@@ -29,7 +29,8 @@ services:
             - mailpit
             - selenium
     mysql:
-        image: 'mysql/mysql-server:8.0'
+        image: 'groonga/mroonga'
+        platform: linux/amd64
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
         environment:
