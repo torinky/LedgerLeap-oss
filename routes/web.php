@@ -2,6 +2,17 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Folder\CreateController as FolderCreateController;
+use App\Http\Controllers\Folder\UpdateController as FolderUpdateController;
+use App\Http\Controllers\Ledger\CreateController as LedgerCreateController;
+use App\Http\Controllers\Ledger\IndexController as LedgerIndexController;
+use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
+use App\Http\Controllers\Ledger\UpdateController;
+use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateController;
+use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
+use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
+use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -28,4 +39,96 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
+
+
+Route::middleware('auth')->group(function () {
+
+//ledgerDefine
+
+    Route::get('/ledgerDefine', LedgerDefineIndexController::class)->name('ledgerDefine.index');
+
+    Route::get('/ledgerDefine/folder/{folderId}', LedgerDefineIndexController::class)
+        ->name('ledgerDefinesByFolderId')
+        ->where('folderId', '[0-9]+');
+
+    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
+        ->name('ledgerDefine.create');
+    Route::get('/ledgerDefine/create/folder/{folderId}', [LedgerDefineCreateController::class, 'create'])
+        ->name('ledgerDefine.createWithFolderId')
+        ->where('folderId', '[0-9]+');
+
+    Route::post('/ledgerDefine/create', [LedgerDefineCreateController::class, 'store'])->name('ledgerDefine.store');
+
+    Route::get('/ledgerDefine/edit/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'edit'])
+        ->name('ledgerDefine.edit')
+        ->where('ledgerDefineId', '[0-9]+');
+
+    Route::put('/ledgerDefine/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'update'])
+        ->name('ledgerDefine.update')
+        ->where('ledgerDefineId', '[0-9]+');
+
+    Route::delete('/ledgerDefine/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'delete'])
+        ->name('ledgerDefine.delete')
+        ->where('ledgerDefineId', '[0-9]+');
+
+
+//    ledger
+    Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
+    Route::get('/ledger/define/{ledgerDefineId}', LedgerIndexController::class)->name('ledgerByDefineId')
+        ->where('ledgerDefineId', '[0-9]+');
+
+//    Route::post('/ledger', SearchController::class)
+//        ->name('ledger.search');
+
+    Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
+        ->where('folderId', '[0-9]+');
+
+    Route::get('/ledger/{ledgerId}', LedgerShowController::class)->name('ledger.show')
+        ->where('ledgerId', '[0-9]+');
+
+    Route::get('/ledger/create/{ledgerDefineId}', [LedgerCreateController::class, 'create'])->name('ledger.create')
+        ->where('ledgerDefineId', '[0-9]+');
+
+    Route::post('/ledger/create/{ledgerDefineId}', [LedgerCreateController::class, 'store'])->name('ledger.store')
+        ->where('ledgerDefineId', '[0-9]+');
+
+    Route::get('/ledger/edit/{ledgerId}', [UpdateController::class, 'edit'])->name('ledger.edit')
+        ->where('ledgerId', '[0-9]+');
+
+    Route::put('/ledger/{ledgerId}', [UpdateController::class, 'update'])->name('ledger.update')
+        ->where('ledgerId', '[0-9]+');
+
+    Route::delete('/ledger/{ledgerId}', [UpdateController::class, 'delete'])
+        ->name('ledger.delete')
+        ->where('ledgerId', '[0-9]+');
+
+//    ledgerDiff
+    Route::get('/ledgerDiff/{ledgerId}', LedgerDiffShowController::class)->name('ledgerDiff.show')
+        ->where('ledgerId', '[0-9]+');
+
+    //folder
+    Route::get('/folder/edit/{folderId}', [FolderUpdateController::class, 'edit'])
+        ->name('folder.edit')
+        ->where('folderId', '[0-9]+');
+
+    Route::put('/folder/{folderId}', [FolderUpdateController::class, 'update'])
+        ->name('folder.update')
+        ->where('folderId', '[0-9]+');
+
+    Route::delete('/folder/{folderId}', [FolderUpdateController::class, 'delete'])
+        ->name('folder.delete')
+        ->where('folderId', '[0-9]+');
+
+    Route::get('/folder/create/folder/{folderId}', [FolderCreateController::class, 'create'])
+        ->name('folder.createWithFolderId')
+        ->where('folderId', '[0-9]+');
+
+    Route::post('/folder/create', [FolderCreateController::class, 'store'])->name('folder.store');
+
+});
+
+
+Route::get('/phpinfo', function () {
+    phpinfo();
+});

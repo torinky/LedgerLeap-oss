@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Controllers\LedgerDefine;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Models\Folder;
+use App\Models\LedgerDefine;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
+
+class UpdateController extends Controller
+{
+    public function edit(request $request): \Illuminate\Contracts\View\View
+    {
+        $ledgerDefine = new LedgerDefine();
+        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+
+        $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();
+
+        $folderRecords = Folder::whereDescendantOf(1)->get();
+
+        return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords'));
+
+    }
+
+    public function update(CreateRequest $request)
+    {
+        $ledgerDefineRecord = LedgerDefine::find($request->id);
+        $ledgerDefineRecord->title = $request->title();
+        $ledgerDefineRecord->column_define = $request->column_define();
+        $ledgerDefineRecord->folder_id = $request->folderId();
+        $ledgerDefineRecord->save();
+
+        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $request->id])
+            ->with('status', __('ledger define updated successfully !'));
+
+    }
+
+    public function delete(request $request)
+    {
+        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+
+        LedgerDefine::find($ledgerDefineId)->ledgers()->delete();
+        session()->flash('status', 'ledger define deleted successfully !');
+
+        return View::make('static.message', ['windowTitle' => 'ledger setting']);
+
+    }
+}
