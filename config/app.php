@@ -83,7 +83,7 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => 'ja',
 
     /*
     |--------------------------------------------------------------------------
@@ -96,7 +96,7 @@ return [
     |
     */
 
-    'fallback_locale' => 'en',
+    'fallback_locale' => 'ja',
 
     /*
     |--------------------------------------------------------------------------
@@ -109,7 +109,8 @@ return [
     |
     */
 
-    'faker_locale' => 'en_US',
+//    'faker_locale' => 'en_US',
+    'faker_locale' => 'ja_JP',
 
     /*
     |--------------------------------------------------------------------------
@@ -168,6 +169,11 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+
+        App\Providers\ColumnHtmlServiceProvider::class,
+        App\Providers\JpDatetimeServiceProvider::class,
+        Intervention\Image\ImageServiceProvider::class,
+
     ])->toArray(),
 
     /*
@@ -183,6 +189,8 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+        'ColumnHtml' => \App\Facades\Ledger\ColumnHtml::class,
+        'JpDatetime' => \App\Facades\JpDatetime::class,
     ])->toArray(),
 
 ];

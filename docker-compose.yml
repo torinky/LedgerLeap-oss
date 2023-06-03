@@ -29,7 +29,7 @@ services:
             - mailpit
             - selenium
     mysql:
-        image: 'groonga/mroonga'
+        image: 'groonga/mroonga:mysql-8.0-latest'
         platform: linux/amd64
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
@@ -47,11 +47,7 @@ services:
         networks:
             - sail
         healthcheck:
-            test:
-                - CMD
-                - mysqladmin
-                - ping
-                - '-p${DB_PASSWORD}'
+            test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
             retries: 3
             timeout: 5s
     redis:

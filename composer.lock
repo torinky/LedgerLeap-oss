@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "edc74fba01a45d617fad019082fc3131",
+    "content-hash": "1b358893cc43e172aaca6454c6b31188",
     "packages": [
         {
             "name": "brick/math",
@@ -364,6 +364,118 @@
                 }
             ],
             "time": "2022-09-10T18:51:20+00:00"
+        },
+        {
+            "name": "efureev/laravel-trees",
+            "version": "v3.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/efureev/laravel-trees.git",
+                "reference": "c540e6d4139be0f1500e59ab6d738f22d7f1d714"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/efureev/laravel-trees/zipball/c540e6d4139be0f1500e59ab6d738f22d7f1d714",
+                "reference": "c540e6d4139be0f1500e59ab6d738f22d7f1d714",
+                "shasum": ""
+            },
+            "require": {
+                "efureev/support": "^4.16",
+                "illuminate/database": "^8.8|^9.25|^10.0",
+                "illuminate/events": "^8.80|^9.25|^10.0",
+                "php": "^8.0|^8.1|^8.2"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.20",
+                "orchestra/testbench": "^6.17|^7.22|8.0",
+                "phpunit/phpunit": "^9.5|^10.0",
+                "squizlabs/php_codesniffer": "^3.7",
+                "symfony/var-dumper": "^5.2|^6.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Fureev\\Trees\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Eugene Fureev",
+                    "email": "fureev@gmail.com"
+                }
+            ],
+            "description": "Multi-Tree structures for Laravel",
+            "keywords": [
+                "laravel",
+                "multi-tree",
+                "package",
+                "php",
+                "tree"
+            ],
+            "support": {
+                "issues": "https://github.com/efureev/laravel-trees/issues",
+                "source": "https://github.com/efureev/laravel-trees/tree/v3.8.0"
+            },
+            "time": "2023-03-20T11:07:45+00:00"
+        },
+        {
+            "name": "efureev/support",
+            "version": "v4.20.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/efureev/php-support.git",
+                "reference": "e7fb26a34b86ea43d6356f906b9fbe3eac1fa1f2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/efureev/php-support/zipball/e7fb26a34b86ea43d6356f906b9fbe3eac1fa1f2",
+                "reference": "e7fb26a34b86ea43d6356f906b9fbe3eac1fa1f2",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^8.1|^8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.10.14",
+                "phpunit/phpunit": "^10.1.1",
+                "squizlabs/php_codesniffer": "^3.7.2"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Global/base.php"
+                ],
+                "psr-4": {
+                    "Php\\Support\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Eugene Fureev",
+                    "homepage": "https://github.com/efureev"
+                }
+            ],
+            "description": "PHP Support Package is a collection of useful functions and snippets",
+            "keywords": [
+                "helpers",
+                "php",
+                "support",
+                "utility"
+            ],
+            "support": {
+                "issues": "https://github.com/efureev/php-support/issues",
+                "source": "https://github.com/efureev/php-support/tree/v4.20.0"
+            },
+            "time": "2023-05-31T14:28:35+00:00"
         },
         {
             "name": "egulias/email-validator",
@@ -973,6 +1085,90 @@
                 }
             ],
             "time": "2021-10-07T12:57:01+00:00"
+        },
+        {
+            "name": "intervention/image",
+            "version": "2.7.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Intervention/image.git",
+                "reference": "04be355f8d6734c826045d02a1079ad658322dad"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Intervention/image/zipball/04be355f8d6734c826045d02a1079ad658322dad",
+                "reference": "04be355f8d6734c826045d02a1079ad658322dad",
+                "shasum": ""
+            },
+            "require": {
+                "ext-fileinfo": "*",
+                "guzzlehttp/psr7": "~1.1 || ^2.0",
+                "php": ">=5.4.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "~0.9.2",
+                "phpunit/phpunit": "^4.8 || ^5.7 || ^7.5.15"
+            },
+            "suggest": {
+                "ext-gd": "to use GD library based image processing.",
+                "ext-imagick": "to use Imagick based image processing.",
+                "intervention/imagecache": "Caching extension for the Intervention Image library"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.4-dev"
+                },
+                "laravel": {
+                    "providers": [
+                        "Intervention\\Image\\ImageServiceProvider"
+                    ],
+                    "aliases": {
+                        "Image": "Intervention\\Image\\Facades\\Image"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Intervention\\Image\\": "src/Intervention/Image"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Oliver Vogel",
+                    "email": "oliver@intervention.io",
+                    "homepage": "https://intervention.io/"
+                }
+            ],
+            "description": "Image handling and manipulation library with support for Laravel integration",
+            "homepage": "http://image.intervention.io/",
+            "keywords": [
+                "gd",
+                "image",
+                "imagick",
+                "laravel",
+                "thumbnail",
+                "watermark"
+            ],
+            "support": {
+                "issues": "https://github.com/Intervention/image/issues",
+                "source": "https://github.com/Intervention/image/tree/2.7.2"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/interventionio",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/Intervention",
+                    "type": "github"
+                }
+            ],
+            "time": "2022-05-21T17:30:32+00:00"
         },
         {
             "name": "laravel/framework",
