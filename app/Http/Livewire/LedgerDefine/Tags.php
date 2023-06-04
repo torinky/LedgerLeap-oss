@@ -6,7 +6,7 @@ use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
-class TagComponent extends Component
+class Tags extends Component
 {
     public $ledgerDefineId;
     public $tags = [];

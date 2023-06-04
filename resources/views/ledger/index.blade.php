@@ -1,11 +1,12 @@
-<x-ledgerLayout title="TOP | DocumentCabinet">
+<x-ledger-layout title="TOP | DocumentCabinet">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Ledger Records') }}
         </h2>
     </x-slot>
     @push('stylesheets')
-        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">
+        {{--        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">--}}
+        @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
     <x-slot name="drawer">
@@ -79,4 +80,4 @@
         <livewire:ledger.records-table/>
     </div>
 
-</x-ledgerLayout>
+</x-ledger-layout>

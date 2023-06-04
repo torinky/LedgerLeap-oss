@@ -151,8 +151,8 @@
                 </div>
             </div>
             <div class="flex flex-row">
-                <livewire:ledger-define.tag :ledgerDefineId="$ledgerRecord->define->id"
-                                            :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
+                <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
+                                             :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
             </div>
             <table class="relative table table-zebra table-compact table-auto w-full">
                 <thead class="z-10 sticky top-0 divide-y">

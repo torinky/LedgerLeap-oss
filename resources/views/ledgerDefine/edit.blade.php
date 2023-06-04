@@ -1,9 +1,11 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     @push('scripts')
-        <script src="{{ asset('js/ledgerDefineEdit.js') }}"></script>
+        {{--    viteビルドシステムとは別に読み込まないとソートが機能しない（DOM生成タイミング絡み）    --}}
+        <script src="{{ asset('js/livewire-sortable.js') }}"></script>
+        @vite(['resources/js/ledgerDefineEdit.js'])
     @endpush
     @push('stylesheets')
-        <link rel="stylesheet" href="{{ asset('css/ledgerDefineEdit.css') }}">
+        @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">

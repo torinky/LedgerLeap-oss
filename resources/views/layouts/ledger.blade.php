@@ -11,12 +11,11 @@
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
 
     <!-- Styles -->
-    @vite(['resources/sass/app.scss'])
+    @vite(['resources/sass/app.scss','resources/js/app.js'])
     {{--    <link rel="stylesheet" href="{{ asset('css/app.css') }}">--}}
     @stack('stylesheets')
 
     <!-- Scripts -->
-    @vite(['resources/js/app.js'])
     {{--    <script src="{{ asset('js/app.js') }}" defer></script>--}}
     @livewireStyles
 </head>
