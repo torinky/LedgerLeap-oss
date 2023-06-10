@@ -128,9 +128,9 @@
 
                 @if($ledgerRecord->define && $defineId!=$ledgerRecord->define->id)
                     @if($lKey!=0)
-                        </tbody></table>
-        <div class="divider"></div>
-        @endif
+                        </tbody></table></div>
+    <div class="divider"></div>
+    @endif
 
         <div class="">
 
@@ -141,11 +141,11 @@
                 </div>
                 <div class="">
                     <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                       class="btn btn-outline btn-info btn-sm relative inline-flex my-2"
+                       class="btn btn-outline btn-info btn-sm relative inline-flex my-2 w-32"
                        target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
                         {{__('create')}}</a>
                     <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                       class="btn btn-outline btn-primary btn-sm relative inline-flex my-2"
+                       class="btn btn-outline btn-primary btn-sm relative inline-flex my-2 w-32"
                        target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
                             class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
                 </div>
@@ -154,107 +154,109 @@
                 <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
                                              :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
             </div>
-            <table class="relative table table-zebra table-compact table-auto w-full">
-                <thead class="z-10 sticky top-0 divide-y">
-                <tr class="hover">
-                    <th class="divide-x sticky left-0 text-center px-4 py-2 tracking-wider"
-                        wire:click="sort('id')"
-                        style="width:7rem;"
-                    >
-                        @if($orderBy == 'id')
-                            @if($orderAsc)
-                                <i class="fas fa-chevron-up"></i>
-                            @else
-                                <i class="fas fa-chevron-down"></i>
+            <div class="overflow-x-auto max-h-screen">
+                <table class="relative table table-zebra table-compact table-auto w-full table-pin-rows table-pin-cols">
+                    <thead>
+                    <tr class="hover">
+                        <th class="text-center px-4 py-2 tracking-wider"
+                            wire:click="sort('id')"
+                            style="width:7rem;"
+                        >
+                            @if($orderBy == 'id')
+                                @if($orderAsc)
+                                    <i class="fas fa-chevron-up"></i>
+                                @else
+                                    <i class="fas fa-chevron-down"></i>
+                                @endif
                             @endif
-                        @endif
-                    </th>
-                    @foreach($ledgerRecord->define->column_define as $cKey=>$column_define)
-                        <th class="px-4 py-2 tracking-wider"
-                            wire:click.self="sort('content->{{ (string)$column_define->id }}')">
-                            {{$column_define->name}}
-                            @if($orderBy == 'content->'.(string)$column_define->id)
+                        </th>
+                        @foreach($ledgerRecord->define->column_define as $cKey=>$column_define)
+                            <td class="px-4 py-2 tracking-wider"
+                                wire:click.self="sort('content->{{ (string)$column_define->id }}')">
+                                {{$column_define->name}}
+                                @if($orderBy == 'content->'.(string)$column_define->id)
+                                    @if($orderAsc)
+                                        <i class="fas fa-chevron-down"></i>
+                                    @else
+                                        <i class="fas fa-chevron-up"></i>
+                                    @endif
+                                @endif
+
+                                <input
+                                    wire:change="contentsFilter({{$ledgerRecord->define->id}},{{$column_define->id}},$event.target.value)"
+                                    type="text"
+                                    class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                                    placeholder="Search {{$column_define->name}}...">
+                            </td>
+                        @endforeach
+
+                        <td class="px-4 py-2 tracking-wider"
+                            wire:click="sort('updated_at')"
+                        >{{__('updated at')}}
+                            @if($orderBy == 'updated_at')
                                 @if($orderAsc)
                                     <i class="fas fa-chevron-down"></i>
                                 @else
                                     <i class="fas fa-chevron-up"></i>
                                 @endif
                             @endif
+                        </td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @endif
+                    {{--                        @dump($ledgerRecord)--}}
+                    {{--                        @dump($ledgerRecord->define)--}}
+                    <tr class="hover">
+                        <th class=" border justify-center">
+                            <div>
+                                <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                                   class="btn btn-outline btn-primary btn-sm my-1 w-28"
+                                   target="ledgerEdit_{{$ledgerRecord->define->id}}}}">
+                                    <i class="fas fa-pencil mr-1"></i>
+                                    {{__('edit')}}</a>
 
-                            <input
-                                wire:change="contentsFilter({{$ledgerRecord->define->id}},{{$column_define->id}},$event.target.value)"
-                                type="text"
-                                class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                                placeholder="Search {{$column_define->name}}...">
+                            </div>
+
+                            <div>
+                                <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id]) }}"
+                                   class="btn btn-outline btn-info btn-sm my-1 w-28"
+                                   target="ledgerShow_{{$ledgerRecord->define->id}}}}">
+                                    <i class="fas fa-table-list mr-1"></i>
+                                    {{__('detail')}}</a>
+
+                            </div>
+
                         </th>
-                    @endforeach
-
-                    <th class="px-4 py-2 tracking-wider"
-                        wire:click="sort('updated_at')"
-                    >{{__('updated at')}}
-                        @if($orderBy == 'updated_at')
-                            @if($orderAsc)
-                                <i class="fas fa-chevron-down"></i>
+                        @foreach($ledgerRecord->define->column_define as $cKey=>$columnDefine)
+                            @isset($ledgerRecord->content[$columnDefine->id])
+                                <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>
                             @else
-                                <i class="fas fa-chevron-up"></i>
+                                <td class="border px-4 py-2 text-center">-</td>
                             @endif
-                        @endif
-                    </th>
-                </tr>
-                </thead>
-                <tbody class="divide-y">
-                @endif
-                {{--                        @dump($ledgerRecord)--}}
-                {{--                        @dump($ledgerRecord->define)--}}
-                <tr class="hover">
-                    <td class="divide-x sticky left-0 border justify-center w-32">
-                        <div>
-                            <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-                               class="btn btn-outline btn-primary btn-sm my-1"
-                               target="ledgerEdit_{{$ledgerRecord->define->id}}}}">
-                                <i class="fas fa-pencil mr-1"></i>
-                                {{__('edit')}}</a>
-
-                        </div>
-
-                        <div>
-                            <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id]) }}"
-                               class="btn btn-outline btn-info btn-sm my-1"
-                               target="ledgerShow_{{$ledgerRecord->define->id}}}}">
-                                <i class="fas fa-table-list mr-1"></i>
-                                {{__('detail')}}</a>
-
-                        </div>
-
-                    </td>
-                    @foreach($ledgerRecord->define->column_define as $cKey=>$columnDefine)
-                        @isset($ledgerRecord->content[$columnDefine->id])
-                            <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>
-                        @else
-                            <td class="border px-4 py-2 text-center">-</td>
-                        @endif
+                        @endforeach
+                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}
+                            <span
+                                class="text-gray-500">{{JpDatetime::date('(bk)',$ledgerRecord->updated_at->timestamp)}}</span>
+                            <br/>( {{ $ledgerRecord->updated_at->diffForHumans() }} )
+                        </td>
+                        {{--                <td class="border px-4 py-2">{{ $ledgerRecords->created_at }}</td>--}}
+                    </tr>
+                        <?php $defineId = $ledgerRecord->define->id; ?>
                     @endforeach
-                    <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}
-                        <span
-                            class="text-gray-500">{{JpDatetime::date('(bk)',$ledgerRecord->updated_at->timestamp)}}</span>
-                        <br/>( {{ $ledgerRecord->updated_at->diffForHumans() }} )
-                    </td>
-                    {{--                <td class="border px-4 py-2">{{ $ledgerRecords->created_at }}</td>--}}
-                </tr>
-                    <?php $defineId = $ledgerRecord->define->id; ?>
-                @endforeach
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        {!! $ledgerRecords->links() !!}
-        @else
-            {{--
-                        <x-ledger.alert :message="__('Select Ledger or Folder')">
-                            @slot('icon')
-                                fa-circle-info
-                            @endslot
-                        </x-ledger.alert>
-            --}}
+    {!! $ledgerRecords->links() !!}
+    @else
+        {{--
+                    <x-ledger.alert :message="__('Select Ledger or Folder')">
+                        @slot('icon')
+                            fa-circle-info
+                        @endslot
+                    </x-ledger.alert>
+        --}}
 
             @include('components.ledger.alert',[
             'message'=>__('Select Ledger or Folder'),

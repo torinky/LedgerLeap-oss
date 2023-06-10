@@ -2,16 +2,53 @@
 
 namespace App\Providers;
 
+use App\Database\MySqlConnection;
+use App\Modules\ImageUpload\ImageManagerInterface;
+use App\Modules\ImageUpload\LocalImageManager;
+use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
+use Illuminate\Database\Connection;
 use Illuminate\Support\ServiceProvider;
+
+//use App\Modules\ImageUpload\CloudinaryImageManager;
+
+//use Cloudinary\Cloudinary;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
+     *
+     * @return void
      */
-    public function register(): void
+    public function register()
     {
-        //
+        /*        $this->app->bind(Cloudinary::class, function () {
+                    return new Cloudinary([
+                        'cloud' => [
+                            'cloud_name' => config('cloudinary.cloud_name'),
+                            'api_key' => config('cloudinary.api_key'),
+                            'api_secret' => config('cloudinary.api_secret'),
+                        ],
+                    ]);
+                });
+                if ($this->app->environment('production')) {
+                    $this->app->bind(ImageManagerInterface::class, CloudinaryImageManager::class);
+                } else {*/
+        $this->app->bind(ImageManagerInterface::class, LocalImageManager::class);
+        $this->app->register(IdeHelperServiceProvider::class);
+//        }
+
+        $this->setCustomResolverForMySql();
+    }
+
+    /**
+     * @return void
+     */
+    private function setCustomResolverForMySql()
+    {
+        Connection::resolverFor('mysql', function ($connection, $database, $prefix, $config) {
+            return new MysqlConnection($connection, $database, $prefix, $config);
+        });
     }
 
     /**
