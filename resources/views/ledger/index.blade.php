@@ -1,4 +1,4 @@
-<x-appWithDrower-layout title="TOP | DocumentCabinet">
+<x-appWithDrawer-layout title="TOP | DocumentCabinet">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Ledger Records') }}
@@ -80,4 +80,4 @@
         <livewire:ledger.records-table/>
     </div>
 
-</x-appWithDrower-layout>
+</x-appWithDrawer-layout>
