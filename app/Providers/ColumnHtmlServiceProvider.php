@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Services\Ledger\ColumnHtml;
+use App\Services\Ledger\ColumnHtmlService;
 use Illuminate\Support\ServiceProvider;
 
 class ColumnHtmlServiceProvider extends ServiceProvider
@@ -15,7 +15,7 @@ class ColumnHtmlServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton('ColumnHtml', function () {
-            return new ColumnHtml();
+            return new ColumnHtmlService();
         });
 
     }

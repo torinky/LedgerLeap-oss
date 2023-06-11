@@ -6,7 +6,7 @@ use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
-class ColumnHtml
+class ColumnHtmlService
 {
     private $attrs = [];
     private $columnDefine;
