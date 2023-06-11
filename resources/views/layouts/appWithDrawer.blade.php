@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="cmyk">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,23 +14,39 @@
     @vite(['resources/sass/app.scss','resources/js/app.js'])
     {{--    <link rel="stylesheet" href="{{ asset('css/app.css') }}">--}}
     @stack('stylesheets')
+    @livewireStyles
 
     <!-- Scripts -->
     {{--    <script src="{{ asset('js/app.js') }}" defer></script>--}}
-    @livewireStyles
+    <script>
+        // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
+        if (
+            localStorage.getItem('color-theme') === 'dark' ||
+            (!('color-theme' in localStorage) &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+            document.documentElement.dataset.theme = 'dark';
+        } else {
+            document.documentElement.dataset.theme = 'light';
+        }
+        console.log(document.documentElement.dataset.theme);
+    </script>
+
 </head>
-<body class="font-sans antialiased">
+<body class="font-body antialiased">
 <div class="min-h-screen">
 
     <div class="fixed w-full z-10 top-0">
-        @include('layouts.navigation')
+        @include('layouts.daisyuiNavigation')
 
-        <!-- Page Heading -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                {{ $header }}
-            </div>
-        </header>
+        @if (isset($header))
+            <!-- Page Heading -->
+            <header class=" shadow">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    {{ $header }}
+                </div>
+            </header>
+        @endif
     </div>
 
 

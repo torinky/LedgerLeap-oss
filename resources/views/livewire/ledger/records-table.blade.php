@@ -110,10 +110,10 @@
                     </div>
                 </div>
             </a>
-        @endforeach
+            @endforeach
 
-        {{--        <div class="p-4 rounded-lg bg-purple-300 dark:bg-purple-800 dark:text-purple-400">04</div>--}}
-        {{--        <div class="p-4 rounded-lg bg-purple-300 dark:bg-purple-800 dark:text-purple-400">05</div>--}}
+            {{--        <div class="p-4 rounded-lg bg-purple-300">04</div>--}}
+            {{--        <div class="p-4 rounded-lg bg-purple-300">05</div>--}}
     </div>
 
 

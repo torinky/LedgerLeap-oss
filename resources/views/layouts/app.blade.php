@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,16 +16,29 @@
     @stack('stylesheets')
     @livewireStyles
 
+    <script>
+        // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
+        if (
+            localStorage.getItem('color-theme') === 'dark' ||
+            (!('color-theme' in localStorage) &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+            document.documentElement.dataset.theme = 'dark';
+        } else {
+            document.documentElement.dataset.theme = 'light';
+        }
+        console.log(document.documentElement.dataset.theme);
+    </script>
 </head>
 <body class="font-sans antialiased">
-<div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-    @include('layouts.navigation')
+<div class="min-h-screen">
+    @include('layouts.daisyuiNavigation')
 
     <!-- Page Heading -->
     @if (isset($header))
-        <header class="bg-white dark:bg-gray-800 shadow">
+        <header class=" shadow">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
+                {{ $header }}
             </div>
         </header>
     @endif

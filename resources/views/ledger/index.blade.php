@@ -1,9 +1,11 @@
 <x-appWithDrawer-layout title="TOP | DocumentCabinet">
+{{--
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl leading-tight">
             {{ __('Ledger Records') }}
         </h2>
     </x-slot>
+--}}
     @push('stylesheets')
         {{--        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">--}}
         @vite(['resources/sass/ledgerIndex.scss'])
