@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
-class LedgerLayout extends Component
+class AppWithDrawerLayout extends Component
 {
     /**
      * Create a new component instance.
@@ -25,6 +25,6 @@ class LedgerLayout extends Component
      */
     public function render()
     {
-        return view('layouts.ledger');
+        return view('layouts.appWithDrawer');
     }
 }

@@ -19,7 +19,7 @@
     {{--    <script src="{{ asset('js/app.js') }}" defer></script>--}}
     @livewireStyles
 </head>
-<body class="font-sans antialiased overflow-y-hidden">
+<body class="font-sans antialiased">
 <div class="min-h-screen">
 
     <div class="fixed w-full z-10 top-0">
@@ -35,13 +35,13 @@
 
 
     {{--        <div class="drawer drawer-mobile">--}}
-    <div class="drawer mt-36">
+    <div class="drawer mt-36 xl:drawer-open">
 
         <input id="my-drawer-2" type="checkbox" class="drawer-toggle"/>
 
         <main class="drawer-content flex flex-col items-center pb-36">
             {{--                        <label for="my-drawer-2" class="btn btn-primary drawer-button lg:hidden">Open drawer</label>--}}
-            <label for="my-drawer-2" class="btn btn-primary drawer-button">Open drawer</label>
+            <label for="my-drawer-2" class="btn btn-primary drawer-button xl:hidden">Open drawer</label>
             {{ $slot }}
         </main>
         <div class="drawer-side">
