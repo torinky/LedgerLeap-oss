@@ -4,13 +4,13 @@
         <div class="w-3/6 mx-1">
             <label>
                 <input wire:model.debounce.800ms="search" type="text"
-                       class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                       class="input input-bordered w-full max-w-xs"
                        placeholder="Search content...">
             </label>
         </div>
         <div class="w-1/6 relative mx-1">
             <select wire:model="orderBy"
-                    class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                    class="select select-bordered w-full max-w-xs"
                     id="grid-state">
                 <option value="id">ID</option>
                 <option value="content->0">col1</option>
@@ -27,7 +27,7 @@
         </div>
         <div class="w-1/6 relative mx-1">
             <select wire:model="orderAsc"
-                    class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                    class="select select-bordered w-full max-w-xs"
                     id="grid-state">
                 <option value="1">Ascending</option>
                 <option value="0">Descending</option>
@@ -42,7 +42,7 @@
         </div>
         <div class="w-1/6 relative mx-1">
             <select wire:model="perPage"
-                    class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                    class="select select-bordered w-full max-w-xs"
                     id="grid-state">
                 <option>10</option>
                 <option>25</option>
@@ -173,19 +173,20 @@
                         @foreach($ledgerRecord->define->column_define as $cKey=>$column_define)
                             <td class="px-4 py-2 tracking-wider"
                                 wire:click.self="sort('content->{{ (string)$column_define->id }}')">
-                                {{$column_define->name}}
-                                @if($orderBy == 'content->'.(string)$column_define->id)
-                                    @if($orderAsc)
-                                        <i class="fas fa-chevron-down"></i>
-                                    @else
-                                        <i class="fas fa-chevron-up"></i>
+                                <div>
+                                    {{$column_define->name}}
+                                    @if($orderBy == 'content->'.(string)$column_define->id)
+                                        @if($orderAsc)
+                                            <i class="fas fa-chevron-down"></i>
+                                        @else
+                                            <i class="fas fa-chevron-up"></i>
+                                        @endif
                                     @endif
-                                @endif
-
+                                </div>
                                 <input
                                     wire:change="contentsFilter({{$ledgerRecord->define->id}},{{$column_define->id}},$event.target.value)"
                                     type="text"
-                                    class="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                                    class="input input-bordered input-sm w-full max-w-xs"
                                     placeholder="Search {{$column_define->name}}...">
                             </td>
                         @endforeach

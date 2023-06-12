@@ -18,19 +18,6 @@
 
     <!-- Scripts -->
     {{--    <script src="{{ asset('js/app.js') }}" defer></script>--}}
-    <script>
-        // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
-        if (
-            localStorage.getItem('color-theme') === 'dark' ||
-            (!('color-theme' in localStorage) &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ) {
-            document.documentElement.dataset.theme = 'dark';
-        } else {
-            document.documentElement.dataset.theme = 'light';
-        }
-        console.log(document.documentElement.dataset.theme);
-    </script>
 
 </head>
 <body class="font-body antialiased">

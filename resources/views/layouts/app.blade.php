@@ -49,6 +49,6 @@
     </main>
 </div>
 </body>
-@livewireScripts
 @stack('scripts')
+@livewireScripts
 </html>
