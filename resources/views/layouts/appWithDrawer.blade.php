@@ -38,13 +38,13 @@
 
 
     {{--        <div class="drawer drawer-mobile">--}}
-    <div class="drawer mt-36 xl:drawer-open">
+    <div class="drawer mt-20 xl:drawer-open">
 
-        <input id="my-drawer-2" type="checkbox" class="drawer-toggle"/>
+        <input id="app-drawer" type="checkbox" class="drawer-toggle"/>
 
         <main class="drawer-content flex flex-col items-center pb-36">
             {{--                        <label for="my-drawer-2" class="btn btn-primary drawer-button lg:hidden">Open drawer</label>--}}
-            <label for="my-drawer-2" class="btn btn-primary drawer-button xl:hidden">Open drawer</label>
+            {{--            <label for="my-drawer-2" class="btn btn-primary drawer-button xl:hidden">Open drawer</label>--}}
             {{ $slot }}
         </main>
         <div class="drawer-side">

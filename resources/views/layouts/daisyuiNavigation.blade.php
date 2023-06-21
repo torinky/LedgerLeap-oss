@@ -38,6 +38,13 @@
                     --}}
                 </ul>
             </div>
+            <div>
+                <label for="app-drawer" class="swap swap-rotate btn btn-sm btn-ghost xl:hidden">
+                    <i class="swap-on fa-regular fa-folder-open"></i>
+                    <i class="swap-off fa-regular fa-folder"></i>
+                </label>
+
+            </div>
             <a class="btn btn-ghost normal-case text-xl">LedgerLeap</a>
         </div>
         <div class="navbar-center hidden lg:flex">
@@ -78,7 +85,7 @@
             {{--            <a class="btn">Button</a>--}}
             <div class="dropdown dropdown-end">
                 {{--                <label tabindex="0" class="btn btn-ghost btn-circle avatar">--}}
-                <a tabindex="0" class="btn btn-ghost ">
+                <a tabindex="0" class="btn btn-ghost btn-sm">
                     {{--
                                         <div class="w-10 rounded-full">
                                             <img src="/images/stock/photo-1534528741775-53994a69daeb.jpg" />
