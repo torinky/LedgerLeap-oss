@@ -158,4 +158,34 @@ class RecordsTable extends Component
         }
     }
 
+
+    public function changeCurrentFolder($newFolderId)
+    {
+        $this->currentFolderId = $newFolderId;
+        $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
+
+        if (!empty($currentFolder)) {
+            $this->breadcrumbs = $currentFolder->parents();
+        }
+        $this->breadcrumbs[] = $currentFolder;
+
+        $this->folderRecords = $currentFolder->children()->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
+
+        if (!$currentFolder->isRoot()) {
+            $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
+            $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
+        }
+    }
+
+    /*    public function toggleLedgerDefineOpen($targetLedgerDefineId)
+        {
+            if (in_array($targetLedgerDefineId,$this->selectedLedgerDefineIds)) {
+                $this->selectedLedgerDefineIds = collect($this->selectedLedgerDefineIds)->reject(function ($item) use ($targetLedgerDefineId) {
+                    return ($item === $targetLedgerDefineId)||($item===false);
+                })->toArray();
+            }else{
+                $this->selectedLedgerDefineIds[]=$targetLedgerDefineId;
+            }
+        }*/
 }

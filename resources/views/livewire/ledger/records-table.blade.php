@@ -1,22 +1,24 @@
 <div>
 
-    <div class="w-full flex pb-10">
+    <div class="w-full flex pb-10 justify-center items-center">
         <div class="w-3/6 mx-1">
             <label>
                 <input wire:model.debounce.800ms="search" type="text"
-                       class="input input-bordered w-full max-w-xs"
+                       class="input input-bordered input-lg input-primary w-full"
                        placeholder="Search content...">
             </label>
         </div>
         <div class="w-1/6 relative mx-1">
-            <select wire:model="orderBy"
-                    class="select select-bordered w-full max-w-xs"
-                    id="grid-state">
-                <option value="id">ID</option>
-                <option value="content->0">col1</option>
-                <option value="content->1">col2</option>
-                <option value="created_at">created</option>
-            </select>
+            {{--
+                        <select wire:model="orderBy"
+                                class="select select-bordered w-full max-w-xs"
+                                id="grid-state">
+                            <option value="id">ID</option>
+                            <option value="content->0">col1</option>
+                            <option value="content->1">col2</option>
+                            <option value="created_at">created</option>
+                        </select>
+            --}}
             {{--
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -59,9 +61,9 @@
         </div>
     </div>
 
-    <x-ledger.breadcrumbs
+    <x-ledger.livewire-breadcrumbs
         :breadcrumbs="$breadcrumbs"
-    ></x-ledger.breadcrumbs>
+    ></x-ledger.livewire-breadcrumbs>
 
     {{--
         <div class="flex flex-row">
@@ -74,51 +76,60 @@
         class="grid sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center leading-6 bg-stripes-purple rounded-lg">
 
         @foreach($folderRecords as $fKey => $folderRecord)
-            <a href="{{route('ledgersByFolderId',['folderId'=>$folderRecord->id])}}">
-                <div class="p-4 rounded-lg shadow-lg bg-purple-500 hover:bg-purple-600">
-                    <div class="flex justify-center items-center">
-                        <label class="swap">
-                            <input type="checkbox" value="{{$folderRecord->id}}"
-                                   wire:model="selectedFolderIds.{{$fKey}}" style="display: none"/>
-                            <i class="swap-off fa-solid fa-folder text-3xl "></i>
-                            <i class="swap-on fa-solid fa-folder-open text-3xl "></i>
-                        </label>
-                        {{--                        <input type="checkbox" checked="checked" class="checkbox ml-5"/>--}}
-                    </div>
-                    <div class="ladgerTitle text-base mt-1">{{$folderRecord->title}}</div>
-                    <div class="lastUpdate text-sm"><i
-                            class="fas fa-clock mr-1"></i>{{$folderRecord->updated_at->format('Y-m-d')}}</div>
+            {{--            <a href="{{route('ledgersByFolderId',['folderId'=>$folderRecord->id])}}">--}}
+            {{--            <button wire:click.self="changeCurrentFolder({{$folderRecord->id}})">--}}
+            {{--            <button class="p-4 rounded-lg shadow-lg bg-secondary hover:bg-secondary-focus" wire:click.self="changeCurrentFolder({{$folderRecord->id}})">--}}
+            <button class="p-2 rounded-lg shadow-lg bg-secondary hover:bg-secondary-focus">
+                <div class="flex justify-center items-center ">
+                    <label class="swap btn btn-ghost">
+                        <input type="checkbox" value="{{$folderRecord->id}}"
+                               wire:model="selectedFolderIds.{{$fKey}}" style="display: none"/>
+                        <i class="swap-off fa-solid fa-folder text-3xl "></i>
+                        <i class="swap-on fa-solid fa-folder-open text-3xl "></i>
+                    </label>
+
+                    <a href="#" class="btn btn-ghost" wire:click="changeCurrentFolder({{$folderRecord->id}})"><i
+                            class="text-3xl fa-solid fa-right-to-bracket"></i></a>
+                    {{--                        <input type="checkbox" checked="checked" class="checkbox ml-5"/>--}}
                 </div>
-            </a>
+                <div class="ladgerTitle text-base mt-1">{{$folderRecord->title}}</div>
+                <div class="lastUpdate text-sm"><i
+                        class="fas fa-clock mr-1"></i>{{$folderRecord->updated_at->format('Y-m-d')}}</div>
+            </button>
         @endforeach
 
         @foreach($ledgerDefineRecords as $dKey => $ledgerDefineRecord)
-            <a href="{{route('ledgerByDefineId',['ledgerDefineId'=>$ledgerDefineRecord->id])}}">
-                <div class="p-4 rounded-lg shadow-lg bg-purple-500 hover:bg-purple-600">
-                    <div class="flex justify-center items-center">
-                        <label class="swap">
-                            <input type="checkbox" value="{{$ledgerDefineRecord->id}}"
-                                   wire:model="selectedLedgerDefineIds.{{$dKey}}" style="display: none"/>
-                            <i class="swap-off fa-solid fa-book text-3xl "></i>
-                            <i class="swap-on text-3xl fa-solid fa-book-open"></i>
-                        </label>
-                        {{--                        <input type="checkbox" checked="checked" class="checkbox ml-5"/>--}}
-                    </div>
-                    <div class="ladgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
+            {{--            <a href="{{route('ledgerByDefineId',['ledgerDefineId'=>$ledgerDefineRecord->id])}}">--}}
+            {{--                <div wire:click.self="$set('selectedLedgerDefineIds.{{$dKey}}',{{$ledgerDefineRecord->id}})" class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus">--}}
+            {{--                <div class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus" wire:click.self="toggleLedgerDefineOpen({{$ledgerDefineRecord->id}})">--}}
+            <button class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus">
+                <div class="flex justify-center items-center">
+
+                    <label class="swap btn btn-ghost">
+                        <input type="checkbox" value="{{$ledgerDefineRecord->id}}"
+                               wire:model="selectedLedgerDefineIds.{{$dKey}}" style="display: none"/>
+                        <i class="swap-off fa-solid fa-book text-3xl "></i>
+                        <i class="swap-on text-3xl fa-solid fa-book-open"></i>
+                    </label>
+                </div>
+                <div class="ladgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
                     <div class="lastUpdate text-sm"><i
                             class="fas fa-clock mr-1"></i>{{$ledgerDefineRecord->updated_at->format('Y-m-d')}}
                     </div>
-                </div>
-            </a>
-            @endforeach
+            </button>
+        @endforeach
 
             {{--        <div class="p-4 rounded-lg bg-purple-300">04</div>--}}
             {{--        <div class="p-4 rounded-lg bg-purple-300">05</div>--}}
     </div>
 
+    <div class="divider"></div>
+
+    <div wire:loading class=" text-center ">
+        <span class="loading loading-dots loading-lg"></span>
+    </div>
 
     <div class="">
-        <div class="divider"></div>
         @if($ledgerRecords->count() > 0)
 
             {!! $ledgerRecords->links() !!}
