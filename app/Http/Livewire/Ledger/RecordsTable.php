@@ -31,7 +31,7 @@ class RecordsTable extends Component
     public $selectedLedgerDefineIds = [];
     public $selectedFolderIds = [];
     public $currentFolderId;
-    protected $listeners = ['contentsFilter'];
+    protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
     private array $tags = [];
     private array $keywords = [];
 
@@ -51,20 +51,7 @@ class RecordsTable extends Component
         $this->updateKeyworrdsAndTags($this->search);
 
         $this->currentFolderId = $request->folderId();
-        $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
-
-        if (!empty($currentFolder)) {
-            $this->breadcrumbs = $currentFolder->parents();
-        }
-        $this->breadcrumbs[] = $currentFolder;
-
-        $this->folderRecords = $currentFolder->children()->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $request->folderId())->get();
-
-        if (!$currentFolder->isRoot()) {
-            $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
-            $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
-        }
+        $this->prepareFolderAsset();
     }
 
     public function sort($columnName)
@@ -162,6 +149,35 @@ class RecordsTable extends Component
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
+        $this->emit('currentFolderChangedByMain', $this->currentFolderId);
+
+        $this->prepareFolderAsset();
+    }
+
+    public function currentFolderChangedByTree($newFolderId)
+    {
+        $this->currentFolderId = $newFolderId;
+
+        $this->prepareFolderAsset();
+    }
+
+    /*
+       public function toggleLedgerDefineOpen($targetLedgerDefineId)
+        {
+            if (in_array($targetLedgerDefineId,$this->selectedLedgerDefineIds)) {
+                $this->selectedLedgerDefineIds = collect($this->selectedLedgerDefineIds)->reject(function ($item) use ($targetLedgerDefineId) {
+                    return ($item === $targetLedgerDefineId)||($item===false);
+                })->toArray();
+            }else{
+                $this->selectedLedgerDefineIds[]=$targetLedgerDefineId;
+            }
+        }
+    */
+    /**
+     * @return void
+     */
+    public function prepareFolderAsset(): void
+    {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
 
         if (!empty($currentFolder)) {
@@ -177,15 +193,4 @@ class RecordsTable extends Component
             $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
         }
     }
-
-    /*    public function toggleLedgerDefineOpen($targetLedgerDefineId)
-        {
-            if (in_array($targetLedgerDefineId,$this->selectedLedgerDefineIds)) {
-                $this->selectedLedgerDefineIds = collect($this->selectedLedgerDefineIds)->reject(function ($item) use ($targetLedgerDefineId) {
-                    return ($item === $targetLedgerDefineId)||($item===false);
-                })->toArray();
-            }else{
-                $this->selectedLedgerDefineIds[]=$targetLedgerDefineId;
-            }
-        }*/
 }

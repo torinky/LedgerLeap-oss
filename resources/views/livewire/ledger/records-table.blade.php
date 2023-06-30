@@ -143,37 +143,45 @@
     <div class="divider"></div>
     @endif
 
-        <div class="">
+    <div class="">
 
-            <div class="flex flex-row justify-between">
-                <div class="flex-relative ">
-                    <x-ledger.breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"
-                                          :thisLedgerDefine="$ledgerRecord->define"></x-ledger.breadcrumbs>
-                </div>
-                <div class="">
-                    <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                       class="btn btn-outline btn-info btn-sm relative inline-flex my-2 w-32"
-                       target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
-                        {{__('create')}}</a>
-                    <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                       class="btn btn-outline btn-primary btn-sm relative inline-flex my-2 w-32"
-                       target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
-                            class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
-                </div>
+        <div class="flex flex-row justify-between">
+            <div class="flex-relative ">
+                {{--                    <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"--}}
+                {{--                                          :thisLedgerDefine="$ledgerRecord->define"></x-ledger.livewire-breadcrumbs>--}}
+                <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"
+                ></x-ledger.livewire-breadcrumbs>
             </div>
-            <div class="flex flex-row">
-                <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
-                                             :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
+            <div class="">
+                <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
+                   class="btn btn-outline btn-info btn-sm relative inline-flex my-2 w-32"
+                   target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
+                    {{__('create')}}</a>
+                <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
+                   class="btn btn-outline btn-primary btn-sm relative inline-flex my-2 w-32"
+                   target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
+                        class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
             </div>
-            <div class="overflow-x-auto max-h-screen">
-                <table class="relative table table-zebra table-compact table-auto w-full table-pin-rows table-pin-cols">
-                    <thead>
-                    <tr class="hover">
-                        <th class="text-center px-4 py-2 tracking-wider"
-                            wire:click="sort('id')"
-                            style="width:7rem;"
-                        >
-                            @if($orderBy == 'id')
+        </div>
+        <div class="flex flex-row">
+            <h3 class="mb-2 mt-0 text-3xl font-medium leading-tight text-primary">
+                <i class="fa-solid fa-book-open"></i>
+                {{$ledgerRecord->define->title}}
+            </h3>
+        </div>
+        <div class="flex flex-row">
+            <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
+                                         :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
+        </div>
+        <div class="overflow-x-auto max-h-screen">
+            <table class="relative table table-zebra table-compact table-auto table-pin-rows table-pin-cols">
+                <thead>
+                <tr class="hover">
+                    <th class="text-center px-4 py-2 tracking-wider"
+                        wire:click="sort('id')"
+                        style="width:7rem;"
+                    >
+                        @if($orderBy == 'id')
                                 @if($orderAsc)
                                     <i class="fas fa-chevron-up"></i>
                                 @else

@@ -1,5 +1,4 @@
 <div>
-    <p>ledger:{{$ledgerDefineId}}</p>
     <div>
         <div class="flex flex-row place-items-center">
             @foreach($tags as $key => $tag)
