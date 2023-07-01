@@ -24,7 +24,7 @@
 
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
             <div class="flex flex-wrap items-center justify-center w-full">
-                <form action="{{ route('ledgerDefine.update',$ledgerDefineRecord->id)}}" method="post">
+                <form action="{{ route('ledgerDefine.update',$ledgerDefineRecord->id)}}" method="post" class="w-full">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="id" value="{{ $ledgerDefineRecord->id }}">
