@@ -97,7 +97,9 @@ class ModifyColumn extends Component
                 }
             }
         }
-//        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
+        $this->emit('elementUpdated');
+
+        //        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
         $this->ledgerDefineRecord->column_define = (array)$this->ledgerDefineRecord->column_define;
         $this->ledgerDefineRecord->save();
 

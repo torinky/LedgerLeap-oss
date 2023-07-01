@@ -10,14 +10,15 @@
 
                 <li wire:sortable.item="{{ $columnDefine->id }}"
                     wire:key="columnDefine-{{ $columnDefine->id }} drag-item"
-                    class="grid card h-20 p-5 m-5 rounded bg-accent min-h-fit">
+                    class="grid card h-20 p-5 m-5 rounded bg-secondary min-h-fit">
 
                     <div class="flex items-center ">
-                        <div wire:sortable.handle class="w-10 align-middle 4xl flex-none"><i
+                        <div wire:sortable.handle class="btn btn-ghost w-10 align-middle 4xl flex-none"><i
                                 class="fa-solid fa-grip-lines"></i></div>
 
                         <div class="flex-none ml-5 w-24">
-                            <label for="column_define[{{$columnDefine->id}}][required]" class="mr-2 text-right">
+                            <label for="column_define[{{$columnDefine->id}}][required]"
+                                   class="mr-2 text-right text-white">
                                 {{__('input　required')}}
                             </label>
                             <input type="hidden" name="column_define[{{$columnDefine->id}}][required]" value="0">
@@ -26,7 +27,8 @@
                         </div>
 
                         <div class="flex-none ml-5 w-24">
-                            <label for="column_define[{{$columnDefine->id}}][doNotDuplicate]" class="mr-2 text-right">
+                            <label for="column_define[{{$columnDefine->id}}][doNotDuplicate]"
+                                   class="mr-2 text-right text-white">
                                 {{__('Do not duplicate')}}
                             </label>
                             <input type="hidden" name="column_define[{{$columnDefine->id}}][doNotDuplicate]" value="0">
@@ -36,7 +38,8 @@
                         </div>
 
                         <div class="flex-none ml-5 w-24">
-                            <label for="column_define[{{$columnDefine->id}}][sortBy]" class="mr-2 text-right">
+                            <label for="column_define[{{$columnDefine->id}}][sortBy]"
+                                   class="mr-2 text-right text-white">
                                 {{__('Sort by')}}
                             </label>
                             <input type="hidden" name="column_define[{{$columnDefine->id}}][sortBy]" value="0">
@@ -47,7 +50,7 @@
 
 
                         <div class="flex-1 ml-5 ">
-                            <label for="column_define[{{$columnDefine->id}}][name]" class="mr-2 text-right">
+                            <label for="column_define[{{$columnDefine->id}}][name]" class="mr-2 text-right text-white">
                                 {{__('column name')}}
                             </label>
                             <input type="hidden" name="column_define[{{$columnDefine->id}}][name]"
@@ -59,7 +62,7 @@
                         </div>
 
                         <div class="flex-none ml-5">
-                            <label for="column_define[{{$columnDefine->id}}][type]" class="mr-2 text-right">
+                            <label for="column_define[{{$columnDefine->id}}][type]" class="mr-2 text-right text-white">
                                 {{__('type')}}
                             </label>
                             <select
@@ -114,12 +117,6 @@
                             @endforeach
                         @endif
 
-                        <a href="#"
-                           wire:click="removeColumn({{$columnDefine->id}})"
-                           class="btn btn-outline btn-ghost btn-sm mx-3 "
-                        >
-                            <i class="fa-solid fa-trash mr-1"></i>
-                            {{__('remove')}}</a>
 
                         <input type="hidden" name="column_define[{{$columnDefine->id}}][id]"
                                value="{{$columnDefine->id}}">
@@ -127,10 +124,69 @@
                                value="{{$columnDefine->order}}">
 
                     </div>
+                    <div class="mt-3 flex-row text-right">
+                        {{--
+                                                <a href="#"
+                                                   wire:click="removeColumn({{$columnDefine->id}})"
+                                                   class="btn btn-outline btn-ghost btn-sm mx-3"
+                                                >
+                                                    <i class="fa-solid fa-trash mr-1"></i>
+                                                    {{__('remove')}}</a>
+                        --}}
+
+                        <label for="delete-modal-{{$columnDefine->id}}" class="btn btn-outline btn-error ml-10"><i
+                                class="fa-solid fa-trash mr-1"></i> {{__('remove')}}</label>
+
+
+                    </div>
+                    <input type="checkbox" id="delete-modal-{{$columnDefine->id}}" class="modal-toggle"
+                           style="display:none;"/>
+                    <div class="modal">
+                        <div class="modal-box">
+                            <h3 class="font-bold text-lg">{{__('delete column')}}</h3>
+                            <p class="py-4">{{__('This Column will be deleted')}}<br/>
+                                {{__('Ledger in records will be deleted')}}</p>
+                            <div class="modal-action">
+                                <div class="btnContainer">
+                                    <a href="#"
+                                       wire:click="removeColumn({{$columnDefine->id}})"
+                                       class="btn"
+                                    >{{__('remove')}}</a>
+                                </div>
+                                <label for="delete-modal-{{$columnDefine->id}}"
+                                       class="btn btn-outline ml-5">{{__('cancel')}}</label>
+                            </div>
+                        </div>
+                    </div>
                 </li>
             @endforeach
             {{--        <input type="hidden" name="column_order"--}}
             {{--               value="{{Js::from( $ledgerDefineRecord->column_order)}}">--}}
         </ul>
+
+        @once
+            @push('scripts')
+                <script type="module">
+
+                    $(document).ready(function () {
+                        // select2.jsの初期化
+                        initializeSelect2();
+
+                        Livewire.on('elementUpdated', function () {
+                            // select2.jsの更新
+                            initializeSelect2();
+                        });
+
+                        function initializeSelect2() {
+
+                            $('.js-attachSelect2Tag').select2({
+                                tags: true
+                            });
+                        }
+                    });
+                </script>
+            @endpush
+        @endonce
+
     @endif
 </div>
