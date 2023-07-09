@@ -34,6 +34,7 @@ class RecordsTable extends Component
     protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
     private array $tags = [];
     private array $keywords = [];
+    public $totalRecords;
 
     /**
      * 初回リクエストの時はこちらで初期化される
@@ -106,12 +107,19 @@ class RecordsTable extends Component
             $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
         }
 
+
+        $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+            ->search(implode(' ', $this->keywords))->contentsFilter($this->filter)
+            ->with('define.folder');
+        $this->totalRecords = $ledgerRecords->count();
+
         return view('livewire.ledger.records-table'
             , [
                 'ledgerRecords' =>
-                    Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-                        ->search(implode(' ', $this->keywords))->contentsFilter($this->filter)
-                        ->with('define.folder')
+                /*                    Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                                        ->search(implode(' ', $this->keywords))->contentsFilter($this->filter)
+                                        ->with('define.folder')*/
+                    $ledgerRecords
                         ->orderBy('ledger_define_id', 'asc')
                         ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
                         ->simplePaginate($this->perPage),
@@ -206,4 +214,10 @@ class RecordsTable extends Component
             $this->selectedLedgerDefineIds[] = $ledgerDefineId;
         }
     }
+
+    public function lastPage()
+    {
+        return ceil($this->totalRecords / $this->perPage);
+    }
+
 }
