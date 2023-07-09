@@ -1,4 +1,4 @@
-<x-appWithDrawer-layout title="TOP | DocumentCabinet">
+<x-appWithDrawer-layout title="Ledgers">
 {{--
     <x-slot name="header">
         <h2 class="font-semibold text-xl leading-tight">

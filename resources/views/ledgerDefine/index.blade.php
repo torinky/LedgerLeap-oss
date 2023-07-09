@@ -1,8 +1,18 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Ledger Defines') }}
-        </h2>
+<x-appWithDrawer-layout title="Ledger Definitions">
+    {{--
+        <x-slot name="header">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('Ledger Defines') }}
+            </h2>
+        </x-slot>
+    --}}
+    @push('stylesheets')
+        {{--        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">--}}
+        @vite(['resources/sass/ledgerIndex.scss'])
+    @endpush
+    <x-slot name="drawer">
+
+        <livewire:folder.tree/>
     </x-slot>
 
     {{--
@@ -24,4 +34,4 @@
         <livewire:ledger-define.records-table/>
     </div>
 
-</x-app-layout>
+</x-appWithDrawer-layout>

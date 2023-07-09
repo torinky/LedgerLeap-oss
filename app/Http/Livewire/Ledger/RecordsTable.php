@@ -51,6 +51,9 @@ class RecordsTable extends Component
         $this->updateKeyworrdsAndTags($this->search);
 
         $this->currentFolderId = $request->folderId();
+        if ($request->ledgerDefineId()) {
+            $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
+        }
         $this->prepareFolderAsset();
     }
 
@@ -149,9 +152,10 @@ class RecordsTable extends Component
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
+        $this->prepareFolderAsset();
+
         $this->emit('currentFolderChangedByMain', $this->currentFolderId);
 
-        $this->prepareFolderAsset();
     }
 
     public function currentFolderChangedByTree($newFolderId)
@@ -191,6 +195,15 @@ class RecordsTable extends Component
         if (!$currentFolder->isRoot()) {
             $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
             $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
+        }
+    }
+
+    public function toggleLedgerDefineId($ledgerDefineId)
+    {
+        if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
+            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
+        } else {
+            $this->selectedLedgerDefineIds[] = $ledgerDefineId;
         }
     }
 }

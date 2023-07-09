@@ -109,5 +109,6 @@ class SearchRequest extends FormRequest
             $this->isLedgerDefineRequest = true;
             return $ledgerDefineId;
         }
+        return null;
     }
 }

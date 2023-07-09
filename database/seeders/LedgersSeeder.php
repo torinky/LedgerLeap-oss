@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Ledger;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 //use Illuminate\Support\Facades\DB;
@@ -26,6 +25,6 @@ class LedgersSeeder extends Seeder
                     'updated_at' => now(),
                 ]);*/
 
-        Ledger::factory()->count(100)->create();
+        Ledger::factory()->count(1000)->create();
     }
 }
