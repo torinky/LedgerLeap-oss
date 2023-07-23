@@ -50,10 +50,11 @@
                 // ページがロードされた時に入力フォームの幅を初期化
                 adjustInputWidth();
 
-                // キーが押されたときに入力フォームの幅を調整
-                window.addEventListener("keydown", function (event) {
-                    event.preventDefault();
-                    window.adjustWidth(event);
+                // 入力フォームの幅を調整するイベントリスナーはinputs要素に対してのみ設定
+                inputs.forEach((input) => {
+                    input.addEventListener('input', function (event) {
+                        adjustInputWidth(input);
+                    });
                 });
 
                 // Livewireメッセージが処理された際に入力フォームの幅を更新
