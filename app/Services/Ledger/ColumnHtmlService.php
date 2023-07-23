@@ -58,7 +58,9 @@ HTML;
 //            dd($this->initialValue);
         } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
-            $html = '<span class="m-1 ' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="m-1 ' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
+            if (!empty($displayValues)) {
+                $html = '<span class="m-1 ' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="m-1 ' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
+            }
         } else {
             $html = $this->initialValue;
         }
