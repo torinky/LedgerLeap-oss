@@ -130,8 +130,10 @@
 
     <div class="divider"></div>
 
-    <div wire:loading class=" text-center ">
-        <span class="loading loading-dots loading-lg"></span>
+    <div wire:loading style="width:100%;">
+        <div class="flex flex-row justify-center ">
+            <span class="loading loading-dots loading-lg"></span>
+        </div>
     </div>
 
     <div class="">
