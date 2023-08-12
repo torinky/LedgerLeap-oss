@@ -10,3 +10,4 @@
         </option>
     @endforeach
 </select>
+@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror

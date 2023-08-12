@@ -3,3 +3,4 @@
        value="{{$this->content[$columnDefine->id] ?? ''}}"
        class="input input-bordered datepicker"
 />
+@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror

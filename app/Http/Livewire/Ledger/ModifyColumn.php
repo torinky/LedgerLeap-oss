@@ -9,12 +9,12 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ModifyColumn extends CreateColumn
 {
 
     public $deletedContent = [];
-
     public function mount(request $request)
     {
         $this->ledgerId = (int)$request->route('ledgerId');
@@ -31,7 +31,6 @@ class ModifyColumn extends CreateColumn
                     $this->content[$column->id] = [];
                 }
             }
-
         }
     }
 
@@ -40,8 +39,16 @@ class ModifyColumn extends CreateColumn
         return view('livewire.ledger.modify-column');
     }
 
+    public function updated($propertyName)
+    {
+        $this->validateOnly($propertyName);
+    }
+
     public function store(StoreRequest $request)
     {
+//        $this->validate($this->getValidationRules());
+        $this->validate();
+
         foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
             if ($column->type == 'files') {
                 $this->mergeContentFiles($column);
@@ -67,7 +74,7 @@ class ModifyColumn extends CreateColumn
      */
     public function mergeContentFiles(mixed $column): void
     {
-//新規登録したファイルの保存
+        //新規登録したファイルの保存
         $filenames = $this->storeFile($column->id);
         $this->content[$column->id] = $filenames;
 
@@ -81,7 +88,7 @@ class ModifyColumn extends CreateColumn
             foreach ($this->ledgerRecord->content[$column->id] as $originalFilename => $filepath) {
                 if (in_array($filepath, $this->deletedContent[$column->id], true)) {
                     unset($tmpContent[$originalFilename]);
-                    //実態ファイルを消したければここに削除処理を追加
+                    //実体ファイルを消したければここに削除処理を追加
                 }
             }
             //以前保存したファイルとのマージ
@@ -112,6 +119,77 @@ class ModifyColumn extends CreateColumn
             'created_at' => $this->ledgerRecord->created_at,
             'updated_at' => $this->ledgerRecord->updated_at,
         ]);
+    }
+
+    /**
+     * バリデーションルールを取得します。
+     *
+     * @return array
+     */
+    protected function rules(): array
+    {
+        $validationRules = [];
+
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            $columnId = $column->id;
+            $columnName = 'content.' . $columnId;
+            $columnType = $column->type;
+
+            $rules = [];
+
+            // カラムの種類に基づいた共通のバリデーションルールを追加
+            if ($columnType === 'text' || $columnType === 'textarea') {
+                $rules[] = 'string';
+            } elseif ($columnType === 'number') {
+                $rules[] = 'string';
+            } elseif ($columnType === 'YMD') {
+                $rules[] = 'date_format:Y-m-d';
+            } elseif ($column->type === 'chk' && $column->useOptions && !empty($column->options)) {
+                // チェックボックスのバリデーションルールを定義
+                $rules["content.{$column->id}"] = ['in_options', $column->options];
+
+                // 必須項目で少なくとも1つの選択肢をチェックするルールを追加
+                if ($column->required) {
+                    array_unshift($rules["content.{$column->id}"], 'at_least_one_checked');
+                }
+
+            } elseif ($columnType === 'select') {
+                $rules[] = Rule::in($column->options);
+            } elseif ($columnType === 'files') {
+//                $rules[] = 'array';
+            }
+
+            // 必要に応じて追加のバリデーションルールを追加
+            if ($column->required & $column->type !== 'chk') {
+                $rules[] = 'required';
+            }
+
+            // カラムごとのバリデーションルールを配列に追加
+            $validationRules[$columnName] = $rules;
+        }
+
+        return $validationRules;
+    }
+
+    protected function validationAttributes()
+    {
+        $attributes = [];
+
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            $attributes["content.{$column->id}"] = $column->name;
+        }
+
+        return $attributes;
+    }
+
+    protected function messages()
+    {
+        return [
+            'content.*.in_options' => ':attribute が無効な選択肢です。',
+            'content.*.at_least_one_checked' => ':attribute を少なくとも1つ選択してください。',
+
+        ];
+
     }
 
 }

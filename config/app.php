@@ -174,6 +174,8 @@ return [
         App\Providers\JpDatetimeServiceProvider::class,
         Intervention\Image\ImageServiceProvider::class,
 
+        App\Providers\ExtendValidatorServiceProvider::class,
+
     ])->toArray(),
 
     /*

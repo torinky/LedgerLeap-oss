@@ -11,7 +11,7 @@
     name="content[{{$columnDefine->id}}]"
     value="{{ $this->content[$columnDefine->id] ?? '' }}"
 >
-
+@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror
 @once
     @push('scripts')
         <script>

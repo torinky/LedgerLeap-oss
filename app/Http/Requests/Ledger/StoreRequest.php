@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Ledger;
 
+use App\Models\ColumnDefine;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRequest extends FormRequest
@@ -23,8 +24,17 @@ class StoreRequest extends FormRequest
      */
     public function rules()
     {
-        //
-        return [];
+        $columnDefines = ColumnDefine::typeLabels();
+
+        $rules = [
+            // 他のルールを追加する場合はここに記述
+        ];
+
+        foreach ($columnDefines as $columnId => $columnName) {
+            $rules["content.$columnId"] = 'nullable';
+        }
+
+        return $rules;
     }
 
     public function content()

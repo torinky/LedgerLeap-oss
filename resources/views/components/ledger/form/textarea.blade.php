@@ -12,6 +12,7 @@
 >
 {{ $this->content[$columnDefine->id] ?? '' }}
 </textarea>
+@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror
 
 @once
     @push('scripts')
