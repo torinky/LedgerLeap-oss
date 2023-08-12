@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         laravel({
             input: [
-                // 'resources/css/app.css',
+                'resources/css/app.css',
                 'resources/sass/app.scss',
                 'resources/sass/ledgerIndex.scss',
                 'resources/sass/ledgerEdit.scss',
@@ -28,5 +28,9 @@ export default defineConfig({
             '$': 'jQuery',
         }
     },
-
+    server: {
+        hmr: {
+            host: 'localhost'
+        }
+    },
 });
