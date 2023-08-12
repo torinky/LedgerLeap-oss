@@ -18,8 +18,8 @@ class AsColumnArrayJsonTest extends TestCase
         // テストに使用するデータを定義します。
         $data = [
             'key1' => 'value1',
-            'key2' => ['json_encoded_array_{"subkey": "subvalue"}'],
-            'key3' => ['json_encoded_object_{"subkey": "subvalue"}'],
+            'key2' => ['json_encoded_array_{"subkey": "subvalue","subkey2": "日本語でも大丈夫"}'],
+            'key3' => ['json_encoded_object_{"subkey": "subvalue","subkey2": "日本語でも大丈夫"}'],
         ];
 
         // モデルに保存する前にキャストを使用してJSONに変換します。
