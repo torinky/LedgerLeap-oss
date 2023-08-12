@@ -18,7 +18,9 @@ class UpdateController extends Controller
 
         $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();
 
-        $folderRecords = Folder::whereDescendantOf(1)->get();
+        $rootFolder = Folder::root()->get();
+        $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
+        $folderRecords = $rootFolder->merge($folderRecords);
 
         return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords'));
 

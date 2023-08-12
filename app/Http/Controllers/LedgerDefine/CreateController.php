@@ -14,7 +14,7 @@ class CreateController extends Controller
     public function create(CreateRequest $request): \Illuminate\Contracts\View\View
     {
         $rootFolder = Folder::root()->get();
-        $folderRecords = Folder::whereDescendantOf(1)->get();
+        $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
         $folderRecords = $rootFolder->merge($folderRecords);
         $initialFolderId = $request->folderId();
 
