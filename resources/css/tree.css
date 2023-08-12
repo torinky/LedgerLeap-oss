@@ -14,7 +14,7 @@
     font-size: 13px;
     font-style: italic;
     letter-spacing: .4px;
-    color: #a8a8a8;
+    /*color: #a8a8a8;*/
 }
 
 .tree .fa-folder-open, .tree .fa-folder {
