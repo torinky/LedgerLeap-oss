@@ -21,6 +21,9 @@ class SearchRequest extends FormRequest
     protected function prepareForValidation()
     {
         $text = $this->keyword();
+        if (empty($text)) {
+            return;
+        }
         $text = mb_convert_kana($text, 'askV', 'UTF-8');
         $text = preg_replace('/\s+/u', ' ', $text);
 
@@ -110,5 +113,14 @@ class SearchRequest extends FormRequest
             return $ledgerDefineId;
         }
         return null;
+    }
+
+    public function filter()
+    {
+        $filter = $this->input('filter');
+        if (!is_array($filter)) {
+            return [];
+        }
+        return $filter;
     }
 }

@@ -176,6 +176,8 @@ return [
 
         App\Providers\ExtendValidatorServiceProvider::class,
 
+        Maatwebsite\Excel\ExcelServiceProvider::class,
+
     ])->toArray(),
 
     /*
@@ -193,6 +195,7 @@ return [
         // 'Example' => App\Facades\Example::class,
         'ColumnHtml' => \App\Facades\Ledger\ColumnHtml::class,
         'JpDatetime' => \App\Facades\JpDatetime::class,
+        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
     ])->toArray(),
 
 ];

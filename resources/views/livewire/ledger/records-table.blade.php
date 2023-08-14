@@ -168,6 +168,11 @@
                    class="btn btn-outline btn-primary btn-sm relative inline-flex my-2 w-32"
                    target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
                         class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
+                <a href="{{ route('ledger.downloadExcelCSV', [
+                    'ledgerDefineId' => $ledgerRecord->define->id,
+                    'keywords' => $search, 'filter' => $filter]) }}"
+                   class="btn btn-outline btn-secondary btn-sm relative inline-flex my-2"
+                >Download Excel CSV</a>
             </div>
         </div>
         <div class="flex flex-row">
