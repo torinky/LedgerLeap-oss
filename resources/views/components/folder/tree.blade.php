@@ -9,7 +9,7 @@
             <a wire:click="changeCurrentFolder({{$folder->id}})" @class(['bg-secondary-focus/30' => $folder->id == $currentFolderId])>
                 <i class="fa fa-folder-open"></i> {{ $folder->title }}
                 @if($folder->ledgerDefines->count()>0)
-                    <span class="badge badge-info text-info-content">{{ $folder->ledgerDefines->count() }}</span>
+                    <span class="badge badge-info">{{ $folder->ledgerDefines->count() }}</span>
                 @endif
             </a>
             @if($folder->children->isNotEmpty())
