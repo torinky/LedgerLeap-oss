@@ -17,14 +17,12 @@ class AsColumnArrayJsonTest extends TestCase
     {
         // テストに使用するデータを定義します。
         $data = [
-            'key1' => 'value1',
-            'key2' => ['json_encoded_array_{"subkey": "subvalue","subkey2": "日本語でも大丈夫"}'],
-            'key3' => ['json_encoded_object_{"subkey": "subvalue","subkey2": "日本語でも大丈夫"}'],
+            'value1',
+            ["subkey" => "subvalue", "subkey2" => "日本語でも大丈夫"],
         ];
 
         // モデルに保存する前にキャストを使用してJSONに変換します。
         $castedData = (new AsColumnArrayJson())->set(new stdClass(), 'attributes', $data, ['attributes']);
-
         // モデルに保存されるデータを確認します。
         $this->assertIsArray($castedData);
         $this->assertJson(json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE), $castedData['attributes']);

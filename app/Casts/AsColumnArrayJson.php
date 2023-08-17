@@ -28,7 +28,7 @@ class AsColumnArrayJson extends AsJson
             // JSONデコードに失敗した場合はログを出力します。
 //            dd($value,$key,$attributes,$e);
             Log::alert($e);
-            return $content;
+            return null;
         }
 
         // デコードされた連想配列の各要素を処理します。
