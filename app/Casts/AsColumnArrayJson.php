@@ -20,34 +20,41 @@ class AsColumnArrayJson extends AsJson
      */
     public function get($model, $key, $value, $attributes)
     {
+        $content = $attributes[$key] ?? $value;
         try {
             // JSON文字列をデコードして連想配列に変換します。
-            $content = json_decode($attributes[$key], true, 512, JSON_THROW_ON_ERROR);
+            $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
+//            dd($value,$key,$attributes,$e);
             Log::alert($e);
-            return null;
+            return $content;
         }
 
         // デコードされた連想配列の各要素を処理します。
-        foreach ($content as $index => $item) {
-            if (empty($content[$index])) {
-                // 空文字列の場合は空文字列として扱います。
-                $content[$index] = '';
-            } elseif (strpos($item, 'json_encoded_array_') !== false) {
-                // json_encoded_array_ で始まる場合は、JSONエンコードされた配列としてデコードします。
-                $temp = substr($item, 19);
-                $temp = stripslashes($temp);
-                $content[$index] = json_decode($temp, true);
-            } elseif (strpos($item, 'json_encoded_object_') !== false) {
-                // json_encoded_object_ で始まる場合は、JSONエンコードされたオブジェクトとしてデコードします。
-                $temp = substr($item, 20);
-                $temp = stripslashes($temp);
-                $content[$index] = json_decode($temp);
+        if (is_array($content) || is_object($content)) {
+            foreach ($content as $index => $item) {
+                $content[$index] = $this->getContent($item);
             }
         }
 
         return $content;
+    }
+
+    /**
+     * @param mixed $item
+     * @return mixed|string
+     */
+    public function getContent(mixed $item): mixed
+    {
+        if (empty($item)) {
+            // 空文字列の場合は空文字列として扱います。
+            $item = '';
+        } elseif (strpos($item, "___serialized___") !== false) {
+            $temp = substr($item, 16);
+            $item = unserialize($temp);
+        }
+        return $item;
     }
 
     /**
@@ -61,21 +68,35 @@ class AsColumnArrayJson extends AsJson
      */
     public function set($model, $key, $value, $attributes): array
     {
-        $content = $value;
-        foreach ($content as $index => $item) {
-            // カラムがヌルになるとcreate時に削除され、カラムがずれてしまうため明示的に空文字を入れます。
-            if (empty($content[$index])) {
-                $content[$index] = '';
-            } elseif (is_array($content[$index])) {
-                // 配列の場合は json_encoded_array_ で始まる文字列に変換します。
-                $content[$index] = 'json_encoded_array_' . addslashes(json_encode($item,
-                        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE));
-            } elseif (is_object($content[$index])) {
-                // オブジェクトの場合は json_encoded_object_ で始まる文字列に変換します。
-                $content[$index] = 'json_encoded_object_' . addslashes(json_encode($item,
-                        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE));
+        $content = $value ?? $attributes[$key];
+        if (is_array($content)) {
+            // 1階層目はjson配列にする
+            $content = array_values($content);
+            foreach ($content as $index => $item) {
+                $content[$index] = $this->setContent($item);
             }
         }
-        return [$key => json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)];
+
+        return [$key => json_encode($content,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
+        ];
     }
+
+    /**
+     * @param mixed $item
+     * @return mixed|string
+     */
+    public function setContent(mixed $item): mixed
+    {
+        if (empty($item)) {
+            $item = '';
+        } elseif (is_array($item) || is_object($item)) {
+//            Mroongaの仕様でjson2階層目以降は第1階層に展開されて保存されてしまうため、serializeする
+            $item = "___serialized___" . serialize($item);
+        }
+
+        return $item;
+
+    }
+
 }

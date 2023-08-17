@@ -21,8 +21,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             UsersSeeder::class,
-            LedgersSeeder::class,
             LedgerDefineSeeder::class,
+            LedgersSeeder::class,
             FolderSeeder::class,
             TagSeeder::class,
         ]);

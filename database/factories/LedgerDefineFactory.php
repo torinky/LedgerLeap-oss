@@ -19,7 +19,37 @@ class LedgerDefineFactory extends Factory
     {
         $columnDefineLoop = random_int(3, 20);
         $columnDefine = [];
-        for ($i = 0; $i < $columnDefineLoop; $i++) {
+        $columnDefine[] = new ColumnDefine(
+            0,
+            $this->faker->realText(10),
+            'chk',
+            1,
+            $this->faker->words(random_int(3, 10)),
+            $this->faker->boolean(),
+            $this->faker->boolean(),
+            $this->faker->boolean()
+        );
+        $columnDefine[] = new ColumnDefine(
+            1,
+            $this->faker->realText(10),
+            'chk',
+            2,
+            $this->faker->words(random_int(3, 10)),
+            $this->faker->boolean(),
+            $this->faker->boolean(),
+            $this->faker->boolean()
+        );
+        /*        $columnDefine[]=new ColumnDefine(
+                    1,
+                    $this->faker->realText(10),
+                    'files',
+                    2,
+                    [],
+                    $this->faker->boolean(),
+                    $this->faker->boolean(),
+                    $this->faker->boolean()
+                );*/
+        for ($i = 2; $i < $columnDefineLoop; $i++) {
             $tempColumnDefine = new ColumnDefine(
                 $i,
                 $this->faker->realText(10),

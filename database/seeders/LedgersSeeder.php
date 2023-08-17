@@ -25,6 +25,9 @@ class LedgersSeeder extends Seeder
                     'updated_at' => now(),
                 ]);*/
 
+        /*        DB::enableQueryLog();
+                Ledger::factory()->count(10)->create();
+                dd(DB::getQueryLog());*/
         Ledger::factory()->count(1000)->create();
     }
 }

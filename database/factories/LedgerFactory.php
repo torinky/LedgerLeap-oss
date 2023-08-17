@@ -31,8 +31,8 @@ class LedgerFactory extends Factory
             'ledger_define_id' => $this->faker->numberBetween(1, 10),
             'content' =>
                 [
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
+                    [$this->faker->realText(10), $this->faker->realText(10), $this->faker->realText(10)],
+                    [$this->faker->realText(10) => $this->faker->realText(10), $this->faker->realText(10) => $this->faker->realText(10),],
                     $this->faker->realText(10),
                     $this->faker->realText(10),
                     $this->faker->realText(10),
