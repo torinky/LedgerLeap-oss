@@ -46,7 +46,6 @@ class ModifyColumn extends CreateColumn
 
     public function store(StoreRequest $request)
     {
-//        $this->validate($this->getValidationRules());
         $this->validate();
 
         foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
@@ -185,8 +184,8 @@ class ModifyColumn extends CreateColumn
     protected function messages()
     {
         return [
-            'content.*.in_options' => ':attribute が無効な選択肢です。',
-            'content.*.at_least_one_checked' => ':attribute を少なくとも1つ選択してください。',
+            'content.*.in_options' => __(":attribute is not valid value"),
+            'content.*.at_least_one_checked' => __("select at least one :attribute"),
 
         ];
 

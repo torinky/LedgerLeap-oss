@@ -30,9 +30,6 @@ class CreateColumn extends Component
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::where('ledger_defines.id', $this->ledgerDefineId)->first();
         $this->ledgerRecord = null;
-        for ($i = 0, $iMax = count($this->ledgerDefineRecord->column_define); $i < $iMax; $i++) {
-            $this->content[$i] = '';
-        }
         foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
             if ($column->type == 'files' || $column->type == 'chk') {
                 $this->content[$column->id] = [];
