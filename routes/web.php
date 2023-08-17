@@ -1,10 +1,9 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Folder\CreateController as FolderCreateController;
 use App\Http\Controllers\Folder\UpdateController as FolderUpdateController;
 use App\Http\Controllers\Ledger\CreateController as LedgerCreateController;
+use App\Http\Controllers\Ledger\ImportController;
 use App\Http\Controllers\Ledger\IndexController as LedgerIndexController;
 use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
 use App\Http\Controllers\Ledger\UpdateController;
@@ -12,6 +11,8 @@ use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateCont
 use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
 use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
 
 
 /*
@@ -95,6 +96,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ledger/edit/{ledgerId}', [UpdateController::class, 'edit'])->name('ledger.edit')
         ->where('ledgerId', '[0-9]+');
+
+    Route::get('/ledger/import/{ledgerDefineId}', [ImportController::class, 'showUploadForm'])->name('ledger.import.show')
+        ->where('ledgerDefineId', '[0-9]+');
+    Route::post('/ledger/import', [ImportController::class, 'importExcelCSV'])->name('ledger.import');
 
     Route::put('/ledger/{ledgerId}', [UpdateController::class, 'update'])->name('ledger.update')
         ->where('ledgerId', '[0-9]+');

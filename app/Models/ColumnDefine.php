@@ -18,6 +18,10 @@ class ColumnDefine
         "YMD",          // 日付（年月日）
         'files',        // ファイル選択
     ];
+    static $shouldConvert2JsonTypes = [
+        'files',        // ファイル選択
+        "chk",          // チェックボックス
+    ];
 
     // プロパティの定義
     public $id;                 // ID
@@ -145,4 +149,36 @@ class ColumnDefine
             "files" => __('select file'), // ファイル選択
         ];
     }
+
+    /**
+     * カラム値を適切な形式に変換する
+     *
+     * @param mixed $columnValue
+     * @return mixed
+     */
+    public function convertColumnValue2Text($columnValue)
+    {
+        if (!empty($columnValue) && in_array($this->type, self::$shouldConvert2JsonTypes)) {
+            return json_encode($columnValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        return $columnValue;
+    }
+
+    /**
+     * カラム値を適切な形式に戻す
+     *
+     * @param string $convertedValue
+     * @return mixed
+     */
+    public function restoreColumnValueFromText($convertedValue)
+    {
+        if (in_array($this->type, self::$shouldConvert2JsonTypes)) {
+            $decodedValue = json_decode($convertedValue, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decodedValue;
+            }
+        }
+        return $convertedValue;
+    }
+
 }

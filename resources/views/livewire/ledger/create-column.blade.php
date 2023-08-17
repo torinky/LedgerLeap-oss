@@ -66,11 +66,14 @@
 
                 <div
                     class="card mx-auto lg:w-1/2 bg-neutral text-neutral-content justify-center opacity-30 hover:opacity-100 transition-opacity inset-x-0 fixed bottom-0">
-                    <div class="card-body items-center text-center">
+                    <div class="card-body items-center text-center space-x-5">
                         <div class="card-actions justify-end">
                             <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
                                     class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
-                            <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                            <a href="{{route('ledger.import.show',['ledgerDefineId'=>$ledgerDefineRecord->id])}}"
+                               class="btn btn-outline btn-info"><i
+                                    class="fa-solid fa-file-csv mr-2"></i>{{__('import from CSV')}}</a>
+                            <a href="#" class="btn btn-outline btn-info" onclick="window.close();"><i
                                     class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
                         </div>
                     </div>

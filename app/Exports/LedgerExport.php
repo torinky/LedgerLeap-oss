@@ -36,16 +36,14 @@ class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue
     {
         $records = [];
 
+
         foreach ($this->query->cursor() as $record) {
             $row = [];
 
             foreach ($this->columnDefines as $columnDefine) {
                 $columnValue = $record->content[$columnDefine->id] ?? '';
 
-                // カラム値が配列の場合はJSONに変換
-                if (is_array($columnValue)) {
-                    $columnValue = json_encode($columnValue);
-                }
+                $columnValue = $columnDefine->convertColumnValue2Text($columnValue);
 
                 $row[] = $columnValue;
             }
