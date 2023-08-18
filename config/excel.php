@@ -42,7 +42,7 @@ return [
         |
         */
         'csv' => [
-            'delimiter' => "\t",
+            'delimiter' => ',',
             'enclosure' => '"',
             'line_ending' => PHP_EOL,
             'use_bom' => false,

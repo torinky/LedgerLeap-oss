@@ -5,10 +5,11 @@ namespace App\Exports;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue
+class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue, WithCustomCsvSettings
 {
     use Exportable;
 
@@ -92,4 +93,19 @@ class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue
     {
         return $record;
     }
+
+    public function getCsvSettings(): array
+    {
+        return [
+            'delimiter' => ',',
+            'enclosure' => '"',
+            'line_ending' => PHP_EOL,
+            'use_bom' => false,
+            'include_separator_line' => false,
+            'excel_compatibility' => false,
+            'output_encoding' => '',
+            'test_auto_detect' => true,
+        ];
+    }
+
 }

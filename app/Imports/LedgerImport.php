@@ -6,9 +6,101 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\OnEachRow;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithBatchInserts;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
+use Maatwebsite\Excel\Concerns\WithGroupedHeadingRow;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithUpserts;
+use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 use Maatwebsite\Excel\Row;
 
-class LedgerImport implements OnEachRow
+class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedHeadingRow, WithCustomCsvSettings,
+    WithBatchInserts, WithChunkReading
+{
+    protected $legerDefine;
+    protected $columnDefines;
+
+    /**
+     * コンストラクタ
+     *
+     * @param array $columnDefines Ledgerモデルのカラム定義情報
+     */
+    public function __construct(LedgerDefine $ledgerDefine)
+    {
+        $this->legerDefine = $ledgerDefine;
+        $this->columnDefines = $ledgerDefine->column_define;
+        HeadingRowFormatter::default('none');
+
+    }
+
+    /**
+     * @return string|array
+     */
+    public function uniqueBy()
+    {
+        return ['id', 'content'];
+    }
+
+    public function model(array $row)
+    {
+        return new Ledger([
+            'id' => $row['[[[id]]]'] ?? '',
+            'updated_at' => $row['[[[updated_at]]]'] ?? '',
+            'created_at' => $row['[[[created_at]]]'] ?? '',
+            'modifier_id' => $row['[[[modifier_id]]]'] ?? Auth::user()->id,
+            'creator_id' => $row['[[[creator_id]]]'] ?? Auth::user()->id,
+            'ledger_define_id' => $this->legerDefine->id,
+            'content' => $this->generateLedgerContent($row),
+        ]);
+
+    }
+
+    /**
+     * Ledgerモデルのcontentを更新
+     *
+     * @param array $contentData コンテンツ行のデータ
+     * @return array
+     */
+    protected function generateLedgerContent($contentData)
+    {
+        $content = [];
+
+        // ヘッダ行の情報を元に各カラムのデータを組み立て
+        foreach ($this->columnDefines as $columnDefine) {
+            $columnValue = $contentData[$columnDefine->name] ?? null;
+            $content[$columnDefine->id] = $columnDefine->restoreColumnValueFromText($columnValue);
+        }
+        // コンテンツを設定
+        return $content;
+    }
+
+    public function getCsvSettings(): array
+    {
+        return [
+            'delimiter' => null,
+            'enclosure' => '"',
+            'escape_character' => '\\',
+            'contiguous' => false,
+            'input_encoding' => 'UTF-8',
+
+        ];
+    }
+
+    public function batchSize(): int
+    {
+        return 1000;
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
+    }
+
+}
+
+class LedgerRowImport implements OnEachRow, WithCustomCsvSettings
 {
     /**
      * @var array $columnDefines Ledgerモデルのカラム定義情報
@@ -153,10 +245,16 @@ class LedgerImport implements OnEachRow
     public function getCsvSettings(): array
     {
         return [
-            'delimiter' => "\t",
+            /*            'delimiter' => "\t",
+                        'enclosure' => '"',
+                        'escape_character' => '\\',
+                        'contiguous' => true,
+                        'input_encoding' => 'UTF-8',*/
+
+            'delimiter' => null,
             'enclosure' => '"',
             'escape_character' => '\\',
-            'contiguous' => true,
+            'contiguous' => false,
             'input_encoding' => 'UTF-8',
 
         ];
