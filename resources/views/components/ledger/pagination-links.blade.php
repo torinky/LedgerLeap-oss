@@ -8,16 +8,16 @@
     {{-- ページネーションがある場合にのみ表示 --}}
     @if ($paginator->hasPages())
         {{-- ページネーションナビゲーション --}}
-        <nav role="navigation" aria-label="ページネーション" class="">
+        <nav role="navigation" aria-label="pagination">
             <div class="join">
                 {{-- 現在のページが最初のページでない場合に表示 --}}
                 @if (!$paginator->onFirstPage())
                     {{-- 最初のページに移動するボタン --}}
-                    <button wire:click="gotoPage(1)" class="join-item btn">
+                    <button wire:key="topPage-{{$position}}" wire:click="gotoPage(1)" class="join-item btn">
                         <i class="fa-sharp fa-solid fa-backward-step"></i>
                     </button>
                     {{-- 前のページに移動するボタン --}}
-                    <button wire:click="previousPage" class="join-item btn">
+                    <button wire:key="backPage-{{$position}}" wire:click="previousPage" class="join-item btn">
                         <i class="fa-solid fa-play fa-flip-horizontal px-3"></i>
                     </button>
                 @endif
@@ -30,7 +30,8 @@
 
                 {{-- 現在のページより前の3つのページボタンを表示 --}}
                 @for ($i = $startPage; $i < $endPage; $i++)
-                    <button wire:click="gotoPage({{ $i }})" class="join-item btn">{{ $i }}</button>
+                    <button wire:key="page-{{$i}}-{{$position}}" wire:click="gotoPage({{ $i }})"
+                            class="join-item btn">{{ $i }}</button>
                 @endfor
 
                 {{-- 現在のページを表示 (アクティブなスタイルを適用) --}}
@@ -47,15 +48,17 @@
                     @endphp
 
                     @for ($i = $startPage; $i <= $endPage; $i++)
-                        <button wire:click="gotoPage({{ $i }})" class="join-item btn">{{ $i }}</button>
+                        <button wire:key="page-{{$i}}-{{$position}}" wire:click="gotoPage({{ $i }})"
+                                class="join-item btn">{{ $i }}</button>
                     @endfor
 
                     {{-- 次のページに移動するボタン --}}
-                    <button wire:click="nextPage" class="join-item btn">
+                    <button wire:key="nextPage-{{$position}}" wire:click="nextPage" class="join-item btn">
                         <i class="fa-solid fa-play px-3"></i>
                     </button>
                     {{-- 最後のページに移動するボタン --}}
-                    <button wire:click="gotoPage({{ $lastPage }})" class="join-item btn">
+                    <button wire:key="lastPage-{{$position}}" wire:click="gotoPage({{ $lastPage }})"
+                            class="join-item btn">
                         <i class="fa-sharp fa-solid fa-forward-step"></i>
                     </button>
                 @endif

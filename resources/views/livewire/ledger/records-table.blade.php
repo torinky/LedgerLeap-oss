@@ -139,7 +139,7 @@
     <div class="">
         @if($ledgerRecords->count() > 0)
 
-            {!! $ledgerRecords->links('components.ledger.pagination-links') !!}
+            {!! $ledgerRecords->links('components.ledger.pagination-links',['position'=>'top']) !!}
 
             @php($defineId = null)
             @foreach($ledgerRecords as $lKey=> $ledgerRecord)
@@ -285,7 +285,7 @@
             </table>
         </div>
     </div>
-    {!! $ledgerRecords->links('components.ledger.pagination-links') !!}
+    {!! $ledgerRecords->links('components.ledger.pagination-links',['position'=>'bottom']) !!}
     @else
         {{--
                     <x-ledger.alert :message="__('Select Ledger or Folder')">
