@@ -13,3 +13,7 @@
         width: calc(33.33% - 0.5em);
     }
 }
+
+.filepond--panel-root {
+    background: inherit;
+}

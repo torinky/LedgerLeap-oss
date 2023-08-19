@@ -7,12 +7,11 @@
 <textarea
     wire:model.lazy="content.{{ $columnDefine->id }}"
     id="content[{{$columnDefine->id}}]"
-    class="adjustWidth adjustHeight input input-bordered"
+    class="adjustWidth adjustHeight input input-bordered @if($columnDefine->required) input-accent @endif"
     name="content[{{$columnDefine->id}}]"
 >
 {{ $this->content[$columnDefine->id] ?? '' }}
 </textarea>
-@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror
 
 @once
     @push('scripts')

@@ -1,6 +1,6 @@
 <select wire:model="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
         name="content[{{$columnDefine->id}}]"
-        class="select"
+        class="select @if($columnDefine->required) input-accent @endif"
 >
     <option disabled>Pick your choice</option>
 
@@ -10,4 +10,3 @@
         </option>
     @endforeach
 </select>
-@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror

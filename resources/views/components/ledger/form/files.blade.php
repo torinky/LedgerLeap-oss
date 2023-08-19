@@ -1,5 +1,5 @@
 <div
-    class="basis-1/2"
+    class="@if($columnDefine->required) card bg-accent @endif"
     wire:ignore
     x-data
     x-init="() => {
@@ -79,5 +79,6 @@
     "
 >
     <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"
-           x-ref="content_{{$columnDefine->id}}">
+           x-ref="content_{{$columnDefine->id}}"
+    >
 </div>

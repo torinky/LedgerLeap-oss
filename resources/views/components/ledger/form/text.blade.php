@@ -7,11 +7,11 @@
 <input
     wire:model.lazy="content.{{ $columnDefine->id }}"
     id="content[{{$columnDefine->id}}]"
-    class="adjustWidth input input-bordered"
+    class="adjustWidth input input-bordered @if($columnDefine->required) input-accent @endif"
     name="content[{{$columnDefine->id}}]"
     value="{{ $this->content[$columnDefine->id] ?? '' }}"
+    {{--    @if($columnDefine->required) required="required" @endif--}}
 >
-@error('content.' . $columnDefine->id) <span class="error">{{ $message }}</span> @enderror
 @once
     @push('scripts')
         <script>
