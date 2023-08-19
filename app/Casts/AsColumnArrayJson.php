@@ -1,9 +1,10 @@
-<?php
+<?php /** @noinspection UnknownInspectionInspection */
 
 namespace App\Casts;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use JsonException;
 
 class AsColumnArrayJson extends AsJson
@@ -15,10 +16,9 @@ class AsColumnArrayJson extends AsJson
      * @param string $key 属性のキー
      * @param mixed $value 属性の値
      * @param array $attributes モデルの全ての属性
-     * @return array|mixed
-     * @throws JsonException
+     * @return mixed|null
      */
-    public function get($model, $key, $value, $attributes)
+    public function get($model, $key, $value, $attributes): mixed
     {
         $content = $attributes[$key] ?? $value;
         try {
@@ -44,13 +44,14 @@ class AsColumnArrayJson extends AsJson
     /**
      * @param mixed $item
      * @return mixed|string
+     * @noinspection UnserializeExploitsInspection
      */
     public function getContent(mixed $item): mixed
     {
         if (empty($item)) {
             // 空文字列の場合は空文字列として扱います。
             $item = '';
-        } elseif (strpos($item, "___serialized___") !== false) {
+        } elseif (Str::startsWith($item, "___serialized___")) {
             $temp = substr($item, 16);
             $item = unserialize($temp);
         }
@@ -65,6 +66,7 @@ class AsColumnArrayJson extends AsJson
      * @param mixed $value 属性の値
      * @param array $attributes モデルの全ての属性
      * @return array
+     * @throws JsonException
      */
     public function set($model, $key, $value, $attributes): array
     {
@@ -77,8 +79,7 @@ class AsColumnArrayJson extends AsJson
             }
         }
 
-        return [$key => json_encode($content,
-            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
+        return [$key => json_encode($content, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
         ];
     }
 
