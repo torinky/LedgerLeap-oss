@@ -1,13 +1,14 @@
 @php
     $currentPage = $paginator->currentPage();
+    $startCount = ($currentPage-1) * $this->perPage + 1;
     $lastPage = $this->lastPage();
 @endphp
 
-<div>
+<div class="grid justify-items-center">
     {{-- ページネーションがある場合にのみ表示 --}}
     @if ($paginator->hasPages())
         {{-- ページネーションナビゲーション --}}
-        <nav role="navigation" aria-label="ページネーション" class="flex justify-center my-5">
+        <nav role="navigation" aria-label="ページネーション" class="">
             <div class="join">
                 {{-- 現在のページが最初のページでない場合に表示 --}}
                 @if (!$paginator->onFirstPage())
@@ -61,4 +62,12 @@
             </div>
         </nav>
     @endif
+    <div role="record count" aria-label="record count" class="">
+        {{$startCount}} 〜 @if( ($startCount + $this->perPage -1)<=$this->totalRecords)
+            {{$startCount + $this->perPage - 1}}
+        @else
+            {{$this->totalRecords}}
+        @endif / {{$this->totalRecords}} {{__('Records')}}
+    </div>
+
 </div>
