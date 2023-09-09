@@ -5,22 +5,27 @@ namespace App\Imports;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithGroupedHeadingRow;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithUpserts;
+use Maatwebsite\Excel\Events\AfterImport;
+use Maatwebsite\Excel\Events\BeforeImport;
 use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 use Maatwebsite\Excel\Row;
 
 class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedHeadingRow, WithCustomCsvSettings,
-    WithBatchInserts, WithChunkReading
+    WithBatchInserts, WithChunkReading, WithEvents
 {
     protected $legerDefine;
     protected $columnDefines;
+    private $currentRows = 0;
 
     /**
      * コンストラクタ
@@ -31,6 +36,8 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
     {
         $this->legerDefine = $ledgerDefine;
         $this->columnDefines = $ledgerDefine->column_define;
+        $this->id = $ledgerDefine->id;
+//        デフォルトだと日本語の列名が無視される
         HeadingRowFormatter::default('none');
 
     }
@@ -45,6 +52,9 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
 
     public function model(array $row)
     {
+        $this->currentRows++;
+        Cache::forever("current_rows_{$this->id}", $this->currentRows);
+//dd($this->currentRows);
         return new Ledger([
             'id' => $row['[[[id]]]'] ?? '',
             'updated_at' => $row['[[[updated_at]]]'] ?? '',
@@ -96,6 +106,40 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
     public function chunkSize(): int
     {
         return 1000;
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            BeforeImport::class => function (BeforeImport $event) {
+                $totalRows = $event->getReader()->getTotalRows();
+
+                if (filled($totalRows)) {
+                    Cache::forever("total_rows_{$this->id}", array_values($totalRows)[0]);
+                    Cache::forever("start_date_{$this->id}", now()->unix());
+                }
+            },
+            AfterImport::class => function (AfterImport $event) {
+                Cache::put(["end_date_{$this->id}" => now()], now()->addMinute());
+                Cache::forget("total_rows_{$this->id}");
+                Cache::forget("start_date_{$this->id}");
+                Cache::forget("current_rows_{$this->id}");
+            },
+        ];
+    }
+
+    /*    public function onRow(Row $row)
+        {
+            $rowIndex = $row->getIndex();
+            $row      = array_map('trim', $row->toArray());
+            cache()->forever("current_row_{$this->id}", $rowIndex);
+            // sleep(0.2);
+
+            Product::create([ ... ]);
+        }*/
+    public function getRowCount(): int
+    {
+        return $this->currentRows;
     }
 
 }

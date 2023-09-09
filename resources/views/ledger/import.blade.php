@@ -19,6 +19,7 @@
             <input type="hidden" name="ledger_define_id" value="{{$ledgerDefineId}}">
             <button type="submit">アップロード</button>
         </form>
+        <livewire:ledger.import/>
     </div>
 
 </x-app-layout>

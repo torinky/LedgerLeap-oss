@@ -1,5 +1,5 @@
 <div
-    class="@if($columnDefine->required) card bg-accent @endif"
+    class=" card @if($columnDefine->required) bg-accent @else bg-base-200 @endif"
     wire:ignore
     x-data
     x-init="() => {
