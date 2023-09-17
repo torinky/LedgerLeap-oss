@@ -187,6 +187,8 @@ class RecordsTable extends Component
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
 
+        $this->selectedLedgerDefineIds = [];
+
         // フォルダーアセットを再準備
         $this->prepareFolderAsset();
 
@@ -204,6 +206,8 @@ class RecordsTable extends Component
     {
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
+
+        $this->selectedLedgerDefineIds = [];
 
         // フォルダーアセットを再準備
         $this->prepareFolderAsset();
