@@ -19,6 +19,7 @@ return new class extends Migration {
 //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
 //            $table->foreignId('ledger_define_id')->constrained('ledger_defines')->cascadeOnDelete();
             $table->unsignedInteger('ledger_define_id')->index();
+            $table->index(['ledger_id', 'ledger_define_id']);  // 複合インデックスを設定
 //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
 //            $table->foreignId('user_id')->constrained('users');
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる

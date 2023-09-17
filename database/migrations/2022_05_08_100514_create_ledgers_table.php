@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->engine = 'Mroonga';
             $table->id();
             $table->unsignedBigInteger('ledger_define_id')->index();
-
+            $table->index(['id', 'ledger_define_id']);  // 複合インデックスを設定
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
 //            $table->foreignId('user_id')->constrained('users');
             $table->unsignedInteger('creator_id')->index();

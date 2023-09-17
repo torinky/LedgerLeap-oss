@@ -15,6 +15,7 @@ return new class extends Migration {
         Schema::create('ledger_defines', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('folder_id')->index();
+            $table->index(['id', 'folder_id']);  // 複合インデックスを設定
             $table->string('title', 500)->index();
             $table->json('column_define');
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
