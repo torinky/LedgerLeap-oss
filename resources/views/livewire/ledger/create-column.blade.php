@@ -68,7 +68,7 @@
 
 
                     <div
-                        class="card mx-auto lg:w-1/2 bg-neutral text-neutral-content justify-center opacity-30 hover:opacity-100 transition-opacity inset-x-0 fixed bottom-0">
+                        class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">
                         <div class="card-body items-center text-center space-x-5">
                             <div class="card-actions justify-end">
                                 <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
