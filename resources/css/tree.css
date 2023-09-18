@@ -17,9 +17,11 @@
     /*color: #a8a8a8;*/
 }
 
+/*
 .tree .fa-folder-open, .tree .fa-folder {
     color: #007bff;
 }
+*/
 
 .tree .fa-html5 {
     color: #f21f10;
@@ -41,7 +43,7 @@
     display: inherit;
 }
 
-.tree ul li:before {
+.tree ul li:not(.root):before {
     position: absolute;
     top: 15px;
     left: 0;
@@ -52,7 +54,7 @@
     background-color: #666;
 }
 
-.tree ul li:after {
+.tree ul li:not(.root):after {
     position: absolute;
     top: 0;
     bottom: 0;
