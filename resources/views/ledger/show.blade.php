@@ -40,7 +40,7 @@
     </div>
 
     <div
-        class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-neutral-content justify-center opacity-30 hover:opacity-100 transition-opacity inset-x-0 fixed bottom-3">
+        class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">
         <div class="card-body items-center text-center">
             <div class="card-actions justify-center">
                 <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
