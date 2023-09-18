@@ -121,9 +121,9 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
             },
             AfterImport::class => function (AfterImport $event) {
                 Cache::put(["end_date_{$this->id}" => now()], now()->addMinute());
-                Cache::forget("total_rows_{$this->id}");
-                Cache::forget("start_date_{$this->id}");
-                Cache::forget("current_rows_{$this->id}");
+//                Cache::forget("total_rows_{$this->id}");
+//                Cache::forget("start_date_{$this->id}");
+//                Cache::forget("current_rows_{$this->id}");
             },
         ];
     }

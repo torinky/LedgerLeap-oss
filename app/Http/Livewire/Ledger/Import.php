@@ -4,7 +4,6 @@ namespace App\Http\Livewire\Ledger;
 
 use App\Imports\LedgerImport;
 use App\Models\LedgerDefine;
-use Illuminate\Cache\;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
@@ -20,7 +19,6 @@ class Import extends Component
     public $importFile;
     public $batchId;
     public $importing = false;
-    public $importFilePath;
     public $importFinished = false;
     /**
      * @var |mixed
@@ -65,23 +63,13 @@ class Import extends Component
         $this->importing = true;
         $this->importFinished = false;
         $this->emit('refreshComponent');
-//        return;
         // ファイルアップロードのバリデーションなどを行う必要があるかもしれません
 
 //        $file = $request->file('csv_file');
 
 
-        /*        $ledgerDefine = LedgerDefine::where('id', $request->input('ledger_define_id'))
-                    ->first();*/
         $import = new LedgerImport($this->ledgerDefine);
 
-
-//        $columnDefines= $ledgerDefine->column_define;
-
-        // カラム定義を取得して、適切な変換ロジックを適用
-        /*        foreach ($columnDefines as $columnDefine) {
-                    $import->applyColumnMapping($columnDefine->id, $columnDefine->restoreColumnValue($columnDefine->id));
-                }*/
 
         // maatwebsite/excel パッケージを使用してインポートを実行
         Excel::import($import, $this->importFile, null, \Maatwebsite\Excel\Excel::CSV);
