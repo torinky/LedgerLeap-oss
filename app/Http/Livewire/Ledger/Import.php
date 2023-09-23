@@ -4,6 +4,7 @@ namespace App\Http\Livewire\Ledger;
 
 use App\Imports\LedgerImport;
 use App\Models\LedgerDefine;
+use Illuminate\Cache\;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
@@ -20,11 +21,20 @@ class Import extends Component
     public $batchId;
     public $importing = false;
     public $importFinished = false;
+    public $importMode = LedgerImport::MODE_UPDATE;
     /**
      * @var |mixed
      */
     public $currentRows = 0;
     protected $listeners = ['refreshComponent' => '$refresh'];
+    /**
+     * @var |mixed
+     */
+    public mixed $insertRows;
+    /**
+     * @var |mixed
+     */
+    public mixed $updateRows;
 
     public function mount(Request $request)
     {
@@ -42,6 +52,8 @@ class Import extends Component
     {
         $this->totalRows = Cache::get('total_rows_' . $this->ledgerDefine->id);
         $this->currentRows = Cache::get('current_rows_' . $this->ledgerDefine->id);
+        $this->insertRows = Cache::get('insert_rows_' . $this->ledgerDefine->id);
+        $this->updateRows = Cache::get('update_rows_' . $this->ledgerDefine->id);
 //        $this->importFinished = $this->importBatch->finished();
         $this->importFinished = Cache::has("end_date_" . $this->ledgerDefine->id) && Cache::get("end_date_" . $this->ledgerDefine->id) < now();
 
@@ -68,7 +80,7 @@ class Import extends Component
 //        $file = $request->file('csv_file');
 
 
-        $import = new LedgerImport($this->ledgerDefine);
+        $import = new LedgerImport($this->ledgerDefine, $this->importMode);
 
 
         // maatwebsite/excel パッケージを使用してインポートを実行

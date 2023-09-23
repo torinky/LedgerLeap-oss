@@ -1,41 +1,58 @@
+@php use App\Imports\LedgerImport; @endphp
 <div class="grid justify-items-center mt-10">
 
     <div class="card w-1/2 bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="card-title">{{__('CSV File Upload')}}</h2>
             <p>
-            @if(!$importing && !$importFinished)
-                {{__('Select CSV File.')}}
+                @if(!$importing && !$importFinished)
+                    {{__('import to ')}}「{{$ledgerDefine->title}}」<br/>
+            {{__('Select CSV File.')}}
             @endif
+
             @if($importing && !$importFinished)
                 <div wire:poll="updateImportProgress">
                     {{__('Importing...please wait.')}}
                 </div>
-                @endif
-                @if($importFinished)
-                    {{__('Finished importing.')}} {{$currentRows}} {{__('records updated/inserted.')}}
+            @endif
+
+            @if($importFinished)
+                {{__('Finished importing.')}}<br/>
+                {{$updateRows??0}} {{__('records updated.')}} / {{$insertRows??0}} {{__('records inserted.')}}
                 @endif
                 </p>
                 <form wire:submit.prevent="importExcelCSV" enctype="multipart/form-data">
                     @csrf
                     <div class="grid justify-items-center space-y-5 my-5">
-                        <div class="form-control w-full max-w-xs">
-                            <label class="label">
-                                <span class="label-text">{{__('Upload mode')}}</span>
-                                {{--                            <span class="label-text-alt">Alt label</span>--}}
+                        <div class="form-control w-full max-w-md">
+                            <label class="label cursor-pointer">
+                        <span class="label-text">
+                            <div class="tooltip"
+                                 data-tip="[[id]]列で特定できるレコードは更新、その他は新規登録します">
+                                <i class="fas fa-question-circle"></i></div>
+                            {{__("update and insert")}}
+                        </span>
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                       value="{{LedgerImport::MODE_UPDATE}}"/>
                             </label>
-                            <select class="select select-bordered">
-                                <option disabled selected>{{__('Pick one')}}</option>
-                                <option>{{__("update and insert")}}</option>
-                                <option>{{__("destroy ledger and insert as new record")}}</option>
-                                <option>{{__("insert as new record")}}</option>
-                            </select>
-                            {{--
-                                                    <label class="label">
-                                                        <span class="label-text-alt">Alt label</span>
-                                                        <span class="label-text-alt">Alt label</span>
-                                                    </label>
-                            --}}
+                            <label class="label cursor-pointer">
+                        <span class="label-text">
+                            <div class="tooltip" data-tip="台帳全体を破棄し新規登録します">
+                                <i class="fas fa-question-circle"></i></div>
+                            {{__("destroy ledger and insert as new record")}}
+                        </span>
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                       value="{{LedgerImport::MODE_DESTOROY}}"/>
+                            </label>
+                            <label class="label cursor-pointer">
+                        <span class="label-text">
+                            <div class="tooltip" data-tip="新規登録します">
+                                <i class="fas fa-question-circle"></i></div>
+                            {{__("insert as new record")}}
+                        </span>
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                       value="{{LedgerImport::MODE_INSERT}}"/>
+                            </label>
                         </div>
                         <div>
                             <input type="file" class="file-input file-input-bordered file-input-primary w-full max-w-xs"
@@ -78,6 +95,9 @@
     </p>
     <p>
         current row : {{$currentRows}}
+    </p>
+    <p>
+        mode : {{$importMode}}
     </p>
 
 </div>
