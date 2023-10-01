@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Ledger;
 use App\Exports\LedgerExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ledger\SearchRequest;
-use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -27,13 +26,8 @@ class ExportController extends Controller
         $ledgerDefineId = $request->ledgerDefineId();
         $columnDefines = LedgerDefine::where('id', $ledgerDefineId)->pluck('column_define')->sortBy('order')->all()[0];
 
-        // Ledgerレコードを検索してエクスポート用のクエリを構築
-        $query = Ledger::where('ledger_define_id', $ledgerDefineId)
-            ->search(implode(' ', $request->keywords()))
-            ->contentsFilter($request->filter())
-            ->with('define.folder');
+        $exportFilename = LedgerDefine::find($ledgerDefineId)->title . '.csv';
 
-        // maatwebsite/excelパッケージを使用してCSVファイルを出力する
         /**
          * 第一引数: インスタンス化したExportクラスを指定
          * 第二引数: ダウンロードするCSVファイルの名前
@@ -41,6 +35,6 @@ class ExportController extends Controller
          * ファイルの形式は第二引数の拡張子から判別されるため、基本的に指定不要
          * 第四引数: ヘッダーに含める情報を指定する配列
          */
-        return Excel::download(new LedgerExport($query, $columnDefines), 'ledger_records.csv', \Maatwebsite\Excel\Excel::CSV, ['X-Vapor-Base64-Encode' => 'True']);
+        return Excel::download(new LedgerExport($ledgerDefineId, $request->keywords(), $request->filter(), $columnDefines), $exportFilename, \Maatwebsite\Excel\Excel::CSV, ['X-Vapor-Base64-Encode' => 'True']);
     }
 }

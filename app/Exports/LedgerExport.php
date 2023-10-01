@@ -2,65 +2,51 @@
 
 namespace App\Exports;
 
+use App\Models\Ledger;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Query\Builder;
 use Maatwebsite\Excel\Concerns\Exportable;
-use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue, WithCustomCsvSettings
+class LedgerExport implements FromQuery, WithHeadings, WithMapping, ShouldQueue, WithCustomCsvSettings
 {
     use Exportable;
 
-    protected $query;
+    protected $ledgerDefineId;
+    protected $keywords;
+    protected $filter;
     protected $columnDefines;
 
     /**
      * Create a new export instance.
      *
-     * @param mixed $query
-     * @param array $columnDefines
+     * @param int $ledgerDefineId
+     * @param array $keywords
+     * @param array $filter
+     * @param object $columnDefines
      */
-    public function __construct($query, $columnDefines)
+    public function __construct(int $ledgerDefineId, array $keywords, array $filter, object $columnDefines)
     {
-        $this->query = $query;
+        $this->ledgerDefineId = $ledgerDefineId;
+        $this->keywords = $keywords;
+        $this->filter = $filter;
         $this->columnDefines = $columnDefines;
     }
 
     /**
-     * Define the data to be exported.
+     * Define the query to be exported.
      *
-     * @return array
+     * @return Builder
      */
-    public function array(): array
+    public function query()
     {
-        $records = [];
-
-
-        foreach ($this->query->cursor() as $record) {
-            $row = [];
-
-            foreach ($this->columnDefines as $columnDefine) {
-                $columnValue = $record->content[$columnDefine->id] ?? '';
-
-                $columnValue = $columnDefine->convertColumnValue2Text($columnValue);
-
-                $row[] = $columnValue;
-            }
-
-            // id, ledger_define_idなどの値もヘッダに追加
-            $row[] = $record->id;
-            $row[] = $record->ledger_define_id;
-            $row[] = $record->updated_at;
-            $row[] = $record->modifire_id;
-            $row[] = $record->created_at;
-            $row[] = $record->creator_id;
-
-            $records[] = $row;
-        }
-
-        return $records;
+        return Ledger::where('ledger_define_id', $this->ledgerDefineId)
+            ->search(implode(' ', $this->keywords))
+            ->contentsFilter($this->filter)
+            ->with('define.folder');
     }
 
     /**
@@ -91,7 +77,25 @@ class LedgerExport implements FromArray, WithHeadings, WithMapping, ShouldQueue,
      */
     public function map($record): array
     {
-        return $record;
+        $row = [];
+
+        foreach ($this->columnDefines as $columnDefine) {
+            $columnValue = $record->content[$columnDefine->id] ?? '';
+
+            $columnValue = $columnDefine->convertColumnValue2Text($columnValue);
+
+            $row[] = $columnValue;
+        }
+
+        // id, ledger_define_idなどの値もヘッダに追加
+        $row[] = $record->id;
+        $row[] = $record->ledger_define_id;
+        $row[] = $record->updated_at;
+        $row[] = $record->modifire_id;
+        $row[] = $record->created_at;
+        $row[] = $record->creator_id;
+
+        return $row;
     }
 
     public function getCsvSettings(): array

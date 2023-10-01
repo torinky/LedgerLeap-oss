@@ -24,10 +24,15 @@ class SearchRequest extends FormRequest
         if (empty($text)) {
             return;
         }
-        $text = mb_convert_kana($text, 'askV', 'UTF-8');
-        $text = preg_replace('/\s+/u', ' ', $text);
+        if (is_array($text)) {
+            $words = $text;
+        } else {
+            $text = mb_convert_kana($text, 'askV', 'UTF-8');
+            $text = preg_replace('/\s+/u', ' ', $text);
 
-        $words = explode(' ', $text);
+            $words = explode(' ', $text);
+            $words = array_filter($words, 'strlen');
+        }
         foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {
                 $this->tags[] = $word;
@@ -117,7 +122,7 @@ class SearchRequest extends FormRequest
 
     public function filter()
     {
-        $filter = $this->input('filter');
+        $filter = $this->query('filter');
         if (!is_array($filter)) {
             return [];
         }

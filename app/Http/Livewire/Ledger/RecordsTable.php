@@ -32,8 +32,8 @@ class RecordsTable extends Component
     public $selectedFolderIds = [];
     public $currentFolderId;
     protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
-    private array $tags = [];
-    private array $keywords = [];
+    private $tags = [];
+    public $keywords = [];
     public $totalRecords;
 
     /**
@@ -92,6 +92,8 @@ class RecordsTable extends Component
         $this->selectedFolderIds = array_filter($this->selectedFolderIds, 'strlen');
 
         $this->updateKeywordsAndTags($this->search);
+        // Exportに検索条件を伝えるためにイベントをトリガ
+        $this->emit('refreshChildren', ['keywords' => $this->keywords, 'filter' => $this->filter]);
 
         $descendantFolderIds = [];
         foreach ($this->selectedFolderIds as $selectedFolderId) {
@@ -167,6 +169,15 @@ class RecordsTable extends Component
         $text = preg_replace('/\s+/u', ' ', $text);
 
         $words = explode(' ', $text);
+        $words = array_filter($words, 'strlen');
+
+        if (empty($words)) {
+            return;
+        }
+
+        $this->keywords = [];
+        $this->tags = [];
+
         foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {
                 $this->tags[] = substr($word, 1);
@@ -292,4 +303,5 @@ class RecordsTable extends Component
         // perPageを変更した場合、currentPageを最初のページにリセットする
         $this->resetPage();
     }
+
 }

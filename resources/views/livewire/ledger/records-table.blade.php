@@ -170,9 +170,13 @@
                         class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
                 <a href="{{ route('ledger.downloadExcelCSV', [
                     'ledgerDefineId' => $ledgerRecord->define->id,
-                    'keywords' => $search, 'filter' => $filter]) }}"
+                    'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
                    class="btn btn-outline btn-secondary btn-sm relative inline-flex my-2"
                 >Download Excel CSV</a>
+                <livewire:ledger.export :ledgerDefineId="$ledgerRecord->define->id" :keywords="json_encode($keywords)"
+                                        :filter="json_encode($filter)"
+                                        :wire:key="'ledger_export-'.$ledgerRecord->define->id"/>
+
             </div>
         </div>
         <div class="flex flex-row">
