@@ -39,13 +39,14 @@
                 </ul>
             </div>
             <div>
-                <label for="app-drawer" class="swap swap-rotate btn btn-sm btn-ghost xl:hidden">
-                    <i class="swap-on fa-regular fa-folder-open"></i>
-                    <i class="swap-off fa-regular fa-folder"></i>
+                <label for="app-drawer" class="btn btn-sm btn-ghost xl:hidden">
+                    <i class="fa-regular fa-folder-tree"></i>
                 </label>
 
             </div>
-            <a class="btn btn-ghost normal-case text-xl">LedgerLeap</a>
+            <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
+                <span class="btn btn-ghost normal-case text-xl">LedgerLeap</span>
+            </x-daisyui-nav-link>
         </div>
         <div class="navbar-center hidden lg:flex">
             <ul class="menu menu-horizontal px-1">

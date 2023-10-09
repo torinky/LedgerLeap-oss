@@ -10,18 +10,13 @@
     <!-- Fonts -->
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
 
-    <!-- Styles -->
+    <!-- Styles  Scripts -->
     @vite(['resources/sass/app.scss','resources/js/app.js'])
-    {{--    <link rel="stylesheet" href="{{ asset('css/app.css') }}">--}}
     @stack('stylesheets')
     @livewireStyles
 
-    <!-- Scripts -->
-    {{--    <script src="{{ asset('js/app.js') }}" defer></script>--}}
-
 </head>
 <body class="font-body antialiased">
-<div class="min-h-screen">
 
     <div class="fixed w-full z-10 top-0">
         @include('layouts.daisyuiNavigation')
@@ -47,17 +42,14 @@
             {{--            <label for="my-drawer-2" class="btn btn-primary drawer-button xl:hidden">Open drawer</label>--}}
             {{ $slot }}
         </main>
-        <div class="drawer-side">
-            <label for="my-drawer-2" class="drawer-overlay"></label>
+        <div class="drawer-side z-10">
+            <label for="app-drawer" class="drawer-overlay"></label>
             <ul class="menu p-4 sm:w-2/3 md:w-1/2 lg:w-1/3 bg-base-100 text-base-content">
                 <!-- Sidebar content here -->
                 {{ $drawer ??''}}
-
             </ul>
         </div>
     </div>
-
-</div>
 </body>
 @livewireScripts
 @stack('scripts')
