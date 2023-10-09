@@ -153,25 +153,25 @@
     <div class="">
 
         <div class="flex flex-row justify-between">
-            <div class="flex-relative ">
+            <div class="">
                 {{--                    <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"--}}
                 {{--                                          :thisLedgerDefine="$ledgerRecord->define"></x-ledger.livewire-breadcrumbs>--}}
                 <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"
                 ></x-ledger.livewire-breadcrumbs>
             </div>
-            <div class="">
+            <div class="space-x-2 space-y-2">
                 <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                   class="btn btn-outline btn-info btn-sm relative inline-flex my-2 w-32"
+                   class="btn btn-outline btn-info btn-sm relative inline-flex w-32"
                    target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
                     {{__('create')}}</a>
                 <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-                   class="btn btn-outline btn-primary btn-sm relative inline-flex my-2 w-32"
+                   class="btn btn-outline btn-primary btn-sm relative inline-flex w-32"
                    target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
                         class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
                 <a href="{{ route('ledger.downloadExcelCSV', [
                     'ledgerDefineId' => $ledgerRecord->define->id,
                     'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
-                   class="btn btn-outline btn-secondary btn-sm relative inline-flex my-2"
+                   class="btn btn-outline btn-secondary btn-sm relative inline-flex"
                 >Download Excel CSV</a>
                 <livewire:ledger.export :ledgerDefineId="$ledgerRecord->define->id" :keywords="json_encode($keywords)"
                                         :filter="json_encode($filter)"
