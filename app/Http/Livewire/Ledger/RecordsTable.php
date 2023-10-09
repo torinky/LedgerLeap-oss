@@ -171,12 +171,12 @@ class RecordsTable extends Component
         $words = explode(' ', $text);
         $words = array_filter($words, 'strlen');
 
+        $this->keywords = [];
+        $this->tags = [];
+
         if (empty($words)) {
             return;
         }
-
-        $this->keywords = [];
-        $this->tags = [];
 
         foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {

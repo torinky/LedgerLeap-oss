@@ -22,6 +22,8 @@ class SearchRequest extends FormRequest
     {
         $text = $this->keyword();
         if (empty($text)) {
+            $this->tags = [];
+            $this->keywords = [];
             return;
         }
         if (is_array($text)) {
