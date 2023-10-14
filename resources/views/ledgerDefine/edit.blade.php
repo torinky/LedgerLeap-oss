@@ -1,8 +1,8 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     @push('scripts')
         {{--    viteビルドシステムとは別に読み込まないとソートが機能しない（DOM生成タイミング絡み）    --}}
-        <script src="{{ asset('js/livewire-sortable.js') }}"></script>
         @vite(['resources/js/ledgerDefineEdit.js'])
+        <script src="{{ asset('js/livewire-sortable.js') }}"></script>
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerDefineEdit.scss'])
@@ -55,16 +55,19 @@
                     <livewire:ledger-define.modify-column/>
 
 
-                    <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
-                        <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
-                                class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
-                        <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
-                        <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
-                                class="fa-solid fa-trash mr-2"></i> {{__('delete ledger')}}</label>
+                    <div
+                        class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">
+                        <div class="card-body items-center text-center">
+                            <div class="  items-center justify-center">
+                                <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
+                                        class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                                <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                                        class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
+                                        class="fa-solid fa-trash mr-2"></i> {{__('delete ledger')}}</label>
 
-
-                    </div>
+                            </div>
+                        </div>
 
                 </form>
             </div>
