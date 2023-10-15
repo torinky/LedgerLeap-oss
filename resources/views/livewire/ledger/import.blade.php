@@ -21,7 +21,7 @@
                 {{$updateRows??0}} {{__('records updated.')}} / {{$insertRows??0}} {{__('records inserted.')}}
                 @endif
                 </p>
-                <form wire:submit.prevent="importExcelCSV" enctype="multipart/form-data">
+                <form wire:submit="importExcelCSV" enctype="multipart/form-data">
                     @csrf
                     <div class="grid justify-items-center space-y-5 my-5">
                         <div class="form-control w-full max-w-md">
@@ -32,7 +32,7 @@
                                 <i class="fas fa-question-circle"></i></div>
                             {{__("update and insert")}}
                         </span>
-                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model.live="importMode"
                                        value="{{LedgerImport::MODE_UPDATE}}"/>
                             </label>
                             <label class="label cursor-pointer">
@@ -41,7 +41,7 @@
                                 <i class="fas fa-question-circle"></i></div>
                             {{__("destroy ledger and insert as new record")}}
                         </span>
-                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model.live="importMode"
                                        value="{{LedgerImport::MODE_DESTOROY}}"/>
                             </label>
                             <label class="label cursor-pointer">
@@ -50,13 +50,13 @@
                                 <i class="fas fa-question-circle"></i></div>
                             {{__("insert as new record")}}
                         </span>
-                                <input type="radio" name="radio-import-mode" class="radio" wire:model="importMode"
+                                <input type="radio" name="radio-import-mode" class="radio" wire:model.live="importMode"
                                        value="{{LedgerImport::MODE_INSERT}}"/>
                             </label>
                         </div>
                         <div>
                             <input type="file" class="file-input file-input-bordered file-input-primary w-full max-w-xs"
-                                   wire:model="importFile" class="@error('import_file') is-invalid @enderror">
+                                   wire:model.live="importFile" class="@error('import_file') is-invalid @enderror">
                         </div>
                         <div>
                             <progress class="progress progress-success w-56" value="{{$currentRows}}"

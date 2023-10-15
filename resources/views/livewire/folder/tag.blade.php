@@ -11,7 +11,7 @@
 
         <script>
             console.log('Folder Tag Js Block Call!!')
-            // document.addEventListener("livewire:load", () => {
+            // document.addEventListener("livewire:init", () => {
             $(document).ready(function () {
                 initSelect()
                 // Livewire.hook('message.processed', (message, component) => {
@@ -46,7 +46,7 @@
                         });
                         // tags = {...tags};
                         console.log(tags);
-                    @this.set('tags', tags);
+                    @this.set('tags', tags)
                         // console.log(@this.tags)
                         // @this.set('tags', {name:'test'});
                     });

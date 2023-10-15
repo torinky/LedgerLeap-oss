@@ -1,4 +1,4 @@
-<select wire:model="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
+<select wire:model.live="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
         name="content[{{$columnDefine->id}}]"
         class="select @if($columnDefine->required) input-accent @endif"
 >

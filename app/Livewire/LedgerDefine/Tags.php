@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\LedgerDefine;
+namespace App\Livewire\LedgerDefine;
 
 use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;

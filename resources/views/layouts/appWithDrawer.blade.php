@@ -13,7 +13,7 @@
     <!-- Styles  Scripts -->
     @vite(['resources/sass/app.scss','resources/js/app.js'])
     @stack('stylesheets')
-    @livewireStyles
+    {{--    @livewireStyles--}}
 
 </head>
 <body class="font-body antialiased">
@@ -51,6 +51,6 @@
         </div>
     </div>
 </body>
-@livewireScripts
+{{--@livewireScripts--}}
 @stack('scripts')
 </html>

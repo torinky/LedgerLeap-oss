@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Ledger;
+namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Models\Ledger;

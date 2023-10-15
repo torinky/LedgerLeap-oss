@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Ledger;
+namespace App\Livewire\Ledger;
 
 use App\Imports\LedgerImport;
 use App\Models\LedgerDefine;
@@ -73,7 +73,7 @@ class Import extends Component
     {
         $this->importing = true;
         $this->importFinished = false;
-        $this->emit('refreshComponent');
+        $this->dispatch('refreshComponent');
         // ファイルアップロードのバリデーションなどを行う必要があるかもしれません
 
 //        $file = $request->file('csv_file');

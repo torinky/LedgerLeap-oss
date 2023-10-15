@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\LedgerDefine;
+namespace App\Livewire\LedgerDefine;
 
 use App\Models\ColumnDefine;
 use App\Models\LedgerDefine;
@@ -97,7 +97,7 @@ class ModifyColumn extends Component
                 }
             }
         }
-        $this->emit('elementUpdated');
+        $this->dispatch('elementUpdated');
 
         //        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
         $this->ledgerDefineRecord->column_define = (array)$this->ledgerDefineRecord->column_define;

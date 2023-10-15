@@ -14,7 +14,7 @@
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @stack('stylesheets')
-    @livewireStyles
+    {{--    @livewireStyles--}}
 
     <script>
         // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
@@ -49,6 +49,6 @@
     </main>
 </div>
 </body>
-@livewireScripts
+{{--@livewireScripts--}}
 @stack('scripts')
 </html>

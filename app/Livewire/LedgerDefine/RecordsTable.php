@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\LedgerDefine;
+namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\IndexRequest;
 use App\Models\Folder;
@@ -8,6 +8,7 @@ use App\Models\LedgerDefine;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -26,7 +27,7 @@ class RecordsTable extends Component
 
     public $selectedFolderIds = [];
     public $currentFolderId;
-    protected $listeners = ['currentFolderChangedByTree'];
+//    protected $listeners = ['currentFolderChangedByTree'];
 
     /**
      * @param IndexRequest $request
@@ -103,7 +104,7 @@ class RecordsTable extends Component
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
-        $this->emit('currentFolderChangedByMain', $this->currentFolderId);
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId);
 
         $this->prepareFolderAsset();
     }
@@ -112,6 +113,7 @@ class RecordsTable extends Component
      * @param $newFolderId
      * @return void
      */
+    #[On('currentFolderChangedByTree')]
     public function currentFolderChangedByTree($newFolderId)
     {
         $this->currentFolderId = $newFolderId;

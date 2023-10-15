@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Livewire\Folder;
+namespace App\Livewire\Folder;
 
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Routing\Route;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Tree extends Component
@@ -16,7 +17,7 @@ class Tree extends Component
      */
     public int $currentFolderId;
 
-    protected $listeners = ['currentFolderChangedByMain'];
+//    protected $listeners = ['currentFolderChangedByMain'];
 
     public function mount(searchRequest $request)
     {
@@ -24,7 +25,8 @@ class Tree extends Component
         $this->folders = Folder::all()->toTree();
     }
 
-    public function currentFolderChangedByMain($newFolderId)
+    #[On('currentFolderChangedByMain')]
+    public function changeCurrentFolderChangedByMain($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
     }
@@ -32,7 +34,7 @@ class Tree extends Component
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
-        $this->emit('currentFolderChangedByTree', $this->currentFolderId);
+        $this->dispatch('currentFolderChangedByTree', newFolderId: $this->currentFolderId);
 
     }
 

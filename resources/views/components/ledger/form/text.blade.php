@@ -5,7 +5,7 @@
     フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
 -->
 <input
-    wire:model.lazy="content.{{ $columnDefine->id }}"
+    wire:model.blur="content.{{ $columnDefine->id }}"
     id="content[{{$columnDefine->id}}]"
     class="adjustWidth input input-bordered @if($columnDefine->required) input-accent @endif"
     name="content[{{$columnDefine->id}}]"
@@ -15,7 +15,7 @@
 @once
     @push('scripts')
         <script>
-            document.addEventListener('livewire:load', function () {
+            document.addEventListener('livewire:init', function () {
                 // 動的なフォームの幅を調整するために.input.adjustWidthクラスを持つ全ての入力要素を取得します
                 const inputs = document.querySelectorAll('input.adjustWidth');
 

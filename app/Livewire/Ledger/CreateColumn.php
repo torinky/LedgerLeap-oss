@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Ledger;
+namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Models\Ledger;
@@ -120,7 +120,7 @@ class CreateColumn extends Component
         $files = collect($tmpPath)->map(function ($i) {
             return TemporaryUploadedFile::createFromLivewire($i);
         })->toArray();
-        $this->emitSelf('upload:finished', $name, collect($files)->map->getFilename()->toArray());
+        $this->dispatch('upload:finished', $name, collect($files)->map->getFilename()->toArray())->self();
 
         //        $files = array_merge($this->getPropertyValue($name), $files);
         $presentValue = $this->getPropertyValue($name);

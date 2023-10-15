@@ -54,9 +54,9 @@
                                         </label>
                                         <select
                                             name="column_define[{{$columnDefine->id}}][type]"
-                                            wire:model="columnTypes.{{$columnDefine->id}}"
+                                            wire:model.live="columnTypes.{{$columnDefine->id}}"
                                             {{-- これは表現が複雑すぎるっぽい--}}
-                                            {{-- wire:model="ledgerDefineRecord.column_define.{{$columnDefine->id}}.type"--}}
+                                            {{-- wire:model.live="ledgerDefineRecord.column_define.{{$columnDefine->id}}.type"--}}
                                             {{-- これはapplyTpeが発火しない--}}
                                             {{-- wire:change="applyType($event.target.value,$columnDefine->id)"--}}
                                             {{-- wire:change="applyType($columnDefine->id)" --}}

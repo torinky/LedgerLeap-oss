@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire\Ledger;
+namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
@@ -10,6 +10,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
@@ -31,7 +32,7 @@ class RecordsTable extends Component
     public $selectedLedgerDefineIds = [];
     public $selectedFolderIds = [];
     public $currentFolderId;
-    protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
+//    protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
     private $tags = [];
     public $keywords = [];
     public $totalRecords;
@@ -93,7 +94,7 @@ class RecordsTable extends Component
 
         $this->updateKeywordsAndTags($this->search);
         // Exportに検索条件を伝えるためにイベントをトリガ
-        $this->emit('refreshChildren', ['keywords' => $this->keywords, 'filter' => $this->filter]);
+        $this->dispatch('refreshChildren', data: ['keywords' => $this->keywords, 'filter' => $this->filter]);
 
         $descendantFolderIds = [];
         foreach ($this->selectedFolderIds as $selectedFolderId) {
@@ -150,6 +151,7 @@ class RecordsTable extends Component
      * @param string $word
      * @return void
      */
+    #[On('contentsFilter')]
     public function contentsFilter($defineId, $columnNo, $word)
     {
         $this->defineId = $defineId;
@@ -204,7 +206,7 @@ class RecordsTable extends Component
         $this->prepareFolderAsset();
 
         // ツリーコンポーネントに現在のフォルダーIDの変更を通知
-        $this->emit('currentFolderChangedByMain', $this->currentFolderId);
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId);
     }
 
     /**
@@ -213,6 +215,7 @@ class RecordsTable extends Component
      * @param int $newFolderId
      * @return void
      */
+    #[On('currentFolderChangedByTree')]
     public function currentFolderChangedByTree($newFolderId)
     {
         // フォルダーIDを更新

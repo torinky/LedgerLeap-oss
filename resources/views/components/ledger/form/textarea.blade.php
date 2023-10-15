@@ -5,7 +5,7 @@
     フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
 -->
 <textarea
-    wire:model.lazy="content.{{ $columnDefine->id }}"
+    wire:model.blur="content.{{ $columnDefine->id }}"
     id="content[{{$columnDefine->id}}]"
     class="adjustWidth adjustHeight input input-bordered @if($columnDefine->required) input-accent @endif"
     name="content[{{$columnDefine->id}}]"
@@ -17,7 +17,7 @@
     @push('scripts')
         <script>
             // ドキュメントがロードされたときに実行する関数
-            document.addEventListener('livewire:load', function () {
+            document.addEventListener('livewire:init', function () {
                 // 幅と高さを調整するためのテキストエリア要素を取得
                 const textareas = document.querySelectorAll('textarea.adjustWidth.adjustHeight');
 

@@ -19,7 +19,7 @@
             @endforeach
             <input type="text" placeholder="{{__('Add Tag')}}"
                    class="input input-bordered input-sm w-full max-w-xs ml-5"
-                   wire:model="newTag" wire:keydown.enter="addTag"/>
+                   wire:model.live="newTag" wire:keydown.enter="addTag"/>
         </div>
     </div>
 </div>

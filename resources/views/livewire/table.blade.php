@@ -1,8 +1,8 @@
 <div>
     {{-- Success is as dangerous as failure. --}}
-    <form wire:submit.prevent="search">
+    <form wire:submit="search">
         <div class="mt-1">
-            <input wire:model="keyword" name="keyword" id="tweet-keyword" type="text"
+            <input wire:model.live="keyword" name="keyword" id="tweet-keyword" type="text"
                    class="focus:ring-blue-400 focus:border-blue-400 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
                    placeholder="探しちゃいなよ"></input>
         </div>

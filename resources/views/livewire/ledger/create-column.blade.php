@@ -1,7 +1,7 @@
 <div>
     @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
         {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
-        <form wire:submit.prevent="store"
+        <form wire:submit="store"
               method="post"
               class="w-full">
             @csrf
@@ -28,7 +28,7 @@
                             @if($columnDefine->type=='files')
                             <div class="form-control basis-3/4">
                                 <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
-                                                     wire:model="content"
+                                                     wire:model.live="content"
                                                      :columnDefine="$columnDefine"
                                                      :ledgerRecord="$ledgerRecord??[]"
                                                      multiple
@@ -38,7 +38,7 @@
                             @else
                                     <div class="form-control">
                                 <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                     wire:model="content"
+                                                     wire:model.live="content"
                                                      :columnDefine="$columnDefine"
                                                      :ledgerRecord="$ledgerRecord??[]"
                                 />

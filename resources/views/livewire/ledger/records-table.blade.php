@@ -3,14 +3,14 @@
     <div class="w-full flex pb-10 justify-center items-center">
         <div class="w-3/6 mx-1">
             <label>
-                <input wire:model.debounce.800ms="search" type="text"
+                <input wire:model.live.debounce.800ms="search" type="text"
                        class="input input-bordered input-lg input-primary w-full"
                        placeholder="Search content...">
             </label>
         </div>
         <div class="w-1/6 relative mx-1">
             {{--
-                        <select wire:model="orderBy"
+                        <select wire:model.live="orderBy"
                                 class="select select-bordered w-full max-w-xs"
                                 id="grid-state">
                             <option value="id">ID</option>
@@ -28,7 +28,7 @@
             --}}
         </div>
         <div class="w-1/6 relative mx-1">
-            <select wire:model="orderAsc"
+            <select wire:model.live="orderAsc"
                     class="select select-bordered w-full max-w-xs"
                     id="grid-state">
                 <option value="1">Ascending</option>
@@ -43,7 +43,7 @@
             --}}
         </div>
         <div class="w-1/6 relative mx-1">
-            <select wire:model="perPage"
+            <select wire:model.live="perPage"
                     class="select select-bordered w-full max-w-xs"
                     id="grid-state">
                 <option>10</option>
@@ -83,7 +83,7 @@
                 <div class="flex justify-center items-center ">
                     <label class="swap btn btn-ghost">
                         <input type="checkbox" value="{{$folderRecord->id}}"
-                               wire:model="selectedFolderIds.{{$fKey}}" style="display: none"/>
+                               wire:model.live="selectedFolderIds.{{$fKey}}" style="display: none"/>
                         <i class="swap-off fa-solid fa-folder text-3xl "></i>
                         <i class="swap-on fa-solid fa-folder-open text-3xl "></i>
                     </label>
@@ -109,7 +109,7 @@
                     {{--
                                         <label class="swap btn btn-ghost">
                                             <input type="checkbox" value="{{$ledgerDefineRecord->id}}"
-                                                   wire:model="selectedLedgerDefineIds.{{$dKey}}" style="display: none"/>
+                                                   wire:model.live="selectedLedgerDefineIds.{{$dKey}}" style="display: none"/>
                                             <i class="swap-off fa-solid fa-book text-3xl "></i>
                                             <i class="swap-on text-3xl fa-solid fa-book-open"></i>
                                         </label>

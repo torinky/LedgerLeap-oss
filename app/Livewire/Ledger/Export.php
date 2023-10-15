@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Livewire\Ledger;
+namespace App\Livewire\Ledger;
 
 use App\Exports\LedgerExport;
 use App\Jobs\Ledger\ExportJob;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -21,7 +22,7 @@ class Export extends Component
     public $keywords = [];
     public $filter = [];
     public ?int $ledgerDefineId = null;
-    protected $listeners = ['refreshChildren' => 'updateFromParent'];
+//    protected $listeners = ['refreshChildren' => 'updateFromParent'];
     private ?LedgerExport $ledgerExport = null;
 
     /**
@@ -29,6 +30,7 @@ class Export extends Component
      *
      * @param array $data キーワードとフィルター情報を含む配列
      */
+    #[On('refreshChildren')]
     public function updateFromParent($data)
     {
         $this->keywords = $data['keywords'];
