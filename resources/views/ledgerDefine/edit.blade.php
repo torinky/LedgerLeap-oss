@@ -1,8 +1,6 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     @push('scripts')
-        {{--    viteビルドシステムとは別に読み込まないとソートが機能しない（DOM生成タイミング絡み）    --}}
         @vite(['resources/js/ledgerDefineEdit.js'])
-        {{--        <script src="{{ asset('js/livewire-sortable.js') }}"></script>--}}
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerDefineEdit.scss'])

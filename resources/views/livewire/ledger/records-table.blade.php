@@ -76,21 +76,17 @@
         class="grid sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center leading-6 bg-stripes-purple rounded-lg">
 
         @foreach($folderRecords as $fKey => $folderRecord)
-            {{--            <a href="{{route('ledgersByFolderId',['folderId'=>$folderRecord->id])}}">--}}
-            {{--            <button wire:click.self="changeCurrentFolder({{$folderRecord->id}})">--}}
-            {{--            <button class="p-4 rounded-lg shadow-lg bg-secondary hover:bg-secondary-focus" wire:click.self="changeCurrentFolder({{$folderRecord->id}})">--}}
             <div class="p-4 rounded-lg shadow-lg bg-secondary hover:bg-secondary-focus">
                 <div class="flex justify-center items-center ">
-                    <label class="swap btn btn-ghost">
-                        <input type="checkbox" value="{{$folderRecord->id}}"
-                               wire:model.live="selectedFolderIds.{{$fKey}}" style="display: none"/>
-                        <i class="swap-off fa-solid fa-folder text-3xl "></i>
-                        <i class="swap-on fa-solid fa-folder-open text-3xl "></i>
-                    </label>
+                    <button class="btn btn-ghost"
+                            wire:click="toggleFolderId({{ $folderRecord->id }})"
+                            wire:key="selected_folder_{{$folderRecord->id}}">
+                        <i class="swap-off fa-solid {{in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder'}}  text-3xl "></i>
+                    </button>
 
-                    <a href="#" class="btn btn-ghost" wire:click="changeCurrentFolder({{$folderRecord->id}})"><i
+                    <a href="#" class="btn btn-ghost" wire:click="changeCurrentFolder({{$folderRecord->id}})"
+                       wire:key="enter_folder_{{$folderRecord->id}}"><i
                             class="text-3xl fa-solid fa-right-to-bracket"></i></a>
-                    {{--                        <input type="checkbox" checked="checked" class="checkbox ml-5"/>--}}
                 </div>
                 <div class="ladgerTitle text-base mt-1">{{$folderRecord->title}}</div>
                 <div class="lastUpdate text-sm"><i
@@ -99,33 +95,17 @@
         @endforeach
 
         @foreach($ledgerDefineRecords as $dKey => $ledgerDefineRecord)
-            {{--            <a href="{{route('ledgerByDefineId',['ledgerDefineId'=>$ledgerDefineRecord->id])}}">--}}
-            {{--                <div wire:click.self="$set('selectedLedgerDefineIds.{{$dKey}}',{{$ledgerDefineRecord->id}})" class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus">--}}
-            {{--                <div class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus" wire:click.self="toggleLedgerDefineOpen({{$ledgerDefineRecord->id}})">--}}
             <button class="p-4 rounded-lg shadow-lg bg-accent hover:bg-accent-focus"
-                    wire:click="toggleLedgerDefineId({{ $ledgerDefineRecord->id }})">
-                <div class="flex justify-center items-center">
+                    wire:click="toggleLedgerDefineId({{ $ledgerDefineRecord->id }})"
+                    wire:key="selected_ledger_{{$ledgerDefineRecord->id}}">
 
-                    {{--
-                                        <label class="swap btn btn-ghost">
-                                            <input type="checkbox" value="{{$ledgerDefineRecord->id}}"
-                                                   wire:model.live="selectedLedgerDefineIds.{{$dKey}}" style="display: none"/>
-                                            <i class="swap-off fa-solid fa-book text-3xl "></i>
-                                            <i class="swap-on text-3xl fa-solid fa-book-open"></i>
-                                        </label>
-                    --}}
-
-                    <i class="swap-off fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} fa-book text-3xl "></i>
-                </div>
+                <i class="swap-off fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} text-3xl "></i>
                 <div class="ladgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
                 <div class="lastUpdate text-sm"><i
                         class="fas fa-clock mr-1"></i>{{$ledgerDefineRecord->updated_at->format('Y-m-d')}}
                 </div>
             </button>
         @endforeach
-
-        {{--        <div class="p-4 rounded-lg bg-purple-300">04</div>--}}
-        {{--        <div class="p-4 rounded-lg bg-purple-300">05</div>--}}
     </div>
 
     <div class="divider"></div>

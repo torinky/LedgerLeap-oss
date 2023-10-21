@@ -89,8 +89,6 @@ class RecordsTable extends Component
      */
     public function render()
     {
-        // checkboxのキーはサーバー側で変えるとブラウザに正しく反映されなくなる
-        $this->selectedFolderIds = array_filter($this->selectedFolderIds, 'strlen');
 
         $this->updateKeywordsAndTags($this->search);
         // Exportに検索条件を伝えるためにイベントをトリガ
@@ -127,7 +125,7 @@ class RecordsTable extends Component
             ->contentsFilter($this->filter)
             ->with('define.folder');
 
-        // 仕訳データの総数を取得
+        // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
         return view('livewire.ledger.records-table', [
@@ -266,6 +264,23 @@ class RecordsTable extends Component
         if (!$currentFolder->isRoot()) {
             $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
             $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
+        }
+    }
+
+    /**
+     * フォルダの選択状態をトグルする
+     *
+     * @param int $ledgerDefineId
+     * @return void
+     */
+    public function toggleFolderId($folderId)
+    {
+        if (in_array($folderId, $this->selectedFolderIds)) {
+            // 選択済みの場合、リストから削除
+            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, [$folderId]));
+        } else {
+            // 選択されていない場合、リストに追加
+            $this->selectedFolderIds[] = $folderId;
         }
     }
 
