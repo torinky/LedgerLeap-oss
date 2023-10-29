@@ -30,15 +30,11 @@ class Ledger extends Model
      */
     protected static function booted()
     {
-        static::creating(function ($ledger) {
-            // create イベントの処理
-            $ledger->normalizeContent();
-        });
-
-        static::updating(function ($ledger) {
+        static::saving(function ($ledger) {
             // update イベントの処理
             $ledger->normalizeContent();
         });
+
     }
 
     /**

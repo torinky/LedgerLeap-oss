@@ -38,7 +38,7 @@
                             @else
                                     <div class="form-control">
                                 <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                     wire:model.live="content"
+                                                     wire:model="content"
                                                      :columnDefine="$columnDefine"
                                                      :ledgerRecord="$ledgerRecord??[]"
                                 />

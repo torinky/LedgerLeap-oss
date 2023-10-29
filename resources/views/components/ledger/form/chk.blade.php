@@ -4,10 +4,10 @@
         {{-- 各オプションのラベルとチェックボックスを表示する --}}
         <label for="content[{{$columnDefine->id}}][{{$oKey}}]" class="label cursor-pointer space-x-2">
             <input type="checkbox"
-                   wire:model.live="content.{{$columnDefine->id}}.{{$oKey}}" {{-- Livewireの双方向データバインディングを使用 --}}
+                   wire:model="content.{{$columnDefine->id}}" {{-- Livewireの双方向データバインディングを使用 --}}
                    id="content[{{$columnDefine->id}}][{{$oKey}}]"
-                   name="content[{{$columnDefine->id}}][{{$oKey}}]" value="{{$option}}"
-                   @php( (isset($this->content) && is_array($this->content[$columnDefine->id]) && in_array($option, $this->content[$columnDefine->id]??[]) ) ? 'checked="checked"' : '') {{-- チェック済みの場合はチェックボックスを選択状態にする --}}
+                   name="content[{{$columnDefine->id}}][{{$option}}]"
+                   value="{{$option}}"
                    class="input-bordered checkbox @if($columnDefine->required) input-accent @endif"
             />
             <span class="label-text">{{$option}}</span> {{-- オプションの名前を表示 --}}

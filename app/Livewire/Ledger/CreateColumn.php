@@ -62,8 +62,12 @@ class CreateColumn extends Component
                 $filenames = $this->storeFile($column->id);
                 $this->content[$column->id] = $filenames;
             }
+            if ($column->type == 'chk' && empty($this->content[$column->id])) {
+                $this->content[$column->id] = [];
+            }
         }
-
+        ksort($this->content);
+//dd($this->content);
         $this->ledgerRecord = Ledger::create([
             'content' => $this->content,
             'ledger_define_id' => $this->ledgerDefineRecord->id,

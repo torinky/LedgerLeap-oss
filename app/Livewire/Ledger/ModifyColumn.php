@@ -46,7 +46,11 @@ class ModifyColumn extends CreateColumn
             if ($column->type == 'files') {
                 $this->mergeContentFiles($column);
             }
+            if ($column->type == 'chk' && empty($this->content[$column->id])) {
+                $this->content[$column->id] = [];
+            }
         }
+        ksort($this->content);
 
         if ($this->ledgerId) {
             $this->storeLedgerDiff();
