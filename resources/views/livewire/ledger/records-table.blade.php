@@ -142,14 +142,19 @@
 
     <div class="">
 
-        <div class="flex flex-row justify-between">
-            <div class="">
+        <div class="flex flex-row ">
                 {{--                    <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"--}}
                 {{--                                          :thisLedgerDefine="$ledgerRecord->define"></x-ledger.livewire-breadcrumbs>--}}
                 <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerRecord->define->id]"
                 ></x-ledger.livewire-breadcrumbs>
-            </div>
-            <div class="space-x-2 space-y-2">
+        </div>
+        <h3 class=" flex flex-row items-center text-3xl font-medium leading-tight text-primary space-x-3">
+            <i class="fa-solid fa-book-open"></i>
+            <span>{{$ledgerRecord->define->title}}</span>
+        </h3>
+        <div class="grid justify-items-end">
+
+            <div class="flex flex-row  space-x-2">
                 <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
                    class="btn btn-outline btn-info btn-sm relative inline-flex w-32"
                    target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
@@ -168,16 +173,10 @@
                                         :wire:key="'ledger_export-'.$ledgerRecord->define->id"/>
 
             </div>
-        </div>
-        <div class="flex flex-row">
-            <h3 class="mb-2 mt-0 text-3xl font-medium leading-tight text-primary">
-                <i class="fa-solid fa-book-open"></i>
-                {{$ledgerRecord->define->title}}
-            </h3>
-        </div>
-        <div class="flex flex-row">
-            <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
-                                         :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
+            <div class="flex flex-row">
+                <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
+                                             :wire:key="'ledger_define_tag-'.$ledgerRecord->define->id"/>
+            </div>
         </div>
         <div class="overflow-x-auto max-h-screen">
             <table class="relative table table-zebra table-compact table-auto table-pin-rows table-pin-cols max-h-fit">
