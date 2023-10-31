@@ -17,7 +17,7 @@
     @push('scripts')
         <script>
             // ドキュメントがロードされたときに実行する関数
-            document.addEventListener('livewire:init', function () {
+            document.addEventListener('livewire:initialized', function () {
                 // 幅と高さを調整するためのテキストエリア要素を取得
                 const textareas = document.querySelectorAll('textarea.adjustWidth.adjustHeight');
 
@@ -66,9 +66,9 @@
                 adjustAllInputSizes();
 
                 // Livewireメッセージが処理された際にすべてのテキストエリアの幅と高さを更新
-                Livewire.hook('message.processed', () => {
+                Livewire.hook('morph.updated', ({el, component}) => {
                     adjustAllInputSizes();
-                });
+                })
             });
         </script>
     @endpush
