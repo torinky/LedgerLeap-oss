@@ -278,6 +278,7 @@ class RecordsTable extends Component
         if (in_array($folderId, $this->selectedFolderIds)) {
             // 選択済みの場合、リストから削除
             $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, [$folderId]));
+            $this->resetPage();
         } else {
             // 選択されていない場合、リストに追加
             $this->selectedFolderIds[] = $folderId;
@@ -295,6 +296,7 @@ class RecordsTable extends Component
         if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
             // 選択済みの場合、リストから削除
             $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
+            $this->resetPage();
         } else {
             // 選択されていない場合、リストに追加
             $this->selectedLedgerDefineIds[] = $ledgerDefineId;
