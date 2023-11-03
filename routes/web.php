@@ -12,6 +12,7 @@ use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexContro
 use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SynonymController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -130,6 +131,8 @@ Route::middleware('auth')->group(function () {
         ->where('folderId', '[0-9]+');
 
     Route::post('/folder/create', [FolderCreateController::class, 'store'])->name('folder.store');
+
+    Route::get('/synonyms/{word}', [SynonymController::class, 'search']);
 
 });
 

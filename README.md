@@ -24,3 +24,10 @@ docker run --rm \
 laravelsail/php81-composer:latest \
 composer install --ignore-platform-reqs
 
+## Credit
+
+Japanese Wordnet (v1.1) © 2009-2011 NICT, 2012-2015 Francis Bond and 2016-2022 Francis Bond, Takayuki Kuribayashi\
+https://bond-lab.github.io/wnja/index.en.html
+
+日本語ワードネット （1.1版）© 2009-2011 NICT, 2012-2015 Francis Bond and 2016-2022 Francis Bond, Takayuki Kuribayashi\
+https://bond-lab.github.io/wnja/index.ja.html

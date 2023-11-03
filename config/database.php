@@ -93,6 +93,11 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'wordnet' => [
+            'driver' => 'sqlite',
+            'database' => database_path('wordnet_data/wnjpn.db'),
+        ],
+
     ],
 
     /*
