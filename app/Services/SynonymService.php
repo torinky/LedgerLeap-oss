@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\WordForm;
-use App\Models\WordSense;
-use App\Models\WordSynset;
+use App\Models\Synonym\Sense;
+use App\Models\Synonym\Synset;
+use App\Models\Synonym\Word;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -20,7 +20,7 @@ class SynonymService
      */
     public function getWords($lemma)
     {
-        return WordForm::where('lemma', $lemma)->get();
+        return Word::where('lemma', $lemma)->get();
     }
 
     /**
@@ -50,18 +50,18 @@ class SynonymService
      */
     public function getSenses($wordid)
     {
-        return WordSense::where('wordid', $wordid)->get();
+        return Sense::where('wordid', $wordid)->get();
     }
 
     /**
      * 指定されたシンセットに関連する情報を取得します。
      *
      * @param string $synset シンセット
-     * @return WordSynset|null
+     * @return Synset|null
      */
     public function getSynset($synset)
     {
-        return WordSynset::where('synset', $synset)->first();
+        return Synset::where('synset', $synset)->first();
     }
 
     /**
@@ -73,9 +73,9 @@ class SynonymService
      */
     public function getWordsFromSynset($synset, $lang)
     {
-        return WordForm::whereHas('wordSenses', function ($query) use ($synset, $lang) {
+        return Word::whereHas('Senses', function ($query) use ($synset, $lang) {
             $query->where('synset', $synset)
-                ->whereHas('wordForm', function ($query) use ($lang) {
+                ->whereHas('word', function ($query) use ($lang) {
                     $query->where('lang', $lang);
                 });
         })->get();

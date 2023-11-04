@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Synonym;
 
 use Illuminate\Database\Eloquent\Model;
 
-class WordForm extends Model
+class Word extends Model
 {
     protected $connection = 'wordnet';
     protected $table = 'word';
     // wordidを主キーとして設定
     protected $primaryKey = 'wordid';
 
-    public function wordSenses()
+    public function senses()
     {
-        return $this->hasMany(WordSense::class, 'wordid', 'wordid');
+        return $this->hasMany(Sense::class, 'wordid', 'wordid');
     }
 
 }

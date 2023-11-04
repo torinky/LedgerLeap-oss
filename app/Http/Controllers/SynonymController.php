@@ -24,7 +24,12 @@ class SynonymController extends Controller
             }
         }
 //        dd($synonyms);
-        return $synonyms;
+//        return $synonyms;
+        // ビューで表示
+        return view('synonyms.show', [
+            'word' => $word,
+            'synonyms' => $synonyms
+        ]);
     }
 }
 
