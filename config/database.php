@@ -98,6 +98,11 @@ return [
             'database' => database_path('wordnet_data/wnjpn.db'),
         ],
 
+        'tansi' => [
+            'driver' => 'sqlite',
+            'database' => database_path('tansi/tansi_v110.db'),
+        ],
+
     ],
 
     /*
