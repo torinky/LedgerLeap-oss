@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\SynonymService;
-use Igo\Tagger;
 
 class SynonymController extends Controller
 {
@@ -16,8 +15,9 @@ class SynonymController extends Controller
 
     public function search($inputWord)
     {
-        $igo = new Tagger();
-        $words = $igo->wakati($inputWord);
+
+        $words = $this->synonymService->wakati($inputWord);
+
 //        dd($igo->parse($inputWord));
 //        dd($words);
 
@@ -26,7 +26,7 @@ class SynonymController extends Controller
             $synonyms = array_merge($synonyms, $this->getSynonyms($word));
 
         }
-//        dd($synonyms);
+        dd($synonyms);
 //        return $synonyms;
         // ビューで表示
         return view('synonyms.show', [
