@@ -2,6 +2,9 @@
     $currentPage = $paginator->currentPage();
     $startCount = ($currentPage-1) * $this->perPage + 1;
     $lastPage = $this->lastPage();
+    if(empty($position)){
+        $position = 'default';
+    }
 @endphp
 
 <div class="grid justify-items-center">
@@ -13,11 +16,13 @@
                 {{-- 現在のページが最初のページでない場合に表示 --}}
                 @if (!$paginator->onFirstPage())
                     {{-- 最初のページに移動するボタン --}}
-                    <button wire:key="topPage-{{$position}}" wire:click="gotoPage(1)" class="join-item btn">
+                    <button wire:key="topPage-{{$position}}-page{{$currentPage}}"
+                            wire:click="gotoPage(1,'{{ $paginator->getPageName() }}')" class="join-item btn">
                         <i class="fa-sharp fa-solid fa-backward-step"></i>
                     </button>
                     {{-- 前のページに移動するボタン --}}
-                    <button wire:key="backPage-{{$position}}" wire:click="previousPage" class="join-item btn">
+                    <button wire:key="backPage-{{$position}}-page{{$currentPage}}"
+                            wire:click="previousPage('{{ $paginator->getPageName() }}')" class="join-item btn">
                         <i class="fa-solid fa-play fa-flip-horizontal px-3"></i>
                     </button>
                 @endif
@@ -30,7 +35,8 @@
 
                 {{-- 現在のページより前の3つのページボタンを表示 --}}
                 @for ($i = $startPage; $i < $endPage; $i++)
-                    <button wire:key="page-{{$i}}-{{$position}}" wire:click="gotoPage({{ $i }})"
+                    <button wire:key="page-{{$i}}-{{$position}}"
+                            wire:click="gotoPage({{ $i }},'{{ $paginator->getPageName() }}')"
                             class="join-item btn">{{ $i }}</button>
                 @endfor
 
@@ -48,16 +54,19 @@
                     @endphp
 
                     @for ($i = $startPage; $i <= $endPage; $i++)
-                        <button wire:key="page-{{$i}}-{{$position}}" wire:click="gotoPage({{ $i }})"
+                        <button wire:key="page-{{$i}}-{{$position}}"
+                                wire:click="gotoPage({{ $i }},'{{ $paginator->getPageName() }}')"
                                 class="join-item btn">{{ $i }}</button>
                     @endfor
 
                     {{-- 次のページに移動するボタン --}}
-                    <button wire:key="nextPage-{{$position}}" wire:click="nextPage" class="join-item btn">
+                    <button wire:key="nextPage-{{$position}}-page{{$currentPage}}"
+                            wire:click="nextPage('{{ $paginator->getPageName() }}')" class="join-item btn">
                         <i class="fa-solid fa-play px-3"></i>
                     </button>
                     {{-- 最後のページに移動するボタン --}}
-                    <button wire:key="lastPage-{{$position}}" wire:click="gotoPage({{ $lastPage }})"
+                    <button wire:key="lastPage-{{$position}}-page{{$currentPage}}"
+                            wire:click="gotoPage({{ $lastPage }},'{{ $paginator->getPageName() }}')"
                             class="join-item btn">
                         <i class="fa-sharp fa-solid fa-forward-step"></i>
                     </button>

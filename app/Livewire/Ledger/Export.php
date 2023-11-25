@@ -47,8 +47,10 @@ class Export extends Component
     public function mount($ledgerDefineId, $keywords, $filter)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-        $this->keywords = json_decode($keywords, true);
-        $this->filter = json_decode($filter, true);
+//        $this->keywords = json_decode($keywords, true);
+        $this->keywords = $keywords;
+//        $this->filter = json_decode($filter, true);
+        $this->filter = $filter;
         $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title . '.csv';
     }
 

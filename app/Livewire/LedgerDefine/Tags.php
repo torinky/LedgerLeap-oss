@@ -15,9 +15,10 @@ class Tags extends Component
     ];
     public $newTag = '';
 
-    public function mount()
+    public function mount($ledgerDefineId)
     {
-        $this->tags = Tag::where('ledger_define_id', $this->ledgerDefineId)->pluck('name', 'id')->toArray();
+        $this->ledgerDefineId = $ledgerDefineId;
+        $this->tags = Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
     }
 
     public function addTag()
