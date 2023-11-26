@@ -1,20 +1,25 @@
 <tr class="hover">
-    <th class=" border justify-center">
-        <div>
+    <th class=" border flex-col ">
+        <div class="tooltip"
+             data-tip="{{__('edit')}}"
+        >
             <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-               class="btn btn-outline btn-primary btn-sm my-1 w-28"
-               target="ledgerEdit_{{$ledgerRecord->define->id}}}}">
-                <i class="fas fa-pencil mr-1"></i>
-                {{__('edit')}}</a>
-
+               class="btn btn-primary btn-sm my-1 btn-square"
+               target="ledgerEdit_{{$ledgerRecord->define->id}}}}"
+            >
+                <i class="fas fa-pencil"></i>
+            </a>
         </div>
 
-        <div>
+
+        <div class="tooltip"
+             data-tip="{{__('detail')}}"
+        >
             <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id]) }}"
-               class="btn btn-outline btn-info btn-sm my-1 w-28"
+               class="btn btn-outline btn-info btn-sm my-1 btn-square"
                target="ledgerShow_{{$ledgerRecord->define->id}}}}">
-                <i class="fas fa-table-list mr-1"></i>
-                {{__('detail')}}</a>
+                <i class="fas fa-table-list"></i>
+            </a>
 
         </div>
 

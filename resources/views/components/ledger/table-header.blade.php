@@ -1,8 +1,7 @@
 <tr class="hover" wire:key="ledger_table_header_{{$ledgerRecord->define->id}}">
-    <th class="text-center px-4 py-2 tracking-wider"
+    <th class="text-center px-4 py-2 px-0 tracking-wider"
         wire:click="sort('id')"
         wire:key="ledger_id_sort_{{$ledgerRecord->define->id}}"
-        style="width:7rem;"
     >
         @if($orderBy == 'id')
             @if($orderAsc)

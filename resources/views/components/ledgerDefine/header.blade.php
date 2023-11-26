@@ -10,7 +10,7 @@
 
     <div class="flex flex-row  space-x-2">
         <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
-           class="btn btn-outline btn-info btn-sm relative inline-flex w-32"
+           class="btn btn-primary btn-sm relative inline-flex w-32"
            target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
             {{__('create')}}</a>
         <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
