@@ -131,3 +131,4 @@ out
 gen
 /_ide_helper.php
 !/database/tansi/tansi_v110.db
+!/database/wordnet_data/wnjpn.db
