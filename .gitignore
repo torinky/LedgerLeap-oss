@@ -130,3 +130,4 @@ fabric.properties
 out
 gen
 /_ide_helper.php
+!/database/tansi/tansi_v110.db
