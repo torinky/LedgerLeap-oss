@@ -19,10 +19,14 @@
             </div>
         </div>
     @endforeach
-    <input type="text" placeholder="{{__('Add Tag')}}"
-           class="input input-bordered input-sm w-full max-w-xs ml-5"
-           wire:model.live="newTag" wire:keydown.enter="addTag"
-           wire:key="tag_add_{{$ledgerDefineId}}"
-    />
+    <form wire:submit="addTag">
+        <input type="text" placeholder="{{__('Add Tag')}}"
+               class="input input-bordered input-sm w-full max-w-xs ml-5"
+               id="newTag-{{$ledgerDefineId}}"
+               wire:model="newTag"
+               wire:key="tag_add_{{$ledgerDefineId}}"
+        />
+        <span wire:loading>Saving...</span>
+    </form>
 </div>
 

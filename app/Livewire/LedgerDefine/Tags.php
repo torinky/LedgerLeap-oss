@@ -10,9 +10,6 @@ class Tags extends Component
 {
     public $ledgerDefineId;
     public $tags = [];
-    protected $rules = [
-        'tags' => 'required',
-    ];
     public $newTag = '';
 
     public function mount($ledgerDefineId)
@@ -33,7 +30,7 @@ class Tags extends Component
                 'creator_id' => Auth::user()->id,
                 'modifier_id' => Auth::user()->id,
             ]);
-            $this->tags[$tag->id] = $this->newTag;
+            $this->tags = Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
             $this->newTag = '';
         }
     }
@@ -41,7 +38,9 @@ class Tags extends Component
     public function removeTag($tagId)
     {
         Tag::find($tagId)->delete();
-        unset($this->tags[$tagId]);
+        $this->tags = $this->tags->filter(function ($item) use ($tagId) {
+            return $item->id != $tagId;
+        });
     }
 
     public function render()
