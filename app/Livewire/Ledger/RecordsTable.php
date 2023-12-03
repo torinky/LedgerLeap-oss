@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
@@ -21,18 +22,21 @@ class RecordsTable extends Component
     use withPagination;
 
     public $perPage = 100;
+    #[Url(as: 'q')]
     public $search = '';
     public $orderBy = 'id';
     public $orderAsc = false;
+    #[Url(as: 'fi')]
     public $filter = [];
     public $defineId = null;
     public $ledgerDefineRecords;
     public $folderRecords;
     public $breadcrumbs = [];
+    #[Url(as: 'l')]
     public $selectedLedgerDefineIds = [];
+    #[Url(as: 'f')]
     public $selectedFolderIds = [];
     public $currentFolderId;
-//    protected $listeners = ['contentsFilter', 'currentFolderChangedByTree'];
     private $tags = [];
     public $keywords = [];
     public $totalRecords;
@@ -142,19 +146,16 @@ class RecordsTable extends Component
     }
 
     /**
-     * コンテンツのフィルタリングを行う
+     * 選択するだいちょうを1つにする
      *
      * @param int $defineId
-     * @param int $columnNo
-     * @param string $word
      * @return void
      */
-    #[On('contentsFilter')]
-    public function contentsFilter($defineId, $columnNo, $word)
+    #[On('focusLedgerDefine')]
+    public function focusLedgerDefine($defineId)
     {
         $this->defineId = $defineId;
-        $this->filter[$columnNo] = $word;
-        $this->render();
+        $this->selectedLedgerDefineIds = [$defineId];
     }
 
     /**
