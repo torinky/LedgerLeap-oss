@@ -25,13 +25,13 @@
         <livewire:ledger.export :ledgerDefineId="$ledgerRecord->define->id"
                                 :$keywords
                                 :$filter
-                                key="ledger_export-{{$ledgerRecord->id}}"
+                                key="ledger_export-{{$ledgerRecord->define->id}}_{{$ledgerRecord->id}}"
         />
 
     </div>
     <div class="flex flex-row">
         <livewire:ledger-define.tags :ledgerDefineId="$ledgerRecord->define->id"
-                                     key="ledger_define_tag-{{$ledgerRecord->id}}"
+                                     key="ledger_define_tag-{{$ledgerRecord->define->id}}_{{$ledgerRecord->id}}"
         />
     </div>
 </div>
