@@ -7,7 +7,6 @@ on:
 env:
   DB_USERNAME: sail
   DB_PASSWORD: password
-  DB_DATABASE: testing
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
@@ -25,8 +24,7 @@ jobs:
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
-          MYSQL_TEST_DATABASE: 'testing'
-          MYSQL_ROOT_PASSWORD: ${{ env.DB_PASSWORD }}
+          MYSQL_GRANT_ALL_ACCESS: true
         options: >-
           --health-cmd "mysqladmin ping"
           --health-interval 10s
