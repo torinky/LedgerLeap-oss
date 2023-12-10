@@ -7,6 +7,7 @@ on:
 env:
   DB_USERNAME: sail
   DB_PASSWORD: password
+  DB_DATABASE: testing
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
@@ -24,6 +25,8 @@ jobs:
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
+          MYSQL_TEST_DATABASE: 'testing'
+          MYSQL_ROOT_PASSWORD: ${{ env.DB_PASSWORD }}
         options: >-
           --health-cmd "mysqladmin ping"
           --health-interval 10s
@@ -47,4 +50,4 @@ jobs:
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
       - name: Execute tests (Unit and Feature tests) via PHPUnit
-        run: vendor/bin/phpunit
+        run: vendor/bin/phpunit --env testing
