@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  DB_USERNAME: root
+  DB_USERNAME: sail
   DB_PASSWORD: password
   MAIL_FROM_ADDRESS: info@example.com
 
