@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  DB_USERNAME: sail
+  DB_USERNAME: root
   DB_PASSWORD: password
   MAIL_FROM_ADDRESS: info@example.com
 
@@ -20,7 +20,7 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: 'example_app'
+          MYSQL_DATABASE: 'ledgerleap'
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
