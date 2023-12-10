@@ -10,9 +10,12 @@
                     @if($folderRecord->folders->count()>0)
                         <span class="badge badge-info text-base-100 ">{{ $folderRecord->folders->count() }}</span>
                     @endif
-                    @if($folderRecord->ledgerDefines->count()>0)
+                        @php
+                            $count = $folderRecord->descendantLedgerDefinesCount();
+                        @endphp
+                        @if($count > 0)
                         <span class="badge badge-info text-base-100 space-x-1"><i
-                                class="fas fa-book"></i><span>{{ $folderRecord->ledgerDefines->count() }}</span></span>
+                                class="fas fa-book"></i><span>{{ $count }}</span></span>
                     @endif
                 </div>
                 <div class="flex justify-center items-center ">

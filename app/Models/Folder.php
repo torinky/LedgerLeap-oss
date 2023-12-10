@@ -29,4 +29,14 @@ class Folder extends Model
         return $this->hasMany(Tag::class, 'ledger_define_id');
     }
 
+    /**
+     * 子孫フォルダーのすべての`LedgerDefine`モデルの件数を取得します。
+     *
+     * @return int
+     */
+    public function descendantLedgerDefinesCount()
+    {
+        return $this->descendants(null, true)->get()
+            ->reduce(fn($carry, $folder) => $carry + $folder->ledgerDefines()->count(), 0);
+    }
 }
