@@ -7,24 +7,31 @@
         >
             <div class="indicator ">
                 <div class="indicator-item indicator-top indicator-center w-32">
-                    @if($folderRecord->folders->count()>0)
-                        <span class="badge badge-info text-base-100 ">{{ $folderRecord->folders->count() }}</span>
-                    @endif
-                        @php
-                            $count = $folderRecord->descendantLedgerDefinesCount();
-                        @endphp
-                        @if($count > 0)
+                    {{--
+                                        @if($folderRecord->folders->count()>0)
+                                            <span class="badge badge-info text-base-100 ">{{ $folderRecord->folders->count() }}</span>
+                                        @endif
+                    --}}
+                    @php
+                        $count = $folderRecord->descendantLedgerDefinesCount();
+                    @endphp
+                    @if($count > 0)
                         <span class="badge badge-info text-base-100 space-x-1"><i
                                 class="fas fa-book"></i><span>{{ $count }}</span></span>
                     @endif
                 </div>
-                <div class="flex justify-center items-center ">
-                    <button class="btn btn-ghost"
+                <div class="flex justify-center items-center space-x-1">
+                    <button class="btn btn-ghost px-2"
                             wire:click="toggleFolderId({{ $folderRecord->id }})"
                             wire:key="selected_folder_{{$folderRecord->id}}">
-                        <i class="swap-off fa-solid {{in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder'}}  text-3xl "></i>
+                            <span class="fa-layers fa-fw text-3xl">
+                                <i class="fa-solid {{in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder'}} "></i>
+                                <span class="fa-layers-text text-secondary" data-fa-transform="shrink-8 down-1"
+                                      style="font-weight:900">{{$folderRecord->descendantCount()}}</span>
+                            </span>
                     </button>
-                    <button class="btn btn-ghost" wire:click="changeCurrentFolder({{$folderRecord->id}})"
+                    <button class="btn btn-ghost px-2"
+                            wire:click="changeCurrentFolder({{$folderRecord->id}})"
                             wire:key="enter_folder_{{$folderRecord->id}}"><i
                             class="text-3xl fa-solid fa-right-to-bracket"></i></button>
                 </div>
@@ -40,7 +47,7 @@
                 wire:click="toggleLedgerDefineId({{ $ledgerDefineRecord->id }})"
                 wire:key="selected_ledger_{{$ledgerDefineRecord->id}}">
 
-            <i class="swap-off fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} text-3xl "></i>
+            <i class="fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} text-3xl "></i>
             <div class="ladgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
             <div class="lastUpdate text-sm"><i
                     class="fas fa-clock mr-1"></i>{{$ledgerDefineRecord->updated_at->format('Y-m-d')}}

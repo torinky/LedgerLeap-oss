@@ -2,16 +2,11 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-//@import '~@fortawesome/fontawesome-free/scss/fontawesome';
-//@import '~@fortawesome/fontawesome-free/scss/regular';
-//@import '~@fortawesome/fontawesome-free/scss/solid';
-//@import '~@fortawesome/fontawesome-free/scss/brands';
-
-$fa-font-path: '~fontawesome/webfonts';
-@import '~fontawesome/scss/fontawesome';
-@import '~fontawesome/scss/brands';
-@import '~fontawesome/scss/solid';
-@import '~fontawesome/scss/regular';
+//$fa-font-path: '~fontawesome/webfonts';
+//@import '~fontawesome/scss/fontawesome';
+//@import '~fontawesome/scss/brands';
+//@import '~fontawesome/scss/solid';
+//@import '~fontawesome/scss/regular';
 
 @import '../css/tree.css';
 //@import 'filepond/dist/filepond.min.css';

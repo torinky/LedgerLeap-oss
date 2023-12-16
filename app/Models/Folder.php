@@ -39,4 +39,14 @@ class Folder extends Model
         return $this->descendants(null, true)->get()
             ->reduce(fn($carry, $folder) => $carry + $folder->ledgerDefines()->count(), 0);
     }
+
+    /**
+     * 子孫フォルダーのすべての件数を取得します。
+     *
+     * @return int
+     */
+    public function descendantCount()
+    {
+        return $this->descendants(null, false)->count();
+    }
 }

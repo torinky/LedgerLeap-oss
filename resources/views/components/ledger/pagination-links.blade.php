@@ -18,7 +18,7 @@
                     {{-- 最初のページに移動するボタン --}}
                     <button wire:key="topPage-{{$position}}-page{{$currentPage}}"
                             wire:click="gotoPage(1,'{{ $paginator->getPageName() }}')" class="join-item btn">
-                        <i class="fa-sharp fa-solid fa-backward-step"></i>
+                        <i class="fa-solid fa-backward-step"></i>
                     </button>
                     {{-- 前のページに移動するボタン --}}
                     <button wire:key="backPage-{{$position}}-page{{$currentPage}}"
@@ -68,7 +68,7 @@
                     <button wire:key="lastPage-{{$position}}-page{{$currentPage}}"
                             wire:click="gotoPage({{ $lastPage }},'{{ $paginator->getPageName() }}')"
                             class="join-item btn">
-                        <i class="fa-sharp fa-solid fa-forward-step"></i>
+                        <i class="fa-solid fa-forward-step"></i>
                     </button>
                 @endif
             </div>
