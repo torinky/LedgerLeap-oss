@@ -16,7 +16,7 @@
                         $count = $folderRecord->descendantLedgerDefinesCount();
                     @endphp
                     @if($count > 0)
-                        <span class="badge badge-info text-base-100 space-x-1"><i
+                        <span class="badge bg-base-200 text-secondary space-x-1"><i
                                 class="fas fa-book"></i><span>{{ $count }}</span></span>
                     @endif
                 </div>

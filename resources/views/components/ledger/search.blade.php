@@ -1,10 +1,9 @@
 <div class="w-full flex pb-10 justify-center items-center">
     <div class="w-3/6 mx-1">
-        <label>
-            <input wire:model.live.debounce.800ms="search" type="text"
+
+        <input wire:model.live.debounce.800ms="search" type="search"
                    class="input input-bordered input-lg input-primary w-full"
-                   placeholder="Search content...">
-        </label>
+               placeholder="{{__('Search content...')}}">
     </div>
     <div class="w-1/6 relative mx-1">
         {{--

@@ -40,7 +40,7 @@
             </div>
             <div>
                 <label for="app-drawer" class="btn btn-sm btn-ghost xl:hidden">
-                    <i class="fa-regular fa-folder-tree"></i>
+                    <i class="fa-solid fa-folder-tree"></i>
                 </label>
 
             </div>
