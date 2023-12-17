@@ -28,6 +28,7 @@ services:
             - meilisearch
             - mailpit
             - selenium
+            - tika
     mysql:
         image: 'groonga/mroonga:mysql-8.0-latest'
         platform: linux/amd64
@@ -67,6 +68,7 @@ services:
             timeout: 5s
     meilisearch:
         image: 'getmeili/meilisearch:latest'
+        platform: linux/amd64
         ports:
             - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
         volumes:
@@ -95,6 +97,16 @@ services:
             - 'host.docker.internal:host-gateway'
         volumes:
             - '/dev/shm:/dev/shm'
+        networks:
+            - sail
+    tika:
+        image: apache/tika:latest
+        ports:
+            - 9998:9998
+        command: -c /tika-config.xml
+        restart: on-failure
+        volumes:
+            - './docker/tika/tika-config.xml:/tika-config.xml'
         networks:
             - sail
 networks:
