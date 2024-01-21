@@ -27,7 +27,10 @@ return new class extends Migration {
         });
 //        DB::statement('ALTER TABLE ledgers COMMENT = \'engine "InnoDB"\'');
         DB::statement('ALTER TABLE ledgers ADD COLUMN content longtext COMMENT \'flags "COLUMN_VECTOR"\'');
+        DB::statement('ALTER TABLE ledgers ADD COLUMN content_attached longtext COMMENT \'flags "COLUMN_VECTOR"\'');
         DB::statement('ALTER TABLE ledgers ADD FULLTEXT index (content) COMMENT \'tokenizer "TokenBigramSplitSymbolAlphaDigit", index_flags "WITH_SECTION|WITH_POSITION"\'');
+        DB::statement('ALTER TABLE ledgers ADD FULLTEXT index (content_attached) COMMENT \'tokenizer "TokenBigramSplitSymbolAlphaDigit", index_flags "WITH_SECTION|WITH_POSITION"\'');
+        DB::statement('ALTER TABLE ledgers ADD FULLTEXT index (content, content_attached) COMMENT \'tokenizer "TokenBigramSplitSymbolAlphaDigit", index_flags "WITH_SECTION|WITH_POSITION"\'');
     }
 
     /**

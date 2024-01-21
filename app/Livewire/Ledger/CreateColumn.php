@@ -3,73 +3,110 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\StoreRequest;
+use App\Livewire\Ledger\Livewire\Features\SupportRedirects\Redirector;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Intervention\Image\Facades\Image;
 use Intervention\Image\ImageManager;
 use Livewire\Component;
-use Livewire\TemporaryUploadedFile;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Vaites\ApacheTika\Client;
 
+/**
+ * @method syncInput(string $name, array|mixed[] $files)
+ */
 class CreateColumn extends Component
 {
     use WithFileUploads;
 
-    public $content;
-    public $ledgerDefineRecord;
+    public array $content;
+    public mixed $ledgerDefineRecord;
     public int $ledgerDefineId;
-    public $ledgerRecord;
-    public $ledgerId;
+    public mixed $ledgerRecord;
+    public string $ledgerId;
+    private array $contentAttached = [];
 
-    public function mount(request $request)
+    /**
+     * @param Request $request
+     * @return void
+     */
+    public function mount(request $request): void
     {
         //new record create
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::where('ledger_defines.id', $this->ledgerDefineId)->first();
         $this->ledgerRecord = null;
-        foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
-            if ($column->type == 'files' || $column->type == 'chk') {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type === 'files' || $column->type === 'chk') {
                 $this->content[$column->id] = [];
-
             } else {
                 $this->content[$column->id] = '';
-
             }
         }
+//        dd($this->content, $this->contentAttached);
 //        dd($this->ledgerDefineRecord);
     }
 
+    /**
+     * @return View
+     */
     public function render(): View
     {
         return view('livewire.ledger.create-column');
     }
 
-    public function updated($propertyName)
+    public function updated($propertyName): void
     {
-        $this->validateOnly($propertyName);
+        try {
+            $this->validateOnly($propertyName);
+        } catch (ValidationException $e) {
+        }
     }
 
+    /**
+     * @param StoreRequest $request
+     * @throws Exception
+     */
     public function store(StoreRequest $request)
     {
         $this->validate();
 
-        foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
-            if ($column->type == 'files') {
-                $filenames = $this->storeFile($column->id);
+//        dd($this->content, $this->contentAttached);
+
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+
+            if ($column->type === 'files') {
+
+                $filenames = [];
+                $fileContents = [];
+                foreach ($this->content[$column->id] as $uploadedFile) {
+                    $stored = $this->storeFile($uploadedFile);
+                    $filenames[$stored->originalName] = $stored->hashedName;
+                    $fileContents[$stored->originalName] = $stored->meta;
+                }
+//                $filenames = $this->storeFile($column->id);
+//dd($filenames,$fileContents);
                 $this->content[$column->id] = $filenames;
-            }
-            if ($column->type == 'chk' && empty($this->content[$column->id])) {
-                $this->content[$column->id] = [];
+                $this->contentAttached[$column->id] = $fileContents;
             }
         }
-        ksort($this->content);
+        $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+        $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
 //dd($this->content);
+//        dd($this->content, $this->contentAttached);
+//        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
+//        数字キーによるソートもcreateに渡すまでの間に済ませておく
         $this->ledgerRecord = Ledger::create([
             'content' => $this->content,
+            'content_attached' => $this->contentAttached,
             'ledger_define_id' => $this->ledgerDefineRecord->id,
             'creator_id' => Auth::user()->id,
             'modifier_id' => Auth::user()->id,
@@ -81,49 +118,83 @@ class CreateColumn extends Component
 
 
     /**
-     * @param int|string $id
-     * @return array
+     * @param TemporaryUploadedFile $file
+     * @return object
+     * @throws Exception
      */
-    public function storeFile(int|string $id): array
+    public function storeFile(TemporaryUploadedFile $file): object
     {
-        $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
-        $filenames = [];
-        if (!isset($this->content[$id])) {
-            return $filenames;
-        }
-        foreach ($this->content[$id] as $file) {
-            $fileHashName = $file->store('public/Ledger/Attachments');
-            $filenames[$file->getClientOriginalName()] = $fileHashName;
 
-            $contentType = $file->getClientMimeType();
-            if (!in_array($contentType, $allowedMimeTypes)) {
-                // Create a thumbnail of the image using Intervention Image Library
-                $imageManager = new ImageManager();
-                $img = Image::make($file->getRealPath());
-                $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-                $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
-            }
+        $fileHashName = $file->store('public/Ledger/Attachments');
+//        $filenames[$file->getClientOriginalName()] = $fileHashName;
+
+        $result = (object)[
+            'originalName' => $file->getClientOriginalName(),
+            'hashedName' => $fileHashName,
+            'meta' => null,
+        ];
+
+//        画像ファイルの場合はサムネイルを作る
+//        $contentType = $file->getClientMimeType();
+//        $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
+//        if (in_array($contentType, $allowedMimeTypes)) {
+//        dd($file->getClientMimeType(),$file->getRealPath());
+        if (Str::endsWith($file->getRealPath(), ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'])) {
+            // Create a thumbnail of the image using Intervention Image Library
+            $imageManager = new ImageManager();
+            $img = Image::make($file->getRealPath());
+            $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
         }
-        return $filenames;
+
+//        ファイルからメタ情報、テキストを抽出する
+        $tikaClient = Client::make('tika', 9998);
+        $result->meta = $tikaClient->getMetadata($file->getRealPath());
+//        dd($language,$metadata);
+//        return $filenames;
+        return $result;
     }
+    /*    public function storeFile(int|string $id): array
+        {
+
+            $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
+            $filenames = [];
+            if (!isset($this->content[$id])) {
+                return $filenames;
+            }
+            foreach ($this->content[$id] as $file) {
+                $fileHashName = $file->store('public/Ledger/Attachments');
+                $filenames[$file->getClientOriginalName()] = $fileHashName;
+
+                $contentType = $file->getClientMimeType();
+                if (!in_array($contentType, $allowedMimeTypes)) {
+                    // Create a thumbnail of the image using Intervention Image Library
+                    $imageManager = new ImageManager();
+                    $img = Image::make($file->getRealPath());
+                    $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                    $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
+                }
+            }
+            return $filenames;
+        }*/
 
     /**
      * 断続的にファイルアップロードした際に以前のアップロードとマージする
      * https://github.com/livewire/livewire/issues/1230
      * @param string $name
      * @param string $tmpPath
+     * @param $isMultiple
      * @return void
      */
-
-    public function finishUpload($name, $tmpPath, $isMultiple)
+    public function finishUpload(string $name, string $tmpPath, $isMultiple): void
     {
         $this->cleanupOldUploads();
 
-        $files = collect($tmpPath)->map(function ($i) {
-            return TemporaryUploadedFile::createFromLivewire($i);
-        })->toArray();
+        $files = collect($tmpPath)->map(fn($i) => TemporaryUploadedFile::createFromLivewire($i))->toArray();
         $this->dispatch('upload:finished', $name, collect($files)->map->getFilename()->toArray())->self();
 
         //        $files = array_merge($this->getPropertyValue($name), $files);
@@ -169,8 +240,6 @@ class CreateColumn extends Component
 
             } elseif ($columnType === 'select') {
                 $rules[] = Rule::in($column->options);
-            } elseif ($columnType === 'files') {
-//                $rules[] = 'array';
             }
 
             // 必要に応じて追加のバリデーションルールを追加
@@ -185,7 +254,10 @@ class CreateColumn extends Component
         return $validationRules;
     }
 
-    protected function validationAttributes()
+    /**
+     * @return array
+     */
+    protected function validationAttributes(): array
     {
         $attributes = [];
 
@@ -196,7 +268,10 @@ class CreateColumn extends Component
         return $attributes;
     }
 
-    protected function messages()
+    /**
+     * @return array
+     */
+    protected function messages(): array
     {
         return [
             'content.*.in_options' => __(":attribute is not valid value"),

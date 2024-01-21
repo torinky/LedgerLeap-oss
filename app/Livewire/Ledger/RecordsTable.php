@@ -146,7 +146,7 @@ class RecordsTable extends Component
     }
 
     /**
-     * 選択するだいちょうを1つにする
+     * 選択する台帳を1つにする
      *
      * @param int $defineId
      * @return void

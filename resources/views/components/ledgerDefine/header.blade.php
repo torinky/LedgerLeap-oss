@@ -12,16 +12,16 @@
         <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
            class="btn btn-primary btn-sm relative inline-flex w-32"
            target="ledgerCreate_{{$ledgerRecord->define->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
-            {{__('create')}}</a>
+            {{__('Create')}}</a>
         <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerRecord->define->id]) }}"
            class="btn btn-outline btn-primary btn-sm relative inline-flex w-32"
            target="ledgerDefineEdit_{{$ledgerRecord->define->id}}}}"><i
-                class="fas fa-gears mr=1"></i> {{__('setting')}}</a>
+                class="fas fa-gears mr=1"></i> {{__('Settings')}}</a>
         <a href="{{ route('ledger.downloadExcelCSV', [
                     'ledgerDefineId' => $ledgerRecord->define->id,
                     'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
            class="btn btn-outline btn-secondary btn-sm relative inline-flex"
-        >Download Excel CSV</a>
+        >{{__('Export CSV')}}</a>
         <livewire:ledger.export :ledgerDefineId="$ledgerRecord->define->id"
                                 :$keywords
                                 :$filter

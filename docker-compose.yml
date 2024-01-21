@@ -1,6 +1,6 @@
 version: '3'
 services:
-    laravel.test:
+    laravel:
         build:
             context: ./docker/8.2
             dockerfile: Dockerfile
@@ -101,9 +101,10 @@ services:
             - sail
     tika:
         image: apache/tika:latest
+        platform: linux/amd64
         ports:
             - 9998:9998
-        command: -c /tika-config.xml
+        #        command: -c /tika-config.xml
         restart: on-failure
         volumes:
             - './docker/tika/tika-config.xml:/tika-config.xml'

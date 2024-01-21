@@ -13,19 +13,29 @@ use Illuminate\Support\Facades\Storage;
 class ModifyColumn extends CreateColumn
 {
 
-    public $deletedContent = [];
-    public function mount(request $request)
+    public array $deletedContent = [];
+    private array $contentAttached = [];
+
+    /**
+     * @param Request $request
+     * @return void
+     */
+    public function mount(request $request): void
     {
         $this->ledgerId = (int)$request->route('ledgerId');
         if ($this->ledgerId) {
             //edit
             $this->ledgerRecord = Ledger::with('define')->where('ledgers.id', $this->ledgerId)->firstOrFail();
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
-            $this->ledgerDefineRecord = $this->ledgerRecord->define;
-            $this->content = $this->ledgerRecord->content;
+            if (!empty($this->ledgerRecord->define)) {
+                $this->ledgerDefineRecord = $this->ledgerRecord->define;
+            }
+            if (!empty($this->ledgerRecord->content)) {
+                $this->content = $this->ledgerRecord->content;
+            }
 
-            foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
-                if ($column->type == 'files') {
+            foreach ($this->ledgerDefineRecord->column_define as $column) {
+                if ($column->type === 'files') {
                     $this->deletedContent[$column->id] = [];
                     $this->content[$column->id] = [];
                 }
@@ -38,42 +48,56 @@ class ModifyColumn extends CreateColumn
         return view('livewire.ledger.modify-column');
     }
 
+    /**
+     * @param StoreRequest $request
+     * @throws Exception
+     */
     public function store(StoreRequest $request)
     {
         $this->validate();
 
-        foreach ($this->ledgerDefineRecord->column_define as $cKey => $column) {
-            if ($column->type == 'files') {
-                $this->mergeContentFiles($column);
-            }
-            if ($column->type == 'chk' && empty($this->content[$column->id])) {
-                $this->content[$column->id] = [];
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type === 'files') {
+                $storedFiles = [];
+                foreach ($this->content[$column->id] as $uploadedFile) {
+                    $stored = $this->storeFile($uploadedFile);
+                    $storedFiles[] = $stored;
+                }
+
+                $this->mergeContentFiles($column, $storedFiles);
+//                dd($storedFiles,$this->content,$this->content_attached);
             }
         }
-        ksort($this->content);
+        $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+        $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
 
         if ($this->ledgerId) {
             $this->storeLedgerDiff();
 
             $ledgerRecord = Ledger::find($this->ledgerId);
             $ledgerRecord->content = $this->content;
+            $ledgerRecord->content_attached = $this->contentAttached;
             $ledgerRecord->modifier_id = Auth::user()->id;
             $ledgerRecord->save();
             return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
                 ->with('status', __('ledger record updated successfully !'));
         }
-
+        abort(404);
     }
 
     /**
      * @param mixed $column
-     * @return void
+     * @param [object] $addingStoredFiles
      */
-    public function mergeContentFiles(mixed $column): void
+    public function mergeContentFiles(mixed $column, $addingStoredFiles): void
     {
-        //新規登録したファイルの保存
-        $filenames = $this->storeFile($column->id);
-        $this->content[$column->id] = $filenames;
+        $addedFilenames = [];
+        $addedFileContents = [];
+        foreach ($addingStoredFiles as $stored) {
+            $addedFilenames[$stored->originalName] = $stored->hashedName;
+            $addedFileContents[$stored->originalName] = $stored->meta;
+        }
+
 
         //既存ファイルの削除処理
         if (!empty($this->ledgerRecord->content[$column->id])) {
@@ -81,20 +105,49 @@ class ModifyColumn extends CreateColumn
              * fileの保存状態
              * ['originalFilename'=>'savedFilePath']
              */
-            $tmpContent = $this->ledgerRecord->content[$column->id];
+            $tmpContent = $this->ledgerRecord->content[$column->id] ?? [];
+            $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
             foreach ($this->ledgerRecord->content[$column->id] as $originalFilename => $filepath) {
                 if (in_array($filepath, $this->deletedContent[$column->id], true)) {
-                    unset($tmpContent[$originalFilename]);
+                    unset($tmpContent[$originalFilename], $tmpContentAttached[$originalFilename]);
                     //実体ファイルを消したければここに削除処理を追加
                 }
             }
             //以前保存したファイルとのマージ
-            $this->content[$column->id] = array_merge($filenames, $tmpContent);
+            $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
+            $this->contentAttached[$column->id] = array_merge($addedFileContents, $tmpContentAttached);
+        } else {
+            $this->content[$column->id] = $addedFilenames;
+            $this->contentAttached[$column->id] = $addedFileContents;
+
         }
     }
+    /*    public function mergeContentFiles(mixed $column): void
+        {
+            //新規登録したファイルの保存
+            $filenames = $this->storeFile($column->id);
+            $this->content[$column->id] = $filenames;
+
+            //既存ファイルの削除処理
+            if (!empty($this->ledgerRecord->content[$column->id])) {
+                $tmpContent = $this->ledgerRecord->content[$column->id];
+                foreach ($this->ledgerRecord->content[$column->id] as $originalFilename => $filepath) {
+                    if (in_array($filepath, $this->deletedContent[$column->id], true)) {
+                        unset($tmpContent[$originalFilename]);
+                        //実体ファイルを消したければここに削除処理を追加
+                    }
+                }
+                //以前保存したファイルとのマージ
+                $this->content[$column->id] = array_merge($filenames, $tmpContent);
+            }
+        }*/
 
 
-    private function getThumbnailUrl($filename)
+    /**
+     * @param $filename
+     * @return string
+     */
+    private function getThumbnailUrl($filename): string
     {
         return Storage::url('Ledger/thumbs/' . basename($filename));
     }

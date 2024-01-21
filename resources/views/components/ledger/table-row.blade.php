@@ -1,7 +1,7 @@
 <tr class="hover">
     <th class=" border flex-col ">
         <div class="tooltip"
-             data-tip="{{__('edit')}}"
+             data-tip="{{__('Edit')}}"
         >
             <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
                class="btn btn-primary btn-sm my-1 btn-square"
@@ -13,7 +13,7 @@
 
 
         <div class="tooltip"
-             data-tip="{{__('detail')}}"
+             data-tip="{{__('Details')}}"
         >
             <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id]) }}"
                class="btn btn-outline btn-info btn-sm my-1 btn-square"

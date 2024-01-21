@@ -9,6 +9,7 @@ use Illuminate\Routing\Route;
 
 /**
  * @method static find(Route|object|string|null $route)
+ * @method maxColumnId()
  */
 class LedgerDefine extends Model
 {
@@ -58,5 +59,51 @@ class LedgerDefine extends Model
             }
         });
     }
+
+    /**
+     * @return int
+     */
+    public function getMaxColumnIdAttribute()
+    {
+        return collect($this->column_define)->pluck('id')->max();
+    }
+
+    /**
+     * @return Collection
+     */
+    private function getColumnDefineKeyByIdAttribute()
+    {
+        return collect($this->column_define)->keyBy('id')->sortKeys();
+
+    }
+
+    /**
+     * @param $content
+     * @return array
+     */
+    public function normalizeByColumnDefine($content)
+    {
+        $maxId = $this->getMaxColumnIdAttribute();
+        $columnDefineKeyById = $this->getColumnDefineKeyByIdAttribute();
+
+        // contentをcollectionに変換
+        $contentCollection = collect($content);
+
+        // 欠番を埋める
+        for ($i = 0; $i <= $maxId; $i++) {
+            if (!$contentCollection->has($i)) {
+                if ($columnDefineKeyById->has($i)) {
+                    $contentCollection[$i] = $columnDefineKeyById[$i]->type === 'chk' ? [] : '';
+                }
+            }
+        }
+
+        // キーで並び替え
+        $sortedContentArray = $contentCollection->sortKeys();
+
+        // 数字添字配列に作り直し
+        return $sortedContentArray->values()->toArray();
+    }
+
 
 }

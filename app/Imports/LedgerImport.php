@@ -21,7 +21,7 @@ use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedHeadingRow, WithCustomCsvSettings,
     WithBatchInserts, WithChunkReading, WithEvents
 {
-    protected $legerDefine;
+    protected $ledgerDefine;
     protected $columnDefines;
     private $currentRows = 0;
     private $updateRows = 0;
@@ -40,7 +40,7 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
      */
     public function __construct(LedgerDefine $ledgerDefine, $mode = Self::MODE_UPDATE)
     {
-        $this->legerDefine = $ledgerDefine;
+        $this->ledgerDefine = $ledgerDefine;
         $this->columnDefines = $ledgerDefine->column_define;
         $this->id = $ledgerDefine->id;
         $this->importMode = $mode;
@@ -96,7 +96,7 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
             'created_at' => $row['[[[created_at]]]'] ?? '',
             'modifier_id' => $row['[[[modifier_id]]]'] ?? Auth::user()->id,
             'creator_id' => $row['[[[creator_id]]]'] ?? Auth::user()->id,
-            'ledger_define_id' => $this->legerDefine->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $this->generateLedgerContent($row),
         ]);
 
@@ -118,7 +118,7 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
             $content[$columnDefine->id] = $columnDefine->restoreColumnValueFromText($columnValue);
         }
         // コンテンツを設定
-        return $content;
+        return $this->ledgerDefine->normalizeByColumnDefine($content);
     }
 
     public function getCsvSettings(): array

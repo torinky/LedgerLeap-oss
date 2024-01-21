@@ -2,12 +2,12 @@
     <a wire:click="export()" class="btn btn-outline btn-secondary btn-sm relative inline-flex"
        wire:key="ledger_export_request-{{$ledgerDefineId}}"
        @if($exporting && !$exportFinished) disabled="disabled" @endif
-    >{{__('Start CSV Export')}}</a>
+    >{{__('Request CSV Export')}}</a>
 
     @if($exporting && !$exportFinished)
         <span wire:poll="updateExportProgress" class="flex space-x-5 items-center"
               wire:key="ledger_export_progress-{{$ledgerDefineId}}">
-            <span class="loading loading-spinner loading-xs mx-2"></span><span>{{__('Exporting...please wait.')}}</span>
+            <span class="loading loading-spinner loading-xs mx-2"></span><span>{{__('Exporting...Please wait.')}}</span>
         </span>
     @endif
 
