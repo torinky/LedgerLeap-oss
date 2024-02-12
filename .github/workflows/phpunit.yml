@@ -6,7 +6,7 @@ on:
 
 env:
   DB_USERNAME: sail
-  DB_PASSWORD: password
+  DB_PASSWORD:
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
