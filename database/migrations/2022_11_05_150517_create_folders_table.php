@@ -17,6 +17,8 @@ return new class extends Migration {
         Schema::create('folders', function (Blueprint $table) {
             $table->id();
             $table->string('title')->index();
+            $table->unsignedInteger('creator_id')->index();
+            $table->unsignedInteger('modifier_id')->index();
 
             Migrate::columns($table, (new Folder)->getTreeConfig());
 

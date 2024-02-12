@@ -60,7 +60,7 @@ class ModifyColumn extends CreateColumn
             if ($column->type === 'files') {
                 $storedFiles = [];
                 foreach ($this->content[$column->id] as $uploadedFile) {
-                    $stored = $this->storeFile($uploadedFile);
+                    $stored = $this->storeFile($uploadedFile, $column->id);
                     $storedFiles[] = $stored;
                 }
 
@@ -79,6 +79,9 @@ class ModifyColumn extends CreateColumn
             $ledgerRecord->content_attached = $this->contentAttached;
             $ledgerRecord->modifier_id = Auth::user()->id;
             $ledgerRecord->save();
+
+            $this->addAttachedFileRecord();
+
             return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
                 ->with('status', __('ledger record updated successfully !'));
         }

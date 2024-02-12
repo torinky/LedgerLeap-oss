@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Livewire\Ledger\Livewire\Features\SupportRedirects\Redirector;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Exception;
@@ -33,6 +35,7 @@ class CreateColumn extends Component
     public mixed $ledgerRecord;
     public string $ledgerId;
     private array $contentAttached = [];
+    private array $newAttachedFiles = [];
 
     /**
      * @param Request $request
@@ -88,7 +91,7 @@ class CreateColumn extends Component
                 $filenames = [];
                 $fileContents = [];
                 foreach ($this->content[$column->id] as $uploadedFile) {
-                    $stored = $this->storeFile($uploadedFile);
+                    $stored = $this->storeFile($uploadedFile, $column->id);
                     $filenames[$stored->originalName] = $stored->hashedName;
                     $fileContents[$stored->originalName] = $stored->meta;
                 }
@@ -112,6 +115,8 @@ class CreateColumn extends Component
             'modifier_id' => Auth::user()->id,
         ]);
 
+        $this->addAttachedFileRecord();
+
         return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
             ->with('status', __('ledger record stored successfully !'));
     }
@@ -122,7 +127,7 @@ class CreateColumn extends Component
      * @return object
      * @throws Exception
      */
-    public function storeFile(TemporaryUploadedFile $file): object
+    public function storeFile(TemporaryUploadedFile $file, $columnId = 0): object
     {
 
         $fileHashName = $file->store('public/Ledger/Attachments');
@@ -154,6 +159,23 @@ class CreateColumn extends Component
         $result->meta = $tikaClient->getMetadata($file->getRealPath());
 //        dd($language,$metadata);
 //        return $filenames;
+
+        $contentFlag = false;
+        if (!empty($result->meta->content)) {
+            $contentFlag = true;
+        }
+
+        $this->newAttachedFiles[] = [
+            'filename' => $file->getClientOriginalName(),
+            'path' => $fileHashName,
+//            'file_type' => $file->getClientMimeType(),
+            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
+            'status' => AttachedFileStatus::UPLOADED->value,
+            'contain_content' => $contentFlag,
+            'optimized' => false,
+            'column_id' => $columnId,
+        ];
+
         return $result;
     }
     /*    public function storeFile(int|string $id): array
@@ -204,6 +226,21 @@ class CreateColumn extends Component
         }
 
         $this->syncInput($name, $files);
+    }
+
+    /**
+     * @return void
+     */
+    public function addAttachedFileRecord(): void
+    {
+        foreach ($this->newAttachedFiles as $newAttachedFile) {
+            AttachedFile::create(array_merge($newAttachedFile, [
+                'ledger_id' => $this->ledgerRecord->id,
+                'ledger_define_id' => $this->ledgerDefineRecord->id,
+                'creator_id' => Auth::user()->id,
+                'modifier_id' => Auth::user()->id,
+            ]));
+        }
     }
 
     /**

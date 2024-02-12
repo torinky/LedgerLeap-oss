@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Fureev\Trees\{NestedSetTrait};
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 //class Folder extends Model implements TreeConfigurable
 class Folder extends Model
@@ -11,7 +12,7 @@ class Folder extends Model
     use NestedSetTrait;
 
     protected $fillable = [
-        'title',
+        'title', 'modifier_id', 'creator_id'
     ];
 
     public function ledgerDefines()
@@ -49,4 +50,25 @@ class Folder extends Model
     {
         return $this->descendants(null, false)->count();
     }
+
+    /**
+     * User モデルへの creator リレーションを定義します。
+     *
+     * @return BelongsTo
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * User モデルへの modifier リレーションを定義します。
+     *
+     * @return BelongsTo
+     */
+    public function modifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'modifier_id');
+    }
+
 }
