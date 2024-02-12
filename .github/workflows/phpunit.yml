@@ -49,11 +49,11 @@ jobs:
         run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
       - name: Grant database privileges
         run: |
-          mysql -h mysql.test -u root -p --force <<EOF
+          mysql -h mysql.test -u root --force <<EOF
             GRANT ALL PRIVILEGES ON testing.* TO sail@'%';
             FLUSH PRIVILEGES;
           EOF
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         run: vendor/bin/phpunit
