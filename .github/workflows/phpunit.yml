@@ -6,7 +6,7 @@ on:
 
 env:
   DB_USERNAME: sail
-  DB_PASSWORD:
+  DB_PASSWORD: password
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
       - name: Grant database privileges
-        run: mysql -u root
+        run: mysql -u root -p${{ env.MYSQL_ROOT_PASSWORD }}
           GRANT ALL PRIVILEGES ON testing.* TO sail@'%';
           FLUSH PRIVILEGES;
       - name: Execute tests (Unit and Feature tests) via PHPUnit
