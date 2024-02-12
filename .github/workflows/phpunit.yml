@@ -49,7 +49,7 @@ jobs:
         run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
       - name: Grant database privileges
         run: |
-          echo "$DB_PASSWORD" | mysql -h mysql.test -u root --force <<EOF
+          mysql -h mysql.test -u root -p --force <<EOF
             GRANT ALL PRIVILEGES ON testing.* TO sail@'%';
             FLUSH PRIVILEGES;
           EOF
