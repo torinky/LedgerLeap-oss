@@ -54,6 +54,7 @@ jobs:
           mysql -h mysql.test -u root --force <<EOF
             GRANT ALL PRIVILEGES ON testing.* TO sail@'%';
             FLUSH PRIVILEGES;
+            create database testing;
           EOF
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         run: vendor/bin/phpunit
