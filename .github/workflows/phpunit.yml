@@ -50,7 +50,7 @@ jobs:
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
       - name: Grant database privileges
-        run: mysql -f -u root -p${{ env.DB_PASSWORD }}
+        run: mysql -u root -p${{ env.DB_PASSWORD }}
           GRANT ALL PRIVILEGES ON testing.* TO sail@'%';
           FLUSH PRIVILEGES;
       - name: Execute tests (Unit and Feature tests) via PHPUnit
