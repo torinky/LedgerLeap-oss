@@ -4,6 +4,7 @@ namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Http\Requests\Ledger\StoreRequest;
+use App\Jobs\Ledger\AttachedFileScanJob;
 use App\Livewire\Ledger\Livewire\Features\SupportRedirects\Redirector;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -12,6 +13,7 @@ use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -178,31 +180,6 @@ class CreateColumn extends Component
 
         return $result;
     }
-    /*    public function storeFile(int|string $id): array
-        {
-
-            $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
-            $filenames = [];
-            if (!isset($this->content[$id])) {
-                return $filenames;
-            }
-            foreach ($this->content[$id] as $file) {
-                $fileHashName = $file->store('public/Ledger/Attachments');
-                $filenames[$file->getClientOriginalName()] = $fileHashName;
-
-                $contentType = $file->getClientMimeType();
-                if (!in_array($contentType, $allowedMimeTypes)) {
-                    // Create a thumbnail of the image using Intervention Image Library
-                    $imageManager = new ImageManager();
-                    $img = Image::make($file->getRealPath());
-                    $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                    $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
-                }
-            }
-            return $filenames;
-        }*/
 
     /**
      * 断続的にファイルアップロードした際に以前のアップロードとマージする
@@ -233,6 +210,9 @@ class CreateColumn extends Component
      */
     public function addAttachedFileRecord(): void
     {
+        if (empty($this->newAttachedFiles)) {
+            return;
+        }
         foreach ($this->newAttachedFiles as $newAttachedFile) {
             AttachedFile::create(array_merge($newAttachedFile, [
                 'ledger_id' => $this->ledgerRecord->id,
@@ -241,6 +221,10 @@ class CreateColumn extends Component
                 'modifier_id' => Auth::user()->id,
             ]));
         }
+        $batch = Bus::batch([
+            new AttachedFileScanJob($this->ledgerRecord->id),
+        ])->dispatch();
+
     }
 
     /**
