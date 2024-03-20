@@ -16,6 +16,9 @@ class Tree extends Component
      * @var Route|int|mixed|object|string
      */
     public int $currentFolderId;
+    public array $selectedFolderIds;
+    public array $selectedLedgerIds;
+    public array $selectedFolderChildrenIds;
 
 //    protected $listeners = ['currentFolderChangedByMain'];
 
@@ -26,9 +29,16 @@ class Tree extends Component
     }
 
     #[On('currentFolderChangedByMain')]
-    public function changeCurrentFolderChangedByMain($newFolderId)
+    public function changeCurrentFolderChangedByMain($newFolderId, $newSelectedFolderIds)
     {
         $this->currentFolderId = $newFolderId;
+        $this->selectedFolderIds = $newSelectedFolderIds;
+
+        $this->selectedFolderChildrenIds = [];
+        $newSelectedFolderChildren = Folder::wherein('id', $newSelectedFolderIds)->get();
+        foreach ($newSelectedFolderChildren as $newSelectedFolderChild) {
+            $this->selectedFolderChildrenIds = array_merge($this->selectedFolderChildrenIds, $newSelectedFolderChild->children()->pluck('id')->toArray());
+        }
     }
 
     public function changeCurrentFolder($newFolderId)
