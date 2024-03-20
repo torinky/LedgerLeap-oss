@@ -22,7 +22,7 @@
 
     <div class="divider"></div>
 
-    <div wire:loading style="width:100%;">
+    <div wire:loading class="w-full">
         <div class="flex flex-row justify-center ">
             <span class="loading loading-dots loading-lg"></span>
         </div>

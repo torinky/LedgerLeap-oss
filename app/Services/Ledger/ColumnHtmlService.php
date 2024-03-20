@@ -20,7 +20,7 @@ class ColumnHtmlService
     private $id = '';
     private $nameBase = '';
 
-    private const BADGE_CLASS_NAME = 'badge badge-outline';
+    private const BADGE_CLASS_NAME = 'badge badge-md badge-primary ';
 //    private string $orderNameBase;
 //    private string $idNameBase;
 
@@ -59,7 +59,7 @@ HTML;
         } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
             if (!empty($displayValues)) {
-                $html = '<span class="m-1 ' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="m-1 ' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
+                $html = '<span class="m-3 ' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="m-3 ' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
             }
         } else {
             $html = $this->initialValue;

@@ -39,7 +39,7 @@
                     <a href="#" class="btn btn-ghost" wire:click="changeCurrentFolder({{$folderRecord->id}})"><i
                             class="text-3xl fa-solid fa-right-to-bracket"></i></a>
                 </div>
-                <div class="ladgerTitle text-base mt-1">{{$folderRecord->title}}</div>
+                <div class="ledgerTitle text-base mt-1">{{$folderRecord->title}}</div>
                 <div class="lastUpdate text-sm"><i
                         class="fas fa-clock mr-1"></i>{{$folderRecord->updated_at->format('Y-m-d')}}</div>
             </div>
@@ -52,7 +52,7 @@
                 <div class="flex justify-center items-center">
                     <i class="fa-solid fa-book text-3xl "></i>
                 </div>
-                <div class="ladgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
+                <div class="ledgerTitle text-base mt-1">{{$ledgerDefineRecord->title}}</div>
                 <div class="lastUpdate text-sm"><i
                         class="fas fa-clock mr-1"></i>{{$ledgerDefineRecord->updated_at->format('Y-m-d')}}
                 </div>

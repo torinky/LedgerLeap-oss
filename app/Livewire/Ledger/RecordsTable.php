@@ -132,6 +132,9 @@ class RecordsTable extends Component
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
+        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' =>
             /*                    Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
@@ -194,6 +197,7 @@ class RecordsTable extends Component
      * @param int $newFolderId
      * @return void
      */
+    #[On('currentFolderChangedByTree')]
     public function changeCurrentFolder($newFolderId)
     {
         // フォルダーIDを更新
@@ -204,26 +208,6 @@ class RecordsTable extends Component
         // フォルダーアセットを再準備
         $this->prepareFolderAsset();
 
-        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId);
-    }
-
-    /**
-     * ツリーコンポーネントから通知を受け取り、現在のフォルダーを変更する
-     *
-     * @param int $newFolderId
-     * @return void
-     */
-    #[On('currentFolderChangedByTree')]
-    public function currentFolderChangedByTree($newFolderId)
-    {
-        // フォルダーIDを更新
-        $this->currentFolderId = $newFolderId;
-
-        $this->selectedLedgerDefineIds = [];
-
-        // フォルダーアセットを再準備
-        $this->prepareFolderAsset();
     }
 
     /**
@@ -277,8 +261,15 @@ class RecordsTable extends Component
     public function toggleFolderId($folderId)
     {
         if (in_array($folderId, $this->selectedFolderIds)) {
-            // 選択済みの場合、リストから削除
-            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, [$folderId]));
+            // 選択済みの場合、selectedFolderIdsリストから削除
+            $removeFolderRecordIds = Folder::where('id', $folderId)->first()->children()->pluck('id')->toArray();
+            $removeFolderRecordIds[] = $folderId;
+            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderRecordIds));
+
+            // 選択済みの場合、selectedLedgerDefineIdsリストから削除
+            $removeLedgerRecordIds = LedgerDefine::wherein('folder_id', $removeFolderRecordIds)->get()->pluck('id')->toArray();
+            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, $removeLedgerRecordIds));
+
         } else {
             // 選択されていない場合、リストに追加
             $this->selectedFolderIds[] = $folderId;
