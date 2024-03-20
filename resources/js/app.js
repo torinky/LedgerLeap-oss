@@ -8,8 +8,8 @@ import '@fortawesome/fontawesome-free/js/fontawesome.js';
 document.addEventListener('DOMContentLoaded', function () {
 
     // const darkThemeName='business'
-    const darkThemeName = 'synthwave'
-    const lightThemeName = 'cupcake'
+    const darkThemeName = 'dim'
+    const lightThemeName = 'nord'
     const themeToggleBtn = document.getElementById('theme-toggle');
 
     if (

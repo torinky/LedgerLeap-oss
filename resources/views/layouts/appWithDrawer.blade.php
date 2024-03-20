@@ -13,7 +13,6 @@
     <!-- Styles  Scripts -->
     @vite(['resources/sass/app.scss','resources/js/app.js'])
     @stack('stylesheets')
-    {{--    @livewireStyles--}}
 
 </head>
 <body class="font-body antialiased">
@@ -38,19 +37,15 @@
         <input id="app-drawer" type="checkbox" class="drawer-toggle"/>
 
         <main class="drawer-content flex flex-col items-center pb-36">
-            {{--                        <label for="my-drawer-2" class="btn btn-primary drawer-button lg:hidden">Open drawer</label>--}}
-            {{--            <label for="my-drawer-2" class="btn btn-primary drawer-button xl:hidden">Open drawer</label>--}}
             {{ $slot }}
         </main>
-        <div class="drawer-side z-10">
-            <label for="app-drawer" class="drawer-overlay"></label>
-            <ul class="menu p-4 sm:w-2/3 md:w-1/2 lg:w-1/3 bg-base-100 text-base-content">
-                <!-- Sidebar content here -->
+        <div class="drawer-side z-10 h-screen">
+            <label for="app-drawer" class="drawer-overlay w-full"></label>
+            <ul class="menu">
                 {{ $drawer ??''}}
             </ul>
         </div>
     </div>
 </body>
-{{--@livewireScripts--}}
 @stack('scripts')
 </html>
