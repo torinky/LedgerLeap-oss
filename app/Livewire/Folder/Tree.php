@@ -17,10 +17,9 @@ class Tree extends Component
      */
     public int $currentFolderId;
     public array $selectedFolderIds;
-    public array $selectedLedgerIds;
-    public array $selectedFolderChildrenIds;
 
-//    protected $listeners = ['currentFolderChangedByMain'];
+//    public array $selectedLedgerIds;
+
 
     public function mount(searchRequest $request)
     {
@@ -34,17 +33,13 @@ class Tree extends Component
         $this->currentFolderId = $newFolderId;
         $this->selectedFolderIds = $newSelectedFolderIds;
 
-        $this->selectedFolderChildrenIds = [];
-        $newSelectedFolderChildren = Folder::wherein('id', $newSelectedFolderIds)->get();
-        foreach ($newSelectedFolderChildren as $newSelectedFolderChild) {
-            $this->selectedFolderChildrenIds = array_merge($this->selectedFolderChildrenIds, $newSelectedFolderChild->children()->pluck('id')->toArray());
-        }
     }
 
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
-        $this->dispatch('currentFolderChangedByTree', newFolderId: $this->currentFolderId);
+        $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
+        $this->dispatch('currentFolderChangedByTree', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
 
     }
 

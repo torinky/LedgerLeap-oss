@@ -8,7 +8,7 @@
     @foreach($folders as $folder)
         <li class="{{$folder->id==1 ? 'root':''}}">
             <a wire:click="changeCurrentFolder({{$folder->id}})"
-               @class(['bg-secondary/30' => $folder->id == $currentFolderId,'bg-info/20' => in_array($folder->id,$selectedFolderIds)||in_array($folder->id,$selectedFolderChildrenIds)])
+               @class(['bg-secondary/30' => $folder->id == $currentFolderId,'bg-info/20' => in_array($folder->id,$selectedFolderIds)])
                wire:key="folder_tree_link_{{$folder->id}}"
             >
                 @if($folder->id==1)

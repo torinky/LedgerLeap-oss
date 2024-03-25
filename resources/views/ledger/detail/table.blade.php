@@ -9,7 +9,7 @@
                 <table class="table table-zebra table-compact table-hover table-fixed w-full">
             <tbody>
             @foreach($ledgerRecord->define->column_define as $cKey => $columnDefine)
-                <tr>
+                <tr class="hover">
                     <th class="w-1/3 lg:w-1/4 break-words">
                         {{$columnDefine->name}}
                     </th>

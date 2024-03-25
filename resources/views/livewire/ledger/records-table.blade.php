@@ -30,9 +30,13 @@
 
     <div class="">
         @if($ledgerRecords->count() > 0)
-
+            <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
+                <div class="card bg-base-300 opacity-70 hover:opacity-100">
+                    <div class="card-body">
             {!! $ledgerRecords->links('components.ledger.pagination-links',['position'=>'top']) !!}
-
+                    </div>
+                </div>
+            </div>
             @php($defineId = null)
             @foreach($ledgerRecords as $lKey=> $ledgerRecord)
                 {{--                台帳定義が変わったら--}}

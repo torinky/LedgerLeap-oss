@@ -132,8 +132,6 @@ class RecordsTable extends Component
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
-        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
 
         return view('livewire.ledger.records-table', [
             'ledgerRecords' =>
@@ -197,13 +195,32 @@ class RecordsTable extends Component
      * @param int $newFolderId
      * @return void
      */
-    #[On('currentFolderChangedByTree')]
     public function changeCurrentFolder($newFolderId)
     {
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
-
+        if ($newFolderId != 1) {
+            $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
+        } else {
+            $this->selectedFolderIds = [];
+        }
         $this->selectedLedgerDefineIds = [];
+
+        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+
+        // フォルダーアセットを再準備
+        $this->prepareFolderAsset();
+
+    }
+
+    #[On('currentFolderChangedByTree')]
+    public function changeCurrentFolderByTree($newFolderId, $newSelectedFolderIds)
+    {
+        // フォルダーIDを更新
+        $this->currentFolderId = $newFolderId;
+
+        $this->selectedFolderIds = $newSelectedFolderIds;
 
         // フォルダーアセットを再準備
         $this->prepareFolderAsset();
@@ -260,9 +277,12 @@ class RecordsTable extends Component
      */
     public function toggleFolderId($folderId)
     {
-        if (in_array($folderId, $this->selectedFolderIds)) {
+        if ($folderId == 1) {
+            $this->selectedFolderIds = [];
+            $this->selectedLedgerDefineIds = [];
+        } elseif (in_array($folderId, $this->selectedFolderIds)) {
             // 選択済みの場合、selectedFolderIdsリストから削除
-            $removeFolderRecordIds = Folder::where('id', $folderId)->first()->children()->pluck('id')->toArray();
+            $removeFolderRecordIds = Folder::whereDescendantOf($folderId)->pluck('id')->toArray();
             $removeFolderRecordIds[] = $folderId;
             $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderRecordIds));
 
@@ -273,7 +293,12 @@ class RecordsTable extends Component
         } else {
             // 選択されていない場合、リストに追加
             $this->selectedFolderIds[] = $folderId;
+            $this->selectedFolderIds = array_merge($this->selectedFolderIds, Folder::whereDescendantOf($folderId)->pluck('id')->toArray());
         }
+
+        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+
         $this->resetPage();
     }
 
