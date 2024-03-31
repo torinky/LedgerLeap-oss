@@ -98,17 +98,8 @@ class RecordsTable extends Component
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: ['keywords' => $this->keywords, 'filter' => $this->filter]);
 
-        $descendantFolderIds = [];
-        foreach ($this->selectedFolderIds as $selectedFolderId) {
-            $descendantFolderIds = array_merge(
-                Folder::whereDescendantOf($selectedFolderId)
-                    ->pluck('id')->toArray(),
-                $descendantFolderIds
-            );
-        }
-
         // 表示対象の台帳を取得
-        $displayLedgerDefines = LedgerDefine::whereIn('folder_id', array_merge($this->selectedFolderIds, $descendantFolderIds))
+        $displayLedgerDefines = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)
             ->orWhereIn('id', $this->selectedLedgerDefineIds)
             ->searchTags($this->tags)
             ->with('folder')
@@ -127,22 +118,32 @@ class RecordsTable extends Component
         $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
             ->search(implode(' ', $this->keywords))
             ->contentsFilter($this->filter)
-            ->with('define.folder');
+//          重複データを持たないように
+//          ->with('define.folder')
+            ->orderBy('ledger_define_id', 'asc')
+            ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+
+
+//      重複データを持たないように台帳定義とフォルダ情報は別に取得する
+        $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
+            ->with('folder')
+            ->get()
+            ->keyBy('id');
 
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
 
         return view('livewire.ledger.records-table', [
-            'ledgerRecords' =>
-            /*                    Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-                                    ->search(implode(' ', $this->keywords))->contentsFilter($this->filter)
-                                    ->with('define.folder')*/
-                $ledgerRecords
-                    ->orderBy('ledger_define_id', 'asc')
-                    ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
-                    ->simplePaginate($this->perPage),
+//          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
+            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->simplePaginate($this->perPage)->groupBy('ledger_define_id'),
+
+//          simplePaginateをViewメソッドの手前で実行すると最終ページの計算がされない(lastPageが常に1になる)ためページネーションのリンク生成のためだけに送る
+            'ledgerRecords' => $ledgerRecords->simplePaginate($this->perPage),
+
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
+            'totalRecords' => $this->totalRecords,
+            'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
         ]);
     }
 
@@ -197,13 +198,19 @@ class RecordsTable extends Component
      */
     public function changeCurrentFolder($newFolderId)
     {
+
+        if ($newFolderId == 1) {
+            $this->selectedFolderIds = [];
+            $this->selectedLedgerDefineIds = [];
+        } else {
+            if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
+                $this->selectedFolderIds = [];
+            } else {
+                $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
+            }
+        }
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
-        if ($newFolderId != 1) {
-            $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
-        } else {
-            $this->selectedFolderIds = [];
-        }
         $this->selectedLedgerDefineIds = [];
 
         // ツリーコンポーネントに現在のフォルダーIDの変更を通知
@@ -217,6 +224,9 @@ class RecordsTable extends Component
     #[On('currentFolderChangedByTree')]
     public function changeCurrentFolderByTree($newFolderId, $newSelectedFolderIds)
     {
+        if ($newFolderId == 1) {
+            $this->selectedLedgerDefineIds = [];
+        }
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
 
@@ -263,10 +273,6 @@ class RecordsTable extends Component
         $this->folderRecords = $currentFolder->children()->get();
         $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
 
-        if (!$currentFolder->isRoot()) {
-            $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
-            $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
-        }
     }
 
     /**
@@ -294,10 +300,11 @@ class RecordsTable extends Component
             // 選択されていない場合、リストに追加
             $this->selectedFolderIds[] = $folderId;
             $this->selectedFolderIds = array_merge($this->selectedFolderIds, Folder::whereDescendantOf($folderId)->pluck('id')->toArray());
+            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::where('folder_id', $folderId)->get()->pluck('id')->toArray());
         }
 
         // ツリーコンポーネントに現在のフォルダーIDの変更を通知
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+        $this->dispatch('selectedFolderChangedByMain', newSelectedFolderIds: $this->selectedFolderIds);
 
         $this->resetPage();
     }

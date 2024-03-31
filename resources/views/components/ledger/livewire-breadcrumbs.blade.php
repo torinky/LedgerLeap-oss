@@ -6,7 +6,8 @@
     <ul>
         @foreach($breadcrumbs as $bKey => $folder)
             @if(is_null($folder->parent_id))
-                <li><a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"><i class="fas fa-home mr-3"></i>Top</a>
+                <li><a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
+                       wire:key="bread_folder_{{$folder->id}}><i class=" fas fa-home mr-3"></i>Top</a>
                 </li>
             @else
                 <li><a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
