@@ -72,12 +72,12 @@
                         <div class="card-body items-center text-center space-x-5">
                             <div class="card-actions justify-end">
                                 <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
-                                        class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                                        class="fa-solid fa-pencil mr-2"></i>{{__('ledger.save')}}</button>
                                 <a href="{{route('ledger.import.show',['ledgerDefineId'=>$ledgerDefineRecord->id])}}"
                                    class="btn btn-outline btn-info"><i
-                                        class="fa-solid fa-file-csv mr-2"></i>{{__('import from CSV')}}</a>
+                                        class="fa-solid fa-file-csv mr-2"></i>{{__('ledger.import_file')}}</a>
                                 <a href="#" class="btn btn-outline btn-info" onclick="window.close();"><i
-                                        class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                        class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
                             </div>
                         </div>
                     </div>

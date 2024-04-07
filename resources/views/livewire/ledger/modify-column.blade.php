@@ -76,12 +76,12 @@
                     <div class="card-body items-center text-center">
                         <div class="card-actions justify-center">
                             <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
-                                    class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                                    class="fa-solid fa-pencil mr-2"></i>{{__('ledger.save')}}</button>
                             <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                    class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                    class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
                             @if(isset($ledgerRecord->id))
                                 <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
-                                        class="fa-solid fa-trash mr-2"></i>{{__('delete record')}}</label>
+                                        class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
                             @endif
                         </div>
                     </div>
@@ -92,19 +92,19 @@
             @if(isset($ledgerRecord->id))
                 <input type="checkbox" id="delete-modal" class="modal-toggle"/>
                 <div class="modal">
-                    <div class="modal-box">
-                        <h3 class="font-bold text-lg">{{__('delete record')}}</h3>
+                    <div class="modal-box bg-warning text-warning-content">
+                        <h3 class="font-bold text-lg">{{__('ledger.remove_title')}}</h3>
                         <p class="py-4">{{__('This record will be deleted')}}</p>
                         <div class="modal-action">
                             <div class="btnContainer">
                                 <form method="POST" action="{{route('ledger.delete',$ledgerRecord->id)}}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn"
-                                            name="deleteLedgerDefine">{{__('delete record')}}</button>
+                                    <button type="submit" class="btn btn-error"
+                                            name="deleteLedgerDefine">{{__('ledger.delete')}}</button>
                                 </form>
                             </div>
-                            <label for="delete-modal" class="btn btn-outline ml-5">{{__('cancel')}}</label>
+                            <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
                         </div>
                     </div>
                 </div>

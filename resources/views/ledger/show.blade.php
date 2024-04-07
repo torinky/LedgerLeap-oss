@@ -1,7 +1,7 @@
 <x-app-layout title="DETAIL | DocumentCabinet">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Ledger Record Diffs') }}
+            {{ __('ledger.details') }}
         </h2>
     </x-slot>
 
@@ -35,8 +35,8 @@
     @include('ledger.detail.table',compact('ledgerRecord'))
     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('updated at: ').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('created at: ').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
+        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
+        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
     </div>
 
     <div
@@ -45,18 +45,18 @@
             <div class="card-actions justify-center">
                 <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
                    class="btn btn-outline btn-primary btn-wide"
-                ><i class="fa-solid fa-pencil mr-2"></i>{{__('edit')}}</a>
+                ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
 
                 @if($ledgerRecord->ledger_diff_count>0)
                     <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
                        class="btn btn-outline btn-info ml-5"
-                    ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('modifies')}}
+                    ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.modifies')}}
                         <div class="badge badge-info badge-outline">{{$ledgerRecord->ledger_diff_count}}</div>
                     </a>
                 @endif
 
                 <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                        class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                        class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
             </div>
         </div>
     </div>

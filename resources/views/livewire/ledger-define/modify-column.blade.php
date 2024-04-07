@@ -1,8 +1,4 @@
 <div class="mt-5">
-    <a href="#" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm mx-3">
-        <i class="fa-solid fa-plus-circle mr-1"></i>
-        {{__('add column setting')}}
-    </a>
 
     @if(!empty($ledgerDefineRecord->column_define))
         <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3" drag-root>
@@ -18,14 +14,13 @@
                         <div
                             class="flex collapse-title bg-primary text-primary-content peer-checked:bg-secondary peer-checked:text-secondary-content peer-checked:pl-16">
 
-                            <button wire:sortable.handle class="btn btn-ghost btn-sm w-10 mr-2 tooltip tooltip-right"
-                                    data-tip="{{__('drag to sort')}}"><i
+                            <button wire:sortable.handle class="btn btn-outline btn-sm w-10 mr-2 tooltip tooltip-right"
+                                    data-tip="{{__('ledger.column.drag2sort')}}"><i
                                     class="fa-solid fa-grip-lines flex-none"></i></button>
-                            <label for="collapse_{{ $columnDefine->id }}"
-                                   class="text-md font-medium flex-auto self-center">
-                                <span class=" tooltip tooltip-right"
-                                      data-tip="{{__('click to collapse')}}"> {{$columnDefine->name}}</span>
-                            </label>
+                            <div
+                                class="subpixel-antialiased text-xl flex-auto self-center">
+                                <span> {{$columnDefine->name}}</span>
+                            </div>
                         </div>
 
                         <div
@@ -192,6 +187,12 @@
                             </div>
                         </div>
                     </div>
+                    <label for="collapse_{{ $columnDefine->id }}"
+                           class="btn btn-sm btn-outline w-full">
+                                <span class=" tooltip"
+                                      data-tip="{{__('click to collapse')}}"> <i class="fas fa-angles-down"></i></span>
+                    </label>
+
                 </li>
             @endforeach
             {{--        <input type="hidden" name="column_order"--}}
@@ -223,4 +224,9 @@
         @endonce
 
     @endif
+    <a href="#" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm w-full my-4">
+        <i class="fa-solid fa-plus-circle mr-1"></i>
+        {{__('ledger.column.add')}}
+    </a>
+
 </div>

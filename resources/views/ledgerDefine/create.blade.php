@@ -1,7 +1,7 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Ledger Define Setting') }}
+            {{ __('ledger.define.create_title') }}
         </h2>
     </x-slot>
 
@@ -38,7 +38,7 @@
                 @csrf
 
                 <div>
-                    <label for="title">{{__('title')}}</label>
+                    <label for="title">{{__('ledger.define.name')}}</label>
                     <input type="hidden" name="title" value="">
                     <input name="title" type="text"
                            value=""
@@ -48,7 +48,7 @@
                 </div>
 
                 <div class="flex-1 m-5">
-                    <label for="folder_id" class="ml-3">{{__('Belonging folder')}}</label>
+                    <label for="folder_id" class="ml-3">{{__('ledger.folder_containing')}}</label>
                     <select
                         name="folder_id"
                         class="select input-bordered">
@@ -65,9 +65,9 @@
 
                 <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
                     <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
-                            class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.define.save')}}</button>
                     <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                            class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                            class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
                 </div>
 
             </form>

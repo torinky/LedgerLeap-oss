@@ -17,13 +17,13 @@
                     </li>
                     <li>
                         <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                            {{ __('Document Cabinet') }}
+                            {{ __('leger.system_name') }}
                         </x-daisyui-nav-link>
                     </li>
                     <li>
                         <x-daisyui-nav-link :href="route('ledgerDefine.index')"
                                             :active="request()->routeIs('ledgerDefine.index')">
-                            {{ __('Ledger Setting') }}
+                            {{ __('ledger.settings') }}
                         </x-daisyui-nav-link>
                     </li>
                     {{--
@@ -57,13 +57,13 @@
                 </li>
                 <li>
                     <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                        {{ __('Ledger') }}
+                        {{ __('ledger.search_view') }}
                     </x-daisyui-nav-link>
                 </li>
                 <li>
                     <x-daisyui-nav-link :href="route('ledgerDefine.index')"
                                         :active="request()->routeIs('ledgerDefine.index')">
-                        {{ __('Setting') }}
+                        {{ __('ledger.settings') }}
                     </x-daisyui-nav-link>
                 </li>
                 {{--

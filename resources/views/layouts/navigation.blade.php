@@ -18,12 +18,12 @@
                 </div>
                 <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                     <x-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                        {{ __('Document Cabinet') }}
+                        {{ __('leger.systemName') }}
                     </x-nav-link>
                 </div>
                 <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                     <x-nav-link :href="route('ledgerDefine.index')" :active="request()->routeIs('ledgerDefine.index')">
-                        {{ __('Ledger Setting') }}
+                        {{ __('ledger.settings') }}
                     </x-nav-link>
                 </div>
             </div>

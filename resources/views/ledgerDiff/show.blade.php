@@ -1,7 +1,7 @@
 <x-app-layout title="DETAIL | DocumentCabinet">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Ledger Record History') }}
+            {{ __('ledger.history_title') }}
         </h2>
     </x-slot>
 
@@ -16,7 +16,7 @@
         --}}
 
         <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
     </div>
 
 </x-app-layout>
