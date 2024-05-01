@@ -79,7 +79,7 @@
             {{$startCount + $this->perPage - 1}}
         @else
             {{$this->totalRecords}}
-        @endif / {{$this->totalRecords}} {{__('Records')}}
+        @endif / {{$this->totalRecords}} {{__('ledger.records')}}
     </div>
 
 </div>

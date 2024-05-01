@@ -20,7 +20,7 @@
                 @method('POST')
 
                 <div class="flex-1 m-5">
-                    <label for="title" class="ml-3">{{__('title')}}</label>
+                    <label for="title" class="ml-3">{{__('ledger.title')}}</label>
                     <input name="title" type="text"
                            value=""
                            placeholder="Type here"

@@ -3,7 +3,7 @@
 
         <input wire:model.live.debounce.800ms="search" type="search"
                    class="input input-bordered input-lg input-primary w-full"
-               placeholder="{{__('Search content...')}}">
+               placeholder="{{__('ledger.search_message')}}">
     </div>
     <div class="w-1/6 relative mx-1">
         {{--

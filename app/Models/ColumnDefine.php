@@ -44,11 +44,11 @@ class ColumnDefine
         $a = func_get_args();
         $i = func_num_args();
         if ($i == 1) {
-            call_user_func_array(array($this, '__constructByObject'), $a);
+            call_user_func_array(array($this, 'constructByObject'), $a);
             return;
         }
         if ($i > 1) {
-            call_user_func_array(array($this, '__constructByArgs'), $a);
+            call_user_func_array(array($this, 'constructByArgs'), $a);
             return;
         }
         throw new Exception('無効な引数');
@@ -60,7 +60,7 @@ class ColumnDefine
      * @param object $inObject
      * @return void
      */
-    public function __constructByObject($inObject)
+    public function constructByObject($inObject)
     {
         $this->id = (int)$inObject->id;
         $this->name = $inObject->name;
@@ -86,7 +86,7 @@ class ColumnDefine
      * @param bool $sortBy
      * @return void
      */
-    public function __constructByArgs(
+    public function constructByArgs(
         int    $id,
         string $name,
         string $type = 'text',
@@ -140,13 +140,13 @@ class ColumnDefine
     static function typeLabels()
     {
         return [
-            "number" => __('auto numbering'), // 自動採番
-            "text" => __('text box'), // テキストボックス
-            "textarea" => __('textarea'), // テキストエリア
-            "chk" => __('check box'), // チェックボックス
-            "select" => __('select box'), // セレクトボックス
-            "YMD" => __('date Y-M-D'), // 日付（年月日）
-            "files" => __('select file'), // ファイル選択
+            "number" => __('ledger.form.auto_numbering'), // 自動採番
+            "text" => __('ledger.form.text'), // テキストボックス
+            "textarea" => __('ledger.form.textarea'), // テキストエリア
+            "chk" => __('ledger.form.check'), // チェックボックス
+            "select" => __('ledger.form.select'), // セレクトボックス
+            "YMD" => __('ledger.form.datetime'), // 日付（年月日）
+            "files" => __('ledger.form.upload'), // ファイル選択
         ];
     }
 

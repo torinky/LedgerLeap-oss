@@ -28,30 +28,45 @@
                     <input type="hidden" name="id" value="{{ $ledgerDefineRecord->id }}">
 
                     <div class="flex-1 m-5">
-                        <label for="title" class="ml-3">{{__('title')}}</label>
+
                         <input type="hidden" name="title" value="{{$ledgerDefineRecord->title}}">
-                        <input name="title" type="text"
-                               value="{{$ledgerDefineRecord->title}}"
-                               placeholder="Type here"
-                               class="input input-bordered w-full max-w-xs"/>
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label">
+                                <span class="label-text">
+                                    {{__('ledger.define.title')}}
+                                </span>
+                            </div>
+                            <input name="title" type="text"
+                                   value="{{$ledgerDefineRecord->title}}"
+                                   placeholder="{{__('ledger.define.title_input')}}"
+                                   class="input input-bordered input-error w-full max-w-xs"/>
+                        </label>
+
+                        <label class="form-control">
+                            <div class="label">
+                                <span class="label-text">
+                                {{__('ledger.folder_containing')}}
+                                </span>
+                            </div>
+                            <select
+                                name="folder_id"
+                                class="select input-bordered input-error">
+                                @foreach($folderRecords as $folderRecord)
+                                    <option
+                                        value="{{$folderRecord->id}}" {{  $ledgerDefineRecord->folder_id == $folderRecord->id ? 'selected' : '' }}
+                                    >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
+                                @endforeach
+                            </select>
+                        </label>
 
                     </div>
-                    <div class="flex-1 m-5">
-                        <label for="folder_id" class="ml-3">{{__('ledger.folder_containing')}}</label>
-                        <select
-                            name="folder_id"
-                            class="select input-bordered">
-                            @foreach($folderRecords as $folderRecord)
-                                <option
-                                    value="{{$folderRecord->id}}" {{  $ledgerDefineRecord->folder_id == $folderRecord->id ? 'selected' : '' }}
-                                >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
-                            @endforeach
-                        </select>
 
+                    <div class="card w-full bg-base-300 shadow-xl mx-5">
+                        <div class="card-body p-3">
+                            <h2 class="card-title">{{__('ledger.column.group_title')}}</h2>
+                            <livewire:ledger-define.modify-column/>
+                        </div>
                     </div>
-
-                    <livewire:ledger-define.modify-column/>
-
 
                     <div
                         class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">

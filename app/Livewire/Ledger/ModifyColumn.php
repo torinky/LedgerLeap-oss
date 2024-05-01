@@ -83,7 +83,7 @@ class ModifyColumn extends CreateColumn
             $this->addAttachedFileRecord();
 
             return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
-                ->with('status', __('ledger record updated successfully !'));
+                ->with('status', __('ledger.updated.success'));
         }
         abort(404);
     }

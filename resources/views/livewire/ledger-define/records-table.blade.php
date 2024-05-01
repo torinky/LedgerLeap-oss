@@ -8,19 +8,19 @@
            class="btn btn-outline btn-secondary btn-sm mx-3"
            target="folderCreate">
             <i class="fa-solid fa-plus-circle mr-1"></i>
-            {{__('create folder')}}
+            {{__('ledger.folder.create')}}
         </a>
         <a href="{{ route('ledgerDefine.createWithFolderId',$currentFolderId)}}"
            class="btn btn-outline btn-secondary btn-sm mx-3"
            target="ledgerDefineCreate">
             <i class="fa-solid fa-plus-circle mr-1"></i>
-            {{__('create ledger')}}
+            {{__('ledger.define.create')}}
         </a>
         <a href="{{ route('ledgersByFolderId',$currentFolderId)}}"
            class="btn btn-outline btn-info btn-sm mx-3"
            target="ledgersByFolderId">
             <i class="fa-solid fa-list-alt mr-1"></i>
-            {{__('view this folder')}}
+            {{__('ledger.folder.goto_ledger')}}
         </a>
 
     </div>

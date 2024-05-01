@@ -12,16 +12,18 @@
         <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
            class="btn btn-primary btn-sm relative inline-flex w-32"
            target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
-            {{__('Create')}}</a>
+            {{__('ledger.create')}}</a>
         <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
            class="btn btn-outline btn-primary btn-sm relative inline-flex w-32"
            target="ledgerDefineEdit_{{$ledgerDefine->id}}}}"><i
-                class="fas fa-gears mr=1"></i> {{__('Settings')}}</a>
-        <a href="{{ route('ledger.downloadExcelCSV', [
-                    'ledgerDefineId' => $ledgerDefine->id,
-                    'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
-           class="btn btn-outline btn-secondary btn-sm relative inline-flex"
-        >{{__('Export CSV')}}</a>
+                class="fas fa-gears mr=1"></i> {{__('ledger.settings')}}</a>
+        {{--
+                <a href="{{ route('ledger.downloadExcelCSV', [
+                            'ledgerDefineId' => $ledgerDefine->id,
+                            'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
+                   class="btn btn-outline btn-secondary btn-sm relative inline-flex"
+                >{{__('ledger.export_csv')}}</a>
+        --}}
         <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
                                 :$keywords
                                 :$filter

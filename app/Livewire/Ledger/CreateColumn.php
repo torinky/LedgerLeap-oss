@@ -120,7 +120,7 @@ class CreateColumn extends Component
         $this->addAttachedFileRecord();
 
         return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
-            ->with('status', __('ledger record stored successfully !'));
+            ->with('status', __('ledger.stored.success'));
     }
 
 
@@ -295,8 +295,8 @@ class CreateColumn extends Component
     protected function messages(): array
     {
         return [
-            'content.*.in_options' => __(":attribute is not valid value"),
-            'content.*.at_least_one_checked' => __("select at least one :attribute"),
+            'content.*.in_options' => __("validation.in"),
+            'content.*.at_least_one_checked' => __("validation.filled"),
 
         ];
 

@@ -42,7 +42,7 @@
 
     <td class="px-4 py-2 text-center">
         <a href="#" class="btn btn-ghost text-sm font-bold" wire:click="sort('updated_at')">
-            {{__('updated at')}}
+            {{__('ledger.updated_at')}}
             @if($orderBy == 'updated_at')
                 @if($orderAsc)
                     <i class="fas fa-chevron-down"></i>
