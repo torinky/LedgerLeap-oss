@@ -1,4 +1,9 @@
 <div>
+    <div wire:loading class="z-500 fixed inset-0 bg-base-300/50 ">
+        <div class="flex h-screen justify-center items-center">
+            <span class="loading loading-dots loading-lg"></span>
+        </div>
+    </div>
 
     <x-ledger.search/>
 
@@ -22,16 +27,11 @@
 
     <div class="divider"></div>
 
-    <div wire:loading class="w-full">
-        <div class="flex flex-row justify-center ">
-            <span class="loading loading-dots loading-lg"></span>
-        </div>
-    </div>
 
     <div class="">
         @if($totalRecords > 0)
             <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
-                <div class="card bg-base-300 opacity-70 hover:opacity-100">
+                <div class="card bg-base-300/70 hover:opacity-100">
                     <div class="card-body">
                         {!! $ledgerRecords->links('components.ledger.pagination-links',['position'=>'top']) !!}
                     </div>
@@ -41,7 +41,7 @@
 
             @foreach($ledgerRecordsGroupByDefineIds as $ledgerDefineId => $ledgerDefineAndRecords)
                 <div class="card bg-base100 shadow-xl my-4" wire:key="ledger_record_{{$ledgerDefineId}}">
-                    <div class="card-body">
+                    <div class="card-body pt-0 px-0">
                         <x-ledgerDefine.header
                             :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]"
                             :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine"
@@ -86,8 +86,8 @@
                         />
         --}}
         @include('components.ledger.alert',[
-            'message'=>__('Select Ledger or Folder'),
-            'icon'=> 'fa-circle-info',
+            'message'=>__('ledger.select_message'),
+            'icon'=> 'fa-hand-pointer',
             'type'=>'warning',
             'refreshParentWindow'=>false,
         ])

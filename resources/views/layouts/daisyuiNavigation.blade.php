@@ -10,11 +10,13 @@
                     </svg>
                 </label>
                 <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
-                    <li>
-                        <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                            {{ __('Dashboard') }}
-                        </x-daisyui-nav-link>
-                    </li>
+                    {{--
+                                        <li>
+                                            <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                                                {{ __('Dashboard') }}
+                                            </x-daisyui-nav-link>
+                                        </li>
+                    --}}
                     <li>
                         <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
                             {{ __('leger.system_name') }}
@@ -50,11 +52,13 @@
         </div>
         <div class="navbar-center hidden lg:flex">
             <ul class="menu menu-horizontal px-1">
-                <li>
-                    <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-daisyui-nav-link>
-                </li>
+                {{--
+                                <li>
+                                    <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                                        {{ __('Dashboard') }}
+                                    </x-daisyui-nav-link>
+                                </li>
+                --}}
                 <li>
                     <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
                         {{ __('ledger.search_view') }}

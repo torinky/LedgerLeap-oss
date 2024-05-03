@@ -5,11 +5,9 @@
     'icon'=>'fa-circle-check',
     ])
 <div class="flex min-h-[6rem] min-w-[18rem] flex-wrap items-center justify-center gap-2 overflow-x-hidden ">
-    <div class="alert alert-{{$type}} shadow-lg max-w-4xl">
-        <div>
-            <i class="far {{$icon}}"></i>
+    <div class="alert alert-{{$type}} shadow-lg max-w-4xl ">
+        <i class="fas {{$icon}} text-lg"></i>
             <span>{{ $message }}</span>
-        </div>
     </div>
 </div>
 @if($refreshParentWindow)

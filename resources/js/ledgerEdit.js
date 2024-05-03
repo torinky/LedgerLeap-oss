@@ -34,7 +34,8 @@ window.flatpickr = flatpickr
 
 window.flatpickr(".datepicker", {
     locale: Japanese,
-    showMonths: 3
+    showMonths: 3,
+    wrap: true,
 });
 
 /*
