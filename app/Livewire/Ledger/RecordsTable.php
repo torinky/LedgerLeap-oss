@@ -22,30 +22,44 @@ class RecordsTable extends Component
     use withPagination;
 
     public $perPage = 100;
+
     #[Url(as: 'q')]
     public $search = '';
+
     public $orderBy = 'id';
+
     public $orderAsc = false;
+
     #[Url(as: 'fi')]
     public $filter = [];
+
     public $defineId = null;
+
     public $ledgerDefineRecords;
+
     public $folderRecords;
+
     public $breadcrumbs = [];
+
     #[Url(as: 'l')]
     public $selectedLedgerDefineIds = [];
+
     #[Url(as: 'f')]
     public $selectedFolderIds = [];
+
     public $currentFolderId;
+
     private $tags = [];
+
     public $keywords = [];
+
     public $totalRecords;
 
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
-     * @param SearchRequest $request
      * @return void
+     *
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
@@ -122,9 +136,9 @@ class RecordsTable extends Component
 //          ->with('define.folder')
             ->orderBy('ledger_define_id', 'asc')
             ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+        //dd($ledgerRecords);
 
-
-//      重複データを持たないように台帳定義とフォルダ情報は別に取得する
+        //      重複データを持たないように台帳定義とフォルダ情報は別に取得する
         $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
             ->with('folder')
             ->get()
@@ -133,12 +147,11 @@ class RecordsTable extends Component
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
-
         return view('livewire.ledger.records-table', [
-//          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
+            //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
             'ledgerRecordsGroupByDefineIds' => $ledgerRecords->simplePaginate($this->perPage)->groupBy('ledger_define_id'),
 
-//          simplePaginateをViewメソッドの手前で実行すると最終ページの計算がされない(lastPageが常に1になる)ためページネーションのリンク生成のためだけに送る
+            //          simplePaginateをViewメソッドの手前で実行すると最終ページの計算がされない(lastPageが常に1になる)ためページネーションのリンク生成のためだけに送る
             'ledgerRecords' => $ledgerRecords->simplePaginate($this->perPage),
 
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
@@ -211,7 +224,7 @@ class RecordsTable extends Component
         }
         // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
-        $this->selectedLedgerDefineIds = [];
+        //        $this->selectedLedgerDefineIds = [];
 
         // ツリーコンポーネントに現在のフォルダーIDの変更を通知
         $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
@@ -241,7 +254,6 @@ class RecordsTable extends Component
      * 台帳を開閉する（コメントアウト済みのコード）
      *
      * @param int $targetLedgerDefineId
-     * @return void
      */
     /*
     public function toggleLedgerDefineOpen($targetLedgerDefineId)
@@ -258,8 +270,6 @@ class RecordsTable extends Component
 
     /**
      * フォルダーアセットを準備する
-     *
-     * @return void
      */
     public function prepareFolderAsset(): void
     {
@@ -347,5 +357,4 @@ class RecordsTable extends Component
         // perPageを変更した場合、currentPageを最初のページにリセットする
         $this->resetPage();
     }
-
 }

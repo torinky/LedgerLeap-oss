@@ -1,5 +1,5 @@
 <div>
-    <div wire:loading class="z-500 fixed inset-0 bg-base-300/50 ">
+    <div wire:loading class="z-9999 fixed inset-0 bg-base-300/70 ">
         <div class="flex h-screen justify-center items-center">
             <span class="loading loading-dots loading-lg"></span>
         </div>
@@ -7,9 +7,11 @@
 
     <x-ledger.search/>
 
+    <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
     <x-ledger.livewire-breadcrumbs
         :breadcrumbs="$breadcrumbs"
     />
+    </div>
 
     {{--
         <div class="flex flex-row">
@@ -31,7 +33,7 @@
     <div class="">
         @if($totalRecords > 0)
             <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
-                <div class="card bg-base-300/70 hover:opacity-100">
+                <div class="card bg-base-300 opacity-70 transition-opacity hover:opacity-100 shadow-lg">
                     <div class="card-body">
                         {!! $ledgerRecords->links('components.ledger.pagination-links',['position'=>'top']) !!}
                     </div>
@@ -40,7 +42,7 @@
 
 
             @foreach($ledgerRecordsGroupByDefineIds as $ledgerDefineId => $ledgerDefineAndRecords)
-                <div class="card bg-base100 shadow-xl my-4" wire:key="ledger_record_{{$ledgerDefineId}}">
+                <div class="card bg-base100 shadow-xl my-10" wire:key="ledger_record_{{$ledgerDefineId}}">
                     <div class="card-body pt-0 px-0">
                         <x-ledgerDefine.header
                             :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]"

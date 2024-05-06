@@ -10,15 +10,13 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 class RecordsTable extends Component
 {
-    use withPagination;
+    public $orderBy = 'title';
 
-    public $perPage = 10;
-    public $orderBy = 'id';
     public $orderAsc = true;
+
     public $folderRecords;
 
     public $breadcrumbs = [];
@@ -26,11 +24,12 @@ class RecordsTable extends Component
     public $selectedLedgerDefineIds = [];
 
     public $selectedFolderIds = [];
+
     public $currentFolderId;
-//    protected $listeners = ['currentFolderChangedByTree'];
+
+    private $ledgerDefineRecords;
 
     /**
-     * @param IndexRequest $request
      * @return void
      */
     public function mount(IndexRequest $request)
@@ -41,89 +40,37 @@ class RecordsTable extends Component
     }
 
     /**
-     * @param IndexRequest $request
      * @return Application|Factory|View|\Illuminate\Foundation\Application
      */
     public function render(IndexRequest $request)
     {
-        // checkboxのキーはサーバー側で変えるとブラウザに正しく反映されなくなる
-        $this->selectedFolderIds = array_filter($this->selectedFolderIds, 'strlen');
-
-        $descendantFolderIds = [];
-        foreach ($this->selectedFolderIds as $selectedFolderId) {
-            $descendantFolderIds = array_merge(
-                Folder::whereDescendantOf($selectedFolderId)
-                    ->pluck('id')->toArray()
-                , $descendantFolderIds
-            );
-        }
-
-        $selectedLedgerDefineIdsByFolderId = LedgerDefine::whereIn('folder_id',
-            array_merge($this->selectedFolderIds, $descendantFolderIds)
-        )
-            ->pluck('id')->toArray() ?? [];
-
-
-        $ledgerDefineIdsInRootFolder = [];
-        $currentFolder = Folder::where('id', '=', $request->folderId())->firstOrFail();
-        //現在地がルートなら所属の台帳を必ず表示
-        if ($currentFolder->isRoot()) {
-            $ledgerDefineIdsInRootFolder = LedgerDefine::where('folder_id', '=', $currentFolder->id)
-                ->pluck('id')->toArray() ?? [];
-        }
-
-        $displayLedgerDefineIds = array_merge(
-            $this->selectedLedgerDefineIds,
-            $selectedLedgerDefineIdsByFolderId,
-            $ledgerDefineIdsInRootFolder
-        );
-
-        //パンクズを作る
-        $displayLedgerDefines = LedgerDefine::whereIn('id', $displayLedgerDefineIds)->with('folder')->get();
-
-        $breadcrumbsPerLedgerDefine = [];
-        foreach ($displayLedgerDefines as $displayLedgerDefine) {
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parents();
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
-        }
-
+        $currentFolder = Folder::where('id', '=', $this->currentFolderId)->firstOrFail();
 
         return view('livewire.ledger-define.records-table', [
-            'ledgerDefineRecords' =>
-                LedgerDefine::whereIn('id', $displayLedgerDefineIds)
-                    ->with('folder')
-                    ->orderBy('id', 'asc')
-                    ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
-                    ->simplePaginate($this->perPage),
-            'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
-            'currentFolder' => Folder::where('id', '=', $request->folderId())->firstOrFail(),
-
+            'ledgerDefineRecords' => $this->ledgerDefineRecords,
+            'currentFolder' => $currentFolder,
         ]);
     }
 
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId);
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: []);
 
         $this->prepareFolderAsset();
     }
 
     /**
-     * @param $newFolderId
      * @return void
      */
     #[On('currentFolderChangedByTree')]
-    public function currentFolderChangedByTree($newFolderId)
+    public function currentFolderChangedByTree($newFolderId, $newSelectedFolderIds)
     {
         $this->currentFolderId = $newFolderId;
 
         $this->prepareFolderAsset();
     }
 
-    /**
-     * @return void
-     */
     public function prepareFolderAsset(): void
     {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
@@ -134,12 +81,9 @@ class RecordsTable extends Component
         $this->breadcrumbs[] = $currentFolder;
 
         $this->folderRecords = $currentFolder->children()->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)
+            ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
+            ->get();
 
-        if (!$currentFolder->isRoot()) {
-            $this->selectedFolderIds = $this->folderRecords->pluck('id')->toArray();
-            $this->selectedLedgerDefineIds = $this->ledgerDefineRecords->pluck('id')->toArray();
-        }
     }
-
 }

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property array $content_attached
  * @property array $content
  * @property BelongsTo $define
+ *
  * @method static create(array $array)
  * @method static find(string $ledgerId)
  */
@@ -28,7 +29,7 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
-        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id'
+        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id',
     ];
 
     /**
@@ -48,8 +49,6 @@ class Ledger extends Model
     /**
      * 指定されたフリーワードで content を検索するスコープです。
      *
-     * @param Builder $query
-     * @param string $freeWord
      * @return void
      */
     public function scopeSearch(Builder $query, string $freeWord)
@@ -58,25 +57,20 @@ class Ledger extends Model
         if (empty($freeWord)) {
             return;
         }
-//        dd($freeWord);
-//        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
-//        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
+        //        dd($freeWord);
+        //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
+        //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
         $query->where(function (Builder $q) use ($freeWord) {
-            $q->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord])
-                ->orWhereRaw("match(`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
+            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
+                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
         });
 
-//        dd($query->toSql(), $query->getBindings());
+        //        dd($query->toSql(), $query->getBindings());
 
     }
 
-
     /**
      * 指定されたフィルタ条件で content をフィルタリングするスコープです。
-     *
-     * @param Builder $query
-     * @param array $filter
-     * @return void
      */
     public static function scopeContentsFilter(Builder $query, array $filter): void
     {
@@ -90,26 +84,23 @@ class Ledger extends Model
                 continue;
             }
 
-// シングルクォート内のバイドがカウントされていないっぽいのでプレースフォルダが使えない
-// https://qiita.com/keizokeizo3/items/112f4785acd8bcf165d2
-//            ->whereRaw("match(`content`) against ('*W? +?' IN BOOLEAN MODE)", [$column, $filter]);
+            // シングルクォート内のバイドがカウントされていないっぽいのでプレースフォルダが使えない
+            // https://qiita.com/keizokeizo3/items/112f4785acd8bcf165d2
+            //            ->whereRaw("match(`content`) against ('*W? +?' IN BOOLEAN MODE)", [$column, $filter]);
 
-// Mroongaの列番号は1始まり
+            // Mroongaの列番号は1始まり
             $mroongaColumnCount = $column + 1;
-//            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-            $query->whereRaw("match(`content`,`content_attached`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-            /*            $query->where(function (Builder $q)use($mroongaColumnCount,$filterStr) {
-                            $q->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)")
-                                ->orWhereRaw("match(`content_attached`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-                        });*/
+            //            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
+            $query->where(function (Builder $q) use ($mroongaColumnCount, $filterStr) {
+                $q->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . ' +"' . $filterStr . "\"' IN BOOLEAN MODE)")
+                    ->orWhereRaw("match(`content_attached`) against ('*W" . $mroongaColumnCount . ' +' . $filterStr . "' IN BOOLEAN MODE)");
+            });
         }
 
     }
 
     /**
      * LedgerDefine モデルへのリレーションを定義します。
-     *
-     * @return BelongsTo
      */
     public function define(): BelongsTo
     {
@@ -118,8 +109,6 @@ class Ledger extends Model
 
     /**
      * LedgerDiff モデルへのリレーションを定義します。
-     *
-     * @return HasMany
      */
     public function ledgerDiff(): HasMany
     {
@@ -128,8 +117,6 @@ class Ledger extends Model
 
     /**
      * User モデルへの creator リレーションを定義します。
-     *
-     * @return BelongsTo
      */
     public function creator(): BelongsTo
     {
@@ -138,15 +125,9 @@ class Ledger extends Model
 
     /**
      * User モデルへの modifier リレーションを定義します。
-     *
-     * @return BelongsTo
      */
     public function modifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'modifier_id');
     }
-
-
 }
-
-

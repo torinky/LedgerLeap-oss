@@ -17,8 +17,8 @@
                                     class="fas fa-book"></i><span>{{ $count }}</span></span>
                         @endif
                     </div>
-                    <div class="flex justify-center items-center space-x-1">
-                        <button class="btn btn-ghost px-2"
+                    <div class="flex justify-center items-center">
+                        <button class="btn btn-ghost"
                                 wire:click="toggleFolderId({{ $folderRecord->id }})"
                                 wire:key="selected_folder_{{$folderRecord->id}}">
                                 <span class="fa-layers fa-fw text-3xl">
@@ -27,7 +27,7 @@
                                           style="font-weight:900">{{$folderRecord->descendantCount()}}</span>
                                 </span>
                         </button>
-                        <button class="btn btn-ghost px-2"
+                        <button class="btn btn-ghost"
                                 wire:click="changeCurrentFolder({{$folderRecord->id}})"
                                 wire:key="enter_folder_{{$folderRecord->id}}"><i
                                 class="text-3xl fa-solid fa-right-to-bracket"></i></button>
@@ -42,7 +42,7 @@
 
     @foreach($ledgerDefineRecords as $dKey => $ledgerDefineRecord)
         <div
-            class="p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100 {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
+            class="cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100 {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
                 wire:click="toggleLedgerDefineId({{ $ledgerDefineRecord->id }})"
                 wire:key="selected_ledger_{{$ledgerDefineRecord->id}}">
 

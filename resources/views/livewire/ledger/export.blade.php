@@ -1,5 +1,5 @@
 <div>
-    <a wire:click="export()" class="btn btn-outline btn-secondary btn-sm relative inline-flex w-48"
+    <a wire:click="export()" class="btn btn-outline btn-secondary w-48"
        wire:key="ledger_export_request-{{$ledgerDefineId}}"
        @if($exporting && !$exportFinished) disabled="disabled" @endif
     ><i class="fas fa-file-csv"></i> {{__('ledger.export_csv')}}</a>

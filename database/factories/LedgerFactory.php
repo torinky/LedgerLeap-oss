@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\LedgerDefine;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,34 +30,36 @@ class LedgerFactory extends Factory
         }
 
         return [
-            'ledger_define_id' => $this->faker->numberBetween(1, 10),
-            'content' =>
-                [
-                    [$this->faker->realText(10), $this->faker->realText(10), $this->faker->realText(10)],
-                    [$this->faker->realText(10) => $this->faker->realText(10), $this->faker->realText(10) => $this->faker->realText(10),],
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                    $this->faker->realText(10),
-                ],
-            'creator_id' => 1,
-            'modifier_id' => 1,
+            //            'ledger_define_id' => $this->faker->numberBetween(1, 10),
+            'ledger_define_id' => LedgerDefine::factory(),
+            'content' => [
+                [$this->faker->realText(10), $this->faker->realText(10), $this->faker->realText(10)],
+                [$this->faker->realText(10) => $this->faker->realText(10), $this->faker->realText(10) => $this->faker->realText(10)],
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+                $this->faker->realText(10),
+            ],
+            //            'creator_id' => 1,
+            'creator_id' => User::factory(),
+            //            'modifier_id' => 1,
+            'modifier_id' => User::factory(),
         ];
     }
 }

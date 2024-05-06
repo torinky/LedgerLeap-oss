@@ -6,7 +6,12 @@
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-info leading-tight">
+            <span class="fa-layers fa-fw mr-2">
+                <i class="fa-solid fa-book text-3xl" data-fa-transform="left-5 "></i>
+                <i class="fa-solid fa-pencil text-2xl text-primary/70"
+                   data-fa-transform=" right-5 up-3"></i>
+            </span>
             {{ __('ledger.define.edit_title') }}
         </h2>
     </x-slot>
@@ -45,7 +50,7 @@
                         <label class="form-control">
                             <div class="label">
                                 <span class="label-text">
-                                {{__('ledger.folder_containing')}}
+                                {{__('ledger.folder.containing')}}
                                 </span>
                             </div>
                             <select
@@ -69,35 +74,39 @@
                     </div>
 
                     <div
-                        class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">
-                        <div class="card-body items-center text-center">
-                            <div class="  items-center justify-center">
-                                <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
-                                        class="fa-solid fa-pencil mr-2"></i>{{__('ledger.define.save')}}</button>
-                                <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                        class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
-                                <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
-                                        class="fa-solid fa-trash mr-2"></i> {{__('ledger.define.delete')}}</label>
+                        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                            <div class="card-body">
+                                <div class="card-actions justify-center items-center">
+                                    <button type="submit" class="btn btn-warning btn-wide btn-lg">
+                                        <i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.define.save')}}</button>
 
+                                    <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">
+                                        <i class="fa-solid fa-trash mr-2"></i>{{__('ledger.define.remove')}}</label>
+
+                                    <x-ledger.close-window-button/>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
                 </form>
             </div>
 
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>
             <div class="modal">
-                <div class="modal-box bg-warning text-warning-content">
-                    <h3 class="font-bold text-lg">{{__('ledger.define.delete_title')}}</h3>
-                    <p class="py-4">{{__('This ledger will be deleted')}}<br/>
-                        {{__('Ledger in records will be deleted')}}</p>
+                <div class="modal-box bg-error/70 text-error-content">
+                    <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</h3>
+                    <p class="py-4">{{__('ledger.define.remove_message')}}<br/>{{__('ledger.remove_records_message')}}
+                    </p>
                     <div class="modal-action">
                         <div class="btnContainer">
                             <form method="POST" action="{{route('ledgerDefine.delete',$ledgerDefineRecord->id)}}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-error"
-                                        name="deleteLedgerDefine">{{__('ledger.define.delete')}}</button>
+                                        name="deleteLedgerDefine"><i
+                                        class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
                             </form>
                         </div>
                         <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>

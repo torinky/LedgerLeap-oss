@@ -6,7 +6,7 @@
             </h2>
         </x-slot>
     --}}
-    <div class="bg-warning h-full">
+    <div class="">
         @push('stylesheets')
             @vite(['resources/sass/ledgerIndex.scss'])
         @endpush

@@ -1,6 +1,11 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-info leading-tight">
+                <span class="fa-layers fa-fw mr-2">
+                    <i class="fa-solid fa-book text-3xl" data-fa-transform="left-6 "></i>
+                    <i class="fa-solid  fa-plus-circle text-primary/70"
+                       data-fa-transform=" right-6 up-10"></i>
+                </span>
             {{ __('ledger.define.create_title') }}
         </h2>
     </x-slot>
@@ -37,18 +42,23 @@
             <form action="{{ route('ledgerDefine.store')}}" method="post">
                 @csrf
 
-                <div>
-                    <label for="title">{{__('ledger.define.name')}}</label>
-                    <input type="hidden" name="title" value="">
+                <input type="hidden" name="title" value="">
+                <label class="form-control w-full " for="title">
+                    <div class="label">
+                        <span class="label-text">{{__('ledger.define.title')}}</span>
+                    </div>
                     <input name="title" type="text"
                            value=""
                            placeholder="{{__('ledger.type_here')}}"
-                           class="input input-bordered w-full max-w-xs"/>
+                           class="input input-bordered w-full "/>
+                </label>
 
-                </div>
 
-                <div class="flex-1 m-5">
-                    <label for="folder_id" class="ml-3">{{__('ledger.folder_containing')}}</label>
+                {{--                <div class="flex-1 m-5">--}}
+                <label for="folder_id" class="form-control w-full max-w-xs">
+                    <div class="label">
+                        <span class="label-text">{{__('ledger.folder.containing')}}</span>
+                    </div>
                     <select
                         name="folder_id"
                         class="select input-bordered">
@@ -58,17 +68,33 @@
                             >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
                         @endforeach
                     </select>
-
-                </div>
+                </label>
+                {{--                </div>--}}
 
                 {{--                    <livewire:ledger-define.modify-column/>--}}
 
-                <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
-                    <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
-                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.define.create')}}</button>
-                    <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                            class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
+                {{--
+                                <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
+                                    <button type="submit" class="btn btn-outline btn-primary btn-wide"><i
+                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.define.create')}}</button>
+                                    <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                                            class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
+                                </div>
+                --}}
+                <div
+                    class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                    <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                        <div class="card-body">
+                            <div class="card-actions justify-center items-center">
+                                <button type="submit" class="btn btn-primary btn-wide btn-lg">
+                                    <i class="fa-solid fa-plus-circle mr-2"></i>{{__('ledger.define.create')}}</button>
+
+                                <x-ledger.close-window-button/>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
 
             </form>
         </div>

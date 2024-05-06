@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\ColumnDefine;
+use App\Models\User;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,6 +16,8 @@ class LedgerDefineFactory extends Factory
      * Define the model's default state.
      *
      * @return array<string, mixed>
+     *
+     * @throws Exception
      */
     public function definition()
     {
@@ -68,8 +72,11 @@ class LedgerDefineFactory extends Factory
             'title' => $this->faker->realText(10),
             'column_define' => $columnDefine,
             'folder_id' => random_int(1, 10),
-            'creator_id' => 1,
-            'modifier_id' => 1,
+            //            'folder_id' => Folder::factory(),
+            //            'creator_id' => 1,
+            //            'modifier_id' => 1,
+            'creator_id' => User::factory(),
+            'modifier_id' => User::factory(),
         ];
     }
 }

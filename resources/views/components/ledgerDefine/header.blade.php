@@ -1,4 +1,4 @@
-<div class="flex flex-row bg-base-300 mt-0 px-4 text-sm rounded-t-box">
+<div class="flex flex-row bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
     <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
     />
 </div>
@@ -8,9 +8,9 @@
 </h3>
 <div class="grid justify-items-end mx-4">
 
-    <div class="flex flex-row  space-x-2">
+    <div class="flex flex-row  space-x-2 place-items-center">
         <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
-           class="btn btn-primary btn-sm relative inline-flex w-48"
+           class="btn btn-neutral relative inline-flex w-48 "
            target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
             {{__('ledger.create')}}</a>
         {{--

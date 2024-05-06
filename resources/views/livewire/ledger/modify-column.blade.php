@@ -1,32 +1,32 @@
 <div>
     @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-            {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
+        {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
         <form wire:submit="store"
-                  method="post"
-                  class="w-full">
-                @csrf
-                <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
-                <caption>
-                    {{$ledgerDefineRecord->title}}
+              method="post"
+              class="w-full">
+            @csrf
+            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
+            <caption>
+                {{$ledgerDefineRecord->title}}
 
-                </caption>
-                @php
-                    $columnJs=[];
-                @endphp
+            </caption>
+            @php
+                $columnJs=[];
+            @endphp
 
-                <div class="mb-32 space-y-5 mt-5">
-                    @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                        <div class="flex justify-items-start items-center px-3 "
-                             wire:key="content-{{$columnDefine->id}}">
-                            <label for="content[{{$columnDefine->id}}]"
-                                   class="basis-1/4 text-right text-gray-700 font-bold mr-5">
-                                @if($columnDefine->required)
-                                    <i class="fas fa-check-circle text-accent"></i>
-                                @endif
-                                {{$columnDefine->name}}
-                            </label>
-                            @if($columnDefine->type=='files')
-                                <div class="form-control basis-3/4">
+            <div class="mb-32 space-y-5 mt-5">
+                @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
+                    <div class="flex justify-items-start items-center px-3 "
+                         wire:key="content-{{$columnDefine->id}}">
+                        <label for="content[{{$columnDefine->id}}]"
+                               class="basis-1/4 text-right text-gray-700 font-bold mr-5">
+                            @if($columnDefine->required)
+                                <i class="fas fa-check-circle text-accent"></i>
+                            @endif
+                            {{$columnDefine->name}}
+                        </label>
+                        @if($columnDefine->type=='files')
+                            <div class="form-control basis-3/4">
                                 <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
                                                      wire:model.live="content"
                                                      wire:model.live="deletedContent"
@@ -37,78 +37,81 @@
                                                      imagePreviewMaxHeight="200"
                                 />
 
-                            @else
-                                        <div class="form-control">
-                                <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                     wire:model.live="content"
-                                                     :columnDefine="$columnDefine"
-                                                     :ledgerRecord="$ledgerRecord??[]"
-                                />
-                            @endif
-                                            @error('content.' . $columnDefine->id)
-                                            <label class="label">
+                                @else
+                                    <div class="form-control">
+                                        <x-dynamic-component
+                                            :component="'ledger.form.'. Str::kebab($columnDefine->type)"
+                                            wire:model.live="content"
+                                            :columnDefine="$columnDefine"
+                                            :ledgerRecord="$ledgerRecord??[]"
+                                        />
+                                        @endif
+                                        @error('content.' . $columnDefine->id)
+                                        <label class="label">
                                     <span class="label-text-alt text-red-500 text-xs space-x-2">
                                         <i class="fas fa-times-circle"></i>
                                         <span class="error">{{ $message }}</span>
                                     </span>
-                                            </label>
-                                            @enderror
-                                        </div>
-                        </div>
-                    @endforeach
-                </div>
-
-                {{--
-                                <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
-                                    <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
-                                            class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
-                                    <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                            class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
-                                    @if(isset($ledgerRecord->id))
-                                        <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
-                                                class="fa-solid fa-trash mr-2"></i>{{__('delete record')}}</label>
-                                    @endif
-                                </div>
-                --}}
-
-                <div
-                    class="card mx-auto md:w-full lg:w-2/3 bg-primary-content text-base-100 justify-center opacity-30 hover:opacity-90 transition-opacity inset-x-0 fixed bottom-3">
-                    <div class="card-body items-center text-center">
-                        <div class="card-actions justify-center">
-                            <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
-                                    class="fa-solid fa-pencil mr-2"></i>{{__('ledger.save')}}</button>
-                            <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                    class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
-                            @if(isset($ledgerRecord->id))
-                                <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
-                                        class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-            </form>
-
-            @if(isset($ledgerRecord->id))
-                <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-                <div class="modal">
-                    <div class="modal-box bg-warning text-warning-content">
-                        <h3 class="font-bold text-lg">{{__('ledger.remove_title')}}</h3>
-                        <p class="py-4">{{__('This record will be deleted')}}</p>
-                        <div class="modal-action">
-                            <div class="btnContainer">
-                                <form method="POST" action="{{route('ledger.delete',$ledgerRecord->id)}}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-error"
-                                            name="deleteLedgerDefine">{{__('ledger.delete')}}</button>
-                                </form>
+                                        </label>
+                                        @enderror
+                                    </div>
                             </div>
-                            <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+                            @endforeach
+                    </div>
+
+                    {{--
+                                    <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
+                                        <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
+                                                class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                                        <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                                                class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                        @if(isset($ledgerRecord->id))
+                                            <label for="delete-modal" class="btn btn-outline btn-error ml-10"><i
+                                                    class="fa-solid fa-trash mr-2"></i>{{__('delete record')}}</label>
+                                        @endif
+                                    </div>
+                    --}}
+
+                    <div
+                        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                            <div class="card-body flex flex-row justify-center items-center">
+                                <div class="card-actions justify-center place-items-center">
+                                    <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
+                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
+                                    @if(isset($ledgerRecord->id))
+                                        <label for="delete-modal" class="btn btn-outline btn-sm btn-error ml-10"><i
+                                                class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
+                                    @endif
+                                    <x-ledger.close-window-button/>
+
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+        </form>
+
+        @if(isset($ledgerRecord->id))
+            <input type="checkbox" id="delete-modal" class="modal-toggle"/>
+            <div class="modal">
+                <div class="modal-box bg-warning text-warning-content">
+                    <h3 class="font-bold text-lg">{{__('ledger.remove_title')}}</h3>
+                    <p class="py-4">{{__('This record will be deleted')}}</p>
+                    <div class="modal-action">
+                        <div class="btnContainer">
+                            <form method="POST" action="{{route('ledger.delete',$ledgerRecord->id)}}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-error"
+                                        name="deleteLedgerDefine">{{__('ledger.delete')}}</button>
+                            </form>
+                        </div>
+                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+                    </div>
                 </div>
-            @endif
+            </div>
+        @endif
 
     @endif
 </div>

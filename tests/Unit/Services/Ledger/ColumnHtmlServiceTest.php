@@ -11,7 +11,6 @@ class ColumnHtmlServiceTest extends TestCase
     public function test_column_value_is_array()
     {
 
-
         $columnDefine = new ColumnDefine(
             1,
             'aaa',
@@ -25,9 +24,9 @@ class ColumnHtmlServiceTest extends TestCase
         $result = $columnHtml->show($columnDefine,
             [
                 'aaa',
-//                'bbb',
+                //                'bbb',
             ]);
-//        dd($result->toHtml());
-        $this->assertEquals($result->toHtml(), '<span class="m-1 badge badge-outline">aaa</span>');
+        //        dd($result->toHtml());
+        $this->assertEquals($result->toHtml(), '<span class="badge badge-secondary py-4 mx-1 my-1">aaa</span>');
     }
 }

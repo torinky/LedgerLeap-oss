@@ -1,11 +1,16 @@
 <x-app-layout title="SETTING | DocumentCabinet">
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Folder Setting') }}
+        <h2 class="font-semibold text-xl text-info leading-tight">
+            <span class="fa-layers fa-fw mr-2">
+                <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
+                <i class="fa-solid  fa-pencil text-2xl text-primary/70"
+                   data-fa-transform=" right-5 up-3"></i>
+            </span>
+            {{ __('ledger.folder.edit') }}
         </h2>
     </x-slot>
 
-    <div class="container mx-auto">
+    <div class="container ">
         @if (session('status'))
             @include('components.ledger.alert',[
                'type'=>'success',
@@ -15,42 +20,61 @@
         @endif
 
         @if($currentFolderRecord)
-            <div class="flex flex-wrap items-center justify-center w-full">
+                <div class="flex w-full justify-center">
                 <form action="{{ route('folder.update',$currentFolderRecord->id)}}" method="post">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="id" value="{{ $currentFolderRecord->id }}">
 
-                    <div class="flex-1 m-5">
-                        <label for="title" class="ml-3">{{__('title')}}</label>
+                    {{--                    <div class="flex-1 m-5">--}}
+                    <label for="title" class="form-control w-full">
+                        <div class="label">
+                            <span class="label-text">{{__('ledger.folder.title')}}</span>
+                        </div>
                         <input type="hidden" name="title" value="{{$currentFolderRecord->title}}">
                         <input name="title" type="text"
                                value="{{$currentFolderRecord->title}}"
-                               placeholder="Type here"
-                               class="input input-bordered w-full max-w-xs"/>
+                               placeholder="{{__('ledger.type_here')}}"
+                               class="input input-bordered w-full "/>
+                    </label>
 
-                    </div>
-                    <div class="flex-1 m-5">
-                        <label for="folder_id" class="ml-3">{{__('Parent folder')}}</label>
+                    {{--                    </div>--}}
+                    {{--                    <div class="flex-1 m-5">--}}
+                    <label for="folder_id" class="folder-control w-full">
+                        <div class="label">
+                            <span class="label-text">{{__('ledger.folder.containing')}}</span>
+
+                        </div>
                         <select
                             name="parent_id"
-                            class="select input-bordered">
+                            class="select input-bordered w-full">
                             @foreach($folderRecords as $folderRecord)
                                 <option
                                     value="{{$folderRecord->id}}" {{  $currentFolderRecord->parent_id == $folderRecord->id ? 'selected' : '' }}
                                 >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
                             @endforeach
                         </select>
+                    </label>
+                    {{--                    </div>--}}
 
-                    </div>
 
+                    <div
+                        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                            <div class="card-body ">
+                                <div class="card-actions justify-center place-items-center">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-wide"><i
+                                            class="fas fa-plus-circle mr-2"></i> {{__('ledger.save')}}</button>
+                                    <label for="delete-modal"
+                                           class="btn btn-outline btn-error btn-sm ml-5"><i
+                                            class="fas fa-trash mr-2"></i> {{__('ledger.folder.remove')}}</label>
+                                    {{--                                    <input type="button" class="btn btn-outline btn-info btn-wide ml-5" onclick="window.close();"--}}
+                                    {{--                                           value="close">--}}
+                                    <x-ledger.close-window-button/>
 
-                    <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
-                        <button type="submit" class="btn btn-outline btn-primary btn-wide">{{__('save')}}</button>
-                        <input type="button" class="btn btn-outline btn-info btn-wide ml-5" onclick="window.close();"
-                               value="close">
-                        <label for="delete-modal" class="btn btn-outline ml-10">{{__('delete folder')}}</label>
-
+                                </div>
+                            </div>
+                        </div>
 
                     </div>
 
@@ -59,20 +83,21 @@
 
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>
             <div class="modal">
-                <div class="modal-box">
-                    <h3 class="font-bold text-lg">{{__('delete folder')}}</h3>
-                    <p class="py-4">{{__('This folder will be deleted')}}<br/>
-                        {{__('Ledgers in this Folder will be moved to upper folder')}}</p>
+                <div class="modal-box bg-error/70 text-error-content ">
+                    <h3 class="font-bold text-lg "><i
+                            class="fas fa-trash mr-2"></i>{{__('ledger.folder.remove_message')}}</h3>
+                    <p class="py-4">{{__('ledger.folder.will_remove_message')}}</p>
                     <div class="modal-action">
                         <div class="btnContainer">
                             <form method="POST" action="{{route('folder.delete',$currentFolderRecord->id)}}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn"
-                                        name="deleteFolder">{{__('delete folder')}}</button>
+                                <button type="submit" class="btn btn-error"
+                                        name="deleteFolder"><i
+                                        class="fas fa-trash mr-2"></i>{{__('ledger.folder.remove')}}</button>
                             </form>
                         </div>
-                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('cancel')}}</label>
+                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('ledger.cancel')}}</label>
                     </div>
                 </div>
             </div>

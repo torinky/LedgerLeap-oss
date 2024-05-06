@@ -19,13 +19,13 @@
                     --}}
                     <li>
                         <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                            {{ __('leger.system_name') }}
+                            <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
                         </x-daisyui-nav-link>
                     </li>
                     <li>
                         <x-daisyui-nav-link :href="route('ledgerDefine.index')"
                                             :active="request()->routeIs('ledgerDefine.index')">
-                            {{ __('ledger.settings') }}
+                            <i class="fas fa-cogs mr-2"></i>{{ __('ledger.settings') }}
                         </x-daisyui-nav-link>
                     </li>
                     {{--
@@ -41,13 +41,17 @@
                 </ul>
             </div>
             <div>
-                <label for="app-drawer" class="btn btn-sm btn-ghost xl:hidden">
+                <label for="app-drawer" class="btn btn-ghost xl:hidden btn-square tooltip tooltip-bottom pt-4"
+                       data-tip="{{__('ledger.open_tree_view')}}">
                     <i class="fa-solid fa-folder-tree"></i>
                 </label>
 
             </div>
-            <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                <span class="btn btn-ghost normal-case text-xl">LedgerLeap</span>
+            <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')"
+                                class="btn btn-ghost normal-case text-xl tooltip tooltip-bottom pt-2"
+                                data-tip="{{__('ledger.reset_search')}}"
+            >
+                <i class="fas fa-book-open-reader mr-2"></i> {{ config('app.name', 'Laravel') }}
             </x-daisyui-nav-link>
         </div>
         <div class="navbar-center hidden lg:flex">
@@ -60,14 +64,19 @@
                                 </li>
                 --}}
                 <li>
-                    <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
-                        {{ __('ledger.search_view') }}
+                    <x-daisyui-nav-link :href="route('ledger.index')"
+                                        :active="request()->routeIs('ledger')"
+                                        class="btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2"
+                    >
+                        <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
                     </x-daisyui-nav-link>
                 </li>
                 <li>
                     <x-daisyui-nav-link :href="route('ledgerDefine.index')"
-                                        :active="request()->routeIs('ledgerDefine.index')">
-                        {{ __('ledger.settings') }}
+                                        :active="request()->routeIs('ledgerDefine.index')"
+                                        class="btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2"
+                    >
+                        <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}
                     </x-daisyui-nav-link>
                 </li>
                 {{--

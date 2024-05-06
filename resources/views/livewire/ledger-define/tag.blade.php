@@ -21,13 +21,13 @@
         </span>
     @endforeach
     <form wire:submit="addTag">
+        <span wire:loading class="fixed h-10 loading loading-ball loading-xs justify"></span>
         <input type="text" placeholder="{{__('ledger.tag.add')}}"
                class="input input-bordered input-xs w-full max-w-xs ml-5"
                id="newTag-{{$ledgerDefineId}}"
                wire:model="newTag"
                wire:key="tag_add_{{$ledgerDefineId}}"
         />
-        <span wire:loading>{{__('ledger.saving')}}Saving...</span>
     </form>
 </div>
 
