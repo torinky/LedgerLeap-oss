@@ -1,5 +1,5 @@
 <div>
-    <div wire:loading class="z-9999 fixed inset-0 bg-base-300/70 ">
+    <div wire:loading class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
         <div class="flex h-screen justify-center items-center">
             <span class="loading loading-dots loading-lg"></span>
         </div>

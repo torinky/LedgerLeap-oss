@@ -8,7 +8,8 @@
         @vite(['resources/sass/ledgerEdit.scss'])
     @endpush
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-info leading-tight">
+            <i class="fas fa-pencil mr-2"></i>
             {{ __('ledger.editTitle') }}
         </h2>
     </x-slot>

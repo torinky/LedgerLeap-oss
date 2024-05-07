@@ -60,7 +60,10 @@
                                         <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
                                                 class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
                     --}}
-                    <x-ledger.close-window-button/>
+                    <x-ledger.close-window-button
+                        :closeWindowMessage="__('ledger.close_view_window_message')"
+                        :cancel="__('ledger.cancel')"
+                    />
                 </div>
             </div>
         </div>

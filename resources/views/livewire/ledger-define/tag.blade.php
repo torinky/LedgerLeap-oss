@@ -1,8 +1,10 @@
 <div class="flex flex-row place-items-center ">
     @foreach($tags as $key => $tag)
         <span wire:key="tag4ledger_{{$tag->id}}">
-            <div class="badge badge-accent badge-sm gap-2 py-4 mx-1 my-4">
-                <a href="#tagRemoveModal-{{$tag->id}}" class="btn btn-xs opacity-50 hover:opacity-100"><i
+            <div
+                class="badge badge-accent badge-sm gap-2 py-4 mx-1 my-4 opacity-80 hover:opacity-100 transition-opacity">
+                <a href="#tagRemoveModal-{{$tag->id}}"
+                   class="btn btn-xs opacity-50 hover:opacity-100 transition-opacity"><i
                         class="fas fa-times"></i></a>
                 {{$tag->name}}
             </div>
