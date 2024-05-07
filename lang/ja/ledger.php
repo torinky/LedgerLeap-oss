@@ -23,6 +23,7 @@ return [
     'close_window' => 'ウィンドウを閉じる',
     'close_window_modal' => '閉じようとしています',
     'close_window_message' => '編集内容を破棄してウィンドウを閉じますか？',
+    'close_view_window_message' => '閲覧を終了してウィンドウを閉じますか？',
     'collapse' => '展開／折りたたむ',
     'collapse_all' => 'すべて折りたたむ',
     'column' => [

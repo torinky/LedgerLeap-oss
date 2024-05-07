@@ -72,6 +72,7 @@
     "Expectation Failed": "指定された要件を満たしていません",
     "Explanation": "説明",
     "Export": "輸出",
+    "Export :name": "Export :name",
     "Failed Dependency": "失敗した依存関係",
     "File": "ファイル",
     "Files": "ファイル",

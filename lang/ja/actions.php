@@ -64,6 +64,7 @@ return [
         'delete' => ':nameを削除',
         'duplicate' => '重複: 名前',
         'edit' => '編集:name',
+        'export' => 'Export :name',
         'hide' => '隠す:name',
         'import' => 'インポート:name',
         'new' => '新しい:name',
