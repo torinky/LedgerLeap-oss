@@ -24,7 +24,7 @@ class ColumnHtmlService
 
     private const BADGE_CLASS_NAME = 'badge badge-secondary py-4 mx-1 my-1';
 
-    private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold font-lg';
+    private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
     //    private string $orderNameBase;
     //    private string $idNameBase;
