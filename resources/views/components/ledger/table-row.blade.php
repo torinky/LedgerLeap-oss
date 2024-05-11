@@ -1,3 +1,7 @@
+@props([
+    'ledgerRecord'=>null,
+    'keywords'=>[],
+    ])
 <tr class="hover">
     <th class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right"
@@ -26,8 +30,9 @@
     </th>
     @foreach($ledgerRecord->define->column_define as $cKey=>$columnDefine)
         @isset($ledgerRecord->content[$columnDefine->id])
-            {{--                                <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>--}}
-            <td class="hover:bg-accent/20 border px-4 py-2">{{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>
+            {{--            <td class="hover:bg-accent/20 border px-4 py-2">{{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>--}}
+            <td class="hover:bg-accent/20 border px-4 py-2">{{ ColumnHtml::setHighlightKeywords($keywords)
+              ->show($columnDefine,$ledgerRecord->content[$columnDefine->id]) }}</td>
         @else
             <td class="border px-4 py-2 text-center">-</td>
         @endif

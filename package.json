@@ -11,15 +11,15 @@
         "alpinejs": "^3.13.10",
         "autoprefixer": "^10.4.19",
         "axios": "^1.6.8",
-        "daisyui": "^4.10.5",
+        "daisyui": "^4.11.1",
         "postcss": "^8.4.38",
-        "sass": "^1.77.0",
+        "sass": "^1.77.1",
         "tailwindcss": "^3.4.3"
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^6.5.2",
         "@nextapps-be/livewire-sortablejs": "^0.4.1",
-        "esbuild": "^0.21.0",
+        "esbuild": "^0.21.1",
         "filepond": "^4.31.1",
         "filepond-plugin-file-poster": "^2.5.1",
         "filepond-plugin-file-validate-size": "^2.2.8",

@@ -8,9 +8,9 @@
     <x-ledger.search/>
 
     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
-    <x-ledger.livewire-breadcrumbs
-        :breadcrumbs="$breadcrumbs"
-    />
+        <x-ledger.livewire-breadcrumbs
+            :breadcrumbs="$breadcrumbs"
+        />
     </div>
 
     {{--
@@ -28,7 +28,15 @@
 
 
     <div class="divider"></div>
+    @if(!empty($keywords))
+        <div class="flex flex-row space-x-2">
+            @foreach($keywords as $keyword)
+                <span>{{__('ledger.searched')}}</span><span>...</span><span
+                    class="badge badge-info badge-lg">{{$keyword}}</span>
+            @endforeach
 
+        </div>
+    @endif
 
     <div class="">
         @if($totalRecords > 0)
@@ -66,6 +74,7 @@
                                 @foreach($ledgerDefineAndRecords as $ledgerRecordValues)
                                     <x-ledger.table-row
                                         :ledgerRecord="$ledgerRecordValues"
+                                        :keywords="$highlights"
                                     />
                                 @endforeach
                                 </tbody>

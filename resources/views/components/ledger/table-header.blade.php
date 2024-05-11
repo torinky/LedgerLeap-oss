@@ -43,7 +43,7 @@
                 wire:change="focusLedgerDefine({{$ledgerDefine->id}})"
                 wire:model="filter.{{$column_define->id}}"
                 wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
-                type="text"
+                type="search"
                 class="input input-bordered input-xs w-full max-w-xs flex flex-row"
                 placeholder="{{__('ledger.filter')}}...">
         </td>

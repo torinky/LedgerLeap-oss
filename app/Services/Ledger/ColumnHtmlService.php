@@ -9,6 +9,7 @@ use Illuminate\Support\HtmlString;
 class ColumnHtmlService
 {
     private $attrs = [];
+
     private $columnDefine;
 
     private $valueNameBase = '';
@@ -18,31 +19,31 @@ class ColumnHtmlService
     private $asCreate = false;
 
     private $id = '';
+
     private $nameBase = '';
 
     private const BADGE_CLASS_NAME = 'badge badge-secondary py-4 mx-1 my-1';
-//    private string $orderNameBase;
-//    private string $idNameBase;
 
+    private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold font-lg';
+
+    //    private string $orderNameBase;
+    //    private string $idNameBase;
+    private array $keywords = [];
 
     /**
-     * @param ColumnDefine $columnDefine
-     * @param $initialValue
-     * @param $attrs
-     * @param $idPrefix
-     * @param $asCreate
      * @return HtmlString
      */
     public function show(ColumnDefine $columnDefine, $initialValue, $attrs = [], $idPrefix = '', $asCreate = false)
     {
-//        $this->__construct($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
-        $this->mount($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
+        if ($columnDefine !== null) {
+            $this->mount($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
+        }
 
         $html = '';
         if ($columnDefine->type == 'files' && is_array($this->initialValue)) {
             foreach ($this->initialValue as $originalFilename => $hashedFilename) {
                 $url = Storage::url($hashedFilename);
-//                画像ファイルか確認
+                //                画像ファイルか確認
                 if (Storage::exists('public/Ledger/thumbs/' . basename($hashedFilename))) {
                     $thumbnailUrl = Storage::url('Ledger/thumbs/' . basename($hashedFilename));
                     $html .= <<<HTML
@@ -55,7 +56,7 @@ HTML;
 
                 }
             }
-//            dd($this->initialValue);
+            //            dd($this->initialValue);
         } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
             if (!empty($displayValues)) {
@@ -65,33 +66,72 @@ HTML;
             $html = $this->initialValue;
         }
 
+        $html = $this->highlightKeywords($html);
+
         return new HtmlString($html);
     }
 
+    /**
+     * @return string
+     */
+    private function highlightKeywords($html)
+    {
+        if (empty($this->keywords)) {
+            return $html;
+        }
+        // HTMLタグを一時的に置換する
+        $htmlTags = [];
+        $html = preg_replace_callback('/<([^>]+)>/', function ($matches) use (&$htmlTags) {
+            $htmlTags[] = $matches[0];
+
+            return '<#' . (count($htmlTags) - 1) . '#>';
+        }, $html);
+
+        // HTMLタグを除去してキーワードをハイライト
+        $text = strip_tags($html);
+        foreach ($this->keywords as $keyword) {
+            $text = preg_replace('/' . ($keyword) . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
+        }
+
+        // ハイライトされたテキストをHTMLに戻す
+        $html = '';
+        $parts = preg_split('/<#_#\d+#_#>/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+        foreach ($parts as $part) {
+            if (preg_match('/<#_#(\d+)#_#>/', $part, $matches)) {
+                $html .= $htmlTags[$matches[1]];
+            } else {
+                $html .= $part;
+            }
+        }
+
+        return $html;
+    }
 
     /**
-     * @param ColumnDefine $columnDefine
-     * @param $initialValue
-     * @param array $attrs
-     * @param bool $asCreate
-     * @param string $idPrefix
+     * @return $this
+     */
+    public function setHighlightKeywords(array $keywords)
+    {
+        $this->keywords = $keywords;
+
+        return $this;
+    }
+
+    /**
      * @return void
      */
-    public
-    function mount(ColumnDefine $columnDefine, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = '')
+    public function mount(ColumnDefine $columnDefine, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = '')
     {
         $this->attrs = $attrs;
         $this->columnDefine = $columnDefine;
 
-        $this->nameBase = "content[" . $columnDefine->id . "]";
-//        $this->valueNameBase = $this->nameBase. "[value]";
+        $this->nameBase = 'content[' . $columnDefine->id . ']';
+        //        $this->valueNameBase = $this->nameBase. "[value]";
         $this->valueNameBase = $this->nameBase;
-//        $this->idNameBase = $this->nameBase. "[id]";
-//        $this->orderNameBase = $this->nameBase. "[order]";
+        //        $this->idNameBase = $this->nameBase. "[id]";
+        //        $this->orderNameBase = $this->nameBase. "[order]";
         $this->initialValue = $initialValue;
         $this->asCreate = $asCreate;
         $this->id = $idPrefix . $this->valueNameBase;
     }
-
-
 }

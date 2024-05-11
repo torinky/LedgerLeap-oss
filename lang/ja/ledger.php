@@ -81,7 +81,7 @@ return [
     'file' => 'ファイル',
     'filter' => 'フィルタ',
     'files' => 'ファイル',
-//    'folder_containing' => '所属するフォルダ',
+    //    'folder_containing' => '所属するフォルダ',
     'folder' => [
         'create' => 'フォルダーを新規作成',
         'edit' => 'フォルダーを編集',
@@ -159,6 +159,7 @@ return [
     'save_and_close' => '保存して閉じる',
     'save_and_return' => '保存して戻る',
     'search' => '検索する',
+    'searched' => '検索しました',
     'search_message' => 'スペース区切りでキーワードを検索',
     'select' => '選択する',
     'select_message' => 'フォルダまたは台帳を選択',
@@ -174,7 +175,7 @@ return [
     'stop' => '停止する',
     'stored' => [
         'success' => '登録を完了しました',
-        'fail' => '登録に失敗しました'
+        'fail' => '登録に失敗しました',
     ],
     'submit' => '提出する',
     'subscribe' => '購読する',
@@ -205,7 +206,7 @@ return [
     'updated_at' => '更新日時',
     'updated' => [
         'success' => '更新を完了しました',
-        'fail' => '更新に失敗しました'
+        'fail' => '更新に失敗しました',
     ],
     'user' => 'ユーザー',
     'view' => 'ビュー',

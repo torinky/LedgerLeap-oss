@@ -55,6 +55,8 @@ class RecordsTable extends Component
 
     public $totalRecords;
 
+    public $highlights = [];
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -181,7 +183,7 @@ class RecordsTable extends Component
      */
     private function updateKeywordsAndTags($rawInputText)
     {
-        $text = mb_convert_kana($rawInputText, 'askV', 'UTF-8');
+        $text = mb_convert_kana($rawInputText, 'asKV', 'UTF-8');
         $text = preg_replace('/\s+/u', ' ', $text);
 
         $words = explode(' ', $text);
@@ -201,6 +203,10 @@ class RecordsTable extends Component
                 $this->keywords[] = $word;
             }
         }
+
+        $this->highlights = array_merge($this->keywords, $this->filter);
+        $this->highlights = array_unique($this->highlights);
+
     }
 
     /**
