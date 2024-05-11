@@ -28,7 +28,7 @@
 
 
     <div class="divider"></div>
-    <div class="info-block space-x-4 flex justify-center">
+    <div class="info-block space-x-4 flex justify-center sticky top-20 z-40">
         @if(!empty($highlights))
             <div class="space-x-2 flex flex-row mr-10">
                 <span class="self-center"><i
