@@ -28,15 +28,50 @@
 
 
     <div class="divider"></div>
-    @if(!empty($keywords))
-        <div class="flex flex-row space-x-2">
-            @foreach($keywords as $keyword)
-                <span>{{__('ledger.searched')}}</span><span>...</span><span
-                    class="badge badge-info badge-lg">{{$keyword}}</span>
-            @endforeach
+    <div class="info-block space-x-4 flex justify-center">
+        @if(!empty($highlights))
+            <div class="space-x-2 flex flex-row mr-10">
+                <span class="self-center"><i
+                        class="fas fa-search mr-2"></i>{{__('ledger.searched')}}</span><span>...</span>
+                @foreach($highlights as $keyword)
+                    <div class="badge badge-neutral opacity-70 badge-lg h-8 flex items-stretch ">
+                        <div class="self-center space-x-2 font-bold">
+                            {{$keyword}}
+                        </div>
+                    </div>
+                @endforeach
 
-        </div>
-    @endif
+            </div>
+        @endif
+
+        @if(!empty($selectedFolderIds))
+            <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16"
+                 data-tip="{{__('ledger.folder.opened_count')}}">
+                <div class="self-center space-x-2">
+                    <i class="fas fa-folder-open text-info-content/50"></i><span
+                        class="font-bold">@php echo count($selectedFolderIds) @endphp</span>
+                </div>
+            </div>
+        @endif
+        @if(!empty($selectedLedgerDefineIds))
+            <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16"
+                 data-tip="{{__('ledger.define.opened_count')}}">
+                <div class="self-center space-x-2">
+                    <i class="fas fa-book-open text-info-content/50"></i><span
+                        class="font-bold">@php echo count($selectedLedgerDefineIds) @endphp</span>
+                </div>
+            </div>
+        @endif
+        @if(!empty($totalRecords))
+            <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16"
+                 data-tip="{{__('ledger.opened_count')}}">
+                <div class="self-center space-x-2">
+                    <i class="fas fa-list"></i><span class="font-bold">@php echo $totalRecords @endphp</span>
+                </div>
+            </div>
+        @endif
+
+    </div>
 
     <div class="">
         @if($totalRecords > 0)

@@ -84,7 +84,7 @@ HTML;
         $html = preg_replace_callback('/<([^>]+)>/', function ($matches) use (&$htmlTags) {
             $htmlTags[] = $matches[0];
 
-            return '<#' . (count($htmlTags) - 1) . '#>';
+            return '<#_#' . (count($htmlTags) - 1) . '#_#>';
         }, $html);
 
         // HTMLタグを除去してキーワードをハイライト

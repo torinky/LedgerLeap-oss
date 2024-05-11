@@ -115,8 +115,12 @@ class RecordsTable extends Component
         $this->dispatch('refreshChildren', data: ['keywords' => $this->keywords, 'filter' => $this->filter]);
 
         // 表示対象の台帳を取得
-        $displayLedgerDefines = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)
-            ->orWhereIn('id', $this->selectedLedgerDefineIds)
+        /*        $displayLedgerDefines = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)
+                    ->orWhereIn('id', $this->selectedLedgerDefineIds)
+                    ->searchTags($this->tags)
+                    ->with('folder')
+                    ->get();*/
+        $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
             ->searchTags($this->tags)
             ->with('folder')
             ->get();
@@ -191,6 +195,7 @@ class RecordsTable extends Component
 
         $this->keywords = [];
         $this->tags = [];
+        $this->highlights = [];
 
         if (empty($words)) {
             return;
@@ -226,6 +231,7 @@ class RecordsTable extends Component
                 $this->selectedFolderIds = [];
             } else {
                 $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
+                $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
             }
         }
         // フォルダーIDを更新
@@ -250,6 +256,7 @@ class RecordsTable extends Component
         $this->currentFolderId = $newFolderId;
 
         $this->selectedFolderIds = $newSelectedFolderIds;
+        $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
 
         // フォルダーアセットを再準備
         $this->prepareFolderAsset();

@@ -1,6 +1,17 @@
-<div class="flex flex-row bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
-    <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
-    />
+<div
+    class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
+    {{--<div class="grid bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">--}}
+    <div class="flex-grow">
+        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
+        />
+
+    </div>
+    <div class="flex-grow text-right">
+        <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
+           data-tip="{{__('ledger.close')}}"
+           wire:click="toggleLedgerDefineId({{ $ledgerDefine->id }})"
+        ><i class="fas fa-times"></i></a>
+    </div>
 </div>
 <h3 class=" flex flex-row items-center text-3xl font-medium leading-tight text-primary space-x-3 mx-4">
     <i class="fa-solid fa-book-open"></i>
