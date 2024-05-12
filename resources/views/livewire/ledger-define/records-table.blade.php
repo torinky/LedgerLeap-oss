@@ -83,29 +83,43 @@
                     <a href="{{ route('folder.createWithFolderId',$currentFolderId)}}"
                        class="btn btn-primary btn-lg mx-3"
                        target="folderCreate">
-                <span class="fa-layers fa-fw mr-2">
-                    <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
-                    <i class="fa-solid  fa-plus-circle text-base-100/70"
-                       data-fa-transform=" right-6 up-10"></i>
-                </span>
+                        <span class="fa-layers fa-fw mr-2">
+                            <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
+                            <i class="fa-solid  fa-plus-circle text-base-100/70"
+                               data-fa-transform=" right-6 up-10"></i>
+                        </span>
                         {{__('ledger.folder.create')}}
                     </a>
+
                     <a href="{{ route('ledgerDefine.createWithFolderId',$currentFolderId)}}"
                        class="btn btn-primary btn-lg mx-3"
-                       target="ledgerDefineCreate">
-                <span class="fa-layers fa-fw mr-2">
-                    <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
-                    <i class="fa-solid  fa-plus-circle text-base-100/70"
-                       data-fa-transform=" right-6 up-10"></i>
-                </span>
+                       target="ledgerDefineCreate"
+                    >
+                        <span class="fa-layers fa-fw mr-2">
+                            <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
+                            <i class="fa-solid  fa-plus-circle text-base-100/70"
+                               data-fa-transform=" right-6 up-10"></i>
+                        </span>
                         {{__('ledger.define.create')}}
                     </a>
+
                     <a href="{{ route('ledgersByFolderId',$currentFolderId)}}"
                        class="btn btn-outline btn-info btn-sm ml-10"
                        target="ledgersByFolderId">
                         <i class="fa-solid fa-arrow-circle-right mr-1"></i>
                         {{__('ledger.folder.goto_ledger')}}
                     </a>
+
+                </div>
+
+                <div class="mt-5 flex justify-center">
+                    <button class="btn btn-error btn-outline btn-xs opacity-70 hover:opacity-100"
+                            wire:click="fixFolderTree()"
+                    >
+                        <i class="fas fa-toolbox mr-2"></i>
+                        {{__('ledger.folder.fix')}}
+                    </button>
+
 
                 </div>
             </div>

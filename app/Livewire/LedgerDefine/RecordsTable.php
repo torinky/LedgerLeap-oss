@@ -86,4 +86,10 @@ class RecordsTable extends Component
             ->get();
 
     }
+
+    public function fixFolderTree()
+    {
+        Folder::fixtree();
+        $this->prepareFolderAsset();
+    }
 }

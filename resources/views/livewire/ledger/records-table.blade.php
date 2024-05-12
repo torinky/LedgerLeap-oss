@@ -30,7 +30,7 @@
     <div class="divider"></div>
     <div class="info-block space-x-4 flex justify-center sticky top-20 z-40">
         @if(!empty($highlights))
-            <div class="space-x-2 flex flex-row mr-10">
+            <div class="space-x-2 flex flex-row mr-10 rounded-box bg-base-100/80 px-2">
                 <span class="self-center"><i
                         class="fas fa-search mr-2"></i>{{__('ledger.searched')}}</span><span>...</span>
                 @foreach($highlights as $keyword)

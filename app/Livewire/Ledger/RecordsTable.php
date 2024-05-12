@@ -321,9 +321,9 @@ class RecordsTable extends Component
 
         } else {
             // 選択されていない場合、リストに追加
-            $this->selectedFolderIds[] = $folderId;
-            $this->selectedFolderIds = array_merge($this->selectedFolderIds, Folder::whereDescendantOf($folderId)->pluck('id')->toArray());
-            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::where('folder_id', $folderId)->get()->pluck('id')->toArray());
+            $mergingFolderIds = array_merge([(int)$folderId], Folder::whereDescendantOf($folderId)->pluck('id')->toArray());
+            $this->selectedFolderIds = array_merge($this->selectedFolderIds, $mergingFolderIds);
+            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->get()->pluck('id')->toArray());
         }
 
         // ツリーコンポーネントに現在のフォルダーIDの変更を通知
