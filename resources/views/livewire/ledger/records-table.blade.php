@@ -4,6 +4,11 @@
             <span class="loading loading-dots loading-lg"></span>
         </div>
     </div>
+    {{--   Dummy for CSS Build --}}
+    <div class="hidden">
+        <span class="badge badge-secondary bg-secondary/50 py-4 mx-1 my-1">dummy</span>
+    </div>
+    {{--   Dummy for CSS Build --}}
 
     <x-ledger.search/>
 

@@ -18,13 +18,17 @@
                                         </li>
                     --}}
                     <li>
-                        <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')">
+                        <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')"
+                            @class(['disabled' => request()->routeIs('ledger.index')])
+                        >
                             <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
                         </x-daisyui-nav-link>
                     </li>
                     <li>
                         <x-daisyui-nav-link :href="route('ledgerDefine.index')"
-                                            :active="request()->routeIs('ledgerDefine.index')">
+                                            :active="request()->routeIs('ledgerDefine.index')"
+                            @class(['disabled' => request()->routeIs('ledger.settings')])
+                        >
                             <i class="fas fa-cogs mr-2"></i>{{ __('ledger.settings') }}
                         </x-daisyui-nav-link>
                     </li>
@@ -64,17 +68,26 @@
                                 </li>
                 --}}
                 <li>
-                    <x-daisyui-nav-link :href="route('ledger.index')"
-                                        :active="request()->routeIs('ledger')"
-                                        class="btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2"
+                    <x-daisyui-nav-link
+                        :href="route('ledger.index')"
+                        :active="!request()->routeIs('ledger.index')"
+                        @class([
+                            'btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledger.index'),
+                            'btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledger.index'),
+                        ])
+
                     >
                         <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
                     </x-daisyui-nav-link>
                 </li>
                 <li>
-                    <x-daisyui-nav-link :href="route('ledgerDefine.index')"
-                                        :active="request()->routeIs('ledgerDefine.index')"
-                                        class="btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2"
+                    <x-daisyui-nav-link
+                        :href="route('ledgerDefine.index')"
+                        :active="!request()->routeIs('ledgerDefine.index')"
+                        @class([
+                            'btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledgerDefine.index'),
+                            'btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledgerDefine.index'),
+                        ])
                     >
                         <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}
                     </x-daisyui-nav-link>
