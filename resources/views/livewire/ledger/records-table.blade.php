@@ -38,14 +38,24 @@
             <div class="space-x-2 flex flex-row mr-10 rounded-box bg-base-100/80 px-2">
                 <span class="self-center"><i
                         class="fas fa-search mr-2"></i>{{__('ledger.searched')}}</span><span>...</span>
-                @foreach($highlights as $keyword)
+                <span>
+                @foreach($keywords as $keyword)
                     <div class="badge badge-neutral opacity-70 badge-lg h-8 flex items-stretch ">
                         <div class="self-center space-x-2 font-bold">
                             {{$keyword}}
                         </div>
                     </div>
-                @endforeach
-
+                        @if(!empty($synonyms[$keyword]))
+                            @foreach($synonyms[$keyword] as $synonyms)
+                                <div class="badge badge-neutral opacity-50 badge h-4 flex items-stretch ">
+                                <div class="self-center space-x-2 font-bold">
+                                    {{$synonyms}}
+                                </div>
+                            </div>
+                            @endforeach
+                        @endif
+                    @endforeach
+                </span>
             </div>
         @endif
 

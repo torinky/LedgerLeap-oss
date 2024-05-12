@@ -6,10 +6,10 @@ use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Services\Ledger\SearchContext;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -57,6 +57,16 @@ class RecordsTable extends Component
 
     public $highlights = [];
 
+    //    private SynonymService $synonymService;
+
+    public array $synonyms;
+
+    /*    public function __construct(SynonymService $synonymService)
+        {
+            $this->synonymService = $synonymService;
+        }*/
+    private SearchContext $searchContext;
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -72,7 +82,10 @@ class RecordsTable extends Component
         if (empty($this->search) && !empty($search)) {
             $this->search = $search ?? session()->get('search') ?? '';
         }
-        $this->updateKeywordsAndTags($this->search);
+        $this->searchContext = new SearchContext($request->keyword(), $this->filter);
+        $this->tags = $this->searchContext->tags;
+
+        //        $this->updateKeywordsAndTags($this->search);
 
         // 現在のフォルダーIDを初期化
         $this->currentFolderId = $request->folderId();
@@ -109,19 +122,18 @@ class RecordsTable extends Component
      */
     public function render()
     {
+        $this->initSearchContext();
 
-        $this->updateKeywordsAndTags($this->search);
+        //        $this->updateKeywordsAndTags($this->search);
         // Exportに検索条件を伝えるためにイベントをトリガ
-        $this->dispatch('refreshChildren', data: ['keywords' => $this->keywords, 'filter' => $this->filter]);
+        $this->dispatch('refreshChildren', data: [
+            'keywords' => $this->searchContext->keywords,
+            'filter' => $this->filter,
+        ]);
 
         // 表示対象の台帳を取得
-        /*        $displayLedgerDefines = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)
-                    ->orWhereIn('id', $this->selectedLedgerDefineIds)
-                    ->searchTags($this->tags)
-                    ->with('folder')
-                    ->get();*/
         $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
-            ->searchTags($this->tags)
+            ->searchTags($this->searchContext->tags)
             ->with('folder')
             ->get();
 
@@ -136,7 +148,7 @@ class RecordsTable extends Component
 
         // 表示対象の台帳に紐づく仕訳データを取得
         $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-            ->search(implode(' ', $this->keywords))
+            ->search($this->searchContext)
             ->contentsFilter($this->filter)
 //          重複データを持たないように
 //          ->with('define.folder')
@@ -185,34 +197,45 @@ class RecordsTable extends Component
      * @param string $rawInputText
      * @return void
      */
-    private function updateKeywordsAndTags($rawInputText)
-    {
-        $text = mb_convert_kana($rawInputText, 'asKV', 'UTF-8');
-        $text = preg_replace('/\s+/u', ' ', $text);
+    /*    private function updateKeywordsAndTags($rawInputText)
+        {
+            $text = mb_convert_kana($rawInputText, 'asKV', 'UTF-8');
+            $text = preg_replace('/\s+/u', ' ', $text);
 
-        $words = explode(' ', $text);
-        $words = array_filter($words, 'strlen');
+            $words = explode(' ', $text);
+            $words = array_filter($words, 'strlen');
 
-        $this->keywords = [];
-        $this->tags = [];
-        $this->highlights = [];
+            $this->keywords = [];
+            $this->tags = [];
+            $this->highlights = [];
 
-        if (empty($words)) {
-            return;
-        }
-
-        foreach ($words as $word) {
-            if (Str::startsWith($word, '#')) {
-                $this->tags[] = substr($word, 1);
-            } else {
-                $this->keywords[] = $word;
+            if (empty($words)) {
+                return;
             }
-        }
 
-        $this->highlights = array_merge($this->keywords, $this->filter);
-        $this->highlights = array_unique($this->highlights);
+            foreach ($words as $word) {
+                if (Str::startsWith($word, '#')) {
+                    $this->tags[] = substr($word, 1);
+                } else {
+                    $this->keywords[] = $word;
+                }
+            }
 
-    }
+            //        $words = $this->synonymService->wakati($inputWord);
+
+            //        dd($igo->parse($inputWord));
+            //        dd($words);
+
+            $synonyms = [];
+            foreach ($this->keywords as $word) {
+                $synonyms[$word] = $this->synonymService->getSynonyms($word);
+            }
+
+            $this->highlights = array_merge($this->keywords, $this->filter);
+            $this->synonyums = $synonyms;
+            $this->highlights = array_unique($this->highlights);
+
+        }*/
 
     /**
      * 現在のフォルダーを変更する
@@ -369,5 +392,16 @@ class RecordsTable extends Component
     {
         // perPageを変更した場合、currentPageを最初のページにリセットする
         $this->resetPage();
+    }
+
+    public function initSearchContext(): void
+    {
+        $this->searchContext = new SearchContext($this->search, $this->filter);
+        $this->tags = $this->searchContext->tags;
+        $this->keywords = $this->searchContext->keywords;
+        $this->highlights = $this->searchContext->highlights;
+        $this->synonyms = $this->searchContext->synonyms;
+        //        dd($this->synonyums);
+        //        dd((string)$this->searchContext,$this->searchContext,$this->searchContext->__toString());
     }
 }

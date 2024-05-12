@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Services\SynonymService;
 
+/**
+ * 類語生成機能の開発用
+ */
 class SynonymController extends Controller
 {
     protected $synonymService;
@@ -18,8 +21,8 @@ class SynonymController extends Controller
 
         $words = $this->synonymService->wakati($inputWord);
 
-//        dd($igo->parse($inputWord));
-//        dd($words);
+        //        dd($igo->parse($inputWord));
+        //        dd($words);
 
         $synonyms = [];
         foreach ($words as $word) {
@@ -27,18 +30,15 @@ class SynonymController extends Controller
 
         }
         dd($synonyms);
-//        return $synonyms;
+
+        //        return $synonyms;
         // ビューで表示
         return view('synonyms.show', [
             'word' => $word,
-            'synonyms' => $synonyms
+            'synonyms' => $synonyms,
         ]);
     }
 
-    /**
-     * @param $word
-     * @return array
-     */
     public function getSynonyms($word): array
     {
         $synonyms = [];
@@ -49,7 +49,7 @@ class SynonymController extends Controller
                 $synonyms = array_merge($synonyms, $s);
             }
         }
+
         return $synonyms;
     }
 }
-

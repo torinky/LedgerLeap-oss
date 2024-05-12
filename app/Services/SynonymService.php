@@ -24,6 +24,19 @@ class SynonymService
         return Word::where('lemma', $lemma)->get();
     }
 
+    public function getSynonymsFromWord($word)
+    {
+        $words = $this->getWords($word);
+        $synonyms = [];
+        if (count($words)) {
+            foreach ($words as $targetWord) {
+                $synonyms = array_merge($synonyms, $this->getSynonyms($targetWord->wordid));
+            }
+        }
+
+        return $synonyms;
+    }
+
     /**
      * 指定された単語IDと言語に関連する類義語を取得します。
      *
@@ -31,7 +44,7 @@ class SynonymService
      * @param string $lang 言語
      * @return array
      */
-    public function getSynonyms($wordid, $lang = "jpn")
+    public function getSynonyms($wordid, $lang = 'jpn')
     {
         $senses = $this->getSenses($wordid);
         $synonyms = [];
@@ -40,6 +53,7 @@ class SynonymService
             $words = $this->getWordsFromSynset($synset->synset, $lang);
             $synonyms[$synset->name] = $words->pluck('lemma')->toArray();
         }
+
         return $synonyms;
     }
 
@@ -83,34 +97,36 @@ class SynonymService
     }
 
     /**
-     *
      * https://php-archive.net/php/compound-nouns/
      *
-     * @param $inputText
      * @return array
      */
     public function wakati($inputText)
     {
         $igo = new Tagger();
-//        $str = "これは形態素解析の実験結果です。";
+        //        $str = "これは形態素解析の実験結果です。";
         $result = $igo->parse($inputText);
 
-        $noun = "";
-        $words = array();
+        $noun = '';
+        $words = [];
         foreach ($result as $value) {
-            if ($value->feature[0] === "名詞") {
+            if ($value->feature[0] === '名詞') {
                 $noun .= $value->surface;
             } else {
-                if (mb_strlen($noun)) $words[] = $noun;
-                $noun = "";
+                if (mb_strlen($noun)) {
+                    $words[] = $noun;
+                }
+                $noun = '';
                 $words[] = $value->surface;
             }
         }
-        if (mb_strlen($noun)) $words[] = $noun;
-//        dd($words);
+        if (mb_strlen($noun)) {
+            $words[] = $noun;
+        }
+
+        //        dd($words);
         return $words;
     }
-
 
     /**
      * 文章の類似度をコサイン類似度を用いて求めます
@@ -127,8 +143,8 @@ class SynonymService
         $text1Corpus = $igo->wakati($text1);
         $text2Corpus = $igo->wakati($text2);
 
-//        $text1Corpus = getWakachiList($text1);
-//        $text2Corpus = getWakachiList($text2);
+        //        $text1Corpus = getWakachiList($text1);
+        //        $text2Corpus = getWakachiList($text2);
 
         // 2つの文章の形態素を抽出
         $allCorpus = array_unique(array_merge($text1Corpus, $text2Corpus));
@@ -159,14 +175,8 @@ class SynonymService
     }
 
     /**
-     *
      * https://qiita.com/mpyw/items/2b636827730e06c71e3d
      *
-     * @param $s1
-     * @param $s2
-     * @param $cost_ins
-     * @param $cost_rep
-     * @param $cost_del
      * @return float|int
      */
     public function levenshtein_normalized_utf8($s1, $s2, $cost_ins = 1, $cost_rep = 1, $cost_del = 1)
@@ -183,6 +193,7 @@ class SynonymService
         if (!$s2) {
             return $l1 / $size;
         }
+
         return 1.0 - levenshtein_utf8($s1, $s2, $cost_ins, $cost_rep, $cost_del) / $size;
     }
 
@@ -200,12 +211,12 @@ class SynonymService
         }
         $p1 = array_fill(0, $l2 + 1, 0);
         $p2 = array_fill(0, $l2 + 1, 0);
-        for ($i2 = 0; $i2 <= $l2; ++$i2) {
+        for ($i2 = 0; $i2 <= $l2; $i2++) {
             $p1[$i2] = $i2 * $cost_ins;
         }
-        for ($i1 = 0; $i1 < $l1; ++$i1) {
+        for ($i1 = 0; $i1 < $l1; $i1++) {
             $p2[0] = $p1[0] + $cost_ins;
-            for ($i2 = 0; $i2 < $l2; ++$i2) {
+            for ($i2 = 0; $i2 < $l2; $i2++) {
                 $c0 = $p1[$i2] + ($s1[$i1] === $s2[$i2] ? 0 : $cost_rep);
                 $c1 = $p1[$i2 + 1] + $cost_del;
                 if ($c1 < $c0) {
@@ -221,7 +232,7 @@ class SynonymService
             $p1 = $p2;
             $p2 = $tmp;
         }
+
         return $p1[$l2];
     }
-
 }
