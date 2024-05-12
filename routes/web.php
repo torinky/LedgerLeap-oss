@@ -13,8 +13,11 @@ use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateCont
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
+use App\Livewire\Tansi\Create;
+use App\Livewire\Tansi\Edit;
+use App\Livewire\Tansi\Index;
+use App\Livewire\Tansi\Show;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -41,12 +44,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
-
+require __DIR__.'/auth.php';
 
 Route::middleware('auth')->group(function () {
 
-//ledgerDefine
+    //ledgerDefine
 
     Route::get('/ledgerDefine', LedgerDefineIndexController::class)->name('ledgerDefine.index');
 
@@ -74,14 +76,13 @@ Route::middleware('auth')->group(function () {
         ->name('ledgerDefine.delete')
         ->where('ledgerDefineId', '[0-9]+');
 
-
-//    ledger
+    //    ledger
     Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
     Route::get('/ledger/define/{ledgerDefineId}', LedgerIndexController::class)->name('ledgerByDefineId')
         ->where('ledgerDefineId', '[0-9]+');
 
-//    Route::post('/ledger', SearchController::class)
-//        ->name('ledger.search');
+    //    Route::post('/ledger', SearchController::class)
+    //        ->name('ledger.search');
 
     Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
         ->where('folderId', '[0-9]+');
@@ -109,7 +110,7 @@ Route::middleware('auth')->group(function () {
         ->name('ledger.delete')
         ->where('ledgerId', '[0-9]+');
 
-//    ledgerDiff
+    //    ledgerDiff
     Route::get('/ledgerDiff/{ledgerId}', LedgerDiffShowController::class)->name('ledgerDiff.show')
         ->where('ledgerId', '[0-9]+');
 
@@ -136,6 +137,15 @@ Route::middleware('auth')->group(function () {
 
 });
 
+Route::get('/words', \App\Livewire\Words\Index::class)->name('words.index');
+Route::get('/words/create', \App\Livewire\Words\Create::class)->name('words.create');
+Route::get('/words/show/{word}', \App\Livewire\Words\Show::class)->name('words.show');
+Route::get('/words/update/{word}', \App\Livewire\Words\Edit::class)->name('words.edit');
+
+Route::get('/tansi', Index::class)->name('tansi.index');
+Route::get('/tansi/create', Create::class)->name('tansi.create');
+Route::get('/tansi/show/{tansi}', Show::class)->name('tansi.show');
+Route::get('/tansi/update/{tansi}', Edit::class)->name('tansi.edit');
 
 Route::get('/phpinfo', function () {
     phpinfo();
