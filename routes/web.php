@@ -137,16 +137,6 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::get('/words', \App\Livewire\Words\Index::class)->name('words.index');
-Route::get('/words/create', \App\Livewire\Words\Create::class)->name('words.create');
-Route::get('/words/show/{word}', \App\Livewire\Words\Show::class)->name('words.show');
-Route::get('/words/update/{word}', \App\Livewire\Words\Edit::class)->name('words.edit');
-
-Route::get('/tansi', Index::class)->name('tansi.index');
-Route::get('/tansi/create', Create::class)->name('tansi.create');
-Route::get('/tansi/show/{tansi}', Show::class)->name('tansi.show');
-Route::get('/tansi/update/{tansi}', Edit::class)->name('tansi.edit');
-
 Route::get('/phpinfo', function () {
     phpinfo();
 });

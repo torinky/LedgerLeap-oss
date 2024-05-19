@@ -13,8 +13,6 @@ class Word extends Model
     // wordidを主キーとして設定
     protected $primaryKey = 'wordid';
 
-    protected $perPage = 20;
-
     /**
      * The attributes that are mass assignable.
      *

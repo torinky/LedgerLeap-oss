@@ -2,6 +2,7 @@
 
 namespace App\Models\Synonym;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property $category2
  * @property $CANDIDATES
  *
- * @mixin \Illuminate\Database\Eloquent\Builder
+ * @mixin Builder
  */
 class Tansi extends Model
 {
@@ -24,8 +25,6 @@ class Tansi extends Model
 
     // wordidを主キーとして設定
     protected $primaryKey = 'WORD';
-
-    protected $perPage = 20;
 
     /**
      * The attributes that are mass assignable.
