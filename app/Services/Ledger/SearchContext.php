@@ -50,13 +50,6 @@ class SearchContext
     public $tags = [];
 
     /**
-     * 類義語サービスのインスタンス
-     *
-     * @var SynonymService
-     */
-    private SynonymService $synonymService;
-
-    /**
      * コンストラクタ
      *
      * @param string $search 検索文字列
@@ -66,7 +59,6 @@ class SearchContext
     {
         $this->setSearch($search);
         $this->setFilter($filter);
-        $this->synonymService = new SynonymService();
     }
 
     /**
@@ -150,15 +142,11 @@ class SearchContext
         $tags = [];
         $keywords = [];
 
-        if (empty($this->synonymService)) {
-            $this->synonymService = new SynonymService();
-        }
-
         foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {
                 $tags[] = substr($word, 1);
             } else {
-                $keywords = array_merge($keywords, $this->synonymService->wakati($word));
+                $keywords = array_merge($keywords, SynonymService::wakati($word));
             }
         }
 
@@ -176,15 +164,7 @@ class SearchContext
         $synonyms = [];
 
         foreach ($keywords as $keyword) {
-            $result = $this->synonymService->getSynonymsFromWord($keyword);
-            $flattenResult = [];
-            if (!empty($result)) {
-                foreach ($result as $idWord => $synonym) {
-                    $flattenResult[] = $idWord;
-                    $flattenResult = array_merge($flattenResult, $synonym);
-                }
-            }
-            $synonyms[$keyword] = array_merge($synonyms[$keyword] ?? [], $flattenResult);
+            $synonyms[$keyword] = $this->findSynonym($keyword);
         }
 
         return $synonyms;
@@ -218,11 +198,7 @@ class SearchContext
     {
         $result = [];
         foreach ($synonyms as $key => $synonym) {
-            if (is_array($synonym)) {
-                $result = array_merge($result, $synonyms[$key]);
-            } else {
-                $result[] = $synonym;
-            }
+            $result = $this->getArr($synonym, $result, $synonyms[$key]);
         }
         $result = array_unique($result);
 
@@ -239,8 +215,49 @@ class SearchContext
         if (empty($this->keywords)) {
             return '';
         }
-        $result = $this->generateHighlights($this->keywords, $this->flattenSynonyms($this->synonyms), $this->filter);
+        $result = $this->generateHighlights($this->keywords, $this->synonyms, $this->filter);
 
         return implode(' ', $result);
+    }
+
+    /**
+     * @param array $synonyms
+     */
+    public function findSynonym(mixed $keyword): array
+    {
+        $result = SynonymService::getSynonymsFromWord($keyword);
+        $flattenResult = [];
+        if (!empty($result)) {
+            foreach ($result as $idWord => $synonym) {
+                $flattenResult[] = $idWord;
+                $flattenResult = array_merge($flattenResult, $synonym);
+            }
+        }
+
+        return $flattenResult;
+    }
+
+    /**
+     * @return array|mixed
+     */
+    public function getArr(mixed $synonym, mixed $result, $synonyms): mixed
+    {
+        if (is_array($synonym)) {
+            $result = array_merge($result, $synonyms);
+        } else {
+            $result[] = $synonym;
+        }
+
+        return $result;
+    }
+
+    /**
+     * キーワードに対応する平坦化された類義語の配列を取得する
+     */
+    public function getFlattenedSynonymsForKeyword(string $keyword): array
+    {
+        $synonyms = $this->synonyms[$keyword] ?? [];
+
+        return array_merge([$keyword], $this->flattenSynonyms($synonyms));
     }
 }

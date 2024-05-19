@@ -147,7 +147,7 @@ return [
     'open' => '開ける',
     'open_website' => 'ウェブサイトで開く',
     'open_tree_view' => 'ツリー表示',
-    'opened_count' => '検索条件を満足した件数',
+    'opened_count' => '検索条件にヒットした件数',
     'options' => '選択肢',
     'per_page' => '表示件数 / ページ',
     'preview' => 'プレビュー',

@@ -57,14 +57,8 @@ class RecordsTable extends Component
 
     public $highlights = [];
 
-    //    private SynonymService $synonymService;
-
     public array $synonyms;
 
-    /*    public function __construct(SynonymService $synonymService)
-        {
-            $this->synonymService = $synonymService;
-        }*/
     private SearchContext $searchContext;
 
     /**
@@ -124,7 +118,6 @@ class RecordsTable extends Component
     {
         $this->initSearchContext();
 
-        //        $this->updateKeywordsAndTags($this->search);
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
             'keywords' => $this->searchContext->keywords,
@@ -148,7 +141,8 @@ class RecordsTable extends Component
 
         // 表示対象の台帳に紐づく仕訳データを取得
         $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-            ->search($this->searchContext)
+//            ->search($this->searchContext)
+            ->searchContext($this->searchContext)
             ->contentsFilter($this->filter)
 //          重複データを持たないように
 //          ->with('define.folder')
@@ -165,13 +159,13 @@ class RecordsTable extends Component
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
+        //ページネーション実行
+        $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
+
         return view('livewire.ledger.records-table', [
+            'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
-            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->simplePaginate($this->perPage)->groupBy('ledger_define_id'),
-
-            //          simplePaginateをViewメソッドの手前で実行すると最終ページの計算がされない(lastPageが常に1になる)ためページネーションのリンク生成のためだけに送る
-            'ledgerRecords' => $ledgerRecords->simplePaginate($this->perPage),
-
+            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->groupBy('ledger_define_id'),
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
@@ -190,52 +184,6 @@ class RecordsTable extends Component
         $this->defineId = $defineId;
         $this->selectedLedgerDefineIds = [$defineId];
     }
-
-    /**
-     * 入力されたテキストからキーワードとタグを更新する
-     *
-     * @param string $rawInputText
-     * @return void
-     */
-    /*    private function updateKeywordsAndTags($rawInputText)
-        {
-            $text = mb_convert_kana($rawInputText, 'asKV', 'UTF-8');
-            $text = preg_replace('/\s+/u', ' ', $text);
-
-            $words = explode(' ', $text);
-            $words = array_filter($words, 'strlen');
-
-            $this->keywords = [];
-            $this->tags = [];
-            $this->highlights = [];
-
-            if (empty($words)) {
-                return;
-            }
-
-            foreach ($words as $word) {
-                if (Str::startsWith($word, '#')) {
-                    $this->tags[] = substr($word, 1);
-                } else {
-                    $this->keywords[] = $word;
-                }
-            }
-
-            //        $words = $this->synonymService->wakati($inputWord);
-
-            //        dd($igo->parse($inputWord));
-            //        dd($words);
-
-            $synonyms = [];
-            foreach ($this->keywords as $word) {
-                $synonyms[$word] = $this->synonymService->getSynonyms($word);
-            }
-
-            $this->highlights = array_merge($this->keywords, $this->filter);
-            $this->synonyums = $synonyms;
-            $this->highlights = array_unique($this->highlights);
-
-        }*/
 
     /**
      * 現在のフォルダーを変更する

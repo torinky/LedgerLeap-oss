@@ -19,18 +19,18 @@ class SynonymService
      * @param string $lemma 単語の基本形
      * @return Collection
      */
-    public function getWords($lemma)
+    public static function getWords($lemma)
     {
         return Word::where('lemma', $lemma)->get();
     }
 
-    public function getSynonymsFromWord($word)
+    public static function getSynonymsFromWord($word)
     {
-        $words = $this->getWords($word);
+        $words = self::getWords($word);
         $synonyms = [];
         if (count($words)) {
             foreach ($words as $targetWord) {
-                $synonyms = array_merge($synonyms, $this->getSynonyms($targetWord->wordid));
+                $synonyms = array_merge($synonyms, self::getSynonyms($targetWord->wordid));
             }
         }
 
@@ -44,13 +44,13 @@ class SynonymService
      * @param string $lang 言語
      * @return array
      */
-    public function getSynonyms($wordid, $lang = 'jpn')
+    public static function getSynonyms($wordid, $lang = 'jpn')
     {
-        $senses = $this->getSenses($wordid);
+        $senses = self::getSenses($wordid);
         $synonyms = [];
         foreach ($senses as $sense) {
-            $synset = $this->getSynset($sense->synset);
-            $words = $this->getWordsFromSynset($synset->synset, $lang);
+            $synset = self::getSynset($sense->synset);
+            $words = self::getWordsFromSynset($synset->synset, $lang);
             $synonyms[$synset->name] = $words->pluck('lemma')->toArray();
         }
 
@@ -63,7 +63,7 @@ class SynonymService
      * @param int $wordid 単語ID
      * @return Collection
      */
-    public function getSenses($wordid)
+    public static function getSenses($wordid)
     {
         return Sense::where('wordid', $wordid)->get();
     }
@@ -74,7 +74,7 @@ class SynonymService
      * @param string $synset シンセット
      * @return Synset|null
      */
-    public function getSynset($synset)
+    public static function getSynset($synset)
     {
         return Synset::where('synset', $synset)->first();
     }
@@ -86,7 +86,7 @@ class SynonymService
      * @param string $lang 言語
      * @return Collection
      */
-    public function getWordsFromSynset($synset, $lang)
+    public static function getWordsFromSynset($synset, $lang = 'jpn')
     {
         return Word::whereHas('Senses', function ($query) use ($synset, $lang) {
             $query->where('synset', $synset)
@@ -101,7 +101,7 @@ class SynonymService
      *
      * @return array
      */
-    public function wakati($inputText)
+    public static function wakati($inputText)
     {
         $igo = new Tagger();
         //        $str = "これは形態素解析の実験結果です。";
@@ -156,9 +156,9 @@ class SynonymService
 
         foreach ($allCorpus as $word) {
             // 文章1に対象の形態素があるかどうか（あれば1、なければ0）
-            $n1 = (array_search($word, $text1Corpus) !== false) ? 1 : 0;
+            $n1 = (in_array($word, $text1Corpus)) ? 1 : 0;
             // 文章2に対象の形態素があるかどうか（あれば1、なければ0）
-            $n2 = (array_search($word, $text2Corpus) !== false) ? 1 : 0;
+            $n2 = (in_array($word, $text2Corpus)) ? 1 : 0;
 
             // コサイン類似度に利用する分子分母の数値を計算
             $c += ($n1 * $n2);
@@ -179,7 +179,7 @@ class SynonymService
      *
      * @return float|int
      */
-    public function levenshtein_normalized_utf8($s1, $s2, $cost_ins = 1, $cost_rep = 1, $cost_del = 1)
+    public static function levenshteinNormalizedUtf8($s1, $s2, $cost_ins = 1, $cost_rep = 1, $cost_del = 1)
     {
         $l1 = mb_strlen($s1, 'UTF-8');
         $l2 = mb_strlen($s2, 'UTF-8');
@@ -194,10 +194,10 @@ class SynonymService
             return $l1 / $size;
         }
 
-        return 1.0 - levenshtein_utf8($s1, $s2, $cost_ins, $cost_rep, $cost_del) / $size;
+        return 1.0 - self::levenshteinUtf8($s1, $s2, $cost_ins, $cost_rep, $cost_del) / $size;
     }
 
-    public function levenshtein_utf8($s1, $s2, $cost_ins = 1, $cost_rep = 1, $cost_del = 1)
+    public static function levenshteinUtf8($s1, $s2, $cost_ins = 1, $cost_rep = 1, $cost_del = 1)
     {
         $s1 = preg_split('//u', $s1, -1, PREG_SPLIT_NO_EMPTY);
         $s2 = preg_split('//u', $s2, -1, PREG_SPLIT_NO_EMPTY);
@@ -214,10 +214,10 @@ class SynonymService
         for ($i2 = 0; $i2 <= $l2; $i2++) {
             $p1[$i2] = $i2 * $cost_ins;
         }
-        for ($i1 = 0; $i1 < $l1; $i1++) {
+        foreach ($s1 as $i1Value) {
             $p2[0] = $p1[0] + $cost_ins;
             for ($i2 = 0; $i2 < $l2; $i2++) {
-                $c0 = $p1[$i2] + ($s1[$i1] === $s2[$i2] ? 0 : $cost_rep);
+                $c0 = $p1[$i2] + ($i1Value === $s2[$i2] ? 0 : $cost_rep);
                 $c1 = $p1[$i2 + 1] + $cost_del;
                 if ($c1 < $c0) {
                     $c0 = $c1;

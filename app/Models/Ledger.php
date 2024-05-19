@@ -5,6 +5,7 @@ namespace App\Models;
 //use App\Casts\AsCollection;
 
 use App\Casts\AsColumnArrayJson;
+use App\Services\Ledger\SearchContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -66,6 +67,21 @@ class Ledger extends Model
         });
 
         //        dd($query->toSql(), $query->getBindings());
+
+    }
+
+    /**
+     * 指定されたSearchContextで content を検索するスコープです。
+     *
+     * @return void
+     */
+    public function scopeSearchContext(Builder $query, SearchContext $searchContext)
+    {
+
+        foreach ($searchContext->keywords as $keyword) {
+            $queryText = $searchContext->getFlattenedSynonymsForKeyword($keyword);
+            $this->scopeSearch($query, implode(' ', $queryText));
+        }
 
     }
 
