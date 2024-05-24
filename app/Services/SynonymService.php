@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Synonym\Keyword;
 use App\Models\Synonym\Sense;
-use App\Models\Synonym\Synset;
 use App\Models\Synonym\Word;
 use Igo\Tagger;
 use Illuminate\Database\Eloquent\Collection;
@@ -72,11 +72,11 @@ class SynonymService
      * 指定されたシンセットに関連する情報を取得します。
      *
      * @param string $synset シンセット
-     * @return Synset|null
+     * @return Keyword|null
      */
     public static function getSynset($synset)
     {
-        return Synset::where('synset', $synset)->first();
+        return Keyword::where('synset', $synset)->first();
     }
 
     /**
