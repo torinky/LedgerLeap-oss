@@ -24,6 +24,7 @@ return [
     'boolean' => ':Attributeには、\'true\'か\'false\'を指定してください。',
     'can' => ':Attributeに権限のない値が含まれています。',
     'confirmed' => ':Attributeと:attribute確認が一致しません。',
+    'contains' => 'The :attribute field is missing a required value.',
     'current_password' => 'パスワードが正しくありません。',
     'date' => ':Attributeは、正しい日付ではありません。',
     'date_equals' => ':Attributeは:dateと同じ日付を入力してください。',
@@ -66,6 +67,7 @@ return [
     'ipv4' => ':AttributeはIPv4アドレスを指定してください。',
     'ipv6' => ':AttributeはIPv6アドレスを指定してください。',
     'json' => ':Attributeには、有効なJSON文字列を指定してください。',
+    'list' => ':attribute フィールドはリストでなければなりません。',
     'lowercase' => ':Attributeは、小文字で入力してください。',
     'lt' => [
         'array' => ':Attributeの項目数は、:value個より少ない必要があります。',
@@ -83,7 +85,7 @@ return [
     'max' => [
         'array' => ':Attributeの項目数は、:max個以下である必要があります。',
         'file' => ':Attributeは、:max KB以下のファイルである必要があります。',
-        'numeric' => ':Attributeは、:max以下の数字である必要があります。',
+        'numeric' => ':Attributeは、:max以下の数値である必要があります。',
         'string' => ':Attributeの文字数は、:max文字以下である必要があります。',
     ],
     'max_digits' => ':Attributeは、:max桁以下の数字である必要があります。',
@@ -92,7 +94,7 @@ return [
     'min' => [
         'array' => ':Attributeの項目数は、:min個以上にしてください。',
         'file' => ':Attributeには、:min KB以上のファイルを指定してください。',
-        'numeric' => ':Attributeには、:min以上の数字を指定してください。',
+        'numeric' => ':Attributeには、:min以上の数値を指定してください。',
         'string' => ':Attributeの文字数は、:min文字以上である必要があります。',
     ],
     'min_digits' => ':Attributeは、:min桁以上の数字である必要があります。',
@@ -104,7 +106,7 @@ return [
     'multiple_of' => ':Attributeは:valueの倍数である必要があります',
     'not_in' => '選択された:attributeは、有効ではありません。',
     'not_regex' => ':Attributeの形式が正しくありません。',
-    'numeric' => ':Attributeには、数字を指定してください。',
+    'numeric' => ':Attributeには、数値を指定してください。',
     'password' => [
         'letters' => ':Attributeは文字を1文字以上含める必要があります。',
         'mixed' => ':Attributeは大文字と小文字をそれぞれ1文字以上含める必要があります。',
@@ -126,6 +128,7 @@ return [
     'required_array_keys' => ':Attributeには、:valuesのエントリを含める必要があります。',
     'required_if' => ':Otherが:valueの場合、:attributeを指定してください。',
     'required_if_accepted' => ':Otherを承認した場合、:attributeは必須項目です。',
+    'required_if_declined' => ':Otherを拒否した場合、:attributeは必須項目です。',
     'required_unless' => ':Otherが:values以外の場合、:attributeは必須項目です。',
     'required_with' => ':Valuesが入力されている場合、:attributeは必須項目です。',
     'required_with_all' => ':Valuesが全て指定されている場合、:attributeは必須項目です。',
