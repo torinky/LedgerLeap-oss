@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Synonym;
 
 use App\Filament\Resources\Synonym\WordResource\Pages;
+use App\Filament\Resources\Synonym\WordResource\RelationManagers;
 use App\Models\Synonym\Word;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,14 +21,17 @@ class WordResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Textarea::make('wordid')
+                    ->columnSpanFull(),
                 Forms\Components\Textarea::make('lang')
                     ->columnSpanFull(),
-                Forms\Components\Textarea::make('lemma')
+                Forms\Components\Textarea::make('lema')
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('pron')
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('pos')
                     ->columnSpanFull(),
+                //
             ]);
     }
 
@@ -35,18 +39,17 @@ class WordResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('wordid'),
                 Tables\Columns\TextColumn::make('lang'),
-                Tables\Columns\TextColumn::make('lemma'),
                 Tables\Columns\TextColumn::make('pron'),
                 Tables\Columns\TextColumn::make('pos'),
+                //
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -55,10 +58,20 @@ class WordResource extends Resource
             ]);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\SynonymsRelationManager::class,
+            //
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageWords::route('/'),
+            'index' => Pages\ListWords::route('/'),
+            'create' => Pages\CreateWord::route('/create'),
+            'edit' => Pages\EditWord::route('/{record}/edit'),
         ];
     }
 }

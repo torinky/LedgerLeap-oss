@@ -32,6 +32,7 @@ class SynonymService
                 $synonyms = array_merge($synonyms, $targetWord->synonyms()->pluck('lemma')->toArray());
             }
         }
+        $synonyms = array_unique($synonyms);
 
         return $synonyms;
     }

@@ -35,7 +35,6 @@ class Word extends Model
         return $this->senses()
             ->join('sense as s2', 'sense.synset', '=', 's2.synset')
             ->join('word as w2', 's2.wordid', '=', 'w2.wordid')
-            ->where('w2.wordid', '!=', $this->wordid)
-            ->select('w2.*');
+            ->where('w2.wordid', '!=', $this->wordid);
     }
 }
