@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Synonym\Keyword;
-use App\Models\Synonym\Sense;
 use App\Models\Synonym\Word;
 use Igo\Tagger;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,74 +24,16 @@ class SynonymService
 
     public static function getSynonymsFromWord($word)
     {
+
         $words = self::getWords($word);
         $synonyms = [];
-        if (count($words)) {
+        if ($words->isNotEmpty()) {
             foreach ($words as $targetWord) {
-                $synonyms = array_merge($synonyms, self::getSynonyms($targetWord->wordid));
+                $synonyms = array_merge($synonyms, $targetWord->synonyms()->pluck('lemma')->toArray());
             }
         }
 
         return $synonyms;
-    }
-
-    /**
-     * 指定された単語IDと言語に関連する類義語を取得します。
-     *
-     * @param int $wordid 単語ID
-     * @param string $lang 言語
-     * @return array
-     */
-    public static function getSynonyms($wordid, $lang = 'jpn')
-    {
-        $senses = self::getSenses($wordid);
-        $synonyms = [];
-        foreach ($senses as $sense) {
-            $synset = self::getSynset($sense->synset);
-            $words = self::getWordsFromSynset($synset->synset, $lang);
-            $synonyms[$synset->name] = $words->pluck('lemma')->toArray();
-        }
-
-        return $synonyms;
-    }
-
-    /**
-     * 指定された単語IDに関連する意味情報を取得します。
-     *
-     * @param int $wordid 単語ID
-     * @return Collection
-     */
-    public static function getSenses($wordid)
-    {
-        return Sense::where('wordid', $wordid)->get();
-    }
-
-    /**
-     * 指定されたシンセットに関連する情報を取得します。
-     *
-     * @param string $synset シンセット
-     * @return Keyword|null
-     */
-    public static function getSynset($synset)
-    {
-        return Keyword::where('synset', $synset)->first();
-    }
-
-    /**
-     * 指定されたシンセットと言語に関連する単語形態を取得します。
-     *
-     * @param string $synset シンセット
-     * @param string $lang 言語
-     * @return Collection
-     */
-    public static function getWordsFromSynset($synset, $lang = 'jpn')
-    {
-        return Word::whereHas('Senses', function ($query) use ($synset, $lang) {
-            $query->where('synset', $synset)
-                ->whereHas('word', function ($query) use ($lang) {
-                    $query->where('lang', $lang);
-                });
-        })->get();
     }
 
     /**

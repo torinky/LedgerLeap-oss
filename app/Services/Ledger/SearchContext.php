@@ -164,7 +164,7 @@ class SearchContext
         $synonyms = [];
 
         foreach ($keywords as $keyword) {
-            $synonyms[$keyword] = $this->findSynonym($keyword);
+            $synonyms[$keyword] = SynonymService::getSynonymsFromWord($keyword);
         }
 
         return $synonyms;
@@ -221,24 +221,12 @@ class SearchContext
     }
 
     /**
-     * @param array $synonyms
-     */
-    public function findSynonym(mixed $keyword): array
-    {
-        $result = SynonymService::getSynonymsFromWord($keyword);
-        $flattenResult = [];
-        if (!empty($result)) {
-            foreach ($result as $idWord => $synonym) {
-                $flattenResult[] = $idWord;
-                $flattenResult = array_merge($flattenResult, $synonym);
-            }
-        }
-
-        return $flattenResult;
-    }
-
-    /**
-     * @return array|mixed
+     * 配列または値を結合または追加する
+     *
+     * @param mixed $synonym 結合または追加する値
+     * @param array $result 結合または追加する配列
+     * @param array $synonyms $synonymが配列の場合に結合する配列
+     * @return array 結合または追加された配列
      */
     public function getArr(mixed $synonym, mixed $result, $synonyms): mixed
     {

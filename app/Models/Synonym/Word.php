@@ -20,8 +20,22 @@ class Word extends Model
      */
     protected $fillable = ['wordid', 'lang', 'lemma', 'pron', 'pos'];
 
+    public function variants()
+    {
+        return $this->hasMany(Variant::class, 'wordid', 'wordid');
+    }
+
     public function senses()
     {
         return $this->hasMany(Sense::class, 'wordid', 'wordid');
+    }
+
+    public function synonyms()
+    {
+        return $this->senses()
+            ->join('sense as s2', 'sense.synset', '=', 's2.synset')
+            ->join('word as w2', 's2.wordid', '=', 'w2.wordid')
+            ->where('w2.wordid', '!=', $this->wordid)
+            ->select('w2.*');
     }
 }
