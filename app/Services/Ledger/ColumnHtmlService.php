@@ -41,8 +41,8 @@ class ColumnHtmlService
 
         $html = '';
         if ($columnDefine->type == 'files' && is_array($this->initialValue)) {
-            foreach ($this->initialValue as $originalFilename => $hashedFilename) {
-                $url = Storage::url($hashedFilename);
+            foreach ($this->initialValue as $hashedFilename => $originalFilename) {
+                $url = Storage::url('public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $hashedFilename);
                 //                画像ファイルか確認
                 if (Storage::exists('public/Ledger/thumbs/' . basename($hashedFilename))) {
                     $thumbnailUrl = Storage::url('Ledger/thumbs/' . basename($hashedFilename));
@@ -51,7 +51,7 @@ class ColumnHtmlService
 HTML;
                 } else {
                     $html .= <<<HTML
-<a href="{$url}">{$originalFilename}</a>
+<a href="{$url}" class="badge badge-accent opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
 HTML;
 
                 }

@@ -15,11 +15,12 @@ return new class extends Migration {
             $table->unsignedBigInteger('ledger_id')->index();
             $table->unsignedBigInteger('ledger_define_id')->index();
             $table->unsignedInteger('column_id')->index();
-            $table->string('filename', 500)->unique()->index();
+            $table->string('filename', 500)->index();
+            $table->string('hashedbasename', 500)->index();
             $table->string('status', 50)->index();
             $table->boolean('contain_content')->index();
             $table->boolean('optimized')->index();
-            $table->string('file_type', 50)->index();
+            $table->string('mime', 500)->index();
             $table->text('path');
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();

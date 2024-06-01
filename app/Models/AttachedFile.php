@@ -12,7 +12,7 @@ class AttachedFile extends Model
     use HasFactory;
 
     protected $fillable = [
-        'filename', 'ledger_define_id', 'ledger_id', 'column_id', 'file_type', 'path', 'status', 'contain_content', 'optimized', 'creator_id', 'modifier_id'
+        'filename', 'hashedbasename', 'ledger_define_id', 'ledger_id', 'column_id', 'mime', 'path', 'status', 'contain_content', 'optimized', 'creator_id', 'modifier_id'
     ];
 
     public function ledger(): BelongsTo

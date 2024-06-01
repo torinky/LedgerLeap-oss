@@ -5,7 +5,6 @@ namespace App\Livewire\Ledger;
 use App\Enums\AttachedFileStatus;
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Jobs\Ledger\AttachedFileScanJob;
-use App\Livewire\Ledger\Livewire\Features\SupportRedirects\Redirector;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -22,7 +21,6 @@ use Intervention\Image\ImageManager;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
-use Vaites\ApacheTika\Client;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
@@ -32,17 +30,19 @@ class CreateColumn extends Component
     use WithFileUploads;
 
     public array $content;
+
     public mixed $ledgerDefineRecord;
+
     public int $ledgerDefineId;
+
     public mixed $ledgerRecord;
+
     public string $ledgerId;
+
     private array $contentAttached = [];
+
     private array $newAttachedFiles = [];
 
-    /**
-     * @param Request $request
-     * @return void
-     */
     public function mount(request $request): void
     {
         //new record create
@@ -56,13 +56,10 @@ class CreateColumn extends Component
                 $this->content[$column->id] = '';
             }
         }
-//        dd($this->content, $this->contentAttached);
-//        dd($this->ledgerDefineRecord);
+        //        dd($this->content, $this->contentAttached);
+        //        dd($this->ledgerDefineRecord);
     }
 
-    /**
-     * @return View
-     */
     public function render(): View
     {
         return view('livewire.ledger.create-column');
@@ -77,14 +74,13 @@ class CreateColumn extends Component
     }
 
     /**
-     * @param StoreRequest $request
      * @throws Exception
      */
     public function store(StoreRequest $request)
     {
         $this->validate();
 
-//        dd($this->content, $this->contentAttached);
+        //        dd($this->content, $this->contentAttached);
 
         foreach ($this->ledgerDefineRecord->column_define as $column) {
 
@@ -94,21 +90,21 @@ class CreateColumn extends Component
                 $fileContents = [];
                 foreach ($this->content[$column->id] as $uploadedFile) {
                     $stored = $this->storeFile($uploadedFile, $column->id);
-                    $filenames[$stored->originalName] = $stored->hashedName;
-                    $fileContents[$stored->originalName] = $stored->meta;
+                    $filenames[$stored->hashedBaseName] = $stored->originalName;
+                    $fileContents[$stored->hashedBaseName] = null;
                 }
-//                $filenames = $this->storeFile($column->id);
-//dd($filenames,$fileContents);
+                //                $filenames = $this->storeFile($column->id);
+                //dd($filenames,$fileContents);
                 $this->content[$column->id] = $filenames;
                 $this->contentAttached[$column->id] = $fileContents;
             }
         }
         $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
         $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
-//dd($this->content);
-//        dd($this->content, $this->contentAttached);
-//        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
-//        数字キーによるソートもcreateに渡すまでの間に済ませておく
+        //dd($this->content);
+        //        dd($this->content, $this->contentAttached);
+        //        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
+        //        数字キーによるソートもcreateに渡すまでの間に済ませておく
         $this->ledgerRecord = Ledger::create([
             'content' => $this->content,
             'content_attached' => $this->contentAttached,
@@ -123,29 +119,27 @@ class CreateColumn extends Component
             ->with('status', __('ledger.stored.success'));
     }
 
-
     /**
-     * @param TemporaryUploadedFile $file
-     * @return object
      * @throws Exception
      */
     public function storeFile(TemporaryUploadedFile $file, $columnId = 0): object
     {
 
         $fileHashName = $file->store('public/Ledger/Attachments');
-//        $filenames[$file->getClientOriginalName()] = $fileHashName;
+        //        $filenames[$file->getClientOriginalName()] = $fileHashName;
 
         $result = (object)[
             'originalName' => $file->getClientOriginalName(),
+            'hashedBaseName' => basename($fileHashName),
             'hashedName' => $fileHashName,
-            'meta' => null,
+//            'meta' => null,
         ];
 
-//        画像ファイルの場合はサムネイルを作る
-//        $contentType = $file->getClientMimeType();
-//        $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
-//        if (in_array($contentType, $allowedMimeTypes)) {
-//        dd($file->getClientMimeType(),$file->getRealPath());
+        //        画像ファイルの場合はサムネイルを作る
+        //        $contentType = $file->getClientMimeType();
+        //        $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
+        //        if (in_array($contentType, $allowedMimeTypes)) {
+        //        dd($file->getClientMimeType(),$file->getRealPath());
         if (Str::endsWith($file->getRealPath(), ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'])) {
             // Create a thumbnail of the image using Intervention Image Library
             $imageManager = new ImageManager();
@@ -156,24 +150,25 @@ class CreateColumn extends Component
             $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
         }
 
-//        ファイルからメタ情報、テキストを抽出する
-        $tikaClient = Client::make('tika', 9998);
-        $result->meta = $tikaClient->getMetadata($file->getRealPath());
-//        dd($language,$metadata);
-//        return $filenames;
+        //        ファイルからメタ情報、テキストを抽出する
+        /*        $tikaClient = Client::make('tika', 9998);
+                $result->meta = $tikaClient->getMetadata($file->getRealPath());
+                if (empty($result->meta->content)) {
+                    $result->meta->content = $tikaClient->getText($file->getRealPath());
+                }*/
+//        dd($result);
+        //        return $filenames;ß
 
-        $contentFlag = false;
-        if (!empty($result->meta->content)) {
-            $contentFlag = true;
-        }
 
         $this->newAttachedFiles[] = [
             'filename' => $file->getClientOriginalName(),
+            'hashedbasename' => basename($fileHashName),
             'path' => $fileHashName,
-//            'file_type' => $file->getClientMimeType(),
-            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
+            'mime' => $file->getClientMimeType(),
+//            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
-            'contain_content' => $contentFlag,
+//            'contain_content' => ! empty($result->meta->content),
+            'contain_content' => false,
             'optimized' => false,
             'column_id' => $columnId,
         ];
@@ -184,10 +179,6 @@ class CreateColumn extends Component
     /**
      * 断続的にファイルアップロードした際に以前のアップロードとマージする
      * https://github.com/livewire/livewire/issues/1230
-     * @param string $name
-     * @param string $tmpPath
-     * @param $isMultiple
-     * @return void
      */
     public function finishUpload(string $name, string $tmpPath, $isMultiple): void
     {
@@ -205,32 +196,27 @@ class CreateColumn extends Component
         $this->syncInput($name, $files);
     }
 
-    /**
-     * @return void
-     */
     public function addAttachedFileRecord(): void
     {
         if (empty($this->newAttachedFiles)) {
             return;
         }
         foreach ($this->newAttachedFiles as $newAttachedFile) {
-            AttachedFile::create(array_merge($newAttachedFile, [
+            $newAttachedFile = AttachedFile::create(array_merge($newAttachedFile, [
                 'ledger_id' => $this->ledgerRecord->id,
                 'ledger_define_id' => $this->ledgerDefineRecord->id,
                 'creator_id' => Auth::user()->id,
                 'modifier_id' => Auth::user()->id,
             ]));
+            Bus::batch([
+                new AttachedFileScanJob($newAttachedFile->id),
+            ])->dispatch();
         }
-        $batch = Bus::batch([
-            new AttachedFileScanJob($this->ledgerRecord->id),
-        ])->dispatch();
 
     }
 
     /**
      * バリデーションルールを取得します。
-     *
-     * @return array
      */
     protected function rules(): array
     {
@@ -275,9 +261,6 @@ class CreateColumn extends Component
         return $validationRules;
     }
 
-    /**
-     * @return array
-     */
     protected function validationAttributes(): array
     {
         $attributes = [];
@@ -289,17 +272,13 @@ class CreateColumn extends Component
         return $attributes;
     }
 
-    /**
-     * @return array
-     */
     protected function messages(): array
     {
         return [
-            'content.*.in_options' => __("validation.in"),
-            'content.*.at_least_one_checked' => __("validation.filled"),
+            'content.*.in_options' => __('validation.in'),
+            'content.*.at_least_one_checked' => __('validation.filled'),
 
         ];
 
     }
-
 }

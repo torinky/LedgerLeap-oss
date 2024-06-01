@@ -27,7 +27,7 @@ class AsColumnArrayJson extends AsJson
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
 //            dd($value,$key,$attributes,$e);
-            Log::alert($e);
+            Log::alert('JSON decode error: ' . $e->getMessage());
             return null;
         }
 

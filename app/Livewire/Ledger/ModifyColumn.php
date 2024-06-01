@@ -97,8 +97,8 @@ class ModifyColumn extends CreateColumn
         $addedFilenames = [];
         $addedFileContents = [];
         foreach ($addingStoredFiles as $stored) {
-            $addedFilenames[$stored->originalName] = $stored->hashedName;
-            $addedFileContents[$stored->originalName] = $stored->meta;
+            $addedFilenames[$stored->hashedBaseName] = $stored->originalName;
+            $addedFileContents[$stored->hashedBaseName] = null;
         }
 
 
@@ -110,9 +110,14 @@ class ModifyColumn extends CreateColumn
              */
             $tmpContent = $this->ledgerRecord->content[$column->id] ?? [];
             $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
-            foreach ($this->ledgerRecord->content[$column->id] as $originalFilename => $filepath) {
-                if (in_array($filepath, $this->deletedContent[$column->id], true)) {
-                    unset($tmpContent[$originalFilename], $tmpContentAttached[$originalFilename]);
+
+            $deletedBaseFilenames = [];
+            foreach ($this->deletedContent[$column->id] as $deletedFilePath) {
+                $deletedBaseFilenames[] = basename($deletedFilePath);
+            }
+            foreach ($this->ledgerRecord->content[$column->id] as $hashedBaseName => $filepath) {
+                if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
+                    unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
                     //実体ファイルを消したければここに削除処理を追加
                 }
             }

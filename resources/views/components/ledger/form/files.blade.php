@@ -49,8 +49,11 @@
                     @if(!empty( $ledgerRecord->content[$columnDefine->id]) && is_array($ledgerRecord->content[$columnDefine->id]))
                         @php($position=0)
                         files: [
-                        @foreach ($ledgerRecord->content[$columnDefine->id] as $originalFilename => $filename)
+                        @foreach ($ledgerRecord->content[$columnDefine->id] as $filename => $originalFilename )
                             {
+                            @php(
+                                $filename = 'public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $filename
+                            )
                                 source: '{{ Storage::url($filename) }}',
                                 options: {
                                    type: 'local',
