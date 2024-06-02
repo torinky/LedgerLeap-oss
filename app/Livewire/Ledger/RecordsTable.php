@@ -162,6 +162,32 @@ class RecordsTable extends Component
         //ページネーション実行
         $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
 
+        // 検索結果のフラグを設定
+        $ledgerRecords->getCollection()->transform(function ($ledger) {
+            if (empty($ledger->content_attached) || empty($this->search)) {
+                return $ledger;
+            }
+            $contentAttached = $ledger->content_attached;
+            $hits = $this->searchContext->highlights;
+            foreach ($contentAttached as $key => $attached) {
+                if (empty($attached)) {
+                    continue;
+                }
+                foreach ($attached as $hashedfilename => $metaData) {
+                    foreach ($hits as $hit) {
+                        if (stripos($metaData->meta->content, $hit) !== false) {
+                            $contentAttached[$key][$hashedfilename]->hit = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $ledger->content_attached = $contentAttached;
+
+            //            dd($ledger->content_attached,$hits);
+            return $ledger;
+        });
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）

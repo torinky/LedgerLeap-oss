@@ -36,7 +36,7 @@ class AttachedFileScanJob implements ShouldQueue
         $targetFile = AttachedFile::where('id', $this->attachedFileId)->firstOrFail();
         $this->generateMetaAndStore($targetFile);
 
-//        未処理分を実行
+        //        未処理分を実行
         foreach (AttachedFile::where('status', AttachedFileStatus::UPLOADED->value) as $targetFile) {
             $this->generateMetaAndStore($targetFile);
         }
@@ -44,21 +44,19 @@ class AttachedFileScanJob implements ShouldQueue
     }
 
     /**
-     * @param $targetFile
-     * @return void
      * @throws Exception
      */
     public function generateMetaAndStore($targetFile): void
     {
         $ledger = Ledger::where('id', $targetFile->ledger_id)->firstOrFail();
 
-//        castさせて取り出す
+        //        castさせて取り出す
         $contentAttached = $ledger->content_attached;
-        $result = $contentAttached[$targetFile->column_id][$targetFile->filename] ?? (object)['meta' => ['content' => ''],];
+        $result = $contentAttached[$targetFile->column_id][$targetFile->hashedbasename] ?? (object)['meta' => ['content' => '']];
 
         $filePath = storage_path('app/' . $targetFile->path);
-//        dd(storage_path(),$filePath);
-//        dd($targetFile,$ledger,$ledger->content_attached,$result);
+        //        dd(storage_path(),$filePath);
+        //        dd($targetFile,$ledger,$ledger->content_attached,$result);
 
         //        ファイルからメタ情報、テキストを抽出する
         $tikaClient = Client::make('tika', 9998);
@@ -73,8 +71,8 @@ class AttachedFileScanJob implements ShouldQueue
             $targetFile->mime = $result->meta->mime;
             $targetFile->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value;
         }
-//        var_dump( $result);
-        $contentAttached[$targetFile->column_id][$targetFile->filename] = $result;
+        //        var_dump( $result);
+        $contentAttached[$targetFile->column_id][$targetFile->hashedbasename] = $result;
 
         // ミューテータを使って値を設定
         $ledger->content_attached = $contentAttached;

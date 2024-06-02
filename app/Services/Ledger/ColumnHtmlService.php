@@ -16,6 +16,8 @@ class ColumnHtmlService
 
     private $initialValue;
 
+    private $attachments = [];
+
     private $asCreate = false;
 
     private $id = '';
@@ -41,20 +43,29 @@ class ColumnHtmlService
 
         $html = '';
         if ($columnDefine->type == 'files' && is_array($this->initialValue)) {
+            //            dd($this->initialValue);
             foreach ($this->initialValue as $hashedFilename => $originalFilename) {
+                $hit = isset($this->attachments[$hashedFilename]->hit) && $this->attachments[$hashedFilename]->hit == true;
+                if ($hit) {
+                    $hitClass = 'badge-error';
+                } else {
+                    $hitClass = 'badge-accent';
+                }
+
                 $url = Storage::url('public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $hashedFilename);
                 //                画像ファイルか確認
                 if (Storage::exists('public/Ledger/thumbs/' . basename($hashedFilename))) {
                     $thumbnailUrl = Storage::url('Ledger/thumbs/' . basename($hashedFilename));
                     $html .= <<<HTML
-<a href="{$url}"><img class="m-1 rounded-lg shadow-xl" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
+<a href="{$url}"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
 HTML;
                 } else {
                     $html .= <<<HTML
-<a href="{$url}" class="badge badge-accent opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
+<a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
 HTML;
 
                 }
+                //                dd($hitClass);
             }
             //            dd($this->initialValue);
         } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
@@ -79,32 +90,22 @@ HTML;
         if (empty($this->keywords)) {
             return $html;
         }
-        // HTMLタグを一時的に置換する
-        $htmlTags = [];
-        $html = preg_replace_callback('/<([^>]+)>/', function ($matches) use (&$htmlTags) {
-            $htmlTags[] = $matches[0];
 
-            return '<#_#' . (count($htmlTags) - 1) . '#_#>';
+        // Use a regular expression to match HTML tags and text nodes
+        $pattern = '/<([^>]+)>|([^<>]+)/';
+        $result = preg_replace_callback($pattern, function ($matches) {
+            if (!empty($matches[1])) { // HTML tag
+                return $matches[0];
+            } else { // Text node
+                $text = $matches[2];
+                foreach ($this->keywords as $keyword) {
+                    $text = preg_replace('/' . ($keyword) . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
+                }
+                return $text;
+            }
         }, $html);
 
-        // HTMLタグを除去してキーワードをハイライト
-        $text = strip_tags($html);
-        foreach ($this->keywords as $keyword) {
-            $text = preg_replace('/' . ($keyword) . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
-        }
-
-        // ハイライトされたテキストをHTMLに戻す
-        $html = '';
-        $parts = preg_split('/<#_#\d+#_#>/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
-        foreach ($parts as $part) {
-            if (preg_match('/<#_#(\d+)#_#>/', $part, $matches)) {
-                $html .= $htmlTags[$matches[1]];
-            } else {
-                $html .= $part;
-            }
-        }
-
-        return $html;
+        return $result;
     }
 
     /**
@@ -133,5 +134,15 @@ HTML;
         $this->initialValue = $initialValue;
         $this->asCreate = $asCreate;
         $this->id = $idPrefix . $this->valueNameBase;
+    }
+
+    public function setAttachments(array|string $attachments)
+    {
+        if (empty($attachments)) {
+            $attachments = [];
+        }
+        $this->attachments = $attachments;
+
+        return $this;
     }
 }
