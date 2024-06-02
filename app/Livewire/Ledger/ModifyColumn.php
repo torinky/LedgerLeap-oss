@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\StoreRequest;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Contracts\View\View;
@@ -12,14 +13,10 @@ use Illuminate\Support\Facades\Storage;
 
 class ModifyColumn extends CreateColumn
 {
-
     public array $deletedContent = [];
+
     private array $contentAttached = [];
 
-    /**
-     * @param Request $request
-     * @return void
-     */
     public function mount(request $request): void
     {
         $this->ledgerId = (int)$request->route('ledgerId');
@@ -49,7 +46,6 @@ class ModifyColumn extends CreateColumn
     }
 
     /**
-     * @param StoreRequest $request
      * @throws Exception
      */
     public function store(StoreRequest $request)
@@ -65,7 +61,7 @@ class ModifyColumn extends CreateColumn
                 }
 
                 $this->mergeContentFiles($column, $storedFiles);
-//                dd($storedFiles,$this->content,$this->content_attached);
+                //                dd($storedFiles,$this->content,$this->content_attached);
             }
         }
         $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
@@ -89,7 +85,6 @@ class ModifyColumn extends CreateColumn
     }
 
     /**
-     * @param mixed $column
      * @param [object] $addingStoredFiles
      */
     public function mergeContentFiles(mixed $column, $addingStoredFiles): void
@@ -101,7 +96,6 @@ class ModifyColumn extends CreateColumn
             $addedFileContents[$stored->hashedBaseName] = null;
         }
 
-
         //既存ファイルの削除処理
         if (!empty($this->ledgerRecord->content[$column->id])) {
             /*
@@ -112,6 +106,7 @@ class ModifyColumn extends CreateColumn
             $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
 
             $deletedBaseFilenames = [];
+            //            パスがついているのでファイル名を取得
             foreach ($this->deletedContent[$column->id] as $deletedFilePath) {
                 $deletedBaseFilenames[] = basename($deletedFilePath);
             }
@@ -119,6 +114,11 @@ class ModifyColumn extends CreateColumn
                 if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
                     unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
                     //実体ファイルを消したければここに削除処理を追加
+                    AttachedFile::where('hashedbasename', $hashedBaseName)
+                        ->where('ledger_id', $this->ledgerRecord->id)
+                        ->where('ledger_define_id', $this->ledgerRecord->ledger_define_id)
+                        ->where('column_id', $column->id)
+                        ->delete();
                 }
             }
             //以前保存したファイルとのマージ
@@ -150,19 +150,11 @@ class ModifyColumn extends CreateColumn
             }
         }*/
 
-
-    /**
-     * @param $filename
-     * @return string
-     */
     private function getThumbnailUrl($filename): string
     {
         return Storage::url('Ledger/thumbs/' . basename($filename));
     }
 
-    /**
-     * @return void
-     */
     public function storeLedgerDiff(): void
     {
         $ledgerDiff = new LedgerDiff();
@@ -178,6 +170,4 @@ class ModifyColumn extends CreateColumn
             'updated_at' => $this->ledgerRecord->updated_at,
         ]);
     }
-
-
 }

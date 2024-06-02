@@ -19,10 +19,11 @@ return new class extends Migration {
             $table->string('title', 500)->index();
             $table->json('column_define');
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
-//            $table->foreignId('user_id')->constrained('users');
+            //            $table->foreignId('user_id')->constrained('users');
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
             $table->timestamps();
+            $table->softDeletes();
 
         });
     }

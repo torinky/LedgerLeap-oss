@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

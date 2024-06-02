@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\AsColumnDefinesArrayJson;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
 
 /**
@@ -13,7 +14,7 @@ use Illuminate\Routing\Route;
  */
 class LedgerDefine extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
@@ -53,6 +54,7 @@ class LedgerDefine extends Model
         if (empty($keywords)) {
             return $query;
         }
+
         return $query->whereHas('tag', function ($query) use ($keywords) {
             foreach ($keywords as $keyword) {
                 $query->where('name', 'LIKE', '%' . $keyword . '%');
@@ -78,7 +80,6 @@ class LedgerDefine extends Model
     }
 
     /**
-     * @param $content
      * @return array
      */
     public function normalizeByColumnDefine($content)
@@ -104,6 +105,4 @@ class LedgerDefine extends Model
         // 数字添字配列に作り直し
         return $sortedContentArray->values()->toArray();
     }
-
-
 }

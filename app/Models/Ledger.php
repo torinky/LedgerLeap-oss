@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Casts\AsColumnArrayJson;
 use App\Services\Ledger\SearchContext;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -145,5 +146,33 @@ class Ledger extends Model
     public function modifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'modifier_id');
+    }
+
+    /**
+     * Ledgerに関連するAttachedFileを取得する。
+     *
+     * @return HasMany
+     */
+    public function attachedFiles()
+    {
+        return $this->hasMany(AttachedFile::class);
+    }
+
+    /**
+     * Ledgerを削除する際に関連するAttachedFileも削除する。
+     *
+     * @return bool|null
+     * @throws Exception
+     */
+    public function delete()
+    {
+        // まず関連するAttachedFileを削除する
+        $this->attachedFiles()->delete();
+
+        // 差分テーブルのレコードも削除
+        $this->ledgerDiff()->delete();
+
+        // 親のdeleteメソッドを呼び出す
+        return parent::delete();
     }
 }
