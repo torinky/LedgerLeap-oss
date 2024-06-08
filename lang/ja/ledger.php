@@ -46,7 +46,7 @@ return [
     'continue_edit' => '編集を続ける',
     'create' => '新規追加',
     'create_message' => '新規登録する',
-    'createTitle' => '台帳に新規追加',
+    'create_title' => '台帳に新規追加',
     'define' => [
         'create' => '台帳の定義を新規作成',
         'create_message' => '台帳の定義を登録しましょう',
@@ -144,6 +144,7 @@ return [
     ],
     'new' => '新しい',
     'no' => 'いいえ',
+    'no_synonyms' => '同義語なし',
     'open' => '開ける',
     'open_website' => 'ウェブサイトで開く',
     'open_tree_view' => 'ツリー表示',

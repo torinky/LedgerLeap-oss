@@ -48,19 +48,28 @@
                             </div>
                         </div>
                     @else
-                        <div class="badge badge-primary opacity-70 badge-lg h-8 flex items-stretch tooltip"
-                             data-tip="{{implode( ' / ',$synonyms[$keyword] )}}"
-                        >
-                            <div class="self-center space-x-2 font-bold">
-                                {{$keyword}}
+                        <div class="stack z-0">
+                            <div class="badge badge-primary opacity-70 badge-lg h-8 flex items-stretch tooltip"
+                                 data-tip="{{implode( ' / ',$synonyms[$keyword] )}}"
+                            >
+                                <div class="self-center space-x-2 font-bold">
+                                    {{$keyword}}
+                                </div>
                             </div>
+                            <div class="badge badge-primary opacity-50 badge-lg h-8 flex items-stretch shadow">
+                                <div class="self-center space-x-2 font-bold">
+                                    {{$keyword}}
+                                </div>
+                            </div>
+
+
                         </div>
                     @endif
                 @endforeach
             </div>
         @endif
 
-        <div class="flex justify-center space-x-4">
+        <div class="flex justify-center space-x-4 items-center">
 
             @if(!empty($selectedFolderIds))
                 <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16"
@@ -70,6 +79,7 @@
                             class="font-bold">@php echo count($selectedFolderIds) @endphp</span>
                     </div>
                 </div>
+                <i class="fas fa-filter text-info-content/50 fa-rotate-270"></i>
             @endif
             @if(!empty($selectedLedgerDefineIds))
                 <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16"
@@ -79,6 +89,7 @@
                             class="font-bold">@php echo count($selectedLedgerDefineIds) @endphp</span>
                     </div>
                 </div>
+                <i class="fas fa-filter text-info-content/50 fa-rotate-270"></i>
             @endif
             @if(!empty($totalRecords))
                 <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16"

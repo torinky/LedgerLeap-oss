@@ -14,7 +14,9 @@
                         {{$columnDefine->name}}
                     </th>
                     <td class="break-words">
-                        {{ ColumnHtml::show($columnDefine,$ledgerRecord->content[$columnDefine->id]??'') }}
+                        {{ ColumnHtml::setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id]??[])
+                            ->show($columnDefine,$ledgerRecord->content[$columnDefine->id]??'') }}
+
                     </td>
                 </tr>
             @endforeach

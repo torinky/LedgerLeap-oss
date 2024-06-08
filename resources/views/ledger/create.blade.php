@@ -10,7 +10,7 @@
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-info leading-tight">
             <i class="fas fa-plus-circle mr-2"></i>
-            {{ __('Ledger.createTitle') }}
+            {{ __('Ledger.create_title') }}
         </h2>
     </x-slot>
 
