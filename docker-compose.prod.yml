@@ -29,9 +29,13 @@ services:
       #            - selenium
       - tika
   queue:
+    build:
+      context: ./docker/8.2
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP}'
     image: sail-8.2/app
-    user: "${WWWUSER}:${WWWGROUP}"
-    command: [ "${WWWUSER}", "php", "/var/www/html/artisan", "queue:work", "--tries=3", "--log=queue" ]
+    command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
       LARAVEL_SAIL: 1
@@ -47,6 +51,7 @@ services:
       #      - redis
       - tika
     restart: on-failure
+  #    restart: unless-stopped
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
     platform: linux/amd64

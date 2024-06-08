@@ -60,6 +60,7 @@ class AttachedFileScanJob implements ShouldQueue
 
         //        ファイルからメタ情報、テキストを抽出する
         $tikaClient = Client::make('tika', 9998);
+        $tikaClient->setTimeout(120);
         $result->meta = $tikaClient->getMetadata($filePath);
         if (empty($result->meta->content)) {
             $result->meta->content = $tikaClient->getText($filePath);
