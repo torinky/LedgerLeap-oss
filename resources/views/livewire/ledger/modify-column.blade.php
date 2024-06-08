@@ -96,7 +96,8 @@
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>
             <div class="modal">
                 <div class="modal-box bg-warning text-warning-content">
-                    <h3 class="font-bold text-lg">{{__('ledger.remove_title')}}</h3>
+                    <h3 class="font-bold text-lg space-x-2"><i
+                            class="fas fa-trash-alt"></i><span>{{__('ledger.remove_title')}}</span></h3>
                     <p class="py-4">{{__('ledger.remove_message')}}</p>
                     <div class="modal-action">
                         <div class="btnContainer">
@@ -104,7 +105,8 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-error space-x-2"
-                                        name="deleteLedgerDefine"><i class="fas fa-trash"></i>{{__('ledger.delete')}}
+                                        name="deleteLedgerDefine"><i
+                                        class="fas fa-trash-alt"></i>{{__('ledger.delete')}}
                                 </button>
                             </form>
                         </div>
