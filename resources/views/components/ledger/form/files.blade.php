@@ -51,9 +51,23 @@
                         files: [
                         @foreach ($ledgerRecord->content[$columnDefine->id] as $filename => $originalFilename )
                             {
-                            @php(
-                                $filename = 'public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $filename
-                            )
+                            @php($filename = 'public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $filename)
+                            @if(!Storage::exists($filename))
+                                source: '',
+                                options: {
+                                   type: 'local',
+                                   file: {
+                                        name: '[Not Found] {{$originalFilename}}',
+                                        size: 0,
+                                        type: '{{Storage::mimeType($filename)}}',
+                                   },
+                                   metadata:{
+                                        poster:'{{$this->getThumbnailUrl( $filename)}}',
+                                        position: {{$position}},
+                                        filename:'not_exist'
+                                   },
+                                },
+                            @else
                                 source: '{{ Storage::url($filename) }}',
                                 options: {
                                    type: 'local',
@@ -68,6 +82,7 @@
                                         filename:'{{$filename}}'
                                    },
                                 },
+                            @endif
                             },
                             @php($position++)
                         @endforeach
