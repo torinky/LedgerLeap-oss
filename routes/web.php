@@ -13,10 +13,6 @@ use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateCont
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
-use App\Livewire\Tansi\Create;
-use App\Livewire\Tansi\Edit;
-use App\Livewire\Tansi\Index;
-use App\Livewire\Tansi\Show;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,9 +26,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
+Route::redirect('/', '/ledger'); // サーバールートにアクセスされたときにledgerにリダイレクト
+/*Route::get('/', function () {
     return view('welcome');
-});
+});*/
 
 Route::get('/dashboard', function () {
     return view('dashboard');
