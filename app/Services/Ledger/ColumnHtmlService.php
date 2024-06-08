@@ -170,7 +170,7 @@ HTML;
 <a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
 HTML;
                 } else {
-                    $content = htmlspecialchars(mb_substr($this->attachmentContents[$hashedFilename]->meta->content, 0, 200) . '...');
+                    $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
 
                     $html .= <<<HTML
 <div class="tooltip" data-tip="{$content}">

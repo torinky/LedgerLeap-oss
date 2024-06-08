@@ -97,14 +97,15 @@
             <div class="modal">
                 <div class="modal-box bg-warning text-warning-content">
                     <h3 class="font-bold text-lg">{{__('ledger.remove_title')}}</h3>
-                    <p class="py-4">{{__('This record will be deleted')}}</p>
+                    <p class="py-4">{{__('ledger.remove_message')}}</p>
                     <div class="modal-action">
                         <div class="btnContainer">
                             <form method="POST" action="{{route('ledger.delete',$ledgerRecord->id)}}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-error"
-                                        name="deleteLedgerDefine">{{__('ledger.delete')}}</button>
+                                <button type="submit" class="btn btn-error space-x-2"
+                                        name="deleteLedgerDefine"><i class="fas fa-trash"></i>{{__('ledger.delete')}}
+                                </button>
                             </form>
                         </div>
                         <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>

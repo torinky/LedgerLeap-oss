@@ -42,9 +42,9 @@ class UpdateController extends Controller
         $ledgerId = (int)$request->route('ledgerId');
 
         Ledger::find($ledgerId)->delete();
-        session()->flash('status', 'ledger record deleted successfully !');
+        session()->flash('status', __('ledger.remove_success'));
 
-        return View::make('static.message', ['windowTitle' => 'ledger']);
+        return View::make('ledger.message', ['windowTitle' => 'ledger']);
 
     }
 
