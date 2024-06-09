@@ -1,5 +1,5 @@
 <nav x-data="{ open: false }" class="row">
-    <div class="navbar bg-base-100">
+    <div class="navbar bg-primary/20">
         <div class="navbar-start">
             <div class="dropdown">
                 <label tabindex="0" class="btn btn-ghost lg:hidden">
@@ -72,8 +72,8 @@
                         :href="route('ledger.index')"
                         :active="!request()->routeIs('ledger.index')"
                         @class([
-                            'btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledger.index'),
-                            'btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledger.index'),
+                            'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledger.index'),
+                            'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledger.index'),
                         ])
 
                     >
@@ -85,8 +85,8 @@
                         :href="route('ledgerDefine.index')"
                         :active="!request()->routeIs('ledgerDefine.index')"
                         @class([
-                            'btn btn-neutral w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledgerDefine.index'),
-                            'btn btn-neutral btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledgerDefine.index'),
+                            'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledgerDefine.index'),
+                            'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledgerDefine.index'),
                         ])
                     >
                         <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}

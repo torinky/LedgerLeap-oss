@@ -1,11 +1,10 @@
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
-    {{--<div class="grid bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">--}}
-    <div class="flex-grow">
+    <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2">
+        <span><i class="fa-solid fa-book-open mr-2"></i>{{$ledgerDefine->title}}</span>
+    </h3>
         <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
         />
-
-    </div>
     <div class="flex-grow text-right">
         <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
            data-tip="{{__('ledger.close')}}"
@@ -13,10 +12,6 @@
         ><i class="fas fa-times"></i></a>
     </div>
 </div>
-<h3 class=" flex flex-row items-center text-3xl font-medium leading-tight text-primary space-x-3 mx-4">
-    <i class="fa-solid fa-book-open"></i>
-    <span>{{$ledgerDefine->title}}</span>
-</h3>
 <div class="grid justify-items-end mx-4">
 
     <div class="flex flex-row  space-x-2 place-items-center">

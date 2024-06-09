@@ -1,22 +1,23 @@
-<div class="w-full flex pb-10 justify-center items-center space-x-8">
-    <div class="w-3/6 mx-1">
+<div class="w-full flex flex-wrap pb-10 justify-center items-center space-x-10 px-0 mx-0 mt-5">
+    <div class="w-full md:w-3/6 mx-1 searchform">
 
-        <input wire:model.live.debounce.800ms="search" type="search"
+        <input wire:model.live.debounce.2000ms="search" type="search"
                class="input input-bordered input-lg input-primary w-full"
-               placeholder="🔍 {{__('ledger.search_message')}}">
+               placeholder="&#xf002; {{__('ledger.search_message')}}"
+        >
     </div>
-    <div class="w-1/6 relative mx-1">
-    </div>
-    <div class="w-1/6 relative mx-1">
+    {{--
+        <div class="w-1/6 relative mx-1">
+        </div>
+    --}}
+    <div class="w-1/2 md:w-1/6 relative md:mt-0">
         <div class="form-control">
             <label class="cursor-pointer label">
                 <span class="label-text">{{__('ledger.ascending')}} / {{__('ledger.descending')}}</span>
                 <input wire:model.live="orderAsc" type="checkbox" class="toggle toggle-primary"/>
             </label>
         </div>
-    </div>
-    <div class="w-1/6 relative mx-1">
-        <label class="form-control w-full max-w-xs">
+        <label class="form-control ">
             <div class="label">
                 <span class="label-text">{{__('ledger.per_page')}}</span>
             </div>
