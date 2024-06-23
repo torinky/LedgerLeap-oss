@@ -1,8 +1,8 @@
 <div class="w-full flex flex-wrap pb-10 justify-center items-center space-x-10 px-0 mx-0 mt-5">
-    <div class="w-full md:w-3/6 mx-1 searchform">
+    <div class="w-full md:w-3/6 mx-1">
 
-        <input wire:model.live.debounce.2000ms="search" type="search"
-               class="input input-bordered input-lg input-primary w-full"
+        <input wire:model.change="search" type="search"
+               class="input input-bordered input-lg input-primary w-full icon-input"
                placeholder="&#xf002; {{__('ledger.search_message')}}"
         >
     </div>

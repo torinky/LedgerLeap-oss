@@ -6,15 +6,13 @@
             </h2>
         </x-slot>
     --}}
-    <div class="">
-        @push('stylesheets')
-            @vite(['resources/sass/ledgerIndex.scss'])
-        @endpush
-        <x-slot name="drawer">
-            <livewire:folder.tree/>
-        </x-slot>
-        <div class="container mx-auto">
-            <livewire:ledger-define.records-table/>
-        </div>
+    @push('stylesheets')
+        @vite(['resources/sass/ledgerIndex.scss'])
+    @endpush
+    <x-slot name="drawer">
+        <livewire:folder.tree/>
+    </x-slot>
+    <div class="container mx-auto px-4">
+        <livewire:ledger-define.records-table/>
     </div>
 </x-appWithDrawer-layout>

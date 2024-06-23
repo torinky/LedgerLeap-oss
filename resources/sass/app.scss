@@ -21,7 +21,7 @@
 }
 
 
-.searchform input[type="search"] {
+.icon-input {
     font-family: 'Avenir',
     'Helvetica Neue',
     'Helvetica',
@@ -39,14 +39,14 @@
     font-weight: 400;
 }
 
-.searchform ::-webkit-input-placeholder {
+input::-webkit-input-placeholder.icon-input {
     font-family: 'Font Awesome 5 Free';
 }
 
-.searchform :-ms-input-placeholder {
+input:-ms-input-placeholder.icon-input {
     font-family: 'Font Awesome 5 Free';
 }
 
-.searchform ::-moz-placeholder {
+input::-moz-placeholder.icon-input {
     font-family: 'Font Awesome 5 Free';
 }
