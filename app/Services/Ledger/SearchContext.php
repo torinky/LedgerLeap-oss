@@ -49,16 +49,17 @@ class SearchContext
      */
     public $tags = [];
 
+    private SynonymService $synonymService;
+
     /**
      * コンストラクタ
      *
      * @param string $search 検索文字列
      * @param array $filter フィルター条件
      */
-    public function __construct($search = '', $filter = [])
+    public function __construct(SynonymService $synonymService)
     {
-        $this->setSearch($search);
-        $this->setFilter($filter);
+        $this->synonymService = $synonymService;
     }
 
     /**
@@ -164,7 +165,7 @@ class SearchContext
         $synonyms = [];
 
         foreach ($keywords as $keyword) {
-            $synonyms[$keyword] = SynonymService::getSynonymsFromWord($keyword);
+            $synonyms[$keyword] = $this->synonymService->getSynonymsFromWord($keyword);
         }
 
         return $synonyms;

@@ -5,7 +5,8 @@ namespace App\Providers\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
+use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -33,12 +34,37 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                //                Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+            ])
+            ->topNavigation()  // これによりトップナビゲーションが有効になります
+            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            ->navigationGroups([
+                NavigationGroup::make()
+                    ->label(__('ledger.settings'))
+                    ->icon('heroicon-o-cog-8-tooth'),
+            ])
+            ->navigationItems([
+                NavigationItem::make(__('ledger.search_view'))
+                    ->url(fn() => route('ledger.index'))
+                    ->icon('heroicon-o-book-open')
+//                    ->group('カスタムリンク')  // オプション：グループを指定
+                    ->sort(3),
+                NavigationItem::make(__('ledger.general_settings'))
+                    ->url(fn() => route('ledgerDefine.index'))
+//                    ->icon('heroicon-o-book-open')
+                    ->group(__('ledger.settings'))  // オプション：グループを指定
+                    ->sort(3),
+                NavigationItem::make(__('ledger.technical_term'))
+                    ->url(fn() => route('filament.admin.resources.synonym.technical-term-groups.index'))
+//                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->group(__('ledger.settings'))  // オプション：グループを指定
+                    ->sort(3),
+                // 他のナビゲーションアイテムをここに追加
             ])
             ->middleware([
                 EncryptCookies::class,

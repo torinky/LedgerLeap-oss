@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Synonym\TechnicalTermGroup;
 use App\Models\Synonym\Word;
+use App\Services\Config\SynonymServiceConfig;
 use Igo\Tagger;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -11,6 +13,18 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class SynonymService
 {
+    private SynonymServiceConfig $config;
+
+    /**
+     * クラスの新しいインスタンスを構築します。
+     *
+     * @param SynonymServiceConfig|null $config 類義語サービスの構成オブジェクト。指定されていない場合は、SynonymServiceConfigの新しいインスタンスが作成されます。
+     */
+    public function __construct(?SynonymServiceConfig $config = null)
+    {
+        $this->config = $config ?? new SynonymServiceConfig();
+    }
+
     /**
      * 指定された単語の形態を取得します。
      *
@@ -22,17 +36,45 @@ class SynonymService
         return Word::where('lemma', $lemma)->get();
     }
 
-    public static function getSynonymsFromWord($word)
+    /**
+     * 指定された単語の類義語を取得します。
+     *
+     * @param string $word 類義語を取得する単語
+     * @param array $options オプションの配列
+     *                          - 'useSynonym': (bool) 類義語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
+     *                          - 'useTechnicalTerm': (bool) 技術用語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
+     * @return array 指定された単語の類義語の配列
+     */
+    public function getSynonymsFromWord($word, array $options = [])
     {
+        $useSynonym = $options['useSynonym'] ?? $this->config->useSynonym;
+        $useTechnicalTerm = $options['useTechnicalTerm'] ?? $this->config->useTechnicalTerm;
 
-        $words = self::getWords($word);
+        $initialSynonyms = [$word];
         $synonyms = [];
-        if ($words->isNotEmpty()) {
-            foreach ($words as $targetWord) {
-                $synonyms = array_merge($synonyms, $targetWord->synonyms()->pluck('lemma')->toArray());
+
+        if ($useTechnicalTerm) {
+            $technicalTermGroups = TechnicalTermGroup::whereJsonContains('synonyms', $word)->get();
+            foreach ($technicalTermGroups as $group) {
+                $initialSynonyms = array_merge($initialSynonyms, $group->synonyms);
             }
         }
-        $synonyms = array_unique($synonyms);
+        $initialSynonyms = array_unique($initialSynonyms);
+
+        if ($useSynonym) {
+            foreach ($initialSynonyms as $synonym) {
+                $words = self::getWords($synonym);
+                if ($words->isNotEmpty()) {
+                    foreach ($words as $targetWord) {
+                        $synonyms = array_merge($synonyms, $targetWord->synonyms()->pluck('lemma')->toArray());
+                    }
+                }
+            }
+            $synonyms = array_unique($synonyms);
+        } else {
+            $synonyms = $initialSynonyms;
+        }
+        $synonyms = array_diff($synonyms, [$word]);
 
         return $synonyms;
     }

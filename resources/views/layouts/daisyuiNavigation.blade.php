@@ -60,13 +60,6 @@
         </div>
         <div class="navbar-center hidden lg:flex">
             <ul class="menu menu-horizontal px-1">
-                {{--
-                                <li>
-                                    <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                                        {{ __('Dashboard') }}
-                                    </x-daisyui-nav-link>
-                                </li>
-                --}}
                 <li>
                     <x-daisyui-nav-link
                         :href="route('ledger.index')"
@@ -75,37 +68,37 @@
                             'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledger.index'),
                             'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledger.index'),
                         ])
-
                     >
                         <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
                     </x-daisyui-nav-link>
                 </li>
                 <li>
-                    <x-daisyui-nav-link
-                        :href="route('ledgerDefine.index')"
-                        :active="!request()->routeIs('ledgerDefine.index')"
-                        @class([
-                            'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledgerDefine.index'),
-                            'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledgerDefine.index'),
-                        ])
-                    >
-                        <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}
-                    </x-daisyui-nav-link>
+                    <div role="button" tabindex="0" class="dropdown dropdown-hover dropdown-bottom p-0 m-0">
+                        <x-daisyui-nav-link
+                            tabindex="0"
+                            :active="request()->routeIs('ledgerDefine.index')"
+                            @class([
+                                'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity' => request()->routeIs('ledgerDefine.index'),
+                                'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity' => !request()->routeIs('ledgerDefine.index'),
+                            ])
+                        >
+                            <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}
+                        </x-daisyui-nav-link>
+                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48"
+                            style="margin-left: 0">
+                            <li>
+                                <a href="{{ route('ledgerDefine.index') }}">
+                                    <i class="fas fa-book-open-reader mr-2"></i>{{ __('ledger.general_settings') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('filament.admin.resources.synonym.technical-term-groups.index') }}">
+                                    <i class="fas fa-comments mr-2"></i>{{ __('ledger.technical_term') }}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
-                {{--
-                                <li tabindex="0">
-                                    <details>
-                                        <summary>Parent</summary>
-                                        <ul class="p-2">
-                                            <li><a>Submenu 1</a></li>
-                                            <li><a>Submenu 2</a></li>
-                                            <li><a>Submenu 2</a></li>
-                                            <li><a>Submenu 2</a></li>
-                                        </ul>
-                                    </details>
-                                </li>
-                                <li><a>Item 3</a></li>
-                --}}
             </ul>
         </div>
         <div class="navbar-end">

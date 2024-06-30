@@ -18,6 +18,8 @@ class TechnicalTermGroupResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Form $form): Form
     {
         return $form
@@ -34,9 +36,9 @@ class TechnicalTermGroupResource extends Resource
                             ])
                             ->columns(2)
                             ->defaultItems(1)
-                            ->addActionLabel('Add Synonym')
+                            ->addActionLabel('Add Synonym'),
 
-                    ])
+                    ]),
             ]);
     }
 
@@ -45,11 +47,14 @@ class TechnicalTermGroupResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')->sortable(),
-                Tables\Columns\TextColumn::make('synonyms')->limit(500),
+                Tables\Columns\TextColumn::make('synonyms')->limit(500)->searchable(),
+                Tables\Columns\TextColumn::make('modifier.name')->label('Modifier'),
+                Tables\Columns\TextColumn::make('updated_at')->label('Updated At'),
+                Tables\Columns\TextColumn::make('creator.name')->label('Creator'),
+                Tables\Columns\TextColumn::make('created_at')->label('Created At'),
             ])
             ->searchable() // 検索機能を有効化する場合（オプション）
-            ->filters([
-            ])
+            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
@@ -74,5 +79,20 @@ class TechnicalTermGroupResource extends Resource
             'create' => Pages\CreateTechnicalTermGroup::route('/create'),
             'edit' => Pages\EditTechnicalTermGroup::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('ledger.technical_term');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('ledger.technical_term'); // または適切な翻訳キー
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('ledger.technical_term'); // 複数形の翻訳キー
     }
 }

@@ -2,11 +2,14 @@
 
 namespace App\Livewire\Ledger;
 
+use AllowDynamicProperties;
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
+use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -17,7 +20,7 @@ use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
-class RecordsTable extends Component
+#[AllowDynamicProperties] class RecordsTable extends Component
 {
     use withPagination;
 
@@ -59,7 +62,15 @@ class RecordsTable extends Component
 
     public array $synonyms;
 
-    private SearchContext $searchContext;
+    public $useSynonym = true;
+
+    public $useTechnicalTerm = true;
+
+    protected SynonymService $synonymService;
+
+    protected SearchContext $searchContext;
+
+    private $synonymServiceConfig;
 
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
@@ -69,17 +80,16 @@ class RecordsTable extends Component
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function mount(SearchRequest $request)
+    public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
         // 検索キーワードの初期化
         $search = $request->keyword();
         if (empty($this->search) && !empty($search)) {
             $this->search = $search ?? session()->get('search') ?? '';
         }
-        $this->searchContext = new SearchContext($request->keyword(), $this->filter);
-        $this->tags = $this->searchContext->tags;
-
-        //        $this->updateKeywordsAndTags($this->search);
+        $this->synonymServiceConfig = $synonymServiceConfig;
+        $this->filter = $request->filter ?? [];
+        $this->initSearchContext();
 
         // 現在のフォルダーIDを初期化
         $this->currentFolderId = $request->folderId();
@@ -91,6 +101,34 @@ class RecordsTable extends Component
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
+    }
+
+    /**
+     * 検索コンテキストを初期化
+     *
+     * 検索コンテキストを作成し、検索キーワード、フィルター、タグ、キーワード、ハイライト、およびシノニムを設定します。
+     * また、検索コンテキストの構成に使用するシノニムサービスの設定も行います。
+     *
+     * @return void
+     */
+    protected function initSearchContext()
+    {
+        if (!$this->synonymServiceConfig) {
+            $this->synonymServiceConfig = new SynonymServiceConfig([
+                'useSynonym' => $this->useSynonym,
+                'useTechnicalTerm' => $this->useTechnicalTerm,
+            ]);
+        }
+
+        $synonymService = new SynonymService($this->synonymServiceConfig);
+        $this->searchContext = new SearchContext($synonymService);
+
+        $this->searchContext->setSearch($this->search);
+        $this->searchContext->setFilter($this->filter);
+        $this->tags = $this->searchContext->tags;
+        $this->keywords = $this->searchContext->keywords;
+        $this->highlights = $this->searchContext->highlights;
+        $this->synonyms = $this->searchContext->synonyms;
     }
 
     /**
@@ -114,7 +152,7 @@ class RecordsTable extends Component
      *
      * @return Application|Factory|View
      */
-    public function render()
+    public function render(SearchContext $searchContext)
     {
         $this->initSearchContext();
 
@@ -366,16 +404,5 @@ class RecordsTable extends Component
     {
         // perPageを変更した場合、currentPageを最初のページにリセットする
         $this->resetPage();
-    }
-
-    public function initSearchContext(): void
-    {
-        $this->searchContext = new SearchContext($this->search, $this->filter);
-        $this->tags = $this->searchContext->tags;
-        $this->keywords = $this->searchContext->keywords;
-        $this->highlights = $this->searchContext->highlights;
-        $this->synonyms = $this->searchContext->synonyms;
-        //        dd($this->synonyums);
-        //        dd((string)$this->searchContext,$this->searchContext,$this->searchContext->__toString());
     }
 }

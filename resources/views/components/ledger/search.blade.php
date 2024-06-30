@@ -30,5 +30,16 @@
                 <option>100</option>
             </select>
         </label>
+        <label for="" class="form-control">
+            <label class="cursor-pointer label">
+                <span class="label-text">{{__('ledger.search_synonym')}}</span>
+                <input wire:model.change="useSynonym" type="checkbox" class="toggle toggle-primary"/>
+            </label>
+            <label class="cursor-pointer label">
+                <span class="label-text">{{__('ledger.search_technical_term')}}</span>
+                <input wire:model.change="useTechnicalTerm" type="checkbox" class="toggle toggle-primary"/>
+            </label>
+        </label>
+
     </div>
 </div>

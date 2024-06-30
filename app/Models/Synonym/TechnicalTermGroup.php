@@ -2,34 +2,23 @@
 
 namespace App\Models\Synonym;
 
+use App\Casts\AsJson;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TechnicalTermGroup extends Model
 {
     use HasFactory;
 
     protected $casts = [
-        'synonyms' => 'json',
-    ];
-    protected $fillable = [
-        'synonyms', 'creator_id', 'modifier_id'
+        'synonyms' => AsJson::class,
     ];
 
-    /*    protected function synonyms(): Attribute
-        {
-            return Attribute::make(
-                get: fn ($value) => is_array($value) ? $value : [],
-                set: function ($value) {
-                    if (!is_array($value)) {
-                        return [];
-                    }
-                    $collection= collect($value);
-                    $value=$collection->pluck('synonym')->toArray();
-                    return json_encode( array_values(array_unique(Arr::sort($value))));
-                },
-            );
-        }*/
+    protected $fillable = [
+        'synonyms', 'creator_id', 'modifier_id',
+    ];
 
     public static function bootTechnicalWordGroup()
     {
@@ -42,5 +31,21 @@ class TechnicalTermGroup extends Model
         static::updating(function ($model) {
             $model->modifier_id = auth()->id();
         });
+    }
+
+    /**
+     * User モデルへの creator リレーションを定義します。
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * User モデルへの modifier リレーションを定義します。
+     */
+    public function modifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'modifier_id');
     }
 }
