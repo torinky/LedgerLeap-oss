@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
-use App\Models\User;
+use App\Filament\Resources\OrganizationResource\Pages;
+use App\Filament\Resources\OrganizationResource\RelationManagers;
+use App\Models\Organization;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,43 +12,32 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Hash;
 
-class UserResource extends Resource
+class OrganizationResource extends Resource
 {
-    protected static ?string $model = User::class;
+    protected static ?string $model = Organization::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('org_id')
+                    ->label('Organization ID')
+//                    ->disabled()
+                    ->unique(ignoreRecord: true)
+                    ->maxLength(255),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('email')
-                    ->email()
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\DateTimePicker::make('email_verified_at'),
-                Forms\Components\TextInput::make('password')
-                    ->password()
-                    ->required(fn(string $context): bool => $context === 'create')
-                    ->minLength(8)
-                    ->same('passwordConfirmation')
-                    ->dehydrated(fn($state) => filled($state))
-                    ->dehydrateStateUsing(fn($state) => Hash::make($state)),
-                Forms\Components\TextInput::make('passwordConfirmation')
-                    ->password()
-                    ->label('Password Confirmation')
-                    ->required(fn(string $context): bool => $context === 'create')
-                    ->minLength(8)
-                    ->dehydrated(false),
-                /*                Forms\Components\TextInput::make('password')
-                                    ->password()
-                                    ->required()
-                                    ->maxLength(255),*/
+                Forms\Components\Textarea::make('description')
+                    ->maxLength(65535),
+                Forms\Components\Select::make('parent_id')
+                    ->label('Parent Organization')
+                    ->options(Organization::pluck('name', 'id'))
+                    ->nullable()
+                    ->searchable(),
                 Forms\Components\Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name'),
@@ -62,20 +51,20 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('org_id')
+                    ->label('Organization ID')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('email_verified_at')
-                    ->dateTime()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('description')
+                    ->limit(50),
+                Tables\Columns\TextColumn::make('parent.name')
+                    ->label('Parent Organization'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
@@ -86,36 +75,38 @@ class UserResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
-                //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\ForceDeleteBulkAction::make(),
+                Tables\Actions\RestoreBulkAction::make(),
             ]);
     }
 
     public static function getRelations(): array
     {
         return [
-            RelationManagers\OrganizationRelationManager::class
+            RelationManagers\UsersRelationManager::class,
+//            RelationManagers\RolesRelationManager::class,
+//            RelationManagers\PermissionsRelationManager::class,
+            RelationManagers\ChildrenRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
+            'index' => Pages\ListOrganizations::route('/'),
+            'create' => Pages\CreateOrganization::route('/create'),
+//            'view' => Pages\ViewOrganization::route('/{record}'),
+            'edit' => Pages\EditOrganization::route('/{record}/edit'),
         ];
     }
 

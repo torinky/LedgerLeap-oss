@@ -2,6 +2,7 @@
 
 use Althinect\FilamentSpatieRolesPermissions\Resources\PermissionResource;
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource;
+use App\Models\Organization;
 use App\Models\Team;
 use App\Models\User;
 
@@ -18,7 +19,7 @@ return [
 
     'navigation_section_group' => 'filament-spatie-roles-permissions::filament-spatie.section.roles_and_permissions', // Default uses language constant
 
-    'team_model' => Team::class,
+    'team_model' => Organization::class,
 
     'scope_to_tenant' => true,
 
