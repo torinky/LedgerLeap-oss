@@ -137,3 +137,7 @@ Route::middleware('auth')->group(function () {
 Route::get('/phpinfo', function () {
     phpinfo();
 });
+
+// 使用例 (ルートファイルなど)
+//Route::get('/organizations/{organization}/users', [UserController::class, 'index'])
+//    ->middleware(['auth', 'check.organization.permission:view-users']);

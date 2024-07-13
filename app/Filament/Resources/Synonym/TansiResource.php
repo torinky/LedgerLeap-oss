@@ -16,6 +16,8 @@ class TansiResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Form $form): Form
     {
         return $form
@@ -38,11 +40,11 @@ class TansiResource extends Resource
         return $table
             ->columns([
                 //
-                Tables\Columns\TextColumn::make('pronunciation1'),
-                Tables\Columns\TextColumn::make('pronunciation2'),
+                Tables\Columns\TextColumn::make('pronunciation1')->searchable(),
+                Tables\Columns\TextColumn::make('pronunciation2')->searchable(),
                 Tables\Columns\TextColumn::make('category1'),
                 Tables\Columns\TextColumn::make('category2'),
-                Tables\Columns\TextColumn::make('CANDIDATES'),
+                Tables\Columns\TextColumn::make('CANDIDATES')->searchable(),
             ])
             ->filters([
                 //
@@ -63,5 +65,20 @@ class TansiResource extends Resource
         return [
             'index' => Pages\ManageTansis::route('/'),
         ];
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('ledger.settings');
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 10; // 数字が小さいほど上に表示されます
+    }
+
+    public static function getNavigationIcon(): ?string
+    {
+        return null;
     }
 }

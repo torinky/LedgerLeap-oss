@@ -81,4 +81,49 @@ class User extends Authenticatable
     {
         return $this->organizations()->wherePivot('is_primary', true)->first();
     }
+
+    public function hasPermissionForOrganization($permission, $organization)
+    {
+        // スーパー管理者の場合、常にtrueを返す
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+
+        // ユーザー自身の権限をチェック
+        if ($this->hasPermissionTo($permission)) {
+            return true;
+        }
+
+        // 指定された組織とその祖先組織の権限をチェック
+        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
+        $userOrganizations = $this->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
+
+        foreach ($userOrganizations as $org) {
+            if ($org->hasPermissionTo($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasRoleForOrganization($role, $organization)
+    {
+        // ユーザー自身の役割をチェック
+        if ($this->hasRole($role)) {
+            return true;
+        }
+
+        // 組織とその祖先組織の役割をチェック
+        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
+        $userOrganizations = $this->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
+
+        foreach ($userOrganizations as $org) {
+            if ($org->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

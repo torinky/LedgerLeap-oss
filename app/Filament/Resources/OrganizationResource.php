@@ -25,7 +25,6 @@ class OrganizationResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('org_id')
                     ->label('Organization ID')
-//                    ->disabled()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('name')
@@ -87,15 +86,15 @@ class OrganizationResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
                 Tables\Actions\ForceDeleteBulkAction::make(),
                 Tables\Actions\RestoreBulkAction::make(),
-            ]);
+            ])
+            ->reorderable('sort_order')
+            ->defaultSort('sort_order');
     }
 
     public static function getRelations(): array
     {
         return [
             RelationManagers\UsersRelationManager::class,
-//            RelationManagers\RolesRelationManager::class,
-//            RelationManagers\PermissionsRelationManager::class,
             RelationManagers\ChildrenRelationManager::class,
         ];
     }
@@ -105,7 +104,6 @@ class OrganizationResource extends Resource
         return [
             'index' => Pages\ListOrganizations::route('/'),
             'create' => Pages\CreateOrganization::route('/create'),
-//            'view' => Pages\ViewOrganization::route('/{record}'),
             'edit' => Pages\EditOrganization::route('/{record}/edit'),
         ];
     }
@@ -115,6 +113,8 @@ class OrganizationResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ]);
+            ])
+//            ->whereNull('parent_id')
+            ->with('children');
     }
 }

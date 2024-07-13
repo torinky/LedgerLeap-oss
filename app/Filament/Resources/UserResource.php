@@ -45,16 +45,16 @@ class UserResource extends Resource
                     ->required(fn(string $context): bool => $context === 'create')
                     ->minLength(8)
                     ->dehydrated(false),
-                /*                Forms\Components\TextInput::make('password')
-                                    ->password()
-                                    ->required()
-                                    ->maxLength(255),*/
                 Forms\Components\Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name'),
                 Forms\Components\Select::make('permissions')
                     ->multiple()
                     ->relationship('permissions', 'name'),
+                Forms\Components\Select::make('organizations')
+                    ->multiple()
+                    ->relationship('organizations', 'name')
+                    ->preload(),
             ]);
     }
 
@@ -83,10 +83,10 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('roles.name')->badge(),
                 Tables\Columns\TextColumn::make('permissions.name')->badge(),
+                Tables\Columns\TextColumn::make('organizations.name')->badge(),
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
-                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -106,7 +106,7 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\OrganizationRelationManager::class
+            RelationManagers\OrganizationRelationManager::class,
         ];
     }
 

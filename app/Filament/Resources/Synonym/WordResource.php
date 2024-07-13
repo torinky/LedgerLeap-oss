@@ -9,13 +9,17 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class WordResource extends Resource
 {
     protected static ?string $model = Word::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {
@@ -25,7 +29,7 @@ class WordResource extends Resource
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('lang')
                     ->columnSpanFull(),
-                Forms\Components\Textarea::make('lema')
+                Forms\Components\Textarea::make('lemma')
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('pron')
                     ->columnSpanFull(),
@@ -41,13 +45,18 @@ class WordResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('wordid'),
                 Tables\Columns\TextColumn::make('lang'),
+                Tables\Columns\TextColumn::make('lemma')->searchable(),
                 Tables\Columns\TextColumn::make('pron'),
                 Tables\Columns\TextColumn::make('pos'),
                 //
             ])
             ->filters([
-                //
+                Filter::make('jpn')
+                    ->query(fn(Builder $query): Builder => $query->where('lang', 'jpn')),
+                Filter::make('eng')
+                    ->query(fn(Builder $query): Builder => $query->where('lang', 'eng')),
             ])
+
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])
@@ -73,5 +82,10 @@ class WordResource extends Resource
             'create' => Pages\CreateWord::route('/create'),
             'edit' => Pages\EditWord::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationIcon(): ?string
+    {
+        return null;
     }
 }

@@ -8,10 +8,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Permission\Traits\HasRoles;
 
-
 class Organization extends Model
 {
-    use HasFactory, SoftDeletes, NodeTrait, HasRoles;
+    use HasFactory, HasRoles, NodeTrait, SoftDeletes;
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
@@ -42,5 +41,35 @@ class Organization extends Model
         }
 
         return $allRoles->unique('id');
+    }
+
+    public function hasPermissionWithInheritance($permission)
+    {
+        if ($this->hasPermissionTo($permission)) {
+            return true;
+        }
+
+        foreach ($this->ancestors as $ancestor) {
+            if ($ancestor->hasPermissionTo($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasRoleWithInheritance($role)
+    {
+        if ($this->hasRole($role)) {
+            return true;
+        }
+
+        foreach ($this->ancestors as $ancestor) {
+            if ($ancestor->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

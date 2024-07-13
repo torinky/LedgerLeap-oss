@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
+use App\Models\Organization;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -16,32 +17,49 @@ class OrganizationRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('OrganizationRelationManager')
+                Forms\Components\Select::make('organization_id')
+                    ->label('Organization')
+                    ->options(Organization::pluck('name', 'id'))
                     ->required()
-                    ->maxLength(255),
+                    ->searchable(),
+                Forms\Components\Toggle::make('is_primary')
+                    ->label('Primary Organization')
+                    ->default(false),
             ]);
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('OrganizationRelationManager')
+            ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('OrganizationRelationManager'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Organization Name')
+                    ->searchable(),
+                Tables\Columns\IconColumn::make('is_primary')
+                    ->boolean()
+                    ->label('Primary'),
             ])
             ->filters([
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                Tables\Actions\AttachAction::make()
+                    ->preloadRecordSelect()
+                    ->form(fn(Tables\Actions\AttachAction $action): array => [
+                        $action->getRecordSelect(),
+                        Forms\Components\Toggle::make('is_primary')
+                            ->label('Primary Organization')
+                            ->default(false),
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DetachAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DetachBulkAction::make(),
                 ]),
             ]);
     }

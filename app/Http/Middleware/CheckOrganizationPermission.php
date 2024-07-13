@@ -2,17 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Organization;
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class CheckOrganizationPermission
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param Closure(Request): (Response) $next
-     */
     public function handle(Request $request, Closure $next, $permission)
     {
         $user = $request->user();
@@ -21,21 +16,26 @@ class CheckOrganizationPermission
             return response('Unauthorized.', 401);
         }
 
-        $userPermissions = $user->getAllPermissions();
-        $organizationPermissions = collect();
+        // 現在のリクエストに関連する組織を取得
+        $organization = $this->getCurrentOrganization($request);
 
-        foreach ($user->organizations as $organization) {
-            $organizationPermissions = $organizationPermissions->merge($organization->getAllPermissions());
+        if (!$organization) {
+            return response('Organization not found.', 404);
         }
 
-        $allPermissions = $userPermissions->merge($organizationPermissions)->unique('id');
-
-        if ($allPermissions->contains('name', $permission)) {
+        if ($user->hasPermissionForOrganization($permission, $organization)) {
             return $next($request);
         }
 
         return response('Forbidden.', 403);
+    }
 
-//        return $next($request);
+    private function getCurrentOrganization(Request $request)
+    {
+        // リクエストから組織を特定する方法をここに実装
+        // 例: ルートパラメータ、クエリパラメータ、またはカスタムヘッダーから組織IDを取得
+        $organizationId = $request->route('organization') ?? $request->query('organization_id');
+
+        return $organizationId ? Organization::find($organizationId) : null;
     }
 }
