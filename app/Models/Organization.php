@@ -16,7 +16,7 @@ class Organization extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'user_organizations');
+        return $this->belongsToMany(User::class, 'user_organizations')->withPivot('is_primary');
     }
 
     // 親組織から継承された権限を含む全ての権限を取得

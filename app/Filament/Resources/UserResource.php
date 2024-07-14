@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\Role;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,6 +14,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\HtmlString;
 
 class UserResource extends Resource
 {
@@ -47,14 +49,18 @@ class UserResource extends Resource
                     ->dehydrated(false),
                 Forms\Components\Select::make('roles')
                     ->multiple()
-                    ->relationship('roles', 'name'),
+                    ->relationship('roles', 'name')
+                    ->afterStateUpdated(function ($state, $record) {
+                        if ($record) {
+                            $organization = $record->primaryOrganization();
+                            foreach ($state as $roleId) {
+                                $record->assignRole(Role::find($roleId), $organization);
+                            }
+                        }
+                    }),
                 Forms\Components\Select::make('permissions')
                     ->multiple()
                     ->relationship('permissions', 'name'),
-                Forms\Components\Select::make('organizations')
-                    ->multiple()
-                    ->relationship('organizations', 'name')
-                    ->preload(),
             ]);
     }
 
@@ -83,7 +89,23 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('roles.name')->badge(),
                 Tables\Columns\TextColumn::make('permissions.name')->badge(),
-                Tables\Columns\TextColumn::make('organizations.name')->badge(),
+                Tables\Columns\TextColumn::make('organizations')
+                    ->formatStateUsing(function ($state, $record) {
+                        $getBadgeHtml = function ($org) {
+                            $style = $org->pivot->is_primary
+                                ? '--c-50:var(--success-50);--c-400:var(--success-400);--c-600:var(--success-600);'
+                                : '--c-50:var(--gray-50);--c-400:var(--gray-400);--c-600:var(--gray-600);';
+                            $colorClass = 'fi-color-custom bg-custom-50 text-custom-600 ring-custom-600/10 dark:bg-custom-400/10 dark:text-custom-400 dark:ring-custom-400/30';
+                            $label = e($org->name) . ($org->pivot->is_primary ? ' (Primary)' : '');
+
+                            return "<span style='{$style}' class='fi-badge inline-flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 {$colorClass}'>{$label}</span>";
+                        };
+
+                        return new HtmlString(
+                            $record->organizations->map($getBadgeHtml)->implode(' ')
+                        );
+                    })
+                    ->html(),
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),

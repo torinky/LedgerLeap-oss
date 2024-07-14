@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -50,7 +51,7 @@ class User extends Authenticatable
 
     public function organizations()
     {
-        return $this->belongsToMany(Organization::class, 'user_organizations');
+        return $this->belongsToMany(Organization::class, 'user_organizations')->withPivot('is_primary');
     }
 
     // ユーザーの全ての権限を取得（所属組織からの継承を含む）
@@ -125,5 +126,39 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    public function setPrimaryOrganization(Organization $organization)
+    {
+        $this->organizations()->updateExistingPivot($organization->id, ['is_primary' => true]);
+        $this->organizations()->where('id', '!=', $organization->id)->updateExistingPivot($organization->id, ['is_primary' => false]);
+    }
+
+    public function getPrimaryOrganizationAttribute()
+    {
+        return $this->organizations()->wherePivot('is_primary', true)->first();
+    }
+
+    /*    public function getStoredRole($roleName, $guardName = null)
+        {
+            $guardName = $guardName ?? $this->getDefaultGuardName();
+            return Role::findByName($roleName, $guardName);
+        }*/
+
+    public function assignRoleToOrganization($role, $organization)
+    {
+        if (is_string($role)) {
+            $role = Role::findByName($role, 'web');
+        }
+
+        $this->roles()->attach($role->id, ['organization_id' => $organization->id]);
+    }
+
+    public function hasRoleInOrganization($role, $organization)
+    {
+        return $this->roles()
+            ->where('name', $role)
+            ->wherePivot('organization_id', $organization->id)
+            ->exists();
     }
 }
