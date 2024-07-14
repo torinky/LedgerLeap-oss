@@ -161,4 +161,20 @@ class User extends Authenticatable
             ->wherePivot('organization_id', $organization->id)
             ->exists();
     }
+
+    public function getAllUniqueRoles()
+    {
+        return $this->roles->merge(
+            $this->organizations->flatMap->getAllRoles()
+        )->unique('id');
+    }
+
+    public function getAllUniquePermissions()
+    {
+        return $this->permissions->merge(
+            $this->organizations->flatMap->getAllUniquePermissions()
+        )->merge(
+            $this->getAllUniqueRoles()->flatMap->permissions
+        )->unique('id');
+    }
 }

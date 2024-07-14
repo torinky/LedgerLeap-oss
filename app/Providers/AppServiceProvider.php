@@ -6,7 +6,9 @@ use App\Database\MySqlConnection;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
+use Filament\Support\Facades\FilamentView;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 //use App\Modules\ImageUpload\CloudinaryImageManager;
@@ -36,9 +38,14 @@ class AppServiceProvider extends ServiceProvider
                 } else {*/
         $this->app->bind(ImageManagerInterface::class, LocalImageManager::class);
         $this->app->register(IdeHelperServiceProvider::class);
-//        }
+        //        }
 
         $this->setCustomResolverForMySql();
+
+        FilamentView::registerRenderHook(
+            'panels::head.end',
+            fn(): string => Blade::render('@vite([\'resources/css/app.css\', \'resources/js/app.js\'])'),
+        );
     }
 
     /**

@@ -54,9 +54,23 @@ class ListOrganizations extends ListRecords
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('roles.name')->badge(),
+                //                Tables\Columns\TextColumn::make('roles.name')->badge(),
+                Tables\Columns\TextColumn::make('direct_roles')
+                    ->label('Direct Roles')
+                    ->badge()
+                    ->getStateUsing(fn(Organization $record) => $record->getDirectRoles()->pluck('name'))
+                    ->colors(['primary'])
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('inherited_roles')
+                    ->label('Inherited Roles')
+                    ->badge()
+                    ->getStateUsing(fn(Organization $record) => $record->getInheritedRoles()->pluck('name'))
+                    ->colors(['info'])
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('permissions.name')->badge(),
-            ])
+                Tables\Columns\ViewColumn::make('permissions')
+                    ->label('Permissions')
+                    ->view('filament.tables.columns.permissions-column')])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
             ])
@@ -76,6 +90,4 @@ class ListOrganizations extends ListRecords
             ->defaultSort('sort_order');
 
     }
-
-
 }

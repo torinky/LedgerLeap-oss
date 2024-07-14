@@ -114,7 +114,6 @@ class OrganizationResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])
-//            ->whereNull('parent_id')
-            ->with('children');
+            ->with(['children', 'roles', 'ancestors.roles']);
     }
 }
