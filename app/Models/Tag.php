@@ -10,9 +10,8 @@ class Tag extends Model
     use HasFactory;
 
     protected $fillable = [
-        'folder_id', 'ledger_define_id', 'creator_id', 'modifier_id', 'name'
+        'folder_id', 'ledger_define_id', 'creator_id', 'modifier_id', 'name',
     ];
-
 
     public function define()
     {
@@ -34,4 +33,9 @@ class Tag extends Model
         return $this->belongsTo(User::class, 'modifier_id');
     }
 
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_tag')
+            ->using(RoleTag::class);
+    }
 }

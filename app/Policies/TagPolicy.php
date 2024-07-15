@@ -14,82 +14,77 @@ class TagPolicy
     /**
      * Determine whether the user can view any models.
      *
-     * @param User $user
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
         //
+        return $user->can('view tags');
     }
 
     /**
      * Determine whether the user can view the model.
      *
-     * @param User $user
-     * @param Tag $tag
      * @return Response|bool
      */
     public function view(User $user, Tag $tag)
     {
+        return $user->can('view tags');
         //
     }
 
     /**
      * Determine whether the user can create models.
      *
-     * @param User $user
      * @return Response|bool
      */
     public function create(User $user)
     {
+        return $user->can('create tags');
         //
     }
 
     /**
      * Determine whether the user can update the model.
      *
-     * @param User $user
-     * @param Tag $tag
      * @return Response|bool
      */
     public function update(User $user, Tag $tag)
     {
+        return $user->can('edit tags');
         //
     }
 
     /**
      * Determine whether the user can delete the model.
      *
-     * @param User $user
-     * @param Tag $tag
      * @return Response|bool
      */
     public function delete(User $user, Tag $tag)
     {
         //
+        return $user->can('delete tags');
     }
 
     /**
      * Determine whether the user can restore the model.
      *
-     * @param User $user
-     * @param Tag $tag
      * @return Response|bool
      */
     public function restore(User $user, Tag $tag)
     {
+        return $user->can('edit tags');
         //
     }
 
     /**
      * Determine whether the user can permanently delete the model.
      *
-     * @param User $user
-     * @param Tag $tag
      * @return Response|bool
      */
     public function forceDelete(User $user, Tag $tag)
     {
+        return $user->can('delete tags');
         //
     }
 }
