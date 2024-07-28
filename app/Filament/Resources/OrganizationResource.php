@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\OrganizationResource\Pages;
 use App\Filament\Resources\OrganizationResource\RelationManagers;
 use App\Models\Organization;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -32,17 +33,17 @@ class OrganizationResource extends Resource
                     ->maxLength(255),
                 Forms\Components\Textarea::make('description')
                     ->maxLength(65535),
-                Forms\Components\Select::make('parent_id')
-                    ->label('Parent Organization')
-                    ->options(Organization::pluck('name', 'id'))
-                    ->nullable()
-                    ->searchable(),
                 Forms\Components\Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name'),
                 Forms\Components\Select::make('permissions')
                     ->multiple()
                     ->relationship('permissions', 'name'),
+                SelectTree::make('parent_id')
+                    ->relationship('parent', 'name', 'parent_id')
+                    ->withCount()
+                    ->alwaysOpen()
+                    ->defaultOpenLevel(2),
             ]);
     }
 

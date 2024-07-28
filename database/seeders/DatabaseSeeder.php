@@ -45,5 +45,6 @@ class DatabaseSeeder extends Seeder
 
         Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
 
+        $this->call(RolesAndPermissionsSeeder::class);
     }
 }

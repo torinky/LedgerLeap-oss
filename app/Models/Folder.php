@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 //class Folder extends Model implements TreeConfigurable
 class Folder extends Model
 {
-    use HasFactory, NestedSetTrait, HasModelRoles, softDeletes;
+    use HasFactory, HasModelRoles, NestedSetTrait, softDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id',
@@ -70,9 +70,8 @@ class Folder extends Model
         return $this->belongsTo(User::class, 'modifier_id');
     }
 
-    public function hasPermissionTo($permission, ?string $guardName): bool
+    public function hasPermissionTo($permission, $guardName = null): bool
     {
-        return $this->roles->flatMap->permissions->contains('name', $permission);
+        return $this->hasDirectPermission($permission) || $this->hasPermissionViaRole($permission);
     }
-
 }

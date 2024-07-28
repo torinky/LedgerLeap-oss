@@ -14,7 +14,6 @@ class FolderPolicy
     /**
      * Determine whether the user can view any models.
      *
-     * @param User $user
      * @return Response|bool
      */
     public function viewAny(User $user)
@@ -23,57 +22,8 @@ class FolderPolicy
     }
 
     /**
-     * Determine whether the user can view the model.
-     *
-     * @param User $user
-     * @param Folder $folder
-     * @return Response|bool
-     */
-    public function view(User $user, Folder $folder)
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can create models.
-     *
-     * @param User $user
-     * @return Response|bool
-     */
-    public function create(User $user)
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     *
-     * @param User $user
-     * @param Folder $folder
-     * @return Response|bool
-     */
-    public function update(User $user, Folder $folder)
-    {
-        //
-    }
-
-    /**
-     * Determine whether the user can delete the model.
-     *
-     * @param User $user
-     * @param Folder $folder
-     * @return Response|bool
-     */
-    public function delete(User $user, Folder $folder)
-    {
-        //
-    }
-
-    /**
      * Determine whether the user can restore the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function restore(User $user, Folder $folder)
@@ -84,12 +34,30 @@ class FolderPolicy
     /**
      * Determine whether the user can permanently delete the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function forceDelete(User $user, Folder $folder)
     {
         //
+    }
+
+    public function view(User $user, Folder $folder)
+    {
+        return $user->hasPermissionTo('view_ledgers') || $folder->hasPermissionTo('view_ledgers');
+    }
+
+    public function create(User $user)
+    {
+        return $user->hasPermissionTo('manage_ledger_defines');
+    }
+
+    public function update(User $user, Folder $folder)
+    {
+        return $user->hasPermissionTo('edit_ledgers') || $folder->hasPermissionTo('edit_ledgers');
+    }
+
+    public function delete(User $user, Folder $folder)
+    {
+        return $user->hasPermissionTo('delete_ledgers') || $folder->hasPermissionTo('delete_ledgers');
     }
 }

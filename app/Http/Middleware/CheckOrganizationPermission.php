@@ -23,7 +23,7 @@ class CheckOrganizationPermission
             return response('Organization not found.', 404);
         }
 
-        if ($user->hasPermissionForOrganization($permission, $organization)) {
+        if ($this->hasHierarchicalPermission($user, $permission, $organization)) {
             return $next($request);
         }
 
@@ -37,5 +37,23 @@ class CheckOrganizationPermission
         $organizationId = $request->route('organization') ?? $request->query('organization_id');
 
         return $organizationId ? Organization::find($organizationId) : null;
+    }
+
+    private function hasHierarchicalPermission($user, $permission, $organization)
+    {
+        // ユーザーが直接権限を持っているかチェック
+        if ($user->hasPermissionTo($permission)) {
+            return true;
+        }
+
+        // 組織の階層を上へ遡りながらチェック
+        while ($organization) {
+            if ($user->hasPermissionForOrganization($permission, $organization)) {
+                return true;
+            }
+            $organization = $organization->parent;
+        }
+
+        return false;
     }
 }

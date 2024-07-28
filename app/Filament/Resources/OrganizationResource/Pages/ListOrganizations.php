@@ -4,9 +4,11 @@ namespace App\Filament\Resources\OrganizationResource\Pages;
 
 use App\Filament\Resources\OrganizationResource;
 use App\Models\Organization;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -73,6 +75,19 @@ class ListOrganizations extends ListRecords
                     ->view('filament.tables.columns.permissions-column')])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
+                Filter::make('tree')
+                    ->form([
+                        SelectTree::make('parent_id')
+                            ->relationship('parent', 'name', 'parent_id')
+                            ->independent(false)
+                            ->enableBranchNode(),
+                    ])
+                    ->query(function ($query, $data) {
+                        if ($data['parent_id']) {
+                            $query->where('parent_id', $data['parent_id'])->orWhere('id', $data['parent_id']);
+                        }
+                    }),
+
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
