@@ -42,9 +42,10 @@ class RoleResource extends BaseRoleResource
 
         return $table
             ->columns([
-//                ...parent::table($table)->getColumns(),
                 ...$columns,
                 Tables\Columns\TextColumn::make('tags.name')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('guard_name')
                     ->badge(),
             ])
             ->filters($parentTable->getFilters())

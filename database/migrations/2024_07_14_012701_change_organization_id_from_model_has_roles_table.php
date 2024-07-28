@@ -11,17 +11,28 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('model_has_roles', function (Blueprint $table) {
-            // プライマリーキーを削除
-            $table->dropPrimary();
+            // organization_idカラムが存在しない場合は追加
+            if (!Schema::hasColumn('model_has_roles', 'organization_id')) {
+                $table->unsignedBigInteger('organization_id')->nullable()->after('role_id');
+            }
 
-            // organization_idをNULL許容に変更
-            $table->unsignedBigInteger('organization_id')->nullable()->change();
+            // 既存のユニークインデックスを削除（存在する場合のみ）
+            if (Schema::hasIndex('model_has_roles', 'model_has_roles_role_id_model_id_model_type_unique')) {
+                $table->dropUnique('model_has_roles_role_id_model_id_model_type_unique');
+            }
 
-            // 新しいプライマリーキーを設定（organization_idを除外）
-            $table->primary(['role_id', 'model_id', 'model_type']);
+            // 新しいユニークインデックスを追加（既に存在しない場合のみ）
+            if (!Schema::hasIndex('model_has_roles', 'model_has_roles_unique')) {
+                $table->unique(['organization_id', 'role_id', 'model_id', 'model_type'], 'model_has_roles_unique');
+            }
 
-            // organization_idを含むユニークインデックスを作成
-            $table->unique(['organization_id', 'role_id', 'model_id', 'model_type'], 'model_has_roles_unique');
+            // 外部キー制約を追加（存在しない場合）
+            if (!Schema::hasColumn('model_has_roles', 'organization_id')) {
+                $table->foreign('organization_id')
+                    ->references('id')
+                    ->on('organizations')
+                    ->onDelete('cascade');
+            }
         });
     }
 
@@ -30,18 +41,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('model_has_roles', function (Blueprint $table) {
-            // ユニークインデックスを削除
-            $table->dropUnique('model_has_roles_unique');
-
-            // プライマリーキーを削除
-            $table->dropPrimary();
-
-            // organization_idをNOT NULLに戻す
-            $table->unsignedBigInteger('organization_id')->nullable(false)->change();
-
-            // 元のプライマリーキーを再設定
-            $table->primary(['organization_id', 'role_id', 'model_id', 'model_type']);
-        });
+//        model_has_rolesはspatie/laravel-permissionで処理されるためここでは削除しない
     }
 };

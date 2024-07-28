@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\HasModelRoles;
 use Fureev\Trees\{NestedSetTrait};
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 //class Folder extends Model implements TreeConfigurable
 class Folder extends Model
 {
-    use HasFactory;
-    use NestedSetTrait;
+    use HasFactory, NestedSetTrait, HasModelRoles, softDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id',
@@ -68,4 +69,10 @@ class Folder extends Model
     {
         return $this->belongsTo(User::class, 'modifier_id');
     }
+
+    public function hasPermissionTo($permission, ?string $guardName): bool
+    {
+        return $this->roles->flatMap->permissions->contains('name', $permission);
+    }
+
 }

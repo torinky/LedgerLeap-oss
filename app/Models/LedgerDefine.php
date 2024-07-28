@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\AsColumnDefinesArrayJson;
+use App\Traits\HasModelRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,7 +15,7 @@ use Illuminate\Routing\Route;
  */
 class LedgerDefine extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasModelRoles;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
@@ -105,4 +106,10 @@ class LedgerDefine extends Model
         // 数字添字配列に作り直し
         return $sortedContentArray->values()->toArray();
     }
+
+    public function hasPermissionTo($permission): bool
+    {
+        return $this->roles->flatMap->permissions->contains('name', $permission);
+    }
+
 }
