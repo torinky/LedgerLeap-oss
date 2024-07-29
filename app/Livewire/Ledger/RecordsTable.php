@@ -173,7 +173,7 @@ use Psr\Container\NotFoundExceptionInterface;
         $breadcrumbsPerLedgerDefine = [];
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
             // 台帳ごとのパンくずリストを準備
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parents();
+            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parent()->get();
             $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
         }
 
@@ -257,7 +257,6 @@ use Psr\Container\NotFoundExceptionInterface;
      */
     public function changeCurrentFolder($newFolderId)
     {
-
         if ($newFolderId == 1) {
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
@@ -265,20 +264,15 @@ use Psr\Container\NotFoundExceptionInterface;
             if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
                 $this->selectedFolderIds = [];
             } else {
-                $this->selectedFolderIds = Folder::whereDescendantOf($newFolderId)->pluck('id')->toArray();
+                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
                 $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
             }
         }
-        // フォルダーIDを更新
         $this->currentFolderId = $newFolderId;
-        //        $this->selectedLedgerDefineIds = [];
 
-        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
         $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
 
-        // フォルダーアセットを再準備
         $this->prepareFolderAsset();
-
     }
 
     #[On('currentFolderChangedByTree')]
@@ -321,22 +315,21 @@ use Psr\Container\NotFoundExceptionInterface;
      */
     public function prepareFolderAsset(): void
     {
-        $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
+        $currentFolder = Folder::findOrFail($this->currentFolderId);
 
         if (!empty($currentFolder)) {
-            $this->breadcrumbs = $currentFolder->parents();
+            $this->breadcrumbs = $currentFolder->ancestors()->get();
         }
         $this->breadcrumbs[] = $currentFolder;
 
         $this->folderRecords = $currentFolder->children()->get();
         $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
-
     }
 
     /**
      * フォルダの選択状態をトグルする
      *
-     * @param int $ledgerDefineId
+     * @param int $folderId
      * @return void
      */
     public function toggleFolderId($folderId)
@@ -345,23 +338,17 @@ use Psr\Container\NotFoundExceptionInterface;
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
         } elseif (in_array($folderId, $this->selectedFolderIds)) {
-            // 選択済みの場合、selectedFolderIdsリストから削除
-            $removeFolderRecordIds = Folder::whereDescendantOf($folderId)->pluck('id')->toArray();
-            $removeFolderRecordIds[] = $folderId;
-            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderRecordIds));
+            $removeFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
+            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderIds));
 
-            // 選択済みの場合、selectedLedgerDefineIdsリストから削除
-            $removeLedgerRecordIds = LedgerDefine::wherein('folder_id', $removeFolderRecordIds)->get()->pluck('id')->toArray();
+            $removeLedgerRecordIds = LedgerDefine::whereIn('folder_id', $removeFolderIds)->pluck('id')->toArray();
             $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, $removeLedgerRecordIds));
-
         } else {
-            // 選択されていない場合、リストに追加
-            $mergingFolderIds = array_merge([(int)$folderId], Folder::whereDescendantOf($folderId)->pluck('id')->toArray());
+            $mergingFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
             $this->selectedFolderIds = array_merge($this->selectedFolderIds, $mergingFolderIds);
-            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->get()->pluck('id')->toArray());
+            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->pluck('id')->toArray());
         }
 
-        // ツリーコンポーネントに現在のフォルダーIDの変更を通知
         $this->dispatch('selectedFolderChangedByMain', newSelectedFolderIds: $this->selectedFolderIds);
 
         $this->resetPage();

@@ -3,16 +3,16 @@
 namespace App\Models;
 
 use App\Traits\HasModelRoles;
-use Fureev\Trees\{NestedSetTrait};
+use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Kalnoy\Nestedset\NodeTrait;
 
-//class Folder extends Model implements TreeConfigurable
 class Folder extends Model
 {
-    use HasFactory, HasModelRoles, NestedSetTrait, softDeletes;
+    use HasFactory, HasModelRoles, HasTreeView, NodeTrait, SoftDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id',
@@ -40,7 +40,7 @@ class Folder extends Model
      */
     public function descendantLedgerDefinesCount()
     {
-        return $this->descendants(null, true)->get()
+        return $this->descendantsAndSelf($this->id)
             ->reduce(fn($carry, $folder) => $carry + $folder->ledgerDefines()->count(), 0);
     }
 
@@ -51,7 +51,7 @@ class Folder extends Model
      */
     public function descendantCount()
     {
-        return $this->descendants(null, false)->count();
+        return $this->descendants()->count();
     }
 
     /**
