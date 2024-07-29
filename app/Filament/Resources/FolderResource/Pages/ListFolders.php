@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\FolderResource\Pages;
 
 use App\Filament\Resources\FolderResource;
+use CubeAgency\FilamentTreeView\Resources\Pages\TreeViewRecords;
 use Filament\Actions;
-use Filament\Resources\Pages\ListRecords;
 
-class ListFolders extends ListRecords
+class ListFolders extends TreeViewRecords
 {
     protected static string $resource = FolderResource::class;
 
@@ -15,5 +15,10 @@ class ListFolders extends ListRecords
         return [
             Actions\CreateAction::make(),
         ];
+    }
+
+    public function getRowTitle($row): ?string
+    {
+        return $row->getAttribute('title');
     }
 }

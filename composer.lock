@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "88a7c05a7dbe348c90c40963720792de",
+    "content-hash": "f83b4810c5fc1cc3f6946a4d623eecd8",
     "packages": [
         {
             "name": "althinect/filament-spatie-roles-permissions",
@@ -565,6 +565,78 @@
                 }
             ],
             "time": "2024-07-12T11:35:52+00:00"
+        },
+        {
+            "name": "cube-agency/filament-tree-view",
+            "version": "v1.0.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cube-agency/filament-tree-view.git",
+                "reference": "45660eab2c45e482e2d5f69d6176f4b0a681c6d4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cube-agency/filament-tree-view/zipball/45660eab2c45e482e2d5f69d6176f4b0a681c6d4",
+                "reference": "45660eab2c45e482e2d5f69d6176f4b0a681c6d4",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^3.0",
+                "illuminate/contracts": "^10.0|^11.0",
+                "kalnoy/nestedset": "^6.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^7.10|^8.1",
+                "nunomaduro/larastan": "^2.0.1",
+                "orchestra/testbench": "^8.0|^9.0",
+                "pestphp/pest": "^2.0",
+                "pestphp/pest-plugin-arch": "^2.0",
+                "pestphp/pest-plugin-laravel": "^2.0",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan-deprecation-rules": "^1.0",
+                "phpstan/phpstan-phpunit": "^1.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "CubeAgency\\FilamentTreeView\\FilamentTreeViewServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "CubeAgency\\FilamentTreeView\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dmitrijs Mihailovs",
+                    "email": "dmitrijs.mihailovs@cube.lv",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Filament package to view records in tree view",
+            "homepage": "https://github.com/cube-agency/filament-tree-view",
+            "keywords": [
+                "cube-agency",
+                "filament",
+                "filament-tree-view",
+                "laravel",
+                "nestedset"
+            ],
+            "support": {
+                "issues": "https://github.com/cube-agency/filament-tree-view/issues",
+                "source": "https://github.com/cube-agency/filament-tree-view"
+            },
+            "time": "2024-05-14T12:45:17+00:00"
         },
         {
             "name": "danharrin/date-format-converter",
