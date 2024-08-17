@@ -74,4 +74,116 @@ class Folder extends Model
     {
         return $this->hasDirectPermission($permission) || $this->hasPermissionViaRole($permission);
     }
+
+    /**
+     * 親組織から継承された権限を含む全ての権限を取得
+     *
+     * @return mixed
+     */
+    public function getAllPermissions()
+    {
+        $allPermissions = $this->permissions;
+
+        foreach ($this->ancestors as $ancestor) {
+            $allPermissions = $allPermissions->merge($ancestor->permissions);
+        }
+
+        return $allPermissions->unique('id');
+    }
+
+    /**
+     * 親組織から継承された役割を含む全ての役割を取得
+     *
+     * @return mixed
+     */
+    public function getAllRoles()
+    {
+        $allRoles = $this->roles;
+
+        foreach ($this->ancestors as $ancestor) {
+            $allRoles = $allRoles->merge($ancestor->roles);
+        }
+
+        return $allRoles->unique('id');
+    }
+
+    public function hasPermissionWithInheritance($permission)
+    {
+        if ($this->hasPermissionTo($permission)) {
+            return true;
+        }
+
+        foreach ($this->ancestors as $ancestor) {
+            if ($ancestor->hasPermissionTo($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasRoleWithInheritance($role)
+    {
+        if ($this->hasRole($role)) {
+            return true;
+        }
+
+        foreach ($this->ancestors as $ancestor) {
+            if ($ancestor->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getDirectRoles()
+    {
+        return $this->roles;
+    }
+
+    public function getInheritedRoles()
+    {
+        $inheritedRoles = collect();
+        foreach ($this->ancestors as $ancestor) {
+            $inheritedRoles = $inheritedRoles->merge($ancestor->roles);
+        }
+
+        return $inheritedRoles->unique('id')->diff($this->getDirectRoles());
+    }
+
+    public function getDirectPermissions()
+    {
+        return $this->permissions;
+    }
+
+    public function getInheritedPermissions()
+    {
+        $inheritedPermissions = collect();
+        foreach ($this->ancestors as $ancestor) {
+            $inheritedPermissions = $inheritedPermissions->merge($ancestor->getAllPermissions());
+        }
+
+        return $inheritedPermissions->unique('id')->diff($this->getDirectPermissions());
+    }
+
+    public function getAllUniquePermissions()
+    {
+        return $this->getAllPermissions()->unique('id');
+    }
+
+    public function getDirectPermissionsViaRoles()
+    {
+        return $this->getDirectRoles()->flatMap->permissions->unique('id');
+    }
+
+    public function getInheritedPermissionsViaRoles()
+    {
+        return $this->getInheritedRoles()->flatMap->permissions->unique('id');
+    }
+
+    public function getAllUniquePermissionsViaRoles()
+    {
+        return $this->getAllRoles()->flatMap->permissions->unique('id');
+    }
 }

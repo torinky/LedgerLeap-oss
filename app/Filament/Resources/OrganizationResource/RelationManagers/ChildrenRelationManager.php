@@ -55,6 +55,10 @@ class ChildrenRelationManager extends RelationManager
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('org_id')
+                    ->label('Organization ID')
+                    ->unique(ignoreRecord: true)
+                    ->maxLength(255),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
