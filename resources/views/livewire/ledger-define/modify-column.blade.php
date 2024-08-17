@@ -82,7 +82,8 @@
                                             @foreach($columnInputTypes as $value => $columnInputTypeName)
                                                 <option
                                                     {{--                                        value="{{$value}}" {{ old('column_define['.$columnDefine->id.'][type]', $columnDefine->type) == $value ? 'selected' : '' }}--}}
-                                                    value="{{$value}}" {{  $columnDefine->type == $value ? 'selected' : '' }}
+                                                    value="{{$value}}"
+                                                    @if($columnDefine->type == $value) selected="selected" @endif
                                                 >{{$columnInputTypeName}}</option>
                                             @endforeach
                                         </select>

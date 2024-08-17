@@ -4,6 +4,18 @@
     $columnDefine->idに基づいて動的なフォームを作成します。
     フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
 -->
+<label for="content[{{$columnDefine->id}}]"
+       class="form-control">
+    <div class="label">
+            <span class="label-text">
+                @if($columnDefine->required)
+                    <i class="fas fa-check-circle text-accent"></i>
+                @endif
+                {{$columnDefine->name}}
+
+            </span>
+
+    </div>
 <textarea
     wire:model.blur="content.{{ $columnDefine->id }}"
     id="content[{{$columnDefine->id}}]"
@@ -12,6 +24,15 @@
 >
 {{ $this->content[$columnDefine->id] ?? '' }}
 </textarea>
+    @error('content.' . $columnDefine->id)
+    <label class="label">
+        <span class="label-text-alt text-red-500 text-xs space-x-2">
+            <i class="fas fa-times-circle"></i>
+            <span class="error">{{ $message }}</span>
+        </span>
+    </label>
+    @enderror
+</label>
 
 @once
     @push('scripts')

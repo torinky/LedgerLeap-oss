@@ -79,7 +79,7 @@ class ModifyColumn extends Component
 
         $this->ledgerDefineRecord->column_define = collect($this->ledgerDefineRecord->column_define)
             ->add(
-                new ColumnDefine($maxId + 1, '', '', $maxOrder + 1)
+                new ColumnDefine($maxId + 1, 'no name', 'text', $maxOrder + 1)
             )
             ->toArray();
         $this->ledgerDefineRecord->save();

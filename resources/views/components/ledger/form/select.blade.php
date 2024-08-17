@@ -1,6 +1,6 @@
 <select wire:model.live="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
         name="content[{{$columnDefine->id}}]"
-        class="select @if($columnDefine->required) input-accent @endif"
+        class="select select-bordered @if($columnDefine->required) input-accent @endif"
 >
     <option disabled>Pick your choice</option>
 

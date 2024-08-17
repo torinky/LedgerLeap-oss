@@ -76,7 +76,7 @@ class RecordsTable extends Component
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
 
         if (!empty($currentFolder)) {
-            $this->breadcrumbs = $currentFolder->parents();
+            $this->breadcrumbs = $currentFolder->parent()->get();
         }
         $this->breadcrumbs[] = $currentFolder;
 

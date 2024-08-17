@@ -52,9 +52,11 @@ class ColumnHtmlService
             //            dd($this->initialValue);
         } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
+            $displayValues = array_keys($displayValues);
             if (!empty($displayValues)) {
                 $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
             }
+//            var_dump($this->initialValue);
         } else {
             $html = $this->initialValue;
         }

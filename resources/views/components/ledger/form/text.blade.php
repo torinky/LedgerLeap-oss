@@ -4,15 +4,59 @@
     $columnDefine->idに基づいて動的なフォームを作成します。
     フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
 -->
-<input
-    wire:model.blur="content.{{ $columnDefine->id }}"
-    id="content[{{$columnDefine->id}}]"
-    class="adjustWidth input input-bordered @if($columnDefine->required) input-accent @endif"
+@php
+    $icon='';
+    $class="input-primary";
+    if($columnDefine->required){
+        $icon='c-check-circle';
+        $class="input-accent";
+    }
+
+@endphp
+
+<x-mary-input
+    label="{{$columnDefine->name}}"
     name="content[{{$columnDefine->id}}]"
-    value="{{ $this->content[$columnDefine->id] ?? '' }}"
-    {{--    @if($columnDefine->required) required="required" @endif--}}
->
-@once
+    placeholder="{{$columnDefine->name}}"
+    icon="{{$icon}}"
+    {{--    hint="{{$columnDefine->name}}"--}}
+    wire:model="content.{{$columnDefine->id}}"
+    clearable
+    :class="$class"
+/>
+
+{{--
+<label class="form-control w-full max-w-xs">
+
+    <div class="label">
+        <span class="label-text">
+            @if($columnDefine->required)
+                <i class="fas fa-check-circle text-accent"></i>
+            @endif
+            {{$columnDefine->name}}
+        </span>
+    </div>
+    <input
+        wire:model.blur="content.{{ $columnDefine->id }}"
+        id="content[{{$columnDefine->id}}]"
+        class="adjustWidth input input-bordered @if($columnDefine->required) input-accent @endif"
+        name="content[{{$columnDefine->id}}]"
+        value="{{ $this->content[$columnDefine->id] ?? '' }}"
+
+    >
+    @error('content.' . $columnDefine->id)
+    <label class="label">
+        <span class="label-text-alt text-red-500 text-xs space-x-2">
+            <i class="fas fa-times-circle"></i>
+            <span class="error">{{ $message }}</span>
+        </span>
+    </label>
+    @enderror
+
+</label>
+--}}
+
+{{--@once
     @push('scripts')
         <script>
             document.addEventListener('livewire:init', function () {
@@ -64,4 +108,4 @@
             });
         </script>
     @endpush
-@endonce
+@endonce--}}

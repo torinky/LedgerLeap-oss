@@ -16,17 +16,19 @@
 
             <div class="mb-32 space-y-5 mt-5">
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    <div class="flex justify-items-start items-center px-3 "
-                         wire:key="content-{{$columnDefine->id}}">
-                        <label for="content[{{$columnDefine->id}}]"
-                               class="basis-1/4 text-right text-gray-700 font-bold mr-5">
-                            @if($columnDefine->required)
-                                <i class="fas fa-check-circle text-accent"></i>
-                            @endif
-                            {{$columnDefine->name}}
-                        </label>
+                    {{--
+                                        <div class="flex justify-items-start items-center px-3 "
+                                             wire:key="content-{{$columnDefine->id}}">
+                                            <label for="content[{{$columnDefine->id}}]"
+                                                   class="basis-1/4 text-right text-gray-700 font-bold mr-5">
+                                                @if($columnDefine->required)
+                                                    <i class="fas fa-check-circle text-accent"></i>
+                                                @endif
+                                                {{$columnDefine->name}}
+                                            </label>
+                    --}}
                         @if($columnDefine->type=='files')
-                            <div class="form-control basis-3/4">
+                        {{--                            <div class="form-control basis-3/4">--}}
                                 <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
                                                      wire:model.live="content"
                                                      wire:model.live="deletedContent"
@@ -37,27 +39,29 @@
                                                      imagePreviewMaxHeight="200"
                                 />
 
-                                @else
-                                    <div class="form-control">
+                    @else
+                        {{--                                    <div class="form-control">--}}
                                         <x-dynamic-component
                                             :component="'ledger.form.'. Str::kebab($columnDefine->type)"
                                             wire:model.live="content"
                                             :columnDefine="$columnDefine"
                                             :ledgerRecord="$ledgerRecord??[]"
                                         />
-                                        @endif
-                                        @error('content.' . $columnDefine->id)
-                                        <label class="label">
-                                    <span class="label-text-alt text-red-500 text-xs space-x-2">
-                                        <i class="fas fa-times-circle"></i>
-                                        <span class="error">{{ $message }}</span>
-                                    </span>
-                                        </label>
-                                        @enderror
-                                    </div>
-                            </div>
-                            @endforeach
-                    </div>
+                    @endif
+                    {{--
+                                                            @error('content.' . $columnDefine->id)
+                                                            <label class="label">
+                                                        <span class="label-text-alt text-red-500 text-xs space-x-2">
+                                                            <i class="fas fa-times-circle"></i>
+                                                            <span class="error">{{ $message }}</span>
+                                                        </span>
+                                                            </label>
+                                                            @enderror
+                    --}}
+                    {{--                                    </div>--}}
+                    {{--                            </div>--}}
+                @endforeach
+            </div>
 
                     {{--
                                     <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
