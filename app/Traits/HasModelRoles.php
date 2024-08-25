@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Models\Role;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Permission\Exceptions\RoleDoesNotExist;
 use Spatie\Permission\Traits\HasRoles;

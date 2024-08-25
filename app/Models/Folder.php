@@ -18,6 +18,8 @@ class Folder extends Model
         'title', 'modifier_id', 'creator_id',
     ];
 
+    protected $guard_name = ['web', 'api'];
+
     public function ledgerDefines()
     {
         return $this->hasMany(LedgerDefine::class);
@@ -185,5 +187,22 @@ class Folder extends Model
     public function getAllUniquePermissionsViaRoles()
     {
         return $this->getAllRoles()->flatMap->permissions->unique('id');
+    }
+
+    public static function treeList($nodes)
+    {
+
+        $options = [];
+        $traverse = function ($categories, $prefix = '-') use (&$traverse, &$options) {
+            foreach ($categories as $category) {
+                $options[$category->id] = $prefix . ' ' . $category->title;
+
+                $traverse($category->children, $prefix . '-');
+            }
+        };
+
+        $traverse($nodes);
+
+        return $options;
     }
 }

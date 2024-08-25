@@ -43,8 +43,8 @@ class OrganizationResource extends Resource
                 SelectTree::make('parent_id')
                     ->relationship('parent', 'name', 'parent_id')
                     ->withCount()
-                    ->alwaysOpen()
-                    ->defaultOpenLevel(2),
+//                    ->alwaysOpen()
+                    ->defaultOpenLevel(5),
             ]);
     }
 
