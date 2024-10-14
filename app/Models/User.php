@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * @property int $id
  */
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
@@ -176,5 +178,10 @@ class User extends Authenticatable
         )->merge(
             $this->getAllUniqueRoles()->flatMap->permissions
         )->unique('id');
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return true; // すべてのドメインからのアクセスを許可
     }
 }

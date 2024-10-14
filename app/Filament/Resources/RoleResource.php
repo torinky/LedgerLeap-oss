@@ -33,7 +33,7 @@ class RoleResource extends BaseRoleResource
 
                 Select::make('tags')
                     ->multiple()
-                    ->relationship('tags', 'name')
+//                    ->relationship('tags', 'name')
                     ->preload()
                     ->searchable(),
 
@@ -76,8 +76,8 @@ class RoleResource extends BaseRoleResource
         return $table
             ->columns([
                 ...$columns,
-                Tables\Columns\TextColumn::make('tags.name')
-                    ->badge(),
+                /*                Tables\Columns\TextColumn::make('tags.name')
+                                    ->badge(),*/
                 Tables\Columns\TextColumn::make('folder.title')
                     ->label('Scope Folders')
                     ->getStateUsing(function ($record) use ($allFolderList) {
@@ -93,6 +93,8 @@ class RoleResource extends BaseRoleResource
                     })
                     ->badge(),
                 Tables\Columns\TextColumn::make('organizations.name')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('permissions.name')
                     ->badge(),
                 Tables\Columns\TextColumn::make('guard_name')
                     ->badge(),

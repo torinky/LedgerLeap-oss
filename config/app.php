@@ -178,7 +178,7 @@ return [
         App\Providers\ExtendValidatorServiceProvider::class,
 
         Maatwebsite\Excel\ExcelServiceProvider::class,
-
+        Spatie\Permission\PermissionServiceProvider::class,
     ])->toArray(),
 
     /*

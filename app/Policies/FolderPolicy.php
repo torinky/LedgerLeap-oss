@@ -43,21 +43,22 @@ class FolderPolicy
 
     public function view(User $user, Folder $folder)
     {
-        return $user->hasPermissionTo('view_ledgers') || $folder->hasPermissionTo('view_ledgers');
+//        return $user->hasPermissionTo('view_ledgers') || $folder->hasPermissionTo('view_ledgers');
     }
 
     public function create(User $user)
     {
-        return $user->hasPermissionTo('manage_ledger_defines');
+        return true;
+//        return $user->hasPermissionTo('manage_ledger_defines');
     }
 
     public function update(User $user, Folder $folder)
     {
-        return $user->hasPermissionTo('edit_ledgers') || $folder->hasPermissionTo('edit_ledgers');
+//        return $user->hasPermissionTo('edit_ledgers') || $folder->hasPermissionTo('edit_ledgers');
     }
 
     public function delete(User $user, Folder $folder)
     {
-        return $user->hasPermissionTo('delete_ledgers') || $folder->hasPermissionTo('delete_ledgers');
+//        return $user->hasPermissionTo('delete_ledgers') || $folder->hasPermissionTo('delete_ledgers');
     }
 }

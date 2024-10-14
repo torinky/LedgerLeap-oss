@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\FolderResource\Pages;
+use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -88,7 +89,7 @@ class FolderResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\ChildrenRelationManager::class,
         ];
     }
 
@@ -106,7 +107,8 @@ class FolderResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ]);
+            ])
+            ->with(['children', 'roles', 'ancestors.roles']);
     }
 
     public static function canViewAny(): bool

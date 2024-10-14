@@ -15,7 +15,7 @@ class Folder extends Model
     use HasFactory, HasModelRoles, HasTreeView, NodeTrait, SoftDeletes;
 
     protected $fillable = [
-        'title', 'modifier_id', 'creator_id',
+        'title', 'modifier_id', 'creator_id', 'parent_id',
     ];
 
     protected $guard_name = ['web', 'api'];
