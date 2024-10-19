@@ -3,16 +3,15 @@
 namespace App\Providers\Filament;
 
 use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
+use App\Filament\Widgets\DashboardLinksWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Navigation\NavigationGroup;
 use Filament\Navigation\NavigationItem;
-use Filament\Pages;
+use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -39,37 +38,58 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+//                Pages\Dashboard::class,
+                \App\Filament\Pages\Dashboard::class
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+//                Widgets\AccountWidget::class,
+                DashboardLinksWidget::class,
+
 //                Widgets\FilamentInfoWidget::class,
             ])
             ->topNavigation()  // これによりトップナビゲーションが有効になります
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
-            ->navigationGroups([
-                NavigationGroup::make()
-                    ->label(__('ledger.settings'))
-                    ->icon('heroicon-o-cog-8-tooth'),
-            ])
+//            ->navigation(false)
             ->navigationItems([
-                NavigationItem::make(__('ledger.search_view'))
+                NavigationItem::make(__('ledger.go_home'))
                     ->url(fn() => route('ledger.index'))
-                    ->icon('heroicon-o-book-open')
-//                    ->group('カスタムリンク')  // オプション：グループを指定
-                    ->sort(3),
-                NavigationItem::make(__('ledger.general_settings'))
-                    ->url(fn() => route('ledgerDefine.index'))
-//                    ->icon('heroicon-o-book-open')
-                    ->group(__('ledger.settings'))  // オプション：グループを指定
-                    ->sort(3),
-                NavigationItem::make(__('ledger.technical_term'))
-                    ->url(fn() => route('filament.admin.resources.synonym.technical-term-groups.index'))
-//                    ->icon('heroicon-o-chat-bubble-left-right')
-                    ->group(__('ledger.settings'))  // オプション：グループを指定
-                    ->sort(3),
-                // 他のナビゲーションアイテムをここに追加
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->activeIcon('heroicon-s-arrow-uturn-left')
+                    ->sort(2),
+                NavigationItem::make(__('ledger.settings'))
+                    ->icon('heroicon-o-adjustments-vertical')
+                    ->activeIcon('heroicon-s-adjustments-vertical')
+                    ->isActiveWhen(fn(): bool => request()->routeIs('filament.admin.pages.dashboard'))
+                    ->url(fn(): string => Dashboard::getUrl())
+                    ->sort(1),
+            ])
+            ->navigationGroups([])
+            /*            ->navigationGroups([
+                            NavigationGroup::make()
+                                ->label(__('ledger.settings'))
+                                ->icon('heroicon-o-cog-8-tooth'),
+                        ])
+                        ->navigationItems([
+                            NavigationItem::make(__('ledger.search_view'))
+                                ->url(fn() => route('ledger.index'))
+                                ->icon('heroicon-o-book-open')
+            //                    ->group('カスタムリンク')  // オプション：グループを指定
+                                ->sort(3),
+                            NavigationItem::make(__('ledger.general_settings'))
+                                ->url(fn() => route('ledgerDefine.index'))
+            //                    ->icon('heroicon-o-book-open')
+                                ->group(__('ledger.settings'))  // オプション：グループを指定
+                                ->sort(3),
+                            NavigationItem::make(__('ledger.technical_term'))
+                                ->url(fn() => route('filament.admin.resources.synonym.technical-term-groups.index'))
+            //                    ->icon('heroicon-o-chat-bubble-left-right')
+                                ->group(__('ledger.settings'))  // オプション：グループを指定
+                                ->sort(3),
+                            // 他のナビゲーションアイテムをここに追加
+                        ])*/
+            ->resources([
+                // 表示したいリソースのみを列挙
             ])
             ->middleware([
                 EncryptCookies::class,

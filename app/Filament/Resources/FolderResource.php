@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class FolderResource extends Resource
 {
+    public static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = Folder::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-folder';

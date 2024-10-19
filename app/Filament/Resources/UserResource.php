@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
+    public static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user';

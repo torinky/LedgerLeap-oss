@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class TagResource extends Resource
 {
+    public static bool $shouldRegisterNavigation = false;
+
     protected static ?string $model = Tag::class;
 
     //    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';

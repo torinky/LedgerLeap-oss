@@ -18,6 +18,7 @@ class FolderPolicy
      */
     public function viewAny(User $user)
     {
+        return true;
         //
     }
 
@@ -28,6 +29,7 @@ class FolderPolicy
      */
     public function restore(User $user, Folder $folder)
     {
+        return true;
         //
     }
 
@@ -38,6 +40,7 @@ class FolderPolicy
      */
     public function forceDelete(User $user, Folder $folder)
     {
+        return true;
         //
     }
 
@@ -54,11 +57,13 @@ class FolderPolicy
 
     public function update(User $user, Folder $folder)
     {
+        return true;
 //        return $user->hasPermissionTo('edit_ledgers') || $folder->hasPermissionTo('edit_ledgers');
     }
 
     public function delete(User $user, Folder $folder)
     {
+        return true;
 //        return $user->hasPermissionTo('delete_ledgers') || $folder->hasPermissionTo('delete_ledgers');
     }
 }
