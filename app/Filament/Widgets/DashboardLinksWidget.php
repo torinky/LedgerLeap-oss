@@ -31,17 +31,17 @@ class DashboardLinksWidget extends Widget
     {
         return [
             [
-                'title' => __('User Management'),
+                'title' => __('ledger.settings.user_management'),
                 'icon' => 'heroicon-o-users',
                 'links' => [
                     [
-                        'title' => __('Users'),
+                        'title' => __('ledger.user'),
                         'icon' => 'heroicon-o-user',
                         'url' => route('filament.admin.resources.users.index'),
                         'color' => 'danger',
                     ],
                     [
-                        'title' => __('Organizations'),
+                        'title' => __('ledger.organization'),
                         'icon' => 'heroicon-o-building-office',
                         'url' => route('filament.admin.resources.organizations.index'),
                         'color' => 'warning',
@@ -49,17 +49,17 @@ class DashboardLinksWidget extends Widget
                 ],
             ],
             [
-                'title' => __('Access Control'),
+                'title' => __('ledger.settings.access_control'),
                 'icon' => 'heroicon-o-shield-check',
                 'links' => [
                     [
-                        'title' => __('Roles'),
+                        'title' => __('ledger.settings.roles'),
                         'icon' => 'heroicon-o-user-group',
                         'url' => route('filament.admin.resources.roles.index'),
                         'color' => 'info',
                     ],
                     [
-                        'title' => __('Permissions'),
+                        'title' => __('ledger.settings.permissions'),
                         'icon' => 'heroicon-o-key',
                         'url' => route('filament.admin.resources.permissions.index'),
                         'color' => 'secondary',
@@ -67,18 +67,12 @@ class DashboardLinksWidget extends Widget
                 ],
             ],
             [
-                'title' => __('System Settings'),
+                'title' => __('ledger.settings.contents'),
                 'icon' => 'heroicon-o-cog-6-tooth',
                 'links' => [
                     [
-                        'title' => __('Folders'),
-                        'icon' => 'heroicon-o-folder',
-                        'url' => route('filament.admin.resources.folders.index'),
-                        'color' => 'success',
-                    ],
-                    [
-                        'title' => __('ledger.general_settings'),
-                        'icon' => 'heroicon-o-adjustments-horizontal',
+                        'title' => __('ledger.settings.framework'),
+                        'icon' => 'heroicon-o-clipboard-document-list',
                         'url' => route('ledgerDefine.index'),
                         'color' => 'primary',
                     ],
@@ -86,6 +80,12 @@ class DashboardLinksWidget extends Widget
                         'title' => __('ledger.technical_term'),
                         'icon' => 'heroicon-o-academic-cap',
                         'url' => route('filament.admin.resources.synonym.technical-term-groups.index'),
+                        'color' => 'success',
+                    ],
+                    [
+                        'title' => __('ledger.settings.folder'),
+                        'icon' => 'heroicon-o-folder',
+                        'url' => route('filament.admin.resources.folders.index'),
                         'color' => 'success',
                     ],
                 ],

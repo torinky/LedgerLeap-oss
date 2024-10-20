@@ -9,40 +9,6 @@
                               d="M4 6h16M4 12h8m-8 6h16"/>
                     </svg>
                 </label>
-                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
-                    {{--
-                                        <li>
-                                            <x-daisyui-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                                                {{ __('Dashboard') }}
-                                            </x-daisyui-nav-link>
-                                        </li>
-                    --}}
-                    <li>
-                        <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger')"
-                            @class(['disabled' => request()->routeIs('ledger.index')])
-                        >
-                            <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
-                        </x-daisyui-nav-link>
-                    </li>
-                    <li>
-                        <x-daisyui-nav-link :href="route('ledgerDefine.index')"
-                                            :active="request()->routeIs('ledgerDefine.index')"
-                            @class(['disabled' => request()->routeIs('ledger.settings')])
-                        >
-                            <i class="fas fa-cogs mr-2"></i>{{ __('ledger.settings') }}
-                        </x-daisyui-nav-link>
-                    </li>
-                    {{--
-                                        <li>
-                                            <a>Parent</a>
-                                            <ul class="p-2">
-                                                <li><a>Submenu 1</a></li>
-                                                <li><a>Submenu 2</a></li>
-                                            </ul>
-                                        </li>
-                                        <li><a>Item 3</a></li>
-                    --}}
-                </ul>
             </div>
             <div>
                 <label for="app-drawer" class="btn btn-ghost xl:hidden btn-square tooltip tooltip-bottom pt-4"
@@ -58,54 +24,16 @@
                 <i class="fas fa-book-open-reader mr-2"></i> {{ config('app.name', 'Laravel') }}
             </x-daisyui-nav-link>
         </div>
-        <div class="navbar-center hidden lg:flex">
-            <ul class="menu menu-horizontal px-1">
-                <li>
-                    <x-daisyui-nav-link
-                        :href="route('ledger.index')"
-                        :active="!request()->routeIs('ledger.index')"
-                        @class([
-                            'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => request()->routeIs('ledger.index'),
-                            'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity mx-2' => !request()->routeIs('ledger.index'),
-                        ])
-                    >
-                        <i class="fas fa-book mr-2"></i>{{ __('ledger.search_view') }}
-                    </x-daisyui-nav-link>
-                </li>
-                <li>
-                    <div role="button" tabindex="0" class="dropdown dropdown-hover dropdown-bottom p-0 m-0">
-                        <x-daisyui-nav-link
-                            tabindex="0"
-                            :active="request()->routeIs('ledgerDefine.index')"
-                            @class([
-                                'btn btn-neutral btn-sm w-32 opacity-70 hover:opacity-100 transition-opacity' => request()->routeIs('ledgerDefine.index'),
-                                'btn btn-neutral btn-sm btn-outline w-32 opacity-70 hover:opacity-100 transition-opacity' => !request()->routeIs('ledgerDefine.index'),
-                            ])
-                        >
-                            <i class="fas fa-cogs mr-2"></i>{{__('ledger.settings') }}
-                        </x-daisyui-nav-link>
-                        <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48"
-                            style="margin-left: 0">
-                            <li>
-                                <a href="{{ route('ledgerDefine.index') }}">
-                                    <i class="fas fa-book-open-reader mr-2"></i>{{ __('ledger.general_settings') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('filament.admin.resources.synonym.technical-term-groups.index') }}">
-                                    <i class="fas fa-comments mr-2"></i>{{ __('ledger.technical_term') }}
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-            </ul>
-        </div>
+
         <div class="navbar-end">
             {{--            <a class="btn">Button</a>--}}
+            <a tabindex="0" class="btn btn-ghost btn-sm tooltip tooltip-bottom pt-2" data-tip="{{__('ledger.setting')}}"
+               href="{{ route('filament.admin.pages.dashboard') }}">
+                <i class="fas fa-sliders"></i>
+            </a>
             <div class="dropdown dropdown-end">
                 {{--                <label tabindex="0" class="btn btn-ghost btn-circle avatar">--}}
-                <a tabindex="0" class="btn btn-ghost btn-sm">
+                <a tabindex="1" class="btn btn-ghost btn-sm">
                     {{--
                                         <div class="w-10 rounded-full">
                                             <img src="/images/stock/photo-1534528741775-53994a69daeb.jpg" />
@@ -113,7 +41,7 @@
                     --}}
                     {{ Auth::user()->name }}
                 </a>
-                <ul tabindex="1" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
+                <ul tabindex="2" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
                         <x-daisyui-nav-link :href="route('profile.edit')" class="justify-between">
                             {{ __('Profile') }}
@@ -134,7 +62,7 @@
                     </li>
                 </ul>
             </div>
-            <div tabindex="2">
+            <div tabindex="3">
                 <label class="swap swap-rotate btn btn-sm btn-ghost">
 
                     <!-- this hidden checkbox controls the state -->

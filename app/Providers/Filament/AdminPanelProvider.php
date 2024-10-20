@@ -38,15 +38,15 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-//                Pages\Dashboard::class,
-                \App\Filament\Pages\Dashboard::class
+                //                Pages\Dashboard::class,
+                \App\Filament\Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-//                Widgets\AccountWidget::class,
+                //                Widgets\AccountWidget::class,
                 DashboardLinksWidget::class,
 
-//                Widgets\FilamentInfoWidget::class,
+                //                Widgets\FilamentInfoWidget::class,
             ])
             ->topNavigation()  // これによりトップナビゲーションが有効になります
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
@@ -57,7 +57,7 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->activeIcon('heroicon-s-arrow-uturn-left')
                     ->sort(2),
-                NavigationItem::make(__('ledger.settings'))
+                NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')
                     ->activeIcon('heroicon-s-adjustments-vertical')
                     ->isActiveWhen(fn(): bool => request()->routeIs('filament.admin.pages.dashboard'))
@@ -67,7 +67,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([])
             /*            ->navigationGroups([
                             NavigationGroup::make()
-                                ->label(__('ledger.settings'))
+                                ->label(__('ledger.setting'))
                                 ->icon('heroicon-o-cog-8-tooth'),
                         ])
                         ->navigationItems([
@@ -79,12 +79,12 @@ class AdminPanelProvider extends PanelProvider
                             NavigationItem::make(__('ledger.general_settings'))
                                 ->url(fn() => route('ledgerDefine.index'))
             //                    ->icon('heroicon-o-book-open')
-                                ->group(__('ledger.settings'))  // オプション：グループを指定
+                                ->group(__('ledger.setting'))  // オプション：グループを指定
                                 ->sort(3),
                             NavigationItem::make(__('ledger.technical_term'))
                                 ->url(fn() => route('filament.admin.resources.synonym.technical-term-groups.index'))
             //                    ->icon('heroicon-o-chat-bubble-left-right')
-                                ->group(__('ledger.settings'))  // オプション：グループを指定
+                                ->group(__('ledger.setting'))  // オプション：グループを指定
                                 ->sort(3),
                             // 他のナビゲーションアイテムをここに追加
                         ])*/

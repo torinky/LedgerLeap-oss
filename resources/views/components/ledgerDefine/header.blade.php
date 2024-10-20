@@ -35,7 +35,7 @@
         <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
            class="btn btn-outline btn-primary btn-sm relative inline-flex"
            target="ledgerDefineEdit_{{$ledgerDefine->id}}}}"><i
-                class="fas fa-gears mr-1"></i> {{__('ledger.settings')}}</a>
+                class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}</a>
 
     </div>
 </div>

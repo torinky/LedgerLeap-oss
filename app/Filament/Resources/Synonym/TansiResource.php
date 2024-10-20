@@ -69,7 +69,7 @@ class TansiResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('ledger.settings');
+        return __('ledger.setting');
     }
 
     public static function getNavigationSort(): ?int

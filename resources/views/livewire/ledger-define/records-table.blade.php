@@ -111,17 +111,6 @@
                     </a>
 
                 </div>
-
-                <div class="mt-5 flex justify-center">
-                    <button class="btn btn-error btn-outline btn-xs opacity-70 hover:opacity-100"
-                            wire:click="fixFolderTree()"
-                    >
-                        <i class="fas fa-toolbox mr-2"></i>
-                        {{__('ledger.folder.fix')}}
-                    </button>
-
-
-                </div>
             </div>
         </div>
     </div>
