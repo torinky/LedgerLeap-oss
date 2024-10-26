@@ -232,4 +232,9 @@ return [
     'user' => 'ユーザー',
     'view' => 'ビュー',
     'yes' => 'はい',
+    'success' => '成功',
+    'action_success' => 'アクションが正常に実行されました。',
+    'error' => 'エラー',
+    'action_error' => 'アクションの実行に失敗しました:',
+
 ];
