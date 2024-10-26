@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
         $users = User::factory(10)->create();
         $this->call([
             UsersSeeder::class,
+            OrganizationSeeder::class,
             FolderSeeder::class,
         ]);
 

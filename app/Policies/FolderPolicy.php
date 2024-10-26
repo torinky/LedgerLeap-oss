@@ -22,48 +22,79 @@ class FolderPolicy
         //
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     *
-     * @return Response|bool
-     */
     public function restore(User $user, Folder $folder)
     {
-        return true;
-        //
-    }
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains($folder);
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     *
-     * @return Response|bool
-     */
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('restore_folders');
+
+        return $hasRoleInFolder && $hasPermission;
+    }
     public function forceDelete(User $user, Folder $folder)
     {
-        return true;
-        //
-    }
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains($folder);
 
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('force_delete_folders');
+
+        return $hasRoleInFolder && $hasPermission;
+    }
     public function view(User $user, Folder $folder)
     {
-//        return $user->hasPermissionTo('view_ledgers') || $folder->hasPermissionTo('view_ledgers');
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains($folder);
+
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('view_folders');
+
+        return $hasRoleInFolder && $hasPermission;
     }
+
 
     public function create(User $user)
     {
-        return true;
-//        return $user->hasPermissionTo('manage_ledger_defines');
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains(auth()->user()->current_folder);
+
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('create_folders');
+
+        return $hasRoleInFolder && $hasPermission;
     }
 
     public function update(User $user, Folder $folder)
     {
-        return true;
-//        return $user->hasPermissionTo('edit_ledgers') || $folder->hasPermissionTo('edit_ledgers');
-    }
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains($folder);
 
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('update_folders');
+
+        return $hasRoleInFolder && $hasPermission;
+    }
     public function delete(User $user, Folder $folder)
     {
-        return true;
-//        return $user->hasPermissionTo('delete_ledgers') || $folder->hasPermissionTo('delete_ledgers');
+        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
+        $userRoles = $user->roles;
+        $accessibleFolders = $userRoles->flatMap->folders;
+        $hasRoleInFolder = $accessibleFolders->contains($folder);
+
+        // ロールのパーミッションに従うかどうかをチェック
+        $hasPermission = $user->hasPermissionTo('delete_folders');
+
+        return $hasRoleInFolder && $hasPermission;
     }
 }
