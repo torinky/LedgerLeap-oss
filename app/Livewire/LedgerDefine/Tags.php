@@ -9,7 +9,9 @@ use Livewire\Component;
 class Tags extends Component
 {
     public $ledgerDefineId;
+
     public $tags = [];
+
     public $newTag = '';
 
     public function mount($ledgerDefineId)

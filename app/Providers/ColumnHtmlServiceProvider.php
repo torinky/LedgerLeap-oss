@@ -15,7 +15,7 @@ class ColumnHtmlServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton('ColumnHtml', function () {
-            return new ColumnHtmlService();
+            return new ColumnHtmlService;
         });
 
     }

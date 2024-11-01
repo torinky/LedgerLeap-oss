@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreFolderRequest;
-use App\Http\Requests\UpdateFolderRequest;
+use App\Http\Requests\Folder\StoreRequest;
+use App\Http\Requests\Folder\UpdateRequest;
 use App\Models\Folder;
 use Illuminate\Http\Response;
 
@@ -32,10 +32,9 @@ class FolderController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param StoreFolderRequest $request
      * @return Response
      */
-    public function store(StoreFolderRequest $request)
+    public function store(StoreRequest $request)
     {
         //
     }
@@ -43,7 +42,6 @@ class FolderController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param Folder $folder
      * @return Response
      */
     public function show(Folder $folder)
@@ -54,7 +52,6 @@ class FolderController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param Folder $folder
      * @return Response
      */
     public function edit(Folder $folder)
@@ -65,11 +62,9 @@ class FolderController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param UpdateFolderRequest $request
-     * @param Folder $folder
      * @return Response
      */
-    public function update(UpdateFolderRequest $request, Folder $folder)
+    public function update(UpdateRequest $request, Folder $folder)
     {
         //
     }
@@ -77,7 +72,6 @@ class FolderController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param Folder $folder
      * @return Response
      */
     public function destroy(Folder $folder)

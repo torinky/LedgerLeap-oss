@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Ledger;
 
-
 class UpdateRequest extends StoreRequest
 {
     /**

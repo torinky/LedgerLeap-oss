@@ -17,7 +17,7 @@ class FolderRelationManager extends RelationManager
 
     public static function getRecordTitleAttribute(): ?string
     {
-        return "title";
+        return 'title';
     }
 
     /*
@@ -75,5 +75,4 @@ class FolderRelationManager extends RelationManager
                 //
             ]);
     }
-
 }

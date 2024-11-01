@@ -9,14 +9,14 @@ use Livewire\Component;
 
 class ModifyColumn extends Component
 {
-//    https://laravel-livewire.com/screencasts/s8-dragging-list
+    //    https://laravel-livewire.com/screencasts/s8-dragging-list
     public $ledgerDefineRecord;
 
     public $columnTypes = [];
 
     public function mount(request $request)
     {
-        $ledgerDefine = new LedgerDefine();
+        $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
@@ -28,7 +28,7 @@ class ModifyColumn extends Component
     public function render(request $request)
     {
         return view('livewire.ledger-define.modify-column', [
-            'columnInputTypes' => ColumnDefine::typeLabels()
+            'columnInputTypes' => ColumnDefine::typeLabels(),
         ]);
     }
 
@@ -42,6 +42,7 @@ class ModifyColumn extends Component
         $this->ledgerDefineRecord->column_define = collect($columnOrder)->map(function ($order, $key) {
             $result = collect($this->ledgerDefineRecord->column_define)->where('id', (int)$order['value'])->firstOrFail();
             $result->order = $order['order'];
+
             return $result;
         })->toArray();
 
@@ -62,13 +63,14 @@ class ModifyColumn extends Component
             ->values()
             ->map(function ($columnDefine, $key) {
                 $columnDefine->order = $key + 1;
+
                 return $columnDefine;
             })
 //            ->dd()
 //            ->all();
             ->toArray();
 
-//      DBに投入しないと反映されない（レスポンスがhtmlなので変数がjsに再バインドされるわけでは無さそう）
+        //      DBに投入しないと反映されない（レスポンスがhtmlなので変数がjsに再バインドされるわけでは無さそう）
         $this->ledgerDefineRecord->save();
     }
 
@@ -85,7 +87,6 @@ class ModifyColumn extends Component
         $this->ledgerDefineRecord->save();
 
     }
-
 
     public function applyType()
     {

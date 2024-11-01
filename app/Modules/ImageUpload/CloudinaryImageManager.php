@@ -1,18 +1,18 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Modules\ImageUpload;
-
 
 use Cloudinary\Cloudinary;
 
 class CloudinaryImageManager implements ImageManagerInterface
 {
-//    private $cloudhinary;
+    //    private $cloudhinary;
 
     public function __construct(private Cloudinary $cloudinary)
     {
-//        $this->cloudinary = $cloudinary;
+        //        $this->cloudinary = $cloudinary;
     }
 
     public function save($file): string

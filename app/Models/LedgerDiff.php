@@ -49,5 +49,4 @@ class LedgerDiff extends Model
     {
         return $this->belongsTo(User::class, 'modifier_id');
     }
-
 }

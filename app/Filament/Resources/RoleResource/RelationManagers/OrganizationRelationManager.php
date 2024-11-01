@@ -15,10 +15,9 @@ class OrganizationRelationManager extends RelationManager
 {
     protected static string $relationship = 'Organizations';
 
-
     public static function getRecordTitleAttribute(): ?string
     {
-        return "name";
+        return 'name';
     }
 
     /*

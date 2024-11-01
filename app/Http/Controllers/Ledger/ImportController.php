@@ -19,7 +19,6 @@ class ImportController extends Controller
     /**
      * CSVファイルからLedgerの内容をインポートする
      *
-     * @param Request $request
      * @return RedirectResponse
      */
     public function importExcelCSV(Request $request)
@@ -28,12 +27,11 @@ class ImportController extends Controller
 
         $file = $request->file('csv_file');
 
-
         $ledgerDefine = LedgerDefine::where('id', $request->input('ledger_define_id'))
             ->first();
         $import = new LedgerImport($ledgerDefine);
 
-//        $columnDefines= $ledgerDefine->column_define;
+        //        $columnDefines= $ledgerDefine->column_define;
 
         // カラム定義を取得して、適切な変換ロジックを適用
         /*        foreach ($columnDefines as $columnDefine) {

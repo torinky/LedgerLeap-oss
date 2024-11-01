@@ -15,31 +15,34 @@ class ExportJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     /**
      * Ledger定義のID
      *
      * @var int
      */
     protected $ledgerDefineId;
+
     /**
      * キーワード情報
      *
      * @var array
      */
     protected $keywords = [];
+
     /**
      * フィルター情報
      *
      * @var array
      */
     protected $filter = [];
+
     /**
      * カラム定義情報
      *
      * @var object
      */
     protected $columnDefines;
+
     /**
      * ファイル名
      *
@@ -73,6 +76,4 @@ class ExportJob implements ShouldQueue
         $export = new LedgerExport($this->ledgerDefineId, $this->keywords, $this->filter, $this->columnDefines);
         Excel::store($export, $this->filename, 'public');
     }
-
-
 }

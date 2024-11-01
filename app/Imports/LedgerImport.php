@@ -18,19 +18,24 @@ use Maatwebsite\Excel\Events\AfterImport;
 use Maatwebsite\Excel\Events\BeforeImport;
 use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 
-class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedHeadingRow, WithCustomCsvSettings,
-    WithBatchInserts, WithChunkReading, WithEvents
+class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithCustomCsvSettings, WithEvents, WithGroupedHeadingRow, WithHeadingRow, WithUpserts
 {
     protected $ledgerDefine;
+
     protected $columnDefines;
+
     private $currentRows = 0;
+
     private $updateRows = 0;
+
     private $insertRows = 0;
 
-    private $importMode = Self::MODE_UPDATE;
+    private $importMode = self::MODE_UPDATE;
 
     const MODE_UPDATE = 1;
+
     const MODE_DESTOROY = 2;
+
     const MODE_INSERT = 3;
 
     /**
@@ -38,16 +43,16 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
      *
      * @param array $columnDefines Ledgerモデルのカラム定義情報
      */
-    public function __construct(LedgerDefine $ledgerDefine, $mode = Self::MODE_UPDATE)
+    public function __construct(LedgerDefine $ledgerDefine, $mode = self::MODE_UPDATE)
     {
         $this->ledgerDefine = $ledgerDefine;
         $this->columnDefines = $ledgerDefine->column_define;
         $this->id = $ledgerDefine->id;
         $this->importMode = $mode;
-//        デフォルトだと日本語の列名が無視される
+        //        デフォルトだと日本語の列名が無視される
         HeadingRowFormatter::default('none');
 
-        if ($this->importMode == Self::MODE_DESTOROY) {
+        if ($this->importMode == self::MODE_DESTOROY) {
             // 外部キー制約を一時的に無効にする
             Ledger::disableForeignKeyConstraints();
 
@@ -76,9 +81,9 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
     {
         $this->currentRows++;
         Cache::forever("current_rows_{$this->id}", $this->currentRows);
-//dd($this->currentRows);
+        //dd($this->currentRows);
         $id = '';
-        if ($this->importMode == Self::MODE_UPDATE) {
+        if ($this->importMode == self::MODE_UPDATE) {
             $id = $row['[[[id]]]'] ?? '';
         }
 
@@ -117,6 +122,7 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
             $columnValue = $contentData[$columnDefine->name] ?? null;
             $content[$columnDefine->id] = $columnDefine->restoreColumnValueFromText($columnValue);
         }
+
         // コンテンツを設定
         return $this->ledgerDefine->normalizeByColumnDefine($content);
     }
@@ -156,9 +162,9 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
             },
             AfterImport::class => function (AfterImport $event) {
                 Cache::put(["end_date_{$this->id}" => now()], now()->addMinute());
-//                Cache::forget("total_rows_{$this->id}");
-//                Cache::forget("start_date_{$this->id}");
-//                Cache::forget("current_rows_{$this->id}");
+                //                Cache::forget("total_rows_{$this->id}");
+                //                Cache::forget("start_date_{$this->id}");
+                //                Cache::forget("current_rows_{$this->id}");
             },
         ];
     }
@@ -176,5 +182,4 @@ class LedgerImport implements ToModel, WithUpserts, WithHeadingRow, WithGroupedH
     {
         return $this->currentRows;
     }
-
 }

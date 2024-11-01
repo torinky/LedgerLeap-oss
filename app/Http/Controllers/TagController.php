@@ -32,7 +32,6 @@ class TagController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param StoreTagRequest $request
      * @return Response
      */
     public function store(StoreTagRequest $request)
@@ -43,7 +42,6 @@ class TagController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param Tag $tag
      * @return Response
      */
     public function show(Tag $tag)
@@ -54,7 +52,6 @@ class TagController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param Tag $tag
      * @return Response
      */
     public function edit(Tag $tag)
@@ -65,8 +62,6 @@ class TagController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param UpdateTagRequest $request
-     * @param Tag $tag
      * @return Response
      */
     public function update(UpdateTagRequest $request, Tag $tag)
@@ -77,7 +72,6 @@ class TagController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param Tag $tag
      * @return Response
      */
     public function destroy(Tag $tag)

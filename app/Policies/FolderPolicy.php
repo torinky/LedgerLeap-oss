@@ -34,6 +34,7 @@ class FolderPolicy
 
         return $hasRoleInFolder && $hasPermission;
     }
+
     public function forceDelete(User $user, Folder $folder)
     {
         // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
@@ -46,6 +47,7 @@ class FolderPolicy
 
         return $hasRoleInFolder && $hasPermission;
     }
+
     public function view(User $user, Folder $folder)
     {
         // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
@@ -58,7 +60,6 @@ class FolderPolicy
 
         return $hasRoleInFolder && $hasPermission;
     }
-
 
     public function create(User $user)
     {
@@ -85,6 +86,7 @@ class FolderPolicy
 
         return $hasRoleInFolder && $hasPermission;
     }
+
     public function delete(User $user, Folder $folder)
     {
         // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック

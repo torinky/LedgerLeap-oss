@@ -34,8 +34,9 @@ class CreateRequest extends FormRequest
         if (empty($columnDefine)) {
             return [];
         }
-//        第1階層は強制的に配列にする（保存されるjsonがオブジェクトになってしまわないようにする対策）
+        //        第1階層は強制的に配列にする（保存されるjsonがオブジェクトになってしまわないようにする対策）
         $columnDefine = array_values($columnDefine);
+
         return $columnDefine;
 
     }
@@ -43,6 +44,7 @@ class CreateRequest extends FormRequest
     public function title()
     {
         $title = $this->input('title');
+
         return $title;
     }
 

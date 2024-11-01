@@ -17,11 +17,20 @@ class UsersSeeder extends Seeder
     {
         //        User::factory(10)->create();
         User::make([
-            'name' => 'aaa',
-            'email' => 'aaa@aaa',
+            'name' => 'super_admin',
+            'email' => 'super_admin@ll.com',
             'email_verified_at' => now(),
             'password' => '$2y$10$O4kUm3TSL9gIhws1xNQcJ.d3kbis37b.aZo5we665Z.wYV.L.QaEi', // aaaaaaaa
             'remember_token' => Str::random(10),
         ])->save();
+
+        User::make([
+            'name' => 'general_user',
+            'email' => 'general_user@ll.com',
+            'email_verified_at' => now(),
+            'password' => '$2y$10$O4kUm3TSL9gIhws1xNQcJ.d3kbis37b.aZo5we665Z.wYV.L.QaEi', // aaaaaaaa
+            'remember_token' => Str::random(10),
+        ])->save();
+
     }
 }

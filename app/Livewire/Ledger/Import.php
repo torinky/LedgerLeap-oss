@@ -15,21 +15,31 @@ class Import extends Component
     use WithFileUploads;
 
     public $ledgerDefine;
+
     public $totalRows = 0;
+
     public $importFile;
+
     public $batchId;
+
     public $importing = false;
+
     public $importFinished = false;
+
     public $importMode = LedgerImport::MODE_UPDATE;
+
     /**
      * @var |mixed
      */
     public $currentRows = 0;
+
     protected $listeners = ['refreshComponent' => '$refresh'];
+
     /**
      * @var |mixed
      */
     public mixed $insertRows;
+
     /**
      * @var |mixed
      */
@@ -39,7 +49,7 @@ class Import extends Component
     {
         $this->ledgerDefine = LedgerDefine::where('id', $request->route('ledgerDefineId'))
             ->first();
-//dd($request);
+        //dd($request);
     }
 
     public function render()
@@ -53,21 +63,19 @@ class Import extends Component
         $this->currentRows = Cache::get('current_rows_' . $this->ledgerDefine->id);
         $this->insertRows = Cache::get('insert_rows_' . $this->ledgerDefine->id);
         $this->updateRows = Cache::get('update_rows_' . $this->ledgerDefine->id);
-//        $this->importFinished = $this->importBatch->finished();
-        $this->importFinished = Cache::has("end_date_" . $this->ledgerDefine->id) && Cache::get("end_date_" . $this->ledgerDefine->id) < now();
+        //        $this->importFinished = $this->importBatch->finished();
+        $this->importFinished = Cache::has('end_date_' . $this->ledgerDefine->id) && Cache::get('end_date_' . $this->ledgerDefine->id) < now();
 
         if ($this->importFinished) {
-//            Storage::delete($this->importFilePath);
+            //            Storage::delete($this->importFilePath);
             $this->importing = false;
         }
 
-//        return cache('total_rows_'.$this->ledgerDefine->id);
+        //        return cache('total_rows_'.$this->ledgerDefine->id);
     }
-
 
     /**
      * CSVファイルからLedgerの内容をインポートする
-     *
      */
     public function importExcelCSV()
     {
@@ -76,16 +84,13 @@ class Import extends Component
         $this->dispatch('refreshComponent');
         // ファイルアップロードのバリデーションなどを行う必要があるかもしれません
 
-//        $file = $request->file('csv_file');
-
+        //        $file = $request->file('csv_file');
 
         $import = new LedgerImport($this->ledgerDefine, $this->importMode);
-
 
         // maatwebsite/excel パッケージを使用してインポートを実行
         Excel::import($import, $this->importFile, null, \Maatwebsite\Excel\Excel::CSV);
         $this->importFile = null;
 
     }
-
 }

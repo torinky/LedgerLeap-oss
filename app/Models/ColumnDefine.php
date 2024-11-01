@@ -8,30 +8,40 @@ use RuntimeException;
 class ColumnDefine
 {
     // 列の種類に関する設定
-    static $useOptionsTypes = ['select', 'chk'];
-    static $types = [
-        "number",       // 数値型
-        "text",         // テキストボックス
-        "textarea",     // テキストエリア
-        "chk",          // チェックボックス
-        "select",       // セレクトボックス
-        "YMD",          // 日付（年月日）
+    public static $useOptionsTypes = ['select', 'chk'];
+
+    public static $types = [
+        'number',       // 数値型
+        'text',         // テキストボックス
+        'textarea',     // テキストエリア
+        'chk',          // チェックボックス
+        'select',       // セレクトボックス
+        'YMD',          // 日付（年月日）
         'files',        // ファイル選択
     ];
-    static $shouldConvert2JsonTypes = [
+
+    public static $shouldConvert2JsonTypes = [
         'files',        // ファイル選択
-        "chk",          // チェックボックス
+        'chk',          // チェックボックス
     ];
 
     // プロパティの定義
     public $id;                 // ID
+
     public $name;               // 列名
+
     public $type;               // 列の種類
+
     public $order;              // 列の表示順序
+
     public $useOptions;         // オプション使用フラグ
+
     public $options;            // オプション値の配列
+
     public $required;           // 必須項目フラグ
+
     public $doNotDuplicate;     // 重複不可フラグ
+
     public $sortBy;             // ソート対象フラグ
 
     /**
@@ -39,16 +49,18 @@ class ColumnDefine
      *
      * 引数の数に応じてオブジェクトによる初期化か値による初期化かを振り分ける
      */
-    function __construct()
+    public function __construct()
     {
         $a = func_get_args();
         $i = func_num_args();
         if ($i == 1) {
-            call_user_func_array(array($this, 'constructByObject'), $a);
+            call_user_func_array([$this, 'constructByObject'], $a);
+
             return;
         }
         if ($i > 1) {
-            call_user_func_array(array($this, 'constructByArgs'), $a);
+            call_user_func_array([$this, 'constructByArgs'], $a);
+
             return;
         }
         throw new Exception('無効な引数');
@@ -76,25 +88,17 @@ class ColumnDefine
     /**
      * 値による初期化
      *
-     * @param int $id
-     * @param string $name
-     * @param string $type
-     * @param int $order
-     * @param array $options
-     * @param bool $required
-     * @param bool $doNotDuplicate
-     * @param bool $sortBy
      * @return void
      */
     public function constructByArgs(
-        int    $id,
+        int   $id,
         string $name,
         string $type = 'text',
-        int    $order = 1,
-        array  $options = [],
-        bool   $required = false,
-        bool   $doNotDuplicate = false,
-        bool   $sortBy = false
+        int   $order = 1,
+        array $options = [],
+        bool  $required = false,
+        bool  $doNotDuplicate = false,
+        bool  $sortBy = false
     )
     {
         $this->id = (int)$id;
@@ -110,8 +114,6 @@ class ColumnDefine
 
     /**
      * 列の種類を設定する
-     *
-     * @param string $type
      */
     public function setType(string $type): void
     {
@@ -124,8 +126,6 @@ class ColumnDefine
 
     /**
      * オプション使用フラグを初期化する
-     *
-     * @return void
      */
     private function initUseOptions(): void
     {
@@ -137,16 +137,16 @@ class ColumnDefine
      *
      * @return array
      */
-    static function typeLabels()
+    public static function typeLabels()
     {
         return [
-            "number" => __('ledger.form.auto_numbering'), // 自動採番
-            "text" => __('ledger.form.text'), // テキストボックス
-            "textarea" => __('ledger.form.textarea'), // テキストエリア
-            "chk" => __('ledger.form.check'), // チェックボックス
-            "select" => __('ledger.form.select'), // セレクトボックス
-            "YMD" => __('ledger.form.datetime'), // 日付（年月日）
-            "files" => __('ledger.form.upload'), // ファイル選択
+            'number' => __('ledger.form.auto_numbering'), // 自動採番
+            'text' => __('ledger.form.text'), // テキストボックス
+            'textarea' => __('ledger.form.textarea'), // テキストエリア
+            'chk' => __('ledger.form.check'), // チェックボックス
+            'select' => __('ledger.form.select'), // セレクトボックス
+            'YMD' => __('ledger.form.datetime'), // 日付（年月日）
+            'files' => __('ledger.form.upload'), // ファイル選択
         ];
     }
 
@@ -161,6 +161,7 @@ class ColumnDefine
         if (!empty($columnValue) && in_array($this->type, self::$shouldConvert2JsonTypes)) {
             return json_encode($columnValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
+
         return $columnValue;
     }
 
@@ -178,7 +179,7 @@ class ColumnDefine
                 return $decodedValue;
             }
         }
+
         return $convertedValue;
     }
-
 }

@@ -6,7 +6,6 @@ use Illuminate\Support\Str;
 
 /**
  * Class MysqlGrammar
- * @package App\Database\Query\Grammar
  */
 class MySqlGrammar extends \Illuminate\Database\Query\Grammars\MySqlGrammar
 {
@@ -28,13 +27,11 @@ class MySqlGrammar extends \Illuminate\Database\Query\Grammars\MySqlGrammar
             return $parts[0];
         }
 
-//        配列に対応
+        //        配列に対応
         if (is_numeric($segment)) {
             return '[' . $segment . ']';
         }
 
         return '"' . $segment . '"';
     }
-
 }
-

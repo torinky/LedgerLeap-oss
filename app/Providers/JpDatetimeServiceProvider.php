@@ -15,7 +15,7 @@ class JpDatetimeServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton('JpDatetime', function () {
-            return new JpDatetimeService();
+            return new JpDatetimeService;
         });
     }
 

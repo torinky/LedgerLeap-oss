@@ -157,7 +157,7 @@ class ModifyColumn extends CreateColumn
 
     public function storeLedgerDiff(): void
     {
-        $ledgerDiff = new LedgerDiff();
+        $ledgerDiff = new LedgerDiff;
         $ledgerDiff->timestamps = false;
         $ledgerDiff->create([
             'content' => $this->ledgerRecord->content,

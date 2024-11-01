@@ -56,7 +56,7 @@ class ColumnHtmlService
             if (!empty($displayValues)) {
                 $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
             }
-//            var_dump($this->initialValue);
+            //            var_dump($this->initialValue);
         } else {
             $html = $this->initialValue;
         }
@@ -139,8 +139,9 @@ class ColumnHtmlService
         $this->attachmentContents = $contents;
         if (!empty($contents)) {
 
-//            dd($this->setAttachmentContents);
+            //            dd($this->setAttachmentContents);
         }
+
         return $this;
     }
 

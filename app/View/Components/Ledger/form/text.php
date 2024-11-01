@@ -7,7 +7,6 @@ use Illuminate\Contracts\View\View;
 
 class text extends BaseInput
 {
-
     /**
      * Get the view / contents that represent the component.
      *

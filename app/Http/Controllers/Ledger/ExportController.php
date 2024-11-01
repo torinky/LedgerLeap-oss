@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ExportController extends Controller
 {
-
     /**
      * CSVファイルとしてLedgerの内容をダウンロードする
      *

@@ -49,5 +49,4 @@ class Dashboard extends \Filament\Pages\Dashboard
                 ->send();
         }
     }
-
 }

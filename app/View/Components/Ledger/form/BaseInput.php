@@ -7,6 +7,7 @@ use Illuminate\View\Component;
 class BaseInput extends Component
 {
     public $columnDefine;
+
     public $ledgerRecord;
 
     /**
@@ -22,11 +23,8 @@ class BaseInput extends Component
 
     /**
      * Get the view / contents that represent the component.
-     *
-     * @return
      */
     public function render()
     {
-        return;
     }
 }

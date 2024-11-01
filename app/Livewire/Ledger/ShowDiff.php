@@ -10,9 +10,13 @@ use Livewire\Component;
 class ShowDiff extends Component
 {
     public $ledgerRecord;
+
     public $ledgerId;
+
     public $offset = 0;
+
     public $nowLedgerRecord;
+
     public $ledgerDiffCount = 0;
 
     public function mount(Request $request)
@@ -26,8 +30,7 @@ class ShowDiff extends Component
         $this->ledgerRecord = $this->nowLedgerRecord;
         //リレーション先の値はlivewireではフロントエンドに伝わらないので個別にpublicに切り出す
         $this->ledgerDiffCount = $this->ledgerRecord->ledger_diff_count;
-//        dd($ledgerRecord);
-
+        //        dd($ledgerRecord);
 
     }
 
@@ -36,9 +39,6 @@ class ShowDiff extends Component
         return view('livewire.ledger.show-diff');
     }
 
-    /**
-     * @return void
-     */
     public function changeOffset($newOffset = 0): void
     {
         if ($newOffset > $this->ledgerDiffCount) {

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Modules\ImageUpload;
@@ -10,7 +11,6 @@ interface ImageManagerInterface
 {
     /**
      * @param File|UploadedFile|string $file
-     * @return string
      */
     public function save($file): string;
 

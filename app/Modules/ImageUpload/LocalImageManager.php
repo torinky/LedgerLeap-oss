@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Modules\ImageUpload;
@@ -10,7 +11,8 @@ class LocalImageManager implements ImageManagerInterface
     public function save($file): string
     {
         $path = (string)Storage::putFile('public/images', $file);
-        $array = (array)explode("/", $path);
+        $array = (array)explode('/', $path);
+
         return end($array);
     }
 

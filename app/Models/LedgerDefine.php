@@ -15,7 +15,7 @@ use Illuminate\Routing\Route;
  */
 class LedgerDefine extends Model
 {
-    use HasFactory, SoftDeletes, HasModelRoles;
+    use HasFactory, HasModelRoles, SoftDeletes;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
@@ -111,5 +111,4 @@ class LedgerDefine extends Model
     {
         return $this->roles->flatMap->permissions->contains('name', $permission);
     }
-
 }

@@ -17,17 +17,15 @@ class LedgerService
     }
 
     /**
-     * @param string $keyword
      * @return Builder[]|Collection
      */
     public function searchLedgers(string $keyword)
     {
-//        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
+        //        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
         $result = Ledger::scopeSearch($keyword)->orderBy('created_at', 'DESC')->get();
-//        var_dump(DB::getQueryLog());
+
+        //        var_dump(DB::getQueryLog());
         return $result;
 
     }
-
-
 }

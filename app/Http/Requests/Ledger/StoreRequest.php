@@ -42,6 +42,7 @@ class StoreRequest extends FormRequest
         $content = $this->input('content');
         //id順になっているのでorderで並び替える
         ksort($content);
+
         return collect($content);
     }
 
@@ -49,5 +50,4 @@ class StoreRequest extends FormRequest
     {
         return $this->input('ledger_define_id');
     }
-
 }

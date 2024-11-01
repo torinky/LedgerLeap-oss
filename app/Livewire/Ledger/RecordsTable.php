@@ -154,6 +154,7 @@ use Psr\Container\NotFoundExceptionInterface;
      */
     public function render(SearchContext $searchContext)
     {
+        $this->authorize('view_ledger_defines', LedgerDefine::class);
         $this->initSearchContext();
 
         // Exportに検索条件を伝えるためにイベントをトリガ

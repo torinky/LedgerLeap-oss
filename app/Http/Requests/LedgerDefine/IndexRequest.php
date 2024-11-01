@@ -32,5 +32,4 @@ class IndexRequest extends FormRequest
     {
         return $this->input('folderId') ?? $this->route('folderId') ?? 1;
     }
-
 }

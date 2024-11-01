@@ -7,7 +7,6 @@ use App\Http\Requests\Ledger\SearchRequest;
 use App\Services\LedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
@@ -25,7 +24,7 @@ class SearchController extends Controller
             $ledgers = $ledgerService->getLedgers();
         }
 
-//dd($ledgers);
+        //dd($ledgers);
 
         return view('ledger.index')
             ->with(compact('ledgers'));

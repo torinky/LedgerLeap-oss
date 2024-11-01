@@ -31,6 +31,7 @@ class StoreRequest extends FormRequest
     public function title()
     {
         $title = $this->input('title');
+
         return $title;
     }
 
@@ -38,5 +39,4 @@ class StoreRequest extends FormRequest
     {
         return $this->input('folderId') ?? $this->route('folderId') ?? 1;
     }
-
 }

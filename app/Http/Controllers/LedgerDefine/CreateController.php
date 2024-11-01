@@ -13,6 +13,7 @@ class CreateController extends Controller
 {
     public function create(CreateRequest $request): \Illuminate\Contracts\View\View
     {
+        $this->authorize('create_ledger_defines', LedgerDefine::class);
         $rootFolder = Folder::root()->get();
         $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
         $folderRecords = $rootFolder->merge($folderRecords);
@@ -22,10 +23,6 @@ class CreateController extends Controller
 
     }
 
-    /**
-     * @param CreateRequest $request
-     * @return RedirectResponse
-     */
     public function store(CreateRequest $request): RedirectResponse
     {
         $ledgerDefine = new LedgerDefine;
@@ -39,5 +36,4 @@ class CreateController extends Controller
             ->with('status', __('ledger definition stored successfully !'));
 
     }
-
 }

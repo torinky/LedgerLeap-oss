@@ -16,13 +16,20 @@ use Livewire\Component;
 class Export extends Component
 {
     public $batchId;
+
     public $exporting = false;
+
     public $exportFinished = false;
+
     public $exportFilename = 'transactions.csv';
+
     public $keywords = [];
+
     public $filter = [];
+
     public ?int $ledgerDefineId = null;
-//    protected $listeners = ['refreshChildren' => 'updateFromParent'];
+
+    //    protected $listeners = ['refreshChildren' => 'updateFromParent'];
     private ?LedgerExport $ledgerExport = null;
 
     /**
@@ -47,9 +54,9 @@ class Export extends Component
     public function mount($ledgerDefineId, $keywords, $filter)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-//        $this->keywords = json_decode($keywords, true);
+        //        $this->keywords = json_decode($keywords, true);
         $this->keywords = $keywords;
-//        $this->filter = json_decode($filter, true);
+        //        $this->filter = json_decode($filter, true);
         $this->filter = $filter;
         $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title . '.csv';
     }
@@ -80,6 +87,7 @@ class Export extends Component
     public function downloadExport()
     {
         $headers = ['Content-Disposition' => 'attachment; filename="' . $this->exportFilename . '"'];
+
         return Storage::download('public/' . $this->exportFilename, $this->exportFilename, $headers);
     }
 
@@ -96,5 +104,4 @@ class Export extends Component
     {
         return view('livewire.ledger.export');
     }
-
 }

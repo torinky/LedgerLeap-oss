@@ -162,6 +162,7 @@ class Ledger extends Model
      * Ledgerを削除する際に関連するAttachedFileも削除する。
      *
      * @return bool|null
+     *
      * @throws Exception
      */
     public function delete()

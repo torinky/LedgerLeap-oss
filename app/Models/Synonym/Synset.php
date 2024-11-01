@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Synset extends Model
 {
     public $incrementing = false;
+
     protected $connection = 'wordnet';
+
     protected $table = 'synset';
+
     public $timestamps = false;
 
     protected $fillable = ['synset', 'pos', 'name', 'src'];

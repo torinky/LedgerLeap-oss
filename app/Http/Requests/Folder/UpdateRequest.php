@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Folder;
 
-
 class UpdateRequest extends StoreRequest
 {
     /**

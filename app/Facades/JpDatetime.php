@@ -11,5 +11,4 @@ class JpDatetime extends Facade
     {
         return JpDatetimeService::class;
     }
-
 }

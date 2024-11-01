@@ -13,7 +13,7 @@ class UpdateController extends Controller
 {
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
-        $ledgerDefine = new LedgerDefine();
+        $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 
         $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();

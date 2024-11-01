@@ -13,7 +13,6 @@ class MySqlConnection extends \Illuminate\Database\MySqlConnection
      */
     protected function getDefaultQueryGrammar()
     {
-        return $this->withTablePrefix(new MySqlGrammar());
+        return $this->withTablePrefix(new MySqlGrammar);
     }
-
 }

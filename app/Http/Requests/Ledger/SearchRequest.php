@@ -8,10 +8,9 @@ use Illuminate\Support\Str;
 
 class SearchRequest extends FormRequest
 {
-
     private $tags = [];
-    private $keywords = [];
 
+    private $keywords = [];
 
     /**
      * Perform additional processing on the request.
@@ -24,6 +23,7 @@ class SearchRequest extends FormRequest
         if (empty($text)) {
             $this->tags = [];
             $this->keywords = [];
+
             return;
         }
         if (is_array($text)) {
@@ -62,7 +62,7 @@ class SearchRequest extends FormRequest
     public function rules()
     {
         return [
-            'keyword' => 'max:140'
+            'keyword' => 'max:140',
         ];
     }
 
@@ -72,13 +72,11 @@ class SearchRequest extends FormRequest
     public function keyword()
     {
         return $this->input('keyword');
-//        return implode(' ',$this->keywords);
+        //        return implode(' ',$this->keywords);
     }
 
     /**
      * Get the keywords array.
-     *
-     * @return array
      */
     public function keywords(): array
     {
@@ -87,8 +85,6 @@ class SearchRequest extends FormRequest
 
     /**
      * Get the tags array.
-     *
-     * @return array
      */
     public function tags(): array
     {
@@ -99,11 +95,12 @@ class SearchRequest extends FormRequest
 
     public function folderId()
     {
-//        dd($this->route('folderId'));
+        //        dd($this->route('folderId'));
         $ledgerDefineId = $this->ledgerDefineId();
 
         if (!is_null($ledgerDefineId)) {
             $this->isFolderRequest = true;
+
             return LedgerDefine::find($ledgerDefineId)->folder_id;
         }
 
@@ -117,8 +114,10 @@ class SearchRequest extends FormRequest
         $ledgerDefineId = $this->input('defineId') ?? $this->route('ledgerDefineId') ?? null;
         if (!is_null($ledgerDefineId)) {
             $this->isLedgerDefineRequest = true;
+
             return $ledgerDefineId;
         }
+
         return null;
     }
 
@@ -128,6 +127,7 @@ class SearchRequest extends FormRequest
         if (!is_array($filter)) {
             return [];
         }
+
         return $filter;
     }
 }

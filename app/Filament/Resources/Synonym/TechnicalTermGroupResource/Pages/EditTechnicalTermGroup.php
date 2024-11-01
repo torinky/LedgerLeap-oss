@@ -29,6 +29,7 @@ class EditTechnicalTermGroup extends EditRecord
 
             $data['synonyms'] = $synonyms;
         }
+
         return $data;
     }
 
@@ -43,5 +44,4 @@ class EditTechnicalTermGroup extends EditRecord
 
         return $data;
     }
-
 }

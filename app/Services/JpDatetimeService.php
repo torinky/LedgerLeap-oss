@@ -7,7 +7,6 @@ namespace App\Services;
  */
 class JpDatetimeService
 {
-
     /** 元号用設定
      * 日付はウィキペディアを参照しました
      * http://ja.wikipedia.org/wiki/%E5%85%83%E5%8F%B7%E4%B8%80%E8%A6%A7_%28%E6%97%A5%E6%9C%AC%29
@@ -51,7 +50,7 @@ class JpDatetimeService
     public static function date($format, $timestamp = null): string
     {
         // 和暦関連のオプションがある場合は和暦取得
-        $gengo = array();
+        $gengo = [];
         $timestamp = is_null($timestamp) ? time() : $timestamp;
         if (preg_match('/[J|b|K|k]/', $format)) {
             foreach (self::$gengoList as $g) {
@@ -117,6 +116,4 @@ class JpDatetimeService
 
         return date($format, $timestamp);
     }
-
-
 }

@@ -28,7 +28,18 @@ class LedgerDefinePolicy
      */
     public function restore(User $user, LedgerDefine $ledgerDefine)
     {
-        //
+        $userRoles = $user->roles;
+        $folderRoles = $ledgerDefine->folder->roles;
+
+        foreach ($userRoles as $userRole) {
+            if ($folderRoles->contains($userRole)) {
+                if ($userRole->hasPermissionTo('restore_ledger_defines')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -38,28 +49,78 @@ class LedgerDefinePolicy
      */
     public function forceDelete(User $user, LedgerDefine $ledgerDefine)
     {
-        //
+        $userRoles = $user->roles;
+        $folderRoles = $ledgerDefine->folder->roles;
+
+        foreach ($userRoles as $userRole) {
+            if ($folderRoles->contains($userRole)) {
+                if ($userRole->hasPermissionTo('force_delete_ledger_defines')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     use HandlesAuthorization;
 
     public function view(User $user, LedgerDefine $ledgerDefine)
     {
-        return $user->hasPermissionTo('view_ledgers') || $ledgerDefine->hasPermissionTo('view_ledgers');
+        $userRoles = $user->roles;
+        $folderRoles = $ledgerDefine->folder->roles;
+
+        foreach ($userRoles as $userRole) {
+            if ($folderRoles->contains($userRole)) {
+                if ($userRole->hasPermissionTo('view_ledger_defines')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function create(User $user)
     {
-        return $user->hasPermissionTo('manage_ledger_defines');
+        foreach ($user->roles as $role) {
+            if ($role->hasPermissionTo('create_ledger_defines')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function update(User $user, LedgerDefine $ledgerDefine)
     {
-        return $user->hasPermissionTo('edit_ledgers') || $ledgerDefine->hasPermissionTo('edit_ledgers');
+        $userRoles = $user->roles;
+        $folderRoles = $ledgerDefine->folder->roles;
+
+        foreach ($userRoles as $userRole) {
+            if ($folderRoles->contains($userRole)) {
+                if ($userRole->hasPermissionTo('update_ledger_defines')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function delete(User $user, LedgerDefine $ledgerDefine)
     {
-        return $user->hasPermissionTo('delete_ledgers') || $ledgerDefine->hasPermissionTo('delete_ledgers');
+        $userRoles = $user->roles;
+        $folderRoles = $ledgerDefine->folder->roles;
+
+        foreach ($userRoles as $userRole) {
+            if ($folderRoles->contains($userRole)) {
+                if ($userRole->hasPermissionTo('delete_ledger_defines')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

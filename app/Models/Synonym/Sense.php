@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Sense extends Model
 {
     public $incrementing = false;
+
     protected $connection = 'wordnet';
+
     protected $table = 'sense';
+
     public $timestamps = false;
 
     protected $primaryKey = ['wordid', 'synset'];

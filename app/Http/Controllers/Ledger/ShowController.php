@@ -13,16 +13,15 @@ class ShowController extends Controller
     /**
      * Handle the incoming request.
      *
-     * @param Request $request
      * @return \Illuminate\Contracts\View\View
      */
     public function __invoke(Request $request, LedgerService $ledgerService)
     {
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledgerId = (int)$request->route('ledgerId');
 
         $ledgerRecord = $ledger->with(['define', 'modifier'])->withCount('ledgerDiff')->where('ledgers.id', $ledgerId)->firstOrFail();
-//        dd($ledgerRecord);
+        //        dd($ledgerRecord);
 
         return View::make('ledger.show', compact('ledgerRecord'));
     }

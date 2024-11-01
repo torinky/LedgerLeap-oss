@@ -132,7 +132,7 @@ class CreateColumn extends Component
             'originalName' => $file->getClientOriginalName(),
             'hashedBaseName' => basename($fileHashName),
             'hashedName' => $fileHashName,
-//            'meta' => null,
+            //            'meta' => null,
         ];
 
         //        画像ファイルの場合はサムネイルを作る
@@ -142,7 +142,7 @@ class CreateColumn extends Component
         //        dd($file->getClientMimeType(),$file->getRealPath());
         if (Str::endsWith($file->getRealPath(), ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'])) {
             // Create a thumbnail of the image using Intervention Image Library
-            $imageManager = new ImageManager();
+            $imageManager = new ImageManager;
             $img = Image::make($file->getRealPath());
             $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
                 $constraint->aspectRatio();
@@ -156,18 +156,17 @@ class CreateColumn extends Component
                 if (empty($result->meta->content)) {
                     $result->meta->content = $tikaClient->getText($file->getRealPath());
                 }*/
-//        dd($result);
+        //        dd($result);
         //        return $filenames;ß
-
 
         $this->newAttachedFiles[] = [
             'filename' => $file->getClientOriginalName(),
             'hashedbasename' => basename($fileHashName),
             'path' => $fileHashName,
             'mime' => $file->getClientMimeType(),
-//            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
+            //            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
-//            'contain_content' => ! empty($result->meta->content),
+            //            'contain_content' => ! empty($result->meta->content),
             'contain_content' => false,
             'optimized' => false,
             'column_id' => $columnId,
