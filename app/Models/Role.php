@@ -8,6 +8,11 @@ use Spatie\Permission\PermissionRegistrar;
 
 class Role extends SpatieRole
 {
+    protected $fillable = [
+        'name', 'gurd_name',
+        'discription',
+    ];
+
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'role_tag')
@@ -31,7 +36,7 @@ class Role extends SpatieRole
     public function folders()
     {
 
-        return $this->morphedByMany(\App\Models\Folder::class, 'model',
+        return $this->morphedByMany(Folder::class, 'model',
             config('permission.table_names.model_has_roles'),
             app(PermissionRegistrar::class)->pivotRole,
             config('permission.column_names.model_morph_key')

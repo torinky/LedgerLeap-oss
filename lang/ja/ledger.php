@@ -47,6 +47,10 @@ return [
     'create' => '新規追加',
     'create_message' => '新規登録する',
     'create_title' => '台帳に新規追加',
+    'creator' => [
+        'name' => '作成者',
+    ],
+    'created_at' => '作成日',
     'define' => [
         'create' => '台帳の定義を新規作成',
         'create_message' => '台帳の定義を登録しましょう',
@@ -94,6 +98,7 @@ return [
         'remove_message' => 'このフォルダーを削除しようとしています',
         'title' => 'フォルダー名',
         'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
+        'scoped' => '対象フォルダ',
     ],
     'form' => [
         'auto_numbering' => '自動採番',
@@ -143,7 +148,7 @@ return [
         'created_at' => '作成 : ',
         'updated_at' => '更新 : ',
     ],
-    'new' => '新しい',
+    'new' => '新着',
     'no' => 'いいえ',
     'no_synonyms' => '同義語なし',
     'open' => '開ける',
@@ -215,6 +220,7 @@ return [
         'self' => '現在のウィンドウで開く',
         'top' => '一番上のフレームで開く',
     ],
+    'title' => '台帳名',
     'technical_term' => '技術用語',
     'type_here' => 'ここに入力',
     'translate' => '翻訳する',
@@ -236,5 +242,11 @@ return [
     'action_success' => 'アクションが正常に実行されました。',
     'error' => 'エラー',
     'action_error' => 'アクションの実行に失敗しました:',
-
+    'organizations' => [
+        'name' => '組織名',
+        'parent' => '親組織',
+        'children' => '配下組織',
+        'scoped' => '対象組織',
+    ],
+    'description' => '説明',
 ];

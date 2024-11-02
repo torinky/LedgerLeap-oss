@@ -32,17 +32,21 @@ class OrganizationResource extends Resource
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 Forms\Components\TextInput::make('name')
+                    ->label(__('ledger.organizations.name'))
                     ->required()
                     ->maxLength(255),
                 Forms\Components\Textarea::make('description')
+                    ->label(__('ledger.description'))
                     ->maxLength(65535),
                 Forms\Components\Select::make('roles')
+                    ->label(__('ledger.settings.roles'))
                     ->multiple()
                     ->relationship('roles', 'name'),
-                Forms\Components\Select::make('permissions')
-                    ->multiple()
-                    ->relationship('permissions', 'name'),
+                /*                Forms\Components\Select::make('permissions')
+                                    ->multiple()
+                                    ->relationship('permissions', 'name'),*/
                 SelectTree::make('parent_id')
+                    ->label(__('ledger.organizations.parent'))
                     ->relationship('parent', 'name', 'parent_id')
                     ->withCount()
 //                    ->alwaysOpen()
@@ -98,7 +102,7 @@ class OrganizationResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\UsersRelationManager::class,
+            RelationManagers\UserRelationManager::class,
             RelationManagers\ChildrenRelationManager::class,
         ];
     }

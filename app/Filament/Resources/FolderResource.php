@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -38,10 +39,12 @@ class FolderResource extends Resource
                     ->relationship('modifier', 'name')
                     ->searchable()
                     ->required(),
-                Forms\Components\Select::make('parent_id')
+                SelectTree::make('parent_id')
                     ->label('Parent Folder')
-                    ->relationship('parent', 'title')
-                    ->nullable(),
+                    ->relationship('parent', 'title', 'parent_id')
+                    ->withCount()
+//                    ->alwaysOpen()
+                    ->defaultOpenLevel(10),
                 Forms\Components\Select::make('roles')
                     ->relationship('roles', 'name')
                     ->multiple()

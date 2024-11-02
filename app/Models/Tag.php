@@ -38,4 +38,9 @@ class Tag extends Model
         return $this->belongsToMany(Role::class, 'role_tag')
             ->using(RoleTag::class);
     }
+
+    public function ledgerDefine()
+    {
+        return $this->belongsTo(LedgerDefine::class, 'ledger_define_id');
+    }
 }

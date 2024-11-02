@@ -1,6 +1,6 @@
 <?php
 
-use Althinect\FilamentSpatieRolesPermissions\Resources\PermissionResource;
+use App\Filament\Resources\PermissionResource;
 use App\Filament\Resources\RoleResource;
 use App\Models\Organization;
 use App\Models\User;
@@ -75,6 +75,8 @@ return [
     'model_filter_key' => 'return \'%\'.$value;', // Eg: 'return \'%\'.$key.'\%\';'
 
     'user_name_column' => 'name',
+
+    'user_name_searchable_columns' => 'guard_name,name',
 
     /*
      * Icons to use for navigation
@@ -174,5 +176,6 @@ return [
         'user_model' => User::class,
 
         'policies_namespace' => 'App\Policies',
+
     ],
 ];

@@ -88,6 +88,12 @@ class DashboardLinksWidget extends Widget
                         'url' => route('filament.admin.resources.folders.index'),
                         'color' => 'success',
                     ],
+                    [
+                        'title' => __('ledger.tags'),
+                        'icon' => 'heroicon-o-tag',
+                        'url' => route('filament.admin.resources.tags.index'),
+                        'color' => 'success',
+                    ],
                 ],
             ],
         ];

@@ -8,10 +8,16 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-class UsersRelationManager extends RelationManager
+class UserRelationManager extends RelationManager
 {
     protected static string $relationship = 'users';
 
+//    protected static ?string $title= 'Users';
+
+    public static function getTitle($ownerRecord, string $pageClass): string
+    {
+        return __('ledger.user');
+    }
     public function form(Form $form): Form
     {
         return $form

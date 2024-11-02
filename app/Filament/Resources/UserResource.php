@@ -59,9 +59,9 @@ class UserResource extends Resource
                             }
                         }
                     }),
-                Forms\Components\Select::make('permissions')
+                /*                Forms\Components\Select::make('permissions')
                     ->multiple()
-                    ->relationship('permissions', 'name'),
+                    ->relationship('permissions', 'name'),*/
             ]);
     }
 

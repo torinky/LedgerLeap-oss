@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TagResource\Pages;
+use App\Filament\Resources\TagResource\RelationManagers\LedgerDefinesRelationManager;
 use App\Models\Tag;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -32,10 +33,10 @@ class TagResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Select::make('roles')
+                /*                Forms\Components\Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name')
-                    ->preload(),
+                    ->preload(),*/
                 //
             ]);
     }
@@ -44,25 +45,42 @@ class TagResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name'),
-                Tables\Columns\TagsColumn::make('roles.name'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('ledger.tag.tag'))
+                    ->sortable()
+                    ->searchable(),
+                //                Tables\Columns\TagsColumn::make('roles.name'),
+                Tables\Columns\TextColumn::make('ledgerDefines')
+                    ->label(__('ledger.title'))
+                    ->badge()
+                    ->getStateUsing(fn($record) => $record->ledgerDefine()->pluck('title'))
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('creator.name')->label(__('ledger.creator.name'))
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('created_at')->label(__('ledger.created_at'))
+                    ->sortable(),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('name');
     }
 
     public static function getRelations(): array
     {
         return [
+            LedgerDefinesRelationManager::class,
             //
         ];
     }

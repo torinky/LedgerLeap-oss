@@ -53,7 +53,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Create roles and assign permissions
         $roles = [
-            'Super Admin' => $permission,
+            'Super Admin' => $permissions,
             'Organization Admin' => [
                 'view_ledgers',
                 'edit_ledgers',
