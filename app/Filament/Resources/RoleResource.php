@@ -25,9 +25,21 @@ class RoleResource extends BaseRoleResource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    public static function getLabel(): string
+    {
+        return __('ledger.settings.roles');
+        //        return __('filament-spatie-roles-permissions::filament-spatie.section.permission');
+    }
+
     public static function getModelLabel(): string
     {
         return __('ledger.settings.roles');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.settings.roles');
+        //        return __('filament-spatie-roles-permissions::filament-spatie.section.permissions');
     }
 
     public static function form(Form $form): Form
@@ -132,8 +144,8 @@ class RoleResource extends BaseRoleResource
     public static function getRelations(): array
     {
         return [
-//            ...parent::getRelations(),
-//            TagsRelationManager::class,
+            //            ...parent::getRelations(),
+            //            TagsRelationManager::class,
             PermissionRelationManager::class,
             UserRelationManager::class,
             FolderRelationManager::class,

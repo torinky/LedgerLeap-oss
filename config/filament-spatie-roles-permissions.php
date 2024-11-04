@@ -30,6 +30,24 @@ return [
         'roles' => false,
     ],
 
+    'should_show_permissions_for_roles' => true,
+
+    /*
+     * Set as true to use simple modal resource.
+     */
+    'should_use_simple_modal_resource' => [
+        'permissions' => false,
+        'roles' => false,
+    ],
+
+    /*
+     * Set as true to remove empty state actions.
+     */
+    'should_remove_empty_state_actions' => [
+        'permissions' => false,
+        'roles' => false,
+    ],
+
     /**
      * Set to true to redirect to the resource index instead of the view
      */
@@ -67,7 +85,7 @@ return [
         ],
     ],
 
-    'default_guard_name' => null,
+    'default_guard_name' => 'web',
 
     // if false guard option will not be show on screen. You should set a default_guard_name in this case
     'should_show_guard' => true,
@@ -76,7 +94,22 @@ return [
 
     'user_name_column' => 'name',
 
-    'user_name_searchable_columns' => 'guard_name,name',
+    /*
+     * If user_name_column is an accessor from a model, then list columns to search.
+     * Default: null, will search by user_name_column
+     *
+     * Example:
+     *
+     * 'user_name_searchable_columns' => ['first_name', 'last_name']
+     *
+     * and in your model:
+     *
+     * public function getFullNameAttribute() {
+     *    return $this->first_name . ' ' . $this->last_name;
+     * }
+     *
+     */
+    'user_name_searchable_columns' => 'guard_name,name,email',
 
     /*
      * Icons to use for navigation
@@ -113,14 +146,13 @@ return [
             'createPermission' => 'create',
             'updatePermission' => 'update',
             'deletePermission' => 'delete',
+            'deleteAnyPermission' => 'delete-any',
+            'replicatePermission' => 'replicate',
             'restorePermission' => 'restore',
+            'restoreAnyPermission' => 'restore-any',
+            'reorderPermission' => 'reorder',
             'forceDeletePermission' => 'force-delete',
-
-            /*
-             * Additional Resource Permissions
-             */
-            'replicate',
-            'reorder',
+            'forceDeleteAnyPermission' => 'force-delete-any',
         ],
 
         /*
@@ -176,6 +208,5 @@ return [
         'user_model' => User::class,
 
         'policies_namespace' => 'App\Policies',
-
     ],
 ];

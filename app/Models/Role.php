@@ -9,8 +9,8 @@ use Spatie\Permission\PermissionRegistrar;
 class Role extends SpatieRole
 {
     protected $fillable = [
-        'name', 'gurd_name',
-        'discription',
+        'name', 'guard_name',
+        'description',
     ];
 
     public function tags()
