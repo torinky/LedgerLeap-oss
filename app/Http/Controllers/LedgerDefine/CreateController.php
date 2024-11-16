@@ -30,6 +30,8 @@ class CreateController extends Controller
             'title' => $request->title(),
             'folder_id' => $request->folderId(),
             'column_define' => $request->column_define(),
+            'creator_id' => auth()->id(),
+            'modifier_id' => auth()->id(),
         ]);
 
         return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $ledgerDefineRecord->id])

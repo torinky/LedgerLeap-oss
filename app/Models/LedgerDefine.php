@@ -25,12 +25,12 @@ class LedgerDefine extends Model
         'title', 'column_define', 'folder_id', 'creator_id', 'modifier_id',
     ];
 
-    public function ledger()
+    public function ledgers()
     {
         return $this->hasMany(Ledger::class, 'ledger_define_id');
     }
 
-    public function tag()
+    public function tags()
     {
         return $this->hasMany(Tag::class, 'ledger_define_id');
     }

@@ -43,10 +43,13 @@ class UpdateController extends Controller
     {
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 
-        LedgerDefine::find($ledgerDefineId)->ledgers()->delete();
+        $ledgerDefine = LedgerDefine::find($ledgerDefineId);
+
+        $ledgerDefine->ledgers()->delete();
+        $ledgerDefine->delete();
         session()->flash('status', 'ledger define deleted successfully !');
 
-        return View::make('static.message', ['windowTitle' => 'ledger setting']);
+        return View::make('ledger.message', ['windowTitle' => 'ledger setting']);
 
     }
 }

@@ -50,6 +50,7 @@ use Psr\Container\NotFoundExceptionInterface;
     #[Url(as: 'f')]
     public $selectedFolderIds = [];
 
+    #[Url(as: 'cf')]
     public $currentFolderId;
 
     private $tags = [];
@@ -92,7 +93,8 @@ use Psr\Container\NotFoundExceptionInterface;
         $this->initSearchContext();
 
         // 現在のフォルダーIDを初期化
-        $this->currentFolderId = $request->folderId();
+        $this->selectedFolderId = $request->folderId();
+        $this->currentFolderId = $request->currentFolderId();
 
         // もし台帳IDが指定されていれば、選択済みリストに追加
         if ($request->ledgerDefineId()) {

@@ -112,7 +112,7 @@ class CreateColumn extends Component
             'creator_id' => Auth::user()->id,
             'modifier_id' => Auth::user()->id,
         ]);
-
+        //dd($this->content);
         $this->addAttachedFileRecord();
 
         return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])

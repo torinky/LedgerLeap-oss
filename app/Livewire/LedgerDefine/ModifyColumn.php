@@ -14,6 +14,10 @@ class ModifyColumn extends Component
 
     public $columnTypes = [];
 
+    public $maxColumnId = 0;
+
+    public $maxColumnOrder = 0;
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
@@ -22,6 +26,9 @@ class ModifyColumn extends Component
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
 
         $this->columnTypes = collect($this->ledgerDefineRecord->column_define)->pluck('type', 'id')->toArray();
+        // idを0から開始できるようにする
+        $this->maxColumnId = collect($this->ledgerDefineRecord->column_define)->pluck('id')->max() - 1;
+        $this->maxColumnOrder = collect($this->ledgerDefineRecord->column_define)->pluck('order')->max();
 
     }
 
@@ -76,12 +83,13 @@ class ModifyColumn extends Component
 
     public function addColumn()
     {
-        $maxId = collect($this->ledgerDefineRecord->column_define)->pluck('id')->max();
-        $maxOrder = collect($this->ledgerDefineRecord->column_define)->pluck('order')->max();
+
+        $this->maxColumnId++;
+        $this->maxColumnOrder++;
 
         $this->ledgerDefineRecord->column_define = collect($this->ledgerDefineRecord->column_define)
             ->add(
-                new ColumnDefine($maxId + 1, 'no name', 'text', $maxOrder + 1)
+                new ColumnDefine($this->maxColumnId, 'no name', 'text', $this->maxColumnOrder)
             )
             ->toArray();
         $this->ledgerDefineRecord->save();

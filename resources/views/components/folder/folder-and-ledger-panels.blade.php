@@ -47,7 +47,17 @@
                 wire:key="selected_ledger_{{$ledgerDefineRecord->id}}">
 
             <i class=" place-self-center fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} text-3xl "></i>
-            <div class="ledgerTitle text-base mt-2 mb-2 break-all">{{$ledgerDefineRecord->title}}</div>
+            <div class="ledgerTitle text-base mt-2 mb-2 break-all">{{$ledgerDefineRecord->title}}
+
+                @if($ledgerDefineRecord->ledgers()->count()==0)
+                    <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
+                       class="btn btn-xs btn-neutral tooltip items-center pt-1"
+                       target="ledgerCreate_{{$ledgerDefineRecord->id}}}}"
+                       data-tip="{{__('ledger.create')}}"
+                    ><i class="fas fa-circle-plus"></i>
+                    </a>
+                @endif
+            </div>
             <div class="lastUpdate text-sm absolute bottom-0 my-1 place-self-center">
                 <i class="fas fa-clock mr-1"></i>{{$ledgerDefineRecord->updated_at->format('Y-m-d')}}
             </div>

@@ -18,7 +18,8 @@ class Tree extends Component
 
     public function mount(SearchRequest $request)
     {
-        $this->currentFolderId = $request->folderId();
+        $this->currentFolderId = $request->currentFolderId();
+        $this->selectedFolderIds = $request->folderId();
         $this->folders = Folder::whereIsRoot()->get();
     }
 

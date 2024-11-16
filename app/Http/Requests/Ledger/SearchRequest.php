@@ -101,10 +101,16 @@ class SearchRequest extends FormRequest
         if (!is_null($ledgerDefineId)) {
             $this->isFolderRequest = true;
 
-            return LedgerDefine::find($ledgerDefineId)->folder_id;
+            return [LedgerDefine::find($ledgerDefineId)->folder_id];
         }
 
-        return $this->input('folderId') ?? $this->route('folderId') ?? 1;
+        return $this->input('f') ?? $this->input('folderId') ?? $this->route('folderId') ?? [1];
+    }
+
+    public function currentFolderId()
+    {
+
+        return $this->input('cf') ?? $this->input('currentFolderId') ?? $this->route('folderId') ?? 1;
     }
 
     public $isLedgerDefineRequest = false;

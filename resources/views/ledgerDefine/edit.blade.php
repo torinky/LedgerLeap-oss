@@ -99,6 +99,7 @@
                     <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</h3>
                     <p class="py-4">{{__('ledger.define.remove_message')}}<br/>{{__('ledger.remove_records_message')}}
                     </p>
+                    @can('delete_ledger_defines')
                     <div class="modal-action">
                         <div class="btnContainer">
                             <form method="POST" action="{{route('ledgerDefine.delete',$ledgerDefineRecord->id)}}">
@@ -111,6 +112,10 @@
                         </div>
                         <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
                     </div>
+                    @else
+                        <!-- 権限がない場合の表示 -->
+                        <span class="text-error">削除する権限がありません</span>
+                    @endcan
                 </div>
             </div>
         @endif
