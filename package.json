@@ -12,23 +12,23 @@
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.7",
         "daisyui": "^4.12.14",
-        "postcss": "^8.4.47",
-        "sass": "^1.80.6",
-        "tailwindcss": "^3.4.14"
+        "postcss": "8.4.49",
+        "sass": "1.81.0",
+        "tailwindcss": "3.4.15"
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^6.6.0",
-        "@nextapps-be/livewire-sortablejs": "^0.4.1",
+        "@wotz/livewire-sortablejs": "^1.0.0",
         "esbuild": "^0.24.0",
-        "filepond": "^4.32.0",
+        "filepond": "4.32.1",
         "filepond-plugin-file-poster": "^2.5.1",
         "filepond-plugin-file-validate-size": "^2.2.8",
         "filepond-plugin-file-validate-type": "^1.2.9",
         "filepond-plugin-image-preview": "^4.6.12",
         "flatpickr": "^4.6.13",
         "jquery": "^3.7.1",
-        "laravel-vite-plugin": "^1.0.5",
+        "laravel-vite-plugin": "1.0.6",
         "select2": "^4.1.0-rc.0",
-        "vite": "^5.4.10"
+        "vite": "5.1.8"
     }
 }

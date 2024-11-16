@@ -1,2 +1,2 @@
-@import "select2/dist/css/select2.css";
-@import '../css/ledgerDefineEdit.css';
+@use "select2/dist/css/select2.css" as *;
+@use '../css/ledgerDefineEdit.css' as *;

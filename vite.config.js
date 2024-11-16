@@ -2,7 +2,6 @@ import {defineConfig} from 'vite';
 import laravel from 'laravel-vite-plugin';
 import path from 'path'
 
-
 export default defineConfig({
     plugins: [
         laravel({
@@ -20,7 +19,15 @@ export default defineConfig({
         }),
     ],
     css: {
-        devSourcemap: true
+        devSourcemap: true,
+        preprocessorOptions: {
+            scss: {
+                implementation: 'sass',
+                sassOptions: {
+                    fiber: false,
+                },
+            }
+        }
     },
     resolve: {
         alias: {

@@ -1,6 +1,6 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@use 'tailwindcss/base' as *;
+@use 'tailwindcss/components' as *;
+@use 'tailwindcss/utilities' as *;
 
 //$fa-font-path: '~fontawesome/webfonts';
 //@import '~fontawesome/scss/fontawesome';
@@ -8,7 +8,7 @@
 //@import '~fontawesome/scss/solid';
 //@import '~fontawesome/scss/regular';
 
-@import '../css/tree.css';
+@use '../css/tree.css' as *;
 //@import 'filepond/dist/filepond.min.css';
 
 

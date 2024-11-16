@@ -3,7 +3,7 @@ console.log('ledgerDefineEdit.js loaded.');
 
 import $ from 'jquery'
 import select2 from 'select2';
-import '@nextapps-be/livewire-sortablejs';
+import '@wotz/livewire-sortablejs';
 
 //Hook up select2 to jQuery
 select2(window, $);

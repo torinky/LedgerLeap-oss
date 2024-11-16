@@ -1,2 +1,2 @@
-@import "../css/daisyUI_cutom.css";
-@import "../css/drower-side.css";
+@use "../css/daisyUI_cutom.css" as *;
+@use "../css/drower-side.css" as *;
