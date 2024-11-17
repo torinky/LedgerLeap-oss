@@ -63,6 +63,7 @@ return [
         'title_input' => '台帳名を入力',
         'remove' => '台帳を削除する',
         'remove_message' => 'この台帳を削除しようとしています',
+        'basic_setting' => '基本設定',
     ],
     'delete' => '削除する',
     'descending' => '降順',

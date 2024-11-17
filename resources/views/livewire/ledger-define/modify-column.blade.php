@@ -10,14 +10,16 @@
                     class=" ">
                     <div
                         wire:sortable.handle
-                        class="flex collapse-title bg-primary text-primary-content
+                        class="flex collapse-title bg-primary/50 text-primary-content
                             peer-checked:bg-secondary peer-checked:text-secondary-content
                             peer-checked:pl-16
                             hover:opacity-80
+                            rounded-tl-lg
+                            rounded-tr-lg
+
                             ">
 
                         <div class="flex flex-row w-full ">
-
                             <h3 class="text-lg">
                                 {{$columnDefine->id}}
                                 : {{$columnDefine->name}}
@@ -25,20 +27,18 @@
                             </h3>
                         </div>
                         <button
-
-                            class="justify-self-end btn btn-ghost btn-sm w-10 mr-2 tooltip tooltip-left"
+                            class=" btn btn-sm tooltip tooltip-left"
                             data-tip="{{__('ledger.column.drag2sort')}}"
                         ><i class="fa-solid fa-grip-lines"></i>
                         </button>
                     </div>
-                    <div class="collapse ">
+                    <div class="collapse rounded-none  bg-primary/30 text-primary-content
+                             ">
                         <input type="checkbox" name="collapse_{{$columnDefine->id}}"
                                id="collapse_{{$columnDefine->id}}" class="peer collapse_swap hidden"/>
 
 
-
-                        <div
-                            class="collapse-content  bg-primary text-primary-content peer-checked:bg-secondary peer-checked:text-secondary-content">
+                        <div class="collapse-content">
                             <div class="items-center flex flex-row space-x-10">
 
 
@@ -137,31 +137,44 @@
                                     {{--                                <div class="basis-1/4">--}}
 
                                     {{--                        @dd($columnDefine)--}}
-                                    <input type="hidden" name="column_define[{{$columnDefine->id}}][useOptions]"
-                                           value="{{$columnDefine->useOptions}}">
+                                    {{--                                    <input type="hidden" name="column_define[{{$columnDefine->id}}][useOptions]"--}}
+                                    {{--                                           value="{{$columnDefine->useOptions}}">--}}
 
                                     @if($columnDefine->useOptions)
-                                        <div wire:ignore>
-                                            <div class="flex-1 ml-5">
-                                                <label class="form-control">
-                                                    <div class="label">
-                                                        <span class="label-text">
-                                                            {{__('ledger.options')}}
-                                                        </span>
-                                                    </div>
-                                                    <select name="column_define[{{$columnDefine->id}}][options][]"
-                                                            class="js-attachSelect2Tag select select-bordered"
-                                                            multiple="multiple">
-                                                        @foreach($columnDefine->options as $key => $columnOption)
-                                                            <option
-                                                                value="{{$columnOption}}" selected
-                                                            >{{$columnOption}}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </label>
-                                            </div>
-                                        </div>
+                                        {{--
+                                                                                <div wire:ignore>
+                                                                                    <div class="flex-1 ml-5">
+                                                                                        <label class="form-control">
+                                                                                            <div class="label">
+                                                                                                <span class="label-text">
+                                                                                                    {{__('ledger.options')}}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <select name="column_define[{{$columnDefine->id}}][options][]"
+                                                                                                    class="js-attachSelect2Tag select select-bordered"
+                                                                                                    multiple="multiple">
+                                                                                                @foreach($columnDefine->options as $key => $columnOption)
+                                                                                                    <option
+                                                                                                        value="{{$columnOption}}" selected
+                                                                                                    >{{$columnOption}}
+                                                                                                    </option>
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                </div>
+                                        --}}
+
+
+                                        <x-mary-tags label="{{__('ledger.options')}}"
+                                                     wire:model="columnOptions.{{$columnDefine->id}}"
+                                                     wire:click="applyOptions({{$columnDefine->id}})"
+                                                     wire:key="columnDefine-{{ $columnDefine->id }}-options"
+                                                     icon="o-tag"
+                                                     hint="Hit enter to create a new tag"
+                                                     @keydown.enter="$wire.applyOptions({{$columnDefine->id}})"
+                                        />
+
                                     @else
                                         <input type="hidden" name="column_define[{{$columnDefine->id}}][options][]"
                                                value="">
@@ -224,7 +237,8 @@
                             </div>
                     </div>
                     <label for="collapse_{{ $columnDefine->id }}"
-                           class="btn btn-sm btn-outline w-full tooltip" data-tip="{{__('ledger.collapse')}}">
+                           class="btn btn-sm btn-primary bg-primary/20 w-full tooltip rounded-none rounded-bl-lg rounded-br-lg"
+                           data-tip="{{__('ledger.collapse')}}">
                         {{--                                <input type="checkbox" style="display: none"/>--}}
                         <div class="pt-2">
                             <span class="swap-on"> <i class="fas fa-angles-down"></i></span>
@@ -237,29 +251,31 @@
             {{--               value="{{Js::from( $ledgerDefineRecord->column_order)}}">--}}
         </ul>
 
-        @once
-            @push('scripts')
-                <script type="module">
+        {{--
+                @once
+                    @push('scripts')
+                        <script type="module">
 
-                    $(document).ready(function () {
-                        // select2.jsの初期化
-                        initializeSelect2();
+                            $(document).ready(function () {
+                                // select2.jsの初期化
+                                initializeSelect2();
 
-                        Livewire.on('elementUpdated', function () {
-                            // select2.jsの更新
-                            initializeSelect2();
-                        });
+                                Livewire.on('elementUpdated', function () {
+                                    // select2.jsの更新
+                                    initializeSelect2();
+                                });
 
-                        function initializeSelect2() {
+                                function initializeSelect2() {
 
-                            $('.js-attachSelect2Tag').select2({
-                                tags: true
+                                    $('.js-attachSelect2Tag').select2({
+                                        tags: true
+                                    });
+                                }
                             });
-                        }
-                    });
-                </script>
-            @endpush
-        @endonce
+                        </script>
+                    @endpush
+                @endonce
+        --}}
 
     @endif
     <a href="#" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm w-full my-4">

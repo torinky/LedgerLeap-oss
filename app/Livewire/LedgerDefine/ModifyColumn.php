@@ -18,6 +18,8 @@ class ModifyColumn extends Component
 
     public $maxColumnOrder = 0;
 
+    public $columnOptions = [];
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
@@ -27,8 +29,15 @@ class ModifyColumn extends Component
 
         $this->columnTypes = collect($this->ledgerDefineRecord->column_define)->pluck('type', 'id')->toArray();
         // idを0から開始できるようにする
-        $this->maxColumnId = collect($this->ledgerDefineRecord->column_define)->pluck('id')->max() - 1;
+        $this->maxColumnId = collect($this->ledgerDefineRecord->column_define)->pluck('id')->max();
+        if (count($this->ledgerDefineRecord->column_define) == 0) {
+            $this->maxColumnId = -1;
+        }
         $this->maxColumnOrder = collect($this->ledgerDefineRecord->column_define)->pluck('order')->max();
+
+        //        options初期化
+        $this->columnOptions = collect($this->ledgerDefineRecord->column_define)->pluck('options', 'id')->toArray();
+//        ksort($this->columnOptions);
 
     }
 
@@ -112,5 +121,31 @@ class ModifyColumn extends Component
         $this->ledgerDefineRecord->column_define = (array)$this->ledgerDefineRecord->column_define;
         $this->ledgerDefineRecord->save();
 
+    }
+
+    public function applyOptions($columnId)
+    {
+
+        foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+            if ($columnDefine->id == $columnId) {
+                $oldOptions = $this->ledgerDefineRecord->column_define[$cKey]->options;
+                break;
+            }
+        }
+
+        $newOptions = $this->columnOptions[$columnId] ?? [];
+
+        // 比較ロジック
+        if ($this->optionsHaveChanged($oldOptions, $newOptions)) {
+            $this->ledgerDefineRecord->column_define[$cKey]->options = $newOptions;
+//            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
+//            dd($this->ledgerDefineRecord->column_define);
+            $this->ledgerDefineRecord->save();
+        }
+    }
+
+    private function optionsHaveChanged($oldOptions, $newOptions)
+    {
+        return array_diff($oldOptions, $newOptions) !== [] || array_diff($newOptions, $oldOptions) !== [];
     }
 }

@@ -26,46 +26,56 @@
         @endif
 
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-            <div class="flex flex-wrap items-center justify-center w-full">
-                <form action="{{ route('ledgerDefine.update',$ledgerDefineRecord->id)}}" method="post" class="w-full">
-                    @csrf
-                    @method('PUT')
+                <div class="flex flex-wrap items-center justify-center w-full space-y-5">
+                    {{--
+                                    <form action="{{ route('ledgerDefine.update',$ledgerDefineRecord->id)}}" method="post" class="w-full">
+                                        @csrf
+                                        @method('PUT')
+                    --}}
                     <input type="hidden" name="id" value="{{ $ledgerDefineRecord->id }}">
 
-                    <div class="flex-1 m-5">
+                    {{--
+                                        <div class="flex-1 m-5">
 
-                        <input type="hidden" name="title" value="{{$ledgerDefineRecord->title}}">
-                        <label class="form-control w-full max-w-xs">
-                            <div class="label">
-                                <span class="label-text">
-                                    {{__('ledger.define.title')}}
-                                </span>
-                            </div>
-                            <input name="title" type="text"
-                                   value="{{$ledgerDefineRecord->title}}"
-                                   placeholder="{{__('ledger.define.title_input')}}"
-                                   class="input input-bordered input-error w-full max-w-xs"/>
-                        </label>
+                                            <input type="hidden" name="title" value="{{$ledgerDefineRecord->title}}">
+                                            <label class="form-control w-full max-w-xs">
+                                                <div class="label">
+                                                    <span class="label-text">
+                                                        {{__('ledger.define.title')}}
+                                                    </span>
+                                                </div>
+                                                <input name="title" type="text"
+                                                       value="{{$ledgerDefineRecord->title}}"
+                                                       placeholder="{{__('ledger.define.title_input')}}"
+                                                       class="input input-bordered input-error w-full max-w-xs"/>
+                                            </label>
 
-                        <label class="form-control">
-                            <div class="label">
-                                <span class="label-text">
-                                {{__('ledger.folder.containing')}}
-                                </span>
-                            </div>
-                            <select
-                                name="folder_id"
-                                class="select input-bordered input-error">
-                                @foreach($folderRecords as $folderRecord)
-                                    <option
-                                        value="{{$folderRecord->id}}" {{  $ledgerDefineRecord->folder_id == $folderRecord->id ? 'selected' : '' }}
-                                    >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
-                                @endforeach
-                            </select>
-                        </label>
+                                            <label class="form-control">
+                                                <div class="label">
+                                                    <span class="label-text">
+                                                    {{__('ledger.folder.containing')}}
+                                                    </span>
+                                                </div>
+                                                <select
+                                                    name="folder_id"
+                                                    class="select input-bordered input-error">
+                                                    @foreach($folderRecords as $folderRecord)
+                                                        <option
+                                                            value="{{$folderRecord->id}}" {{  $ledgerDefineRecord->folder_id == $folderRecord->id ? 'selected' : '' }}
+                                                        >{{str_pad('',$folderRecord->lvl,'-').$folderRecord->title }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
 
+                                        </div>
+                    --}}
+
+                    <div class="card w-full bg-base-300 shadow-xl mx-5">
+                        <div class="card-body p-3">
+                            <h2 class="card-title">{{__('ledger.define.basic_setting')}}</h2>
+                            <livewire:ledger-define.edit/>
+                        </div>
                     </div>
-
                     <div class="card w-full bg-base-300 shadow-xl mx-5">
                         <div class="card-body p-3">
                             <h2 class="card-title">{{__('ledger.column.group_title')}}</h2>
@@ -90,7 +100,7 @@
                         </div>
                     </div>
 
-                </form>
+                    {{--                </form>--}}
             </div>
 
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>

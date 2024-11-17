@@ -91,14 +91,14 @@ class ColumnDefine
      * @return void
      */
     public function constructByArgs(
-        int   $id,
+        int  $id,
         string $name,
         string $type = 'text',
-        int   $order = 1,
+        int  $order = 1,
         array $options = [],
-        bool  $required = false,
-        bool  $doNotDuplicate = false,
-        bool  $sortBy = false
+        bool $required = false,
+        bool $doNotDuplicate = false,
+        bool $sortBy = false
     )
     {
         $this->id = (int)$id;
