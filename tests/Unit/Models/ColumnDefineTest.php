@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Tests\Unit\Models;
 
 use App\Models\ColumnDefine;
@@ -9,7 +8,7 @@ use Tests\TestCase;
 
 class ColumnDefineTest extends TestCase
 {
-    public function testObjectInitialization(): void
+    public function test_object_initialization(): void
     {
         // テスト用のオブジェクトを作成
         $data = (object)[
@@ -19,7 +18,7 @@ class ColumnDefineTest extends TestCase
             'order' => 2,
             'options' => ['option1', 'option2'],
             'required' => true,
-            'doNotDuplicate' => false,
+            'unique' => false,
             'sortBy' => true,
         ];
 
@@ -34,11 +33,11 @@ class ColumnDefineTest extends TestCase
         $this->assertFalse($column->useOptions); // 'text'は$optionsを持たないためtrueになる
         $this->assertEquals($data->options, $column->options);
         $this->assertEquals($data->required, $column->required);
-        $this->assertEquals($data->doNotDuplicate, $column->doNotDuplicate);
+        $this->assertEquals($data->unique, $column->unique);
         $this->assertEquals($data->sortBy, $column->sortBy);
     }
 
-    public function testValueInitialization(): void
+    public function test_value_initialization(): void
     {
         // 値による初期化のテスト
         $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, false);
@@ -51,11 +50,11 @@ class ColumnDefineTest extends TestCase
         $this->assertTrue($column->useOptions); // 'select'は$optionsを持つためtrueになる
         $this->assertEquals(['option1', 'option2'], $column->options);
         $this->assertFalse($column->required);
-        $this->assertTrue($column->doNotDuplicate);
+        $this->assertTrue($column->unique);
         $this->assertFalse($column->sortBy);
     }
 
-    public function testSetType(): void
+    public function test_set_type(): void
     {
         // 列の種類を変更するテスト
         $column = new ColumnDefine(3, 'column3', 'text', 1);
@@ -73,7 +72,7 @@ class ColumnDefineTest extends TestCase
         $column->setType('invalid_type');
     }
 
-    public function testTypeLabels(): void
+    public function test_type_labels(): void
     {
         // 列の種類のラベルを取得するテスト
         $labels = ColumnDefine::typeLabels();

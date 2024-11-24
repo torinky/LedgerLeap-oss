@@ -40,7 +40,7 @@
 
 
 @php
-    $icon='';
+    $icon='o-calendar';
     $class="input-primary";
     $mark='';
     if($columnDefine->required){
@@ -62,6 +62,7 @@
         icon="{{$icon}}"
         {{--        clearable--}}
         :class="$class"
+        :required="$columnDefine->required"
         data-input
     >
         <x-slot:append>

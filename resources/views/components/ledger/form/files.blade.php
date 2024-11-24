@@ -1,8 +1,19 @@
-<div
-    class=" card @if($columnDefine->required) bg-accent @else bg-base-200 @endif"
-    wire:ignore
-    x-data
-    x-init="() => {
+<div class="form-control">
+
+    <div class="pt-0 label label-text font-semibold">
+        <span>
+             {{$columnDefine->name}}
+            @if($columnDefine->required)
+                <span class="text-error">*</span>
+            @endif
+        </span>
+    </div>
+
+    <div
+        class=" card @if($columnDefine->required) bg-accent @else bg-base-200 @endif"
+        wire:ignore
+        x-data
+        x-init="() => {
         window.addEventListener('load', () => {
             const post = FilePond.create($refs.content_{{$columnDefine->id}});
             post.setOptions({
@@ -95,8 +106,9 @@
         });
     }
     "
->
-    <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"
-           x-ref="content_{{$columnDefine->id}}"
     >
+        <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"
+               x-ref="content_{{$columnDefine->id}}"
+        >
+    </div>
 </div>

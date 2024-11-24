@@ -1,5 +1,4 @@
-<div class="mt-5 mb-36">
-
+<div>
 
     @if(!empty($ledgerDefineRecord->column_define))
         <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3" drag-root>
@@ -44,126 +43,174 @@
 
                                 <div class="basis-1/2 space-y-4">
 
-                                    <input type="hidden" name="column_define[{{$columnDefine->id}}][id]"
-                                           value="{{$columnDefine->id}}">
+                                    {{--
+                                                                        <input type="hidden" name="column_define[{{$columnDefine->id}}][id]"
+                                                                               value="{{$columnDefine->id}}">
 
-                                    <input type="hidden" name="column_define[{{$columnDefine->id}}][name]"
-                                           value="{{$columnDefine->name}}">
-                                    <label class="form-control">
-                                        <div class="label">
-                                            <span class="label-text">
-                                                 {{__('ledger.column.title')}}
-                                            </span>
-                                        </div>
-                                        <input name="column_define[{{$columnDefine->id}}][name]" type="text"
-                                               value="{{$columnDefine->name}}"
-                                               placeholder="{{__('ledger.column.title_input')}}"
-                                               class="input input-bordered input-error" required/>
-                                    </label>
+                                                                        <input type="hidden" name="column_define[{{$columnDefine->id}}][name]"
+                                                                               value="{{$columnDefine->name}}">
+                                    --}}
+                                    <x-mary-input
+                                        label="{{__('ledger.column.title')}}"
+                                        placeholder="{{__('ledger.column.title')}}" icon="o-table-cells" required
+                                        wire:model="columnNames.{{$columnDefine->id}}"
+                                        wire:change="applyName({{$columnDefine->id}})"
+                                        wire:key="name_{{$columnDefine->id}}"
+                                        class="input-accent"
+                                    />
+                                    {{--
+                                                                        <label class="form-control">
+                                                                            <div class="label">
+                                                                                <span class="label-text">
+                                                                                     {{__('ledger.column.title')}}
+                                                                                </span>
+                                                                            </div>
+                                                                            <input name="column_define[{{$columnDefine->id}}][name]" type="text"
+                                                                                   value="{{$columnDefine->name}}"
+                                                                                   wire:model="columnNames.{{$columnDefine->id}}"
+                                                                                   wire:change="applyName({{$columnDefine->id}})"
+                                                                                   placeholder="{{__('ledger.column.title_input')}}"
+                                                                                   class="input input-bordered input-error" required/>
+                                                                        </label>
+                                    --}}
 
-                                    <label class="form-control">
-                                        <div class="label">
-                                            <span class="label-text">
-                                                {{__('ledger.column.type')}}
-                                            </span>
-                                        </div>
-                                        <select
-                                            name="column_define[{{$columnDefine->id}}][type]"
-                                            wire:model.live="columnTypes.{{$columnDefine->id}}"
-                                            {{-- これは表現が複雑すぎるっぽい--}}
-                                            {{-- wire:model.live="ledgerDefineRecord.column_define.{{$columnDefine->id}}.type"--}}
-                                            {{-- これはapplyTpeが発火しない--}}
-                                            {{-- wire:change="applyType($event.target.value,$columnDefine->id)"--}}
-                                            {{-- wire:change="applyType($columnDefine->id)" --}}
-                                            {{-- これは選択したの値を送ることができるがほとんど意味がない--}}
-                                            {{-- wire:change="applyType($event.target.value)"--}}
-                                            wire:change="applyType"
-                                            class="select select-error">
-                                            @foreach($columnInputTypes as $value => $columnInputTypeName)
-                                                <option
-                                                    {{--                                        value="{{$value}}" {{ old('column_define['.$columnDefine->id.'][type]', $columnDefine->type) == $value ? 'selected' : '' }}--}}
-                                                    value="{{$value}}"
-                                                    @if($columnDefine->type == $value) selected="selected" @endif
-                                                >{{$columnInputTypeName}}</option>
-                                            @endforeach
-                                        </select>
-                                    </label>
+                                    @php
+                                        $tmpOptions=[];
+                                        foreach ($columnInputTypes as $value => $columnInputTypeName){
+                                            $tmpSelected = ($columnDefine->type == $value??'') ? true : false;
+                                            $tmpOptions[] = ['id'=>$value, 'name'=>$columnInputTypeName, 'selected'=>$tmpSelected];
+                                        }
+                                    //    dd($tmpOptions);
+                                    @endphp
+                                    <x-mary-select label=" {{__('ledger.column.type')}}"
+                                                   icon="o-chevron-up-down"
+                                                   id="type[{{$columnDefine->id}}]"
+                                                   name="column_define[{{$columnDefine->id}}][type]"
+                                                   wire:model="columnTypes.{{$columnDefine->id}}"
+                                                   wire:change="applyType({{$columnDefine->id}})"
+                                                   wire:key="type_{{$columnDefine->id}}"
+                                                   :options="$tmpOptions"
+                                                   class="input-accent"
+                                                   required
+                                    />
+
+                                    {{--
+                                                                        <label class="form-control">
+                                                                            <div class="label">
+                                                                                <span class="label-text">
+                                                                                    {{__('ledger.column.type')}}
+                                                                                </span>
+                                                                            </div>
+                                                                            <select
+                                                                                name="column_define[{{$columnDefine->id}}][type]"
+                                                                                wire:model.live="columnTypes.{{$columnDefine->id}}"
+                                                                                --}}
+                                    {{-- これは表現が複雑すぎるっぽい--}}{{--
+
+                                                                                --}}
+                                    {{-- wire:model.live="ledgerDefineRecord.column_define.{{$columnDefine->id}}.type"--}}{{--
+
+                                                                                --}}
+                                    {{-- これはapplyTpeが発火しない--}}{{--
+
+                                                                                --}}
+                                    {{-- wire:change="applyType($event.target.value,$columnDefine->id)"--}}{{--
+
+                                                                                --}}
+                                    {{-- wire:change="applyType($columnDefine->id)" --}}{{--
+
+                                                                                --}}
+                                    {{-- これは選択したの値を送ることができるがほとんど意味がない--}}{{--
+
+                                                                                --}}
+                                    {{-- wire:change="applyType($event.target.value)"--}}{{--
+
+                                                                                wire:change="applyType"
+                                                                                class="select select-error">
+                                                                                @foreach($columnInputTypes as $value => $columnInputTypeName)
+                                                                                    <option
+                                                                                        --}}
+                                    {{--                                        value="{{$value}}" {{ old('column_define['.$columnDefine->id.'][type]', $columnDefine->type) == $value ? 'selected' : '' }}--}}{{--
+
+                                                                                        value="{{$value}}"
+                                                                                        @if($columnDefine->type == $value) selected="selected" @endif
+                                                                                    >{{$columnInputTypeName}}</option>
+                                                                                @endforeach
+                                                                            </select>
+                                                                        </label>
+                                    --}}
+                                    <hr/>
+                                    <x-mary-checkbox label="{{__('ledger.column.required')}}"
+                                                     wire:model="columnRequired.{{$columnDefine->id}}"
+                                                     wire:change="applyRequired({{$columnDefine->id}})"
+                                                     wire:key="required_{{$columnDefine->id}}"
+                                                     name="column_define[{{$columnDefine->id}}][required]"
+                                                     id="required[{{$columnDefine->id}}]"
+                                    />
+                                    <x-mary-checkbox label="{{__('ledger.column.unique')}}"
+                                                     wire:model="columnUnique.{{$columnDefine->id}}"
+                                                     wire:change="applyUnique({{$columnDefine->id}})"
+                                                     wire:key="unique_{{$columnDefine->id}}"
+                                                     name="column_define[{{$columnDefine->id}}][unique]"
+                                                     id="unique[{{$columnDefine->id}}]"
+                                    />
+                                    <x-mary-checkbox label="{{__('ledger.column.sort')}}"
+                                                     wire:model="columnSortBy.{{$columnDefine->id}}"
+                                                     wire:change="applySortBy({{$columnDefine->id}})"
+                                                     wire:key="sortBy_{{$columnDefine->id}}"
+                                                     name="column_define[{{$columnDefine->id}}][sortBy]"
+                                                     id="sortBy[{{$columnDefine->id}}]"
+                                    />
 
                                 </div>
 
-                                <div class="basis-1/2 space-y-4">
-                                    <div class="flex-none ml-5">
+                                <div class="basis-1/2 space-y-4 m-3">
+                                    {{--
+                                                                        <div class="flex-none ml-5">
 
-                                        <input type="hidden" name="column_define[{{$columnDefine->id}}][required]"
-                                               value="0">
-                                        <div class="form-control">
-                                            <label class="cursor-pointer label">
-                                            <span class="label-text">
-                                                {{__('ledger.column.required')}}
-                                            </span>
-                                                <input type="checkbox" class="checkbox checkbox-default"
-                                                       name="column_define[{{$columnDefine->id}}][required]"
-                                                       value="1" {{$columnDefine->required ? 'checked' : ''}} />
-                                            </label>
-                                        </div>
 
-                                        <input type="hidden" name="column_define[{{$columnDefine->id}}][doNotDuplicate]"
-                                               value="0">
-                                        <div class="form-control">
-                                            <label class="cursor-pointer label">
-                                            <span class="label-text">
-                                                {{__('ledger.column.unique')}}
-                                            </span>
-                                                <input type="checkbox" class="checkbox"
-                                                       name="column_define[{{$columnDefine->id}}][doNotDuplicate]"
-                                                       value="1" {{$columnDefine->doNotDuplicate ? 'checked' : ''}} />
-                                            </label>
-                                        </div>
+                                                                            <input type="hidden" name="column_define[{{$columnDefine->id}}][required]"
+                                                                                   value="0">
+                                                                            <div class="form-control">
+                                                                                <label class="cursor-pointer label">
+                                                                                <span class="label-text">
+                                                                                    {{__('ledger.column.required')}}
+                                                                                </span>
+                                                                                    <input type="checkbox" class="checkbox checkbox-default"
+                                                                                           name="column_define[{{$columnDefine->id}}][required]"
+                                                                                           value="1" {{$columnDefine->required ? 'checked' : ''}} />
+                                                                                </label>
+                                                                            </div>
 
-                                        <input type="hidden" name="column_define[{{$columnDefine->id}}][sortBy]"
-                                               value="0">
-                                        <div class="form-control">
-                                            <label class="cursor-pointer label">
-                                                <span class="label-text">
-                                                    {{__('ledger.column.sort')}}
-                                                </span>
-                                                <input type="checkbox" class="checkbox"
-                                                       name="column_define[{{$columnDefine->id}}][sortBy]"
-                                                       value="1" {{$columnDefine->sortBy ? 'checked' : ''}} />
-                                            </label>
-                                        </div>
-                                    </div>
-                                    {{--                                </div>--}}
-                                    {{--                                <div class="basis-1/4">--}}
+                                                                            <input type="hidden" name="column_define[{{$columnDefine->id}}][unique]"
+                                                                                   value="0">
+                                                                            <div class="form-control">
+                                                                                <label class="cursor-pointer label">
+                                                                                <span class="label-text">
+                                                                                    {{__('ledger.column.unique')}}
+                                                                                </span>
+                                                                                    <input type="checkbox" class="checkbox"
+                                                                                           name="column_define[{{$columnDefine->id}}][unique]"
+                                                                                           value="1" {{$columnDefine->unique ? 'checked' : ''}} />
+                                                                                </label>
+                                                                            </div>
 
-                                    {{--                        @dd($columnDefine)--}}
-                                    {{--                                    <input type="hidden" name="column_define[{{$columnDefine->id}}][useOptions]"--}}
-                                    {{--                                           value="{{$columnDefine->useOptions}}">--}}
+                                                                            <input type="hidden" name="column_define[{{$columnDefine->id}}][sortBy]"
+                                                                                   value="0">
+                                                                            <div class="form-control">
+                                                                                <label class="cursor-pointer label">
+                                                                                    <span class="label-text">
+                                                                                        {{__('ledger.column.sort')}}
+                                                                                    </span>
+                                                                                    <input type="checkbox" class="checkbox"
+                                                                                           name="column_define[{{$columnDefine->id}}][sortBy]"
+                                                                                           value="1" {{$columnDefine->sortBy ? 'checked' : ''}} />
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                    --}}
 
                                     @if($columnDefine->useOptions)
-                                        {{--
-                                                                                <div wire:ignore>
-                                                                                    <div class="flex-1 ml-5">
-                                                                                        <label class="form-control">
-                                                                                            <div class="label">
-                                                                                                <span class="label-text">
-                                                                                                    {{__('ledger.options')}}
-                                                                                                </span>
-                                                                                            </div>
-                                                                                            <select name="column_define[{{$columnDefine->id}}][options][]"
-                                                                                                    class="js-attachSelect2Tag select select-bordered"
-                                                                                                    multiple="multiple">
-                                                                                                @foreach($columnDefine->options as $key => $columnOption)
-                                                                                                    <option
-                                                                                                        value="{{$columnOption}}" selected
-                                                                                                    >{{$columnOption}}
-                                                                                                    </option>
-                                                                                                @endforeach
-                                                                                            </select>
-                                                                                        </label>
-                                                                                    </div>
-                                                                                </div>
-                                        --}}
 
 
                                         <x-mary-tags label="{{__('ledger.options')}}"
@@ -190,14 +237,6 @@
                                            value="{{$columnDefine->order}}">
 
                                     <div class="mt-3 flex-row w-full text-right">
-                                        {{--
-                                                                <a href="#"
-                                                                   wire:click="removeColumn({{$columnDefine->id}})"
-                                                                   class="btn btn-outline btn-ghost btn-sm mx-3"
-                                                                >
-                                                                    <i class="fa-solid fa-trash mr-1"></i>
-                                                                    {{__('remove')}}</a>
-                                        --}}
 
                                         <label for="delete-modal-{{$columnDefine->id}}"
                                                class="btn btn-outline btn-error ml-10 justify-self-end"><i
@@ -247,40 +286,14 @@
                     </label>
                 </li>
             @endforeach
-            {{--         <input type="hidden" name="column_order"--}}
-            {{--               value="{{Js::from( $ledgerDefineRecord->column_order)}}">--}}
         </ul>
 
-        {{--
-                @once
-                    @push('scripts')
-                        <script type="module">
-
-                            $(document).ready(function () {
-                                // select2.jsの初期化
-                                initializeSelect2();
-
-                                Livewire.on('elementUpdated', function () {
-                                    // select2.jsの更新
-                                    initializeSelect2();
-                                });
-
-                                function initializeSelect2() {
-
-                                    $('.js-attachSelect2Tag').select2({
-                                        tags: true
-                                    });
-                                }
-                            });
-                        </script>
-                    @endpush
-                @endonce
-        --}}
 
     @endif
     <a href="#" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm w-full my-4">
         <i class="fa-solid fa-plus-circle mr-1"></i>
         {{__('ledger.column.add')}}
     </a>
+
 
 </div>

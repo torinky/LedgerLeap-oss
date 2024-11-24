@@ -1,15 +1,35 @@
 @props([
     'message'=>'',
+    'description'=>'',
     'refreshParentWindow'=>false,
     'type'=>'info',
-    'icon'=>'fa-circle-check',
+    'icon'=>'check-circle',
+    'seconds'=>5000,
     ])
+{{--
 <div class="flex min-h-[6rem] min-w-[18rem] flex-wrap items-center justify-center gap-2 overflow-x-hidden ">
-    <div class="alert alert-{{$type}} shadow-lg max-w-4xl ">
-        <i class="fas {{$icon}} text-lg"></i>
+    <div  role="alert" class="alert alert-{{$type}} shadow-lg max-w-4xl ">
+        <h3>
+            <i class="fas {{$icon}} text-lg"></i>
             <span>{{ $message }}</span>
+
+        </h3>
     </div>
 </div>
+--}}
+@php
+    $key = hash('sha256', time() . mt_rand());
+@endphp
+
+<x-mary-alert
+    title="{{ $message }}"
+    wire:key="{{$key}}"
+    description="{{ $description }}"
+    class="alert-{{$type}}"
+    icon="o-{{ $icon }}"
+    dismissible
+/>
+
 @if($refreshParentWindow)
     <script type="text/javascript">
         window.onunload = function () {

@@ -64,6 +64,7 @@ return [
         'remove' => '台帳を削除する',
         'remove_message' => 'この台帳を削除しようとしています',
         'basic_setting' => '基本設定',
+        'preview' => 'プレビュー',
     ],
     'delete' => '削除する',
     'descending' => '降順',

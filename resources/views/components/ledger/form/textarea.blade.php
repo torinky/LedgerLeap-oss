@@ -1,38 +1,37 @@
-<!-- textarea.blade.php -->
-<!--
-    テキストエリアフォームの幅と高さを動的に調整するためのLivewireコンポーネントのビューファイルです。
-    $columnDefine->idに基づいて動的なフォームを作成します。
-    フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
--->
-<label for="content[{{$columnDefine->id}}]"
-       class="form-control">
-    <div class="label">
-            <span class="label-text">
-                @if($columnDefine->required)
-                    <i class="fas fa-check-circle text-accent"></i>
-                @endif
-                {{$columnDefine->name}}
+@props([
+    'class'=>'adjustHeight input-primary w-full block',
+    'icon'=>'o-chat-bubble-oval-left-ellipsis',
+    'columnDefine'=>[]
+    ])
+@php
+    if($columnDefine->required){
+        $icon='c-check-circle';
+        $class="adjustHeight input-accent w-full block";
+    }
+@endphp
 
-            </span>
 
+<div class="flex items-center space-x-2 w-full">
+
+    @if($columnDefine->required)
+        <i class="fas fa-check-circle text-neutral/50"></i>
+    @endif
+    <div class="flex-1">
+        <x-mary-textarea
+            label="{{$columnDefine->name}}"
+            id="content[{{$columnDefine->id}}]"
+            name="content[{{$columnDefine->id}}]"
+            icon="{{$icon}}"
+            wire:model="content.{{$columnDefine->id}}"
+            placeholder="{{$columnDefine->name}}"
+            {{--        hint="Max 1000 chars"--}}
+            rows="3"
+            :required="$columnDefine->required"
+            :class="$class"
+        />
     </div>
-<textarea
-    wire:model.blur="content.{{ $columnDefine->id }}"
-    id="content[{{$columnDefine->id}}]"
-    class="adjustWidth adjustHeight input input-bordered @if($columnDefine->required) input-accent @endif"
-    name="content[{{$columnDefine->id}}]"
->
-{{ $this->content[$columnDefine->id] ?? '' }}
-</textarea>
-    @error('content.' . $columnDefine->id)
-    <label class="label">
-        <span class="label-text-alt text-red-500 text-xs space-x-2">
-            <i class="fas fa-times-circle"></i>
-            <span class="error">{{ $message }}</span>
-        </span>
-    </label>
-    @enderror
-</label>
+</div>
+
 
 @once
     @push('scripts')
@@ -40,7 +39,7 @@
             // ドキュメントがロードされたときに実行する関数
             document.addEventListener('livewire:initialized', function () {
                 // 幅と高さを調整するためのテキストエリア要素を取得
-                const textareas = document.querySelectorAll('textarea.adjustWidth.adjustHeight');
+                const textareas = document.querySelectorAll('textarea.adjustHeight');
 
                 // テキストエリアの幅と高さを調整する関数
                 function adjustInputSize(input) {
@@ -48,7 +47,6 @@
                     const clone = input.cloneNode();
                     clone.style.overflowY = 'hidden'; // クローンでのスクロールバー表示を無効に
                     clone.style.height = 'auto'; // クローンの高さを自動調整
-                    clone.style.width = 'auto'; // クローンの幅を自動調整
                     clone.style.whiteSpace = 'pre'; // クローンで改行を考慮
 
                     // クローンを一時的に画面外に配置
@@ -57,16 +55,20 @@
                     clone.style.top = '-9999px';
                     document.body.appendChild(clone);
 
-                    // クローンの幅と高さを取得
-                    const width = clone.scrollWidth + 25; // テキストの幅に余裕を持たせるために25pxを加えます
+                    // 個別にadjustWidthが指定されている場合は幅を調整
+                    if (input.classList.contains('adjustWidth')) {
+                        const width = clone.scrollWidth; // テキストの幅に余裕を持たせるために25pxを加えます
+                        input.style.width = width + 'px';
+                    }
+                    // クローンの高さを取得
                     const height = clone.scrollHeight;
 
                     // クローンを削除
                     document.body.removeChild(clone);
 
-                    // テキストエリアの幅と高さを設定
-                    input.style.width = width + 'px';
+                    // テキストエリアの高さを設定
                     input.style.height = height + 'px';
+
                 }
 
                 // 各テキストエリアに対してイベントリスナーを設定
@@ -76,19 +78,19 @@
                     });
                 });
 
-                // ページがロードされた際にすべてのテキストエリアの幅と高さを調整
-                function adjustAllInputSizes() {
+                // ページがロードされた際にすべてのテキストエリアの高さを調整
+                function adjustAllInputHeights() {
                     textareas.forEach((textarea) => {
                         adjustInputSize(textarea);
                     });
                 }
 
-                // ページがロードされた際にすべてのテキストエリアの幅と高さを初期化
-                adjustAllInputSizes();
+                // ページがロードされた際にすべてのテキストエリアの高さを初期化
+                adjustAllInputHeights();
 
-                // Livewireメッセージが処理された際にすべてのテキストエリアの幅と高さを更新
+                // Livewireメッセージが処理された際にすべてのテキストエリアの高さを更新
                 Livewire.hook('morph.updated', ({el, component}) => {
-                    adjustAllInputSizes();
+                    adjustAllInputHeights();
                 })
             });
         </script>

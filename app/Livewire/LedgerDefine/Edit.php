@@ -32,6 +32,7 @@ class Edit extends Component
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
 
         $this->title = $this->ledgerDefineRecord->title;
+        $this->parentFolderId = $this->ledgerDefineRecord->folder_id;
 
 
         $this->folderRecords = [];
@@ -50,35 +51,45 @@ class Edit extends Component
 
 
         $this->folderIdNameMap = $this->folderRecords->mapWithKeys(function ($folderRecord) {
-            return (object)[$folderRecord->id => ['id' => $folderRecord->id, 'name' => $folderRecord->title]];
+            $selected = $folderRecord->id == $this->parentFolderId ? true : false;
+            return [
+                $folderRecord->id => [
+                    'id' => $folderRecord->id,
+                    'name' => $folderRecord->title,
+                    'selected' => $selected
+                ]
+            ];
         });
 
-        $this->parentFolderId = $this->ledgerDefineRecord->folderId;
 
-//        dd($this->folderRecords,$this->folderIdNameMap);
+//        dd($this->folderRecords,$this->parentFolderId,$this->folderIdNameMap);
 
 
     }
 
-    public function applyTitle()
-    {
-        $this->ledgerDefineRecord->title = $this->title;
-        $this->store();
-    }
+    /*    public function applyTitle()
+        {
+            $this->ledgerDefineRecord->title = $this->title;
+    //        $this->store();
+        }*/
 
     /**
      * @return void
      */
-    private function store(): void
+    public function store(): void
     {
+        $this->ledgerDefineRecord->title = $this->title;
+        $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
+        // イベントを発行
+        $this->dispatch('ledgerDefineRecordStored');
     }
 
-    public function applyParentFolder()
-    {
-        $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
-        $this->store();
-    }
+    /*    public function applyParentFolder()
+        {
+            $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
+    //        $this->store();
+        }*/
 
 }

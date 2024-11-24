@@ -20,6 +20,14 @@ class ModifyColumn extends Component
 
     public $columnOptions = [];
 
+    public $columnNames = [];
+
+    public $columnRequired = [];           // 必須項目フラグ
+
+    public $columnUnique = [];     // 重複不可フラグ
+
+    public $columnSortBy = [];             // ソート対象フラグ
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
@@ -37,7 +45,11 @@ class ModifyColumn extends Component
 
         //        options初期化
         $this->columnOptions = collect($this->ledgerDefineRecord->column_define)->pluck('options', 'id')->toArray();
-//        ksort($this->columnOptions);
+        $this->columnNames = collect($this->ledgerDefineRecord->column_define)->pluck('name', 'id')->toArray();
+        $this->columnRequired = collect($this->ledgerDefineRecord->column_define)->pluck('required', 'id')->toArray();
+        $this->columnUnique = collect($this->ledgerDefineRecord->column_define)->pluck('unique', 'id')->toArray();
+        $this->columnSortBy = collect($this->ledgerDefineRecord->column_define)->pluck('sortBy', 'id')->toArray();
+        //        ksort($this->columnOptions);
 
     }
 
@@ -62,7 +74,7 @@ class ModifyColumn extends Component
             return $result;
         })->toArray();
 
-        $this->ledgerDefineRecord->save();
+        $this->store();
 
     }
 
@@ -87,7 +99,7 @@ class ModifyColumn extends Component
             ->toArray();
 
         //      DBに投入しないと反映されない（レスポンスがhtmlなので変数がjsに再バインドされるわけでは無さそう）
-        $this->ledgerDefineRecord->save();
+        $this->store();
     }
 
     public function addColumn()
@@ -101,27 +113,26 @@ class ModifyColumn extends Component
                 new ColumnDefine($this->maxColumnId, 'no name', 'text', $this->maxColumnOrder)
             )
             ->toArray();
-        $this->ledgerDefineRecord->save();
+        $this->store();
 
     }
 
-    public function applyType()
-    {
+    /*    public function applyType()
+        {
 
-        foreach ($this->columnTypes as $columnId => $columnType) {
-            foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
-                if ($columnDefine->id == $columnId) {
-                    $this->ledgerDefineRecord->column_define[$cKey]->setType($columnType);
+            foreach ($this->columnTypes as $columnId => $columnType) {
+                foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+                    if ($columnDefine->id == $columnId) {
+                        $this->ledgerDefineRecord->column_define[$cKey]->setType($columnType);
+                    }
                 }
             }
-        }
-        $this->dispatch('elementUpdated');
 
-        //        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
-        $this->ledgerDefineRecord->column_define = (array)$this->ledgerDefineRecord->column_define;
-        $this->ledgerDefineRecord->save();
+            //        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
+            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
+            $this->store();
 
-    }
+        }*/
 
     public function applyOptions($columnId)
     {
@@ -138,14 +149,72 @@ class ModifyColumn extends Component
         // 比較ロジック
         if ($this->optionsHaveChanged($oldOptions, $newOptions)) {
             $this->ledgerDefineRecord->column_define[$cKey]->options = $newOptions;
-//            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
-//            dd($this->ledgerDefineRecord->column_define);
-            $this->ledgerDefineRecord->save();
+            //            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
+            //            dd($this->ledgerDefineRecord->column_define);
+            $this->store();
         }
     }
 
     private function optionsHaveChanged($oldOptions, $newOptions)
     {
         return array_diff($oldOptions, $newOptions) !== [] || array_diff($newOptions, $oldOptions) !== [];
+    }
+
+    public function applyProperty($columnId, $propertyName, $newValue)
+    {
+        $setterMethod = 'set' . ucfirst($propertyName);
+        foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+            if ($columnDefine->id == $columnId) {
+                $oldValue = $columnDefine->$propertyName;
+                break;
+            }
+        }
+
+        if ($oldValue != $newValue) {
+            foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+                if ($columnDefine->id == $columnId) {
+                    $columnDefine->$setterMethod($newValue);
+                    break;
+                }
+            }
+            $this->store();
+        }
+    }
+
+    public function applyName($columnId)
+    {
+        $this->applyProperty($columnId, 'name', $this->columnNames[$columnId] ?? []);
+    }
+
+    public function applyRequired($columnId)
+    {
+        $this->applyProperty($columnId, 'required', $this->columnRequired[$columnId] ?? []);
+    }
+
+    public function applyType($columnId)
+    {
+        $this->applyProperty($columnId, 'type', $this->columnTypes[$columnId] ?? []);
+    }
+
+    public function applyUnique($columnId)
+    {
+        $this->applyProperty($columnId, 'unique', $this->columnUnique[$columnId] ?? []);
+    }
+
+    public function applySortBy($columnId)
+    {
+        $this->applyProperty($columnId, 'sortBy', $this->columnSortBy[$columnId] ?? []);
+    }
+
+    public function store()
+    {
+        $this->ledgerDefineRecord->modifier_id = auth()->id();
+        $this->ledgerDefineRecord->save();
+        // イベントを発行
+        $this->dispatch('ledgerDefineRecordStored');
+
+        // セッションにメッセージを保存
+        session()->flash('status', __('ledger.define.saved'));
+
     }
 }

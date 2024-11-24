@@ -4,9 +4,12 @@
     $columnDefine->idに基づいて動的なフォームを作成します。
     フォームの入力内容はcontent[$columnDefine->id]というLivewireのプロパティで管理されます。
 -->
+@props([
+    'class'=>'input-primary',
+    'icon'=>'o-chat-bubble-oval-left-ellipsis',
+    'columnDefine'=>[]
+    ])
 @php
-    $icon='';
-    $class="input-primary";
     if($columnDefine->required){
         $icon='c-check-circle';
         $class="input-accent";
@@ -23,6 +26,7 @@
     wire:model="content.{{$columnDefine->id}}"
     clearable
     :class="$class"
+    :required="$columnDefine->required"
 />
 
 {{--

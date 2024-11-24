@@ -40,7 +40,7 @@ class ColumnDefine
 
     public $required;           // 必須項目フラグ
 
-    public $doNotDuplicate;     // 重複不可フラグ
+    public $unique;     // 重複不可フラグ
 
     public $sortBy;             // ソート対象フラグ
 
@@ -81,7 +81,7 @@ class ColumnDefine
         $this->initUseOptions();
         $this->options = $inObject->options ?? [];
         $this->required = $inObject->required;
-        $this->doNotDuplicate = $inObject->doNotDuplicate;
+        $this->unique = $inObject->unique;
         $this->sortBy = $inObject->sortBy;
     }
 
@@ -97,7 +97,7 @@ class ColumnDefine
         int  $order = 1,
         array $options = [],
         bool $required = false,
-        bool $doNotDuplicate = false,
+        bool $unique = false,
         bool $sortBy = false
     )
     {
@@ -108,7 +108,7 @@ class ColumnDefine
         $this->initUseOptions();
         $this->options = $options;
         $this->required = $required;
-        $this->doNotDuplicate = $doNotDuplicate;
+        $this->unique = $unique;
         $this->sortBy = $sortBy;
     }
 
@@ -181,5 +181,45 @@ class ColumnDefine
         }
 
         return $convertedValue;
+    }
+
+    /**
+     * @param mixed $name
+     */
+    public function setName($name): void
+    {
+        $this->name = $name;
+    }
+
+    /**
+     * @param mixed $options
+     */
+    public function setOptions($options): void
+    {
+        $this->options = $options;
+    }
+
+    /**
+     * @param mixed $required
+     */
+    public function setRequired($required): void
+    {
+        $this->required = $required;
+    }
+
+    /**
+     * @param mixed $unique
+     */
+    public function setUnique($unique): void
+    {
+        $this->unique = $unique;
+    }
+
+    /**
+     * @param mixed $sortBy
+     */
+    public function setSortBy($sortBy): void
+    {
+        $this->sortBy = $sortBy;
     }
 }

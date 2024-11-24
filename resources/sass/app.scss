@@ -50,3 +50,7 @@ input:-ms-input-placeholder.icon-input {
 input::-moz-placeholder.icon-input {
     font-family: 'Font Awesome 5 Free';
 }
+
+textarea {
+    field-sizing: content;
+}

@@ -17,15 +17,18 @@
 </div>--}}
 
 
-<div>
-    <label class="label">
-        <span class="label-text">
-            @if($columnDefine->required)
-                <i class="fas fa-check-circle text-accent"></i>
-            @endif
+<div class="space-x-1">
+    <label class="pt-0 label label-text font-semibold">
+        <span>
             {{$columnDefine->name}}
+            @if($columnDefine->required)
+                <span class="text-error">*</span>
+            @endif
         </span>
     </label>
+    @if($columnDefine->required)
+        <i class="fas fa-check-circle text-neutral/50"></i>
+    @endif
     <div class="join">
         @foreach($columnDefine->options as $oKey => $option)
             <div class="join-item">
