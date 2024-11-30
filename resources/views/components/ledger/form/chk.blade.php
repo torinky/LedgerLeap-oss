@@ -16,8 +16,10 @@
 @endforeach
 </div>--}}
 
-
-<div class="space-x-1">
+@props([
+    'class'=>'',
+    ])
+<div class="form-control {{$class}}">
     <label class="pt-0 label label-text font-semibold">
         <span>
             {{$columnDefine->name}}
@@ -26,16 +28,20 @@
             @endif
         </span>
     </label>
-    @if($columnDefine->required)
-        <i class="fas fa-check-circle text-neutral/50"></i>
-    @endif
-    <div class="join">
+    {{--    <div class="flex flex-wrap space-y-2 join items-center">--}}
+    <div class="flex flex-wrap join ">
+        {{--
+            <div class="flex flex-wrap space-y-2 join items-center">
+            @if($columnDefine->required)
+                <i class="fas fa-check-circle text-neutral/50 mr-2 mt-4"></i>
+            @endif
+        --}}
         @foreach($columnDefine->options as $oKey => $option)
-            <div class="join-item">
+            <div class="join-item items-center space-y-2">
                 <input type="checkbox"
                        id="content[{{$columnDefine->id}}][{{$option}}]"
                        value="{{$option}}"
-                       wire:model="content.{{$columnDefine->id}}.{{$option}}"
+                       wire:model.live="content.{{$columnDefine->id}}.{{$option}}"
                        name="content[{{$columnDefine->id}}][{{$option}}]"
                        class="hidden peer"
                     {{--                       @if($columnDefine->required) required @endif--}}

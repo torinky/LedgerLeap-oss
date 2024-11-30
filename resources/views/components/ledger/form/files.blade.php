@@ -1,19 +1,27 @@
 <div class="form-control">
+    @error('content.' . $columnDefine->id)
+    <span class="label-text-alt text-red-500 text-xs space-x-2">
+        <i class="fas fa-times-circle"></i>
+        <span class="error">{{ $message }}</span>
+    </span>
+    @enderror
 
-    <div class="pt-0 label label-text font-semibold">
+    <label for="content[{{$columnDefine->id}}]" class="">
+
+        <div class="pt-0 label label-text font-semibold">
         <span>
              {{$columnDefine->name}}
             @if($columnDefine->required)
                 <span class="text-error">*</span>
             @endif
         </span>
-    </div>
+        </div>
 
-    <div
-        class=" card @if($columnDefine->required) bg-accent @else bg-base-200 @endif"
-        wire:ignore
-        x-data
-        x-init="() => {
+        <div
+            class=" rounded-lg opacity-70 hover:opacity-100 @if($columnDefine->required) bg-warning/70 @else bg-neutral/50 @endif "
+            wire:ignore
+            x-data
+            x-init="() => {
         window.addEventListener('load', () => {
             const post = FilePond.create($refs.content_{{$columnDefine->id}});
             post.setOptions({
@@ -106,9 +114,10 @@
         });
     }
     "
-    >
-        <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"
-               x-ref="content_{{$columnDefine->id}}"
         >
-    </div>
+            <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"
+                   x-ref="content_{{$columnDefine->id}}"
+            >
+        </div>
+    </label>
 </div>

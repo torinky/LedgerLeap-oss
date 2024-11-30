@@ -11,26 +11,30 @@
 @endphp
 
 
+{{--
 <div class="flex items-center space-x-2 w-full">
 
     @if($columnDefine->required)
         <i class="fas fa-check-circle text-neutral/50"></i>
     @endif
     <div class="flex-1">
+--}}
         <x-mary-textarea
             label="{{$columnDefine->name}}"
             id="content[{{$columnDefine->id}}]"
             name="content[{{$columnDefine->id}}]"
             icon="{{$icon}}"
-            wire:model="content.{{$columnDefine->id}}"
+            wire:model.blur="content.{{$columnDefine->id}}"
             placeholder="{{$columnDefine->name}}"
             {{--        hint="Max 1000 chars"--}}
             rows="3"
             :required="$columnDefine->required"
             :class="$class"
         />
+{{--
     </div>
 </div>
+--}}
 
 
 @once

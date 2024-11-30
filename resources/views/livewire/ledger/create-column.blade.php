@@ -14,32 +14,17 @@
             <div class="card-body mb-32 space-y-5 ">
                 <h2 class="card-title">
                     {{$ledgerDefineRecord->title}}
-
+                    {{--@dd($content)--}}
                 </h2>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
+                    <div class="flex">
+                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} mr-2 "></div>
+                        <div class="w-full"
+                             wire:key="content-{{$columnDefine->id}}">
 
-                    <div class=""
-                         wire:key="content-{{$columnDefine->id}}">
+                            @if($columnDefine->type=='files')
 
-                        @if($columnDefine->type=='files')
-
-                            <label for="content[{{$columnDefine->id}}]"
-                                   class="">
-                                <div class="label">
-                                    <span class="label-text">
-                               @if($columnDefine->required)
-                                            <i class="fas fa-check-circle text-accent"></i>
-                                        @endif
-                                        {{$columnDefine->name}}
-                                    </span>
-                                </div>
-                                @error('content.' . $columnDefine->id)
-                                <span class="label-text-alt text-red-500 text-xs space-x-2">
-                                            <i class="fas fa-times-circle"></i>
-                                            <span class="error">{{ $message }}</span>
-                                    </span>
-                                @enderror
-                                <div class="w-full">
+                                <div class="">
                                     <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
                                                          wire:model.live="content"
                                                          :columnDefine="$columnDefine"
@@ -49,43 +34,15 @@
                                                          imagePreviewMaxHeight="200"
                                     />
                                 </div>
-                            </label>
-                        @else
-                            {{--
-                                                        <label for="content[{{$columnDefine->id}}]"
-                                                               class="form-control w-full max-w-xs">
-                                                            <div class="label">
-                                                                <span class="label-text">
-                                                                    @if($columnDefine->required)
-                                                                        <i class="fas fa-check-circle text-accent"></i>
-                                                                    @endif
-                                                                    {{$columnDefine->name}}</span>
-                                                            </div>
-                                                            <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                                                 wire:model="content"
-                                                                                 :columnDefine="$columnDefine"
-                                                                                 :ledgerRecord="$ledgerRecord??[]"
-                                                            />
+                            @else
+                                <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
+                                                     wire:model="content"
+                                                     :columnDefine="$columnDefine"
+                                                     :ledgerRecord="$ledgerRecord??[]"
+                                />
 
-                                                        </label>
-                            --}}
-                            <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                 wire:model="content"
-                                                 :columnDefine="$columnDefine"
-                                                 :ledgerRecord="$ledgerRecord??[]"
-                            />
-
-                        @endif
-                        {{--
-                                                @error('content.' . $columnDefine->id)
-                                                <label class="label">
-                                                            <span class="label-text-alt text-red-500 text-xs space-x-2">
-                                                                <i class="fas fa-times-circle"></i>
-                                                                <span class="error">{{ $message }}</span>
-                                                            </span>
-                                                </label>
-                                                @enderror
-                        --}}
+                            @endif
+                        </div>
                     </div>
 
                 @endforeach

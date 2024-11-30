@@ -36,6 +36,13 @@ class ModifyColumn extends CreateColumn
                     $this->deletedContent[$column->id] = [];
                     $this->content[$column->id] = [];
                 }
+                if (!empty($this->content[$column->id])) {
+                    $this->labelColor[$column->id] = 'success';
+                } elseif ($column->required) {
+                    $this->labelColor[$column->id] = 'warning';
+                } else {
+                    $this->labelColor[$column->id] = 'muted';
+                }
             }
         }
     }

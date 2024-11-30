@@ -1,50 +1,59 @@
 <div>
     @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
         {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
-        <form wire:submit="store"
-              method="post"
-              class="w-full">
+        <x-mary-form wire:submit="store"
+                     method="post"
+                     class="card w-full bg-neutral-500/10 shadow-xl">
             @csrf
             <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
-            <caption>
-                {{$ledgerDefineRecord->title}}
-
-            </caption>
             @php
                 $columnJs=[];
             @endphp
 
-            <div class="m-5 space-y-5">
+            <div class="card-body mb-32 space-y-5 ">
+                <h2 class="card-title">
+                    {{$ledgerDefineRecord->title}}
+                    {{--@dd($content)--}}
+                </h2>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    @if($columnDefine->type=='files')
-                        <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
-                                             wire:model.live="content"
-                                             wire:model.live="deletedContent"
-                                             :columnDefine="$columnDefine"
-                                             :ledgerRecord="$ledgerRecord??[]"
-                                             multiple
-                                             allowImagePreview
-                                             imagePreviewMaxHeight="200"
-                        />
+                    <div class="flex">
+                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} mr-2 "></div>
+                        <div class="w-full">
+                            @if($columnDefine->type=='files')
+                                <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
+                                                     wire:model="content"
+                                                     wire:model="deletedContent"
+                                                     :columnDefine="$columnDefine"
+                                                     :ledgerRecord="$ledgerRecord??[]"
+                                                     multiple
+                                                     allowImagePreview
+                                                     imagePreviewMaxHeight="200"
+                                />
 
-                    @else
-                        <x-dynamic-component
-                            :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                            wire:model.live="content"
-                            :columnDefine="$columnDefine"
-                            :ledgerRecord="$ledgerRecord??[]"
-                        />
-                    @endif
+                            @else
+                                <x-dynamic-component
+                                    :component="'ledger.form.'. Str::kebab($columnDefine->type)"
+                                    wire:model.live="content"
+                                    :columnDefine="$columnDefine"
+                                    :ledgerRecord="$ledgerRecord??[]"
+                                />
+                            @endif
+                        </div>
+
+                    </div>
                 @endforeach
             </div>
-
             <div
                 class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
                 <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
                     <div class="card-body flex flex-row justify-center items-center">
                         <div class="card-actions justify-center place-items-center">
-                            <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
-                                    class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
+                            <x-mary-button label="{{__('ledger.modify_message')}}" icon="o-pencil-square"
+                                           class="btn btn-lg btn-warning btn-wide mr-4" type="submit" spinner="store"/>
+                            {{--
+                                                        <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
+                                                                class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
+                            --}}
                             @if(isset($ledgerRecord->id))
                                 <label for="delete-modal" class="btn btn-outline btn-sm btn-error ml-10"><i
                                         class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
@@ -56,7 +65,7 @@
                 </div>
             </div>
 
-        </form>
+        </x-mary-form>
 
         @if(isset($ledgerRecord->id))
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>

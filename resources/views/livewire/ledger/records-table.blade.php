@@ -162,7 +162,7 @@
         --}}
         @include('components.ledger.alert',[
             'message'=>__('ledger.select_message'),
-            'icon'=> 'fa-hand-pointer',
+            'icon'=> 'cursor-arrow-ripple',
             'type'=>'warning',
             'refreshParentWindow'=>false,
         ])

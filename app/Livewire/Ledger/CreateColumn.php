@@ -31,6 +31,8 @@ class CreateColumn extends Component
 
     public array $content;
 
+    public array $labelColor;
+
     public mixed $ledgerDefineRecord;
 
     public int $ledgerDefineId;
@@ -55,6 +57,11 @@ class CreateColumn extends Component
             } else {
                 $this->content[$column->id] = '';
             }
+            if ($column->required) {
+                $this->labelColor[$column->id] = 'warning';
+            } else {
+                $this->labelColor[$column->id] = 'muted';
+            }
         }
         //        dd($this->content, $this->contentAttached);
         //        dd($this->ledgerDefineRecord);
@@ -69,6 +76,20 @@ class CreateColumn extends Component
     {
         try {
             $this->validateOnly($propertyName);
+            foreach ($this->ledgerDefineRecord->column_define as $column) {
+                if ($column->required) {
+                    $this->labelColor[$column->id] = 'warning';
+                } else {
+                    $this->labelColor[$column->id] = 'muted';
+                }
+                if ((!is_array($this->content[$column->id]) && !empty($this->content[$column->id]))
+                    || (is_array($this->content[$column->id]) && in_array(true, $this->content[$column->id]))
+                ) {
+                    $this->labelColor[$column->id] = 'success';
+                } elseif ($this->getErrorBag()->hasAny($propertyName)) {
+                    $this->labelColor[$column->id] = 'error';
+                }
+            }
         } catch (ValidationException $e) {
         }
     }

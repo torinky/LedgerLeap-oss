@@ -20,47 +20,32 @@
           'class'=>$class
           ];
     }
-  //    dd($tmpOptions);
-
-  /*if($columnDefine->required){
-      $label='<i class="fas fa-check-circle text-accent"></i>'.$columnDefine->name;
-  }else{
-      $label=$columnDefine->name;
-  }*/
 @endphp
 
 
-{{--
-<div class="form-control">
-    <div class="label">
-        <span class="label-text font-semibold">
-             {{$columnDefine->name}}
-        </span>
-    </div>
-
-    <select wire:model.live="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
-            name="content[{{$columnDefine->id}}]"
-            class="select select-bordered @if($columnDefine->required) input-accent @endif"
-    >
-        <option disabled>{{__('ledger.form.pickSelections')}}</option>
-
-        @foreach ($columnDefine->options as $option)
-            <option value="{{$option}}" @php(($option==($this->content[$columnDefine->id]??'') )? 'selected' : '')>
-                {{$option}}
-            </option>
-        @endforeach
-    </select>
-</div>
---}}
-
-
-<x-mary-select label="{{$columnDefine->name}}"
-               icon="{{$icon}}"
-               id="content[{{$columnDefine->id}}]"
-               name="content[{{$columnDefine->id}}]"
-               wire:model="content.{{$columnDefine->id}}"
-               :options="$tmpOptions"
-               class="@if($columnDefine->required) input-accent @endif"
-               :required="$columnDefine->required"
-               :class="$class"
-/>
+@if(count($tmpOptions)<5)
+    <x-mary-select label="{{$columnDefine->name}}"
+                   icon="{{$icon}}"
+                   id="content[{{$columnDefine->id}}]"
+                   name="content[{{$columnDefine->id}}]"
+                   wire:model.blur="content.{{$columnDefine->id}}"
+                   :options="$tmpOptions"
+                   class="@if($columnDefine->required) input-accent @endif"
+                   :required="$columnDefine->required"
+                   :class="$class"
+    />
+@else
+    {{--
+        <div class="flex flex-wrap items-center space-y-2">
+            @if($columnDefine->required)
+                <i class="fas fa-check-circle text-neutral/50 mr-2 mt-8"></i>
+            @endif
+    --}}
+    <x-mary-radio label="{{$columnDefine->name}}"
+                  :options="$tmpOptions"
+                  wire:model.live="content.{{$columnDefine->id}}"
+                  :required="$columnDefine->required"
+                  class="flex w-full"
+    />
+    {{--    </div>--}}
+@endif
