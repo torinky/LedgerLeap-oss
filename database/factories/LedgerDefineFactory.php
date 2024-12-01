@@ -62,7 +62,9 @@ class LedgerDefineFactory extends Factory
                 $this->faker->words(random_int(3, 10)),
                 $this->faker->boolean(),
                 $this->faker->boolean(),
-                $this->faker->boolean()
+                $this->faker->boolean(),
+                $this->faker->realText(30),
+                ['name' => $this->faker->word() . '.png', 'path' => $this->faker->word() . '.png']
             );
 
             $columnDefine[] = $tempColumnDefine;

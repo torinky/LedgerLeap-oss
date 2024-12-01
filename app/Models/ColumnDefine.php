@@ -45,7 +45,7 @@ class ColumnDefine
 
     public $hint;
 
-    public $file;
+    public $file = [];
 
     /**
      * コンストラクタ
@@ -98,7 +98,7 @@ class ColumnDefine
         bool $unique = false,
         bool   $sortBy = false,
         string $hint = '',
-        string $file = ''
+        array $file = []
     )
     {
         $this->id = (int)$id;
