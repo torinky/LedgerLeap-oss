@@ -17,10 +17,9 @@ class AsColumnDefinesArrayJsonTest extends TestCase
     {
         // テストに使用するデータを定義します。
         $data = [
-            ['id' => 123, 'name' => 'Column1', 'type' => 'number', 'order' => 0, 'required' => 0, 'unique' => 1, 'sortBy' => 1],
-            ['id' => 124, 'name' => 'Column2', 'type' => 'text', 'order' => 1, 'required' => 1, 'unique' => 0, 'sortBy' => 0],
+            ['id' => 123, 'name' => 'Column1', 'type' => 'number', 'order' => 0, 'required' => 0, 'unique' => 1, 'sortBy' => 1, 'hint' => '', 'file' => ''],
+            ['id' => 124, 'name' => 'Column2', 'type' => 'text', 'order' => 1, 'required' => 1, 'unique' => 0, 'sortBy' => 0, 'hint' => '', 'file' => ''],
         ];
-
         // モデルに保存する前にキャストを使用してJSONに変換します。
         $castedData = (new AsColumnDefinesArrayJson)->set(new stdClass, 'attributes', $data, ['attributes']);
 

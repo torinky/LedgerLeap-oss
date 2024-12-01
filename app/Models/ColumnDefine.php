@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Exception;
 use RuntimeException;
 
 class ColumnDefine
@@ -44,26 +43,24 @@ class ColumnDefine
 
     public $sortBy;             // ソート対象フラグ
 
+    public $hint;
+
+    public $file;
+
     /**
      * コンストラクタ
      *
+     * @param object|array $inObject
+     *
      * 引数の数に応じてオブジェクトによる初期化か値による初期化かを振り分ける
      */
-    public function __construct()
+    public function __construct($inObject = null)
     {
-        $a = func_get_args();
-        $i = func_num_args();
-        if ($i == 1) {
-            call_user_func_array([$this, 'constructByObject'], $a);
-
-            return;
+        if (is_object($inObject)) {
+            $this->constructByObject($inObject);
+        } elseif (func_num_args() > 1) {
+            $this->constructByArgs(...func_get_args());
         }
-        if ($i > 1) {
-            call_user_func_array([$this, 'constructByArgs'], $a);
-
-            return;
-        }
-        throw new Exception('無効な引数');
     }
 
     /**
@@ -75,14 +72,15 @@ class ColumnDefine
     public function constructByObject($inObject)
     {
         $this->id = (int)$inObject->id;
-        $this->name = $inObject->name;
-        $this->type = $inObject->type;
-        $this->order = $inObject->order;
-        $this->initUseOptions();
-        $this->options = $inObject->options ?? [];
-        $this->required = $inObject->required;
-        $this->unique = $inObject->unique;
-        $this->sortBy = $inObject->sortBy;
+        $this->setName($inObject->name);
+        $this->setType($inObject->type);
+        $this->setOrder($inObject->order);
+        $this->setOptions($inObject->options ?? []);
+        $this->setRequired($inObject->required);
+        $this->setUnique($inObject->unique);
+        $this->setSortBy($inObject->sortBy);
+        $this->setHint($inObject->hint);
+        $this->setFile($inObject->file);
     }
 
     /**
@@ -91,25 +89,28 @@ class ColumnDefine
      * @return void
      */
     public function constructByArgs(
-        int  $id,
-        string $name,
+        int    $id,
+        string $name = '',
         string $type = 'text',
-        int  $order = 1,
+        int    $order = 1,
         array $options = [],
         bool $required = false,
         bool $unique = false,
-        bool $sortBy = false
+        bool   $sortBy = false,
+        string $hint = '',
+        string $file = ''
     )
     {
         $this->id = (int)$id;
-        $this->name = $name;
-        $this->type = $type;
-        $this->order = $order;
-        $this->initUseOptions();
-        $this->options = $options;
-        $this->required = $required;
-        $this->unique = $unique;
-        $this->sortBy = $sortBy;
+        $this->setName($name);
+        $this->setType($type);
+        $this->setOrder($order);
+        $this->setOptions($options);
+        $this->setRequired($required);
+        $this->setUnique($unique);
+        $this->setSortBy($sortBy);
+        $this->setHint($hint);
+        $this->setFile($file);
     }
 
     /**
@@ -221,5 +222,26 @@ class ColumnDefine
     public function setSortBy($sortBy): void
     {
         $this->sortBy = $sortBy;
+    }
+
+    /**
+     * @param mixed $hint
+     */
+    public function setHint($hint): void
+    {
+        $this->hint = $hint;
+    }
+
+    /**
+     * @param mixed $file
+     */
+    public function setFile($file): void
+    {
+        $this->file = $file;
+    }
+
+    public function setOrder(int $order): void
+    {
+        $this->order = $order;
     }
 }

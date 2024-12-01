@@ -24,7 +24,7 @@ class ColumnHtmlService
 
     private $nameBase = '';
 
-    private const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
+    public const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
