@@ -27,5 +27,6 @@
     clearable
     :class="$class"
     :required="$columnDefine->required"
+    :hint="$columnDefine->hint"
 />
 

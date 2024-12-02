@@ -109,7 +109,9 @@
                                     @if(isset($columnFile[$columnDefine->id]['name']) )
                                         <a href="{{ asset('storage/'.$columnFile[$columnDefine->id]['path']??'') }}"
                                            target="_blank">
-                                            {{ $columnFile[$columnDefine->id]['name']??'' }}
+                                            <img
+                                                src="{{ asset('storage/thumbnails/'.$columnFile[$columnDefine->id]['path']) }}"
+                                                alt="{{ $columnFile[$columnDefine->id]['name'] }}">
                                         </a>
                                         <button
                                             class="btn btn-sm tooltip"

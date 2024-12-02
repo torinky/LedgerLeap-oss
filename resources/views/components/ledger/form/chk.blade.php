@@ -18,6 +18,7 @@
 
 @props([
     'class'=>'',
+    'hintClass'=> 'label-text-alt text-gray-400 ps-1 mt-2',
     ])
 <div class="form-control {{$class}}">
     <label class="pt-0 label label-text font-semibold">
@@ -61,5 +62,8 @@
         </span>
     </label>
     @enderror
+    @if($columnDefine->hint)
+        <div class="{{ $hintClass }}" x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
+    @endif
 
 </div>

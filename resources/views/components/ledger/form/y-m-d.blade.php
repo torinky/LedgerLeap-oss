@@ -63,6 +63,7 @@
         {{--        clearable--}}
         :class="$class"
         :required="$columnDefine->required"
+        :hint="$columnDefine->hint"
         data-input
     >
         <x-slot:append>

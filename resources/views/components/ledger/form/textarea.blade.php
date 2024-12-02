@@ -30,6 +30,7 @@
             rows="3"
             :required="$columnDefine->required"
             :class="$class"
+            :hint="$columnDefine->hint"
         />
 {{--
     </div>

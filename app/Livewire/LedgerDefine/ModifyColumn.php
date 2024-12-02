@@ -7,8 +7,10 @@ use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
+use RuntimeException;
 
 class ModifyColumn extends Component
 {
@@ -65,6 +67,15 @@ class ModifyColumn extends Component
             ->map(function ($value) {
                 return (array)$value;
             });
+        // サムネイル生成処理を追加
+//        dd($this->columnFile);
+        foreach ($this->columnFile as $columnId => $file) {
+            if (!isset($file['path'])) {
+                continue;
+            }
+            $this->createThumbnail($file['path']);
+        }
+
         foreach ($this->columnFile as $columnId => $file) {
             $this->columnUploadedFile[$columnId] = (object)['name' => "", 'path' => ""];
         }
@@ -259,6 +270,29 @@ class ModifyColumn extends Component
     }
 
     /**
+     * @param $path
+     * @return void
+     */
+    public function createThumbnail($path): void
+    {
+        $thumbnailPath = Storage::disk('public')->path('thumbnails/' . $path);
+        if (!is_dir(dirname($thumbnailPath))) {
+            if (!mkdir($concurrentDirectory = dirname($thumbnailPath), 0777, true) && !is_dir($concurrentDirectory)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+            }
+        }
+
+        $sourcePath = Storage::disk('public')->path($path);
+        if (!file_exists($thumbnailPath) && file_exists($sourcePath)) {
+            $img = Image::make($sourcePath);
+            $img->resize(200, null, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            $img->save($thumbnailPath);
+        }
+    }
+
+    /**
      * このクラスのpublicパラメータとcolumnDefineクラスに合わせてバリデーションの内容を定義します。
      */
     protected function rules(): array
@@ -273,7 +307,8 @@ class ModifyColumn extends Component
             'columnSortBy.*' => 'boolean',
             'columnHint.*' => 'nullable|string|max:255',
 //            'columnFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
-            'columnFile.*' => 'nullable',
+//            'columnUploadedFile.*' => 'nullable',
+            'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
         ];
         // Add dynamic rules based on columnDefine
         foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
@@ -293,6 +328,7 @@ class ModifyColumn extends Component
             $originalFileName = $file->getClientOriginalName();
             $fileName = "ledger_{$this->ledgerDefineRecord->id}_column_{$columnId}_{$originalFileName}";
             $filePath = $file->storeAs('column_files', $fileName, 'public');
+            $this->createThumbnail($filePath);
             $this->columnFile[$columnId] = ['name' => $originalFileName, 'path' => $filePath];
             $this->ledgerDefineRecord->column_define[$columnId]->file = $this->columnFile[$columnId];
             $this->store();

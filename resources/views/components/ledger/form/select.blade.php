@@ -22,8 +22,7 @@
     }
 @endphp
 
-
-@if(count($tmpOptions)<5)
+@if(count($tmpOptions) > 5)
     <x-mary-select label="{{$columnDefine->name}}"
                    icon="{{$icon}}"
                    id="content[{{$columnDefine->id}}]"
@@ -33,6 +32,8 @@
                    class="@if($columnDefine->required) input-accent @endif"
                    :required="$columnDefine->required"
                    :class="$class"
+                   :hint="$columnDefine->hint"
+
     />
 @else
     {{--
@@ -46,6 +47,7 @@
                   wire:model.live="content.{{$columnDefine->id}}"
                   :required="$columnDefine->required"
                   class="flex w-full"
+                  :hint="$columnDefine->hint"
     />
     {{--    </div>--}}
 @endif
