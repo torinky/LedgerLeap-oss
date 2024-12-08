@@ -1,23 +1,56 @@
+
 @props([
-    'class'=>'',
-    'hintClass'=> 'label-text-alt text-gray-400 ps-1 mt-2',
+    'class'=>'input-primary',
+    'icon'=>'o-chat-bubble-oval-left-ellipsis',
+    'columnDefine'=>[],
+    'isDemo'=>false,
     ])
 
-<div class="form-control">
-    <div class="pt-0 label label-text font-semibold">
-        <span>
-             {{$columnDefine->name}}
-            @if($columnDefine->required)
-                <span class="text-error">*</span>
-            @endif
-        </span>
-    </div>
-    <input type="text" wire:model.live="content.{{$columnDefine->id}}" id="content[{{$columnDefine->id}}]"
-           class="input input-bordered @if($columnDefine->required) input-accent @endif"
-           name="content[{{$columnDefine->id}}]" value="{{$this->content[$columnDefine->id] ?? ''}}"/>
-    @if($columnDefine->hint)
-        <div class="{{ $hintClass }}" x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
-    @endif
 
-</div>
-
+@if($isDemo)
+    <x-mary-input
+        {{--        wire:model.blur="content.{{$columnDefine->id}}"--}}
+        label="{{$columnDefine->name}}"
+        name="content[{{$columnDefine->id}}]"
+        placeholder="{{$columnDefine->name}}"
+        icon="{{$icon}}"
+        clearable
+        class="{{$class}}"
+        required="{{$columnDefine->required}}"
+        hint="{{$columnDefine->hint}}"
+        x-on:focus="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-100');
+        opacityBlock.classList.remove('opacity-30');
+        updateBackground('{{$columnDefine->id}}');
+        "
+        x-on:blur="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.remove('opacity-100');
+        "
+    />
+@else
+    <x-mary-input
+        wire:model.blur="content.{{$columnDefine->id}}"
+        label="{{$columnDefine->name}}"
+        name="content[{{$columnDefine->id}}]"
+        placeholder="{{$columnDefine->name}}"
+        icon="{{$icon}}"
+        clearable
+        class="{{$class}}"
+        required="{{$columnDefine->required}}"
+        hint="{{$columnDefine->hint}}"
+        x-on:focus="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-100');
+        opacityBlock.classList.remove('opacity-30');
+        updateBackground('{{$columnDefine->id}}');
+        "
+        x-on:blur="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.remove('opacity-100');
+        "
+    />
+@endif

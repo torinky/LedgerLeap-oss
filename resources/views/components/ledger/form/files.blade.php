@@ -1,6 +1,6 @@
 @props([
     'class'=>'',
-    'hintClass'=> 'label-text-alt text-gray-400 ps-1 mt-2',
+    'hintClass'=> 'label-text-alt text-gray-400 ps-1 ',
     ])
 
 <div class="form-control">
@@ -124,9 +124,10 @@
                    x-ref="content_{{$columnDefine->id}}"
             >
         </div>
+        @if($columnDefine->hint)
+            <div class="{{ $hintClass }}"
+                 x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
+        @endif
     </label>
-    @if($columnDefine->hint)
-        <div class="{{ $hintClass }}" x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
-    @endif
 
 </div>

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use RuntimeException;
@@ -15,6 +16,7 @@ use RuntimeException;
 class ModifyColumn extends Component
 {
     use WithFileUploads;
+
     //    https://laravel-livewire.com/screencasts/s8-dragging-list
     public $ledgerDefineRecord;
 
@@ -40,6 +42,8 @@ class ModifyColumn extends Component
 
     public $columnUploadedFile = [];
 
+    public $backgroundImages = [];
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
@@ -58,7 +62,7 @@ class ModifyColumn extends Component
         //        options初期化
         $this->columnOptions = collect($this->ledgerDefineRecord->column_define)->pluck('options', 'id');
         $this->columnName = collect($this->ledgerDefineRecord->column_define)->pluck('name', 'id');
-//        dd($this->columnName);
+        //        dd($this->columnName);
         $this->columnRequired = collect($this->ledgerDefineRecord->column_define)->pluck('required', 'id');
         $this->columnUnique = collect($this->ledgerDefineRecord->column_define)->pluck('unique', 'id');
         $this->columnSortBy = collect($this->ledgerDefineRecord->column_define)->pluck('sortBy', 'id');
@@ -68,18 +72,18 @@ class ModifyColumn extends Component
                 return (array)$value;
             });
         // サムネイル生成処理を追加
-//        dd($this->columnFile);
+        //        dd($this->columnFile);
         foreach ($this->columnFile as $columnId => $file) {
             if (!isset($file['path'])) {
                 continue;
             }
             $this->createThumbnail($file['path']);
         }
+        $this->initBackgroundImages();
 
         foreach ($this->columnFile as $columnId => $file) {
-            $this->columnUploadedFile[$columnId] = (object)['name' => "", 'path' => ""];
+            $this->columnUploadedFile[$columnId] = (object)['name' => '', 'path' => ''];
         }
-        //        ksort($this->columnOptions);
 
     }
 
@@ -190,7 +194,6 @@ class ModifyColumn extends Component
         return array_diff($oldOptions, $newOptions) !== [] || array_diff($newOptions, $oldOptions) !== [];
     }
 
-
     public function applyProperty($columnId, $propertyName, $newValue)
     {
         $setterMethod = 'set' . ucfirst($propertyName);
@@ -259,20 +262,15 @@ class ModifyColumn extends Component
         $classPropertyName = reset($propertyParts);
         $columnDefinePropertyName = Str::camel(strtr($classPropertyName, ['column' => '']));
 
-//        dd($classPropertyName, $columnDefinePropertyName, $columnId);
+        //        dd($classPropertyName, $columnDefinePropertyName, $columnId);
         if ($classPropertyName === 'columnUploadedFile') {
             $this->storeFile($columnId);
         } else {
             $this->applyProperty($columnId, $columnDefinePropertyName, $this->{$classPropertyName}[$columnId]);
         }
 
-
     }
 
-    /**
-     * @param $path
-     * @return void
-     */
     public function createThumbnail($path): void
     {
         $thumbnailPath = Storage::disk('public')->path('thumbnails/' . $path);
@@ -292,6 +290,20 @@ class ModifyColumn extends Component
         }
     }
 
+    public function initBackgroundImages(): void
+    {
+        $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
+            ->map(function ($value) {
+                if (empty($value->path)) {
+                    return null;
+                }
+
+                return asset('storage/' . $value->path);
+            })->toArray();
+        //        dd($this->columnFile,$backgroundImages);
+        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+    }
+
     /**
      * このクラスのpublicパラメータとcolumnDefineクラスに合わせてバリデーションの内容を定義します。
      */
@@ -299,15 +311,15 @@ class ModifyColumn extends Component
     {
         $validationRules = [
             'columnName.*' => 'required|string|max:255',
-//            'columnType.*' => 'required|string|in:text,number,date',
+            //            'columnType.*' => 'required|string|in:text,number,date',
             'columnType.*' => 'required|string',
             'columnOptions.*' => 'array',
             'columnRequired.*' => 'boolean',
             'columnUnique.*' => 'boolean',
             'columnSortBy.*' => 'boolean',
             'columnHint.*' => 'nullable|string|max:255',
-//            'columnFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
-//            'columnUploadedFile.*' => 'nullable',
+            //            'columnFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
+            //            'columnUploadedFile.*' => 'nullable',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
         ];
         // Add dynamic rules based on columnDefine
@@ -322,16 +334,21 @@ class ModifyColumn extends Component
     public function storeFile($columnId)
     {
         if (isset($this->columnUploadedFile[$columnId])) {
-//            dd($this->columnUploadedFile[$columnId]);
+            //            dd($this->columnUploadedFile[$columnId]);
             $file = $this->columnUploadedFile[$columnId];
-//            dd($this->columnFile[$columnId]);
+            //            dd($this->columnFile[$columnId]);
             $originalFileName = $file->getClientOriginalName();
             $fileName = "ledger_{$this->ledgerDefineRecord->id}_column_{$columnId}_{$originalFileName}";
             $filePath = $file->storeAs('column_files', $fileName, 'public');
             $this->createThumbnail($filePath);
             $this->columnFile[$columnId] = ['name' => $originalFileName, 'path' => $filePath];
             $this->ledgerDefineRecord->column_define[$columnId]->file = $this->columnFile[$columnId];
+
+            $this->backgroundImages[$columnId] = asset('storage/' . $filePath);
+            $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+
             $this->store();
+
         }
     }
 
@@ -345,6 +362,10 @@ class ModifyColumn extends Component
 
         $this->columnFile[$columnId] = null;
         $this->ledgerDefineRecord->column_define[$columnId]->file = null;
+
+        $this->backgroundImages[$columnId] = null;
+        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+
         $this->store();
     }
 }

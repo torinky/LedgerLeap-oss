@@ -6,7 +6,9 @@
 
                 <li wire:sortable.item="{{ $columnDefine->id }}"
                     wire:key="columnDefine-{{ $columnDefine->id }} drag-item"
-                    class=" ">
+                    class=" "
+                    {{--                    x-on:mouseenter="$dispatchTo('preview', 'changeBackground', '{file: {{$columnFile[$columnDefine->id]['file']??'' }}, path:{{$columnFile[$columnDefine->id]['path']??'' }}}' )"--}}
+                >
                     <div
                         wire:sortable.handle
                         class="flex collapse-title bg-primary/50 text-primary-content
@@ -15,9 +17,11 @@
                             hover:opacity-80
                             rounded-tl-lg
                             rounded-tr-lg
-                            ">
+                            "
+                    >
 
-                        <div class="flex flex-row w-full ">
+                        <div class="flex flex-row w-full "
+                        >
                             <h3 class="text-lg">
                                 {{$columnDefine->id}}
                                 : {{$columnDefine->name}}
@@ -30,8 +34,9 @@
                         ><i class="fa-solid fa-grip-lines"></i>
                         </button>
                     </div>
-                    <div class="collapse rounded-none  bg-primary/30 text-primary-content
-                             ">
+                    <div class="collapse rounded-none  bg-primary/30 text-primary-content"
+                        {{--                         wire:mouseenter="applyBackgroundImages( {{ $backgroundImages }} )"--}}
+                    >
                         <input type="checkbox" name="collapse_{{$columnDefine->id}}"
                                id="collapse_{{$columnDefine->id}}" class="peer collapse_swap hidden"/>
 
@@ -108,11 +113,27 @@
 
                                     @if(isset($columnFile[$columnDefine->id]['name']) )
                                         <a href="{{ asset('storage/'.$columnFile[$columnDefine->id]['path']??'') }}"
-                                           target="_blank">
+                                           target="_blank"
+                                        >
                                             <img
                                                 src="{{ asset('storage/thumbnails/'.$columnFile[$columnDefine->id]['path']) }}"
                                                 alt="{{ $columnFile[$columnDefine->id]['name'] }}">
                                         </a>
+
+                                        {{--
+                                                                            <x-mary-button
+                                                                                label="{{_('ledger.background.apply')}}"
+                                        --}}
+                                        {{--                                        wire:click="$dispatchTo('preview', 'changeBackground',  { id: {{ $columnDefine->id }} })"--}}{{--
+
+                                                                                icon="o-photo"
+                                        --}}
+                                        {{--                                        wire:click="changeBackground( {{ $columnDefine->id }} )"--}}{{--
+
+                                                                                wire:click="applyBackgroundImages()"
+                                                                            />
+                                        --}}
+
                                         <button
                                             class="btn btn-sm tooltip"
                                             data-tip="{{__('ledger.column.delete_file')}}"

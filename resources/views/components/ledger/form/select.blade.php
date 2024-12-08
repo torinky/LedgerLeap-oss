@@ -1,7 +1,9 @@
 @props([
     'class'=>'input-primary',
     'icon'=>'o-chevron-up-down',
+    'isDemo'=>false,
     ])
+
 @php
     $tmpOptions=[];
     if($columnDefine->required){
@@ -22,32 +24,54 @@
     }
 @endphp
 
-@if(count($tmpOptions) > 5)
-    <x-mary-select label="{{$columnDefine->name}}"
-                   icon="{{$icon}}"
-                   id="content[{{$columnDefine->id}}]"
-                   name="content[{{$columnDefine->id}}]"
-                   wire:model.blur="content.{{$columnDefine->id}}"
-                   :options="$tmpOptions"
-                   class="@if($columnDefine->required) input-accent @endif"
-                   :required="$columnDefine->required"
-                   :class="$class"
-                   :hint="$columnDefine->hint"
 
-    />
-@else
-    {{--
-        <div class="flex flex-wrap items-center space-y-2">
-            @if($columnDefine->required)
-                <i class="fas fa-check-circle text-neutral/50 mr-2 mt-8"></i>
-            @endif
-    --}}
-    <x-mary-radio label="{{$columnDefine->name}}"
-                  :options="$tmpOptions"
-                  wire:model.live="content.{{$columnDefine->id}}"
-                  :required="$columnDefine->required"
-                  class="flex w-full"
-                  :hint="$columnDefine->hint"
-    />
-    {{--    </div>--}}
-@endif
+@php
+    $type = $isDemo ? (count($tmpOptions) > 5 ? 'demo-select' : 'demo-radio') : (count($tmpOptions) > 5 ? 'select' : 'radio');
+@endphp
+
+@switch($type)
+    @case('demo-select')
+        <x-mary-select
+            label="{{$columnDefine->name}}"
+            icon="{{$icon}}"
+            id="content[{{$columnDefine->id}}]"
+            name="content[{{$columnDefine->id}}]"
+            class="{{$class}}@if($columnDefine->required) input-accent @endif"
+            :options="$tmpOptions"
+            required="{{$columnDefine->required}}"
+            hint="{{$columnDefine->hint}}"
+        ></x-mary-select>
+        @break
+    @case('demo-radio')
+        <x-mary-radio
+            label="{{$columnDefine->name}}"
+            :options="$tmpOptions"
+            required="{{$columnDefine->required}}"
+            class="flex w-full"
+            hint="{{$columnDefine->hint}}"
+        ></x-mary-radio>
+        @break
+    @case('select')
+        <x-mary-select
+            wire:model.blur="content.{{$columnDefine->id}}"
+            label="{{$columnDefine->name}}"
+            icon="{{$icon}}"
+            id="content[{{$columnDefine->id}}]"
+            name="content[{{$columnDefine->id}}]"
+            class="{{$class}}@if($columnDefine->required) input-accent @endif"
+            :options="$tmpOptions"
+            required="{{$columnDefine->required}}"
+            hint="{{$columnDefine->hint}}"
+        ></x-mary-select>
+        @break
+    @case('radio')
+        <x-mary-radio
+            wire:model.live="content.{{$columnDefine->id}}"
+            label="{{$columnDefine->name}}"
+            :options="$tmpOptions"
+            required="$columnDefine->required"
+            class="flex w-full"
+            hint="{{$columnDefine->hint}}"
+        ></x-mary-radio>
+        @break
+@endswitch

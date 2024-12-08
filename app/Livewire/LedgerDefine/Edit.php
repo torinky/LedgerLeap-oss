@@ -34,7 +34,6 @@ class Edit extends Component
         $this->title = $this->ledgerDefineRecord->title;
         $this->parentFolderId = $this->ledgerDefineRecord->folder_id;
 
-
         $this->folderRecords = [];
         $nodes = $this->folderRecords = Folder::get()->toTree();
         $traverse = function ($categories, $prefix = '-') use (&$traverse) {
@@ -49,33 +48,19 @@ class Edit extends Component
         $traverse($nodes);
         $this->folderRecords = collect($this->folderRecords);
 
-
         $this->folderIdNameMap = $this->folderRecords->mapWithKeys(function ($folderRecord) {
             $selected = $folderRecord->id == $this->parentFolderId ? true : false;
+
             return [
                 $folderRecord->id => [
                     'id' => $folderRecord->id,
                     'name' => $folderRecord->title,
-                    'selected' => $selected
-                ]
+                    'selected' => $selected,
+                ],
             ];
         });
-
-
-//        dd($this->folderRecords,$this->parentFolderId,$this->folderIdNameMap);
-
-
     }
 
-    /*    public function applyTitle()
-        {
-            $this->ledgerDefineRecord->title = $this->title;
-    //        $this->store();
-        }*/
-
-    /**
-     * @return void
-     */
     public function store(): void
     {
         $this->ledgerDefineRecord->title = $this->title;
@@ -85,11 +70,4 @@ class Edit extends Component
         // イベントを発行
         $this->dispatch('ledgerDefineRecordStored');
     }
-
-    /*    public function applyParentFolder()
-        {
-            $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
-    //        $this->store();
-        }*/
-
 }

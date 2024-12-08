@@ -1,7 +1,8 @@
 @props([
     'class'=>'adjustHeight input-primary w-full block',
     'icon'=>'o-chat-bubble-oval-left-ellipsis',
-    'columnDefine'=>[]
+    'columnDefine'=>[],
+    'isDemo'=>false,
     ])
 @php
     if($columnDefine->required){
@@ -10,33 +11,55 @@
     }
 @endphp
 
-
-{{--
-<div class="flex items-center space-x-2 w-full">
-
-    @if($columnDefine->required)
-        <i class="fas fa-check-circle text-neutral/50"></i>
-    @endif
-    <div class="flex-1">
---}}
-        <x-mary-textarea
-            label="{{$columnDefine->name}}"
-            id="content[{{$columnDefine->id}}]"
-            name="content[{{$columnDefine->id}}]"
-            icon="{{$icon}}"
-            wire:model.blur="content.{{$columnDefine->id}}"
-            placeholder="{{$columnDefine->name}}"
-            {{--        hint="Max 1000 chars"--}}
-            rows="3"
-            :required="$columnDefine->required"
-            :class="$class"
-            :hint="$columnDefine->hint"
-        />
-{{--
-    </div>
-</div>
---}}
-
+@if($isDemo)
+    <x-mary-textarea
+        {{--    wire:model.blur="content.{{$columnDefine->id}}"--}}
+        label="{{ $columnDefine->name }}"
+        id="content[{{$columnDefine->id}}]"
+        name="content[{{$columnDefine->id}}]"
+        icon="{{ $icon }}"
+        placeholder="{{ $columnDefine->name }}"
+        rows="3"
+        required="{{ $columnDefine->required }}"
+        class="{{ $class }}"
+        hint="{{ $columnDefine->hint }}"
+        x-on:focus="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-100');
+        opacityBlock.classList.remove('opacity-30');
+        updateBackground('{{$columnDefine->id}}');
+        "
+        x-on:blur="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.remove('opacity-100');
+        "
+    />
+@else
+    <x-mary-textarea
+        wire:model.blur="content.{{$columnDefine->id}}"
+        label="{{ $columnDefine->name }}"
+        id="content[{{$columnDefine->id}}]"
+        name="content[{{$columnDefine->id}}]"
+        icon="{{ $icon }}"
+        placeholder="{{ $columnDefine->name }}"
+        rows="3"
+        required="{{ $columnDefine->required }}"
+        class="{{ $class }}"
+        hint="{{ $columnDefine->hint }}"
+        x-on:focus="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-100');
+        opacityBlock.classList.remove('opacity-30');
+        updateBackground('{{$columnDefine->id}}');
+        "
+        x-on:blur="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.remove('opacity-100');
+        "
+    />
+@endif
 
 @once
     @push('scripts')

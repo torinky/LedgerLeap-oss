@@ -1,4 +1,9 @@
 <div>
+    {{--    css生成のためのダミー--}}
+    <div class="hidden">
+        <div class="bg-success"></div>
+        <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
+    </div>
     @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
         {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
         <x-mary-form wire:submit="store"

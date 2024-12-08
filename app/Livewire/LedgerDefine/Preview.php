@@ -13,12 +13,15 @@ class Preview extends Component
 
     public int $ledgerDefineId;
 
+    public $backgroundImages = [];
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
+        $this->initBackgroundImages();
 
     }
 
@@ -35,5 +38,25 @@ class Preview extends Component
     public function render()
     {
         return view('livewire.ledger-define.preview');
+    }
+
+    #[On('applyBackgroundImages')]
+    public function applyBackgroundImages($files)
+    {
+        $this->backgroundImages = $files;
+        //        dd($this->backgroundImages);
+        //        $this->render();
+    }
+
+    private function initBackgroundImages()
+    {
+        $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
+            ->map(function ($value) {
+                if (empty($value->path)) {
+                    return null;
+                }
+
+                return asset('storage/' . $value->path);
+            })->toArray();
     }
 }

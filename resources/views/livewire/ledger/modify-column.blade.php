@@ -1,9 +1,15 @@
 <div>
+    {{--    css生成のためのダミー--}}
+    <div class="hidden">
+        <div class="bg-success"></div>
+        <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
+    </div>
     @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
         {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
         <x-mary-form wire:submit="store"
                      method="post"
-                     class="card w-full bg-neutral-500/10 shadow-xl">
+                     class="card w-full bg-neutral-500/10 shadow-xl"
+        >
             @csrf
             <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
             @php
