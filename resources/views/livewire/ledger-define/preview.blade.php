@@ -7,10 +7,10 @@
             currentBg: null,
             updateBackground(columnId) {
                 this.currentBg = $wire.backgroundImages[columnId] || null;
-<!--
-                console.log($wire.backgroundImages);
-                console.log(this.currentBg);
--->
+
+//                console.log($wire.backgroundImages);
+//                console.log(this.currentBg);
+
                 if(this.currentBg == null || this.currentBg.length == 0) {
                     document.querySelector('.background-image-change').style.backgroundImage = ``;
                 }else{
@@ -44,11 +44,15 @@
         <div class="divider"></div>
         <h1 class="text-xl my-3 font-bold">{{__('ledger.column.group_title')}}</h1>
 
-        <div class=" space-y-8 mt-5 h-fit">
+            <div class=" space-y-3 mt-5 h-fit">
             @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                 <div
-                    x-on:mouseenter="updateBackground('{{ $cKey }}')"
-                    class="opacity-control-block opacity-30 hover:opacity-100 transition-opacity duration-500 ease-in-out"
+                    x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                    class="opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80  {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                    @if($loop->first)
+                        x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                    x-init="updateBackground('{{ $columnDefine->id }}')"
+                    @endif
                 >
                     @if($columnDefine->type=='files')
                         <div class="form-control">

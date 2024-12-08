@@ -1,5 +1,32 @@
 <div>
-    {{--    css生成のためのダミー--}}
+    <div
+        class="background-image-change"
+        x-data="{
+            currentBg: null,
+            updateBackground(columnId) {
+                this.currentBg = $wire.backgroundImages[columnId] || null;
+
+//                console.log($wire.backgroundImages);
+//                console.log(this.currentBg);
+
+                if(this.currentBg == null || this.currentBg.length == 0) {
+                    document.querySelector('.background-image-change').style.backgroundImage = ``;
+                }else{
+                    document.querySelector('.background-image-change').style.backgroundImage = `url('${this.currentBg}')`;
+                }
+            },
+            focusFirstInput() {
+                const firstInput = document.querySelector('.background-image-change input:first-child');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+        }"
+        x-init="focusFirstInput()"
+    >
+
+
+        {{--    css生成のためのダミー--}}
     <div class="hidden">
         <div class="bg-success"></div>
         <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
@@ -16,13 +43,21 @@
             @endphp
 
 
-            <div class="card-body mb-32 space-y-5 ">
+            <div class="card-body mb-32 space-y-3 ">
                 <h2 class="card-title">
                     {{$ledgerDefineRecord->title}}
                     {{--@dd($content)--}}
                 </h2>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    <div class="flex">
+                    <div
+                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                        class="flex opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                        @if($loop->first)
+                            x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                        x-init="updateBackground('{{ $columnDefine->id }}')"
+                        @endif
+
+                    >
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} mr-2 "></div>
                         <div class="w-full"
                              wire:key="content-{{$columnDefine->id}}">
@@ -86,5 +121,6 @@
         </x-mary-form>
 
     @endif
+    </div>
 </div>
 

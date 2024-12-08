@@ -45,6 +45,7 @@ class ModifyColumn extends CreateColumn
                 }
             }
         }
+        $this->initBackgroundImages();
     }
 
     public function render(): View

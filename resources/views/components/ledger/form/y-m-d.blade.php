@@ -31,12 +31,12 @@
             x-on:focus="
         const opacityBlock = event.target.closest('.opacity-control-block');
         opacityBlock.classList.add('opacity-100');
-        opacityBlock.classList.remove('opacity-30');
+        opacityBlock.classList.remove('opacity-50');
         updateBackground('{{$columnDefine->id}}');
         "
             x-on:blur="
         const opacityBlock = event.target.closest('.opacity-control-block');
-        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.add('opacity-50');
         opacityBlock.classList.remove('opacity-100');
         "
         >
@@ -66,12 +66,12 @@
             x-on:focus="
         const opacityBlock = event.target.closest('.opacity-control-block');
         opacityBlock.classList.add('opacity-100');
-        opacityBlock.classList.remove('opacity-30');
+        opacityBlock.classList.remove('opacity-50');
         updateBackground('{{$columnDefine->id}}');
         "
             x-on:blur="
         const opacityBlock = event.target.closest('.opacity-control-block');
-        opacityBlock.classList.add('opacity-30');
+        opacityBlock.classList.add('opacity-50');
         opacityBlock.classList.remove('opacity-100');
         "
         >

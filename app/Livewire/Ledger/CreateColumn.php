@@ -45,6 +45,8 @@ class CreateColumn extends Component
 
     private array $newAttachedFiles = [];
 
+    public $backgroundImages = [];
+
     public function mount(request $request): void
     {
         //new record create
@@ -63,8 +65,24 @@ class CreateColumn extends Component
                 $this->labelColor[$column->id] = 'muted';
             }
         }
+        $this->initBackgroundImages();
+
         //        dd($this->content, $this->contentAttached);
         //        dd($this->ledgerDefineRecord);
+    }
+
+    public function initBackgroundImages(): void
+    {
+        $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
+            ->map(function ($value) {
+                if (empty($value->path)) {
+                    return null;
+                }
+
+                return asset('storage/' . $value->path);
+            })->toArray();
+        //        dd($this->columnFile,$backgroundImages);
+//        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
     }
 
     public function render(): View
