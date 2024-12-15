@@ -6,9 +6,12 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Livewire\Component;
+use Mary\Traits\Toast;
 
 class Edit extends Component
 {
+    use Toast;
+
     public $ledgerDefineRecord;
 
     public $folderRecords = [];
@@ -67,7 +70,8 @@ class Edit extends Component
         $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
+        $this->success(__('ledger.has_been_updated'));
         // イベントを発行
-        $this->dispatch('ledgerDefineRecordStored');
+        //        $this->dispatch('ledgerDefineRecordStored');
     }
 }

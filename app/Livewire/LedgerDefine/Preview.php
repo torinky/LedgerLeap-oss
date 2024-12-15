@@ -31,7 +31,7 @@ class Preview extends Component
         //        dd('redrawing!');
         $ledgerDefine = new LedgerDefine;
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
-        session()->flash('status', __('ledger.define.saved'));
+        //        session()->flash('status', __('ledger.define.saved'));
         $this->render();
     }
 

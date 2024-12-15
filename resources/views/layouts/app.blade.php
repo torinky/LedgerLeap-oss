@@ -31,6 +31,7 @@
     </script>
 </head>
 <body class="font-sans antialiased">
+<x-mary-toast/>
 <div class="min-h-screen">
     @include('layouts.daisyuiNavigation')
 

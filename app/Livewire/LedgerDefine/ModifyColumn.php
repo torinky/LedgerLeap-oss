@@ -8,16 +8,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
+use Mary\Traits\Toast;
 use RuntimeException;
 
 class ModifyColumn extends Component
 {
-    use WithFileUploads;
+    use Toast, WithFileUploads;
 
     //    https://laravel-livewire.com/screencasts/s8-dragging-list
+    #[Locked]
     public $ledgerDefineRecord;
 
     public $columnType = [];
@@ -46,28 +47,33 @@ class ModifyColumn extends Component
 
     public function mount(request $request)
     {
+        if ($request->isMethod('POST')) {
+            return;
+        }
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
 
-        $this->columnType = collect($this->ledgerDefineRecord->column_define)->pluck('type', 'id');
+        $columnDefines = collect($this->ledgerDefineRecord->column_define);
+
+        $this->columnType = $columnDefines->pluck('type', 'id');
         // idを0から開始できるようにする
-        $this->maxColumnId = collect($this->ledgerDefineRecord->column_define)->pluck('id')->max();
+        $this->maxColumnId = $columnDefines->pluck('id')->max();
         if (count($this->ledgerDefineRecord->column_define) == 0) {
             $this->maxColumnId = -1;
         }
-        $this->maxColumnOrder = collect($this->ledgerDefineRecord->column_define)->pluck('order')->max();
+        $this->maxColumnOrder = $columnDefines->pluck('order')->max();
 
         //        options初期化
-        $this->columnOptions = collect($this->ledgerDefineRecord->column_define)->pluck('options', 'id');
-        $this->columnName = collect($this->ledgerDefineRecord->column_define)->pluck('name', 'id');
+        $this->columnOptions = $columnDefines->pluck('options', 'id');
+        $this->columnName = $columnDefines->pluck('name', 'id');
         //        dd($this->columnName);
-        $this->columnRequired = collect($this->ledgerDefineRecord->column_define)->pluck('required', 'id');
-        $this->columnUnique = collect($this->ledgerDefineRecord->column_define)->pluck('unique', 'id');
-        $this->columnSortBy = collect($this->ledgerDefineRecord->column_define)->pluck('sortBy', 'id');
-        $this->columnHint = collect($this->ledgerDefineRecord->column_define)->pluck('hint', 'id');
-        $this->columnFile = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
+        $this->columnRequired = $columnDefines->pluck('required', 'id');
+        $this->columnUnique = $columnDefines->pluck('unique', 'id');
+        $this->columnSortBy = $columnDefines->pluck('sortBy', 'id');
+        $this->columnHint = $columnDefines->pluck('hint', 'id');
+        $this->columnFile = $columnDefines->pluck('file', 'id')
             ->map(function ($value) {
                 return (array)$value;
             });
@@ -151,29 +157,12 @@ class ModifyColumn extends Component
 
     }
 
-    /*    public function applyType()
-        {
-
-            foreach ($this->columnTypes as $columnId => $columnType) {
-                foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
-                    if ($columnDefine->id == $columnId) {
-                        $this->ledgerDefineRecord->column_define[$cKey]->setType($columnType);
-                    }
-                }
-            }
-
-            //        配列に変換しないとキーが文字列型になりJSONオブジェクトになってしまう
-            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
-            $this->store();
-
-        }*/
-
     public function applyOptions($columnId)
     {
 
         foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
             if ($columnDefine->id == $columnId) {
-                $oldOptions = $this->ledgerDefineRecord->column_define[$cKey]->options;
+                $oldOptions = $this->ledgerDefineRecord->column_define[$columnDefine->id]->options;
                 break;
             }
         }
@@ -182,8 +171,7 @@ class ModifyColumn extends Component
 
         // 比較ロジック
         if ($this->optionsHaveChanged($oldOptions, $newOptions)) {
-            $this->ledgerDefineRecord->column_define[$cKey]->options = $newOptions;
-            //            $this->ledgerDefineRecord->column_define = (array) $this->ledgerDefineRecord->column_define;
+            $this->ledgerDefineRecord->column_define[$columnDefine->id]->options = $newOptions;
             //            dd($this->ledgerDefineRecord->column_define);
             $this->store();
         }
@@ -197,15 +185,15 @@ class ModifyColumn extends Component
     public function applyProperty($columnId, $propertyName, $newValue)
     {
         $setterMethod = 'set' . ucfirst($propertyName);
-        foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+        foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
             if ($columnDefine->id == $columnId) {
                 $oldValue = $columnDefine->$propertyName;
                 break;
             }
         }
 
-        if ($oldValue != $newValue) {
-            foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
+        if (!isset($oldValue) || $oldValue != $newValue) {
+            foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
                 if ($columnDefine->id == $columnId) {
                     $columnDefine->$setterMethod($newValue);
                     break;
@@ -242,27 +230,56 @@ class ModifyColumn extends Component
 
     public function store()
     {
+        /*        foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
+                    $columnId = $columnDefine->id;
+                    $this->applyProperty($columnId, 'name', $this->columnName[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'options', $this->columnOptions[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'required', $this->columnRequired[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'unique', $this->columnUnique[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'sortBy', $this->columnSortBy[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'hint', $this->columnHint[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'type', $this->columnType[$columnId] ?? null);
+                    $this->applyProperty($columnId, 'file', $this->columnFile[$columnId] ?? null);
+                }*/
+
+//        dd($this->columnType,collect($this->ledgerDefineRecord->column_define)->pluck('type','id'));
+//        dd($this->columnHint,collect($this->ledgerDefineRecord->column_define)->pluck('hint','id'));
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         // イベントを発行
         $this->dispatch('ledgerDefineRecordStored');
 
         // セッションにメッセージを保存
-        session()->flash('status', __('ledger.define.saved'));
+        //        session()->flash('status', __('ledger.define.saved'));
+        /*        $this->toast(
+                    type: 'success',
+                    title:  __('ledger.define.saved'),
+                    description: null,                  // optional (text)
+                    position: 'toast-top toast-end',    // optional (daisyUI classes)
+                    icon: 'o-information-circle',       // Optional (any icon)
+                    css: 'alert-info',                  // Optional (daisyUI classes)
+                    timeout: 3000,                      // optional (ms)
+                    redirectTo: null
+                );*/
+        $this->success(__('ledger.define.saved'));
 
+        //        throw ToastException::success(__('ledger.define.saved'));
     }
 
     public function updated($propertyName)
     {
-
-        $this->validateOnly($propertyName);
-
         $propertyParts = explode('.', $propertyName);
         $columnId = (int)end($propertyParts);
         $classPropertyName = reset($propertyParts);
+
+        $this->validateOnly($propertyName);
+
         $columnDefinePropertyName = Str::camel(strtr($classPropertyName, ['column' => '']));
 
-        //        dd($classPropertyName, $columnDefinePropertyName, $columnId);
+        if (!isset($this->{$classPropertyName}[$columnId])) {
+            $this->{$classPropertyName}[$columnId] = [];
+            //                    dd($this->{$classPropertyName},$classPropertyName, $columnDefinePropertyName, $columnId);
+        }
         if ($classPropertyName === 'columnUploadedFile') {
             $this->storeFile($columnId);
         } else {
@@ -318,8 +335,6 @@ class ModifyColumn extends Component
             'columnUnique.*' => 'boolean',
             'columnSortBy.*' => 'boolean',
             'columnHint.*' => 'nullable|string|max:255',
-            //            'columnFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
-            //            'columnUploadedFile.*' => 'nullable',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
         ];
         // Add dynamic rules based on columnDefine

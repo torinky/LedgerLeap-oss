@@ -36,6 +36,7 @@
                      class="card w-full bg-neutral-500/10 shadow-xl"
         >
             @csrf
+
             <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
             @php
                 $columnJs=[];
@@ -47,16 +48,16 @@
                     {{--@dd($content)--}}
                 </h2>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    <div
-                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                        class="flex opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                        @if($loop->first)
-                            x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                        x-init="updateBackground('{{ $columnDefine->id }}')"
-                        @endif
-                    >
-                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} mr-2 "></div>
-                        <div class="w-full">
+                    <div class="flex">
+                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
+                        <div
+                            x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                            class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                            @if($loop->first)
+                                x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                            x-init="updateBackground('{{ $columnDefine->id }}')"
+                            @endif
+                        >
                             @if($columnDefine->type=='files')
                                 <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
                                                      wire:model="content"

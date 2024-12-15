@@ -15,7 +15,7 @@
         <x-slot:actions>
             <x-mary-button label="{{__('ledger.save')}}"
                            icon="o-pencil-square"
-                           class="btn-primary btn-sm"
+                           class="btn btn-primary btn-sm"
                            type="submit"
                            spinner="store"/>
         </x-slot:actions>
