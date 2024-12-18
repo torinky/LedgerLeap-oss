@@ -13,6 +13,7 @@ use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateCont
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
+use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -53,7 +54,8 @@ Route::middleware('auth')->group(function () {
         ->name('ledgerDefinesByFolderId')
         ->where('folderId', '[0-9]+');
 
-    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
+    //    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
+    Route::get('/ledgerDefine/create', LedgerDefineCreateComponent::class)
         ->name('ledgerDefine.create');
     Route::get('/ledgerDefine/create/folder/{folderId}', [LedgerDefineCreateController::class, 'create'])
         ->name('ledgerDefine.createWithFolderId')

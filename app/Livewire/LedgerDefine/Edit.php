@@ -16,6 +16,9 @@ class Edit extends Component
 
     public $folderRecords = [];
 
+    public $createDescription;
+    public $detailDescription;
+    public $listDescription;
     public $folderIdNameMap = [];
 
     public $title;
@@ -36,6 +39,9 @@ class Edit extends Component
 
         $this->title = $this->ledgerDefineRecord->title;
         $this->parentFolderId = $this->ledgerDefineRecord->folder_id;
+        $this->createDescription = $this->ledgerDefineRecord->create_description;
+        $this->listDescription = $this->ledgerDefineRecord->list_description;
+        $this->detailDescription = $this->ledgerDefineRecord->detail_description;
 
         $this->folderRecords = [];
         $nodes = $this->folderRecords = Folder::get()->toTree();
@@ -68,9 +74,14 @@ class Edit extends Component
     {
         $this->ledgerDefineRecord->title = $this->title;
         $this->ledgerDefineRecord->folder_id = $this->parentFolderId;
+        $this->ledgerDefineRecord->create_description = $this->createDescription;
+        $this->ledgerDefineRecord->list_description = $this->listDescription;
+        $this->ledgerDefineRecord->detail_description = $this->detailDescription;
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         $this->success(__('ledger.has_been_updated'));
+        $this->dispatch('ledgerDefineRecordStored');
+
         // イベントを発行
         //        $this->dispatch('ledgerDefineRecordStored');
     }

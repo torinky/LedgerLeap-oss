@@ -70,10 +70,17 @@ class LedgerDefineFactory extends Factory
             $columnDefine[] = $tempColumnDefine;
         }
 
+
+        $markdownText = $this->faker->paragraphs(3, true);
+        $markdownText = str_replace("\n", "\n\n", $markdownText);
+
         return [
             'title' => $this->faker->realText(10),
             'column_define' => $columnDefine,
             'folder_id' => random_int(1, 10),
+            'create_description' => $markdownText,
+            'list_description' => $this->faker->paragraphs(2, true),
+            'detail_description' => $this->faker->paragraphs(4, true),
             //            'folder_id' => Folder::factory(),
             //            'creator_id' => 1,
             //            'modifier_id' => 1,

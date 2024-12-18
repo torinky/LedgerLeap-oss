@@ -36,16 +36,17 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             OrganizationSeeder::class,
             FolderSeeder::class,
+            RolesAndPermissionsSeeder::class,
         ]);
 
         $ledgerDefines = LedgerDefine::factory(50)->recycle($users)
 //            ->hasTag(random_int(0,5))
             ->create();
 
-        $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
-
         Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
 
-        $this->call(RolesAndPermissionsSeeder::class);
+        $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+
+
     }
 }

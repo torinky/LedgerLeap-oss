@@ -12,6 +12,18 @@
             {{--            wire:change="applyParentFolder"--}}
             wire:model="parentFolderId" required
         />
+        <x-mary-markdown
+            label="{{__('ledger.define.create_description')}}"
+            wire:model="createDescription"
+        />
+        <x-mary-markdown
+            label="{{__('ledger.define.list_description')}}"
+            wire:model="listDescription"
+        />
+        <x-mary-markdown
+            label="{{__('ledger.define.detail_description')}}"
+            wire:model="detailDescription"
+        />
         <x-slot:actions>
             <x-mary-button label="{{__('ledger.save')}}"
                            icon="o-pencil-square"

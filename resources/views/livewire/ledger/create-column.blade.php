@@ -49,18 +49,18 @@
                     {{--@dd($content)--}}
                 </h2>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    <div
-                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                        class="flex opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                        @if($loop->first)
-                            x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                        x-init="updateBackground('{{ $columnDefine->id }}')"
-                        @endif
+                    <div class="flex">
+                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
+                        <div
+                            wire:key="content-{{$columnDefine->id}}"
+                            x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                            class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                            @if($loop->first)
+                                x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                            x-init="updateBackground('{{ $columnDefine->id }}')"
+                            @endif
 
-                    >
-                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} mr-2 "></div>
-                        <div class="w-full"
-                             wire:key="content-{{$columnDefine->id}}">
+                        >
 
                             @if($columnDefine->type=='files')
 

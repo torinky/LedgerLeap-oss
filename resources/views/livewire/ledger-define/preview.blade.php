@@ -28,17 +28,50 @@
     >
 
 
-        @if (session('status'))
-            @include('components.ledger.alert',[
-               'type'=>'success',
-               'message'=>session('status'),
-               'refreshParentWindow'=>true,
-            ])
-        @endif
+        {{--
+                @if (session('status'))
+                    @include('components.ledger.alert',[
+                       'type'=>'success',
+                       'message'=>session('status'),
+                       'refreshParentWindow'=>true,
+                    ])
+                @endif
+        --}}
 
         <h1 class="text-2xl my-3 font-black">
             <x-mary-icon name="o-home"/>{{$ledgerDefineRecord->title}}</h1>
+
         <div class="divider"></div>
+
+        <x-mary-accordion wire:model="descriptionGroup">
+            <x-mary-collapse name="createDescription">
+                <x-slot:heading>{{__('ledger.define.create_description')}}</x-slot:heading>
+                <x-slot:content>
+                    <x-markdown class="prose">
+                        {!! $ledgerDefineRecord->create_description !!}
+                    </x-markdown>
+                </x-slot:content>
+            </x-mary-collapse>
+            <x-mary-collapse name="listDescription">
+                <x-slot:heading>{{__('ledger.define.list_description')}}</x-slot:heading>
+                <x-slot:content>
+                    <x-markdown class="prose">
+                        {!! $ledgerDefineRecord->list_description !!}
+                    </x-markdown>
+                </x-slot:content>
+            </x-mary-collapse>
+            <x-mary-collapse name="detailDescription">
+                <x-slot:heading>{{__('ledger.define.detail_description')}}</x-slot:heading>
+                <x-slot:content>
+                    <x-markdown class="prose">
+                        {!! $ledgerDefineRecord->detail_description !!}
+                    </x-markdown>
+                </x-slot:content>
+            </x-mary-collapse>
+        </x-mary-accordion>
+
+        <div class="divider"></div>
+
         <div class="alert alert-neutral">
             <x-mary-icon name="o-folder"/>{{$ledgerDefineRecord->folder->title}}</div>
         <div class="divider"></div>

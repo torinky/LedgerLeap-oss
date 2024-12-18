@@ -20,6 +20,9 @@ return new class extends Migration {
             $table->json('column_define');
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
             //            $table->foreignId('user_id')->constrained('users');
+            $table->text('create_description')->nullable();
+            $table->text('list_description')->nullable();
+            $table->text('detail_description')->nullable();
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
             $table->timestamps();

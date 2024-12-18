@@ -26,6 +26,9 @@ export default defineConfig({
                 sassOptions: {
                     fiber: false,
                 },
+                css: {
+                    includePaths: [path.resolve(__dirname, 'node_modules/easymde/dist')],
+                },
             }
         }
     },

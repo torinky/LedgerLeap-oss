@@ -6,24 +6,26 @@
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info leading-tight">
+        <h2 class="font-semibold text-xl text-info ">
             <span class="fa-layers fa-fw mr-2">
                 <i class="fa-solid fa-book text-3xl" data-fa-transform="left-5 "></i>
                 <i class="fa-solid fa-pencil text-2xl text-primary/70"
                    data-fa-transform=" right-5 up-3"></i>
             </span>
-            {{ __('ledger.define.edit_title') }}
+            <span> {{ __('ledger.define.edit_title') }}</span>
         </h2>
     </x-slot>
 
         <div class="container mx-auto h-screen w-screen bg-warning/30">
-        @if (session('status'))
-            @include('components.ledger.alert',[
-               'type'=>'success',
-               'message'=>session('status'),
-               'refreshParentWindow'=>true,
-            ])
-        @endif
+            {{--
+                    @if (session('status'))
+                        @include('components.ledger.alert',[
+                           'type'=>'success',
+                           'message'=>session('status'),
+                           'refreshParentWindow'=>true,
+                        ])
+                    @endif
+            --}}
 
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-5">

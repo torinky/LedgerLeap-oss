@@ -15,6 +15,8 @@ class Preview extends Component
 
     public $backgroundImages = [];
 
+    public $descriptionGroup = "createDescription";
+
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;

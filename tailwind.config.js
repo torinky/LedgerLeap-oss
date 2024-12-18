@@ -41,7 +41,12 @@ export default {
         },
     },
 
-    plugins: [forms, require('@tailwindcss/forms'), require("@tailwindcss/typography"), require("daisyui")],
+    plugins: [
+        forms,
+        require('@tailwindcss/forms'),
+        require("@tailwindcss/typography"),
+        require("daisyui")
+    ],
     // daisyUI config (optional)
     daisyui: {
         styled: true,

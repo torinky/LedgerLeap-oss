@@ -22,7 +22,13 @@ class LedgerDefine extends Model
     ];
 
     protected $fillable = [
-        'title', 'column_define', 'folder_id', 'creator_id', 'modifier_id',
+        'title', 'column_define',
+        'folder_id',
+        'creator_id',
+        'modifier_id',
+        'create_description',
+        'list_description',
+        'detail_description',
     ];
 
     public function ledgers()

@@ -143,13 +143,13 @@ class SearchContext
         $tags = [];
         $keywords = [];
 
-        foreach ($words as $word) {
+        collect($words)->each(function ($word) use ($tags, $keywords) {
             if (Str::startsWith($word, '#')) {
                 $tags[] = substr($word, 1);
             } else {
                 $keywords = array_merge($keywords, SynonymService::wakati($word));
             }
-        }
+        });
 
         return [$keywords, $tags];
     }
