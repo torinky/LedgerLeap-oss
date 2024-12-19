@@ -25,6 +25,7 @@ class Edit extends Component
 
     public $parentFolderId;
 
+    public $descriptionGroup = 'createDescription';
     public function render()
     {
         return view('livewire.ledger-define.edit');
@@ -84,5 +85,12 @@ class Edit extends Component
 
         // イベントを発行
         //        $this->dispatch('ledgerDefineRecordStored');
+    }
+
+    public function toggleDescriptionGroup($name)
+    {
+        $this->descriptionGroup = $name;
+        $this->dispatch('toggleDescriptionGroup', name: $name);
+
     }
 }

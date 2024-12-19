@@ -45,7 +45,11 @@
 
         <x-mary-accordion wire:model="descriptionGroup">
             <x-mary-collapse name="createDescription">
-                <x-slot:heading>{{__('ledger.define.create_description')}}</x-slot:heading>
+                <x-slot:heading>
+                    {{--                    {{__('ledger.define.create_description')}}--}}
+                    <button
+                        wire:click="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
+                </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose">
                         {!! $ledgerDefineRecord->create_description !!}
@@ -53,7 +57,11 @@
                 </x-slot:content>
             </x-mary-collapse>
             <x-mary-collapse name="listDescription">
-                <x-slot:heading>{{__('ledger.define.list_description')}}</x-slot:heading>
+                <x-slot:heading>
+                    {{--                    {{__('ledger.define.list_description')}}--}}
+                    <button
+                        wire:click="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
+                </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose">
                         {!! $ledgerDefineRecord->list_description !!}
@@ -61,7 +69,11 @@
                 </x-slot:content>
             </x-mary-collapse>
             <x-mary-collapse name="detailDescription">
-                <x-slot:heading>{{__('ledger.define.detail_description')}}</x-slot:heading>
+                <x-slot:heading>
+                    {{--                    {{__('ledger.define.detail_description')}}--}}
+                    <button
+                        wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
+                </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose">
                         {!! $ledgerDefineRecord->detail_description !!}

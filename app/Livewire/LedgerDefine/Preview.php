@@ -27,6 +27,11 @@ class Preview extends Component
 
     }
 
+    #[On('toggleDescriptionGroup')]
+    public function toggleDescriptionGroup($name)
+    {
+        $this->descriptionGroup = $name;
+    }
     #[On('ledgerDefineRecordStored')]
     public function redraw()
     {
