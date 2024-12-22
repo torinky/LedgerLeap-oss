@@ -6,12 +6,36 @@
         </div>
     </div>
 
+    <script>
+        window.addEventListener('reloadParentWindow', () => {
+            console.log('イベントが発火しました');
+            if (window.opener && !window.opener.closed) {
+                // window.opener.location.reload();
+                // window["onunload"] = function () {
+                reload_parent_window();
+                // }
+            }
+
+            //親ウィンドウの更新処理
+            function reload_parent_window() {
+                //自身を開いたウィンドウが存在する場合
+                if ((window.opener && !window.opener.closed)) {
+                    window.opener.location.reload();
+                    //自身がiframeの子である場合
+                } else if (window !== window.parent) {
+                    window.parent.location.reload();
+                }
+            }
+
+        });
+    </script>
 
     @if(!empty($ledgerDefineRecord->column_define))
         <x-mary-form wire:submit.prevent="store">
+            @csrf
             <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3"
                 drag-root>
-                @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
+                @foreach($ledgerDefineRecord->column_define as $columnDefine)
 
                     <li wire:sortable.item="{{ $columnDefine->id }}"
                         wire:key="columnDefine-{{ $columnDefine->id }} drag-item"
@@ -66,7 +90,11 @@
                                         @php
                                             $tmpOptions=[];
                                             foreach ($columnInputTypes as $value => $columnInputTypeName){
-                                                $tmpSelected = ($columnType[$columnDefine->id] == $value??'') ? true : false;
+                                                if (isset($columnType[$columnDefine->id])) {
+                                                    $tmpSelected = ($columnType[$columnDefine->id] == $value??'') ? true : false;
+                                                } else {
+                                                    $tmpSelected = false;
+                                                }
                                                 $tmpOptions[] = ['id'=>$value, 'name'=>$columnInputTypeName, 'selected'=>$tmpSelected];
                                             }
                                         //    dd($tmpOptions);

@@ -43,7 +43,7 @@
 
         <div class="divider"></div>
 
-        <x-mary-accordion wire:model="descriptionGroup">
+        <x-mary-accordion wire:model="descriptionGroup" class="rounded-lg bg-base-200 border-base-300 border">
             <x-mary-collapse name="createDescription">
                 <x-slot:heading>
                     {{--                    {{__('ledger.define.create_description')}}--}}
@@ -89,7 +89,7 @@
         <div class="divider"></div>
         <h1 class="text-xl my-3 font-bold">{{__('ledger.column.group_title')}}</h1>
 
-            <div class=" space-y-3 mt-5 h-fit">
+        <div class=" space-y-3 mt-5 h-fit">
             @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                 <div
                     x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"

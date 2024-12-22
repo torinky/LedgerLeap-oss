@@ -44,10 +44,11 @@
 
 
             <div class="card-body mb-32 space-y-3 ">
-                <h2 class="card-title">
-                    {{$ledgerDefineRecord->title}}
-                    {{--@dd($content)--}}
-                </h2>
+                {{--
+                                <h2 class="card-title">
+                                    {{$ledgerDefineRecord->title}}
+                                </h2>
+                --}}
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                     <div class="flex">
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>

@@ -50,6 +50,11 @@ class ModifyColumn extends Component
         if ($request->isMethod('POST')) {
             return;
         }
+        if ($request->input('fromCreate')) {
+            $this->success(__('ledger.has_been_created'));
+            $this->dispatch('reloadParentWindow');
+        }
+
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 
@@ -153,6 +158,8 @@ class ModifyColumn extends Component
                 new ColumnDefine($this->maxColumnId, 'no name', 'text', $this->maxColumnOrder)
             )
             ->toArray();
+        $this->columnType[$this->maxColumnId] = 'text';
+
         $this->store();
 
     }
@@ -230,20 +237,7 @@ class ModifyColumn extends Component
 
     public function store()
     {
-        /*        foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
-                    $columnId = $columnDefine->id;
-                    $this->applyProperty($columnId, 'name', $this->columnName[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'options', $this->columnOptions[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'required', $this->columnRequired[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'unique', $this->columnUnique[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'sortBy', $this->columnSortBy[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'hint', $this->columnHint[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'type', $this->columnType[$columnId] ?? null);
-                    $this->applyProperty($columnId, 'file', $this->columnFile[$columnId] ?? null);
-                }*/
 
-//        dd($this->columnType,collect($this->ledgerDefineRecord->column_define)->pluck('type','id'));
-//        dd($this->columnHint,collect($this->ledgerDefineRecord->column_define)->pluck('hint','id'));
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         // イベントを発行

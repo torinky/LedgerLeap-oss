@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ledger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ledger\UpdateRequest;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 
@@ -12,12 +13,14 @@ class UpdateController extends Controller
 {
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
-        //        $ledgerId = (int)$request->route('ledgerId');
+        $ledgerId = (int)$request->route('ledgerId');
 
-        //        $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
+        $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
 
         //        return View::make('ledger.edit', compact('ledgerRecord'));
-        return View::make('ledger.edit');
+        //        $ledgeDefineRecord= LedgerDefine::findOrFail($request->ledgerDefineId);
+        //        dd($ledgerRecord->define);
+        return View::make('ledger.edit', ['ledgerDefineRecord' => $ledgerRecord->define]);
 
     }
 

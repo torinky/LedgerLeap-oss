@@ -6,7 +6,7 @@
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info ">
+        <h2 class="font-semibold text-xl text-info flex align-items-center">
             <span class="fa-layers fa-fw mr-2">
                 <i class="fa-solid fa-book text-3xl" data-fa-transform="left-5 "></i>
                 <i class="fa-solid fa-pencil text-2xl text-primary/70"

@@ -13,7 +13,7 @@
             wire:model="parentFolderId" required
         />
 
-        <x-mary-accordion wire:model="descriptionGroup">
+        <x-mary-accordion wire:model="descriptionGroup" class="rounded-lg bg-base-200 border-base-300 border">
             <x-mary-collapse name="createDescription">
                 <x-slot:heading>
                     {{--                                        {{__('ledger.define.create_description')}}--}}

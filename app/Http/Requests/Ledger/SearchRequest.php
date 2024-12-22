@@ -104,7 +104,12 @@ class SearchRequest extends FormRequest
             return [LedgerDefine::find($ledgerDefineId)->folder_id];
         }
 
-        return $this->input('f') ?? $this->input('folderId') ?? $this->route('folderId') ?? [1];
+        $result = $this->input('f') ?? $this->input('folderId') ?? $this->route('folderId') ?? [1];
+        if (is_string($result)) {
+            $result = [$result];
+        }
+
+        return $result;
     }
 
     public function currentFolderId()

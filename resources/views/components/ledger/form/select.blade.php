@@ -53,7 +53,7 @@
         @break
     @case('select')
         <x-mary-select
-            wire:model.blur="content.{{$columnDefine->id}}"
+            wire:model.live="content.{{$columnDefine->id}}"
             label="{{$columnDefine->name}}"
             icon="{{$icon}}"
             id="content[{{$columnDefine->id}}]"

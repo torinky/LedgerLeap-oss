@@ -54,8 +54,8 @@ Route::middleware('auth')->group(function () {
         ->name('ledgerDefinesByFolderId')
         ->where('folderId', '[0-9]+');
 
-    //    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
-    Route::get('/ledgerDefine/create', LedgerDefineCreateComponent::class)
+    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
+//    Route::get('/ledgerDefine/create', LedgerDefineCreateComponent::class)
         ->name('ledgerDefine.create');
     Route::get('/ledgerDefine/create/folder/{folderId}', [LedgerDefineCreateController::class, 'create'])
         ->name('ledgerDefine.createWithFolderId')
