@@ -47,12 +47,35 @@ class CreateColumn extends Component
 
     public $backgroundImages = [];
 
+    public $progress = 0;
+
+    public $requredColumnIds = [];
+    /**
+     * @var mixed|null
+     */
+    public $totalRequireColumnCount = 0;
+
     public function mount(request $request): void
     {
         //new record create
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::where('ledger_defines.id', $this->ledgerDefineId)->first();
         $this->ledgerRecord = null;
+        $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
+            return $column->required;
+        })->count();
+        $totalRequireColumnCount = 0;
+        /*        foreach ($this->ledgerDefineRecord->column_define as $column) {
+                    if ($column->required) {
+                        $totalRequireColumnCount++;
+                    }
+                }
+                dd($totalRequireColumnCount,$this->totalRequireColumnCount);*/
+
+        $this->requredColumnIds = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
+            return $column->required;
+        })->pluck('id')->toArray();
+
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             if ($column->type === 'files' || $column->type === 'chk') {
                 $this->content[$column->id] = [];
@@ -65,6 +88,7 @@ class CreateColumn extends Component
                 $this->labelColor[$column->id] = 'muted';
             }
         }
+
         $this->initBackgroundImages();
 
         //        dd($this->content, $this->contentAttached);
@@ -82,7 +106,7 @@ class CreateColumn extends Component
                 return asset('storage/' . $value->path);
             })->toArray();
         //        dd($this->columnFile,$backgroundImages);
-//        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+        //        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
     }
 
     public function render(): View
@@ -92,23 +116,43 @@ class CreateColumn extends Component
 
     public function updated($propertyName): void
     {
+        //        dd($propertyName);
+        $propertyPath = explode('.', $propertyName);
+        $columnId = $propertyPath[1];
+
         try {
             $this->validateOnly($propertyName);
-            foreach ($this->ledgerDefineRecord->column_define as $column) {
-                if ($column->required) {
-                    $this->labelColor[$column->id] = 'warning';
+
+            $column = $this->ledgerDefineRecord->column_define[$columnId];
+//            dd($propertyName,$columnId, $this->content[$column->id]);
+            $this->progress = collect($this->content)->filter(function ($value, $key) {
+                    if (!is_array(($value))) {
+                        $value = trim($value);
+                    }
+                    return !empty($value) && in_array($key, $this->requredColumnIds);
+                })->count() / $this->totalRequireColumnCount * 100;
+
+
+            if ($column->required) {
+                $this->labelColor[$column->id] = 'warning';
+            } else {
+                $this->labelColor[$column->id] = 'muted';
+            }
+            $tmpColumnValue = $this->content[$column->id];
+
+            if (empty($tmpColumnValue)) {
+                $this->labelColor[$column->id] = 'muted';
+            } elseif ($this->getErrorBag()->hasAny($propertyName)) {
+                $this->labelColor[$column->id] = 'error';
+            } else {
+                if (is_array($tmpColumnValue)) {
+                    $this->labelColor[$column->id] = (in_array(true, $tmpColumnValue) ? 'success' : 'muted');
                 } else {
-                    $this->labelColor[$column->id] = 'muted';
-                }
-                if ((!is_array($this->content[$column->id]) && !empty($this->content[$column->id]))
-                    || (is_array($this->content[$column->id]) && in_array(true, $this->content[$column->id]))
-                ) {
-                    $this->labelColor[$column->id] = 'success';
-                } elseif ($this->getErrorBag()->hasAny($propertyName)) {
-                    $this->labelColor[$column->id] = 'error';
+                    $this->labelColor[$column->id] = (trim($tmpColumnValue) !== '' ? 'success' : 'muted');
                 }
             }
         } catch (ValidationException $e) {
+            error_log('ValidationException occurred: ' . $e->getMessage());
         }
     }
 

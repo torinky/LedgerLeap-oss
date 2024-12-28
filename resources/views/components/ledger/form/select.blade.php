@@ -69,7 +69,7 @@
             wire:model.live="content.{{$columnDefine->id}}"
             label="{{$columnDefine->name}}"
             :options="$tmpOptions"
-            required="$columnDefine->required"
+            required="{{$columnDefine->required}}"
             class="flex w-full"
             hint="{{$columnDefine->hint}}"
         ></x-mary-radio>

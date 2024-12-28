@@ -25,7 +25,6 @@
         x-init="focusFirstInput()"
     >
 
-
         {{--    css生成のためのダミー--}}
     <div class="hidden">
         <div class="bg-success"></div>
@@ -43,12 +42,9 @@
             @endphp
 
 
-            <div class="card-body mb-32 space-y-3 ">
-                {{--
-                                <h2 class="card-title">
-                                    {{$ledgerDefineRecord->title}}
-                                </h2>
-                --}}
+            <div class="card-body mb-32 space-y-3 pt-2">
+                <x-mary-progress value="{{$progress}}" max="100"
+                                 class="progress-warning h-3 w-full mb-10 mt-0 pt-0 sticky"/>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                     <div class="flex">
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
