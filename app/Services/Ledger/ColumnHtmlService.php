@@ -49,8 +49,8 @@ class ColumnHtmlService
         $html = '';
         if ($columnDefine->type == 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
-            //            dd($this->initialValue);
-        } elseif ($this->columnDefine->useOptions && is_array($this->initialValue)) {
+            //            台帳の設定で配列からテキスト入力などに変更される場合があるので配列かどうかだけをチェック
+        } elseif (is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
             $displayValues = array_keys($displayValues);
             if (!empty($displayValues)) {
@@ -96,8 +96,14 @@ class ColumnHtmlService
     /**
      * @return $this
      */
-    public function setHighlightKeywords(array $keywords)
+    public function setHighlightKeywords($keywords)
     {
+        if (empty($keywords)) {
+            return $this;
+        }
+        if (is_string($keywords)) {
+            $keywords = explode(',', $keywords);
+        }
         $this->keywords = $keywords;
 
         return $this;
@@ -125,6 +131,9 @@ class ColumnHtmlService
     {
         if (empty($attachments)) {
             $attachments = [];
+        }
+        if (is_string($attachments)) {
+            dd($attachments);
         }
         $this->attachments = $attachments;
 
