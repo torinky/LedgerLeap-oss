@@ -146,7 +146,8 @@ use Psr\Container\NotFoundExceptionInterface;
         // 現在のソート順をトグル
         $this->orderAsc = !$this->orderAsc;
 
-        $this->render();
+        $this->initSearchContext();
+        $this->render($this->searchContext);
     }
 
     /**

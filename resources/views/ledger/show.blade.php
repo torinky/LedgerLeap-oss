@@ -16,7 +16,7 @@
             <label for="createDescription"
                    class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
             <div class="collapse-content">
-                <x-markdown class="prose text-sm leading-relaxed">
+                <x-markdown class="prose text-sm leading-relaxed max-w-none">
                     {!! $ledgerDefineRecord->detail_description !!}
                 </x-markdown>
             </div>

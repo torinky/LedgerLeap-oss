@@ -51,7 +51,7 @@
                         wire:click="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-markdown class="prose text-sm leading-relaxed">
+                    <x-markdown class="prose text-sm leading-relaxed max-w-none">
                         {!! $ledgerDefineRecord->create_description !!}
                     </x-markdown>
                 </x-slot:content>
@@ -63,7 +63,7 @@
                         wire:click="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-markdown class="prose text-sm leading-relaxed">
+                    <x-markdown class="prose text-sm leading-relaxed max-w-none">
                         {!! $ledgerDefineRecord->list_description !!}
                     </x-markdown>
                 </x-slot:content>
@@ -75,7 +75,7 @@
                         wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-markdown class="prose text-sm leading-relaxed">
+                    <x-markdown class="prose text-sm leading-relaxed max-w-none">
                         {!! $ledgerDefineRecord->detail_description !!}
                     </x-markdown>
                 </x-slot:content>
