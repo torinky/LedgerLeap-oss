@@ -148,7 +148,7 @@
     "ledger.column.remove_message": "「:name」の列を削除します",
     "ledger.column.required": "必須入力",
     "ledger.column.sort": "この列でリストを並び替え",
-    "ledger.column.title": "列の表示名",
+    "ledger.column.title": "表示名",
     "ledger.column.type": "入力形式",
     "ledger.column.unique": "重複を禁止",
     "ledger.column.will_ledger_delete_message": "登録されたこの列の内容も削除します！",
@@ -202,7 +202,7 @@
     "ledger.form.textarea": "複数行テキスト",
     "ledger.form.upload": "ファイル添付",
     "ledger.go_home": "Topに戻る",
-    "ledger.go_to": "移動",
+    "ledger.go_to": "この台帳のリスト表示へ移動",
     "ledger.has_been_created": "作成されました",
     "ledger.has_been_updated": "更新されました",
     "ledger.history_title": "更新履歴",
@@ -419,5 +419,11 @@
     "Yes": "はい。",
     "You are receiving this email because we received a password reset request for your account.": "パスワード再設定のリクエストを受け付けました。",
     "You're logged in!": "ログイン成功",
-    "Your email address is unverified.": "メールアドレスが未認証です。"
+    "Your email address is unverified.": "メールアドレスが未認証です。",
+    "ledger.stored.failed": "保存に失敗しました",
+    "ledger.records_title": "リスト",
+    "Ledger.editTitle": "登録内容の編集",
+    "Ledger.create": "新規登録",
+    "ledger.column.bg_file": "背景画像",
+    "ledger.define.setting": "台帳／フォルダ設定の管理"
 }

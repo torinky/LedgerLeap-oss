@@ -1,22 +1,26 @@
-<x-app-layout title="SETTING | DocumentCabinet">
+<x-app-layout title="{{__('ledger.define.edit_title')}}" class="bg-warning/30">
     @push('scripts')
         @vite(['resources/js/ledgerDefineEdit.js'])
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info flex align-items-center">
+        <x-slot name="header" class="sticky top-0 z-10 ">
+            <div class="ttl_3d5 warn md:flex md:items-center space-x-4">
+                <h2 class="font-black text-xl text-warning-content/70 md:text-2xl flex items-center">
             <span class="fa-layers fa-fw mr-2">
                 <i class="fa-solid fa-book text-3xl" data-fa-transform="left-5 "></i>
                 <i class="fa-solid fa-pencil text-2xl text-primary/70"
                    data-fa-transform=" right-5 up-3"></i>
             </span>
-            <span> {{ __('ledger.define.edit_title') }}</span>
-        </h2>
+                    <span> {{ __('ledger.define.edit_title') }}</span>
+                </h2>
+                <div class="text-warning-content/50 text-sm"><i
+                        class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
+            </div>
     </x-slot>
 
-        <div class="container mx-auto h-screen w-screen bg-warning/30">
+        <div class="container mx-auto ">
             {{--
                     @if (session('status'))
                         @include('components.ledger.alert',[
@@ -28,7 +32,7 @@
             --}}
 
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-5">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 space-y-5">
                     <!-- 2段組みのコンテンツ -->
                     <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">
 

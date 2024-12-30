@@ -89,11 +89,20 @@ class ModifyColumn extends CreateColumn
             $ledgerRecord->modifier_id = Auth::user()->id;
             $ledgerRecord->save();
 
+            $this->dispatch('ledgerStored', $this->ledgerRecord->id);
+
             $this->addAttachedFileRecord();
             //            dd($this->content);
 
-            return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
-                ->with('status', __('ledger.updated.success'));
+            /*            return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
+                            ->with('success', __('ledger.updated.success'));*/
+            //dd(route('ledger.show', ['ledgerId' => $ledgerRecord->id]));
+            $this->success(
+                __('ledger.updated.success'),
+                redirectTo: route('ledger.show', ['ledgerId' => $ledgerRecord->id])
+            );
+
+            return;
         }
         abort(404);
     }

@@ -154,6 +154,7 @@ use Psr\Container\NotFoundExceptionInterface;
      *
      * @return Application|Factory|View
      */
+    #[On('ledgerStored')]
     public function render(SearchContext $searchContext)
     {
         $this->authorize('view_ledger_defines', LedgerDefine::class);

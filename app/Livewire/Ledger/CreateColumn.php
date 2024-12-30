@@ -21,13 +21,14 @@ use Intervention\Image\ImageManager;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Mary\Traits\Toast;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
  */
 class CreateColumn extends Component
 {
-    use WithFileUploads;
+    use Toast, WithFileUploads;
 
     public array $content;
 
@@ -50,6 +51,7 @@ class CreateColumn extends Component
     public $progress = 0;
 
     public $requredColumnIds = [];
+
     /**
      * @var mixed|null
      */
@@ -157,6 +159,7 @@ class CreateColumn extends Component
                 } else {
                     $value = array_filter($value, 'strlen');
                 }
+
                 return !empty($value) && in_array($key, $this->requredColumnIds);
             })->count() / $this->totalRequireColumnCount * 100;
     }
@@ -166,45 +169,59 @@ class CreateColumn extends Component
      */
     public function store(StoreRequest $request)
     {
-        $this->validate();
+        try {
+            $this->validate();
 
-        //        dd($this->content, $this->contentAttached);
+            //        dd($this->content, $this->contentAttached);
 
-        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            foreach ($this->ledgerDefineRecord->column_define as $column) {
 
-            if ($column->type === 'files') {
+                if ($column->type === 'files') {
 
-                $filenames = [];
-                $fileContents = [];
-                foreach ($this->content[$column->id] as $uploadedFile) {
-                    $stored = $this->storeFile($uploadedFile, $column->id);
-                    $filenames[$stored->hashedBaseName] = $stored->originalName;
-                    $fileContents[$stored->hashedBaseName] = null;
+                    $filenames = [];
+                    $fileContents = [];
+                    foreach ($this->content[$column->id] as $uploadedFile) {
+                        $stored = $this->storeFile($uploadedFile, $column->id);
+                        $filenames[$stored->hashedBaseName] = $stored->originalName;
+                        $fileContents[$stored->hashedBaseName] = null;
+                    }
+                    //                $filenames = $this->storeFile($column->id);
+                    //dd($filenames,$fileContents);
+                    $this->content[$column->id] = $filenames;
+                    $this->contentAttached[$column->id] = $fileContents;
                 }
-                //                $filenames = $this->storeFile($column->id);
-                //dd($filenames,$fileContents);
-                $this->content[$column->id] = $filenames;
-                $this->contentAttached[$column->id] = $fileContents;
             }
-        }
-        $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
-        $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
-        //dd($this->content);
-        //        dd($this->content, $this->contentAttached);
-        //        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
-        //        数字キーによるソートもcreateに渡すまでの間に済ませておく
-        $this->ledgerRecord = Ledger::create([
-            'content' => $this->content,
-            'content_attached' => $this->contentAttached,
-            'ledger_define_id' => $this->ledgerDefineRecord->id,
-            'creator_id' => Auth::user()->id,
-            'modifier_id' => Auth::user()->id,
-        ]);
-        //dd($this->content);
-        $this->addAttachedFileRecord();
+            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+            $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
+            //dd($this->content);
+            //        dd($this->content, $this->contentAttached);
+            //        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
+            //        数字キーによるソートもcreateに渡すまでの間に済ませておく
+            $this->ledgerRecord = Ledger::create([
+                'content' => $this->content,
+                'content_attached' => $this->contentAttached,
+                'ledger_define_id' => $this->ledgerDefineRecord->id,
+                'creator_id' => Auth::user()->id,
+                'modifier_id' => Auth::user()->id,
+            ]);
+            //dd($this->content);
+            $this->addAttachedFileRecord();
 
-        return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
-            ->with('status', __('ledger.stored.success'));
+            /*            return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
+                            ->with('status', __('ledger.stored.success'));*/
+            $this->dispatch('ledgerStored', $this->ledgerRecord->id);
+            $this->success(
+                __('ledger.stored.success'),
+                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
+            );
+
+            return;
+        } catch (Exception $e) {
+            $this->addError('storedFailed', __('ledger.stored.failed'));
+            //TODO: 例外処理
+            error_log($e->getMessage());
+        }
+
     }
 
     /**

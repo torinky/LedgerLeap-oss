@@ -28,6 +28,7 @@ return [
     'collapse_all' => 'すべて折りたたむ',
     'column' => [
         'add' => '列を追加',
+        'bg_file' => '背景画像',
         'delete_file' => 'ファイルを削除',
         'drag2sort' => 'ドラッグして並び替え',
         'file' => [
@@ -72,6 +73,7 @@ return [
         'remove_message' => 'この台帳を削除しようとしています',
         'save' => '台帳の定義に反映する',
         'saved' => '定義が保存されました',
+        'setting' => '台帳／フォルダ設定の管理',
         'title' => '台帳名',
         'title_input' => '台帳名を入力',
     ],
@@ -122,7 +124,7 @@ return [
         'upload' => 'ファイル添付',
     ],
     'go_home' => 'Topに戻る',
-    'go_to' => '移動',
+    'go_to' => 'この台帳のリスト表示へ移動',
     'has_been_created' => '作成されました',
     'has_been_updated' => '更新されました',
     'hide' => '隠す',
@@ -181,6 +183,7 @@ return [
     'price' => '価格',
     'record' => '記録',
     'records' => '件',
+    'records_title' => 'リスト',
     'remove' => '削除する',
     'remove_message' => 'この案件の内容は削除されます！ 取り消しできません！',
     'remove_records_message' => 'この台帳のレコードを削除します',
@@ -220,6 +223,7 @@ return [
     'stop' => '停止する',
     'stored' => [
         'fail' => '登録に失敗しました',
+        'failed' => '保存に失敗しました',
         'success' => '登録を完了しました',
     ],
     'submit' => '提出する',

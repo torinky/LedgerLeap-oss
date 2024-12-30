@@ -1,4 +1,4 @@
-<x-appWithDrawer-layout title="Ledger Definitions">
+<x-appWithDrawer-layout title="{{__('ledger.define.setting')}}" class="bg-warning/30">
     {{--
         <x-slot name="header">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">

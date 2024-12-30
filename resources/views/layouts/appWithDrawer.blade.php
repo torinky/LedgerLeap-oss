@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ $attributes->get('title') ?? 'page'}} | {{ config('app.name', 'Laravel')}}</title>
 
     <!-- Fonts -->
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
@@ -15,7 +15,7 @@
     @stack('stylesheets')
 
 </head>
-<body class="font-body antialiased">
+<body class="font-sans antialiased {{$attributes->get('class')}}">
 
     <div class="fixed w-full z-10 top-0">
         @include('layouts.daisyuiNavigation')
@@ -32,7 +32,7 @@
 
 
     {{--        <div class="drawer drawer-mobile">--}}
-    <div class="drawer mt-20 xl:drawer-open">
+    <div class="drawer pt-20 xl:drawer-open">
 
         <input id="app-drawer" type="checkbox" class="drawer-toggle"/>
 

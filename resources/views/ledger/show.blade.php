@@ -1,72 +1,28 @@
-<x-app-layout title="DETAIL | DocumentCabinet">
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('ledger.details') }}
-        </h2>
+<x-app-layout title="{{__('ledger.details')}}">
+    <x-slot name="header" class="sticky top-0 z-10">
+        <div class="ttl_3d5 md:flex md:items-center space-x-4">
+            <h2 class="font-black text-lg text-info md:text-xl">
+                <i class="fas fa-list mr-2"></i>
+                {{ __('ledger.details') }}
+            </h2>
+            <div class="text-info/90 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
+        </div>
     </x-slot>
 
-    @if (session('status'))
-        <div class="flex min-h-[6rem] min-w-[18rem] flex-wrap items-center justify-center gap-2 overflow-x-hidden ">
-            <div class="alert alert-success  max-w-4xl">
-                <div>
-                    <i class="far fa-circle-check"></i>
-                    <span>{{ session('status') }}</span>
-                </div>
+    <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5">
+
+        <div class="collapse bg-base-200 collapse-arrow border-base-300 border">
+            <input type="checkbox" id="createDescription" checked/>
+            <label for="createDescription"
+                   class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
+            <div class="collapse-content">
+                <x-markdown class="prose text-sm leading-relaxed">
+                    {!! $ledgerDefineRecord->detail_description !!}
+                </x-markdown>
             </div>
         </div>
-        <script type="text/javascript">
-            window.onunload = function () {
-                reload_parent_window();
-            }
 
-            //親ウィンドウの更新処理
-            function reload_parent_window() {
-                //自身を開いたウィンドウが存在する場合
-                if ((window.opener && !window.opener.closed)) {
-                    window.opener.location.reload();
-                    //自身がiframeの子である場合
-                } else if (window != window.parent) {
-                    window.parent.location.reload();
-                }
-            }
-        </script>
-    @endif
-
-    @include('ledger.detail.table',compact('ledgerRecord'))
-    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
-        <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
-    </div>
-
-    <div
-        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-            <div class="card-body flex flex-row justify-center items-center">
-                <div class="card-actions justify-center place-items-center">
-                    <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-                       class="btn btn-primary btn-lg btn-wide"
-                    ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
-
-                    @if($ledgerRecord->ledger_diff_count>0)
-                        <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
-                           class="btn btn-outline btn-info ml-5"
-                        ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.modifies')}}
-                            <div class="badge badge-info badge-outline">{{$ledgerRecord->ledger_diff_count}}</div>
-                        </a>
-                    @endif
-
-                    {{--
-                                        <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                                class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
-                    --}}
-                    <x-ledger.close-window-button
-                        :closeWindowMessage="__('ledger.close_view_window_message')"
-                        :cancel="__('ledger.cancel')"
-                    />
-                </div>
-            </div>
-        </div>
+        <livewire:ledger.show/>
     </div>
 
 </x-app-layout>

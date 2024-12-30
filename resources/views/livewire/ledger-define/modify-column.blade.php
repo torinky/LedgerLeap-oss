@@ -43,7 +43,7 @@
                     >
                         <div
                             wire:sortable.handle
-                            class="flex collapse-title bg-primary/50 text-primary-content
+                            class="flex collapse-title bg-primary/20 text-primary-content
                             peer-checked:bg-secondary peer-checked:text-secondary-content
                             peer-checked:pl-16
                             hover:opacity-80
@@ -66,7 +66,7 @@
                             ><i class="fa-solid fa-grip-lines"></i>
                             </button>
                         </div>
-                        <div class="collapse rounded-none  bg-primary/30 text-primary-content">
+                        <div class="collapse rounded-none  bg-base-200 text-primary-content">
                             <input type="checkbox" name="collapse_{{$columnDefine->id}}"
                                    id="collapse_{{$columnDefine->id}}"
                                    class="peer collapse_swap hidden"
@@ -165,10 +165,11 @@
                                             </button>
                                         @else
                                             <x-mary-file
-                                                label="{{__('ledger.column.file')}}"
+                                                label="{{__('ledger.column.bg_file')}}"
                                                 wire:model.live="columnUploadedFile.{{$columnDefine->id}}"
                                                 class="input-accent"
                                                 wire:key="file_{{$columnDefine->id}}"
+                                                hint="png, jpg, jpeg, gif, svg"
                                             />
                                         @endif
 
@@ -235,7 +236,7 @@
                             </div>
                         </div>
                         <label for="collapse_{{ $columnDefine->id }}"
-                               class="btn btn-sm btn-primary bg-primary/20 w-full tooltip rounded-none rounded-bl-lg rounded-br-lg"
+                               class="btn btn-sm btn-primary bg-primary/20 hover:bg-primary/50 w-full tooltip rounded-none rounded-bl-lg rounded-br-lg"
                                data-tip="{{__('ledger.collapse')}}">
                             {{--                                <input type="checkbox" style="display: none"/>--}}
                             <div class="pt-2">

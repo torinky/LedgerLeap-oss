@@ -86,3 +86,23 @@ textarea {
     left: 10px;
     z-index: -1;
 }
+
+.ttl_3d5.warn {
+    border-color: theme('colors.warning');
+    //background-color: theme('colors.base-200');
+    //background-color: rgb(var(--warning-r), var(--warning-g), var(--warning-b), 0.5);
+    background-color: theme('colors.base-100');
+}
+
+.ttl_3d5.warn::before {
+    background-image: radial-gradient(theme('colors.warning') 8%, transparent 16%), radial-gradient(theme('colors.warning') 8%, transparent 16%);
+}
+
+.ttl_3d5.error {
+    border-color: theme('colors.error');
+    background-color: theme('colors.base-300');
+}
+
+.ttl_3d5.error::before {
+    background-image: radial-gradient(theme('colors.error') 8%, transparent 16%), radial-gradient(theme('colors.error') 8%, transparent 16%);
+}

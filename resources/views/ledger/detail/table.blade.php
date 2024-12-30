@@ -2,9 +2,11 @@
     {{--        @dd($ledgerRecord)--}}
     @if($ledgerRecord && $ledgerRecord->content && $ledgerRecord->define)
         <div class="card bg-base-100 shadow-xl mt-10">
-            <h2 class="card-title">
-            {{$ledgerRecord->define->title}}
-            </h2>
+            {{--
+                        <h2 class="card-title">
+                        {{$ledgerRecord->define->title}}
+                        </h2>
+            --}}
             <div class="card-body">
                 <table class="table table-zebra table-compact table-hover table-fixed w-full">
             <tbody>

@@ -1,4 +1,4 @@
-<x-appWithDrawer-layout title="Ledgers">
+<x-appWithDrawer-layout title="{{__('ledger.records_title')}}">
 {{--
     <x-slot name="header">
         <h2 class="font-semibold text-xl leading-tight">

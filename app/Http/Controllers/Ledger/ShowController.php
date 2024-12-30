@@ -20,9 +20,10 @@ class ShowController extends Controller
         $ledger = new Ledger;
         $ledgerId = (int)$request->route('ledgerId');
 
-        $ledgerRecord = $ledger->with(['define', 'modifier'])->withCount('ledgerDiff')->where('ledgers.id', $ledgerId)->firstOrFail();
-        //        dd($ledgerRecord);
+        //        $ledgerRecord = $ledger->with(['define', 'modifier'])->withCount('ledgerDiff')->where('ledgers.id', $ledgerId)->firstOrFail();
+        $ledgerRecord = $ledger->with(['define'])->where('ledgers.id', $ledgerId)->firstOrFail();
+        $ledgerDefineRecord = $ledgerRecord->define;
 
-        return View::make('ledger.show', compact('ledgerRecord'));
+        return View::make('ledger.show', compact('ledgerRecord', 'ledgerDefineRecord'));
     }
 }
