@@ -36,6 +36,7 @@
         "
     />
 @else
+    @if($columnDefine->required)
     <x-mary-textarea
         wire:model.blur="content.{{$columnDefine->id}}"
         label="{{ $columnDefine->name }}"
@@ -59,6 +60,31 @@
         opacityBlock.classList.remove('opacity-100');
         "
     />
+    @else
+        <x-mary-textarea
+            wire:model.blur="content.{{$columnDefine->id}}"
+            label="{{ $columnDefine->name }}"
+            id="content[{{$columnDefine->id}}]"
+            name="content[{{$columnDefine->id}}]"
+            icon="{{ $icon }}"
+            placeholder="{{ $columnDefine->name }}"
+            rows="3"
+            {{--        required="{{ $columnDefine->required }}"--}}
+            class="{{ $class }}"
+            hint="{{ $columnDefine->hint }}"
+            x-on:focus="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-100');
+        opacityBlock.classList.remove('opacity-50');
+        updateBackground('{{$columnDefine->id}}');
+        "
+            x-on:blur="
+        const opacityBlock = event.target.closest('.opacity-control-block');
+        opacityBlock.classList.add('opacity-50');
+        opacityBlock.classList.remove('opacity-100');
+        "
+        />
+    @endif
 @endif
 
 @once

@@ -27,51 +27,66 @@
 
 @php
     $type = $isDemo ? (count($tmpOptions) > 5 ? 'demo-select' : 'demo-radio') : (count($tmpOptions) > 5 ? 'select' : 'radio');
+    $required = $columnDefine->required ? 'required=required' : "";
 @endphp
-
-@switch($type)
-    @case('demo-select')
-        <x-mary-select
-            label="{{$columnDefine->name}}"
-            icon="{{$icon}}"
-            id="content[{{$columnDefine->id}}]"
-            name="content[{{$columnDefine->id}}]"
-            class="{{$class}}@if($columnDefine->required) input-accent @endif"
-            :options="$tmpOptions"
-            required="{{$columnDefine->required}}"
-            hint="{{$columnDefine->hint}}"
-        ></x-mary-select>
-        @break
-    @case('demo-radio')
-        <x-mary-radio
-            label="{{$columnDefine->name}}"
-            :options="$tmpOptions"
-            required="{{$columnDefine->required}}"
-            class="flex w-full"
-            hint="{{$columnDefine->hint}}"
-        ></x-mary-radio>
-        @break
-    @case('select')
-        <x-mary-select
-            wire:model.live="content.{{$columnDefine->id}}"
-            label="{{$columnDefine->name}}"
-            icon="{{$icon}}"
-            id="content[{{$columnDefine->id}}]"
-            name="content[{{$columnDefine->id}}]"
-            class="{{$class}}@if($columnDefine->required) input-accent @endif"
-            :options="$tmpOptions"
-            required="{{$columnDefine->required}}"
-            hint="{{$columnDefine->hint}}"
-        ></x-mary-select>
-        @break
-    @case('radio')
-        <x-mary-radio
-            wire:model.live="content.{{$columnDefine->id}}"
-            label="{{$columnDefine->name}}"
-            :options="$tmpOptions"
-            required="{{$columnDefine->required}}"
-            class="flex w-full"
-            hint="{{$columnDefine->hint}}"
-        ></x-mary-radio>
-        @break
-@endswitch
+@if ($type === 'demo-select')
+    <x-mary-select
+        label="{{ $columnDefine->name }}"
+        icon="{{ $icon }}"
+        id="content[{{ $columnDefine->id }}]"
+        name="content[{{ $columnDefine->id }}]"
+        class="{{ $class . ($columnDefine->required ? ' input-accent' : '') }}"
+        :options="$tmpOptions"
+        required="{{ $columnDefine->required }}"
+        hint="{{ $columnDefine->hint }}"
+    ></x-mary-select>
+@elseif ($type === 'demo-radio')
+    <x-mary-radio
+        label="{{ $columnDefine->name }}"
+        :options="$tmpOptions"
+        required="{{ $columnDefine->required }}"
+        class="flex w-full"
+        hint="{{ $columnDefine->hint }}"
+    ></x-mary-radio>
+@elseif ($type === 'select' && $columnDefine->required)
+    <x-mary-select
+        wire:model.live="content.{{ $columnDefine->id }}"
+        label="{{ $columnDefine->name }}"
+        icon="{{ $icon }}"
+        id="content[{{ $columnDefine->id }}]"
+        name="content[{{ $columnDefine->id }}]"
+        class="{{ $class . ($columnDefine->required ? ' input-accent' : '') }}"
+        :options="$tmpOptions"
+        hint="{{ $columnDefine->hint }}"
+        required
+    ></x-mary-select>
+@elseif ($type === 'select')
+    <x-mary-select
+        wire:model.live="content.{{ $columnDefine->id }}"
+        label="{{ $columnDefine->name }}"
+        icon="{{ $icon }}"
+        id="content[{{ $columnDefine->id }}]"
+        name="content[{{ $columnDefine->id }}]"
+        class="{{ $class . ($columnDefine->required ? ' input-accent' : '') }}"
+        :options="$tmpOptions"
+        hint="{{ $columnDefine->hint }}"
+    ></x-mary-select>
+@elseif($columnDefine->required)
+    <x-mary-radio
+        wire:model.live="content.{{ $columnDefine->id }}"
+        label="{{ $columnDefine->name }}"
+        :options="$tmpOptions"
+        class="flex w-full"
+        hint="{{ $columnDefine->hint }}"
+        required
+    ></x-mary-radio>
+@else
+    <x-mary-radio
+        wire:model.live="content.{{ $columnDefine->id }}"
+        label="{{ $columnDefine->name }}"
+        :options="$tmpOptions"
+        required="{{ $columnDefine->required }}"
+        class="flex w-full"
+        hint="{{ $columnDefine->hint }}"
+    ></x-mary-radio>
+@endif
