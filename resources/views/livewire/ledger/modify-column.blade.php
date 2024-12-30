@@ -43,11 +43,8 @@
             @endphp
 
             <div class="card-body mb-32 space-y-3 ">
-                {{--
-                                <h2 class="card-title">
-                                    {{$ledgerDefineRecord->title}}
-                                </h2>
-                --}}
+                <x-mary-progress value="{{$progress}}" max="100"
+                                 class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                     <div class="flex">
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>

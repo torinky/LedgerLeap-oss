@@ -1,16 +1,19 @@
-<x-app-layout title="EDIT | DocumentCabinet">
+<x-app-layout title="{{__('Ledger.edit')}}">
     @push('scripts')
         @vite(['resources/js/ledgerEdit.js'])
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerEdit.scss'])
     @endpush
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info leading-tight">
-            <i class="fas fa-pencil mr-2"></i>
-            {{ __('ledger.editTitle') }}
-        </h2>
-    </x-slot>
+        <x-slot name="header" class="sticky top-0 z-10">
+            <div class="ttl_3d5 md:flex md:items-center space-x-4">
+                <h2 class="font-black text-lg text-info md:text-xl">
+                    <i class="fas fa-plus-circle mr-2"></i>
+                    {{ __('ledger.editTitle') }}
+                </h2>
+                <div class="text-info/90 text-sm"><i class="fas fa-home"></i> {{$ledgerDefineRecord->title}}</div>
+            </div>
+        </x-slot>
         {{--    <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 xl:grid-cols-2 gap-10">--}}
         <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5">
 

@@ -26,10 +26,15 @@ class ModifyColumn extends CreateColumn
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
             if (!empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
+                $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
+                    return $column->required;
+                })->count();
             }
             if (!empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
             }
+            $this->initRequireColumns();
+            $this->updateProgress();
 
             foreach ($this->ledgerDefineRecord->column_define as $column) {
                 if ($column->type === 'files') {

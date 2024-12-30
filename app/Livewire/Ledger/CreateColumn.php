@@ -61,20 +61,8 @@ class CreateColumn extends Component
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::where('ledger_defines.id', $this->ledgerDefineId)->first();
         $this->ledgerRecord = null;
-        $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
-            return $column->required;
-        })->count();
-        $totalRequireColumnCount = 0;
-        /*        foreach ($this->ledgerDefineRecord->column_define as $column) {
-                    if ($column->required) {
-                        $totalRequireColumnCount++;
-                    }
-                }
-                dd($totalRequireColumnCount,$this->totalRequireColumnCount);*/
 
-        $this->requredColumnIds = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
-            return $column->required;
-        })->pluck('id')->toArray();
+        $this->initRequireColumns();
 
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             if ($column->type === 'files' || $column->type === 'chk') {
@@ -90,9 +78,18 @@ class CreateColumn extends Component
         }
 
         $this->initBackgroundImages();
+    }
 
-        //        dd($this->content, $this->contentAttached);
-        //        dd($this->ledgerDefineRecord);
+    public function initRequireColumns(): void
+    {
+        $columns = collect($this->ledgerDefineRecord->column_define);
+        $this->totalRequireColumnCount = $columns->filter(function ($column) {
+            return $column->required;
+        })->count();
+
+        $this->requredColumnIds = $columns->filter(function ($column) {
+            return $column->required;
+        })->pluck('id')->toArray();
     }
 
     public function initBackgroundImages(): void
@@ -116,7 +113,6 @@ class CreateColumn extends Component
 
     public function updated($propertyName): void
     {
-        //        dd($propertyName);
         $propertyPath = explode('.', $propertyName);
         $columnId = $propertyPath[1];
 
@@ -124,14 +120,7 @@ class CreateColumn extends Component
             $this->validateOnly($propertyName);
 
             $column = $this->ledgerDefineRecord->column_define[$columnId];
-//            dd($propertyName,$columnId, $this->content[$column->id]);
-            $this->progress = collect($this->content)->filter(function ($value, $key) {
-                    if (!is_array(($value))) {
-                        $value = trim($value);
-                    }
-                    return !empty($value) && in_array($key, $this->requredColumnIds);
-                })->count() / $this->totalRequireColumnCount * 100;
-
+            $this->updateProgress();
 
             if ($column->required) {
                 $this->labelColor[$column->id] = 'warning';
@@ -154,6 +143,22 @@ class CreateColumn extends Component
         } catch (ValidationException $e) {
             error_log('ValidationException occurred: ' . $e->getMessage());
         }
+    }
+
+    public function updateProgress(): void
+    {
+        if (!isset($this->requredColumnIds)) {
+            $this->initRequireColumns();
+        }
+
+        $this->progress = collect($this->content)->filter(function ($value, $key) {
+                if (!is_array(($value))) {
+                    $value = trim($value);
+                } else {
+                    $value = array_filter($value, 'strlen');
+                }
+                return !empty($value) && in_array($key, $this->requredColumnIds);
+            })->count() / $this->totalRequireColumnCount * 100;
     }
 
     /**

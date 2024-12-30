@@ -36,7 +36,8 @@
                      method="post"
                      class="card w-full bg-neutral-500/10 shadow-xl">
             @csrf
-            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
+            {{--            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">--}}
+
             @php
                 $columnJs=[];
             @endphp
@@ -44,7 +45,7 @@
 
             <div class="card-body mb-32 space-y-3 pt-2">
                 <x-mary-progress value="{{$progress}}" max="100"
-                                 class="progress-warning h-3 w-full mb-10 mt-0 pt-0 sticky"/>
+                                 class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
                 @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                     <div class="flex">
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
