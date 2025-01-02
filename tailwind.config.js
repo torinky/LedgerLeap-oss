@@ -38,6 +38,9 @@ export default {
                 '5xl': '2560px', // 5xlブレークポイントを設定
                 '6xl': '3840px', // 6xlブレークポイントを設定
             },
+            colors: {
+                'warning-content': '#c27c07',
+            }
         },
     },
 

@@ -1,14 +1,16 @@
-<x-app-layout title="SETTING | LedgerLeap" class="bg-warning/50">
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info leading-tight">
+<x-app-layout title="{{__('ledger.define.create_title')}}" class="bg-warning/50">
+    <x-slot name="header" class="sticky top-0 z-10 ">
+        <div class="ttl_3d5 warn md:flex md:items-center space-x-4">
+            <h2 class="font-black text-xl text-warning-content/70 md:text-2xl flex items-center">
                 <span class="fa-layers fa-fw mr-2">
                     <i class="fa-solid fa-book text-3xl" data-fa-transform="left-6 "></i>
                     <i class="fa-solid  fa-plus-circle text-primary/70"
                        data-fa-transform=" right-6 up-10"></i>
                 </span>
             {{ __('ledger.define.create_title') }}
-        </h2>
+        </div>
     </x-slot>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-5">
         <!-- 2段組みのコンテンツ -->
         {{--        <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">--}}

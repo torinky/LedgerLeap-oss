@@ -11,6 +11,7 @@
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
 
     <!-- Styles  Scripts -->
+    @livewireStyles
     @vite(['resources/sass/app.scss','resources/js/app.js'])
     @stack('stylesheets')
 
@@ -22,7 +23,7 @@
 
         @if (isset($header))
             <!-- Page Heading -->
-            <header class=" shadow">
+            <header class=" {{$header->attributes->get('class')}}">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     {{ $header }}
                 </div>
@@ -46,6 +47,7 @@
             </ul>
         </div>
     </div>
+    @livewireScripts
+    @stack('scripts')
 </body>
-@stack('scripts')
 </html>

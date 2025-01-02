@@ -42,6 +42,9 @@
             <x-mary-icon name="o-home"/>{{$ledgerDefineRecord->title}}</h1>
 
         <div class="divider"></div>
+        <div class="alert alert-neutral">
+            <x-mary-icon name="o-folder"/>{{$ledgerDefineRecord->folder->title}}</div>
+        <div class="divider"></div>
 
         <x-mary-accordion wire:model="descriptionGroup" class="rounded-lg bg-base-200 border-base-300 border">
             <x-mary-collapse name="createDescription">
@@ -84,9 +87,6 @@
 
         <div class="divider"></div>
 
-        <div class="alert alert-neutral">
-            <x-mary-icon name="o-folder"/>{{$ledgerDefineRecord->folder->title}}</div>
-        <div class="divider"></div>
         <h1 class="text-xl my-3 font-bold">{{__('ledger.column.group_title')}}</h1>
 
         <div class=" space-y-3 mt-5 h-fit">

@@ -11,9 +11,9 @@
     {{--        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />--}}
 
     <!-- Scripts -->
+    {{--        @livewireStyles--}}
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @stack('stylesheets')
-    {{--    @livewireStyles--}}
 
     <script>
         // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
@@ -36,7 +36,7 @@
 
     <!-- Page Heading -->
     @if (isset($header))
-        <header class=" shadow {{$header->attributes->get('class')}}">
+        <header class=" {{$header->attributes->get('class')}}">
             <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 {{ $header }}
             </div>
@@ -48,7 +48,7 @@
         {{ $slot }}
     </main>
 </div>
-</body>
-{{--@livewireScripts--}}
+{{--        @livewireScripts--}}
 @stack('scripts')
+</body>
 </html>

@@ -7,11 +7,12 @@
     @endpush
         <x-slot name="header" class="sticky top-0 z-10">
             <div class="ttl_3d5 warn md:flex md:items-center space-x-4">
-                <h2 class="font-black text-lg text-info md:text-xl">
+                <h2 class="font-black text-lg text-warning-content md:text-2xl">
                     <i class="fas fa-plus-circle mr-2"></i>
                     {{ __('Ledger.create') }}
                 </h2>
-                <div class="text-info/90 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
+                <div class="text-warning-content/70 text-sm"><i
+                        class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
             </div>
     </x-slot>
         {{--    <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 xl:grid-cols-2 gap-10 ">--}}
