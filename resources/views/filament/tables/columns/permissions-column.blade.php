@@ -1,7 +1,7 @@
 <div>
     <div class="mb-1">
         <span class="text-xs text-muted">Direct Permissions:</span>
-        @foreach($getRecord()->getDirectPermissions() as $permission)
+        @foreach($getRecord()->permissions as $permission)
             {{--            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">--}}
             <span class="badge badge-sm badge-primary">
                 {{ $permission->name }}

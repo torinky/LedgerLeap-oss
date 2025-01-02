@@ -2,23 +2,48 @@
 
 namespace App\Models;
 
-use App\Traits\HasModelRoles;
 use CubeAgency\FilamentTreeView\Traits\HasTreeView;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Kalnoy\Nestedset\NodeTrait;
+use Spatie\Permission\PermissionRegistrar;
 
 class Folder extends Model
 {
-    use HasFactory, HasModelRoles, HasTreeView, NodeTrait, SoftDeletes;
+    use HasFactory, HasTreeView, NodeTrait, SoftDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id',
     ];
 
     protected $guard_name = ['web', 'api'];
+
+    protected static function booted()
+    {
+        static::created(function ($folder) {
+            Cache::forget('folder_tree_list_');
+        });
+
+        static::updated(function ($folder) {
+            Cache::forget('folder_tree_list_');
+            foreach (Role::all() as $role) {
+                Cache::forget('folder_permissions_' . $folder->id . '_' . $role->id);
+                Cache::forget('role_writable_folders_' . $role->id);
+            }
+        });
+
+        static::deleted(function ($folder) {
+            Cache::forget('folder_tree_list_');
+            foreach (Role::all() as $role) {
+                Cache::forget('folder_permissions_' . $folder->id . '_' . $role->id);
+                Cache::forget('role_writable_folders_' . $role->id);
+            }
+        });
+    }
 
     public function ledgerDefines()
     {
@@ -72,31 +97,37 @@ class Folder extends Model
         return $this->belongsTo(User::class, 'modifier_id');
     }
 
-    public function hasPermissionTo($permission, $guardName = null): bool
-    {
-        return $this->hasDirectPermission($permission) || $this->hasPermissionViaRole($permission);
-    }
-
     /**
-     * 親組織から継承された権限を含む全ての権限を取得
+     * 与えられたノードからツリー形式のオプション配列を生成します。
+     * 各ノードのタイトルは、階層を表すプレフィックスが付いたものがオプションのキーとなります。
      *
-     * @return mixed
+     * @param Collection $nodes ルートノードのコレクション
+     * @return array 階層化されたオプション配列
      */
-    public function getAllPermissions()
+    public static function treeList($nodes)
     {
-        $allPermissions = $this->permissions;
+        $cacheKey = 'folder_tree_list_';
 
-        foreach ($this->ancestors as $ancestor) {
-            $allPermissions = $allPermissions->merge($ancestor->permissions);
-        }
+        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($nodes) {
+            $options = [];
+            $traverse = function ($categories, $prefix = '-') use (&$traverse, &$options) {
+                foreach ($categories as $category) {
+                    $options[$category->id] = $prefix . ' ' . $category->title;
 
-        return $allPermissions->unique('id');
+                    $traverse($category->children, $prefix . '-');
+                }
+            };
+
+            $traverse($nodes);
+
+            return $options;
+        });
     }
 
     /**
-     * 親組織から継承された役割を含む全ての役割を取得
+     * 自身と祖先のすべての組織に役割を継承しているかどうかを確認します。
      *
-     * @return mixed
+     * @return Collection 継承された役割のコレクション
      */
     public function getAllRoles()
     {
@@ -109,100 +140,72 @@ class Folder extends Model
         return $allRoles->unique('id');
     }
 
-    public function hasPermissionWithInheritance($permission)
+    public function roles()
     {
-        if ($this->hasPermissionTo($permission)) {
-            return true;
-        }
+        return $this->morphedByMany(Role::class, 'model',
+            config('permission.table_names.model_has_roles'),
+            app(PermissionRegistrar::class)->pivotRole,
+            config('permission.column_names.model_morph_key')
+        );
+    }
 
-        foreach ($this->ancestors as $ancestor) {
-            if ($ancestor->hasPermissionTo($permission)) {
-                return true;
+    /**
+     *  指定されたロールがこのフォルダに対して特定の権限を持っているか、親フォルダから権限を継承しているかをチェックします。
+     *
+     * @param Role $role チェックするロール
+     * @param string $permission チェックする権限
+     */
+    public function hasPermissionWithInheritance(Role $role, string $permission): bool
+    {
+        $allPermissions = $this->getAllPermissionsWithInheritance($role);
+
+        return in_array($permission, $allPermissions);
+    }
+
+    /**
+     *  指定されたロールが直接このフォルダに対して特定の権限を持っているかをチェックします。
+     *
+     * @param Role $role チェックするロール
+     * @param string $permission チェックする権限
+     */
+    public function hasDirectPermission(Role $role, string $permission): bool
+    {
+        return $role->folderPermissions()
+            ->where('folder_id', $this->id)
+            ->wherePivot('permission', $permission)
+            ->exists();
+
+    }
+
+    /**
+     * 指定されたロールが直接このフォルダに対して持っているすべての権限を返します。
+     *
+     * @param Role $role チェックするロール
+     */
+    public function getDirectPermissions(Role $role): array
+    {
+        return $role->folderPermissions()
+            ->where('folder_id', $this->id)
+            ->pluck('permission')
+            ->toArray();
+    }
+
+    /**
+     * 指定されたロールが持つ、このフォルダとその祖先フォルダのすべての権限を返します。
+     *
+     * @param Role $role チェックするロール
+     */
+    public function getAllPermissionsWithInheritance(Role $role): array
+    {
+        $cacheKey = 'folder_permissions_' . $this->id . '_' . $role->id; // キャッシュキーを生成
+
+        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($role) {
+            $permissions = $this->getDirectPermissions($role);
+            if ($this->parent) {
+                $permissions = array_merge($permissions, $this->parent->getAllPermissionsWithInheritance($role));
             }
-        }
 
-        return false;
-    }
-
-    public function hasRoleWithInheritance($role)
-    {
-        if ($this->hasRole($role)) {
-            return true;
-        }
-
-        foreach ($this->ancestors as $ancestor) {
-            if ($ancestor->hasRole($role)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function getDirectRoles()
-    {
-        return $this->roles;
-    }
-
-    public function getInheritedRoles()
-    {
-        $inheritedRoles = collect();
-        foreach ($this->ancestors as $ancestor) {
-            $inheritedRoles = $inheritedRoles->merge($ancestor->roles);
-        }
-
-        return $inheritedRoles->unique('id')->diff($this->getDirectRoles());
-    }
-
-    public function getDirectPermissions()
-    {
-        return $this->permissions;
-    }
-
-    public function getInheritedPermissions()
-    {
-        $inheritedPermissions = collect();
-        foreach ($this->ancestors as $ancestor) {
-            $inheritedPermissions = $inheritedPermissions->merge($ancestor->getAllPermissions());
-        }
-
-        return $inheritedPermissions->unique('id')->diff($this->getDirectPermissions());
-    }
-
-    public function getAllUniquePermissions()
-    {
-        return $this->getAllPermissions()->unique('id');
-    }
-
-    public function getDirectPermissionsViaRoles()
-    {
-        return $this->getDirectRoles()->flatMap->permissions->unique('id');
-    }
-
-    public function getInheritedPermissionsViaRoles()
-    {
-        return $this->getInheritedRoles()->flatMap->permissions->unique('id');
-    }
-
-    public function getAllUniquePermissionsViaRoles()
-    {
-        return $this->getAllRoles()->flatMap->permissions->unique('id');
-    }
-
-    public static function treeList($nodes)
-    {
-
-        $options = [];
-        $traverse = function ($categories, $prefix = '-') use (&$traverse, &$options) {
-            foreach ($categories as $category) {
-                $options[$category->id] = $prefix . ' ' . $category->title;
-
-                $traverse($category->children, $prefix . '-');
-            }
-        };
-
-        $traverse($nodes);
-
-        return $options;
+            return array_unique($permissions);
+        });
     }
 }

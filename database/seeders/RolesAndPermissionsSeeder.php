@@ -18,6 +18,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Create permissions
         $permissions = [
             'view_ledgers',
+            'create_ledgers',
             'edit_ledgers',
             'delete_ledgers',
             'manage_ledger_defines',
@@ -57,6 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'Organization Admin' => [
                 'view_ledgers',
                 'edit_ledgers',
+                'create_ledgers',
                 'delete_ledgers',
                 'manage_ledger_defines',
                 'manage_folders',
@@ -81,6 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'Project Manager' => [
                 'view_ledgers',
+                'create_ledgers',
                 'edit_ledgers',
                 'manage_ledger_defines',
                 'manage_folders',
@@ -100,6 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'Editor' => [
                 'view_ledgers',
+                'create_ledgers',
                 'edit_ledgers',
                 'view_folders',
                 'view_ledger_defines',

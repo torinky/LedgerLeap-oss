@@ -28,7 +28,6 @@ class RoleResource extends BaseRoleResource
     public static function getLabel(): string
     {
         return __('ledger.settings.roles');
-        //        return __('filament-spatie-roles-permissions::filament-spatie.section.permission');
     }
 
     public static function getModelLabel(): string
@@ -39,7 +38,6 @@ class RoleResource extends BaseRoleResource
     public static function getPluralLabel(): string
     {
         return __('ledger.settings.roles');
-        //        return __('filament-spatie-roles-permissions::filament-spatie.section.permissions');
     }
 
     public static function form(Form $form): Form
@@ -53,43 +51,37 @@ class RoleResource extends BaseRoleResource
                     ->schema([
                         ...$components,
 
-                        /*                        Select::make('tags')
-                                                    ->multiple()
-                        //                    ->relationship('tags', 'name')
-                                                    ->preload()
-                                                    ->searchable(),*/
-
-                        Select::make('scope folders')
-                            ->label(__('ledger.folder.scoped'))
+                        Select::make('readable folders')
+                            ->label(__('ledger.folder.readable'))
                             ->options(function () {
                                 return Folder::treeList(Folder::get()->toTree());
                             })
                             ->multiple()
                             ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
                                 if ($record) {
-                                    $folderIds = Folder::role($record)->pluck('id')->toArray();
+                                    $folderIds = $record->readableFolders()->pluck('id')->toArray();
                                     $component->state($folderIds);
-                                }
-                            })
-                            ->afterStateUpdated(function ($state, ?Model $record) {
-                                if ($record) {
-                                    $allFolders = Folder::get();
-
-                                    foreach ($allFolders as $allFolder) {
-                                        if (in_array($allFolder->id, $state)) {
-                                            $allFolder->assignRole($record);
-                                        } else {
-                                            $allFolder->removeRole($record);
-                                        }
-                                    }
                                 }
                             })
                             ->dehydrated(false),
 
-                        TextInput::make('description') // descriptionフィールドを追加
-                        ->label(__('ledger.description'))  // ラベルを設定
-//                            ->required()
-                        ->placeholder('Enter a description...'), // プレースホルダーを設定
+                        Select::make('writable folders')
+                            ->label(__('ledger.folder.writable'))
+                            ->options(function () {
+                                return Folder::treeList(Folder::get()->toTree());
+                            })
+                            ->multiple()
+                            ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
+                                if ($record) {
+                                    $folderIds = $record->writableFolders()->pluck('id')->toArray();
+                                    $component->state($folderIds);
+                                }
+                            })
+                            ->dehydrated(false),
+
+                        TextInput::make('description')
+                            ->label(__('ledger.description'))
+                            ->placeholder('Enter a description...'),
 
                     ]),
             ]);
@@ -106,22 +98,44 @@ class RoleResource extends BaseRoleResource
         return $table
             ->columns([
                 ...$columns,
-                /*                Tables\Columns\TextColumn::make('tags.name')
-                                    ->badge(),*/
-                Tables\Columns\TextColumn::make('folder.title')
+                Tables\Columns\TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
-                    ->getStateUsing(function ($record) use ($allFolderList) {
-                        $selectedFolderIds = Folder::role($record)->pluck('id')->toArray();
-                        $folders = [];
-                        foreach ($allFolderList as $folderId => $folderTitle) {
-                            if (in_array($folderId, $selectedFolderIds)) {
-                                $folders[] = $folderTitle;
-                            }
-                        }
-
-                        return $folders;
+                    ->getStateUsing(function ($record): array {
+                        // フォルダー権限とフォルダー情報を一緒に取得
+                        return $record->folderPermissions()
+                            ->get()
+                            ->map(function ($folderPermission) {
+                                return [
+                                    'permission' => $folderPermission->pivot->permission,
+                                    'folder_title' => $folderPermission->title ?? '不明なフォルダー',
+                                ];
+                            })
+                            ->toArray();
                     })
-                    ->badge(),
+                    ->badge()
+                    ->color(function (array $state): string {
+                        // 権限に応じて色を返す
+                        return match ($state['permission']) {
+                            'read' => 'info',     // 青
+                            'write' => 'warning', // 黄
+                            'admin' => 'success', // 緑
+                            default => 'gray',
+                        };
+                    })
+                    ->formatStateUsing(function (array $state): string {
+                        // フォルダータイトルと権限を組み合わせて表示
+                        $permission = match ($state['permission']) {
+                            'read' => '閲覧',
+                            'write' => '編集',
+                            'admin' => '管理者',
+                            default => '不明',
+                        };
+
+                        return "{$state['folder_title']}: {$permission}";
+                    })
+                    ->separator(' ') // バッジ間の区切り文字
+                    ->wrap()         // 長い場合は折り返し
+                    ->translateLabel(),
                 Tables\Columns\TextColumn::make('organizations.name')
                     ->label(__('ledger.organizations.scoped'))
                     ->badge(),
@@ -130,10 +144,10 @@ class RoleResource extends BaseRoleResource
                     ->badge(),
                 Tables\Columns\TextColumn::make('guard_name')
                     ->badge(),
-                Tables\Columns\TextColumn::make('description') // descriptionカラムを追加
-                ->label(__('ledger.description'))  // ラベルを設定
-                ->sortable() // ソート可能にする場合
-                ->searchable(), // 検索可能にする場合
+                Tables\Columns\TextColumn::make('description')
+                    ->label(__('ledger.description'))
+                    ->sortable()
+                    ->searchable(),
 
             ])
             ->filters($parentTable->getFilters())
@@ -144,8 +158,6 @@ class RoleResource extends BaseRoleResource
     public static function getRelations(): array
     {
         return [
-            //            ...parent::getRelations(),
-            //            TagsRelationManager::class,
             PermissionRelationManager::class,
             UserRelationManager::class,
             FolderRelationManager::class,

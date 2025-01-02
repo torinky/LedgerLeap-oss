@@ -60,7 +60,7 @@ return [
     'define' => [
         'basic_setting' => '基本設定',
         'create' => '台帳の定義を新規作成',
-        'create_description' => '説明（新規登録時）',
+        'create_description' => '説明（新規登録／編集時）',
         'create_message' => '台帳の定義を登録しましょう',
         'create_title' => '台帳を新規作成',
         'delete_title' => '台帳を削除します',
