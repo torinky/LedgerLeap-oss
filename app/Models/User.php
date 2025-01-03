@@ -5,10 +5,12 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
@@ -50,6 +52,64 @@ class User extends Authenticatable implements FilamentUser
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // キャッシュの自動更新
+        static::saved(function ($user) {
+            $user->refreshWritableFolderCache();
+        });
+
+        static::deleted(function ($user) {
+            $user->clearWritableFolderCache();
+        });
+    }
+
+    protected function writableFolderIds(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                return $this->getWritableFolderIds();
+            }
+        );
+    }
+
+    protected function getWritableFolderCacheKey(): string
+    {
+        return "user_writable_folder_ids_{$this->id}";
+    }
+
+    public function getWritableFolderIds()
+    {
+        $cacheKey = $this->getWritableFolderCacheKey();
+
+        return Cache::remember(
+            $cacheKey,
+            config('cache.writable_folders_ttl', 60),
+            function () {
+                $userRoles = $this->getAllRoles();
+                // ユーザーのロールに基づき、書き込み可能なフォルダーのIDを取得
+                $baseWritableFolders = $userRoles->flatMap(fn($role) => $role->writableFolders());
+                $writableFolderIds = $baseWritableFolders->flatMap(fn($folder) => $folder->descendantsAndSelf($folder->id)->pluck('id'));
+
+                return $writableFolderIds;
+            }
+        );
+
+    }
+
+    public function refreshWritableFolderCache(): void
+    {
+        Cache::forget($this->getWritableFolderCacheKey());
+        $this->getWritableFolderIds(); // キャッシュを再生成
+    }
+
+    protected function clearWritableFolderCache(): void
+    {
+        Cache::forget($this->getWritableFolderCacheKey());
+    }
 
     public function organizations()
     {
