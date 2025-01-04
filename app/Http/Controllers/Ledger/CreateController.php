@@ -32,7 +32,7 @@ class CreateController extends Controller
         // リクエストパラメータから台帳定義を特定
         $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
 
-        if (!auth()->user()->writableFolderIds->contains($ledgerDefine->folder_id)) {
+        if (!in_array($ledgerDefine->folder_id, auth()->user()->writableFolderIds())) {
             //            dd($ledgerDefine->folder_id, auth()->user()->writableFolderIds);
             abort(403, __('ledger.not_allow_write_folder'));
         }

@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -51,24 +49,12 @@ class Role extends SpatieRole
             ->select('folders.*');
     }
 
-    /**
-     * ロールに関連する書き込み可能なフォルダーを取得します。
-     *
-     * このメソッドは、現在のロールが書き込み権限を持つフォルダーを取得します。
-     * 結果はパフォーマンス向上のために60分間キャッシュされます。
-     *
-     * @return Collection 書き込み権限を持つフォルダーのコレクション。
-     */
     public function writableFolders()
     {
-        $cacheKey = 'role_writable_folders_' . $this->id;
-
-        return Cache::remember($cacheKey, now()->addMinutes(60), function () {
-            return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
-                ->withPivot('permission')
-                ->wherePivot('permission', 'write')
-                ->select('folders.*');
-        });
+        return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+            ->withPivot('permission')
+            ->wherePivot('permission', 'write')
+            ->select('folders.*');
     }
 
     /**

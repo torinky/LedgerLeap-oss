@@ -3,16 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Repositories\WritableFolderRepository;
+use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -59,56 +58,32 @@ class User extends Authenticatable implements FilamentUser
 
         // キャッシュの自動更新
         static::saved(function ($user) {
-            $user->refreshWritableFolderCache();
+            app(WritableFolderRepository::class)->refreshWritableFolderCache($user);
+            app(WritableFolderRepository::class)->refreshReadableFolderCache($user);
         });
 
         static::deleted(function ($user) {
-            $user->clearWritableFolderCache();
+            app(WritableFolderRepository::class)->clearWritableFolderCache($user);
+            app(WritableFolderRepository::class)->clearReadableFolderCache($user);
         });
     }
 
-    protected function writableFolderIds(): Attribute
+    public function writableFolderIds()
     {
-        return Attribute::make(
-            get: function () {
-                return $this->getWritableFolderIds();
-            }
-        );
+        return app(WritableFolderRepository::class)->getWritableFolderIds($this);
     }
 
-    protected function getWritableFolderCacheKey(): string
+    public function readableFolderIds()
     {
-        return "user_writable_folder_ids_{$this->id}";
+        return app(WritableFolderRepository::class)->getReadableFolderIds($this);
     }
 
-    public function getWritableFolderIds()
+    protected UserService $userService;
+
+    public function __construct(array $attributes = [])
     {
-        $cacheKey = $this->getWritableFolderCacheKey();
-
-        return Cache::remember(
-            $cacheKey,
-            config('cache.writable_folders_ttl', 60),
-            function () {
-                $userRoles = $this->getAllRoles();
-                // ユーザーのロールに基づき、書き込み可能なフォルダーのIDを取得
-                $baseWritableFolders = $userRoles->flatMap(fn($role) => $role->writableFolders());
-                $writableFolderIds = $baseWritableFolders->flatMap(fn($folder) => $folder->descendantsAndSelf($folder->id)->pluck('id'));
-
-                return $writableFolderIds;
-            }
-        );
-
-    }
-
-    public function refreshWritableFolderCache(): void
-    {
-        Cache::forget($this->getWritableFolderCacheKey());
-        $this->getWritableFolderIds(); // キャッシュを再生成
-    }
-
-    protected function clearWritableFolderCache(): void
-    {
-        Cache::forget($this->getWritableFolderCacheKey());
+        parent::__construct($attributes);
+        $this->userService = app(UserService::class);
     }
 
     public function organizations()
@@ -116,128 +91,58 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Organization::class, 'user_organizations')->withPivot('is_primary');
     }
 
-    // ユーザーの全ての権限を取得（所属組織からの継承を含む）
-    public function getAllPermissions()
-    {
-        $permissions = $this->permissions;
-
-        foreach ($this->organizations as $organization) {
-            $permissions = $permissions->merge($organization->getAllPermissions());
-        }
-
-        return $permissions->unique('id');
-    }
-
-    // ユーザーの全ての役割を取得（所属組織からの継承を含む）
-    public function getAllRoles()
-    {
-        $roles = $this->roles;
-
-        foreach ($this->organizations as $organization) {
-            $roles = $roles->merge($organization->getAllRoles());
-        }
-
-        return $roles->unique('id');
-    }
-
     public function primaryOrganization()
     {
-        return $this->organizations()->wherePivot('is_primary', true)->first();
-    }
-
-    public function hasPermissionForOrganization($permission, $organization)
-    {
-        // スーパー管理者の場合、常にtrueを返す
-        if ($this->hasRole('super-admin')) {
-            return true;
-        }
-
-        // ユーザー自身の権限をチェック
-        if ($this->hasPermissionTo($permission)) {
-            return true;
-        }
-
-        // 指定された組織とその祖先組織の権限をチェック
-        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
-        $userOrganizations = $this->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
-
-        foreach ($userOrganizations as $org) {
-            if ($org->hasPermissionTo($permission)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public function hasRoleForOrganization($role, $organization)
-    {
-        // ユーザー自身の役割をチェック
-        if ($this->hasRole($role)) {
-            return true;
-        }
-
-        // 組織とその祖先組織の役割をチェック
-        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
-        $userOrganizations = $this->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
-
-        foreach ($userOrganizations as $org) {
-            if ($org->hasRole($role)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->belongsToMany(Organization::class, 'user_organizations')
+            ->wherePivot('is_primary', true)
+            ->withPivot('is_primary')
+            ->first();
     }
 
     public function setPrimaryOrganization(Organization $organization)
     {
-        $this->organizations()->updateExistingPivot($organization->id, ['is_primary' => true]);
-        $this->organizations()->where('id', '!=', $organization->id)->updateExistingPivot($organization->id, ['is_primary' => false]);
+        $this->organizations()->update(['is_primary' => false]); // 既存のプライマリ組織を解除
+        $this->organizations()->syncWithPivotValues([$organization->id], ['is_primary' => true], false);
     }
 
-    public function getPrimaryOrganizationAttribute()
+    public function getAllPermissions()
     {
-        return $this->organizations()->wherePivot('is_primary', true)->first();
+        return $this->userService->getAllPermissionsForUser($this);
     }
 
-    /*    public function getStoredRole($roleName, $guardName = null)
-        {
-            $guardName = $guardName ?? $this->getDefaultGuardName();
-            return Role::findByName($roleName, $guardName);
-        }*/
+    public function getAllRoles()
+    {
+        return $this->userService->getAllRolesForUser($this);
+    }
+
+    public function hasPermissionForOrganization($permission, $organization)
+    {
+        return $this->userService->hasPermissionForOrganization($this, $permission, $organization);
+    }
+
+    public function hasRoleForOrganization($role, $organization)
+    {
+        return $this->userService->hasRoleForOrganization($this, $role, $organization);
+    }
 
     public function assignRoleToOrganization($role, $organization)
     {
-        if (is_string($role)) {
-            $role = Role::findByName($role, 'web');
-        }
-
-        $this->roles()->attach($role->id, ['organization_id' => $organization->id]);
+        $this->userService->assignRoleToOrganization($this, $role, $organization);
     }
 
     public function hasRoleInOrganization($role, $organization)
     {
-        return $this->roles()
-            ->where('name', $role)
-            ->wherePivot('organization_id', $organization->id)
-            ->exists();
+        return $this->userService->hasRoleInOrganization($this, $role, $organization);
     }
 
     public function getAllUniqueRoles()
     {
-        return $this->roles->merge(
-            $this->organizations->flatMap->getAllRoles()
-        )->unique('id');
+        return $this->userService->getAllUniqueRolesForUser($this);
     }
 
     public function getAllUniquePermissions()
     {
-        return $this->permissions->merge(
-            $this->organizations->flatMap->getAllUniquePermissions()
-        )->merge(
-            $this->getAllUniqueRoles()->flatMap->permissions
-        )->unique('id');
+        return $this->userService->getAllUniquePermissionsForUser($this);
     }
 
     public function canAccessPanel(Panel $panel): bool
