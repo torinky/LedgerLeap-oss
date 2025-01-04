@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 // use Illuminate\Support\Facades\Gate;
+use App\Models\Ledger;
 use App\Models\Organization;
 use App\Models\User;
+use App\Policies\LedgerPolicy;
+use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -16,6 +19,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        Ledger::class => LedgerPolicy::class,
+
         //
     ];
 
@@ -27,7 +32,7 @@ class AuthServiceProvider extends ServiceProvider
         //
         Gate::before(function (User $user, $ability) {
             if ($user->hasRole('Super Admin')) {
-                return true;
+//                return true;
             }
         });
 
@@ -43,4 +48,12 @@ class AuthServiceProvider extends ServiceProvider
         });
 
     }
+
+    public function register()
+    {
+        $this->app->bind(WritableFolderRepository::class, function ($app) {
+            return new WritableFolderRepository();
+        });
+    }
+
 }

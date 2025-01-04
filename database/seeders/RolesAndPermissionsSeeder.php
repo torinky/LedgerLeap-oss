@@ -12,9 +12,6 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run()
     {
-        // Reset cached roles and permissions
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
-
         // Create permissions
         $permissions = [
             'view_ledgers',
@@ -139,7 +136,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($roles as $roleName => $rolePermissions) {
-            $role = Role::create(['name' => $roleName]);
+            $role = Role::firstOrCreate(['name' => $roleName]);
             $role->givePermissionTo($rolePermissions);
         }
 

@@ -19,7 +19,10 @@ use Spatie\Permission\Traits\HasRoles;
  */
 class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasRoles {
+        assignRole as protected spatieAssignRole;
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -68,15 +71,15 @@ class User extends Authenticatable implements FilamentUser
         });
     }
 
-    public function writableFolderIds()
-    {
-        return app(WritableFolderRepository::class)->getWritableFolderIds($this);
-    }
+    /*    public function writableFolderIds()
+        {
+            return app(WritableFolderRepository::class)->getWritableFolderIds($this);
+        }
 
-    public function readableFolderIds()
-    {
-        return app(WritableFolderRepository::class)->getReadableFolderIds($this);
-    }
+        public function readableFolderIds()
+        {
+            return app(WritableFolderRepository::class)->getReadableFolderIds($this);
+        }*/
 
     protected UserService $userService;
 
@@ -148,5 +151,22 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         return true; // すべてのドメインからのアクセスを許可
+    }
+
+    /**
+     * SpatieのassignRoleメソッドをオーバーライドして、
+     * ロール割り当て後にWritableFolderRepositoryのキャッシュをクリアする
+     *
+     * @param mixed ...$roles
+     * @return $this
+     */
+    public function assignRole(...$roles): static
+    {
+        $this->spatieAssignRole(...$roles);
+
+        app(WritableFolderRepository::class)->clearWritableFolderCache($this);
+        app(WritableFolderRepository::class)->clearReadableFolderCache($this);
+
+        return $this;
     }
 }

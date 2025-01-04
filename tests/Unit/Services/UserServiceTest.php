@@ -1,16 +1,40 @@
 <?php
 
+use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Permission;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
+use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Collection;
 
 // use Mockery;
+use Illuminate\Support\Facades\Artisan;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        // 各テストメソッドの前にデータベースを初期化
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Spatieのキャッシュクリア
+        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
     public function test_get_all_permissions_for_user()
     {
         // Arrange
@@ -147,8 +171,9 @@ class UserServiceTest extends TestCase
     public function test_handles_edge_case_with_no_permissions_or_roles()
     {
         // Arrange
-        $userService = new UserService;
-        $user = Mockery::mock(User::class); // ここで User モデルのモックを作成
+        $writableFolderRepositoryMock = Mockery::mock(WritableFolderRepository::class); // WritableFolderRepository のモックを作成
+        $userService = new UserService($writableFolderRepositoryMock); // モックを UserService のコンストラクタに渡す
+        $user = Mockery::mock(User::class);
 
         $user->shouldReceive('getAttribute')->with('permissions')->andReturn(new Collection);
         $user->shouldReceive('getAttribute')->with('roles')->andReturn(new Collection);
@@ -162,11 +187,11 @@ class UserServiceTest extends TestCase
         $this->assertEquals(new Collection, $resultPermissions);
         $this->assertEquals(new Collection, $resultRoles);
     }
-
     public function test_handles_edge_case_with_no_organizations()
     {
         // Arrange
-        $userService = new UserService;
+        $writableFolderRepositoryMock = Mockery::mock(WritableFolderRepository::class); // WritableFolderRepository のモックを作成
+        $userService = new UserService($writableFolderRepositoryMock); // モックを UserService のコンストラクタに渡す
         $user = Mockery::mock(User::class);
 
         $permission1 = Mockery::mock(Permission::class);
@@ -189,5 +214,46 @@ class UserServiceTest extends TestCase
         $expectedPermissions = collect([$permission1, $permission2]);
         $this->assertEquals($expectedPermissions->pluck('id')->toArray(), $resultPermissions->pluck('id')->toArray());
         $this->assertEquals(new Collection, $resultRoles);
+    }
+
+    public function test_get_writable_folder_ids_returns_all_writable_folders_including_descendants_when_folder_is_null()
+    {
+        $user = User::factory()->create();
+        // 既存のロールを取得する
+        $role1 = Role::findByName('Organization Admin');
+        $role2 = Role::findByName('Project Manager');
+
+        $rootFolder = Folder::factory()->create(['title' => 'ルートフォルダ']);
+        $childFolder1 = Folder::factory()->create(['title' => 'フォルダ1', 'parent_id' => $rootFolder->id]);
+        $childFolder2 = Folder::factory()->create(['title' => 'フォルダ2', 'parent_id' => $rootFolder->id]);
+        $grandChildFolder = Folder::factory()->create(['title' => 'フォルダ1-1', 'parent_id' => $childFolder1->id]);
+        $otherFolder = Folder::factory()->create(['title' => 'その他フォルダ']);
+
+        $user->assignRole($role1);
+        $user->assignRole($role2);
+
+        // Spatieのキャッシュクリア
+        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        // WritableFolderRepository のキャッシュクリア
+        app(WritableFolderRepository::class)->clearWritableFolderCache($user);
+        app(WritableFolderRepository::class)->clearReadableFolderCache($user);
+
+        // RoleFolderPermission を直接使用して関連付け
+        RoleFolderPermission::create(['role_id' => $role1->id, 'folder_id' => $rootFolder->id, 'permission' => 'write', 'modifier_id' => $user->id]);
+        RoleFolderPermission::create(['role_id' => $role2->id, 'folder_id' => $childFolder2->id, 'permission' => 'write', 'modifier_id' => $user->id]);
+        RoleFolderPermission::create(['role_id' => $role2->id, 'folder_id' => $otherFolder->id, 'permission' => 'write', 'modifier_id' => $user->id]);
+
+        $repository = new WritableFolderRepository();
+
+        // フォルダを指定しない場合
+//        dd(Folder::all()->pluck('id','title')->toArray());
+        $writableFolderIds = $repository->getWritableFolderIds($user);
+//dd($writableFolderIds,Folder::all()->pluck('id','title')->toArray());
+        $this->assertCount(5, $writableFolderIds); // ルートフォルダ, フォルダ1, フォルダ1-1, フォルダ2, その他フォルダ
+        $this->assertContains($rootFolder->id, $writableFolderIds);
+        $this->assertContains($childFolder1->id, $writableFolderIds);
+        $this->assertContains($childFolder2->id, $writableFolderIds);
+        $this->assertContains($grandChildFolder->id, $writableFolderIds);
+        $this->assertContains($otherFolder->id, $writableFolderIds);
     }
 }

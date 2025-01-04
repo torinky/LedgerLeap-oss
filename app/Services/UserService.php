@@ -2,13 +2,23 @@
 
 namespace App\Services;
 
+use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\User;
+use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 
 class UserService
 {
+    protected $writableFolderRepository;
+
+    public function __construct(WritableFolderRepository $writableFolderRepository)
+    {
+        $this->writableFolderRepository = $writableFolderRepository;
+    }
+
     /**
      * 指定されたユーザーに関連するすべての権限を取得し、組織からも権限を含めます。
      *
@@ -163,5 +173,27 @@ class UserService
         return $user->roles->merge(
             $user->organizations->flatMap->getAllRoles()
         )->unique('id');
+    }
+
+    /**
+     * ユーザーが指定されたフォルダーに対して書き込み権限を持っているかどうかを判定する
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return bool
+     */
+    public function isWritableFolderForUser(User $user, Folder $folder): bool
+    {
+        $writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($user, $folder);
+
+        return in_array($folder->id, $writableFolderIds);
+    }
+
+    public function isReadableFolderForUser(User $user, Folder $folder): bool
+    {
+        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user, $folder);
+        dd($user, $folder, $readableFolderIds);
+
+        return in_array($folder->id, $readableFolderIds);
     }
 }

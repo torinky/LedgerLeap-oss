@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 
 class CreateController extends Controller
@@ -31,11 +33,17 @@ class CreateController extends Controller
 
         // リクエストパラメータから台帳定義を特定
         $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
-
-        if (!in_array($ledgerDefine->folder_id, auth()->user()->writableFolderIds())) {
-            //            dd($ledgerDefine->folder_id, auth()->user()->writableFolderIds);
-            abort(403, __('ledger.not_allow_write_folder'));
+        $folder = $ledgerDefine->folder;
+        if (Gate::denies('create', [Ledger::class, $folder])) {
+            abort(403, __('ledger.not_allow_create'));
         }
+
+//        dd($this->authorize('Ledger/create', [auth()->user(), $folder]));
+
+        /*        if (!in_array($ledgerDefine->folder_id, auth()->user()->writableFolderIds())) {
+                    //            dd($ledgerDefine->folder_id, auth()->user()->writableFolderIds);
+                    abort(403, __('ledger.not_allow_write_folder'));
+                }*/
 
         // dd(auth()->user()->writableFolderIds);
         // 新規台帳作成用のビューをレンダリング
