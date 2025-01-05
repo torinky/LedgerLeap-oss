@@ -7,6 +7,7 @@ use App\Http\Requests\Ledger\UpdateRequest;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 
 class UpdateController extends Controller
@@ -16,27 +17,12 @@ class UpdateController extends Controller
         $ledgerId = (int)$request->route('ledgerId');
 
         $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
+        // 権限チェック
+        if (Gate::denies('update', [Ledger::class, $ledgerRecord->define])) {
+            abort(403);
+        }
 
-        //        return View::make('ledger.edit', compact('ledgerRecord'));
-        //        $ledgeDefineRecord= LedgerDefine::findOrFail($request->ledgerDefineId);
-        //        dd($ledgerRecord->define);
         return View::make('ledger.edit', ['ledgerDefineRecord' => $ledgerRecord->define]);
-
-    }
-
-    public function update(UpdateRequest $request)
-    {
-        $ledgerRecord = Ledger::find($request->id);
-        $ledgerRecord->content = $request->content();
-        $ledgerRecord->save();
-
-        //        $ledgerRecord = Ledger::find($request->id);
-
-        return redirect()->route('ledger.show', ['ledgerId' => $request->id])
-            ->with('status', __('ledger record updated successfully !'));
-        //        return View::make('static.message', ['windowTitle' => 'ledger']);
-        //        return View::make('ledger.show', ['ledgerRecord' => $ledgerRecord, 'ledgerId' => $request->id])
-        //            ->with('status', __('ledger record updated successfully !'));
 
     }
 
@@ -50,4 +36,18 @@ class UpdateController extends Controller
         return View::make('ledger.message', ['windowTitle' => 'ledger']);
 
     }
+
+    public function destroy(Request $request, Ledger $ledger)
+    {
+        // 権限チェック
+        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
+            abort(403);
+        }
+
+        $ledger->delete();
+
+        session()->flash('status', __('ledger.remove_success'));
+        return View::make('ledger.message', ['windowTitle' => 'ledger']);
+    }
+
 }

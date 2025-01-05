@@ -105,9 +105,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/ledger/{ledgerId}', [UpdateController::class, 'update'])->name('ledger.update')
         ->where('ledgerId', '[0-9]+');
 
-    Route::delete('/ledger/{ledgerId}', [UpdateController::class, 'delete'])
-        ->name('ledger.delete')
-        ->where('ledgerId', '[0-9]+');
+    Route::delete('/ledgers/{ledger}', [UpdateController::class, 'destroy'])->name('ledger.destroy');
+
+    /*    Route::delete('/ledger/{ledgerId}', [UpdateController::class, 'delete'])
+            ->name('ledger.delete')
+            ->where('ledgerId', '[0-9]+');*/
 
     //    ledgerDiff
     Route::get('/ledgerDiff/{ledgerId}', LedgerDiffShowController::class)->name('ledgerDiff.show')

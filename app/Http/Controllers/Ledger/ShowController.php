@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ledger;
 use App\Services\LedgerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 
 class ShowController extends Controller
@@ -17,13 +18,19 @@ class ShowController extends Controller
      */
     public function __invoke(Request $request, LedgerService $ledgerService)
     {
-        $ledger = new Ledger;
         $ledgerId = (int)$request->route('ledgerId');
+        $ledger = Ledger::with(['define'])->findOrFail($ledgerId);
+        $ledgerDefineRecord = null;
+        if (!empty($ledger)) {
+            $ledgerDefineRecord = $ledger->define;
+        }
 
-        //        $ledgerRecord = $ledger->with(['define', 'modifier'])->withCount('ledgerDiff')->where('ledgers.id', $ledgerId)->firstOrFail();
-        $ledgerRecord = $ledger->with(['define'])->where('ledgers.id', $ledgerId)->firstOrFail();
-        $ledgerDefineRecord = $ledgerRecord->define;
+        // 権限チェック
+        if (Gate::denies('view', [Ledger::class, $ledgerDefineRecord->folder])) {
+            abort(403);
+        }
 
-        return View::make('ledger.show', compact('ledgerRecord', 'ledgerDefineRecord'));
+
+        return View::make('ledger.show', compact('ledger', 'ledgerDefineRecord'));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Folder;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -25,44 +26,48 @@ class LedgerPolicy
         return $user->hasPermissionTo('view_ledgers');
     }
 
-    public function view(User $user, Ledger $ledger): bool
+    public function view(User $user, LedgerDefine $ledgerDefine): bool
     {
-        // $ledger->define が null の場合は、false を返す
-        if (is_null($ledger->define)) {
-            return false;
-        }
-
+        $folder = $ledgerDefine->folder;
         // ユーザーが view_ledgers 権限を持っていても、読み取り可能フォルダ範囲でなければ false を返す
         if ($user->hasPermissionTo('view_ledgers') &&
-            $this->userService->isReadableFolderForUser($user, $ledger->define->folder)) {
+            $this->userService->isReadableFolderForUser($user, $folder)) {
             return true;
         }
         return false;
     }
 
-    public function create(User $user, ?Folder $folder = null): bool
+    public function create(User $user, LedgerDefine $ledgerDefine): bool
     {
 //        dd('LedgerPolicy@create called');
         if (!$user->hasPermissionTo('create_ledgers')) {
             return false;
         }
+        $folder = $ledgerDefine->folder;
 
-        // フォルダーが指定されていない場合は作成可能とする (必要に応じて調整)
         if (!$folder) {
-//            return true;
             return false;
         }
         return $this->userService->isWritableFolderForUser($user, $folder);
     }
 
-    public function update(User $user, Ledger $ledger): bool
+    public function update(User $user, LedgerDefine $ledgerDefine): bool
     {
-        return $user->hasPermissionTo('edit_ledgers') && $this->userService->isWritableFolderForUser($user, $ledger->ledgerDefine->folder);
+        if (!$user->hasPermissionTo('edit_ledgers')) {
+            return false;
+        }
+        $folder = $ledgerDefine->folder;
+
+        if (!$folder) {
+            return false;
+        }
+        return $this->userService->isWritableFolderForUser($user, $folder);
     }
 
-    public function delete(User $user, Ledger $ledger): bool
+    public function delete(User $user, LedgerDefine $ledgerDefine): bool
     {
-        return $user->hasPermissionTo('delete_ledgers') && $this->userService->isWritableFolderForUser($user, $ledger->ledgerDefine->folder);
+        $folder = $ledgerDefine->folder;
+        return $user->hasPermissionTo('delete_ledgers') && $this->userService->isWritableFolderForUser($user, $folder);
     }
     /**
      * Determine whether the user can restore the model.

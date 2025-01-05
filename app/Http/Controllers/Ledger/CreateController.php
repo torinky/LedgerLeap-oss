@@ -33,19 +33,11 @@ class CreateController extends Controller
 
         // リクエストパラメータから台帳定義を特定
         $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
-        $folder = $ledgerDefine->folder;
-        if (Gate::denies('create', [Ledger::class, $folder])) {
+
+        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
             abort(403, __('ledger.not_allow_create'));
         }
 
-//        dd($this->authorize('Ledger/create', [auth()->user(), $folder]));
-
-        /*        if (!in_array($ledgerDefine->folder_id, auth()->user()->writableFolderIds())) {
-                    //            dd($ledgerDefine->folder_id, auth()->user()->writableFolderIds);
-                    abort(403, __('ledger.not_allow_write_folder'));
-                }*/
-
-        // dd(auth()->user()->writableFolderIds);
         // 新規台帳作成用のビューをレンダリング
         return View::make('ledger.create', ['ledgerDefineRecord' => $ledgerDefine]);
     }

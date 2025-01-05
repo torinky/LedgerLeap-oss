@@ -66,7 +66,7 @@ class LedgerPolicyTest extends TestCase
         $userServiceMock->shouldReceive('isReadableFolderForUser')->andReturn(true);
 
         $policy = new LedgerPolicy($userServiceMock);
-        $this->assertTrue($policy->view($user, $ledger));
+        $this->assertTrue($policy->view($user, $ledgerDefine));
     }
 
     public function test_view_returns_false_for_user_when_folder_is_not_readable()
@@ -80,7 +80,7 @@ class LedgerPolicyTest extends TestCase
 
         $policy = new LedgerPolicy($userServiceMock);
 
-        $this->assertFalse($policy->view($user, $ledger));
+        $this->assertFalse($policy->view($user, $ledgerDefine));
     }
 
     public function test_view_returns_false_for_user_with_view_ledgers_permission_but_not_readable_folder()
@@ -103,12 +103,12 @@ class LedgerPolicyTest extends TestCase
         // UserService のモックを作成
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('isReadableFolderForUser')
-            ->with($user, $ledger->define->folder)
+            ->with($user, $ledgerDefine->folder)
             ->andReturn(false);
 
         $policy = new LedgerPolicy($userServiceMock);
 
-        $this->assertFalse($policy->view($user, $ledger));
+        $this->assertFalse($policy->view($user, $ledgerDefine));
     }
 
     public function test_view_returns_false_when_ledger_define_is_null()
@@ -119,7 +119,7 @@ class LedgerPolicyTest extends TestCase
         $userServiceMock = Mockery::mock(UserService::class);
         $policy = new LedgerPolicy($userServiceMock);
 
-        $this->assertFalse($policy->view($user, $ledger));
+        $this->assertFalse($policy->view($user, $ledger->define));
     }
 
     public function test_create_returns_true_for_user_with_create_ledgers_permission_and_writable_folder()
@@ -131,26 +131,27 @@ class LedgerPolicyTest extends TestCase
 
         // UserService のモックを作成し、isWritableFolderForUser および isReadableFolderForUser メソッドが true を返すように設定
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $folder)->andReturn(true);
-        $userServiceMock->shouldReceive('isReadableFolderForUser')->with($user, $folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isReadableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
 
         // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
         $policy = new LedgerPolicy($userServiceMock);
 
-        $this->assertTrue($policy->create($user, $folder));
+        $this->assertTrue($policy->create($user, $ledgerDefine));
     }
 
     public function test_create_returns_false_for_user_without_create_ledgers_permission()
     {
         $user = User::factory()->create();
         $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         // UserService のモックを作成
         $userServiceMock = Mockery::mock(UserService::class);
 
         // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
         $policy = new LedgerPolicy($userServiceMock);
-        $this->assertFalse($policy->create($user, $folder));
+        $this->assertFalse($policy->create($user, $ledgerDefine));
     }
 
     public function test_create_returns_false_for_user_with_create_ledgers_permission_but_not_writable_folder()
@@ -158,14 +159,15 @@ class LedgerPolicyTest extends TestCase
         $user = User::factory()->create();
         $user->givePermissionTo('create_ledgers');
         $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         // UserService のモックを作成し、isWritableFolderForUser メソッドが false を返すように設定
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $folder)->andReturn(false);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
 
         // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
         $policy = new LedgerPolicy($userServiceMock);
-        $this->assertFalse($policy->create($user, $folder));
+        $this->assertFalse($policy->create($user, $ledgerDefine));
     }
 
     protected function tearDown(): void

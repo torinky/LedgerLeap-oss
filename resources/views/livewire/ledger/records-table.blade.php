@@ -122,6 +122,7 @@
                             :search="$search"
                             :filter="$filter"
                             :keywords="$keywords"
+                            :canCreate="$canCreate[$ledgerDefineId]"
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">
@@ -139,6 +140,8 @@
                                     <x-ledger.table-row
                                         :ledgerRecord="$ledgerRecordValues"
                                         :keywords="$highlights"
+                                        :canUpdate="$canUpdate[$ledgerDefineId]"
+                                        :canView="$canView[$ledgerDefineId]"
                                     />
                                 @endforeach
                                 </tbody>

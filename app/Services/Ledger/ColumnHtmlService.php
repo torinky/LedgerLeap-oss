@@ -40,23 +40,24 @@ class ColumnHtmlService
     /**
      * @return HtmlString
      */
-    public function show(ColumnDefine $columnDefine, $initialValue, $attrs = [], $idPrefix = '', $asCreate = false)
+    public function show(ColumnDefine $columnDefine, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false)
     {
         if ($columnDefine !== null) {
             $this->mount($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
         }
 
         $html = '';
-        if ($columnDefine->type == 'files' && is_array($this->initialValue)) {
+        if (!$canView) {
+            // 権限がない場合は伏せ字にする
+            $html = '<div class="text-gray-400 text-center">***</div>'; // または「閲覧権限なし」などのメッセージ
+        } elseif ($columnDefine->type == 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
-            //            台帳の設定で配列からテキスト入力などに変更される場合があるので配列かどうかだけをチェック
         } elseif (is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
             $displayValues = array_keys($displayValues);
             if (!empty($displayValues)) {
                 $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
             }
-            //            var_dump($this->initialValue);
         } else {
             $html = $this->initialValue;
         }

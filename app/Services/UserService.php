@@ -192,8 +192,7 @@ class UserService
     public function isReadableFolderForUser(User $user, Folder $folder): bool
     {
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user, $folder);
-        dd($user, $folder, $readableFolderIds);
 
-        return in_array($folder->id, $readableFolderIds);
+        return in_array($folder->id, $readableFolderIds) || $this->isWritableFolderForUser($user, $folder);
     }
 }

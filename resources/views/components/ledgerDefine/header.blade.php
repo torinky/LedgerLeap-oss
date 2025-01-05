@@ -1,3 +1,10 @@
+@props([
+    'canCreate'=>false,
+    'ledgerDefine'=>null,
+    'breadcrumbsPerLedgerDefine'=>[],
+    'keywords'=>[],
+    'filter'=>[],
+])
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
     <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2">
@@ -19,17 +26,20 @@
 <div class="grid justify-items-end mx-4">
 
     <div class="flex flex-row  space-x-2 place-items-center">
-        <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
-           class="btn btn-neutral relative inline-flex w-48 "
-           target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
-            {{__('ledger.create')}}</a>
-        {{--
-                <a href="{{ route('ledger.downloadExcelCSV', [
-                            'ledgerDefineId' => $ledgerDefine->id,
-                            'keyword' =>  $search, 'filter' => http_build_query( $filter)]) }}"
-                   class="btn btn-outline btn-secondary btn-sm relative inline-flex"
-                >{{__('ledger.export_csv')}}</a>
-        --}}
+        @if($canCreate)
+            <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+               class="btn btn-neutral relative inline-flex w-48 "
+               target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
+                {{__('ledger.create')}}
+            </a>
+        @else
+            <div class="tooltip" data-tip="{{ __('ledger.no_create_permission') }}">
+                <button class="btn btn-neutral relative inline-flex w-48 " disabled>
+                    <i class="fas fa-circle-plus mr-1"></i>
+                    {{__('ledger.create')}}
+                </button>
+            </div>
+        @endif
         <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
                                 :$keywords
                                 :$filter

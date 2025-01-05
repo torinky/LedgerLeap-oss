@@ -13,6 +13,7 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -199,6 +200,15 @@ use Psr\Container\NotFoundExceptionInterface;
             ->get()
             ->keyBy('id');
 
+        $canCreate = [];
+        $canUpdate = [];
+        $canView = [];
+        foreach ($ledgerDefineRecords as $ledgerDefine) {
+            $canCreate[$ledgerDefine->id] = Gate::allows('create', [Ledger::class, $ledgerDefine]);
+            $canUpdate[$ledgerDefine->id] = Gate::allows('update', [Ledger::class, $ledgerDefine]);
+            $canView[$ledgerDefine->id] = Gate::allows('view', [Ledger::class, $ledgerDefine]);
+        }
+
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
@@ -238,6 +248,9 @@ use Psr\Container\NotFoundExceptionInterface;
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
+            'canCreate' => $canCreate,
+            'canUpdate' => $canUpdate,
+            'canView' => $canView,
         ]);
     }
 
