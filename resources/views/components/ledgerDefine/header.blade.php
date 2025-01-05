@@ -33,7 +33,7 @@
                 {{__('ledger.create')}}
             </a>
         @else
-            <div class="tooltip" data-tip="{{ __('ledger.no_create_permission') }}">
+            <div class="tooltip" data-tip="{{ __('ledger.not_allow_create') }}">
                 <button class="btn btn-neutral relative inline-flex w-48 " disabled>
                     <i class="fas fa-circle-plus mr-1"></i>
                     {{__('ledger.create')}}

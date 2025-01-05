@@ -18,7 +18,7 @@
             >
                 <span
                     class="tooltip"
-                    data-tip="{{ in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.folder.none')) }}"
+                    data-tip="{{ in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.no_view_permission')) }}"
                 >
 
                 @if($folder->id==1)

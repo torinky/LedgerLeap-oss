@@ -225,7 +225,7 @@
     "ledger.organizations.name": "組織名",
     "ledger.organizations.parent": "親組織",
     "ledger.organizations.scoped": "対象組織",
-    "ledger.per_page": "表示件数 / ページ",
+    "ledger.per_page": "表示件数 \/ ページ",
     "ledger.records": "件",
     "ledger.records_title": "リスト",
     "ledger.remove": "削除する",
@@ -425,5 +425,14 @@
     "Yes": "はい。",
     "You are receiving this email because we received a password reset request for your account.": "パスワード再設定のリクエストを受け付けました。",
     "You're logged in!": "ログイン成功",
-    "Your email address is unverified.": "メールアドレスが未認証です。"
+    "Your email address is unverified.": "メールアドレスが未認証です。",
+    "ledger.permissions.read": "読み込み",
+    "ledger.permissions.write": "書き込み",
+    "ledger.permissions.admin": "管理権限",
+    "ledger.permissions.delete": "削除権限",
+    "ledger.folder.readable": "読み込み可能",
+    "ledger.folder.writable": "書き込み可能",
+    "ledger.not_allow_create": "台帳を作成する権限がありません",
+    "ledger.no_edit_permission": "編集権限がありません",
+    "ledger.no_view_permission": "閲覧権限がありません"
 }
