@@ -12,7 +12,7 @@
 
 .tree span {
     font-size: 13px;
-    font-style: italic;
+    /*font-style: italic;*/
     letter-spacing: .4px;
     /*color: #a8a8a8;*/
 }

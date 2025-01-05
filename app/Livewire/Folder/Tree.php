@@ -4,6 +4,7 @@ namespace App\Livewire\Folder;
 
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
+use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -53,6 +54,13 @@ class Tree extends Component
 
     public function render()
     {
-        return view('livewire.folder.tree');
+        $writableFolderRepository = app(WritableFolderRepository::class);
+        $writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
+        $readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
+
+        return view('livewire.folder.tree', [
+            'writableFolderIds' => $writableFolderIds,
+            'readableFolderIds' => $readableFolderIds,
+        ]);
     }
 }

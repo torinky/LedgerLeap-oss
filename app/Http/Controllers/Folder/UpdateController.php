@@ -29,7 +29,8 @@ class UpdateController extends Controller
 
         $folderRecord = Folder::find($request->id);
         $folderRecord->title = $request->title();
-        $folderRecord->appendTo($parentFolderRecord)->save();
+        //        $folderRecord->appendTo($parentFolderRecord)->save();
+        $folderRecord->save();
 
         return redirect()->route('folder.edit', ['folderId' => $request->id])
             ->with('status', __('folder updated successfully !'));
