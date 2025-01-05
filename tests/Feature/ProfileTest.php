@@ -63,6 +63,8 @@ class ProfileTest extends TestCase
 
     public function test_user_can_delete_their_account(): void
     {
+        User::query()->delete();
+
         $user = User::factory()->create();
 
         $response = $this
@@ -73,10 +75,11 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
+            ->assertRedirect('/login');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $this->assertGuest();
+        $this->assertNotNull($user->fresh()->deleted_at); // deleted_at カラムに値が設定されていることを確認
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

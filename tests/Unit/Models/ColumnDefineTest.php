@@ -51,8 +51,7 @@ class ColumnDefineTest extends TestCase
     public function test_value_initialization(): void
     {
         // 値による初期化のテスト
-        $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, false, false, '', '');
-
+        $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, false, false, ['file1', 'file2'], '');
         // オブジェクトのプロパティが期待通りにセットされているかテスト
         $this->assertEquals(2, $column->id);
         $this->assertEquals('column2', $column->name);

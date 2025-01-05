@@ -218,6 +218,9 @@ class UserServiceTest extends TestCase
 
     public function test_get_writable_folder_ids_returns_all_writable_folders_including_descendants_when_folder_is_null()
     {
+        // 既存のフォルダをすべて削除
+        Folder::query()->delete();
+
         $user = User::factory()->create();
         // 既存のロールを取得する
         $role1 = Role::findByName('Organization Admin');
