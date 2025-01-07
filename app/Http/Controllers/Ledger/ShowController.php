@@ -26,7 +26,7 @@ class ShowController extends Controller
         }
 
         // 権限チェック
-        if (Gate::denies('view', [Ledger::class, $ledgerDefineRecord->folder])) {
+        if (Gate::denies('view', [Ledger::class, $ledgerDefineRecord])) {
             abort(403);
         }
 

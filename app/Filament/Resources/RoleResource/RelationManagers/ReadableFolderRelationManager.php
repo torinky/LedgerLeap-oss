@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
+use App\Models\RoleFolderPermission;
+use App\Models\User;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -11,9 +16,9 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
-class FolderRelationManager extends RelationManager
+class ReadableFolderRelationManager extends RelationManager
 {
-    protected static string $relationship = 'folders';
+    protected static string $relationship = 'readableFolders';
 
     public static function getRecordTitleAttribute(): ?string
     {
@@ -48,13 +53,17 @@ class FolderRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
+        $modifierId = auth()->id();
+
         return $form
             ->schema([
                 TextInput::make('title')
                     ->label(__((string)str(static::getRelationshipName()))),
+
+                Hidden::make('modifier_id')
+                    ->default($modifierId),
             ]);
     }
-
     public function table(Table $table): Table
     {
         return $table
@@ -68,7 +77,24 @@ class FolderRelationManager extends RelationManager
             ->filters([
 
             ])->headerActions([
-                AttachAction::make(),
+                AttachAction::make()->form([
+                    SelectTree::make('recordId')
+                        ->label(__('ledger.folder.containing'))
+                        ->relationship('parent', 'title', 'parent_id')
+                        ->withCount()
+                        ->searchable()
+                        ->enableBranchNode()
+//                        ->alwaysOpen()
+                        ->defaultOpenLevel(10),
+                ])->using(function (array $data, string $model): Model {
+                    $role = $this->getOwnerRecord();
+                    $data['role_id'] = $role->id;
+                    $data['folder_id'] = $data['recordId'];
+                    $data['modifier_id'] = auth()->id();
+                    unset($data['recordId']);
+
+                    return RoleFolderPermission::firstOrCreate($data, ['role_id', 'folder_id']);
+                }),
             ])->actions([
                 DetachAction::make(),
             ])->bulkActions([

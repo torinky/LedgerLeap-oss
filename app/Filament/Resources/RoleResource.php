@@ -6,7 +6,7 @@ use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleR
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource\RelationManager\PermissionRelationManager;
 use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
-use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\ReadableFolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
 use App\Models\Folder;
 use App\Models\Role;
@@ -59,7 +59,7 @@ class RoleResource extends BaseRoleResource
                             ->multiple()
                             ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
                                 if ($record) {
-                                    $folderIds = $record->readableFolders()->pluck('id')->toArray();
+                                    $folderIds = $record->readableFolders()->pluck('folders.id')->toArray();
                                     $component->state($folderIds);
                                 }
                             })
@@ -73,7 +73,7 @@ class RoleResource extends BaseRoleResource
                             ->multiple()
                             ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
                                 if ($record) {
-                                    $folderIds = $record->writableFolders()->pluck('id')->toArray();
+                                    $folderIds = $record->writableFolders()->pluck('folders.id')->toArray();
                                     $component->state($folderIds);
                                 }
                             })
@@ -160,7 +160,7 @@ class RoleResource extends BaseRoleResource
         return [
             PermissionRelationManager::class,
             UserRelationManager::class,
-            FolderRelationManager::class,
+            ReadableFolderRelationManager::class,
             OrganizationRelationManager::class,
         ];
     }

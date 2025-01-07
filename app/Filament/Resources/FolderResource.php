@@ -43,6 +43,7 @@ class FolderResource extends Resource
                     ->label('Parent Folder')
                     ->relationship('parent', 'title', 'parent_id')
                     ->withCount()
+                    ->enableBranchNode()
 //                    ->alwaysOpen()
                     ->defaultOpenLevel(10),
                 Forms\Components\Select::make('roles')
