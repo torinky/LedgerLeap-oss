@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FolderPermissionType;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
@@ -45,7 +46,7 @@ class Role extends SpatieRole
     {
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
             ->withPivot('permission')
-            ->wherePivot('permission', 'read')
+            ->wherePivot('permission', FolderPermissionType::READ)
             ->select('folders.*');
     }
 
@@ -53,7 +54,15 @@ class Role extends SpatieRole
     {
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
             ->withPivot('permission')
-            ->wherePivot('permission', 'write')
+            ->wherePivot('permission', FolderPermissionType::WRITE)
+            ->select('folders.*');
+    }
+
+    public function ManageableFolders()
+    {
+        return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+            ->withPivot('permission')
+            ->wherePivot('permission', FolderPermissionType::ADMIN)
             ->select('folders.*');
     }
 

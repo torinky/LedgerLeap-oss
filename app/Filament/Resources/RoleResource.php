@@ -6,8 +6,10 @@ use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleR
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource\RelationManager\PermissionRelationManager;
 use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
-use App\Filament\Resources\RoleResource\RelationManagers\ReadableFolderRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\ManageableFolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\WritableFolderRelationManager;
 use App\Models\Folder;
 use App\Models\Role;
 use Filament\Forms\Components\Section;
@@ -51,7 +53,7 @@ class RoleResource extends BaseRoleResource
                     ->schema([
                         ...$components,
 
-                        Select::make('readable folders')
+                        /*                        Select::make('readable folders')
                             ->label(__('ledger.folder.readable'))
                             ->options(function () {
                                 return Folder::treeList(Folder::get()->toTree());
@@ -77,7 +79,7 @@ class RoleResource extends BaseRoleResource
                                     $component->state($folderIds);
                                 }
                             })
-                            ->dehydrated(false),
+                            ->dehydrated(false),*/
 
                         TextInput::make('description')
                             ->label(__('ledger.description'))
@@ -159,9 +161,11 @@ class RoleResource extends BaseRoleResource
     {
         return [
             PermissionRelationManager::class,
-            UserRelationManager::class,
-            ReadableFolderRelationManager::class,
             OrganizationRelationManager::class,
+            UserRelationManager::class,
+            FolderRelationManager::class,
+            WritableFolderRelationManager::class,
+            ManageableFolderRelationManager::class,
         ];
     }
 
