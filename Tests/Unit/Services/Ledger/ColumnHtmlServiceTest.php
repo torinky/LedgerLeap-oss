@@ -20,7 +20,7 @@ class ColumnHtmlServiceTest extends TestCase
             false,
             false
         );
-        $columnHtml = new ColumnHtmlService();
+        $columnHtml = new ColumnHtmlService;
         $columnHtml->mount($columnDefine, ['aaa' => 'aaa', 'ccc' => 'ccc']);
 
         $result = $columnHtml->show($columnDefine, [
@@ -45,7 +45,7 @@ class ColumnHtmlServiceTest extends TestCase
             false
         );
 
-        $columnHtml = new ColumnHtmlService();
+        $columnHtml = new ColumnHtmlService;
         $result = $columnHtml->show($columnDefine, null);
 
         $this->assertEquals('', $result->toHtml());
@@ -64,7 +64,7 @@ class ColumnHtmlServiceTest extends TestCase
             false
         );
 
-        $columnHtml = new ColumnHtmlService();
+        $columnHtml = new ColumnHtmlService;
         $columnHtml->mount($columnDefine, 'This is a test content with keywords');
         $columnHtml->setHighlightKeywords(['test', 'keywords']);
 
@@ -73,6 +73,4 @@ class ColumnHtmlServiceTest extends TestCase
         $expectedHtml = 'This is a <span class="text-error font-bold text-lg">test</span> content with <span class="text-error font-bold text-lg">keywords</span>';
         $this->assertEquals($expectedHtml, $result->toHtml());
     }
-
-
 }

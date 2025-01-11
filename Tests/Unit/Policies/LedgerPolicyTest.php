@@ -8,12 +8,9 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\User;
 use App\Policies\LedgerPolicy;
-use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Artisan;
 use Mockery;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -22,7 +19,7 @@ class LedgerPolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -33,7 +30,7 @@ class LedgerPolicyTest extends TestCase
         app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    public function test_viewAny_returns_true_for_user_with_view_ledgers_permission()
+    public function test_view_any_returns_true_for_user_with_view_ledgers_permission()
     {
         $user = User::factory()->create();
         $user->givePermissionTo('view_ledgers');
@@ -44,7 +41,7 @@ class LedgerPolicyTest extends TestCase
         $this->assertTrue($policy->viewAny($user));
     }
 
-    public function test_viewAny_returns_false_for_user_without_view_ledgers_permission()
+    public function test_view_any_returns_false_for_user_without_view_ledgers_permission()
     {
         $user = User::factory()->create();
 

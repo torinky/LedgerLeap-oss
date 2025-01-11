@@ -17,13 +17,13 @@ class AsJsonTest extends TestCase
         $data = ['name' => 'John Doe', 'age' => 30];
 
         // モデルに保存する前にキャストを使用してJSONに変換します。
-        $castedData = (new AsJson())->set(new stdClass(), 'attributes', $data, ['attributes']);
+        $castedData = (new AsJson)->set(new stdClass, 'attributes', $data, ['attributes']);
         // モデルに保存されるデータを確認します。
         $this->assertIsArray($castedData);
         $this->assertJson(json_encode($data, JSON_UNESCAPED_UNICODE), $castedData['attributes']);
 
         // モデルから取得したデータを元の配列に戻します。
-        $decodedData = (new AsJson())->get(new stdClass(), 'attributes', null, $castedData);
+        $decodedData = (new AsJson)->get(new stdClass, 'attributes', null, $castedData);
 
         // 元の配列と復元された配列が一致することを確認します。
         $this->assertEquals($data, $decodedData);
@@ -37,12 +37,11 @@ class AsJsonTest extends TestCase
         $invalidJson = '{"name": "John Doe", "age": 30';
 
         // AsJsonのgetメソッドを呼び出すためのテストデータを作成します。
-        $model = new stdClass();
+        $model = new stdClass;
         $model->attributes = $invalidJson;
 
         // モデルの属性を取得し、キャストされたデータがnullであることを確認します。
-        $decodedData = (new AsJson())->get($model, 'attributes', null, (array)$model);
+        $decodedData = (new AsJson)->get($model, 'attributes', null, (array)$model);
         $this->assertNull($decodedData);
     }
-
 }

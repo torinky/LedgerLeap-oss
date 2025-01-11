@@ -9,7 +9,6 @@ use Tests\TestCase;
 
 class AsColumnArrayJsonTest extends TestCase
 {
-
     /**
      * @test
      */
@@ -18,17 +17,17 @@ class AsColumnArrayJsonTest extends TestCase
         // テストに使用するデータを定義します。
         $data = [
             'value1',
-            ["subkey" => "subvalue", "subkey2" => "日本語でも大丈夫"],
+            ['subkey' => 'subvalue', 'subkey2' => '日本語でも大丈夫'],
         ];
 
         // モデルに保存する前にキャストを使用してJSONに変換します。
-        $castedData = (new AsColumnArrayJson())->set(new stdClass(), 'attributes', $data, ['attributes']);
+        $castedData = (new AsColumnArrayJson)->set(new stdClass, 'attributes', $data, ['attributes']);
         // モデルに保存されるデータを確認します。
         $this->assertIsArray($castedData);
         $this->assertJson(json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE), $castedData['attributes']);
 
         // モデルから取得したデータを元の配列に戻します。
-        $decodedData = (new AsColumnArrayJson())->get(new stdClass(), 'attributes', null, $castedData);
+        $decodedData = (new AsColumnArrayJson)->get(new stdClass, 'attributes', null, $castedData);
 
         // 元の配列と復元された配列が一致することを確認します。
         $this->assertEquals($data, $decodedData);
@@ -42,7 +41,7 @@ class AsColumnArrayJsonTest extends TestCase
         $invalidJson = '{"key": "value", "missing_key":';
 
         // AsColumnArrayJsonのgetメソッドを呼び出します。
-        $decodedData = (new AsColumnArrayJson())->get(new stdClass(), 'attributes', null, ['attributes' => $invalidJson]);
+        $decodedData = (new AsColumnArrayJson)->get(new stdClass, 'attributes', null, ['attributes' => $invalidJson]);
 
         // 予期した動作としてnullが返されることを確認します。
         $this->assertNull($decodedData);

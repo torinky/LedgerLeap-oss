@@ -36,7 +36,7 @@ class WritableFolderRepositoryTest extends TestCase
         RoleFolderPermission::create(['role_id' => $role1->id, 'folder_id' => $folder1->id, 'permission' => 'write', 'modifier_id' => $user->id]);
         RoleFolderPermission::create(['role_id' => $role2->id, 'folder_id' => $folder2->id, 'permission' => 'write', 'modifier_id' => $user->id]);
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
         $writableFolderIds = $repository->getWritableFolderIds($user);
 
         $this->assertCount(2, $writableFolderIds);
@@ -44,7 +44,6 @@ class WritableFolderRepositoryTest extends TestCase
         $this->assertContains($folder2->id, $writableFolderIds);
         $this->assertNotContains($folder3->id, $writableFolderIds);
     }
-
 
     public function test_get_writable_folder_ids_returns_only_writable_folders_under_specified_folder()
     {
@@ -63,7 +62,7 @@ class WritableFolderRepositoryTest extends TestCase
         $role2->writableFolders()->attach($grandChildFolder, ['permission' => 'write', 'modifier_id' => $user->id]);
         $role2->writableFolders()->attach($otherFolder, ['permission' => 'write', 'modifier_id' => $user->id]);
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
 
         // ルートフォルダを指定した場合
         $writableFolderIds = $repository->getWritableFolderIds($user, $rootFolder);
@@ -98,7 +97,7 @@ class WritableFolderRepositoryTest extends TestCase
         // キャッシュをクリア
         Cache::flush();
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
 
         // 初回呼び出し（キャッシュ生成）
         $writableFolderIds1 = $repository->getWritableFolderIds($user);
@@ -134,7 +133,7 @@ class WritableFolderRepositoryTest extends TestCase
         $user->assignRole($role);
         $role->writableFolders()->attach($folder, ['permission' => 'write', 'modifier_id' => $user->id]);
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
 
         // 初回呼び出し（キャッシュ生成）
         $writableFolderIds1 = $repository->getWritableFolderIds($user);
@@ -162,7 +161,7 @@ class WritableFolderRepositoryTest extends TestCase
         $user->assignRole($role);
         $role->writableFolders()->attach($folder, ['permission' => 'write', 'modifier_id' => $user->id]);
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
 
         // 初回呼び出し（キャッシュ生成）
         $writableFolderIds1 = $repository->getWritableFolderIds($user);

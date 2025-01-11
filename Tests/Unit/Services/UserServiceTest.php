@@ -9,17 +9,14 @@ use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Collection;
-
 // use Mockery;
-use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -35,6 +32,7 @@ class UserServiceTest extends TestCase
         Mockery::close();
         parent::tearDown();
     }
+
     public function test_get_all_permissions_for_user()
     {
         // Arrange
@@ -187,6 +185,7 @@ class UserServiceTest extends TestCase
         $this->assertEquals(new Collection, $resultPermissions);
         $this->assertEquals(new Collection, $resultRoles);
     }
+
     public function test_handles_edge_case_with_no_organizations()
     {
         // Arrange
@@ -246,12 +245,12 @@ class UserServiceTest extends TestCase
         RoleFolderPermission::create(['role_id' => $role2->id, 'folder_id' => $childFolder2->id, 'permission' => 'write', 'modifier_id' => $user->id]);
         RoleFolderPermission::create(['role_id' => $role2->id, 'folder_id' => $otherFolder->id, 'permission' => 'write', 'modifier_id' => $user->id]);
 
-        $repository = new WritableFolderRepository();
+        $repository = new WritableFolderRepository;
 
         // フォルダを指定しない場合
-//        dd(Folder::all()->pluck('id','title')->toArray());
+        //        dd(Folder::all()->pluck('id','title')->toArray());
         $writableFolderIds = $repository->getWritableFolderIds($user);
-//dd($writableFolderIds,Folder::all()->pluck('id','title')->toArray());
+        // dd($writableFolderIds,Folder::all()->pluck('id','title')->toArray());
         $this->assertCount(5, $writableFolderIds); // ルートフォルダ, フォルダ1, フォルダ1-1, フォルダ2, その他フォルダ
         $this->assertContains($rootFolder->id, $writableFolderIds);
         $this->assertContains($childFolder1->id, $writableFolderIds);
