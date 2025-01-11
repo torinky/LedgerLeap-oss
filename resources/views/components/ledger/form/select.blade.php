@@ -2,6 +2,7 @@
     'class'=>'input-primary',
     'icon'=>'o-chevron-up-down',
     'isDemo'=>false,
+    'columnDefine' => null,
     ])
 
 @php

@@ -3,6 +3,7 @@
     'class'=>'',
     'hintClass'=> 'label-text-alt text-gray-400 ps-1 mt-2',
     'isDemo'=>false,
+    'columnDefine' => null,
     ])
 
 <div class="form-control {{$class}}">
