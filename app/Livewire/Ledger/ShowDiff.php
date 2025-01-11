@@ -5,6 +5,7 @@ namespace App\Livewire\Ledger;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
 class ShowDiff extends Component
@@ -18,6 +19,7 @@ class ShowDiff extends Component
     public $nowLedgerRecord;
 
     public $ledgerDiffCount = 0;
+    public $canView = false;
 
     public function mount(Request $request)
     {
@@ -31,6 +33,8 @@ class ShowDiff extends Component
         //リレーション先の値はlivewireではフロントエンドに伝わらないので個別にpublicに切り出す
         $this->ledgerDiffCount = $this->ledgerRecord->ledger_diff_count;
         //        dd($ledgerRecord);
+        // 権限チェックはせず画面内のカラムを伏せる
+        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord->define]);
 
     }
 

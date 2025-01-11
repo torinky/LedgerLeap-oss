@@ -25,9 +25,9 @@ class ShowController extends Controller
             $ledgerDefineRecord = $ledger->define;
         }
 
-        // 権限チェック
-        if (Gate::denies('view', [Ledger::class, $ledgerDefineRecord])) {
-            abort(403);
+        //表示可否の判定はlivewireで行う
+        if (empty($ledger)) {
+            abort(404, __('ledger.not_found'));
         }
 
 

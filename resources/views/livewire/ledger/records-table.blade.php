@@ -123,6 +123,7 @@
                             :filter="$filter"
                             :keywords="$keywords"
                             :canCreate="$canCreate[$ledgerDefineId]"
+                            :canView="$canView[$ledgerDefineId]"
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">

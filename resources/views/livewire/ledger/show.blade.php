@@ -1,5 +1,8 @@
 <div>
-    @include('ledger.detail.table',compact('ledgerRecord'))
+    <x-ledger.detail.table
+        :ledgerRecord="$ledgerRecord"
+        :canView="$canView"
+    />
     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
         <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>

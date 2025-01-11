@@ -8,7 +8,10 @@
             @endfor
         </div>
     </div>
-    @include('ledger.detail.table',['ledgerRecord'=>$ledgerRecord])
+    <x-ledger.detail.table
+        :ledgerRecord="$ledgerRecord"
+        :canView="$canView"
+    />
 
     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}

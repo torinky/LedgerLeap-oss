@@ -21,7 +21,6 @@
                 </x-markdown>
             </div>
         </div>
-
         <livewire:ledger.show/>
     </div>
 

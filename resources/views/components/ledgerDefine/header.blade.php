@@ -1,5 +1,6 @@
 @props([
     'canCreate'=>false,
+    'canView'=>false,
     'ledgerDefine'=>null,
     'breadcrumbsPerLedgerDefine'=>[],
     'keywords'=>[],
@@ -40,11 +41,20 @@
                 </button>
             </div>
         @endif
-        <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
-                                :$keywords
-                                :$filter
-                                key="{{Hash::make('ledger_export-'. $ledgerDefine->id)}}"
-        />
+            @if($canView)
+                <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
+                                        :$keywords
+                                        :$filter
+                                        key="{{Hash::make('ledger_export-'. $ledgerDefine->id)}}"
+                />
+            @else
+                <div class="tooltip" data-tip="{{ __('ledger.no_view_permission') }}">
+                    <button class="btn btn-outline btn-secondary w-48" disabled>
+                        <i class="fas fa-file-csv"></i>
+                        {{__('ledger.export_csv')}}
+                    </button>
+                </div>
+            @endif
         <div class="w-6"></div>
         <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
            class="btn btn-outline btn-primary btn-sm relative inline-flex"

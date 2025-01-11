@@ -1,3 +1,8 @@
+@props([
+    'ledgerRecord'=>[],
+    'canView'=>false,
+])
+
 <div class="container mx-auto">
     {{--        @dd($ledgerRecord)--}}
     @if($ledgerRecord && $ledgerRecord->content && $ledgerRecord->define)
@@ -17,7 +22,7 @@
                     </th>
                     <td class="break-words">
                         {{ ColumnHtml::setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id]??[])
-                            ->show($columnDefine,$ledgerRecord->content[$columnDefine->id]??'') }}
+                            ->show($columnDefine,$ledgerRecord->content[$columnDefine->id]??'',$canView) }}
 
                     </td>
                 </tr>
