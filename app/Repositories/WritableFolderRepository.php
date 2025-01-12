@@ -2,134 +2,128 @@
 
 namespace App\Repositories;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\User;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class WritableFolderRepository
 {
     /**
-     * ユーザーが書き込み可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
-     * フォルダが指定されていない場合は、ユーザーが書き込み可能なすべてのフォルダIDを子孫フォルダも含めて取得する
+     * ユーザーが指定された権限でアクセス可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
+     * フォルダが指定されていない場合は、ユーザーがアクセス可能なすべてのフォルダIDを子孫フォルダも含めて取得する
      *
      * @param User $user
+     * @param FolderPermissionType $permission 'read', 'write', 'manageable' など
      * @param Folder|null $folder 制限をかけたいフォルダ
+     * @return array
+     */
+    public function getAccessibleFolderIds(User $user, FolderPermissionType $permission, ?Folder $folder = null): array
+    {
+        $cacheKey = $this->getCacheKey($user, $permission->value, $folder);
+
+        return Cache::remember(
+            $cacheKey,
+            config("cache.{$permission->value}able_folders_ttl", 60),
+            function () use ($user, $permission, $folder) {
+                $userRoles = $user->getAllRoles();
+
+                $allAccessibleFolderIds = $userRoles->flatMap(function ($role) use ($permission) {
+                    return $role->accessibleFolders($permission)->get()->flatMap(function ($folder) {
+                        return $folder->descendantsAndSelf($folder->id);
+                    })->pluck('id');
+                })->unique();
+
+                if (!is_null($folder)) {
+                    $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
+                    $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
+                }
+
+                return $allAccessibleFolderIds->toArray();
+            }
+        );
+    }
+
+    /**
+     * ユーザーが書き込み可能なフォルダのIDを取得する
+     *
+     * @param User $user
+     * @param Folder|null $folder
      * @return array
      */
     public function getWritableFolderIds(User $user, ?Folder $folder = null): array
     {
-
-        $cacheKey = "user_{$user->id}_writable_folders";
-        if ($folder) {
-            $cacheKey .= "_under_" . $folder->id;
-        }
-
-        return Cache::remember(
-            $cacheKey,
-            config('cache.writable_folders_ttl', 60),
-            function () use ($user, $folder) {
-                $userRoles = $user->getAllRoles();
-
-                // フォルダーが指定されていない場合、ユーザーが書き込み可能な全てのフォルダーIDを子孫を含めて取得する。
-                $allWritableFolderIds = $userRoles->flatMap(function ($role) {
-                    return $role->writableFolders()->get()->flatMap(function ($folder) {
-                        return $folder->descendantsAndSelf($folder->id);
-                    })->pluck('id');
-                })->unique();
-
-                if (!is_null($folder)) {
-                    // フォルダーが指定されている場合、指定されたフォルダーの子孫を含めて取得
-                    $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
-                    $allWritableFolderIds = $allWritableFolderIds->intersect($descendantIds);
-                }
-                return $allWritableFolderIds->toArray();
-            }
-        );
-    }
-
-    public function refreshWritableFolderCache(User $user): void
-    {
-        // userに関連するすべてのキャッシュキーをクリア
-        $this->clearWritableFolderCache($user);
-
-        // キャッシュを再生成
-        $this->getWritableFolderIds($user);
-    }
-
-    public function clearWritableFolderCache(User $user): void
-    {
-        Cache::forget("user_{$user->id}_writable_folders"); // 基本のキャッシュキー
-        // ルートフォルダと全ての子フォルダを取得
-        $rootFolders = Folder::whereIsRoot()->get();
-        $allFolders = $rootFolders->flatMap(function ($folder) {
-            return $folder->descendantsAndSelf($folder->id);
-        });
-        // フォルダIDを使ってキャッシュキーを生成し、削除
-        foreach ($allFolders as $folder) {
-            Cache::forget("user_{$user->id}_writable_folders_under_{$folder->id}");
-        }
+        return $this->getAccessibleFolderIds($user, FolderPermissionType::WRITE, $folder);
     }
 
     /**
-     * ユーザーが読み取り可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
-     * フォルダが指定されていない場合は、ユーザーが読み取り可能なすべてのフォルダIDを子孫フォルダも含めて取得する
+     * ユーザーが読み取り可能なフォルダのIDを取得する
      *
      * @param User $user
-     * @param Folder|null $folder 制限をかけたいフォルダ
+     * @param Folder|null $folder
      * @return array
      */
     public function getReadableFolderIds(User $user, ?Folder $folder = null): array
     {
-        $cacheKey = "user_{$user->id}_readable_folders";
-        if ($folder) {
-            $cacheKey .= "_under_" . $folder->id;
-        }
-
-        return Cache::remember(
-            $cacheKey,
-            config('cache.readable_folders_ttl', 60), // 読み取り用のキャッシュ時間
-            function () use ($user, $folder) {
-                $userRoles = $user->getAllRoles();
-
-                // フォルダーが指定されていない場合、ユーザーが読み取り可能な全てのフォルダーIDを子孫を含めて取得する。
-                $allReadableFolderIds = $userRoles->flatMap(function ($role) {
-                    return $role->readableFolders()->get()->flatMap(function ($folder) {
-                        return $folder->descendantsAndSelf($folder->id);
-                    })->pluck('id');
-                })->unique();
-
-                if (!is_null($folder)) {
-                    // フォルダーが指定されている場合、指定されたフォルダーの子孫を含めて取得
-                    $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
-                    $allReadableFolderIds = $allReadableFolderIds->intersect($descendantIds);
-                }
-//dd($user,$user->getRoleNames(),$userRoles,$allReadableFolderIds);
-                return $allReadableFolderIds->toArray();
-            }
-        );
+        return $this->getAccessibleFolderIds($user, FolderPermissionType::READ, $folder);
     }
 
-    public function refreshReadableFolderCache(User $user): void
+    public function refreshFolderCache(User $user, string $permission): void
     {
-        // userに関連するすべてのキャッシュキーをクリア
-        $this->clearReadableFolderCache($user);
-
-        // キャッシュを再生成
-        $this->getReadableFolderIds($user);
+        $this->clearFolderCache($user, $permission);
+        $this->getAccessibleFolderIds($user, FolderPermissionType::from($permission));
     }
 
-    public function clearReadableFolderCache(User $user): void
+    public function clearFolderCache(User $user, string $permission): void
     {
-        Cache::forget("user_{$user->id}_readable_folders"); // 基本のキャッシュキー
-        // ルートフォルダと全ての子フォルダを取得
+        Cache::forget($this->getCacheKey($user, $permission));
         $rootFolders = Folder::whereIsRoot()->get();
         $allFolders = $rootFolders->flatMap(function ($folder) {
             return $folder->descendantsAndSelf($folder->id);
         });
-        // フォルダIDを使ってキャッシュキーを生成し、削除
         foreach ($allFolders as $folder) {
-            Cache::forget("user_{$user->id}_readable_folders_under_{$folder->id}");
+            Cache::forget($this->getCacheKey($user, $permission, $folder));
         }
     }
+
+    /**
+     * キャッシュキーを生成する
+     *
+     * @param User $user
+     * @param string $permission
+     * @param Folder|null $folder
+     * @return string
+     */
+    protected function getCacheKey(User $user, string $permission, ?Folder $folder = null): string
+    {
+        $cacheKey = "user_{$user->id}_{$permission}_folders";
+        if ($folder) {
+            $cacheKey .= "_under_" . $folder->id;
+        }
+
+        return $cacheKey;
+    }
+
+    /**
+     * キャッシュをクリアする
+     *
+     * @param User $user
+     * @return void
+     */
+    public function clearAllCache(User $user): void
+    {
+        $permissions = array_column(FolderPermissionType::cases(), 'value');
+        foreach ($permissions as $permission) {
+            $this->clearFolderCache($user, $permission);
+        }
+    }
+
+    public function refreshAllCache(User $user): void
+    {
+        $permissions = array_column(FolderPermissionType::cases(), 'value');
+        foreach ($permissions as $permission) {
+            $this->refreshFolderCache($user, $permission);
+        }
+    }
+
 }

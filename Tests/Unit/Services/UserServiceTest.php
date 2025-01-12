@@ -237,8 +237,7 @@ class UserServiceTest extends TestCase
         // Spatieのキャッシュクリア
         app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
         // WritableFolderRepository のキャッシュクリア
-        app(WritableFolderRepository::class)->clearWritableFolderCache($user);
-        app(WritableFolderRepository::class)->clearReadableFolderCache($user);
+        app(WritableFolderRepository::class)->clearAllCache($user);
 
         // RoleFolderPermission を直接使用して関連付け
         RoleFolderPermission::create(['role_id' => $role1->id, 'folder_id' => $rootFolder->id, 'permission' => 'write', 'modifier_id' => $user->id]);

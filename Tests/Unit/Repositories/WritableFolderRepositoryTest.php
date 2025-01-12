@@ -144,7 +144,7 @@ class WritableFolderRepositoryTest extends TestCase
         $role->writableFolders()->attach($newFolder, ['permission' => 'write', 'modifier_id' => $user->id]);
 
         // キャッシュをリフレッシュ
-        $repository->refreshWritableFolderCache($user);
+        $repository->refreshFolderCache($user, 'write');
 
         // 変更後のフォルダIDが取得されることを確認
         $writableFolderIds2 = $repository->getWritableFolderIds($user);
@@ -167,7 +167,7 @@ class WritableFolderRepositoryTest extends TestCase
         $writableFolderIds1 = $repository->getWritableFolderIds($user);
 
         // キャッシュをクリア
-        $repository->clearWritableFolderCache($user);
+        $repository->clearFolderCache($user, 'write');
 
         // ロールとフォルダの関連付けを変更
         $role->writableFolders()->detach($folder);

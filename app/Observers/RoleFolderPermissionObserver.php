@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\FolderPermissionType;
 use App\Models\RoleFolderPermission;
 use App\Repositories\WritableFolderRepository;
 
@@ -27,9 +28,9 @@ class RoleFolderPermissionObserver
             $users = $roleFolderPermission->role->users;
 
             // 各ユーザーのキャッシュをクリア
+            $repository = app(WritableFolderRepository::class);
             foreach ($users as $user) {
-                $this->writableFolderRepository->clearWritableFolderCache($user);
-                $this->writableFolderRepository->clearReadableFolderCache($user);
+                $repository->clearAllCache($user);
             }
         }
     }

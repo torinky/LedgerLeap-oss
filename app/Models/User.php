@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
@@ -61,13 +62,11 @@ class User extends Authenticatable implements FilamentUser
 
         // キャッシュの自動更新
         static::saved(function ($user) {
-            app(WritableFolderRepository::class)->refreshWritableFolderCache($user);
-            app(WritableFolderRepository::class)->refreshReadableFolderCache($user);
+            app(WritableFolderRepository::class)->clearAllCache($user);
         });
 
         static::deleted(function ($user) {
-            app(WritableFolderRepository::class)->clearWritableFolderCache($user);
-            app(WritableFolderRepository::class)->clearReadableFolderCache($user);
+            app(WritableFolderRepository::class)->refreshAllCache($user);
         });
     }
 
@@ -164,8 +163,7 @@ class User extends Authenticatable implements FilamentUser
     {
         $this->spatieAssignRole(...$roles);
 
-        app(WritableFolderRepository::class)->clearWritableFolderCache($this);
-        app(WritableFolderRepository::class)->clearReadableFolderCache($this);
+        app(WritableFolderRepository::class)->clearAllCache($this);
 
         return $this;
     }

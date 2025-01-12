@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\FolderPermissionType;
 use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 use Kalnoy\Nestedset\NodeTrait;
@@ -207,5 +209,18 @@ class Folder extends Model
 
             return array_unique($permissions);
         });
+    }
+
+    /**
+     * 指定された権限を持つロールに紐づくフォルダを取得する
+     *
+     * @param FolderPermissionType $permission 'write', 'read', 'manageable' など
+     * @return BelongsToMany
+     */
+    public function accessibleFolders(FolderPermissionType $permission)
+    {
+        return $this->belongsToMany(Role::class, RoleFolderPermission::class, 'folder_id', 'role_id')
+            ->withPivot('permission')
+            ->wherePivot('permission', $permission->value);
     }
 }
