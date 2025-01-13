@@ -5,6 +5,7 @@
     'selectedFolderChildrenIds'=>[],
     'writableFolderIds' => [],
     'readableFolderIds' => [],
+    'manageableFolderIds' => [],
 ])
 <ul>
     @foreach($folders as $folder)
@@ -18,7 +19,7 @@
             >
                 <span
                     class="tooltip"
-                    data-tip="{{ in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.no_view_permission')) }}"
+                    data-tip="{{ in_array($folder->id, $manageableFolderIds) ? __('ledger.folder.manageable') : (in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.no_view_permission'))) }}"
                 >
 
                 @if($folder->id==1)
@@ -27,12 +28,12 @@
                         @php
                             $color = 'text-secondary';
 
-                            if (in_array($folder->id, $writableFolderIds)) {
+                            if (in_array($folder->id, $manageableFolderIds)) {
                                 $color = 'text-accent';
-                            } elseif (in_array($folder->id, $readableFolderIds) && !in_array($folder->id, $writableFolderIds)) {
-                                $color = 'text-accent/70';
-                            } elseif (!in_array($folder->id, $readableFolderIds) && !in_array($folder->id, $writableFolderIds)) {
-                                $color = 'text-secondary/50';
+                            } elseif (in_array($folder->id, $writableFolderIds)) {
+                                $color = 'text-accent/90';
+                            } elseif (in_array($folder->id, $readableFolderIds)) {
+                                $color = 'text-accent/80';
                             }
                         @endphp
                         <span class="fa-stack " style="font-size: 0.8em;">
@@ -41,7 +42,9 @@
                     @else
                                 <i class="fas fa-folder {{$color}} fa-stack-2x"></i>
                     @endif
-                            @if(in_array($folder->id, $writableFolderIds))
+                        @if(in_array($folder->id, $manageableFolderIds))
+                            <i class="fas fa-fw fa-gear text-base-100 fa-stack-1x"></i> {{-- 管理可能なフォルダ --}}
+                        @elseif(in_array($folder->id, $writableFolderIds))
                                 <i class="fas fa-fw fa-pen text-base-100 fa-stack-1x"></i> {{-- 書き込み可能なフォルダ --}}
                             @elseif(in_array($folder->id, $readableFolderIds))
                                 <i class="fas fa-fw fa-eye text-base-100 fa-stack-1x"></i> {{-- 読み取り可能なフォルダ --}}
@@ -57,7 +60,9 @@
                 @endif
             </a>
             @if($folder->children->isNotEmpty())
-                @include('components.folder.tree', ['folders' => $folder->children])
+                @include('components.folder.tree', [
+    'folders' => $folder->children,
+    ])
             @endif
         </li>
     @endforeach

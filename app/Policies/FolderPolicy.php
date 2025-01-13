@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Folder;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 
@@ -11,92 +12,104 @@ class FolderPolicy
 {
     use HandlesAuthorization;
 
+    protected $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Determine whether the user can view any models.
      *
+     * @param User $user
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
-        return true;
-        //
+        // ユーザーがフォルダの閲覧権限を持っているかどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('view_folders');
     }
 
-    public function restore(User $user, Folder $folder)
-    {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains($folder);
-
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('restore_folders');
-
-        return $hasRoleInFolder && $hasPermission;
-    }
-
-    public function forceDelete(User $user, Folder $folder)
-    {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains($folder);
-
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('force_delete_folders');
-
-        return $hasRoleInFolder && $hasPermission;
-    }
-
+    /**
+     * Determine whether the user can view the model.
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return Response|bool
+     */
     public function view(User $user, Folder $folder)
     {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains($folder);
-
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('view_folders');
-
-        return $hasRoleInFolder && $hasPermission;
+        // ユーザーがフォルダの閲覧権限を持っているか、およびフォルダが閲覧可能かどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('view_folders')
+            && $this->userService->isReadableFolderForUser($user, $folder);
     }
 
+    /**
+     * Determine whether the user can create models.
+     *
+     * @param User $user
+     * @return Response|bool
+     */
     public function create(User $user)
     {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains(auth()->user()->current_folder);
-
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('create_folders');
-
-        return $hasRoleInFolder && $hasPermission;
+        // ユーザーがフォルダの作成権限を持っているかどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('create_folders');
     }
 
+    /**
+     * Determine whether the user can update the model.
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return Response|bool
+     */
     public function update(User $user, Folder $folder)
     {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains($folder);
-
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('update_folders');
-
-        return $hasRoleInFolder && $hasPermission;
+        // ユーザーがフォルダの更新権限を持っているか、およびフォルダが管理可能かどうかをチェック
+        return $this->userService->hasPermission($user, 'manage_folders')
+            && $this->userService->isManageableFolderForUser($user, $folder);
     }
 
+    /**
+     * Determine whether the user can delete the model.
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return Response|bool
+     */
     public function delete(User $user, Folder $folder)
     {
-        // ユーザーのロールに紐付けられたフォルダーにアクセスしようとしているフォルダーが含まれているかどうかをチェック
-        $userRoles = $user->roles;
-        $accessibleFolders = $userRoles->flatMap->folders;
-        $hasRoleInFolder = $accessibleFolders->contains($folder);
+        // ユーザーがフォルダの削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('delete_folders')
+            && $this->userService->isManageableFolderForUser($user, $folder);
+    }
 
-        // ロールのパーミッションに従うかどうかをチェック
-        $hasPermission = $user->hasPermissionTo('delete_folders');
+    /**
+     * Determine whether the user can restore the model.
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return Response|bool
+     */
+    public function restore(User $user, Folder $folder)
+    {
+        // ユーザーがフォルダの復元権限を持っているか、およびフォルダが管理可能かどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('restore_folders')
+            && $this->userService->isManageableFolderForUser($user, $folder);
+    }
 
-        return $hasRoleInFolder && $hasPermission;
+    /**
+     * Determine whether the user can permanently delete the model.
+     *
+     * @param User $user
+     * @param Folder $folder
+     * @return Response|bool
+     */
+    public function forceDelete(User $user, Folder $folder)
+    {
+        // ユーザーがフォルダの強制削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
+        return $this->userService->getAllUniquePermissionsForUser($user)->contains('force_delete_folders')
+            && $this->userService->isManageableFolderForUser($user, $folder);
     }
 }

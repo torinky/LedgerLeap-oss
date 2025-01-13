@@ -1,6 +1,7 @@
 @props([
     'canCreate'=>false,
     'canView'=>false,
+    'canManage'=>false,
     'ledgerDefine'=>null,
     'breadcrumbsPerLedgerDefine'=>[],
     'keywords'=>[],
@@ -56,10 +57,19 @@
                 </div>
             @endif
         <div class="w-6"></div>
-        <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
-           class="btn btn-outline btn-primary btn-sm relative inline-flex"
-           target="ledgerDefineEdit_{{$ledgerDefine->id}}}}"><i
-                class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}</a>
+            @if($canManage)
+                <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+                   class="btn btn-outline btn-primary btn-sm relative inline-flex"
+                   target="ledgerDefineEdit_{{$ledgerDefine->id}}}}">
+                    <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
+                </a>
+            @else
+                <div class="tooltip" data-tip="{{ __('ledger.no_manage_permission') }}">
+                    <button class="btn btn-outline btn-primary btn-sm relative inline-flex" disabled>
+                        <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
+                    </button>
+                </div>
+            @endif
 
     </div>
 </div>

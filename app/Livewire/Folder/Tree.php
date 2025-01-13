@@ -17,11 +17,21 @@ class Tree extends Component
 
     public array $selectedFolderIds;
 
-    public function mount(SearchRequest $request)
+    public array $manageableFolderIds;
+
+    public array $writableFolderIds;
+
+    public array $readableFolderIds;
+
+    public function mount(SearchRequest $request, WritableFolderRepository $writableFolderRepository)
     {
         $this->currentFolderId = $request->currentFolderId();
         $this->selectedFolderIds = $request->folderId();
         $this->folders = Folder::whereIsRoot()->get();
+
+        $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(auth()->user());
+        $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
+        $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
     }
 
     #[On('currentFolderChangedByMain')]
@@ -54,13 +64,6 @@ class Tree extends Component
 
     public function render()
     {
-        $writableFolderRepository = app(WritableFolderRepository::class);
-        $writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
-        $readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
-
-        return view('livewire.folder.tree', [
-            'writableFolderIds' => $writableFolderIds,
-            'readableFolderIds' => $readableFolderIds,
-        ]);
+        return view('livewire.folder.tree');
     }
 }

@@ -12,22 +12,44 @@
             class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center ">
 
             @foreach($folderRecords as $fKey => $folderRecord)
+                @php
+                    $canUpdateFolder = auth()->user()->can('update', $folderRecord);
+                @endphp
                 <div class="p-4 rounded-lg shadow-lg bg-secondary text-secondary-content hover:shadow-secondary hover:focus-secondary hover:opacity-100 min-w-36 relative grid
             {{in_array($folderRecord->id, $selectedFolderIds) ? 'opacity-90' : 'opacity-60'}}">
                     <div class="absolute place-self-center top-1">
                         <div class="indicator">
-                            {{--                <div class="flex justify-center items-center ">--}}
-                            <a href="{{ route('folder.edit', ['folderId'=>$folderRecord->id]) }}"
-                               class="btn btn-ghost"
-                               target="folderEdit_{{$folderRecord->id}}}}">
-                                {{--                        <i class="fa-solid fa-folder "></i>--}}
+                            @if($canUpdateFolder)
+                                <a
+                                    href="{{ route('folder.edit', ['folderId'=>$folderRecord->id]) }}"
+                                    class="btn btn-ghost tooltip flex items-center"
+                                    data-tip="{{__('folder.edit')}}"
+                                    target="folderEdit_{{$folderRecord->id}}}}"
+                                >
 
-                                <span class="fa-layers fa-fw">
-                                    <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
-                                    <i class="fa-solid  fa-pencil text-2xl text-base-100/70"
-                                       data-fa-transform=" right-5 up-3"></i>
-                                </span>
-                            </a>
+                                    <span class="fa-layers fa-fw">
+                                        <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
+                                        <i class="fa-solid  fa-pencil text-2xl text-base-100/70"
+                                           data-fa-transform=" right-5 up-3"></i>
+                                    </span>
+                                </a>
+                            @else
+                                <a
+                                    class="btn btn-ghost opacity-30 tooltip flex items-center"
+                                    data-tip="{{__('folder.no_edit_permission')}}"
+                                    target="folderEdit_{{$folderRecord->id}}}}"
+                                >
+
+                                    <span class="fa-layers fa-fw">
+                                        <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
+{{--
+                                        <i class="fa-solid  fa-pencil text-2xl text-base-100/70"
+                                           data-fa-transform=" right-5 up-3"></i>
+--}}
+                                    </span>
+                                </a>
+
+                            @endif
 
                             <a href="#" class="btn btn-ghost"
                                wire:click="changeCurrentFolder({{$folderRecord->id}})">
@@ -41,11 +63,24 @@
             @endforeach
 
             @foreach($ledgerDefineRecords as $dKey => $ledgerDefineRecord)
-                <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
-                   target="ledgerDefineEdit_{{$ledgerDefineRecord->id}}}}"
-                   class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100
-                   {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
-                   data-tip="{{__('ledger.edit')}}"
+                @php
+                    $canUpdateLedgerDefine = auth()->user()->can('update', $ledgerDefineRecord);
+                @endphp
+                <a
+                    target="ledgerDefineEdit_{{$ledgerDefineRecord->id}}}}"
+                    @if($canUpdateLedgerDefine)
+                        data-tip="{{__('ledger.edit')}}"
+                    wire:click="changeCurrentLedgerDefine({{$ledgerDefineRecord->id}})"
+                    href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
+                    class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100
+                       {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
+                    @else
+                        data-tip="{{__('ledger.define.no_edit_permission')}}"
+                    class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-neutral/50 hover:shadow-accent hover:opacity-100
+                       {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
+                    disabled
+                    @endif
+
                 >
                     <div class="flex justify-center items-center">
                         {{--                    <i class="fa-solid fa-book text-3xl "></i>--}}

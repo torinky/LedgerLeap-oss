@@ -66,19 +66,16 @@ class Role extends SpatieRole
         return $this->accessibleFolders(FolderPermissionType::WRITE);
     }
 
+    public function manageableFolders()
+    {
+        return $this->accessibleFolders(FolderPermissionType::ADMIN);
+    }
+
     public function accessibleFolders(FolderPermissionType $permission)
     {
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
             ->withPivot('permission')
             ->wherePivot('permission', $permission->value)
-            ->select('folders.*');
-    }
-
-    public function ManageableFolders()
-    {
-        return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
-            ->withPivot('permission')
-            ->wherePivot('permission', FolderPermissionType::ADMIN)
             ->select('folders.*');
     }
 

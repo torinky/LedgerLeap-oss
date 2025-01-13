@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 // use Illuminate\Support\Facades\Gate;
+use App\Models\Folder;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\Organization;
 use App\Models\User;
+use App\Policies\FolderPolicy;
+use App\Policies\LedgerDefinePolicy;
 use App\Policies\LedgerPolicy;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -20,8 +24,8 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Ledger::class => LedgerPolicy::class,
-
-        //
+        LedgerDefine::class => LedgerDefinePolicy::class,
+        Folder::class => FolderPolicy::class,
     ];
 
     /**

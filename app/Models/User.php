@@ -3,7 +3,6 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
@@ -23,6 +22,7 @@ class User extends Authenticatable implements FilamentUser
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
     use HasRoles {
         assignRole as protected spatieAssignRole;
+        removeRole as protected spatieRemoveRole;
     }
 
     /**
@@ -164,7 +164,25 @@ class User extends Authenticatable implements FilamentUser
         $this->spatieAssignRole(...$roles);
 
         app(WritableFolderRepository::class)->clearAllCache($this);
+        app(UserService::class)->clearUserPermissionsCache($this);
 
         return $this;
     }
+
+    /**
+     * ユーザーからロールを削除し、関連するキャッシュをクリアする
+     *
+     * @param mixed ...$roles
+     * @return $this
+     */
+    public function removeRole($role)
+    {
+        $this->spatieRemoveRole(...$role);
+
+        app(WritableFolderRepository::class)->clearAllCache($this);
+        app(UserService::class)->clearUserPermissionsCache($this);
+
+        return $this;
+    }
+
 }

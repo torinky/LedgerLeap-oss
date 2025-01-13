@@ -21,7 +21,7 @@ use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
-#[AllowDynamicProperties] class RecordsTable extends Component
+class RecordsTable extends Component
 {
     use withPagination;
 
@@ -192,7 +192,7 @@ use Psr\Container\NotFoundExceptionInterface;
 //          ->with('define.folder')
             ->orderBy('ledger_define_id', 'asc')
             ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
-        //dd($ledgerRecords);
+        // dd($ledgerRecords);
 
         //      重複データを持たないように台帳定義とフォルダ情報は別に取得する
         $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
@@ -200,19 +200,10 @@ use Psr\Container\NotFoundExceptionInterface;
             ->get()
             ->keyBy('id');
 
-        $canCreate = [];
-        $canUpdate = [];
-        $canView = [];
-        foreach ($ledgerDefineRecords as $ledgerDefine) {
-            $canCreate[$ledgerDefine->id] = Gate::allows('create', [Ledger::class, $ledgerDefine]);
-            $canUpdate[$ledgerDefine->id] = Gate::allows('update', [Ledger::class, $ledgerDefine]);
-            $canView[$ledgerDefine->id] = Gate::allows('view', [Ledger::class, $ledgerDefine]);
-        }
-
         // 台帳レコードの総数を取得
         $this->totalRecords = $ledgerRecords->count();
 
-        //ページネーション実行
+        // ページネーション実行
         $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
 
         // 検索結果のフラグを設定
@@ -248,9 +239,6 @@ use Psr\Container\NotFoundExceptionInterface;
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
-            'canCreate' => $canCreate,
-            'canUpdate' => $canUpdate,
-            'canView' => $canView,
         ]);
     }
 

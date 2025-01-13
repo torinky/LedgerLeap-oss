@@ -34,7 +34,8 @@ class CreateController extends Controller
         // リクエストパラメータから台帳定義を特定
         $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
 
-        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
+//        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
+        if (auth()->user()->cannot('create', [Ledger::class, $ledgerDefine])) {
             abort(403, __('ledger.not_allow_create'));
         }
 

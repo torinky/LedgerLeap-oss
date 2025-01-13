@@ -24,7 +24,7 @@ class Show extends Component
         $this->ledgerRecord = $ledger->with(['define', 'modifier'])->withCount('ledgerDiff')->where('ledgers.id', $ledgerId)->firstOrFail();
         //        dd($ledgerRecord);
         // 権限チェックはせず画面内のカラムを伏せる
-        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord->define]);
+//        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord->define]);
     }
 
     public function render()

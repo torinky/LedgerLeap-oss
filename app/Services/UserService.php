@@ -37,6 +37,19 @@ class UserService
     }
 
     /**
+     * ユーザーが指定された権限を持っているかどうかを判定する
+     * 組織から継承した権限も考慮する
+     *
+     * @param User $user
+     * @param string $permissionName
+     * @return bool
+     */
+    public function hasPermission(User $user, string $permissionName): bool
+    {
+        return $this->getAllUniquePermissionsForUser($user)->contains('name', $permissionName);
+    }
+
+    /**
      * 指定されたユーザーに関連するすべての役割を取得し、組織からも役割を含めます。
      *
      * @param User $user 役割を取得するユーザー。
@@ -146,6 +159,7 @@ class UserService
 
     /**
      * ユーザーに関連するすべての一意の権限を取得し、組織からも権限を含めます。
+     * キャッシュを利用して、パフォーマンスを向上させる
      *
      * @param User $user 権限を取得するユーザー。
      * @return Collection 重複を取り除いた権限オブジェクトのコレクション。
@@ -155,11 +169,25 @@ class UserService
      */
     public function getAllUniquePermissionsForUser(User $user): Collection
     {
-        return $user->permissions->merge(
-            $user->organizations->flatMap->getAllUniquePermissions()
-        )->merge(
-            $this->getAllUniqueRolesForUser($user)->flatMap->permissions
-        )->unique('id');
+        $cacheKey = "user:{$user->id}:all_permissions";
+
+        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($user) {
+            return $user->permissions->merge(
+                $user->organizations->flatMap->getAllUniquePermissions()
+            )->merge(
+                $this->getAllUniqueRolesForUser($user)->flatMap->permissions
+            )->unique('id');
+        });
+    }
+
+    /**
+     * ユーザーに関連する権限のキャッシュをクリアする
+     *
+     * @param User $user
+     */
+    public function clearUserPermissionsCache(User $user): void
+    {
+        Cache::forget("user:{$user->id}:all_permissions");
     }
 
     /**
@@ -175,24 +203,30 @@ class UserService
         )->unique('id');
     }
 
+    public function isManageableFolderForUser(User $user, Folder $folder): bool
+    {
+        $manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($user, $folder);
+
+        return in_array($folder->id, $manageableFolderIds);
+    }
+
     /**
      * ユーザーが指定されたフォルダーに対して書き込み権限を持っているかどうかを判定する
-     *
-     * @param User $user
-     * @param Folder $folder
-     * @return bool
      */
     public function isWritableFolderForUser(User $user, Folder $folder): bool
     {
         $writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($user, $folder);
 
-        return in_array($folder->id, $writableFolderIds);
+        return in_array($folder->id, $writableFolderIds)
+            || $this->isManageableFolderForUser($user, $folder);
     }
 
     public function isReadableFolderForUser(User $user, Folder $folder): bool
     {
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user, $folder);
 
-        return in_array($folder->id, $readableFolderIds) || $this->isWritableFolderForUser($user, $folder);
+        return in_array($folder->id, $readableFolderIds)
+            || $this->isWritableFolderForUser($user, $folder)
+            || $this->isManageableFolderForUser($user, $folder);
     }
 }

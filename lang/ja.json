@@ -1,7 +1,7 @@
 {
     "(and :count more error)": "(その他、:countエラーあり)",
     "(and :count more errors)": "(その他、:countエラーあり)",
-    "A decryption key is required.": "複合キーは必須です。",
+    "A decryption key is required.": "復号キーは必須です。",
     "A new verification link has been sent to the email address you provided during registration.": "入力いただいたメールアドレスに確認メールを送信しました。",
     "A new verification link has been sent to your email address.": "確認メールを送信しました。",
     "A Timeout Occurred": "タイムアウト発生",

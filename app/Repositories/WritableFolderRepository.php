@@ -13,10 +13,8 @@ class WritableFolderRepository
      * ユーザーが指定された権限でアクセス可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
      * フォルダが指定されていない場合は、ユーザーがアクセス可能なすべてのフォルダIDを子孫フォルダも含めて取得する
      *
-     * @param User $user
      * @param FolderPermissionType $permission 'read', 'write', 'manageable' など
      * @param Folder|null $folder 制限をかけたいフォルダ
-     * @return array
      */
     public function getAccessibleFolderIds(User $user, FolderPermissionType $permission, ?Folder $folder = null): array
     {
@@ -46,10 +44,6 @@ class WritableFolderRepository
 
     /**
      * ユーザーが書き込み可能なフォルダのIDを取得する
-     *
-     * @param User $user
-     * @param Folder|null $folder
-     * @return array
      */
     public function getWritableFolderIds(User $user, ?Folder $folder = null): array
     {
@@ -58,14 +52,15 @@ class WritableFolderRepository
 
     /**
      * ユーザーが読み取り可能なフォルダのIDを取得する
-     *
-     * @param User $user
-     * @param Folder|null $folder
-     * @return array
      */
     public function getReadableFolderIds(User $user, ?Folder $folder = null): array
     {
         return $this->getAccessibleFolderIds($user, FolderPermissionType::READ, $folder);
+    }
+
+    public function getManageableFolderIds(User $user, ?Folder $folder = null): array
+    {
+        return $this->getAccessibleFolderIds($user, FolderPermissionType::ADMIN, $folder);
     }
 
     public function refreshFolderCache(User $user, string $permission): void
@@ -88,17 +83,12 @@ class WritableFolderRepository
 
     /**
      * キャッシュキーを生成する
-     *
-     * @param User $user
-     * @param string $permission
-     * @param Folder|null $folder
-     * @return string
      */
     protected function getCacheKey(User $user, string $permission, ?Folder $folder = null): string
     {
         $cacheKey = "user_{$user->id}_{$permission}_folders";
         if ($folder) {
-            $cacheKey .= "_under_" . $folder->id;
+            $cacheKey .= '_under_' . $folder->id;
         }
 
         return $cacheKey;
@@ -106,9 +96,6 @@ class WritableFolderRepository
 
     /**
      * キャッシュをクリアする
-     *
-     * @param User $user
-     * @return void
      */
     public function clearAllCache(User $user): void
     {
@@ -125,5 +112,4 @@ class WritableFolderRepository
             $this->refreshFolderCache($user, $permission);
         }
     }
-
 }

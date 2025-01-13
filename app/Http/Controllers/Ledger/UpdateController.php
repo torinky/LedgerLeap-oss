@@ -18,7 +18,7 @@ class UpdateController extends Controller
 
         $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
         // 権限チェック
-        if (Gate::denies('update', [Ledger::class, $ledgerRecord->define])) {
+        if (auth()->user()->cannot('update', $ledgerRecord)) {
             abort(403);
         }
 
@@ -30,7 +30,12 @@ class UpdateController extends Controller
     {
         $ledgerId = (int)$request->route('ledgerId');
 
-        Ledger::find($ledgerId)->delete();
+        $ledgerRecord = Ledger::findOrFail($ledgerId);
+        // 権限チェック
+        if (auth()->user()->cannot('delete', $ledgerRecord)) {
+            abort(403, __('ledger.not_allow_delete'));
+        }
+        $ledgerRecord->delete();
         session()->flash('status', __('ledger.remove_success'));
 
         return View::make('ledger.message', ['windowTitle' => 'ledger']);
@@ -40,8 +45,9 @@ class UpdateController extends Controller
     public function destroy(Request $request, Ledger $ledger)
     {
         // 権限チェック
-        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
-            abort(403);
+//        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
+        if (auth()->user()->cannot('destroy', $ledger)) {
+            abort(403, __('ledger.not_allow_destroy'));
         }
 
         $ledger->delete();
