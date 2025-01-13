@@ -22,7 +22,6 @@ class Create extends Component
 
     public $parentFolderId;
 
-    public mixed $initialFolderId;
 
     public function render()
     {
@@ -34,13 +33,10 @@ class Create extends Component
     public function mount(createRequest $request)
     {
         $ledgerDefine = new LedgerDefine;
-        //                $ledgerDefineId = (int)$request->route('ledgerDefineId');
-
         $this->ledgerDefineRecord = $ledgerDefine;
-        //        $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
 
         $this->title = $request->title;
-        $this->parentFolderId = $request->folder_id ?? Folder::root()->pluck('id')[0];
+        $this->parentFolderId = $request->folderId();
         //        dd($this->parentFolderId);
         $this->folderRecords = [];
         $nodes = $this->folderRecords = Folder::get()->toTree();
@@ -68,8 +64,6 @@ class Create extends Component
             ];
         });
 
-        $this->initialFolderId = null;
-
     }
 
     public function store()
@@ -81,12 +75,15 @@ class Create extends Component
         $this->ledgerDefineRecord->column_define = [];
         $this->ledgerDefineRecord->save();
 
-//        jsが正しく初期化されない
-//        $redirectTo = route('ledgerDefine.edit', ['ledgerDefineId' => $this->ledgerDefineRecord->id, 'fromCreate' => true]);
-//        $this->success(__('ledger.has_been_created'), redirectTo:$redirectTo);
-//        $this->success(__('ledger.has_been_created'));
-        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $this->ledgerDefineRecord->id, 'fromCreate' => true]);
+//        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $this->ledgerDefineRecord->id, 'fromCreate' => true]);
         // イベントを発行
         //        $this->dispatch('ledgerDefineRecordStored');
+        $this->success(__('ledger.has_been_created'),
+            redirectTo: route('ledgerDefine.edit', [
+                'ledgerDefineId' => $this->ledgerDefineRecord->id,
+                'fromCreate' => true,
+            ])
+        );
+
     }
 }

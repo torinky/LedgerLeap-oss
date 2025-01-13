@@ -1,4 +1,4 @@
-<x-app-layout title="SETTING | DocumentCabinet">
+<x-app-layout title="{{__('ledger.folder.edit')}}">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-info leading-tight">
             <span class="fa-layers fa-fw mr-2">

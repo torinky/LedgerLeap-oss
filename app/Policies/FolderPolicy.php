@@ -22,94 +22,83 @@ class FolderPolicy
     /**
      * Determine whether the user can view any models.
      *
-     * @param User $user
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
         // ユーザーがフォルダの閲覧権限を持っているかどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('view_folders');
+        return $this->userService->hasPermission($user, 'view_folders');
     }
 
     /**
      * Determine whether the user can view the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function view(User $user, Folder $folder)
     {
         // ユーザーがフォルダの閲覧権限を持っているか、およびフォルダが閲覧可能かどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('view_folders')
+        return $this->userService->hasPermission($user, 'view_folders')
             && $this->userService->isReadableFolderForUser($user, $folder);
     }
 
     /**
      * Determine whether the user can create models.
      *
-     * @param User $user
      * @return Response|bool
      */
-    public function create(User $user)
+    public function create(User $user, Folder $folder)
     {
         // ユーザーがフォルダの作成権限を持っているかどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('create_folders');
+        return $this->userService->hasPermission($user, 'create_folders')
+            && $this->userService->isManageableFolderForUser($user, $folder);
     }
 
     /**
      * Determine whether the user can update the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function update(User $user, Folder $folder)
     {
         // ユーザーがフォルダの更新権限を持っているか、およびフォルダが管理可能かどうかをチェック
-        return $this->userService->hasPermission($user, 'manage_folders')
+        return $this->userService->hasPermission($user, 'update_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
     }
 
     /**
      * Determine whether the user can delete the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function delete(User $user, Folder $folder)
     {
         // ユーザーがフォルダの削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('delete_folders')
+        return $this->userService->hasPermission($user, 'delete_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
     }
 
     /**
      * Determine whether the user can restore the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function restore(User $user, Folder $folder)
     {
         // ユーザーがフォルダの復元権限を持っているか、およびフォルダが管理可能かどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('restore_folders')
+        return $this->userService->hasPermission($user, 'restore_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
     }
 
     /**
      * Determine whether the user can permanently delete the model.
      *
-     * @param User $user
-     * @param Folder $folder
      * @return Response|bool
      */
     public function forceDelete(User $user, Folder $folder)
     {
         // ユーザーがフォルダの強制削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
-        return $this->userService->getAllUniquePermissionsForUser($user)->contains('force_delete_folders')
+        return $this->userService->hasPermission($user, 'force_delete_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
     }
 }

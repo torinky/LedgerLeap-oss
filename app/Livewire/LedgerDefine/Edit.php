@@ -33,6 +33,10 @@ class Edit extends Component
 
     public function mount(request $request)
     {
+        if ($request->input('fromCreate')) {
+            $this->dispatch('reloadParentWindow');
+        }
+
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
 

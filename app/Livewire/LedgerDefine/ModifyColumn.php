@@ -50,10 +50,6 @@ class ModifyColumn extends Component
         if ($request->isMethod('POST')) {
             return;
         }
-        if ($request->input('fromCreate')) {
-            $this->success(__('ledger.has_been_created'));
-            $this->dispatch('reloadParentWindow');
-        }
 
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');

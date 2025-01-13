@@ -12,12 +12,20 @@ class CreateController extends Controller
 {
     public function create(StoreRequest $request)
     {
-        $rootFolder = Folder::root()->get();
-        $folderRecords = Folder::whereDescendantOf(1)->get();
-        $folderRecords = $rootFolder->merge($folderRecords);
-        $initialFolderId = $request->folderId();
+        /*        $rootFolder = Folder::root()->get();
+                $folderRecords = Folder::whereDescendantOf(1)->get();
+                $folderRecords = $rootFolder->merge($folderRecords);
+                $initialFolderId = $request->folderId();*/
 
-        return View::make('folder.create', compact('folderRecords', 'initialFolderId'));
+        $currentFolder = Folder::find($request->folderId());
+//        dd($currentFolder);
+//        if (auth()->user()->cannot('create', $currentFolder)) {
+        if (auth()->user()->cannot('create', $currentFolder)) {
+            abort(403, __('ledger.folder.not_allow_create'));
+        }
+
+//        return View::make('folder.create', compact('folderRecords', 'initialFolderId'));
+        return View::make('folder.create');
 
     }
 

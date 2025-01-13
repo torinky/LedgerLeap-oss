@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\UserService;
@@ -57,10 +58,13 @@ class LedgerDefinePolicy
      *
      * @return Response|bool
      */
-    public function create(User $user)
+    public function create(User $user, Folder $folder)
     {
         // ユーザーが所属する組織の権限も含めて、台帳定義の作成権限があるか確認
-        if ($this->userService->hasPermission($user, 'create_ledger_defines')) {
+        if (!$this->userService->hasPermission($user, 'create_ledger_defines')) {
+            return false;
+        }
+        if ($this->userService->isWritableFolderForUser($user, $folder)) {
             return true;
         }
 
@@ -223,9 +227,4 @@ class LedgerDefinePolicy
 
         return $this->userService->isWritableFolderForUser($user, $folder);
     }
-
-
-
-
-
 }
