@@ -5,166 +5,197 @@ namespace Tests\Unit\Policies;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Role;
 use App\Models\User;
+use App\Policies\LedgerDefinePolicy;
 use App\Policies\LedgerPolicy;
 use App\Services\UserService;
-use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LedgerPolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // 各テストメソッドの前にデータベースを初期化
-        $this->seed(RolesAndPermissionsSeeder::class);
-
-        // Spatieのキャッシュクリア
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
-    }
-
     public function test_view_any_returns_true_for_user_with_view_ledgers_permission()
     {
+        // Arrange
         $user = User::factory()->create();
-        $user->givePermissionTo('view_ledgers');
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $policy = new LedgerPolicy($userServiceMock);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'view_ledgers')->andReturn(true);
 
+        // LedgerDefinePolicy のモックを作成
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+
+        // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
         $this->assertTrue($policy->viewAny($user));
     }
-
     public function test_view_any_returns_false_for_user_without_view_ledgers_permission()
     {
+        // Arrange
         $user = User::factory()->create();
-
         $userServiceMock = Mockery::mock(UserService::class);
-        $policy = new LedgerPolicy($userServiceMock);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'view_ledgers')->andReturn(false);
+        // LedgerDefinePolicy のモックを作成
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
 
+        // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
         $this->assertFalse($policy->viewAny($user));
     }
 
     public function test_view_returns_true_for_user_with_view_ledgers_permission_and_readable_folder()
     {
+        // Arrange
         $user = User::factory()->create();
-        $user->givePermissionTo('view_ledgers');
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
         $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isReadableFolderForUser')->andReturn(true);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'view_ledgers')->andReturn(true);
+        $userServiceMock->shouldReceive('isReadableFolderForUser')->with($user, $ledger->define->folder)->andReturn(true);
 
-        $policy = new LedgerPolicy($userServiceMock);
-        $this->assertTrue($policy->view($user, $ledgerDefine));
+        // LedgerDefinePolicy のモックを作成
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        // ledgerView メソッドのモック設定を修正：$ledger->define を使う
+        $ledgerDefinePolicyMock->shouldReceive('ledgerView')->with($user, $ledger->define)->andReturn(true);
+
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
+        $this->assertTrue($policy->view($user, $ledger));
     }
-
     public function test_view_returns_false_for_user_when_folder_is_not_readable()
     {
+        // Arrange
         $user = User::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create();
         $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isReadableFolderForUser')->andReturn(false);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'view_ledgers')->andReturn(true);
+        $userServiceMock->shouldReceive('isReadableFolderForUser')->with($user, $ledger->define->folder)->andReturn(false);
+        // ledgerView メソッドのモック設定を追加
+        $ledgerDefinePolicyMock->shouldReceive('ledgerView')->with($user, $ledger->define)->andReturn(false);
 
-        $policy = new LedgerPolicy($userServiceMock);
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
 
-        $this->assertFalse($policy->view($user, $ledgerDefine));
-    }
-
-    public function test_view_returns_false_for_user_with_view_ledgers_permission_but_not_readable_folder()
-    {
-        $user = User::factory()->create();
-        $user->givePermissionTo('view_ledgers');
-
-        // ユーザーにロールを割り当て、ロールにフォルダを関連付ける
-        $role = Role::create(['name' => 'test-role']);
-        $user->assignRole($role);
-        $folder = Folder::factory()->create();
-        $role->readableFolders()->attach($folder, ['permission' => 'write', 'modifier_id' => $user->id]);
-
-        // Spatieのキャッシュクリア
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
-
-        // UserService のモックを作成
-        $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isReadableFolderForUser')
-            ->with($user, $ledgerDefine->folder)
-            ->andReturn(false);
-
-        $policy = new LedgerPolicy($userServiceMock);
-
-        $this->assertFalse($policy->view($user, $ledgerDefine));
-    }
-
-    public function test_view_returns_false_when_ledger_define_is_null()
-    {
-        $user = User::factory()->create();
-        $ledger = Ledger::factory()->create(); // LedgerDefine は関連付けない
-
-        $userServiceMock = Mockery::mock(UserService::class);
-        $policy = new LedgerPolicy($userServiceMock);
-
-        $this->assertFalse($policy->view($user, $ledger->define));
+        // Act & Assert
+        $this->assertFalse($policy->view($user, $ledger));
     }
 
     public function test_create_returns_true_for_user_with_create_ledgers_permission_and_writable_folder()
     {
+        // Arrange
         $user = User::factory()->create();
-        $user->givePermissionTo('create_ledgers');
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
-        // UserService のモックを作成し、isWritableFolderForUser および isReadableFolderForUser メソッドが true を返すように設定
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
-        $userServiceMock->shouldReceive('isReadableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerCreate')->with($user, $ledgerDefine)->andReturn(true);
 
-        // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
-        $policy = new LedgerPolicy($userServiceMock);
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
 
+        // Act & Assert
         $this->assertTrue($policy->create($user, $ledgerDefine));
     }
 
     public function test_create_returns_false_for_user_without_create_ledgers_permission()
     {
+        // Arrange
         $user = User::factory()->create();
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
-        // UserService のモックを作成
         $userServiceMock = Mockery::mock(UserService::class);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerCreate')->with($user, $ledgerDefine)->andReturn(false);
 
-        // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
-        $policy = new LedgerPolicy($userServiceMock);
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
         $this->assertFalse($policy->create($user, $ledgerDefine));
     }
 
-    public function test_create_returns_false_for_user_with_create_ledgers_permission_but_not_writable_folder()
+    public function test_update_returns_true_for_user_with_edit_ledgers_permission_and_writable_folder()
     {
+        // Arrange
         $user = User::factory()->create();
-        $user->givePermissionTo('create_ledgers');
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
-        // UserService のモックを作成し、isWritableFolderForUser メソッドが false を返すように設定
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerUpdate')->with($user, $ledger->define)->andReturn(true);
 
-        // LedgerPolicy のインスタンスを作成し、モックをコンストラクタインジェクション
-        $policy = new LedgerPolicy($userServiceMock);
-        $this->assertFalse($policy->create($user, $ledgerDefine));
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
+        $this->assertTrue($policy->update($user, $ledger));
+    }
+
+    public function test_update_returns_false_for_user_without_edit_ledgers_permission()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
+
+        $userServiceMock = Mockery::mock(UserService::class);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerUpdate')->with($user, $ledger->define)->andReturn(false);
+
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
+        $this->assertFalse($policy->update($user, $ledger));
+    }
+
+    public function test_delete_returns_true_for_user_with_delete_ledgers_permission_and_writable_folder()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
+
+        $userServiceMock = Mockery::mock(UserService::class);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerDelete')->with($user, $ledger->define)->andReturn(true);
+
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
+        $this->assertTrue($policy->delete($user, $ledger));
+    }
+
+    public function test_delete_returns_false_for_user_without_delete_ledgers_permission()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
+
+        $userServiceMock = Mockery::mock(UserService::class);
+        $ledgerDefinePolicyMock = Mockery::mock(LedgerDefinePolicy::class);
+        $ledgerDefinePolicyMock->shouldReceive('ledgerDelete')->with($user, $ledger->define)->andReturn(false);
+
+        $policy = new LedgerPolicy($userServiceMock, $ledgerDefinePolicyMock);
+
+        // Act & Assert
+        $this->assertFalse($policy->delete($user, $ledger));
     }
 
     protected function tearDown(): void
