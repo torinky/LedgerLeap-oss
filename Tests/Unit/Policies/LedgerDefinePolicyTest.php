@@ -91,26 +91,48 @@ class LedgerDefinePolicyTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
+        $folder = Folder::factory()->create();
+
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'create_ledger_defines')->andReturn(true);
+        // モックの設定: isWritableFolderForUser が true を返すようにする
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
-        $this->assertTrue($policy->create($user));
+        // テストメソッドの引数に $folder を追加
+        $this->assertTrue($policy->create($user, $folder));
     }
 
     public function test_create_returns_false_for_user_without_create_ledger_defines_permission()
     {
         // Arrange
         $user = User::factory()->create();
+        $folder = Folder::factory()->create(); // $folderの定義がなく、hasPermissionがfalseの場合にしか通らないので追加
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'create_ledger_defines')->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
-        $this->assertFalse($policy->create($user));
+        // テストメソッドの引数に $folder を追加
+        $this->assertFalse($policy->create($user, $folder));
     }
 
+    public function test_create_returns_false_for_user_with_create_ledger_defines_permission_but_not_writable_folder()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        $userServiceMock = Mockery::mock(UserService::class);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'create_ledger_defines')->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $folder)->andReturn(false);
+        $policy = new LedgerDefinePolicy($userServiceMock);
+
+        // Act & Assert
+        $this->assertFalse($policy->create($user, $folder)); // $folder を渡すように修正
+    }
     public function test_update_returns_true_for_user_with_manage_ledger_defines_permission_and_manageable_folder()
     {
         // Arrange
