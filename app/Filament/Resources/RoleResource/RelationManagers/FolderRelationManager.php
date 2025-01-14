@@ -56,8 +56,8 @@ class FolderRelationManager extends RelationManager
     {
         $role = $this->getOwnerRecord();
         $existingFolderIds = RoleFolderPermission::where('role_id', $role->id)
+            ->where('permission', $this->permission->value)
             ->pluck('folder_id');
-
         return $table
             // Support changing table heading by translations.
             ->heading(__((string)str(static::getRelationshipName())))
