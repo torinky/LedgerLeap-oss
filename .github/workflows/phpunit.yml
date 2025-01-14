@@ -6,7 +6,7 @@ on:
 
 env:
   DB_USERNAME: sail
-  DB_PASSWORD: password
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
@@ -22,8 +22,8 @@ jobs:
         env:
           MYSQL_DATABASE: 'ledgerleap'
           MYSQL_USER: ${{ env.DB_USERNAME }}
-          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }} #  シークレットを使用
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }} #  シークレットを使用
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
         options: >-
           --health-cmd "mysqladmin ping"
@@ -53,9 +53,9 @@ jobs:
           MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
         run: |
           mysql -h mysql.test -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON ledgerleap.* TO sail@'%';
+            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
             FLUSH PRIVILEGES;
-            create database ledgerleap;
+            CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         working-directory: ${{ github.workspace }}
