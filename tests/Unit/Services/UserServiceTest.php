@@ -1,5 +1,7 @@
 <?php
 
+namespace tests\Unit\Services;
+
 use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Permission;
