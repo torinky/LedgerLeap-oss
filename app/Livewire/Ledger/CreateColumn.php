@@ -151,16 +151,20 @@ class CreateColumn extends Component
         if (!isset($this->requredColumnIds)) {
             $this->initRequireColumns();
         }
+        $rawCount = collect($this->content)->filter(function ($value, $key) {
+            if (!is_array(($value))) {
+                $value = trim($value);
+            } else {
+                $value = array_filter($value, 'strlen');
+            }
 
-        $this->progress = collect($this->content)->filter(function ($value, $key) {
-                if (!is_array(($value))) {
-                    $value = trim($value);
-                } else {
-                    $value = array_filter($value, 'strlen');
-                }
+            return !empty($value) && in_array($key, $this->requredColumnIds);
+        })->count();
 
-                return !empty($value) && in_array($key, $this->requredColumnIds);
-            })->count() / $this->totalRequireColumnCount * 100;
+        if ($rawCount > 0) {
+            $this->progress = $rawCount / $this->totalRequireColumnCount * 100;
+        }
+
     }
 
     /**
