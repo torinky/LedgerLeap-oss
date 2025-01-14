@@ -124,26 +124,25 @@ class CreateColumn extends Component
             $column = $this->ledgerDefineRecord->column_define[$columnId];
             $this->updateProgress();
 
+            $this->labelColor[$columnId] = 'muted';
             if ($column->required) {
-                $this->labelColor[$column->id] = 'warning';
-            } else {
-                $this->labelColor[$column->id] = 'muted';
+                $this->labelColor[$columnId] = 'warning';
             }
-            $tmpColumnValue = $this->content[$column->id];
+            $tmpColumnValue = $this->content[$columnId];
 
-            if (empty($tmpColumnValue)) {
-                $this->labelColor[$column->id] = 'muted';
-            } elseif ($this->getErrorBag()->hasAny($propertyName)) {
-                $this->labelColor[$column->id] = 'error';
+            if (empty($tmpColumnValue) && $this->getErrorBag()->hasAny($propertyName)) {
+                $this->labelColor[$columnId] = 'error';
             } else {
                 if (is_array($tmpColumnValue)) {
-                    $this->labelColor[$column->id] = (in_array(true, $tmpColumnValue) ? 'success' : 'muted');
+                    $this->labelColor[$columnId] = (count($tmpColumnValue) > 0) ? 'success' : 'muted';
                 } else {
-                    $this->labelColor[$column->id] = (trim($tmpColumnValue) !== '' ? 'success' : 'muted');
+                    $tmpColumnValue = trim($tmpColumnValue);
+                    $this->labelColor[$columnId] = ($tmpColumnValue !== '' ? 'success' : 'muted');
                 }
             }
         } catch (ValidationException $e) {
             error_log('ValidationException occurred: ' . $e->getMessage());
+            $this->error(__('ledger.validation.failed'), $e->getMessage());
         }
     }
 
