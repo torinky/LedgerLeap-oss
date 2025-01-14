@@ -58,4 +58,5 @@ jobs:
             create database ledgerleap;
           EOF
       - name: Execute tests (Unit and Feature tests) via PHPUnit
+        working-directory: ${{ github.workspace }}
         run: vendor/bin/phpunit
