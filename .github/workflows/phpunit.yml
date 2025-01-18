@@ -46,21 +46,27 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
 
-      #      - name: Grant database privileges
-      #        env:
-      #          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-      #        run: |
-      #          mysql -h mysql -u root --force <<EOF
-      #            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
-      #            FLUSH PRIVILEGES;
-      #            CREATE DATABASE IF NOT EXISTS ledgerleap;
-      #          EOF
+      - name: Generate key
+        run: php artisan key:generate --env testing
+
+      - name: Set hostname
+        run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
+
+      - name: Grant database privileges
+        env:
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          mysql -h mysql -u root --force <<EOF
+            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
+            FLUSH PRIVILEGES;
+            CREATE DATABASE IF NOT EXISTS ledgerleap;
+          EOF
 
       - name: Cache Vendor
         id: cache-vendor
         uses: actions/cache@v4
         with:
-          path: ./vendor
+          path: vendor
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
       - name: Install Dependencies
@@ -80,6 +86,8 @@ jobs:
         run: php artisan --version
       - name: Composer Validate
         run: composer validate
+      - name: Run tests
+        run: php artisan test
       - name: Run Migrate
         run: php artisan migrate
       - name: Run Migrate Refresh
@@ -167,11 +175,6 @@ jobs:
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-      - name: Generate key
-        run: php artisan key:generate --env testing
-
-      - name: Set hostname
-        run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
 
       - name: Clear Config Cache
         run: php artisan config:clear
