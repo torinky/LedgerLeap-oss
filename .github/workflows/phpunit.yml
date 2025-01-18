@@ -68,6 +68,9 @@ jobs:
       - name: Generate key
         run: php artisan key:generate --env testing
 
+      - name: composer dump-autoload
+        run: composer dump-autoload
+
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
 
