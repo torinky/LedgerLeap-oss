@@ -68,8 +68,8 @@ jobs:
       - name: Generate key
         run: php artisan key:generate --env testing
 
-      #      - name: composer dump-autoload
-      #        run: composer dump-autoload
+      - name: composer dump-autoload
+        run: composer dump-autoload
 
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
@@ -179,11 +179,11 @@ jobs:
       #        run: |
       #          printenv
 
-      #      - name: Install Dependencies
-      #        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+      - name: Install Dependencies
+        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
 
-      #      - name: Generate key
-      #        run: php artisan key:generate --env testing
+      - name: Generate key
+        run: php artisan key:generate --env testing
 
       #      - name: Check Composer Autoload
       #        run: |
@@ -209,10 +209,10 @@ jobs:
       #          ls -la tests/
       #          cat tests/TestCase.php
 
-      #      - name: Dump Autoload
-      #        run: |
-      #          composer dump-autoload
-      #          composer dump-autoload -o
+      - name: Dump Autoload
+        run: |
+          composer dump-autoload
+          composer dump-autoload -o
 
       - name: Clear Cache
         run: |
@@ -221,6 +221,15 @@ jobs:
           php artisan view:clear
 
 
+      #      - name: ディレクトリ構造の確認
+      #        run: ls -lR ${{ github.workspace }}
+
+      - name: Execute tests (Unit and Feature tests) via artisan1
+        run: |
+          php artisan test --testsuite Unit # Unit テストスイートのみ実行
+          php artisan test --testsuite Feature # Feature テストスイートのみ実行
+
       - name: Execute tests (Unit and Feature tests) via PHPUnit
+        continue-on-error: true
         run: vendor/bin/phpunit
 
