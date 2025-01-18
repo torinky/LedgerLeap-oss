@@ -70,7 +70,7 @@ jobs:
         run: |
           ls -l .env*
           cat .env.testing
-          php -r "var_dump(getenv());"
+          #          php -r "var_dump(getenv());"
           php -r "var_dump($_SERVER);"
       - name: ディレクトリ構造の確認 # デバッグ用(必要に応じてコメントアウト)
         run: ls -lR ${{ github.workspace }}
