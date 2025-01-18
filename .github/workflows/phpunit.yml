@@ -153,11 +153,13 @@ jobs:
       - name: Check PHP Version and Configuration
         continue-on-error: true
         run: |
+        run: |
           php -v
-          php -n -i | grep "Loaded Configuration File" # -n オプションを追加
+          # Use the expected path to your php.ini file
+          php -n -i | grep "Loaded Configuration File"
           php -n -i | grep "variables_order"
           php -n -i | grep "register_globals"
-          php -i | grep extension_dir # extension_dir を確認
+          php -i | grep extension_dir
 
       - name: Check .env Content
         run: cat .env
@@ -168,6 +170,23 @@ jobs:
           php -r "var_dump(getenv('DB_HOST')); var_dump(getenv('DB_DATABASE')); var_dump(getenv('APP_ENV'));"
           php -r "print_r($_ENV);"
           php -r "print_r($_SERVER);"
+
+      - name: Check Environment Variables
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          # ... other environment variables
+        run: |
+          printenv
+
+      - name: Install Dependencies
+        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+
+      - name: Generate key
+        run: php artisan key:generate --env testing
+
+      - name: composer dump-autoload
+        run: composer dump-autoload
 
       - name: Check Composer Autoload
         run: |
