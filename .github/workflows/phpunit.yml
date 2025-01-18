@@ -58,6 +58,19 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # または適切なバージョン
+
+      - name: Install Frontend Dependencies
+        working-directory: ./ # フロントエンドのルートディレクトリを指定
+        run: npm ci # または yarn install --frozen-lockfile
+
+      - name: Build Frontend Assets
+        working-directory: ./ # フロントエンドのルートディレクトリを指定
+        run: npm run build # または yarn build / vite build
+
       - name: Laravel Setting
         run: |
           cp .env.example .env
@@ -179,8 +192,8 @@ jobs:
       #        run: |
       #          printenv
 
-      - name: Install Dependencies
-        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+      #      - name: Install Dependencies
+      #        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
 
       - name: Generate key
         run: php artisan key:generate --env testing
