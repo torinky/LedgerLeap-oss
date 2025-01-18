@@ -46,6 +46,25 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
 
+      - name: Install Dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+
+      - name: Cache Vendor
+        id: cache-vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Laravel Setting
+        run: |
+          cp .env.example .env
+          php artisan optimize
+          git config --local core.fileMode false
+          chmod -R 777 storage bootstrap/cache
+
       - name: Generate key
         run: php artisan key:generate --env testing
 
@@ -62,22 +81,6 @@ jobs:
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
 
-      - name: Cache Vendor
-        id: cache-vendor
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-      - name: Install Dependencies
-        if: steps.cache-vendor.outputs.cache-hit != 'true'
-        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
-      - name: Laravel Setting
-        run: |
-          cp .env.example .env
-          php artisan optimize
-          git config --local core.fileMode false
-          chmod -R 777 storage bootstrap/cache
       - name: PHP Version
         run: php --version
       - name: Composer Version
