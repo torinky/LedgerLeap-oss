@@ -209,7 +209,9 @@ jobs:
 
       - name: Execute tests (Unit and Feature tests) via artisan1
         continue-on-error: true
-        run: php artisan test
+        run: |
+          php artisan test --testsuite Unit # Unit テストスイートのみ実行
+          php artisan test --testsuite Feature # Feature テストスイートのみ実行
 
       - name: Execute tests (Unit and Feature tests) via artisan
         continue-on-error: true
