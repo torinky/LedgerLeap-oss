@@ -42,15 +42,15 @@ jobs:
 
       - name: Copy .env.example and Edit
         run: |
-          cp .env.example .env.testing
-          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
-          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql/g" .env.testing
-          sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env.testing
-          sed -i "s/DB_PASSWORD=/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/g" .env.testing
-          sed -i "s/CACHE_DRIVER=file/CACHE_DRIVER=array/g" .env.testing
-          sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env.testing
-          sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env.testing
-          sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env.testing
+          cp .env.example .env
+          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env
+          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql/g" .env
+          sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env
+          sed -i "s/DB_PASSWORD=/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/g" .env
+          sed -i "s/CACHE_DRIVER=file/CACHE_DRIVER=array/g" .env
+          sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env
+          sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env
+          sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env
 
       - name: Check OS Environment Variables
         run: env
@@ -64,8 +64,8 @@ jobs:
           php -n -i | grep "register_globals"
           php -i | grep extension_dir # extension_dir を確認
 
-      - name: Check .env.testing Content
-        run: cat .env.testing
+      - name: Check .env Content
+        run: cat .env
 
       - name: Check PHP Environment Variables (Crucial Debug)
         continue-on-error: true
