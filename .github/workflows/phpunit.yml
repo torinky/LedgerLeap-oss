@@ -56,22 +56,33 @@ jobs:
         run: env
 
       - name: Check PHP Version and Configuration
+        continue-on-error: true
         run: |
           php -v
-          php -i | grep "Loaded Configuration File"
-          php -i | grep "variables_order"
-          php -i | grep "register_globals"
+          php -n -i | grep "Loaded Configuration File" # -n オプションを追加
+          php -n -i | grep "variables_order"
+          php -n -i | grep "register_globals"
+          php -i | grep extension_dir # extension_dir を確認
 
       - name: Check .env.testing Content
         run: cat .env.testing
 
       - name: Check PHP Environment Variables (Crucial Debug)
-        continue-on-error: true # エラー時も続行
+        continue-on-error: true
         run: |
-          php -r "var_dump(getenv('DB_HOST')); var_dump(getenv('DB_DATABASE')); var_dump(getenv('APP_ENV'));" # getenv() で個別に取得
-          php -r "print_r($_ENV);" # print_r で出力
+          php -r "var_dump(getenv('DB_HOST')); var_dump(getenv('DB_DATABASE')); var_dump(getenv('APP_ENV'));"
+          php -r "print_r($_ENV);"
           php -r "print_r($_SERVER);"
 
+      - name: Check Composer Autoload
+        run: |
+          COMPOSER_BIN=$(which composer)
+          if [ -n "$COMPOSER_BIN" ]; then
+              echo "Composer found: $COMPOSER_BIN"
+              ls -l vendor/autoload.php
+          else
+              echo "Composer not found"
+          fi
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
@@ -96,7 +107,7 @@ jobs:
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         working-directory: ${{ github.workspace }}
-        if: always() # 前のステップが失敗しても実行
+        if: always()
         run: vendor/bin/phpunit
       - name: ディレクトリ構造の確認
         run: ls -lR ${{ github.workspace }}
