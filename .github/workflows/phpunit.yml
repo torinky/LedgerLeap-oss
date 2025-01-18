@@ -36,10 +36,10 @@ jobs:
           php-version: '8.2'
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
-      - name: Copy .env.example to .env.testing
-        run: cp .env.example .env.testing
-      - name: .env.testing を編集 (重要な修正)
+      - name: Copy .env.example to .env.testing and Edit
         run: |
+          cp .env.example .env.testing
+          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
           sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
           sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql.test/g" .env.testing
           sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env.testing
@@ -48,6 +48,11 @@ jobs:
           sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env.testing
           sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env.testing
           sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env.testing
+      - name: Clear Config Cache # 追加
+        run: php artisan config:clear
+      - name: .env.testingの内容確認
+        run:
+          cat .env.testing
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
       - name: Generate key
@@ -63,6 +68,12 @@ jobs:
             FLUSH PRIVILEGES;
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
+      - name: Debug - Check Files and Environment # 追加
+        run: |
+          ls -l .env*
+          cat .env.testing
+          php -r "var_dump(getenv());"
+          php -r "var_dump($_SERVER);"
       - name: ディレクトリ構造の確認 # デバッグ用(必要に応じてコメントアウト)
         run: ls -lR ${{ github.workspace }}
       - name: 環境変数の確認 # デバッグ用(必要に応じてコメントアウト)
