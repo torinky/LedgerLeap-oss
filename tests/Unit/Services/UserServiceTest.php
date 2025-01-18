@@ -12,7 +12,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Collection;
 // use Mockery;
 use Spatie\Permission\PermissionRegistrar;
-use Tests\TestCase;
+use tests\TestCase;
 
 class UserServiceTest extends TestCase
 {

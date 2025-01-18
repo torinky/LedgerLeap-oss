@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Policies;
+namespace tests\Unit\Policies;
 
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -9,7 +9,7 @@ use App\Policies\LedgerDefinePolicy;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Tests\TestCase;
+use tests\TestCase;
 
 class LedgerDefinePolicyTest extends TestCase
 {

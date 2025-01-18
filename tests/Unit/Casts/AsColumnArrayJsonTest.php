@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\Unit\Casts;
+namespace tests\Unit\Casts;
 
 use App\Casts\AsColumnArrayJson;
 use Illuminate\Support\Facades\Log;
 use stdClass;
-use Tests\TestCase;
+use tests\TestCase;
 
 class AsColumnArrayJsonTest extends TestCase
 {

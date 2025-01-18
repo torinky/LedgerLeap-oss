@@ -198,6 +198,11 @@ jobs:
       #      - name: Install Dependencies
       #        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
+      - name: Check Project Structure
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -type d
 
       - name: Directory Structure Check
         run: |

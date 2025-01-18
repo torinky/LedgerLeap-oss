@@ -1,10 +1,10 @@
 <?php
 
-namespace Tests\Unit\Models;
+namespace tests\Unit\Models;
 
 use App\Models\ColumnDefine;
 use RuntimeException;
-use Tests\TestCase;
+use tests\TestCase;
 
 class ColumnDefineTest extends TestCase
 {

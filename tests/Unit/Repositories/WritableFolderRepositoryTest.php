@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Repositories;
+namespace tests\Unit\Repositories;
 
 use App\Models\Folder;
 use App\Models\Role;
@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Tests\TestCase;
+use tests\TestCase;
 
 class WritableFolderRepositoryTest extends TestCase
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Services\Ledger;
+namespace tests\Unit\Services\Ledger;
 
 use App\Models\ColumnDefine;
 use App\Services\Ledger\ColumnHtmlService;
