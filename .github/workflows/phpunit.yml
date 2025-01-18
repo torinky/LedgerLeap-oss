@@ -1,4 +1,4 @@
-name: Laravel
+name: Laravel Sail with Mroonga Debug
 
 on:
   push:
@@ -6,19 +6,19 @@ on:
 
 env:
   DB_USERNAME: sail
-  DB_PASSWORD: ${{ secrets.DB_PASSWORD }} # Secretsに登録したパスワード
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
   phpunit:
     runs-on: ubuntu-latest
     services:
-      mysql.test:
-        image: 'groonga/mroonga:mysql-8.0-latest'
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: 'ledgerleap'
+          MYSQL_DATABASE: ledgerleap
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -28,59 +28,75 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
-      - name: Copy .env.example to .env.testing and Edit
+
+      - name: Copy .env.example and Edit
         run: |
           cp .env.example .env.testing
           sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
-          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
-          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql.test/g" .env.testing
+          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql/g" .env.testing
           sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env.testing
           sed -i "s/DB_PASSWORD=/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/g" .env.testing
           sed -i "s/CACHE_DRIVER=file/CACHE_DRIVER=array/g" .env.testing
           sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env.testing
           sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env.testing
           sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env.testing
-      - name: .env.testingの内容確認
-        run:
-          cat .env.testing
+
+      - name: Check OS Environment Variables
+        run: env
+
+      - name: Check PHP Version and Configuration
+        run: |
+          php -v
+          php -i | grep "Loaded Configuration File"
+          php -i | grep "variables_order"
+          php -i | grep "register_globals"
+
+      - name: Check .env.testing Content
+        run: cat .env.testing
+
+      - name: Check PHP Environment Variables (Crucial Debug)
+        continue-on-error: true # エラー時も続行
+        run: |
+          php -r "var_dump(getenv('DB_HOST')); var_dump(getenv('DB_DATABASE')); var_dump(getenv('APP_ENV'));" # getenv() で個別に取得
+          php -r "print_r($_ENV);" # print_r で出力
+          php -r "print_r($_SERVER);"
+
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
       - name: Generate key
         run: php artisan key:generate --env testing
+
       - name: Set hostname
-        run: sudo echo "127.0.0.1 mysql.test" | sudo tee -a /etc/hosts
+        run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
+
       - name: Grant database privileges
         env:
           MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
         run: |
-          mysql -h mysql.test -u root --force <<EOF
+          mysql -h mysql -u root --force <<EOF
             GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
             FLUSH PRIVILEGES;
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
-      - name: Debug - Check Files and Environment # 追加
-        run: |
-          ls -l .env*
-          cat .env.testing
-          #          php -r "var_dump(getenv());"
-          php -r "var_dump($_SERVER);"
-      - name: ディレクトリ構造の確認 # デバッグ用(必要に応じてコメントアウト)
-        run: ls -lR ${{ github.workspace }}
-      - name: 環境変数の確認 # デバッグ用(必要に応じてコメントアウト)
-        run: |
-          echo "APP_ENV: $APP_ENV"
-          echo "DB_DATABASE: $DB_DATABASE"
-          cat .env.testing
-      - name: Clear Config Cache # 追加
+
+      - name: Clear Config Cache
         run: php artisan config:clear
+
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         working-directory: ${{ github.workspace }}
+        if: always() # 前のステップが失敗しても実行
         run: vendor/bin/phpunit
+      - name: ディレクトリ構造の確認
+        run: ls -lR ${{ github.workspace }}
