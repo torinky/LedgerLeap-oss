@@ -6,7 +6,7 @@ on:
 
 env:
   DB_USERNAME: sail
-  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }} # Secretsに登録したパスワード
   MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
@@ -38,6 +38,16 @@ jobs:
           tools: composer:v2
       - name: Copy .env.example to .env.testing
         run: cp .env.example .env.testing
+      - name: .env.testing を編集 (重要な修正)
+        run: |
+          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env.testing
+          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql.test/g" .env.testing
+          sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env.testing
+          sed -i "s/DB_PASSWORD=/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/g" .env.testing
+          sed -i "s/CACHE_DRIVER=file/CACHE_DRIVER=array/g" .env.testing
+          sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env.testing
+          sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env.testing
+          sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env.testing
       - name: Install Dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
       - name: Generate key
@@ -53,14 +63,13 @@ jobs:
             FLUSH PRIVILEGES;
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
-      - name: ディレクトリ構造の確認 # デバッグ用
+      - name: ディレクトリ構造の確認 # デバッグ用(必要に応じてコメントアウト)
         run: ls -lR ${{ github.workspace }}
-      - name: 環境変数の確認 # デバッグ用
+      - name: 環境変数の確認 # デバッグ用(必要に応じてコメントアウト)
         run: |
           echo "APP_ENV: $APP_ENV"
           echo "DB_DATABASE: $DB_DATABASE"
           cat .env.testing
       - name: Execute tests (Unit and Feature tests) via PHPUnit
-        working-directory: ${{ github.workspace }} # 重要
+        working-directory: ${{ github.workspace }}
         run: vendor/bin/phpunit
-
