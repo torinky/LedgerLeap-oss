@@ -146,16 +146,6 @@ jobs:
       #          DB_DATABASE: ":memory:"
       #        run: ./vendor/bin/pest --parallel --cache-directory storage/pest/cache
 
-      - name: Run tests
-        continue-on-error: true
-        run: php artisan test
-
-      - name: Execute tests (Unit and Feature tests) via PHPUnit
-        continue-on-error: true
-        if: always()
-        run: |
-          ls -lR ./Tests
-          vendor/bin/phpunit ./Tests
 
       - name: Check PHP Version and Configuration
         continue-on-error: true
@@ -185,8 +175,9 @@ jobs:
           else
               echo "Composer not found"
           fi
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      #      - name: Install Dependencies
+      #        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
 
       - name: Clear Config Cache
@@ -194,3 +185,8 @@ jobs:
 
       - name: ディレクトリ構造の確認
         run: ls -lR ${{ github.workspace }}
+
+      - name: Execute tests (Unit and Feature tests) via PHPUnit
+        run: vendor/bin/phpunit ./Tests
+
+
