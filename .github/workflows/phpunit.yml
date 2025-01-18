@@ -8,6 +8,8 @@ env:
   DB_USERNAME: sail
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   MAIL_FROM_ADDRESS: info@example.com
+  DB_PORT: 3306
+  DB_DATABASE: laravel
 
 jobs:
   phpunit:
@@ -40,20 +42,85 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
 
-      - name: Copy .env.example and Edit
+      - name: Cache Vendor
+        id: cache-vendor
+        uses: actions/cache@v4
+        with:
+          path: ./vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install Dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+      - name: Laravel Setting
         run: |
           cp .env.example .env
-          sed -i "s/APP_ENV=local/APP_ENV=testing/g" .env
-          sed -i "s/DB_HOST=127.0.0.1/DB_HOST=mysql/g" .env
-          sed -i "s/DB_USERNAME=root/DB_USERNAME=sail/g" .env
-          sed -i "s/DB_PASSWORD=/DB_PASSWORD=${{ secrets.DB_PASSWORD }}/g" .env
-          sed -i "s/CACHE_DRIVER=file/CACHE_DRIVER=array/g" .env
-          sed -i "s/SESSION_DRIVER=file/SESSION_DRIVER=array/g" .env
-          sed -i "s/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=sync/g" .env
-          sed -i "s/MAIL_MAILER=smtp/MAIL_MAILER=array/g" .env
+          php artisan optimize
+          git config --local core.fileMode false
+          chmod -R 777 storage bootstrap/cache
+      - name: PHP Version
+        run: php --version
+      - name: Composer Version
+        run: composer --version
+      - name: Laravel Version
+        run: php artisan --version
+      - name: Composer Validate
+        run: composer validate
+      - name: Run Migrate
+        run: php artisan migrate
+      - name: Run Migrate Refresh
+        run: php artisan migrate:refresh
+      - name: Run Seeding
+        run: php artisan db:seed
+      - name: Run IDE Helper Models
+        run: |
+          php artisan ide-helper:models --write --reset
+          ./vendor/bin/pint app/Models
+          if ! git diff --exit-code; then
+            echo "Error: The phpdoc for the model ide-helper is not updated!"
+            echo "Run: php artisan ide-helper:models --write --reset"
+            exit 1
+          fi
+      - name: Cache Pint
+        uses: actions/cache@v4
+        with:
+          path: ./.pint.cache
+          key: ${{ runner.os }}-pint-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-pint-
+      - name: Run Pint
+        run: ./vendor/bin/pint --test
+      - name: Cache Rector
+        uses: actions/cache@v4
+        with:
+          path: ./storage/rector/cache
+          key: ${{ runner.os }}-rector-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-rector-
+      - name: Run Rector
+        run: ./vendor/bin/rector process --dry-run
+      - name: Cache PHPStan
+        uses: actions/cache@v4
+        with:
+          path: ./storage/phpstan
+          key: ${{ runner.os }}-phpstan-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-phpstan-
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyze
+      - name: Cache Pest
+        uses: actions/cache@v4
+        with:
+          path: ./storage/pest/cache
+          key: ${{ runner.os }}-pest-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-pest-
+      - name: Run Pest
+        env:
+          SESSION_DRIVER: array
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+        run: ./vendor/bin/pest --parallel --cache-directory storage/pest/cache
 
-      - name: Check OS Environment Variables
-        run: env
+      - name: Execute tests (Unit and Feature tests) via PHPUnit
+        if: always()
+        run: vendor/bin/phpunit
 
       - name: Check PHP Version and Configuration
         continue-on-error: true
@@ -105,9 +172,5 @@ jobs:
       - name: Clear Config Cache
         run: php artisan config:clear
 
-      - name: Execute tests (Unit and Feature tests) via PHPUnit
-        working-directory: ${{ github.workspace }}
-        if: always()
-        run: vendor/bin/phpunit
       - name: ディレクトリ構造の確認
         run: ls -lR ${{ github.workspace }}
