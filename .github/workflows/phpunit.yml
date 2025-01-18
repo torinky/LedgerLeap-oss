@@ -183,10 +183,21 @@ jobs:
       - name: Clear Config Cache
         run: php artisan config:clear
 
-      - name: ディレクトリ構造の確認
-        run: ls -lR ${{ github.workspace }}
+      #      - name: ディレクトリ構造の確認
+      #        run: ls -lR ${{ github.workspace }}
+
+      - name: Execute tests (Unit and Feature tests) via artisan1
+        continue-on-error: true
+        run: php artisan test
+
+      - name: Execute tests (Unit and Feature tests) via artisan
+        continue-on-error: true
+        run: php artisan test ./Tests
+
+      - name: Execute tests (Unit and Feature tests) via PHPUnit1
+        continue-on-error: true
+        run: vendor/bin/phpunit
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         run: vendor/bin/phpunit ./Tests
-
 
