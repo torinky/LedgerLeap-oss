@@ -96,8 +96,9 @@ jobs:
         run: php artisan migrate
       - name: Run Migrate Refresh
         run: php artisan migrate:refresh
-      - name: Run Seeding
-        run: php artisan db:seed
+      #      - name: Run Seeding
+      #        run: php artisan db:seed
+
       #      - name: Run IDE Helper Models
       #        continue-on-error: true
       #        run: |
@@ -184,9 +185,6 @@ jobs:
       - name: Generate key
         run: php artisan key:generate --env testing
 
-      - name: composer dump-autoload
-        run: composer dump-autoload
-
       - name: Check Composer Autoload
         run: |
           COMPOSER_BIN=$(which composer)
@@ -201,8 +199,22 @@ jobs:
       #        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
 
-      - name: Clear Config Cache
-        run: php artisan config:clear
+      - name: Directory Structure Check
+        run: |
+          ls -la tests/
+          cat tests/TestCase.php
+
+      - name: Dump Autoload
+        run: |
+          composer dump-autoload
+          composer dump-autoload -o
+
+      - name: Clear Cache
+        run: |
+          php artisan config:clear
+          php artisan cache:clear
+          php artisan view:clear
+
 
       #      - name: ディレクトリ構造の確認
       #        run: ls -lR ${{ github.workspace }}
