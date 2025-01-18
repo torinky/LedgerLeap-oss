@@ -89,8 +89,6 @@ jobs:
         run: php artisan --version
       - name: Composer Validate
         run: composer validate
-      - name: Run tests
-        run: php artisan test
       - name: Run Migrate
         run: php artisan migrate
       - name: Run Migrate Refresh
@@ -142,6 +140,8 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
         run: ./vendor/bin/pest --parallel --cache-directory storage/pest/cache
+      - name: Run tests
+        run: php artisan test
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         if: always()
