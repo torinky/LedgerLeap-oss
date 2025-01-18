@@ -28,7 +28,7 @@ jobs:
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
         options: >-
           --health-cmd "mysqladmin ping"
           --health-interval 10s
@@ -46,15 +46,15 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
 
-      - name: Grant database privileges
-        env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          mysql -h mysql -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
-            FLUSH PRIVILEGES;
-            CREATE DATABASE IF NOT EXISTS ledgerleap;
-          EOF
+      #      - name: Grant database privileges
+      #        env:
+      #          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+      #        run: |
+      #          mysql -h mysql -u root --force <<EOF
+      #            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
+      #            FLUSH PRIVILEGES;
+      #            CREATE DATABASE IF NOT EXISTS ledgerleap;
+      #          EOF
 
       - name: Cache Vendor
         id: cache-vendor
