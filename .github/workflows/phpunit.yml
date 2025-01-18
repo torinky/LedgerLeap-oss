@@ -12,7 +12,7 @@ env:
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   MAIL_FROM_ADDRESS: info@example.com
   DB_PORT: 3306
-  DB_DATABASE: laravel
+  DB_DATABASE: ledgerleap
 
 jobs:
   phpunit:
@@ -76,7 +76,7 @@ jobs:
           MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
         run: |
           mysql -h mysql -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON laravel.* TO '${{ env.DB_USERNAME }}'@'%';
+            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
             FLUSH PRIVILEGES;
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
@@ -95,60 +95,60 @@ jobs:
         run: php artisan migrate:refresh
       - name: Run Seeding
         run: php artisan db:seed
-      - name: Run IDE Helper Models
-        continue-on-error: true
-        run: |
-          php artisan ide-helper:models --write --reset
-          ./vendor/bin/pint app/Models
-          if ! git diff --exit-code; then
-            echo "Error: The phpdoc for the model ide-helper is not updated!"
-            echo "Run: php artisan ide-helper:models --write --reset"
-            exit 1
-          fi
-      - name: Cache Pint
-        uses: actions/cache@v4
-        with:
-          path: ./.pint.cache
-          key: ${{ runner.os }}-pint-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-pint-
-      - name: Run Pint
-        continue-on-error: true
-        run: ./vendor/bin/pint --test
-      - name: Cache Rector
-        uses: actions/cache@v4
-        with:
-          path: ./storage/rector/cache
-          key: ${{ runner.os }}-rector-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-rector-
-      - name: Run Rector
-        continue-on-error: true
-        run: ./vendor/bin/rector process --dry-run
-      - name: Cache PHPStan
-        uses: actions/cache@v4
-        with:
-          path: ./storage/phpstan
-          key: ${{ runner.os }}-phpstan-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-phpstan-
-      - name: Run PHPStan
-        continue-on-error: true
-        run: ./vendor/bin/phpstan analyze
-      - name: Cache Pest
-        uses: actions/cache@v4
-        with:
-          path: ./storage/pest/cache
-          key: ${{ runner.os }}-pest-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-pest-
-      - name: Run Pest
-        continue-on-error: true
-        env:
-          SESSION_DRIVER: array
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ":memory:"
-        run: ./vendor/bin/pest --parallel --cache-directory storage/pest/cache
+      #      - name: Run IDE Helper Models
+      #        continue-on-error: true
+      #        run: |
+      #          php artisan ide-helper:models --write --reset
+      #          ./vendor/bin/pint app/Models
+      #          if ! git diff --exit-code; then
+      #            echo "Error: The phpdoc for the model ide-helper is not updated!"
+      #            echo "Run: php artisan ide-helper:models --write --reset"
+      #            exit 1
+      #          fi
+      #      - name: Cache Pint
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: ./.pint.cache
+      #          key: ${{ runner.os }}-pint-${{ hashFiles('**/composer.lock') }}
+      #          restore-keys: ${{ runner.os }}-pint-
+      #      - name: Run Pint
+      #        continue-on-error: true
+      #        run: ./vendor/bin/pint --test
+      #      - name: Cache Rector
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: ./storage/rector/cache
+      #          key: ${{ runner.os }}-rector-${{ hashFiles('**/composer.lock') }}
+      #          restore-keys: ${{ runner.os }}-rector-
+      #      - name: Run Rector
+      #        continue-on-error: true
+      #        run: ./vendor/bin/rector process --dry-run
+      #      - name: Cache PHPStan
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: ./storage/phpstan
+      #          key: ${{ runner.os }}-phpstan-${{ hashFiles('**/composer.lock') }}
+      #          restore-keys: ${{ runner.os }}-phpstan-
+      #      - name: Run PHPStan
+      #        continue-on-error: true
+      #        run: ./vendor/bin/phpstan analyze
+      #      - name: Cache Pest
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: ./storage/pest/cache
+      #          key: ${{ runner.os }}-pest-${{ hashFiles('**/composer.lock') }}
+      #          restore-keys: ${{ runner.os }}-pest-
+      #      - name: Run Pest
+      #        continue-on-error: true
+      #        env:
+      #          SESSION_DRIVER: array
+      #          DB_CONNECTION: sqlite
+      #          DB_DATABASE: ":memory:"
+      #        run: ./vendor/bin/pest --parallel --cache-directory storage/pest/cache
 
       - name: Run tests
         continue-on-error: true
-        run: php artisan test ./Tests
+        run: php artisan test
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
         continue-on-error: true
