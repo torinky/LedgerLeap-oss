@@ -96,6 +96,7 @@ jobs:
       - name: Run Seeding
         run: php artisan db:seed
       - name: Run IDE Helper Models
+        continue-on-error: true
         run: |
           php artisan ide-helper:models --write --reset
           ./vendor/bin/pint app/Models
