@@ -153,7 +153,6 @@ jobs:
       - name: Check PHP Version and Configuration
         continue-on-error: true
         run: |
-        run: |
           php -v
           # Use the expected path to your php.ini file
           php -n -i | grep "Loaded Configuration File"
