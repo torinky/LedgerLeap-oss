@@ -2,7 +2,10 @@ name: Laravel Sail with Mroonga Debug
 
 on:
   push:
+    branches:
+      - 'main'
   pull_request:
+  workflow_dispatch:
 
 env:
   DB_USERNAME: sail
@@ -14,6 +17,7 @@ env:
 jobs:
   phpunit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       mysql:
         image: groonga/mroonga:mysql-8.0-latest
@@ -41,6 +45,16 @@ jobs:
           php-version: '8.2'
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
+
+      - name: Grant database privileges
+        env:
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          mysql -h mysql -u root --force <<EOF
+            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
+            FLUSH PRIVILEGES;
+            CREATE DATABASE IF NOT EXISTS ledgerleap;
+          EOF
 
       - name: Cache Vendor
         id: cache-vendor
@@ -158,16 +172,6 @@ jobs:
 
       - name: Set hostname
         run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
-
-      - name: Grant database privileges
-        env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          mysql -h mysql -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
-            FLUSH PRIVILEGES;
-            CREATE DATABASE IF NOT EXISTS ledgerleap;
-          EOF
 
       - name: Clear Config Cache
         run: php artisan config:clear
