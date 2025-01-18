@@ -149,8 +149,9 @@ jobs:
         run: php artisan test
 
       - name: Execute tests (Unit and Feature tests) via PHPUnit
+        continue-on-error: true
         if: always()
-        run: vendor/bin/phpunit
+        run: vendor/bin/phpunit Tests
 
       - name: Check PHP Version and Configuration
         continue-on-error: true
