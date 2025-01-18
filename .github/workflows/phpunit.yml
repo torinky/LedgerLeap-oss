@@ -76,7 +76,7 @@ jobs:
           MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
         run: |
           mysql -h mysql -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
+            GRANT ALL PRIVILEGES ON laravel.* TO '${{ env.DB_USERNAME }}'@'%';
             FLUSH PRIVILEGES;
             CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
