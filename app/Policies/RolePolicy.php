@@ -3,55 +3,43 @@
 namespace App\Policies;
 
 use App\Models\Role;
+use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class RolePolicy
 {
     use HandlesAuthorization;
 
-    /**
-     * Create a new policy instance.
-     */
-    public function __construct()
+    private UserService $userService;
+
+    public function __construct(UserService $userService)
     {
-        //
+        $this->userService = $userService;
     }
 
-    public function viewAny($user)
+    public function viewAny(User $user)
     {
-        return true;
-        return $user->hasPermissionTo('view_roles');
+        return $this->userService->hasPermission($user, ['view_roles', 'manage_roles']);
     }
 
-    public function view($user, Role $role)
+    public function view(User $user)
     {
-        return true;
-        return $user->hasPermissionTo('view_roles') || $role->hasPermission('view_roles');
+        return $this->userService->hasPermission($user, ['view_roles', 'manage_roles']);
     }
 
-    public function hasPermission($user, Role $role, $permission)
+    public function create(User $user)
     {
-        $userPermissions = $user->getPermissions();
-        $rolePermissions = $role->getPermissions();
-
-        $combinedPermissions = array_merge($userPermissions, $rolePermissions);
-
-        return in_array($permission, $combinedPermissions);
+        return $this->userService->hasPermission($user, ['create_roles', 'manage_roles']);
     }
 
-    public function create($user)
+    public function update(User $user)
     {
-        return $user->hasPermissionTo('create_roles');
+        return $this->userService->hasPermission($user, ['edit_roles', 'manage_roles']);
     }
 
-    public function update($user, Role $role)
+    public function delete(User $user)
     {
-        return true;
-        return $user->hasPermissionTo('edit_roles') || $role->hasPermission('edit_roles');
-    }
-
-    public function delete($user, Role $role)
-    {
-        return $user->hasPermissionTo('delete_roles') || $role->hasPermission('delete_roles');
+        return $this->userService->hasPermission($user, ['delete_roles', 'manage_roles']);
     }
 }

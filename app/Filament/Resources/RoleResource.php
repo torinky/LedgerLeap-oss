@@ -182,4 +182,29 @@ class RoleResource extends BaseRoleResource
             'edit' => Pages\EditRole::route('/{record}/edit'),
         ];
     }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Role::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', Role::class);
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('delete', Role::class);
+    }
 }

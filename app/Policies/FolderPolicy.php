@@ -63,7 +63,7 @@ class FolderPolicy
     {
         // ユーザーがフォルダの更新権限を持っているか、およびフォルダが管理可能かどうかをチェック
         return $this->userService->hasPermission($user, 'update_folders')
-            && $this->userService->isManageableFolderForUser($user, $folder);
+            && $this->userService->isWritableFolderForUser($user, $folder);
     }
 
     /**

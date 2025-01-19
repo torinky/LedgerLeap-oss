@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -36,6 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete_ledger_defines',
             'restore_ledger_defines',
             'force_delete_ledger_defines',
+            'view_roles',
             'create_roles',
             'update_roles',
             'delete_roles',
@@ -44,7 +44,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            if (!Permission::whereName($permission)->exists()) {
+            if (! Permission::whereName($permission)->exists()) {
                 Permission::create(['name' => $permission]);
             }
         }
@@ -72,6 +72,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'delete_ledger_defines',
                 'restore_ledger_defines',
                 'force_delete_ledger_defines',
+                'view_roles',
                 'create_roles',
                 'update_roles',
                 'delete_roles',
