@@ -133,7 +133,8 @@ class LedgerDefinePolicyTest extends TestCase
         // Act & Assert
         $this->assertFalse($policy->create($user, $folder)); // $folder を渡すように修正
     }
-    public function test_update_returns_true_for_user_with_manage_ledger_defines_permission_and_manageable_folder()
+
+    public function test_update_returns_true_for_user_with_manage_ledger_defines_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -142,7 +143,7 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'manage_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
@@ -164,7 +165,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->update($user, $ledgerDefine));
     }
 
-    public function test_update_returns_false_for_user_with_manage_ledger_defines_permission_but_not_manageable_folder()
+    public function test_update_returns_false_for_user_with_manage_ledger_defines_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -173,14 +174,14 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'manage_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
         $this->assertFalse($policy->update($user, $ledgerDefine));
     }
 
-    public function test_delete_returns_true_for_user_with_delete_ledger_defines_permission_and_manageable_folder()
+    public function test_delete_returns_true_for_user_with_delete_ledger_defines_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -189,7 +190,7 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'delete_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
@@ -211,7 +212,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->delete($user, $ledgerDefine));
     }
 
-    public function test_delete_returns_false_for_user_with_delete_ledger_defines_permission_but_not_manageable_folder()
+    public function test_delete_returns_false_for_user_with_delete_ledger_defines_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -220,14 +221,14 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'delete_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
         $this->assertFalse($policy->delete($user, $ledgerDefine));
     }
 
-    public function test_restore_returns_true_for_user_with_restore_ledger_defines_permission_and_manageable_folder()
+    public function test_restore_returns_true_for_user_with_restore_ledger_defines_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -236,7 +237,7 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'restore_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
@@ -258,7 +259,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->restore($user, $ledgerDefine));
     }
 
-    public function test_restore_returns_false_for_user_with_restore_ledger_defines_permission_but_not_manageable_folder()
+    public function test_restore_returns_false_for_user_with_restore_ledger_defines_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -267,14 +268,14 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'restore_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
         $this->assertFalse($policy->restore($user, $ledgerDefine));
     }
 
-    public function test_forceDelete_returns_true_for_user_with_force_delete_ledger_defines_permission_and_manageable_folder()
+    public function test_forceDelete_returns_true_for_user_with_force_delete_ledger_defines_permission_and_Writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -283,7 +284,7 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'force_delete_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
@@ -305,7 +306,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->forceDelete($user, $ledgerDefine));
     }
 
-    public function test_forceDelete_returns_false_for_user_with_force_delete_ledger_defines_permission_but_not_manageable_folder()
+    public function test_forceDelete_returns_false_for_user_with_force_delete_ledger_defines_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -314,7 +315,7 @@ class LedgerDefinePolicyTest extends TestCase
 
         $userServiceMock = Mockery::mock(UserService::class);
         $userServiceMock->shouldReceive('hasPermission')->with($user, 'force_delete_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isManageableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
+        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
