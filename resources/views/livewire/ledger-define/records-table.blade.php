@@ -24,7 +24,7 @@
                                 <a
                                     href="{{ route('folder.edit', ['folderId'=>$folderRecord->id]) }}"
                                     class="btn btn-ghost tooltip flex items-center"
-                                    data-tip="{{__('folder.edit')}}"
+                                    data-tip="{{__('ledger.folder.edit')}}"
                                     target="folderEdit_{{$folderRecord->id}}}}"
                                 >
 
@@ -37,7 +37,7 @@
                             @else
                                 <a
                                     class="btn btn-ghost opacity-30 tooltip flex items-center"
-                                    data-tip="{{__('folder.no_edit_permission')}}"
+                                    data-tip="{{__('ledger.folder.not_allow_edit')}}"
                                     target="folderEdit_{{$folderRecord->id}}}}"
                                 >
 
@@ -76,7 +76,7 @@
                     class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100
                        {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
                     @else
-                        data-tip="{{__('ledger.define.no_edit_permission')}}"
+                        data-tip="{{__('ledger.define.not_allow_edit')}}"
                     class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-neutral/50 hover:shadow-accent hover:opacity-100
                        {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
                     disabled
@@ -130,7 +130,7 @@
                         </a>
                     @else
                         <div class="tooltip"
-                             data-tip="{{__('ledger.folder.no_allowed_create')}}">
+                             data-tip="{{__('ledger.folder.not_allow_create')}}">
                             <div
                                 class="btn btn-neutral btn-lg mx-3 opacity-50"
                             >
@@ -158,7 +158,7 @@
                         </a>
                     @else
                         <div class="tooltip"
-                             data-tip="{{__('ledger.define.no_allowed_create')}}">
+                             data-tip="{{__('ledger.define.not_allow_create')}}">
                             <div
                                 class="btn btn-neutral btn-lg mx-3 opacity-50"
                             >

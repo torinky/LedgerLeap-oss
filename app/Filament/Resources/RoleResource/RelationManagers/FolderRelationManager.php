@@ -31,10 +31,11 @@ class FolderRelationManager extends RelationManager
      */
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return (string)str(static::getRelationshipName())
-            ->kebab()
-            ->replace('-', ' ')
-            ->headline();
+        return __('ledger.filament.' . (string)str(static::getRelationshipName()));
+        /*        return (string)str(static::getRelationshipName())
+                    ->kebab()
+                    ->replace('-', ' ')
+                    ->headline();*/
     }
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
@@ -44,12 +45,12 @@ class FolderRelationManager extends RelationManager
 
     protected static function getModelLabel(): string
     {
-        return __((string)str(static::getRelationshipName()));
+        return __('ledger.filament.' . (string)str(static::getRelationshipName()));
     }
 
     protected static function getPluralModelLabel(): string
     {
-        return __((string)str(static::getRelationshipName()));
+        return __('ledger.filament.' . (string)str(static::getRelationshipName()));
     }
 
     public function table(Table $table): Table
@@ -60,7 +61,7 @@ class FolderRelationManager extends RelationManager
             ->pluck('folder_id');
         return $table
             // Support changing table heading by translations.
-            ->heading(__((string)str(static::getRelationshipName())))
+            ->heading(__('ledger.filament.' . (string)str(static::getRelationshipName())))
             ->columns([
                 TextColumn::make('title')
                     ->label(__('title'))

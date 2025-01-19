@@ -49,7 +49,7 @@
                                         key="{{Hash::make('ledger_export-'. $ledgerDefine->id)}}"
                 />
             @else
-                <div class="tooltip" data-tip="{{ __('ledger.no_view_permission') }}">
+                <div class="tooltip" data-tip="{{ __('ledger.not_allow_view') }}">
                     <button class="btn btn-outline btn-secondary w-48" disabled>
                         <i class="fas fa-file-csv"></i>
                         {{__('ledger.export_csv')}}
@@ -64,7 +64,7 @@
                     <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
                 </a>
             @else
-                <div class="tooltip" data-tip="{{ __('ledger.no_manage_permission') }}">
+                <div class="tooltip" data-tip="{{ __('ledger.not_allow_manage') }}">
                     <button class="btn btn-outline btn-primary btn-sm relative inline-flex" disabled>
                         <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
                     </button>
