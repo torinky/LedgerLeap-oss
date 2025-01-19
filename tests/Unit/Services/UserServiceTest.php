@@ -12,7 +12,7 @@ use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Collection;
-// use Mockery;
+use Mockery;
 use Spatie\Permission\PermissionRegistrar;
 use tests\TestCase;
 
