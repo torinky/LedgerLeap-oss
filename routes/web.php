@@ -14,6 +14,9 @@ use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
 use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
+use App\Livewire\Notifications\Index;
+use App\Livewire\Notifications\Settings;
+use App\Livewire\UserActivityLog;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -136,6 +139,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/synonyms/{word}', [SynonymController::class, 'search']);
 
+    Route::get('/notifications', Index::class)
+        ->middleware(['auth'])
+        ->name('notifications.index');
+    Route::get('/notifications/settings', Settings::class)
+        ->middleware(['auth'])
+        ->name('notifications.settings');
+    Route::get('/activity-log', UserActivityLog::class)
+        ->middleware(['auth'])
+        ->name('activity-log');
 });
 
 Route::get('/phpinfo', function () {

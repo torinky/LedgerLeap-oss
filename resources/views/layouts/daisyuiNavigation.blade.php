@@ -26,14 +26,15 @@
         </div>
 
         <div class="navbar-end">
+            <livewire:notifications.icon/>
             {{--            <a class="btn">Button</a>--}}
-            <a tabindex="0" class="btn btn-ghost btn-sm tooltip tooltip-bottom pt-2" data-tip="{{__('ledger.setting')}}"
+            <a tabindex="1" class="btn btn-ghost btn-sm tooltip tooltip-bottom pt-2" data-tip="{{__('ledger.setting')}}"
                href="{{ route('filament.admin.pages.dashboard') }}">
                 <i class="fas fa-sliders"></i>
             </a>
             <div class="dropdown dropdown-end">
                 {{--                <label tabindex="0" class="btn btn-ghost btn-circle avatar">--}}
-                <a tabindex="1" class="btn btn-ghost btn-sm">
+                <a tabindex="2" class="btn btn-ghost btn-sm">
                     {{--
                                         <div class="w-10 rounded-full">
                                             <img src="/images/stock/photo-1534528741775-53994a69daeb.jpg" />
@@ -41,11 +42,16 @@
                     --}}
                     {{ Auth::user()->name }}
                 </a>
-                <ul tabindex="2" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
+                <ul tabindex="3" class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
                         <x-daisyui-nav-link :href="route('profile.edit')" class="justify-between">
                             {{ __('Profile') }}
-                            <span class="badge">New</span>
+                            {{--                            <span class="badge">New</span>--}}
+                        </x-daisyui-nav-link>
+                    </li>
+                    <li>
+                        <x-daisyui-nav-link :href="route('notifications.settings')">
+                            {{ __('Notification Settings') }}
                         </x-daisyui-nav-link>
                     </li>
                     <li>
@@ -62,7 +68,7 @@
                     </li>
                 </ul>
             </div>
-            <div tabindex="3">
+            <div tabindex="4">
                 <label class="swap swap-rotate btn btn-sm btn-ghost">
 
                     <!-- this hidden checkbox controls the state -->
