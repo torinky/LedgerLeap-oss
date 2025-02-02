@@ -416,7 +416,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerCreate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_true_for_user_with_edit_ledgers_permission_and_writable_folder()
+    public function test_ledgerUpdate_returns_true_for_user_with_update_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -424,7 +424,7 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'edit_ledgers')->andReturn(true);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'update_ledgers')->andReturn(true);
         $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
@@ -432,7 +432,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerUpdate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_false_for_user_without_edit_ledgers_permission()
+    public function test_ledgerUpdate_returns_false_for_user_without_update_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -440,14 +440,14 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'edit_ledgers')->andReturn(false);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'update_ledgers')->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
         $this->assertFalse($policy->ledgerUpdate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_false_for_user_with_edit_ledgers_permission_but_not_writable_folder()
+    public function test_ledgerUpdate_returns_false_for_user_with_update_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -455,7 +455,7 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'edit_ledgers')->andReturn(true);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, 'update_ledgers')->andReturn(true);
         $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 

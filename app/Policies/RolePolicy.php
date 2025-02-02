@@ -35,7 +35,7 @@ class RolePolicy
 
     public function update(User $user)
     {
-        return $this->userService->hasPermission($user, ['edit_roles', 'manage_roles']);
+        return $this->userService->hasPermission($user, ['update_roles', 'manage_roles']);
     }
 
     public function delete(User $user)

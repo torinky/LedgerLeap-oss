@@ -126,7 +126,7 @@ class LedgerPolicyTest extends TestCase
         $this->assertFalse($policy->create($user, $ledgerDefine));
     }
 
-    public function test_update_returns_true_for_user_with_edit_ledgers_permission_and_writable_folder()
+    public function test_update_returns_true_for_user_with_update_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -144,7 +144,7 @@ class LedgerPolicyTest extends TestCase
         $this->assertTrue($policy->update($user, $ledger));
     }
 
-    public function test_update_returns_false_for_user_without_edit_ledgers_permission()
+    public function test_update_returns_false_for_user_without_update_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();

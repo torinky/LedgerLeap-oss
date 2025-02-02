@@ -132,6 +132,7 @@ class RecordsTable extends Component
         $this->keywords = $this->searchContext->keywords;
         $this->highlights = $this->searchContext->highlights;
         $this->synonyms = $this->searchContext->synonyms;
+//        dd($this->searchContext,$this->keywords);
     }
 
     /**

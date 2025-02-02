@@ -141,7 +141,7 @@ class SearchContext
         }
 
         $tags = [];
-        $keywords = [];
+        $keywords = $words;
 
         collect($words)->each(function ($word) use ($tags, $keywords) {
             if (Str::startsWith($word, '#')) {

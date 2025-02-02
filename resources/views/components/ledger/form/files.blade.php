@@ -1,6 +1,7 @@
 @props([
     'class'=>'',
     'hintClass'=> 'label-text-alt text-gray-400 ps-1 ',
+    'columnDefine'=>[],
     ])
 
 <div class="form-control">

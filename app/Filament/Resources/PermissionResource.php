@@ -84,29 +84,24 @@ class PermissionResource extends BasePermissionResource
 
     public static function canViewAny(): bool
     {
-        return true;
 
-        return auth()->user()->can('view_permissions');
+//        dd('view', auth()->user()->can('view_permissionss', Permission::class));
+        return auth()->user()->can('view_permissions', Permission::class);
     }
 
     public static function canCreate(): bool
     {
-        return true;
-
-        return auth()->user()->can('create_permissions');
+//        dd('create', auth()->user()->can('create_permissions'));
+        return auth()->user()->can('create_permissions', Permission::class);
     }
 
     public static function canEdit($record): bool
     {
-        return true;
-
-        return auth()->user()->can('edit_permissions');
+        return auth()->user()->can('update_permissions', $record);
     }
 
     public static function canDelete($record): bool
     {
-        return true;
-
-        return auth()->user()->can('delete_permissions');
+        return auth()->user()->can('delete_permissions', $record);
     }
 }

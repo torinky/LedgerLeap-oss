@@ -174,7 +174,7 @@ class LedgerDefinePolicy
 
     public function ledgerUpdate(User $user, LedgerDefine $ledgerDefine): bool
     {
-        if (!$this->userService->hasPermission($user, 'edit_ledgers')) {
+        if (!$this->userService->hasPermission($user, 'update_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
