@@ -11,9 +11,9 @@ class Icon extends Component
 
     public function mount()
     {
-//        $this->unreadCount = $this->getUnreadCount();
+        $this->unreadCount = $this->getUnreadCount();
         // モデルを使用せず、固定値で初期化
-        $this->unreadCount = 5;
+        //        $this->unreadCount = 5;
     }
 
     public function getUnreadCount()
@@ -22,9 +22,10 @@ class Icon extends Component
         $user = auth()->user();
         if ($user) {
             // リフレッシュ時も、固定値を返す
-            $this->unreadCount = 5;
-//            return $user->unreadNotifications()->count();
+            //            $this->unreadCount = 5;
+            return $user->unreadNotifications()->count();
         }
+
         return 0;
 
     }

@@ -8,10 +8,15 @@ use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -19,7 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, LogsActivity, Notifiable, SoftDeletes;
     use HasRoles {
         assignRole as protected spatieAssignRole;
         removeRole as protected spatieRemoveRole;
@@ -184,5 +189,45 @@ class User extends Authenticatable implements FilamentUser
 
         return $this;
     }
+
+    /**
+     * Get the user's unread notifications.
+     *
+     * @return MorphMany
+     */
+    public function unreadNotifications()
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable')->whereNull('read_at');
+    }
+
+    public function notificationSettings()
+    {
+        return $this->hasMany(NotificationSetting::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(Activity::class, 'causer_id');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+            ->logOnlyDirty() // 変更があった場合のみ記録
+            ->dontSubmitEmptyLogs() // 空のログは記録しない
+            ->logFillable()
+            ->setDescriptionForEvent(fn(string $eventName) => "Ledger has been {$eventName}");
+        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+    }
+    /*    public function getActivitylogOptions(): LogOptions
+        {
+            return LogOptions::defaults()
+                ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+                ->logOnlyDirty() // 変更があった場合のみ記録
+                ->dontSubmitEmptyLogs() // 空のログは記録しない
+                ->logFillable();
+        }*/
 
 }

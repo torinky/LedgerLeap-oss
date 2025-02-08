@@ -37,7 +37,10 @@ class DatabaseSeeder extends Seeder
             OrganizationSeeder::class,
             FolderSeeder::class,
             RolesAndPermissionsSeeder::class,
+            AllUsersRoleSeeder::class,       // All Users ロール
+            NotificationTypeSeeder::class,
         ]);
+
 
         $ledgerDefines = LedgerDefine::factory(50)->recycle($users)
 //            ->hasTag(random_int(0,5))

@@ -12,6 +12,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property array $content_attached
@@ -23,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Ledger extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $casts = [
         'content' => AsColumnArrayJson::class,
@@ -176,4 +181,18 @@ class Ledger extends Model
         // 親のdeleteメソッドを呼び出す
         return parent::delete();
     }
+
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+            ->logOnlyDirty() // 変更があった場合のみ記録
+            ->dontSubmitEmptyLogs() // 空のログは記録しない
+            ->logFillable()
+            ->setDescriptionForEvent(fn(string $eventName) => "Ledger has been {$eventName}");
+        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+    }
+
 }
