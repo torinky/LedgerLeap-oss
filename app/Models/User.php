@@ -9,11 +9,12 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Models\Activity;
@@ -192,21 +193,31 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Get the user's unread notifications.
+     * Get the user's unread notifications, considering both direct notifications and role-based notifications.
      *
-     * @return MorphMany
      */
     public function unreadNotifications()
     {
-        return $this->morphMany(DatabaseNotification::class, 'notifiable')->whereNull('read_at');
+        $userService = app(UserService::class);
+        $roles = $userService->getAllUniqueRolesForUser($this);
+
+        return DatabaseNotification::query()
+            ->where(function ($query) use ($roles) {
+                $query->where(function ($q) use ($roles) {
+                    $q->where('notifiable_type', Role::class)
+                        ->whereIn('notifiable_id', $roles->pluck('id'));
+                })->orWhere(function ($q) {
+                    $q->where('notifiable_type', get_class($this))
+                        ->where('notifiable_id', $this->id);
+                });
+            })
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('notification_user')
+                    ->whereColumn('notification_user.notification_id', 'notifications.id')
+                    ->where('notification_user.user_id', $this->id);
+            });
     }
-    /**
-     * Get the user's unread notifications.
-     */
-    /*    public function unreadNotifications()
-        {
-            return $this->morphMany(config('notifications.database.model'), 'notifiable')->whereNull('read_at');
-        }*/
 
     public function notificationSettings()
     {
@@ -229,6 +240,7 @@ class User extends Authenticatable implements FilamentUser
         // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
         // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
     }
+
     /*    public function getActivitylogOptions(): LogOptions
         {
             return LogOptions::defaults()
@@ -239,8 +251,6 @@ class User extends Authenticatable implements FilamentUser
         }*/
     /**
      * Get all notifications for the user via their roles.
-     *
-     * @return HasManyThrough
      */
     public function roleNotifications(): HasManyThrough
     {

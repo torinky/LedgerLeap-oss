@@ -8,7 +8,6 @@ use App\Models\Role;
 use App\Notifications\GenericNotification;
 use Illuminate\Support\Facades\Notification;
 use Log;
-use Spatie\Activitylog\Models\Activity;
 
 class NotificationService
 {
@@ -28,6 +27,7 @@ class NotificationService
 
         if (!$activity) {
             Log::info('No activity found');
+
             return;
         }
 
@@ -37,14 +37,15 @@ class NotificationService
 
         if (!$notificationType) {
             Log::info('NotificationType not found');
+
             return;
         }
 
         Log::info('NotificationType found', ['notificationType' => $notificationType]); // ログ追加
 
         // 通知対象のロールを取得 (UserService のメソッドを利用)
-//        $roles = $this->userService->getNotifiableRoles($activity->event, $ledger);
-        $roles = Role::where('name', 'All Users')->get(); // App\Models\Role を取得
+        $roles = $this->userService->getNotifiableRoles($activity->event, $ledger);
+        //        $roles = Role::where('name', 'All Users')->get(); // App\Models\Role を取得
 
         if ($roles->isEmpty()) {
             Log::info('No roles to notify');

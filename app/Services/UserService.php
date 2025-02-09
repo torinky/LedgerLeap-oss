@@ -4,11 +4,11 @@ namespace App\Services;
 
 use App\Models\Folder;
 use App\Models\Organization;
+use App\Models\Role;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Permission\Models\Role;
 
 class UserService
 {

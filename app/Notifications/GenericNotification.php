@@ -2,16 +2,12 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\BroadcastMessage;
 use App\Models\Ledger;
 use App\Models\NotificationType;
-use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notification;
 use Log;
-use Spatie\Permission\Models\Role;
 
 class GenericNotification extends Notification implements ShouldQueue
 {
@@ -71,7 +67,7 @@ class GenericNotification extends Notification implements ShouldQueue
             'type' => $notificationType->name,
             'data' => [
                 'ledger_id' => $this->ledger->id,
-                'ledger_name' => $this->ledger->name,
+                'ledger_name' => $this->ledger->define->title,
                 'causer_name' => $this->additionalData['causer_name'] ?? null,
                 'event' => $this->additionalData['event'] ?? null,
             ],

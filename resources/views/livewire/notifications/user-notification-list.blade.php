@@ -16,7 +16,8 @@
                             <ul class="p-4">
                                 @foreach($notifications as $notification)
                                     {{--                                    @dd($notification)--}}
-                                    <li class="border-b border-base-content/50 py-4">
+                                    <li class="border-b border-base-content/50 py-4"
+                                        wire:key="notification_{{ $notification->id }}">
                                         <div class="flex items-center justify-between">
                                             <div>
                                                 @if(is_null($notification->read_at))
@@ -35,7 +36,10 @@
                                             <div>
                                                 @if(is_null($notification->read_at))
                                                     <button wire:click="markAsRead('{{ $notification->id }}')"
-                                                            class="btn btn-xs btn-ghost">{{ __('Mark as read') }}</button>
+                                                            class="btn btn-xs btn-ghost"
+                                                            wire:key="mark_as_read_{{ $notification->id }}"
+                                                    >{{ __('Mark as read') }} (ID: {{ $notification->id }})
+                                                    </button>
                                                 @endif
                                             </div>
                                         </div>
