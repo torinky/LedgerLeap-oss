@@ -231,4 +231,10 @@ class UserService
             || $this->isWritableFolderForUser($user, $folder)
             || $this->isManageableFolderForUser($user, $folder);
     }
+
+    public function getNotifiableRoles(string $eventType, $eventSubject): Collection
+    {
+        // PoC では、常に「All Users」ロールを返す
+        return Role::where('name', 'All Users')->get();
+    }
 }

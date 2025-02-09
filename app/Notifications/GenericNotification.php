@@ -2,13 +2,14 @@
 
 namespace App\Notifications;
 
-use App\Models\Ledger;
-use App\Models\NotificationType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-
-// 追記
+use Illuminate\Notifications\Messages\BroadcastMessage;
+use App\Models\Ledger;
+use App\Models\NotificationType;
+use App\Models\User;
 use Log;
 use Spatie\Permission\Models\Role;
 
@@ -17,14 +18,15 @@ class GenericNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected $notificationTypeId;
-
     protected $ledger;
-
     protected $additionalData;
 
     /**
      * Create a new notification instance.
      *
+     * @param int $notificationTypeId
+     * @param Ledger $ledger
+     * @param array $additionalData
      * @return void
      */
     public function __construct(int $notificationTypeId, Ledger $ledger, array $additionalData = [])
@@ -53,29 +55,32 @@ class GenericNotification extends Notification implements ShouldQueue
      */
     public function toDatabase($notifiable)
     {
+        Log::info('GenericNotification::toDatabase called', ['notifiable' => $notifiable]);
+
         $notificationType = NotificationType::find($this->notificationTypeId);
-        $allUsersRole = Role::where('name', 'All Users')->first();
 
-        if (!$notificationType || !$allUsersRole) {
-            Log::error('NotificationType or All Users role not found!');
-
-            return [];
+        if (!$notificationType || !$notifiable) {
+            Log::error('NotificationType or Notifiable role not found!');
+            return []; // または null
         }
 
-        return [
-            'notifiable_type' => get_class($allUsersRole), // Spatie\Permission\Models\Role
-            'notifiable_id' => $allUsersRole->id,
+        // notifications テーブルへのレコード追加 (ロールに対して通知を登録)
+        $notificationData = [
+            'notifiable_type' => get_class($notifiable), // Spatie\Permission\Models\Role
+            'notifiable_id' => $notifiable->id,
             'type' => $notificationType->name,
             'data' => [
                 'ledger_id' => $this->ledger->id,
                 'ledger_name' => $this->ledger->name,
-                'causer_name' => $this->additionalData['causer_name'] ?? null, // 追加
-                'event' => $this->additionalData['event'] ?? null, // 追加
-                // 他の必要なデータ
+                'causer_name' => $this->additionalData['causer_name'] ?? null,
+                'event' => $this->additionalData['event'] ?? null,
             ],
         ];
-    }
 
+        Log::info('Notification data', ['data' => $notificationData]);
+
+        return $notificationData; // $notificationData を返す
+    }
     /**
      * Get the array representation of the notification.
      *

@@ -8,6 +8,7 @@ use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -199,6 +200,13 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->morphMany(DatabaseNotification::class, 'notifiable')->whereNull('read_at');
     }
+    /**
+     * Get the user's unread notifications.
+     */
+    /*    public function unreadNotifications()
+        {
+            return $this->morphMany(config('notifications.database.model'), 'notifiable')->whereNull('read_at');
+        }*/
 
     public function notificationSettings()
     {
@@ -229,5 +237,21 @@ class User extends Authenticatable implements FilamentUser
                 ->dontSubmitEmptyLogs() // 空のログは記録しない
                 ->logFillable();
         }*/
-
+    /**
+     * Get all notifications for the user via their roles.
+     *
+     * @return HasManyThrough
+     */
+    public function roleNotifications(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            config('notifications.database.model'), // 通常は \Illuminate\Notifications\DatabaseNotification::class
+            Role::class, // カスタム Role モデル (app/Models/Role.php)
+            'id', // Role モデルの主キー
+            'notifiable_id', // notifications テーブルの外部キー
+            'id', // User モデルの主キー
+            'id'   // Role モデルの主キー
+        )
+            ->where('notifiable_type', Role::class);
+    }
 }

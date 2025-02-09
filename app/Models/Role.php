@@ -5,11 +5,16 @@ namespace App\Models;
 use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
 
 class Role extends SpatieRole
 {
+    use Notifiable;
+
     protected $fillable = [
         'name', 'guard_name',
         'description',
@@ -92,5 +97,16 @@ class Role extends SpatieRole
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
             ->withPivot('permission')
             ->withTimestamps();
+    }
+
+    /**
+     * A role may have many notifications.
+     *
+     * @return MorphMany
+     */
+    public function roleNotifications(): MorphMany // 追加
+    {
+//        return $this->morphMany(config('notifications.database.model'), 'notifiable');
+        return $this->morphMany(DatabaseNotification::class, 'notifiable');
     }
 }
