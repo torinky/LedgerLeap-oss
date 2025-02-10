@@ -12,10 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
@@ -181,7 +178,6 @@ class Ledger extends Model
         // 親のdeleteメソッドを呼び出す
         return parent::delete();
     }
-
 
     public function getActivitylogOptions(): LogOptions
     {

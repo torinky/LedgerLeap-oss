@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CustomActivity;
 use Spatie\Activitylog\Models\Activity;
 
 return [
@@ -30,14 +31,16 @@ return [
     /*
      * If set to true, the subject returns soft deleted models.
      */
-    'subject_returns_soft_deleted_models' => false,
+    //    'subject_returns_soft_deleted_models' => false,
+    'subject_returns_soft_deleted_models' => true,
 
     /*
      * This model will be used to log activity.
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
      */
-    'activity_model' => Activity::class,
+    //    'activity_model' => Activity::class,
+    'activity_model' => CustomActivity::class,
 
     /*
      * This is the name of the table that will be created by the migration and
