@@ -2,62 +2,34 @@
 
 namespace App\Livewire\Notifications;
 
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+use App\Services\NotificationService;
+use Illuminate\Support\Collection;
 
 class UserNotificationList extends Component
 {
-    public Collection $notifications; // 型を修正
-
+    public Collection $notifications;
     public $selectedTab = 'notifications';
 
-    public function mount()
-    {
-        $this->notifications = $this->getNotifications();
-    }
-
-    protected function getNotifications()
+    public function mount(NotificationService $notificationService)
     {
         $user = Auth::user();
-        return $user ? $user->unreadNotifications()->get() : new Collection();
+        $this->notifications = $user ? $notificationService->getUnreadNotificationsForUser($user) : new Collection();
     }
-    // 通知を既読にするメソッド
-    public function markAsRead($notificationId)
+
+    public function markAsRead(NotificationService $notificationService, string $notificationId)
     {
-//        dd("mark as read!");
         $user = Auth::user();
         if (!$user) {
             return;
         }
-        // notification_user テーブルにレコードが存在するか確認
-        $notificationUser = DB::table('notification_user')
-            ->where('notification_id', $notificationId)
-            ->where('user_id', $user->id)
-            ->first();
 
-        if ($notificationUser) {
-            // レコードが存在する場合は、read_at を更新
-            DB::table('notification_user')
-                ->where('notification_id', $notificationId)
-                ->where('user_id', $user->id)
-                ->update(['read_at' => now()]);
-        } else {
-            // レコードが存在しない場合は、新規作成
-            DB::table('notification_user')->insert([
-                'notification_id' => $notificationId,
-                'user_id' => $user->id,
-                'read_at' => now(), // 既読日時をセット
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        $notificationService->markNotificationAsRead($notificationId, $user);
 
         // 通知一覧を再取得
-        $this->notifications = $this->getNotifications();
+        $this->notifications = $notificationService->getUnreadNotificationsForUser($user);
     }
-
 
     public function render()
     {

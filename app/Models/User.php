@@ -7,6 +7,7 @@ use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -195,6 +196,7 @@ class User extends Authenticatable implements FilamentUser
     /**
      * Get the user's unread notifications, considering both direct notifications and role-based notifications.
      *
+     * @return Builder
      */
     public function unreadNotifications()
     {
@@ -216,8 +218,33 @@ class User extends Authenticatable implements FilamentUser
                     ->from('notification_user')
                     ->whereColumn('notification_user.notification_id', 'notifications.id')
                     ->where('notification_user.user_id', $this->id);
-            });
+            })->orderBy('created_at', 'desc'); // Order byを追加
     }
+
+    /**
+     * Get the user's unread notifications, considering both direct notifications and role-based notifications.
+     *
+     * @return Collection
+     */
+    /*    public function unreadNotifications()
+        {
+            $userService = app(UserService::class);
+            $roles = $userService->getAllUniqueRolesForUser($this);
+
+            // 各ロールに紐づく通知を取得し、1つのコレクションにまとめる
+            $notifications = collect();
+            foreach ($roles as $role) {
+                $notifications = $notifications->merge($role->notifications);
+            }
+            $data=$notifications[0]->data;
+    dd($notifications,$notifications[0]->data,$data['data']['description']);
+            // 未読の通知のみを抽出
+            return $notifications->filter(function ($notification) {
+                return ! DB::table('notification_user')
+                    ->where('notification_id', $notification->id)
+                    ->where('user_id', $this->id)
+                    ->exists();
+            });    }*/
 
     public function notificationSettings()
     {

@@ -19,5 +19,16 @@ class NotificationTypeSeeder extends Seeder
             'description' => 'Ledgerが更新されたときに通知します。',
             'default_is_enabled' => true,
         ]);
+        // 以下を追加
+        NotificationType::firstOrCreate([
+            'name' => 'ledger_created',
+            'description' => 'Ledgerが作成されたときに通知します。',
+            'default_is_enabled' => true,
+        ]);
+        NotificationType::firstOrCreate([
+            'name' => 'ledger_deleted',
+            'description' => 'Ledgerが削除されたときに通知します。',
+            'default_is_enabled' => true,
+        ]);
     }
 }

@@ -2,34 +2,37 @@
 
 namespace App\Notifications;
 
-use App\Models\Ledger;
-use App\Models\NotificationType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Log;
+use Illuminate\Notifications\Messages\BroadcastMessage;
+use App\Models\NotificationType;
+use Illuminate\Support\Facades\Log;
+use Spatie\Activitylog\Models\Activity;
 
 class GenericNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    protected $notificationTypeId;
-    protected $ledger;
-    protected $additionalData;
+    protected int $notificationTypeId;
+    protected Model $subject; // 追加: 通知対象オブジェクト (Ledger, Folder, User など)
+    protected Activity $activity; // 追加: Activity モデル
 
     /**
      * Create a new notification instance.
      *
      * @param int $notificationTypeId
-     * @param Ledger $ledger
-     * @param array $additionalData
+     * @param Model $subject // 型ヒントを Model に変更
+     * @param array $activity // 追加
      * @return void
      */
-    public function __construct(int $notificationTypeId, Ledger $ledger, array $additionalData = [])
+    public function __construct(int $notificationTypeId, Model $subject, Activity $activity)
     {
         $this->notificationTypeId = $notificationTypeId;
-        $this->ledger = $ledger;
-        $this->additionalData = $additionalData;
+        $this->subject = $subject;
+        $this->activity = $activity;
     }
 
     /**
@@ -51,13 +54,14 @@ class GenericNotification extends Notification implements ShouldQueue
      */
     public function toDatabase($notifiable)
     {
+//        dd($notifiable); // 追加: $notifiable の内容を確認
         Log::info('GenericNotification::toDatabase called', ['notifiable' => $notifiable]);
 
         $notificationType = NotificationType::find($this->notificationTypeId);
 
         if (!$notificationType || !$notifiable) {
             Log::error('NotificationType or Notifiable role not found!');
-            return []; // または null
+            return [];
         }
 
         // notifications テーブルへのレコード追加 (ロールに対して通知を登録)
@@ -65,30 +69,21 @@ class GenericNotification extends Notification implements ShouldQueue
             'notifiable_type' => get_class($notifiable), // Spatie\Permission\Models\Role
             'notifiable_id' => $notifiable->id,
             'type' => $notificationType->name,
-            'data' => [
-                'ledger_id' => $this->ledger->id,
-                'ledger_name' => $this->ledger->define->title,
-                'causer_name' => $this->additionalData['causer_name'] ?? null,
-                'event' => $this->additionalData['event'] ?? null,
+            'payload' => [
+                'subject_type' => get_class($this->subject),
+                'subject_id' => $this->subject->id,
+                'causer_name' => optional($this->activity->causer)->name,
+                'event' => $this->activity->event,
+                'description' => $this->activity->description,
+                'changes' => $this->activity->changes(),
             ],
         ];
 
         Log::info('Notification data', ['data' => $notificationData]);
 
-        return $notificationData; // $notificationData を返す
+        return $notificationData;
+
+
     }
-    /**
-     * Get the array representation of the notification.
-     *
-     * @param mixed $notifiable
-     * @return array
-     */
-    public function toArray($notifiable)
-    {
-        return [
-            'ledger_id' => $this->ledger->id,
-            'read_at' => null,
-            // 他の必要なデータ
-        ];
-    }
+
 }

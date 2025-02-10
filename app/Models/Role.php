@@ -104,9 +104,9 @@ class Role extends SpatieRole
      *
      * @return MorphMany
      */
-    public function roleNotifications(): MorphMany // 追加
-    {
-//        return $this->morphMany(config('notifications.database.model'), 'notifiable');
-        return $this->morphMany(DatabaseNotification::class, 'notifiable');
-    }
+    /*    public function roleNotifications(): MorphMany // 追加
+        {
+    //        return $this->morphMany(config('notifications.database.model'), 'notifiable');
+            return $this->morphMany(DatabaseNotification::class, 'notifiable');
+        }*/
 }

@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Listeners\ProcessActivityLog;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
@@ -41,15 +40,6 @@ class EventServiceProvider extends ServiceProvider
         /*        'eloquent.created: Spatie\Activitylog\Models\Activity' => [ // Activity モデルの created イベントをリッスン
                     ProcessActivityLog::class,
                 ],*/
-        'eloquent.created: App\Models\Ledger' => [ // Ledger モデルの created, updated, deleted イベントをリッスン
-            ProcessActivityLog::class,
-        ],
-        'eloquent.updated: App\Models\Ledger' => [
-            ProcessActivityLog::class,
-        ],
-        'eloquent.deleted: App\Models\Ledger' => [
-            ProcessActivityLog::class,
-        ],
 
     ];
 
