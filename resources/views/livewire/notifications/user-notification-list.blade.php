@@ -59,7 +59,7 @@
                                                                     </li>
                                                                 @else
                                                                     <li>{{ $attribute }}: <span
-                                                                            class="text-base-content">{{ $newValue }}</span>
+                                                                            class="text-base-content">{{implode(', ', collect( $newValue)->flatten()->toArray()) }}</span>
                                                                         (新規追加)
                                                                     </li>
                                                                 @endisset

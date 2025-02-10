@@ -2,13 +2,11 @@
 
 namespace App\Notifications;
 
+use App\Models\NotificationType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\BroadcastMessage;
-use App\Models\NotificationType;
 use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\Models\Activity;
 
@@ -17,13 +15,14 @@ class GenericNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected int $notificationTypeId;
+
     protected Model $subject; // 追加: 通知対象オブジェクト (Ledger, Folder, User など)
+
     protected Activity $activity; // 追加: Activity モデル
 
     /**
      * Create a new notification instance.
      *
-     * @param int $notificationTypeId
      * @param Model $subject // 型ヒントを Model に変更
      * @param array $activity // 追加
      * @return void
@@ -54,25 +53,26 @@ class GenericNotification extends Notification implements ShouldQueue
      */
     public function toDatabase($notifiable)
     {
-//        dd($notifiable); // 追加: $notifiable の内容を確認
+        //        dd($notifiable); // 追加: $notifiable の内容を確認
         Log::info('GenericNotification::toDatabase called', ['notifiable' => $notifiable]);
 
         $notificationType = NotificationType::find($this->notificationTypeId);
 
         if (!$notificationType || !$notifiable) {
             Log::error('NotificationType or Notifiable role not found!');
+
             return [];
         }
 
         // notifications テーブルへのレコード追加 (ロールに対して通知を登録)
         $notificationData = [
             'notifiable_type' => get_class($notifiable), // Spatie\Permission\Models\Role
-            'notifiable_id' => $notifiable->id,
+            'notifiable_id' => $notifiable->id ?? '',
             'type' => $notificationType->name,
             'payload' => [
                 'subject_type' => get_class($this->subject),
-                'subject_id' => $this->subject->id,
-                'causer_name' => optional($this->activity->causer)->name,
+                'subject_id' => $this->subject->id ?? '',
+                'causer_name' => optional($this->activity->causer)->name ?? optional($this->activity->causer)->title ?? '',
                 'event' => $this->activity->event,
                 'description' => $this->activity->description,
                 'changes' => $this->activity->changes(),
@@ -83,7 +83,5 @@ class GenericNotification extends Notification implements ShouldQueue
 
         return $notificationData;
 
-
     }
-
 }

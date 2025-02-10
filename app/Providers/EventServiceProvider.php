@@ -6,14 +6,11 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use App\Models\Ledger;
 use App\Observers\RoleFolderPermissionObserver;
 use App\Observers\UserPermissionsObserver;
-use App\Services\NotificationService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -37,10 +34,6 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        /*        'eloquent.created: Spatie\Activitylog\Models\Activity' => [ // Activity モデルの created イベントをリッスン
-                    ProcessActivityLog::class,
-                ],*/
-
     ];
 
     /**
@@ -49,20 +42,6 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RoleFolderPermission::observe(RoleFolderPermissionObserver::class);
-
-        // Ledger モデルのイベントをリッスンし、NotificationService のメソッドを呼び出す
-        Ledger::created(function (Ledger $ledger) {
-            $notificationService = app(NotificationService::class);
-            $notificationService->processActivityLog($ledger);
-        });
-        Ledger::updated(function (Ledger $ledger) {
-            $notificationService = app(NotificationService::class);
-            $notificationService->processActivityLog($ledger);
-        });
-        Ledger::deleted(function (Ledger $ledger) {
-            $notificationService = app(NotificationService::class);
-            $notificationService->processActivityLog($ledger);
-        });
 
     }
 

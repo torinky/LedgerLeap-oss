@@ -2,15 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Ledger;
 use App\Models\NotificationType;
 use App\Models\User;
 use App\Notifications\GenericNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Activitylog\Models\Activity;
-use Illuminate\Support\Collection;
 
 class NotificationService
 {
@@ -21,44 +20,58 @@ class NotificationService
         $this->userService = $userService;
     }
 
-    public function processActivityLog(Ledger $ledger)
+    // public function processActivityLog(Ledger $ledger) // 引数を変更
+    public function processActivityLog(Activity $activity)
     {
         Log::info('NotificationService::processActivityLog called'); // ログ追加
 
-        // activitylog を取得 (直近の1件のみ)
-        $activity = $ledger->activities()->latest()->first();
-        if (!$activity) {
-            Log::info('No activity found');
-            return;
+        // subject_type に応じて通知タイプを決定
+        $subjectType = $activity->subject_type;
+        $event = $activity->event;
+
+        // 通知タイプを取得
+        $notificationTypeName = null;
+        switch ($subjectType) {
+            case 'App\Models\Ledger':
+                $notificationTypeName = "ledger_{$event}";
+                break;
+            // case 'App\Models\User':
+            //     $notificationTypeName = "user_{$event}";
+            //     break;
+            // 他のモデルのケースを追加
+            default:
+                Log::info("Unknown subject type: {$subjectType}");
+
+                return;
         }
 
-        Log::info('Activity found', ['activity' => $activity]); // ログ追加
-
-        $notificationType = NotificationType::where('name', 'ledger_updated')->first();
+        $notificationType = NotificationType::where('name', $notificationTypeName)->first();
 
         if (!$notificationType) {
-            Log::info('NotificationType not found');
+            Log::info("NotificationType not found for event: {$notificationTypeName}");
+
             return;
         }
 
         Log::info('NotificationType found', ['notificationType' => $notificationType]); // ログ追加
 
         // 通知対象のロールを取得 (UserService のメソッドを利用)
-        $roles = $this->userService->getNotifiableRoles($activity->event, $ledger);
+        $roles = $this->userService->getNotifiableRoles($activity->event, $activity->subject);
 
         if ($roles->isEmpty()) {
             Log::info('No roles to notify');
+
             return;
         }
 
         Log::info('Roles to notify', ['roles' => $roles]); // ログ追加
 
-//        dd($activity);
+        //        dd($activity);
         // 通知を送信
         Notification::send($roles, new GenericNotification(
             $notificationType->id,
-            $ledger,
-            $activity // $activity を渡す
+            $activity->subject, // 変更されたモデルのインスタンスを渡す
+            $activity
         ));
     }
 
