@@ -11,6 +11,11 @@ class Icon extends Component
 
     public function mount(NotificationService $notificationService)
     {
+        $this->refreshUnreadCount($notificationService);
+    }
+
+    public function refreshUnreadCount(NotificationService $notificationService)
+    {
         $this->unreadCount = $notificationService->getUnreadNotificationCountForUser(auth()->user());
     }
 

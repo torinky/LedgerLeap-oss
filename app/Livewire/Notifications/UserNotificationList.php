@@ -2,22 +2,22 @@
 
 namespace App\Livewire\Notifications;
 
-use Livewire\Component;
-use Illuminate\Support\Facades\Auth;
 use App\Services\NotificationService;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class UserNotificationList extends Component
 {
-    public Collection $notifications;
+    use WithPagination;
+
     public $selectedTab = 'notifications';
 
     public function mount(NotificationService $notificationService)
     {
-        $user = Auth::user();
-        $this->notifications = $user ? $notificationService->getUnreadNotificationsForUser($user) : new Collection();
     }
 
+    // 通知を既読にするメソッド (変更なし)
     public function markAsRead(NotificationService $notificationService, string $notificationId)
     {
         $user = Auth::user();
@@ -25,14 +25,28 @@ class UserNotificationList extends Component
             return;
         }
 
-        $notificationService->markNotificationAsRead($notificationId, $user);
+        $notificationService->markAsRead($user, $notificationId);
 
-        // 通知一覧を再取得
-        $this->notifications = $notificationService->getUnreadNotificationsForUser($user);
+    }
+
+    // 全ての通知を既読にする (変更なし)
+    public function markAllAsRead(NotificationService $notificationService)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+        $notificationService->markAsRead($user);
+
     }
 
     public function render()
     {
-        return view('livewire.notifications.user-notification-list')->layout('layouts.app', ['title' => __('ledger.notifications')]);
+        $user = Auth::user();
+        $notifications = $user ? $user->unreadNotifications()->paginate(3) : [];
+
+        return view('livewire.notifications.user-notification-list',
+            ['notifications' => $notifications])
+            ->layout('layouts.app', ['title' => __('ledger.notifications')]);
     }
 }

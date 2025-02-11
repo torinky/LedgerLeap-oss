@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\NotificationType;
 use App\Models\User;
 use App\Notifications\GenericNotification;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -75,9 +75,9 @@ class NotificationService
         ));
     }
 
-    public function getUnreadNotificationsForUser(User $user): Collection
+    public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator
     {
-        return $user->unreadNotifications()->get();
+        return $user->unreadNotifications()->paginate($perPage);
     }
 
     public function getUnreadNotificationCountForUser(User $user): int
@@ -85,29 +85,42 @@ class NotificationService
         return $user->unreadNotifications()->count();
     }
 
-    public function markNotificationAsRead(string $notificationId, User $user): void
+    // 既読処理 (単数/複数)
+    public function markAsRead(User $user, $notificationIds = null): void
     {
-        // notification_user テーブルにレコードが存在するか確認
-        $notificationUser = DB::table('notification_user')
-            ->where('notification_id', $notificationId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($notificationUser) {
-            // レコードが存在する場合は、read_at を更新
-            DB::table('notification_user')
-                ->where('notification_id', $notificationId)
-                ->where('user_id', $user->id)
-                ->update(['read_at' => now()]);
+        if ($notificationIds === null) {
+            // $notificationIds が null の場合、すべての未読通知を対象にする
+            $notifications = $user->unreadNotifications()->get();
+        } elseif (is_string($notificationIds)) {
+            // $notificationIds が文字列の場合、単一の通知 ID として扱う
+            $notifications = $user->unreadNotifications()->where('id', $notificationIds)->get();
         } else {
-            // レコードが存在しない場合は、新規作成
-            DB::table('notification_user')->insert([
-                'notification_id' => $notificationId,
-                'user_id' => $user->id,
-                'read_at' => now(), // 既読日時をセット
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // $notificationIds が配列の場合
+            $notifications = $user->unreadNotifications()->whereIn('id', $notificationIds)->get();
+        }
+
+        foreach ($notifications as $notification) {
+            $notificationUser = DB::table('notification_user')
+                ->where('notification_id', $notification->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($notificationUser) {
+                // レコードが存在する場合は、read_at を更新
+                DB::table('notification_user')
+                    ->where('notification_id', $notification->id)
+                    ->where('user_id', $user->id)
+                    ->update(['read_at' => now()]);
+            } else {
+                // レコードが存在しない場合は、新規作成
+                DB::table('notification_user')->insert([
+                    'notification_id' => $notification->id,
+                    'user_id' => $user->id,
+                    'read_at' => now(), // 既読日時をセット
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
     }
 }

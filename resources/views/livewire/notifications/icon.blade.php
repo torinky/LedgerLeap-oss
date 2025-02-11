@@ -1,5 +1,5 @@
 <div>
-    <div class="dropdown dropdown-end">
+    <div class="dropdown dropdown-end" wire:poll.5s="refreshUnreadCount">
         <a tabindex="4" class="btn btn-ghost btn-sm tooltip tooltip-bottom pt-2" data-tip="{{ __('Notifications') }}"
            href="{{ route('notifications.index') }}">
             <i class="fas fa-bell"></i>
