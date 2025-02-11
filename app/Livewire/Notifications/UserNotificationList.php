@@ -40,10 +40,10 @@ class UserNotificationList extends Component
 
     }
 
-    public function render()
+    public function render(NotificationService $notificationService)
     {
         $user = Auth::user();
-        $notifications = $user ? $user->unreadNotifications()->paginate(3) : [];
+        $notifications = $user ? $notificationService->unreadNotificationsForUser($user)->paginate(3) : [];
 
         return view('livewire.notifications.user-notification-list',
             ['notifications' => $notifications])

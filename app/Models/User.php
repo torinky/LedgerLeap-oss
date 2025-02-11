@@ -193,68 +193,6 @@ class User extends Authenticatable implements FilamentUser
         return $this;
     }
 
-    /**
-     * Get the user's unread notifications, considering both direct notifications and role-based notifications.
-     *
-     * @return Builder
-     */
-    public function unreadNotifications()
-    {
-        $userService = app(UserService::class);
-        $roles = $userService->getAllUniqueRolesForUser($this);
-
-        return DatabaseNotification::query()
-            ->where(function ($query) use ($roles) {
-                $query->where(function ($q) use ($roles) {
-                    $q->where('notifiable_type', Role::class)
-                        ->whereIn('notifiable_id', $roles->pluck('id'));
-                })->orWhere(function ($q) {
-                    $q->where('notifiable_type', get_class($this))
-                        ->where('notifiable_id', $this->id);
-                });
-            })
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('notification_user')
-                    ->whereColumn('notification_user.notification_id', 'notifications.id')
-                    ->where('notification_user.user_id', $this->id);
-            })->orderBy('created_at', 'desc'); // Order byを追加
-    }
-
-    /**
-     * Get the user's unread notifications, considering both direct notifications and role-based notifications.
-     *
-     * @return Collection
-     */
-    /*    public function unreadNotifications()
-        {
-            $userService = app(UserService::class);
-            $roles = $userService->getAllUniqueRolesForUser($this);
-
-            // 各ロールに紐づく通知を取得し、1つのコレクションにまとめる
-            $notifications = collect();
-            foreach ($roles as $role) {
-                $notifications = $notifications->merge($role->notifications);
-            }
-            $data=$notifications[0]->data;
-    dd($notifications,$notifications[0]->data,$data['data']['description']);
-            // 未読の通知のみを抽出
-            return $notifications->filter(function ($notification) {
-                return ! DB::table('notification_user')
-                    ->where('notification_id', $notification->id)
-                    ->where('user_id', $this->id)
-                    ->exists();
-            });    }*/
-
-    public function notificationSettings()
-    {
-        return $this->hasMany(NotificationSetting::class);
-    }
-
-    public function activities()
-    {
-        return $this->hasMany(Activity::class, 'causer_id');
-    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -276,19 +214,4 @@ class User extends Authenticatable implements FilamentUser
                 ->dontSubmitEmptyLogs() // 空のログは記録しない
                 ->logFillable();
         }*/
-    /**
-     * Get all notifications for the user via their roles.
-     */
-    public function roleNotifications(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            config('notifications.database.model'), // 通常は \Illuminate\Notifications\DatabaseNotification::class
-            Role::class, // カスタム Role モデル (app/Models/Role.php)
-            'id', // Role モデルの主キー
-            'notifiable_id', // notifications テーブルの外部キー
-            'id', // User モデルの主キー
-            'id'   // Role モデルの主キー
-        )
-            ->where('notifiable_type', Role::class);
-    }
 }

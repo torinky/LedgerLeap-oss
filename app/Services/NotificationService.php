@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Models\NotificationType;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\GenericNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -77,12 +80,12 @@ class NotificationService
 
     public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator
     {
-        return $user->unreadNotifications()->paginate($perPage);
+        return $this->unreadNotificationsForUser($user)->paginate($perPage);
     }
 
     public function getUnreadNotificationCountForUser(User $user): int
     {
-        return $user->unreadNotifications()->count();
+        return $this->unreadNotificationsForUser($user)->count();
     }
 
     // 既読処理 (単数/複数)
@@ -90,13 +93,13 @@ class NotificationService
     {
         if ($notificationIds === null) {
             // $notificationIds が null の場合、すべての未読通知を対象にする
-            $notifications = $user->unreadNotifications()->get();
+            $notifications = $this->unreadNotificationsForUser($user)->get();
         } elseif (is_string($notificationIds)) {
             // $notificationIds が文字列の場合、単一の通知 ID として扱う
-            $notifications = $user->unreadNotifications()->where('id', $notificationIds)->get();
+            $notifications = $this->unreadNotificationsForUser($user)->where('id', $notificationIds)->get();
         } else {
             // $notificationIds が配列の場合
-            $notifications = $user->unreadNotifications()->whereIn('id', $notificationIds)->get();
+            $notifications = $this->unreadNotificationsForUser($user)->whereIn('id', $notificationIds)->get();
         }
 
         foreach ($notifications as $notification) {
@@ -122,5 +125,28 @@ class NotificationService
                 ]);
             }
         }
+    }
+
+    public function unreadNotificationsForUser(User $user): Builder
+    {
+        $userService = $this->userService;
+        $roles = $userService->getAllUniqueRolesForUser($user);
+
+        return DatabaseNotification::query()
+            ->where(function ($query) use ($user, $roles) {
+                $query->where(function ($q) use ($roles) {
+                    $q->where('notifiable_type', Role::class)
+                        ->whereIn('notifiable_id', $roles->pluck('id'));
+                })->orWhere(function ($q) use ($user) {
+                    $q->where('notifiable_type', get_class($user))
+                        ->where('notifiable_id', $user->id);
+                });
+            })
+            ->whereNotExists(function ($query) use ($user) {
+                $query->select(DB::raw(1))
+                    ->from('notification_user')
+                    ->whereColumn('notification_user.notification_id', 'notifications.id')
+                    ->where('notification_user.user_id', $user->id);
+            })->orderBy('created_at', 'desc');
     }
 }
