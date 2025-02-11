@@ -304,5 +304,7 @@ return [
     'attribute' => '属性',
     'before_change' => '変更前',
     'after_change' => '変更後',
-
+    'name' => '名前',
+    'content' => '内容',
+    'ledger_define_id' => '台帳定義ID',
 ];
