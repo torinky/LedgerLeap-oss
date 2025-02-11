@@ -21,6 +21,7 @@
         "logue/igo-php": "^0.2.1",
         "maatwebsite/excel": "^3.1.48",
         "robsontenorio/mary": "^1.35",
+        "sebastian/diff": "^6.0",
         "spatie/laravel-activitylog": "^4.9",
         "spatie/laravel-markdown": "^2.7",
         "spatie/laravel-permission": "^6.9",
@@ -38,7 +39,7 @@
         "laravel/sail": "*",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^8.0",
-        "phpunit/phpunit": "^10.1",
+        "phpunit/phpunit": "^11",
         "roave/security-advisories": "dev-latest",
         "spatie/laravel-ignition": "^2.0"
     },

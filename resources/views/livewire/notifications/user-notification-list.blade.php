@@ -1,3 +1,4 @@
+{{-- resources/views/livewire/notifications/user-notification-list.blade.php --}}
 <div>
     <x-slot name="header">
         <h2 class="font-semibold text-base-content leading-tight">
@@ -19,9 +20,6 @@
                                     <button wire:click="markAllAsRead"
                                             class="btn btn-sm btn-primary">{{ __('ledger.mark_all_as_read') }}</button>
                                 </div>
-                                <div class="flex justify-center ">
-                                    {{ $notifications->links() }}
-                                </div>
 
                                 @foreach($notifications as $notification)
                                     <div class="border-b border-base-content/50 last:border-b-0 pb-4">
@@ -41,8 +39,8 @@
                                                         @if($notification->data['payload']['event'] === 'created')
                                                             {{__('ledger.ledger')}}
                                                             @isset($notification->data['payload']['subject_id'])
-                                                                <a href="{{ route('ledger.show', $notification->data['payload']['subject_id']) }}"
-                                                                   class="link">
+                                                                    <a href="{{ route('ledger.show', $notification->data['payload']['subject_id']) }}"
+                                                                       class="link">
                                                                     {{ $notification->data['payload']['ledger_name'] ?? 'Ledger ID: ' . $notification->data['payload']['subject_id'] }}
                                                                 </a>
                                                             @endisset
@@ -50,8 +48,8 @@
                                                         @elseif($notification->data['payload']['event'] === 'updated')
                                                             {{__('ledger.ledger')}}
                                                             @isset($notification->data['payload']['subject_id'])
-                                                                <a href="{{ route('ledger.show', $notification->data['payload']['subject_id']) }}"
-                                                                   class="link">
+                                                                    <a href="{{ route('ledger.show', $notification->data['payload']['subject_id']) }}"
+                                                                       class="link">
                                                                     {{ $notification->data['payload']['ledger_name'] ?? 'Ledger ID: ' . $notification->data['payload']['subject_id'] }}
                                                                 </a>
                                                             @endisset
@@ -95,21 +93,12 @@
                                                         </thead>
                                                         <tbody>
                                                         @foreach($notification->data['payload']['changes']['attributes'] as $attribute => $newValue)
-                                                            <tr>
-                                                                <td>{{ $attribute }}</td>
-                                                                <td>
-                                                                    @isset($notification->data['payload']['changes']['old'][$attribute])
-                                                                        <pre
-                                                                            class="text-xs">{{ json_encode($notification->data['payload']['changes']['old'][$attribute], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
-                                                                    @else
-                                                                        -
-                                                                    @endisset
-                                                                </td>
-                                                                <td>
-                                                                    <pre
-                                                                        class="text-xs">{{ json_encode($newValue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
-                                                                </td>
-                                                            </tr>
+                                                            {{-- 変更前後の値を1つのコンポーネントに渡す --}}
+                                                            <x-diff-display
+                                                                :attribute="$attribute"
+                                                                :old="$notification->data['payload']['changes']['old'][$attribute] ?? null"
+                                                                :new="$newValue"
+                                                            />
                                                         @endforeach
                                                         </tbody>
                                                     </table>
@@ -117,7 +106,7 @@
                                             </div>
                                         @endif
                                         {{-- 既読ボタン --}}
-                                        <div class="mt-2 flex justify-end ">
+                                        <div class="flex justify-end">
                                             @if($notification->unread())
                                                 <button wire:click="markAsRead('{{ $notification->id }}')"
                                                         class="btn btn-xs btn-primary">{{ __('ledger.mark_as_read') }}</button>
@@ -125,8 +114,14 @@
                                         </div>
                                     </div>
                                 @endforeach
-                                <div class="flex justify-center ">
-                                    {{ $notifications->links() }}
+                                {{-- ページネーションリンク --}}
+                                <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
+                                    <div
+                                        class="card bg-base-300 opacity-70 transition-opacity hover:opacity-100 shadow-lg">
+                                        <div class="card-body">
+                                            {!! $notifications->links() !!}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         @endif
