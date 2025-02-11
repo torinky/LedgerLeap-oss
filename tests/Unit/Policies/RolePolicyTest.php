@@ -108,7 +108,7 @@ class RolePolicyTest extends TestCase
     {
         $userWithoutEditRolesPermission = User::factory()->create();
         $this->userService->shouldReceive('hasPermission')
-            ->with($userWithoutEditRolesPermission, ['edit_roles', 'manage_roles'])
+            ->with($userWithoutEditRolesPermission, ['update_roles', 'manage_roles'])
             ->andReturn(false);
 
         $this->assertFalse($this->rolePolicy->update($userWithoutEditRolesPermission));
