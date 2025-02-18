@@ -223,4 +223,9 @@ class Folder extends Model
             ->withPivot('permission')
             ->wherePivot('permission', $permission->value);
     }
+
+    public function notificationType(): BelongsTo
+    {
+        return $this->belongsTo(NotificationType::class);
+    }
 }

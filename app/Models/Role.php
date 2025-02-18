@@ -5,8 +5,7 @@ namespace App\Models;
 use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
@@ -100,13 +99,22 @@ class Role extends SpatieRole
     }
 
     /**
-     * A role may have many notifications.
-     *
-     * @return MorphMany
+     * The folders that belong to the role and have notification settings.
      */
-    /*    public function roleNotifications(): MorphMany // 追加
-        {
-    //        return $this->morphMany(config('notifications.database.model'), 'notifiable');
-            return $this->morphMany(DatabaseNotification::class, 'notifiable');
-        }*/
+    public function notificationSettings(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Folder::class,
+            'role_folder_permissions', // 中間テーブル名
+            'role_id', // 現在のモデル (Role) の外部キー
+            'folder_id' // 関連モデル (Folder) の外部キー
+        )
+            ->withPivot('notification_type_id') // 中間テーブルのカラム
+            ->withTimestamps(); // 中間テーブルのタイムスタンプを更新
+    }
+
+    public function roleFolderPermissions(): HasMany
+    {
+        return $this->hasMany(RoleFolderPermission::class);
+    }
 }

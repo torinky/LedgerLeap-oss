@@ -8,6 +8,7 @@ use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationMan
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\ManageableFolderRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\WritableFolderRelationManager;
 use App\Models\Folder;
@@ -166,6 +167,7 @@ class RoleResource extends BaseRoleResource
             FolderRelationManager::class,
             WritableFolderRelationManager::class,
             ManageableFolderRelationManager::class,
+            NotificationSettingsRelationManager::class,
         ];
     }
 

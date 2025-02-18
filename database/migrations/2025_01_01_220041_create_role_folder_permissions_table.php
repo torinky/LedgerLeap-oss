@@ -15,11 +15,15 @@ return new class extends Migration {
             $table->unsignedBigInteger('role_id');
             $table->unsignedBigInteger('folder_id');
             $table->unsignedBigInteger('modifier_id');
-            $table->enum('permission', ['read', 'write', 'admin', 'delete'])->default('read');
+            $table->enum('permission', ['read', 'write', 'admin', 'delete', 'notify_on', 'notify_off'])->default('read');
+
+            $table->foreignId('notification_type_id')->constrained()->cascadeOnDelete();
+
             $table->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('folders')->onDelete('cascade');
             $table->foreign('modifier_id')->references('id')->on('users');
-            $table->unique(['role_id', 'folder_id']); // 同じroleとfolderの組み合わせは一意にする
+
+            $table->unique(['role_id', 'folder_id', 'notification_type_id'], 'unique_role_folder_notification');
             $table->timestamps();
         });
     }

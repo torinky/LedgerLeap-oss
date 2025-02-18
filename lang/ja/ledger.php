@@ -307,4 +307,7 @@ return [
     'name' => '名前',
     'content' => '内容',
     'ledger_define_id' => '台帳定義ID',
+    'notification_settings' => '通知設定',
+    'notify' => '通知',
+    'containing' => '含む', // SelectTree のラベル
 ];

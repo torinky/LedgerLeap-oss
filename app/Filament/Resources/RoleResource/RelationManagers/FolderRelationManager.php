@@ -59,6 +59,7 @@ class FolderRelationManager extends RelationManager
         $existingFolderIds = RoleFolderPermission::where('role_id', $role->id)
             ->where('permission', $this->permission->value)
             ->pluck('folder_id');
+
         return $table
             // Support changing table heading by translations.
             ->heading(__('ledger.filament.' . (string)str(static::getRelationshipName())))
@@ -96,6 +97,7 @@ class FolderRelationManager extends RelationManager
                         $data['role_id'] = $role->id;
                         $data['folder_id'] = $data['recordId'];
                         $data['permission'] = $this->permission;
+                        $data['notification_type_id'] = 1;
                         $data['modifier_id'] = auth()->id();
                         unset($data['recordId']);
 
