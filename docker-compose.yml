@@ -1,11 +1,11 @@
 services:
     laravel:
         build:
-            context: ./docker/8.2
+            context: ./vendor/laravel/sail/runtimes/8.4
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
-        image: sail-8.2/app
+        image: sail-8.4/app
         ports:
             - '${APP_PORT:-80}:80'
             - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
@@ -26,19 +26,13 @@ services:
                 condition: service_started
             tika:
                 condition: service_started
-    #            - mysql
-    #            - redis
-    #            - meilisearch
-    #            - mailpit
-    #            - selenium
-    #            - tika
     queue:
         build:
-            context: ./docker/8.2
+            context: ./vendor/laravel/sail/runtimes/8.4
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
-        image: sail-8.2/app
+        image: sail-8.4/app
         command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
         environment:
             WWWUSER: '${WWWUSER}'
@@ -76,8 +70,8 @@ services:
             MYSQL_ALLOW_EMPTY_PASSWORD: 1
         volumes:
             - 'sail-mysql:/var/lib/mysql'
-            - './docker/8.2/my.cnf:/etc/my.cnf'
             - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+            - './docker/mroonga/my.cnf:/etc/mysql/conf.d/mroonga.cnf'
         networks:
             - sail
         healthcheck:
@@ -139,6 +133,7 @@ services:
         ports:
             - 9998:9998
         #        command: -c /tika-config.xml
+        command: [ '-JXmx4g', '-c', '/tika-config.xml' ]  # メモリ割当最適化
         restart: on-failure
         volumes:
             - './docker/tika/tika-config.xml:/tika-config.xml'

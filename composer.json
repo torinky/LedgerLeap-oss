@@ -5,7 +5,7 @@
     "keywords": ["framework", "laravel"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "ext-mbstring": "*",
         "althinect/filament-spatie-roles-permissions": "^2.2",
         "codewithdennis/filament-select-tree": "^3.1",
