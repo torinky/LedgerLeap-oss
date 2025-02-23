@@ -5,6 +5,7 @@ namespace App\Filament\Resources\RoleResource\RelationManagers;
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\NotificationType;
+use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms\Components\CheckboxList;
@@ -18,7 +19,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
-
 
 class NotificationSettingsRelationManager extends RelationManager
 {
@@ -62,7 +62,7 @@ class NotificationSettingsRelationManager extends RelationManager
                 ->label(__('ledger.notification_type'))
                     ->formatStateUsing(function ($record) {
                         //                dd($record);
-                        return $record->notificationType ? $record->notificationType->name : null;
+                        return $record->notificationType ? __('ledger.notification_types.' . $record->notificationType->name) : null;
                     }), IconColumn::make('permission')
                     ->label(__('ledger.notify'))
                     ->boolean()
@@ -92,8 +92,12 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->enableBranchNode()
                             ->defaultOpenLevel(10),
                         CheckboxList::make('notification_type_ids') // 変更: 複数選択可能な CheckboxList
-                        ->label(__('ledger.notification_types'))
-                            ->options(NotificationType::pluck('name', 'id')->toArray()) // 通知タイプを選択
+                        ->label(__('ledger.notification_type'))
+                            ->options(function () {
+                                return NotificationType::all()->mapWithKeys(function ($notificationType) {
+                                    return [$notificationType->id => __('ledger.notification_types.' . $notificationType->name)];
+                                })->toArray();
+                            })
                             ->columns(3)
                             ->default(function () {
                                 // デフォルトで、Ledger 関連の通知タイプをすべて選択
@@ -161,8 +165,13 @@ class NotificationSettingsRelationManager extends RelationManager
                 EditAction::make() // 追加: EditAction を追加
                 ->form([
                     CheckboxList::make('notification_types') // 変更: CheckboxList を追加
-                    ->label(__('ledger.notification_types'))
-                        ->options(NotificationType::pluck('name', 'id')->toArray()) // 通知タイプを選択
+                    ->label(__('ledger.notification_type'))
+//                            ->options(NotificationType::pluck('name', 'id')->toArray()) // 通知タイプを選択
+                        ->options(function () {
+                            return NotificationType::all()->mapWithKeys(function ($notificationType) {
+                                return [$notificationType->id => __('ledger.notification_types.' . $notificationType->name)];
+                            })->toArray();
+                        })
                         ->columns(3)
                         ->afterStateHydrated(function (CheckboxList $component, Folder $record) {
                             //                            dd($record);
@@ -216,5 +225,32 @@ class NotificationSettingsRelationManager extends RelationManager
     {
         // この RelationManager ではフォームは使わない
         return $form->schema([]);
+    }
+
+    public function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', Role::class);
+    }
+
+    public function canCreate(): bool
+    {
+        return auth()->user()->can('create', Role::class);
+    }
+
+    public function canEdit($record): bool
+    {
+        //        return auth()->user()->can('update', $record);
+        return auth()->user()->can('update', Role::class);
+    }
+
+    public function canDelete($record): bool
+    {
+        //        return auth()->user()->can('delete', $record);
+        return auth()->user()->can('delete', Role::class);
+    }
+
+    public function canDeleteAny(): bool
+    {
+        return auth()->user()->can('delete', Role::class);
     }
 }

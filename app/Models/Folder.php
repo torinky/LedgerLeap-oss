@@ -224,6 +224,10 @@ class Folder extends Model
             ->wherePivot('permission', $permission->value);
     }
 
+    /**
+     * Belongs to relationship for notification type.
+     *  RoleFolderPermission と NotificationType を経由して紐付いているが、ここで宣言しなければならない理由は不明
+     */
     public function notificationType(): BelongsTo
     {
         return $this->belongsTo(NotificationType::class);
