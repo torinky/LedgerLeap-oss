@@ -237,4 +237,28 @@ class UserService
         // PoC では、常に「All Users」ロールを返す
         return Role::where('name', 'All Users')->get();
     }
+
+    /**
+     * 指定されたロール ID の配列に紐づくユーザーのコレクションを取得する
+     */
+    public function getUsersByRoleIds(array $roleIds): Collection
+    {
+        return User::whereHas('roles', function ($query) use ($roleIds) {
+            $query->whereIn('id', $roleIds);
+        })->get();
+    }
+
+    /**
+     * 組織が持つすべてのロールを取得する (上位組織から継承されたロールも含む)
+     */
+    public function getAllRolesForOrganization(Organization $organization): Collection
+    {
+        $roles = $organization->roles; // 組織に直接紐づくロールを取得
+
+        foreach ($organization->ancestors as $ancestor) {
+            $roles = $roles->merge($ancestor->roles); // 上位組織のロールをマージ
+        }
+
+        return $roles->unique('id'); // 重複を除外して返す
+    }
 }

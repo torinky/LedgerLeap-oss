@@ -17,15 +17,13 @@ return new class extends Migration {
             $table->unsignedBigInteger('modifier_id');
             $table->enum('permission', ['read', 'write', 'admin', 'delete', 'notify_on', 'notify_off'])->default('read');
 
-            // $table->foreignId('notification_type_id')->constrained()->cascadeOnDelete(); // 削除
-            $table->unsignedBigInteger('notification_type_id')->nullable(); // 追加: nullable に変更
+            $table->unsignedBigInteger('notification_type_id')->nullable();
 
-            // $table->foreign('notification_type_id')->references('id')->on('notification_types'); // 削除: 外部キー制約はいったん削除
             $table->foreign('notification_type_id')->references('id')->on('notification_types')->nullOnDelete(); //追記:nullableなのでnullOnDelete
             $table->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('folders')->onDelete('cascade');
             $table->foreign('modifier_id')->references('id')->on('users');
-            $table->unique(['role_id', 'folder_id', 'notification_type_id'], 'unique_role_folder_notification');
+            $table->unique(['role_id', 'folder_id', 'notification_type_id', 'permission'], 'unique_role_folder_notification_permission');
             $table->timestamps();
         });
     }

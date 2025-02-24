@@ -7,18 +7,12 @@ use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -78,22 +72,12 @@ class User extends Authenticatable implements FilamentUser
         });
     }
 
-    /*    public function writableFolderIds()
-        {
-            return app(WritableFolderRepository::class)->getWritableFolderIds($this);
-        }
-
-        public function readableFolderIds()
-        {
-            return app(WritableFolderRepository::class)->getReadableFolderIds($this);
-        }*/
-
     protected UserService $userService;
 
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->userService = app(UserService::class);
+        //        $this->userService = app(UserService::class);
     }
 
     public function organizations()
@@ -115,45 +99,45 @@ class User extends Authenticatable implements FilamentUser
         $this->organizations()->syncWithPivotValues([$organization->id], ['is_primary' => true], false);
     }
 
-    public function getAllPermissions()
-    {
-        return $this->userService->getAllPermissionsForUser($this);
-    }
+    /*    public function getAllPermissions()
+        {
+            return $this->userService->getAllPermissionsForUser($this);
+        }
 
-    public function getAllRoles()
-    {
-        return $this->userService->getAllRolesForUser($this);
-    }
+        public function getAllRoles()
+        {
+            return $this->userService->getAllRolesForUser($this);
+        }
 
-    public function hasPermissionForOrganization($permission, $organization)
-    {
-        return $this->userService->hasPermissionForOrganization($this, $permission, $organization);
-    }
+        public function hasPermissionForOrganization($permission, $organization)
+        {
+            return $this->userService->hasPermissionForOrganization($this, $permission, $organization);
+        }
 
-    public function hasRoleForOrganization($role, $organization)
-    {
-        return $this->userService->hasRoleForOrganization($this, $role, $organization);
-    }
+        public function hasRoleForOrganization($role, $organization)
+        {
+            return $this->userService->hasRoleForOrganization($this, $role, $organization);
+        }
 
-    public function assignRoleToOrganization($role, $organization)
-    {
-        $this->userService->assignRoleToOrganization($this, $role, $organization);
-    }
+        public function assignRoleToOrganization($role, $organization)
+        {
+            $this->userService->assignRoleToOrganization($this, $role, $organization);
+        }
 
-    public function hasRoleInOrganization($role, $organization)
-    {
-        return $this->userService->hasRoleInOrganization($this, $role, $organization);
-    }
+        public function hasRoleInOrganization($role, $organization)
+        {
+            return $this->userService->hasRoleInOrganization($this, $role, $organization);
+        }
 
-    public function getAllUniqueRoles()
-    {
-        return $this->userService->getAllUniqueRolesForUser($this);
-    }
+        public function getAllUniqueRoles()
+        {
+            return $this->userService->getAllUniqueRolesForUser($this);
+        }
 
-    public function getAllUniquePermissions()
-    {
-        return $this->userService->getAllUniquePermissionsForUser($this);
-    }
+        public function getAllUniquePermissions()
+        {
+            return $this->userService->getAllUniquePermissionsForUser($this);
+        }*/
 
     public function canAccessPanel(Panel $panel): bool
     {
@@ -192,7 +176,6 @@ class User extends Authenticatable implements FilamentUser
 
         return $this;
     }
-
 
     public function getActivitylogOptions(): LogOptions
     {

@@ -12,51 +12,108 @@ class NotificationTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        // 通知なし
-        NotificationType::firstOrCreate(['name' => 'none'], [
-            'description' => '通知を受け取りません。',
-            'default_is_enabled' => false,
-        ]);
         // Ledger 関連
         NotificationType::firstOrCreate(['name' => 'ledger_created'], [
-            'description' => 'Ledger が作成されたときに通知します。',
-            'default_is_enabled' => true,
+            'description' => '台帳が作成されたときに通知します。',
+            'model' => 'App\Models\Ledger',
+            'folder_relation' => 'define.folder',
+            'event' => 'created',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_updated'], [
-            'description' => 'Ledger が更新されたときに通知します。',
-            'default_is_enabled' => true,
+            'description' => '台帳が更新されたときに通知します。',
+            'model' => 'App\Models\Ledger',
+            'folder_relation' => 'define.folder',
+            'event' => 'updated',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_deleted'], [
-            'description' => 'Ledger が削除されたときに通知します。',
-            'default_is_enabled' => true,
+            'description' => '台帳が削除されたときに通知します。',
+            'model' => 'App\Models\Ledger',
+            'folder_relation' => 'define.folder',
+            'event' => 'deleted',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
 
         // Folder 関連
         NotificationType::firstOrCreate(['name' => 'folder_created'], [
             'description' => 'フォルダーが作成されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\Folder',
+            'folder_relation' => null, // Folder 自身が subject
+            'event' => 'created',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'folder_updated'], [
             'description' => 'フォルダーが更新されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\Folder',
+            'folder_relation' => null,
+            'event' => 'updated',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'folder_deleted'], [
             'description' => 'フォルダーが削除されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\Folder',
+            'folder_relation' => null,
+            'event' => 'deleted',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
 
         // LedgerDefine 関連
         NotificationType::firstOrCreate(['name' => 'ledger_define_created'], [
             'description' => '台帳定義が作成されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\LedgerDefine',
+            'folder_relation' => 'folder',
+            'event' => 'created',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_define_updated'], [
             'description' => '台帳定義が更新されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\LedgerDefine',
+            'folder_relation' => 'folder',
+            'event' => 'updated',
+            'default_notify' => true,
+            'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_define_deleted'], [
             'description' => '台帳定義が削除されたときに通知します。',
-            'default_is_enabled' => true,
+            'model' => 'App\Models\LedgerDefine',
+            'folder_relation' => 'folder',
+            'event' => 'deleted',
+            'default_notify' => true,
+            'enabled' => true,
+        ]);
+
+        // User 関連 (例)
+        NotificationType::firstOrCreate(['name' => 'user_created'], [
+            'description' => 'ユーザーが作成されたときに通知します。',
+            'model' => 'App\Models\User',
+            'folder_relation' => null, // ユーザーはフォルダーに直接関連付けられない
+            'event' => 'created',
+            'default_notify' => false, // デフォルトでは OFF (必要に応じて変更)
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'user_updated'], [
+            'description' => 'ユーザー情報が更新されたときに通知します。',
+            'model' => 'App\Models\User',
+            'folder_relation' => null,
+            'event' => 'updated',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'user_deleted'], [
+            'description' => 'ユーザーが削除されたときに通知します。',
+            'model' => 'App\Models\User',
+            'folder_relation' => null,
+            'event' => 'deleted',
+            'default_notify' => false,
+            'enabled' => true,
         ]);
     }
 }

@@ -47,8 +47,12 @@ class FolderPolicy
      *
      * @return Response|bool
      */
-    public function create(User $user, Folder $folder)
+    public function create(User $user, $folder = null)
     {
+        if (empty($folder)) {
+            return false;
+        }
+
         // ユーザーがフォルダの作成権限を持っているかどうかをチェック
         return $this->userService->hasPermission($user, 'create_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
@@ -71,8 +75,12 @@ class FolderPolicy
      *
      * @return Response|bool
      */
-    public function delete(User $user, Folder $folder)
+    public function delete(User $user, $folder = null)
     {
+        if (empty($folder)) {
+            return null;
+        }
+
         // ユーザーがフォルダの削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
         return $this->userService->hasPermission($user, 'delete_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
@@ -95,8 +103,12 @@ class FolderPolicy
      *
      * @return Response|bool
      */
-    public function forceDelete(User $user, Folder $folder)
+    public function forceDelete(User $user, $folder = null)
     {
+        if (empty($folder)) {
+            return false;
+        }
+
         // ユーザーがフォルダの強制削除権限を持っているか、およびフォルダが管理可能かどうかをチェック
         return $this->userService->hasPermission($user, 'force_delete_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);

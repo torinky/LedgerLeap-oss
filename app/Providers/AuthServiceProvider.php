@@ -42,7 +42,7 @@ class AuthServiceProvider extends ServiceProvider
         //
         Gate::before(function (User $user, $ability) {
             if ($user->hasRole('Super Admin')) {
-//                return true;
+                //                return true;
             }
         });
 
@@ -62,8 +62,7 @@ class AuthServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(WritableFolderRepository::class, function ($app) {
-            return new WritableFolderRepository();
+            return new WritableFolderRepository;
         });
     }
-
 }

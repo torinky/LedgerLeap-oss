@@ -334,5 +334,7 @@ return [
         'permission_deleted' => '権限削除',
     ],
     'notification_type' => '通知タイプ',
+    'disable_notification' => '通知を無効にする',
+    'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
 
 ];

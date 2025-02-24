@@ -9,10 +9,38 @@ class NotificationType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'default_is_enabled'];
+    protected $fillable = [
+        'name',
+        'description',
+        'model',
+        'folder_relation',
+        'event',
+        'default_notify',
+        'enabled',
+    ];
 
-    public function notificationSettings()
+    /**
+     * Get the related folder for this notification type.
+     *
+     * @return mixed
+     */
+    public function folder()
     {
-        return $this->hasMany(NotificationSetting::class);
+        if (!$this->folder_relation) {
+            return null;
+        }
+
+        // リレーションシップパスを使ってフォルダーを取得
+        return data_get($this, $this->folder_relation);
+    }
+
+    /**
+     * Check if this notification type is for the given model.
+     *
+     * @param mixed $model
+     */
+    public function isForModel($model): bool
+    {
+        return $this->model === get_class($model);
     }
 }

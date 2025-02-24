@@ -2,13 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\FolderPermissionType;
 use App\Models\NotificationType;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Notifications\GenericNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -24,69 +27,109 @@ class NotificationService
     }
 
     // public function processActivityLog(Ledger $ledger) // 引数を変更
+    /*   public function processActivityLog(Activity $activity)
+       {
+           Log::info('NotificationService::processActivityLog called'); // ログ追加
+
+           // subject_type に応じて通知タイプを決定
+           $subjectType = $activity->subject_type;
+           $event = $activity->event;
+
+           // 通知タイプを取得
+           $notificationTypeName = null;
+           switch ($subjectType) {
+               case 'App\Models\Ledger':
+                   $notificationTypeName = "ledger_{$event}";
+                   break;
+               // case 'App\Models\User':
+               //     $notificationTypeName = "user_{$event}";
+               //     break;
+               // 他のモデルのケースを追加
+               default:
+                   Log::info("Unknown subject type: {$subjectType}");
+
+                   return;
+           }
+
+           $notificationType = NotificationType::where('name', $notificationTypeName)->first();
+
+           if (!$notificationType) {
+               Log::info("NotificationType not found for event: {$notificationTypeName}");
+
+               return;
+           }
+
+           Log::info('NotificationType found', ['notificationType' => $notificationType]); // ログ追加
+
+           // 通知対象のロールを取得 (UserService のメソッドを利用)
+           $roles = $this->userService->getNotifiableRoles($activity->event, $activity->subject);
+
+           if ($roles->isEmpty()) {
+               Log::info('No roles to notify');
+
+               return;
+           }
+
+           Log::info('Roles to notify', ['roles' => $roles]); // ログ追加
+
+           //        dd($activity);
+           // 通知を送信
+           Notification::send($roles, new GenericNotification(
+               $notificationType->id,
+               $activity->subject, // 変更されたモデルのインスタンスを渡す
+               $activity
+           ));
+       }*/
     public function processActivityLog(Activity $activity)
     {
-        Log::info('NotificationService::processActivityLog called'); // ログ追加
-
-        // subject_type に応じて通知タイプを決定
         $subjectType = $activity->subject_type;
         $event = $activity->event;
 
-        // 通知タイプを取得
-        $notificationTypeName = null;
-        switch ($subjectType) {
-            case 'App\Models\Ledger':
-                $notificationTypeName = "ledger_{$event}";
-                break;
-            // case 'App\Models\User':
-            //     $notificationTypeName = "user_{$event}";
-            //     break;
-            // 他のモデルのケースを追加
-            default:
-                Log::info("Unknown subject type: {$subjectType}");
-
-                return;
-        }
-
-        $notificationType = NotificationType::where('name', $notificationTypeName)->first();
+        // 通知タイプを取得 (model と event で絞り込み)
+        $notificationType = NotificationType::where('model', $subjectType)
+            ->where('event', $event)
+            ->first();
 
         if (!$notificationType) {
-            Log::info("NotificationType not found for event: {$notificationTypeName}");
+            \Log::info("NotificationType not found for model: {$subjectType}, event: {$event}");
 
             return;
         }
 
-        Log::info('NotificationType found', ['notificationType' => $notificationType]); // ログ追加
+        // 通知対象のロールとユーザーを取得
+        $users = $this->getNotifiableRecipients($activity, $notificationType);
 
-        // 通知対象のロールを取得 (UserService のメソッドを利用)
-        $roles = $this->userService->getNotifiableRoles($activity->event, $activity->subject);
-
-        if ($roles->isEmpty()) {
-            Log::info('No roles to notify');
-
+        if ($users->isEmpty()) {
             return;
         }
 
-        Log::info('Roles to notify', ['roles' => $roles]); // ログ追加
-
-        //        dd($activity);
         // 通知を送信
-        Notification::send($roles, new GenericNotification(
+        Notification::send($users, new GenericNotification(
             $notificationType->id,
-            $activity->subject, // 変更されたモデルのインスタンスを渡す
+            $activity->subject,
             $activity
         ));
     }
 
     public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator
     {
-        return $this->unreadNotificationsForUser($user)->paginate($perPage);
+        return $user->unreadNotifications()->paginate($perPage);
     }
 
     public function getUnreadNotificationCountForUser(User $user): int
     {
-        return $this->unreadNotificationsForUser($user)->count();
+        return $user->unreadNotifications()->count();
     }
+
+    /*    public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator
+        {
+            return $this->unreadNotificationsForUser($user)->paginate($perPage);
+        }
+
+        public function getUnreadNotificationCountForUser(User $user): int
+        {
+            return $this->unreadNotificationsForUser($user)->count();
+        }*/
 
     // 既読処理 (単数/複数)
     public function markAsRead(User $user, $notificationIds = null): void
@@ -148,5 +191,66 @@ class NotificationService
                     ->whereColumn('notification_user.notification_id', 'notifications.id')
                     ->where('notification_user.user_id', $user->id);
             })->orderBy('created_at', 'desc');
+    }
+
+    public function getNotifiableRecipients(Activity $activity, NotificationType $notificationType): Collection
+    {
+        $subject = $activity->subject;
+
+        // subject (変更されたモデル) からフォルダーを特定
+        $folder = $notificationType->folder(); // NotificationType モデルの folder() メソッドを使用
+
+        if (!$folder) {
+            \Log::info('Folder not found for subject: ' . get_class($subject));
+
+            return collect();
+        }
+
+        // フォルダーと通知タイプに紐づく RoleFolderPermission を取得し、permission が NOTIFY_ON のものを抽出
+        $roleFolderPermissions = RoleFolderPermission::where('folder_id', $folder->id)
+            ->where('notification_type_id', $notificationType->id)
+            ->where('permission', FolderPermissionType::NOTIFY_ON)
+            ->get();
+
+        // RoleFolderPermission から Role の ID を取得
+        $roleIds = $roleFolderPermissions->pluck('role_id')->unique()->toArray();
+
+        // Role の ID から User を取得 (UserService を利用)
+        $users = $this->userService->getUsersByRoleIds($roleIds);
+
+        return $users;
+    }
+
+    /**
+     * 通知対象のロールを取得する
+     */
+    public function getNotifiableRoles(Activity $activity, NotificationType $notificationType): Collection // 引数を修正
+    {
+        $subject = $activity->subject;
+
+        // subject (変更されたモデル) からフォルダーを特定
+        $folder = null;
+        if ($activity->subject_type == 'App\Models\Ledger') {
+            $folder = $activity->subject->define->folder;
+        }
+        // TODO: Folder モデルや User モデルの変更の場合は、$activity->subject から直接取得
+
+        if (!$folder) {
+            \Log::info('Folder not found for subject: ' . $activity->subject_type);
+
+            return collect();
+        }
+
+        // フォルダーと通知タイプに紐づく RoleFolderPermission を取得し、permission が NOTIFY_ON のものを抽出
+        $roleFolderPermissions = RoleFolderPermission::where('folder_id', $folder->id)
+            ->where('notification_type_id', $notificationType->id)
+            ->where('permission', FolderPermissionType::NOTIFY_ON)
+            ->get();
+
+        // RoleFolderPermission から Role の ID を取得
+        $roleIds = $roleFolderPermissions->pluck('role_id')->unique()->toArray();
+
+        // Role の ID から Role モデルを取得
+        return Role::whereIn('id', $roleIds)->get();
     }
 }

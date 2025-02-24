@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
+use App\Filament\Tables\Actions\DeleteNotification;
 use App\Models\Folder;
 use App\Models\NotificationType;
 use App\Models\Role;
@@ -43,7 +44,7 @@ class NotificationSettingsRelationManager extends RelationManager
 
     protected static function getModelLabel(): string
     {
-        return __('ledger.notification_setting');
+        return __('ledger.notification_settings');
     }
 
     protected static function getPluralModelLabel(): string
@@ -101,7 +102,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->columns(3)
                             ->default(function () {
                                 // デフォルトで、Ledger 関連の通知タイプをすべて選択
-                                return NotificationType::where('name', 'like', 'ledger_%')->pluck('id')->toArray();
+                                return NotificationType::where('default_notify', '=', true)->pluck('id')->toArray();
                             })
                             ->required(),
 
@@ -120,48 +121,35 @@ class NotificationSettingsRelationManager extends RelationManager
                         $modifierId = auth()->id();
                         $selectedNotificationTypeIds = $data['notification_type_ids'];
 
-                        $notificationTypeIds = NotificationType::pluck('id')->toArray();
-
-                        // 既存の通知設定を取得 (permission が NOTIFY_ON または NOTIFY_OFF のもの)
-                        $existingSettings = RoleFolderPermission::where('role_id', $role->id)
+                        // 既存の通知設定をすべて NOTIFY_OFF に更新
+                        RoleFolderPermission::where('role_id', $role->id)
                             ->where('folder_id', $folderId)
-                            ->whereIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
-                            ->get();
+                            ->where('permission', FolderPermissionType::NOTIFY_ON)
+                            ->update(['permission' => FolderPermissionType::NOTIFY_OFF]);
 
                         // 選択された通知タイプについて、role_folder_permissions レコードを作成/更新
-                        foreach ($notificationTypeIds as $notificationTypeId) {
-
-                            if (in_array($notificationTypeId, $selectedNotificationTypeIds)) {
-                                $switch = FolderPermissionType::NOTIFY_ON;
-                            } else {
-                                $switch = FolderPermissionType::NOTIFY_OFF;
-                            }
-
-                            $setting = $existingSettings->where('notification_type_id', $notificationTypeId)->first();
-                            if ($setting) {
-                                // 既存の設定がある場合は、permission を NOTIFY_ON に更新
-                                $setting->update([
-                                    'modifier_id' => $modifierId,
-                                    'permission' => $switch,
-                                ]);
-                            } else {
-                                // 既存の設定がない場合は、新規作成
-                                $createdRecord = RoleFolderPermission::create([
+                        foreach ($selectedNotificationTypeIds as $notificationTypeId) {
+                            RoleFolderPermission::updateOrCreate(
+                                [
                                     'role_id' => $role->id,
                                     'folder_id' => $folderId,
+                                    'permission' => FolderPermissionType::NOTIFY_OFF,
                                     'notification_type_id' => $notificationTypeId,
+                                ],
+                                [
+                                    'role_id' => $role->id,
+                                    'folder_id' => $folderId,
                                     'modifier_id' => $modifierId,
-                                    'permission' => $switch,
-                                ]);
-                                //                                dd($setting,$notificationTypeId,$createdRecord);
-                            }
+                                    'permission' => FolderPermissionType::NOTIFY_ON, // 通知を ON に設定
+                                    'notification_type_id' => $notificationTypeId,
+                                ]
+                            );
                         }
 
                         return null; // AttachAction では通常、何も返さない
                     }),
             ])->actions([
-                DeleteAction::make(),
-                //                DisableNotification::make(), // 追加
+                DeleteNotification::make(),
                 EditAction::make() // 追加: EditAction を追加
                 ->form([
                     CheckboxList::make('notification_types') // 変更: CheckboxList を追加

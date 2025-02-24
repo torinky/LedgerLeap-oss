@@ -14,7 +14,11 @@ return new class extends Migration {
             $table->id();
             $table->string('name')->unique();
             $table->string('description')->nullable();
-            $table->boolean('default_is_enabled')->default(true);
+            $table->string('model')->nullable();
+            $table->string('folder_relation')->nullable();
+            $table->string('event')->nullable();
+            $table->boolean('default_notify')->default(true);
+            $table->boolean('enabled')->default(true);
             $table->timestamps();
         });
     }

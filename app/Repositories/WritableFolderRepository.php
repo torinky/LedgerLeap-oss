@@ -5,10 +5,18 @@ namespace App\Repositories;
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Cache;
 
 class WritableFolderRepository
 {
+    private UserService $userService;
+
+    public function __construct()
+    {
+        $this->userService = new UserService($this);
+    }
+
     /**
      * ユーザーが指定された権限でアクセス可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
      * フォルダが指定されていない場合は、ユーザーがアクセス可能なすべてのフォルダIDを子孫フォルダも含めて取得する
@@ -24,7 +32,8 @@ class WritableFolderRepository
             $cacheKey,
             config("cache.{$permission->value}able_folders_ttl", 60),
             function () use ($user, $permission, $folder) {
-                $userRoles = $user->getAllRoles();
+                //                $userRoles = $user->getAllRoles();
+                $userRoles = $this->userService->getAllUniqueRolesForUser($user);
 
                 $allAccessibleFolderIds = $userRoles->flatMap(function ($role) use ($permission) {
                     return $role->accessibleFolders($permission)->get()->flatMap(function ($folder) {
@@ -36,6 +45,7 @@ class WritableFolderRepository
                     $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
                     $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
                 }
+                $allAccessibleFolderIds->add($folder);
 
                 return $allAccessibleFolderIds->toArray();
             }
