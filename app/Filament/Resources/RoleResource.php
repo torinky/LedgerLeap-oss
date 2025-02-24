@@ -165,8 +165,6 @@ class RoleResource extends BaseRoleResource
             OrganizationRelationManager::class,
             UserRelationManager::class,
             FolderRelationManager::class,
-            WritableFolderRelationManager::class,
-            ManageableFolderRelationManager::class,
             NotificationSettingsRelationManager::class,
         ];
     }

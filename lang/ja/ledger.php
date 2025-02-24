@@ -114,6 +114,7 @@ return [
         'not_allow_create' => 'フォルダーの作成権限がありません',
         'not_allow_edit' => 'フォルダーの編集権限がありません',
         'opened_count' => '検索対象のフォルダ数',
+        'permission' => 'フォルダー権限',
         'readable' => '閲覧できます',
         'remove' => 'フォルダーを削除する',
         'remove_message' => 'このフォルダーを削除しようとしています',
@@ -196,6 +197,7 @@ return [
         'scoped' => '保有組織',
     ],
     'per_page' => '表示件数 / ページ',
+    'permission' => '権限',
     'permissions' => [
         'admin' => '管理権限',
         'delete' => '削除権限',
