@@ -232,4 +232,14 @@ class Folder extends Model
     {
         return $this->belongsTo(NotificationType::class);
     }
+
+    public function notificationSettings()
+    {
+        return $this->belongsToMany(Role::class, 'role_folder_permissions', 'folder_id', 'role_id')
+            ->withPivot('notification_type_id', 'permission')
+            ->withTimestamps()
+//            ->using(RoleFolderPermission::class)
+//            ->as('setting')
+            ;
+    }
 }

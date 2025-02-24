@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
@@ -117,4 +118,14 @@ class Role extends SpatieRole
     {
         return $this->hasMany(RoleFolderPermission::class);
     }
+
+    /**
+     * Belongs to relationship for notification type.
+     *  RoleFolderPermission と NotificationType を経由して紐付いているが、ここで宣言しなければならない理由は不明
+     */
+    public function notificationType(): BelongsTo
+    {
+        return $this->belongsTo(NotificationType::class);
+    }
+
 }
