@@ -37,4 +37,19 @@ enum FolderPermissionType: string
     {
         return !$this->isNotificationType();
     }
+
+    public function getColor(): string
+    {
+        return match ($this) {
+            self::READ => 'info',
+            self::WRITE => 'warning',
+            self::ADMIN => 'success',
+            default => 'gray',
+        };
+    }
+
+    public function getLabel()
+    {
+        return __('ledger.permissions.' . $this->value);
+    }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Resources\RoleResource\RelationManagers;
+namespace App\Filament\Resources\FolderResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
+use App\Models\Role;
 use App\Models\RoleFolderPermission;
-use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -15,52 +15,40 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
-class FolderRelationManager extends RelationManager
+class RoleFolderPermissionRelationManager extends RelationManager
 {
-    protected static string $relationship = 'accessibleFolders';
+    protected static string $relationship = 'accessibleRoles'; // Folderモデルに定義されているリレーションシップ名
 
-    public static function getRecordTitleAttribute(): ?string
-    {
-        return 'title';
-    }
+    protected static ?string $recordTitleAttribute = 'name';
 
-    /*
-     * Support changing tab title in RelationManager.
-     */
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
         return __('ledger.folder.permission');
     }
 
-    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
-    {
-        return true; // 常にtrueを返すことで、権限チェックを無効化
-    }
-
-    protected static function getModelLabel(): string
+    public static function getModelLabel(): string
     {
         return __('ledger.folder.permission');
     }
 
-    protected static function getPluralModelLabel(): string
+    public static function getPluralModelLabel(): string
     {
         return __('ledger.folder.permission');
     }
 
     public function table(Table $table): Table
     {
-        $role = $this->getOwnerRecord();
-        $existingFolderIds = RoleFolderPermission::where('role_id', $role->id)
+        $folder = $this->getOwnerRecord();
+        $existingRoleIds = RoleFolderPermission::where('folder_id', $folder->id)
 //            ->where('permission', $this->permission->value)
             ->WhereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
-            ->pluck('folder_id');
+            ->pluck('role_id');
 
         return $table
-            // Support changing table heading by translations.
             ->heading(__('ledger.folder.permission'))
             ->columns([
-                TextColumn::make('title')
-                    ->label(__('ledger.folder.title'))
+                TextColumn::make('name')
+                    ->label(__('ledger.role'))
                     ->searchable(),
                 SelectColumn::make('permission')
                     ->label(__('ledger.folder.permission'))
@@ -85,30 +73,17 @@ class FolderRelationManager extends RelationManager
                         }
                     }),
             ])
-            ->modifyQueryUsing(function ($query) {
-                $query->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
-            })
             ->filters([
-
-            ])->headerActions([
+                //
+            ])
+            ->headerActions([
                 AttachAction::make()->form([
-                    SelectTree::make('recordId')
-                        ->searchable()
-                        ->label(__('ledger.folder.containing'))
-                        ->relationship('parent', 'title', 'parent_id',
-                            modifyQueryUsing: function ($query) use ($existingFolderIds) {
-                                return $query->whereNotIn('folders.id', $existingFolderIds);
-                            },
-                            modifyChildQueryUsing: function ($query) use ($existingFolderIds) {
-                                return $query->whereNotIn('folders.id', $existingFolderIds);
-                            }
-                        )
-                        ->withCount()
-                        ->enableBranchNode()
-//                        ->alwaysOpen()
-                        ->defaultOpenLevel(10),
-                    Select::make('permission') // 変更: 複数選択可能な CheckboxList
-                    ->label(__('ledger.permission'))
+                    Select::make('recordId')
+                        ->label(__('ledger.role'))
+                        ->options(Role::query()->whereNotIn('id', $existingRoleIds)->pluck('name', 'id'))->searchable()
+                        ->required(),
+                    Select::make('permission')
+                        ->label(__('ledger.permission'))
                         ->options(function () {
                             return collect(FolderPermissionType::cases())
                                 ->filter(function ($folderPermission) {
@@ -118,33 +93,27 @@ class FolderRelationManager extends RelationManager
                                     return [$folderPermission->value => __('ledger.permissions.' . $folderPermission->value)];
                                 })->toArray();
                         })
-                        ->columns(3)
-                        /*                        ->default(function () {
-                                                    return NotificationType::where('default_notify', '=', true)->pluck('id')->toArray();
-                                                })*/
                         ->required(),
                 ])
-//                    ->translateLabel()
                     ->using(function (array $data, string $model) {
-                        //                        dd($data,$model);
+                        //                                                dd($data,$model);
                         if (is_null($data['recordId'])) {
                             return null;
                         }
-                        $role = $this->getOwnerRecord();
-                        $data['role_id'] = $role->id;
-                        $data['folder_id'] = $data['recordId'];
+                        $folder = $this->getOwnerRecord();
+                        $data['role_id'] = $data['recordId'];
+                        $data['folder_id'] = $folder->id;
                         $data['notification_type_id'] = null;
                         $data['modifier_id'] = auth()->id();
-                        unset($data['recordId']);
 
-                        $existFolderPermisson = RoleFolderPermission::where('role_id', $role->id)
+                        $existFolderPermission = RoleFolderPermission::where('role_id', $data['role_id'])
                             ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
                             ->where('folder_id', $data['folder_id'])
                             ->first();
-                        if ($existFolderPermisson) {
-                            $existFolderPermisson->update($data);
+                        if ($existFolderPermission) {
+                            $existFolderPermission->update($data);
 
-                            return $existFolderPermisson;
+                            return $existFolderPermission;
                         } else {
                             return RoleFolderPermission::create($data);
                         }
@@ -162,6 +131,5 @@ class FolderRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form->schema([]);
-
     }
 }

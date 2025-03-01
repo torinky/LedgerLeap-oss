@@ -97,6 +97,7 @@ class FolderResource extends Resource
         return [
             RelationManagers\ChildrenRelationManager::class,
             RelationManagers\NotificationSettingsRelationManager::class,
+            RelationManagers\RoleFolderPermissionRelationManager::class,
         ];
     }
 

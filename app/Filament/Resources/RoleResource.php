@@ -10,17 +10,14 @@ use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\ManageableFolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
-use App\Filament\Resources\RoleResource\RelationManagers\WritableFolderRelationManager;
 use App\Models\Folder;
 use App\Models\Role;
 use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 
 class RoleResource extends BaseRoleResource
 {
@@ -104,8 +101,9 @@ class RoleResource extends BaseRoleResource
                 Tables\Columns\TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
                     ->getStateUsing(function ($record): array {
+//                        dd($record);
                         // フォルダー権限とフォルダー情報を一緒に取得
-                        return $record->folderPermissions()
+                        return $record->accessibleFolders()
                             ->get()
                             ->map(function ($folderPermission) {
                                 return [
@@ -118,23 +116,10 @@ class RoleResource extends BaseRoleResource
                     ->badge()
                     ->color(function (array $state): string {
                         // 権限に応じて色を返す
-                        return match ($state['permission']) {
-                            'read' => 'info',     // 青
-                            'write' => 'warning', // 黄
-                            'admin' => 'success', // 緑
-                            default => 'gray',
-                        };
+                        return $state['permission']->getColor();
                     })
                     ->formatStateUsing(function (array $state): string {
-                        // フォルダータイトルと権限を組み合わせて表示
-                        $permission = match ($state['permission']) {
-                            'read' => '閲覧',
-                            'write' => '編集',
-                            'admin' => '管理者',
-                            default => '不明',
-                        };
-
-                        return "{$state['folder_title']}: {$permission}";
+                        return "{$state['folder_title']}: {$state['permission']->getLabel()}";
                     })
                     ->separator(' ') // バッジ間の区切り文字
                     ->wrap()         // 長い場合は折り返し

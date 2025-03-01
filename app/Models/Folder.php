@@ -217,11 +217,18 @@ class Folder extends Model
      * @param FolderPermissionType $permission 'write', 'read', 'manageable' など
      * @return BelongsToMany
      */
-    public function accessibleFolders(FolderPermissionType $permission)
+    public function accessibleRoles(?FolderPermissionType $permission = null)
     {
+        if (empty($permission)) {
+            return $this->belongsToMany(Role::class, RoleFolderPermission::class, 'folder_id', 'role_id')
+                ->withPivot('permission')
+                ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
+        }
+
         return $this->belongsToMany(Role::class, RoleFolderPermission::class, 'folder_id', 'role_id')
             ->withPivot('permission')
-            ->wherePivot('permission', $permission->value);
+            ->wherePivot('permission', $permission->value)
+            ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
     }
 
     /**
@@ -237,9 +244,8 @@ class Folder extends Model
     {
         return $this->belongsToMany(Role::class, 'role_folder_permissions', 'folder_id', 'role_id')
             ->withPivot('notification_type_id', 'permission')
-            ->withTimestamps()
-//            ->using(RoleFolderPermission::class)
-//            ->as('setting')
-            ;
+            ->withTimestamps();
+        //            ->using(RoleFolderPermission::class)
+        //            ->as('setting')
     }
 }
