@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @method static find(Route|object|string|null $route)
@@ -15,7 +17,7 @@ use Illuminate\Routing\Route;
  */
 class LedgerDefine extends Model
 {
-    use HasFactory, HasModelRoles, SoftDeletes;
+    use HasFactory, HasModelRoles, LogsActivity, SoftDeletes;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
@@ -116,5 +118,17 @@ class LedgerDefine extends Model
     public function hasPermissionTo($permission): bool
     {
         return $this->roles->flatMap->permissions->contains('name', $permission);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+//            ->logOnly(['title', 'folder_id', 'column_define','create_description','list_description','detail_description','deleted_at']) // 変更を監視する属性
+            ->logOnlyDirty() // 変更があった場合のみ記録
+            ->dontSubmitEmptyLogs() // 空のログは記録しない
+            ->logFillable()
+            ->setDescriptionForEvent(fn(string $eventName) => "LedgerDefine has been {$eventName}");
+        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
     }
 }

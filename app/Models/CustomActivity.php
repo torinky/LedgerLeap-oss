@@ -11,9 +11,9 @@ class CustomActivity extends SpatieActivity
     {
         static::created(function (CustomActivity $activity) {
             // Activity ログが保存された後に呼び出される
-            if ($activity->subject_type === 'App\Models\Ledger') { // Ledger モデルの場合のみ通知
-                app(NotificationService::class)->processActivityLog($activity);
-            }
+            //            if ($activity->subject_type === 'App\Models\Ledger') { // Ledger モデルの場合のみ通知
+            app(NotificationService::class)->processActivityLog($activity);
+            //            }
         });
     }
 }

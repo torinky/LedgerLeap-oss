@@ -12,11 +12,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 use Kalnoy\Nestedset\NodeTrait;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\PermissionRegistrar;
 
 class Folder extends Model
 {
-    use HasFactory, HasTreeView, NodeTrait, SoftDeletes;
+    use HasFactory, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id',
@@ -247,5 +249,17 @@ class Folder extends Model
             ->withTimestamps();
         //            ->using(RoleFolderPermission::class)
         //            ->as('setting')
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+//            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+            ->logOnlyDirty() // 変更があった場合のみ記録
+            ->dontSubmitEmptyLogs() // 空のログは記録しない
+            ->logFillable()
+            ->setDescriptionForEvent(fn(string $eventName) => "Folder has been {$eventName}");
+        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
     }
 }

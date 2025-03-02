@@ -3,21 +3,23 @@
 namespace App\Filament\Resources;
 
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleResource;
-use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource\RelationManager\PermissionRelationManager;
 use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
-use App\Filament\Resources\RoleResource\RelationManagers\ManageableFolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
 use App\Models\Folder;
 use App\Models\Role;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class RoleResource extends BaseRoleResource
 {
@@ -49,40 +51,40 @@ class RoleResource extends BaseRoleResource
             ->schema([
                 Section::make()
                     ->schema([
-                        ...$components,
+                        Grid::make(2)
+                            ->schema([
+                                //                        ...$components,
+                                TextInput::make('name')
+                                    ->label(__('role.name'))
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->unique(Role::class, 'name', ignoreRecord: true),
+                                Select::make('guard_name')
+                                    ->label(__('role.guard_name'))
+                                    ->options(config('filament-spatie-roles-permissions.guard_names'))
+                                    ->default(config('filament-spatie-roles-permissions.default_guard_name'))
+                                    ->visible(fn() => config('filament-spatie-roles-permissions.should_show_guard', true))
+                                    ->required(),
 
-                        /*                        Select::make('readable folders')
-                            ->label(__('ledger.folder.readable'))
-                            ->options(function () {
-                                return Folder::treeList(Folder::get()->toTree());
-                            })
-                            ->multiple()
-                            ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
-                                if ($record) {
-                                    $folderIds = $record->readableFolders()->pluck('folders.id')->toArray();
-                                    $component->state($folderIds);
-                                }
-                            })
-                            ->dehydrated(false),
+                                Select::make('permissions')
+                                    ->columnSpanFull()
+                                    ->label(__('role.permissions'))
+                                    ->relationship(
+                                        name: 'permissions',
+                                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('name'),
+                                    )
+                                    ->visible(config('filament-spatie-roles-permissions.should_show_permissions_for_roles'))
+                                    ->getOptionLabelFromRecordUsing(fn(Model $record) => __('permission.name.' . $record->name) . ' (' . $record->guard_name . ')')
+                                    ->searchable(['name', 'guard_name']) // searchable on both name and guard_name
+                                    ->preload(config('filament-spatie-roles-permissions.preload_permissions'))
+                                    ->multiple()
+                                    ->searchable(),
 
-                        Select::make('writable folders')
-                            ->label(__('ledger.folder.writable'))
-                            ->options(function () {
-                                return Folder::treeList(Folder::get()->toTree());
-                            })
-                            ->multiple()
-                            ->afterStateHydrated(function (Select $component, $state, ?Model $record) {
-                                if ($record) {
-                                    $folderIds = $record->writableFolders()->pluck('folders.id')->toArray();
-                                    $component->state($folderIds);
-                                }
-                            })
-                            ->dehydrated(false),*/
+                                TextInput::make('description')
+                                    ->label(__('ledger.description'))
+                                    ->placeholder('Enter a description...'),
 
-                        TextInput::make('description')
-                            ->label(__('ledger.description'))
-                            ->placeholder('Enter a description...'),
-
+                            ]),
                     ]),
             ]);
     }
@@ -101,7 +103,7 @@ class RoleResource extends BaseRoleResource
                 Tables\Columns\TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
                     ->getStateUsing(function ($record): array {
-//                        dd($record);
+                        //                        dd($record);
                         // フォルダー権限とフォルダー情報を一緒に取得
                         return $record->accessibleFolders()
                             ->get()
@@ -130,6 +132,13 @@ class RoleResource extends BaseRoleResource
                 Tables\Columns\TextColumn::make('permissions.name')
                     ->label(__('ledger.settings.permissions'))
                     ->badge(),
+                TextColumn::make('permissions.name')
+                    ->label(__('role.permissions'))
+                    ->formatStateUsing(function (string $state): string {
+                        return __('permission.name.' . $state);
+                    })
+                    ->badge(),
+
                 Tables\Columns\TextColumn::make('guard_name')
                     ->badge(),
                 Tables\Columns\TextColumn::make('description')
@@ -146,7 +155,7 @@ class RoleResource extends BaseRoleResource
     public static function getRelations(): array
     {
         return [
-            PermissionRelationManager::class,
+            //            PermissionRelationManager::class,
             OrganizationRelationManager::class,
             UserRelationManager::class,
             FolderRelationManager::class,

@@ -66,9 +66,16 @@ class PermissionResource extends BasePermissionResource
             ->columns([
                 ...$parentTable->getColumns(), // 親のカラムを取得
 
-                TextColumn::make('description') // descriptionカラムを追加
-                ->label('Description') // ラベルを設定
-                ->sortable()
+                TextColumn::make('name')
+                    ->label(__('permission.title'))
+                    ->formatStateUsing(function ($record) {
+                        return __('permission.name.' . $record->name);
+                    })
+                    ->searchable(),
+
+                TextColumn::make('description')
+                    ->label(__('permission.description'))
+                    ->sortable()
                     ->searchable(),
             ]);
     }
@@ -85,13 +92,13 @@ class PermissionResource extends BasePermissionResource
     public static function canViewAny(): bool
     {
 
-//        dd('view', auth()->user()->can('view_permissionss', Permission::class));
+        //        dd('view', auth()->user()->can('view_permissionss', Permission::class));
         return auth()->user()->can('view_permissions', Permission::class);
     }
 
     public static function canCreate(): bool
     {
-//        dd('create', auth()->user()->can('create_permissions'));
+        //        dd('create', auth()->user()->can('create_permissions'));
         return auth()->user()->can('create_permissions', Permission::class);
     }
 

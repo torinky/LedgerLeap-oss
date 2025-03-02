@@ -26,72 +26,19 @@ class NotificationService
         $this->userService = $userService;
     }
 
-    // public function processActivityLog(Ledger $ledger) // 引数を変更
-    /*   public function processActivityLog(Activity $activity)
-       {
-           Log::info('NotificationService::processActivityLog called'); // ログ追加
-
-           // subject_type に応じて通知タイプを決定
-           $subjectType = $activity->subject_type;
-           $event = $activity->event;
-
-           // 通知タイプを取得
-           $notificationTypeName = null;
-           switch ($subjectType) {
-               case 'App\Models\Ledger':
-                   $notificationTypeName = "ledger_{$event}";
-                   break;
-               // case 'App\Models\User':
-               //     $notificationTypeName = "user_{$event}";
-               //     break;
-               // 他のモデルのケースを追加
-               default:
-                   Log::info("Unknown subject type: {$subjectType}");
-
-                   return;
-           }
-
-           $notificationType = NotificationType::where('name', $notificationTypeName)->first();
-
-           if (!$notificationType) {
-               Log::info("NotificationType not found for event: {$notificationTypeName}");
-
-               return;
-           }
-
-           Log::info('NotificationType found', ['notificationType' => $notificationType]); // ログ追加
-
-           // 通知対象のロールを取得 (UserService のメソッドを利用)
-           $roles = $this->userService->getNotifiableRoles($activity->event, $activity->subject);
-
-           if ($roles->isEmpty()) {
-               Log::info('No roles to notify');
-
-               return;
-           }
-
-           Log::info('Roles to notify', ['roles' => $roles]); // ログ追加
-
-           //        dd($activity);
-           // 通知を送信
-           Notification::send($roles, new GenericNotification(
-               $notificationType->id,
-               $activity->subject, // 変更されたモデルのインスタンスを渡す
-               $activity
-           ));
-       }*/
     public function processActivityLog(Activity $activity)
     {
+        Log::info('NotificationService::processActivityLog called');
+
         $subjectType = $activity->subject_type;
         $event = $activity->event;
-
         // 通知タイプを取得 (model と event で絞り込み)
         $notificationType = NotificationType::where('model', $subjectType)
             ->where('event', $event)
             ->first();
 
         if (!$notificationType) {
-            \Log::info("NotificationType not found for model: {$subjectType}, event: {$event}");
+            Log::info("NotificationType not found for model: {$subjectType}, event: {$event}");
 
             return;
         }
@@ -100,9 +47,13 @@ class NotificationService
         $users = $this->getNotifiableRecipients($activity, $notificationType);
 
         if ($users->isEmpty()) {
+            Log::info("users not found for model: {$subjectType}, event: {$event}");
+
             return;
         }
 
+        Log::info('NotificationType found', ['notificationType' => $notificationType]);
+        Log::info('Event', ['event' => $event]);
         // 通知を送信
         Notification::send($users, new GenericNotification(
             $notificationType->id,
@@ -196,16 +147,17 @@ class NotificationService
     public function getNotifiableRecipients(Activity $activity, NotificationType $notificationType): Collection
     {
         $subject = $activity->subject;
+        Log::info('NotificationService::getNotifiableRecipients called', ['subject' => $subject, 'activity' => $activity]);
 
         // subject (変更されたモデル) からフォルダーを特定
-        $folder = $notificationType->folder(); // NotificationType モデルの folder() メソッドを使用
+        $folder = $subject->folder()->first();
 
         if (!$folder) {
             \Log::info('Folder not found for subject: ' . get_class($subject));
 
             return collect();
         }
-
+        // dd($folder,$folder->get());
         // フォルダーと通知タイプに紐づく RoleFolderPermission を取得し、permission が NOTIFY_ON のものを抽出
         $roleFolderPermissions = RoleFolderPermission::where('folder_id', $folder->id)
             ->where('notification_type_id', $notificationType->id)
@@ -230,9 +182,10 @@ class NotificationService
 
         // subject (変更されたモデル) からフォルダーを特定
         $folder = null;
-        if ($activity->subject_type == 'App\Models\Ledger') {
-            $folder = $activity->subject->define->folder;
-        }
+        //        dd($activity->subject_type);
+        /*        if ($activity->subject_type == Ledger::class) {
+                    $folder = $activity->subject->define->folder;
+                }*/
         // TODO: Folder モデルや User モデルの変更の場合は、$activity->subject から直接取得
 
         if (!$folder) {
