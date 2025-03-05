@@ -107,6 +107,11 @@ class RoleResource extends BaseRoleResource
                                     ->multiple()
                                     ->columnSpanFull(),
 
+                                TextInput::make('description')
+                                    ->label(__('ledger.description'))
+                                    ->placeholder('Enter a description...')
+                                    ->columnSpanFull(),
+
                             ]),
                     ]),
             ]);
