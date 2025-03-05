@@ -3,13 +3,16 @@
 namespace App\Filament\Resources;
 
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleResource;
+use App\Enums\FolderPermissionType;
 use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
 use App\Models\Folder;
+use App\Models\NotificationType;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -77,12 +80,32 @@ class RoleResource extends BaseRoleResource
                                     ->getOptionLabelFromRecordUsing(fn(Model $record) => __('permission.name.' . $record->name) . ' (' . $record->guard_name . ')')
                                     ->searchable(['name', 'guard_name']) // searchable on both name and guard_name
                                     ->preload(config('filament-spatie-roles-permissions.preload_permissions'))
-                                    ->multiple()
-                                    ->searchable(),
+                                    ->multiple(),
 
-                                TextInput::make('description')
-                                    ->label(__('ledger.description'))
-                                    ->placeholder('Enter a description...'),
+                                Select::make('global_notify') // グローバル通知のチェックボックス
+                                ->label(__('role.global_notify'))
+                                    ->options(function () {
+                                        return NotificationType::where('folder_relation', null)->pluck('name', 'id')->toArray();
+                                    })
+                                    ->afterStateHydrated(function ($component, ?Role $record) {
+                                        $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
+                                        $hasGlobalNotify = RoleFolderPermission::where('role_id', $record->id)
+                                            ->where('folder_id', 1) // ルートフォルダーのID
+                                            ->whereIn('notification_type_id', $globalNotifyTypes)
+                                            ->where('permission', FolderPermissionType::NOTIFY_ON)
+                                            ->pluck('notification_type_id')->toArray();
+                                        $component->state($hasGlobalNotify);
+                                    })
+                                    ->dehydrateStateUsing(function ($component, Role $record, $state) {
+                                        foreach ($state as $globalNotifyTypeId) {
+                                            RoleFolderPermission::updateOrCreate(
+                                                ['role_id' => $record->id, 'folder_id' => 1, 'notification_type_id' => $globalNotifyTypeId],
+                                                ['permission' => FolderPermissionType::NOTIFY_ON, 'modifier_id' => auth()->id()]
+                                            );
+                                        }
+                                    })
+                                    ->multiple()
+                                    ->columnSpanFull(),
 
                             ]),
                     ]),
