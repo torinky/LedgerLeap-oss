@@ -97,12 +97,22 @@ class RoleResource extends BaseRoleResource
                                         $component->state($hasGlobalNotify);
                                     })
                                     ->dehydrateStateUsing(function ($component, Role $record, $state) {
+                                        $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
+                                        // 削除された通知タイプをNOTIFY_OFFにする
+                                        RoleFolderPermission::where('role_id', $record->id)
+                                            ->where('folder_id', 1)
+                                            ->whereIn('notification_type_id', $globalNotifyTypes)
+                                            ->whereNotIn('notification_type_id', $state)
+                                            ->update(['permission' => FolderPermissionType::NOTIFY_OFF, 'modifier_id' => auth()->id()]);
+
+                                        // 選択された通知タイプをNOTIFY_ONにする
                                         foreach ($state as $globalNotifyTypeId) {
                                             RoleFolderPermission::updateOrCreate(
                                                 ['role_id' => $record->id, 'folder_id' => 1, 'notification_type_id' => $globalNotifyTypeId],
                                                 ['permission' => FolderPermissionType::NOTIFY_ON, 'modifier_id' => auth()->id()]
                                             );
                                         }
+
                                     })
                                     ->multiple()
                                     ->columnSpanFull(),
