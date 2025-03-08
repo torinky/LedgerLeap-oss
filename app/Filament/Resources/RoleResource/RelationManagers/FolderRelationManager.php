@@ -116,7 +116,8 @@ class FolderRelationManager extends RelationManager
                                 })
                                 ->mapWithKeys(function ($folderPermission) {
                                     return [$folderPermission->value => __('ledger.permissions.' . $folderPermission->value)];
-                                })->toArray();
+                                })
+                                ->toArray();
                         })
                         ->columns(3)
                         /*                        ->default(function () {

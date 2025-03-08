@@ -27,23 +27,23 @@ class NotificationSettingsRelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('ledger.notification_settings'); // タブのタイトル
+        return __('ledger.folder.notification'); // タブのタイトル
     }
 
     public static function getModelLabel(): string
     {
-        return __('ledger.notification_settings'); // タブのタイトル
+        return __('ledger.folder.notification'); // タブのタイトル
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('ledger.notification_settings');
+        return __('ledger.folder.notification');
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->heading(__('ledger.notification_settings')) // テーブルの見出し
+            ->heading(__('ledger.folder.notification')) // テーブルの見出し
             ->columns([
                 TextColumn::make('name')
                     ->label(__('ledger.role_name')),

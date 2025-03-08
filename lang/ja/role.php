@@ -15,4 +15,5 @@ return [
     'permission' => '権限',
     'permissions' => '権限',
     'guard_name' => '認証名',
+    'global_notify' => '通知',
 ];

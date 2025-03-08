@@ -85,7 +85,12 @@ class RoleResource extends BaseRoleResource
                                 Select::make('global_notify') // グローバル通知のチェックボックス
                                 ->label(__('role.global_notify'))
                                     ->options(function () {
-                                        return NotificationType::where('folder_relation', null)->pluck('name', 'id')->toArray();
+                                        return NotificationType::where('folder_relation', null)->pluck('name', 'id')
+                                            ->mapWithKeys(function ($folderPermission, $key) {
+//                                                dd($folderPermission,$key);
+                                                return [$key => __('ledger.notification_types.' . $folderPermission)];
+                                            })
+                                            ->toArray();
                                     })
                                     ->afterStateHydrated(function ($component, ?Role $record) {
                                         $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
@@ -93,7 +98,8 @@ class RoleResource extends BaseRoleResource
                                             ->where('folder_id', 1) // ルートフォルダーのID
                                             ->whereIn('notification_type_id', $globalNotifyTypes)
                                             ->where('permission', FolderPermissionType::NOTIFY_ON)
-                                            ->pluck('notification_type_id')->toArray();
+                                            ->pluck('notification_type_id')
+                                            ->toArray();
                                         $component->state($hasGlobalNotify);
                                     })
                                     ->dehydrateStateUsing(function ($component, Role $record, $state) {

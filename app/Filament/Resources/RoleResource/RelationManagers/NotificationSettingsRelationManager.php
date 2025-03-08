@@ -33,7 +33,7 @@ class NotificationSettingsRelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('ledger.notification_settings'); // タブのタイトル
+        return __('ledger.folder.notification'); // タブのタイトル
     }
 
     /*    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
@@ -43,18 +43,18 @@ class NotificationSettingsRelationManager extends RelationManager
 
     protected static function getModelLabel(): string
     {
-        return __('ledger.notification_settings');
+        return __('ledger.folder.notification');
     }
 
     protected static function getPluralModelLabel(): string
     {
-        return __('ledger.notification_settings');
+        return __('ledger.folder.notification');
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->heading(__('ledger.notification_settings')) // テーブルの見出し
+            ->heading(__('ledger.folder.notification')) // テーブルの見出し
             ->columns([
                 TextColumn::make('title') // 関連するフォルダーの title を表示
                 ->label(__('ledger.folder.title')), // カラムのラベル

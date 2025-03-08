@@ -122,6 +122,7 @@ return [
         'title' => 'フォルダー名',
         'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
         'writable' => '書き込み可能',
+        'notification' => 'フォルダー通知',
     ],
     'form' => [
         'auto_numbering' => '自動採番',
@@ -309,7 +310,6 @@ return [
     'name' => '名前',
     'content' => '内容',
     'ledger_define_id' => '台帳定義ID',
-    'notification_settings' => '通知設定',
     'notify' => '通知',
     'containing' => '含む', // SelectTree のラベル
     'notification_types' => [
