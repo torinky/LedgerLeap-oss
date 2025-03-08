@@ -47,12 +47,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'update_ledgers' => '台帳を更新できる',
             'delete_ledgers' => '台帳を削除できる',
 
-            'view_ledgerdefines' => '台帳定義の一覧を閲覧できる',
-            'create_ledgerdefines' => '台帳定義を作成できる',
-            'update_ledgerdefines' => '台帳定義を更新できる',
-            'delete_ledgerdefines' => '台帳定義を削除できる',
-            'restore_ledgerdefines' => '台帳定義を復元できる',
-            'force_delete_ledgerdefines' => '台帳定義を完全に削除できる',
+            'view_ledger_defines' => '台帳定義の一覧を閲覧できる',
+            'create_ledger_defines' => '台帳定義を作成できる',
+            'update_ledger_defines' => '台帳定義を更新できる',
+            'delete_ledger_defines' => '台帳定義を削除できる',
+            'restore_ledger_defines' => '台帳定義を復元できる',
+            'force_delete_ledger_defines' => '台帳定義を完全に削除できる',
 
             'view_folders' => 'フォルダーの一覧を閲覧できる',
             'create_folders' => 'フォルダーを作成できる',
@@ -87,7 +87,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_roles', 'create_roles', 'update_roles', 'delete_roles', 'restore_roles', 'force_delete_roles',
                     'view_rolefolderpermissions', 'create_rolefolderpermissions', 'update_rolefolderpermissions', 'delete_rolefolderpermissions',
                     'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
-                    'view_ledgerdefines', 'create_ledgerdefines', 'update_ledgerdefines', 'delete_ledgerdefines', 'restore_ledgerdefines', 'force_delete_ledgerdefines',
+                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
                     'view_permissions', 'create_permissions', 'update_permissions', 'delete_permissions', 'manage_permissions',
                     'notify',
@@ -100,7 +100,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_organizations', 'create_organizations', 'update_organizations', 'delete_organizations',
                     'view_roles', 'create_roles', 'update_roles', 'delete_roles', 'restore_roles', 'force_delete_roles',
                     'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
-                    'view_ledgerdefines', 'create_ledgerdefines', 'update_ledgerdefines', 'delete_ledgerdefines', 'restore_ledgerdefines', 'force_delete_ledgerdefines',
+                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
                     'view_rolefolderpermissions', 'create_rolefolderpermissions', 'update_rolefolderpermissions', 'delete_rolefolderpermissions',
                 ],
@@ -109,7 +109,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'description' => 'プロジェクトの管理者',
                 'permissions' => [
                     'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
-                    'view_ledgerdefines', 'create_ledgerdefines', 'update_ledgerdefines', 'delete_ledgerdefines',
+                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines',
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders',
                 ],
             ],
@@ -117,7 +117,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'description' => '台帳の編集者',
                 'permissions' => [
                     'view_ledgers', 'create_ledgers', 'update_ledgers',
-                    'view_ledgerdefines', 'create_ledgerdefines', 'update_ledgerdefines',
+                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines',
                     'view_folders',
                 ],
             ],
@@ -125,7 +125,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'description' => '台帳の閲覧者',
                 'permissions' => [
                     'view_ledgers',
-                    'view_ledgerdefines',
+                    'view_ledger_defines',
                     'view_folders',
                 ],
             ],
@@ -133,14 +133,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 'description' => 'フォルダーの管理者',
                 'permissions' => [
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders',
-                    'view_ledgerdefines', 'create_ledgerdefines', 'update_ledgerdefines', 'delete_ledgerdefines',
+                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines',
                 ],
             ],
             'Folder Viewer' => [
                 'description' => 'フォルダーの閲覧者',
                 'permissions' => [
                     'view_folders',
-                    'view_ledgerdefines',
+                    'view_ledger_defines',
                 ],
             ],
             'user' => [

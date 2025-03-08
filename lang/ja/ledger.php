@@ -334,9 +334,16 @@ return [
         'permission_created' => '権限作成',
         'permission_updated' => '権限更新',
         'permission_deleted' => '権限削除',
+        'App\Models\Folder' => 'フォルダー',
+        'App\Models\User' => 'ユーザー',
+        'App\Models\Organization' => '組織',
+        'App\Models\Role' => 'ロール',
+        'App\Models\Permission' => '権限',
+        'App\Models\LedgerDefine' => '台帳定義',
+        'App\Models\Ledger' => '台帳',
     ],
     'notification_type' => '通知タイプ',
     'disable_notification' => '通知を無効にする',
     'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
-
+    'ledger_define' => '台帳定義',
 ];

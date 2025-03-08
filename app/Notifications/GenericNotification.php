@@ -71,6 +71,7 @@ class GenericNotification extends Notification implements ShouldQueue
             'type' => $notificationType->name,
             'payload' => [
                 'subject_type' => get_class($this->subject),
+                'route' => $notificationType->route,
                 'subject_id' => $this->subject->id ?? '',
                 'causer_name' => optional($this->activity->causer)->name ?? optional($this->activity->causer)->title ?? '',
                 'event' => $this->activity->event,

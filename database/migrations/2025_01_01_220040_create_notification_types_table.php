@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('name')->unique();
             $table->string('description')->nullable();
             $table->string('model')->nullable();
+            $table->string('route')->nullable();
             $table->string('folder_relation')->nullable();
             $table->string('event')->nullable();
             $table->boolean('default_notify')->default(true);

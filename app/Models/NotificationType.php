@@ -13,6 +13,7 @@ class NotificationType extends Model
         'name',
         'description',
         'model',
+        'route',
         'folder_relation',
         'event',
         'default_notify',

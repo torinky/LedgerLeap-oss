@@ -148,18 +148,21 @@ class NotificationService
     {
         $subject = $activity->subject;
         Log::info('NotificationService::getNotifiableRecipients called', ['subject' => $subject, 'activity' => $activity]);
-
-        // subject (変更されたモデル) からフォルダーを特定
+        // subject (変更されたモデル) からフォルダーを特定し、その子孫フォルダーも取得
         $folder = $subject->folder()->first();
 
         if (!$folder) {
             \Log::info('Folder not found for subject: ' . get_class($subject));
-
             return collect();
         }
-        // dd($folder,$folder->get());
+
+        // 先祖フォルダーを取得
+        $ancestorFolders = $folder->ancestorsAndSelf($folder->id);
+        // 自分自身と先祖フォルダーのIDを配列に格納
+        $folderIds = $ancestorFolders->pluck('id')->toArray();
+
         // フォルダーと通知タイプに紐づく RoleFolderPermission を取得し、permission が NOTIFY_ON のものを抽出
-        $roleFolderPermissions = RoleFolderPermission::where('folder_id', $folder->id)
+        $roleFolderPermissions = RoleFolderPermission::whereIn('folder_id', $folderIds)
             ->where('notification_type_id', $notificationType->id)
             ->where('permission', FolderPermissionType::NOTIFY_ON)
             ->get();

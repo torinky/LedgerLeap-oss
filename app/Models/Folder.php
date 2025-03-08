@@ -262,4 +262,9 @@ class Folder extends Model
         // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
         // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
     }
+
+    public function folder()
+    {
+        return $this;
+    }
 }

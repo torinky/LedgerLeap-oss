@@ -40,10 +40,13 @@ class LedgerDefinePolicy
      *
      * @return Response|bool
      */
-    public function view(User $user, LedgerDefine $ledgerDefine)
+    public function view(User $user, ?LedgerDefine $ledgerDefine = null)
     {
         // ユーザーが所属する組織の権限も含めて、台帳定義の閲覧権限があるか確認
         if ($this->userService->hasPermission($user, 'view_ledger_defines')) {
+            if (is_null($ledgerDefine)) {
+                return true;
+            }
             // さらに、フォルダが閲覧可能かどうかも確認
             if ($this->userService->isReadableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
@@ -79,7 +82,7 @@ class LedgerDefinePolicy
     public function update(User $user, LedgerDefine $ledgerDefine)
     {
         // ユーザーが所属する組織の権限も含めて、台帳定義の更新権限があるか確認
-        if ($this->userService->hasPermission($user, 'manage_ledger_defines')) {
+        if ($this->userService->hasPermission($user, ['manage_ledger_defines', 'update_ledger_defines'])) {
             // さらに、対象のフォルダが管理可能かどうかも確認
             if ($this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;

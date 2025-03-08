@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Ledger;
 
-use AllowDynamicProperties;
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,7 +12,6 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -132,7 +130,7 @@ class RecordsTable extends Component
         $this->keywords = $this->searchContext->keywords;
         $this->highlights = $this->searchContext->highlights;
         $this->synonyms = $this->searchContext->synonyms;
-//        dd($this->searchContext,$this->keywords);
+        //        dd($this->searchContext,$this->keywords);
     }
 
     /**
@@ -160,7 +158,7 @@ class RecordsTable extends Component
     #[On('ledgerStored')]
     public function render(SearchContext $searchContext)
     {
-        $this->authorize('view_ledger_defines', LedgerDefine::class);
+        $this->authorize('view', LedgerDefine::class);
         $this->initSearchContext();
 
         // Exportに検索条件を伝えるためにイベントをトリガ

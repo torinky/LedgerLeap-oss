@@ -31,12 +31,12 @@ return [
         'update_ledgers' => '台帳の更新',
         'delete_ledgers' => '台帳の削除',
 
-        'view_ledgerdefines' => '台帳定義の閲覧',
-        'create_ledgerdefines' => '台帳定義の作成',
-        'update_ledgerdefines' => '台帳定義の更新',
-        'delete_ledgerdefines' => '台帳定義の削除',
-        'restore_ledgerdefines' => '台帳定義の復元',
-        'force_delete_ledgerdefines' => '台帳定義の完全削除',
+        'view_ledger_defines' => '台帳定義の閲覧',
+        'create_ledger_defines' => '台帳定義の作成',
+        'update_ledger_defines' => '台帳定義の更新',
+        'delete_ledger_defines' => '台帳定義の削除',
+        'restore_ledger_defines' => '台帳定義の復元',
+        'force_delete_ledger_defines' => '台帳定義の完全削除',
 
         'view_folders' => 'フォルダーの閲覧',
         'create_folders' => 'フォルダーの作成',
