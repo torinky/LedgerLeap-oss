@@ -133,7 +133,7 @@ services:
         ports:
             - 9998:9998
         #        command: -c /tika-config.xml
-        command: [ '-JXmx4g', '-c', '/tika-config.xml' ]  # メモリ割当最適化
+        #        command: [ '-Xmx4g', '-c', '/tika-config.xml' ]  # メモリ割当最適化
         restart: on-failure
         volumes:
             - './docker/tika/tika-config.xml:/tika-config.xml'

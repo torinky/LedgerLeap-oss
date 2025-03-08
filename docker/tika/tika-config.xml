@@ -69,7 +69,7 @@
             <!-- jvm args to use in the forked process -->
             <forkedJvmArgs>
                 <arg>-Xms1g</arg>
-                <arg>-Xmx1g</arg>
+                <arg>-Xmx4g</arg>
                 <arg>-Dlog4j.configurationFile=my-forked-log4j2.xml</arg>
             </forkedJvmArgs>
             <!-- this must be set to true for any handler that uses a fetcher or emitter.  These pipes features are inherently unsecure because
