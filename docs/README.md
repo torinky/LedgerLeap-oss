@@ -47,36 +47,35 @@ LedgerLeap は、組織内の情報管理と共有を効率化するための台
 * **検索**:
     * コサイン類似度
     * レーベンシュタイン距離
+* **ファイル解析**: Apache Tika
 
 ## 主な機能
 
 ### 現在の機能
 
-* **台帳管理**:
+* **[台帳管理](/docs/function/Ledger.md)**:
     * 台帳データの登録、編集、削除が可能です。
-* **変更履歴の記録**:
+* **[変更履歴の記録](/docs/function/History.md)**:
     * 台帳データに対する変更履歴を記録します。
-* **通知処理**:
-    * 台帳データやフォルダーの更新時に、ユーザーへ通知を送信します。
-        * 通知対象は、権限に基づいて決定されます。
-        * 通知は、未読・既読の管理が可能です。
-* **全文検索**:
+* **[通知](/docs/function/Notification.md)**:
+    * 台帳データやフォルダーの更新時に、適切なユーザーへ通知を送信します。
+    * 通知の配信先や、通知の有無は権限や設定によって決定されます。
+* **[全文検索](/docs/function/Search.md)**:
     * 現在位置しているフォルダ階層以下や、タグ付けした台帳の内容を対象とした全文検索が可能です。
-* **類義語を使った処理**:
+    * アップロードされたファイルはApache Tikaを用いて内容とメタデータを抽出しインデックス化することで、ファイルの全文検索も可能です。
+* **[類義語を使った処理](/docs/function/Synonym.md)**:
     * 類義語を使った検索が可能です。
-* **権限管理**:
+* **[権限管理](/docs/function/Authority.md)**:
     * フォルダーへのアクセス権限をロールごとに管理できます。
-* **通知設定**:
-    * ロールとフォルダーを紐付けて、通知のオン・オフを設定できます。
-* **ユーザー管理**:
+* **[ユーザー管理](/docs/function/User.md)**:
     * ユーザーの追加、編集、削除が行えます。
-* **組織管理**:
+* **[組織管理](/docs/function/Organization.md)**:
     * 組織を管理できます。
-* **ロール管理**:
+* **[ロール管理](/docs/function/Role.md)**:
     * ロールを管理できます。
-* **モデルに対する変更管理**:
+* **[モデルに対する変更管理](/docs/function/Activity.md)**:
     * モデルが変更された際に、記録されます。
-* **テストコード**:
+* **[テストコード](/docs/function/Test.md)**:
     * テストコードが実装されています。
 
 ### 今後実装予定の機能
@@ -129,3 +128,10 @@ LedgerLeap は、組織内の情報管理と共有を効率化するための台
 * [CustomActivity](/docs/models/CustomActivity.md)
 * [NotificationService](/docs/services/NotificationService.md)
 * [SynonymService](/docs/services/SynonymService.md)
+* [NotificationType](/docs/models/NotificationType.md)
+* [RoleFolderPermission](/docs/models/RoleFolderPermission.md)
+* [TikaService](/docs/services/TikaService.md)
+* [GenericNotification](/docs/notification/GenericNotification.md)
+* [notification_user](/docs/notification/notification_user.md)
+* [RoleResource](/docs/ui/RoleResource.md)
+* [NotificationSettingsRelationManager](/docs/ui/NotificationSettingsRelationManager.md)
