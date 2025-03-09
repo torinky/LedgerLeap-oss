@@ -142,14 +142,17 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'manage_ledger_defines')->andReturn(true);
-        $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(true);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, ['manage_ledger_defines', 'update_ledger_defines'])->andReturn(true);
+        $userServiceMock->expects()->isWritableFolderForUser($user, $ledgerDefine->folder)
+            ->andReturn(true);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
-        // Act & Assert
-        $this->assertTrue($policy->update($user, $ledgerDefine));
-    }
+        // Act
+        $result = $policy->update($user, $ledgerDefine);
 
+        // Assert
+        $this->assertTrue($result);
+    }
     public function test_update_returns_false_for_user_without_manage_ledger_defines_permission()
     {
         // Arrange
@@ -158,7 +161,7 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'manage_ledger_defines')->andReturn(false);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, ['manage_ledger_defines', 'update_ledger_defines'])->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 
         // Act & Assert
@@ -173,7 +176,7 @@ class LedgerDefinePolicyTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
-        $userServiceMock->shouldReceive('hasPermission')->with($user, 'manage_ledger_defines')->andReturn(true);
+        $userServiceMock->shouldReceive('hasPermission')->with($user, ['manage_ledger_defines', 'update_ledger_defines'])->andReturn(true);
         $userServiceMock->shouldReceive('isWritableFolderForUser')->with($user, $ledgerDefine->folder)->andReturn(false);
         $policy = new LedgerDefinePolicy($userServiceMock);
 

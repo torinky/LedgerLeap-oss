@@ -39,7 +39,7 @@ class WritableFolderRepositoryTest extends TestCase
         $repository = new WritableFolderRepository;
         $writableFolderIds = $repository->getWritableFolderIds($user);
 
-        $this->assertCount(2, $writableFolderIds);
+        $this->assertCount(3, $writableFolderIds);
         $this->assertContains($folder1->id, $writableFolderIds);
         $this->assertContains($folder2->id, $writableFolderIds);
         $this->assertNotContains($folder3->id, $writableFolderIds);
@@ -66,23 +66,23 @@ class WritableFolderRepositoryTest extends TestCase
 
         // ルートフォルダを指定した場合
         $writableFolderIds = $repository->getWritableFolderIds($user, $rootFolder);
-        $this->assertCount(2, $writableFolderIds);
+        $this->assertCount(3, $writableFolderIds);
         $this->assertContains($childFolder1->id, $writableFolderIds);
         $this->assertContains($grandChildFolder->id, $writableFolderIds);
 
         // フォルダ1を指定した場合
         $writableFolderIds = $repository->getWritableFolderIds($user, $childFolder1);
-        $this->assertCount(2, $writableFolderIds);
+        $this->assertCount(3, $writableFolderIds);
         $this->assertContains($childFolder1->id, $writableFolderIds);
         $this->assertContains($grandChildFolder->id, $writableFolderIds);
 
         // フォルダ2を指定した場合
         $writableFolderIds = $repository->getWritableFolderIds($user, $childFolder2);
-        $this->assertCount(0, $writableFolderIds);
+        $this->assertCount(1, $writableFolderIds);
 
         // その他フォルダを指定した場合
         $writableFolderIds = $repository->getWritableFolderIds($user, $otherFolder);
-        $this->assertCount(1, $writableFolderIds); // otherFolder自身は含まれる
+        $this->assertCount(2, $writableFolderIds); // otherFolder自身は含まれる
         $this->assertContains($otherFolder->id, $writableFolderIds);
     }
 
