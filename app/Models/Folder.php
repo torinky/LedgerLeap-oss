@@ -251,16 +251,39 @@ class Folder extends Model
         //            ->as('setting')
     }
 
+    /**
+     * ログに記録する項目
+     */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-//            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
-            ->logOnlyDirty() // 変更があった場合のみ記録
-            ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->logFillable()
-            ->setDescriptionForEvent(fn(string $eventName) => "Folder has been {$eventName}");
-        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+            ->useLogName('folder')
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+    }
+
+    /**
+     * ログに記録する際の追加情報
+     */
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        // 言語ファイルからdescriptionを取得
+        $key = "activitylog.folder_{$eventName}";
+
+        return trans($key);
+    }
+
+    /**
+     * ログに記録する際のメッセージを取得
+     */
+    protected function getLogDescriptionForEvent(string $eventName): string
+    {
+        $key = "activitylog.default_message.folder_{$eventName}";
+
+        // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
+        return Lang::has($key) ? trans($key) : "フォルダーが{$eventName}されました";
     }
 
     public function folder()

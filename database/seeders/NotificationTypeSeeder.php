@@ -14,7 +14,7 @@ class NotificationTypeSeeder extends Seeder
     {
         // Ledger 関連
         NotificationType::firstOrCreate(['name' => 'ledger_created'], [
-            'description' => '台帳が作成されたときに通知します。',
+            'description' => 'activitylog.ledger_created',
             'model' => 'App\Models\Ledger',
             'route' => 'ledger.show',
             'folder_relation' => 'define.folder',
@@ -23,7 +23,7 @@ class NotificationTypeSeeder extends Seeder
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_updated'], [
-            'description' => '台帳が更新されたときに通知します。',
+            'description' => 'activitylog.ledger_updated',
             'model' => 'App\Models\Ledger',
             'route' => 'ledger.show',
             'folder_relation' => 'define.folder',
@@ -32,7 +32,7 @@ class NotificationTypeSeeder extends Seeder
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_deleted'], [
-            'description' => '台帳が削除されたときに通知します。',
+            'description' => 'activitylog.ledger_deleted',
             'model' => 'App\Models\Ledger',
             'route' => 'ledgerDefine.index',
             'folder_relation' => 'define.folder',
@@ -43,25 +43,25 @@ class NotificationTypeSeeder extends Seeder
 
         // Folder 関連
         NotificationType::firstOrCreate(['name' => 'folder_created'], [
-            'description' => 'フォルダーが作成されたときに通知します。',
+            'description' => 'activitylog.folder_created',
             'model' => 'App\Models\Folder',
-            'route' => 'folder.show',
+            'route' => 'ledgersByFolderId',
             'folder_relation' => null, // Folder 自身が subject
             'event' => 'created',
             'default_notify' => true,
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'folder_updated'], [
-            'description' => 'フォルダーが更新されたときに通知します。',
+            'description' => 'activitylog.folder_updated',
             'model' => 'App\Models\Folder',
-            'route' => 'folder.show',
+            'route' => 'ledgersByFolderId',
             'folder_relation' => null,
             'event' => 'updated',
             'default_notify' => true,
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'folder_deleted'], [
-            'description' => 'フォルダーが削除されたときに通知します。',
+            'description' => 'activitylog.folder_deleted',
             'model' => 'App\Models\Folder',
             'route' => 'folder.index',
             'folder_relation' => null,
@@ -72,7 +72,7 @@ class NotificationTypeSeeder extends Seeder
 
         // LedgerDefine 関連
         NotificationType::firstOrCreate(['name' => 'ledger_define_created'], [
-            'description' => '台帳定義が作成されたときに通知します。',
+            'description' => 'activitylog.ledger_define_created',
             'model' => 'App\Models\LedgerDefine',
             'route' => 'ledgerDefine.show',
             'folder_relation' => 'folder',
@@ -81,7 +81,7 @@ class NotificationTypeSeeder extends Seeder
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_define_updated'], [
-            'description' => '台帳定義が更新されたときに通知します。',
+            'description' => 'activitylog.ledger_define_updated',
             'model' => 'App\Models\LedgerDefine',
             'route' => 'ledgerDefine.show',
             'folder_relation' => 'folder',
@@ -90,7 +90,7 @@ class NotificationTypeSeeder extends Seeder
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'ledger_define_deleted'], [
-            'description' => '台帳定義が削除されたときに通知します。',
+            'description' => 'activitylog.ledger_define_deleted',
             'model' => 'App\Models\LedgerDefine',
             'route' => 'ledgerDefine.index',
             'folder_relation' => 'folder',
@@ -99,31 +99,196 @@ class NotificationTypeSeeder extends Seeder
             'enabled' => true,
         ]);
 
-        // User 関連 (例)
+        // User 関連
         NotificationType::firstOrCreate(['name' => 'user_created'], [
-            'description' => 'ユーザーが作成されたときに通知します。',
+            'description' => 'activitylog.user_created',
             'model' => 'App\Models\User',
-            'route' => 'user.show',
-            'folder_relation' => null, // ユーザーはフォルダーに直接関連付けられない
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
             'event' => 'created',
-            'default_notify' => false, // デフォルトでは OFF (必要に応じて変更)
+            'default_notify' => false,
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'user_updated'], [
-            'description' => 'ユーザー情報が更新されたときに通知します。',
+            'description' => 'activitylog.user_updated',
             'model' => 'App\Models\User',
-            'route' => 'user.show',
+            'route' => null, // 必要に応じて変更
             'folder_relation' => null,
             'event' => 'updated',
             'default_notify' => false,
             'enabled' => true,
         ]);
         NotificationType::firstOrCreate(['name' => 'user_deleted'], [
-            'description' => 'ユーザーが削除されたときに通知します。',
+            'description' => 'activitylog.user_deleted',
             'model' => 'App\Models\User',
-            'route' => 'user.index',
+            'route' => null, // 必要に応じて変更
             'folder_relation' => null,
             'event' => 'deleted',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+        // Organization 関連
+        NotificationType::firstOrCreate(['name' => 'organization_created'], [
+            'description' => 'activitylog.organization_created',
+            'model' => 'App\Models\Organization',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'created',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'organization_updated'], [
+            'description' => 'activitylog.organization_updated',
+            'model' => 'App\Models\Organization',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'updated',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'organization_deleted'], [
+            'description' => 'activitylog.organization_deleted',
+            'model' => 'App\Models\Organization',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'deleted',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+        // Role 関連
+        NotificationType::firstOrCreate(['name' => 'role_created'], [
+            'description' => 'activitylog.role_created',
+            'model' => 'App\Models\Role',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'created',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'role_updated'], [
+            'description' => 'activitylog.role_updated',
+            'model' => 'App\Models\Role',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'updated',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'role_deleted'], [
+            'description' => 'activitylog.role_deleted',
+            'model' => 'App\Models\Role',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'deleted',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+        // Permission 関連
+        NotificationType::firstOrCreate(['name' => 'permission_created'], [
+            'description' => 'activitylog.permission_created',
+            'model' => 'App\Models\Permission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'created',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'permission_updated'], [
+            'description' => 'activitylog.permission_updated',
+            'model' => 'App\Models\Permission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'updated',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'permission_deleted'], [
+            'description' => 'activitylog.permission_deleted',
+            'model' => 'App\Models\Permission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'deleted',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+        // Login / Logout
+        NotificationType::firstOrCreate(['name' => 'login'], [
+            'description' => 'activitylog.login',
+            'model' => 'App\Models\User',
+            'route' => null,
+            'folder_relation' => null,
+            'event' => null,
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'logout'], [
+            'description' => 'activitylog.logout',
+            'model' => 'App\Models\User',
+            'route' => null,
+            'folder_relation' => null,
+            'event' => null,
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        // ユーザーと組織関連
+        NotificationType::firstOrCreate(['name' => 'user_organization_attached'], [
+            'description' => 'activitylog.user_organization_attached',
+            'model' => 'App\Models\Organization',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'attached',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'user_organization_detached'], [
+            'description' => 'activitylog.user_organization_detached',
+            'model' => 'App\Models\Organization',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'detached',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+        // ユーザーとロール関連
+        NotificationType::firstOrCreate(['name' => 'role_user_attached'], [
+            'description' => 'activitylog.role_user_attached',
+            'model' => 'App\Models\Role',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'attached',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'role_user_detached'], [
+            'description' => 'activitylog.role_user_detached',
+            'model' => 'App\Models\Role',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'detached',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        // ロールと権限関連
+        NotificationType::firstOrCreate(['name' => 'role_permission_attached'], [
+            'description' => 'activitylog.role_permission_attached',
+            'model' => 'App\Models\Permission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'attached',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'role_permission_detached'], [
+            'description' => 'activitylog.role_permission_detached',
+            'model' => 'App\Models\Permission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => null,
+            'event' => 'detached',
             'default_notify' => false,
             'enabled' => true,
         ]);

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Lang;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -120,15 +121,38 @@ class LedgerDefine extends Model
         return $this->roles->flatMap->permissions->contains('name', $permission);
     }
 
+    /**
+     * ログに記録する項目
+     */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-//            ->logOnly(['title', 'folder_id', 'column_define','create_description','list_description','detail_description','deleted_at']) // 変更を監視する属性
-            ->logOnlyDirty() // 変更があった場合のみ記録
-            ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->logFillable()
-            ->setDescriptionForEvent(fn(string $eventName) => "LedgerDefine has been {$eventName}");
-        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+            ->useLogName('ledger_define')
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+    }
+
+    /**
+     * ログに記録する際の追加情報
+     */
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        // 言語ファイルからdescriptionを取得
+        $key = "activitylog.ledger_define_{$eventName}";
+
+        return trans($key);
+    }
+
+    /**
+     * ログに記録する際のメッセージを取得
+     */
+    protected function getLogDescriptionForEvent(string $eventName): string
+    {
+        $key = "activitylog.default_message.ledger_define_{$eventName}";
+
+        // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
+        return Lang::has($key) ? trans($key) : "台帳定義が{$eventName}されました";
     }
 }

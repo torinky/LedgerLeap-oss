@@ -50,6 +50,7 @@ return [
         'update_permissions' => '権限の更新',
         'delete_permissions' => '権限の削除',
         'manage_permissions' => '権限の管理',
+        'view_activity_logs' => 'アクティビティログの閲覧',
     ],
 
 ];

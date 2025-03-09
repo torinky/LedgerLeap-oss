@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Lang;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -77,7 +78,7 @@ class User extends Authenticatable implements FilamentUser
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        //        $this->userService = app(UserService::class);
+        $this->userService = app(UserService::class);
     }
 
     public function organizations()
@@ -128,16 +129,16 @@ class User extends Authenticatable implements FilamentUser
         {
             return $this->userService->hasRoleInOrganization($this, $role, $organization);
         }
+*/
+    public function getAllUniqueRoles()
+    {
+        return $this->userService->getAllUniqueRolesForUser($this);
+    }
 
-        public function getAllUniqueRoles()
-        {
-            return $this->userService->getAllUniqueRolesForUser($this);
-        }
-
-        public function getAllUniquePermissions()
-        {
-            return $this->userService->getAllUniquePermissionsForUser($this);
-        }*/
+    public function getAllUniquePermissions()
+    {
+        return $this->userService->getAllUniquePermissionsForUser($this);
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {
@@ -177,24 +178,46 @@ class User extends Authenticatable implements FilamentUser
         return $this;
     }
 
+    /**
+     * ログに記録する項目
+     */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
-            ->logOnlyDirty() // 変更があった場合のみ記録
-            ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->logFillable()
-            ->setDescriptionForEvent(fn(string $eventName) => "Ledger has been {$eventName}");
-        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+            ->useLogName('user')
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
-    /*    public function getActivitylogOptions(): LogOptions
-        {
-            return LogOptions::defaults()
-                ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
-                ->logOnlyDirty() // 変更があった場合のみ記録
-                ->dontSubmitEmptyLogs() // 空のログは記録しない
-                ->logFillable();
-        }*/
+    /**
+     * ログに記録する際の追加情報
+     */
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        // 言語ファイルからdescriptionを取得
+        $key = "activitylog.user_{$eventName}";
+
+        return trans($key);
+    }
+
+    /**
+     * ログに記録する際のメッセージを取得
+     */
+    protected function getLogDescriptionForEvent(string $eventName): string
+    {
+        $key = "activitylog.default_message.user_{$eventName}";
+
+        // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
+        return Lang::has($key) ? trans($key) : "ユーザーが{$eventName}されました";
+    }
+
+    /**
+     * グローバル通知をさせるためにルートフォルダーを返す
+     *
+     * @return Folder
+     */
+    public function folder()
+    {
+        return Folder::root();
+    }
 }

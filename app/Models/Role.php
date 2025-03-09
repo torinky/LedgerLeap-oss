@@ -8,12 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Lang;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
 
 class Role extends SpatieRole
 {
-    use Notifiable;
+    use LogsActivity, Notifiable;
 
     protected $fillable = [
         'name', 'guard_name',
@@ -35,6 +38,41 @@ class Role extends SpatieRole
                 app(WritableFolderRepository::class)->clearAllCache($user);
             });
         });
+    }
+
+    /**
+     * ログに記録する項目
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->useLogName('role')
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+    }
+
+    /**
+     * ログに記録する際の追加情報
+     */
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        // 言語ファイルからdescriptionを取得
+        $key = "activitylog.role_{$eventName}";
+
+        return trans($key);
+    }
+
+    /**
+     * ログに記録する際のメッセージを取得
+     */
+    protected function getLogDescriptionForEvent(string $eventName): string
+    {
+        $key = "activitylog.default_message.role_{$eventName}";
+
+        // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
+        return Lang::has($key) ? trans($key) : "ロールが{$eventName}されました";
     }
 
     public function tags()

@@ -23,13 +23,13 @@
 
                                 @foreach($notifications as $notification)
                                     @php
-                                        //                                    dd($notification);
-                                                                                $routeName = $notification->data['payload']['route']??'ledger.index';
-                                                                                $subjectId = $notification->data['payload']['subject_id'] ?? null;
-                                                                                $causerName = $notification->data['payload']['causer_name'] ?? null;
-                                                                                $event = $notification->data['payload']['event'];
-                                                                                $label = __('ledger.notification_types.'.$notification->data['payload']['subject_type']);
-                                                                                $eventLabel = __('ledger.action_'.$event);
+                                        //dd($notification);
+                                        $routeName = $notification->data['payload']['route']??'ledger.index';
+                                        $subjectId = $notification->data['payload']['subject_id'] ?? null;
+                                        $causerName = $notification->data['payload']['causer_name'] ?? null;
+                                        $event = $notification->data['payload']['event'];
+                                        $label = __('ledger.notification_types.'.$notification->data['payload']['subject_type']);
+                                        $eventLabel = __('ledger.action_'.$event);
                                     @endphp
                                     <div class="border-b border-base-content/50 last:border-b-0 pb-4">
                                         <div>
@@ -44,13 +44,17 @@
                                                         @endisset
 
                                                         {{ $label }}
-                                                        @isset($subjectId)
-                                                            <a href="{{ route($routeName , $subjectId) }}"
-                                                               class="link">
-                                                                {{ $notification->data['payload']['ledger_name'] ?? ucfirst($routeName) . ' ID: ' . $subjectId }}
-                                                            </a>
-                                                        @endisset
-                                                        {{ $eventLabel }}
+                                                            @isset($subjectId)
+                                                                @if(Route::has($routeName))
+                                                                    <a href="{{ route($routeName, $subjectId) }}"
+                                                                       class="link">
+                                                                        {{ $notification->data['payload']['ledger_name'] ?? ucfirst($routeName) . ' ID: ' . $subjectId }}
+                                                                    </a>
+                                                                @else
+                                                                    {{ $notification->data['payload']['ledger_name'] ?? ucfirst($routeName) . ' ID: ' . $subjectId }}
+                                                                @endif
+                                                            @endisset
+                                                            {{ $eventLabel }}
                                                     </p>
                                                     <div
                                                         class="text-base-content/70 text-sm">{{ $notification->created_at->diffForHumans() }}</div>
@@ -102,7 +106,7 @@
                             </div>
                         @endif
                     </x-mary-tab>
-                    <x-mary-tab name="activityLog" :label="__('ledger.activity_log')">
+                    <x-mary-tab name="activityLog" :label="__('activitylog.activitylog')">
                         <div class="p-4">
                             <livewire:user-activity-log/>
                         </div>

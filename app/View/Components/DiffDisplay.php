@@ -11,21 +11,24 @@ use SebastianBergmann\Diff\Output\UnifiedDiffOutputBuilder;
 class DiffDisplay extends Component
 {
     public $attribute;
+
     public $old;
+
     public $new;
+
     public $mode;
+
     public $showLabel;
+
     public $oldHtml; // 追加
+
     public $newHtml; // 追加
 
     /**
      * Create a new component instance.
      *
-     * @param string $attribute
      * @param mixed $old
      * @param mixed $new
-     * @param string $mode
-     * @param bool $showLabel
      * @return void
      */
     public function __construct(string $attribute, $old, $new, string $mode = 'table', bool $showLabel = true)
@@ -66,11 +69,19 @@ class DiffDisplay extends Component
     protected function calculateDiff()
     {
         // 文字列の場合は JSON デコードを試みる
+        // dd($this->old , json_decode($this->old, true));
         if (is_string($this->old)) {
-            $this->old = json_decode($this->old, true);
+            $challenged = json_decode($this->old, true);
+
+            if (!empty($challenged) && !empty($this->old)) {
+                $this->old = $challenged;
+            }
         }
         if (is_string($this->new)) {
-            $this->new = json_decode($this->new, true);
+            $challenged = json_decode($this->new, true);
+            if (!empty($challenged) && !empty($this->new)) {
+                $this->new = $challenged;
+            }
         }
 
         // 配列/オブジェクトの場合は JSON 文字列に変換
@@ -93,9 +104,10 @@ class DiffDisplay extends Component
         // ));
         // UnifiedDiffOutputBuilder のコンストラクタで空のヘッダーを渡す
         $differ = new Differ(new UnifiedDiffOutputBuilder(
-            "", // ヘッダーを空にする
+            '', // ヘッダーを空にする
             false // コンテキスト行を含めるかどうか(変更)
         ));
+
         return $differ->diff($this->old, $this->new);
     }
 

@@ -7,14 +7,50 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 class Organization extends Model
 {
-    use HasFactory, HasRoles, HasTreeView, NodeTrait, SoftDeletes;
+    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
+
+    /**
+     * ログに記録する項目
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->useLogName('organization')
+            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+    }
+
+    /**
+     * ログに記録する際の追加情報
+     */
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        // 言語ファイルからdescriptionを取得
+        $key = "activitylog.organization_{$eventName}";
+
+        return trans($key);
+    }
+
+    /**
+     * ログに記録する際のメッセージを取得
+     */
+    protected function getLogDescriptionForEvent(string $eventName): string
+    {
+        $key = "activitylog.default_message.organization_{$eventName}";
+
+        // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
+        return Lang::has($key) ? trans($key) : "組織が{$eventName}されました";
+    }
 
     /**
      * @return BelongsToMany

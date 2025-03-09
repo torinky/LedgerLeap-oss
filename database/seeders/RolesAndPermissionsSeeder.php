@@ -66,6 +66,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'update_permissions' => '権限を更新できる',
             'delete_permissions' => '権限を削除できる',
             'manage_permissions' => '権限を管理できる',
+            'view_activity_logs' => 'アクティビティログを閲覧できる',
         ];
         // 権限を登録
         foreach ($permissions as $name => $description) {
@@ -90,7 +91,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
                     'view_permissions', 'create_permissions', 'update_permissions', 'delete_permissions', 'manage_permissions',
-                    'notify',
+                    'notify', 'view_activity_logs',
                 ],
             ],
             'Organization Admin' => [
@@ -102,7 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
                     'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
-                    'view_rolefolderpermissions', 'create_rolefolderpermissions', 'update_rolefolderpermissions', 'delete_rolefolderpermissions',
+                    'view_rolefolderpermissions', 'create_rolefolderpermissions', 'update_rolefolderpermissions', 'delete_rolefolderpermissions', 'view_activity_logs',
                 ],
             ],
             'Project Manager' => [
@@ -110,7 +111,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'permissions' => [
                     'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
                     'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines',
-                    'view_folders', 'create_folders', 'update_folders', 'delete_folders',
+                    'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'view_activity_logs',
                 ],
             ],
             'Editor' => [

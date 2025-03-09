@@ -10,6 +10,7 @@ use App\Models\Organization;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\ActivityLogPolicy;
 use App\Policies\FolderPolicy;
 use App\Policies\LedgerDefinePolicy;
 use App\Policies\LedgerPolicy;
@@ -18,6 +19,7 @@ use App\Policies\RolePolicy;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Activitylog\Models\Activity;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -32,6 +34,8 @@ class AuthServiceProvider extends ServiceProvider
         Folder::class => FolderPolicy::class,
         Permission::class => PermissionPolicy::class,
         Role::class => RolePolicy::class,
+        Activity::class => ActivityLogPolicy::class,
+
     ];
 
     /**
