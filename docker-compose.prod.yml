@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile
       args:
         WWWGROUP: '${WWWGROUP}'
-    image: sail-8.2/app
+    image: sail-8.4/app
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
@@ -45,9 +45,12 @@ services:
     networks:
       - sail
     depends_on:
-      - mysql
-      #      - redis
-      - tika
+      mysql:
+        condition: service_healthy
+      #      redis:
+      #        condition: service_started
+      tika:
+        condition: service_started
     restart: on-failure
   #    restart: unless-stopped
   mysql:
