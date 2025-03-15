@@ -8,26 +8,27 @@
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.10",
         "@tailwindcss/typography": "^0.5.16",
-        "alpinejs": "^3.14.8",
-        "autoprefixer": "^10.4.20",
-        "axios": "^1.8.1",
-        "daisyui": "^4.12.24",
+        "@tailwindcss/postcss": "^4.0.14",
+        "@tailwindcss/vite": "^4.0.14",
+        "alpinejs": "^3.14.9",
+        "autoprefixer": "^10.4.21",
         "postcss": "8.5.3",
         "sass": "1.81.0",
-        "tailwindcss": "3.4.15"
+        "tailwindcss": "^4.0.14",
+        "daisyui": "^5.0.4",
+        "vite": "^6.2.2",
+        "laravel-vite-plugin": "^1.2.0"
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^6.7.2",
         "@wotz/livewire-sortablejs": "^1.0.0",
+        "axios": "1.8.2",
         "easymde": "^2.20.0",
-        "esbuild": "^0.25.0",
         "filepond": "4.32.1",
         "filepond-plugin-file-poster": "^2.5.2",
         "filepond-plugin-file-validate-size": "^2.2.8",
         "filepond-plugin-file-validate-type": "^1.2.9",
         "filepond-plugin-image-preview": "^4.6.12",
-        "flatpickr": "^4.6.13",
-        "laravel-vite-plugin": "^1.2.0",
-        "vite": "^6.2.1"
+        "flatpickr": "^4.6.13"
     }
 }

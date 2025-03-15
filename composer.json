@@ -14,7 +14,7 @@
         "guzzlehttp/guzzle": "^7.2",
         "intervention/image": "^2.7",
         "kalnoy/nestedset": "^6.0",
-        "laravel/framework": "^11",
+        "laravel/framework": "^11.0",
         "laravel/sanctum": "^4",
         "laravel/tinker": "^2.8",
         "livewire/livewire": "^3.5",
@@ -40,6 +40,7 @@
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^8.0",
         "phpunit/phpunit": "^11",
+        "pestphp/pest": "^3.0",
         "roave/security-advisories": "dev-latest",
         "spatie/laravel-ignition": "^2.0",
         "ext-json": "*"
