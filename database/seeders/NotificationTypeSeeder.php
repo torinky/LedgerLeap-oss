@@ -221,7 +221,7 @@ class NotificationTypeSeeder extends Seeder
             'model' => 'App\Models\User',
             'route' => null,
             'folder_relation' => null,
-            'event' => null,
+            'event' => 'login',
             'default_notify' => false,
             'enabled' => true,
         ]);
@@ -230,7 +230,7 @@ class NotificationTypeSeeder extends Seeder
             'model' => 'App\Models\User',
             'route' => null,
             'folder_relation' => null,
-            'event' => null,
+            'event' => 'logout',
             'default_notify' => false,
             'enabled' => true,
         ]);
@@ -292,5 +292,29 @@ class NotificationTypeSeeder extends Seeder
             'default_notify' => false,
             'enabled' => true,
         ]);
+
+        // RoleFolderPermission 関連
+        NotificationType::firstOrCreate(['name' => 'role_folder_permission_created'], [
+            'description' => 'activitylog.role_folder_permission_created',
+            'model' => 'App\Models\RoleFolderPermission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => 'folder',
+            'event' => 'created',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'role_folder_permission_updated'], [
+            'description' => 'activitylog.role_folder_permission_updated',
+            'model' => 'App\Models\RoleFolderPermission',
+            'route' => null, // 必要に応じて変更
+            'folder_relation' => 'folder',
+            'event' => 'updated',
+            'default_notify' => false,
+            'enabled' => true,
+        ]);
+
+
+
+
     }
 }
