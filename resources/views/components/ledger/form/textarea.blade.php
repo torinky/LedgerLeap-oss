@@ -13,7 +13,7 @@
 
 @if($isDemo)
     <x-mary-textarea
-        {{--    wire:model.blur="content.{{$columnDefine->id}}"--}}
+        {{--    wire:model.live.blur="content.{{$columnDefine->id}}"--}}
         label="{{ $columnDefine->name }}"
         id="content[{{$columnDefine->id}}]"
         name="content[{{$columnDefine->id}}]"
@@ -127,8 +127,12 @@
 
                 // 各テキストエリアに対してイベントリスナーを設定
                 textareas.forEach((textarea) => {
+                    let timeout;
                     textarea.addEventListener('input', function (event) {
-                        adjustInputSize(textarea);
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            adjustInputSize(this);
+                        }, 300); // 300ミリ秒の遅延を設定
                     });
                 });
 
@@ -140,11 +144,19 @@
                 }
 
                 // ページがロードされた際にすべてのテキストエリアの高さを初期化
-                adjustAllInputHeights();
+                adjustAllInputHeights(); // 初期化時に一度だけ実行
 
                 // Livewireメッセージが処理された際にすべてのテキストエリアの高さを更新
-                Livewire.hook('morph.updated', ({el, component}) => {
-                    adjustAllInputHeights();
+                Livewire.hook('morph.updated', ({el}) => {
+                    const updatedTextareas = el.querySelectorAll('textarea.adjustHeight');
+                    updatedTextareas.forEach((textarea) => {
+                        if (textarea.offsetParent !== null) {
+                            if (textarea.dataset.adjustedHeight) {
+                                textarea.style.height = textarea.dataset.adjustedHeight;
+                            }
+                            setTimeout(() => adjustInputSize(textarea), 0);
+                        }
+                    });
                 })
             });
         </script>

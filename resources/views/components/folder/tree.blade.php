@@ -36,21 +36,18 @@
                                 $color = 'text-accent/80';
                             }
                         @endphp
-                        <span class="fa-stack mr-3" style="font-size:0.5em">
+                        <span class="fa-stack " style="font-size: 0.8em;">
                     @if(in_array($folder->id,$selectedFolderIds)||in_array($folder->id,$selectedFolderChildrenIds)||$folder->id==$currentFolderId)
                                 <i class="fas fa-folder-open {{$color}} fa-stack-2x"></i>
                     @else
                                 <i class="fas fa-folder {{$color}} fa-stack-2x"></i>
                     @endif
                         @if(in_array($folder->id, $manageableFolderIds))
-                            <i class="fas fa-fw fa-gear text-base-100 fa-stack-1x pl-2"
-                               style="font-size:2em"></i> {{-- 管理可能なフォルダ --}}
+                            <i class="fas fa-fw fa-gear text-base-100 fa-stack-1x"></i> {{-- 管理可能なフォルダ --}}
                         @elseif(in_array($folder->id, $writableFolderIds))
-                            <i class="fas fa-fw fa-pen text-base-100 fa-stack-1x pl-2"
-                               style="font-size:2em"></i> {{-- 書き込み可能なフォルダ --}}
+                            <i class="fas fa-fw fa-pen text-base-100 fa-stack-1x"></i> {{-- 書き込み可能なフォルダ --}}
                             @elseif(in_array($folder->id, $readableFolderIds))
-                            <i class="fas fa-fw fa-eye text-base-100 fa-stack-1x pl-2"
-                               style="font-size:2em"></i> {{-- 読み取り可能なフォルダ --}}
+                            <i class="fas fa-fw fa-eye text-base-100 fa-stack-1x"></i> {{-- 読み取り可能なフォルダ --}}
                             @endif
                     </span>
                     {{ $folder->title }}

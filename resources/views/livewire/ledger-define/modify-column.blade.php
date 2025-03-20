@@ -31,7 +31,7 @@
     </script>
 
     @if(!empty($ledgerDefineRecord->column_define))
-        <x-mary-form wire:submit.prevent="store">
+        <x-mary-form wire:submit="store">
             @csrf
             <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3"
                 drag-root>

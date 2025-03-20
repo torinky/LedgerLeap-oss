@@ -4,24 +4,19 @@
 @use "tailwindcss";
 
 
-// FontAwesomeのインポート方法を修正
-$fa-font-path: '@fortawesome/fontawesome-free/webfonts';
-@use '@fortawesome/fontawesome-free/scss/fontawesome';
-@use '@fortawesome/fontawesome-free/scss/brands';
-@use '@fortawesome/fontawesome-free/scss/solid';
-@use '@fortawesome/fontawesome-free/scss/regular';
-
 // daisyUI v5用のプラグイン読み込み
 @plugin "daisyui" {
     themes: all;
 } ;
+@plugin "daisyui/theme";
 
 // FilePondのインポートが必要な場合はコメント解除
 // @import 'filepond/dist/filepond.min.css';
 
 /* FontAwesomeのフォント読み込み */
+$fa-font-path: '@fortawesome/fontawesome-free/webfonts';
 @font-face {
-    font-family: 'Font Awesome 5 Free';
+    font-family: 'Font Awesome 6 Free';
     font-style: normal;
     font-display: block;
     src: url('#{$fa-font-path}/fa-solid-900.woff2') format('woff2');
@@ -41,7 +36,7 @@ $fa-font-path: '@fortawesome/fontawesome-free/webfonts';
     'ＭＳ Ｐゴシック',
     'MS PGothic',
     'sans-serif',
-    'Font Awesome 5 Free';
+    'Font Awesome 6 Free';
     font-weight: 400;
 }
 
@@ -51,7 +46,7 @@ input {
     &::-webkit-input-placeholder.icon-input,
     &:-ms-input-placeholder.icon-input,
     &::-moz-placeholder.icon-input {
-        font-family: 'Font Awesome 5 Free';
+        font-family: 'Font Awesome 6 Free';
     }
 }
 
@@ -61,44 +56,46 @@ textarea {
 
 // タイトルスタイルの修正
 .ttl_3d5 {
-    border: 3px solid rgb(var(--color-info));
-    background-color: rgb(var(--color-base-100));
+    border: 3px solid var(--color-info);
+    background-color: var(--color-base-100);
     padding: 0.5em 1em;
     position: relative;
+}
 
-    &::before {
-        content: '';
-        width: 100%;
-        height: 100%;
-        background-image: radial-gradient(rgba(var(--color-info), 0.08) 8%, transparent 16%),
-        radial-gradient(rgba(var(--color-info), 0.08) 8%, transparent 16%);
-        background-position: 0 0, 7px 7px;
-        background-size: 12px 12px;
-        position: absolute;
-        top: -10px;
-        left: 10px;
-        z-index: -1;
-    }
+.ttl_3d5::before {
+    content: '';
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(var(--color-info) 8%, transparent 16%),
+    radial-gradient(var(--color-info), 8%, transparent 16%);
+    background-position: 0 0, 7px 7px;
+    background-size: 12px 12px;
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    z-index: -1;
+}
 
-    &.warn {
-        border-color: rgb(var(--color-warning));
-        background-color: rgb(var(--color-base-100));
+.ttl_3d5.warn {
+    border-color: var(--color-warning);
+    background-color: var(--color-base-100);
 
-        &::before {
-            background-image: radial-gradient(rgba(var(--color-warning), 0.08) 8%, transparent 16%),
-            radial-gradient(rgba(var(--color-warning), 0.08) 8%, transparent 16%);
-        }
-    }
+}
 
-    &.error {
-        border-color: rgb(var(--color-error));
-        background-color: rgb(var(--color-base-300));
+.ttl_3d5.warn::before {
+    background-image: radial-gradient(var(--color-warning) 8%, transparent 16%),
+    radial-gradient(var(--color-warning), 8%, transparent 16%);
+}
 
-        &::before {
-            background-image: radial-gradient(rgba(var(--color-error), 0.08) 8%, transparent 16%),
-            radial-gradient(rgba(var(--color-error), 0.08) 8%, transparent 16%);
-        }
-    }
+.ttl_3d5.error {
+    border-color: var(--color-error);
+    background-color: var(--color-base-300);
+
+}
+
+.ttl_3d5.error::before {
+    background-image: radial-gradient(var(--color-error) 8%, transparent 16%),
+    radial-gradient(var(--color-error) 8%, transparent 16%);
 }
 
 // EasyMDEスタイル

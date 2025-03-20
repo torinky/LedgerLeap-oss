@@ -72,7 +72,7 @@
                                     label="{{__('ledger.go_to')}}"
                                     icon="o-arrow-right-circle"
                                     class="btn btn-sm btn-neutral mr-4"
-                                    link="{{route('ledger.index',['l[]'=>$ledgerDefineRecord->id])}}"
+                                    link="{{ route('ledger.index',['l[0]'=>$ledgerDefineRecord->id]) }}"
                                 />
 
                                 <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">

@@ -26,7 +26,9 @@
         </div>
 
         <div class="navbar-end">
-            <livewire:notifications.icon/>
+            <div class="dropdown dropdown-end">
+                <livewire:notifications.icon/>
+            </div>
             {{--            <a class="btn">Button</a>--}}
             <a tabindex="1" class="btn btn-ghost btn-sm tooltip tooltip-bottom pt-2" data-tip="{{__('ledger.setting')}}"
                href="{{ route('filament.admin.pages.dashboard') }}">

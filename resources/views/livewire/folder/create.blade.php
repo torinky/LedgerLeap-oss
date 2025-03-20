@@ -15,7 +15,7 @@
                 label="{{__('ledger.folder.containing')}}"
                 icon="o-folder" :options="$folderIdNameMap"
                 {{--            wire:change="applyParentFolder"--}}
-                wire:model="parentFolderId" required
+                wire:model.live="parentFolderId" required
             />
             {{--
                         <x-slot:actions>
