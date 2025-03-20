@@ -146,11 +146,9 @@ class FolderRelationManager extends RelationManager
                             $existFolderPermisson->update($data);
 
                             return $existFolderPermisson;
-                        } else {
-                            return RoleFolderPermission::create($data);
                         }
+                        return RoleFolderPermission::create($data);
 
-                        return null;
 
                     }),
             ])->actions([

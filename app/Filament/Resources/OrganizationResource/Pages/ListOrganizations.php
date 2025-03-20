@@ -5,14 +5,17 @@ namespace App\Filament\Resources\OrganizationResource\Pages;
 use App\Filament\Resources\OrganizationResource;
 use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
-use CubeAgency\FilamentTreeView\Resources\Pages\TreeViewRecords;
 use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListOrganizations extends TreeViewRecords
+//use CubeAgency\FilamentTreeView\Resources\Pages\TreeViewRecords;
+
+//class ListOrganizations extends TreeViewRecords
+class ListOrganizations extends ListRecords
 {
     protected static string $resource = OrganizationResource::class;
 

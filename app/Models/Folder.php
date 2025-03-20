@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\FolderPermissionType;
-use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,9 +15,12 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\PermissionRegistrar;
 
+//use CubeAgency\FilamentTreeView\Traits\HasTreeView;
+
 class Folder extends Model
 {
-    use HasFactory, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
+//    use HasFactory, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
+    use HasFactory, LogsActivity, NodeTrait, SoftDeletes;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id',

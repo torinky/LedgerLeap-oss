@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use CubeAgency\FilamentTreeView\Traits\HasTreeView;
+//use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +15,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 class Organization extends Model
 {
-    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
+//    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
+    use HasFactory, HasRoles, LogsActivity, NodeTrait, SoftDeletes;
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
