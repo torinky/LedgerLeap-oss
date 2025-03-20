@@ -44,6 +44,11 @@ return [
         'user_updated' => 'ユーザーが更新されました',
         'user_deleted' => 'ユーザーが削除されました',
     ],
+    'role' => [
+        'permission_added' => 'ロールに権限「:permission」が付与されました。',
+        'permission_removed' => 'ロールから権限「:permission」が削除されました。',
+        'attribute_changed' => '属性「:attribute」が「:old」から「:new」に変更されました。',
+    ],
     'no_permission' => 'アクティビティログの閲覧権限がありません。',
     'activitylog' => 'アクティビティログ',
 ];
