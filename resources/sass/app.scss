@@ -8,7 +8,8 @@
 @plugin "daisyui" {
     themes: all;
 } ;
-@plugin "daisyui/theme";
+
+@source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
 
 // FilePondのインポートが必要な場合はコメント解除
 // @import 'filepond/dist/filepond.min.css';
@@ -111,4 +112,12 @@ textarea {
     h3 {
         @apply text-lg font-bold mb-3
     }
+}
+
+.mary-table-pagination span[aria-current="page"] > span {
+    @apply bg-primary text-base-100
+}
+
+.mary-table-pagination button {
+    @apply cursor-pointer
 }

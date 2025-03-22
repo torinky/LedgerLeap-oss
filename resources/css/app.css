@@ -1,15 +1,20 @@
+/*@import "tailwindcss";*/
 /**
     The lines above are intact.
     The lines below were added by maryUI installer.
 */
 
 /** daisyUI */
-/*@plugin "daisyui" {*/
-/*    themes: light --default, dark --prefersdark;*/
-/*}*/
+/*
+@plugin "daisyui" {
+    !*themes: light --default, dark --prefersdark;*!
+
+    themas:all;
+}
+*/
 
 /* maryUI */
-@source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
+/*@source "../../vendor/robsontenorio/mary/src/View/Components!**!*.php";*/
 
 /* Theme toggle */
 /*@custom-variant dark (&:where(.dark, .dark *));*/
@@ -19,6 +24,7 @@
 * Because Laravel defaults does not match well the design of daisyUI.
 */
 
+/*
 .mary-table-pagination span[aria-current="page"] > span {
     @apply bg-primary text-base-100
 }
@@ -26,3 +32,4 @@
 .mary-table-pagination button {
     @apply cursor-pointer
 }
+*/
