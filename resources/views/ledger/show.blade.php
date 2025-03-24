@@ -1,11 +1,12 @@
 <x-app-layout title="{{__('ledger.details')}}">
     <x-slot name="header" class="sticky top-0 z-10">
-        <div class="ttl_3d5 md:flex md:items-center space-x-4">
-            <h2 class="font-black text-lg text-info md:text-xl">
+        <div class="ttl_3d5 md:flex md:items-center space-x-4 bg-info/40 rounded">
+            <h2 class="font-black text-lg text-info-content/60 md:text-xl">
                 <i class="fas fa-list mr-2"></i>
                 {{ __('ledger.details') }}
             </h2>
-            <div class="text-info/90 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
+            <div class="text-info-content/50 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}
+            </div>
         </div>
     </x-slot>
 

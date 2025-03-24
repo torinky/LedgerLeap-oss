@@ -46,8 +46,8 @@
         label="{{ $columnDefine->name }}"
         :options="$tmpOptions"
         required="{{ $columnDefine->required }}"
-        class="flex w-full"
         hint="{{ $columnDefine->hint }}"
+        inline
     ></x-mary-radio>
 @elseif ($type === 'select' && $columnDefine->required)
     <x-mary-select
@@ -77,9 +77,9 @@
         wire:model.live="content.{{ $columnDefine->id }}"
         label="{{ $columnDefine->name }}"
         :options="$tmpOptions"
-        class="flex w-full"
         hint="{{ $columnDefine->hint }}"
         required
+        inline
     ></x-mary-radio>
 @else
     <x-mary-radio
@@ -87,7 +87,7 @@
         label="{{ $columnDefine->name }}"
         :options="$tmpOptions"
         required="{{ $columnDefine->required }}"
-        class="flex w-full"
         hint="{{ $columnDefine->hint }}"
+        inline
     ></x-mary-radio>
 @endif

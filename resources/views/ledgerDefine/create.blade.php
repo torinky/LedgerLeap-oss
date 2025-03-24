@@ -1,11 +1,11 @@
 <x-app-layout title="{{__('ledger.define.create_title')}}" class="bg-warning/50">
     <x-slot name="header" class="sticky top-0 z-10 ">
-        <div class="ttl_3d5 warn md:flex md:items-center space-x-4">
+        <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
             <h2 class="font-black text-xl text-warning-content/70 md:text-2xl flex items-center">
                 <span class="fa-layers fa-fw mr-2">
                     <i class="fa-solid fa-book text-3xl" data-fa-transform="left-6 "></i>
-                    <i class="fa-solid  fa-plus-circle text-primary/70"
-                       data-fa-transform=" right-6 up-10"></i>
+                    <i class="fa-solid  fa-plus-circle text-xl text-warning-content/60"
+                       data-fa-transform=" right-5 up-7"></i>
                 </span>
             {{ __('ledger.define.create_title') }}
         </div>

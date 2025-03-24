@@ -58,7 +58,7 @@ textarea {
 // タイトルスタイルの修正
 .ttl_3d5 {
     border: 3px solid var(--color-info);
-    background-color: var(--color-base-100);
+    //background-color: var(--color-base-100);
     padding: 0.5em 1em;
     position: relative;
 }
@@ -79,7 +79,7 @@ textarea {
 
 .ttl_3d5.warn {
     border-color: var(--color-warning);
-    background-color: var(--color-base-100);
+    //background-color: var(--color-base-100);
 
 }
 
@@ -89,8 +89,8 @@ textarea {
 }
 
 .ttl_3d5.error {
-    border-color: var(--color-error);
-    background-color: var(--color-base-300);
+    //border-color: var(--color-error);
+    //background-color: var(--color-base-300);
 
 }
 

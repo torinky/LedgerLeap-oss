@@ -2,9 +2,13 @@
 
 <div>
     <x-slot name="header">
-        <h2 class="font-semibold text-base-content leading-tight">
-            {{ __('Notifications') }}
-        </h2>
+        <div class="ttl_3d5 info md:flex md:items-center space-x-4 bg-info/40 rounded">
+            <h2 class="font-black text-xl text-info-content/60 md:text-2xl flex items-center">
+                {{--        <h2 class="font-semibold text-base-content leading-tight">--}}
+                {{ __('ledger.notifications') }}
+                {{--        </h2>--}}
+            </h2>
+        </div>
     </x-slot>
 
     <div class="py-2">
