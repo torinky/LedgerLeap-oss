@@ -6,7 +6,8 @@
 
 // daisyUI v5用のプラグイン読み込み
 @plugin "daisyui" {
-    themes: all;
+    themes: nord --default, coffee --prefersdark;
+    //themes: all;
 } ;
 
 @source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";

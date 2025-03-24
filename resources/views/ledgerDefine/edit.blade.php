@@ -37,14 +37,19 @@
                     <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">
 
                     <div class="card w-full bg-base-300 shadow-xl mx-5">
+                        <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
+                            <i class="fa-solid fa-gear"></i> {{__('ledger.define.basic_setting')}}
+                        </h2>
                         <div class="card-body p-3">
-                            <h2 class="card-title">{{__('ledger.define.basic_setting')}}</h2>
                             <livewire:ledger-define.edit/>
                         </div>
                     </div>
                     <div class="card w-full bg-base-300 shadow-xl mx-5">
+                        <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
+                            <i class="fa-regular fa-rectangle-list"></i> {{__('ledger.column.group_title')}}
+                        </h2>
+
                         <div class="card-body p-3">
-                            <h2 class="card-title">{{__('ledger.column.group_title')}}</h2>
                             <livewire:ledger-define.modify-column/>
                         </div>
                     </div>
@@ -54,8 +59,11 @@
                     </div>
                     <div class="flex flex-wrap items-center justify-center w-full">
                         <div class="card w-full bg-base-300 shadow-xl mx-5">
+                            <h2 class="card-title font-bold bg-secondary/70 text-secondary-content/70 rounded-t-box px-4 py-2 ">
+                                <i class="fa-solid fa-magnifying-glass"></i> {{__('ledger.define.preview')}}
+                            </h2>
+
                             <div class="card-body p-3">
-                                <h2 class="card-title">{{__('ledger.define.preview')}}</h2>
                                 <livewire:ledger-define.preview>
                             </div>
                         </div>
