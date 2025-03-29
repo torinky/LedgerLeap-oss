@@ -29,7 +29,7 @@
         console.log(document.documentElement.dataset.theme);
     </script>
 </head>
-<body class="font-sans antialiased {{$attributes->get('class')}}">
+<body class="font-sans antialiased {{$attributes->get('class') ?? 'bg-base-200'}}">
 <x-mary-toast/>
 <div class="min-h-screen">
     @include('layouts.daisyuiNavigation')

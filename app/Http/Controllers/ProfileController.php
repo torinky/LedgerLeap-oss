@@ -14,10 +14,27 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): View
+    /*    public function edit(Request $request): View
+        {
+            return view('profile.edit', [
+                'user' => $request->user(),
+            ]);
+        }*/
+    // App\Http\Controllers\ProfileController の edit メソッド内 (想定)
+    public function edit(Request $request): View // 戻り値の型を View に
     {
+        $user = $request->user();
+        // ユーザーが所属する組織を名前順で取得
+        $organizations = $user->organizations()->orderBy('name')->get();
+        // 主所属を取得
+        $primaryOrganization = $user->primaryOrganization(); // NULLの可能性あり
+
+        // Breeze が元々渡しているデータに加えて、組織情報を渡す
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user,
+            'organizations' => $organizations,
+            'primaryOrganizationId' => $primaryOrganization?->id, // 主所属のID (比較用)
+            // 'mustVerifyEmail' や 'status' など、Breezeが必要とする他のデータも渡す
         ]);
     }
 

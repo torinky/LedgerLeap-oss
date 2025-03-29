@@ -346,4 +346,10 @@ return [
     'disable_notification' => '通知を無効にする',
     'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
     'ledger_define' => '台帳定義',
+    // 所属情報セクション (追加分)
+    'organization_section_title' => '所属組織/プロジェクト',
+    'organization_section_description' => 'あなたが所属している組織やプロジェクトの一覧です。',
+    'organization_primary_badge' => '主所属',
+    'organization_empty' => '所属している組織やプロジェクトはありません。',
+
 ];

@@ -36,7 +36,7 @@
                                 $color = 'text-accent/80';
                             }
                         @endphp
-                        <span class="fa-stack " style="font-size: 0.8em;">
+                        <span class="fa-stack " style="font-size: 0.9em;">
                     @if(in_array($folder->id,$selectedFolderIds)||in_array($folder->id,$selectedFolderChildrenIds)||$folder->id==$currentFolderId)
                                 <i class="fas fa-folder-open {{$color}} fa-stack-2x"></i>
                     @else
