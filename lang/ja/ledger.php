@@ -346,10 +346,56 @@ return [
     'disable_notification' => '通知を無効にする',
     'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
     'ledger_define' => '台帳定義',
+
     // 所属情報セクション (追加分)
     'organization_section_title' => '所属組織/プロジェクト',
     'organization_section_description' => 'あなたが所属している組織やプロジェクトの一覧です。',
-    'organization_primary_badge' => '主所属',
     'organization_empty' => '所属している組織やプロジェクトはありません。',
 
+    // マイポータル
+    'my_portal_title' => 'マイポータル',
+    'roles_and_affiliations_title' => '役割と所属',
+    'main_role_and_affiliation_title' => '主な役割/担当',
+    'other_affiliations_title' => 'その他の所属',
+    'your_effective_roles_title' => 'あなたの有効なロール',
+    'no_primary_organization' => '主所属なし',
+    'no_specific_role' => '特定の役割なし',
+    'no_organization_assigned' => '組織に所属していません',
+    'no_roles_assigned' => 'ロールが割り当てられていません。',
+    'organization_primary_badge' => '主所属',
+
+    // ロール表示名 (例) - Seeder のロール名に合わせる
+    'role_label.Super Admin' => 'スーパー管理者',
+    'role_label.Organization Admin' => '組織管理者',
+    'role_label.Project Manager' => 'プロジェクトマネージャー',
+    'role_label.Editor' => '編集者',
+    'role_label.Viewer' => '閲覧者',
+    'role_label.Folder Manager' => 'フォルダー管理者',
+    'role_label.Folder Viewer' => 'フォルダー閲覧者',
+    'role_label.user' => '一般ユーザー', // Seeder の 'user' に合わせる
+
+    // 主なできること
+    'main_abilities_title' => '主なできること',
+    'basic_operations_info' => 'その他、フォルダの権限に応じて台帳の閲覧などの基本的な操作が可能です。', // 修正
+    'basic_operations_permission' => '台帳の閲覧などの基本的な操作が可能です。', // 修正
+
+    // 権限の説明 (permissionsToCheck に合わせて)
+    'permission_description.create_ledgers' => 'アクセス可能なフォルダ内に新しい台帳を作成できます。',
+    'permission_description.update_ledgers' => 'アクセス可能な台帳の情報を更新できます。',
+    'permission_description.create_ledger_defines' => '新しい種類の台帳（台帳定義）を作成できます。',
+    'permission_description.create_folders' => '新しいフォルダーを作成できます。',
+    'permission_description.update_folders' => 'フォルダーの情報を更新できます。',
+    'permission_description.manage_user' => 'ユーザーアカウントを追加・編集できます（管理者向け）。', // 必要なら権限名を合わせる
+    'permission_description.manage_organization' => '組織を管理できます（管理者向け）。', // 必要なら権限名を合わせる
+    'permission_description.view_activity_logs' => 'アクティビティログを閲覧できます。',
+
+    'assigned_folders_title' => 'あなたの担当フォルダ',
+    'folder_permission_editable' => '編集可能',
+    'folder_permission_manageable' => '管理可能',
+    'go_to_folder_button' => 'フォルダへ移動',
+    'no_assigned_folders' => '担当フォルダはありません。',
+
+    'detailed_information_title' => '詳細情報',
+    'all_accessible_folders_link' => 'アクセス可能な全フォルダと権限を確認する',
+    'folder_permission_readable' => '閲覧可能', // 読み取り可能のテキスト
 ];

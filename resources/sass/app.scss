@@ -2,8 +2,8 @@
 
 // Tailwind CSS v4用のインポートに変更
 @use "tailwindcss";
-
-
+@use "tailwindcss/theme";
+@use "tailwindcss/utilities";
 // daisyUI v5用のプラグイン読み込み
 @plugin "daisyui" {
     themes: nord --default, coffee --prefersdark;

@@ -6,18 +6,31 @@
     'writableFolderIds' => [],
     'readableFolderIds' => [],
     'manageableFolderIds' => [],
+    'interactive' => true, // true ならクリック動作を有効化
 ])
-<ul>
+<ul class="tree">
     @foreach($folders as $folder)
         <li class="{{$folder->id==1 ? 'root':''}}">
-            <a wire:click="changeCurrentFolder({{$folder->id}})"
-               @class([
-                    'bg-secondary/30' => $folder->id == $currentFolderId,
-                    'bg-info/20' => in_array($folder->id,$selectedFolderIds),
-               ])
-               wire:key="folder_tree_link_{{$folder->id}}"
+            {{--
+                        <a wire:click="changeCurrentFolder({{$folder->id}})"
+                           @class([
+                                'bg-secondary/30' => $folder->id == $currentFolderId,
+                                'bg-info/20' => in_array($folder->id,$selectedFolderIds),
+                           ])
+                           wire:key="folder_tree_link_{{$folder->id}}"
+                        >
+            --}}
+            {{-- interactive が true の場合のみ wire:click を付与 --}}
+            <a @if($interactive) wire:click="changeCurrentFolder({{$folder->id}})" @endif
+            @class([
+                 'cursor-pointer' => $interactive, // クリック可能な場合にポインターを表示
+                 'cursor-default' => !$interactive, // クリック不可な場合にデフォルトカーソル
+                 'bg-secondary/30' => $interactive && $folder->id == $currentFolderId, // interactive な場合のみ背景色適用
+                 'bg-info/20' => $interactive && in_array($folder->id,$selectedFolderIds), // interactive な場合のみ背景色適用
+            ])
+            wire:key="folder_tree_link_{{$folder->id}}"
             >
-                <span
+                 <span
                     class="tooltip"
                     data-tip="{{ in_array($folder->id, $manageableFolderIds) ? __('ledger.folder.manageable') : (in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.no_view_permissions'))) }}"
                 >
@@ -60,9 +73,21 @@
                 @endif
             </a>
             @if($folder->children->isNotEmpty())
+                {{--
+                                @include('components.folder.tree', [
+                    'folders' => $folder->children,
+                    ])
+                --}}
                 @include('components.folder.tree', [
-    'folders' => $folder->children,
-    ])
+                     'folders' => $folder->children,
+                     'interactive' => $interactive, // interactive フラグを子にも渡す
+                     // 他の props も渡す
+                     'writableFolderIds' => $writableFolderIds,
+                     'readableFolderIds' => $readableFolderIds,
+                     'manageableFolderIds' => $manageableFolderIds,
+                     'currentFolderId' => $currentFolderId ?? null, // エラー回避のため null 合体演算子
+                     'selectedFolderIds' => $selectedFolderIds ?? [], // エラー回避のため空配列
+                 ])
             @endif
         </li>
     @endforeach

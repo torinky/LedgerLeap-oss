@@ -14,6 +14,7 @@ use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
 use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
+use App\Livewire\MyPortal;
 use App\Livewire\Notifications\UserNotificationList;
 use App\Livewire\Notifications\Settings;
 use App\Livewire\UserActivityLog;
@@ -148,6 +149,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/activity-log', UserActivityLog::class)
         ->middleware(['auth'])
         ->name('activity-log');
+
+    Route::get('/my-portal', MyPortal::class)->name('my-portal');
+
 });
 
 Route::get('/phpinfo', function () {
