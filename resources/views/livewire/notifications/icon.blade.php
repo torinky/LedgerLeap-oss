@@ -1,5 +1,6 @@
 <div>
-    <a tabindex="4" class="btn btn-ghost btn-sm tooltip tooltip-bottom "
+    <a tabindex="4"
+       class="btn btn-ghost btn-sm tooltip tooltip-bottom {{ request()->routeIs('notifications.index') ? 'btn-active' : '' }}"
        data-tip="{{ __('ledger.navigation.notifications') }}"
        href="{{ route('notifications.index') }}">
         <i class="fas fa-bell"></i>

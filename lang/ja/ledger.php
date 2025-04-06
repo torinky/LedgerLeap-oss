@@ -226,6 +226,7 @@ return [
     'search_technical_term' => '技術用語も検索',
     'search_view' => '台帳リスト',
     'searched' => '検索しました',
+    'search_options' => '検索オプション',
     'select' => '選択する',
     'select_all' => 'すべて選択',
     'select_message' => 'フォルダまたは台帳を選択',
@@ -406,16 +407,10 @@ return [
     'landing_page_setting_description' => 'ログイン後に最初に表示する画面を選択してください。',
     'landing_page_select_label' => '初期画面',
 
-    // ナビゲーション
-    /*    'navigation.my_portal' => 'マイポータル',
-        'navigation.go_to_my_portal' => 'マイポータルへ移動',
-        'navigation.ledgers' => '台帳',
-        'navigation.open_folder_tree' => 'フォルダツリーを開く',
-        'navigation.profile' => 'プロフィール',
-        'navigation.notification_settings' => '通知設定',
-        'navigation.logout' => 'ログアウト',
-        'navigation.toggle_theme' => 'テーマ切り替え',*/
+    'edit_profile_title' => 'プロフィールを変更する',
 
+
+    // ナビゲーション
     'navigation' => [
         'my_portal' => 'マイポータル',
         'go_to_my_portal' => 'マイポータルへ移動',

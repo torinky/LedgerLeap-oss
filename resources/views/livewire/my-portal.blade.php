@@ -9,7 +9,8 @@
                        size="text-xl" separator progress-indicator>
             {{-- 必要であれば右側にアクションボタンなどを追加できる --}}
             <x-slot:actions>
-                <x-mary-button label="設定" icon="o-cog-6-tooth" link="{{ route('profile.edit') }}" class="btn-ghost"/>
+                <x-mary-button label="{{ __('ledger.edit_profile_title') }}" icon="o-user"
+                               link="{{ route('profile.edit') }}" class="btn-ghost"/>
             </x-slot:actions>
         </x-mary-header>
     </x-slot>

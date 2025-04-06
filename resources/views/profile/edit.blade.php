@@ -1,5 +1,5 @@
 {{-- resources/views/profile/edit.blade.php --}}
-<x-app-layout>
+<x-app-layout title="{{ __('Profile') }}">
     <x-slot name="header">
         {{-- ヘッダーのテキスト色も daisyUI テーマに合わせる --}}
         <h2 class="font-semibold text-xl text-base-content leading-tight">
