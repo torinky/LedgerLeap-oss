@@ -261,4 +261,58 @@ class UserService
 
         return $roles->unique('id'); // 重複を除外して返す
     }
+
+    /**
+     * ユーザーが設定画面 (Filament など) にアクセスする権限を持っているか判定する
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function canUserAccessSettings(User $user): bool
+    {
+        // キャッシュを利用しても良いが、権限チェックの頻度による
+        // $cacheKey = "user:{$user->id}:can_access_settings";
+        // return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($user) {
+
+        // ユーザーが持つ全権限名を取得 (既存メソッド利用)
+        $permissions = $this->getAllUniquePermissionsForUser($user)->pluck('name');
+
+        // 設定画面アクセスに関連すると見なすキーワードや権限名
+        $keywords = ['manage', 'create_', 'update_', 'delete_', 'restore_', 'force_delete_'];
+        $specificPermissions = ['view_roles', 'view_permissions', 'view_activity_logs'];
+        $subjects = ['roles', 'permissions', 'users', 'organizations', 'ledger_defines']; // 管理対象
+
+        // いずれかの条件に一致するかチェック
+        foreach ($permissions as $permission) {
+            // 特定の権限リストに含まれるか
+            if (in_array($permission, $specificPermissions)) {
+                // Log::debug("User {$user->id} has specific permission: {$permission}"); // デバッグ用
+                return true;
+            }
+            // キーワードのいずれかが前方一致するか
+            foreach ($keywords as $keyword) {
+                if (str_starts_with($permission, $keyword)) {
+                    // Log::debug("User {$user->id} has keyword permission: {$permission}"); // デバッグ用
+                    return true;
+                }
+            }
+            // 特定の管理対象を含むか (より緩やかな判定)
+            foreach ($subjects as $subject) {
+                if (str_contains($permission, $subject)) { // str_contains で部分一致
+                    // Log::debug("User {$user->id} has subject permission: {$permission}"); // デバッグ用
+                    return true;
+                }
+            }
+            // preg_match を使う場合
+            // if (preg_match('/(' . implode('|', $subjects) . ')/', $permission)) {
+            //     return true;
+            // }
+        }
+
+        // 上記のいずれにも該当しなければ false
+        // Log::debug("User {$user->id} cannot access settings."); // デバッグ用
+        return false;
+
+        // }); // キャッシュを使う場合の閉じ括弧
+    }
 }

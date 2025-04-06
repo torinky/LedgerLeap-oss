@@ -19,7 +19,7 @@
 <body class="font-sans antialiased {{$attributes->get('class')}}">
 
     <div class="fixed w-full z-10 top-0">
-        @include('layouts.daisyuiNavigation')
+        @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])
 
         @if (isset($header))
             <!-- Page Heading -->

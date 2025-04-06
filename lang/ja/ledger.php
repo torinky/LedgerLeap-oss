@@ -405,4 +405,27 @@ return [
     'landing_page_setting_title' => 'ログイン後の初期画面設定',
     'landing_page_setting_description' => 'ログイン後に最初に表示する画面を選択してください。',
     'landing_page_select_label' => '初期画面',
+
+    // ナビゲーション
+    /*    'navigation.my_portal' => 'マイポータル',
+        'navigation.go_to_my_portal' => 'マイポータルへ移動',
+        'navigation.ledgers' => '台帳',
+        'navigation.open_folder_tree' => 'フォルダツリーを開く',
+        'navigation.profile' => 'プロフィール',
+        'navigation.notification_settings' => '通知設定',
+        'navigation.logout' => 'ログアウト',
+        'navigation.toggle_theme' => 'テーマ切り替え',*/
+
+    'navigation' => [
+        'my_portal' => 'マイポータル',
+        'go_to_my_portal' => 'マイポータルへ移動',
+        'ledgers' => '台帳',
+        'open_folder_tree' => 'フォルダツリーを開く',
+        'profile' => 'プロフィール',
+        'notification_settings' => '通知設定',
+        'logout' => 'ログアウト',
+        'toggle_theme' => 'テーマ切り替え',
+        'notifications' => '通知',
+        'settings' => '設定',
+    ]
 ];
