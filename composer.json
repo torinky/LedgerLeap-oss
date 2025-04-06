@@ -20,7 +20,7 @@
         "livewire/volt": "^1.7",
         "logue/igo-php": "^0.2.1",
         "maatwebsite/excel": "^3.1.48",
-        "robsontenorio/mary": "V2.x-dev",
+        "robsontenorio/mary": "^2.0",
         "sebastian/diff": "^6.0",
         "solution-forest/filament-tree": "^2.1",
         "spatie/laravel-activitylog": "^4.9",

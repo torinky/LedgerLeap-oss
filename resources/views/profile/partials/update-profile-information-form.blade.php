@@ -1,4 +1,4 @@
-@php use Illuminate\Contracts\Auth\MustVerifyEmail; @endphp
+@php use App\Enums\LoginLandingPage;use Illuminate\Contracts\Auth\MustVerifyEmail; @endphp
 <section>
     <header>
         {{-- テキスト色をテーマに合わせる --}}
@@ -72,6 +72,47 @@
                 </div>
             @endif
         </div>
+
+        {{--
+                @php
+                    // 現在の選択値を取得 (old ヘルパー優先)
+                    $currentLandingPage = old('login_landing_page', $user->login_landing_page->value);
+                    // Enum から MaryUI 用の options 配列を取得
+                    $landingPageOptions = \App\Enums\LoginLandingPage::optionsForMaryUI($currentLandingPage);
+                @endphp
+                <x-mary-select
+                    label="{{ __('ledger.landing_page_select_label') }}"
+                    :options="$landingPageOptions"
+                    name="login_landing_page"
+                    id="login_landing_page"
+                    class="mt-1 block w-full"
+                />
+                <x-input-error class="mt-2" :messages="$errors->get('login_landing_page')"/>
+        --}}
+
+        {{-- DaisyUI Select を使う場合 --}}
+        <fieldset class="fieldset py-0 w-full"> {{-- DaisyUI の form-control で囲む --}}
+            <legend class="fieldset-legend mb-0.5">{{ __('ledger.landing_page_select_label') }}</legend>
+            <select name="login_landing_page" id="login_landing_page" class="select w-full mt-1 block w-full">
+                @php
+                    $currentLandingPage = old('login_landing_page', $user->login_landing_page->value);
+                @endphp
+                @foreach(LoginLandingPage::cases() as $case)
+                    <option value="{{ $case->value }}" @selected($currentLandingPage === $case->value)>
+                        {{ $case->label() }}
+                    </option>
+                @endforeach
+            </select>
+            {{-- エラー表示 --}}
+            <div class="label">
+                @error('login_landing_page')
+                <span class="label-text-alt text-error">{{ $message }}</span>
+                @enderror
+            </div>
+        </fieldset>
+        <x-input-error class="mt-1" :messages="$errors->get('login_landing_page')"/> {{-- ← <x-input-error> は残してもOK --}}
+
+
 
         {{-- Save Button & Status --}}
         <div class="flex items-center gap-4">

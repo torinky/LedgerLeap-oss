@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\LoginLandingPage;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,6 +27,9 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // login_landing_page のバリデーション
+            'login_landing_page' => ['required', 'string', Rule::in(array_column(LoginLandingPage::cases(), 'value'))],
+
         ];
     }
 }

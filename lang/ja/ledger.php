@@ -398,4 +398,11 @@ return [
     'detailed_information_title' => '詳細情報',
     'all_accessible_folders_link' => 'アクセス可能な全フォルダと権限を確認する',
     'folder_permission_readable' => '閲覧可能', // 読み取り可能のテキスト
+
+    'landing_page_option_my_portal' => 'マイポータル',
+    'landing_page_option_ledgers' => '台帳/フォルダ一覧',
+
+    'landing_page_setting_title' => 'ログイン後の初期画面設定',
+    'landing_page_setting_description' => 'ログイン後に最初に表示する画面を選択してください。',
+    'landing_page_select_label' => '初期画面',
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\LoginLandingPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +29,20 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user(); // ログインしたユーザーを取得
+
+        // デフォルトのリダイレクト先ルート名を設定
+        $landingPageRouteName = 'my-portal'; // マイポータルのルート名
+        // ユーザーの設定を確認し、必要ならリダイレクト先を変更
+        if ($user->login_landing_page === LoginLandingPage::Ledgers) {
+            $landingPageRouteName = 'ledger.index'; // 台帳/フォルダ一覧画面のルート名
+        }
+//        return redirect()->route($landingPageRouteName); // intended() を使わない形
+
+        // intended() はログイン前にアクセスしようとしたページがあればそちらを優先
+        // なければ、決定したランディングページのルートへリダイレクト
+        return redirect()->intended(route($landingPageRouteName));
+
     }
 
     /**

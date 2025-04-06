@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\LoginLandingPage;
 use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Filament\Models\Contracts\FilamentUser;
@@ -37,6 +38,7 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'login_landing_page',
     ];
 
     /**
@@ -57,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'login_landing_page' => LoginLandingPage::class,
     ];
 
     protected static function boot()
