@@ -5,6 +5,7 @@ namespace App\Models;
 // use App\Casts\AsCollection;
 
 use App\Casts\AsColumnArrayJson;
+use App\Enums\WorkflowStatus;
 use App\Services\Ledger\SearchContext;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,7 @@ class Ledger extends Model
     protected $casts = [
         'content' => AsColumnArrayJson::class,
         'content_attached' => AsColumnArrayJson::class,
+        'status' => WorkflowStatus::class,
     ];
 
     protected $fillable = [
@@ -217,5 +219,29 @@ class Ledger extends Model
     public function folder()
     {
         return $this->define->folder();
+    }
+
+    /**
+     * 最新の LedgerDiff レコードへのリレーション (オプション)
+     * これにより $ledger->latestDiff で最新の承認情報などにアクセスできる
+     */
+    public function latestDiff()
+    {
+        return $this->hasOne(LedgerDiff::class)->latestOfMany();
+    }
+
+    /**
+     * 現在のバージョンに対応する LedgerDiff レコードへのリレーション (オプション)
+     * $ledger->diffForVersion(3) のように使う場合。より複雑。
+     * 通常は LedgerDiff 側から ledger_id で検索する方が多い。
+     */
+    // public function diffForVersion(int $version) { ... }
+
+    /**
+     * 編集がロックされているか (APPROVED 状態か) を判定するヘルパー
+     */
+    public function isLocked(): bool
+    {
+        return $this->status === WorkflowStatus::APPROVED;
     }
 }

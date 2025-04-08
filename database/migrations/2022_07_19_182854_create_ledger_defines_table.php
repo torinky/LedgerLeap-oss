@@ -23,6 +23,13 @@ return new class extends Migration {
             $table->text('create_description')->nullable();
             $table->text('list_description')->nullable();
             $table->text('detail_description')->nullable();
+
+            $table->unsignedInteger('version')->default(1); // バージョン番号
+            $table->unsignedBigInteger('recommended_inspector_id')->nullable()->index(); // 推奨点検者(User)
+            $table->unsignedBigInteger('recommended_approver_id')->nullable()->index();  // 推奨承認者(User)
+            $table->unsignedBigInteger('recommended_inspector_role_id')->nullable()->index(); // 推奨点検者(Role)
+            $table->unsignedBigInteger('recommended_approver_role_id')->nullable()->index();  // 推奨承認者(Role)
+
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
             $table->timestamps();

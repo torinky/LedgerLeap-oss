@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Casts\AsColumnArrayJson;
 use App\Casts\AsColumnDefinesArrayJson;
+use App\Enums\WorkflowStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,11 +19,28 @@ class LedgerDiff extends Model
     protected $casts = [
         'content' => AsColumnArrayJson::class,
         'column_define' => AsColumnDefinesArrayJson::class,
+        // --- ワークフロー関連 ---
+        'status' => WorkflowStatus::class, // Enum キャスト
+        'requested_at' => 'datetime',
+        'inspected_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'returned_at' => 'datetime',
     ];
 
     protected $fillable = [
         'content', 'ledger_id', 'column_define', 'ledger_define_id',
-        'creator_id', 'modifier_id', 'created_at', 'updated_at',
+        'creator_id', 'modifier_id',
+        // --- ワークフロー関連  ---
+        'status',
+        'inspector_id',
+        'approver_id',
+        'requested_at',
+        'inspected_at',
+        'approved_at',
+        'returned_at',
+        'comments',
+
+        'created_at', 'updated_at',
     ];
 
     public function ledger()
@@ -48,5 +66,16 @@ class LedgerDiff extends Model
     public function modifier()
     {
         return $this->belongsTo(User::class, 'modifier_id');
+    }
+
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
     }
 }

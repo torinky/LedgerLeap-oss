@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\WorkflowStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -22,7 +23,9 @@ return new class extends Migration {
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
 
-//            $table->longText('content');
+            $table->string('status')->default(WorkflowStatus::DRAFT->value)->index(); // 最新のワークフロー状態
+            $table->unsignedInteger('version')->default(1); // バージョン番号
+
             $table->timestamps();
         });
 //        DB::statement('ALTER TABLE ledgers COMMENT = \'engine "InnoDB"\'');

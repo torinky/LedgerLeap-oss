@@ -32,6 +32,12 @@ class LedgerDefine extends Model
         'create_description',
         'list_description',
         'detail_description',
+
+        'version',
+        'recommended_inspector_id',
+        'recommended_approver_id',
+        'recommended_inspector_role_id',
+        'recommended_approver_role_id',
     ];
 
     public function ledgers()
@@ -154,5 +160,29 @@ class LedgerDefine extends Model
 
         // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
         return Lang::has($key) ? trans($key) : "台帳定義が{$eventName}されました";
+    }
+
+    public function recommendedInspector()
+    {
+        return $this->belongsTo(User::class, 'recommended_inspector_id');
+    }
+
+    public function recommendedApprover()
+    {
+        return $this->belongsTo(User::class, 'recommended_approver_id');
+    }
+
+    public function recommendedInspectorRole()
+    {
+        // Role モデルが Spatie\Permission\Models\Role の場合
+        return $this->belongsTo(config('permission.models.role'), 'recommended_inspector_role_id');
+        // 自作 Role モデルの場合は App\Models\Role::class を指定
+        // return $this->belongsTo(Role::class, 'recommended_inspector_role_id');
+    }
+
+    public function recommendedApproverRole()
+    {
+        return $this->belongsTo(config('permission.models.role'), 'recommended_approver_role_id');
+        // return $this->belongsTo(Role::class, 'recommended_approver_role_id');
     }
 }
