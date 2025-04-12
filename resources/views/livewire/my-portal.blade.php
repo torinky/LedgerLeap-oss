@@ -4,7 +4,6 @@
     @endpush
 
     <x-slot name="header">
-        {{-- 修正: maryUI Header を追加 --}}
         <x-mary-header :title="__('ledger.my_portal_title')" subtitle="ようこそ、{{ Auth::user()->name }} さん！"
                        size="text-xl" separator progress-indicator>
             {{-- 必要であれば右側にアクションボタンなどを追加できる --}}
@@ -17,6 +16,21 @@
 
 
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-6">
+
+        {{-- ★承認待ちタスク カード (追加) ★ --}}
+        <a href="{{ route('workflow.pending') }}" {{-- 承認待ちリストページのルート名 (例) --}}
+        class="card bg-warning text-warning-content shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out {{ $pendingTaskCount > 0 ? '' : 'opacity-50' }}">
+            <div class="card-body flex-row items-center justify-between p-4"> {{-- p-4 に変更 --}}
+                <div>
+                    <h2 class="card-title text-lg">{{ __('ledger.workflow.pending_tasks') }}</h2>
+                    <p class="text-sm">{{ __('ledger.workflow.pending_tasks_description') }}</p> {{-- 新しい翻訳キー --}}
+                </div>
+                {{-- 件数を大きく表示 --}}
+                <div class="text-4xl font-bold">
+                    {{ $pendingTaskCount }}
+                </div>
+            </div>
+        </a>
 
         {{-- 役割と所属エリア --}}
         <x-mary-card title="{{ __('ledger.roles_and_affiliations_title') }}" shadow="sm"> {{-- 翻訳キー --}}

@@ -14,9 +14,24 @@ enum WorkflowStatus: string
     {
         return match ($this) {
             self::DRAFT => __('ledger.workflow_status.draft'),
-            self::PENDING_INSPECTION => __('ledger.workflow_status.pending_inspection'),
-            self::PENDING_APPROVAL => __('ledger.workflow_status.pending_approval'),
-            self::APPROVED => __('ledger.workflow_status.approved'),
+            self::PENDING_INSPECTION => __('ledger.workflow.status.pending_inspection'),
+            self::PENDING_APPROVAL => __('ledger.workflow.status.pending_approval'),
+            self::APPROVED => __('ledger.workflow.status.approved'),
+        };
+    }
+
+    /**
+     * ステータスに応じた DaisyUI/Tailwind の色クラスを返すメソッド (新規追加)
+     * 例: badge-warning, badge-info, badge-success など
+     */
+    public function colorClass(): string
+    {
+        return match ($this) {
+            self::DRAFT => 'badge-ghost', // 下書きは目立たない色
+            self::PENDING_INSPECTION => 'badge-warning', // 点検待ちは警告色
+            self::PENDING_APPROVAL => 'badge-info',    // 承認待ちは情報色
+            self::APPROVED => 'badge-success',  // 承認済みは成功色
+            // default => 'badge-secondary', // 万が一の場合のデフォルト
         };
     }
 }

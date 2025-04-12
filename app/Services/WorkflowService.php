@@ -6,6 +6,7 @@ use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -98,19 +99,7 @@ class WorkflowService
         });
     }
 
-    /**
-     * 未処理タスクカウンターをインクリメントする (仮実装)
-     */
-    protected function incrementPendingTaskCount(int $userId): void
-    {
-        // User モデルにカウンターカラムがある場合:
-        // User::find($userId)?->increment('pending_inspection_count');
-        // Cache を使う場合:
-        // Cache::increment("user:{$userId}:pending_inspection_count");
-        \Log::info("Increment pending inspection count for user: {$userId}"); // ログ出力
-    }
 
-    // --- 下書き保存用メソッドも Service に移譲する (推奨) ---
 
     /**
      * 下書きを保存する (LedgerDiff のみ作成/更新)
@@ -187,4 +176,69 @@ class WorkflowService
         });
     }
 
+    /**
+     * 点検完了・承認申請を処理し、LedgerDiff のステータスを更新する
+     *
+     * @param LedgerDiff $ledgerDiff 更新対象の LedgerDiff オブジェクト
+     * @param int $approverId 選択された承認者の User ID
+     * @param int $inspectorId 点検操作を行った User ID
+     * @return LedgerDiff 更新後の LedgerDiff オブジェクト
+     * @throws Throwable
+     */
+    public function requestApproval(LedgerDiff $ledgerDiff, int $approverId, int $inspectorId): LedgerDiff
+    {
+        // ToDo: 権限チェック (inspectorId が本当にこの $ledgerDiff の点検者か？)
+        if ($ledgerDiff->status !== WorkflowStatus::PENDING_INSPECTION) {
+            // エラー処理またはログ記録
+            Log::warning("Invalid status transition requested for LedgerDiff ID: {$ledgerDiff->id}");
+            throw new Exception("Invalid status for requesting approval."); // 例
+        }
+        if ($ledgerDiff->inspector_id !== $inspectorId) {
+            Log::warning("Unauthorized inspection completion attempt by User ID: {$inspectorId} for LedgerDiff ID: {$ledgerDiff->id}");
+            throw new Exception("User not authorized for this inspection."); // 例
+        }
+
+
+        return DB::transaction(function () use ($ledgerDiff, $approverId, $inspectorId) {
+            $ledgerDiff->update([
+                'status' => WorkflowStatus::PENDING_APPROVAL,
+                'approver_id' => $approverId,
+                'inspector_id' => $inspectorId, // 点検者IDも記録 (誰が点検完了したか)
+                'inspected_at' => now(), // 点検完了日時
+                'modifier_id' => $inspectorId, // 今回の操作者
+                // requested_at は変更しない
+                // approved_at, returned_at, comments は null のまま
+            ]);
+
+            // ToDo: 点検者のカウンターをデクリメント
+            $this->decrementPendingTaskCount($inspectorId, 'inspection');
+            // ToDo: 承認者のカウンターをインクリメント
+            $this->incrementPendingTaskCount($approverId); // メソッドを分けるか引数で判定
+
+            // ToDo: 関連イベントを発行 (通知用)
+            // event(new ApprovalRequested($ledgerDiff));
+
+            Log::info("Inspection completed, approval requested for LedgerDiff ID: {$ledgerDiff->id}. Next approver: {$approverId}");
+
+            return $ledgerDiff->refresh(); // 更新後のモデルを返す
+        });
+    }
+
+    /**
+     * 未処理タスクカウンターをインクリメントする (仮実装)
+     */
+    protected function incrementPendingTaskCount(int $userId): void
+    {
+        // User モデルにカウンターカラムがある場合:
+        // User::find($userId)?->increment('pending_inspection_count');
+        // Cache を使う場合:
+        // Cache::increment("user:{$userId}:pending_inspection_count");
+        \Log::info("Increment pending inspection count for user: {$userId}"); // ログ出力
+    }
+
+    protected function decrementPendingTaskCount(int $userId, string $type): void
+    {
+        // 実際のカウンター更新処理
+        Log::info("Decrement pending {$type} count for user: {$userId}");
+    }
 }

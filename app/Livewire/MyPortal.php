@@ -6,6 +6,7 @@ use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use App\Repositories\WorkflowTaskRepository;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
 
@@ -38,6 +39,10 @@ class MyPortal extends Component
     public array $readableFolderIds = []; // 読み取り可能フォルダID (Write/Manage も含む)
 
 
+// --- 承認待ち件数用 ---
+    public int $pendingTaskCount = 0;
+    protected WorkflowTaskRepository $taskRepository;
+
     // 表示する主要権限リスト (ここで定義)
     protected array $permissionsToCheck = [
         'create_ledgers',         // 台帳を作成できる
@@ -53,9 +58,11 @@ class MyPortal extends Component
     protected WritableFolderRepository $writableFolderRepository;
 
     // Livewire 8+ の場合、コンストラクタインジェクションより boot() や mount() でのインジェクトが推奨される場合あり
-    public function boot(WritableFolderRepository $repository): void
+    // Repository をインジェクト
+    public function boot(WorkflowTaskRepository $taskRepository, WritableFolderRepository $writableFolderRepository): void // 引数追加
     {
-        $this->writableFolderRepository = $repository;
+        $this->taskRepository = $taskRepository;
+        $this->writableFolderRepository = $writableFolderRepository; // 既存のインジェクト
     }
 
     /**
@@ -77,6 +84,9 @@ class MyPortal extends Component
 
         // ステップ4で追加: 全フォルダツリー用データの準備
         $this->prepareAllFolderTreeData();
+
+        // --- 承認待ち件数を取得 ---
+        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
 
     }
 

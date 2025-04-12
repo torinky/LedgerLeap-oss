@@ -43,9 +43,17 @@ class LedgerDiff extends Model
         'created_at', 'updated_at',
     ];
 
-    public function ledger()
+    /**
+     * Ledger モデルへのリレーションを定義します。(修正)
+     *
+     * @return BelongsTo
+     */
+    public function ledger(): BelongsTo // メソッド名を単数形に (Laravelの慣習) & 戻り値の型ヒント追加
     {
-        return $this->hasOne(Ledger::class, 'ledger_id');
+        // 第一引数: 関連モデルクラス
+        // 第二引数: このモデル(LedgerDiff)が持つ外部キーカラム名
+        // 第三引数: 関連モデル(Ledger)の主キーカラム名 (通常は 'id' なので省略可)
+        return $this->belongsTo(Ledger::class, 'ledger_id');
     }
 
     /**

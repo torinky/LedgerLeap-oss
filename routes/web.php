@@ -18,6 +18,7 @@ use App\Livewire\MyPortal;
 use App\Livewire\Notifications\UserNotificationList;
 use App\Livewire\Notifications\Settings;
 use App\Livewire\UserActivityLog;
+use App\Livewire\Workflow\PendingList;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -151,7 +152,8 @@ Route::middleware('auth')->group(function () {
         ->name('activity-log');
 
     Route::get('/my-portal', MyPortal::class)->name('my-portal');
-
+    // --- 承認待ちリストへのルートを追加 ---
+    Route::get('/workflow/pending', PendingList::class)->name('workflow.pending');
 });
 
 Route::get('/phpinfo', function () {

@@ -429,7 +429,10 @@ return [
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
 
     'workflow' => [
+        'requester' => '申請者',
+        'requested_at' => '申請日時',
         'status' => [
+            'label' => 'ステータス', // テーブルヘッダー用
             'draft' => '作成中/編集中',
             'pending_inspection' => '点検待ち',
             'pending_approval' => '承認待ち',
@@ -438,14 +441,10 @@ return [
         ],
         'next_inspector' => '次の点検者',
         'select_inspector' => '点検者を選択',
-        'next_approver' => '次の承認者', // ステップ2以降用
         'select_approver' => '承認者を選択', // ステップ2以降用
         'recommended_user' => '推奨',
         'recommended_role' => '推奨 (役割)',
         'request_inspection' => '作成完了（点検依頼）',
-        'request_approval' => '点検完了（承認申請）', // ステップ2以降用
-        'approve' => '承認', // ステップ2以降用
-        'return_to_draft' => '作成中に戻す', // ステップ3以降用 (ボタン名)
         'confirm_edit_while_pending_title' => 'ワークフロー中の項目編集',
         'confirm_edit_while_pending_text' => 'このレコードは現在ワークフロー処理中です。編集・保存するとステータスが「作成中/編集中」に戻り、再度申請が必要になります。続行しますか？',
         'edit_reason_label' => '編集理由（任意）', // ステップ3以降用
@@ -456,9 +455,19 @@ return [
         'returned_to_draft_message' => 'ステータスを作成中に戻しました。', // ステップ3以降用
         'pending_tasks' => '未処理タスク', // 承認待ちリスト用
         'no_pending_tasks' => '未処理のタスクはありません。', // 承認待ちリスト用
-        'view_details' => '詳細確認', // 承認待ちリスト用
         'action_by' => '操作者', // 履歴表示用
         'action_at' => '操作日時', // 履歴表示用
         'comments' => 'コメント/理由', // 履歴表示用
+        'pending_tasks_description' => 'あなたの確認や承認を待っているタスクがあります。',
+        'request_approval_short' => '承認申請', // 短縮形ラベル (ボタン用)
+        'return_to_draft_short' => '戻す', // 短縮形ラベル (ボタン用)
+        'approve' => '承認',
+        'return_to_draft_reason' => '作成中に戻す理由',
+        'return_to_draft' => '作成中に戻す',
+        'select_next_approver' => '次の承認者を選択',
+        'next_approver' => '次の承認者',
+        'request_approval' => '承認申請',
+
     ],
+    'view_details' => '詳細確認', // 承認待ちリスト用
 ];

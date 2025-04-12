@@ -130,7 +130,7 @@
                         </div>
                         {{-- 現在のステータス表示 --}}
                         <div class="text-center text-xs text-base-content/70 mt-2">
-                            現在のステータス: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow_status.draft') }}
+                            現在のステータス: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
                         </div>
                     </div>
                 </div>
