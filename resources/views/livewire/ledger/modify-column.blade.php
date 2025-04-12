@@ -37,7 +37,7 @@
         >
             @csrf
 
-            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">
+            {{--            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">--}}
             @php
                 $columnJs=[];
             @endphp
@@ -49,7 +49,8 @@
                     <div class="flex">
                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
                         <div
-                            x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                            wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
+                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
                             class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
                             @if($loop->first)
                                 x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
@@ -60,6 +61,7 @@
                                 <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
                                                      wire:model="content"
                                                      wire:model="deletedContent"
+                                                     wire:key="content-file-{{$columnDefine->id}}"
                                                      :columnDefine="$columnDefine"
                                                      :ledgerRecord="$ledgerRecord??[]"
                                                      multiple
@@ -71,6 +73,7 @@
                                 <x-dynamic-component
                                     :component="'ledger.form.'. Str::kebab($columnDefine->type)"
                                     wire:model.live="content"
+                                    wire:key="content-input-{{$columnDefine->id}}"
                                     :columnDefine="$columnDefine"
                                     :ledgerRecord="$ledgerRecord??[]"
                                 />
@@ -80,27 +83,83 @@
                     </div>
                 @endforeach
             </div>
-            <div
-                class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+            {{-- 変更: アクションボタンエリアをワークフロー対応に --}}
+            <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
                 <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                    <div class="card-body flex flex-row justify-center items-center">
-                        <div class="card-actions justify-center place-items-center">
-                            <x-mary-button label="{{__('ledger.modify_message')}}" icon="o-pencil-square"
-                                           class="btn btn-lg btn-warning btn-wide mr-4" type="submit" spinner="store"/>
-                            {{--
-                                                        <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
-                                                                class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
-                            --}}
+                    <div class="card-body p-4"> {{-- パディング調整 --}}
+                        <div class="flex flex-wrap items-center justify-center gap-4"> {{-- gap で間隔調整 --}}
+
+                            {{-- 下書き保存ボタン (常に表示して良い) --}}
+                            <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
+                                           class="btn-secondary" wire:click.prevent="saveDraft" spinner="saveDraft"/>
+
+                            {{-- 点検者選択 UI (ワークフロー開始時に表示) --}}
+                            {{-- ToDo: 現在のステータスが DRAFT の場合のみ表示する条件を追加 (ステップ3以降) --}}
+                            <div class="form-control w-full max-w-xs">
+                                <label class="label pb-0">
+                                    <span class="label-text">{{ __('ledger.workflow.next_inspector') }}</span>
+                                </label>
+                                <x-mary-select
+                                    label=""
+                                    wire:model.live="selectedInspectorId"
+                                    :options="$this->getInspectorOptions()"
+                                    placeholder="{{ __('ledger.workflow.select_inspector') }}"
+                                    class="select-sm"
+                                />
+                                @error('selectedInspectorId') <span
+                                    class="text-xs text-error">{{ $message }}</span> @enderror
+                            </div>
+
+                            {{-- 作成完了（点検依頼）ボタン (ワークフロー開始時に表示) --}}
+                            {{-- ToDo: 現在のステータスが DRAFT の場合のみ表示する条件を追加 (ステップ3以降) --}}
+                            <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                           icon="o-paper-airplane"
+                                           class="btn-primary" wire:click.prevent="requestInspection"
+                                           spinner="requestInspection"
+                                           :disabled="!$selectedInspectorId"
+                            />
+
+                            {{-- 既存の削除ボタン (変更なし、位置調整は任意) --}}
                             @if(isset($ledgerRecord->id))
-                                <label for="delete-modal" class="btn btn-outline btn-sm btn-error ml-10"><i
+                                <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i
                                         class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
                             @endif
-                            <x-ledger.close-window-button/>
 
+                            <x-ledger.close-window-button/> {{-- 既存の閉じるボタン --}}
+
+                        </div>
+                        {{-- 現在のステータス表示 --}}
+                        <div class="text-center text-xs text-base-content/70 mt-2">
+                            現在のステータス: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow_status.draft') }}
                         </div>
                     </div>
                 </div>
             </div>
+            {{--
+                        <div
+                            class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                                <div class="card-body flex flex-row justify-center items-center">
+                                    <div class="card-actions justify-center place-items-center">
+                                        <x-mary-button label="{{__('ledger.modify_message')}}" icon="o-pencil-square"
+                                                       class="btn btn-lg btn-warning btn-wide mr-4" type="submit" spinner="store"/>
+                                        --}}
+            {{--
+                                                                    <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
+                                                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
+                                        --}}{{--
+
+                                        @if(isset($ledgerRecord->id))
+                                            <label for="delete-modal" class="btn btn-outline btn-sm btn-error ml-10"><i
+                                                    class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
+                                        @endif
+                                        <x-ledger.close-window-button/>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+            --}}
 
         </x-mary-form>
 

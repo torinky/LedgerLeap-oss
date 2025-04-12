@@ -33,8 +33,10 @@ class ModifyColumn extends CreateColumn
             if (!empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
             }
+            $this->initColumns(); // カラム初期化 (必須マーク色など)
             $this->initRequireColumns();
             $this->updateProgress();
+            $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
 
             foreach ($this->ledgerDefineRecord->column_define as $column) {
                 if ($column->type === 'files') {
@@ -61,51 +63,46 @@ class ModifyColumn extends CreateColumn
     /**
      * @throws Exception
      */
-    public function store(StoreRequest $request)
-    {
-        $this->validate();
+    /*    public function store(StoreRequest $request)
+        {
+            $this->validate();
 
-        foreach ($this->ledgerDefineRecord->column_define as $column) {
-            if ($column->type === 'files') {
-                $storedFiles = [];
-                foreach ($this->content[$column->id] as $uploadedFile) {
-                    $stored = $this->storeFile($uploadedFile, $column->id);
-                    $storedFiles[] = $stored;
+            foreach ($this->ledgerDefineRecord->column_define as $column) {
+                if ($column->type === 'files') {
+                    $storedFiles = [];
+                    foreach ($this->content[$column->id] as $uploadedFile) {
+                        $stored = $this->storeFile($uploadedFile, $column->id);
+                        $storedFiles[] = $stored;
+                    }
+
+                    $this->mergeContentFiles($column, $storedFiles);
+                    //                dd($storedFiles,$this->content,$this->content_attached);
                 }
-
-                $this->mergeContentFiles($column, $storedFiles);
-                //                dd($storedFiles,$this->content,$this->content_attached);
             }
-        }
-        $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
-        $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
+            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+            $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
 
-        if ($this->ledgerId) {
-            $this->storeLedgerDiff();
+            if ($this->ledgerId) {
+                $this->storeLedgerDiff();
 
-            $ledgerRecord = Ledger::find($this->ledgerId);
-            $ledgerRecord->content = $this->content;
-            $ledgerRecord->content_attached = $this->contentAttached;
-            $ledgerRecord->modifier_id = Auth::user()->id;
-            $ledgerRecord->save();
+                $ledgerRecord = Ledger::find($this->ledgerId);
+                $ledgerRecord->content = $this->content;
+                $ledgerRecord->content_attached = $this->contentAttached;
+                $ledgerRecord->modifier_id = Auth::user()->id;
+                $ledgerRecord->save();
 
-            $this->dispatch('ledgerStored', $this->ledgerRecord->id);
+                $this->dispatch('ledgerStored', $this->ledgerRecord->id);
 
-            $this->addAttachedFileRecord();
-            //            dd($this->content);
+                $this->addAttachedFileRecord();
+                $this->success(
+                    __('ledger.updated.success'),
+                    redirectTo: route('ledger.show', ['ledgerId' => $ledgerRecord->id])
+                );
 
-            /*            return redirect()->route('ledger.show', ['ledgerId' => $ledgerRecord->id])
-                            ->with('success', __('ledger.updated.success'));*/
-            //dd(route('ledger.show', ['ledgerId' => $ledgerRecord->id]));
-            $this->success(
-                __('ledger.updated.success'),
-                redirectTo: route('ledger.show', ['ledgerId' => $ledgerRecord->id])
-            );
-
-            return;
-        }
-        abort(404);
-    }
+                return;
+            }
+            abort(404);
+        }*/
 
     /**
      * @param [object] $addingStoredFiles
@@ -192,5 +189,42 @@ class ModifyColumn extends CreateColumn
             'created_at' => $this->ledgerRecord->created_at,
             'updated_at' => $this->ledgerRecord->updated_at,
         ]);
+    }
+
+    // Modify 用のファイルマージ処理をオーバーライド
+    protected function mergeFilesForSave(object $column, array $storedFiles): void
+    {
+        $addedFilenames = [];
+        $addedFileContents = [];
+        foreach ($storedFiles as $stored) {
+            $addedFilenames[$stored->hashedBaseName] = $stored->originalName;
+            $addedFileContents[$stored->hashedBaseName] = null;
+        }
+
+        // 既存ファイルの取得 (DBから再取得が安全)
+        $existingLedger = Ledger::find($this->ledgerId);
+        $tmpContent = $existingLedger?->content[$column->id] ?? [];
+        $tmpContentAttached = $existingLedger?->content_attached[$column->id] ?? [];
+
+        // 削除指定されたファイルを既存リストから除去
+        $deletedBaseFilenames = [];
+        foreach ($this->deletedContent[$column->id] ?? [] as $deletedFilePath) {
+            $deletedBaseFilenames[] = basename($deletedFilePath);
+        }
+        foreach ($tmpContent as $hashedBaseName => $originalName) { // $filepath ではなく $originalName
+            if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
+                unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
+                // 実体ファイル削除や AttachedFile レコード削除はここで行う
+                AttachedFile::where('hashedbasename', $hashedBaseName)
+                    ->where('ledger_id', $this->ledgerId) // ledgerId を使う
+                    ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
+                    ->where('column_id', $column->id)
+                    ->delete();
+            }
+        }
+
+        // 新規ファイルと残った既存ファイルをマージ
+        $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
+        $this->contentAttached[$column->id] = array_merge($addedFileContents, $tmpContentAttached);
     }
 }

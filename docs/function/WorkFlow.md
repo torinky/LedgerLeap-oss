@@ -19,10 +19,13 @@
 * **オンプレミス環境:** インターネット接続のない環境を想定。
 * **通知手段:** システム内通知（ヘッダーのバッジ表示、マイポータルへの表示）、ブラウザネイティブ通知（プッシュ通知）を主とし、メールは補助的。
 * **既存機能の活用:** 台帳変更履歴 (`LedgerDiff`)、ロールベース権限、フォルダ別通知設定 (`RoleFolderPermission`) を活用。
+* **対象:** 現状、主に台帳レコード (`Ledger`) の新規登録・更新を対象とします。ファイルアップロード等への適用は今後の検討課題です。
+* **ワークフローの有効化:** ワークフローは全ての台帳で必須ではなく、**台帳定義 (`LedgerDefine`) ごとに有効/無効を設定**
+  できます。(`ledger_defines.workflow_enabled` カラムで管理想定)。
 
-## ワークフローの状態定義 (例)
+## ワークフローの状態定義
 
-本システムにおけるワークフローの状態は、主に以下の通りです。
+本システムにおけるワークフローの状態は、主に以下の通りです。状態は主に `LedgerDiff` テーブルの `status` カラムで管理されます。
 
 * `DRAFT` (作成中/編集中): レコード作成中または修正中の初期状態。編集権限があれば誰でも編集可能。
 * `PENDING_INSPECTION` (点検待ち): 作成者が「作成完了」し、点検者の確認待ち。*
@@ -36,24 +39,33 @@
 
 ## 機能詳細
 
-### 1. ワークフローの開始と進行 (状態遷移)
+### 1. ワークフローの有効化設定
+
+* 台帳定義 (`LedgerDefine`) の作成・編集時に、その定義に基づく台帳でワークフローを有効にするか (`workflow_enabled`)
+  を設定します。
+* ワークフローが無効な台帳定義の場合、以降のワークフロー関連の操作（ボタン表示、ステータス変更など）は行われません（通常の直接保存）。
+
+### 2. ワークフローの開始と進行 (状態遷移)
 
 * **作成/編集 (`DRAFT`):** ユーザーは台帳レコードを作成・編集します。
 * **作成完了/点検依頼:** `DRAFT` 状態から**「作成完了（点検依頼）」**ボタンをクリックします。
     * 次の担当者（点検者）を選択または確認します（推奨担当者をデフォルト表示）。
     * 内容は `LedgerDiff` に記録され、ステータスは `PENDING_INSPECTION` に遷移します。
     * 点検者の未処理件数カウンターがインクリメントされます。
+  * **`Ledger` レコードは、この時点ではまだ作成されないか、仮の `DRAFT` ステータスで作成されます。** (**要検討: 新規作成時の
+    Ledger レコードの扱い**)
+
 * **点検完了/承認申請:** `PENDING_INSPECTION` 状態から点検者が**「点検完了（承認申請）」**ボタンをクリックします。
     * 次の担当者（承認者）を選択または確認します。
     * `LedgerDiff` に点検完了の記録が追加（または更新）され、ステータスは `PENDING_APPROVAL` に遷移します。
     * 点検者のカウンターはデクリメントされ、承認者のカウンターがインクリメントされます。
 * **承認:** `PENDING_APPROVAL` 状態から承認者が**「承認」ボタン**をクリックします。
     * `LedgerDiff` に承認の記録が追加（または更新）され、ステータスは `APPROVED` に遷移します。
-    * **`Ledger` テーブルのレコードが新規作成または更新されます** (データ反映)。
+  * **`Ledger` テーブルのレコードが新規作成または更新されます** (データ反映)。`Ledger` の `status` も `APPROVED` に更新されます。
     * 承認者のカウンターはデクリメントされます。
     * (オプション) 申請者等に承認完了通知が送信されます（通知設定ONの場合）。
 
-### 2. 承認フロー中のレコード編集 (重要)
+### 3. 承認フロー中のレコード編集 (重要)
 
 * **編集権限:** ワークフローの状態が `DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL` のいずれであっても、*
   *そのレコードに対する編集権限を持つユーザーは、レコード内容を編集することが可能**です。
@@ -70,7 +82,7 @@
     4. カウンターの調整：もし `PENDING_INSPECTION` や `PENDING_APPROVAL` 状態から `DRAFT`
        に戻った場合、対応する点検者や承認者の未処理件数カウンターをデクリメントする必要があります。
 
-### 3. 担当者（点検者/承認者）のアクション
+### 4. 担当者（点検者/承認者）のアクション
 
 担当者は、自分宛ての未処理タスク (`PENDING_INSPECTION` または `PENDING_APPROVAL`) に対して、主に以下の操作を行います。
 
@@ -80,27 +92,30 @@
   に戻します（理由入力推奨）。または、別途コメント機能や他のコミュニケーション手段で申請者に修正を依頼します。*
   *明示的な「差し戻し」ボタンはありません。**
 
-### 4. 承認済みレコードの扱い
+### 5. 承認済みレコードの扱い
 
 * `APPROVED` 状態になったレコードは、原則として**編集がロック**され、通常の編集画面からは変更できません。
 * 承認済みのレコードを修正する必要が生じた場合は、管理者がロックを解除する、あるいは「改訂版作成」のような別のプロセスを開始するなどの運用が必要になります（本ワークフロー機能の範囲外として別途定義）。
 
-### 5. ワークフローステータスと履歴 (証跡)
+### 6. ワークフローステータスと履歴 (証跡)
 
 * 全ての状態遷移（作成完了、点検完了、承認）および編集による `DRAFT` への巻き戻しは、その操作者、日時、理由コメント（任意）と共に
   **`LedgerDiff` テーブルに記録**され、証跡となります。
 * 台帳の詳細画面や変更履歴画面で、現在のステータスと過去の履歴を確認できるようにします。
 
-### 6. 柔軟な承認ルート
+### 7. 柔軟な承認ルート
 
-* 推奨担当者設定（台帳定義/フォルダ）、申請時指定、ロール指定承認（並列承認）などをサポート。
+* **推奨担当者:** `LedgerDefine` に推奨点検者・承認者をユーザーIDまたはロールIDで設定可能。申請画面でデフォルト表示。
+* **申請時指定:** 申請者は推奨担当者を変更、または直接ユーザー/ロールを選択可能。
+* **ロール指定承認:** ロールを指定した場合、そのロールを持つメンバーの誰か一人が処理すればOK（並列承認）。(**要検討:
+  ロール指定時の詳細な挙動 - 通知、タスク表示、処理権限**)
 
-### 7. 承認待ちタスクの確認と集約通知
+### 8. 承認待ちタスクの確認と集約通知
 
 * **承認待ちリスト:** 点検者・承認者は専用画面で自分宛ての `PENDING_INSPECTION` または `PENDING_APPROVAL` 状態の申請を確認・処理。
 * **集約通知:** 定期バッチで、未処理タスクを持つ担当者に対し、通知設定がONの場合にシステム内/ブラウザ通知で「確認/承認待ち〇件」を通知。
 
-### 8. 通知設定との連携
+### 9. 通知設定との連携
 
 * **ワークフロー関連通知タイプ:** `notification_types` テーブルに `inspection_requested`, `approval_requested`,
   `inspection_completed`, `approval_completed`, `status_returned_to_draft` (編集によりDRAFTに戻った時),
@@ -108,36 +123,44 @@
 * **ユーザーによる制御:** フォルダ別通知設定で、これらの通知の ON/OFF を設定可能。
 * **通知送信時の確認:** `NotificationService` は、通知設定を確認し、ON の場合にのみ送信。
 
+### 10. ワークフローと台帳定義の変更
+
+* ワークフローが進行中 (`PENDING_INSPECTION`, `PENDING_APPROVAL`) の台帳レコードが存在する場合、そのレコードの基となっている
+  **台帳定義 (`LedgerDefine`) の列構成の変更は禁止**されます（`LedgerDefineResource` で制御）。タイトルや説明の変更は可能です。
+* 定義変更が必要な場合は、関連するワークフローが完了するのを待つ必要があります。
+
+### 11. ワークフロー中のレコードのリスト表示
+
+* 通常の台帳リスト画面 (`ledgers.index` 等) では、**すべてのステータス**の `Ledger` レコードを表示します。
+* `APPROVED` 以外のレコードには、現在のステータス (`点検待ち`, `承認待ち` など)
+  をバッジ等で明確に表示し、未確定であることを視覚的に示します（例: 行の背景色変更）。
+
 ## 関連ファイル (想定)
 
 * **モデル:**
-    * `App\Models\LedgerDiff`: *
-      *カラム追加 (`status`, `inspector_id`?, `approver_id`, `requested_at`?, `inspected_at`?, `approved_at`?,
-      `returned_at`?, `comments`) が必要。状態遷移と編集理由を記録。**
-    * `App\Models\Ledger`: **`status` カラム (Enum) を持つか、`LedgerDiff` の最新状態を参照。承認済みロックのためのフラグ等も検討。
-      **
-    * `App\Models\NotificationType`: **ワークフロー用タイプ追加が必要。**
+    * `App\Models\LedgerDiff`: カラム追加 (`status`, `inspector_id`, `approver_id`, `requested_at`, `inspected_at`,
+      `approved_at`, `comments`) が必要。
+    * `App\Models\Ledger`: `status` (Enum), `version` カラム追加済み。`isLocked()` メソッドあり。
+    * `App\Models\LedgerDefine`: `workflow_enabled` (boolean), `version`, 推奨担当者カラム追加済み。
+    * `App\Models\NotificationType`: ワークフロー用タイプ追加が必要。
 * **Enum:**
-    * `App\Enums\WorkflowStatus`: (`DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL`, `APPROVED`) **新規作成が必要。**
+    * `App\Enums\WorkflowStatus`: (`DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL`, `APPROVED`) 作成済み。
 * **サービス:**
-    * `App\Services\WorkflowService` (新規作成推奨): **状態遷移ロジック、編集時のステータス巻き戻し処理、カウンター管理、通知トリガー。
-      **
-    * `App\Services\NotificationService`: **ワークフロー通知送信ロジック追加。**
+    * `App\Services\WorkflowService`: 状態遷移ロジック、編集時巻き戻し処理、カウンター管理、通知トリガー。
+    * `App\Services\NotificationService`: ワークフロー通知送信ロジック追加。
 * **リポジトリ:**
     * `App\Repositories\WorkflowTaskRepository` (新規作成推奨): 点検/承認待ちリスト取得。
 * **コントローラー/Livewire:**
-    * `App\Livewire\Ledger\ModifyColumn` (または相当): **状態遷移ボタン表示制御、担当者選択 UI
-      追加、編集時の警告ダイアログ、保存時の理由入力とステータス巻き戻し処理呼び出し。**
-    * `App\Livewire\Workflow\PendingList` (新規作成)
-    * `App\Livewire\Workflow\ActionButtons` (新規作成 or PendingList内): **「点検完了」「承認」ボタン処理。**
-* **通知クラス:** `InspectionRequested`, `ApprovalRequested`, `InspectionCompleted`, `ApprovalCompleted`,
-  `StatusReturnedToDraft`, `WorkflowSummary` 等 **新規作成が必要。**
-* **コマンド:** `App\Console\Commands\SendWorkflowSummaryNotification` **新規作成が必要。**
+    * `App\Livewire\Ledger\CreateColumn`, `App\Livewire\Ledger\ModifyColumn`: ワークフロー有効チェック、状態遷移ボタン表示制御、担当者選択
+      UI、編集時警告/理由入力、保存/申請処理。
+    * `App\Livewire\Workflow\PendingList` (新規作成): 承認待ちリスト表示。
+    * `App\Livewire\Workflow\ActionButtons` (新規作成 or PendingList内): 「点検完了」「承認」ボタン処理。
+* **通知クラス:** `InspectionRequested`, `ApprovalRequested` など新規作成が必要。
+* **コマンド:** `App\Console\Commands\SendWorkflowSummaryNotification` 新規作成が必要。
 * **Filament (関連):**
-    * `App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager`: **ワークフロー関連通知タイプの選択肢追加。
-      **
-* **マイグレーション:** `ledger_diffs` テーブルへのカラム追加、(必要なら)`ledgers` テーブルへのカラム追加、
-  `notification_types` テーブルへのレコード追加。
+    * `App\Filament\Resources\LedgerDefineResource`: `workflow_enabled` 設定 UI、列構成変更時のワークフローチェック追加。
+    * `App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager`: 通知タイプ選択肢追加。
+* **マイグレーション:** `ledger_diffs`, `ledgers`, `ledger_defines` テーブルの修正。`notification_types` へのレコード追加。
 
 ## 実装計画（案）
 
@@ -170,41 +193,61 @@
 
 ---
 
-### ステップ 1: ワークフロー開始（作成完了/点検依頼）機能の実装 (Next)
+### ✅ ステップ 1: ワークフロー開始（作成完了/点検依頼）機能の実装 (完了)
 
-* **目的:** ユーザーが台帳レコードを作成/編集し、「作成完了（点検依頼）」として最初の承認ステップに進められるようにする。
-* **タスク:**
-    1. **UI変更:** `Ledger\ModifyColumn` (または相当するコンポーネント) のビューに「下書き保存」ボタンと**
-       「作成完了（点検依頼）」**ボタンを追加。点検者を選択する UI (シンプルな User/Role セレクトなど) を追加。（推奨担当者表示も考慮）
-    2. **ロジック実装 (`ModifyColumn` & `WorkflowService`):**
-        * 「下書き保存」: `LedgerDiff` に `status='DRAFT'` で保存（`Ledger` は更新しない）。
-        * 「作成完了（点検依頼）」:
-            * 選択された点検者 (`inspector_id` または `inspector_role_id`) を取得。
-            * `WorkflowService` を呼び出す。
-            * `WorkflowService` は `LedgerDiff` に `status='PENDING_INSPECTION'`, `inspector_id` (または Role ID?),
-              `requested_at` を記録。
-            * **`Ledger` テーブルはまだ更新しない。**
-            * 点検者のカウンター更新ロジックの呼び出しポイントをコメント等で明記（通知実装は後）。
+* **目的:** ユーザーが台帳レコードを作成/編集し、「作成完了（点検依頼）」として最初の承認ステップに進められるようにする (*
+  *ワークフローが有効な台帳定義の場合を前提とする**)。
+* **実施済みタスク:**
+    1. **UI変更 (`ModifyColumn`等):** 「下書き保存」ボタン、「作成完了（点検依頼）」ボタン、点検者選択 UI (推奨担当者表示含む)
+       を追加。 [完了]
+    2. **ロジック実装 (`ModifyColumn`, `WorkflowService`):**
+        * 「下書き保存」: `LedgerDiff` に `status='DRAFT'` で保存 (`Ledger` は DRAFT で作成/更新)。 [完了]
+        * 「作成完了（点検依頼）」: 点検者選択を検証し、`WorkflowService` を呼び出し。`LedgerDiff` に
+          `status='PENDING_INSPECTION'`, `inspector_id`, `requested_at` を記録 (`Ledger` の status も更新)
+          。カウンター更新呼び出しポイントをコメントで明記。 [完了]
 * **動作確認:**
-    * レコードを編集し、「作成完了（点検依頼）」をクリックすると、`LedgerDiff` に `status='PENDING_INSPECTION'`
-      でレコードが作成されることを確認。`Ledger` 本体は変更されないことを確認。点検者が記録されているか確認。
-* **成果物:** ワークフローを開始し、最初の「点検待ち」状態に遷移できる機能。
-* **ドキュメント更新:** 「ワークフローの開始と進行」「関連ファイル」セクションに関連する実装詳細を追記。`ModifyColumn.md`
-  等を更新。
+    * 下書き保存、点検依頼の動作（`LedgerDiff` と `Ledger` のステータス変更、`requested_at` 記録）を確認。 [完了]
+* **成果物:** ワークフローを開始し、最初の「点検待ち」状態に遷移できる基本機能（ワークフロー有効時）。
+* **ドキュメント更新:** このセクションを更新。
 
 ---
 
-### ステップ 2: 点検・承認機能（基本形）とデータ反映
+### ステップ 2: 点検・承認機能（基本形）とデータ反映 (Next)
 
 * **目的:** 点検者/承認者がタスクを確認し、「点検完了（承認申請）」または「承認」を行い、最終的にデータが `Ledger`
-  テーブルに反映されるようにする。
+  テーブルに反映されるようにする（ワークフロー有効時）。**リスト表示でステータスを確認できるようにする。**
 * **タスク:**
-    1. UI作成 (`Workflow\PendingList`): 承認待ちリスト表示（基本形）。
-    2. UI作成 (`ActionButtons`): 「点検完了（承認申請）」「承認」ボタン表示（状態・権限に応じる）。
-    3. ロジック実装 (`ActionButtons`, `WorkflowService`): 各ボタンクリック時に `LedgerDiff` ステータス更新。承認時には
-       `Ledger` レコードを作成/更新する処理を実装。カウンター調整呼び出しポイント明記。
-* **動作確認:** 各アクションでステータスが遷移すること、承認時に `Ledger` データが反映されることを確認。
-* **ドキュメント更新:** 「担当者のアクション」「関連ファイル」更新。新コンポーネントドキュメント作成。
+    1. **UI作成 (`PendingList`, `ActionButtons`):** 承認待ちリスト表示（基本形）。「点検完了（承認申請）」「承認」ボタン表示（状態・権限に応じる）。担当者選択UI（承認申請時）。
+    2. **ロジック実装 (`ActionButtons`, `WorkflowService`):**
+        * 「点検完了（承認申請）」: 承認者選択検証、`LedgerDiff` ステータスを `PENDING_APPROVAL`
+          に更新、担当者情報記録、カウンター調整呼び出しポイント明記。
+        * 「承認」: `LedgerDiff` ステータスを `APPROVED` に更新、担当者情報記録。**`Ledger` レコードを作成/更新する処理を実装。
+          ** カウンター調整呼び出しポイント明記。
+    3. **台帳リスト表示改善:** 台帳リスト表示画面 (`ledgers.index` 等) でワークフローステータスを表示し、未確定レコードを視覚的に区別できるようにする。
+* **動作確認:**
+    * 点検/承認アクションでステータスが遷移することを確認。
+    * 承認時に `Ledger` データが反映されることを確認。
+    * 台帳リストで各レコードのステータスが表示され、見た目で区別できることを確認。
+* **ドキュメント更新:** 「機能詳細(担当者のアクション、リスト表示)」「関連ファイル」更新。新コンポーネントドキュメント作成。
+
+---
+
+### ステップ 2.1: ワークフロー有効化制御と定義変更制限
+
+* **目的:** 台帳定義の設定に基づきワークフローの有効/無効を制御し、ワークフロー進行中の定義変更を制限する。
+* **タスク:**
+    1. **ワークフロー有効/無効分岐処理:** `CreateColumn`/`ModifyColumn` で `LedgerDefine.workflow_enabled` をチェック。
+        * **無効の場合:** ワークフロー関連UI（申請ボタン、担当者選択）を非表示にし、「保存」ボタンを表示する。
+        * **有効の場合:** ステップ1で実装したワークフロー開始UIを表示する。
+    2. **直接保存ロジック:** ワークフロー無効時の「保存」ボタンクリック時に、直接 `Ledger` レコードを作成/更新する処理を実装（
+       `WorkflowService` を経由しない、または専用メソッド呼び出し）。
+    3. **台帳定義変更制限:** `LedgerDefineResource` (Filament) の保存・削除処理前フック等で、関連する `LedgerDiff` に
+       `PENDING_INSPECTION` または `PENDING_APPROVAL` のレコードが存在しないかチェックし、存在する場合は変更/削除をブロックするロジックを追加。
+* **動作確認:**
+    * ワークフロー有効/無効設定に応じて台帳編集画面のボタンが変わることを確認。
+    * ワークフロー無効時は直接保存されることを確認。
+    * ワークフロー進行中に台帳定義の列構成を変更しようとするとエラーになること。
+* **ドキュメント更新:** 「機能詳細(ワークフロー有効化設定、台帳定義変更制限)」「関連ファイル」更新。
 
 ---
 
