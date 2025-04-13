@@ -241,4 +241,62 @@ class WorkflowService
         // 実際のカウンター更新処理
         Log::info("Decrement pending {$type} count for user: {$userId}");
     }
+
+    /**
+     * 承認処理を行い、LedgerDiff と Ledger を更新する
+     *
+     * @param LedgerDiff $ledgerDiff 承認対象の LedgerDiff オブジェクト
+     * @param int $approverId 承認操作を行った User ID
+     * @return Ledger 更新後の Ledger オブジェクト
+     * @throws \Throwable
+     */
+    public function approve(LedgerDiff $ledgerDiff, int $approverId): Ledger
+    {
+        // ToDo: 権限チェック (approverId が本当にこの $ledgerDiff の承認者か？)
+        if ($ledgerDiff->status !== WorkflowStatus::PENDING_APPROVAL) {
+            Log::warning("Invalid status transition requested for LedgerDiff ID: {$ledgerDiff->id}");
+            throw new \Exception("Invalid status for approving.");
+        }
+        if ($ledgerDiff->approver_id !== $approverId) {
+            Log::warning("Unauthorized approval attempt by User ID: {$approverId} for LedgerDiff ID: {$ledgerDiff->id}");
+            throw new \Exception("User not authorized for this approval.");
+        }
+
+        return DB::transaction(function () use ($ledgerDiff, $approverId) {
+            // 1. LedgerDiff のステータスを更新
+            $ledgerDiff->update([
+                'status' => WorkflowStatus::APPROVED,
+                'approved_at' => now(),
+                'modifier_id' => $approverId, // 承認者が最終変更者
+                // inspector_id, approver_id はそのまま or クリア？ -> そのまま残すのが履歴として自然か
+                // requested_at, inspected_at はそのまま
+                // returned_at, comments は関係ないのでそのまま
+            ]);
+
+            // 2. Ledger レコードを取得 (findOrFail で存在確認)
+            $ledger = Ledger::findOrFail($ledgerDiff->ledger_id);
+
+            // 3. Ledger レコードに LedgerDiff の内容を反映
+            $ledger->update([
+                'content' => $ledgerDiff->content,
+                // 注意: content_attached の反映ロジックが必要な場合がある
+                //       単純な上書きで良いか、マージが必要か？
+                //       ここでは単純な上書きを仮定
+                'content_attached' => $ledgerDiff->content_attached ?? [], // Diff になければ空配列
+                'status' => WorkflowStatus::APPROVED, // Ledger のステータスも更新
+                'modifier_id' => $approverId, // Ledger の最終変更者も更新
+                'version' => $ledger->version + 1, // バージョンをインクリメント
+            ]);
+
+            // ToDo: 承認者のカウンターをデクリメント
+            $this->decrementPendingTaskCount($approverId, 'approval');
+
+            // ToDo: 関連イベントを発行 (通知用)
+            // event(new ApprovalCompleted($ledgerDiff));
+
+            Log::info("Ledger approved for Ledger ID: {$ledger->id}, Diff ID: {$ledgerDiff->id}");
+
+            return $ledger->refresh(); // 更新後の Ledger モデルを返す
+        });
+    }
 }

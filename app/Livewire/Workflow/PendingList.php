@@ -54,12 +54,6 @@ class PendingList extends Component
 
     }
 
-    public function approveTask(int $taskId)
-    {
-        // WorkflowService::approve を呼び出す
-        // ...
-        $this->dispatch('notify', message: __('ledger.workflow.approved_message'), type: 'success');
-    }
 
     public function returnTaskToDraft(int $taskId, string $comments)
     { // コメントを受け取る
@@ -157,8 +151,6 @@ class PendingList extends Component
             );
             $this->dispatch('close-modal', 'approval-request-modal');
             $this->success(__('ledger.workflow.approval_requested_message'));
-            // リストを再描画するために $refresh を使うか、ページをリロード
-//            $this->dispatch('$refresh');
         } catch (Exception $e) {
             Log::error("Approval request failed: " . $e->getMessage());
             $this->error(__('messages.error.generic')); // 汎用エラーメッセージ
@@ -181,4 +173,36 @@ class PendingList extends Component
         }
         $this->returnToDraftModal = true; // <<<--- モーダル表示プロパティを true に
     }
+
+    /**
+     * 承認アクションを実行する
+     */
+    public function approveTask(int $taskId): void
+    {
+        $ledgerDiff = LedgerDiff::find($taskId);
+
+        if (!$ledgerDiff) {
+            $this->error('Task not found.');
+            return;
+        }
+
+        // 承認者自身であるかの簡易チェック (より厳密な権限チェックは Service 側でも推奨)
+        if ($ledgerDiff->approver_id !== Auth::id()) {
+            $this->error(__('messages.error.unauthorized'));
+            return;
+        }
+
+        try {
+            // WorkflowService の approve メソッドを呼び出す
+            $this->workflowService->approve($ledgerDiff, Auth::id());
+
+            $this->success(__('ledger.workflow.approved_message'));
+//            $this->dispatch('$refresh'); // リストを更新
+        } catch (\Exception $e) {
+            Log::error("Approval failed for task ID {$taskId}: " . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
+
+
 }
