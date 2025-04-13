@@ -31,18 +31,15 @@
             @scope('actions', $task)
             <div class="flex justify-end gap-1">
                 @if($task->status === \App\Enums\WorkflowStatus::PENDING_INSPECTION && Auth::id() === $task->inspector_id /* && 権限チェック */)
-                    {{-- 修正: モーダルを開くメソッドを呼び出す --}}
                     <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}" icon="o-check-badge"
                                    class="btn-sm btn-success" wire:click="openApprovalRequestModal({{ $task->id }})"
                                    spinner/>
-                    {{-- 修正: モーダルを開くメソッドを呼び出す --}}
                     <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
                                    class="btn-sm btn-warning" wire:click="openReturnToDraftModal({{ $task->id }})"
                                    spinner/>
                 @elseif($task->status === \App\Enums\WorkflowStatus::PENDING_APPROVAL && Auth::id() === $task->approver_id /* && 権限チェック */)
                     <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
                                    class="btn-sm btn-primary" wire:click="approveTask({{ $task->id }})" spinner/>
-                    {{-- 修正: モーダルを開くメソッドを呼び出す --}}
                     <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
                                    class="btn-sm btn-warning" wire:click="openReturnToDraftModal({{ $task->id }})"
                                    spinner/>
@@ -51,7 +48,9 @@
                                link="{{ route('ledger.show', ['ledgerId' => $task->ledger_id]) }}"/>
             </div>
             @endscope
-
+            <x-slot:empty>
+                <x-mary-icon name="o-cube" label="{{ __('ledger.workflow.no_pending_tasks') }}" />
+            </x-slot:empty>
         </x-mary-table>
 
         {{-- 承認者選択モーダル --}}
@@ -65,13 +64,15 @@
                                wire:click="requestApproval" spinner/>
             </x-slot:actions>
         </x-mary-modal>
-        {{-- 戻し理由入力モーダル --}}
+
+        {{-- 戻し理由入力モーダル (コンポーネントの外に追加) --}}
         <x-mary-modal wire:model="returnToDraftModal" title="{{ __('ledger.workflow.return_to_draft_reason') }}">
-            {{-- wire:model は配列の特定キーにバインド --}}
+            {{-- selectedTaskId を使って対応するコメントにバインド --}}
             <x-mary-textarea label="{{ __('ledger.workflow.comments') }}"
-                             wire:model="returnComments.{{ $selectedTaskId }}"/>
+                             wire:model="returnComments.{{ $selectedTaskId }}"
+                             placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
+                             hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
             <x-slot:actions>
-                {{-- @click で直接プロパティを false にして閉じる --}}
                 <x-mary-button label="{{ __('Cancel') }}" @click="$wire.returnToDraftModal = false"/>
                 <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
                                wire:click="returnTaskToDraft" spinner/>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Workflow;
 
+use App\Enums\WorkflowStatus;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
@@ -31,6 +32,7 @@ class PendingList extends Component
     public bool $returnToDraftModal = false; // 戻し理由モーダルの表示状態
     // ------------------------------
 
+
     public array $returnComments = []; // 戻し理由コメント (タスクIDをキーにする)
     /**
      * @var mixed|null
@@ -50,17 +52,11 @@ class PendingList extends Component
         return view('livewire.workflow.pending-list', [
             'pendingTasks' => $pendingTasks,
         ])
-            ->layout('layouts.app', ['title' => __('ledger.my_portal_title')]); // アプリケーションのレイアウトを使用
+            ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
 
     }
 
 
-    public function returnTaskToDraft(int $taskId, string $comments)
-    { // コメントを受け取る
-        // WorkflowService::returnToDraft を呼び出す
-        // ...
-        $this->dispatch('notify', message: __('ledger.workflow.returned_to_draft_message'), type: 'success');
-    }
 
     // 承認者選択肢をロードするメソッド (モーダル表示時に呼ぶ)
 
@@ -162,19 +158,6 @@ class PendingList extends Component
     }
 
     /**
-     * 戻し理由入力モーダルを開く
-     */
-    public function openReturnToDraftModal(int $taskId): void
-    {
-        $this->selectedTaskId = $taskId;
-        // 配列キーが存在しない場合のエラーを防ぐため、初期化
-        if (!isset($this->returnComments[$taskId])) {
-            $this->returnComments[$taskId] = '';
-        }
-        $this->returnToDraftModal = true; // <<<--- モーダル表示プロパティを true に
-    }
-
-    /**
      * 承認アクションを実行する
      */
     public function approveTask(int $taskId): void
@@ -204,5 +187,67 @@ class PendingList extends Component
         }
     }
 
+    /**
+     * 戻し理由入力モーダルを開く
+     */
+    public function openReturnToDraftModal(int $taskId): void
+    {
+        $this->selectedTaskId = $taskId;
+        // 配列キーが存在しない場合のエラーを防ぐため、初期化
+        if (!isset($this->returnComments[$taskId])) {
+            $this->returnComments[$taskId] = '';
+        }
+        $this->returnToDraftModal = true;
+    }
 
+    /**
+     * タスクを作成中に戻す
+     */
+    public function returnTaskToDraft(): void
+    {
+        if ($this->selectedTaskId === null) {
+            $this->error('No task selected.'); // エラー処理
+            return;
+        }
+
+        // コメントを取得 (null の可能性もある)
+        $comments = $this->returnComments[$this->selectedTaskId] ?? null;
+
+        // コメント必須の場合のバリデーション (任意)
+        // $validated = $this->validate(['returnComments.'.$this->selectedTaskId => ['required', 'string', 'max:1000']]);
+        // $comments = $validated['returnComments'][$this->selectedTaskId];
+
+        $ledgerDiff = LedgerDiff::find($this->selectedTaskId);
+        if (!$ledgerDiff) {
+            $this->error('Task not found.');
+            return;
+        }
+
+        // 権限チェック (簡易) - Service 側でもチェック推奨
+        $canReturn = ($ledgerDiff->status === WorkflowStatus::PENDING_INSPECTION && $ledgerDiff->inspector_id === Auth::id()) ||
+            ($ledgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $ledgerDiff->approver_id === Auth::id());
+
+        if (!$canReturn) {
+            $this->error(__('messages.error.unauthorized'));
+            return;
+        }
+
+        try {
+            // WorkflowService の returnToDraft メソッドを呼び出す
+            $this->workflowService->returnToDraft($ledgerDiff, Auth::id(), $comments);
+
+            $this->returnToDraftModal = false; // モーダルを閉じる
+            $this->success(__('ledger.workflow.returned_to_draft_message'));
+//            $this->dispatch('$refresh'); // リストを更新
+        } catch (\Exception $e) {
+            Log::error("Return to draft failed for task ID {$this->selectedTaskId}: " . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        } finally {
+            // コメントと選択タスクIDをリセット
+            unset($this->returnComments[$this->selectedTaskId]);
+            $this->selectedTaskId = null;
+            $this->returnToDraftModal = false;
+
+        }
+    }
 }

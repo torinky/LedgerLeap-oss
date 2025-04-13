@@ -299,4 +299,66 @@ class WorkflowService
             return $ledger->refresh(); // 更新後の Ledger モデルを返す
         });
     }
+    /**
+     * ワークフローのステータスを DRAFT に戻す (差し戻し相当)
+     *
+     * @param LedgerDiff $ledgerDiff 対象の LedgerDiff
+     * @param int $userId 操作を実行したユーザーID (点検者 or 承認者)
+     * @param string|null $comments 戻す理由コメント (任意)
+     * @return LedgerDiff 更新後の LedgerDiff オブジェクト
+     * @throws \Throwable
+     */
+    public function returnToDraft(LedgerDiff $ledgerDiff, int $userId, ?string $comments): LedgerDiff
+    {
+        // ToDo: 権限チェック (userId が本当にこのタスクの点検者または承認者か？)
+        if (!in_array($ledgerDiff->status, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+            Log::warning("Invalid status transition requested for returning to draft. LedgerDiff ID: {$ledgerDiff->id}");
+            throw new \Exception("Invalid status for returning to draft.");
+        }
+        // 点検待ちの場合は点検者か、承認待ちの場合は承認者かチェック
+        if (($ledgerDiff->status === WorkflowStatus::PENDING_INSPECTION && $ledgerDiff->inspector_id !== $userId) ||
+            ($ledgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $ledgerDiff->approver_id !== $userId)) {
+            Log::warning("Unauthorized return to draft attempt by User ID: {$userId} for LedgerDiff ID: {$ledgerDiff->id}");
+            throw new \Exception("User not authorized to return this task to draft.");
+        }
+
+
+        return DB::transaction(function () use ($ledgerDiff, $userId, $comments) {
+            // 1. LedgerDiff のステータスと関連情報を更新
+            $ledgerDiff->update([
+                'status' => WorkflowStatus::DRAFT,
+                'returned_at' => now(), // 戻された日時
+                'comments' => $comments, // 理由コメント
+                'modifier_id' => $userId, // 操作者ID
+                // inspector_id, approver_id はクリアすべきか？ -> 履歴として残す方が良いか
+                // requested_at, inspected_at, approved_at は変更しない
+            ]);
+
+            // 2. Ledger レコードを取得し、ステータスを DRAFT に更新
+            //    (Ledger が存在しないケースは基本ないはずだが念のためチェック)
+            $ledger = $ledgerDiff->ledger()->first(); // リレーションを使って取得
+            if ($ledger) {
+                $ledger->update(['status' => WorkflowStatus::DRAFT]);
+            } else {
+                // Ledger が見つからない場合のエラーハンドリング
+                Log::error("Associated Ledger not found for LedgerDiff ID: {$ledgerDiff->id} during return to draft.");
+                // 例外を投げるか、処理を続けるか検討
+            }
+
+            // ToDo: 点検者/承認者のカウンターをデクリメント
+            $taskType = ($ledgerDiff->getOriginal('status') === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval'; // 戻す前のステータスで判断
+            $handlerId = ($taskType === 'inspection') ? $ledgerDiff->inspector_id : $ledgerDiff->approver_id;
+            if ($handlerId) { // 担当者が割り当てられていれば
+                $this->decrementPendingTaskCount($handlerId, $taskType);
+            }
+
+
+            // ToDo: 関連イベントを発行 (通知用)
+            // event(new StatusReturnedToDraft($ledgerDiff, $comments));
+
+            Log::info("LedgerDiff ID: {$ledgerDiff->id} returned to DRAFT by User ID: {$userId}");
+
+            return $ledgerDiff->refresh();
+        });
+    }
 }

@@ -429,6 +429,7 @@ return [
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
 
     'workflow' => [
+        'title' => '点検/承認',
         'requester' => '申請者',
         'requested_at' => '申請日時',
         'status' => [
@@ -467,6 +468,8 @@ return [
         'select_next_approver' => '次の承認者を選択',
         'next_approver' => '次の承認者',
         'request_approval' => '承認申請',
+        'return_reason_placeholder' => '理由を入力してください...',
+        'optional_comment' => '（任意）',
 
     ],
     'view_details' => '詳細確認', // 承認待ちリスト用
