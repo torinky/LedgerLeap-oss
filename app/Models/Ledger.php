@@ -36,7 +36,7 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
-        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id',
+        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id','status', 'version'
     ];
 
     /**

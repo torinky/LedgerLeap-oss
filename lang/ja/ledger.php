@@ -470,7 +470,7 @@ return [
         'request_approval' => '承認申請',
         'return_reason_placeholder' => '理由を入力してください...',
         'optional_comment' => '（任意）',
-
+        'record_locked' => 'ロックされています',
     ],
     'view_details' => '詳細確認', // 承認待ちリスト用
 ];

@@ -9,7 +9,7 @@
         <div class="tooltip tooltip-right"
              data-tip="{{__('ledger.edit')}}"
         >
-            @if($canUpdate)
+            @if($canUpdate && !$ledgerRecord->isLocked())
                 <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
                    class="btn btn-neutral opacity-70 hover:opacity-100 btn-sm my-1 btn-square"
                    target="ledgerEdit_{{$ledgerRecord->define->id}}}}"
@@ -17,7 +17,8 @@
                     <i class="fas fa-pencil"></i>
                 </a>
             @else
-                <div class="tooltip tooltip-right" data-tip="{{__('ledger.no_edit_permission')}}">
+                <div class="tooltip tooltip-right"
+                     data-tip="{{ $ledgerRecord->isLocked() ? __('ledger.workflow.record_locked') : __('ledger.no_edit_permission') }}">
                     <button class="btn btn-neutral opacity-70 btn-sm my-1 btn-square" disabled>
                         <i class="fas fa-pencil"></i>
                     </button>
@@ -47,6 +48,15 @@
         @endif
     @endforeach
     {{--                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}--}}
+
+    {{-- ステータス表示セル (新規追加) --}}
+    <td class="border px-4 py-2 text-center">
+        @if ($ledgerRecord->status)
+            <x-mary-badge :value="$ledgerRecord->status->label()"
+                          class="badge-sm {{ $ledgerRecord->status->colorClass() }}"/>
+        @endif
+    </td>
+
     <td class="border px-4 py-2">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}
         <span
             class="text-gray-500">{{JpDatetime::date('(bk)',$ledgerRecord->updated_at->timestamp)}}</span>

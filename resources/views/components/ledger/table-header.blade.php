@@ -49,6 +49,15 @@
         </td>
     @endforeach
 
+    {{-- ステータス列ヘッダー追加 --}}
+    <th class="px-4 py-2 text-center bg-accent bg-opacity-30">
+        <span class="text-sm font-bold">{{ __('ledger.workflow.status.label') }}</span>
+        {{-- 必要ならソートボタン --}}
+        {{-- <button class="btn btn-xs" wire:click.self="$parent.sort('status')">...</button> --}}
+        {{-- 必要ならフィルタ (Select) --}}
+        {{-- <select wire:model.live="$parent.filterStatus" class="select select-xs ...">...</select> --}}
+    </th>
+
     <td class="px-4 py-2 text-center bg-accent bg-opacity-30">
         <span class="text-sm font-bold">
             {{__('ledger.updated_at')}}

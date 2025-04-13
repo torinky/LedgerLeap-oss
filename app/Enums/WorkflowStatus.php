@@ -13,7 +13,7 @@ enum WorkflowStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::DRAFT => __('ledger.workflow_status.draft'),
+            self::DRAFT => __('ledger.workflow.status.draft'),
             self::PENDING_INSPECTION => __('ledger.workflow.status.pending_inspection'),
             self::PENDING_APPROVAL => __('ledger.workflow.status.pending_approval'),
             self::APPROVED => __('ledger.workflow.status.approved'),
@@ -33,5 +33,13 @@ enum WorkflowStatus: string
             self::APPROVED => 'badge-success',  // 承認済みは成功色
             // default => 'badge-secondary', // 万が一の場合のデフォルト
         };
+    }
+
+    /**
+     * このステータスが承認済みかどうかを判定する
+     */
+    public function isApproved(): bool
+    {
+        return $this === self::APPROVED;
     }
 }

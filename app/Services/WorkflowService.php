@@ -278,11 +278,12 @@ class WorkflowService
 
             // 3. Ledger レコードに LedgerDiff の内容を反映
             $ledger->update([
+//                'id'=>$ledgerDiff->id,
                 'content' => $ledgerDiff->content,
                 // 注意: content_attached の反映ロジックが必要な場合がある
                 //       単純な上書きで良いか、マージが必要か？
                 //       ここでは単純な上書きを仮定
-                'content_attached' => $ledgerDiff->content_attached ?? [], // Diff になければ空配列
+//                'content_attached' => $ledgerDiff->content_attached ?? [], // Diff になければ空配列
                 'status' => WorkflowStatus::APPROVED, // Ledger のステータスも更新
                 'modifier_id' => $approverId, // Ledger の最終変更者も更新
                 'version' => $ledger->version + 1, // バージョンをインクリメント
