@@ -220,6 +220,7 @@ return [
     'save' => '保存する',
     'save_and_close' => '保存して閉じる',
     'save_and_return' => '保存して戻る',
+    'save_changes' => '上書きする',
     'search' => '検索する',
     'search_message' => 'スペース区切りでキーワードを検索',
     'search_synonym' => '同義語も検索',
@@ -409,7 +410,6 @@ return [
 
     'edit_profile_title' => 'プロフィールを変更する',
 
-
     // ナビゲーション
     'navigation' => [
         'my_portal' => 'マイポータル',
@@ -471,6 +471,12 @@ return [
         'return_reason_placeholder' => '理由を入力してください...',
         'optional_comment' => '（任意）',
         'record_locked' => 'ロックされています',
+        'cannot_edit_approved' => '承認済みのレコードは編集できません。',
+        'cannot_request_inspection_approved' => '承認済みのレコードの点検依頼はできません。',
+        'can_request_inspection_only_from_draft' => '点検依頼は作成中の状態からのみ可能です。',
+        'save_and_return_to_draft' => '保存して作成中に戻す',
+        'current_status' => '現在のステータス',
+
     ],
     'view_details' => '詳細確認', // 承認待ちリスト用
 ];

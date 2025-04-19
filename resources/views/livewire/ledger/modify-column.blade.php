@@ -83,54 +83,57 @@
                     </div>
                 @endforeach
             </div>
-            {{-- 変更: アクションボタンエリアをワークフロー対応に --}}
             <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
                 <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                    <div class="card-body p-4"> {{-- パディング調整 --}}
-                        <div class="flex flex-wrap items-center justify-center gap-4"> {{-- gap で間隔調整 --}}
+                    <div class="card-body p-4">
+                        <div class="flex flex-wrap items-center justify-center gap-4">
 
-                            {{-- 下書き保存ボタン (常に表示して良い) --}}
-                            <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
-                                           class="btn-secondary" wire:click.prevent="saveDraft" spinner="saveDraft"/>
+                            {{-- 保存ボタン (常に表示、クリック時のアクションは saveChanges) --}}
+                            {{-- 承認済み (isLocked) の場合は無効化 --}}
+                            <x-mary-button label="{{ __('ledger.save_changes') }}"
+                            icon="o-pencil"
+                                           class="btn-primary"
+                                           wire:click.prevent="saveChanges"
+                                           spinner="saveChanges"
+                                           :disabled="$ledgerRecord?->isLocked()" />
 
-                            {{-- 点検者選択 UI (ワークフロー開始時に表示) --}}
-                            {{-- ToDo: 現在のステータスが DRAFT の場合のみ表示する条件を追加 (ステップ3以降) --}}
-                            <div class="form-control w-full max-w-xs">
-                                <label class="label pb-0">
-                                    <span class="label-text">{{ __('ledger.workflow.next_inspector') }}</span>
-                                </label>
-                                <x-mary-select
-                                    label=""
-                                    wire:model.live="selectedInspectorId"
-                                    :options="$this->getInspectorOptions()"
-                                    placeholder="{{ __('ledger.workflow.select_inspector') }}"
-                                    class="select-sm"
+                            {{-- 点検者選択 UI (DRAFT 状態の場合に表示) --}}
+                            @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
+                                <div class="form-control w-full max-w-xs">
+                                    <label class="label pb-0">
+                                        <span class="label-text">{{ __('ledger.workflow.next_inspector') }}</span>
+                                    </label>
+                                    <x-mary-select
+                                        label=""
+                                        wire:model.live="selectedInspectorId"
+                                        :options="$this->getInspectorOptions()"
+                                        placeholder="{{ __('ledger.workflow.select_inspector') }}"
+                                        class="select-sm"
+                                    />
+                                    @error('selectedInspectorId') <span class="text-xs text-error">{{ $message }}</span> @enderror
+                                </div>
+
+                                {{-- 作成完了（点検依頼）ボタン (DRAFT 状態の場合に表示) --}}
+                                <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                               icon="o-paper-airplane"
+                                               class="btn-success" {{-- 色を変更 --}}
+                                               wire:click.prevent="requestInspection"
+                                               spinner="requestInspection"
+                                               :disabled="!$selectedInspectorId"
                                 />
-                                @error('selectedInspectorId') <span
-                                    class="text-xs text-error">{{ $message }}</span> @enderror
-                            </div>
-
-                            {{-- 作成完了（点検依頼）ボタン (ワークフロー開始時に表示) --}}
-                            {{-- ToDo: 現在のステータスが DRAFT の場合のみ表示する条件を追加 (ステップ3以降) --}}
-                            <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                           icon="o-paper-airplane"
-                                           class="btn-primary" wire:click.prevent="requestInspection"
-                                           spinner="requestInspection"
-                                           :disabled="!$selectedInspectorId"
-                            />
-
-                            {{-- 既存の削除ボタン (変更なし、位置調整は任意) --}}
-                            @if(isset($ledgerRecord->id))
-                                <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i
-                                        class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
                             @endif
 
-                            <x-ledger.close-window-button/> {{-- 既存の閉じるボタン --}}
+                            {{-- 既存の削除ボタン --}}
+                            @if ($ledgerRecord?->id && !$ledgerRecord?->isLocked()) {{-- 承認済みは削除も不可？ --}}
+                            <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
+                            @endif
+
+                            <x-ledger.close-window-button/>
 
                         </div>
                         {{-- 現在のステータス表示 --}}
                         <div class="text-center text-xs text-base-content/70 mt-2">
-                            現在のステータス: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
+                            {{ __('ledger.workflow.current_status') }} : {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
                         </div>
                     </div>
                 </div>
@@ -162,6 +165,23 @@
             --}}
 
         </x-mary-form>
+
+        {{-- 編集確認モーダル (新規追加) --}}
+        <x-mary-modal wire:model="confirmingEdit" title="{{ __('ledger.workflow.confirm_edit_while_pending_title') }}" persistent>
+            {{ __('ledger.workflow.confirm_edit_while_pending_text') }}
+
+            <div class="mt-4">
+                <x-mary-textarea label="{{ __('ledger.workflow.edit_reason_label') }}"
+                                 hint="{{ __('ledger.workflow.edit_reason_hint') }}"
+                                 wire:model="editReason" rows="3" />
+            </div>
+
+            <x-slot:actions>
+                <x-mary-button label="{{ __('Cancel') }}" @click="$wire.confirmingEdit = false" />
+                <x-mary-button label="{{ __('ledger.save_and_return_to_draft') }}" {{-- 新しい翻訳キー --}}
+                class="btn-warning" wire:click="saveChangesAndReturnToDraft" spinner="saveChangesAndReturnToDraft" />
+            </x-slot:actions>
+        </x-mary-modal>
 
         @if(isset($ledgerRecord->id))
             <input type="checkbox" id="delete-modal" class="modal-toggle"/>

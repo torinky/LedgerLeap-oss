@@ -219,53 +219,54 @@
 
 ---
 
-### ステップ 3: Ledgerテーブルへの下書き/フロー中データ保存（方針D実装）(Next)
+### ステップ 3: `LedgerDiff` の `content` 重複削減と編集時挙動の実装 (Next)
 
-*   **目的:** ワークフローのどの段階でも、**`Ledgers` テーブルに常に最新のデータ (`content`, `content_attached`) を保存する**ように変更し、リストや詳細表示のロジックを簡素化する。
+*   **目的:** **ステータス変更のみのアクション (`requestApproval`, `approve`, `returnToDraft`) で `LedgerDiff` を作成/更新する際に、`content`, `content_attached`, `column_define` を NULL (または空文字列) として記録**するように変更する。承認フロー中の編集でステータスが `DRAFT` に戻る挙動を実装する。
 *   **タスク:**
-    1.  **`WorkflowService::saveDraft` 修正:** `LedgerDiff` 作成と**同時に**、`Ledger` レコードの `content`, `content_attached`, `modifier_id`, `version` を**常に更新**するように変更。`status` は `DRAFT`。
-    2.  **`WorkflowService::requestInspection` 修正:** `LedgerDiff` 作成と**同時に**、`Ledger` レコードの `content`, `content_attached`, `modifier_id`, `version` を**更新**。`status` は `PENDING_INSPECTION`。
-    3.  **`WorkflowService::requestApproval` 修正:** `LedgerDiff` 更新と**同時に**、`Ledger` レコードの `content`, `content_attached`, `modifier_id`, `version` を**更新**。`status` は `PENDING_APPROVAL`。
-    4.  **`WorkflowService::approve` 修正:** `LedgerDiff` 更新後、`Ledger` レコードの `status` を `APPROVED` に、`version` をインクリメントする**だけで良い**（`content` 等は既に最新のはず）。
-    5.  **`WorkflowService::returnToDraft` 修正:** `LedgerDiff` 更新と**同時に**、`Ledger` レコードの `status` を `DRAFT` に更新。
-    6.  **(新規タスク) 編集によるステータス巻き戻し処理 (`WorkflowService` / `ModifyColumn`):**
-        *   UI: 編集時の警告ダイアログ、理由入力(任意)。
-        *   ロジック: 保存時に警告・理由入力後、**新規 `LedgerDiff` を作成**。**`Ledger` の `status` を `DRAFT` に、`content`, `content_attached`, `version` 等も更新**。カウンター調整呼び出しポイント、通知トリガーをコメントで明記。
-    7.  **リスト表示/詳細表示のロジック簡素化:** `RecordsTable` や `ledger.show` (想定) で、常に `Ledger` モデルの `content`, `content_attached` を参照するように修正（`latestDiff` を見る必要がなくなる）。ステータスバッジ表示と行スタイル変更は維持。
-    8.  **`APPROVED` レコードのロック実装:** `Ledger.status === APPROVED` の場合に編集不可とする処理を `ModifyColumn` などに追加（ステップ2で実施済みか再確認）。
+    1.  **マイグレーション変更・実行:** `ledger_diffs` テーブルの `content`, `content_attached`, `column_define` カラムを **nullable** に変更する (またはデフォルト値を設定)。
+    2.  **`WorkflowService` 修正 (重要):**
+        *   `requestApproval` (点検完了時): **新規 `LedgerDiff` を作成**するが、`content` 等は **NULL** (または空) に設定。`status`, `approver_id`, `inspected_at` 等を記録。`Ledger.status` を `PENDING_APPROVAL` に更新。
+        *   `approve` (承認時): **新規 `LedgerDiff` を作成**するが、`content` 等は **NULL** (または空)。`status='APPROVED'`, `approved_at` 等を記録。**最新の content を持つ `LedgerDiff` を特定し、その内容を `Ledger` に反映** (`content`, `version` 更新)。`Ledger.status` を `APPROVED` に更新。
+        *   `returnToDraft` (作成中に戻す時): **新規 `LedgerDiff` を作成**するが、`content` 等は **NULL** (または空)。`status='DRAFT'`, `comments`, `returned_at` 等を記録。`Ledger.status` を `DRAFT` に更新。
+        *   **(新規) `saveEditedRecord` (仮名 - 編集によるDRAFT戻し処理):**
+            *   **新規 `LedgerDiff` を作成し、編集後の `content` 等を記録**。`status='DRAFT'`, `comments` (理由) 等を記録。
+            *   `Ledger.status` を `DRAFT` に更新。
+            *   カウンター調整、通知トリガー呼び出しポイント明記。
+    3.  **UI変更 (`ModifyColumn`):** 編集時の警告ダイアログ、理由入力フィールド（任意）追加。保存ボタンの `wire:click` は新しい `saveEditedRecord` (またはそのトリガーとなるメソッド) を呼び出すように変更。
+    4.  **`APPROVED` レコードのロック実装確認。**
+    5.  **履歴表示ロジック検討 (将来):** 特定時点の内容表示には、`content` が NULL/空でない直近の `LedgerDiff` を遡って参照する必要があることを念頭に置く。
 *   **動作確認:**
-    *   下書き保存、点検依頼、承認申請、承認、ステータス戻し、編集中保存の各操作で、`Ledger` テーブルの `content`, `status`, `version` 等が常に最新の状態に更新されることを確認。
-    *   台帳リストや詳細画面で、どのステータスでも最新の内容が表示されることを確認。
-    *   承認済みレコードがロックされていることを確認。
-*   **ドキュメント更新:** 「機能詳細」セクション全体を方針Dに合わせて修正。「関連ファイル」の `Ledger` の役割を更新。
+    *   点検完了、承認、作成中に戻すアクションでは、`LedgerDiff` に `content` なしのレコードが作成されること。
+    *   下書き保存、編集DRAFT戻し時には `LedgerDiff` に `content` が記録されること。
+    *   承認時に `Ledger` に正しい内容が反映されること。
+    *   フロー中編集で警告が表示され、保存すると `DRAFT` に戻り、新しい `LedgerDiff` (content有) が作成されること。
+*   **ドキュメント更新:** 「機能詳細」の各アクションにおける `LedgerDiff` の記録内容 (`content` が NULL/空かどうか) を修正。「関連ファイル」のモデル定義を修正。履歴参照の注意点を追記。
 
 ---
 
-### ステップ 4: Activity Log によるプロセス履歴記録
+### ステップ 4: リスト/詳細表示での最新内容表示 (旧ステップ2-Dの一部)
 
-*   **目的:** ワークフローの各アクション（申請、完了、承認、戻し、編集）の履歴を Activity Log に記録し、後から追跡できるようにする。
+*   **目的:** 台帳リストと詳細画面で、ワークフロー中でも常に最新の内容が表示されるようにする。
 *   **タスク:**
-    1.  **`LedgerDiff` モデルへの設定:** `LogsActivity` Trait、`getActivitylogOptions()` を設定し、ログ対象に `status`, `inspector_id`, `approver_id`, `comments` 等を含める。
-    2.  **`WorkflowService` でのカスタムイベント記録:** 各アクションメソッド (`requestInspection`, `requestApproval`, `approve`, `returnToDraft`, および編集時保存処理) の最後で、`activity()->performedOn($ledgerDiff)->causedBy($user)->withProperties([...])->log('イベント名')` を使ってカスタムログを記録する。`properties` には理由コメントや次の担当者IDなど、必要な情報を格納する。
-    3.  **履歴表示 UI:** 台帳詳細画面や変更履歴画面で、`$ledgerDiff->activities` (または `$ledger->activities`?) を取得し、記録されたイベント、実行者、日時、プロパティ（コメント等）を時系列で表示する UI を作成する。
+    1.  **モデル変更 (`Ledger`):** `latestDiff()` リレーションを確実に定義する。
+    2.  **リスト表示ロジック (`RecordsTable`):** `Ledger` 取得時に `with('latestDiff')` で Eager Load する。
+    3.  **リスト表示ビュー (`table-row.blade.php`):** `Ledger.status` が `APPROVED` でない場合、`$ledgerRecord->latestDiff->content` を参照して内容を表示するように修正 (`ColumnHtmlService` に渡すデータを変更)。
+    4.  **詳細表示画面 (`ledger.show` - 未実装想定):** 同様に、ステータスに応じて `$ledgerRecord->content` または `$ledgerRecord->latestDiff->content` を表示するように実装。
 *   **動作確認:**
-    *   各ワークフローアクションを実行した際に、対応する Activity Log が `LedgerDiff` (または `Ledger`) に紐づいて記録されることを確認。
-    *   履歴表示 UI でプロセス履歴が正しく表示されることを確認。
-*   **ドキュメント更新:** 「証跡の確保」「ワークフローステータスと履歴」「関連ファイル」セクションを Activity Log 活用方針に更新。
+    *   台帳リストで、下書きや承認待ちのレコードでも最新の内容が表示されること。
+    *   詳細画面（もしあれば）でも同様に最新内容が表示されること。
+*   **ドキュメント更新:** 「機能詳細(リスト表示)」を修正。
 
 ---
 
 ### ステップ 5: ワークフロー有効化制御と定義変更制限 (旧ステップ2.1)
 
 *   **目的:** 台帳定義の設定に基づきワークフローの有効/無効を制御し、ワークフロー進行中の定義変更を制限する。
-*   **タスク:**
-    1.  **ワークフロー有効/無効分岐処理:** `CreateColumn`/`ModifyColumn` で `LedgerDefine.workflow_enabled` をチェックし、UI（表示ボタン）と保存時の処理（ワークフロー経由か直接保存か）を分岐させる。
-    2.  **直接保存ロジック:** ワークフロー無効時の「保存」ボタンクリック時に、直接 `Ledger` レコードを作成/更新する処理を実装（`LedgerDiff` や Activity Log は記録しない）。`Ledger.status` は常に `APPROVED` とする。
-    3.  **台帳定義変更制限:** `LedgerDefineResource` (Filament) の保存・削除処理前フック等で、関連する `Ledger` の `status` が `PENDING_INSPECTION` または `PENDING_APPROVAL` でないかチェックし、存在する場合は変更/削除をブロックするロジックを追加。
-*   **動作確認:**
-    *   ワークフロー有効/無効設定に応じたUI・保存動作の分岐。
-    *   ワークフロー無効時は直接保存され、ステータスが `APPROVED` になること。
-    *   ワークフロー進行中に台帳定義の列構成を変更しようとするとエラーになること。
+*   **タスク:** (変更なし)
+    1.  ワークフロー有効/無効分岐処理 (`CreateColumn`/`ModifyColumn`)。
+    2.  直接保存ロジック（WF無効時）。
+    3.  台帳定義変更制限 (`LedgerDefineResource`)。
+*   **動作確認:** (変更なし)
 *   **ドキュメント更新:** 「機能詳細(ワークフロー有効化設定、台帳定義変更制限)」「関連ファイル」更新。
 
 ---
@@ -273,42 +274,41 @@
 ### ステップ 6: 通知機能の実装 (旧ステップ4)
 
 *   **目的:** ワークフローに関連する通知（集約・個別）を実装する。
-*   **タスク:**
-    1.  `notification_types` テーブルにレコード追加。
-    2.  Filament UI 更新 (`NotificationSettingsRelationManager`)。
-    3.  未処理カウンター実装（DB or Cache）。`WorkflowService` (またはイベントリスナー/Observer) で増減処理。
-    4.  `NotificationService` 拡張（ワークフロー用通知メソッド、設定確認ロジック。Activity Log イベントをリッスンして通知をトリガーすることも検討）。
-    5.  集約通知コマンド作成 (`SendWorkflowSummaryNotification`) と Kernel 登録。
-    6.  システム内通知 UI 実装（ヘッダーバッジ、マイポータル表示）。
+*   **タスク:** (大きな変更なし)
+    1.  `notification_types` レコード追加。
+    2.  Filament UI 更新。
+    3.  未処理カウンター実装。`WorkflowService` で増減処理。
+    4.  `NotificationService` 拡張。
+    5.  集約通知コマンド作成・登録。
+    6.  システム内通知 UI 実装。
     7.  (オプション) ブラウザ通知実装。
-*   **動作確認:** カウンター増減、各種通知送信、通知設定反映を確認。
-*   **ドキュメント更新:** 通知関連セクション更新。トリガー（イベント/サービス呼び出し/リスナー）について追記。
+*   **動作確認:** (変更なし)
+*   **ドキュメント更新:** 通知関連セクション更新。
 
 ---
 
 ### ステップ 7: 柔軟な承認ルート機能の実装 (旧ステップ5)
 
-*   **目的:** 承認者/点検者をより柔軟に設定できるようにする。担当者情報を Activity Log に記録。
+*   **目的:** 承認者/点検者をより柔軟に設定できるようにする。担当者情報を `LedgerDiff` に記録。
 *   **タスク:**
     1.  (オプション) 推奨担当者設定機能。
     2.  担当者選択 UI 改善（ロール指定含む）。
-    3.  ロジック実装（選択された担当者情報を Activity Log の properties に記録。ロール指定時の処理調整 - 担当者特定方法）。
-    4.  承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正: `Ledger.status` と 最新の関連 Activity Log (`inspection_requested`, `inspection_completed`) を参照して担当者を特定し、リストを取得するように変更。
-*   **動作確認:** 推奨担当者表示、担当者変更、ロール指定時の動作（リスト表示、通知など）を確認。
+    3.  ロジック実装（選択された担当者情報を `LedgerDiff` の `inspector_id`/`approver_id` (またはロールID用カラム) に記録）。
+    4.  **承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正:** **`LedgerDiff` テーブルの最新レコード**（ステータスと担当者IDを持つ）を参照してリストを取得するように変更。
+*   **動作確認:** 推奨担当者表示、担当者変更、ロール指定時の動作を確認。
 *   **ドキュメント更新:** 「柔軟な承認ルート」セクション更新。担当者情報の記録場所とリスト取得方法について追記。
 
 ---
 ## 今後の展望 / 要検討事項
 *   **要検討事項:**
-    *   ~~新規作成時の `Ledger` レコードの扱い~~ → **方針D (`DRAFT` で作成し、常に最新データを反映) で確定。**
     *   承認済み (`APPROVED`) レコードの変更・編集解除プロセス。
     *   ロール指定承認の詳細な挙動。
     *   担当者選択 UI のコンポーネント選定。
     *   通知カウンターの実装方法。
     *   ブラウザ通知の実装方針。
     *   点検ステップが不要な場合のワークフロー。
-    *   **Activity Log のパフォーマンス:** 特に履歴表示、担当者特定クエリ。
-    *   ~~担当者情報の保持場所~~ → **Activity Log の properties を主とする方針。** (ただし、リスト取得効率化のために `Ledger` に最新担当者を冗長的に持つことも検討可)
+    *   **履歴表示機能:** `LedgerDiff` を遡って NULL/空でない content を探すロジックのパフォーマンスと実装方法。
+    *   **Activity Log の活用:** 補助的な履歴記録として活用するかどうか再検討。
 *   ファイルアップロード等へのワークフロー適用。
 *   承認ルートの高度化。
 *   期限と督促機能。
