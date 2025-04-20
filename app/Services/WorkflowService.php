@@ -8,83 +8,96 @@ use App\Models\LedgerDiff;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-
-// Log ファサードを use
 
 class WorkflowService
 {
     /**
      * 下書きを保存する
-     * Ledger と LedgerDiff を作成/更新し、Ledger に最新データを反映する
+     * 新しい LedgerDiff (Content有り) を作成し、Ledger も更新する
      *
-     * @param  array|Collection  $columnDefine
+     * @param int|null $ledgerId 既存レコードID (新規なら null)
+     * @param int $ledgerDefineId
+     * @param array $content フォームの入力内容
+     * @param array $contentAttached 添付ファイルの検索用インデックス
+     * @param int $modifierId 操作者ID
      * @return array{ledger: Ledger, ledgerDiff: LedgerDiff}
-     *
      * @throws Throwable
      */
     public function saveDraft(
-        ?int $ledgerId,
-        int $ledgerDefineId,
+        ?int  $ledgerId,
+        int   $ledgerDefineId,
         array $content,
-        $columnDefine,
-        int $modifierId
-    ): array {
-        return DB::transaction(function () use (&$ledgerId, $ledgerDefineId, $content, $columnDefine, $modifierId) {
+        array $contentAttached,
+        int   $modifierId
+    ): array
+    {
+        // ToDo: 権限チェック (modifierId が下書き保存できるか？)
+
+        return DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $modifierId) {
             $ledger = null;
-            $currentVersion = 0;
+            $isNewLedger = false;
 
             if ($ledgerId) {
                 $ledger = Ledger::findOrFail($ledgerId);
-                $currentVersion = $ledger->version;
+                // 承認済みなら編集できない
+                if ($ledger->isLocked()) {
+                    throw new Exception("Cannot save draft for an approved record.");
+                }
             } else {
+                $isNewLedger = true;
                 $ledger = Ledger::create([
                     'ledger_define_id' => $ledgerDefineId,
                     'creator_id' => $modifierId,
                     'modifier_id' => $modifierId,
                     'status' => WorkflowStatus::DRAFT,
-                    'content' => $content, // <<<--- 新規作成時もコンテンツを保存
-                    'content_attached' => $content['content_attached'] ?? [], // <<<--- 添付情報も保存
+                    'content' => $content, // 新規作成時から content を保存
+                    'content_attached' => $contentAttached ?? [],
                     'version' => 1,
                 ]);
                 $ledgerId = $ledger->id;
-                $currentVersion = 1; // 新規作成時はバージョン1
             }
+            $columnDefine = $ledger->define->column_define;
 
-            // LedgerDiff のデータ
+            // LedgerDiff (データスナップショット) を作成
             $diffData = [
                 'ledger_id' => $ledgerId,
                 'content' => $content,
+//                'content_attached' => $content['content_attached'] ?? [], // <<<--- 内容を記録
                 'column_define' => $columnDefine,
                 'ledger_define_id' => $ledgerDefineId,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
-                'status' => WorkflowStatus::DRAFT, // Diff のステータスは操作時点のもの
-                'inspector_id' => null,
-                'approver_id' => null,
-                'requested_at' => null,
-                'inspected_at' => null,
-                'approved_at' => null,
-                'returned_at' => null,
-                'comments' => null,
+                'status' => WorkflowStatus::DRAFT, // この Diff 作成時のステータス
+                // 他のワークフローカラムは NULL
+                'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
+                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
-            // Ledger を更新 (ステータス、コンテンツ、バージョンなど)
-            if (! $ledger->wasRecentlyCreated) { // 既存レコードの場合のみ更新
+            // Ledger を更新 (content, modifier, status 等)
+            if (!$isNewLedger) {
                 $ledger->update([
                     'content' => $content,
-                    'content_attached' => $content['content_attached'] ?? [],
-                    'status' => WorkflowStatus::DRAFT,
+                    'content_attached' => $contentAttached ?? [],
+                    'status' => WorkflowStatus::DRAFT, // 念のため DRAFT に
                     'modifier_id' => $modifierId,
-                    'version' => $currentVersion,
+                    // 'version' => $ledger->version, // 下書き保存ではバージョン上げない
+                    'latest_diff_id' => $ledgerDiff->id, // 最新Diff ID を更新
+                    // 日時や担当者IDはクリア
+                    /*                    'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
+                                        'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,*/
                 ]);
             } else {
-                // 新規作成時は create で既にセットされている
+                // 新規作成時は latest_diff_id をセット
+//                $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
             }
 
+            // Activity Log 記録 (ステップ4)
+            /* activity()->performedOn($ledger)->causedBy(User::find($modifierId))->log('draft_saved'); */
             Log::info("Draft saved for Ledger ID: {$ledgerId}, Diff ID: {$ledgerDiff->id}");
 
             return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $ledgerDiff];
@@ -93,357 +106,359 @@ class WorkflowService
 
     /**
      * 点検依頼を処理する
-     * Ledger のステータスを更新し、新しい LedgerDiff を作成する。
-     * 前提：対応する Ledger レコードは既に存在する (saveDraft で作成済み)。
+     * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param  int  $ledgerId  対象の Ledger ID (必須)
-     * @param  array  $currentContent  現在のフォームの内容 (最新のスナップショット用)
-     * @param  array|\Illuminate\Support\Collection  $currentColumnDefine  現在の台帳定義
-     * @param  int  $requesterId  申請者ID
-     * @param  int  $inspectorId  点検者ID
-     * @return array{ledger: Ledger, ledgerDiff: LedgerDiff}
-     *
+     * @param int $ledgerId 台帳レコードID
+     * @param int $requesterId 点検依頼を行った User ID
+     * @param int $inspectorId 次の担当者 User ID
+     * @return Ledger 更新後の Ledger
      * @throws Throwable
      */
-    public function requestInspection(
-        int $ledgerId, // <<<--- Nullable を解除し必須に
-        array $currentContent,
-        $currentColumnDefine,
-        int $requesterId,
-        int $inspectorId
-    ): array {
-        // ToDo: 権限チェック (申請者がこの操作を行えるか)
+    public function requestInspection(int $ledgerId, int $requesterId, int $inspectorId): Ledger
+    {
+        // ToDo: 権限チェック (requesterId が点検依頼できるか？)
 
         return DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId) {
-            // 1. 対象の Ledger を取得 (findOrFail で存在確認)
-            $ledger = Ledger::findOrFail($ledgerId);
-
-            // 2. 現在のステータスチェック (DRAFT からのみ申請可能とする)
+            $ledger = Ledger::findOrFail($ledgerId)->orderBy('created_at', 'desc')->first();
             if ($ledger->status !== WorkflowStatus::DRAFT) {
-                Log::warning("Inspection request for non-draft ledger. Ledger ID: {$ledgerId}, Status: {$ledger->status->value}");
-                throw new \Exception('Inspection can only be requested from Draft status.');
+                throw new Exception("Inspection can only be requested from Draft status.");
             }
 
-            // 3. 新しい LedgerDiff を作成 (点検依頼時点のスナップショット)
+            // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
                 'ledger_id' => $ledgerId,
-                'content' => [],
-                //                'content_attached' => $currentContent['content_attached'] ?? [], // <<<--- 最新の attached を保存
-                'column_define' => [],
+                'content' => '',
+//                'content_attached' => null,
+                'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
-                'modifier_id' => $requesterId, // 今回の操作者
-                'status' => WorkflowStatus::PENDING_INSPECTION, // Diff のステータス
-                'inspector_id' => $inspectorId,
+                'modifier_id' => $requesterId,
+                'status' => WorkflowStatus::PENDING_INSPECTION, // このアクション時点のステータス
+                'inspector_id' => $inspectorId, // 次の担当者
                 'approver_id' => null,
-                'requested_at' => now(), // 申請日時
-                // inspected_at, approved_at, returned_at, comments は null
+                'requested_at' => now(),
+                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
-            // 4. Ledger のステータスと modifier を更新
+            // Ledger のステータスと担当者、最新Diff ID を更新
             $ledger->update([
                 'status' => WorkflowStatus::PENDING_INSPECTION,
+//                'inspector_id' => $inspectorId,
+//                'approver_id' => null, // クリア
+//                'requested_at' => now(), // Ledger にも記録
                 'modifier_id' => $requesterId,
-                // content, version はこの時点では更新しない (承認時に更新)
+//                'latest_diff_id' => $ledgerDiff->id, // 最新の Diff ID
+                // 日時クリア
+//                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
             ]);
+//            dd($ledger, $ledger->refresh(), $ledgerDiff->id);
 
-            // 5. ToDo: 点検者の未処理カウンターをインクリメント
-            $this->incrementPendingTaskCount($inspectorId, 'inspection'); // type を指定
-
-            // 6. ToDo: 関連イベントを発行 (通知用)
+            // ToDo: カウンター更新 (点検者+)
+            $this->incrementPendingTaskCount($inspectorId, 'inspection');
+            // ToDo: イベント発行
             // event(new InspectionRequested($ledgerDiff));
+            // ToDo: Activity Log 記録 (ステップ4)
+            Log::info("Inspection requested for Ledger ID: {$ledgerId}. Inspector: {$inspectorId}. Diff ID: {$ledgerDiff->id}");
 
-            Log::info("Inspection requested for Ledger ID: {$ledgerId}, Diff ID: {$ledgerDiff->id}");
-
-            return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $ledgerDiff];
-        });
-    }
-
-    /**
-     * 点検完了・承認申請を処理する
-     * Ledger のステータスを更新し、Activity Log に記録する (LedgerDiff は更新しない)
-     *
-     * @param  LedgerDiff  $latestDiff  最新の LedgerDiff (承認対象のデータを含む)
-     * @return Ledger 更新後の Ledger オブジェクト
-     *
-     * @throws Throwable
-     */
-    public function requestApproval(LedgerDiff $latestDiff, int $approverId, int $inspectorId): Ledger
-    {
-        // 点検完了時の LedgerDiff は最新のはず
-        $ledger = $latestDiff->ledger()->firstOrFail();
-
-        // 権限チェック
-        if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION) {
-            throw new Exception('Invalid status for requesting approval.');
-        }
-        // ここでは LedgerDiff の inspector_id を見るのではなく、最新のプロセス履歴(Activity Log)で担当者を確認するのがより正確
-        // $latestLog = Activity::where('subject_type', LedgerDiff::class)->where('subject_id', $latestDiff->id)->where('event', 'inspection_requested')->latest()->first();
-        // if(!$latestLog || $latestLog->properties->get('next_inspector_id') !== $inspectorId) { ... }
-        // 今回は簡易的に LedgerDiff の inspector_id を使う
-        if ($latestDiff->inspector_id !== $inspectorId) {
-            throw new Exception('User not authorized for this inspection.');
-        }
-
-        return DB::transaction(function () use ($ledger, $latestDiff, $approverId, $inspectorId) {
-            // LedgerDiff のデータ (content 等は NULL)
-            $diffData = [
-                'ledger_id' => $ledger->id,
-                'content' => [], // <<<--- NULL
-                //                'content_attached' => null, // <<<--- NULL
-                'column_define' => [], // <<<--- NULL
-                'ledger_define_id' => $ledger->ledger_define_id,
-                'creator_id' => $ledger->creator_id,
-                'modifier_id' => $inspectorId, // 今回の操作者
-                'status' => WorkflowStatus::PENDING_APPROVAL, // Diff のステータス
-                'inspector_id' => $inspectorId, // 完了した点検者
-                'approver_id' => $approverId, // 次の承認者
-                'requested_at' => $latestDiff->requested_at, // 前の依頼日時を引き継ぐ？ or null?
-                'inspected_at' => now(), // 点検完了日時
-                'approved_at' => null,
-                'returned_at' => null,
-                'comments' => null, // 点検完了コメントは不要？
-            ];
-            $newLedgerDiff = LedgerDiff::create($diffData);
-
-            // Ledger のステータスを更新
-            $ledger->update([
-                'status' => WorkflowStatus::PENDING_APPROVAL,
-                'modifier_id' => $inspectorId, // 今回の操作者
-            ]);
-
-            Log::info("Inspection completed, approval requested for Ledger ID: {$ledger->id}. Diff ID: {$newLedgerDiff->id}");
-
-            // Activity Log に記録 (ステップ4で実装)
-            /*
-            activity()
-               ->performedOn($latestDiff) // ログの対象は最新の Diff
-               ->causedBy(User::find($inspectorId))
-               ->withProperties(['next_approver_id' => $approverId, 'comments' => '点検完了']) // 次の担当者情報など
-               ->log('inspection_completed');
-            */
-            Log::info("Inspection completed, approval requested for Ledger ID: {$ledger->id}. Next approver: {$approverId}");
-
-            // ToDo: 点検者のカウンターをデクリメント
-            $this->decrementPendingTaskCount($inspectorId, 'inspection');
-            // ToDo: 承認者のカウンターをインクリメント
-            $this->incrementPendingTaskCount($approverId, 'approval'); // type を変える
-
-            // ToDo: 関連イベントを発行 (通知用)
-            // event(new ApprovalRequested($latestDiff));
-
-            return $ledger->refresh(); // 更新後の Ledger を返す
-        });
-    }
-
-    /**
-     * 承認処理を行う
-     * Ledger のステータスを更新し、バージョンを上げる。Activity Log に記録。
-     *
-     * @param  LedgerDiff  $latestDiff  最新の LedgerDiff
-     * @return Ledger 更新後の Ledger オブジェクト
-     *
-     * @throws Throwable
-     */
-    public function approve(LedgerDiff $latestDiff, int $approverId): Ledger
-    {
-        $ledger = $latestDiff->ledger()->firstOrFail();
-
-        // 権限チェック
-        if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL) {
-            throw new Exception('Invalid status for approving.');
-        }
-        // Activity Log で担当者確認 or LedgerDiff で確認 (今回は LedgerDiff)
-        if ($latestDiff->approver_id !== $approverId) {
-            throw new Exception('User not authorized for this approval.');
-        }
-
-        return DB::transaction(function () use ($ledger, $approverId) {
-            // Ledger を更新
-            $ledger->update([
-                'status' => WorkflowStatus::APPROVED,
-                'modifier_id' => $approverId,
-                'version' => $ledger->version + 1, // バージョンインクリメント
-                // content, content_attached は最新のはずなので更新不要
-            ]);
-
-            // Activity Log に記録 (ステップ4で実装)
-            /*
-            activity()
-               ->performedOn($latestDiff)
-               ->causedBy(User::find($approverId))
-               ->log('approved');
-            */
-            Log::info("Ledger approved for Ledger ID: {$ledger->id}");
-
-            // ToDo: 承認者のカウンターをデクリメント
-            $this->decrementPendingTaskCount($approverId, 'approval');
-
-            // ToDo: 関連イベントを発行 (通知用)
-            // event(new ApprovalCompleted($latestDiff));
 
             return $ledger->refresh();
         });
     }
 
     /**
-     * ステータスを DRAFT に戻す (差し戻し相当 or 編集中保存)
-     * 新しい LedgerDiff を作成し、Ledger のステータス、内容、バージョン等を更新。Activity Log に記録。
+     * 点検完了・承認申請を処理する
+     * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param  Ledger  $ledger  対象の Ledger
-     * @param  array  $newContent  編集後の内容
-     * @param  int  $modifierId  操作を実行したユーザーID
-     * @param  string|null  $comments  理由コメント (任意)
-     * @param  string  $logEvent  Activity Log に記録するイベント名
-     * @return array{ledger: Ledger, ledgerDiff: LedgerDiff}
-     *
+     * @param int $ledgerId
+     * @param int $approverId 次の承認者 ID
+     * @param int $inspectorId 点検操作を行った User ID
+     * @return Ledger 更新後の Ledger
      * @throws Throwable
      */
-    public function returnToDraft(
-        Ledger $ledger,
-        array $newContent,
-        int $modifierId,
-        ?string $comments,
-        string $logEvent = 'returned_to_draft' // or 'edited_while_pending'
-    ): array {
-        // 権限チェック (編集権限があるか、$ledger->isLocked() でないか等)
-        if ($ledger->isLocked()) {
-            throw new Exception('Cannot modify an approved record.');
-        }
-        // ToDo: modifierId が編集権限を持っているかチェック
+    public function requestApproval(int $ledgerId, int $approverId, int $inspectorId): Ledger
+    {
+        // ToDo: 権限チェック (inspectorId が点検を完了できるか？)
 
-        return DB::transaction(function () use ($ledger, $modifierId, $comments, $logEvent) {
-
-            $currentStatus = $ledger->status; // 戻す前のステータス
-
-            // 1. 新しい LedgerDiff を作成 (content 等は NULL)
-            $diffData = [
-                'ledger_id' => $ledger->id,
-                'content' => [],
-                //                    'content_attached' => null, // <<<--- NULL
-                'column_define' => [], // <<<--- NULL
-                'ledger_define_id' => $ledger->ledger_define_id,
-                'creator_id' => $ledger->creator_id,
-                'modifier_id' => $modifierId,
-                'status' => WorkflowStatus::DRAFT, // Diff のステータス
-                'comments' => $comments,
-                'returned_at' => now(), // 戻された日時
-                // 他のワークフローカラムはクリア
-                'inspector_id' => null,
-                'approver_id' => null,
-                'requested_at' => null,
-                'inspected_at' => null,
-                'approved_at' => null,
-            ];
-            $newLedgerDiff = LedgerDiff::create($diffData);
-
-            // 2. Ledger を更新
-            $ledger->update([
-                'status' => WorkflowStatus::DRAFT,
-                'modifier_id' => $modifierId,
-                // content, version は変更しない
-            ]);
-
-
-            // 3. Activity Log に記録 (ステップ4で実装)
-            /*
-            activity()
-               ->performedOn($newLedgerDiff) // 新しい Diff を対象に
-               ->causedBy(User::find($modifierId))
-               ->withProperties(['comments' => $comments, 'previous_status' => $currentStatus->value])
-               ->log($logEvent);
-            */
-            Log::info("Ledger ID: {$ledger->id} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$newLedgerDiff->id}. Event: {$logEvent}");
-
-            // 4. ToDo: カウンター調整 (もし PENDING 状態から戻した場合)
-            if (in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
-                $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
-                // 最新の Diff または Activity Log から担当者 ID を取得する必要がある
-                $latestDiffBeforeReturn = LedgerDiff::where('ledger_id', $ledger->id)
-                    ->where('id', '!=', $newLedgerDiff->id) // 今回作成したものは除く
-                    ->latest('id')->first();
-                $handlerId = ($taskType === 'inspection') ? $latestDiffBeforeReturn?->inspector_id : $latestDiffBeforeReturn?->approver_id;
-                if ($handlerId) {
-                    $this->decrementPendingTaskCount($handlerId, $taskType);
-                }
+        return DB::transaction(function () use ($ledgerId, $approverId, $inspectorId) {
+            $ledger = Ledger::findOrFail($ledgerId)->orderBy('created_at', 'desc')->first();
+//            $ledgerDiff = LedgerDiff::where('ledger_id', $ledgerId)->latest('id')->first();
+            $ledgerDiff = $ledger->latestDiff()->first();
+//            dd($ledger, $ledger->status, WorkflowStatus::PENDING_INSPECTION, $ledger->inspector_id, $inspectorId);
+            if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
+                throw new Exception("User not authorized or invalid status for requesting approval.");
             }
 
-            // 5. ToDo: 関連イベント発行 (通知用)
-            // event(new StatusReturnedToDraft($newLedgerDiff, $comments));
+            // LedgerDiff を作成 (content 等は NULL)
+            $diffData = [
+                'ledger_id' => $ledgerId,
+                'content' => '',
+//                'content_attached' => null,
+                'column_define' => '',
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $inspectorId,
+                'status' => WorkflowStatus::PENDING_APPROVAL, // このアクション時点のステータス
+                'inspector_id' => $inspectorId, // 点検完了者
+                'approver_id' => $approverId, // 次の承認者
+                'requested_at' => $ledgerDiff->requested_at,
+                'inspected_at' => now(), // 点検完了日時
+                'approved_at' => null, 'returned_at' => null, 'comments' => null,
+            ];
+            $ledgerDiff = LedgerDiff::create($diffData);
 
-            return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $newLedgerDiff];
+
+            // Ledger のステータスと担当者、最新Diff ID を更新
+            $ledger->update([
+                'status' => WorkflowStatus::PENDING_APPROVAL,
+//                'approver_id' => $approverId,
+//                'inspected_at' => now(), // Ledger にも記録
+                'modifier_id' => $inspectorId,
+//                'latest_diff_id' => $ledgerDiff->id,
+                // approved_at, returned_at, comments はクリア
+//                'approved_at' => null, 'returned_at' => null, 'comments' => null,
+            ]);
+
+            // ToDo: カウンター更新 (点検者-, 承認者+)
+            $this->decrementPendingTaskCount($inspectorId, 'inspection');
+            $this->incrementPendingTaskCount($approverId, 'approval');
+            // ToDo: イベント発行
+            // event(new ApprovalRequested($ledgerDiff));
+            // ToDo: Activity Log 記録 (ステップ4)
+            Log::info("Inspection completed, approval requested for Ledger ID: {$ledgerId}. Approver: {$approverId}. Diff ID: {$ledgerDiff->id}");
+
+            return $ledger->refresh();
         });
     }
 
     /**
-     * 編集による DRAFT 戻し処理
-     * 新しい LedgerDiff を作成し、content 等を記録。Ledger も更新。
+     * 承認処理を行う
+     * 新しい LedgerDiff (Content無し) を作成し、Ledger を承認済みに更新し内容を反映
+     *
+     * @param int $ledgerId
+     * @param int $approverId
+     * @return Ledger 更新後の Ledger
+     * @throws Throwable
      */
-    public function saveEditedRecord(
-        Ledger $ledger,
-        array $newContent,
-               $columnDefine, // 編集時の ColumnDefine
-        int $modifierId,
-        ?string $comments
-    ): array {
-        // ... (権限チェック: isLocked でないか等) ...
+    public function approve(int $ledgerId, int $approverId): Ledger
+    {
+        // ToDo: 権限チェック (approverId が承認できるか？)
 
-        return DB::transaction(function () use ($ledger, $newContent, $columnDefine, $modifierId, $comments) {
-            $currentStatus = $ledger->status; // 戻す前のステータス
+        return DB::transaction(function () use ($ledgerId, $approverId) {
+            $ledger = Ledger::findOrFail($ledgerId);
+            $latestDiff = $ledger->latestDiff()->first();
 
-            // 1. 新しい LedgerDiff を作成 (content 等を記録)
+            if (!$latestDiff) {
+                Log::error("Could not find LedgerDiff with content for Ledger ID: {$ledgerId} during approval.");
+                throw new Exception("Cannot approve without content data.");
+            }
+            if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL || $latestDiff->approver_id !== $approverId) {
+                throw new Exception("User not authorized or invalid status for approving.");
+            }
+
+            // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
-                'ledger_id' => $ledger->id,
-                'content' => $newContent['content'] ?? [], // <<<--- 編集後の内容を記録
-//                'content_attached' => $newContent['content_attached'] ?? [], // <<<--- 編集後の内容を記録
-                'column_define' => $columnDefine, // <<<--- 編集時の定義を記録
+                'ledger_id' => $ledgerId,
+                'content' => [],
+                'column_define' => [],
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $approverId,
+                'status' => WorkflowStatus::APPROVED, // このアクション時点のステータス
+                'inspector_id' => $latestDiff->inspector_id, // 前の担当者
+                'approver_id' => $approverId, // 承認者
+                'requested_at' => $latestDiff->requested_at,
+                'inspected_at' => $latestDiff->inspected_at,
+                'approved_at' => now(), // 承認日時
+                'returned_at' => null, 'comments' => null,
+            ];
+            $ledgerDiff = LedgerDiff::create($diffData);
+
+            // Ledger を更新 (最新の Diff 内容を反映)
+            $ledger->update([
+                'status' => WorkflowStatus::APPROVED,
+                'modifier_id' => $approverId,
+                'version' => $ledger->version + 1, // バージョンアップ
+//                'approved_at' => now(), // Ledger にも承認日時
+//                'latest_diff_id' => $ledgerDiff->id, // ステータスのみのDiffも最新とする
+                // 担当者IDは承認者を残すかクリアか？ -> 承認者を残す
+                // 'inspector_id' => null,
+                'comments' => null, // クリア
+            ]);
+
+            // ToDo: カウンター更新 (承認者-)
+            $this->decrementPendingTaskCount($approverId, 'approval');
+            // ToDo: イベント発行
+            // event(new ApprovalCompleted($ledgerDiff));
+            // ToDo: Activity Log 記録 (ステップ4)
+            Log::info("Ledger approved for Ledger ID: {$ledgerId}. Diff ID: {$ledgerDiff->id}");
+
+            return $ledger->refresh();
+        });
+    }
+
+    /**
+     * ステータスを DRAFT に戻す (担当者が「作成中に戻す」ボタンを押した時)
+     * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
+     *
+     * @param int $ledgerId
+     * @param int $modifierId 操作者ID (点検者 or 承認者)
+     * @param string|null $comments 理由コメント
+     * @return Ledger 更新後の Ledger
+     * @throws Throwable
+     */
+    public function returnToDraft(int $ledgerId, int $modifierId, ?string $comments): Ledger
+    {
+        // ToDo: 権限チェック (modifierId が点検者/承認者か？)
+
+        return DB::transaction(function () use ($ledgerId, $modifierId, $comments) {
+            $ledger = Ledger::findOrFail($ledgerId);
+            if (!in_array($ledger->status, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+                throw new Exception("Invalid status for returning to draft.");
+            }
+            // ToDo: さらに $modifierId が $ledger->inspector_id または $ledger->approver_id と一致するかチェック
+
+            $currentStatus = $ledger->status; // 戻す前のステータス
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+
+            // LedgerDiff を作成 (content 等は NULL)
+            $diffData = [
+                'ledger_id' => $ledgerId,
+                'content' => '',
+//                'content_attached' => null,
+                'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
-                'status' => WorkflowStatus::DRAFT, // Diff ステータスは DRAFT
+                'status' => WorkflowStatus::DRAFT, // このアクション時点のステータス
+                'comments' => $comments,
+                'returned_at' => now(), // 戻された日時
+                'inspector_id' => $ledger->inspector_id, // 戻す直前の担当者
+                'approver_id' => $ledger->approver_id,  // 戻す直前の担当者
+                'requested_at' => $ledger->requested_at,
+                'inspected_at' => $ledger->inspected_at,
+                'approved_at' => null, // クリア
+            ];
+            $ledgerDiff = LedgerDiff::create($diffData);
+
+            // Ledger を更新
+            $ledger->update([
+                'status' => WorkflowStatus::DRAFT,
+//                'comments' => $comments, // Ledgerにも最新コメント
+                'returned_at' => now(), // Ledgerにも記録
+                'modifier_id' => $modifierId,
+//                'latest_diff_id' => $ledgerDiff->id,
+                // 担当者IDクリア
+//                'inspector_id' => null,
+//                'approver_id' => null,
+                // 日時クリア
+//                'requested_at' => null,
+//                'inspected_at' => null,
+//                'approved_at' => null,
+            ]);
+
+            // ToDo: カウンター調整 (担当者-)
+            if ($handlerId) {
+                $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
+                $this->decrementPendingTaskCount($handlerId, $taskType);
+            }
+            // ToDo: イベント発行
+            // event(new StatusReturnedToDraft($ledgerDiff, $comments));
+            // ToDo: Activity Log 記録 (ステップ4)
+            Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$ledgerDiff->id}");
+
+            return $ledger->refresh();
+        });
+    }
+
+    /**
+     * 編集による DRAFT 戻し処理 (編集画面での保存時)
+     * 新しい LedgerDiff (Content有り) を作成し、Ledger も更新。
+     *
+     * @param Ledger $ledger
+     * @param array $newContent
+     * @param array $newContentAttached
+     * @param int $modifierId
+     * @param string|null $comments
+     * @return array{ledger: Ledger, ledgerDiff: LedgerDiff}
+     * @throws Throwable
+     */
+    public function saveEditedRecord(
+        Ledger  $ledger,
+        array   $newContent,
+                $newContentAttached,
+        int     $modifierId,
+        ?string $comments
+    ): array
+    {
+        if ($ledger->isLocked()) {
+            throw new Exception("Cannot modify an approved record.");
+        }
+        // ToDo: modifierId が編集権限を持っているかチェック
+
+        return DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments) {
+            $currentStatus = $ledger->status; // 戻す前のステータス
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+
+            // 1. 新しい LedgerDiff を作成 (Content有り)
+            $diffData = [
+                'ledger_id' => $ledger->id,
+                'content' => $newContent ?? [], // 編集後の内容
+//                'content_attached' => $newContent['content_attached'] ?? [], // 編集後の内容
+                'column_define' => $ledger->define->column_define, // 編集時の定義
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $modifierId,
+                'status' => WorkflowStatus::DRAFT, // Diff ステータス
                 'comments' => $comments, // 編集理由
-                // 他のワークフローカラムはクリア
-                'inspector_id' => null,
-                'approver_id' => null,
-                'requested_at' => null,
-                'inspected_at' => null,
-                'approved_at' => null,
+                // 他のWFカラムはクリア
+                'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
+                'inspected_at' => null, 'approved_at' => null,
                 'returned_at' => now(), // 編集により戻された日時
             ];
             $newLedgerDiff = LedgerDiff::create($diffData);
 
             // 2. Ledger を更新
             $ledger->update([
-                'content' => $newContent['content'] ?? [], // Ledger にも最新内容を反映
-                'content_attached' => $newContent['content_attached'] ?? [],
+                'content' => $newContent ?? [], // 最新内容を反映
+                'content_attached' => $newContentAttached ?? [],
                 'status' => WorkflowStatus::DRAFT,
                 'modifier_id' => $modifierId,
+//                'latest_diff_id' => $newLedgerDiff->id, // 最新Diff ID 更新
+                'comments' => $comments, // Ledgerにも最新コメント
+                'returned_at' => now(), // Ledgerにも記録
                 // バージョンは上げない
+                // 担当者IDクリア
+//                'inspector_id' => null, 'approver_id' => null,
+                // 日時クリア
+//                'requested_at' => null, 'inspected_at' => null, 'approved_at' => null,
             ]);
 
-            // ... (Activity Log 記録、カウンター調整、イベント発行) ...
+            // 3. ToDo: Activity Log 記録 (ステップ4)
             Log::info("Ledger ID: {$ledger->id} edited and returned to DRAFT by User ID: {$modifierId}. Diff ID: {$newLedgerDiff->id}");
+
+            // 4. ToDo: カウンター調整
+            if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+                $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
+                $this->decrementPendingTaskCount($handlerId, $taskType);
+            }
+
+            // 5. ToDo: イベント発行
+            // event(new StatusReturnedToDraft($ledger, $comments));
 
             return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $newLedgerDiff];
         });
     }
 
-    /**
-     * 未処理タスクカウンターをインクリメントする (仮実装)
-     */
-    protected function incrementPendingTaskCount(int $userId): void
+
+    // --- カウンター操作メソッド (仮実装) ---
+    protected function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
     {
-        // User モデルにカウンターカラムがある場合:
-        // User::find($userId)?->increment('pending_inspection_count');
-        // Cache を使う場合:
-        // Cache::increment("user:{$userId}:pending_inspection_count");
-        \Log::info("Increment pending inspection count for user: {$userId}"); // ログ出力
+        Log::info("Increment pending {$type} count for user: {$userId}");
     }
 
     protected function decrementPendingTaskCount(int $userId, string $type): void
     {
-        // 実際のカウンター更新処理
         Log::info("Decrement pending {$type} count for user: {$userId}");
     }
 }

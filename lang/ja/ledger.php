@@ -220,6 +220,7 @@ return [
     'save' => '保存する',
     'save_and_close' => '保存して閉じる',
     'save_and_return' => '保存して戻る',
+    'save_and_return_to_draft' => '保存して作成中に戻す',
     'save_changes' => '上書きする',
     'search' => '検索する',
     'search_message' => 'スペース区切りでキーワードを検索',

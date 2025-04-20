@@ -3,11 +3,13 @@
 namespace App\Livewire\Workflow;
 
 use App\Enums\WorkflowStatus;
+use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
 use App\Services\WorkflowService;
 use Exception;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -55,7 +57,6 @@ class PendingList extends Component
             ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
 
     }
-
 
 
     // 承認者選択肢をロードするメソッド (モーダル表示時に呼ぶ)
@@ -141,7 +142,7 @@ class PendingList extends Component
 
         try {
             $this->workflowService->requestApproval(
-                $ledgerDiff,
+                $ledgerDiff->ledger_id,
                 $validated['selectedApproverId'],
                 Auth::id() // 点検者ID
             );
@@ -177,7 +178,7 @@ class PendingList extends Component
 
         try {
             // WorkflowService の approve メソッドを呼び出す
-            $this->workflowService->approve($ledgerDiff, Auth::id());
+            $this->workflowService->approve($ledgerDiff->ledger_id, Auth::id());
 
             $this->success(__('ledger.workflow.approved_message'));
 //            $this->dispatch('$refresh'); // リストを更新
@@ -234,7 +235,7 @@ class PendingList extends Component
 
         try {
             // WorkflowService の returnToDraft メソッドを呼び出す
-            $this->workflowService->returnToDraft($ledgerDiff, Auth::id(), $comments);
+            $this->workflowService->returnToDraft($ledgerDiff->ledger_id, Auth::id(), $comments);
 
             $this->returnToDraftModal = false; // モーダルを閉じる
             $this->success(__('ledger.workflow.returned_to_draft_message'));
