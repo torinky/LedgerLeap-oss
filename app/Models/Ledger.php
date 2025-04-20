@@ -36,7 +36,7 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
-        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'version'
+        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version'
     ];
 
     /**
@@ -222,14 +222,13 @@ class Ledger extends Model
     }
 
     /**
-     * 最新の LedgerDiff レコードへのリレーション (オプション)
-     * これにより $ledger->latestDiff で最新の承認情報などにアクセスできる
+     * 最新の LedgerDiff レコードへのリレーション (修正)
      */
-    public function latestDiff()
+    public function latestDiff(): BelongsTo // <<<--- BelongsTo に変更
     {
-        return $this->hasOne(LedgerDiff::class)->latestOfMany();
+        return $this->belongsTo(LedgerDiff::class, 'latest_diff_id');
     }
-
+    
     /**
      * 現在のバージョンに対応する LedgerDiff レコードへのリレーション (オプション)
      * $ledger->diffForVersion(3) のように使う場合。より複雑。

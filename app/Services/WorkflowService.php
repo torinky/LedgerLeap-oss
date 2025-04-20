@@ -5,10 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use App\Models\User;
 use Exception;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -66,7 +63,6 @@ class WorkflowService
             $diffData = [
                 'ledger_id' => $ledgerId,
                 'content' => $content,
-//                'content_attached' => $content['content_attached'] ?? [], // <<<--- 内容を記録
                 'column_define' => $columnDefine,
                 'ledger_define_id' => $ledgerDefineId,
                 'creator_id' => $ledger->creator_id,
@@ -85,15 +81,11 @@ class WorkflowService
                     'content_attached' => $contentAttached ?? [],
                     'status' => WorkflowStatus::DRAFT, // 念のため DRAFT に
                     'modifier_id' => $modifierId,
-                    // 'version' => $ledger->version, // 下書き保存ではバージョン上げない
                     'latest_diff_id' => $ledgerDiff->id, // 最新Diff ID を更新
-                    // 日時や担当者IDはクリア
-                    /*                    'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
-                                        'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,*/
                 ]);
             } else {
                 // 新規作成時は latest_diff_id をセット
-//                $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
+                $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
             }
 
             // Activity Log 記録 (ステップ4)
@@ -128,7 +120,6 @@ class WorkflowService
             $diffData = [
                 'ledger_id' => $ledgerId,
                 'content' => '',
-//                'content_attached' => null,
                 'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
@@ -144,15 +135,9 @@ class WorkflowService
             // Ledger のステータスと担当者、最新Diff ID を更新
             $ledger->update([
                 'status' => WorkflowStatus::PENDING_INSPECTION,
-//                'inspector_id' => $inspectorId,
-//                'approver_id' => null, // クリア
-//                'requested_at' => now(), // Ledger にも記録
                 'modifier_id' => $requesterId,
-//                'latest_diff_id' => $ledgerDiff->id, // 最新の Diff ID
-                // 日時クリア
-//                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'latest_diff_id' => $ledgerDiff->id, // 最新の Diff ID
             ]);
-//            dd($ledger, $ledger->refresh(), $ledgerDiff->id);
 
             // ToDo: カウンター更新 (点検者+)
             $this->incrementPendingTaskCount($inspectorId, 'inspection');
@@ -182,9 +167,7 @@ class WorkflowService
 
         return DB::transaction(function () use ($ledgerId, $approverId, $inspectorId) {
             $ledger = Ledger::findOrFail($ledgerId)->orderBy('created_at', 'desc')->first();
-//            $ledgerDiff = LedgerDiff::where('ledger_id', $ledgerId)->latest('id')->first();
             $ledgerDiff = $ledger->latestDiff()->first();
-//            dd($ledger, $ledger->status, WorkflowStatus::PENDING_INSPECTION, $ledger->inspector_id, $inspectorId);
             if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
                 throw new Exception("User not authorized or invalid status for requesting approval.");
             }
@@ -193,7 +176,6 @@ class WorkflowService
             $diffData = [
                 'ledger_id' => $ledgerId,
                 'content' => '',
-//                'content_attached' => null,
                 'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
@@ -211,12 +193,8 @@ class WorkflowService
             // Ledger のステータスと担当者、最新Diff ID を更新
             $ledger->update([
                 'status' => WorkflowStatus::PENDING_APPROVAL,
-//                'approver_id' => $approverId,
-//                'inspected_at' => now(), // Ledger にも記録
                 'modifier_id' => $inspectorId,
-//                'latest_diff_id' => $ledgerDiff->id,
-                // approved_at, returned_at, comments はクリア
-//                'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'latest_diff_id' => $ledgerDiff->id,
             ]);
 
             // ToDo: カウンター更新 (点検者-, 承認者+)
@@ -279,10 +257,7 @@ class WorkflowService
                 'status' => WorkflowStatus::APPROVED,
                 'modifier_id' => $approverId,
                 'version' => $ledger->version + 1, // バージョンアップ
-//                'approved_at' => now(), // Ledger にも承認日時
-//                'latest_diff_id' => $ledgerDiff->id, // ステータスのみのDiffも最新とする
-                // 担当者IDは承認者を残すかクリアか？ -> 承認者を残す
-                // 'inspector_id' => null,
+                'latest_diff_id' => $ledgerDiff->id, // ステータスのみのDiffも最新とする
                 'comments' => null, // クリア
             ]);
 
@@ -325,7 +300,6 @@ class WorkflowService
             $diffData = [
                 'ledger_id' => $ledgerId,
                 'content' => '',
-//                'content_attached' => null,
                 'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
@@ -344,17 +318,9 @@ class WorkflowService
             // Ledger を更新
             $ledger->update([
                 'status' => WorkflowStatus::DRAFT,
-//                'comments' => $comments, // Ledgerにも最新コメント
                 'returned_at' => now(), // Ledgerにも記録
                 'modifier_id' => $modifierId,
-//                'latest_diff_id' => $ledgerDiff->id,
-                // 担当者IDクリア
-//                'inspector_id' => null,
-//                'approver_id' => null,
-                // 日時クリア
-//                'requested_at' => null,
-//                'inspected_at' => null,
-//                'approved_at' => null,
+                'latest_diff_id' => $ledgerDiff->id,
             ]);
 
             // ToDo: カウンター調整 (担当者-)
@@ -404,7 +370,6 @@ class WorkflowService
             $diffData = [
                 'ledger_id' => $ledger->id,
                 'content' => $newContent ?? [], // 編集後の内容
-//                'content_attached' => $newContent['content_attached'] ?? [], // 編集後の内容
                 'column_define' => $ledger->define->column_define, // 編集時の定義
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
@@ -424,14 +389,8 @@ class WorkflowService
                 'content_attached' => $newContentAttached ?? [],
                 'status' => WorkflowStatus::DRAFT,
                 'modifier_id' => $modifierId,
-//                'latest_diff_id' => $newLedgerDiff->id, // 最新Diff ID 更新
-                'comments' => $comments, // Ledgerにも最新コメント
-                'returned_at' => now(), // Ledgerにも記録
+                'latest_diff_id' => $newLedgerDiff->id, // 最新Diff ID 更新
                 // バージョンは上げない
-                // 担当者IDクリア
-//                'inspector_id' => null, 'approver_id' => null,
-                // 日時クリア
-//                'requested_at' => null, 'inspected_at' => null, 'approved_at' => null,
             ]);
 
             // 3. ToDo: Activity Log 記録 (ステップ4)

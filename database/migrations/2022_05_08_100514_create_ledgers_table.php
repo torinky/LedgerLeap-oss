@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->unsignedInteger('modifier_id')->index();
 
             $table->string('status')->default(WorkflowStatus::DRAFT->value)->index(); // 最新のワークフロー状態
+            $table->unsignedBigInteger('latest_diff_id')->nullable();
             $table->unsignedInteger('version')->default(1); // バージョン番号
 
             $table->timestamps();
@@ -43,6 +44,11 @@ return new class extends Migration {
      */
     public function down()
     {
+        Schema::table('ledgers', function (Blueprint $table) {
+            // 外部キー制約を先に削除
+            $table->dropForeign(['latest_diff_id']);
+            $table->dropColumn('latest_diff_id');
+        });
         Schema::dropIfExists('ledgers');
     }
 };

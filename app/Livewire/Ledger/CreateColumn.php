@@ -471,33 +471,24 @@ class CreateColumn extends Component
         ));
 
         $userId = Auth::id();
-//        $this->processFilesForSave(); // ファイル処理
 
         if (isNull($this->ledgerId)) {
             $this->saveDraft();
         }
 
         try {
-//            dd($this->ledgerId, $userId, $this->selectedInspectorId);
             // WorkflowService を呼び出す
             $result = $this->workflowService->requestInspection(
                 $this->ledgerId, // 下書き保存されていれば ID が入る
-//                $this->ledgerDefineId,
-//                $this->content,
-//                $this->ledgerDefineRecord->column_define,
                 $userId,
                 $this->selectedInspectorId
             );
 
             // 戻り値から ID を更新
-//            dd($result, $result['ledger'], $result['ledger']->id);
             $this->ledgerId = $result->id;
 
             $this->addAttachedFileRecordIfNecessary();
-//            $this->success(__('ledger.workflow.inspection_requested_message'));
             // 詳細画面にリダイレクト
-//            $this->redirectRoute('ledger.show', ['ledgerId' => $this->ledgerId]);
-
             $this->success(__('ledger.workflow.inspection_requested_message'),
                 redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
 

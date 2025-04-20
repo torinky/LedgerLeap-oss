@@ -477,7 +477,7 @@ return [
         'can_request_inspection_only_from_draft' => '点検依頼は作成中の状態からのみ可能です。',
         'save_and_return_to_draft' => '保存して作成中に戻す',
         'current_status' => '現在のステータス',
-
+        'last_updated_at' => '最終更新日時',
     ],
     'view_details' => '詳細確認', // 承認待ちリスト用
 ];

@@ -161,26 +161,6 @@ class ModifyColumn extends CreateColumn
         }
     }
 
-    /*    public function mergeContentFiles(mixed $column): void
-        {
-            //新規登録したファイルの保存
-            $filenames = $this->storeFile($column->id);
-            $this->content[$column->id] = $filenames;
-
-            //既存ファイルの削除処理
-            if (!empty($this->ledgerRecord->content[$column->id])) {
-                $tmpContent = $this->ledgerRecord->content[$column->id];
-                foreach ($this->ledgerRecord->content[$column->id] as $originalFilename => $filepath) {
-                    if (in_array($filepath, $this->deletedContent[$column->id], true)) {
-                        unset($tmpContent[$originalFilename]);
-                        //実体ファイルを消したければここに削除処理を追加
-                    }
-                }
-                //以前保存したファイルとのマージ
-                $this->content[$column->id] = array_merge($filenames, $tmpContent);
-            }
-        }*/
-
     private function getThumbnailUrl($filename): string
     {
         return Storage::url('Ledger/thumbs/' . basename($filename));
@@ -307,6 +287,8 @@ class ModifyColumn extends CreateColumn
             $this->error(__('messages.error.generic'));
         }
     }
+
+
     // --- 親クラスから継承・オーバーライドするメソッド ---
 
     /**
@@ -372,8 +354,6 @@ class ModifyColumn extends CreateColumn
         try {
             $result = $this->workflowService->requestInspection(
                 $this->ledgerId, // 既存 ID を渡す
-//                $this->content,
-//                $this->ledgerDefineRecord->column_define,
                 $userId,
                 $validated['selectedInspectorId']
             );

@@ -16,7 +16,7 @@ return new class extends Migration {
         Schema::create('ledger_diffs', function (Blueprint $table) {
             $table->engine = 'Mroonga';
             $table->id();
-            $table->foreignId('ledger_id')->constrained('ledgers')->cascadeOnDelete();
+            $table->foreignId('ledger_id');
             $table->unsignedInteger('ledger_define_id')->index();
             $table->index(['ledger_id', 'ledger_define_id']);
             $table->unsignedInteger('creator_id')->index(); // このDiffを作成した人(編集者)
