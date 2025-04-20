@@ -318,26 +318,48 @@
 
 ---
 
-### ステップ 4: 承認待ちリスト表示の修正と詳細画面への反映 (Next)
+### ステップ 4: 承認待ちリスト修正、詳細画面実装、バージョン管理導入 (Next)
 
 * **目的:** **承認待ちリスト (`PendingList`) に最新のタスクのみが表示されるように修正**する。*
-  *台帳の詳細レコード画面 (`ledger.show` 想定) でもワークフローの現在のステータスと関連アクションを表示**できるようにする。
+  *台帳詳細画面 (`ledger.show`) でワークフロー情報とアクションボタンを表示**できるようにする。**`LedgerDiff` にバージョン番号を記録
+  **する。**`Ledger` が常に最新の `LedgerDiff` を指すようにする。**
 * **タスク:**
-    1. **承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正:** `Ledger` テーブルを起点とし、`status` が
-       `PENDING_*` で、かつ `latestDiff` リレーションを使って最新の `LedgerDiff` の担当者が自分であるレコードを取得するようにクエリを修正。
-    2. **詳細表示画面 (`ledger.show`) 作成/修正:**
-        * 現在のレコードのステータス (`$ledger->status->label()` とバッジ) を大きく表示する。
-        * もしログインユーザーが現在の担当者（`$ledger->latestDiff->inspector_id` または `approver_id`
-          ）であれば、対応するアクションボタン（「点検完了(承認申請)」「承認」「作成中に戻す」）を表示し、`PendingList`
-          と同様のアクションを実行できるようにする。（Livewire コンポーネント化推奨）
-        * ワークフロー履歴を表示するエリアを設ける（ステップ4.1 で実装）。
-    3. **台帳リスト表示ビュー (`table-row.blade.php`) 確認:** `Ledger.status` が `APPROVED` でない場合に表示する内容は、常に
-       `Ledger.content` を参照するだけで良い（方針D適用済みのため、`latestDiff` 参照は不要）。
+    1. **マイグレーション変更・実行:**
+        * **`ledger_diffs` テーブル:** `version` (unsignedInteger, default: 1, index?) カラムを追加する新しいマイグレーションを作成・実行。
+        * **`ledgers` テーブル:** `latest_diff_id` (unsignedBigInteger, nullable, FK to `ledger_diffs`, onDelete('set
+          null')) カラムを追加するマイグレーションを作成・実行 (**削除しない**)。
+    2. **モデル変更:**
+        * **`LedgerDiff`:** `$fillable` に `version` を追加。
+        * **`Ledger`:** `$fillable` に `latest_diff_id` を追加。`latestDiff()` リレーションを
+          `belongsTo(LedgerDiff::class, 'latest_diff_id')` で定義。
+    3. **`WorkflowService` 修正:**
+        * **全ての `LedgerDiff` 作成処理** (`saveDraft`, `requestInspection`, `requestApproval`, `approve`,
+          `returnToDraft`, `saveEditedRecord`) において、関連する `Ledger` の**現在の `version`** を取得し、作成する
+          `LedgerDiff` の `version` カラムにセットして保存するように修正する。
+        * **全ての `LedgerDiff` 作成/更新処理の最後**で、関連する **`Ledger` の `latest_diff_id`
+          を、作成/更新した `LedgerDiff` の ID で更新**する処理を追加する。
+    4. **承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正:** **`Ledger` テーブルを起点**とし、
+       `whereHas('latestDiff', ...)` を使って最新の `LedgerDiff` の `status` (`PENDING_*`) と担当者 (`inspector_id` /
+       `approver_id`) を条件に絞り込むようにクエリを修正。
+    5. **承認待ちリストビュー (`pending-list.blade.php`) 修正:** ループ変数を `$ledger` に、表示データを `$ledger` や
+       `$ledger->latestDiff` から取得、アクションボタンの引数を `$ledger->id` に変更。
+    6. **承認待ちリストコンポーネント (`PendingList.php`) 修正:** アクションメソッドの引数を `$ledgerId` に変更し、内部で
+       `Ledger::find()` するように修正。
+    7. **台帳詳細画面 (`Show.php` Livewire & `show.blade.php` View) 作成/修正:**
+        * `Ledger` レコードを取得 (with `latestDiff`)。
+        * 現在のステータス (`$ledger->status->label()`) と担当者 (`$ledger->latestDiff->inspector` / `approver`) を表示。
+        * 常に `$ledger->content` を表示。
+        * 担当者の場合、アクションボタンを表示・実行。
+        * 変更履歴表示 (`ShowDiff`) へのリンク追加。
+    8. **台帳リスト表示ビュー (`table-row.blade.php`) 確認:** 内容表示が `$ledgerRecord->content` を参照していることを再確認。
 * **動作確認:**
-    * 承認待ちリストに最新のタスクのみが表示されること。
-    * 台帳詳細画面で現在のステータスが表示され、担当者であれば適切なアクションボタンが表示・実行できること。
+    * `LedgerDiff` に正しい `version` が記録されること。
+    * 各アクション後に `ledgers.latest_diff_id` が正しく更新されること。
+    * 承認待ちリストに最新の正しいタスクが表示されること。
+    * 台帳詳細画面で正しい情報とアクションボタンが表示され、動作すること。
     * 通常の台帳リスト表示が引き続き正しく行われること。
-* **ドキュメント更新:** 「機能詳細(担当者のアクション、リスト表示、詳細表示)」「関連ファイル」更新。承認待ちリスト取得方法修正。
+* **ドキュメント更新:** 「機能詳細」「関連ファイル」「実装計画」をこの最終方針に合わせて更新。`LedgerDiff` のバージョン管理、
+  `latest_diff_id` の役割、承認待ちリスト取得方法を明記。
 
 ---
 

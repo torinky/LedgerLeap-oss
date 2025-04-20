@@ -39,7 +39,7 @@ class LedgerDiff extends Model
         'approved_at',
         'returned_at',
         'comments',
-
+        'version',
         'created_at', 'updated_at',
     ];
 

@@ -58,6 +58,7 @@ class WorkflowService
                 $ledgerId = $ledger->id;
             }
             $columnDefine = $ledger->define->column_define;
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff (データスナップショット) を作成
             $diffData = [
@@ -68,6 +69,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
                 'status' => WorkflowStatus::DRAFT, // この Diff 作成時のステータス
+                'version' => $ledgerVersion,
                 // 他のワークフローカラムは NULL
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
@@ -115,6 +117,7 @@ class WorkflowService
             if ($ledger->status !== WorkflowStatus::DRAFT) {
                 throw new Exception("Inspection can only be requested from Draft status.");
             }
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
@@ -125,6 +128,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $requesterId,
                 'status' => WorkflowStatus::PENDING_INSPECTION, // このアクション時点のステータス
+                'version' => $ledgerVersion,
                 'inspector_id' => $inspectorId, // 次の担当者
                 'approver_id' => null,
                 'requested_at' => now(),
@@ -171,6 +175,7 @@ class WorkflowService
             if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
                 throw new Exception("User not authorized or invalid status for requesting approval.");
             }
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
@@ -181,6 +186,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $inspectorId,
                 'status' => WorkflowStatus::PENDING_APPROVAL, // このアクション時点のステータス
+                'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'inspector_id' => $inspectorId, // 点検完了者
                 'approver_id' => $approverId, // 次の承認者
                 'requested_at' => $ledgerDiff->requested_at,
@@ -233,6 +239,7 @@ class WorkflowService
             if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL || $latestDiff->approver_id !== $approverId) {
                 throw new Exception("User not authorized or invalid status for approving.");
             }
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
@@ -243,6 +250,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $approverId,
                 'status' => WorkflowStatus::APPROVED, // このアクション時点のステータス
+                'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'inspector_id' => $latestDiff->inspector_id, // 前の担当者
                 'approver_id' => $approverId, // 承認者
                 'requested_at' => $latestDiff->requested_at,
@@ -295,6 +303,7 @@ class WorkflowService
 
             $currentStatus = $ledger->status; // 戻す前のステータス
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
@@ -305,6 +314,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
                 'status' => WorkflowStatus::DRAFT, // このアクション時点のステータス
+                'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments,
                 'returned_at' => now(), // 戻された日時
                 'inspector_id' => $ledger->inspector_id, // 戻す直前の担当者
@@ -365,6 +375,7 @@ class WorkflowService
         return DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments) {
             $currentStatus = $ledger->status; // 戻す前のステータス
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // 1. 新しい LedgerDiff を作成 (Content有り)
             $diffData = [
@@ -375,6 +386,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
                 'status' => WorkflowStatus::DRAFT, // Diff ステータス
+                'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments, // 編集理由
                 // 他のWFカラムはクリア
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,

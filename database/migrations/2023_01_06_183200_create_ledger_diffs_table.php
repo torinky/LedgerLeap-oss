@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->engine = 'Mroonga';
             $table->id();
             $table->foreignId('ledger_id');
+            $table->unsignedInteger('version')->default(1)->index();
             $table->unsignedInteger('ledger_define_id')->index();
             $table->index(['ledger_id', 'ledger_define_id']);
             $table->unsignedInteger('creator_id')->index(); // このDiffを作成した人(編集者)

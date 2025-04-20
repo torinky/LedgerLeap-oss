@@ -478,6 +478,10 @@ return [
         'save_and_return_to_draft' => '保存して作成中に戻す',
         'current_status' => '現在のステータス',
         'last_updated_at' => '最終更新日時',
+        'inspector' => '点検者',
+        'approver' => '承認者',
+        'approved_by' => '承認者',
+
     ],
     'view_details' => '詳細確認', // 承認待ちリスト用
 ];
