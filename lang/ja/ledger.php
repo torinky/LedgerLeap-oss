@@ -481,7 +481,15 @@ return [
         'inspector' => '点検者',
         'approver' => '承認者',
         'approved_by' => '承認者',
+        'history_title' => 'ワークフロー履歴',
+        'history_datetime' => '日時',
+        'history_user' => '操作者',
+        'history_action' => 'アクション/ステータス',
+        'history_detail' => '詳細（担当者、コメント等）',
+        'no_history' => 'ワークフロー履歴はありません。',
 
     ],
+    'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認', // 承認待ちリスト用
+    'view_history' => '変更履歴を見る',
 ];

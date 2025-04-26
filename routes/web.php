@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::middleware('auth')->group(function () {
 
@@ -117,8 +117,16 @@ Route::middleware('auth')->group(function () {
             ->where('ledgerId', '[0-9]+');*/
 
     //    ledgerDiff
-    Route::get('/ledgerDiff/{ledgerId}', LedgerDiffShowController::class)->name('ledgerDiff.show')
-        ->where('ledgerId', '[0-9]+');
+    Route::get('/ledgerDiff/{ledgerId}/{diffId?}', LedgerDiffShowController::class) // ShowController を使う場合
+    ->name('ledgerDiff.show')
+        ->where('ledgerId', '[0-9]+')
+        ->where('diffId', '[0-9]+'); // diffId も数字のみ
+
+    // もし Livewire を直接ルートにバインドする場合
+    // Route::get('/ledgerDiff/{ledgerId}/{diffId?}', App\Livewire\Ledger\ShowDiff::class)
+    //     ->name('ledgerDiff.show')
+    //     ->where('ledgerId', '[0-9]+')
+    //     ->where('diffId', '[0-9]+');
 
     //folder
     Route::get('/folder/edit/{folderId}', [FolderUpdateController::class, 'edit'])

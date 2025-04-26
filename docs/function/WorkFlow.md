@@ -168,33 +168,6 @@
     * `App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager`: 通知タイプ選択肢追加。
 * **マイグレーション:** `ledger_diffs`, `ledgers`, `ledger_defines` テーブルの修正。`notification_types` へのレコード追加。
 
-## 関連ファイル (想定)
-
-* **モデル:**
-    * `App\Models\LedgerDiff`: カラム追加 (`status`, `inspector_id`, `approver_id`, `requested_at`, `inspected_at`,
-      `approved_at`, `comments`) が必要。
-    * `App\Models\Ledger`: `status` (Enum), `version` カラム追加済み。`isLocked()` メソッドあり。
-    * `App\Models\LedgerDefine`: `workflow_enabled` (boolean), `version`, 推奨担当者カラム追加済み。
-    * `App\Models\NotificationType`: ワークフロー用タイプ追加が必要。
-* **Enum:**
-    * `App\Enums\WorkflowStatus`: (`DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL`, `APPROVED`) 作成済み。
-* **サービス:**
-    * `App\Services\WorkflowService`: 状態遷移ロジック、編集時巻き戻し処理、カウンター管理、通知トリガー。
-    * `App\Services\NotificationService`: ワークフロー通知送信ロジック追加。
-* **リポジトリ:**
-    * `App\Repositories\WorkflowTaskRepository` (新規作成推奨): 点検/承認待ちリスト取得。
-* **コントローラー/Livewire:**
-    * `App\Livewire\Ledger\CreateColumn`, `App\Livewire\Ledger\ModifyColumn`: ワークフロー有効チェック、状態遷移ボタン表示制御、担当者選択
-      UI、編集時警告/理由入力、保存/申請処理。
-    * `App\Livewire\Workflow\PendingList` (新規作成): 承認待ちリスト表示。
-    * `App\Livewire\Workflow\ActionButtons` (新規作成 or PendingList内): 「点検完了」「承認」ボタン処理。
-* **通知クラス:** `InspectionRequested`, `ApprovalRequested` など新規作成が必要。
-* **コマンド:** `App\Console\Commands\SendWorkflowSummaryNotification` 新規作成が必要。
-* **Filament (関連):**
-    * `App\Filament\Resources\LedgerDefineResource`: `workflow_enabled` 設定 UI、列構成変更時のワークフローチェック追加。
-    * `App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager`: 通知タイプ選択肢追加。
-* **マイグレーション:** `ledger_diffs`, `ledgers`, `ledger_defines` テーブルの修正。`notification_types` へのレコード追加。
-
 ---
 
 ## 実装計画（案）
@@ -318,60 +291,70 @@
 
 ---
 
-### ステップ 4: 承認待ちリスト修正、詳細画面実装、バージョン管理導入 (Next)
+### ✅ ステップ 4: 承認待ちリスト修正、詳細画面実装、バージョン管理導入 (完了)
 
 * **目的:** **承認待ちリスト (`PendingList`) に最新のタスクのみが表示されるように修正**する。*
   *台帳詳細画面 (`ledger.show`) でワークフロー情報とアクションボタンを表示**できるようにする。**`LedgerDiff` にバージョン番号を記録
-  **する。**`Ledger` が常に最新の `LedgerDiff` を指すようにする。**
-* **タスク:**
-    1. **マイグレーション変更・実行:**
-        * **`ledger_diffs` テーブル:** `version` (unsignedInteger, default: 1, index?) カラムを追加する新しいマイグレーションを作成・実行。
-        * **`ledgers` テーブル:** `latest_diff_id` (unsignedBigInteger, nullable, FK to `ledger_diffs`, onDelete('set
-          null')) カラムを追加するマイグレーションを作成・実行 (**削除しない**)。
-    2. **モデル変更:**
-        * **`LedgerDiff`:** `$fillable` に `version` を追加。
-        * **`Ledger`:** `$fillable` に `latest_diff_id` を追加。`latestDiff()` リレーションを
-          `belongsTo(LedgerDiff::class, 'latest_diff_id')` で定義。
-    3. **`WorkflowService` 修正:**
-        * **全ての `LedgerDiff` 作成処理** (`saveDraft`, `requestInspection`, `requestApproval`, `approve`,
-          `returnToDraft`, `saveEditedRecord`) において、関連する `Ledger` の**現在の `version`** を取得し、作成する
-          `LedgerDiff` の `version` カラムにセットして保存するように修正する。
-        * **全ての `LedgerDiff` 作成/更新処理の最後**で、関連する **`Ledger` の `latest_diff_id`
-          を、作成/更新した `LedgerDiff` の ID で更新**する処理を追加する。
-    4. **承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正:** **`Ledger` テーブルを起点**とし、
-       `whereHas('latestDiff', ...)` を使って最新の `LedgerDiff` の `status` (`PENDING_*`) と担当者 (`inspector_id` /
-       `approver_id`) を条件に絞り込むようにクエリを修正。
-    5. **承認待ちリストビュー (`pending-list.blade.php`) 修正:** ループ変数を `$ledger` に、表示データを `$ledger` や
-       `$ledger->latestDiff` から取得、アクションボタンの引数を `$ledger->id` に変更。
-    6. **承認待ちリストコンポーネント (`PendingList.php`) 修正:** アクションメソッドの引数を `$ledgerId` に変更し、内部で
-       `Ledger::find()` するように修正。
-    7. **台帳詳細画面 (`Show.php` Livewire & `show.blade.php` View) 作成/修正:**
-        * `Ledger` レコードを取得 (with `latestDiff`)。
-        * 現在のステータス (`$ledger->status->label()`) と担当者 (`$ledger->latestDiff->inspector` / `approver`) を表示。
-        * 常に `$ledger->content` を表示。
-        * 担当者の場合、アクションボタンを表示・実行。
-        * 変更履歴表示 (`ShowDiff`) へのリンク追加。
-    8. **台帳リスト表示ビュー (`table-row.blade.php`) 確認:** 内容表示が `$ledgerRecord->content` を参照していることを再確認。
+  **する。
+* **実施済みタスク:**
+    1. **マイグレーション変更・実行:** `ledger_diffs` テーブルに `version` カラムを追加。[完了]
+    2. **モデル変更:** `LedgerDiff` に `version` を `$fillable` に追加。[完了]
+    3. **`WorkflowService` 修正:** 全ての `LedgerDiff` 作成時に `Ledger.version` を `LedgerDiff.version`
+       にセットして保存するように修正。[完了]
+    4. **承認待ちリストビュー (`pending-list.blade.php`) 修正:** ループ変数を `$ledger` に、表示データとアクションボタンの引数を
+       `$ledger` 基準に修正。[完了]
+    5. **承認待ちリストコンポーネント (`PendingList.php`) 修正:** アクションメソッドの引数を `$ledgerId` に変更し、内部で
+       `Ledger::find()` するように修正。[完了]
+    6. **台帳詳細画面 (`Show.php` Livewire & `show.blade.php` View) 作成/修正:** `Ledger` (`with latestDiff`)
+       を取得し、ステータス、担当者、`Ledger.content`
+       を表示。担当者の場合にアクションボタンを表示・実行できるように実装。変更履歴へのリンク追加。[完了]
+    7. **台帳リスト表示ビュー (`table-row.blade.php`) 確認:** 内容表示が `$ledgerRecord->content`
+       を参照していることを再確認。[完了]
 * **動作確認:**
-    * `LedgerDiff` に正しい `version` が記録されること。
-    * 各アクション後に `ledgers.latest_diff_id` が正しく更新されること。
-    * 承認待ちリストに最新の正しいタスクが表示されること。
-    * 台帳詳細画面で正しい情報とアクションボタンが表示され、動作すること。
-    * 通常の台帳リスト表示が引き続き正しく行われること。
-* **ドキュメント更新:** 「機能詳細」「関連ファイル」「実装計画」をこの最終方針に合わせて更新。`LedgerDiff` のバージョン管理、
-  `latest_diff_id` の役割、承認待ちリスト取得方法を明記。
+    * `LedgerDiff` に正しい `version` が記録されること。[完了]
+    * 承認待ちリストに最新の正しいタスクのみが表示されること。[完了]
+    * 台帳詳細画面で正しい情報とアクションボタンが表示され、動作すること。[完了]
+    * 通常の台帳リスト表示が引き続き正しく行われること。[完了]
+* **成果物:** 正確な承認待ちリスト表示、ワークフロー情報とアクションを備えた台帳詳細画面、バージョン管理された変更履歴の基盤。
+* **ドキュメント更新:** このセクションを更新。「機能詳細」「関連ファイル」「実装計画」を修正。
 
 ---
 
-### ステップ 4.1: Activity Log によるプロセス履歴記録 (旧ステップ4一部)
+### ステップ 4.1: ワークフロープロセス履歴表示機能の実装 (Next)
 
-* **目的:** ワークフローの各アクション履歴を Activity Log に記録し、詳細画面で表示する。
+* **目的:** 台帳詳細画面 (`ledger.show`) に、**`LedgerDiff` テーブルを活用し、ワークフローのプロセス履歴**
+  （誰が、いつ、何のアクションを、どの担当者に対して、どんなコメント付きで実行したか）をユーザーに分かりやすく表示する。
 * **タスク:**
-    1. `Ledger` モデルへの Activity Log 設定。
-    2. `WorkflowService` でカスタムイベントを記録。
-    3. 履歴表示 UI (詳細画面内) 作成。
-* **動作確認:** Activity Log 記録と表示を確認。
-* **ドキュメント更新:** 証跡関連セクション更新。
+    1. **履歴表示 UI 作成:** 台帳詳細画面の Livewire ビュー (`resources/views/livewire/ledger/show.blade.php`)
+       に、ワークフロー履歴を表示するための専用セクション（例: `<x-mary-card title="ワークフロー履歴">`
+       やタイムライン形式のコンポーネント）を追加する。
+    2. **データ取得ロジック (`App\Livewire\Ledger\Show.php`):**
+        * `mount()` または `render()` メソッド内で、`$this->ledgerRecord->ledgerDiff()` リレーションを使って関連する
+          `LedgerDiff` レコードを取得する。
+        * 取得時に必要な関連情報も Eager Load する:
+          `with(['modifier:id,name', 'inspector:id,name', 'approver:id,name'])`。
+        * `orderBy('created_at', 'desc')` または `orderBy('id', 'desc')` で最新の履歴から表示するようにソートする。
+        * 取得した `LedgerDiff` のコレクションをビューに渡す（例: `$workflowHistory`）。
+    3. **ビューでの表示ロジック (`show.blade.php` Livewire用):**
+        * 取得した `$workflowHistory` コレクションを `@foreach` でループ処理する。
+        * 各 `$diff` レコードについて、以下の情報をリスト形式やテーブル形式などで表示する:
+            * **日時:** `$diff->created_at->isoFormat(...)`
+            * **操作者:** `$diff->modifier->name ?? 'N/A'`
+            * **アクション/ステータス:** `$diff->status->label()` を表示。（より具体的に「点検依頼」「承認」などを表示するには、
+              `$diff->status` とその直前の Diff の `status` を比較するヘルパーメソッドを `LedgerDiff`
+              モデルに追加するか、ビュー側で条件分岐する）
+            * **担当者:** `PENDING_INSPECTION` なら `$diff->inspector->name` を、`PENDING_APPROVAL` なら
+              `$diff->approver->name` を表示 (存在する場合)。
+            * **コメント:** `$diff->comments` があれば表示。
+        * **データ内容へのリンク:** 各 `$diff` レコードに対して、その時点のデータ内容を `ShowDiff`
+          画面で確認するためのリンク (
+          `route('ledgerDiff.show', ['ledgerId' => $diff->ledger_id, 'diffId' => $diff->id])` のような形式?
+          またはバージョン番号で?) を設置する。（`content` が空でない Diff のみにリンクを付けることも検討）
+* **動作確認:**
+    * 台帳詳細画面を開いた際に、画面下部などにワークフローの履歴が時系列（新しい順）で表示されること。
+    * 各履歴項目に、操作日時、操作者、アクション/ステータス、担当者（該当する場合）、コメント（あれば）が正しく表示されること。
+    * データ内容へのリンク（変更履歴画面へのリンク）が正しく機能すること。
+* **ドキュメント更新:** 「機能詳細(ワークフローステータスと履歴)」「関連ファイル」更新。詳細画面での履歴表示方法について追記。
 
 ---
 

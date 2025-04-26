@@ -222,13 +222,13 @@ class Ledger extends Model
     }
 
     /**
-     * 最新の LedgerDiff レコードへのリレーション (修正)
+     * 最新の LedgerDiff レコードへのリレーション
      */
-    public function latestDiff(): BelongsTo // <<<--- BelongsTo に変更
+    public function latestDiff(): BelongsTo
     {
         return $this->belongsTo(LedgerDiff::class, 'latest_diff_id');
     }
-    
+
     /**
      * 現在のバージョンに対応する LedgerDiff レコードへのリレーション (オプション)
      * $ledger->diffForVersion(3) のように使う場合。より複雑。

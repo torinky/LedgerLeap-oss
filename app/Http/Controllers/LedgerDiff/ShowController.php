@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\LedgerDiff;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ledger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\View;
@@ -15,19 +16,18 @@ class ShowController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function __invoke()
-    {
-
-        return View::make('ledgerDiff.show');
-    }
-    /*    public function __invoke(Request $request)
+    /*    public function __invoke()
         {
-            $ledger = new Ledger();
-            $ledgerId = (int)$request->route('ledgerId');
 
-            $ledgerRecord = $ledger->with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
-    //        dd($ledgerRecord);
-
-            return View::make('ledger.show', compact('ledgerRecord'));
+            return View::make('ledgerDiff.show');
         }*/
+    public function __invoke(Request $request)
+    {
+        $ledgerId = (int)$request->route('ledgerId');
+        $diffId = (int)$request->route('diffId');
+
+        //        dd($ledgerRecord);
+
+        return View::make('ledgerDiff.show', ['ledgerId' => $ledgerId, 'diffId' => $diffId]);
+    }
 }

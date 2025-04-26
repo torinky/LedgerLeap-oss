@@ -22,7 +22,7 @@
                 </x-markdown>
             </div>
         </div>
-        <livewire:ledger.show/>
+        <livewire:ledger.show :ledgerId="$ledger->id"/>
     </div>
 
 </x-app-layout>

@@ -6,6 +6,7 @@ use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -33,6 +34,8 @@ class Show extends Component
     protected WorkflowService $workflowService;
     // --- ここまで ---
 
+    public Collection $workflowHistory; // ワークフロー履歴用プロパティ
+
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService): void
     {
@@ -40,14 +43,20 @@ class Show extends Component
     }
 
     // WorkflowService をインジェクト
-    public function mount(Request $request)
+    public function mount(int $ledgerId): void // <<<--- Request $request 不要
     {
-        $ledgerId = (int)$request->route('ledgerId');
-
         // Eager load で必要な情報を取得
-        $this->ledgerRecord = Ledger::with(['define', 'modifier', 'creator', 'latestDiff.inspector', 'latestDiff.approver'])
+        $this->ledgerRecord = Ledger::with([
+            'define',
+            'modifier:id,name', // <<<--- 取得カラム指定推奨
+            'creator:id,name',
+            'latestDiff.inspector:id,name', // <<<--- 最新Diffの担当者も取得
+            'latestDiff.approver:id,name'
+        ])
             ->findOrFail($ledgerId);
-        $this->ledgerDefineRecord = $this->ledgerRecord->define; // define をセット
+        $this->ledgerDefineRecord = $this->ledgerRecord->define;
+
+        $this->loadWorkflowHistory();
 
         // 権限チェック (閲覧権限) - 必要に応じて実装
         // $this->authorize('view', $this->ledgerRecord);
@@ -55,6 +64,16 @@ class Show extends Component
         // 権限チェックはせず画面内のカラムを伏せる
 //        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord->define]);
     }
+
+    protected function loadWorkflowHistory(): void
+    {
+        $this->workflowHistory = $this->ledgerRecord->ledgerDiff()
+            ->with(['modifier:id,name', 'inspector:id,name', 'approver:id,name']) // 必要な情報をEager Load
+            ->orderBy('created_at', 'desc') // 新しい順
+            ->orderBy('id', 'desc') // 同時刻ならIDで
+            ->get();
+    }
+
 
     /**
      * 点検完了・承認申請モーダルを開く
