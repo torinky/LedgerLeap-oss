@@ -25,6 +25,7 @@ class Show extends Component
     public Ledger $ledgerRecord; // タイプヒントを明確に
     public $ledgerDefineRecord; // define はリレーションでアクセス可能
 
+    public $canUpdate = false;
     // --- Workflow Action 用 ---
     public bool $approvalRequestModal = false;
     public bool $returnToDraftModal = false;
@@ -35,6 +36,8 @@ class Show extends Component
     // --- ここまで ---
 
     public Collection $workflowHistory; // ワークフロー履歴用プロパティ
+
+    public $selectedTab = 'details';
 
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService): void
@@ -156,6 +159,7 @@ class Show extends Component
                 Auth::id()
             );
             $this->approvalRequestModal = false;
+            $this->loadWorkflowHistory();
             $this->success(__('ledger.workflow.approval_requested_message'));
             // 必要なら $refresh など
         } catch (\Exception $e) {
@@ -183,6 +187,7 @@ class Show extends Component
                 $this->ledgerRecord->id,
                 Auth::id()
             );
+            $this->loadWorkflowHistory();
             $this->success(__('ledger.workflow.approved_message'));
         } catch (\Exception $e) {
             Log::error("Approval failed: " . $e->getMessage());
@@ -212,6 +217,7 @@ class Show extends Component
                 $this->returnComment
             );
             $this->returnToDraftModal = false;
+            $this->loadWorkflowHistory();
             $this->success(__('ledger.workflow.returned_to_draft_message'));
         } catch (\Exception $e) {
             Log::error("Return to draft failed: " . $e->getMessage());
@@ -221,7 +227,7 @@ class Show extends Component
         }
     }
 
-    // --- 権限チェック用ヘルパーメソッド (例) ---
+    // --- 権限チェック用ヘルパーメソッド ---
     public function canRequestApproval(): bool
     {
         // 現在のユーザーが点検者であるか、かつステータスが点検待ちか

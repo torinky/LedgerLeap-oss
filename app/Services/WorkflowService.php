@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use Carbon\Carbon;
+use Carbon\Traits\Date;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -186,7 +188,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $inspectorId,
                 'status' => WorkflowStatus::PENDING_APPROVAL, // このアクション時点のステータス
-                'version' => $ledgerVersion, // <<<--- Ledger の version を記録
+                'version' => $ledgerVersion,
                 'inspector_id' => $inspectorId, // 点検完了者
                 'approver_id' => $approverId, // 次の承認者
                 'requested_at' => $ledgerDiff->requested_at,
@@ -244,8 +246,8 @@ class WorkflowService
             // LedgerDiff を作成 (content 等は NULL)
             $diffData = [
                 'ledger_id' => $ledgerId,
-                'content' => [],
-                'column_define' => [],
+                'content' => '',
+                'column_define' => '',
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $approverId,
@@ -294,9 +296,11 @@ class WorkflowService
     {
         // ToDo: 権限チェック (modifierId が点検者/承認者か？)
 
-        return DB::transaction(function () use ($ledgerId, $modifierId, $comments) {
+        return DB::transaction(callback: function () use ($ledgerId, $modifierId, $comments) {
             $ledger = Ledger::findOrFail($ledgerId);
-            if (!in_array($ledger->status, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+            $latestDiff = $ledger->latestDiff()->first();
+
+            if (in_array($ledger->status, [WorkflowStatus::DRAFT, WorkflowStatus::APPROVED])) {
                 throw new Exception("Invalid status for returning to draft.");
             }
             // ToDo: さらに $modifierId が $ledger->inspector_id または $ledger->approver_id と一致するかチェック
@@ -317,20 +321,21 @@ class WorkflowService
                 'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments,
                 'returned_at' => now(), // 戻された日時
-                'inspector_id' => $ledger->inspector_id, // 戻す直前の担当者
-                'approver_id' => $ledger->approver_id,  // 戻す直前の担当者
-                'requested_at' => $ledger->requested_at,
-                'inspected_at' => $ledger->inspected_at,
+                'inspector_id' => $latestDiff->inspector_id, // 戻す直前の担当者
+                'approver_id' => $latestDiff->approver_id,  // 戻す直前の担当者
+                'requested_at' => $latestDiff->requested_at,
+                'inspected_at' => self::getInspectedAtCarbonDate($latestDiff->inspected_at),
                 'approved_at' => null, // クリア
             ];
-            $ledgerDiff = LedgerDiff::create($diffData);
+//            dd($latestDiff, $latestDiff->inspected_at, $diffData);
+            $lDiff = LedgerDiff::create($diffData);
 
             // Ledger を更新
             $ledger->update([
                 'status' => WorkflowStatus::DRAFT,
                 'returned_at' => now(), // Ledgerにも記録
                 'modifier_id' => $modifierId,
-                'latest_diff_id' => $ledgerDiff->id,
+                'latest_diff_id' => $lDiff->id,
             ]);
 
             // ToDo: カウンター調整 (担当者-)
@@ -341,7 +346,7 @@ class WorkflowService
             // ToDo: イベント発行
             // event(new StatusReturnedToDraft($ledgerDiff, $comments));
             // ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$ledgerDiff->id}");
+            Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$lDiff->id}");
 
             return $ledger->refresh();
         });
@@ -389,8 +394,11 @@ class WorkflowService
                 'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments, // 編集理由
                 // 他のWFカラムはクリア
-                'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
-                'inspected_at' => null, 'approved_at' => null,
+                'inspector_id' => $ledger->latestDiff->inspector_id ?? null,
+                'approver_id' => $ledger->latestDiff->approver_id ?? null,
+                'requested_at' => $ledger->latestDiff->requested_at ?? null,
+                'inspected_at' => null,
+                'approved_at' => null,
                 'returned_at' => now(), // 編集により戻された日時
             ];
             $newLedgerDiff = LedgerDiff::create($diffData);
@@ -431,5 +439,16 @@ class WorkflowService
     protected function decrementPendingTaskCount(int $userId, string $type): void
     {
         Log::info("Decrement pending {$type} count for user: {$userId}");
+    }
+
+    /**
+     * @param $targetDate string|Carbon|null
+     * @return \Carbon\Carbon|null
+     */
+    static function getInspectedAtCarbonDate($targetDate): ?\Carbon\Carbon
+    {
+        return \Carbon\Carbon::hasFormat($targetDate, 'Y-m-d H:i:s') && $targetDate !== '0000-00-00 00:00:00'
+            ? \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $targetDate)
+            : null;
     }
 }

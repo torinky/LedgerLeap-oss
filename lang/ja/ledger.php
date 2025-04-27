@@ -261,6 +261,10 @@ return [
     'switch' => 'スイッチ',
     'switch_to_role' => '役割に切り替える',
     'system_name' => 'Ledger Leap',
+    'tab' => [
+        'details' => '基本情報',
+        'workflow_history' => 'ワークフロー履歴',
+    ],
     'tag' => [
         'add' => 'タグを追加',
         'remove' => 'タグを削除',
@@ -492,4 +496,5 @@ return [
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認', // 承認待ちリスト用
     'view_history' => '変更履歴を見る',
+    'reviseCount' => '改訂回数',
 ];

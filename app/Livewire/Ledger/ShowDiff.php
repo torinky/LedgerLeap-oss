@@ -64,11 +64,31 @@ class ShowDiff extends Component
 
         }
 
-        // contentが空でないときのみ ledgerRecord を更新
-        if ($this->currentDiffRecord->content && !(count($this->currentDiffRecord->content) == 1 && $this->currentDiffRecord->content[0] === '""')) {
+        // contentが空の時はcontentが空でないledgerDiffのレコードのcontentとcolumn_defineを流用してセットしたい
+        if (empty($this->currentDiffRecord->content)) {
+            // contentが空の場合、空でない最新のDiffを探す
+            $latestNonEmptyDiff = LedgerDiff::where('ledger_id', $this->ledgerId)
+                ->where('id', '<', $this->currentDiffRecord->id)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->latest('id')
+                ->first();
+
+            if ($latestNonEmptyDiff) {
+                // 空でないDiffが見つかった場合、そのcontentとcolumn_defineを流用
+                $this->ledgerRecord->content = $latestNonEmptyDiff->content;
+                $this->ledgerRecord->define->column_define = $latestNonEmptyDiff->column_define;
+            } else {
+                // 空でないDiffが見つからない場合、contentとcolumn_defineをnullにする
+                $this->ledgerRecord->content = null;
+                $this->ledgerRecord->define->column_define = null;
+            }
+        } else {
+            // contentが空でない場合、そのままセット
             $this->ledgerRecord->content = $this->currentDiffRecord->content;
             $this->ledgerRecord->define->column_define = $this->currentDiffRecord->column_define;
         }
+
         $this->ledgerRecord->modifier = $this->currentDiffRecord->modifier;
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
 //        dd($this->currentDiffRecord->column_define);

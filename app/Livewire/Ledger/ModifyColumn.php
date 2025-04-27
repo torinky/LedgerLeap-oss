@@ -32,7 +32,7 @@ class ModifyColumn extends CreateColumn
         $this->ledgerId = (int)$request->route('ledgerId');
         if ($this->ledgerId) {
             // edit
-            $this->ledgerRecord = Ledger::with('define')->where('ledgers.id', $this->ledgerId)->firstOrFail();
+            $this->ledgerRecord = Ledger::with('define', 'latestDiff')->where('ledgers.id', $this->ledgerId)->firstOrFail();
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
             if (!empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
