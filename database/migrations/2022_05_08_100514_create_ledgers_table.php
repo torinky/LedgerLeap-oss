@@ -23,7 +23,7 @@ return new class extends Migration {
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
 
-            $table->string('status')->default(WorkflowStatus::DRAFT->value)->index(); // 最新のワークフロー状態
+            $table->string('status')->default(WorkflowStatus::NONE->value)->index(); // 最新のワークフロー状態
             $table->unsignedBigInteger('latest_diff_id')->nullable();
             $table->unsignedInteger('version')->default(1); // バージョン番号
 
@@ -45,9 +45,17 @@ return new class extends Migration {
     public function down()
     {
         Schema::table('ledgers', function (Blueprint $table) {
-            // 外部キー制約を先に削除
-            $table->dropForeign(['latest_diff_id']);
-            $table->dropColumn('latest_diff_id');
+            // 外部キー制約を削除する前に存在を確認
+            if (Schema::hasColumn('ledgers', 'latest_diff_id')) {
+                $foreignKeys = DB::select("SELECT CONSTRAINT_NAME 
+                                       FROM information_schema.KEY_COLUMN_USAGE 
+                                       WHERE TABLE_NAME = 'ledgers' 
+                                       AND COLUMN_NAME = 'latest_diff_id' 
+                                       AND TABLE_SCHEMA = DATABASE()");
+                if (!empty($foreignKeys)) {
+                    $table->dropForeign(['latest_diff_id']);
+                }
+            }
         });
         Schema::dropIfExists('ledgers');
     }

@@ -78,6 +78,8 @@ return [
         'setting' => '台帳／フォルダ設定の管理',
         'title' => '台帳名',
         'title_input' => '台帳名を入力',
+        'enable_workflow' => 'ワークフローを有効化',
+        'enable_workflow_hint' => 'ワークフローを有効化すると、台帳を点検・認可できるようになります。',
     ],
     'delete' => '削除する',
     'descending' => '降順',
@@ -443,6 +445,7 @@ return [
             'pending_inspection' => '点検待ち',
             'pending_approval' => '承認待ち',
             'approved' => '承認済み',
+            'none' => '承認不要',
             // 'rejected' => '差し戻し', // 不要になった
         ],
         'next_inspector' => '次の点検者',

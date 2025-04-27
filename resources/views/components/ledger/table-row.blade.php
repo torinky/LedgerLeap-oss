@@ -49,13 +49,16 @@
     @endforeach
     {{--                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}--}}
 
-    {{-- ステータス表示セル (新規追加) --}}
-    <th class="border px-4 py-2 text-center">
-        @if ($ledgerRecord->status)
-            <x-mary-badge :value="$ledgerRecord->status->label()"
-                          class="badge-sm {{ $ledgerRecord->status->colorClass() }}"/>
-        @endif
-    </th>
+    {{-- ステータス表示セル --}}
+    @if($ledgerRecord->define->workflow_enabled)
+        <th class="border px-4 py-2 text-center">
+            @if ($ledgerRecord->status)
+                <x-mary-badge :value="$ledgerRecord->status->label()"
+                              class="badge-sm {{ $ledgerRecord->status->colorClass() }}"/>
+            @endif
+        </th>
+    @endif
+
 
     <td class="border px-4 py-2">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}
         <span class="text-gray-500">{{JpDatetime::date('(bk)',$ledgerRecord->updated_at->timestamp)}}</span>

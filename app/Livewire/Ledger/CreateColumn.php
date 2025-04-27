@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Enums\WorkflowStatus;
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Jobs\Ledger\AttachedFileScanJob;
 use App\Models\AttachedFile;
@@ -67,7 +68,6 @@ class CreateColumn extends Component
 
     protected WorkflowService $workflowService; // WorkflowService をインジェクト
 
-    // --- ここまで ---
 
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService): void
@@ -265,6 +265,60 @@ class CreateColumn extends Component
             }
 
         }*/
+
+    /**
+     * ワークフロー無効時の直接保存処理 (新規追加)
+     */
+    public function saveDirectly(): void
+    {
+        // ワークフローが無効であることを再確認
+        if ($this->isWorkflowEnabled) {
+            $this->error('Workflow is enabled.');
+            return;
+        }
+        // 承認済みはロック (ModifyColumn でオーバーライドされる)
+        if ($this->ledgerRecord?->isLocked()) {
+            $this->error(__('ledger.workflow.cannot_edit_approved'));
+            return;
+        }
+
+        // バリデーション
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $userId = Auth::id();
+        $this->processFilesForSave(); // ファイル処理
+
+        try {
+            $ledgerData = [
+                'ledger_define_id' => $this->ledgerDefineId,
+                'content' => $this->content,
+                'content_attached' => $this->contentAttached,
+                'modifier_id' => $userId,
+                'status' => WorkflowStatus::NONE,
+                // version は変更しないか、新規なら 1
+            ];
+
+            if ($this->ledgerId && $this->ledgerRecord) { // 更新の場合
+                // 承認済みチェックは上で実施済み
+                $this->ledgerRecord->update($ledgerData);
+                $ledger = $this->ledgerRecord;
+                $message = __('ledger.updated.success');
+            } else { // 新規作成の場合
+                $ledgerData['creator_id'] = $userId;
+                $ledgerData['version'] = 1;
+                $ledger = Ledger::create($ledgerData);
+                $this->ledgerId = $ledger->id;
+                $this->ledgerRecord = $ledger;
+                $message = __('ledger.stored.success');
+            }
+
+            $this->addAttachedFileRecordIfNecessary();
+            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+
+        } catch (\Exception $e) {
+            Log::error('Direct save failed: ' . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
 
     /**
      * @throws Exception

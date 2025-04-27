@@ -29,6 +29,7 @@ class ModifyColumn extends CreateColumn
 
     public function mount(request $request): void
     {
+
         $this->ledgerId = (int)$request->route('ledgerId');
         if ($this->ledgerId) {
             // edit
@@ -224,6 +225,11 @@ class ModifyColumn extends CreateColumn
      */
     public function saveChanges(): void
     {
+        // ワークフローが無効なら直接保存
+        if (!$this->isWorkflowEnabled) {
+            $this->saveDirectly(); // 親クラスの直接保存メソッド呼び出し
+            return;
+        }
         // 現在のステータスを確認
         $currentStatus = $this->ledgerRecord?->status;
 
@@ -329,6 +335,12 @@ class ModifyColumn extends CreateColumn
     // 点検依頼 (Modify 時も基本的に同じだが、権限や状態チェックが必要)
     public function requestInspection(): void
     {
+        if ($this->ledgerRecord?->status !== WorkflowStatus::DRAFT) {
+            $this->error(__('ledger.workflow.cannot_request_inspection_approved'));
+
+            return;
+        }
+
         // 承認済みならエラー
         if ($this->ledgerRecord?->isLocked()) {
             $this->error(__('ledger.workflow.cannot_request_inspection_approved'));

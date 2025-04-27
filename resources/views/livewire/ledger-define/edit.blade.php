@@ -7,23 +7,26 @@
                       required
         />
         <x-mary-select
-            label="{{__('ledger.folder.containing')}}"
-            icon="o-folder" :options="$folderIdNameMap"
-            {{--            wire:change="applyParentFolder"--}}
-            wire:model="parentFolderId" required
+                label="{{__('ledger.folder.containing')}}"
+                icon="o-folder" :options="$folderIdNameMap"
+                {{--            wire:change="applyParentFolder"--}}
+                wire:model="parentFolderId" required
         />
+        {{-- ★★★ ワークフロー有効化トグル (新規追加) ★★★ --}}
+        <x-mary-toggle wire:model="workflow_enabled" label="{{ __('ledger.define.enable_workflow') }}"
+                       hint="{{ __('ledger.define.enable_workflow_hint') }}" right tight/>
 
         <x-mary-accordion wire:model="descriptionGroup" class="rounded-lg bg-base-200 border-base-300 border">
             <x-mary-collapse name="createDescription">
                 <x-slot:heading>
                     {{--                                        {{__('ledger.define.create_description')}}--}}
                     <button
-                        wire:click.prevent="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
+                            wire:click.prevent="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
                     <x-mary-markdown
-                        {{--                        label="{{__('ledger.define.create_description')}}"--}}
-                        wire:model="createDescription"
+                            {{--                        label="{{__('ledger.define.create_description')}}"--}}
+                            wire:model="createDescription"
                     />
                 </x-slot:content>
             </x-mary-collapse>
@@ -31,12 +34,12 @@
                 <x-slot:heading>
                     {{--                                        {{__('ledger.define.list_description')}}--}}
                     <button
-                        wire:click.prevent="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
+                            wire:click.prevent="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
                     <x-mary-markdown
-                        {{--                        label="{{__('ledger.define.list_description')}}"--}}
-                        wire:model="listDescription"
+                            {{--                        label="{{__('ledger.define.list_description')}}"--}}
+                            wire:model="listDescription"
                     />
                 </x-slot:content>
             </x-mary-collapse>
@@ -44,12 +47,12 @@
                 <x-slot:heading>
                     {{--                                        {{__('ledger.define.detail_description')}}--}}
                     <button
-                        wire:click.prevent="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
+                            wire:click.prevent="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
                     <x-mary-markdown
-                        {{--                        label="{{__('ledger.define.detail_description')}}"--}}
-                        wire:model="detailDescription"
+                            {{--                        label="{{__('ledger.define.detail_description')}}"--}}
+                            wire:model="detailDescription"
                     />
                 </x-slot:content>
             </x-mary-collapse>

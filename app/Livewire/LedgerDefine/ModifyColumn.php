@@ -2,7 +2,9 @@
 
 namespace App\Livewire\LedgerDefine;
 
+use App\Enums\WorkflowStatus;
 use App\Models\ColumnDefine;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -107,6 +109,8 @@ class ModifyColumn extends Component
      */
     public function updateColumnOrder($columnOrder)
     {
+        if (!$this->canModifyColumns()) return;
+
         // https://laravel-livewire.com/screencasts/s8-dragging-list
         $this->ledgerDefineRecord->column_define = collect($columnOrder)->map(function ($order, $key) {
             $result = collect($this->ledgerDefineRecord->column_define)->where('id', (int)$order['value'])->firstOrFail();
@@ -125,6 +129,8 @@ class ModifyColumn extends Component
      */
     public function removeColumn($columnId)
     {
+        if (!$this->canModifyColumns()) return;
+
         $this->ledgerDefineRecord->column_define = collect($this->ledgerDefineRecord->column_define)
 //            ->dd()
             ->reject(fn($columnDefine, $key) => $columnDefine->id == $columnId)
@@ -145,6 +151,7 @@ class ModifyColumn extends Component
 
     public function addColumn()
     {
+        if (!$this->canModifyColumns()) return;
 
         $this->maxColumnId++;
         $this->maxColumnOrder++;
@@ -187,6 +194,8 @@ class ModifyColumn extends Component
 
     public function applyProperty($columnId, $propertyName, $newValue)
     {
+        if (!$this->canModifyColumns()) return;
+
         $setterMethod = 'set' . ucfirst($propertyName);
         foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
             if ($columnDefine->id == $columnId) {
@@ -233,6 +242,7 @@ class ModifyColumn extends Component
 
     public function store()
     {
+        if (!$this->canModifyColumns()) return;
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
@@ -338,6 +348,8 @@ class ModifyColumn extends Component
 
     public function storeFile($columnId)
     {
+        if (!$this->canModifyColumns()) return;
+
         if (isset($this->columnUploadedFile[$columnId])) {
             //            dd($this->columnUploadedFile[$columnId]);
             $file = $this->columnUploadedFile[$columnId];
@@ -359,6 +371,8 @@ class ModifyColumn extends Component
 
     public function deleteFile($columnId)
     {
+        if (!$this->canModifyColumns()) return;
+
         $filePath = $this->ledgerDefineRecord->column_define[$columnId]->file->path ?? null;
 
         if ($filePath && Storage::disk('public')->exists($filePath)) {
@@ -373,4 +387,24 @@ class ModifyColumn extends Component
 
         $this->store();
     }
+
+    /**
+     * 台帳定義の列構成を変更可能かチェックする
+     * @return bool true: 変更可能, false: 変更不可
+     */
+    private function canModifyColumns(): bool // メソッド名変更
+    {
+        $pendingCount = Ledger::where('ledger_define_id', $this->ledgerDefineRecord->id)
+            ->whereIn('status', [
+                WorkflowStatus::PENDING_INSPECTION,
+                WorkflowStatus::PENDING_APPROVAL
+            ])->count();
+
+        if ($pendingCount > 0) {
+            $this->error(__('ledger.define.cannot_modify_while_workflow'));
+            return false;
+        }
+        return true;
+    }
+
 }

@@ -12,45 +12,47 @@
 
                 <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-10">
 
-                    <x-mary-card>
-                        <div class="flex justify-between items-center ">
-                            <div>
-                                <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
-                                <x-mary-badge :value="$ledgerRecord->status->label()"
-                                              class="{{ $ledgerRecord->status->colorClass() }}"/>
-                                {{--                                担当者表示--}}
+                    @if($ledgerRecord->define->workflow_enabled)
+                        <x-mary-card>
+                            <div class="flex justify-between items-center ">
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
+                                    <x-mary-badge :value="$ledgerRecord->status->label()"
+                                                  class="{{ $ledgerRecord->status->colorClass() }}"/>
+                                    {{-- 担当者表示--}}
 
-                                @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
-                                    <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
-                                @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
-                                    <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
-                                @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
-                                    <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
-                                @endif
-                            </div>
-                            {{--                            アクションボタン--}}
+                                    @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
+                                    @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
+                                    @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
+                                    @endif
+                                </div>
+                                {{-- アクションボタン--}}
 
-                            <div class="flex gap-2 items-center">
-                                @if($this->canRequestApproval())
-                                    <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                                   icon="o-check-badge"
-                                                   class="btn-lg btn-success" wire:click="openApprovalRequestModal"
-                                                   spinner/>
-                                @endif
-                                @if($this->canApprove())
-                                    <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                   class="btn-lg btn-primary" wire:click="approveTask" spinner/>
-                                @endif
-                                @if($this->canReturnToDraft())
-                                    <x-mary-button
-                                            label="{{ __('ledger.workflow.return_to_draft_short').' '.$ledgerRecord->id }}"
-                                            icon="o-arrow-uturn-left"
-                                            class="btn-sm btn-warning" wire:click="openReturnToDraftModal"
-                                            spinner/>
-                                @endif
+                                <div class="flex gap-2 items-center">
+                                    @if($this->canRequestApproval())
+                                        <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                       icon="o-check-badge"
+                                                       class="btn-lg btn-success" wire:click="openApprovalRequestModal"
+                                                       spinner/>
+                                    @endif
+                                    @if($this->canApprove())
+                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                                       class="btn-lg btn-primary" wire:click="approveTask" spinner/>
+                                    @endif
+                                    @if($this->canReturnToDraft())
+                                        <x-mary-button
+                                                label="{{ __('ledger.workflow.return_to_draft_short').' '.$ledgerRecord->id }}"
+                                                icon="o-arrow-uturn-left"
+                                                class="btn-sm btn-warning" wire:click="openReturnToDraftModal"
+                                                spinner/>
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-                    </x-mary-card>
+                        </x-mary-card>
+                    @endif
 
                     <x-ledger.detail.table
                             :ledgerRecord="$ledgerRecord"
@@ -68,7 +70,7 @@
 
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history" label="{{ __('ledger.tab.workflow_history') }}" icon="o-list-bullet">
-                <x-mary-card> {{-- 新しい翻訳キー --}}
+                <x-mary-card>
                     <div class="overflow-x-auto">
                         <table class="table table-sm w-full bg-base-200 shadow-md">
                             <thead>

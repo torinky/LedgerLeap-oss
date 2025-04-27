@@ -22,6 +22,7 @@ class LedgerDefine extends Model
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
+        'workflow_enabled' => 'boolean',
     ];
 
     protected $fillable = [
