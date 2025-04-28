@@ -25,8 +25,11 @@
             </div>
 
             {{-- アプリロゴ/名称 (マイポータルへのリンク) --}}
-            <a href="{{ route('my-portal') }}" class="btn btn-ghost normal-case text-xl tooltip tooltip-bottom"
-               data-tip="{{ __('ledger.navigation.go_to_my_portal') }}">
+            <a href="{{ route('my-portal') }}"
+               {{--               class="btn btn-ghost normal-case text-xl tooltip tooltip-bottom"--}}
+               data-tip="{{ __('ledger.navigation.go_to_my_portal') }}"
+                    @class(['btn btn-ghost tooltip tooltip-bottom text-xl', 'btn-active' => request()->routeIs('my-portal')]) {{-- アクティブ状態をクラスで表現 --}}
+            >
                 {{ config('app.name', 'Laravel') }}
             </a>
 
@@ -34,7 +37,7 @@
             <div class="hidden lg:flex items-center ml-4 space-x-1"> {{-- space-x を調整 --}}
                 {{-- 台帳リンク (アイコン + ツールチップ) --}}
                 <a href="{{ route('ledger.index') }}"
-                   @class(['btn btn-ghost btn-sm btn-square tooltip tooltip-bottom', 'btn-active' => request()->routeIs('ledger.index')]) {{-- アクティブ状態をクラスで表現 --}}
+                   @class(['btn btn-ghost btn-square tooltip tooltip-bottom', 'btn-active' => request()->routeIs('ledger.index')]) {{-- アクティブ状態をクラスで表現 --}}
                    data-tip="{{ __('ledger.navigation.ledgers') }}"
                 >
                     <i class="fas fa-book-open-reader"></i>
