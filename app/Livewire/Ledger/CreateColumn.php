@@ -9,6 +9,7 @@ use App\Jobs\Ledger\AttachedFileScanJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Services\WorkflowService;
 use Exception;
@@ -16,6 +17,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -267,20 +269,17 @@ class CreateColumn extends Component
         }*/
 
     /**
-     * ワークフロー無効時の直接保存処理 (新規追加)
+     * ワークフロー無効時の直接保存処理 (LedgerDiff 作成を追加)
      */
     public function saveDirectly(): void
     {
         // ワークフローが無効であることを再確認
-        if ($this->isWorkflowEnabled) {
-            $this->error('Workflow is enabled.');
+        if ($this->ledgerDefineRecord?->workflow_enabled) { // プロパティ名を修正 isWorkflowEnabled -> workflow_enabled
+            $this->error('Workflow is enabled for this definition.');
             return;
         }
-        // 承認済みはロック (ModifyColumn でオーバーライドされる)
-        if ($this->ledgerRecord?->isLocked()) {
-            $this->error(__('ledger.workflow.cannot_edit_approved'));
-            return;
-        }
+        // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
+        // if ($this->ledgerRecord?->isLocked()) { ... }
 
         // バリデーション
         $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
@@ -288,33 +287,67 @@ class CreateColumn extends Component
         $this->processFilesForSave(); // ファイル処理
 
         try {
+            // トランザクション開始
+            DB::beginTransaction();
+
             $ledgerData = [
                 'ledger_define_id' => $this->ledgerDefineId,
                 'content' => $this->content,
                 'content_attached' => $this->contentAttached,
                 'modifier_id' => $userId,
-                'status' => WorkflowStatus::NONE,
-                // version は変更しないか、新規なら 1
+                'status' => WorkflowStatus::NONE, // <<<--- NONE ステータス
+                // version は Ledger::create / update でよしなにされるはず
             ];
 
             if ($this->ledgerId && $this->ledgerRecord) { // 更新の場合
-                // 承認済みチェックは上で実施済み
+                // 承認済みチェック (念のため)
+                if ($this->ledgerRecord->isLocked()) {
+                    throw new \Exception(__('ledger.workflow.cannot_edit_approved'));
+                }
+                $ledgerData['version'] = $this->ledgerRecord->version + 1;
                 $this->ledgerRecord->update($ledgerData);
-                $ledger = $this->ledgerRecord;
+                $ledger = $this->ledgerRecord->refresh(); // 更新後のデータを再取得
                 $message = __('ledger.updated.success');
             } else { // 新規作成の場合
                 $ledgerData['creator_id'] = $userId;
-                $ledgerData['version'] = 1;
+                $ledgerData['version'] = 1; // 新規作成時のバージョン
                 $ledger = Ledger::create($ledgerData);
-                $this->ledgerId = $ledger->id;
-                $this->ledgerRecord = $ledger;
+                $this->ledgerId = $ledger->id; // ID をセット
+                $this->ledgerRecord = $ledger; // レコードをセット
                 $message = __('ledger.stored.success');
             }
 
-            $this->addAttachedFileRecordIfNecessary();
+            // --- LedgerDiff 作成処理を追加 ---
+            $columnDefine = $ledger->define->column_define; // Ledger から Define を取得
+            $ledgerVersion = $ledger->version;
+
+            $diffData = [
+                'ledger_id' => $ledger->id,
+                'content' => $ledger->content, // 保存された内容
+                'content_attached' => $ledger->content_attached, // 保存された内容
+                'column_define' => $columnDefine,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $userId, // 今回の操作者
+                'status' => WorkflowStatus::NONE, // <<<--- NONE ステータス
+                'version' => $ledgerVersion,
+                // 他のワークフローカラムは NULL
+                'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
+                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+            ];
+            $ledgerDiff = LedgerDiff::create($diffData);
+
+            // Ledger の latest_diff_id を更新
+            $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
+            // --- ここまで追加 ---
+
+            DB::commit(); // トランザクション確定
+
+            $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
             $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
 
-        } catch (\Exception $e) {
+        } catch (Throwable $e) { // Throwable をキャッチ
+            DB::rollBack(); // エラー時ロールバック
             Log::error('Direct save failed: ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
         }

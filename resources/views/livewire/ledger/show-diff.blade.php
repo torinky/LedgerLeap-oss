@@ -10,13 +10,15 @@
                 <span>|</span>
             @endfor
         </div>
-        <p class="text-center text-sm">id: {{ $currentDiffRecord?->id ?? 'N/A' }}
-            Ver: {{ $currentDiffRecord?->version }} ({{ $ledgerDiffCount - $offset }}
-            / {{ $ledgerDiffCount }})</p> {{-- バージョン表示例 --}}
+        <p class="text-center text-sm">
+            {{--            id: {{ $currentDiffRecord?->id ?? 'N/A' }}--}}
+            Ver: {{ $currentDiffRecord?->version }}
+        {{--            ({{ $ledgerDiffCount - $offset }} / {{ $ledgerDiffCount }})</p>--}}
+        {{-- バージョン表示例 --}}
     </div>
 
     {{--  ワークフロー情報表示エリア  --}}
-    @if ($currentDiffRecord)
+    @if ($currentDiffRecord && $currentDiffRecord->status !== \App\Enums\WorkflowStatus::NONE)
         <x-mary-card title="{{ __('ledger.workflow.history_detail') }}" class="mb-6" shadow="sm">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
@@ -53,8 +55,33 @@
                 {{-- 他の関連日時なども必要なら追加 --}}
             </div>
         </x-mary-card>
+    @elseif ($currentDiffRecord)
+        {{-- status が NONE の場合の代替表示 (任意) --}}
+        <div class="text-sm text-base-content/70 mb-6 italic text-center">
+            {{ __('ledger.workflow.workflow_inactive_at_this_point') }}
+            ({{ __('ledger.workflow.history_user') }}: {{ $currentDiffRecord->modifier->name ?? 'N/A' }}
+            , {{ $currentDiffRecord->created_at->isoFormat('YYYY/MM/DD HH:mm:ss') }})
+        </div>
     @endif
 
+    @if($currentDiffRecord && !empty($currentDiffRecord->content) && $currentDiffRecord->content != '[]' && $currentDiffRecord->content != '{}')
+        {{--
+                <x-ledger.detail.table
+                        :ledgerRecord="$currentDiffRecord" --}}
+        {{-- Diff レコードを渡す --}}{{--
+
+                        :columnDefine="$currentDiffRecord->column_define" --}}
+        {{-- Diff の定義を渡す --}}{{--
+
+                        :canView="auth()->user()->can('view', $ledgerRecord)"
+                />
+        --}}
+    @else
+        {{-- content が記録されていない Diff の場合にメッセージ表示 --}}
+
+        <div class="alert alert-info max-w-md mx-auto"><i
+                    class="fas fa-info-circle"></i>{{__('ledger.no_content_in_this_diff')}}</div>
+    @endif
 
     @if($ledgerRecord->content)
         <x-ledger.detail.table
@@ -62,7 +89,7 @@
                 :canView="auth()->user()->can('view', $ledgerRecord)"
         />
     @else
-        <div class="alert alert-info">{{__('ledger.no_change_content')}}</div>
+        <div class="alert alert-info"><i class="fas fa-info-circle"></i>{{__('ledger.no_change_content')}}</div>
     @endif
 
 

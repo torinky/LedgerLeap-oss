@@ -46,8 +46,10 @@ class WorkflowService
                 if ($ledger->isLocked()) {
                     throw new Exception("Cannot save draft for an approved record.");
                 }
+                $currentVersion = $ledger->version + 1; // <<<--- 更新時はインクリメント
             } else {
                 $isNewLedger = true;
+                $currentVersion = 1;
                 $ledger = Ledger::create([
                     'ledger_define_id' => $ledgerDefineId,
                     'creator_id' => $modifierId,
@@ -55,12 +57,11 @@ class WorkflowService
                     'status' => WorkflowStatus::DRAFT,
                     'content' => $content, // 新規作成時から content を保存
                     'content_attached' => $contentAttached ?? [],
-                    'version' => 1,
+                    'version' => $currentVersion,
                 ]);
                 $ledgerId = $ledger->id;
             }
             $columnDefine = $ledger->define->column_define;
-            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff (データスナップショット) を作成
             $diffData = [
@@ -71,7 +72,7 @@ class WorkflowService
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $modifierId,
                 'status' => WorkflowStatus::DRAFT, // この Diff 作成時のステータス
-                'version' => $ledgerVersion,
+                'version' => $currentVersion,
                 // 他のワークフローカラムは NULL
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
@@ -380,7 +381,7 @@ class WorkflowService
         return DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments) {
             $currentStatus = $ledger->status; // 戻す前のステータス
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
-            $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
+            $ledgerVersion = $ledger->version + 1; // 現在の Ledger バージョン+1を取得
 
             // 1. 新しい LedgerDiff を作成 (Content有り)
             $diffData = [
@@ -410,7 +411,7 @@ class WorkflowService
                 'status' => WorkflowStatus::DRAFT,
                 'modifier_id' => $modifierId,
                 'latest_diff_id' => $newLedgerDiff->id, // 最新Diff ID 更新
-                // バージョンは上げない
+                'version' => $ledgerVersion,
             ]);
 
             // 3. ToDo: Activity Log 記録 (ステップ4)

@@ -368,56 +368,76 @@
 
 ---
 
-### ステップ 5: ワークフロー有効化制御、定義変更制限、`NONE` ステータス導入 (Next)
+### ✅ ステップ 5: ワークフロー有効化制御、定義変更制限、`NONE` ステータス導入 (完了)
 
-* **目的:** 台帳定義の設定に基づきワークフローの有効/無効を制御する。ワークフロー進行中の定義変更を制限する。*
-  *ワークフロー非適用を示す `NONE` ステータスを導入し、状態管理と処理分岐を明確化する。**
-* **タスク:**
-    1. **Enum 定義変更:** `app/Enums/WorkflowStatus.php` に `NONE` ケースを追加し、関連メソッド (`label`, `colorClass`,
-       `isWorkflowActive`, `isWorkflowPending`) を定義・修正する。
-    2. **DB スキーマ変更:**
-        * `create_ledgers_table.php` (または変更用マイグレーション) で `status` カラムのデフォルト値を
-          `WorkflowStatus::NONE->value` に変更する。
-        * `create_ledger_defines_table.php` (または変更用マイグレーション) で、`workflow_enabled` (boolean, default:
-          false, nullable: false) カラムを追加する。
-        * マイグレーションを実行する。
+* **目的:** 台帳定義の設定に基づきワークフローの有効/無効を制御する。ワークフロー進行中の定義変更を制限する。ワークフロー非適用を示す
+  `NONE` ステータスを導入し、状態管理と処理分岐を明確化する。
+* **実施済みタスク:**
+    1. **Enum 定義変更:** `app/Enums/WorkflowStatus.php` に `NONE` ケースを追加し、関連メソッドを定義・修正。[完了]
+    2. **DB スキーマ変更:** `create_ledgers_table.php` の `status` カラムのデフォルト値を `WorkflowStatus::NONE->value`
+       に変更。`create_ledger_defines_table.php` に `workflow_enabled` カラムを追加。マイグレーションを実行。[完了]
     3. **台帳定義編集画面 (`LedgerDefine\Edit`) 実装:**
-        * UI (`edit.blade.php`): `workflow_enabled` 設定用のトグルスイッチ (`<x-mary-toggle>`) を追加する。
-        * ロジック (`Edit.php`):
-            * `mount` で `$workflow_enabled` プロパティを DB から読み込む。
-            * `store` メソッドで `$workflow_enabled` を保存する処理を追加。
-            * **有効→無効に変更された場合:** 関連する `Ledger` レコードのうち、`status` が `PENDING_INSPECTION`,
-              `PENDING_APPROVAL`, または `DRAFT` のものを検索し、`status` を `NONE`
-              に更新する処理を追加する（関連する担当者ID等もクリア）。(※ バッチ処理化も検討)
-            * (オプション・ステップ6) 上記 `NONE` 戻し時に、関係者への通知イベントを発行する。
+        * UI (`edit.blade.php`): `workflow_enabled` 設定用のトグルスイッチ (`<x-mary-toggle>`) を追加。[完了]
+        * ロジック (`Edit.php`): `mount` で値を読み込み、`store` で保存。**有効→無効変更時に進行中 Ledger の `status`
+          を `NONE` に更新する処理を実装。**[完了]
     4. **台帳作成/編集画面 (`CreateColumn`/`ModifyColumn`) 分岐処理実装:**
-        * ロジック (`CreateColumn.php`, `ModifyColumn.php`): `mount` 時に `$ledgerDefineRecord->workflow_enabled` を読み込み、
-          `$isWorkflowEnabled` プロパティに保持する。
-        * ビュー (`create-column.blade.php`, `modify-column.blade.php`): `@if($isWorkflowEnabled)`
-          ディレクティブを使用し、アクションボタンエリアの表示を切り替える（有効ならワークフローボタン群、無効なら直接保存ボタン）。
+        * ビュー (`create-column.blade.php`, `modify-column.blade.php`): `@if($ledgerRecord->definee->workflow_enabled)`
+          ディレクティブでアクションボタンエリアの表示を切り替え。[完了]
     5. **台帳リスト/詳細画面 状態表示処理実装:**
         * ビュー (`records-table.blade.php`, `table-row.blade.php`, `livewire/ledger/show.blade.php`):
-          `@if($ledgerRecord->status !== \App\Enums\WorkflowStatus::NONE)` 等の条件分岐を追加し、ワークフローが無効 (
-          `NONE` 状態) の場合は、関連するステータス表示、アクションボタン、履歴タブなどを非表示にする。
-    6. **直接保存ロジック実装 (`CreateColumn::saveDirectly`):**
-        * ワークフロー無効時の「保存」ボタンから呼び出されるメソッドを実装する。
-        * `Ledger` レコードを作成または更新し、`status` カラムには必ず `WorkflowStatus::NONE` を設定する (`LedgerDiff`
-          は作成しない)。
-    7. **台帳定義変更制限ロジック (`LedgerDefine\ModifyColumn`):**
-        * 列定義 (`column_define`) を変更するアクションの実行前に `canModifyDefinition()` メソッドを呼び出す。
-        * `canModifyDefinition()` メソッド内で、関連する `Ledger` レコードに `status` が `PENDING_INSPECTION` または
-          `PENDING_APPROVAL` のものが存在するかチェックし、存在する場合は `false` を返し、エラーメッセージを表示する。
-    8. **`WorkflowService` メソッドのステータスチェック強化:** 各ワークフローアクションメソッドの冒頭で、対象 `Ledger`
-       の現在の `status` がそのアクションを実行可能な状態であるか、より厳密にチェックするロジックを追加する。
+          `@if($ledgerRecord->status !== \App\Enums\WorkflowStatus::NONE)` 等の条件分岐を追加し、`NONE`
+          状態の場合はステータス関連表示を非表示または変更。[完了]
+    6. **直接保存ロジック実装 (`CreateColumn::saveDirectly`):** ワークフロー無効時の「保存」ボタンから呼び出されるメソッドを実装し、
+       `Ledger.status` を `NONE` で保存。[完了]
+    7. **台帳定義変更制限ロジック (`LedgerDefine\ModifyColumn`):** 列定義を変更するアクションの実行前に
+       `canModifyDefinition()` メソッドを呼び出し、進行中の Ledger があれば変更をブロックする処理を実装。[完了]
+    8. **`WorkflowService` メソッドのステータスチェック強化:** 各ワークフローアクションメソッド冒頭で、対象
+       `Ledger.status` が適切かチェックするロジックを追加。[完了]
 * **動作確認:**
-    * `LedgerDefine` 編集画面でワークフロー有効/無効トグルが表示され、設定が保存されること。
-    * ワークフロー有効/無効設定に応じて、台帳作成/編集画面のアクションボタンが切り替わること。
-    * ワークフロー有効/無効設定に応じて、台帳リスト/詳細画面のステータス関連表示が切り替わること。
-    * ワークフロー無効時は直接保存され、`Ledger.status` が `NONE` になること。
-    * ワークフロー設定を有効→無効に変更した場合、進行中だったレコードのステータスが `NONE` に戻ること。
-    * ワークフロー進行中に台帳定義の列構成を変更しようとするとエラーメッセージが表示され、変更がブロックされること。
-* **ドキュメント更新:** 「機能詳細(ワークフロー有効化設定、直接保存、定義変更制限、リスト/詳細表示)」「関連ファイル」を更新。
-  `NONE` ステータスの導入と設定変更時の挙動、UI分岐について追記。
+    * `LedgerDefine` 編集画面でワークフロー有効/無効トグルが表示され、設定が保存されることを確認。[完了]
+    * ワークフロー有効/無効設定に応じて、台帳作成/編集画面のアクションボタンが切り替わることを確認。[完了]
+    * ワークフロー有効/無効設定に応じて、台帳リスト/詳細画面のステータス関連表示が切り替わることを確認。[完了]
+    * ワークフロー無効時は直接保存され、`Ledger.status` が `NONE` になることを確認。[完了]
+    * ワークフロー設定を有効→無効に変更した場合、進行中だったレコードのステータスが `NONE` に戻ることを確認。[完了]
+    *
+  ワークフロー進行中に台帳定義の列構成を変更しようとするとエラーメッセージが表示され、変更がブロックされることを確認。[完了]
+* **成果物:** ワークフローの有効/無効を台帳定義ごとに制御でき、状態管理と UI 表示が連動する機能。定義変更時の安全性向上。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(ワークフロー有効化設定、直接保存、定義変更制限、リスト/詳細表示)
+  」「関連ファイル」を更新。`NONE` ステータスの導入と設定変更時の挙動、UI分岐について追記。
+
+---
+
+### ステップ 5.1: WF無効時の変更履歴記録と履歴表示調整 (Next)
+
+* **目的:** **ワークフローが無効な台帳でも、データ変更時に `LedgerDiff` を変更履歴として記録**する。詳細画面および*
+  *変更履歴画面 (`ShowDiff`)** の履歴表示をワークフローの状態に応じて調整する。
+* **タスク:**
+    1. **直接保存ロジック修正 (`CreateColumn::saveDirectly`, `ModifyColumn::saveDirectly`):** `Ledger` レコードを作成/更新する
+       **と同時に**、**新規 `LedgerDiff` レコードを作成**する処理を追加する。この Diff には*
+       *変更後の `content`, `content_attached`, `column_define` を記録**し、`status` は **`WorkflowStatus::NONE`** とする。
+       `Ledger.version` は更新しない。
+    2. **履歴表示ロジック (`Show.php` Livewire):** 変更なし（`LedgerDiff` を取得してビューに渡す）。
+    3. **履歴表示ビュー (`show.blade.php` Livewire用 - 詳細画面の履歴タブ):** ワークフロー履歴タブ内のループで、
+       `@if ($diff->status !== \App\Enums\WorkflowStatus::NONE)` などの条件分岐を追加し、`status` が `NONE`
+       の場合はワークフロー関連情報（担当者など）を表示せず、「変更」などのシンプルなアクション名を表示するように調整する。
+       `content` がある Diff へのリンク (`ShowDiff` へのリンク) は表示する。
+    4. **変更履歴画面ビュー (`show-diff.blade.php` Livewire用) 修正:**
+        * 現在表示中の `$currentDiffRecord` の `status` をチェックする。
+        * `@if ($currentDiffRecord->status !== \App\Enums\WorkflowStatus::NONE)` ディレクティブを追加し、*
+          *ワークフロー情報表示エリア全体**（ステータスバッジ、点検者、承認者、コメント欄を含むカード）を囲み、`status` が
+          `NONE` の場合は表示しないようにする。
+        * **(任意)** `status` が `NONE` の場合に、「この時点ではワークフローは無効でした」のような代替メッセージを表示する。
+    5. **変更履歴画面データ表示修正 (`show-diff.blade.php` Livewire用):** データ内容表示部分 (`<x-ledger.detail.table>`)
+       の表示条件を、`$currentDiffRecord?->content` が空文字列 (`''`) や空JSON (`'[]'`) でない場合に表示するように修正する（
+       `content` が記録されていない Diff も存在するため）。
+* **動作確認:**
+    * ワークフロー無効の台帳を編集・保存した場合、`LedgerDiff` が `status=NONE` で作成され、`content` が記録されること。
+    * 詳細画面の履歴タブで、ワークフロー無効時の変更履歴がシンプルに表示され、ワークフロー有効時の履歴は詳細情報付きで表示されること。
+    * 変更履歴画面 (`ShowDiff`) で、ワークフロー無効時の履歴を表示した場合、ワークフロー情報エリアが表示されず、データ内容のみが表示されること。
+    * 変更履歴画面 (`ShowDiff`) で、ワークフロー有効時の履歴（ステータス変更のみで `content`
+      が空の場合も含む）を表示した場合、データ内容エリアに「内容の変更はありません」等が表示され、ワークフロー情報が表示されること。
+* **ドキュメント更新:** 「機能詳細(ワークフロー有効化設定、直接保存、証跡)」「関連ファイル」更新。WF無効時の `LedgerDiff`
+  の扱いと、詳細画面および**変更履歴画面**での履歴表示方法について追記。
 
 ---
 

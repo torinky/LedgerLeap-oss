@@ -7,6 +7,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Mary\Traits\Toast;
 
@@ -104,19 +105,19 @@ class Edit extends Component
             try {
                 $count = Ledger::where('ledger_define_id', $this->ledgerDefineRecord->id)
                     ->whereIn('status', [
-                        WorkflowStatus::DRAFT,
+//                        WorkflowStatus::DRAFT,
                         WorkflowStatus::PENDING_INSPECTION,
                         WorkflowStatus::PENDING_APPROVAL
                     ])
                     ->update([
                         'status' => WorkflowStatus::NONE,
-                        'inspector_id' => null, // 担当者等もクリア
-                        'approver_id' => null,
-                        'requested_at' => null,
-                        'inspected_at' => null,
-                        'approved_at' => null,
-                        'returned_at' => null,
-                        'comments' => null,
+//                        'inspector_id' => null, // 担当者等もクリア
+//                        'approver_id' => null,
+//                        'requested_at' => null,
+//                        'inspected_at' => null,
+//                        'approved_at' => null,
+//                        'returned_at' => null,
+//                        'comments' => null,
                         'modifier_id' => auth()->id() // 操作者を記録
                     ]);
                 if ($count > 0) {
@@ -136,6 +137,7 @@ class Edit extends Component
         $this->ledgerDefineRecord->create_description = $this->createDescription;
         $this->ledgerDefineRecord->list_description = $this->listDescription;
         $this->ledgerDefineRecord->detail_description = $this->detailDescription;
+        $this->ledgerDefineRecord->workflow_enabled = $this->workflow_enabled;
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         $this->success(__('ledger.has_been_updated'));

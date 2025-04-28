@@ -78,8 +78,9 @@ return [
         'setting' => '台帳／フォルダ設定の管理',
         'title' => '台帳名',
         'title_input' => '台帳名を入力',
-        'enable_workflow' => 'ワークフローを有効化',
-        'enable_workflow_hint' => 'ワークフローを有効化すると、台帳を点検・認可できるようになります。',
+        'enable_workflow' => 'ワークフローを有効にする',
+        'enable_workflow_hint' => 'この台帳への登録・更新に点検・承認ステップを必須とします。',
+        'cannot_modify_while_workflow' => 'この台帳でワークフローが進行中（点検待ち・承認待ち）のため、列定義を変更できません。ワークフローが完了してから再度お試しください。',
     ],
     'delete' => '削除する',
     'descending' => '降順',
@@ -445,7 +446,8 @@ return [
             'pending_inspection' => '点検待ち',
             'pending_approval' => '承認待ち',
             'approved' => '承認済み',
-            'none' => '承認不要',
+            'none' => 'ワークフローなし', // NONE ステータスの表示名
+            'none_long' => 'この台帳にはワークフローは適用されていません。', // 詳細画面での表示
             // 'rejected' => '差し戻し', // 不要になった
         ],
         'next_inspector' => '次の点検者',
@@ -494,10 +496,16 @@ return [
         'history_action' => 'アクション/ステータス',
         'history_detail' => '詳細（担当者、コメント等）',
         'no_history' => 'ワークフロー履歴はありません。',
+        'no_edit_permission' => '編集権限がありません。', // 念のため汎用的なキーも
+        'no_approvers_found' => '承認者の候補が見つかりません。', // 承認者選択モーダル用
+        'view_content_at_this_point' => 'この時点の内容を見る', // 履歴テーブルリンク
+        'history_action_modified' => '内容の変更', // NONE ステータスの履歴表示
+        'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。', // ShowDiffでのNONEステータス表示
 
     ],
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認', // 承認待ちリスト用
     'view_history' => '変更履歴を見る',
     'reviseCount' => '改訂回数',
+    'no_content_in_this_diff' => 'この履歴には内容の変更記録はありません。', // ShowDiffメッセージ
 ];
