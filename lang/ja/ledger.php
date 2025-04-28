@@ -430,6 +430,7 @@ return [
         'toggle_theme' => 'テーマ切り替え',
         'notifications' => '通知',
         'settings' => '設定',
+        'unread_notifications' => '未読の通知',
     ],
 
     'save_draft' => '下書き保存',

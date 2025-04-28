@@ -456,26 +456,42 @@
 
 ---
 
-### ステップ 6.2: システム内通知 UI への連携
+### ✅ ステップ 6.2: システム内通知 UI への連携 (完了)
 
-* **目的:** ヘッダーアイコンとマイポータルのカードに、ステップ6.1で実装したカウンターの値を表示する。
-* **タスク:**
-    1. ヘッダー通知アイコン (`livewire:notifications.icon`想定): コンポーネントでログインユーザーのカウンター値を取得し、ビューで合計件数をバッジ表示。
-    2. マイポータル (`MyPortal.php`): `mount` で `$pendingTaskCount` をユーザーのカウンターカラム合計値から取得するように修正。
-* **動作確認:** WFアクション後、ページリロード等でヘッダーとマイポータルの件数が更新されること。
-* **ドキュメント更新:** 「機能詳細(通知UI)」「関連ファイル(Iconコンポーネント, MyPortal)」更新。
+* **目的:** ヘッダーアイコンとマイポータルのカードに、ステップ6.1で実装した未処理ワークフロータスクのカウンター値を表示する。
+* **実施済みタスク:**
+    1. **ヘッダー通知アイコン (`Notifications\Icon` Livewire):**
+        * コンポーネント (`Icon.php`) で、ログインユーザーの `$user->pending_inspection_count` と
+          `$user->pending_approval_count` を合計して取得するロジックを追加 (`refreshCounts` メソッド)。[完了]
+        * ビュー (`icon.blade.php`) で、取得した未処理タスク合計件数を、既存の未読通知件数とは別のバッジ (例: 警告色)
+          で表示するように修正。各バッジにツールチップを追加。[完了]
+        * `wire:poll` を調整し、定期的に両方の件数を更新するように設定（任意）。[完了]
+    2. **マイポータル (`MyPortal.php`):** `mount` メソッドで `$pendingTaskCount`
+       プロパティに、ログインユーザーのカウンターカラム (`pending_inspection_count + pending_approval_count`)
+       の合計値を直接セットするように修正。[完了]
+* **動作確認:**
+    * ヘッダーのベルアイコン右上に、未処理タスク件数と未読通知件数が別々のバッジで表示されることを確認。[完了]
+    * 各バッジにマウスオーバーすると、内容を示すツールチップが表示されることを確認。[完了]
+    * マイポータルの「承認待ちタスク」カードの件数が、ヘッダーのタスク件数と一致することを確認。[完了]
+    * ワークフローアクション実行後、ページリロード（または `wire:poll`
+      による更新後）に、ヘッダーとマイポータルの件数が正しく増減することを確認。[完了]
+* **成果物:** ユーザーがヘッダーとマイポータルで自身の未処理タスク件数を容易に把握できる UI。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(通知UI)」「関連ファイル(Iconコンポーネント, MyPortal)」更新。
 
 ---
 
-### ステップ 6.3: ワークフロー通知タイプの定義と設定UI
+### ステップ 6.3: ワークフロー通知タイプの定義と設定UI (Next)
 
 * **目的:** ワークフローに関連する通知の種類を定義し、ユーザーが通知設定画面で ON/OFF できるようにする。
 * **タスク:**
-    1. `notification_types` テーブルへのレコード追加 (Seeder/Migration)。
-    2. Filament UI 更新 (`NotificationSettingsRelationManager`) で選択肢追加。
-    3. 翻訳ファイル更新 (通知タイプ名)。
-* **動作確認:** 通知設定画面でWF関連通知タイプの ON/OFF が設定できること。
-* **ドキュメント更新:** 「機能詳細(通知設定)」「関連ファイル」更新。
+    1. `notification_types` テーブルへのレコード追加 (Seeder/Migration): `inspection_requested` (集約通知用?),
+       `approval_requested` (集約通知用?), `inspection_completed` (申請者向け?), `approved` (申請者向け),
+       `status_returned_to_draft` (申請者向け), `workflow_summary` (担当者向け集約) 等を定義。`default_notify` も検討。
+    2. Filament UI 更新 (`NotificationSettingsRelationManager.php`): フォームの CheckboxList (`notification_types`) の
+       `options()` で新しい通知タイプを表示。テーブルの `notific˚ationType.name` カラムで翻訳キー表示。
+    3. 翻訳ファイル更新 (通知タイプ名: `ledger.notification_types.*`)。
+* **動作確認:** 通知設定画面 (Role リソース内) で、新しいワークフロー関連通知タイプの ON/OFF が設定できること。
+* **ドキュメント更新:** 「機能詳細(通知設定)」「関連ファイル(NotificationType, NotificationSettingsRelationManager)」更新。
 
 ---
 
