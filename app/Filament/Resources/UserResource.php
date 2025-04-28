@@ -172,4 +172,29 @@ class UserResource extends Resource
             ])
             ->with(['roles', 'permissions', 'organizations.roles', 'organizations.permissions']);
     }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->can('viewAny', User::class);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->can('create', User::class);
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()->can('update', $record);
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()->can('delete', $record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()->can('delete', User::class);
+    }
 }

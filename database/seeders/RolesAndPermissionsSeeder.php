@@ -24,11 +24,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'create_users' => 'ユーザーを作成できる',
             'update_users' => 'ユーザーを更新できる',
             'delete_users' => 'ユーザーを削除できる',
+            'manage_users' => 'ユーザーを管理できる',
 
             'view_organizations' => '組織の一覧を閲覧できる',
             'create_organizations' => '組織を作成できる',
             'update_organizations' => '組織を更新できる',
             'delete_organizations' => '組織を削除できる',
+            'manage_organization' => '組織を管理できる',
 
             'view_roles' => '役割の一覧を閲覧できる',
             'create_roles' => '役割を作成できる',
@@ -82,17 +84,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $roles = [
             'Super Admin' => [
                 'description' => 'システム全体の管理者',
-                'permissions' => [
-                    'view_users', 'create_users', 'update_users', 'delete_users',
-                    'view_organizations', 'create_organizations', 'update_organizations', 'delete_organizations',
-                    'view_roles', 'create_roles', 'update_roles', 'delete_roles', 'restore_roles', 'force_delete_roles',
-                    'view_rolefolderpermissions', 'create_rolefolderpermissions', 'update_rolefolderpermissions', 'delete_rolefolderpermissions',
-                    'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
-                    'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
-                    'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
-                    'view_permissions', 'create_permissions', 'update_permissions', 'delete_permissions', 'manage_permissions',
-                    'notify', 'view_activity_logs',
-                ],
+                'permissions' => array_keys($permissions),
             ],
             'Organization Admin' => [
                 'description' => '組織の管理者',
