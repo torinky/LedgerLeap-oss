@@ -41,7 +41,7 @@ class MyPortal extends Component
 
 // --- 承認待ち件数用 ---
     public int $pendingTaskCount = 0;
-    protected WorkflowTaskRepository $taskRepository;
+//    protected WorkflowTaskRepository $taskRepository;
 
     // 表示する主要権限リスト (ここで定義)
     protected array $permissionsToCheck = [
@@ -59,11 +59,11 @@ class MyPortal extends Component
 
     // Livewire 8+ の場合、コンストラクタインジェクションより boot() や mount() でのインジェクトが推奨される場合あり
     // Repository をインジェクト
-    public function boot(WorkflowTaskRepository $taskRepository, WritableFolderRepository $writableFolderRepository): void // 引数追加
+    public function boot(WritableFolderRepository $writableFolderRepository): void
     {
-        $this->taskRepository = $taskRepository;
-        $this->writableFolderRepository = $writableFolderRepository; // 既存のインジェクト
+        $this->writableFolderRepository = $writableFolderRepository;
     }
+
 
     /**
      * コンポーネントのマウント時にデータを準備
@@ -86,7 +86,10 @@ class MyPortal extends Component
         $this->prepareAllFolderTreeData();
 
         // --- 承認待ち件数を取得 ---
-        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
+//        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
+        // --- 承認待ち件数を取得 (修正) ---
+        // $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // 古い方法
+        $this->pendingTaskCount = $this->user->pending_inspection_count + $this->user->pending_approval_count; // <<<--- 修正: User モデルから直接取得
 
     }
 
