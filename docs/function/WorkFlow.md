@@ -437,17 +437,22 @@
 
 ---
 
-### ステップ 6.1: 未処理カウンターの実装 (Next)
+### ✅ ステップ 6.1: 未処理カウンターの実装 (完了)
 
-* **目的:** 各担当者（点検者/承認者）の未処理タスク件数を管理する仕組みの基盤を実装する。
-* **タスク:**
-    1. **カウンター保存方法決定 & スキーマ変更:** DB (`users` テーブルに `pending_inspection_count`,
-       `pending_approval_count` カラム追加 - unsignedInteger, default 0) を採用し、マイグレーションを作成・実行する。
-    2. **`WorkflowService` 修正:** 各アクションメソッド (`requestInspection`, `requestApproval`, `approve`,
-       `returnToDraft`, `saveEditedRecord`) 内で、関連する担当者のカウンターを**増減**させるロジックを実装する (
-       `increment()`, `decrement()`)。トランザクション内で実行する。
-* **動作確認:** 各ワークフローアクション実行時に、関連するユーザーのカウンターカラムの値がDB上で正しく増減することを確認する。
-* **ドキュメント更新:** 「機能詳細(通知)」「関連ファイル(Userモデル, WorkflowService)」更新。カウンター実装について追記。
+* **目的:** 各担当者（点検者/承認者）の未処理タスク件数をデータベースで管理する仕組みの基盤を実装する。
+* **実施済みタスク:**
+    1. **DB スキーマ変更:** `users` テーブルに `pending_inspection_count`, `pending_approval_count` カラム (
+       unsignedInteger, default 0, index付き) を追加するマイグレーションを作成・実行。[完了]
+    2. **モデル更新 (`User.php`):** `$casts` 配列に新しいカウンターカラムを `integer` として追加。[完了]
+    3. **`WorkflowService` 修正:** 各ワークフローアクションメソッド (`requestInspection`, `requestApproval`, `approve`,
+       `returnToDraft`, `saveEditedRecord`) 内で、関連する担当者のカウンターカラム (`pending_inspection_count` または
+       `pending_approval_count`) を `increment()` / `decrement()`
+       を使用して増減させるロジックを実装。トランザクション内で実行。[完了]
+* **動作確認:**
+  各ワークフローアクション実行時に、関連するユーザーのカウンターカラムの値がDB上で正しく増減することを確認。[完了]
+* **成果物:** 担当者ごとの未処理タスク件数を追跡するためのデータベース基盤と更新ロジック。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(通知)」および「関連ファイル(Userモデル, WorkflowService)
+  」にカウンター実装について追記。
 
 ---
 

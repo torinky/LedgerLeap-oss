@@ -60,6 +60,8 @@ class User extends Authenticatable implements FilamentUser
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'login_landing_page' => LoginLandingPage::class,
+        'pending_inspection_count' => 'integer',
+        'pending_approval_count' => 'integer',
     ];
 
     protected static function boot()

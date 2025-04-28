@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\Traits\Date;
 use Exception;
@@ -86,6 +87,7 @@ class WorkflowService
                     'content_attached' => $contentAttached ?? [],
                     'status' => WorkflowStatus::DRAFT, // 念のため DRAFT に
                     'modifier_id' => $modifierId,
+                    'version' => $currentVersion,
                     'latest_diff_id' => $ledgerDiff->id, // 最新Diff ID を更新
                 ]);
             } else {
@@ -146,7 +148,7 @@ class WorkflowService
                 'latest_diff_id' => $ledgerDiff->id, // 最新の Diff ID
             ]);
 
-            // ToDo: カウンター更新 (点検者+)
+            // カウンター更新 (点検者+)
             $this->incrementPendingTaskCount($inspectorId, 'inspection');
             // ToDo: イベント発行
             // event(new InspectionRequested($ledgerDiff));
@@ -206,7 +208,7 @@ class WorkflowService
                 'latest_diff_id' => $ledgerDiff->id,
             ]);
 
-            // ToDo: カウンター更新 (点検者-, 承認者+)
+            // カウンター更新 (点検者-, 承認者+)
             $this->decrementPendingTaskCount($inspectorId, 'inspection');
             $this->incrementPendingTaskCount($approverId, 'approval');
             // ToDo: イベント発行
@@ -272,7 +274,7 @@ class WorkflowService
                 'comments' => null, // クリア
             ]);
 
-            // ToDo: カウンター更新 (承認者-)
+            // カウンター更新 (承認者-)
             $this->decrementPendingTaskCount($approverId, 'approval');
             // ToDo: イベント発行
             // event(new ApprovalCompleted($ledgerDiff));
@@ -299,7 +301,9 @@ class WorkflowService
 
         return DB::transaction(callback: function () use ($ledgerId, $modifierId, $comments) {
             $ledger = Ledger::findOrFail($ledgerId);
+            $currentStatus = $ledger->status;
             $latestDiff = $ledger->latestDiff()->first();
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff?->inspector_id : $latestDiff?->approver_id; // <<<--- 最新Diffから担当者取得
 
             if (in_array($ledger->status, [WorkflowStatus::DRAFT, WorkflowStatus::APPROVED])) {
                 throw new Exception("Invalid status for returning to draft.");
@@ -339,11 +343,12 @@ class WorkflowService
                 'latest_diff_id' => $lDiff->id,
             ]);
 
-            // ToDo: カウンター調整 (担当者-)
-            if ($handlerId) {
+            // カウンター調整 (担当者-)
+            if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
                 $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
                 $this->decrementPendingTaskCount($handlerId, $taskType);
             }
+
             // ToDo: イベント発行
             // event(new StatusReturnedToDraft($ledgerDiff, $comments));
             // ToDo: Activity Log 記録 (ステップ4)
@@ -431,15 +436,42 @@ class WorkflowService
     }
 
 
-    // --- カウンター操作メソッド (仮実装) ---
+    // --- カウンター操作メソッド (実装) ---
+
+    /**
+     * 指定されたユーザーの未処理タスクカウンターをインクリメントする
+     * @param int $userId 対象ユーザーID
+     * @param string $type 'inspection' または 'approval'
+     */
     protected function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
     {
-        Log::info("Increment pending {$type} count for user: {$userId}");
+        try {
+            $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';
+            // DB::table('users')->where('id', $userId)->increment($column); // Query Builder
+            User::where('id', $userId)->increment($column); // Eloquent
+            Log::info("Incremented pending {$type} count for user: {$userId}");
+        } catch (\Exception $e) {
+            Log::error("Failed to increment pending {$type} count for user {$userId}: " . $e->getMessage());
+            // ここで例外を再スローするかどうかは要件による
+        }
     }
 
+    /**
+     * 指定されたユーザーの未処理タスクカウンターをデクリメントする
+     * @param int $userId 対象ユーザーID
+     * @param string $type 'inspection' または 'approval'
+     */
     protected function decrementPendingTaskCount(int $userId, string $type): void
     {
-        Log::info("Decrement pending {$type} count for user: {$userId}");
+        try {
+            $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';
+            // マイナスにならないように where でガード
+            // DB::table('users')->where('id', $userId)->where($column, '>', 0)->decrement($column);
+            User::where('id', $userId)->where($column, '>', 0)->decrement($column); // Eloquent
+            Log::info("Decremented pending {$type} count for user: {$userId}");
+        } catch (\Exception $e) {
+            Log::error("Failed to decrement pending {$type} count for user {$userId}: " . $e->getMessage());
+        }
     }
 
     /**
