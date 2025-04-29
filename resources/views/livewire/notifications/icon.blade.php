@@ -1,25 +1,4 @@
-{{--
 <div>
-    <a tabindex="4"
-       class="btn btn-ghost btn-sm tooltip tooltip-bottom {{ request()->routeIs('notifications.index') ? 'btn-active' : '' }}"
-       data-tip="{{ __('ledger.navigation.notifications') }}"
-       href="{{ route('notifications.index') }}">
-        <i class="fas fa-bell"></i>
-        --}}
-{{--        <span wire:poll.5s="refreshUnreadCount">--}}{{--
-
-        <span wire:poll.600s="refreshUnreadCount">
-            @if($unreadCount > 0)
-                <span class="badge badge-sm badge-secondary">{{ $unreadCount }}</span>
-            @endif
-
-        </span>
-    </a>
-</div>
---}}
-
-<div>
-    {{-- 既存の通知アイコンリンク --}}
     <div class="indicator mr-4">
         <a tabindex="4"
            @class([
@@ -31,7 +10,7 @@
            href="{{ route('notifications.index') }}"
            _target="LedgerLeap_PendingList"
 
-           wire:poll.600s="refreshUnreadCount"
+           wire:poll.600s="refreshCounts"
         >
 
             <span class="indicator-item indicator-top indicator-end flex gap-1"> {{-- バッジを右上に配置 --}}
