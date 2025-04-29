@@ -226,7 +226,7 @@ class ModifyColumn extends CreateColumn
     public function saveChanges(): void
     {
         // ワークフローが無効なら直接保存
-        if (!$this->isWorkflowEnabled) {
+        if (!$this->ledgerDefineRecord?->workflow_enabled) {
             $this->saveDirectly(); // 親クラスの直接保存メソッド呼び出し
             return;
         }
@@ -364,12 +364,13 @@ class ModifyColumn extends CreateColumn
         $this->processFilesForSave();
 
         try {
+//            dd($this->ledgerId, $userId, $validated['selectedInspectorId']);
             $result = $this->workflowService->requestInspection(
                 $this->ledgerId, // 既存 ID を渡す
                 $userId,
                 $validated['selectedInspectorId']
             );
-            $this->ledgerRecord = $result['ledger']; // ステータスが更新されたレコードを反映
+            $this->ledgerRecord = $result; // ステータスが更新されたレコードを反映
             $this->addAttachedFileRecordIfNecessary();
             $this->success(__('ledger.workflow.inspection_requested_message'),
                 redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));

@@ -2,24 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     */
-    /**
      * 通知関連ページのインデックス（タブコンテナ）を表示
      */
-    public function index(Request $request): View
+    public function index(Request $request, NotificationService $notificationService): View
     {
+        $user = Auth::user();
+        $initialNotificationCount = $user ? $notificationService->getUnreadNotificationCountForUser($user) : 0;
+        $initialTaskCount = $user ? ($user->pending_inspection_count + $user->pending_approval_count) : 0;
+
         // URL クエリパラメータからアクティブなタブを取得 (デフォルトは 'notifications')
         $activeTab = $request->query('tab', 'notifications');
-//        dd($activeTab);
+        //デフォルトで未処理タスクがあれば 'tasks' に切り替える
+        if ($activeTab == 'notifications' && $initialTaskCount > 0) {
+            $activeTab = 'tasks';
+        }
+
         // 親ビューにアクティブなタブ情報を渡す
-        return view('notifications.index', ['activeTab' => $activeTab]);
+        return view('notifications.index', [
+            'initialNotificationCount' => $initialNotificationCount,
+            'initialTaskCount' => $initialTaskCount,
+            'activeTab' => $activeTab
+        ]);
     }
 
     /**

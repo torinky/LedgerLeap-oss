@@ -69,7 +69,8 @@ class NotificationService
 
     public function getUnreadNotificationCountForUser(User $user): int
     {
-        return $user->unreadNotifications()->count();
+        return $this->unreadNotificationsForUser($user)->count();
+//        return $user->unreadNotifications()->count();
     }
 
     /*    public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator

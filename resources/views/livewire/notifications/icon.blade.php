@@ -24,13 +24,13 @@
         <a tabindex="4"
            @class([
                'btn  btn-square btn=sm',
-               'btn-ghost'=>($unreadCount==0),
-               'btn-info' => ($unreadCount > 0),
+               'btn-ghost'=>($pendingTaskCount==0),
+               'btn-info' => ($pendingTaskCount > 0),
                'btn-active' => request()->routeIs('notifications.index')
            ])
            href="{{ route('notifications.index') }}"
            _target="LedgerLeap_PendingList"
-           
+
            wire:poll.600s="refreshUnreadCount"
         >
 

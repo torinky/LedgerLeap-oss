@@ -81,8 +81,13 @@ class WorkflowService
             $ledgerDiff = LedgerDiff::create($diffData);
 
             // Ledger を更新 (content, modifier, status 等)
-            if (!$isNewLedger) {
-                $ledger->update([
+//            dd($isNewLedger);
+            if ($isNewLedger) {
+                // 新規作成時は latest_diff_id をセット
+                $result = $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
+            } else {
+                $result = $ledger->update([
+                    'id' => $ledger->id,
                     'content' => $content,
                     'content_attached' => $contentAttached ?? [],
                     'status' => WorkflowStatus::DRAFT, // 念のため DRAFT に
@@ -90,9 +95,6 @@ class WorkflowService
                     'version' => $currentVersion,
                     'latest_diff_id' => $ledgerDiff->id, // 最新Diff ID を更新
                 ]);
-            } else {
-                // 新規作成時は latest_diff_id をセット
-                $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
             }
 
             // Activity Log 記録 (ステップ4)
@@ -118,7 +120,7 @@ class WorkflowService
         // ToDo: 権限チェック (requesterId が点検依頼できるか？)
 
         return DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId) {
-            $ledger = Ledger::findOrFail($ledgerId)->orderBy('created_at', 'desc')->first();
+            $ledger = Ledger::findOrFail($ledgerId);
             if ($ledger->status !== WorkflowStatus::DRAFT) {
                 throw new Exception("Inspection can only be requested from Draft status.");
             }
@@ -175,7 +177,7 @@ class WorkflowService
         // ToDo: 権限チェック (inspectorId が点検を完了できるか？)
 
         return DB::transaction(function () use ($ledgerId, $approverId, $inspectorId) {
-            $ledger = Ledger::findOrFail($ledgerId)->orderBy('created_at', 'desc')->first();
+            $ledger = Ledger::findOrFail($ledgerId);
             $ledgerDiff = $ledger->latestDiff()->first();
             if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
                 throw new Exception("User not authorized or invalid status for requesting approval.");
@@ -308,10 +310,10 @@ class WorkflowService
             if (in_array($ledger->status, [WorkflowStatus::DRAFT, WorkflowStatus::APPROVED])) {
                 throw new Exception("Invalid status for returning to draft.");
             }
-            // ToDo: さらに $modifierId が $ledger->inspector_id または $ledger->approver_id と一致するかチェック
+            // ToDo: さらに $modifierId が $latestDiff->inspector_id または $latestDiff->approver_id と一致するかチェック
 
             $currentStatus = $ledger->status; // 戻す前のステータス
-            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff->inspector_id : $latestDiff->approver_id;
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
