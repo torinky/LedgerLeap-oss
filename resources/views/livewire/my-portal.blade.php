@@ -18,7 +18,7 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 3xl:grid-cols-3 gap-6">
 
         {{-- ★承認待ちタスク カード (追加) ★ --}}
-        <a href="{{ route('workflow.pending') }}" {{-- 承認待ちリストページのルート名 (例) --}}
+        <a href="{{ route('workflow.pending') }}" _target="LedgerLeap_PendingList" {{-- 承認待ちリストページのルート名 (例) --}}
         class="card bg-warning text-warning-content shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out {{ $pendingTaskCount > 0 ? '' : 'opacity-50' }}">
             <div class="card-body flex-row items-center justify-between p-4"> {{-- p-4 に変更 --}}
                 <div>
@@ -224,14 +224,14 @@
                     {{-- wire:click によるアクションは不要なので、props のみを渡す --}}
                     <div class="p-4 menu w-full"> {{-- 内側に少しパディングを追加 --}}
                         <x-folder.tree
-                            :folders="$allRootFolders"
-                            :writableFolderIds="$writableFolderIds"
-                            :readableFolderIds="$readableFolderIds"
-                            :manageableFolderIds="$manageableFolderIds"
-                            :interactive="false"
-                            {{-- currentFolderId や selectedFolderIds はここでは不要 --}}
-                            {{-- 必要であれば :interactive="false" のようなプロパティを追加して --}}
-                            {{-- Bladeコンポーネント側でクリック動作を無効化する --}}
+                                :folders="$allRootFolders"
+                                :writableFolderIds="$writableFolderIds"
+                                :readableFolderIds="$readableFolderIds"
+                                :manageableFolderIds="$manageableFolderIds"
+                                :interactive="false"
+                                {{-- currentFolderId や selectedFolderIds はここでは不要 --}}
+                                {{-- 必要であれば :interactive="false" のようなプロパティを追加して --}}
+                                {{-- Bladeコンポーネント側でクリック動作を無効化する --}}
                         />
                     </div>
                 </x-slot:content>

@@ -1,8 +1,5 @@
 @php use App\Enums\WorkflowStatus; @endphp
 <div>
-    <x-slot name="header">
-        <x-mary-header title="{{ __('ledger.workflow.pending_tasks') }}" separator progress-indicator/>
-    </x-slot>
 
     <x-mary-card>
         {{-- テーブルヘッダーのラベルを翻訳キーに --}}

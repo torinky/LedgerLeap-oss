@@ -53,8 +53,8 @@ class PendingList extends Component
 
         return view('livewire.workflow.pending-list', [
             'pendingTasks' => $pendingTasks,
-        ])
-            ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
+        ]);
+//            ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
 
     }
 

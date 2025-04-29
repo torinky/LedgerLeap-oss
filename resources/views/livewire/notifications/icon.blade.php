@@ -29,6 +29,8 @@
                'btn-active' => request()->routeIs('notifications.index')
            ])
            href="{{ route('notifications.index') }}"
+           _target="LedgerLeap_PendingList"
+           
            wire:poll.600s="refreshUnreadCount"
         >
 

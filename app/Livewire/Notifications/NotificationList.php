@@ -7,11 +7,9 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-class UserNotificationList extends Component
+class NotificationList extends Component
 {
     use WithPagination;
-
-    public $selectedTab = 'notifications';
 
     public function mount(NotificationService $notificationService)
     {
@@ -45,8 +43,6 @@ class UserNotificationList extends Component
         $user = Auth::user();
         $notifications = $user ? $notificationService->unreadNotificationsForUser($user)->paginate(3) : [];
 
-        return view('livewire.notifications.user-notification-list',
-            ['notifications' => $notifications])
-            ->layout('layouts.app', ['title' => __('ledger.notifications')]);
+        return view('livewire.notifications.notification-list', ['notifications' => $notifications]);
     }
 }
