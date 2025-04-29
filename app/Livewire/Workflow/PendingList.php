@@ -34,6 +34,8 @@ class PendingList extends Component
     public bool $returnToDraftModal = false; // 戻し理由モーダルの表示状態
     // ------------------------------
 
+    public int $totalPendingTasks = 0; //  合計件数用プロパティ
+
 
     public array $returnComments = []; // 戻し理由コメント (タスクIDをキーにする)
     /**
@@ -50,6 +52,10 @@ class PendingList extends Component
     public function render()
     {
         $pendingTasks = $this->taskRepository->getPendingTasksForUser(Auth::user());
+        $this->totalPendingTasks = $pendingTasks->total(); // ページネーション結果から合計を取得
+
+        // ---件数をイベントで親に通知 ---
+        $this->dispatch('update-tab-count', tab: 'tasks', count: $this->totalPendingTasks);
 
         return view('livewire.workflow.pending-list', [
             'pendingTasks' => $pendingTasks,

@@ -478,48 +478,42 @@
 * **成果物:** ユーザーがヘッダーとマイポータルで自身の未処理タスク件数を容易に把握できる UI。
 * **ドキュメント更新:** このセクションを更新。「機能詳細(通知UI)」「関連ファイル(Iconコンポーネント, MyPortal)」更新。
 
-### ステップ 6.3: 通知/タスク画面構成変更とコンポーネント分割 (Next)
+### ✅ ステップ 6.3: 通知/タスク画面統合とコンポーネント分割、タブ件数表示 (完了)
 
-* **目的:** **通知一覧画面 (`/notifications`) を通常の Blade ビュー (`notifications/index.blade.php`) で再構築**
-  する。その中にタブ UI を設け、**「通知リスト」「アクティビティログ」「未処理タスクリスト」をそれぞれ独立した Livewire
-  コンポーネントとして呼び出す**構成に変更する。マイポータルからのリンクも調整する。
-* **タスク:**
-    1. **ルート定義変更:**
-        * `/notifications` ルートを、新しいコントローラー (`UserNotificationController@index` など)
-          を指すように変更（または既存コントローラーを利用）。
-        * `/activity-log` ルートは通知画面に統合されるため、リダイレクトまたは削除を検討。
-        * `/workflow/pending` ルートを削除。
-    2. **コントローラー作成/修正 (`UserNotificationController`):** `index` メソッドで、親 Blade ビュー (
-       `notifications.index`) を返す。URL クエリパラメータ (`tab=activity`, `tab=tasks` など) をビューに渡す。
-    3. **親 Blade ビュー作成/修正 (`resources/views/notifications/index.blade.php`):**
-        * `<x-mary-tabs>` を使用し、「通知」「アクティビティログ」「未処理タスク」のタブを作成。
-        * 受け取ったクエリパラメータに応じて、デフォルトで表示するタブを設定する JavaScript ロジック（または Blade
-          ディレクティブ）を追加。
-        * 「通知」タブ内に `@livewire('notifications.notification-list')` を配置。
-        * 「アクティビティログ」タブ内に `@livewire('user-activity-log')` (既存コンポーネント名想定) を配置。
-        * 「未処理タスク」タブ内に `@livewire('workflow.pending-list')` を配置。
+* **目的:** 通知一覧画面を通常の Blade ビューで再構築し、タブ内に独立した Livewire
+  コンポーネント（通知リスト、アクティビティログ、未処理タスクリスト）を配置。タブタイトルに動的に件数を表示し、マイポータルからの導線を確保する。
+* **実施済みタスク:**
+    1. **ルート定義変更:** `/notifications` ルートをコントローラー (`UserNotificationController@index`) に変更。
+       `/activity-log` リダイレクト設定、`/workflow/pending` 削除。[完了]
+    2. **コントローラー作成 (`UserNotificationController`):** 親 Blade ビュー (`notifications.index`) を返し、アクティブタブ情報を渡す
+       `index` メソッドを実装。[完了]
+    3. **親 Blade ビュー作成 (`notifications/index.blade.php`):** DaisyUI タブ (または Alpine.js 連携の MaryUI タブ)
+       を使用し、3つのタブ（通知、アクティビティログ、未処理タスク）の枠組みを作成。URLパラメータに基づき初期アクティブタブを設定。各タブ内に対応する
+       Livewire コンポーネントを `@livewire` で埋め込み。Alpine.js を使用し、子コンポーネントからのイベント (
+       `update-tab-count`) を受けてタブの aria-label (または表示テキスト) の件数を動的に更新。[完了]
     4. **Livewire コンポーネント分割/リファクタリング:**
-        * **`App\Livewire\Notifications\NotificationList` (新規作成 or 既存改修):** 従来の `UserNotificationList` から、*
-          *通知リスト関連**のプロパティとロジック（未読/既読取得、表示、既読処理）を抽出・実装。
-        * **`App\Livewire\UserActivityLog` (既存改修):** 従来の `UserNotificationList` から、**アクティビティログ関連**
-          のプロパティとロジックを抽出・実装（既に別コンポーネントならそのまま）。
-        * **`App\Livewire\Workflow\PendingList` (既存改修):** **未処理タスクリスト関連**
-          のプロパティとロジック（タスク取得、表示、アクションメソッド、モーダル制御）を実装（現状の `PendingList` を流用）。
+        * `App\Livewire\Notifications\NotificationList` (新規作成/改修): 通知リスト関連ロジックを実装。`render`
+          時に合計件数を取得し `update-tab-count` イベントを発行。[完了]
+        * `App\Livewire\UserActivityLog` (既存利用): アクティビティログ関連ロジックを実装 (
+          必要なら件数イベント発行も)。[完了]
+        * `App\Livewire\Workflow\PendingList` (既存利用): 未処理タスクリスト関連ロジックを実装。`render` 時に合計件数を取得し
+          `update-tab-count` イベントを発行。[完了]
     5. **マイポータルビュー (`my-portal.blade.php`) 修正:** 承認待ち件数カードのリンク先を
-       `route('notifications.index', ['tab' => 'tasks'])` に修正。
-    6. **(削除)** 従来の `UserNotificationList` コンポーネントは不要になるため削除（またはリネームして NotificationList
-       として再利用）。
+       `route('notifications.index', ['tab' => 'tasks'])` に修正。[完了]
+    6. **(削除)** 従来の `UserNotificationList` コンポーネントを削除またはリファクタリング。[完了]
 * **動作確認:**
-    * `/notifications` にアクセスすると、タブ付きの画面が表示され、デフォルトで「通知」タブが開くこと。
-    * 各タブをクリックすると、対応する Livewire コンポーネント（通知リスト、アクティビティログ、未処理タスクリスト）が正しく表示されること。
-    * マイポータルの件数カードをクリックすると、`/notifications?tab=tasks` に遷移し、「未処理タスク」タブがアクティブな状態で表示されること。
-    * 各タブ内のリスト表示やアクション（既読処理、タスク承認など）が正しく機能すること。
-* **ドキュメント更新:** 「機能詳細(承認待ちタスクの確認、通知UI)」「関連ファイル」更新。画面構成の変更（親Blade +
-  子Livewire）、コンポーネント分割について追記。
+    * 通知一覧画面のタブ表示、初期タブ設定、タブ切り替えが正しく動作することを確認。[完了]
+    * 各タブ内に対応するリスト（通知、ログ、タスク）が表示され、ページネーションやアクションが機能することを確認。[完了]
+    * マイポータルから「未処理タスク」タブへ直接リンクできることを確認。[完了]
+    * **各タブのラベルに初期件数が表示され、リストの内容が変化（既読化、タスク処理など）した後に件数が動的に更新されることを確認。
+      **[完了]
+* **成果物:** 親 Blade + 子 Livewire 構成による、統合された通知・タスク管理画面。タブへの動的な件数表示機能。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(承認待ちタスクの確認、通知UI)
+  」「関連ファイル」更新。画面構成変更、コンポーネント分割、タブ件数表示について追記。
 
 ---
 
-### ステップ 6.4: ワークフロー通知タイプの定義と設定UI
+### ステップ 6.4: ワークフロー通知タイプの定義と設定UI (Next)
 
 * **目的:** ワークフローに関連する通知の種類を定義し、ユーザーが通知設定画面で ON/OFF できるようにする。
 * **タスク:**

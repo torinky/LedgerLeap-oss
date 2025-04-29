@@ -165,7 +165,7 @@ Route::middleware('auth')->group(function () {
 
     // --- ワークフロー関連ルート ---
     // 削除: 承認待ちリスト単独ページは廃止
-    Route::redirect('/workflow/pending', '/notifications?tab=pending', 301)->name('workflow.pending'); // 例: リダイレクト
+    Route::redirect('/workflow/pending', '/notifications?tab=tasks', 301)->name('workflow.pending'); // 例: リダイレクト
     // Route::get('/workflow/pending', PendingList::class)->name('workflow.pending'); // <<<--- 削除
 
 
