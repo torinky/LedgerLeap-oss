@@ -312,8 +312,6 @@ class WorkflowService
             }
             // ToDo: さらに $modifierId が $latestDiff->inspector_id または $latestDiff->approver_id と一致するかチェック
 
-            $currentStatus = $ledger->status; // 戻す前のステータス
-            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff->inspector_id : $latestDiff->approver_id;
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
@@ -334,7 +332,6 @@ class WorkflowService
                 'inspected_at' => self::getInspectedAtCarbonDate($latestDiff->inspected_at),
                 'approved_at' => null, // クリア
             ];
-//            dd($latestDiff, $latestDiff->inspected_at, $diffData);
             $lDiff = LedgerDiff::create($diffData);
 
             // Ledger を更新
@@ -387,7 +384,8 @@ class WorkflowService
 
         return DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments) {
             $currentStatus = $ledger->status; // 戻す前のステータス
-            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $ledger->inspector_id : $ledger->approver_id;
+            $latestDiff = $ledger->latestDiff()->first();
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff->inspector_id : $latestDiff->approver_id;
             $ledgerVersion = $ledger->version + 1; // 現在の Ledger バージョン+1を取得
 
             // 1. 新しい LedgerDiff を作成 (Content有り)
@@ -402,9 +400,9 @@ class WorkflowService
                 'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments, // 編集理由
                 // 他のWFカラムはクリア
-                'inspector_id' => $ledger->latestDiff->inspector_id ?? null,
-                'approver_id' => $ledger->latestDiff->approver_id ?? null,
-                'requested_at' => $ledger->latestDiff->requested_at ?? null,
+                'inspector_id' => $latestDiff->inspector_id ?? null,
+                'approver_id' => $latestDiff->approver_id ?? null,
+                'requested_at' => $latestDiff->requested_at ?? null,
                 'inspected_at' => null,
                 'approved_at' => null,
                 'returned_at' => now(), // 編集により戻された日時
