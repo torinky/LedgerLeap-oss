@@ -7,16 +7,24 @@
                 <button wire:click="markAllAsRead"
                         class="btn btn-sm btn-primary">{{ __('ledger.mark_all_as_read') }}</button>
             </div>
-
+            {{--            @dd($notifications)--}}
             @foreach($notifications as $notification)
                 @php
-                    //dd($notification);
-                    $routeName = $notification->data['payload']['route']??'ledger.index';
-                    $subjectId = $notification->data['payload']['subject_id'] ?? null;
-                    $causerName = $notification->data['payload']['causer_name'] ?? null;
-                    $event = $notification->data['payload']['event'];
-                    $label = __('ledger.notification_types.'.$notification->data['payload']['subject_type']);
-                    $eventLabel = __('ledger.action_'.$event);
+                    if(!isset($notification->data['payload'])){
+//                        dd($notification,$notification->data);
+                        $routeName = 'ledger.index';
+                        $subjectId =  null;
+                        $causerName =  null;
+                        $event = $notification->data['title'];
+                        $label = $notification->type.' '.__('ledger.notification_types.unknown');
+                    }else{
+                        $routeName = $notification->data['payload']['route']??'ledger.index';
+                        $subjectId = $notification->data['payload']['subject_id'] ?? null;
+                        $causerName = $notification->data['payload']['causer_name'] ?? null;
+                        $event = $notification->data['payload']['event'];
+                        $label = __('ledger.notification_types.'.$notification->data['payload']['subject_type']);
+                        $eventLabel = __('ledger.action_'.$event);
+                    }
                 @endphp
                 <div class="border-b border-base-content/50 last:border-b-0 pb-4">
                     <div>
