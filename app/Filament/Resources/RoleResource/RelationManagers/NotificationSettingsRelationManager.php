@@ -37,8 +37,9 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -96,7 +97,7 @@ class NotificationSettingsRelationManager extends RelationManager
         return $table
             ->heading(__('ledger.folder.notification'))
             // ->recordTitleAttribute(...) // 不要
-            ->query(function (Builder $query) {
+            ->query(function (EloquentBuilder $query) {
                 $query->setModel(new RoleFolderPermission());
 
                 // ★ 通知関連の権限のみをフィルタリング
@@ -129,15 +130,54 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->sortable(), // 基本的なソートを有効化 (Joinなし)
 
                 // ★ 通知 ON/OFF の表示 (RoleFolderPermission の permission 属性を直接使用)
-                IconColumn::make('permission')
-                    ->label(__('ledger.notify'))
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-badge')
-                    ->falseIcon('heroicon-o-x-mark')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    // Enum キャストがあればこれだけで動作するはず
+                /*                IconColumn::make('permission')
+                                    ->label(__('ledger.notify'))
+                                    ->boolean()
+                                    ->trueIcon('heroicon-o-check-badge')
+                                    ->falseIcon('heroicon-o-x-mark')
+                                    ->trueColor('success')
+                                    ->falseColor('danger')
+                                    // Enum キャストがあればこれだけで動作するはず
+                                    ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),*/
+
+                // --- 通知 ON/OFF を ToggleColumn に変更 ---
+                ToggleColumn::make('permission_toggle') // <<<--- ToggleColumn に変更
+                ->label(__('ledger.notify'))
+                    // ON / OFF に対応する Enum ケースを定義
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->onIcon('heroicon-o-check-badge')
+                    ->offIcon('heroicon-o-x-mark')
+                    // ここで状態を boolean (ONかどうか) に変換する必要はないはず
+                    // ToggleColumn は通常 boolean カラムに使うが、
+                    // カスタムロジックで Enum を扱えるか試す価値あり
+                    // もし Enum でうまく動かなければ、 boolean の仮想カラムを作るなど工夫が必要
+                    ->updateStateUsing(function (RoleFolderPermission $record, $state): void { // <<<--- 更新ロジック
+                        // $state にはトグル後の状態 (true / false) が入る
+                        $newPermission = $state ? FolderPermissionType::NOTIFY_ON : FolderPermissionType::NOTIFY_OFF;
+                        try {
+                            $record->update([
+                                'permission' => $newPermission,
+                                'modifier_id' => auth()->id(),
+                            ]);
+                            Notification::make()
+                                ->title(__('ledger.notification.updated_success'))
+                                ->success()
+                                ->send();
+                        } catch (Exception $e) {
+                            Log::error('Failed to update notification setting via toggle: ' . $e->getMessage(), ['record_id' => $record->id]);
+                            Notification::make()
+                                ->title(__('ledger.notification.updated_error'))
+                                ->danger()
+                                ->send();
+                            // 状態を元に戻す (オプション)
+                            $this->refresh(); // テーブル再描画で元の状態に戻ることを期待
+                        }
+                    })
+                    // <<<--- 初期状態の設定 (重要)
+                    // ToggleColumn は内部的に boolean を期待するため、Enum から boolean への変換が必要
                     ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),
+
             ])
             ->filters([
                 // 必要に応じてフィルタを追加
@@ -149,7 +189,7 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->form([ // フォーム定義をここに移動
                         SelectTree::make('folder_id')
                             ->label(__('ledger.folder.title'))
-                            ->relationship(relationship: 'folder', titleAttribute: 'title', parentAttribute: 'parent_id', modifyQueryUsing: fn(Builder $query) => $query->orderBy('_lft'))
+                            ->relationship(relationship: 'folder', titleAttribute: 'title', parentAttribute: 'parent_id', modifyQueryUsing: fn(EloquentBuilder $query) => $query->orderBy('_lft'))
                             ->required()
                             ->searchable()
                             ->enableBranchNode()
@@ -223,58 +263,59 @@ class NotificationSettingsRelationManager extends RelationManager
             ])
             ->actions([
                 // ★ EditAction の修正 (通知 ON/OFF の切り替えのみ)
-                EditAction::make()
-                    ->label(__('Edit'))
-                    ->form([
-                        Toggle::make('permission')
-                            ->label(__('ledger.notify'))
-                            ->onIcon('heroicon-o-check-badge')
-                            ->offIcon('heroicon-o-x-mark')
-                            ->onColor('success')
-                            ->offColor('danger')
-                            // RoleFolderPermission の permission 属性を boolean に変換して設定
-                            ->afterStateHydrated(function (Toggle $component, RoleFolderPermission $record) {
-                                $component->state($record->permission === FolderPermissionType::NOTIFY_ON);
-                            })
-                            // 送信時に boolean から Enum/値 に変換
-                            ->dehydrateStateUsing(fn(bool $state): string => ($state ? FolderPermissionType::NOTIFY_ON : FolderPermissionType::NOTIFY_OFF)->value)
-                            ->required(),
-                    ])
-                    ->using(function (Model $record, array $data): Model {
-                        try {
-                            $record->update([
-                                'permission' => $data['permission'],
-                                'modifier_id' => auth()->id(),
-                            ]);
+                /*                EditAction::make()
+                                    ->label(__('Edit'))
+                                    ->form([
+                                        Toggle::make('permission')
+                                            ->label(__('ledger.notify'))
+                                            ->onIcon('heroicon-o-check-badge')
+                                            ->offIcon('heroicon-o-x-mark')
+                                            ->onColor('success')
+                                            ->offColor('danger')
+                                            // RoleFolderPermission の permission 属性を boolean に変換して設定
+                                            ->afterStateHydrated(function (Toggle $component, RoleFolderPermission $record) {
+                                                $component->state($record->permission === FolderPermissionType::NOTIFY_ON);
+                                            })
+                                            // 送信時に boolean から Enum/値 に変換
+                                            ->dehydrateStateUsing(fn(bool $state): string => ($state ? FolderPermissionType::NOTIFY_ON : FolderPermissionType::NOTIFY_OFF)->value)
+                                            ->required(),
+                                    ])
+                                    ->using(function (Model $record, array $data): Model {
+                                        try {
+                                            $record->update([
+                                                'permission' => $data['permission'],
+                                                'modifier_id' => auth()->id(),
+                                            ]);
 
-                            // ★ 成功通知 (using 内で送信)
-                            Notification::make()
-                                ->title(__('ledger.notification.updated_success'))
-                                ->success()
-                                ->sendToDatabase(auth()->user()); // 必要に応じてDBにも保存
+                                            // ★ 成功通知 (using 内で送信)
+                                            Notification::make()
+                                                ->title(__('ledger.notification.updated_success'))
+                                                ->success()
+                                                ->sendToDatabase(auth()->user()); // 必要に応じてDBにも保存
 
-                            return $record;
+                                            return $record;
 
-                        } catch (Exception $e) {
-                            // ★ 失敗通知 (using 内で送信)
-                            Notification::make()
-                                ->title(__('ledger.notification.updated_error'))
-                                ->body($e->getMessage()) // デバッグ用
-                                ->danger()
-                                ->sendToDatabase(auth()->user()); // 必要に応じてDBにも保存
+                                        } catch (Exception $e) {
+                                            // ★ 失敗通知 (using 内で送信)
+                                            Notification::make()
+                                                ->title(__('ledger.notification.updated_error'))
+                                                ->body($e->getMessage()) // デバッグ用
+                                                ->danger()
+                                                ->sendToDatabase(auth()->user()); // 必要に応じてDBにも保存
 
-                            // ★ エラーログ
-                            Log::error('Failed to update notification setting: ' . $e->getMessage(), [
-                                'record_id' => $record->id,
-                                'data' => $data,
-                                'exception' => $e,
-                            ]);
+                                            // ★ エラーログ
+                                            Log::error('Failed to update notification setting: ' . $e->getMessage(), [
+                                                'record_id' => $record->id,
+                                                'data' => $data,
+                                                'exception' => $e,
+                                            ]);
 
-                            // 例外を再スローするか、null を返すなどして Filament にエラーを伝える
-                            // ここでは例外を再スローして標準のエラー処理に任せる
-                            throw $e;
-                        }
-                    }),
+                                            // 例外を再スローするか、null を返すなどして Filament にエラーを伝える
+                                            // ここでは例外を再スローして標準のエラー処理に任せる
+                                            throw $e;
+                                        }
+                                    }),
+                */
                 // ★ 標準の DeleteAction を使用 (RoleFolderPermission レコードを削除)
                 DeleteAction::make()
                     // ★ 成功・失敗通知タイトルを設定

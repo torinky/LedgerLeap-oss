@@ -185,7 +185,7 @@ class Ledger extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+            ->logOnly(['name', 'content', 'ledger_define_id', 'status', 'version', 'modifier_id']) // 変更を監視する属性
             ->logOnlyDirty() // 変更があった場合のみ記録
             ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName))
