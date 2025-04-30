@@ -312,8 +312,62 @@ class NotificationTypeSeeder extends Seeder
             'default_notify' => false,
             'enabled' => true,
         ]);
-
-
+        // --- ステップ6.4 追加: ワークフロー関連通知タイプ ---
+        NotificationType::firstOrCreate(['name' => 'workflow_summary'], [
+            'description' => 'ledger.notification_types_description.workflow_summary', // 説明用翻訳キー
+            'model' => null, // 特定モデルに限定しない
+            'route' => 'notifications.index', // 通知一覧へ (タスクタブを開くパラメータは別途)
+            'folder_relation' => null, // フォルダに依存しない
+            'event' => 'workflow_summary', // 固有イベント名
+            'default_notify' => true, // 担当者はデフォルトで受け取る
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'status_returned_to_draft'], [
+            'description' => 'ledger.notification_types_description.status_returned_to_draft',
+            'model' => 'App\Models\Ledger', // 対象は Ledger
+            'route' => 'ledger.show',
+            'folder_relation' => 'define.folder', // Ledger のフォルダ
+            'event' => 'returned_to_draft', // 固有イベント名
+            'default_notify' => true, // 申請者はデフォルトで受け取る
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'approved'], [
+            'description' => 'ledger.notification_types_description.approved',
+            'model' => 'App\Models\Ledger',
+            'route' => 'ledger.show',
+            'folder_relation' => 'define.folder',
+            'event' => 'approved',
+            'default_notify' => true,
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'inspection_completed'], [
+            'description' => 'ledger.notification_types_description.inspection_completed',
+            'model' => 'App\Models\Ledger',
+            'route' => 'ledger.show',
+            'folder_relation' => 'define.folder',
+            'event' => 'inspection_completed',
+            'default_notify' => false, // オプションなのでデフォルト OFF 推奨
+            'enabled' => true,
+        ]);
+        // --- (任意) 担当者向け個別依頼通知 ---
+        NotificationType::firstOrCreate(['name' => 'inspection_requested'], [
+            'description' => 'ledger.notification_types_description.inspection_requested',
+            'model' => 'App\Models\Ledger',
+            'route' => 'ledger.show', // または承認待ちリスト
+            'folder_relation' => 'define.folder',
+            'event' => 'inspection_requested',
+            'default_notify' => false, // 集約通知を主とするため OFF 推奨
+            'enabled' => true,
+        ]);
+        NotificationType::firstOrCreate(['name' => 'approval_requested'], [
+            'description' => 'ledger.notification_types_description.approval_requested',
+            'model' => 'App\Models\Ledger',
+            'route' => 'ledger.show', // または承認待ちリスト
+            'folder_relation' => 'define.folder',
+            'event' => 'approval_requested',
+            'default_notify' => false, // 集約通知を主とするため OFF 推奨
+            'enabled' => true,
+        ]);
 
 
     }

@@ -540,50 +540,70 @@
 
 * **目的:** ワークフローに関連する通知の種類をデータベースに定義し、ロール管理画面（Filament）からフォルダごとにユーザー（ロール）が通知を受け取るかどうかを設定できるようにする。
 * **タスク:**
-    1. **通知タイプ (`notification_types` テーブル) へのレコード追加:**
-        * 以下の通知タイプに対応するレコードを `notification_types` テーブルに追加する Seeder
-          またはマイグレーションを作成・実行する。各タイプについて、`model`, `event` (関連があれば), `name` (翻訳キー用),
-          `description` (設定画面用), `default_notify` (デフォルトでONかOFFか) を設定する。
-            * `workflow_summary`: (担当者向け集約) 未処理タスク件数通知。
-            * `status_returned_to_draft`: (申請者向け個別) 作成中に戻された通知。
-            * `approved`: (申請者向け個別) 承認完了通知。
-            * `(任意)` `inspection_completed`: (申請者向け個別) 点検完了通知。
-        * `name` は `ledger.notification_types.workflow_summary` のような形式にする。
-    2. **通知設定UI (`NotificationSettingsRelationManager.php`) の修正:**
-        * **フォーム (`AttachAction`, `EditAction`):**
-            * 通知タイプを選択する `CheckboxList` (`notification_type_ids` または `notification_types`) の `options()`
-              メソッドを修正し、新しく追加されたワークフロー関連の通知タイプも選択肢として表示されるようにする。
-              `NotificationType::all()` 等で取得し、翻訳キー (`ledger.notification_types.*`) を使ってラベルを表示する。
-        * **テーブル (`table()` メソッド):**
-            * `notificationType.name` カラムの `formatStateUsing()` (または `label()`)
-              を修正し、新しい通知タイプの翻訳キー (`ledger.notification_types.*`) にも対応できるようにする。
-    3. **翻訳ファイル (`ledger.php`) 更新:**
-        * `ledger.notification_types.{タイプ名}`: 各通知タイプの表示名 (例: `workflow_summary` -> "未処理タスク通知 (
-          担当者向け)")。
-        * `ledger.notification_types_description.{タイプ名}`: (任意) 通知設定画面で表示する各通知タイプの簡単な説明。
-* **動作確認:**
-    * `notification_types` テーブルに新しいレコードが追加されていることを確認。
-    * ロール管理画面内の「フォルダ別通知設定」で、フォルダを選択して通知設定を追加・編集する際に、新しいワークフロー関連通知タイプがチェックボックスリストに表示され、選択・保存できることを確認。
-    * 設定済みの通知一覧テーブルで、ワークフロー関連通知タイプが正しい日本語名（または設定言語）で表示されることを確認。
+    1. **通知タイプ (`notification_types` テーブル) へのレコード追加 (修正):**
+        * Seeder/Migration で以下の通知タイプを登録。`model` や `event` は Observer での判定や通知内容生成の参考に利用。
+            * `inspection_requested`: (担当者向け) 点検依頼通知。`default_notify=false` 推奨（集約通知を主とするため）。
+            * `approval_requested`: (担当者向け) 承認依頼通知。`default_notify=false` 推奨。
+            * `status_returned_to_draft`: (申請者向け) 作成中に戻された通知。`default_notify=true` 推奨。
+            * `approved`: (申請者向け) 承認完了通知。`default_notify=true` 推奨。
+            * `workflow_summary`: (担当者向け集約) 未処理タスク件数通知。`model=null`, `folder_relation=null`。
+              `default_notify=true` 推奨。
+            * `(任意)` `inspection_completed`: (申請者向け) 点検完了通知。`default_notify=false` 推奨。
+    2. **通知設定UI (`NotificationSettingsRelationManager.php`) の修正:** フォームとテーブルを修正し、新しい通知タイプに対応させる（
+       `options()`, `formatStateUsing` 等）。
+    3. **翻訳ファイル (`ledger.php`) 更新:** 新しい通知タイプ名 (`ledger.notification_types.*`) と説明 (
+       `ledger.notification_types_description.*`) を追加。
+* **動作確認:** 通知設定画面で新しいタイプが設定でき、正しく表示されることを確認。
 * **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(NotificationType, NotificationSettingsRelationManager)
-  」更新。追加された通知タイプの詳細と、設定UIの変更点を記述。
+  」更新。定義された通知タイプとその目的を記述。
 
 ---
 
-### ステップ 6.5: 個別通知と集約通知の実装 (通知送信)
+### ステップ 6.5: 個別通知の実装 (`LedgerDiff` イベントトリガー)
 
-* **目的:** ワークフローのアクションに応じて、設定に基づき個別通知と集約通知を送信する。
+* **目的:** `LedgerDiff` の作成/更新をトリガーとして、主に**申請者向けの個別通知** (`status_returned_to_draft`,
+  `approved`, `inspection_completed`?) と、**(オプションで)担当者向けの個別依頼通知** (`inspection_requested`,
+  `approval_requested`) を送信する。
 * **タスク:**
-    1. `NotificationService` 拡張 (WF用通知メソッド、設定確認ロジック)。
-    2. `WorkflowService` からの呼び出し (戻し時、承認完了時)。
-    3. 集約通知コマンド作成・実行 (`SendWorkflowSummaryNotification`)。
-    4. 通知リスト画面 (`UserNotificationList`) 調整。
-* **動作確認:** 個別/集約通知が設定に基づき送信されること。
-* **ドキュメント更新:** 「機能詳細(通知送信)」「関連ファイル」更新。
+    1. **`LedgerDiffObserver` 作成・登録:** `php artisan make:observer LedgerDiffObserver --model=LedgerDiff`
+       で作成し、ServiceProvider に登録。
+    2. **`LedgerDiffObserver::created/updated` 実装:**
+        * `saved` イベントメソッド内で `$ledgerDiff` の `status` や `getChanges()` 等を判定。
+        * `status` が `DRAFT` (戻された場合), `APPROVED` になった場合: 申請者 (`$ledgerDiff->ledger->creator_id`) を特定し、
+          `NotificationService::sendWorkflowNotification` を呼び出す (タイプ: `status_returned_to_draft`, `approved`)
+          。コメントも渡す。
+        * `status` が `PENDING_APPROVAL` (点検完了) になった場合 (任意): 申請者を特定し、
+          `NotificationService::sendWorkflowNotification` を呼び出す (タイプ: `inspection_completed`)。
+        * **(オプション) `status` が `PENDING_INSPECTION` または `PENDING_APPROVAL` になった場合:** 次の担当者 (
+          `$ledgerDiff->inspector_id` or `approver_id`) を特定し、`NotificationService::sendWorkflowNotification`
+          を呼び出す (タイプ: `inspection_requested`, `approval_requested`)。
+    3. **`NotificationService` 拡張:**
+        * `sendWorkflowNotification(User $recipient, NotificationType $type, LedgerDiff $diff, ?string $comment = null)`
+          メソッドを追加。
+        * メソッド内で受信者の通知設定を確認し、ON なら通知（システム内 `DatabaseNotification`,
+          ブラウザ）を送信。通知内容を生成（誰が、どの台帳を、どうしたか、コメント）。
+* **動作確認:**
+    * 「作成中に戻す」「承認」時に、設定がONの申請者に通知が届くこと。
+    * (オプション) 点検完了時や依頼時に、設定がONの関係者に通知が届くこと。
+* **ドキュメント更新:** 「機能詳細(通知設定との連携、通知送信)」「関連ファイル(Observer, Service)」更新。Observer トリガーについて追記。
 
 ---
 
-### ステップ 6.6: (オプション) ブラウザ通知機能の実装
+### ステップ 6.6: 集約通知の実装
+
+* **目的:** 定期的に担当者へ未処理タスク件数を通知する。
+* **タスク:**
+    1. **集約通知コマンド作成 (`SendWorkflowSummaryNotification`):** カウンター > 0 のユーザーを取得し、ループして
+       `NotificationService::sendWorkflowSummaryNotification` を呼び出す。
+    2. **`NotificationService` 拡張:** `sendWorkflowSummaryNotification(User $user)` メソッドを追加。ユーザーが
+       `workflow_summary` 通知を ON にしているか確認し、ON ならシステム内/ブラウザ通知で「未処理タスク〇件」を送信。
+    3. **Kernel 登録:** コマンドをスケジュール登録 (`daily()` など)。
+* **動作確認:** スケジュール実行で、未処理タスクがあり設定ONの担当者に集約通知が届くこと。
+* **ドキュメント更新:** 「機能詳細(集約通知)」「関連ファイル(Command, Kernel)」更新。
+
+---
+
+### ステップ 6.7: (オプション) ブラウザ通知機能の実装
 
 * **目的:** 集約通知や重要な個別通知をブラウザプッシュ通知で送信する。
 * **タスク:** Web Pushライブラリ導入, Service Worker実装, 購読情報保存, `NotificationService`での送信処理追加。

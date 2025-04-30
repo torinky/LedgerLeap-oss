@@ -323,6 +323,7 @@ return [
     'notify' => '通知',
     'containing' => '含む', // SelectTree のラベル
     'notification_types' => [
+        // --- 既存 (確認・修正) ---
         'ledger_created' => '台帳作成',
         'ledger_updated' => '台帳更新',
         'ledger_deleted' => '台帳削除',
@@ -344,6 +345,25 @@ return [
         'permission_created' => '権限作成',
         'permission_updated' => '権限更新',
         'permission_deleted' => '権限削除',
+        'login' => 'ユーザーログイン',
+        'logout' => 'ユーザーログアウト',
+        'user_organization_attached' => 'ユーザーが組織に所属',
+        'user_organization_detached' => 'ユーザーが組織から離脱',
+        'role_user_attached' => 'ロールがユーザーに割り当て',
+        'role_user_detached' => 'ロールがユーザーから解除',
+        'role_permission_attached' => '権限がロールに割り当て',
+        'role_permission_detached' => '権限がロールから解除',
+        'role_folder_permission_created' => 'フォルダー権限/通知 作成',
+        'role_folder_permission_updated' => 'フォルダー権限/通知 更新',
+        // --- ここからワークフロー関連 (新規追加) ---
+        'workflow_summary' => '未処理タスク通知 (担当者向け)', // 担当者向け集約
+        'status_returned_to_draft' => '作成中に戻された通知 (申請者向け)', // 申請者向け個別
+        'approved' => '承認完了通知 (申請者向け)', // 申請者向け個別
+        'inspection_completed' => '(任意) 点検完了通知 (申請者向け)', // 申請者向け個別(任意)
+        'inspection_requested' => '(任意) 点検依頼通知 (担当者向け)',
+        'approval_requested' => '(任意) 承認依頼通知 (担当者向け)',
+        // --- ここまでワークフロー関連 ---
+        // --- モデル名の翻訳 (既存キー確認・追加) ---
         'App\Models\Folder' => 'フォルダー',
         'App\Models\User' => 'ユーザー',
         'App\Models\Organization' => '組織',
@@ -351,6 +371,27 @@ return [
         'App\Models\Permission' => '権限',
         'App\Models\LedgerDefine' => '台帳定義',
         'App\Models\Ledger' => '台帳',
+        'App\Models\RoleFolderPermission' => 'フォルダー権限/通知設定',
+
+    ],
+    'notification' => [
+        'created_success' => '通知設定を作成しました。',
+        'created_error' => '通知設定の作成に失敗しました。',
+        'updated_success' => '通知設定を更新しました。',
+        'updated_error' => '通知設定の更新に失敗しました。',
+        'deleted_success' => '通知設定を削除しました。',
+        'deleted_error' => '通知設定の削除に失敗しました。',
+        'bulk_deleted_success' => '選択した通知設定を削除しました。',
+        'bulk_deleted_error' => '通知設定の一括削除に失敗しました。',
+    ],
+    // (任意) 通知タイプの説明用キー
+    'notification_types_description' => [
+        'workflow_summary' => '担当者に未処理の点検・承認タスクがある場合に定期的に通知します。',
+        'status_returned_to_draft' => '申請したレコードが点検者・承認者によって作成中に戻された場合に通知します。',
+        'approved' => '申請したレコードが最終承認された場合に通知します。',
+        'inspection_completed' => '（任意）申請したレコードの点検が完了し、承認ステップに進んだ場合に通知します。',
+        'inspection_requested' => '（任意）自分が点検担当者に指定された場合に通知します。',
+        'approval_requested' => '（任意）自分が承認担当者に指定された場合に通知します。',
     ],
     'notification_type' => '通知タイプ',
     'disable_notification' => '通知を無効にする',
@@ -509,4 +550,5 @@ return [
     'view_history' => '変更履歴を見る',
     'reviseCount' => '改訂回数',
     'no_content_in_this_diff' => 'この履歴には内容の変更記録はありません。', // ShowDiffメッセージ
+    'new_relation_attach' => '新たに紐付け'
 ];

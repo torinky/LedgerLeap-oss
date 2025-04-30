@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -235,14 +236,6 @@ class Folder extends Model
             ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
     }
 
-    /**
-     * Belongs to relationship for notification type.
-     *  RoleFolderPermission と NotificationType を経由して紐付いているが、ここで宣言しなければならない理由は不明
-     */
-    public function notificationType(): BelongsTo
-    {
-        return $this->belongsTo(NotificationType::class);
-    }
 
     public function notificationSettings()
     {
