@@ -572,43 +572,38 @@
 
 ---
 
-### ステップ 6.5: 個別通知の実装 (`LedgerDiff` イベントトリガー) (Next)
+### ✅ ステップ 6.5: 個別通知の実装 (完了)
 
-* **目的:** `LedgerDiff` の作成/更新をトリガーとして、主に**申請者向けの個別通知** (`status_returned_to_draft`,
-  `approved`, `inspection_completed`?) と、**(オプションで)担当者向けの個別依頼通知** (`inspection_requested`,
-  `approval_requested`) を、ユーザーの通知設定に基づいて送信する。
-* **タスク:**
-    1. **`LedgerDiffObserver` 作成・登録:** `php artisan make:observer LedgerDiffObserver --model=LedgerDiff`
-       で作成し、ServiceProvider に登録する。
-    2. **`LedgerDiffObserver::created/updated` (または `saved`) 実装:**
-        * `saved` イベントメソッド内で、引数 `$ledgerDiff` の状態変化を判定する。
-        * **差し戻し/編集戻し時 (`status` が `DRAFT` になった):** 申請者 (`$ledgerDiff->ledger->creator_id`) を特定し、通知タイプ
-          `status_returned_to_draft` で `NotificationService::sendWorkflowNotification` を呼び出す。コメント (
-          `$ledgerDiff->comments`) も渡す。
-        * **承認完了時 (`status` が `APPROVED` になった):** 申請者を特定し、通知タイプ `approved` で
-          `NotificationService::sendWorkflowNotification` を呼び出す。
-        * **(任意) 点検完了時 (`status` が `PENDING_APPROVAL` になった):** 申請者を特定し、通知タイプ
-          `inspection_completed` で `NotificationService::sendWorkflowNotification` を呼び出す。
-        * **(オプション) 点検依頼時 (`status` が `PENDING_INSPECTION` になった):** 次の担当者 (
-          `$ledgerDiff->inspector_id`) を特定し、通知タイプ `inspection_requested` で
-          `NotificationService::sendWorkflowNotification` を呼び出す。
-        * **(オプション) 承認依頼時 (`status` が `PENDING_APPROVAL` になった):** 次の担当者 (`$ledgerDiff->approver_id`)
-          を特定し、通知タイプ `approval_requested` で `NotificationService::sendWorkflowNotification` を呼び出す。
-    3. **`NotificationService` 拡張:**
-        * `sendWorkflowNotification(User $recipient, NotificationType $type, LedgerDiff $diff, ?string $comment = null)`
-          メソッド（または類似のメソッド）を追加する。
-        * メソッド内で、受信者 (`$recipient`) の**通知設定** (`RoleFolderPermission` を参照、フォルダ特定ロジックが必要)
-          を確認し、該当通知タイプが ON の場合にのみ通知（まずはシステム内 `DatabaseNotification`）を送信するロジックを実装する。
-        * 通知内容（「誰が」「どの台帳を」「どうしたか」「コメント」）を生成するロジックを実装する。通知クリック時のリンク先 (
-          `route()`) も設定する。
-    4. **通知リスト画面 (`NotificationList`) 調整:** 送信された個別通知がリストに表示されることを確認する。
+* **目的:** ワークフローの各アクションが発生したタイミングで、主に関連ユーザー（申請者、担当者）へ個別通知を送信する。ユーザーは通知設定に基づいて受信を制御できる。
+  **通知トリガーは `WorkflowService` 内の各アクションメソッドとする (Observer は使用しない)。**
+* **実施済みタスク:**
+    1. **`LedgerDiffObserver` の不採用決定:** ワークフローアクションは `WorkflowService` 内で完結するため、Observer
+       を使用せず、Service 内で直接通知処理を呼び出す方針に変更。[完了]
+    2. **`NotificationService` 拡張:**
+        * ワークフロー通知送信用の汎用メソッド
+          `sendWorkflowNotification(User $recipient, NotificationType $type, LedgerDiff $diff, ?string $comment = null, ?Folder $folder = null)`
+          を実装。[完了]
+        * メソッド内で受信者の通知設定 (`RoleFolderPermission`) を確認し、ON の場合のみ通知（システム内
+          `DatabaseNotification`) を送信するロジックを実装。[完了]
+        * 通知内容（ペイロード）を生成するロジックを実装。[完了]
+        * 通知クリック時のリンク先 (`route()`) を設定。[完了]
+    3. **`WorkflowService` 修正:** 各アクションメソッド (`requestInspection`, `requestApproval`, `approve`,
+       `returnToDraft`, `saveEditedRecord`) の**トランザクション成功後**に、適切な通知タイプと受信者を特定し、
+       `NotificationService::sendWorkflowNotification` を呼び出す処理を追加。[完了]
+        * 差し戻し時 (`status_returned_to_draft`): 申請者へ通知。
+        * 承認完了時 (`approved`): 申請者へ通知。
+        * (任意) 点検完了時 (`inspection_completed`): 申請者へ通知。
+        * (オプション) 点検/承認依頼時 (`inspection_requested`, `approval_requested`):
+          担当者へ通知（集約通知を主とするため、デフォルトOFFまたは設定次第）。
+    4. **通知リスト画面 (`NotificationList`) 調整:** 新しいペイロード構造 (`data['payload']`)
+       に合わせて通知内容を表示するように修正。[完了]
 * **動作確認:**
-    * ワークフローの各アクション（差し戻し、承認、任意で点検完了・依頼）に応じて、通知設定が ON
-      になっている適切なユーザー（申請者、担当者）にシステム内通知が届くこと。
-    * 通知の内容（メッセージ、リンク先）が正しいこと。
-    * 通知設定が OFF のユーザーには通知が届かないこと。
-* **ドキュメント更新:** 「機能詳細(通知設定との連携、通知送信)」「関連ファイル(Observer, Service)」更新。Observer
-  トリガーによる個別通知について追記。
+    * ワークフローの各アクションに応じて、通知設定が ON になっている適切なユーザーにシステム内通知が届くことを確認。[完了]
+    * 通知の内容（メッセージ、リンク先、コメント等）が正しく表示されることを確認。[完了]
+    * 通知設定が OFF のユーザーには通知が届かないことを確認。[完了]
+* **成果物:** ワークフローの進行状況に応じて関係者に個別通知が送信される機能。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(通知設定との連携、通知送信)」「関連ファイル(Service)」更新。**Observer
+  を使わず Service から通知をトリガーする方式**に変更した点を明記。
 
 ---
 
