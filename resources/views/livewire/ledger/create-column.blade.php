@@ -108,7 +108,7 @@
 
                                     {{-- 下書き保存ボタン --}}
                                     <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
-                                                   class="btn-secondary" wire:click.prevent="saveDraft"
+                                                   class="btn-secondary btn-wide btn-xl" wire:click.prevent="saveDraft"
                                                    spinner="saveDraft"/>
 
                                     {{-- 点検者/承認者 選択 (ステップ1では点検者のみ) --}}

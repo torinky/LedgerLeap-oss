@@ -93,7 +93,7 @@
                                     {{-- 承認済み (isLocked) の場合は無効化 --}}
                                     <x-mary-button label="{{ __('ledger.save_changes') }}"
                                                    icon="o-pencil"
-                                                   class="btn-primary"
+                                                   class="btn-primary btn-wide btn-xl"
                                                    wire:click.prevent="saveChanges"
                                                    spinner="saveChanges"
                                                    :disabled="$ledgerRecord?->isLocked()"/>
