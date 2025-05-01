@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\FolderPermissionType;
+use App\Models\Folder;
+use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
@@ -210,4 +212,93 @@ class NotificationService
         // Role の ID から Role モデルを取得
         return Role::whereIn('id', $roleIds)->get();
     }
+
+    /**
+     * ワークフロー関連の個別通知を送信する
+     *
+     * @param User $recipient
+     * @param NotificationType $notificationType
+     * @param LedgerDiff $ledgerDiff
+     * @param string|null $comment
+     * @param Folder|null $folder 対象フォルダ
+     */
+    public function sendWorkflowNotification(User $recipient, NotificationType $notificationType, LedgerDiff $ledgerDiff, ?string $comment = null, ?Folder $folder = null): void
+    {
+        Log::info("sendWorkflowNotification called for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
+
+        // 1. ユーザーがこの通知タイプを受け取る設定か確認する
+        //    (shouldReceiveNotification の第3引数に Folder オブジェクトを渡す)
+        if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) { // <<<--- $folder を渡す
+            Log::info("User {$recipient->id} should not receive notification type {$notificationType->name} for this folder.");
+            return;
+        }
+
+        // 2. 通知を送信 (GenericNotification を流用)
+        try {
+            // GenericNotification の payload にコメントなどの追加情報を渡す
+            $payloadOverrides = [];
+            if ($comment) {
+                $payloadOverrides['comments'] = $comment;
+            }
+            // 次の担当者情報なども必要なら payload に含める
+            // if ($notificationType->name === 'inspection_requested') { ... }
+
+            Notification::send($recipient, new GenericNotification(
+                $notificationType->id,
+                $ledgerDiff->ledger, // Subject は Ledger とする (Diff ではない)
+                null, // Activity Log は渡さない
+                $payloadOverrides // 追加情報を渡す
+            ));
+            Log::info("Workflow notification sent successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send workflow notification: " . $e->getMessage(), [
+                'recipient_id' => $recipient->id,
+                'type' => $notificationType->name,
+                'diff_id' => $ledgerDiff->id,
+                'exception' => $e
+            ]);
+        }
+    }
+
+    /**
+     * ユーザーが特定のフォルダで特定の通知タイプを受け取る設定か確認するヘルパー
+     *
+     * @param User $user
+     * @param NotificationType $notificationType
+     * @param Folder|null $folder 対象フォルダ (null の場合はグローバル設定？ or 失敗？)
+     * @return bool
+     */
+    protected function shouldReceiveNotification(User $user, NotificationType $notificationType, ?Folder $folder): bool
+    {
+        if (!$folder) {
+            // workflow_summary などフォルダに依存しない通知タイプの扱い (要検討)
+            // とりあえず false を返すか、グローバル設定を見る
+            if ($notificationType->name === 'workflow_summary') {
+                // ToDo: グローバルな通知設定を確認するロジック
+                return true; // 仮に常に true
+            }
+            Log::warning("Folder context is missing for notification check.", ['user_id' => $user->id, 'type' => $notificationType->name]);
+            return false;
+        }
+
+        // ユーザーの全有効ロールを取得
+        $userRoles = $this->userService->getAllUniqueRolesForUser($user);
+        if ($userRoles->isEmpty()) {
+            return false;
+        }
+        $roleIds = $userRoles->pluck('id')->toArray();
+
+        // フォルダとその祖先の ID リストを取得
+        $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
+
+        // 該当する RoleFolderPermission で NOTIFY_ON になっているか確認
+        $canReceive = RoleFolderPermission::whereIn('role_id', $roleIds)
+            ->whereIn('folder_id', $folderIds)
+            ->where('notification_type_id', $notificationType->id)
+            ->where('permission', FolderPermissionType::NOTIFY_ON)
+            ->exists();
+
+        return $canReceive;
+    }
+
 }
