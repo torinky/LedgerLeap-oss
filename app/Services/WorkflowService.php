@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\NotificationType;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\Traits\Date;
@@ -15,6 +16,13 @@ use Throwable;
 
 class WorkflowService
 {
+    protected NotificationService $notificationService; // NotificationService をインジェクト
+
+    public function __construct(NotificationService $notificationService) // コンストラクタでインジェクト
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * 下書きを保存する
      * 新しい LedgerDiff (Content有り) を作成し、Ledger も更新する
@@ -118,8 +126,10 @@ class WorkflowService
     public function requestInspection(int $ledgerId, int $requesterId, int $inspectorId): Ledger
     {
         // ToDo: 権限チェック (requesterId が点検依頼できるか？)
+        $ledger = null; // 先に宣言
+        $ledgerDiff = null; // 先に宣言
 
-        return DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId) {
+        DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId, &$ledger, &$ledgerDiff) {
             $ledger = Ledger::findOrFail($ledgerId);
             if ($ledger->status !== WorkflowStatus::DRAFT) {
                 throw new Exception("Inspection can only be requested from Draft status.");
@@ -154,12 +164,30 @@ class WorkflowService
             $this->incrementPendingTaskCount($inspectorId, 'inspection');
             // ToDo: イベント発行
             // event(new InspectionRequested($ledgerDiff));
-            // ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Inspection requested for Ledger ID: {$ledgerId}. Inspector: {$inspectorId}. Diff ID: {$ledgerDiff->id}");
-
-
-            return $ledger->refresh();
         });
+
+        // --- 通知処理 (トランザクション外) ---
+        if ($ledgerDiff && $inspectorId) {
+            $recipient = User::find($inspectorId);
+            $notificationType = NotificationType::where('name', 'inspection_requested')->first();
+            $folder = $ledger->define?->folder; // Folder を取得
+
+            if ($recipient && $notificationType) {
+                $this->notificationService->sendWorkflowNotification(
+                    $recipient,
+                    $notificationType,
+                    $ledgerDiff,
+                    null, // comment
+                    $folder
+                );
+            }
+        }
+        // --- ここまで ---
+
+        // ToDo: Activity Log 記録 (ステップ4)
+        Log::info("Inspection requested for Ledger ID: {$ledgerId}. Inspector: {$inspectorId}. Diff ID: {$ledgerDiff->id}");
+
+        return $ledger->refresh();
     }
 
     /**
@@ -175,9 +203,13 @@ class WorkflowService
     public function requestApproval(int $ledgerId, int $approverId, int $inspectorId): Ledger
     {
         // ToDo: 権限チェック (inspectorId が点検を完了できるか？)
+        $ledger = null;
+        $ledgerDiff = null; // 作成する Diff を保持
+        $applicant = null; // 申請者
 
-        return DB::transaction(function () use ($ledgerId, $approverId, $inspectorId) {
+        DB::transaction(function () use ($ledgerId, $approverId, $inspectorId, &$ledger, &$ledgerDiff, &$applicant) {
             $ledger = Ledger::findOrFail($ledgerId);
+            $applicant = $ledger->creator; // 申請者を取得
             $ledgerDiff = $ledger->latestDiff()->first();
             if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
                 throw new Exception("User not authorized or invalid status for requesting approval.");
@@ -215,11 +247,32 @@ class WorkflowService
             $this->incrementPendingTaskCount($approverId, 'approval');
             // ToDo: イベント発行
             // event(new ApprovalRequested($ledgerDiff));
-            // ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Inspection completed, approval requested for Ledger ID: {$ledgerId}. Approver: {$approverId}. Diff ID: {$ledgerDiff->id}");
-
-            return $ledger->refresh();
         });
+        // --- 通知処理 ---
+        // 承認依頼通知 (担当者向け - オプション)
+        if ($ledgerDiff && $approverId) {
+            $recipient = User::find($approverId);
+            $notificationType = NotificationType::where('name', 'approval_requested')->first();
+            $folder = $ledger->define?->folder;
+            if ($recipient && $notificationType) {
+                $this->notificationService->sendWorkflowNotification($recipient, $notificationType, $ledgerDiff, null, $folder);
+            }
+        }
+        // 点検完了通知 (申請者向け - オプション)
+        if ($applicant && $ledgerDiff) {
+            $notificationType = NotificationType::where('name', 'inspection_completed')->first();
+            $folder = $ledger->define?->folder;
+            if ($notificationType) {
+                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, null, $folder);
+            }
+        }
+        // --- ここまで ---
+
+        // ToDo: Activity Log 記録 (ステップ4)
+        Log::info("Inspection completed, approval requested for Ledger ID: {$ledgerId}. Approver: {$approverId}. Diff ID: {$ledgerDiff->id}");
+
+        return $ledger->refresh();
+
     }
 
     /**
@@ -234,9 +287,13 @@ class WorkflowService
     public function approve(int $ledgerId, int $approverId): Ledger
     {
         // ToDo: 権限チェック (approverId が承認できるか？)
+        $ledger = null;
+        $ledgerDiff = null; // 作成する Diff を保持
+        $applicant = null;
 
-        return DB::transaction(function () use ($ledgerId, $approverId) {
+        DB::transaction(function () use ($ledgerId, $approverId, &$ledger, &$ledgerDiff, &$applicant) {
             $ledger = Ledger::findOrFail($ledgerId);
+            $applicant = $ledger->creator;
             $latestDiff = $ledger->latestDiff()->first();
 
             if (!$latestDiff) {
@@ -280,11 +337,21 @@ class WorkflowService
             $this->decrementPendingTaskCount($approverId, 'approval');
             // ToDo: イベント発行
             // event(new ApprovalCompleted($ledgerDiff));
-            // ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Ledger approved for Ledger ID: {$ledgerId}. Diff ID: {$ledgerDiff->id}");
-
-            return $ledger->refresh();
         });
+        // --- 通知処理 ---
+        if ($applicant && $ledgerDiff) {
+            $notificationType = NotificationType::where('name', 'approved')->first();
+            $folder = $ledger->define?->folder;
+            if ($notificationType) {
+                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, null, $folder);
+            }
+        }
+        // --- ここまで ---
+        // ToDo: Activity Log 記録 (ステップ4)
+        Log::info("Ledger approved for Ledger ID: {$ledgerId}. Diff ID: {$ledgerDiff->id}");
+
+        return $ledger->refresh();
+
     }
 
     /**
@@ -300,9 +367,13 @@ class WorkflowService
     public function returnToDraft(int $ledgerId, int $modifierId, ?string $comments): Ledger
     {
         // ToDo: 権限チェック (modifierId が点検者/承認者か？)
+        $ledger = null;
+        $ledgerDiff = null; // 作成する Diff を保持
+        $applicant = null;
 
-        return DB::transaction(callback: function () use ($ledgerId, $modifierId, $comments) {
+        DB::transaction(callback: function () use ($ledgerId, $modifierId, $comments, &$ledger, &$ledgerDiff, &$applicant) {
             $ledger = Ledger::findOrFail($ledgerId);
+            $applicant = $ledger->creator;
             $currentStatus = $ledger->status;
             $latestDiff = $ledger->latestDiff()->first();
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff?->inspector_id : $latestDiff?->approver_id; // <<<--- 最新Diffから担当者取得
@@ -332,14 +403,14 @@ class WorkflowService
                 'inspected_at' => self::getInspectedAtCarbonDate($latestDiff->inspected_at),
                 'approved_at' => null, // クリア
             ];
-            $lDiff = LedgerDiff::create($diffData);
+            $ledgerDiff = LedgerDiff::create($diffData);
 
             // Ledger を更新
             $ledger->update([
                 'status' => WorkflowStatus::DRAFT,
                 'returned_at' => now(), // Ledgerにも記録
                 'modifier_id' => $modifierId,
-                'latest_diff_id' => $lDiff->id,
+                'latest_diff_id' => $ledgerDiff->id,
             ]);
 
             // カウンター調整 (担当者-)
@@ -350,11 +421,22 @@ class WorkflowService
 
             // ToDo: イベント発行
             // event(new StatusReturnedToDraft($ledgerDiff, $comments));
-            // ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$lDiff->id}");
-
-            return $ledger->refresh();
         });
+        // --- 通知処理 ---
+        if ($applicant && $ledgerDiff) {
+            $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first();
+            $folder = $ledger->define?->folder;
+            if ($notificationType) {
+                // コメントも渡す
+                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, $comments, $folder);
+            }
+        }
+        // --- ここまで ---
+        // ToDo: Activity Log 記録 (ステップ4)
+        Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$ledgerDiff->id}");
+
+        return $ledger->refresh();
+
     }
 
     /**
@@ -382,7 +464,9 @@ class WorkflowService
         }
         // ToDo: modifierId が編集権限を持っているかチェック
 
-        return DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments) {
+        $newLedgerDiff = null; // 先に宣言
+
+        DB::transaction(function () use ($ledger, $newContent, $newContentAttached, $modifierId, $comments, &$newLedgerDiff) {
             $currentStatus = $ledger->status; // 戻す前のステータス
             $latestDiff = $ledger->latestDiff()->first();
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff->inspector_id : $latestDiff->approver_id;
@@ -419,8 +503,6 @@ class WorkflowService
                 'version' => $ledgerVersion,
             ]);
 
-            // 3. ToDo: Activity Log 記録 (ステップ4)
-            Log::info("Ledger ID: {$ledger->id} edited and returned to DRAFT by User ID: {$modifierId}. Diff ID: {$newLedgerDiff->id}");
 
             // 4. ToDo: カウンター調整
             if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
@@ -431,8 +513,22 @@ class WorkflowService
             // 5. ToDo: イベント発行
             // event(new StatusReturnedToDraft($ledger, $comments));
 
-            return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $newLedgerDiff];
         });
+
+        // --- 通知処理 ---
+        $applicant = $ledger->creator;
+        if ($applicant && $newLedgerDiff) {
+            $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first(); // 同じ通知タイプを使う？
+            $folder = $ledger->define?->folder;
+            if ($notificationType) {
+                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $newLedgerDiff, $comments, $folder);
+            }
+        }
+        // --- ここまで ---
+
+        // 3. ToDo: Activity Log 記録 (ステップ4)
+        Log::info("Ledger ID: {$ledger->id} edited and returned to DRAFT by User ID: {$modifierId}. Diff ID: {$newLedgerDiff->id}");
+        return ['ledger' => $ledger->refresh(), 'ledgerDiff' => $newLedgerDiff];
     }
 
 
