@@ -235,19 +235,29 @@ class NotificationService
 
         // 2. 通知を送信 (GenericNotification を流用)
         try {
+            $causer = $ledgerDiff->modifier; // 操作者
+            $subject = $ledgerDiff->ledger; // 対象
+            // イベント名は NotificationType の名前を使うか、別途定義する
+            $eventName = $notificationType->event ?? $notificationType->name;
+
             // GenericNotification の payload にコメントなどの追加情報を渡す
             $payloadOverrides = [];
             if ($comment) {
                 $payloadOverrides['comments'] = $comment;
             }
             // 次の担当者情報なども必要なら payload に含める
-            // if ($notificationType->name === 'inspection_requested') { ... }
+            if ($notificationType->name === 'inspection_requested') {
+                $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
+            }
 
             Notification::send($recipient, new GenericNotification(
-                $notificationType->id,
-                $ledgerDiff->ledger, // Subject は Ledger とする (Diff ではない)
-                null, // Activity Log は渡さない
-                $payloadOverrides // 追加情報を渡す
+                notificationTypeId: $notificationType->id,
+                subject: $subject,
+                activity: null, // <<<--- Activity は null
+                causer: $causer, // <<<--- 操作者 User を渡す
+                eventName: $eventName, // <<<--- イベント名を渡す
+                comment: $comment, // <<<--- コメントを渡す
+                payloadOverrides: $payloadOverrides
             ));
             Log::info("Workflow notification sent successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
         } catch (\Exception $e) {
