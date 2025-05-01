@@ -373,6 +373,7 @@ return [
         'App\Models\Ledger' => '台帳',
         'App\Models\RoleFolderPermission' => 'フォルダー権限/通知設定',
 
+        'unknown' => '不明な通知', // フォールバック用
     ],
     'notification' => [
         'created_success' => '通知設定を作成しました。',
@@ -550,5 +551,18 @@ return [
     'view_history' => '変更履歴を見る',
     'reviseCount' => '改訂回数',
     'no_content_in_this_diff' => 'この履歴には内容の変更記録はありません。', // ShowDiffメッセージ
-    'new_relation_attach' => '新たに紐付け'
+    'new_relation_attach' => '新たに紐付け',
+
+    'action_returned_to_draft' => 'を作成中に戻しました',
+    'action_approved' => 'を承認しました',
+    'action_inspection_completed' => 'の点検を完了しました',
+    'action_inspection_requested' => 'の点検を依頼しました',
+    'action_approval_requested' => 'の承認を依頼しました',
+    'action_edited_while_pending' => 'を編集しました(要再申請)',
+    'action_login' => 'ログインしました',
+    'action_logout' => 'ログアウトしました',
+    'action_attached' => 'を割り当てました',
+    'action_detached' => 'の割り当てを解除しました',
+    'link_unavailable' => 'リンクなし',
+    'performed_action' => 'さんが'
 ];

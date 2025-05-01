@@ -8,11 +8,13 @@ return [
         'create_users' => 'ユーザーの作成',
         'update_users' => 'ユーザーの更新',
         'delete_users' => 'ユーザーの削除',
+        'manage_users' => 'ユーザーの管理',
 
         'view_organizations' => '組織の閲覧',
         'create_organizations' => '組織の作成',
         'update_organizations' => '組織の更新',
         'delete_organizations' => '組織の削除',
+        'manage_organization' => '組織の管理',
 
         'view_roles' => '役割の閲覧',
         'create_roles' => '役割の作成',
