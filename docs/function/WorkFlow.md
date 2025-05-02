@@ -607,18 +607,34 @@
 
 ---
 
-### ステップ 6.6: 集約通知の実装
+### ✅ ステップ 6.5: 集約通知の実装 (完了)
 
 * **目的:** 定期的に担当者へ未処理タスク件数を通知する。
-* **タスク:**
+* **実施済みタスク:**
     1. **集約通知コマンド作成 (`SendWorkflowSummaryNotification`):** `User` モデルから未処理カウンター (
-       `pending_inspection_count` + `pending_approval_count`) > 0 のユーザーを取得する。
+       `pending_inspection_count` + `pending_approval_count`) > 0 のユーザーを取得するロジックを実装。[完了]
     2. **`NotificationService` 拡張:** `sendWorkflowSummaryNotification(User $user)` メソッドを追加。メソッド内でユーザーが
-       `workflow_summary` 通知を ON にしているか確認し、ON ならシステム内通知（「未処理タスク〇件」）を送信する。
-    3. **コマンド実装:** 取得したユーザーごとにループし、`NotificationService::sendWorkflowSummaryNotification` を呼び出す。
-    4. **Kernel 登録:** 作成したコマンドをスケジュール登録 (`daily()` など)。
-* **動作確認:** スケジュール実行で、未処理タスクがあり設定が ON の担当者に集約通知が届くこと。
-* **ドキュメント更新:** 「機能詳細(集約通知)」「関連ファイル(Command, Kernel)」更新。
+       `notify` Permission を持っているか (`can('notify')`) を確認し、持っている場合に新しい専用通知クラス
+       `WorkflowSummaryNotification` を使って通知（まずはシステム内 `DatabaseNotification`
+       ）を送信するロジックを実装。[完了]
+    3. **コマンド実装:** 作成したコマンド (`SendWorkflowSummaryNotification`) の `handle` メソッドで、対象ユーザーを取得しループして
+       `NotificationService::sendWorkflowSummaryNotification` を呼び出すように実装。[完了]
+    4. **通知クラス作成 (`WorkflowSummaryNotification`):** 未処理件数をコンストラクタで受け取り、`toDatabase`
+       で通知データを生成する専用クラスを作成。[完了]
+    5. **Kernel 登録:** `app/Console/Kernel.php` の `schedule()` メソッドに `SendWorkflowSummaryNotification`
+       コマンドを登録（例: `daily()`）。[完了]
+    6. **スケジューラー実行方式の変更:** Laravel Sail 環境での安定性と設定の容易さを考慮し、cron を利用する代わりに、*
+       *`schedule:work` コマンド** を使用する方式に変更。`docker-compose.yml` に `scheduler` サービス（または `queue`
+       サービスを拡張）を追加/修正し、`php artisan schedule:work` を実行するように設定。[完了]
+* **動作確認:**
+    * 手動で `php artisan workflow:send-summary` を実行し、期待されるユーザー（未処理タスクがあり、`notify`
+      権限を持つ）に集約通知が届く（リストに表示される）ことを確認。[完了]
+    * `schedule:work` を実行しているコンテナが正常に動作し、スケジュールされた時刻（例: `daily()` なら翌日、テスト用に
+      `everyMinute()` に変更して1分後）にコマンドが自動実行され、通知が送信されることを確認。[完了]
+* **成果物:** 定期的に担当者へ未処理タスク件数を通知する集約通知機能と、その実行基盤。
+* **ドキュメント更新:** このセクションを更新。「機能詳細(集約通知)」「関連ファイル(Command, Kernel, NotificationService,
+  WorkflowSummaryNotification)」更新。**スケジューラー実行方式が `schedule:work` に変更された点**、**受信条件が `notify`
+  Permission に変更された点**を明記。
 
 ---
 
