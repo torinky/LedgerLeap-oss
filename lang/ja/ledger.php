@@ -544,6 +544,8 @@ return [
         'view_content_at_this_point' => 'この時点の内容を見る', // 履歴テーブルリンク
         'history_action_modified' => '内容の変更', // NONE ステータスの履歴表示
         'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。', // ShowDiffでのNONEステータス表示
+        'summary_notification_message' => '未処理の点検依頼が :inspection_count 件、承認依頼が :approval_count 件あります。',
+
 
     ],
     'view_content_at_this_point' => 'この時点の内容を見る',
@@ -564,5 +566,5 @@ return [
     'action_attached' => 'を割り当てました',
     'action_detached' => 'の割り当てを解除しました',
     'link_unavailable' => 'リンクなし',
-    'performed_action' => 'さんが'
+    'performed_action' => 'さんが '
 ];

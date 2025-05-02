@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Notifications\GenericNotification;
+use App\Notifications\WorkflowSummaryNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Notifications\DatabaseNotification;
@@ -309,6 +310,73 @@ class NotificationService
             ->exists();
 
         return $canReceive;
+    }
+
+    /**
+     * ワークフローの未処理タスク集約通知を送信する (修正)
+     *
+     * @param User $recipient 通知を受け取るユーザー
+     */
+    public function sendWorkflowSummaryNotification(User $recipient): void
+    {
+        // 修正: 受信条件を Permission でチェック
+        if (!$recipient->can('notify')) { // 'notify' Permission を確認
+            Log::info("User {$recipient->id} does not have 'notify' permission. Skipping summary notification.");
+            return;
+        }
+
+        // 未処理件数を取得
+        $inspectionCount = $recipient->pending_inspection_count;
+        $approvalCount = $recipient->pending_approval_count;
+        $totalCount = $inspectionCount + $approvalCount;
+
+        if ($totalCount <= 0) {
+            Log::info("User {$recipient->id} has no pending tasks, skipping summary notification.");
+            return;
+        }
+
+        Log::info("Attempting to send workflow summary notification.", ['recipient_id' => $recipient->id, 'total_count' => $totalCount]);
+
+        try {
+            // 修正: 新しい WorkflowSummaryNotification を使用
+            Notification::send($recipient, new WorkflowSummaryNotification($inspectionCount, $approvalCount));
+
+            Log::info("Workflow summary notification sent successfully.", ['recipient_id' => $recipient->id]);
+
+        } catch (\Exception $e) {
+            Log::error("Failed to send workflow summary notification: " . $e->getMessage(), [
+                'recipient_id' => $recipient->id,
+                'exception' => $e
+            ]);
+        }
+    }
+
+    /**
+     * ユーザーが集約通知を受け取る設定か確認するヘルパー
+     * (フォルダに依存しないため、shouldReceiveNotification とは別のロジック)
+     */
+    protected function shouldReceiveSummaryNotification(User $user, NotificationType $notificationType): bool
+    {
+        // ToDo: グローバルな通知設定を確認するロジックを実装する
+        // 例1: User モデルに直接設定フラグを持つ
+        // return $user->receives_workflow_summary;
+
+        // 例2: RoleFolderPermission で特別な folder_id (例: 0 or null) を使う
+        $userRoles = $this->userService->getAllUniqueRolesForUser($user);
+        if ($userRoles->isEmpty()) {
+            return false;
+        }
+        $roleIds = $userRoles->pluck('id')->toArray();
+
+        return RoleFolderPermission::whereIn('role_id', $roleIds)
+            // ->whereNull('folder_id') // folder_id が NULL のものをグローバル設定とみなす？
+            ->where('folder_id', 0) // または特定のID (例: 0) を使う？
+            ->where('notification_type_id', $notificationType->id)
+            ->where('permission', FolderPermissionType::NOTIFY_ON)
+            ->exists();
+
+        // 例3: 常に True (全員に送る場合)
+        // return true;
     }
 
 }
