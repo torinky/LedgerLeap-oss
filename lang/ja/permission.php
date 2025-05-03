@@ -3,18 +3,39 @@
 return [
     'title' => '権限',
     'description' => '説明',
+    'direct_permissions' => '直接割り当てられた権限', // UserResource用
+    'direct_permissions_help' => 'ユーザーに直接割り当てられた権限です。ロールから継承された権限はここには表示されません。', // UserResource用
+
+    // --- グループ名の翻訳キー ---
+    'group' => [
+        'user' => 'ユーザー管理',
+        'organization' => '組織管理',
+        'role' => 'ロール管理',
+        'permission' => '権限管理',
+        'folder' => 'フォルダ管理',
+        'folder_permission' => 'フォルダ権限設定',
+        'ledger_define' => '台帳定義管理',
+        'ledger' => '台帳操作',
+        'workflow_notification' => 'ワークフロー通知',
+        'notification' => 'システム内通知',
+        'activity_log' => 'アクティビティログ',
+        'other' => 'その他',
+    ],
+
+    // --- 権限名の翻訳キー ---
     'name' => [
+        // --- 既存のキー (省略) ---
         'view_users' => 'ユーザーの閲覧',
         'create_users' => 'ユーザーの作成',
         'update_users' => 'ユーザーの更新',
         'delete_users' => 'ユーザーの削除',
-        'manage_users' => 'ユーザーの管理',
+        'manage_users' => 'ユーザーの管理', // グループ化のため追加 (既存かも)
 
         'view_organizations' => '組織の閲覧',
         'create_organizations' => '組織の作成',
         'update_organizations' => '組織の更新',
         'delete_organizations' => '組織の削除',
-        'manage_organization' => '組織の管理',
+        'manage_organization' => '組織の管理', // グループ化のため追加 (既存かも)
 
         'view_roles' => '役割の閲覧',
         'create_roles' => '役割の作成',
@@ -23,10 +44,10 @@ return [
         'restore_roles' => '役割の復元',
         'force_delete_roles' => '役割の完全削除',
 
-        'view_rolefolderpermissions' => 'フォルダーの権限の閲覧',
-        'create_rolefolderpermissions' => 'フォルダーの権限の作成',
-        'update_rolefolderpermissions' => 'フォルダーの権限の更新',
-        'delete_rolefolderpermissions' => 'フォルダーの権限の削除',
+        'view_folder_permissions' => 'フォルダー権限設定の閲覧', // 名称変更
+        'create_folder_permissions' => 'フォルダー権限設定の作成', // 名称変更
+        'update_folder_permissions' => 'フォルダー権限設定の更新', // 名称変更
+        'delete_folder_permissions' => 'フォルダー権限設定の削除', // 名称変更
 
         'view_ledgers' => '台帳の閲覧',
         'create_ledgers' => '台帳の作成',
@@ -46,13 +67,20 @@ return [
         'delete_folders' => 'フォルダーの削除',
         'restore_folders' => 'フォルダーの復元',
         'force_delete_folders' => 'フォルダーの完全削除',
-        'notify' => '通知を受け取る',
+
+        'notify' => '通知を受け取る（システム内）', // description を反映
         'view_permissions' => '権限の閲覧',
         'create_permissions' => '権限の作成',
         'update_permissions' => '権限の更新',
         'delete_permissions' => '権限の削除',
-        'manage_permissions' => '権限の管理',
+        'manage_permissions' => '権限の管理', // グループ化のため追加 (既存かも)
+
         'view_activity_logs' => 'アクティビティログの閲覧',
+
+        // --- ここから追加 ---
+        'receive_workflow_summary_email' => 'ワークフロー集約メール受信',
+        'receive_workflow_action_email' => 'ワークフロー個別メール受信',
+        // --- ここまで追加 ---
     ],
 
 ];

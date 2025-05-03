@@ -607,7 +607,7 @@
 
 ---
 
-### ✅ ステップ 6.5: 集約通知の実装 (完了)
+### ✅ ステップ 6.6: 集約通知の実装 (完了)
 
 * **目的:** 定期的に担当者へ未処理タスク件数を通知する。
 * **実施済みタスク:**
@@ -638,16 +638,99 @@
 
 ---
 
-### ステップ 6.7: (オプション) ブラウザ通知機能の実装
+### ステップ 6.7: メール通知用 Permission 定義とロールへの初期割当 (Next)
 
-* **目的:** 集約通知や重要な個別通知をブラウザプッシュ通知で送信する。
-* **タスク:** Web Pushライブラリ導入, Service Worker実装, 購読情報保存, `NotificationService`での送信処理追加。
-* **動作確認:** ブラウザ通知の許可・受信を確認。
-* **ドキュメント更新:** 「機能詳細(通知手段)」「関連ファイル」更新。
+* **目的:** ワークフロー関連のメール通知を受け取るかどうかを制御するための **Permission**
+  を定義し、初期ロールに割り当てる。管理者がロール/ユーザーに権限設定できるようにする。
+* **タスク:**
+    1. **Permission 定義:** `RolesAndPermissionsSeeder` (または新規 Seeder) で、メール通知の受信権限を示す新しい
+       Permission を作成する。
+        * 検討する粒度:
+            * **中粒度案:** `'receive_workflow_summary_email'` (集約メール用), `'receive_workflow_action_email'` (
+              個別アクション通知用) の2つを作成。
+            * **細粒度案:** `'receive_approved_email'`, `'receive_returned_email'`,
+              `'receive_inspection_completed_email'`, `'receive_inspection_requested_email'`,
+              `'receive_approval_requested_email'`, `'receive_workflow_summary_email'` のように通知タイプごとに作成。
+        * Permission 名、guard (`web`)、(任意で) description を設定する。
+    2. **初期ロールへの割り当て:** `RolesAndPermissionsSeeder`
+       内で、デフォルトでメール通知を受け取るべきと考えられるロール（例: `Super Admin`, `Organization Admin`,
+       `Project Manager`, `Editor` など）に、上記で作成したメール通知 Permission を `givePermissionTo()`
+       メソッドを使って割り当てる。どのロールにどの Permission をデフォルトで付与するかは運用に合わせて決定する。
+    3. **Filament UI 更新 (`RoleResource.php`, `UserResource.php`):**
+        * ロール編集フォーム (`RoleResource::form()`) 内の Permission 選択部分 (
+          `Spatie\Permission\Filament\Forms\Components\PermissionCheckboxList` または類似のコンポーネント)
+          で、新しく作成したメール通知関連 Permission が表示され、選択・保存できるようにする。必要であれば Permission
+          をグループ化して表示する。
+        * ユーザー編集フォーム (`UserResource::form()`) 内にも同様に、ユーザーに**直接**メール通知 Permission
+          を割り当てるためのチェックボックスリストを追加または調整する。
+    4. **翻訳ファイル更新 (`ledger.php` または `permissions.php` 等):** 新しい Permission
+       名に対応する分かりやすい表示名（ラベル）の翻訳キー (`ledger.permissions.receive_...` など）を追加する。
+    5. **Seeder 実行:** `php artisan db:seed --class=RolesAndPermissionsSeeder` (または `migrate:fresh --seed`) を実行して
+       Permission をデータベースに登録し、ロールに割り当てる。
+* **動作確認:**
+    * `permissions` テーブルに新しいメール通知関連の権限が登録されていることを確認。
+    * Filament のロール編集画面およびユーザー編集画面で、新しい権限が表示され、チェックを入れて保存・解除できることを確認。
+    * 初期設定したロールを持つユーザーが、期待通りにメール通知権限を持っていること（例: Tinker で
+      `$user->can('receive_approved_email')` を実行して確認）。
+* **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(Seeder, RoleResource, UserResource)」更新。メール通知制御に
+  Permission を利用する方式、定義された Permission の種類と目的について追記。
 
 ---
 
-### ステップ 7: 柔軟な承認ルート機能の実装 (旧ステップ5)
+### ステップ 6.8: 個人用メール通知設定画面の実装
+
+* **目的:** ユーザーがプロファイル（または `/notifications/settings`）で、自分自身のメール通知受信設定（直接割り当てられた
+  Permission）を ON/OFF できるようにする。ロール設定による制限も表示する。
+* **タスク:**
+    1. **`Settings.php` (Livewire) 実装:**
+        * `mount` でログインユーザーとメール通知関連 Permission (ステップ6.4で定義したもの) を取得。
+        * 各 Permission について、ユーザーに直接割り当てられているか (`hasDirectPermission`)
+          と、ロール経由で割り当てられているか (`hasPermissionTo`) を判定。
+        * 表示用データ配列 (`$notificationSettings` など) を準備 (`name`, `label`, `description`, `enabled`[
+          `can()`で判定], `is_via_role` を含む)。
+    2. **`settings.blade.php` (ビュー) 実装:**
+        * 表示用データ配列をループし、各 Permission に対する `<x-mary-toggle>` を表示。
+        * `wire:model` でコンポーネントのプロパティ（例: `$settings['receive_workflow_summary_email']`) にバインド。
+        * `:disabled="$setting['is_via_role']"` でロール設定による無効化を実装。
+        * 無効化されている場合にツールチップで理由を表示。
+    3. **保存ロジック (`Settings::save()`):**
+        * フォーム送信時に、トグルの状態に基づき、ユーザーに **直接** Permission を付与 (`givePermissionTo`) または剥奪 (
+          `revokePermissionTo`) する処理を実装。ロール経由の設定は変更しない。
+* **動作確認:**
+    * 通知設定画面でメール通知 ON/OFF が表示・制御できること。
+    * ロールで設定されている項目はトグルが無効化され、ツールチップが表示されること。
+    * ユーザーがトグルを操作して保存すると、ユーザーの直接 Permission が更新されること (DB `model_has_permissions`
+      テーブル等で確認)。
+* **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(Settingsコンポーネント)」更新。個人用通知設定画面について追記。
+
+---
+
+### ステップ 6.9: 個別通知と集約通知の実装 (メール送信)
+
+* **目的:** ワークフローのアクションに応じて、設定に基づき個別通知と集約通知を**メールで送信**する。
+* **タスク:**
+    1. **Mailable クラス作成:** `WorkflowActionNotification` (汎用), `WorkflowSummaryMail`
+       を作成・実装。メールの件名、本文（Markdownテンプレート）、詳細へのリンクボタンなどを含む。
+    2. **`NotificationService` 拡張:**
+        * `sendWorkflowNotification`: 受信者が対応するメール通知 Permission (`can('receive_..._email')`)
+          を持つかチェック。持っていればシステム内通知に加え、`WorkflowActionNotification` Mailable を使ってメール送信 (
+          `Mail::to(...)->send(...)` または Notification Facade)。
+        * `sendWorkflowSummaryNotification`: 受信者が `can('receive_workflow_summary_email')` かチェック。持っていれば
+          `WorkflowSummaryMail` を使ってメール送信。
+    3. **`WorkflowService` からの呼び出し確認:** 各アクションメソッドから `NotificationService` のメソッドが呼び出されていることを確認。
+    4. **集約通知コマンド作成・実行:** `SendWorkflowSummaryNotification` コマンド内で対象ユーザーを取得し
+       `NotificationService` を呼び出す。Kernel 登録。
+* **動作確認:**
+    * 各アクション発生時、および定期コマンド実行時に、対応する Permission を持ち、かつフォルダ別設定が ON
+      のユーザーにメールが送信されること (Mailpit 等で確認)。
+    * Permission がないユーザーにはメールが送信されないこと。
+    * メールの内容、件名、リンクが正しいこと。
+* **ドキュメント更新:** 「機能詳細(通知送信)」「関連ファイル(Mailable, Service, Command)」更新。メール送信ロジックと
+  Permission チェックについて追記。
+
+---
+
+### ステップ 7: 柔軟な承認ルート機能の実装
 
 * **目的:** 承認者/点検者をより柔軟に設定できるようにする。担当者情報を `LedgerDiff` に記録。
 * **タスク:**

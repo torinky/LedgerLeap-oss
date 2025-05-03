@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Forms;
@@ -14,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserResource extends Resource
 {
@@ -27,41 +29,82 @@ class UserResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('email')
-                    ->email()
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\DateTimePicker::make('email_verified_at'),
-                Forms\Components\TextInput::make('password')
-                    ->password()
-                    ->required(fn(string $context): bool => $context === 'create')
-                    ->minLength(8)
-                    ->same('passwordConfirmation')
-                    ->dehydrated(fn($state) => filled($state))
-                    ->dehydrateStateUsing(fn($state) => Hash::make($state)),
-                Forms\Components\TextInput::make('passwordConfirmation')
-                    ->password()
-                    ->label('Password Confirmation')
-                    ->required(fn(string $context): bool => $context === 'create')
-                    ->minLength(8)
-                    ->dehydrated(false),
-                Forms\Components\Select::make('roles')
-                    ->multiple()
-                    ->relationship('roles', 'name')
-                    ->afterStateUpdated(function ($state, $record) {
-                        if ($record) {
-                            $organization = $record->primaryOrganization();
-                            foreach ($state as $roleId) {
-                                $record->assignRole(Role::find($roleId), $organization);
+                Forms\Components\Section::make(__('user.user_details')) // セクション追加
+                ->schema([
+                    Forms\Components\TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('email')
+                        ->email()
+                        ->required()
+                        ->unique(ignoreRecord: true) // ユニーク制約を追加 (編集時も考慮)
+                        ->maxLength(255),
+                    Forms\Components\DateTimePicker::make('email_verified_at'),
+                ])->columns(2), // 2カラムレイアウト
+
+                Forms\Components\Section::make(__('user.password_settings')) // セクション追加
+                ->schema([
+                    Forms\Components\TextInput::make('password')
+                        ->password()
+                        ->label(__('user.password'))
+                        ->required(fn(string $context): bool => $context === 'create')
+                        ->minLength(8)
+                        ->same('passwordConfirmation')
+                        ->dehydrated(fn($state) => filled($state))
+                        ->dehydrateStateUsing(fn($state) => Hash::make($state)),
+                    Forms\Components\TextInput::make('passwordConfirmation')
+                        ->password()
+                        ->label(__('user.password_confirmation'))
+                        ->required(fn(string $context): bool => $context === 'create')
+                        ->minLength(8)
+                        ->dehydrated(false),
+                ])->columns(2), // 2カラムレイアウト
+
+                Forms\Components\Section::make(__('user.roles_and_permissions')) // セクション追加
+                ->schema([
+                    Forms\Components\Select::make('roles')
+                        ->multiple()
+                        ->relationship('roles', 'name')
+                        ->label(__('role.roles')) // ラベルを翻訳キーに
+                        ->preload() // preload を追加
+                        ->getOptionLabelFromRecordUsing(fn($record) => $record->name . ' (' . $record->guard_name . ')'), // ラベル表示調整
+                    // ->afterStateUpdated(...) // afterStateUpdated は組織との関連が複雑なため、一旦コメントアウト or 別途実装検討
+                    // ->dehydrated(false), // Role の保存は RelationManager で行う方がシンプルかもしれない
+
+                    // --- ここから Direct Permissions Select を追加 ---
+                    Forms\Components\Select::make('permissions')
+                        ->multiple()
+                        ->relationship('permissions', 'name') // リレーションシップ名を指定
+                        ->label(__('permission.direct_permissions')) // ラベルを設定
+                        ->helperText(__('permission.direct_permissions_help')) // ヘルパーテキストを追加
+                        ->preload()
+                        // --- グループ化と翻訳のためのカスタマイズ ---
+                        ->options(function () {
+                            $permissions = Permission::orderBy('name')->get();
+                            $groupedPermissions = $permissions->groupBy(function ($permission) {
+                                return self::getPermissionGroup($permission->name) ?? 'other';
+                            })->sortBy(function ($group, $key) {
+                                $order = [ // RoleResource と同じ順序
+                                    'user' => 1, 'organization' => 2, 'role' => 3, 'permission' => 4,
+                                    'folder' => 5, 'folder_permission' => 6,
+                                    'ledger_define' => 7, 'ledger' => 8,
+                                    'workflow_notification' => 9, 'notification' => 10,
+                                    'activity_log' => 11,
+                                    'other' => 99,
+                                ];
+                                return $order[$key] ?? 99;
+                            });
+
+                            $options = [];
+                            foreach ($groupedPermissions as $groupKey => $permissionsInGroup) {
+                                foreach ($permissionsInGroup as $permission) {
+                                    $options[$permission->id] = self::getFormattedPermissionLabel($permission);
+                                }
                             }
-                        }
-                    }),
-                /*                Forms\Components\Select::make('permissions')
-                    ->multiple()
-                    ->relationship('permissions', 'name'),*/
+                            return $options;
+                        }),
+                    // --- ここまで Direct Permissions Select ---
+                ])->columns(1), // 1カラムレイアウト (Selectを縦に並べる)
             ]);
     }
 
@@ -197,4 +240,30 @@ class UserResource extends Resource
     {
         return auth()->user()->can('delete', User::class);
     }
+
+    // --- 権限名からグループキーを判定するヘルパーメソッド ---
+    protected static function getPermissionGroup(string $permissionName): ?string
+    {
+        if (Str::contains($permissionName, ['users'])) return 'user';
+        if (Str::contains($permissionName, ['organizations'])) return 'organization';
+        if (Str::contains($permissionName, ['roles'])) return 'role';
+        if (Str::contains($permissionName, ['permissions'])) return 'permission'; // 'manage_permissions' など
+        if (Str::contains($permissionName, ['folder_permissions'])) return 'folder_permission'; // フォルダー権限設定
+        if (Str::contains($permissionName, ['ledgers']) && !Str::contains($permissionName, ['define'])) return 'ledger'; // 台帳操作
+        if (Str::contains($permissionName, ['ledger_defines'])) return 'ledger_define'; // 台帳定義
+        if (Str::contains($permissionName, ['folders']) && !Str::contains($permissionName, ['rolefolder'])) return 'folder'; // フォルダ管理
+        if (Str::contains($permissionName, ['workflow', 'email'])) return 'workflow_notification'; // ワークフロー通知
+        if (Str::contains($permissionName, ['notify'])) return 'notification'; // システム内通知
+        if (Str::contains($permissionName, ['activity_logs'])) return 'activity_log'; // アクティビティログ
+        return null; // グループが見つからない場合
+    }
+
+    // --- 整形された権限ラベルを取得するヘルパーメソッド ---
+    protected static function getFormattedPermissionLabel(Permission $permission): string
+    {
+        $group = self::getPermissionGroup($permission->name);
+        $groupLabel = $group ? (__('permission.group.' . $group) . ' - ') : '';
+        return $groupLabel . __('permission.name.' . $permission->name);
+    }
+
 }
