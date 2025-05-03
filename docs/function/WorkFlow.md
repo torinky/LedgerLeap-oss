@@ -638,42 +638,37 @@
 
 ---
 
-### ステップ 6.7: メール通知用 Permission 定義とロールへの初期割当 (Next)
+### ✅ ステップ 6.7: メール通知用 Permission 定義とロールへの初期割当 (完了)
 
 * **目的:** ワークフロー関連のメール通知を受け取るかどうかを制御するための **Permission**
   を定義し、初期ロールに割り当てる。管理者がロール/ユーザーに権限設定できるようにする。
-* **タスク:**
-    1. **Permission 定義:** `RolesAndPermissionsSeeder` (または新規 Seeder) で、メール通知の受信権限を示す新しい
-       Permission を作成する。
-        * 検討する粒度:
-            * **中粒度案:** `'receive_workflow_summary_email'` (集約メール用), `'receive_workflow_action_email'` (
-              個別アクション通知用) の2つを作成。
-            * **細粒度案:** `'receive_approved_email'`, `'receive_returned_email'`,
-              `'receive_inspection_completed_email'`, `'receive_inspection_requested_email'`,
-              `'receive_approval_requested_email'`, `'receive_workflow_summary_email'` のように通知タイプごとに作成。
-        * Permission 名、guard (`web`)、(任意で) description を設定する。
+* **実施済みタスク:**
+    1. **Permission 定義:** `RolesAndPermissionsSeeder` で、メール通知の受信権限を示す新しい Permission を**中粒度**
+       で作成 (`receive_workflow_summary_email`, `receive_workflow_action_email`)。`description` も設定。[完了]
     2. **初期ロールへの割り当て:** `RolesAndPermissionsSeeder`
-       内で、デフォルトでメール通知を受け取るべきと考えられるロール（例: `Super Admin`, `Organization Admin`,
-       `Project Manager`, `Editor` など）に、上記で作成したメール通知 Permission を `givePermissionTo()`
-       メソッドを使って割り当てる。どのロールにどの Permission をデフォルトで付与するかは運用に合わせて決定する。
+       内で、デフォルトロール (`Super Admin`, `Organization Admin`, `Project Manager`, `Editor`) に、作成したメール通知
+       Permission を `syncPermissions` を使って割り当て。[完了]
     3. **Filament UI 更新 (`RoleResource.php`, `UserResource.php`):**
-        * ロール編集フォーム (`RoleResource::form()`) 内の Permission 選択部分 (
-          `Spatie\Permission\Filament\Forms\Components\PermissionCheckboxList` または類似のコンポーネント)
-          で、新しく作成したメール通知関連 Permission が表示され、選択・保存できるようにする。必要であれば Permission
-          をグループ化して表示する。
-        * ユーザー編集フォーム (`UserResource::form()`) 内にも同様に、ユーザーに**直接**メール通知 Permission
-          を割り当てるためのチェックボックスリストを追加または調整する。
-    4. **翻訳ファイル更新 (`ledger.php` または `permissions.php` 等):** 新しい Permission
-       名に対応する分かりやすい表示名（ラベル）の翻訳キー (`ledger.permissions.receive_...` など）を追加する。
-    5. **Seeder 実行:** `php artisan db:seed --class=RolesAndPermissionsSeeder` (または `migrate:fresh --seed`) を実行して
-       Permission をデータベースに登録し、ロールに割り当てる。
+        * ロール/ユーザー編集フォーム (`form()`) 内の Permission 選択コンポーネント (`Select`) をカスタマイズし、権限を*
+          *グループ化**して表示するように変更。新しいメール通知関連 Permission も表示・選択・保存可能。[完了]
+        * ユーザー編集フォームに、ユーザーへ**直接** Permission を割り当てるための Select コンポーネントを追加。[完了]
+    4. **翻訳ファイル更新 (`permission.php`):** 新しい Permission
+       名に対応する翻訳キー (`permission.name.receive_...`) と、グループ化用の翻訳キー (`permission.group.*`)
+       を追加。[完了]
+    5. **Seeder 実行:** `php artisan db:seed --class=RolesAndPermissionsSeeder` (または `migrate:fresh --seed`)
+       を実行し、Permission とロールへの割り当てをデータベースに反映。[完了]
+    6. **権限名変更:** フォルダ権限設定に関する Permission 名を `*_rolefolderpermissions` から
+       `*_folder_permissions` に変更（翻訳キー、グループ化ロジック含む）。[完了]
 * **動作確認:**
-    * `permissions` テーブルに新しいメール通知関連の権限が登録されていることを確認。
-    * Filament のロール編集画面およびユーザー編集画面で、新しい権限が表示され、チェックを入れて保存・解除できることを確認。
+    * `permissions` テーブルに新しいメール通知関連の権限が登録されていることを確認。[完了]
+    * Filament のロール編集画面およびユーザー編集画面で、権限が**グループ化されて**
+      表示され、新しい権限がチェックを入れて保存・解除できることを確認。[完了]
     * 初期設定したロールを持つユーザーが、期待通りにメール通知権限を持っていること（例: Tinker で
-      `$user->can('receive_approved_email')` を実行して確認）。
+      `$user->can('receive_workflow_summary_email')` を実行して確認）。[完了]
+* **成果物:** メール通知の受信を制御するための Permission 基盤と、管理者による設定 UI。
 * **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(Seeder, RoleResource, UserResource)」更新。メール通知制御に
-  Permission を利用する方式、定義された Permission の種類と目的について追記。
+  Permission を利用する方式、定義された Permission の種類と目的、UIでのグループ化について追記。権限名の変更 (
+  `folder_permissions`) を反映。[完了]
 
 ---
 
