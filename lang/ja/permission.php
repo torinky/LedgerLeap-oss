@@ -3,8 +3,18 @@
 return [
     'title' => '権限',
     'description' => '説明',
+    'descriptions' => [
+        'receive_workflow_summary_email' => '担当している未処理のワークフロータスク件数を定期的にメールで受け取ります。',
+        'receive_workflow_action_email' => '自分が関与するワークフローの進行状況（差し戻し、承認完了など）に関する通知をメールで受け取ります。',
+        // 必要に応じて他の権限の説明も追加
+    ],
     'direct_permissions' => '直接割り当てられた権限', // UserResource用
     'direct_permissions_help' => 'ユーザーに直接割り当てられた権限です。ロールから継承された権限はここには表示されません。', // UserResource用
+
+    'role_enforced_tooltip' => 'この設定はあなたの役割によって有効化されており、変更できません。', // ツールチップ用
+    'role_enforced_label' => '役割による設定', // 無効化理由表示用
+    'no_settings_available' => '設定可能な通知項目がありません。', // 設定項目がない場合
+    'settings_description' => 'ここでは、特定の通知をメールで受け取るかどうかを設定できます。役割（ロール）によって設定が強制されている場合、変更することはできません。', // 設定画面の説明文
 
     // --- グループ名の翻訳キー ---
     'group' => [
@@ -77,10 +87,7 @@ return [
 
         'view_activity_logs' => 'アクティビティログの閲覧',
 
-        // --- ここから追加 ---
         'receive_workflow_summary_email' => 'ワークフロー集約メール受信',
         'receive_workflow_action_email' => 'ワークフロー個別メール受信',
-        // --- ここまで追加 ---
     ],
-
 ];

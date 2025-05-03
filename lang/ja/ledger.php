@@ -256,7 +256,7 @@ return [
     'stored' => [
         'fail' => '登録に失敗しました',
         'failed' => '保存に失敗しました',
-        'success' => '登録を完了しました',
+        'success' => '保存しました',
     ],
     'submit' => '提出する',
     'subscribe' => '購読する',
@@ -376,6 +376,10 @@ return [
         'unknown' => '不明な通知', // フォールバック用
     ],
     'notification' => [
+        'settings' => [
+            'title' => '通知設定', // ページタイトル兼画面ヘッダー用
+            'description' => 'ここでは、特定の通知をメールで受け取るかどうかを設定できます。役割（ロール）によって設定が強制されている場合、変更することはできません。', // 画面説明 (permission.php から移動または共有)
+        ],
         'created_success' => '通知設定を作成しました。',
         'created_error' => '通知設定の作成に失敗しました。',
         'updated_success' => '通知設定を更新しました。',
