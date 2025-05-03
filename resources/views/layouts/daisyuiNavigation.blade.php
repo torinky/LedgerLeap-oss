@@ -89,15 +89,15 @@
                             <i class="fas fa-bell w-4 mr-2"></i> {{ __('ledger.navigation.notification_settings') }}
                         </x-daisyui-nav-link>
                     </li>
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <li>
                             <x-daisyui-nav-link :href="route('logout')"
                                                 onclick="event.preventDefault(); this.closest('form').submit();">
                                 <i class="fas fa-sign-out-alt w-4 mr-2"></i> {{ __('ledger.navigation.logout') }}
                             </x-daisyui-nav-link>
-                        </form>
-                    </li>
+                        </li>
+                    </form>
                 </ul>
             </div>
 
