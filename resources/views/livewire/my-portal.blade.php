@@ -10,6 +10,8 @@
             <x-slot:actions>
                 <x-mary-button label="{{ __('ledger.edit_profile_title') }}" icon="o-user"
                                link="{{ route('profile.edit') }}" class="btn-ghost"/>
+                <x-mary-button label="{{ __('ledger.edit_notifications_settings_title') }}" icon="o-bell"
+                               link="{{ route('notifications.settings') }}" class="btn-ghost"/>
             </x-slot:actions>
         </x-mary-header>
     </x-slot>

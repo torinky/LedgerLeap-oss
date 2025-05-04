@@ -7,6 +7,7 @@ use App\Http\Requests\Ledger\StoreRequest;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use Doctrine\DBAL\Exception\NonUniqueFieldNameException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -234,8 +235,7 @@ class ModifyColumn extends CreateColumn
         $currentStatus = $this->ledgerRecord?->status;
 
         // DRAFT またはワークフロー無効の場合は、下書き保存を実行
-//        if ($currentStatus === WorkflowStatus::DRAFT || !$this->ledgerDefineRecord?->workflow_enabled) {
-        if ($currentStatus === WorkflowStatus::DRAFT) {
+        if ($currentStatus === WorkflowStatus::DRAFT || $currentStatus === WorkflowStatus::NONE) {
             $this->saveDraft(); // 親クラスの saveDraft を呼び出す
 
             return;

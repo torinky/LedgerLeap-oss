@@ -50,8 +50,8 @@ class MyPortal extends Component
         'create_ledger_defines',  // 台帳定義を作成できる
         'create_folders',         // フォルダーを作成できる
         'update_folders',         // フォルダーを更新できる
-        'manage_user',            // ユーザーを管理できる (Seederにはないが、想定として)
-        'manage_organization',    // 組織を管理できる (Seederにはないが、想定として)
+        'manage_users',            // ユーザーを管理できる (Seederにはないが、想定として)
+        'manage_organizations',    // 組織を管理できる (Seederにはないが、想定として)
         'view_activity_logs',     // アクティビティログを閲覧できる
     ];
     // WritableFolderRepository をインジェクト
@@ -184,6 +184,13 @@ class MyPortal extends Component
             ->orderBy('_lft')
             ->take(5)
             ->get();
+
+        if ($this->assignedFolders->count() == 0) {
+            $this->assignedFolders = Folder::whereIn('id', $targetFolderIds)
+                ->where('id', '!=', 1) // ルートフォルダを除外
+                ->orderBy('_lft')
+                ->get();
+        }
     }
 
     /**

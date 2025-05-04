@@ -30,7 +30,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create_organizations' => '組織を作成できる',
             'update_organizations' => '組織を更新できる',
             'delete_organizations' => '組織を削除できる',
-            'manage_organization' => '組織を管理できる', // 組織管理グループ
+            'manage_organizations' => '組織を管理できる', // 組織管理グループ
 
             'view_roles' => '役割の一覧を閲覧できる',
             'create_roles' => '役割を作成できる',
