@@ -3,6 +3,7 @@
 namespace App\Notifications;
 // Namespace は適切に設定
 
+use App\Mail\WorkflowSummaryMail;
 use App\Models\User;
 
 // User を use
@@ -35,33 +36,44 @@ class WorkflowSummaryNotification extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
+     * @param User $notifiable User オブジェクトを受け取る想定
      * @return array<int, string>
      */
-    public function via(object $notifiable): array
+    public function via(object $notifiable): array // 引数の型を User に変更 (推奨)
     {
-        // ここで通知チャネルを決定 (DBは必須)
         $channels = ['database'];
-        // if ($notifiable->prefers_browser_notifications) { // 将来的なブラウザ通知
-        //     $channels[] = 'broadcast'; // または WebPush チャンネル
-        // }
-        // if ($notifiable->prefers_email_summary) { // メール通知オプション
-        //     $channels[] = 'mail';
-        // }
+
+        // $notifiable が User インスタンスで、かつメール通知権限を持っているか確認
+        if ($notifiable instanceof User && $notifiable->can('receive_workflow_summary_email')) {
+            $channels[] = 'mail';
+        }
+        Log::info("Notification channels for User ID: {$notifiable->id}, Type: WorkflowSummaryNotification", ['channels' => $channels]);
+
         return $channels;
     }
 
     /**
      * Get the mail representation of the notification.
+     *
+     * @param User $notifiable User オブジェクトを受け取る想定
+     * @return WorkflowSummaryMail|null
      */
-    // public function toMail(object $notifiable): MailMessage
-    // {
-    //     return (new MailMessage)
-    //                 ->line('未処理のワークフロータスクがあります。')
-    //                 ->line("点検待ち: {$this->inspectionCount} 件")
-    //                 ->line("承認待ち: {$this->approvalCount} 件")
-    //                 ->action('タスクを確認する', route('notifications.index', ['tab' => 'tasks']))
-    //                 ->line('ご確認ください。');
-    // }
+    public function toMail(object $notifiable): ?WorkflowSummaryMail // 戻り値を Mailable クラスに、Nullable に
+    {
+        // $notifiable が User インスタンスでない場合は null を返す (念のため)
+        if (!$notifiable instanceof User) {
+            Log::warning("toMail called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
+            return null;
+        }
+
+        Log::info("Generating WorkflowSummaryMail for User ID: {$notifiable->id}");
+
+        // WorkflowSummaryMail インスタンスを生成して返す
+        return new WorkflowSummaryMail(
+            $this->inspectionCount,
+            $this->approvalCount
+        )->to($notifiable->email); // 受信者のメールアドレスを指定
+    }
 
     /**
      * Get the database representation of the notification.

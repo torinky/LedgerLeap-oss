@@ -572,4 +572,64 @@ return [
     'link_unavailable' => 'リンクなし',
     'performed_action' => 'さんが ',
     'edit_notifications_settings_title' => '通知される条件を変更する',
+
+    'unknown_user' => '不明なユーザー', // ユーザー名がない場合
+    'unknown_ledger' => '不明な台帳', // 台帳名がない場合
+    'no_comment' => '理由の記載はありません', // コメントがない場合
+
+    // --- ここからメール関連キー ---
+    'mail' => [
+        'subject' => [
+            'returned' => '[ :appName ] 台帳「:title」が差し戻されました',
+            'approved' => '[ :appName ] 台帳「:title」が承認されました',
+            'inspection_requested' => '[ :appName ] 台帳「:title」の点検依頼',
+            'approval_requested' => '[ :appName ] 台帳「:title」の承認依頼',
+            'inspection_completed' => '[ :appName ] 台帳「:title」の点検が完了しました',
+            'generic' => '[ :appName ] お知らせ (:type)',
+            'summary' => '[ :appName ] 未処理のワークフロータスクがあります (:count 件)',
+        ],
+        'greeting' => [
+            'returned' => ':userName さん、以下の台帳が差し戻されました。',
+            'approved' => ':userName さん、申請した台帳が承認されました。',
+            'inspection_requested' => ':userName さん、以下の台帳の点検依頼が届いています。',
+            'approval_requested' => ':userName さん、以下の台帳の承認依頼が届いています。',
+            'inspection_completed' => ':userName さん、申請した台帳の点検が完了しました。',
+            'generic' => 'お知らせがあります。',
+            'summary' => '未処理のワークフロータスクがあります',
+        ],
+        'body' => [
+            'line1' => [
+                'returned' => '理由: :comment',
+                'approved' => '承認者: :approverName',
+                'inspection_requested' => '依頼者: :requesterName',
+                'approval_requested' => '点検者: :inspectorName',
+                'inspection_completed' => '点検者: :inspectorName',
+                'generic' => ':causerName さんが :subjectType (:subjectId) に対してアクションを実行しました。', // subjectType は後で調整
+                'summary' => '現在、あなたに割り当てられている未処理のタスクは以下の通りです。',
+            ],
+            'line2' => [
+                'inspection_completed' => '承認ステップに進みました。',
+                'summary' => 'ご確認をお願いいたします。',
+            ],
+            // 必要に応じて追加の行
+        ],
+        'action' => [
+            'view_ledger' => '台帳を確認する',
+            'view_approved_ledger' => '承認された台帳を確認する',
+            'view_inspection_tasks' => '点検タスクを確認する',
+            'view_approval_tasks' => '承認タスクを確認する',
+            'view_ledger_status' => '台帳の状況を確認する',
+            'view_details' => '詳細を確認する',
+            'view_tasks' => 'タスク一覧を確認する',
+        ],
+        'label' => [
+            'comment' => 'コメント', // コメントパネルのラベル
+            'pending_inspection' => '点検待ち',
+            'pending_approval' => '承認待ち',
+            'total' => '合計',
+        ],
+        'footer' => [
+            'thanks' => 'よろしくお願いします。',
+        ],
+    ],
 ];

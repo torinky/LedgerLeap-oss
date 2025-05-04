@@ -107,7 +107,7 @@ class NotificationList extends Component
         if ($notificationClassName === 'App\\Notifications\\WorkflowSummaryNotification') { // Summary 通知の場合
             $displayData['message'] = $payload['message'] ?? __('ledger.workflow.summary_notification_default'); // Summary 用メッセージ
         } else { // GenericNotification やその他の場合
-            $baseMessage = $subjectName ? "{$subjectLabel}「{$subjectName}」を" : "{$subjectLabel} を";
+            $baseMessage = $subjectName ? "{$subjectLabel}「{$subjectName}」" : "{$subjectLabel} ";
             if ($causerName) {
                 $baseMessage = "<strong>{$causerName}</strong> " . __('ledger.performed_action') . " {$baseMessage}";
             }
@@ -151,7 +151,7 @@ class NotificationList extends Component
             }
 
         }
-        
+
         return $displayData;
     }
 }

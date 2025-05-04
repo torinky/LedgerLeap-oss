@@ -217,6 +217,11 @@ class NotificationService
     /**
      * ワークフロー関連の個別通知を送信する
      *
+     * 変更点: メール送信の可否は GenericNotification::via() で判断されるため、
+     *         このメソッド内でのメール送信 Permission チェックは不要。
+     *         ただし、システム内通知を送るかどうかの判断のために
+     *         shouldReceiveNotification (RoleFolderPermission チェック) は維持する。
+     *
      * @param User $recipient
      * @param NotificationType $notificationType
      * @param LedgerDiff $ledgerDiff
@@ -225,48 +230,43 @@ class NotificationService
      */
     public function sendWorkflowNotification(User $recipient, NotificationType $notificationType, LedgerDiff $ledgerDiff, ?string $comment = null, ?Folder $folder = null): void
     {
-        Log::info("sendWorkflowNotification called for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
+        Log::info("Attempting to send workflow notification (system/mail) for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
 
-        // 1. ユーザーがこの通知タイプを受け取る設定か確認する
-        //    (shouldReceiveNotification の第3引数に Folder オブジェクトを渡す)
-        if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) { // <<<--- $folder を渡す
-            Log::info("User {$recipient->id} should not receive notification type {$notificationType->name} for this folder.");
+        // 1. ユーザーがこのフォルダでこの通知タイプを *システム内通知で* 受け取る設定か確認
+        if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) {
+            Log::info("User {$recipient->id} should not receive system notification type {$notificationType->name} for this folder.");
+            // メールだけ送りたい場合はこの return を消すが、基本はシステム通知と連動させる
             return;
         }
 
-        // 2. 通知を送信 (GenericNotification を流用)
+        // 2. 通知を送信 (GenericNotification インスタンスを渡すだけ)
         try {
-            $causer = $ledgerDiff->modifier; // 操作者
-            $subject = $ledgerDiff->ledger; // 対象
-            // イベント名は NotificationType の名前を使うか、別途定義する
+            $causer = $ledgerDiff->modifier;
+            $subject = $ledgerDiff->ledger;
             $eventName = $notificationType->event ?? $notificationType->name;
-
-            // GenericNotification の payload にコメントなどの追加情報を渡す
             $payloadOverrides = [];
-            if ($comment) {
-                $payloadOverrides['comments'] = $comment;
-            }
-            // 次の担当者情報なども必要なら payload に含める
-            if ($notificationType->name === 'inspection_requested') {
-                $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
-            }
+            if ($comment) $payloadOverrides['comments'] = $comment;
+            if ($notificationType->name === 'inspection_requested') $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
+            if ($notificationType->name === 'approval_requested') $payloadOverrides['approver_id'] = $ledgerDiff->approver_id;
 
-            Notification::send($recipient, new GenericNotification(
+            // GenericNotification をインスタンス化
+            $notification = new GenericNotification(
                 notificationTypeId: $notificationType->id,
-                subject: $subject,
-                activity: null, // <<<--- Activity は null
-                causer: $causer, // <<<--- 操作者 User を渡す
-                eventName: $eventName, // <<<--- イベント名を渡す
-                comment: $comment, // <<<--- コメントを渡す
+                subject: $subject, // subject は Ledger になっているはず
+                activity: null,
+                causer: $causer,
+                eventName: $eventName,
+                comment: $comment,
                 payloadOverrides: $payloadOverrides
-            ));
-            Log::info("Workflow notification sent successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
+            );
+
+            // Notification Facade を使って送信
+            Notification::send($recipient, $notification);
+
+            Log::info("Workflow notification (system/mail if permitted) dispatched successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
         } catch (\Exception $e) {
-            Log::error("Failed to send workflow notification: " . $e->getMessage(), [
-                'recipient_id' => $recipient->id,
-                'type' => $notificationType->name,
-                'diff_id' => $ledgerDiff->id,
-                'exception' => $e
+            Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
+                'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'diff_id' => $ledgerDiff->id, 'exception' => $e
             ]);
         }
     }
@@ -315,38 +315,42 @@ class NotificationService
     /**
      * ワークフローの未処理タスク集約通知を送信する (修正)
      *
-     * @param User $recipient 通知を受け取るユーザー
+     * 変更点: Permission チェックを can('receive_workflow_summary_email') に変更
      */
     public function sendWorkflowSummaryNotification(User $recipient): void
     {
-        // 修正: 受信条件を Permission でチェック
-        if (!$recipient->can('notify')) { // 'notify' Permission を確認
-            Log::info("User {$recipient->id} does not have 'notify' permission. Skipping summary notification.");
+        // 修正: 集約メール受信 Permission をチェック
+        // can() メソッドは RoleFolderPermission を考慮しないため、
+        // システム内通知の 'notify' とメール通知の 'receive_workflow_summary_email' の両方をチェックするか、
+        // またはメール送信は Notification クラスの via() に任せる。
+        // ここでは、そもそもこのメソッドが呼ばれるべきかを判断する意味で 'notify' をチェックしておく方が良いかもしれない。
+        // => やはり via() に任せるのがシンプル。ここではカウンターチェックのみ。
+        /*
+        if (!$recipient->can('notify')) { // 'notify' Permission (システム内通知)
+            Log::info("User {$recipient->id} does not have 'notify' permission. Skipping summary notification entirely.");
             return;
         }
+        */
 
-        // 未処理件数を取得
-        $inspectionCount = $recipient->pending_inspection_count;
-        $approvalCount = $recipient->pending_approval_count;
+        $inspectionCount = $recipient->pending_inspection_count ?? 0;
+        $approvalCount = $recipient->pending_approval_count ?? 0;
         $totalCount = $inspectionCount + $approvalCount;
 
         if ($totalCount <= 0) {
-            Log::info("User {$recipient->id} has no pending tasks, skipping summary notification.");
-            return;
+            // Log::info("User {$recipient->id} has no pending tasks, skipping summary notification.");
+            return; // タスクがなければ何もしない
         }
 
-        Log::info("Attempting to send workflow summary notification.", ['recipient_id' => $recipient->id, 'total_count' => $totalCount]);
+        Log::info("Dispatching workflow summary notification for User ID: {$recipient->id}, Total: {$totalCount}");
 
         try {
-            // 修正: 新しい WorkflowSummaryNotification を使用
+            // WorkflowSummaryNotification をインスタンス化して送信
+            // メール送信可否は via() で判断される
             Notification::send($recipient, new WorkflowSummaryNotification($inspectionCount, $approvalCount));
-
-            Log::info("Workflow summary notification sent successfully.", ['recipient_id' => $recipient->id]);
-
+            Log::info("Workflow summary notification dispatched successfully.", ['recipient_id' => $recipient->id]);
         } catch (\Exception $e) {
-            Log::error("Failed to send workflow summary notification: " . $e->getMessage(), [
-                'recipient_id' => $recipient->id,
-                'exception' => $e
+            Log::error("Failed to dispatch workflow summary notification: " . $e->getMessage(), [
+                'recipient_id' => $recipient->id, 'exception' => $e
             ]);
         }
     }

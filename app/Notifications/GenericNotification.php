@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Mail\WorkflowActionMail;
 use App\Models\NotificationType;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -56,12 +57,79 @@ class GenericNotification extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
-     * @param mixed $notifiable
+     * @param User $notifiable User オブジェクトを受け取る想定
      * @return array
      */
-    public function via($notifiable)
+    public function via(object $notifiable): array
     {
-        return ['database']; // データベースのみ
+        $channels = ['database']; // デフォルトは database
+
+        // $notifiable が User インスタンスか確認
+        if (!$notifiable instanceof User) {
+            Log::warning("via called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
+            return $channels;
+        }
+
+        // --- メール送信条件を修正 ---
+        $notificationType = NotificationType::find($this->notificationTypeId);
+
+        // 1. ワークフロー関連の通知タイプか？ (NotificationType の name で判定)
+        //    (例: 'status_returned_to_draft', 'approved', 'inspection_requested', ...)
+        $isWorkflowActionNotification = $notificationType && in_array($notificationType->name, [
+                'status_returned_to_draft',
+                'approved',
+                'inspection_requested',
+                'approval_requested',
+                'inspection_completed'
+                // 必要に応じて他のワークフロー通知タイプを追加
+            ]);
+
+        // 2. ユーザーが個別アクションメールの受信権限を持っているか？
+        $canReceiveActionEmail = $notifiable->can('receive_workflow_action_email');
+
+        // ワークフロー関連通知であり、かつメール受信権限があれば mail チャネルを追加
+        if ($isWorkflowActionNotification && $canReceiveActionEmail) {
+            $channels[] = 'mail';
+        }
+        // --- ここまで修正 ---
+
+        Log::info("Notification channels for User ID: {$notifiable->id}, Type ID: {$this->notificationTypeId}", ['channels' => $channels]);
+        return $channels;
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     * (変更なし - via() で制御するため、常に Mailable を返す想定で良い)
+     *
+     * @param User $notifiable User オブジェクトを受け取る想定
+     * @return WorkflowActionMail|null
+     */
+    public function toMail(object $notifiable): ?WorkflowActionMail
+    {
+        if (!$notifiable instanceof User) {
+            Log::warning("toMail called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
+            return null;
+        }
+
+        $notificationType = NotificationType::find($this->notificationTypeId);
+
+        // subject は Mailable 内で適切に処理される想定 (LedgerDiff 以外の場合も考慮)
+        // Mailable 側で subject の型チェックを行う方が良いかもしれない
+        // if (!$this->subject instanceof \App\Models\LedgerDiff || !$notificationType) {
+        //      Log::warning("Cannot send mail for GenericNotification.", ['subject_type' => get_class($this->subject), 'notification_type_id' => $this->notificationTypeId]);
+        //      return null;
+        // }
+
+        Log::info("Generating WorkflowActionMail for User ID: {$notifiable->id}, Type ID: {$this->notificationTypeId}");
+
+        // WorkflowActionMail インスタンスを生成して返す
+        // Mailable のコンストラクタや configureMailContent で subject の型に応じた処理を行う
+        return (new WorkflowActionMail(
+            $notificationType, // NotificationType を渡す
+            $this->subject,    // Model (LedgerDiff) を渡す
+            $this->causer,
+            $this->comment
+        ))->to($notifiable->email);
     }
 
     /**
