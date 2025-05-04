@@ -715,28 +715,47 @@
 
 ---
 
-### ステップ 6.9: 個別通知と集約通知の実装 (メール送信)
+### ✅ ステップ 6.9: 個別通知と集約通知の実装 (メール送信) (完了)
 
 * **目的:** ワークフローのアクションに応じて、設定に基づき個別通知と集約通知を**メールで送信**する。
-* **タスク:**
-    1. **Mailable クラス作成:** `WorkflowActionNotification` (汎用), `WorkflowSummaryMail`
-       を作成・実装。メールの件名、本文（Markdownテンプレート）、詳細へのリンクボタンなどを含む。
-    2. **`NotificationService` 拡張:**
-        * `sendWorkflowNotification`: 受信者が対応するメール通知 Permission (`can('receive_..._email')`)
-          を持つかチェック。持っていればシステム内通知に加え、`WorkflowActionNotification` Mailable を使ってメール送信 (
-          `Mail::to(...)->send(...)` または Notification Facade)。
-        * `sendWorkflowSummaryNotification`: 受信者が `can('receive_workflow_summary_email')` かチェック。持っていれば
-          `WorkflowSummaryMail` を使ってメール送信。
-    3. **`WorkflowService` からの呼び出し確認:** 各アクションメソッドから `NotificationService` のメソッドが呼び出されていることを確認。
-    4. **集約通知コマンド作成・実行:** `SendWorkflowSummaryNotification` コマンド内で対象ユーザーを取得し
-       `NotificationService` を呼び出す。Kernel 登録。
+* **実施済みタスク:**
+    1. **Mailable クラス作成:**
+        * `app/Mail/WorkflowActionMail.php`: 個別アクション通知用。コンストラクタで `NotificationType`, `LedgerDiff`,
+          `User`, `comment` を受け取り、タイプに応じて件名、本文、アクションURLを翻訳キーを使用して設定。
+        * `app/Mail/WorkflowSummaryMail.php`: 集約通知用。コンストラクタで未処理件数を受け取り、件名、本文、アクションURLを翻訳キーを使用して設定。
+    2. **Markdown メールテンプレート作成:**
+        * `resources/views/emails/workflow/action.blade.php`: `WorkflowActionMail` 用。渡された変数を表示し、Laravel
+          の標準メールコンポーネント (`<x-mail::message>`, `<x-mail::button>` など) を使用。**行頭インデントを削除し、Markdown
+          レンダリングを修正。**
+        * `resources/views/emails/workflow/summary.blade.php`: `WorkflowSummaryMail` 用。渡された未処理件数を表示し、タスク一覧へのリンクボタンを設置。
+          **行頭インデントを削除し、Markdown レンダリングを修正。**
+    3. **Notification クラス修正:**
+        * `app/Notifications/GenericNotification.php`:
+            * `via()` メソッドを修正。`$notifiable` (User) が `receive_workflow_action_email` 権限を持ち、かつ通知タイプがワークフロー関連の場合のみ
+              `'mail'` チャネルを追加するように変更。
+            * `toMail()` メソッドを追加（または修正）。`WorkflowActionMail` を生成し、必要なデータを渡して返すように実装。*
+        * `app/Notifications/WorkflowSummaryNotification.php`:
+            * `via()` メソッドを修正。`$notifiable` (User) が `receive_workflow_summary_email` 権限を持つ場合のみ
+              `'mail'` チャネルを追加するように変更。
+            * `toMail()` メソッドを追加（または修正）。`WorkflowSummaryMail` を生成し、件数を渡して返すように実装。
+    4. **`NotificationService` 確認:**
+        * `sendWorkflowNotification`: メール送信可否の Permission チェックは Notification クラスの `via()`
+          に任せるため、Service 側でのチェックは不要であることを確認。システム内通知の判定 (`shouldReceiveNotification`)
+          は維持。
+        * `sendWorkflowSummaryNotification`: 同様に Permission チェックは Notification クラスの `via()` に任せることを確認。
+    5. **翻訳ファイル更新 (`ledger.php`):** メール件名、本文、ボタンテキストなどの翻訳キーを追加。
+    6. **環境設定確認 (`.env`):** Mailpit への接続設定（`MAIL_HOST`, `MAIL_PORT` 等）を確認。
 * **動作確認:**
-    * 各アクション発生時、および定期コマンド実行時に、対応する Permission を持ち、かつフォルダ別設定が ON
-      のユーザーにメールが送信されること (Mailpit 等で確認)。
-    * Permission がないユーザーにはメールが送信されないこと。
-    * メールの内容、件名、リンクが正しいこと。
-* **ドキュメント更新:** 「機能詳細(通知送信)」「関連ファイル(Mailable, Service, Command)」更新。メール送信ロジックと
-  Permission チェックについて追記。
+    * 各ワークフローアクション発生時、および集約通知コマンド実行時に、対応する Permission
+      を持つユーザーにメールが送信されること (Mailpit で確認)。[完了]
+    * Permission がないユーザーにはメールが送信されないこと。[完了]
+    * メールの内容（件名、本文、リンク）が各シナリオで正しいこと。[完了]
+    * メールテンプレートが正しくレンダリングされていること（インデント問題解消）。[完了]
+    * システム内通知が引き続き正しく動作すること。[完了]
+    * キュージョブがエラーなく処理されること。[完了]
+* **成果物:** ユーザーの権限設定に基づき、ワークフロー関連通知がメールでも送信される機能。
+* **ドキュメント更新:** 「機能詳細(通知送信)」「関連ファイル(Mailable, Notificationクラス, Service, Command, 翻訳ファイル)
+  」更新。メール送信ロジック、Permission チェック、Mailable/テンプレート実装、キュー処理について追記。[完了]
 
 ---
 
