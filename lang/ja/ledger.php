@@ -445,7 +445,7 @@ return [
     'permission_description.manage_organization' => '組織を管理できます（管理者向け）。', // 必要なら権限名を合わせる
     'permission_description.view_activity_logs' => 'アクティビティログを閲覧できます。',
 
-    'assigned_folders_title' => 'あなたの担当フォルダ',
+    'assigned_folders_title' => 'あなたが担当する主なフォルダ',
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
     'go_to_folder_button' => 'フォルダへ移動',
@@ -570,5 +570,6 @@ return [
     'action_attached' => 'を割り当てました',
     'action_detached' => 'の割り当てを解除しました',
     'link_unavailable' => 'リンクなし',
-    'performed_action' => 'さんが '
+    'performed_action' => 'さんが ',
+    'edit_notifications_settings_title' => '通知される条件を変更する',
 ];
