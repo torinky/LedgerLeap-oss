@@ -108,12 +108,19 @@ class NotificationSettingsRelationManager extends RelationManager
 
                 return $query;
             })
+            ->defaultGroup('folder.title') // Folder タイトルでグループ化
+            ->groups([
+                \Filament\Tables\Grouping\Group::make('folder.title')
+                    ->label(__('ledger.folder.title'))
+                    ->collapsible(), // 折りたたみ可能に
+            ])
             ->columns([
                 // ★ Folder のタイトルを表示 (リレーション経由)
                 TextColumn::make('folder.title')
                     ->label(__('ledger.folder.title'))
                     ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
-                    ->sortable(), // 基本的なソートを有効化 (Joinなし)
+                    ->sortable()
+                , // 基本的なソートを有効化 (Joinなし)
 
                 // ★ 通知タイプの表示 (リレーション経由)
                 TextColumn::make('notificationType.name')
