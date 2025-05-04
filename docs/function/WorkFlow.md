@@ -759,17 +759,94 @@
 
 ---
 
-### ステップ 7: 柔軟な承認ルート機能の実装
+### ステップ 7: フォルダ権限への「点検」「承認」追加と包含関係対応 (複数レコード方式)
 
-* **目的:** 承認者/点検者をより柔軟に設定できるようにする。担当者情報を `LedgerDiff` に記録。
+* **目的:** 点検・承認権限を定義し、複数権限を管理できるテーブル構造とUIを実装し、包含関係を考慮したアクセス制御を行う。
+* **方針:** `RoleFolderPermission` テーブルをアクセス権限専用とし、Role-Folder-PermissionType
+  の組み合わせでレコードを管理。権限チェック時に包含関係を考慮する。
 * **タスク:**
-    1. (オプション) 推奨担当者設定機能。
-    2. 担当者選択 UI 改善（ロール指定含む）。
-    3. ロジック実装（選択された担当者情報を `LedgerDiff` の `inspector_id`/`approver_id` (またはロールID用カラム) に記録）。
-    4. **承認待ちリスト取得ロジック (`WorkflowTaskRepository`) 修正:** **`LedgerDiff` テーブルの最新レコード**
-       （ステータスと担当者IDを持つ）を参照してリストを取得するように変更。
-* **動作確認:** 推奨担当者表示、担当者変更、ロール指定時の動作を確認。
-* **ドキュメント更新:** 「柔軟な承認ルート」セクション更新。担当者情報の記録場所とリスト取得方法について追記。
+    1. **Enum 修正 (`FolderPermissionType.php`):**
+        * `INSPECT`, `APPROVE` ケース追加。
+        * `accessPermissions()` 等のヘルパーメソッド修正。
+        * 包含関係定義 (`HIERARCHY`) と `includes()` メソッドを追加。
+    2. **DBマイグレーション修正 (`...create_role_folder_permissions_table.php`):**
+        * `permission` カラムの Enum 定義をアクセス権限 (`READ`～`ADMIN`) のみに変更。
+        * **`notification_type_id` と `notification_enabled` カラムを削除。**
+        * **ユニーク制約を `role_id`, `folder_id`, `permission`
+          の複合ユニークに変更 (`role_folder_access_permission_unique`)。**
+    3. **Filament UI 修正 (`FolderRelationManager.php`):**
+        * テーブルカラム (`rolePermissions`): `getStateUsing` で紐づく権限 Enum の配列を取得し、バッジで表示。
+        * 編集アクション (`edit_permissions`): モーダル内で `CheckboxList` を使用。`mountUsing` で現在の権限をセット。
+          `action` で選択された権限に基づいて `RoleFolderPermission` レコードを作成/削除するロジックを実装。
+        * 包含関係ハンドリング (UI連動): `CheckboxList` の `afterStateUpdated`
+          で包含関係に基づいてチェックを自動更新するヘルパーメソッド (`applyPermissionHierarchy`) を使用。
+        * 一括付与アクション (`attach_folders`): フォームで複数フォルダと複数権限を選択。`action`
+          で包含関係を適用し、対象フォルダと権限の組み合わせでレコードを一括作成/削除 (既存を一旦削除して再作成が確実)。
+        * 権限解除アクション (`detach_folder_permissions`): 特定フォルダに対するアクセス権限レコードを全て削除。
+    4. **`UserService::hasFolderPermission` 修正:**
+        * 指定された権限タイプまたはそれより上位の権限を持つ `RoleFolderPermission`
+          レコードが、対象ユーザーのロールと対象フォルダ/祖先フォルダの組み合わせで存在するか確認するようにロジックを修正。
+    5. **`WorkflowService` 権限チェック確認:** `UserService::hasFolderPermission` の呼び出し箇所を確認。
+    6. **`NotificationSettingsRelationManager` 確認:** この Relation Manager が `role_folder_permissions`
+       テーブルを参照しなくなった（または通知専用のカラム/テーブルを参照するようになった）ことを確認・修正。
+    7. **翻訳ファイル更新:** 新権限名、UIラベル等を追加。
+
+* **成果物:** 点検・承認権限が定義され、Role-Folder ごとに複数のアクセス権限を設定・管理できるUIとDB構造。包含関係を考慮した権限チェック機構。通知設定とアクセス権限設定のUI分離。
+
+---
+
+### ステップ 8: 実績ベースの担当者選択支援機能の実装
+
+* **目的:** 申請者が**過去の担当実績**、**権限を持つ担当者候補**、**直近の担当履歴**を参考に、迷わず効率的に担当者を選択できるUIを提供する。
+* **タスク:**
+    1. **担当者選択UIコンポーネント作成/改修:**
+        * 点検依頼時・承認申請時に表示されるモーダル (`RequestInspectionModal`, `RequestApprovalModal` Livewire
+          コンポーネント) を作成または改修。
+    2. **候補表示ロジック実装:**
+        * モーダル内に以下の3種類のリストを表示する (UIはセクション分けなどを検討):
+            * **A) 実績ベース推奨ユーザー:** 同じ台帳定義の完了済みワークフロー履歴 (`LedgerDiff`)
+              から、点検者/承認者として登場した回数が多い順に上位 N 名のユーザーを表示。取得・集計ロジック (
+              `getFrequentWorkflowUsers(int $ledgerDefineId, string $roleType, int $limit = 5)`) を実装。
+            * **B) 担当可能なユーザー (権限ベース):** 対象フォルダに `INSPECT` または `APPROVE`
+              権限（包含関係考慮済み）を持つユーザーをリスト表示 (検索機能付き)。ユーザー取得メソッド (
+              `getUsersWithFolderPermission(Folder $folder, FolderPermissionType $permissionType)`) を `UserService`
+              に実装。
+            * **C) 直近の担当者履歴:** 現在処理中の `Ledger` の直近 N 件の `LedgerDiff` から担当者 (点検者/承認者) を表示。
+    3. **担当者選択・記録:** (変更なし)
+        * ユーザーがいずれかのリストから担当者 (User) を選択。
+        * 選択された User ID を `WorkflowService` に渡し、`LedgerDiff` に記録。
+* **成果物:** 申請者が過去の実績、権限、直近履歴に基づいて、適切な担当者を効率的に選択できるUI。
+
+---
+
+### ステップ 9: 承認待ちリスト拡張とシンプルなタスク引き継ぎ
+
+* **目的:** 自分宛タスクとは別に「処理可能なタスク」リストを表示し、簡単な操作でタスクを引き継げるようにする。
+* **タスク:**
+    1. **「処理可能なタスク」取得ロジック実装 (`WorkflowTaskRepository` or `UserService`):**
+        * `getClaimableTasks(User $user)`: ログインユーザーが `INSPECT` または `APPROVE` 権限（包含関係考慮済み）を持つフォルダに属し、ステータスが
+          `PENDING_*` で、**かつ自分が担当者でない** Ledger レコードを取得。
+    2. **Livewire コンポーネント作成 (`ClaimableTaskList.php`):** リスト表示、現在の担当者表示。
+    3. **通知画面への統合 (`notifications/index.blade.php`):** 「処理可能なタスク」タブ追加、コンポーネント埋め込み、件数表示。
+    4. **シンプルなタスク引き継ぎアクション:**
+        * 「引き継ぐ」ボタン追加。
+        * Livewire メソッド `claimTask(int $ledgerId)` 実装。
+        * `WorkflowService` に `claimTask(Ledger $ledger, User $claimer)` メソッド実装 (
+          担当者更新、コメント自動記録、カウンター調整)。
+* **成果物:** ユーザーが権限を持つフォルダ内の未処理タスク一覧と、簡単な操作でタスクを引き継ぐ機能（コメント自動記録付き）。
+
+---
+
+### ステップ 10: 進捗・期間・平均ステップ数可視化
+
+* **目的:** 詳細画面、リスト、台帳定義画面に進捗情報や統計情報を表示する。
+* **タスク:**
+    1. **詳細画面改修 (`Show.php`, `show.blade.php`):** 申請日時、点検完了日時、承認完了日時、経過時間表示。
+    2. **承認待ちリスト改修 (`PendingList`, `ClaimableTaskList`):** 「申請日時」「滞留時間」列追加。
+    3. **平均ステップ数表示 (台帳定義詳細画面):**
+        * 計算ロジック (`LedgerDefine::calculateAverageWorkflowSteps()`) 実装。
+        * UI実装 (Filament `LedgerDefineResource` ViewRecord ページ)。
+* **成果物:** ワークフローの進捗と所要時間に関する情報、および台帳定義ごとの平均処理ステップ数の可視化。
 
 ---
 
