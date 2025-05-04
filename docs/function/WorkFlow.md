@@ -672,31 +672,46 @@
 
 ---
 
-### ステップ 6.8: 個人用メール通知設定画面の実装
+### ✅ ステップ 6.8: 個人用メール通知設定画面の実装 (完了)
 
-* **目的:** ユーザーがプロファイル（または `/notifications/settings`）で、自分自身のメール通知受信設定（直接割り当てられた
-  Permission）を ON/OFF できるようにする。ロール設定による制限も表示する。
-* **タスク:**
-    1. **`Settings.php` (Livewire) 実装:**
-        * `mount` でログインユーザーとメール通知関連 Permission (ステップ6.4で定義したもの) を取得。
-        * 各 Permission について、ユーザーに直接割り当てられているか (`hasDirectPermission`)
-          と、ロール経由で割り当てられているか (`hasPermissionTo`) を判定。
-        * 表示用データ配列 (`$notificationSettings` など) を準備 (`name`, `label`, `description`, `enabled`[
-          `can()`で判定], `is_via_role` を含む)。
-    2. **`settings.blade.php` (ビュー) 実装:**
-        * 表示用データ配列をループし、各 Permission に対する `<x-mary-toggle>` を表示。
-        * `wire:model` でコンポーネントのプロパティ（例: `$settings['receive_workflow_summary_email']`) にバインド。
-        * `:disabled="$setting['is_via_role']"` でロール設定による無効化を実装。
-        * 無効化されている場合にツールチップで理由を表示。
-    3. **保存ロジック (`Settings::save()`):**
-        * フォーム送信時に、トグルの状態に基づき、ユーザーに **直接** Permission を付与 (`givePermissionTo`) または剥奪 (
-          `revokePermissionTo`) する処理を実装。ロール経由の設定は変更しない。
+* **目的:** ユーザーが自身の通知設定画面 (`/notifications/settings`) で、メール通知の受信設定（直接割り当てられた
+  Permission）を ON/OFF できるようにする。ロールによって設定が強制されている場合は、その旨を表示し変更不可とする。
+* **実施済みタスク:**
+    1. **Livewire コンポーネント改修 (`App\Livewire\Notifications\Settings.php`):**
+        * 既存のモックデータを削除し、`mount` でログインユーザー (`Auth::user()`) と対象 Permission (
+          `targetPermissionNames`) を取得。
+        * `loadSettings` メソッドで、各 Permission についてユーザーの権限状態（`can()`, `hasDirectPermission()`,
+          `hasPermissionTo()`）を判定。
+        * ビュー表示用の `$notificationSettings` 配列を準備 (`name`, `label`, `description` [翻訳キー使用], `enabled`,
+          `is_direct`, `via_role`, `disabled`)。
+        * `#[Title]` 属性でページタイトルを設定（翻訳キー参照）。
+        * `Mary\Traits\Toast` を使用し、`save()` メソッドで保存成功・失敗時にトースト通知 (`toastSuccess`, `toastError`)
+          を表示するように変更。
+        * `save()` メソッドで、ロール強制設定 (`$setting['disabled']`) をスキップし、トグルの状態に基づいてユーザーの直接
+          Permission を `givePermissionTo` または `revokePermissionTo` で更新するロジックを実装。
+        * `canSaveChanges` Computed プロパティを実装し、変更可能な設定項目がない場合に `false` を返すようにした。
+    2. **Blade ビュー改修 (`resources/views/livewire/notifications/settings.blade.php`):**
+        * `<x-mary-header>` を使用して画面タイトルを表示。
+        * 画面説明文、ラベル、ツールチップ等のテキストを翻訳キー (`ledger.php`, `permission.php`) 参照に変更。
+        * `$notificationSettings` 配列をループし、各 Permission に対する `<x-mary-toggle>` を表示。
+        * `wire:model` でコンポーネントのプロパティにバインド。
+        * ロールによる設定強制がある場合 (`$setting['disabled']` が true)、トグルを `:disabled` で無効化し、親要素に
+          `opacity-60`, `bg-base-200`, `cursor-not-allowed` クラスを適用。さらに `<div class="tooltip">` でツールチップを表示。
+        * 保存ボタンの表示を `@if($this->canSaveChanges())` で制御し、変更可能な項目がない場合は非活性状態のボタンを表示（または非表示）。
+    3. **翻訳ファイル更新 (`ledger.php`, `permission.php`):** 画面タイトル、説明文、ツールチップ、ボタンラベル等の翻訳キーを追加・修正。
+       `permission.descriptions` キーを追加。
 * **動作確認:**
-    * 通知設定画面でメール通知 ON/OFF が表示・制御できること。
-    * ロールで設定されている項目はトグルが無効化され、ツールチップが表示されること。
-    * ユーザーがトグルを操作して保存すると、ユーザーの直接 Permission が更新されること (DB `model_has_permissions`
-      テーブル等で確認)。
-* **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(Settingsコンポーネント)」更新。個人用通知設定画面について追記。
+    * 通知設定画面 (`/notifications/settings`) に正しいページタイトルと画面ヘッダーが表示されること。[完了]
+    * メール通知 ON/OFF のトグルが表示・制御できること。[完了]
+    * ロールで設定されている項目はトグルが無効化され、ツールチップが表示されること。[完了]
+    * ユーザーがトグルを操作して「保存」ボタンを押すと、成功/失敗の**トースト通知**が表示され、ユーザーの直接 Permission
+      が更新されること (DB `model_has_permissions` テーブル等で確認)。[完了]
+    * **変更可能な設定項目がない場合、保存ボタンが非活性になること。**[完了]
+    * 保存後、画面のトグル状態が正しく更新されること。[完了]
+* **成果物:** ユーザーが自身のメール通知設定（直接権限）を管理でき、ロール設定による制限も理解できる
+  UI。設定結果はトーストでフィードバックされる。
+* **ドキュメント更新:** 「機能詳細(通知設定との連携)」「関連ファイル(Settingsコンポーネント, Userモデル, Permissionモデル,
+  翻訳ファイル)」更新。個人用通知設定画面の実装詳細、Toast通知、ページタイトル、ボタン非活性化について追記。[完了]
 
 ---
 
