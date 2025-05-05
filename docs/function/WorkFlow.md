@@ -759,39 +759,57 @@
 
 ---
 
-### ステップ 7: フォルダ権限への「点検」「承認」追加と包含関係対応 (複数レコード方式)
+### ✅ ステップ 7: フォルダ権限への「点検」「承認」追加と包含関係対応 (完了)
 
 * **目的:** 点検・承認権限を定義し、複数権限を管理できるテーブル構造とUIを実装し、包含関係を考慮したアクセス制御を行う。
-* **方針:** `RoleFolderPermission` テーブルをアクセス権限専用とし、Role-Folder-PermissionType
-  の組み合わせでレコードを管理。権限チェック時に包含関係を考慮する。
-* **タスク:**
+* **方針:** `RoleFolderPermission` テーブルは**既存の構造（`permission` Enum に全タイプ、複合ユニーク制約維持）を維持**
+  し、アクセス権限 (`READ`～`ADMIN`) と通知設定 (`NOTIFY_ON`/`OFF`) を同じテーブルで管理する。アクセス権限は **Role-Folder
+  ごとに複数の権限レコードを持つ**ことを許容する。権限チェック時に包含関係 (`ADMIN` > `APPROVE` > `INSPECT` > `WRITE` >
+  `READ`) を考慮する。アクセス権限の設定は `FolderPermissionRelationManager` で、通知設定は
+  `NotificationSettingsRelationManager` で行う。
+* **実施済みタスク:**
     1. **Enum 修正 (`FolderPermissionType.php`):**
-        * `INSPECT`, `APPROVE` ケース追加。
+        * `INSPECT`, `APPROVE` ケースを追加。
         * `accessPermissions()` 等のヘルパーメソッド修正。
         * 包含関係定義 (`HIERARCHY`) と `includes()` メソッドを追加。
     2. **DBマイグレーション修正 (`...create_role_folder_permissions_table.php`):**
-        * `permission` カラムの Enum 定義をアクセス権限 (`READ`～`ADMIN`) のみに変更。
-        * **`notification_type_id` と `notification_enabled` カラムを削除。**
-        * **ユニーク制約を `role_id`, `folder_id`, `permission`
-          の複合ユニークに変更 (`role_folder_access_permission_unique`)。**
-    3. **Filament UI 修正 (`FolderRelationManager.php`):**
-        * テーブルカラム (`rolePermissions`): `getStateUsing` で紐づく権限 Enum の配列を取得し、バッジで表示。
-        * 編集アクション (`edit_permissions`): モーダル内で `CheckboxList` を使用。`mountUsing` で現在の権限をセット。
-          `action` で選択された権限に基づいて `RoleFolderPermission` レコードを作成/削除するロジックを実装。
+        * `permission` カラムの `enum()` 定義に `'inspect'`, `'approve'` を追加。
+        * **既存の複合ユニーク制約 (`role_id`, `folder_id`, `notification_type_id`, `permission`) を維持。** (
+          *これにより、アクセス権限レコードでは `notification_type_id` は NULL として保存される*)
+    3. **Filament UI 修正 (`FolderPermissionRelationManager.php` - `NotificationSettingsRelationManager`
+       をベースに作成):**
+        * `$relationship` を `roleFolderPermissions` に設定。
+        * `query()` でアクセス権限レコード (`permission` が `READ`～`ADMIN`) のみをフィルタリング。
+        * テーブルカラム: フォルダ名でグループ化し、各行に設定されているアクセス権限 (`permission`) のラベルとバッジを表示。
+        * ヘッダーアクション (`Action::make('create')`):
+            * フォームで単一フォルダ (`SelectTree`) と複数アクセス権限 (`CheckboxList`) を選択。
+            * `action` で既存のアクセス権限レコードを削除し、選択された（包含関係適用済み）権限に対応する
+              `RoleFolderPermission` レコードを複数作成 (保存時 `notification_type_id` は `NULL`)。
+            * *当初案の `CreateAction` は `getKey()` エラーのためカスタムアクションに変更。*
+        * アクション (`EditAction::make`, `DeleteAction::make`, `Action::make('detach_folder_permissions')`):
+            * 編集: モーダルで `CheckboxList` を使用し、現在のアクセス権限をロード・編集。保存時に既存レコード削除＆新規作成。
+            * 削除: 特定の権限レコード (`RoleFolderPermission`) を削除。
+            * 全解除: 特定フォルダに対する全アクセス権限レコードを削除。
         * 包含関係ハンドリング (UI連動): `CheckboxList` の `afterStateUpdated`
           で包含関係に基づいてチェックを自動更新するヘルパーメソッド (`applyPermissionHierarchy`) を使用。
-        * 一括付与アクション (`attach_folders`): フォームで複数フォルダと複数権限を選択。`action`
-          で包含関係を適用し、対象フォルダと権限の組み合わせでレコードを一括作成/削除 (既存を一旦削除して再作成が確実)。
-        * 権限解除アクション (`detach_folder_permissions`): 特定フォルダに対するアクセス権限レコードを全て削除。
+        * *当初案の `AttachAction` は `Folder` モデルとのリレーションシップを前提としていたため、`RoleFolderPermission`
+          を直接操作するカスタムアクション (`Action::make('create')`) に変更。*
+        * *`FolderRelationManager` のベースとして `NotificationSettingsRelationManager`
+          を使用し、アクセス権限管理に特化するように改修。*
     4. **`UserService::hasFolderPermission` 修正:**
         * 指定された権限タイプまたはそれより上位の権限を持つ `RoleFolderPermission`
-          レコードが、対象ユーザーのロールと対象フォルダ/祖先フォルダの組み合わせで存在するか確認するようにロジックを修正。
-    5. **`WorkflowService` 権限チェック確認:** `UserService::hasFolderPermission` の呼び出し箇所を確認。
-    6. **`NotificationSettingsRelationManager` 確認:** この Relation Manager が `role_folder_permissions`
-       テーブルを参照しなくなった（または通知専用のカラム/テーブルを参照するようになった）ことを確認・修正。
-    7. **翻訳ファイル更新:** 新権限名、UIラベル等を追加。
+          レコードが、対象ユーザーのロールと対象フォルダ/祖先フォルダの組み合わせで**アクセス権限として**（`permission` が
+          `READ`～`ADMIN`）存在するか確認するようにロジックを修正。
+    5. **`WorkflowService` 権限チェック確認:** `UserService::hasFolderPermission`
+       の呼び出し箇所を確認。権限チェックが正しく機能することを確認。[完了]
+    6. **`NotificationSettingsRelationManager` 確認:** この Relation Manager が通知設定 (`permission` が `NOTIFY_ON`/
+       `OFF`, `notification_type_id` を使用) のみを扱うようにフィルタリングやロジックが維持されていることを確認。[完了] (
+       *今回は変更なし*)
+    7. **翻訳ファイル更新:** 新権限名、UIラベル、成功/失敗メッセージ等の翻訳キーを追加。[完了]
 
-* **成果物:** 点検・承認権限が定義され、Role-Folder ごとに複数のアクセス権限を設定・管理できるUIとDB構造。包含関係を考慮した権限チェック機構。通知設定とアクセス権限設定のUI分離。
+* **成果物:** 点検・承認権限が定義され、Role-Folder
+  ごとに複数のアクセス権限を設定・管理できるUI。包含関係を考慮した権限チェック機構。通知設定とアクセス権限設定のUI分離（テーブル構造は共用）。
+* **ドキュメント更新:** 上記の実施タスクと成果物を反映。[完了]
 
 ---
 
