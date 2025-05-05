@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
@@ -22,7 +24,7 @@ class UserService
     /**
      * 指定されたユーザーに関連するすべての権限を取得し、組織からも権限を含めます。
      *
-     * @param  User  $user  権限を取得するユーザー。
+     * @param User $user 権限を取得するユーザー。
      * @return Collection 重複を取り除いた権限オブジェクトのコレクション。
      */
     public function getAllPermissionsForUser(User $user): Collection
@@ -40,7 +42,7 @@ class UserService
      * ユーザーが指定された権限を持っているかどうかを判定する
      * 組織から継承した権限も考慮する
      *
-     * @param  string|string[]  $permissionName
+     * @param string|string[] $permissionName
      */
     public function hasPermission(User $user, $permissionName): bool
     {
@@ -56,7 +58,7 @@ class UserService
     /**
      * 指定されたユーザーに関連するすべての役割を取得し、組織からも役割を含めます。
      *
-     * @param  User  $user  役割を取得するユーザー。
+     * @param User $user 役割を取得するユーザー。
      * @return Collection 重複を取り除いた役割オブジェクトのコレクション。
      */
     public function getAllRolesForUser(User $user): Collection
@@ -74,9 +76,9 @@ class UserService
      * ユーザーが組織に対して特定の権限を持っているかどうかを確認します。
      * スーパー管理者、ユーザー自身の権限、ユーザーが所属する組織の権限も確認します。
      *
-     * @param  User  $user  権限を確認するユーザー。
-     * @param  string  $permission  確認する権限。
-     * @param  Organization  $organization  権限を確認する組織。
+     * @param User $user 権限を確認するユーザー。
+     * @param string $permission 確認する権限。
+     * @param Organization $organization 権限を確認する組織。
      * @return bool ユーザーが権限を持っている場合は true、そうでない場合は false。
      */
     public function hasPermissionForOrganization(User $user, string $permission, Organization $organization): bool
@@ -105,9 +107,9 @@ class UserService
      * ユーザーが組織に対して特定の役割を持っているかどうかを確認します。
      * スーパー管理者、ユーザー自身の役割、ユーザーが所属する組織の役割も確認します。
      *
-     * @param  User  $user  役割を確認するユーザー。
-     * @param  string  $role  確認する役割。
-     * @param  Organization  $organization  役割を確認する組織。
+     * @param User $user 役割を確認するユーザー。
+     * @param string $role 確認する役割。
+     * @param Organization $organization 役割を確認する組織。
      * @return bool ユーザーが役割を持っている場合は true、そうでない場合は false。
      */
     public function hasRoleForOrganization(User $user, string $role, Organization $organization): bool
@@ -132,9 +134,9 @@ class UserService
      * ユーザーに組織に固有の役割を割り当てます。
      * 役割が文字列で渡された場合は、対応する役割オブジェクトを検索します。
      *
-     * @param  User  $user  役割を割り当てるユーザー。
-     * @param  mixed  $role  割り当てる役割。文字列か役割オブジェクトのいずれか。
-     * @param  Organization  $organization  役割を割り当てる組織。
+     * @param User $user 役割を割り当てるユーザー。
+     * @param mixed $role 割り当てる役割。文字列か役割オブジェクトのいずれか。
+     * @param Organization $organization 役割を割り当てる組織。
      */
     public function assignRoleToOrganization(User $user, $role, Organization $organization): void
     {
@@ -148,9 +150,9 @@ class UserService
     /**
      * ユーザーが組織に対して特定の役割を持っているかどうかを確認します。
      *
-     * @param  User  $user  役割を確認するユーザー。
-     * @param  string  $role  確認する役割。
-     * @param  Organization  $organization  役割を確認する組織。
+     * @param User $user 役割を確認するユーザー。
+     * @param string $role 確認する役割。
+     * @param Organization $organization 役割を確認する組織。
      * @return bool ユーザーが役割を持っている場合は true、そうでない場合は false。
      */
     public function hasRoleInOrganization(User $user, string $role, Organization $organization): bool
@@ -165,7 +167,7 @@ class UserService
      * ユーザーに関連するすべての一意の権限を取得し、組織からも権限を含めます。
      * キャッシュを利用して、パフォーマンスを向上させる
      *
-     * @param  User  $user  権限を取得するユーザー。
+     * @param User $user 権限を取得するユーザー。
      * @return Collection 重複を取り除いた権限オブジェクトのコレクション。
      *
      * このメソッドは、ユーザーが持つすべての権限と、ユーザーが所属する組織が持つすべての権限を
@@ -195,7 +197,7 @@ class UserService
     /**
      * ユーザーに関連するすべての一意の役割を取得し、組織からも役割を含めます。
      *
-     * @param  User  $user  役割を取得するユーザー。
+     * @param User $user 役割を取得するユーザー。
      * @return Collection 重複を取り除いた役割オブジェクトのコレクション。
      */
     public function getAllUniqueRolesForUser(User $user): Collection
@@ -204,33 +206,49 @@ class UserService
             $user->organizations->flatMap->getAllRoles()
         )->unique('id');
     }
-
+    // isManageableFolderForUser, isWritableFolderForUser, isReadableFolderForUser は
+    // 新しい hasFolderPermission を使うように修正
     public function isManageableFolderForUser(User $user, Folder $folder): bool
     {
-        $manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($user, $folder);
-
-        return in_array($folder->id, $manageableFolderIds);
+        return $this->hasFolderPermission($user, $folder, FolderPermissionType::ADMIN);
     }
 
-    /**
-     * ユーザーが指定されたフォルダーに対して書き込み権限を持っているかどうかを判定する
-     */
     public function isWritableFolderForUser(User $user, Folder $folder): bool
     {
-        $writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($user, $folder);
-
-        return in_array($folder->id, $writableFolderIds)
-            || $this->isManageableFolderForUser($user, $folder);
+        return $this->hasFolderPermission($user, $folder, FolderPermissionType::WRITE);
     }
 
     public function isReadableFolderForUser(User $user, Folder $folder): bool
     {
-        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user, $folder);
-
-        return in_array($folder->id, $readableFolderIds)
-            || $this->isWritableFolderForUser($user, $folder)
-            || $this->isManageableFolderForUser($user, $folder);
+        return $this->hasFolderPermission($user, $folder, FolderPermissionType::READ);
     }
+
+//    public function isManageableFolderForUser(User $user, Folder $folder): bool
+//    {
+//        $manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($user, $folder);
+//
+//        return in_array($folder->id, $manageableFolderIds);
+//    }
+//
+//    /**
+//     * ユーザーが指定されたフォルダーに対して書き込み権限を持っているかどうかを判定する
+//     */
+//    public function isWritableFolderForUser(User $user, Folder $folder): bool
+//    {
+//        $writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($user, $folder);
+//
+//        return in_array($folder->id, $writableFolderIds)
+//            || $this->isManageableFolderForUser($user, $folder);
+//    }
+//
+//    public function isReadableFolderForUser(User $user, Folder $folder): bool
+//    {
+//        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user, $folder);
+//
+//        return in_array($folder->id, $readableFolderIds)
+//            || $this->isWritableFolderForUser($user, $folder)
+//            || $this->isManageableFolderForUser($user, $folder);
+//    }
 
     public function getNotifiableRoles(string $eventType, $eventSubject): Collection
     {
@@ -314,5 +332,83 @@ class UserService
         return false;
 
         // }); // キャッシュを使う場合の閉じ括弧
+    }
+
+    /**
+     * ユーザーが特定のフォルダに対して指定されたアクセス権限を持っているか確認する (包含関係考慮)
+     *
+     * @param User $user 対象ユーザー
+     * @param Folder $folder 対象フォルダ
+     * @param FolderPermissionType $requiredPermission 必要な最低権限
+     * @return bool
+     */
+    public function hasFolderPermission(User $user, Folder $folder, FolderPermissionType $requiredPermission): bool
+    {
+        // スーパー管理者は常に true
+        if ($user->hasRole('Super Admin')) {
+            return true;
+        }
+
+        // ユーザーが持つ全ロールIDを取得
+        $roleIds = $this->getAllUniqueRolesForUser($user)->pluck('id')->toArray();
+        if (empty($roleIds)) {
+            return false;
+        }
+
+        // 対象フォルダとその祖先フォルダのIDリストを取得
+        $folderIds = $folder->ancestorsAndSelf()->pluck('id')->toArray();
+
+        // キャッシュキー (ユーザーID、フォルダIDリストのハッシュ、要求権限で作成)
+//        $folderIdsHash = md5(implode(',', $folderIds));
+//        $cacheKey = "user:{$user->id}:folders:{$folderIdsHash}:perm:{$requiredPermission->value}";
+//        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($roleIds, $folderIds, $requiredPermission) {
+
+            // DB から該当ロールとフォルダ/祖先フォルダに紐づく権限を取得
+            $permissions = RoleFolderPermission::whereIn('role_id', $roleIds)
+                ->whereIn('folder_id', $folderIds)
+                ->whereIn('permission', FolderPermissionType::accessPermissionValues()) // アクセス権限のみ対象
+                ->pluck('permission'); // permission カラムの値 (Enum) の Collection を取得
+
+            // 取得した権限の中に、要求された権限 or それより上位の権限が含まれているかチェック
+            foreach ($permissions as $grantedPermission) {
+                // $grantedPermission は FolderPermissionType Enum インスタンス
+                if ($grantedPermission->includes($requiredPermission)) {
+                    return true; // 包含関係を満たす権限が見つかった
+                }
+            }
+            return false; // 条件を満たす権限が見つからなかった
+//        }); // Cache::remember の閉じ括弧
+    }
+
+
+    /**
+     * 指定されたフォルダに対して特定のアクセス権限を持つユーザーのリストを取得する
+     * (担当者選択支援用)
+     */
+    public function getUsersWithFolderPermission(Folder $folder, FolderPermissionType $requiredPermission): Collection
+    {
+        // 対象フォルダとその祖先フォルダのIDリストを取得
+        $folderIds = $folder->ancestorsAndSelf()->pluck('id')->toArray();
+
+        // 必要な権限またはそれ以上の権限を持つ RoleFolderPermission レコードに紐づく Role ID を取得
+        $roleIds = RoleFolderPermission::whereIn('folder_id', $folderIds)
+            ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+            ->get(['role_id', 'permission']) // role_id と permission を取得
+            ->filter(function ($rp) use ($requiredPermission) {
+                // 付与されている権限が要求権限を包含するかチェック
+                return $rp->permission->includes($requiredPermission);
+            })
+            ->pluck('role_id') // 条件を満たす role_id を取得
+            ->unique() // 重複を除外
+            ->all(); // 配列に変換
+
+        if (empty($roleIds)) {
+            return collect(); // 空のコレクションを返す
+        }
+
+        // 該当するロールを持つユーザーを取得 (distinct で重複排除)
+        return User::whereHas('roles', function ($query) use ($roleIds) {
+            $query->whereIn('roles.id', $roleIds);
+        })->distinct()->get();
     }
 }
