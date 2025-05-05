@@ -39,13 +39,13 @@ return [
         'create_users' => 'ユーザーの作成',
         'update_users' => 'ユーザーの更新',
         'delete_users' => 'ユーザーの削除',
-        'manage_users' => 'ユーザーの管理', // グループ化のため追加 (既存かも)
+        'manage_users' => 'ユーザーの管理',
 
         'view_organizations' => '組織の閲覧',
         'create_organizations' => '組織の作成',
         'update_organizations' => '組織の更新',
         'delete_organizations' => '組織の削除',
-        'manage_organization' => '組織の管理', // グループ化のため追加 (既存かも)
+        'manage_organizations' => '組織の管理',
 
         'view_roles' => '役割の閲覧',
         'create_roles' => '役割の作成',
@@ -87,7 +87,43 @@ return [
 
         'view_activity_logs' => 'アクティビティログの閲覧',
 
+
+        // --- アクセス権限 ---
+        'read' => '閲覧',
+        'write' => '書き込み',
+        'inspect' => '点検',
+        'approve' => '承認',
+        'admin' => '管理',
+        // --- 通知設定 (別管理推奨だが、もしラベルが必要なら) ---
+        'notify_on' => '通知ON',
+        'notify_off' => '通知OFF',
+
+        // --- 他の権限名 ---
+        // ... (view_users など) ...
         'receive_workflow_summary_email' => 'ワークフロー集約メール受信',
         'receive_workflow_action_email' => 'ワークフロー個別メール受信',
     ],
+    // --- FolderRelationManager 用 ---
+    'folder_permissions' => 'フォルダアクセス権限',
+    'current_permissions' => '設定中の権限', // テーブルカラム名変更
+    'attach_folder_permissions' => 'フォルダを選択して権限付与',
+    'attach_folder_modal_heading' => 'フォルダ権限の一括付与',
+    'attach_folder_target_label' => '対象フォルダ',
+    'attach_folder_permission_label' => '付与するアクセス権限',
+    'edit_folder_permissions' => '権限編集',
+    'edit_folder_modal_folder_label' => 'フォルダ名',
+    'edit_folder_modal_permission_label' => 'アクセス権限',
+    'update_folder_permissions_success' => '権限を更新しました',
+    'detach_folder_permissions' => '権限解除',
+    'detach_folder_modal_heading' => 'フォルダから権限を解除',
+    'detach_folder_modal_description' => 'このフォルダに対する全てのアクセス権限をこのロールから解除しますか？',
+    'detach_folder_permissions_success' => 'フォルダ権限を解除しました',
+    'attach_folder_permissions_success' => '権限を一括付与しました',
+    'edit_folder_permission_modal_heading'=>":folder の権限を変更します",
+    'access_permissions' => "アクセス権限",
+    'edit_permission' => "権限の編集",
+    'detach_folder_permissions_modal_heading'=>':folder の権限を解除します',
+    'detach_folder_permissions_modal_description'=>'このフォルダに対する全てのアクセス権限をこのロールから解除しますか？',
+
+
 ];

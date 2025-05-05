@@ -38,7 +38,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
 // ★ クラス名を変更
-class FolderRelationManager extends RelationManager
+class FolderPermissionRelationManager extends RelationManager
 {
     // ★ リレーションシップ名を roleFolderPermissions に変更
     protected static string $relationship = 'roleFolderPermissions';
@@ -80,16 +80,16 @@ class FolderRelationManager extends RelationManager
                 // Placeholder::make('folder_name')...
 
                 // ★ CheckboxList でアクセス権限を選択
-                CheckboxList::make('permissions') // <<<--- State Path を 'permissions' に変更
-                ->label(__('アクセス権限')) // 翻訳キー使用
+                CheckboxList::make('permissions')
+                ->label(__('permission.access_permissions'))
                 ->options(FolderPermissionType::asAccessSelectArray()) // アクセス権限のみ
                 ->live()
-                    ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, ?array $state) {
-                        $newState = $this->applyPermissionHierarchy($state ?? []);
-                        $livewire->fill(['data.permissions' => $newState]); // State Path を 'permissions' に
-                    })
-                    ->columns(2)
-                    ->bulkToggleable()
+                ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, ?array $state) {
+                    $newState = $this->applyPermissionHierarchy($state ?? []);
+                    $component->state($newState);
+                })
+                ->columns(2)
+                ->bulkToggleable()
                 // ->required() // 権限なしを許容する場合
             ]);
     }
@@ -120,11 +120,10 @@ class FolderRelationManager extends RelationManager
                     ->label(__('フォルダ名'))
                     ->searchable(isIndividual: true) // 個別検索のみ
                     ->sortable()
-//                    ->hidden(!is_null($table->getGrouping())) // グループ化されている場合は非表示
                 ,
                 // ★ 設定されているアクセス権限を表示 (Enum のラベルを使用)
                 TextColumn::make('permission')
-                    ->label(__('permission.name.title')) // 翻訳キー
+                    ->label(__('permission.title'))
                     ->badge()
                     ->color(fn(?FolderPermissionType $state): string => $state?->getColor() ?? 'gray')
                     ->formatStateUsing(fn(?FolderPermissionType $state): string => $state?->getLabel() ?? '-')
@@ -136,7 +135,7 @@ class FolderRelationManager extends RelationManager
             ])
             ->headerActions([
                 Action::make('create')
-                ->label(__('permission.attach_folder_permissions')) // ラベル変更
+                ->label(__('permission.attach_folder_permissions'))
                 ->modalHeading(__('permission.attach_folder_modal_heading')) // モーダルタイトル
                 ->form([ // Create 用のフォーム
                     SelectTree::make('folder_id')
@@ -148,12 +147,12 @@ class FolderRelationManager extends RelationManager
                         ->enableBranchNode()
                         ->defaultOpenLevel(1),
                     CheckboxList::make('permissions') // 権限は複数選択
-                    ->label(__('アクセス権限')) // 翻訳キー
+                    ->label(__('permission.access_permissions'))
                     ->options(FolderPermissionType::asAccessSelectArray())
                         ->live()
                         ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, ?array $state) {
                             $newState = $this->applyPermissionHierarchy($state ?? []);
-                            $livewire->fill(['data.permissions' => $newState]);
+                            $component->state($newState);
                         })
                         ->columns(2)
                         ->bulkToggleable()
@@ -195,13 +194,13 @@ class FolderRelationManager extends RelationManager
                             });
 
                             Notification::make()
-                                ->title(__('permission.attach_folder_permissions_success')) // 翻訳キー
+                                ->title(__('permission.attach_folder_permissions_success'))
                                 ->success()
                                 ->send();
 
                         } catch (Exception $e) {
                             Notification::make()
-                                ->title(__('permission.attach_folder_permissions_failed')) // 翻訳キー
+                                ->title(__('permission.attach_folder_permissions_failed'))
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();
@@ -212,8 +211,8 @@ class FolderRelationManager extends RelationManager
             ->actions([
                 // ★ 編集アクション: モーダルで権限チェックボックスを表示
                 EditAction::make()
-                    ->label(__('権限編集')) // 翻訳キー
-                    ->modalHeading(fn(RoleFolderPermission $record) => $record->folder?->title . ' の権限編集') // 動的タイトル
+                    ->label(__('permission.edit_permission'))
+                    ->modalHeading(fn(RoleFolderPermission $record) => __('permission.edit_folder_permission_modal_heading', ['folder' => $record->folder?->title]))
                     // ★ mountUsing で現在の権限をフォームにロード
                     ->mountUsing(function (Form $form, RoleFolderPermission $record) {
                         // 同じフォルダの他の権限レコードも取得する必要がある
@@ -260,13 +259,13 @@ class FolderRelationManager extends RelationManager
                                 }
                             });
                             Notification::make()
-                                ->title(__('permission.update_folder_permissions_success')) // 翻訳キー
+                                ->title(__('permission.update_folder_permissions_success'))
                                 ->success()
                                 ->send();
 
                         } catch (Exception $e) {
                             Notification::make()
-                                ->title(__('Error')) // 翻訳キー
+                                ->title(__('permission.error'))
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();
@@ -274,13 +273,13 @@ class FolderRelationManager extends RelationManager
                             // エラーを再スローするかどうか
                         }
                         // 変更されたレコードを返す必要がある場合がある
-                        // return $record; // ただし、複数のレコードが変更されている
+                        // ただし、複数のレコードが変更されている
                         return $record; // 一旦元のレコードを返す
                     }),
                 // ★ 削除アクション: 特定の権限レコードを削除
                 DeleteAction::make()
-                    ->successNotificationTitle(__('permission.delete_folder_permission_success')) // 翻訳キー
-                    ->failureNotificationTitle(__('permission.delete_folder_permission_failed')) // 翻訳キー
+                    ->successNotificationTitle(__('permission.delete_folder_permission_success'))
+                    ->failureNotificationTitle(__('permission.delete_folder_permission_failed'))
                     ->using(function (DeleteAction $action, Model $record) {
                         try {
                             $record->delete();
@@ -292,12 +291,12 @@ class FolderRelationManager extends RelationManager
                     }),
                 // ★ 全権限解除アクション (フォルダ単位)
                 Action::make('detach_folder_permissions')
-                    ->label(__('permission.detach_folder_permissions')) // 翻訳キー
+                    ->label(__('permission.detach_folder_permissions'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->modalHeading(fn(RoleFolderPermission $record) => __('permission.detach_folder_permissions_modal_heading', ['folder' => $record->folder?->title]))
-                    ->modalDescription(__('permission.detach_folder_permissions_modal_description')) // 翻訳キー
+                    ->modalDescription(__('permission.detach_folder_permissions_modal_description'))
                     ->action(function (RoleFolderPermission $record) {
                         $role = $this->getOwnerRecord();
                         RoleFolderPermission::where('role_id', $role->id)
@@ -305,7 +304,7 @@ class FolderRelationManager extends RelationManager
                             ->whereIn('permission', FolderPermissionType::accessPermissionValues())
                             ->delete();
                         Notification::make()
-                            ->title(__('permission.detach_folder_permissions_success')) // 翻訳キー
+                            ->title(__('permission.detach_folder_permissions_success'))
                             ->success()
                             ->send();
                     }),
@@ -314,8 +313,8 @@ class FolderRelationManager extends RelationManager
                 BulkActionGroup::make([
                     // ★ 一括削除アクション (選択された権限レコードを削除)
                     DeleteBulkAction::make()
-                        ->successNotificationTitle(__('permission.bulk_delete_folder_permissions_success')) // 翻訳キー
-                        ->failureNotificationTitle(__('permission.bulk_delete_folder_permissions_failed')) // 翻訳キー
+                        ->successNotificationTitle(__('permission.bulk_delete_folder_permissions_success'))
+                        ->failureNotificationTitle(__('permission.bulk_delete_folder_permissions_failed'))
                         ->using(function (DeleteBulkAction $action, EloquentCollection $records) {
                             try {
                                 $records->each->delete();
@@ -338,6 +337,7 @@ class FolderRelationManager extends RelationManager
     protected function applyPermissionHierarchy(array $selectedPermissions): array
     {
         $finalPermissions = $selectedPermissions;
+//        $finalPermissionsEnums = [];
         foreach ($selectedPermissions as $permissionKey => $permissionValue) {
             if ($permissionValue instanceof FolderPermissionType) {
                 $permissionEnum = $permissionValue;
@@ -346,10 +346,13 @@ class FolderRelationManager extends RelationManager
             } else {
                 $permissionEnum = FolderPermissionType::tryFrom($permissionValue);
             }
+//            $finalPermissionsEnums[$permissionValue] = $permissionEnum;
+
             if ($permissionEnum && isset(FolderPermissionType::HIERARCHY[$permissionValue])) {
                 $finalPermissions = array_merge($finalPermissions, FolderPermissionType::HIERARCHY[$permissionValue]);
             }
         }
+//        return $finalPermissionsEnums;
         // Filter out notification types just in case
         $accessOnlyPermissions = array_filter($finalPermissions, function ($p) {
             $enum = FolderPermissionType::tryFrom($p);
