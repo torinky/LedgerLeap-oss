@@ -382,33 +382,38 @@ class UserService
 
 
     /**
-     * 指定されたフォルダに対して特定のアクセス権限を持つユーザーのリストを取得する
-     * (担当者選択支援用)
+     * 指定されたフォルダに対して特定のアクセス権限を持つユーザーのリストを取得する (修正: 検索機能追加)
+     *
+     * @param Folder $folder
+     * @param FolderPermissionType $requiredPermission
+     * @param string $searchQuery 検索文字列 (オプション)
+     * @return Collection<User>
      */
-    public function getUsersWithFolderPermission(Folder $folder, FolderPermissionType $requiredPermission): Collection
+    public function getUsersWithFolderPermission(Folder $folder, FolderPermissionType $requiredPermission, string $searchQuery = ''): Collection
     {
-        // 対象フォルダとその祖先フォルダのIDリストを取得
-        $folderIds = $folder->ancestorsAndSelf()->pluck('id')->toArray();
+        $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
 
-        // 必要な権限またはそれ以上の権限を持つ RoleFolderPermission レコードに紐づく Role ID を取得
         $roleIds = RoleFolderPermission::whereIn('folder_id', $folderIds)
             ->whereIn('permission', FolderPermissionType::accessPermissionValues())
-            ->get(['role_id', 'permission']) // role_id と permission を取得
-            ->filter(function ($rp) use ($requiredPermission) {
-                // 付与されている権限が要求権限を包含するかチェック
-                return $rp->permission->includes($requiredPermission);
-            })
-            ->pluck('role_id') // 条件を満たす role_id を取得
-            ->unique() // 重複を除外
-            ->all(); // 配列に変換
+            ->get(['role_id', 'permission'])
+            ->filter(fn ($rp) => $rp->permission->includes($requiredPermission))
+            ->pluck('role_id')
+            ->unique()
+            ->all();
 
-        if (empty($roleIds)) {
-            return collect(); // 空のコレクションを返す
+        if(empty($roleIds)) {
+            return collect();
         }
 
-        // 該当するロールを持つユーザーを取得 (distinct で重複排除)
-        return User::whereHas('roles', function ($query) use ($roleIds) {
-            $query->whereIn('roles.id', $roleIds);
-        })->distinct()->get();
-    }
-}
+        // ユーザーを取得するクエリ
+        $query = User::whereHas('roles', function ($q) use ($roleIds) {
+            $q->whereIn('roles.id', $roleIds);
+        });
+
+        // 検索クエリがあればユーザー名でフィルタリング
+        if (!empty($searchQuery)) {
+            $query->where('name', 'like', "%{$searchQuery}%");
+        }
+
+        return $query->distinct()->orderBy('name')->get(); // 名前順で取得
+    }}

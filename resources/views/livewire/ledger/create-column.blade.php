@@ -109,35 +109,34 @@
                                     {{-- 下書き保存ボタン --}}
                                     <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
                                                    class="btn-secondary btn-wide btn-xl" wire:click.prevent="saveDraft"
-                                                   spinner="saveDraft"/>
+                                                   spinner="saveDraft"
+                                                   wire:key="save-draft-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
+                                    />
 
                                     {{-- 点検者/承認者 選択 (ステップ1では点検者のみ) --}}
                                     {{-- ToDo: 将来的に Role 選択も可能にする --}}
-                                    <div class="form-control w-full max-w-xs">
-                                        <label class="label pb-0">
-                                            <span class="label-text">{{ __('ledger.workflow.next_inspector') }}</span>
-                                        </label>
-                                        {{-- ユーザー選択 (シンプルな Select の例) --}}
-                                        {{-- ToDo: よりリッチなコンポーネント (SelectTree や検索付き Select) に変更検討 --}}
-                                        <x-mary-select
-                                                label="" {{-- 上でラベル表示済み --}}
-                                        wire:model.live="selectedInspectorId"
-                                                :options="$this->getInspectorOptions()"
-                                                {{-- コンポーネント側で選択肢を取得するメソッドを用意 --}}
-                                                placeholder="{{ __('ledger.workflow.select_inspector') }}"
-                                                class="select-sm" {{-- 少し小さく表示 --}}
+                                    @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
+                                        <livewire:workflow.workflow-assignee-select
+                                                :ledger-define-id="$ledgerDefineId"
+                                                :folder-id="$ledgerDefineRecord->folder_id"
+                                                role-type="inspector"
+                                                :ledger-id="$ledgerId"
+                                                wire:model.live="selectedUserId"
+                                                :key="'assignee-select-inspector-' . ($ledgerId ?? $ledgerDefineId ??'new')"
                                         />
-                                        @error('selectedInspectorId') <span
-                                                class="text-xs text-error">{{ $message }}</span> @enderror
-                                    </div>
+                                        @error('selectedUserId')
+                                        <div class="text-xs text-error mt-1">{{ $message }}</div> @enderror
 
-                                    {{-- 作成完了（点検依頼）ボタン --}}
-                                    <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                                   icon="o-paper-airplane"
-                                                   class="btn-primary" wire:click.prevent="requestInspection"
-                                                   spinner="requestInspection"
-                                                   :disabled="!$selectedInspectorId" {{-- 点検者が選択されていないと無効 --}}
-                                    />
+                                        {{-- 作成完了（点検依頼）ボタン (DRAFT 状態の場合に表示) --}}
+                                        <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                                       icon="o-paper-airplane"
+                                                       class="btn-success" {{-- 色変更 --}}
+                                                       wire:click.prevent="requestInspection"
+                                                       spinner="requestInspection"
+                                                       :disabled="!$selectedUserId"
+                                                       wire:key="request-inspection-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
+                                        />
+                                    @endif
 
                                     {{-- (ステップ2以降で追加) 点検完了（承認申請）ボタン --}}
                                     {{-- @if($this->canRequestApproval()) --}}
