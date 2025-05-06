@@ -103,40 +103,30 @@
                 <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
                     <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
                         <div class="card-body p-4"> {{-- パディング調整 --}}
-                            <div class="flex flex-wrap items-center justify-center gap-4"> {{-- gap で間隔調整 --}}
+                            <div class="flex flex-wrap items-center justify-center gap-4 w-full"> {{-- gap で間隔調整 --}}
                                 @if ($ledgerDefineRecord->workflow_enabled)
+                                    <div class="join flex flex-wrap items-center justify-center w-full">
 
-                                    {{-- 下書き保存ボタン --}}
-                                    <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
-                                                   class="btn-secondary btn-wide btn-xl" wire:click.prevent="saveDraft"
-                                                   spinner="saveDraft"
-                                                   wire:key="save-draft-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
-                                    />
-
-                                    {{-- 点検者/承認者 選択 (ステップ1では点検者のみ) --}}
-                                    {{-- ToDo: 将来的に Role 選択も可能にする --}}
-                                    @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
-                                        <livewire:workflow.workflow-assignee-select
-                                                :ledger-define-id="$ledgerDefineId"
-                                                :folder-id="$ledgerDefineRecord->folder_id"
-                                                role-type="inspector"
-                                                :ledger-id="$ledgerId"
-                                                wire:model.live="selectedUserId"
-                                                :key="'assignee-select-inspector-' . ($ledgerId ?? $ledgerDefineId ??'new')"
+                                        {{-- 下書き保存ボタン --}}
+                                        <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
+                                                       class="btn-secondary btn-wide join-item"
+                                                       wire:click.prevent="saveDraft"
+                                                       spinner="saveDraft"
+                                                       wire:key="save-draft-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
                                         />
-                                        @error('selectedUserId')
-                                        <div class="text-xs text-error mt-1">{{ $message }}</div> @enderror
 
-                                        {{-- 作成完了（点検依頼）ボタン (DRAFT 状態の場合に表示) --}}
+                                        {{-- ToDo: 将来的に Role 選択も可能にする --}}
+                                        {{-- 点検依頼ボタン (モーダルを開く) --}}
+                                        {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
+--}}
                                         <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
                                                        icon="o-paper-airplane"
-                                                       class="btn-success" {{-- 色変更 --}}
+                                                       class="btn-primary btn-wide join-item"
+                                                       {{-- モーダルを開くメソッドを呼び出す --}}
                                                        wire:click.prevent="requestInspection"
                                                        spinner="requestInspection"
-                                                       :disabled="!$selectedUserId"
-                                                       wire:key="request-inspection-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
                                         />
-                                    @endif
+                                    </div>
 
                                     {{-- (ステップ2以降で追加) 点検完了（承認申請）ボタン --}}
                                     {{-- @if($this->canRequestApproval()) --}}
@@ -149,21 +139,25 @@
                                     {{-- @endif --}}
 
                                 @else
+
                                     {{-- 直接保存ボタン --}}
-                                    <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
-                                    icon="o-pencil"
-                                                   class="btn-primary btn-wide btn-xl"
-                                                   wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
-                                                   spinner="saveDirectly"
-                                    />
+                                    <div class="flex flex-wrap items-center justify-center w-full">
+                                        <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
+                                        icon="o-pencil"
+                                                       class="btn-primary btn-wide btn-xl"
+                                                       wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
+                                                       spinner="saveDirectly"
+                                        />
+                                    </div>
                                 @endif
-
-                                <x-ledger.close-window-button/> {{-- 既存の閉じるボタン --}}
-
                             </div>
-                            {{-- 現在のステータス表示 (任意) --}}
+                            <div class="flex flex-wrap items-center justify-center w-full">
+                                <x-ledger.close-window-button/>
+                            </div>
+
+                            {{-- 現在のステータス表示 --}}
                             <div class="text-center text-xs text-base-content/70 mt-2">
-                                現在のステータス: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
+                                {{__('ledger.workflow.current_status')}}: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
                             </div>
                         </div>
                     </div>
@@ -172,5 +166,10 @@
 
         @endif
     </div>
+
+    {{-- 担当者選択モーダルコンポーネントを呼び出し --}}
+    {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
+    @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+
 </div>
 

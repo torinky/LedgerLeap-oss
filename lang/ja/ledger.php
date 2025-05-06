@@ -640,6 +640,12 @@
             'title' => '点検/承認',
             'view_content_at_this_point' => 'この時点の内容を見る',
             'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
+            'select_next_inspector' => '点検者を選択してください',
+            'select_assignee' => 'この人に依頼する',
+            'assignee_search_placeholder' => '文字入力して担当者を検索',
+            'invalid_assignee' => '有効な担当者を選択してください',
+            'save_first_before_assigning' => '保存してから担当者を選択してください',
+
         ),
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',

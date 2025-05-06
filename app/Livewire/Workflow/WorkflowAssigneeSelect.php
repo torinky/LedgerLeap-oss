@@ -45,15 +45,20 @@ class WorkflowAssigneeSelect extends Component
         $this->options = collect([]);
     }
 
-    public function mount(int $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null): void
+    public function mount(int $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null, ?int $initialUserId = null): void
     {
         $this->ledgerDefineId = $ledgerDefineId;
         $this->folderId = $folderId;
         $this->roleType = $roleType;
         $this->ledgerId = $ledgerId;
-//        $this->selectedUserId = $initialUserId;
-        // 初期表示用のオプションを取得 (検索語なし、選択中のユーザーを含む)
-        $this->searchAssignees(''); // <<<--- searchメソッドを呼び出す
+        // --- selectedUserId の初期値をセット ---
+        // wire:model で渡される値よりも mount で渡された初期値を優先する場合はここで設定
+        // ただし、@Modelable があると wire:model が優先される可能性が高い
+//         $this->selectedUserId = $initialUserId;
+        // ------------------------------------
+        $this->searchAssignees(); // 初期オプションをロード
+        // mount 時点で selectedUserId (wire:model で渡された値 or initialUserId) がセットされているので、
+        // loadOptions 内で選択中ユーザーをリストに含める処理が機能するはず。
     }
 
     /**

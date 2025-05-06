@@ -1,10 +1,10 @@
-<div class="w-1/3">
+<div class="w-full">
 <x-mary-choices
         class="w-1/3"
         label="{{ $roleType === 'inspector' ? __('ledger.workflow.next_inspector') : __('ledger.workflow.next_approver') }}"
         :options="$options" {{-- Collection を直接渡す --}}
         wire:model.live="selectedUserId"
-        placeholder="{{ __('ledger.workflow.search_placeholder') }}"
+        placeholder="{{ __('ledger.workflow.assignee_search_placeholder') }}"
         searchable
         single
         clearable
