@@ -118,10 +118,10 @@
                                         {{-- ToDo: 将来的に Role 選択も可能にする --}}
                                         {{-- 点検依頼ボタン (モーダルを開く) --}}
                                         {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
---}}
+
                                         <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
                                                        icon="o-paper-airplane"
-                                                       class="btn-primary btn-wide join-item"
+                                                       class="btn-success btn-wide join-item"
                                                        {{-- モーダルを開くメソッドを呼び出す --}}
                                                        wire:click.prevent="requestInspection"
                                                        spinner="requestInspection"
@@ -144,7 +144,7 @@
                                     <div class="flex flex-wrap items-center justify-center w-full">
                                         <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
                                         icon="o-pencil"
-                                                       class="btn-primary btn-wide btn-xl"
+                                                       class="btn-primary btn-wide join-item"
                                                        wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
                                                        spinner="saveDirectly"
                                         />
