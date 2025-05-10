@@ -1,0 +1,201 @@
+<?php
+
+namespace App\Livewire\Workflow;
+
+use App\Enums\FolderPermissionType;
+use App\Enums\WorkflowStatus;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\RoleFolderPermission;
+use App\Models\User;
+use App\Services\UserService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Livewire\Component;
+use Livewire\WithPagination;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection; // Eloquent Collection
+use Illuminate\Support\Collection as BaseCollection; // Support Collection
+use Illuminate\Database\Eloquent\Builder;
+
+class OtherRelatedTasksList extends Component
+{
+    use WithPagination;
+
+    public int $perPage = 10;
+    public string $sortField = 'ledger_updated_at'; // ソート対象を明確に
+    public string $sortDirection = 'desc';
+
+    // 統合されたタスクリスト (整形済みデータの Collection)
+    public BaseCollection $tasksData; // Eloquent Collection ではなく Support Collection
+
+    protected UserService $userService;
+
+    // 引き継ぎ関連のプロパティとメソッドは後ほど
+    public bool $showClaimCommentModal = false;
+    public ?array $claimingTaskData = null; // 整形済みタスクデータを保持
+    public string $claimComment = '';
+
+    public  $claimingTask;
+
+    public function boot(UserService $userService): void
+    {
+        $this->userService = $userService;
+        $this->tasksData = collect(); // 初期化
+    }
+
+    public function mount(): void
+    {
+        $this->loadTasks();
+    }
+
+    public function loadTasks(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            $this->tasksData = collect();
+            return;
+        }
+
+        // 各リストを取得
+        $mySubmissionsPendingOthers = $this->fetchMySubmissionsPendingOthers($user);
+        $claimableTasks = $this->fetchClaimableTasks($user);
+
+        // 結合し、重複を除去し、ソート
+        $this->tasksData = $mySubmissionsPendingOthers
+            ->concat($claimableTasks)
+            ->unique('ledger_id') // 整形後の配列のキーで重複排除
+            ->sortBy([
+                [$this->sortField, $this->sortDirection],
+                ['ledger_id', 'desc'],
+            ])
+            ->values();
+    }
+
+
+    /**
+     * タスクデータをビュー表示用に整形する
+     */
+    private function formatTaskData(Ledger $ledger, string $taskType): array
+    {
+        return [
+            'ledger_id' => $ledger->id,
+            'ledger_title' => $ledger->define?->title ?? __('ledger.unknown_ledger'),
+            'status_value' => $ledger->status->value, // Enumのvalue
+            'status_label' => $ledger->status->label(),
+            'status_color_class' => $ledger->status->colorClass(),
+            'current_inspector_name' => $ledger->latestDiff?->inspector?->name,
+            'current_approver_name' => $ledger->latestDiff?->approver?->name,
+            'applicant_name' => $ledger->creator?->name,
+            'ledger_updated_at' => $ledger->updated_at,
+            'ledger_created_at' => $ledger->created_at,
+            'task_type' => $taskType,
+            'is_locked' => $ledger->isLocked(),
+            // Eloquentモデル自体を渡すと循環参照や不要なデータも含まれるため、必要な情報だけを抽出
+            // 'ledger_instance' => $ledger, // 必要なら限定的に渡す
+        ];
+    }
+
+    /**
+     * ユーザーが特定のタスクを引き継ぎ可能か判定する (変更なし)
+     */
+    protected function canUserClaimTask(Ledger $ledger, User $user): bool { /* ... */ }
+
+    public function sortBy($field): void
+    {
+        // ソート対象のフィールドを調整 (例: 'ledger_updated_at')
+        $actualSortField = $field;
+        if ($field === 'updated_at_formatted') $actualSortField = 'ledger_updated_at';
+        if ($field === 'age') $actualSortField = 'ledger_created_at';
+
+
+        if ($this->sortField === $actualSortField) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortDirection = 'asc';
+        }
+        $this->sortField = $actualSortField;
+        $this->loadTasks(); // 再ソートしてロード
+    }
+
+    // ... (render, claimTask関連メソッドは後で) ...
+    public function render()
+    {
+        $paginatedTasks = new \Illuminate\Pagination\LengthAwarePaginator(
+            $this->tasksData->forPage($this->getPage(), $this->perPage),
+            $this->tasksData->count(),
+            $this->perPage,
+            $this->getPage(),
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('livewire.workflow.other-related-tasks-list', [
+            'listedTasks' => $paginatedTasks,
+        ]);
+    }
+
+    /**
+     * 1. 自分が申請したが、現在他の人が担当しているタスク
+     */
+    private function fetchMySubmissionsPendingOthers(User $user): BaseCollection
+    {
+        $userId = $user->id;
+        $results = collect();
+
+        // A-1: 自分が申請し、点検待ちだが、点検者が自分ではない
+        $pendingInspectionByOthers = Ledger::where('creator_id', $userId)
+            ->where('status', WorkflowStatus::PENDING_INSPECTION)
+            ->whereHas('latestDiff', function (Builder $query) use ($userId) {
+                $query->where('inspector_id', '!=', $userId)
+                    ->orWhereNull('inspector_id'); // まだ担当者が決まっていない場合
+            })
+            ->withNeededRelations()
+            ->get()
+            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_inspection'));
+        $results = $results->concat($pendingInspectionByOthers);
+
+        // A-2: 自分が申請または点検し、承認待ちだが、承認者が自分ではない
+        $pendingApprovalByOthers = Ledger::where('status', WorkflowStatus::PENDING_APPROVAL)
+            ->where(function (Builder $query) use ($userId) {
+                $query->where('creator_id', $userId) // 自分が直接承認依頼
+                ->orWhereHas('latestDiff', function (Builder $diffQuery) use ($userId) {
+                    // 自分が点検完了して承認待ちにした
+                    $diffQuery->where('inspector_id', $userId);
+                });
+            })
+            ->whereHas('latestDiff', function (Builder $query) use ($userId) {
+                $query->where('approver_id', '!=', $userId)
+                    ->orWhereNull('approver_id'); // まだ担当者が決まっていない場合
+            })
+            ->withNeededRelations()
+            ->get()
+            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_approval'));
+        $results = $results->concat($pendingApprovalByOthers);
+
+        return $results;
+    }
+
+    /**
+     * 2. 自分に処理権限があり、かつ自分が担当者でも申請者でもない、他の人のタスク (引き継ぎ可能)
+     */
+    private function fetchClaimableTasks(User $user): BaseCollection
+    {
+        return $this->userService->getClaimableTasks($user)
+            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'claimable'));
+    }
+
+    public function openClaimTaskCommentModal(int $ledgerId): void
+    {
+        // tasksData から対象のタスクデータを取得
+        $this->loadTasks();
+        $this->claimingTaskData = $this->tasksData->firstWhere('ledger_id', $ledgerId);
+//        dd($ledgerId,$this->claimingTaskData,$this->tasksData);
+        if ($this->claimingTaskData) {
+            $this->claimComment = '';
+            $this->showClaimCommentModal = true;
+        } else {
+            $this->toast()->error(__('タスクが見つかりません。'));
+        }
+    }
+
+
+}

@@ -368,7 +368,16 @@ class NotificationTypeSeeder extends Seeder
             'default_notify' => false, // 集約通知を主とするため OFF 推奨
             'enabled' => true,
         ]);
-
+        // --- ステップ9.1 追加: タスク引き継ぎ通知タイプ ---
+        NotificationType::firstOrCreate(['name' => 'task_claimed'], [
+            'description' => 'ledger.notification_types_description.task_claimed', // 説明用翻訳キー
+            'model' => 'App\Models\Ledger', // 主体は Ledger
+            'route' => 'ledger.show',       // 詳細画面へ
+            'folder_relation' => 'define.folder', // Ledger のフォルダ
+            'event' => 'task_claimed',      // 固有イベント名
+            'default_notify' => true,       // 関係者はデフォルトで受け取る
+            'enabled' => true,
+        ]);
 
     }
 }

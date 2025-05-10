@@ -2,7 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Mail\TaskClaimedMail;
 use App\Mail\WorkflowActionMail;
+use App\Models\Ledger;
+use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -19,10 +22,11 @@ class GenericNotification extends Notification implements ShouldQueue
     protected int $notificationTypeId;
     protected Model $subject;
     protected ?Activity $activity = null; // <<<--- Nullable に変更し、初期値を null に
-    protected ?User $causer = null; // <<<--- 追加: 操作者 (Activityがない場合用)
-    protected ?string $eventName = null; // <<<--- 追加: イベント名 (Activityがない場合用)
-    protected ?string $comment = null; // <<<--- 追加: コメント (Activityがない場合用)
-    protected array $payloadOverrides = []; // <<<--- 追加: その他の情報
+    protected ?User $causer = null; // <<<--- 操作者 (Activityがない場合用)
+    protected ?string $eventName = null; // <<<--- イベント名 (Activityがない場合用)
+    protected ?string $comment = null; // <<<--- コメント (Activityがない場合用)
+    protected array $payloadOverrides = []; // <<<--- その他の情報
+    public ?User $originalAssignee = null; // <<<--- 元の担当者 (引き継ぎ時)
 
     /**
      * Create a new notification instance.
@@ -42,7 +46,9 @@ class GenericNotification extends Notification implements ShouldQueue
         ?User     $causer = null,
         ?string   $eventName = null,
         ?string   $comment = null,
-        array     $payloadOverrides = []
+        array     $payloadOverrides = [],
+        ?User     $originalAssignee = null // <<<--- 追加
+
     )
     {
         $this->notificationTypeId = $notificationTypeId;
@@ -52,9 +58,11 @@ class GenericNotification extends Notification implements ShouldQueue
         $this->eventName = $eventName ?? $activity?->event; // activity があれば event を優先
         $this->comment = $comment; // コメントは直接受け取る
         $this->payloadOverrides = $payloadOverrides;
+        $this->originalAssignee = $originalAssignee;
+
     }
 
-    /**
+     /**
      * Get the notification's delivery channels.
      *
      * @param User $notifiable User オブジェクトを受け取る想定
@@ -80,7 +88,8 @@ class GenericNotification extends Notification implements ShouldQueue
                 'approved',
                 'inspection_requested',
                 'approval_requested',
-                'inspection_completed'
+                'inspection_completed',
+                'task_claimed',
                 // 必要に応じて他のワークフロー通知タイプを追加
             ]);
 
@@ -104,34 +113,71 @@ class GenericNotification extends Notification implements ShouldQueue
      * @param User $notifiable User オブジェクトを受け取る想定
      * @return WorkflowActionMail|null
      */
-    public function toMail(object $notifiable): ?WorkflowActionMail
+//    public function toMail(object $notifiable): ?WorkflowActionMail
+//    {
+//        if (!$notifiable instanceof User) {
+//            Log::warning("toMail called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
+//            return null;
+//        }
+//
+//        $notificationType = NotificationType::find($this->notificationTypeId);
+//
+//        // subject は Mailable 内で適切に処理される想定 (LedgerDiff 以外の場合も考慮)
+//        // Mailable 側で subject の型チェックを行う方が良いかもしれない
+//        // if (!$this->subject instanceof \App\Models\LedgerDiff || !$notificationType) {
+//        //      Log::warning("Cannot send mail for GenericNotification.", ['subject_type' => get_class($this->subject), 'notification_type_id' => $this->notificationTypeId]);
+//        //      return null;
+//        // }
+//
+//        Log::info("Generating WorkflowActionMail for User ID: {$notifiable->id}, Type ID: {$this->notificationTypeId}");
+//
+//        // WorkflowActionMail インスタンスを生成して返す
+//        // Mailable のコンストラクタや configureMailContent で subject の型に応じた処理を行う
+//        return (new WorkflowActionMail(
+//            $notificationType, // NotificationType を渡す
+//            $this->subject,    // Model (LedgerDiff) を渡す
+//            $this->causer,
+//            $this->comment
+//        ))->to($notifiable->email);
+//    }
+    public function toMail(object $notifiable): mixed // 戻り値を mixed に変更
     {
-        if (!$notifiable instanceof User) {
-            Log::warning("toMail called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
-            return null;
-        }
+        if (!$notifiable instanceof User) return null;
 
         $notificationType = NotificationType::find($this->notificationTypeId);
+        if (!$notificationType) return null;
 
-        // subject は Mailable 内で適切に処理される想定 (LedgerDiff 以外の場合も考慮)
-        // Mailable 側で subject の型チェックを行う方が良いかもしれない
-        // if (!$this->subject instanceof \App\Models\LedgerDiff || !$notificationType) {
-        //      Log::warning("Cannot send mail for GenericNotification.", ['subject_type' => get_class($this->subject), 'notification_type_id' => $this->notificationTypeId]);
-        //      return null;
-        // }
+        if ($notificationType->name === 'task_claimed') {
+            if ($this->subject instanceof Ledger && $this->causer && $this->originalAssignee) {
+                // $this->subject は Ledger, $this->causer は引き継ぎ操作者, $this->originalAssignee は元の担当者
+                // $notifiable (メール受信者) に応じて recipientType を決定
+                $recipientType = 'applicant'; // デフォルトは申請者
+                if ($notifiable->id === $this->causer->id) $recipientType = 'new_assignee'; // 新しい担当者 (引き継いだ本人)
+                else if ($this->originalAssignee && $notifiable->id === $this->originalAssignee->id) $recipientType = 'original_assignee';
 
-        Log::info("Generating WorkflowActionMail for User ID: {$notifiable->id}, Type ID: {$this->notificationTypeId}");
-
-        // WorkflowActionMail インスタンスを生成して返す
-        // Mailable のコンストラクタや configureMailContent で subject の型に応じた処理を行う
-        return (new WorkflowActionMail(
-            $notificationType, // NotificationType を渡す
-            $this->subject,    // Model (LedgerDiff) を渡す
-            $this->causer,
-            $this->comment
-        ))->to($notifiable->email);
+                return (new TaskClaimedMail(
+                    $this->subject,       // Ledger
+                    $this->causer,        // 引き継ぎ操作者 (新しい担当者)
+                    $this->originalAssignee, // 元の担当者
+                    $this->causer,        // 新しい担当者 (引き継ぎ操作者と同じ)
+                    $this->comment,       // 引き継ぎコメント
+                    $recipientType
+                ))->to($notifiable->email);
+            }
+        } else {
+            // 既存のワークフローアクションメール
+            if ($this->subject instanceof LedgerDiff) { // Subject が LedgerDiff であることを期待
+                return (new WorkflowActionMail(
+                    $notificationType,
+                    $this->subject,
+                    $this->causer,
+                    $this->comment
+                ))->to($notifiable->email);
+            }
+        }
+        Log::warning("No Mailable for notification type: {$notificationType->name}");
+        return null;
     }
-
     /**
      * Get the database representation of the notification.
      *
@@ -172,6 +218,11 @@ class GenericNotification extends Notification implements ShouldQueue
             $payload['changes'] = $this->activity->changes()->toArray(); // 必要なら (ただし data が大きくなる)
         }
 
+        // task_claimed の場合、ペイロードに original_assignee_id, new_assignee_id などを追加しても良い
+        if ($this->notificationTypeId && NotificationType::find($this->notificationTypeId)?->name === 'task_claimed') {
+            $payload['original_assignee_id'] = $this->originalAssignee?->id;
+            $payload['new_assignee_id'] = $this->causer?->id; // 引き継いだ人が新しい担当者
+        }
         // payloadOverrides で渡された値で上書き・追加
         $payload = array_merge($payload, $this->payloadOverrides);
 

@@ -3,17 +3,22 @@
 namespace App\Services;
 
 use App\Enums\FolderPermissionType;
+use App\Enums\WorkflowStatus;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Mary\Traits\Toast;
 
 class UserService
 {
+    use Toast;
     protected $writableFolderRepository;
 
     public function __construct(WritableFolderRepository $writableFolderRepository)
@@ -356,7 +361,7 @@ class UserService
         }
 
         // 対象フォルダとその祖先フォルダのIDリストを取得
-        $folderIds = $folder->ancestorsAndSelf()->pluck('id')->toArray();
+        $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
 
         // キャッシュキー (ユーザーID、フォルダIDリストのハッシュ、要求権限で作成)
 //        $folderIdsHash = md5(implode(',', $folderIds));
@@ -382,7 +387,7 @@ class UserService
 
 
     /**
-     * 指定されたフォルダに対して特定のアクセス権限を持つユーザーのリストを取得する (修正: 検索機能追加)
+     * 指定されたフォルダに対して特定のアクセス権限を持つユーザーのリストを取得する
      *
      * @param Folder $folder
      * @param FolderPermissionType $requiredPermission
@@ -416,4 +421,87 @@ class UserService
         }
 
         return $query->distinct()->orderBy('name')->get(); // 名前順で取得
-    }}
+    }
+
+    /**
+     * ユーザーが引き継ぎ可能なワークフロータスク (Ledger) のコレクションを取得する
+     * (自分が担当者でも申請者でもない、権限のあるタスク)
+     *
+     * @param User $user 対象ユーザー
+     * @return Collection<Ledger>
+     */
+    public function getClaimableTasks(User $user): Collection
+    {
+        $userId = $user->id;
+
+        // 1. ユーザーが INSPECT または APPROVE 権限を持つフォルダの ID リストを取得
+        $privilegedFolderIds = $this->getPrivilegedFolderIdsForClaimable($user); // ヘルパーメソッド化
+
+        if ($privilegedFolderIds->isEmpty() && !$user->hasRole('Super Admin')) {
+            return collect();
+        }
+
+        // 2. Ledger テーブルを検索
+        $claimableLedgers = Ledger::whereIn('status', [
+            WorkflowStatus::PENDING_INSPECTION->value,
+            WorkflowStatus::PENDING_APPROVAL->value,
+        ])
+            // 自分が申請者ではない
+            ->where('creator_id', '!=', $userId)
+            // 最新の LedgerDiff を確認し、自分が担当者ではない
+            ->where(function (Builder $query) use ($userId) {
+                $query->whereDoesntHave('latestDiff', function (Builder $diffQuery) use ($userId) {
+                    $diffQuery->where('inspector_id', $userId)
+                        ->orWhere('approver_id', $userId);
+                })
+                    ->orWhereDoesntHave('latestDiff'); // 最新Diffがない場合も考慮 (DRAFT直後など)
+            })
+            // 権限のあるフォルダに紐づく LedgerDefine を持つ Ledger を対象
+            ->when(!$user->hasRole('Super Admin'), function (Builder $query) use ($privilegedFolderIds) {
+                $query->whereHas('define', function (Builder $defineQuery) use ($privilegedFolderIds) {
+                    $defineQuery->whereIn('folder_id', $privilegedFolderIds);
+                });
+            })
+            ->withNeededRelations() // Ledgerモデルのスコープを想定
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        // さらに、取得した各 Ledger が実際に引き継ぎ可能か（権限があるか）を最終確認
+        return $claimableLedgers->filter(function (Ledger $ledger) use ($user) {
+            if (!$ledger->define?->folder) return false; // フォルダがなければ権限判定不可
+            $requiredPermission = ($ledger->status === WorkflowStatus::PENDING_INSPECTION)
+                ? FolderPermissionType::INSPECT
+                : FolderPermissionType::APPROVE;
+            return $this->hasFolderPermission($user, $ledger->define->folder, $requiredPermission);
+        });
+    }
+
+    /**
+     * 引き継ぎ可能なタスクを検索するために、ユーザーが点検または承認権限を持つフォルダIDを取得
+     */
+    private function getPrivilegedFolderIdsForClaimable(User $user): Collection
+    {
+        $userRoles = $this->getAllUniqueRolesForUser($user);
+        if ($userRoles->isEmpty()) {
+            return collect();
+        }
+
+        $roleFolderPermissions = RoleFolderPermission::whereIn('role_id', $userRoles->pluck('id'))
+            ->whereIn('permission', [ // INSPECT, APPROVE, ADMIN 権限を対象
+                FolderPermissionType::INSPECT->value,
+                FolderPermissionType::APPROVE->value,
+                FolderPermissionType::ADMIN->value,
+            ])
+            ->distinct()
+            ->pluck('folder_id');
+
+        return Folder::whereIn('id', $roleFolderPermissions)
+            ->with('descendants')
+            ->get()
+            ->flatMap(fn($folder) => $folder->descendantsAndSelf($folder->id)->pluck('id'))
+            ->unique()
+            ->values();
+    }
+
+
+}

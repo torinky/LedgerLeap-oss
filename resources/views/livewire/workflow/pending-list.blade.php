@@ -1,7 +1,7 @@
 @php use App\Enums\WorkflowStatus; @endphp
 <div>
 
-    <x-mary-card>
+    <x-mary-card :title="__('ledger.workflow.pending_tasks')">
         {{-- テーブルヘッダーのラベルを翻訳キーに --}}
         <x-mary-table :headers="[
             ['key' => 'requester', 'label' => __('ledger.workflow.requester')],

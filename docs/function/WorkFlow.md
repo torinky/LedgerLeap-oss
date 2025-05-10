@@ -824,8 +824,8 @@
 * **実施済みタスク:**
     1. **担当者候補取得ロジック実装 (`WorkflowService`, `WorkflowAssigneeSelect`):**
         *
-        `WorkflowService::getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = '')`:
-        特定の台帳定義と役割タイプ（点検者/承認者）において、過去に頻繁に担当したユーザーを登場回数順に取得するメソッドを実装。ユーザー名での検索機能も含む。
+       `WorkflowService::getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = '')`:
+       特定の台帳定義と役割タイプ（点検者/承認者）において、過去に頻繁に担当したユーザーを登場回数順に取得するメソッドを実装。ユーザー名での検索機能も含む。
         * `WorkflowAssigneeSelect::getRecentAssignee(?int $ledgerId, string $roleType)`:
           特定の台帳レコードの直近の点検者/承認者を取得するメソッドを実装。
         * `WorkflowAssigneeSelect::fetchInspectorOptions()`, `fetchApproverOptions()`:
@@ -841,9 +841,10 @@
           を呼び出し、選択中のユーザーを必ず含めた上でオプションリストを更新。
         * `updatedSelectedUserId()`: 選択変更時にオプションを再読み込みし、表示を維持。
         * オプション表示には理由アイコン/タグを含める。
-    3. *
-       *担当者選択モーダルLivewireコンポーネント作成 (`WorkflowAssigneeModal.php`, `workflow-assignee-modal.blade.php`):
-       **
+    3.
+        *
+    *担当者選択モーダルLivewireコンポーネント作成 (`WorkflowAssigneeModal.php`, `workflow-assignee-modal.blade.php`):
+    **
         * モーダル表示状態 (`showModal`) を管理。
         * 親からパラメータ (`ledgerDefineId`, `folderId`, `roleType`, `ledgerId`, `initialUserId`) を受け取る
           `openModal()` メソッド（イベントリスナー `#[On('open-assignee-modal')]`）を実装。
@@ -871,21 +872,71 @@
 
 ---
 
-### ステップ 9: 承認待ちリスト拡張とシンプルなタスク引き継ぎ
+### ステップ 9: 関連タスクリストの表示とシンプルなタスク引き継ぎ
 
-* **目的:** 自分宛タスクとは別に「処理可能なタスク」リストを表示し、簡単な操作でタスクを引き継げるようにする。
+* **目的:** ログインユーザーに関連するワークフロータスク（自分宛、自分が申請、引き継ぎ可能）を1画面に集約して表示し、状況に応じたアクションを可能にする。
+* **方針:** 1画面に「自分宛のタスク」と「その他の関連タスク」の2つのリストを上下に配置する。引き継ぎ時には新しい通知タイプ
+  `task_claimed` を使用し、コメント入力モーダルを表示する。
 * **タスク:**
-    1. **「処理可能なタスク」取得ロジック実装 (`WorkflowTaskRepository` or `UserService`):**
-        * `getClaimableTasks(User $user)`: ログインユーザーが `INSPECT` または `APPROVE` 権限（包含関係考慮済み）を持つフォルダに属し、ステータスが
-          `PENDING_*` で、**かつ自分が担当者でない** Ledger レコードを取得。
-    2. **Livewire コンポーネント作成 (`ClaimableTaskList.php`):** リスト表示、現在の担当者表示。
-    3. **通知画面への統合 (`notifications/index.blade.php`):** 「処理可能なタスク」タブ追加、コンポーネント埋め込み、件数表示。
-    4. **シンプルなタスク引き継ぎアクション:**
-        * 「引き継ぐ」ボタン追加。
-        * Livewire メソッド `claimTask(int $ledgerId)` 実装。
-        * `WorkflowService` に `claimTask(Ledger $ledger, User $claimer)` メソッド実装 (
-          担当者更新、コメント自動記録、カウンター調整)。
-* **成果物:** ユーザーが権限を持つフォルダ内の未処理タスク一覧と、簡単な操作でタスクを引き継ぐ機能（コメント自動記録付き）。
+    1. **通知タイプ `task_claimed` の定義:**
+        * `notification_types` テーブルに新しい通知タイプ `task_claimed` を追加する (Seeder またはマイグレーションで)。
+        * `ledger.notification_types.task_claimed` などの翻訳キーを追加する。
+        * 新しい通知タイプ用のMailable (`TaskClaimedMail.php`) とメールテンプレート (
+          `emails/workflow/task_claimed.blade.php`) を作成する。内容は「[操作者名]さんが[元担当者名]さんのタスク「[台帳名]
+          」を引き継ぎ、新しい担当者になりました。コメント: [コメント]」のような形式を想定。
+        * `GenericNotification.php` の `via()` メソッドと `toMail()` メソッドを調整し、`task_claimed`
+          通知タイプに対応できるようにする（または専用の `TaskClaimedNotification.php` を作成）。
+    2. **Livewireコンポーネント改修/作成:**
+        * **`PendingList.php` (自分宛のタスク - 既存コンポーネント):**
+            * 表示対象が純粋に自分に割り当てられたタスクであることを再確認。
+            * (任意) 表示項目やアクションボタンのUIを、後述の「その他の関連タスク」リストと統一感を出すように調整。
+        * **`OtherRelatedTasksList.php` (その他の関連タスク - 新規作成):**
+            * **データ取得ロジック (`getOtherRelatedTasks()`):**
+                * A) **自分が申請した進行中のタスク:** `creator_id = Auth::id()` かつ
+                  `status IN (PENDING_INSPECTION, PENDING_APPROVAL)` の `Ledger` レコードを取得。
+                * B) **引き継ぎ可能なチーム/フォルダのタスク:** `UserService::getClaimableTasks(Auth::user())`
+                  メソッド (ステップ10で作成予定だったが、ここで実装) を呼び出し、自分が担当者でも申請者でもなく、かつ
+                  `INSPECT` または `APPROVE` 権限を持つフォルダに属する未処理タスク (
+                  `status IN (PENDING_INSPECTION, PENDING_APPROVAL)`) を取得する。
+                * 上記 A と B を結合し、重複を除外。
+                * 各タスクに「タイプ」（例: `my_submission`, `claimable`）を内部的に付与し、ビューでの表示やアクションの出し分けに使用。
+            * **テーブル表示項目:** 台帳名, 現在のステータス, **現在の担当者名**, **申請者名**, 申請日時 (
+              または最終更新日時), **滞留時間**, **タスクタイプ** (例:
+              アイコンやラベルで「申請済み」「引き継ぎ可能」などと表示)。
+    3. **ビュー作成/修正:**
+        * **`other-related-tasks-list.blade.php` (新規作成):**
+            * 取得したタスクリストを `<x-mary-table>` で表示。
+            * 各行にアクションボタンを表示:
+                * タスクタイプが `my_submission` の場合: 「編集」ボタン (クリックで `Ledger` 編集画面へ遷移)。
+                * タスクタイプが `claimable` の場合: 「引き継ぐ」ボタン (クリックでコメント入力モーダル表示)。
+        * **`notifications/index.blade.php` (既存修正):**
+            * タブ構成ではなく、1画面内に `@livewire('workflow.pending-list')` と
+              `@livewire('workflow.other-related-tasks-list')` を上下に配置する。
+            * 各リストのヘッダーにタイトル（例: 「自分宛のタスク」「その他の関連タスク」）と件数を表示する。
+        * **(新規作成) `livewire/workflow/claim-task-comment-modal.blade.php`:** 引き継ぎ時のコメント入力用モーダルビュー。
+    4. **タスク引き継ぎアクション実装 (`OtherRelatedTasksList.php`):**
+        * 「引き継ぐ」ボタンクリック時に、対象の `ledgerId` を保持し、コメント入力モーダル (`claimTaskCommentModal = true`)
+          を表示するメソッド (`openClaimTaskCommentModal(int $ledgerId)`) を実装。
+        * コメント入力モーダルからの保存アクション (`claimTaskWithComment()`) を実装。
+            * `WorkflowService` に `claimTask(Ledger $ledger, User $claimer, ?string $comments)` メソッドを実装:
+                * 新しい `LedgerDiff` を作成 (ステータスは変更せず、`inspector_id` または `approver_id` を `$claimer->id`
+                  に更新、引数のコメントを記録)。
+                * Ledger の `latest_diff_id` を更新。
+                * 元の担当者 (`inspector_id` または `approver_id` にいたユーザー) のカウンターをデクリメント。
+                * 新しい担当者 (`$claimer`) のカウンターをインクリメント。
+                * **通知送信:** `NotificationService::sendWorkflowNotification` を使用し、新しい通知タイプ `task_claimed`
+                  で、申請者、元の担当者、新しい担当者に通知を送信。コメントも通知内容に含める。
+            * Livewire メソッドから Service メソッドを呼び出し、リストを更新 (`$refresh`)、トースト通知を表示。
+    5. **`UserService::getClaimableTasks(User $user)` 実装:**
+        * ログインユーザーが `INSPECT` または `APPROVE` 権限を持つフォルダを特定。
+        * それらのフォルダに属し、ステータスが `PENDING_INSPECTION` または `PENDING_APPROVAL` であり、かつログインユーザーが担当者でも申請者でもない
+          `Ledger` レコードを取得するクエリを実装。
+* **成果物:**
+    * ログインユーザーに関連するワークフロータスクを1画面に集約表示し、状況を把握しやすくしたUI。
+    * 自分が申請したタスクの編集導線。
+    * チーム/フォルダ内の未処理タスクを引き継ぎ、コメントを残せる機能。
+    * タスク引き継ぎ時の適切な通知。
+* **ドキュメント更新:** 上記の実施タスクと成果物を反映。
 
 ---
 

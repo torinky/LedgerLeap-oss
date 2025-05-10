@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\Role;
@@ -13,6 +14,7 @@ use App\Notifications\GenericNotification;
 use App\Notifications\WorkflowSummaryNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -228,46 +230,128 @@ class NotificationService
      * @param string|null $comment
      * @param Folder|null $folder 対象フォルダ
      */
-    public function sendWorkflowNotification(User $recipient, NotificationType $notificationType, LedgerDiff $ledgerDiff, ?string $comment = null, ?Folder $folder = null): void
-    {
-        Log::info("Attempting to send workflow notification (system/mail) for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
+//    public function sendWorkflowNotification(User $recipient, NotificationType $notificationType, LedgerDiff $ledgerDiff, ?string $comment = null, ?Folder $folder = null): void
+//    {
+//        Log::info("Attempting to send workflow notification (system/mail) for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
+//
+//        // 1. ユーザーがこのフォルダでこの通知タイプを *システム内通知で* 受け取る設定か確認
+//        if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) {
+//            Log::info("User {$recipient->id} should not receive system notification type {$notificationType->name} for this folder.");
+//            // メールだけ送りたい場合はこの return を消すが、基本はシステム通知と連動させる
+//            return;
+//        }
+//
+//        // 2. 通知を送信 (GenericNotification インスタンスを渡すだけ)
+//        try {
+//            $causer = $ledgerDiff->modifier;
+//            $subject = $ledgerDiff->ledger;
+//            $eventName = $notificationType->event ?? $notificationType->name;
+//            $payloadOverrides = [];
+//            if ($comment) $payloadOverrides['comments'] = $comment;
+//            if ($notificationType->name === 'inspection_requested') $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
+//            if ($notificationType->name === 'approval_requested') $payloadOverrides['approver_id'] = $ledgerDiff->approver_id;
+//
+//            // GenericNotification をインスタンス化
+//            $notification = new GenericNotification(
+//                notificationTypeId: $notificationType->id,
+//                subject: $subject, // subject は Ledger になっているはず
+//                activity: null,
+//                causer: $causer,
+//                eventName: $eventName,
+//                comment: $comment,
+//                payloadOverrides: $payloadOverrides
+//            );
+//
+//            // Notification Facade を使って送信
+//            Notification::send($recipient, $notification);
+//
+//            Log::info("Workflow notification (system/mail if permitted) dispatched successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
+//        } catch (\Exception $e) {
+//            Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
+//                'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'diff_id' => $ledgerDiff->id, 'exception' => $e
+//            ]);
+//        }
+//    }
 
-        // 1. ユーザーがこのフォルダでこの通知タイプを *システム内通知で* 受け取る設定か確認
+    /**
+     * ワークフロー関連の通知を送信する (修正: task_claimed に対応)
+     *
+     * @param User $recipient
+     * @param NotificationType $notificationType
+     * @param Model $subject Ledger (task_claimed の場合) または LedgerDiff
+     * @param User|null $causer 操作者
+     * @param string|null $comment
+     * @param Folder|null $folder
+     * @param User|null $originalAssignee 元の担当者 (task_claimed の場合)
+     */
+    public function sendWorkflowNotification(
+        User $recipient,
+        NotificationType $notificationType,
+        Model $subject, // Ledger or LedgerDiff
+        ?User $causer = null, // 操作者。Activity がない場合に指定
+        ?string $comment = null,
+        ?Folder $folder = null,
+        ?User $originalAssignee = null // task_claimed 用に追加
+    ): void
+    {
+        Log::info("Attempting to send workflow notification for User ID: {$recipient->id}, Type: {$notificationType->name}");
+
+        // 1. システム内通知の可否チェック (変更なし)
         if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) {
             Log::info("User {$recipient->id} should not receive system notification type {$notificationType->name} for this folder.");
-            // メールだけ送りたい場合はこの return を消すが、基本はシステム通知と連動させる
             return;
         }
 
-        // 2. 通知を送信 (GenericNotification インスタンスを渡すだけ)
+        // 2. 通知送信
         try {
-            $causer = $ledgerDiff->modifier;
-            $subject = $ledgerDiff->ledger;
+            // causer が null の場合、引き継ぎなら subject の modifier (新担当者)
+            // それ以外なら subject (LedgerDiff) の modifier (アクション実行者)
+            if (!$causer) {
+                if ($notificationType->name === 'task_claimed' && $subject instanceof Ledger) {
+                    $causer = $subject->modifier; // 引き継いだ人
+                } elseif ($subject instanceof LedgerDiff) {
+                    $causer = $subject->modifier;
+                }
+            }
+
             $eventName = $notificationType->event ?? $notificationType->name;
             $payloadOverrides = [];
             if ($comment) $payloadOverrides['comments'] = $comment;
-            if ($notificationType->name === 'inspection_requested') $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
-            if ($notificationType->name === 'approval_requested') $payloadOverrides['approver_id'] = $ledgerDiff->approver_id;
 
-            // GenericNotification をインスタンス化
+            if ($notificationType->name === 'task_claimed') {
+                // $subject は Ledger, $causer は引き継ぎ操作者, $originalAssignee を渡す
+                $payloadOverrides['original_assignee_id'] = $originalAssignee?->id;
+                $payloadOverrides['new_assignee_id'] = $causer?->id; // 引き継ぎ操作者が新しい担当者
+            } elseif ($subject instanceof LedgerDiff) {
+                if ($notificationType->name === 'inspection_requested') $payloadOverrides['inspector_id'] = $subject->inspector_id;
+                if ($notificationType->name === 'approval_requested') $payloadOverrides['approver_id'] = $subject->approver_id;
+            }
+
             $notification = new GenericNotification(
                 notificationTypeId: $notificationType->id,
-                subject: $subject, // subject は Ledger になっているはず
-                activity: null,
+                subject: $subject, // Ledger または LedgerDiff
+                activity: null, // Activity Log は使わない前提
                 causer: $causer,
                 eventName: $eventName,
                 comment: $comment,
-                payloadOverrides: $payloadOverrides
+                payloadOverrides: $payloadOverrides,
+                originalAssignee: ($notificationType->name === 'task_claimed') ? $originalAssignee : null // task_claimed の場合のみ渡す
             );
 
-            // Notification Facade を使って送信
             Notification::send($recipient, $notification);
-
             Log::info("Workflow notification (system/mail if permitted) dispatched successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
+
         } catch (\Exception $e) {
-            Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
-                'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'diff_id' => $ledgerDiff->id, 'exception' => $e
-            ]);
+            if($subject instanceof Ledger){
+                Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
+                    'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'ledger_id' => $subject->id, 'exception' => $e
+                ]);
+
+            }elseif($subject instanceof LedgerDiff){
+                Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
+                    'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'diff_id' => $subject->id, 'exception' => $e
+                ]);
+            }
         }
     }
 

@@ -58,8 +58,15 @@
                                   x-text=" taskCount "></span>
                         </label>
                         <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-                            {{-- 未処理タスク Livewire コンポーネント呼び出し --}}
-                            @livewire('workflow.pending-list') {{-- 既存コンポーネント名 --}}
+                            {{-- 自分宛のタスクリスト --}}
+                            <div>
+                                @livewire('workflow.pending-list', key('pending-list-main'))
+                            </div>
+
+                            {{-- その他の関連タスクリスト --}}
+                            <div>
+                                @livewire('workflow.other-related-tasks-list', key('other-related-tasks-main'))
+                            </div>
                         </div>
 
                         <label class="tab">
