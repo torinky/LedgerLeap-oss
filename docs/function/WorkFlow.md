@@ -813,27 +813,61 @@
 
 ---
 
-### ステップ 8: 実績ベースの担当者選択支援機能の実装
+### ✅ ステップ 8: 実績ベースの担当者選択支援機能の実装 (完了)
 
-* **目的:** 申請者が**過去の担当実績**、**権限を持つ担当者候補**、**直近の担当履歴**を参考に、迷わず効率的に担当者を選択できるUIを提供する。
-* **タスク:**
-    1. **担当者選択UIコンポーネント作成/改修:**
-        * 点検依頼時・承認申請時に表示されるモーダル (`RequestInspectionModal`, `RequestApprovalModal` Livewire
-          コンポーネント) を作成または改修。
-    2. **候補表示ロジック実装:**
-        * モーダル内に以下の3種類のリストを表示する (UIはセクション分けなどを検討):
-            * **A) 実績ベース推奨ユーザー:** 同じ台帳定義の完了済みワークフロー履歴 (`LedgerDiff`)
-              から、点検者/承認者として登場した回数が多い順に上位 N 名のユーザーを表示。取得・集計ロジック (
-              `getFrequentWorkflowUsers(int $ledgerDefineId, string $roleType, int $limit = 5)`) を実装。
-            * **B) 担当可能なユーザー (権限ベース):** 対象フォルダに `INSPECT` または `APPROVE`
-              権限（包含関係考慮済み）を持つユーザーをリスト表示 (検索機能付き)。ユーザー取得メソッド (
-              `getUsersWithFolderPermission(Folder $folder, FolderPermissionType $permissionType)`) を `UserService`
-              に実装。
-            * **C) 直近の担当者履歴:** 現在処理中の `Ledger` の直近 N 件の `LedgerDiff` から担当者 (点検者/承認者) を表示。
-    3. **担当者選択・記録:** (変更なし)
-        * ユーザーがいずれかのリストから担当者 (User) を選択。
-        * 選択された User ID を `WorkflowService` に渡し、`LedgerDiff` に記録。
-* **成果物:** 申請者が過去の実績、権限、直近履歴に基づいて、適切な担当者を効率的に選択できるUI。
+* **目的:** 申請者（または点検者）が、点検・承認依頼時に、実績・権限・直近履歴に基づいた候補リストから迷わず効率的に担当者を選択できるUIを提供する。
+* **方針:**
+    * 担当者選択UIを再利用可能なモーダルコンポーネント (`WorkflowAssigneeModal` と `WorkflowAssigneeSelect`) として実装。
+    * モーダル内で、実績多数ユーザー、権限保有ユーザー、直近担当者を統合し、推奨度順にソートした単一の検索可能リストを表示。各候補には推奨理由を示すアイコン/タグを表示。
+    * 親コンポーネント (台帳作成/編集画面、詳細画面、承認待ちリスト) からこのモーダルを呼び出し、選択結果を受け取ってワークフロー処理を実行する。
+    * **台帳定義への静的な推奨担当者設定は行わず、動的な実績データと権限情報に基づいて候補を提示する。**
+* **実施済みタスク:**
+    1. **担当者候補取得ロジック実装 (`WorkflowService`, `WorkflowAssigneeSelect`):**
+        *
+        `WorkflowService::getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = '')`:
+        特定の台帳定義と役割タイプ（点検者/承認者）において、過去に頻繁に担当したユーザーを登場回数順に取得するメソッドを実装。ユーザー名での検索機能も含む。
+        * `WorkflowAssigneeSelect::getRecentAssignee(?int $ledgerId, string $roleType)`:
+          特定の台帳レコードの直近の点検者/承認者を取得するメソッドを実装。
+        * `WorkflowAssigneeSelect::fetchInspectorOptions()`, `fetchApproverOptions()`:
+            * `roleType` に応じて、上記 `getFrequentAssignees`、`UserService::getUsersWithFolderPermission`、
+              `getRecentAssignee` を呼び出し、実績・権限・直近の各候補リストを取得。
+            * 取得したリストを統合し、重複を除外。各候補に推奨理由（実績多数、権限あり、直近担当）を付与し、表示優先度を設定。
+            * 優先度と名前でソートした最終的な候補リストを生成するロジックを実装。
+    2. **担当者選択Livewireコンポーネント作成 (`WorkflowAssigneeSelect.php`, `workflow-assignee-select.blade.php`):**
+        * プロパティ (`ledgerDefineId`, `folderId`, `roleType`, `ledgerId`, `@Modelable selectedUserId`, `searchQuery`,
+          `options`) を定義。
+        * MaryUI Select (`<x-mary-select searchable>`) を使用し、サーバーサイド検索 (`search-function`) で担当者候補を動的に表示。
+        * `searchAssignees(string $value = '')` メソッド: ユーザー入力に応じて `fetch*Options`
+          を呼び出し、選択中のユーザーを必ず含めた上でオプションリストを更新。
+        * `updatedSelectedUserId()`: 選択変更時にオプションを再読み込みし、表示を維持。
+        * オプション表示には理由アイコン/タグを含める。
+    3. *
+       *担当者選択モーダルLivewireコンポーネント作成 (`WorkflowAssigneeModal.php`, `workflow-assignee-modal.blade.php`):
+       **
+        * モーダル表示状態 (`showModal`) を管理。
+        * 親からパラメータ (`ledgerDefineId`, `folderId`, `roleType`, `ledgerId`, `initialUserId`) を受け取る
+          `openModal()` メソッド（イベントリスナー `#[On('open-assignee-modal')]`）を実装。
+        * 内部で `@livewire('workflow.workflow-assignee-select', ...)` を呼び出し、`initialUserId`
+          を渡して初期選択を設定し、選択された担当者ID (`selectedUserId`) を自身のプロパティとバインド。
+        * 「担当者を選択」ボタンで親コンポーネントに `assignee-selected` イベント（選択された `userId`, `roleType`
+          を含む）を発行し、モーダルを閉じる。
+    4. **親コンポーネント修正 (`CreateColumn.php`, `ModifyColumn.php`, `Show.php`, `PendingList.php`):**
+        * 点検依頼/承認申請ボタンのクリックアクションを、モーダルを開くメソッド (
+          `openAssigneeModal('inspector'/'approver')`) 呼び出しに変更。
+        * `openAssigneeModal()`: モーダルに渡すパラメータを設定。実績ベースで初期選択ユーザーIDを決定し、
+          `open-assignee-modal` イベントを発行。
+        * `assignee-selected` イベントをリッスンするメソッド (`handleAssigneeSelected(int $userId, string $roleType)`)
+          を実装。受け取った `userId` を使って `WorkflowService` の `requestInspection` / `requestApproval` を呼び出す。
+        * 各親コンポーネントから `getFrequentAssigneesInternal` を `WorkflowService::getFrequentAssignees` の呼び出しに修正。
+* **動作確認:**
+    * 台帳作成/編集画面で点検依頼ボタンクリック → 下書き保存 → 実績ベースで初期選択された点検者候補モーダル表示 → 選択 →
+      点検依頼実行。[完了]
+    * 台帳詳細画面/承認待ちリストで点検完了（承認申請）ボタンクリック → 実績ベースで初期選択された承認者候補モーダル表示 →
+      選択 → 承認申請実行。[完了]
+    * モーダル内の検索機能、候補リストの表示順、理由アイコンが期待通り動作すること。[完了]
+    * 他のワークフローアクション（承認、戻し）が引き続き正しく動作すること。[完了]
+* **成果物:** 再利用可能な担当者選択モーダルコンポーネント。実績・権限・直近履歴に基づいた、よりインテリジェントな担当者候補提示機能。UIから直接担当者を選択する部分をモーダルに集約。
+* **ドキュメント更新:** 上記の実施タスクと成果物を反映。[完了]
 
 ---
 

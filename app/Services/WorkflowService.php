@@ -580,4 +580,34 @@ class WorkflowService
             ? \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $targetDate)
             : null;
     }
+
+    /**
+     * 特定の台帳定義と役割タイプにおいて、過去に頻繁に担当したユーザーを取得する
+     *
+     * @param int $ledgerDefineId
+     * @param string $roleType 'inspector' または 'approver'
+     * @param int $limit 取得する最大件数
+     * @param string $searchQuery ユーザー名での検索クエリ (オプション)
+     * @return array [['id' => userId, 'name' => userName, 'count' => N], ...]
+     */
+    public function getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = ''): array
+    {
+        $column = ($roleType === 'inspector') ? 'inspector_id' : 'approver_id';
+
+        $query = LedgerDiff::select("ledger_diffs.{$column} as user_id", 'users.name as user_name', DB::raw('count(*) as count'))
+            ->join('users', 'users.id', '=', "ledger_diffs.{$column}")
+            ->where('ledger_diffs.ledger_define_id', $ledgerDefineId) // テーブル名を明確化
+            ->whereNotNull("ledger_diffs.{$column}")
+            ->when($searchQuery, function ($q) use ($searchQuery) {
+                $q->where('users.name', 'like', "%{$searchQuery}%");
+            })
+            ->groupBy('user_id', 'users.name')
+            ->orderByDesc('count')
+            ->limit($limit);
+
+        return $query->get()
+            ->map(fn($diff) => ['id' => $diff->user_id, 'name' => $diff->user_name ?? __('ledger.unknown_user'), 'count' => $diff->count])
+            ->filter(fn($item) => $item['id'] !== null)
+            ->toArray();
+    }
 }

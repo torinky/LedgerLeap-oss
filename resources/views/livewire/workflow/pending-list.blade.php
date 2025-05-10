@@ -32,10 +32,12 @@
             @scope('actions', $ledger) {{-- $task を $ledger に変更 --}}
             <div class="flex justify-end gap-1">
                 @if($ledger->status === WorkflowStatus::PENDING_INSPECTION && Auth::id() === $ledger->latestDiff->inspector_id /* && 権限チェック */)
+                    {{-- 承認申請ボタン (モーダルを開く) --}}
                     <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}" icon="o-check-badge"
                                    class="btn-sm btn-success"
-                                   wire:click="openApprovalRequestModal({{ $ledger->latestDiff->id }})"
-                                   spinner/>
+                                   {{-- モーダルを開くメソッド呼び出し (Ledger ID を渡す) --}}
+                                   wire:click="openApproverSelectModal({{ $ledger->id }})"
+                                   spinner="openApproverSelectModal"/>
                     <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
                                    class="btn-sm btn-warning"
                                    wire:click="openReturnToDraftModal({{ $ledger->latestDiff->id }})"
@@ -61,18 +63,24 @@
             </x-slot:empty>
         </x-mary-table>
 
+        {{-- 担当者選択モーダルコンポーネント呼び出し --}}
+        @livewire('workflow.workflow-assignee-modal', key('assignee-modal-pending'))
 
         {{-- 承認者選択モーダル --}}
+{{--
         <x-mary-modal wire:model="approvalRequestModal" title="{{ __('ledger.workflow.select_next_approver') }}">
             <x-mary-select label="{{ __('ledger.workflow.next_approver') }}" :options="$approverOptions"
                            wire:model="selectedApproverId"/>
             <x-slot:actions>
-                {{-- @click で直接プロパティを false にして閉じる --}}
+                --}}
+{{-- @click で直接プロパティを false にして閉じる --}}{{--
+
                 <x-mary-button label="{{ __('Cancel') }}" @click="$wire.approvalRequestModal = false"/>
                 <x-mary-button label="{{ __('ledger.workflow.request_approval') }}" class="btn-primary"
                                wire:click="requestApproval" spinner/>
             </x-slot:actions>
         </x-mary-modal>
+--}}
 
         {{-- 戻し理由入力モーダル (コンポーネントの外に追加) --}}
         <x-mary-modal wire:model="returnToDraftModal" title="{{ __('ledger.workflow.return_to_draft_reason') }}">

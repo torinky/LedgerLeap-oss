@@ -35,8 +35,10 @@
                                     @if($this->canRequestApproval())
                                         <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
                                                        icon="o-check-badge"
-                                                       class="btn-lg btn-success" wire:click="openApprovalRequestModal"
-                                                       spinner/>
+                                                       class="btn-lg btn-success"
+                                                       {{-- モーダルを開くメソッド呼び出し --}}
+                                                       wire:click="openApproverSelectModal"
+                                                       spinner="openApproverSelectModal"/>
                                     @endif
                                     @if($this->canApprove())
                                         <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
@@ -191,7 +193,10 @@
                         @if($this->canRequestApproval())
                             <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
                                            icon="o-check-badge"
-                                           class="btn-lg btn-success" wire:click="openApprovalRequestModal" spinner/>
+                                           class="btn-lg btn-success"
+                                           {{-- モーダルを開くメソッド呼び出し --}}
+                                           wire:click="openApproverSelectModal"
+                                           spinner="openApproverSelectModal"/>
                         @endif
                         @if($this->canApprove())
                             <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
@@ -222,18 +227,9 @@
             </div>
         </div>
 
+        {{-- 担当者選択モーダルコンポーネント呼び出し --}}
+        @livewire('workflow.workflow-assignee-modal', key('assignee-modal-show'))
 
-        {{-- 承認者選択モーダル --}}
-        <x-mary-modal wire:model="approvalRequestModal"
-                      title="{{ __('ledger.workflow.select_next_approver') }}">
-            <x-mary-select label="{{ __('ledger.workflow.next_approver') }}" :options="$approverOptions"
-                           wire:model="selectedApproverId"/>
-            <x-slot:actions>
-                <x-mary-button label="{{ __('Cancel') }}" @click="$wire.approvalRequestModal = false"/>
-                <x-mary-button label="{{ __('ledger.workflow.request_approval') }}" class="btn-primary"
-                               wire:click="requestApproval" spinner/>
-            </x-slot:actions>
-        </x-mary-modal>
 
         {{-- 戻し理由入力モーダル --}}
         <x-mary-modal wire:model="returnToDraftModal"

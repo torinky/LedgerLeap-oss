@@ -705,7 +705,7 @@ class CreateColumn extends Component
         if ($roleType === 'inspector') {
             // WorkflowAssigneeSelect のロジックを一部流用して最も頻度の高いユーザーを取得
             // (本来は Service/Repository に切り出すべきロジック)
-            $frequentUsers = $this->getFrequentAssigneesInternal($this->ledgerDefineId, 'inspector', 1);
+            $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineId, 'inspector', 1);
             if (!empty($frequentUsers)) {
                 $initialUserId = $frequentUsers[0]['id'];
                 Log::debug("Initial inspector ID based on frequency: {$initialUserId}");
@@ -817,24 +817,6 @@ class CreateColumn extends Component
     {
         // TODO: 承認者の推奨ロジック
         return null;
-    }
-    // --- 実績ベースの担当者取得ロジック (WorkflowAssigneeSelect からコピー・調整) ---
-    // (本来は Service/Repository に置くべき)
-    protected function getFrequentAssigneesInternal(int $ledgerDefineId, string $roleType, int $limit): array
-    {
-        $column = ($roleType === 'inspector') ? 'inspector_id' : 'approver_id';
-        $query = LedgerDiff::select("ledger_diffs.{$column} as user_id", 'users.name as user_name', DB::raw('count(*) as count'))
-            ->join('users', 'users.id', '=', "ledger_diffs.{$column}")
-            ->where('ledger_define_id', $ledgerDefineId)
-            ->whereNotNull("ledger_diffs.{$column}")
-            ->groupBy('user_id', 'users.name')
-            ->orderByDesc('count')
-            ->limit($limit);
-
-        return $query->get()
-            ->map(fn($diff) => ['id' => $diff->user_id, 'name' => $diff->user_name ?? __('ledger.unknown_user'), 'count' => $diff->count])
-            ->filter(fn($item) => $item['id'] !== null)
-            ->toArray();
     }
 
 }

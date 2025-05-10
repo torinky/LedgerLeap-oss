@@ -4,6 +4,7 @@ namespace App\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
+use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Database\Eloquent\Collection;
@@ -11,8 +12,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
 
@@ -33,7 +36,10 @@ class Show extends Component
     public array $approverOptions = [];
     public string $returnComment = ''; // 詳細画面ではタスクIDは不要
     protected WorkflowService $workflowService;
-    // --- ここまで ---
+
+    // --- モーダル制御用プロパティ ---
+    public bool $showAssigneeModal = false; // 承認者選択モーダル用
+    public string $assigneeModalRoleType = 'approver'; // 固定で approver
 
     public Collection $workflowHistory; // ワークフロー履歴用プロパティ
 
@@ -81,7 +87,7 @@ class Show extends Component
     /**
      * 点検完了・承認申請モーダルを開く
      */
-    public function openApprovalRequestModal(): void
+/*    public function openApprovalRequestModal(): void
     {
         // 権限チェック (自分が点検者か？)
         if (!$this->canRequestApproval()) return;
@@ -93,7 +99,87 @@ class Show extends Component
             return;
         }
         $this->approvalRequestModal = true;
+    }*/
+    /**
+     * 承認者選択モーダルを開く (旧 openApprovalRequestModal)
+     */
+    public function openApproverSelectModal(): void // <<<--- メソッド名変更
+    {
+        // 権限チェック (自分が点検者か？) - Service 側でも行う
+        if (!$this->canRequestApproval()) {
+            $this->error(__('messages.error.unauthorized')); // Or custom message
+            Log::error('Approval request failed: ' . Auth::id() . ' is not the inspector of ledger ' . $this->ledgerRecord->id);
+            return;
+        }
+
+        $this->assigneeModalRoleType = 'approver'; // 念のため設定
+        // 初期選択IDを設定 (実績ベース)
+        $initialApproverId = $this->getInitialApproverId(); // <<<--- 初期選択ID取得ヘルパー呼び出し
+
+        $this->resetValidation();
+        $this->showAssigneeModal = true;
+
+        $this->dispatch('open-assignee-modal',
+            ledgerDefineId: $this->ledgerDefineRecord->id,
+            folderId: $this->ledgerDefineRecord->folder_id,
+            roleType: 'approver', // <<<--- 'approver' を指定
+            ledgerId: $this->ledgerRecord->id,
+            initialUserId: $initialApproverId // <<<--- 初期選択ID
+        );
     }
+    /**
+     * モーダルから承認者が選択されたときのイベントリスナー
+     */
+    #[On('assignee-selected')]
+    public function handleAssigneeSelected(int $userId, string $roleType): void
+    {
+        // このコンポーネントは承認者選択のみを扱う想定
+        if ($roleType !== 'approver') {
+            Log::warning("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
+            return;
+        }
+
+        Log::debug("Approver selected via modal: User ID {$userId}");
+        $this->requestApprovalInternal($userId); // 承認申請処理を呼び出す
+
+        // モーダルは子コンポーネント側で閉じるはず
+        $this->showAssigneeModal = false;
+    }
+
+    /**
+     * 承認申請を実行する内部メソッド
+     */
+    protected function requestApprovalInternal(int $approverId): void
+    {
+        // 権限チェック (再度確認)
+        if (!$this->canRequestApproval()) { $this->error(__('messages.error.unauthorized')); return; }
+        // 担当者IDのバリデーション (念のため)
+        if(!User::find($approverId)){ $this->error(__('ledger.workflow.invalid_approver')); return; }
+
+        try {
+            // Service 呼び出し (引数は Ledger ID, 承認者ID, 点検者ID=自分)
+            $this->ledgerRecord = $this->workflowService->requestApproval(
+                $this->ledgerRecord->id,
+                $approverId, // <<<--- モーダルで選択された ID
+                Auth::id()    // <<<--- 操作者は自分 (点検者)
+            );
+            // $this->approvalRequestModal = false; // handleAssigneeSelected で閉じる
+            $this->loadWorkflowHistory(); // 履歴を更新
+            $this->success(__('ledger.workflow.approval_requested_message'));
+        } catch (\Exception $e) {
+            Log::error("Approval request failed: " . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
+
+    // --- 承認者の初期選択IDを取得するヘルパー ---
+    protected function getInitialApproverId(): ?int
+    {
+        // 実績ベースで取得 (CreateColumn と同じロジック)
+        $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineRecord->id, 'approver', 1);
+        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+    }
+
 
     /**
      * 作成中に戻すモーダルを開く
@@ -135,40 +221,6 @@ class Show extends Component
         $this->approverOptions = array_values($options);
     }
 
-
-    /**
-     * 点検完了・承認申請を実行
-     */
-    public function requestApproval(): void
-    {
-        // 権限チェック
-        if (!$this->canRequestApproval()) {
-            $this->error(__('messages.error.unauthorized'));
-            return;
-        }
-
-        $validated = $this->validate([
-            'selectedApproverId' => ['required', 'integer', 'exists:users,id']
-        ]);
-
-        try {
-            // 修正: Service 呼び出し (引数は Ledger ID)
-            $this->ledgerRecord = $this->workflowService->requestApproval(
-                $this->ledgerRecord->id,
-                $validated['selectedApproverId'],
-                Auth::id()
-            );
-            $this->approvalRequestModal = false;
-            $this->loadWorkflowHistory();
-            $this->success(__('ledger.workflow.approval_requested_message'));
-            // 必要なら $refresh など
-        } catch (\Exception $e) {
-            Log::error("Approval request failed: " . $e->getMessage());
-            $this->error(__('messages.error.generic'));
-        } finally {
-            $this->selectedApproverId = null;
-        }
-    }
 
     /**
      * 承認を実行

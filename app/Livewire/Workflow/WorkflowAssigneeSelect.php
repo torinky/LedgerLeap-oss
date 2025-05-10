@@ -188,14 +188,8 @@ class WorkflowAssigneeSelect extends Component
         return $sortedOptions;
     }
 
-    // --- TODO: 承認者用 fetchApproverOptions ---
-    protected function fetchApproverOptions(int $ledgerDefineId, int $folderId, ?int $currentLedgerId, string $searchQuery = ''): array
-    {
-        return [];
-    }
-
     /**
-     * 実績ベースの推奨担当者を取得 (修正: 検索クエリを追加)
+     * 実績ベースの推奨担当者を取得
      */
     protected function getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = ''): array
     {
@@ -222,7 +216,7 @@ class WorkflowAssigneeSelect extends Component
     // --- getRecentAssignee, getReasonLabel は変更なし ---
 
     /**
-     * 直近の担当者を取得 (修正: roleType でカラムとリレーションを切り替え)
+     * 直近の担当者を取得
      */
     protected function getRecentAssignee(?int $ledgerId, string $roleType): ?User
     {
@@ -238,8 +232,6 @@ class WorkflowAssigneeSelect extends Component
             ->orderByDesc('id')
             ->first();
 
-        // 修正: roleType に応じてリレーション名を決定して User を取得
-        // LedgerDiff モデルに inspector(), approver() リレーションが定義されている前提
         return $latestDiff?->{$roleType};
     }
 
@@ -278,5 +270,72 @@ class WorkflowAssigneeSelect extends Component
         Log::debug("selectedUserId updated to {$value}, options reloaded.");
     }
 
+    /**
+     * 承認者候補リストを取得・統合・ソートする
+     *
+     * @param int $ledgerDefineId
+     * @param int $folderId
+     * @param ?int $currentLedgerId
+     * @param string $searchQuery
+     * @return array
+     */
+    protected function fetchApproverOptions(int $ledgerDefineId, int $folderId, ?int $currentLedgerId, string $searchQuery = ''): array
+    {
+        $requiredPermission = FolderPermissionType::APPROVE; // <<<--- 承認権限
+        $folder = Folder::find($folderId);
+        if (!$folder) return [];
+
+        // --- データ取得 ---
+        // 実績ベース (承認者)
+        $frequentApprovers = $this->getFrequentAssignees($ledgerDefineId, 'approver', 5, $searchQuery);
+        // 権限ベース (承認権限)
+        $authorizedUsers = $this->userService->getUsersWithFolderPermission($folder, $requiredPermission, $searchQuery);
+        // 直近担当者 (承認者)
+        $recentApprover = $this->getRecentAssignee($currentLedgerId, 'approver');
+
+        // --- 統合リスト作成 (ロジックは点検者と同じ) ---
+        $options = [];
+        $addedUserIds = [];
+
+        // 1. 直近承認者
+        if ($recentApprover && !isset($addedUserIds[$recentApprover->id]) && ($this->selectedUserId === $recentApprover->id || empty($searchQuery) || stripos($recentApprover->name, $searchQuery) !== false) ) {
+            $options[$recentApprover->id] = ['id' => $recentApprover->id, 'name' => $recentApprover->name, 'reasons' => ['recent'], 'sort_priority' => 1];
+            $addedUserIds[$recentApprover->id] = true;
+        }
+
+        // 2. 実績多数承認者
+        foreach ($frequentApprovers as $user) {
+            $userId = $user['id'];
+            if (!isset($addedUserIds[$userId])) {
+                $options[$userId] = ['id' => $userId, 'name' => $user['name'], 'reasons' => ['frequent'], 'sort_priority' => 2];
+                $addedUserIds[$userId] = true;
+            } elseif (isset($options[$userId])) {
+                $options[$userId]['reasons'][] = 'frequent';
+                $options[$userId]['sort_priority'] = min($options[$userId]['sort_priority'], 2);
+            }
+        }
+
+        // 3. その他の承認権限保有ユーザー
+        foreach ($authorizedUsers as $user) {
+            $userId = $user->id;
+            if (!isset($addedUserIds[$userId])) {
+                $options[$userId] = ['id' => $userId, 'name' => $user->name, 'reasons' => ['authorized'], 'sort_priority' => 3];
+                $addedUserIds[$userId] = true;
+            } elseif (isset($options[$userId]) && !in_array('authorized', $options[$userId]['reasons'])) {
+                $options[$userId]['reasons'][] = 'authorized';
+            }
+        }
+
+        // --- ソート ---
+        $sortedOptions = array_values($options);
+        usort($sortedOptions, function ($a, $b) {
+            if ($a['sort_priority'] !== $b['sort_priority']) {
+                return $a['sort_priority'] <=> $b['sort_priority'];
+            }
+            return $a['name'] <=> $b['name'];
+        });
+
+        return $sortedOptions;
+    }
 
 }
