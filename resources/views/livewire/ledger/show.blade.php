@@ -8,7 +8,9 @@
         <x-mary-tabs wire:model="selectedTab" class="mb-10"> {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
-            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text">
+            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
+                        class="shadow-md"
+            >
 
                 <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-10">
 
@@ -75,10 +77,11 @@
             @endphp
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history"
+                        class="shadow-md"
                         label="{{ $historyTabTitle }}" icon="o-list-bullet">
                 <x-mary-card>
                     <div class="overflow-x-auto">
-                        <table class="table table-sm w-full bg-base-200 shadow-md">
+                        <table class="table table-sm w-full  table-zebra">
                             <thead>
                             <tr>
                                 <th>{{ __('ledger.workflow.history_datetime') }}</th>
@@ -133,10 +136,10 @@
                                         @if ($diff->content)
                                             {{-- content が空でない場合 --}}
                                             <a href="{{ route('ledgerDiff.show', ['ledgerId' => $ledgerRecord->id, 'diffId' => $diff->id]) }}"
-                                               class="btn btn-info tooltip"
+                                               class="btn btn-square tooltip"
                                                target="_blank"
                                                data-tip="{{ __('ledger.view_content_at_this_point') }}">
-                                                <i class="fa-solid fa-magnifying-glass"></i>
+                                                <i class="far fa-eye"></i>
                                             </a>
                                         @endif
                                     </td>
