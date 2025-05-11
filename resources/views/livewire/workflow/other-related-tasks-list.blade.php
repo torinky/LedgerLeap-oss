@@ -61,17 +61,17 @@
                 <div class="flex justify-end gap-1">
                     @if (in_array($taskData['task_type'], ['my_submission_pending_inspection', 'my_submission_pending_approval']) && !$taskData['is_locked'])
                         <a href="{{ route('ledger.edit', ['ledgerId' => $taskData['ledger_id']]) }}"
-                           class="btn btn-xs btn-ghost text-primary tooltip" data-tip="{{__('ledger.edit')}}">
+                           class="btn btn-square btn-ghost text-primary tooltip" data-tip="{{__('ledger.edit')}}">
                             <x-mary-icon name="o-pencil-square"/>
                         </a>
                     @elseif ($taskData['task_type'] === 'claimable')
                         <x-mary-button wire:click="openClaimTaskCommentModal({{ $taskData['ledger_id'] }})"
-                                       class="btn-xs btn-outline btn-success tooltip" data-tip="{{__('ledger.workflow.claim_task')}}">
+                                       class="btn btn-square btn-outline btn-success tooltip" data-tip="{{__('ledger.workflow.claim_task')}}">
                             <x-mary-icon name="o-hand-raised"/>
                         </x-mary-button>
                     @endif
                     <a href="{{ route('ledger.show', ['ledgerId' => $taskData['ledger_id']]) }}"
-                       class="btn btn-xs btn-ghost tooltip" data-tip="{{__('ledger.view_details')}}">
+                       class="btn btn-square btn-ghost tooltip" data-tip="{{__('ledger.view_details')}}">
                         <x-mary-icon name="o-eye"/>
                     </a>
                 </div>

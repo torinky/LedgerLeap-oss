@@ -279,7 +279,6 @@ class NotificationService
      * @param User $recipient
      * @param NotificationType $notificationType
      * @param Model $subject Ledger (task_claimed の場合) または LedgerDiff
-     * @param User|null $causer 操作者
      * @param string|null $comment
      * @param Folder|null $folder
      * @param User|null $originalAssignee 元の担当者 (task_claimed の場合)
@@ -288,7 +287,6 @@ class NotificationService
         User $recipient,
         NotificationType $notificationType,
         Model $subject, // Ledger or LedgerDiff
-        ?User $causer = null, // 操作者。Activity がない場合に指定
         ?string $comment = null,
         ?Folder $folder = null,
         ?User $originalAssignee = null // task_claimed 用に追加
@@ -304,14 +302,11 @@ class NotificationService
 
         // 2. 通知送信
         try {
-            // causer が null の場合、引き継ぎなら subject の modifier (新担当者)
-            // それ以外なら subject (LedgerDiff) の modifier (アクション実行者)
-            if (!$causer) {
-                if ($notificationType->name === 'task_claimed' && $subject instanceof Ledger) {
-                    $causer = $subject->modifier; // 引き継いだ人
-                } elseif ($subject instanceof LedgerDiff) {
-                    $causer = $subject->modifier;
-                }
+            $causer = null; //GenericNotification 側でsubjectのmodifierを使ってもらう
+            if ($subject instanceof Ledger || $subject instanceof LedgerDiff) {
+                // $subject->modifier はリレーションオブジェクトを返す
+                // ここで User インスタンスを取得する必要がある
+                $causer = $subject->modifier()->first(); // ★ 修正: ->first() を追加
             }
 
             $eventName = $notificationType->event ?? $notificationType->name;

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
@@ -17,10 +18,13 @@ use Throwable;
 class WorkflowService
 {
     protected NotificationService $notificationService; // NotificationService をインジェクト
+    protected UserService $userService; // UserService もインジェクトする想定
 
-    public function __construct(NotificationService $notificationService) // コンストラクタでインジェクト
+
+    public function __construct(NotificationService $notificationService, UserService $userService) // コンストラクタでインジェクト
     {
         $this->notificationService = $notificationService;
+        $this->userService = $userService; // インジェクト
     }
 
     /**
@@ -424,6 +428,10 @@ class WorkflowService
         });
         // --- 通知処理 ---
         if ($applicant && $ledgerDiff) {
+            if(!($applicant instanceof User)){
+
+                dd($applicant, $ledgerDiff);
+            }
             $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {
@@ -609,5 +617,128 @@ class WorkflowService
             ->map(fn($diff) => ['id' => $diff->user_id, 'name' => $diff->user_name ?? __('ledger.unknown_user'), 'count' => $diff->count])
             ->filter(fn($item) => $item['id'] !== null)
             ->toArray();
+    }
+    /**
+     * ワークフロータスクを引き継ぐ
+     *
+     * @param Ledger $ledger 引き継ぎ対象のLedger
+     * @param User $claimer 引き継ぎを行うユーザー (新しい担当者)
+     * @param string|null $comments 引き継ぎコメント
+     * @return Ledger 更新後のLedger
+     * @throws \Throwable
+     */
+    public function claimTask(Ledger $ledger, User $claimer, ?string $comments): Ledger
+    {
+        // 1. 基本的なバリデーション
+        if (!$ledger->status->isWorkflowPending()) { // isWorkflowPending() は Enum に定義されている想定
+            throw new \Exception(__('ledger.errors.cannot_claim_not_pending_task'));
+        }
+        if ($ledger->creator_id === $claimer->id) {
+            throw new \Exception(__('ledger.errors.applicant_cannot_claim'));
+        }
+
+        $latestDiff = $ledger->latestDiff()->first();
+        if (!$latestDiff) {
+            throw new \Exception(__('ledger.errors.latest_diff_not_found'));
+        }
+
+        // 2. 現在の担当者情報を取得 (元の担当者)
+        $originalAssignee = null;
+        $currentTaskRoleType = ''; // 元の担当者の役割タイプ (inspector or approver)
+
+        if ($ledger->status === WorkflowStatus::PENDING_INSPECTION && $latestDiff->inspector_id) {
+            $originalAssignee = $latestDiff->inspector; // リレーションで User を取得
+            $currentTaskRoleType = 'inspection';
+        } elseif ($ledger->status === WorkflowStatus::PENDING_APPROVAL && $latestDiff->approver_id) {
+            $originalAssignee = $latestDiff->approver; // リレーションで User を取得
+            $currentTaskRoleType = 'approval';
+        }
+
+        // 既に自分が担当者ならエラー
+        if ($originalAssignee && $originalAssignee->id === $claimer->id) {
+            throw new \Exception(__('ledger.errors.already_assignee'));
+        }
+
+        // 3. 引き継ぎ者の権限チェック
+        $requiredPermission = ($ledger->status === WorkflowStatus::PENDING_INSPECTION)
+            ? FolderPermissionType::INSPECT
+            : FolderPermissionType::APPROVE;
+        if (!$ledger->define?->folder || !$this->userService->hasFolderPermission($claimer, $ledger->define->folder, $requiredPermission)) {
+            throw new \Exception(__('ledger.errors.no_permission_to_claim'));
+        }
+
+
+        return DB::transaction(function () use ($ledger, $claimer, $comments, $latestDiff, $originalAssignee, $currentTaskRoleType) {
+            $now = now();
+            // ステータスは引き継ぎなので変更しない
+            $newStatus = $ledger->status;
+
+            // 4. 新しい LedgerDiff を作成
+            $newDiffData = [
+                'ledger_id' => $ledger->id,
+                'content' => '', // 引き継ぎ時は内容は変更しない
+                'column_define' => '', // 同上
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id, // 元の申請者は維持
+                'modifier_id' => $claimer->id, // 操作者は引き継ぎ者
+                'status' => $newStatus, // ステータスは維持
+                'version' => $ledger->version, // バージョンも維持
+                'comments' => $comments, // 引き継ぎコメント
+                'requested_at' => $latestDiff->requested_at, // 元の依頼日時は維持
+                'inspected_at' => ($newStatus === WorkflowStatus::PENDING_APPROVAL) ? $latestDiff->inspected_at : null, // 点検完了日時は維持 (承認待ちの場合)
+                'approved_at' => null, // 承認日時はクリア
+                'returned_at' => null, // 差し戻しではない
+                // 新しい担当者を設定
+                'inspector_id' => ($newStatus === WorkflowStatus::PENDING_INSPECTION) ? $claimer->id : $latestDiff->inspector_id,
+                'approver_id' => ($newStatus === WorkflowStatus::PENDING_APPROVAL) ? $claimer->id : $latestDiff->approver_id,
+            ];
+            $newLedgerDiff = LedgerDiff::create($newDiffData);
+
+            // 5. Ledger の latest_diff_id と modifier_id を更新
+            $ledger->update([
+                'latest_diff_id' => $newLedgerDiff->id,
+                'modifier_id' => $claimer->id, // Ledger の最終更新者も引き継ぎ者に
+            ]);
+
+            // 6. カウンター調整
+            if ($originalAssignee && !empty($currentTaskRoleType)) { // 元の担当者がいて、役割タイプが特定できればデクリメント
+                $this->decrementPendingTaskCount($originalAssignee->id, $currentTaskRoleType);
+            }
+            // 新しい担当者のカウンターをインクリメント (役割タイプはステータスから判断)
+            $newTaskType = ($newStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
+            $this->incrementPendingTaskCount($claimer->id, $newTaskType);
+
+            // 7. 通知処理
+            $notificationType = NotificationType::where('name', 'task_claimed')->first();
+            if ($notificationType) {
+                $folder = $ledger->define?->folder;
+                $recipients = collect();
+
+                // 申請者に通知 (引き継ぎ者と異なる場合)
+                if ($ledger->creator_id !== $claimer->id && $ledger->creator) {
+                    $recipients->push($ledger->creator);
+                }
+                // 元の担当者に通知 (存在し、引き継ぎ者と異なる場合)
+                if ($originalAssignee && $originalAssignee->id !== $claimer->id) {
+                    $recipients->push($originalAssignee);
+                }
+                // 新しい担当者(引き継ぎ者本人)にも通知が必要か？ -> 通常は操作者なので不要だが、確認のため通知しても良い
+                $recipients->push($claimer); // 自分にも通知を送る場合
+
+                foreach ($recipients->unique('id') as $recipientUser) {
+                    if ($recipientUser) { // null チェック
+                        $this->notificationService->sendWorkflowNotification(
+                            $recipientUser,
+                            $notificationType,
+                            $ledger, // subject は Ledger
+                            $comments,
+                            $folder,
+                            $originalAssignee // originalAssignee を渡す
+                        );
+                    }
+                }
+            }
+            return $ledger->refresh();
+        });
     }
 }

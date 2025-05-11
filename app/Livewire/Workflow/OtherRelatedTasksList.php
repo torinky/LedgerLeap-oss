@@ -9,6 +9,7 @@ use App\Models\Ledger;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\UserService;
+use App\Services\WorkflowService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -16,10 +17,11 @@ use Livewire\WithPagination;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection; // Eloquent Collection
 use Illuminate\Support\Collection as BaseCollection; // Support Collection
 use Illuminate\Database\Eloquent\Builder;
+use Mary\Traits\Toast;
 
 class OtherRelatedTasksList extends Component
 {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public int $perPage = 10;
     public string $sortField = 'ledger_updated_at'; // ソート対象を明確に
@@ -29,6 +31,7 @@ class OtherRelatedTasksList extends Component
     public BaseCollection $tasksData; // Eloquent Collection ではなく Support Collection
 
     protected UserService $userService;
+    protected WorkflowService $workflowService;
 
     // 引き継ぎ関連のプロパティとメソッドは後ほど
     public bool $showClaimCommentModal = false;
@@ -37,8 +40,9 @@ class OtherRelatedTasksList extends Component
 
     public  $claimingTask;
 
-    public function boot(UserService $userService): void
+    public function boot(WorkflowService $workflowService, UserService $userService): void
     {
+        $this->workflowService = $workflowService;
         $this->userService = $userService;
         $this->tasksData = collect(); // 初期化
     }
@@ -193,9 +197,52 @@ class OtherRelatedTasksList extends Component
             $this->claimComment = '';
             $this->showClaimCommentModal = true;
         } else {
-            $this->toast()->error(__('タスクが見つかりません。'));
+            $this->error(__('ledger.workflow.task_not_found'));        }
+    }
+    /**
+     * コメント付きでタスクを引き継ぐ
+     */
+    public function claimTaskWithComment(): void
+    {
+        if (!$this->claimingTaskData || !isset($this->claimingTaskData['ledger_id'])) {
+            $this->error(__('ledger.workflow.no_task_to_claim'));
+            $this->showClaimCommentModal = false;
+            return;
+        }
+
+        // (任意) コメントが必須であればバリデーション
+        // $this->validate(['claimComment' => 'required|string|max:1000']);
+
+        $ledgerId = $this->claimingTaskData['ledger_id'];
+        $claimer = Auth::user(); // 現在のログインユーザーが引き継ぎ者
+        $ledger = Ledger::find($ledgerId);
+
+        if (!$ledger || !$claimer) {
+            $this->error(__('ledger.errors.cannot_execute_action'));
+            $this->showClaimCommentModal = false;
+            return;
+        }
+
+        try {
+            // WorkflowService の claimTask メソッドを呼び出す
+            $updatedLedger = $this->workflowService->claimTask($ledger, $claimer, $this->claimComment);
+
+            $this->showClaimCommentModal = false;
+            $this->claimingTaskData = null;
+            $this->claimComment = '';
+            $this->loadTasks(); // リストを再読み込みして、引き継いだタスクがここから消えることを期待
+            $this->dispatch('refreshPendingList'); // 自分宛リストも更新させるイベント (PendingList側でリッスン)
+            $this->success(__('ledger.workflow.task_claimed_successfully'));
+
+        } catch (\Exception $e) {
+            Log::error("Task claim failed for Ledger ID {$ledgerId} from OtherRelatedTasksList: " . $e->getMessage(), [
+                'claimer_id' => $claimer->id,
+                'comment' => $this->claimComment,
+                'exception' => $e
+            ]);
+            $this->error(__('ledger.error'), $e->getMessage());
+            $this->showClaimCommentModal = false;
         }
     }
-
 
 }

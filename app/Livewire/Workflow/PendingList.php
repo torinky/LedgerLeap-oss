@@ -403,4 +403,19 @@ class PendingList extends Component
         return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
+    #[On('refreshPendingList')] // イベントをリッスン
+    public function refreshList(): void
+    {
+        // render メソッドが再実行されればリストは更新されるので、
+        // 明示的にデータを再ロードする必要はないかもしれないが、
+        // 確実に最新状態にするために render を再呼び出しするか、
+        // データ取得メソッドがあればそれを呼び出す。
+        // ここでは、次のレンダリングサイクルでデータが更新されることを期待。
+        // もし明示的にデータ再取得が必要なら、render 内のデータ取得ロジックをメソッドに切り出して呼び出す。
+        // 例: $this->loadPendingTasks();
+        // $this->dispatch('$refresh'); // これでも可
+        $this->render(); // 強制的に再描画 (Livewireのバージョンや実装による)
+        Log::info("PendingList refreshed by event.");
+    }
+
 }

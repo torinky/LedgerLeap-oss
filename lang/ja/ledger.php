@@ -1,4 +1,4 @@
-<?php return array(
+<?php return [
     'Impersonate' => 'なりすまし',
     'Impersonation' => 'なりすまし',
     'action_approval_requested' => 'の承認を依頼しました',
@@ -16,6 +16,7 @@
     'action_returned_to_draft' => 'を作成中に戻しました',
     'action_success' => 'アクションが正常に実行されました。',
     'action_updated' => 'を更新しました。',
+    'action_task_claimed' => 'を引き継ぎました',
     'add' => '追加する',
     'admin' => '管理',
     'after_change' => '変更後',
@@ -46,15 +47,15 @@
     'collapse' => '展開／折りたたむ',
     'collapse_all' => 'すべて折りたたむ',
     'column' =>
-        array(
+        [
             'add' => '列を追加',
             'bg_file' => '背景画像',
             'delete_file' => 'ファイルを削除',
             'drag2sort' => 'ドラッグして並び替え',
             'file' =>
-                array(
+                [
                     'upload' => 'ファイルをアップロード',
-                ),
+                ],
             'group_title' => '台帳の列',
             'hint' => 'ヒント',
             'remove' => 'この列を削除',
@@ -66,7 +67,7 @@
             'type' => '入力形式',
             'unique' => '重複を禁止',
             'will_ledger_delete_message' => '登録されたこの列の内容も削除します！',
-        ),
+        ],
     'comment' => 'コメントする',
     'confirm' => '確認する',
     'connect' => '接続する',
@@ -78,11 +79,11 @@
     'create_title' => '台帳に新規追加',
     'created_at' => '作成日',
     'creator' =>
-        array(
+        [
             'name' => '作成者',
-        ),
+        ],
     'define' =>
-        array(
+        [
             'basic_setting' => '基本設定',
             'cannot_modify_while_workflow' => 'この台帳でワークフローが進行中（点検待ち・承認待ち）のため、列定義を変更できません。ワークフローが完了してから再度お試しください。',
             'create' => '台帳の枠組みを新規作成',
@@ -106,7 +107,7 @@
             'setting' => '台帳／フォルダ設定の管理',
             'title' => '台帳名',
             'title_input' => '台帳名を入力',
-        ),
+        ],
     'delete' => '削除する',
     'descending' => '降順',
     'description' => '説明',
@@ -127,6 +128,14 @@
     'edit_profile_title' => 'プロフィールを変更する',
     'enable' => '有効にする',
     'error' => 'エラー',
+    'errors' => [
+        'cannot_claim_not_pending_task' => '進行中ではないタスクは引き継げません。',
+        'applicant_cannot_claim' => '申請者自身はタスクを引き継げません。',
+        'latest_diff_not_found' => '最新の履歴が見つからず、処理を続行できませんでした。',
+        'already_assignee' => 'あなたは既にこのタスクの担当者です。',
+        'no_permission_to_claim' => 'このタスクを引き継ぐ権限がありません。',
+        'cannot_execute_action' => '処理を実行できませんでした。',
+    ],
     'expand' => '拡大する',
     'expand_all' => 'すべて展開',
     'explanation' => '説明',
@@ -135,17 +144,17 @@
     'export_finished' => 'エクスポート完了',
     'exporting' => 'エクスポート中です。お待ちください・・・',
     'filament' =>
-        array(
+        [
             'manageableFolders' => '管理フォルダー',
             'readableFolders' => '読み込みフォルダー',
             'writableFolders' => '書き込みフォルダー',
-        ),
+        ],
     'file' => 'ファイル',
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
     'files' => 'ファイル',
     'filter' => 'フィルタ',
     'folder' =>
-        array(
+        [
             'containing' => '所属するフォルダ',
             'create' => 'フォルダーを新規作成',
             'created' => 'フォルダーが作成されました',
@@ -165,12 +174,12 @@
             'title' => 'フォルダー名',
             'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
             'writable' => '書き込み可能',
-        ),
+        ],
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
     'folder_permission_readable' => '閲覧可能',
     'form' =>
-        array(
+        [
             'auto_numbering' => '自動採番',
             'check' => '複数選択',
             'datetime' => '日時',
@@ -178,7 +187,7 @@
             'text' => '1行テキスト',
             'textarea' => '複数行テキスト',
             'upload' => 'ファイル添付',
-        ),
+        ],
     'go_home' => '設定を終了',
     'go_to' => 'この台帳のリスト表示へ移動',
     'go_to_folder_button' => 'フォルダへ移動',
@@ -208,9 +217,9 @@
     'log_in' => 'ログイン',
     'log_out' => 'ログアウト',
     'mail' =>
-        array(
+        [
             'action' =>
-                array(
+                [
                     'view_approval_tasks' => '承認タスクを確認する',
                     'view_approved_ledger' => '承認された台帳を確認する',
                     'view_details' => '詳細を確認する',
@@ -220,11 +229,11 @@
                     'view_tasks' => 'タスク一覧を確認する',
                     'view_claimed_task' => '引き継がれたタスクを確認する',
                     'view_task_details' => 'タスク詳細を確認する',
-                ),
+                ],
             'body' =>
-                array(
+                [
                     'line1' =>
-                        array(
+                        [
                             'approval_requested' => '点検者: :inspectorName',
                             'approved' => '承認者: :approverName',
                             'generic' => ':causerName さんが :subjectType (:subjectId) に対してアクションを実行しました。',
@@ -233,20 +242,20 @@
                             'returned' => '操作者: :causerName',
                             'summary' => '現在、あなたに割り当てられている未処理のタスクは以下の通りです。',
                             'task_claimed_common' => '台帳名: :ledgerTitle', // 引き継ぎ通知共通
-                        ),
+                        ],
                     'line2' =>
-                        array(
+                        [
                             'inspection_completed' => '承認ステップに進みました。',
                             'summary' => 'ご確認をお願いいたします。',
                             'task_claimed_comment_prefix' => 'コメント:', // 引き継ぎコメントの接頭辞
-                        ),
-                ),
+                        ],
+                ],
             'footer' =>
-                array(
+                [
                     'thanks' => 'よろしくお願いします。',
-                ),
+                ],
             'greeting' =>
-                array(
+                [
                     'approval_requested' => ':userName さん、以下の台帳の承認依頼が届いています。',
                     'approved' => ':userName さん、申請した台帳が承認されました。',
                     'generic' => 'お知らせがあります。',
@@ -257,16 +266,16 @@
                     'task_claimed_to_new_assignee' => ':newAssigneeName さん、以下のタスクがあなたに割り当てられました（:claimerName さんによる引き継ぎ）。',
                     'task_claimed_to_original_assignee' => ':originalAssigneeName さん、あなたのタスク「:title」は :claimerName さんに引き継がれました。',
                     'task_claimed_to_applicant' => ':applicantName さん、申請した台帳「:title」の担当者が :originalAssigneeName さんから :newAssigneeName さんに変更されました。',
-                ),
+                ],
             'label' =>
-                array(
+                [
                     'comment' => 'コメント',
                     'pending_approval' => '承認待ち',
                     'pending_inspection' => '点検待ち',
                     'total' => '合計',
-                ),
+                ],
             'subject' =>
-                array(
+                [
                     'approval_requested' => '[ :appName ] 台帳「:title」の承認依頼',
                     'approved' => '[ :appName ] 台帳「:title」が承認されました',
                     'generic' => '[ :appName ] お知らせ (:type)',
@@ -275,8 +284,8 @@
                     'returned' => '[ :appName ] 台帳「:title」が「作成中」に戻りました',
                     'summary' => '[ :appName ] 未処理のワークフロータスクがあります (:count 件)',
                     'task_claimed' => '[ :appName ] 台帳「:title」の担当者が変更されました', // 引き継ぎメール件名
-                ),
-        ),
+                ],
+        ],
     'main_abilities_title' => '主なできること',
     'main_role_and_affiliation_title' => '主な役割/担当',
     'mark_all_as_read' => 'すべて既読にする',
@@ -287,7 +296,7 @@
     'my_portal_title' => 'マイポータル',
     'name' => '名前',
     'named' =>
-        array(
+        [
             'add' => ':nameを追加',
             'choose' => ':name 個選択してください',
             'create' => ':nameを作成する',
@@ -305,9 +314,9 @@
             'update' => '更新 :name',
             'updated_at' => '更新 : ',
             'view' => ':name を見る',
-        ),
+        ],
     'navigation' =>
-        array(
+        [
             'go_to_my_portal' => 'マイポータルへ移動',
             'ledgers' => '台帳',
             'logout' => 'ログアウト',
@@ -319,7 +328,7 @@
             'settings' => '設定',
             'toggle_theme' => 'テーマ切り替え',
             'unread_notifications' => '未読の通知',
-        ),
+        ],
     'new' => '新着',
     'new_relation_attach' => '新たに紐付け',
     'no' => 'いいえ',
@@ -344,7 +353,7 @@
     'not_allow_view' => '閲覧権限がありません',
     'not_found' => '見つかりません',
     'notification' =>
-        array(
+        [
             'bulk_deleted_error' => '通知設定の一括削除に失敗しました。',
             'bulk_deleted_success' => '選択した通知設定を削除しました。',
             'created_error' => '通知設定の作成に失敗しました。',
@@ -352,18 +361,19 @@
             'deleted_error' => '通知設定の削除に失敗しました。',
             'deleted_success' => '通知設定を削除しました。',
             'settings' =>
-                array(
+                [
                     'description' => 'ここでは、特定の通知をメールで受け取るかどうかを設定できます。役割（ロール）によって設定が強制されている場合、変更することはできません。',
                     'title' => '通知設定',
-                ),
+                ],
             'updated_error' => '通知設定の更新に失敗しました。',
             'updated_success' => '通知設定を更新しました。',
-        ),
+        ],
     'notification_type' => '通知タイプ',
     'notification_types' =>
-        array(
+        [
             'App\\Models\\Folder' => 'フォルダー',
             'App\\Models\\Ledger' => '台帳',
+            'App\\Models\\LedgerDiff' => '台帳の状態',
             'App\\Models\\LedgerDefine' => '台帳定義',
             'App\\Models\\Organization' => '組織',
             'App\\Models\\Permission' => '権限',
@@ -410,9 +420,9 @@
             'workflow_summary' => '未処理タスク通知 (担当者向け)',
             'task_claimed' => 'タスク引き継ぎ通知', // 新しい通知タイプの表示名
 
-        ),
+        ],
     'notification_types_description' =>
-        array(
+        [
             'approval_requested' => '（任意）自分が承認担当者に指定された場合に通知します。',
             'approved' => '申請したレコードが最終承認された場合に通知します。',
             'inspection_completed' => '（任意）申請したレコードの点検が完了し、承認ステップに進んだ場合に通知します。',
@@ -421,7 +431,7 @@
             'workflow_summary' => '担当者に未処理の点検・承認タスクがある場合に定期的に通知します。',
             'task_claimed' => 'ワークフロータスクの担当者が変更（引き継ぎ）された場合に通知します。', // 新しい通知タイプの説明
 
-        ),
+        ],
     'notifications' => '通知',
     'notify' => '通知',
     'of' => 'の',
@@ -436,18 +446,18 @@
     'organization_section_description' => 'あなたが所属している組織やプロジェクトの一覧です。',
     'organization_section_title' => '所属組織/プロジェクト',
     'organizations' =>
-        array(
+        [
             'children' => '配下組織',
             'name' => '組織名',
             'parent' => '親組織',
             'scoped' => '保有組織',
-        ),
+        ],
     'other_affiliations_title' => 'その他の所属',
     'per_page' => '表示件数 / ページ',
     'performed_action' => 'さんが ',
     'permission' => '権限',
     'permission_description' =>
-        array(
+        [
             'create_folders' => '新しいフォルダーを作成できます。',
             'create_ledger_defines' => '新しい種類の台帳（台帳定義）を作成できます。',
             'create_ledgers' => 'アクセス可能なフォルダ内に新しい台帳を作成できます。',
@@ -456,14 +466,14 @@
             'update_folders' => 'フォルダーの情報を更新できます。',
             'update_ledgers' => 'アクセス可能な台帳の情報を更新できます。',
             'view_activity_logs' => 'アクティビティログを閲覧できます。',
-        ),
+        ],
     'permissions' =>
-        array(
+        [
             'admin' => '管理権限',
             'delete' => '削除権限',
             'read' => '読み込み',
             'write' => '書き込み',
-        ),
+        ],
     'preview' => 'プレビュー',
     'price' => '価格',
     'record' => '記録',
@@ -478,7 +488,7 @@
     'restore' => '復元する',
     'reviseCount' => '改訂回数',
     'role_label' =>
-        array(
+        [
             'Editor' => '編集者',
             'Folder Manager' => 'フォルダー管理者',
             'Folder Viewer' => 'フォルダー閲覧者',
@@ -487,7 +497,7 @@
             'Super Admin' => 'スーパー管理者',
             'Viewer' => '閲覧者',
             'user' => '一般ユーザー',
-        ),
+        ],
     'roles_and_affiliations_title' => '役割と所属',
     'save' => '保存する',
     'save_and_close' => '保存して閉じる',
@@ -508,7 +518,7 @@
     'send' => '送信する',
     'setting' => '設定',
     'settings' =>
-        array(
+        [
             'access_control' => 'アクセス制御',
             'contents' => 'コンテンツ設定',
             'folder' => 'フォルダー',
@@ -516,7 +526,7 @@
             'permissions' => '権限',
             'roles' => '役割',
             'user_management' => 'ユーザー管理',
-        ),
+        ],
     'show' => '見せる',
     'show_all' => 'すべて表示する',
     'show_details' => '詳細を表示する',
@@ -525,11 +535,11 @@
     'start' => '始める',
     'stop' => '停止する',
     'stored' =>
-        array(
+        [
             'fail' => '登録に失敗しました',
             'failed' => '保存に失敗しました',
             'success' => '保存しました',
-        ),
+        ],
     'submit' => '提出する',
     'subscribe' => '購読する',
     'success' => '成功',
@@ -537,25 +547,25 @@
     'switch_to_role' => '役割に切り替える',
     'system_name' => 'Ledger Leap',
     'tab' =>
-        array(
+        [
             'details' => '基本情報',
             'workflow_history' => 'ワークフロー履歴',
-        ),
+        ],
     'tag' =>
-        array(
+        [
             'add' => 'タグを追加',
             'remove' => 'タグを削除',
             'remove_message' => '次のタグを削除します',
             'tag' => 'タグ',
-        ),
+        ],
     'tags' => 'タグ',
     'target_link' =>
-        array(
+        [
             'blank' => '新しいウィンドウで開きます',
             'parent' => '親フレームで開く',
             'self' => '現在のウィンドウで開く',
             'top' => '一番上のフレームで開く',
-        ),
+        ],
     'technical_term' => '技術用語',
     'title' => '台帳名',
     'translate' => '翻訳する',
@@ -570,23 +580,23 @@
     'update' => 'アップデート',
     'update_message' => '更新する',
     'updated' =>
-        array(
+        [
             'fail' => '更新に失敗しました',
             'success' => '更新を完了しました',
-        ),
+        ],
     'updated_at' => '更新日時',
     'user' => 'ユーザー',
     'user_action_suffix' => 'が',
     'validation' =>
-        array(
+        [
             'failed' => '修正が必要です',
-        ),
+        ],
     'view' => 'ビュー',
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認',
     'view_history' => '変更履歴を見る',
     'workflow' =>
-        array(
+        [
             'action_at' => '操作日時',
             'action_by' => '操作者',
             'approval_requested_message' => '承認申請を送信しました。',
@@ -644,7 +654,7 @@
             'select_next_approver' => '次の承認者を選択',
             'select_next_inspector' => '点検者を選択してください',
             'status' =>
-                array(
+                [
                     'approved' => '承認済み',
                     'draft' => '作成中/編集中',
                     'label' => 'ステータス',
@@ -652,7 +662,7 @@
                     'none_long' => 'この台帳にはワークフローは適用されていません。',
                     'pending_approval' => '承認待ち',
                     'pending_inspection' => '点検待ち',
-                ),
+                ],
             'summary_notification_message' => '未処理の点検依頼が :inspection_count 件、承認依頼が :approval_count 件あります。',
             'title' => '点検/承認',
             'view_content_at_this_point' => 'この時点の内容を見る',
@@ -670,7 +680,10 @@
             'claim_comment_placeholder' => '引き継ぎ理由などを入力...',
             'claim_and_start' => '引き継いで処理を開始',
             'tasks_title' => 'ワークフロータスク', // ページタイトル用
-        ),
+            'task_not_found' => 'タスクが見つかりませんでした。',
+            'no_task_to_claim' => '引き継ぎ対象のタスクが選択されていません。',
+            'task_claimed_successfully' => 'タスクを引き継ぎました。',
+        ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-);
+];

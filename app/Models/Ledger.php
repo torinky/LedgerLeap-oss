@@ -189,9 +189,10 @@ class Ledger extends Model
             ->logOnlyDirty() // 変更があった場合のみ記録
             ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName))
-            ->logFillable();
-        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+            ->logFillable()
+            // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id']) // 特定の属性のみが変更された場合はログを記録しない
+            ;
     }
 
     /**

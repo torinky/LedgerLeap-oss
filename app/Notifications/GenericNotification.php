@@ -54,15 +54,24 @@ class GenericNotification extends Notification implements ShouldQueue
         $this->notificationTypeId = $notificationTypeId;
         $this->subject = $subject;
         $this->activity = $activity;
-        $this->causer = $causer ?? $activity?->causer; // activity があれば causer を優先
         $this->eventName = $eventName ?? $activity?->event; // activity があれば event を優先
         $this->comment = $comment; // コメントは直接受け取る
         $this->payloadOverrides = $payloadOverrides;
         $this->originalAssignee = $originalAssignee;
 
+        // causer の決定ロジックを修正
+        if ($causer instanceof User) {
+            $this->causer = $causer;
+        } elseif ($subject instanceof Ledger || $subject instanceof LedgerDiff) {
+            // $subject->modifier はリレーションなので、実際のUserモデルを取得
+            $this->causer = $subject->modifier()->first(); // または $subject->modifier (動的プロパティ)
+        } elseif ($activity && $activity->causer instanceof User) {
+            $this->causer = $activity->causer;
+        }
+        Log::debug('GenericNotification::__construct called', ['causer' => $this->causer, 'activity' => $activity, 'subject' => $subject]);
     }
 
-     /**
+    /**
      * Get the notification's delivery channels.
      *
      * @param User $notifiable User オブジェクトを受け取る想定
@@ -100,7 +109,7 @@ class GenericNotification extends Notification implements ShouldQueue
         if ($isWorkflowActionNotification && $canReceiveActionEmail) {
             $channels[] = 'mail';
         }
-        // --- ここまで修正 ---
+
 
         Log::info("Notification channels for User ID: {$notifiable->id}, Type ID: {$this->notificationTypeId}", ['channels' => $channels]);
         return $channels;
@@ -140,51 +149,82 @@ class GenericNotification extends Notification implements ShouldQueue
 //            $this->comment
 //        ))->to($notifiable->email);
 //    }
-    public function toMail(object $notifiable): mixed // 戻り値を mixed に変更
+    public function toMail(object $notifiable): mixed
     {
-        if (!$notifiable instanceof User) return null;
+        if (!$notifiable instanceof User) {
+            Log::warning("toMail called with non-User notifiable.", ['notifiable_type' => get_class($notifiable)]);
+            return null;
+        }
+
+        // ★ 追加: $notifiable のメールアドレスを確認
+        if (empty($notifiable->email)) {
+            Log::error("toMail: Notifiable User ID {$notifiable->id} has no email address.", ['user' => $notifiable->toArray()]);
+            return null; // メールアドレスがない場合は Mailable を返さない
+        }
 
         $notificationType = NotificationType::find($this->notificationTypeId);
-        if (!$notificationType) return null;
-
-        if ($notificationType->name === 'task_claimed') {
-            if ($this->subject instanceof Ledger && $this->causer && $this->originalAssignee) {
-                // $this->subject は Ledger, $this->causer は引き継ぎ操作者, $this->originalAssignee は元の担当者
-                // $notifiable (メール受信者) に応じて recipientType を決定
-                $recipientType = 'applicant'; // デフォルトは申請者
-                if ($notifiable->id === $this->causer->id) $recipientType = 'new_assignee'; // 新しい担当者 (引き継いだ本人)
-                else if ($this->originalAssignee && $notifiable->id === $this->originalAssignee->id) $recipientType = 'original_assignee';
-
-                return (new TaskClaimedMail(
-                    $this->subject,       // Ledger
-                    $this->causer,        // 引き継ぎ操作者 (新しい担当者)
-                    $this->originalAssignee, // 元の担当者
-                    $this->causer,        // 新しい担当者 (引き継ぎ操作者と同じ)
-                    $this->comment,       // 引き継ぎコメント
-                    $recipientType
-                ))->to($notifiable->email);
-            }
-        } else {
-            // 既存のワークフローアクションメール
-            if ($this->subject instanceof LedgerDiff) { // Subject が LedgerDiff であることを期待
-                return (new WorkflowActionMail(
-                    $notificationType,
-                    $this->subject,
-                    $this->causer,
-                    $this->comment
-                ))->to($notifiable->email);
-            }
+        if (!$notificationType) {
+            Log::warning("NotificationType not found for ID: {$this->notificationTypeId}");
+            return null;
         }
-        Log::warning("No Mailable for notification type: {$notificationType->name}");
+
+        Log::debug('toMail called for notification type: '. $notificationType->name );
+        Log::info("Sending email to: {$notifiable->email}");
+        if ($notificationType->name === 'task_claimed') {
+            // task_claimed の場合、$subject は Ledger であることを期待
+            if (!$this->subject instanceof Ledger) {
+                Log::warning("TaskClaimedMail requires Ledger subject.", ['subject_type' => get_class($this->subject)]);
+                return null;
+            }
+
+            // $this->causer はコンストラクタでセットされた操作者 (引き継ぎ者) を使うべき
+            // toMail 内で $this->causer を上書きしない
+            $claimer = $this->causer; // コンストラクタでセットされた causer (引き継ぎ者)
+
+            if (!$claimer instanceof User) {
+                Log::warning("TaskClaimedMail requires a User instance for claimer (causer).", ['causer_type' => get_class($claimer)]);
+                return null;
+            }
+
+            // $notifiable (メール受信者) に応じて recipientType を決定
+            $recipientType = 'applicant'; // デフォルトは申請者
+            if ($notifiable->id === $claimer->id) {
+                $recipientType = 'new_assignee';
+            } elseif ($this->originalAssignee && $notifiable->id === $this->originalAssignee->id) {
+                $recipientType = 'original_assignee';
+            }
+            // 申請者 ($this->subject->creator) への通知の場合も考慮が必要なら追加
+            return new TaskClaimedMail(
+                $this->subject,          // Ledger インスタンス
+                $claimer,                // 引き継ぎ操作者 (User インスタンス)
+                $this->originalAssignee, // 元の担当者 (User インスタンス or null)
+                $claimer,                // 新しい担当者 (User インスタンス)
+                $this->comment,          // 引き継ぎコメント
+                $recipientType
+            )->to($notifiable->email);
+
+        } elseif ($this->subject instanceof LedgerDiff) { // 他のワークフローアクションメール
+            // $this->causer はコンストラクタでセットされた causer を使う
+            return new WorkflowActionMail(
+                $notificationType,
+                $this->subject, // LedgerDiff インスタンス
+                $this->causer,  // User インスタンス or null
+                $this->comment
+            )->to($notifiable->email);
+        }
+
+        Log::warning("No Mailable configured for notification type: {$notificationType->name} with subject type: " . get_class($this->subject));
         return null;
     }
+
     /**
      * Get the database representation of the notification.
      *
      * @param mixed $notifiable
      * @return array
      */
-    public function toDatabase($notifiable)
+    public
+    function toDatabase($notifiable)
     {
         //        dd($notifiable); // 追加: $notifiable の内容を確認
         Log::info('GenericNotification::toDatabase called', ['notifiable' => $notifiable]);

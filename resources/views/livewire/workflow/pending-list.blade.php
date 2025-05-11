@@ -33,26 +33,27 @@
             <div class="flex justify-end gap-1">
                 @if($ledger->status === WorkflowStatus::PENDING_INSPECTION && Auth::id() === $ledger->latestDiff->inspector_id /* && 権限チェック */)
                     {{-- 承認申請ボタン (モーダルを開く) --}}
-                    <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}" icon="o-check-badge"
-                                   class="btn-sm btn-success"
+                    <x-mary-button data-tip="{{ __('ledger.workflow.request_approval_short') }}" icon="o-check-badge"
+                                   class="btn-square btn-success tooltip"
                                    {{-- モーダルを開くメソッド呼び出し (Ledger ID を渡す) --}}
                                    wire:click="openApproverSelectModal({{ $ledger->id }})"
                                    spinner="openApproverSelectModal"/>
-                    <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
-                                   class="btn-sm btn-warning"
+                    <x-mary-button data-tip="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
+                                   class="btn-square btn-warning tooltip"
                                    wire:click="openReturnToDraftModal({{ $ledger->latestDiff->id }})"
                                    spinner/>
                 @elseif($ledger->status === WorkflowStatus::PENDING_APPROVAL && Auth::id() === $ledger->latestDiff->approver_id /* && 権限チェック */)
-                    <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                   class="btn-sm btn-primary" wire:click="approveTask({{ $ledger->latestDiff->id }})"
+                    <x-mary-button data-tip="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                   class="btn-square btn-primary tooltip" wire:click="approveTask({{ $ledger->latestDiff->id }})"
                                    spinner/>
-                    <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
-                                   class="btn-sm btn-warning"
+                    <x-mary-button data-tip="{{ __('ledger.workflow.return_to_draft_short') }}" icon="o-arrow-uturn-left"
+                                   class="btn-square btn-warning tooltip"
                                    wire:click="openReturnToDraftModal({{ $ledger->latestDiff->id }})"
                                    spinner/>
                 @endif
-                <x-mary-button label="{{ __('ledger.view_details') }}" icon="o-eye" class="btn-sm btn-ghost"
+                <x-mary-button data-tip="{{ __('ledger.view_details') }}" icon="o-eye" class="btn-square btn-ghost tooltip"
                                link="{{ route('ledger.show', ['ledgerId' => $ledger->id]) }}"/>
+
             </div>
             {{-- 戻し理由入力モーダル (修正: task->id ではなく ledger->id を使う？ $selectedTaskId で制御) --}}
             {{-- モーダル自体は $selectedTaskId で制御するため、ここの task/ledger ID は不要 --}}

@@ -93,7 +93,7 @@ class TaskClaimedMail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.task-claimed', // 新しいテンプレート
+            markdown: 'mail.task-claimed-mail', // 新しいテンプレート
             with: [
                 'greeting' => $this->greeting,
                 'line1' => $this->line1,
