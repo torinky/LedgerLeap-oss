@@ -843,23 +843,24 @@
         * オプション表示には理由アイコン/タグを含める。
     3.
         *
-    *担当者選択モーダルLivewireコンポーネント作成 (`WorkflowAssigneeModal.php`, `workflow-assignee-modal.blade.php`):
-    **
-        * モーダル表示状態 (`showModal`) を管理。
-        * 親からパラメータ (`ledgerDefineId`, `folderId`, `roleType`, `ledgerId`, `initialUserId`) を受け取る
-          `openModal()` メソッド（イベントリスナー `#[On('open-assignee-modal')]`）を実装。
-        * 内部で `@livewire('workflow.workflow-assignee-select', ...)` を呼び出し、`initialUserId`
-          を渡して初期選択を設定し、選択された担当者ID (`selectedUserId`) を自身のプロパティとバインド。
-        * 「担当者を選択」ボタンで親コンポーネントに `assignee-selected` イベント（選択された `userId`, `roleType`
-          を含む）を発行し、モーダルを閉じる。
-    4. **親コンポーネント修正 (`CreateColumn.php`, `ModifyColumn.php`, `Show.php`, `PendingList.php`):**
-        * 点検依頼/承認申請ボタンのクリックアクションを、モーダルを開くメソッド (
-          `openAssigneeModal('inspector'/'approver')`) 呼び出しに変更。
-        * `openAssigneeModal()`: モーダルに渡すパラメータを設定。実績ベースで初期選択ユーザーIDを決定し、
-          `open-assignee-modal` イベントを発行。
-        * `assignee-selected` イベントをリッスンするメソッド (`handleAssigneeSelected(int $userId, string $roleType)`)
-          を実装。受け取った `userId` を使って `WorkflowService` の `requestInspection` / `requestApproval` を呼び出す。
-        * 各親コンポーネントから `getFrequentAssigneesInternal` を `WorkflowService::getFrequentAssignees` の呼び出しに修正。
+  *担当者選択モーダルLivewireコンポーネント作成 (`WorkflowAssigneeModal.php`, `workflow-assignee-modal.blade.php`):
+  **
+    * モーダル表示状態 (`showModal`) を管理。
+    * 親からパラメータ (`ledgerDefineId`, `folderId`, `roleType`, `ledgerId`, `initialUserId`) を受け取る
+      `openModal()` メソッド（イベントリスナー `#[On('open-assignee-modal')]`）を実装。
+    * 内部で `@livewire('workflow.workflow-assignee-select', ...)` を呼び出し、`initialUserId`
+      を渡して初期選択を設定し、選択された担当者ID (`selectedUserId`) を自身のプロパティとバインド。
+    * 「担当者を選択」ボタンで親コンポーネントに `assignee-selected` イベント（選択された `userId`, `roleType`
+      を含む）を発行し、モーダルを閉じる。
+        4. **親コンポーネント修正 (`CreateColumn.php`, `ModifyColumn.php`, `Show.php`, `PendingList.php`):**
+            * 点検依頼/承認申請ボタンのクリックアクションを、モーダルを開くメソッド (
+              `openAssigneeModal('inspector'/'approver')`) 呼び出しに変更。
+            * `openAssigneeModal()`: モーダルに渡すパラメータを設定。実績ベースで初期選択ユーザーIDを決定し、
+              `open-assignee-modal` イベントを発行。
+            * `assignee-selected` イベントをリッスンするメソッド (
+              `handleAssigneeSelected(int $userId, string $roleType)`)
+              を実装。受け取った `userId` を使って `WorkflowService` の `requestInspection` / `requestApproval` を呼び出す。
+            * 各親コンポーネントから `getFrequentAssigneesInternal` を `WorkflowService::getFrequentAssignees` の呼び出しに修正。
 * **動作確認:**
     * 台帳作成/編集画面で点検依頼ボタンクリック → 下書き保存 → 実績ベースで初期選択された点検者候補モーダル表示 → 選択 →
       点検依頼実行。[完了]
@@ -872,84 +873,122 @@
 
 ---
 
-### ステップ 9: 関連タスクリストの表示とシンプルなタスク引き継ぎ
+### ✅ ステップ 9: 関連タスクリストの表示とシンプルなタスク引き継ぎ (完了)
 
-* **目的:** ログインユーザーに関連するワークフロータスク（自分宛、自分が申請、引き継ぎ可能）を1画面に集約して表示し、状況に応じたアクションを可能にする。
-* **方針:** 1画面に「自分宛のタスク」と「その他の関連タスク」の2つのリストを上下に配置する。引き継ぎ時には新しい通知タイプ
-  `task_claimed` を使用し、コメント入力モーダルを表示する。
-* **タスク:**
+* **目的:** ログインユーザーに関連するワークフロータスク（自分宛、自分が申請、引き継ぎ可能）を1画面に集約して表示し、状況に応じたアクション（主に詳細画面への遷移と、タスク引き継ぎ）を可能にする。
+* **方針:** 通知画面に「自分宛のタスク」リストと「その他の関連タスク」リストを上下に表示。タスク引き継ぎアクションは「その他の関連タスク」リストから実行し、コメント入力モーダルを経由。新しい通知タイプ
+  `task_claimed` を使用。
+* **実施済みタスク:**
     1. **通知タイプ `task_claimed` の定義:**
-        * `notification_types` テーブルに新しい通知タイプ `task_claimed` を追加する (Seeder またはマイグレーションで)。
-        * `ledger.notification_types.task_claimed` などの翻訳キーを追加する。
-        * 新しい通知タイプ用のMailable (`TaskClaimedMail.php`) とメールテンプレート (
-          `emails/workflow/task_claimed.blade.php`) を作成する。内容は「[操作者名]さんが[元担当者名]さんのタスク「[台帳名]
-          」を引き継ぎ、新しい担当者になりました。コメント: [コメント]」のような形式を想定。
-        * `GenericNotification.php` の `via()` メソッドと `toMail()` メソッドを調整し、`task_claimed`
-          通知タイプに対応できるようにする（または専用の `TaskClaimedNotification.php` を作成）。
+        * `notification_types` テーブルに `task_claimed` を追加 (Seeder)。
+        * 翻訳キー (`ledger.notification_types.task_claimed`, メール件名・本文用キー) を追加。
+        * Mailable (`TaskClaimedMail.php`) とメールテンプレート (`emails/workflow/task-claimed.blade.php`)
+          を作成。受信者タイプに応じてメッセージを調整。
+        * `GenericNotification.php` を拡張し、`task_claimed` 通知タイプと関連パラメータ (`originalAssignee`) を扱えるように
+          `via()` と `toMail()` を修正。
     2. **Livewireコンポーネント改修/作成:**
-        * **`PendingList.php` (自分宛のタスク - 既存コンポーネント):**
-            * 表示対象が純粋に自分に割り当てられたタスクであることを再確認。
-            * (任意) 表示項目やアクションボタンのUIを、後述の「その他の関連タスク」リストと統一感を出すように調整。
-        * **`OtherRelatedTasksList.php` (その他の関連タスク - 新規作成):**
-            * **データ取得ロジック (`getOtherRelatedTasks()`):**
-                * A) **自分が申請した進行中のタスク:** `creator_id = Auth::id()` かつ
-                  `status IN (PENDING_INSPECTION, PENDING_APPROVAL)` の `Ledger` レコードを取得。
-                * B) **引き継ぎ可能なチーム/フォルダのタスク:** `UserService::getClaimableTasks(Auth::user())`
-                  メソッド (ステップ10で作成予定だったが、ここで実装) を呼び出し、自分が担当者でも申請者でもなく、かつ
-                  `INSPECT` または `APPROVE` 権限を持つフォルダに属する未処理タスク (
-                  `status IN (PENDING_INSPECTION, PENDING_APPROVAL)`) を取得する。
-                * 上記 A と B を結合し、重複を除外。
-                * 各タスクに「タイプ」（例: `my_submission`, `claimable`）を内部的に付与し、ビューでの表示やアクションの出し分けに使用。
-            * **テーブル表示項目:** 台帳名, 現在のステータス, **現在の担当者名**, **申請者名**, 申請日時 (
-              または最終更新日時), **滞留時間**, **タスクタイプ** (例:
-              アイコンやラベルで「申請済み」「引き継ぎ可能」などと表示)。
+        * **`PendingList.php` (自分宛のタスク - 既存):**
+            * 表示項目（台帳名, ステータス, 申請者, 申請日時, 滞留時間など）を調整。
+            * アクションボタンを「詳細表示」に集約（編集権限に応じて「編集」も）。
+            * `refreshPendingList` イベントリスナーを追加し、他のリストの変更に応じて自身を更新。
+        * **`OtherRelatedTasksList.php` (その他の関連タスク - 新規):**
+            * **データ取得ロジック (`loadTasks()`):**
+                * `fetchMySubmissionsPendingOthers()`: 「自分が申請したが、現在他の人が担当しているタスク」を取得・整形。
+                * `fetchClaimableTasks()`: `UserService::getClaimableTasks()` を呼び出し「引き継ぎ可能なタスク」を取得・整形。
+                * 上記を結合・重複排除・ソートし、整形済みデータ (`task_type` 含む) をビューに渡す。
+            * **テーブル表示項目:** 台帳名, ステータス, 現在の担当者名, 申請者名, 申請日時, 滞留時間, タスクタイプ (
+              「申請中」「引き継ぎ可能」など)。
+            * **アクションボタン:** 「詳細表示」「編集」(自分が申請したタスク用、権限に応じて)、「引き継ぐ」(
+              引き継ぎ可能なタスク用、ツールチップ付き)。
     3. **ビュー作成/修正:**
-        * **`other-related-tasks-list.blade.php` (新規作成):**
-            * 取得したタスクリストを `<x-mary-table>` で表示。
-            * 各行にアクションボタンを表示:
-                * タスクタイプが `my_submission` の場合: 「編集」ボタン (クリックで `Ledger` 編集画面へ遷移)。
-                * タスクタイプが `claimable` の場合: 「引き継ぐ」ボタン (クリックでコメント入力モーダル表示)。
-        * **`notifications/index.blade.php` (既存修正):**
-            * タブ構成ではなく、1画面内に `@livewire('workflow.pending-list')` と
-              `@livewire('workflow.other-related-tasks-list')` を上下に配置する。
-            * 各リストのヘッダーにタイトル（例: 「自分宛のタスク」「その他の関連タスク」）と件数を表示する。
-        * **(新規作成) `livewire/workflow/claim-task-comment-modal.blade.php`:** 引き継ぎ時のコメント入力用モーダルビュー。
+        * **`other-related-tasks-list.blade.php` (新規):** 上記テーブルとアクションボタンを実装。
+        * **`pending-list.blade.php` (既存修正):** 表示項目とアクションボタンを修正。
+        * **`notifications/index.blade.php` (既存修正):** 1画面内に `@livewire('workflow.pending-list')` と
+          `@livewire('workflow.other-related-tasks-list')` を上下に配置。
+        * **`livewire/workflow/claim-task-comment-modal.blade.php` (新規):** 引き継ぎコメント入力用モーダルビュー。
     4. **タスク引き継ぎアクション実装 (`OtherRelatedTasksList.php`):**
-        * 「引き継ぐ」ボタンクリック時に、対象の `ledgerId` を保持し、コメント入力モーダル (`claimTaskCommentModal = true`)
-          を表示するメソッド (`openClaimTaskCommentModal(int $ledgerId)`) を実装。
-        * コメント入力モーダルからの保存アクション (`claimTaskWithComment()`) を実装。
-            * `WorkflowService` に `claimTask(Ledger $ledger, User $claimer, ?string $comments)` メソッドを実装:
-                * 新しい `LedgerDiff` を作成 (ステータスは変更せず、`inspector_id` または `approver_id` を `$claimer->id`
-                  に更新、引数のコメントを記録)。
-                * Ledger の `latest_diff_id` を更新。
-                * 元の担当者 (`inspector_id` または `approver_id` にいたユーザー) のカウンターをデクリメント。
-                * 新しい担当者 (`$claimer`) のカウンターをインクリメント。
-                * **通知送信:** `NotificationService::sendWorkflowNotification` を使用し、新しい通知タイプ `task_claimed`
-                  で、申請者、元の担当者、新しい担当者に通知を送信。コメントも通知内容に含める。
-            * Livewire メソッドから Service メソッドを呼び出し、リストを更新 (`$refresh`)、トースト通知を表示。
-    5. **`UserService::getClaimableTasks(User $user)` 実装:**
-        * ログインユーザーが `INSPECT` または `APPROVE` 権限を持つフォルダを特定。
-        * それらのフォルダに属し、ステータスが `PENDING_INSPECTION` または `PENDING_APPROVAL` であり、かつログインユーザーが担当者でも申請者でもない
-          `Ledger` レコードを取得するクエリを実装。
+        * `openClaimTaskCommentModal(int $ledgerId)`: 対象タスク情報を保持し、コメント入力モーダルを表示。
+        * `claimTaskWithComment()`: `WorkflowService::claimTask()` を呼び出し、成功時にリスト更新 (`loadTasks()`,
+          `refreshPendingList` イベント発行)、トースト通知表示。
+    5. **`WorkflowService::claimTask(Ledger $ledger, User $claimer, ?string $comments)` 実装:**
+        * バリデーション（ステータス、申請者/担当者重複、権限）。
+        * トランザクション内で LedgerDiff 作成（担当者変更、コメント記録）、Ledger 更新（`latest_diff_id`, `modifier_id`
+          ）、カウンター調整。
+        * `NotificationService::sendWorkflowNotification` を使用し、通知タイプ `task_claimed` で申請者、元担当者、新担当者（引き継ぎ者）に通知送信。
+    6. **`UserService::getClaimableTasks(User $user)` 実装:**
+        * ユーザーが `INSPECT` または `APPROVE` 権限を持つフォルダを特定 (子孫含む)。
+        * 該当フォルダに属し、進行中で、自分が担当者でも申請者でもない `Ledger` を取得。
+* **動作確認:**
+    * 通知画面に2つのリストが上下に表示されることを確認。[完了]
+    * 「その他の関連タスク」リストに「自分が申請したタスク」「引き継ぎ可能なタスク」が正しく表示されることを確認。[完了]
+    * 各タスクのアクションボタンが適切に表示されることを確認。[完了]
+    *
+    引き継ぎボタン→コメントモーダル表示→引き継ぎ実行→担当者変更・カウンター更新・Diff作成・Ledger更新・通知送信（システム内・メール）・リスト表示更新・トースト通知の一連の流れを確認。[完了]
+    * 各種バリデーションはユニットテストで網羅的に確認。[要テスト]
 * **成果物:**
-    * ログインユーザーに関連するワークフロータスクを1画面に集約表示し、状況を把握しやすくしたUI。
-    * 自分が申請したタスクの編集導線。
-    * チーム/フォルダ内の未処理タスクを引き継ぎ、コメントを残せる機能。
-    * タスク引き継ぎ時の適切な通知。
-* **ドキュメント更新:** 上記の実施タスクと成果物を反映。
+    * 「自分宛」と「その他関連（自分が申請/引き継ぎ可能）」の2つのリストに集約されたタスク管理UI。
+    * シンプルなタスク引き継ぎ機能と、関係者への適切な通知。
+* **ドキュメント更新:** 上記の実施タスクと成果物を反映。[完了]
 
 ---
 
-### ステップ 10: 進捗・期間・平均ステップ数可視化
+### ステップ 10: 台帳詳細画面からのワークフローアクションと変更点提示
 
-* **目的:** 詳細画面、リスト、台帳定義画面に進捗情報や統計情報を表示する。
+* **目的:** 点検者または承認者が、**台帳詳細画面を起点**として、必要に応じて内容を編集（別画面）し、コメントを付与して、ワークフローを進行できるようにする。その際、
+  **再上程の場合は変更点を分かりやすく提示する**ことを重視する。
+* **方針:**
+    * タスクリストからは原則として台帳詳細画面 (`Show.php`) に遷移させる。
+    * 詳細画面に、現在のステータスとユーザー権限に応じたワークフローアクションボタン（点検完了、承認、差し戻しなど）を配置。
+    * 内容の編集は、詳細画面から編集画面 (`ModifyColumn.php`) に遷移して行う。
+    * 点検完了/承認アクション実行時には、コメント入力モーダルを表示。**もし直前のDiffから内容変更がある場合は、その旨をモーダル内や通知で示唆する。
+      **
+    * `LedgerDiff` には、ステータス変更時のコメントと、もしあれば編集画面で行われた内容変更の両方を記録する（
+      `WorkflowService` のアクションメソッドで対応）。
 * **タスク:**
-    1. **詳細画面改修 (`Show.php`, `show.blade.php`):** 申請日時、点検完了日時、承認完了日時、経過時間表示。
-    2. **承認待ちリスト改修 (`PendingList`, `ClaimableTaskList`):** 「申請日時」「滞留時間」列追加。
-    3. **平均ステップ数表示 (台帳定義詳細画面):**
-        * 計算ロジック (`LedgerDefine::calculateAverageWorkflowSteps()`) 実装。
-        * UI実装 (Filament `LedgerDefineResource` ViewRecord ページ)。
-* **成果物:** ワークフローの進捗と所要時間に関する情報、および台帳定義ごとの平均処理ステップ数の可視化。
+    1. **UI/UX設計:**
+        * **台帳詳細画面 (`Show.php`, `show.blade.php`):**
+            * 現在の担当者（点検者/承認者）が自分である場合、適切なワークフローアクションボタン（「点検完了（承認申請）」「承認」「作成中に戻す」など）を表示。
+            * 「編集」ボタンは、ユーザーの編集権限とレコードのロック状態に応じて表示。
+            * **もし現在の `Ledger` の `content` が、このワークフローの起点となった `LedgerDiff` の `content`
+              と異なる場合（つまり、差し戻されて編集・再申請された場合）、変更箇所をハイライト表示する機能を検討 (
+              差分表示ライブラリ `sebastian/diff` 等の活用)。** または、少なくとも「内容が変更されています」というアラートを表示。
+        * **台帳編集画面 (`ModifyColumn.php`, `modify-column.blade.php`):**
+            * フッターのアクションボタン:
+                * 「下書き保存」ボタン。
+                * 自分が現在の担当者（点検者/承認者）の場合:
+                    * 「コメントを付けて点検完了（承認申請）」ボタン。
+                    * 「コメントを付けて承認」ボタン。
+                    * 「コメントを付けて作成中に戻す」ボタン。
+                * 自分が申請者でDRAFT状態の場合:
+                    * 「点検依頼」ボタン（担当者選択モーダルを開く）。
+            * 各ボタンクリック時に、まず現在のフォーム内容で `Ledger` と新しい `LedgerDiff`（contentあり、コメントなし、ステータス変更なし）を
+              **下書きとして保存**（または更新）。その後、コメント入力モーダルを開く。
+    2. **コメント入力モーダル (`WorkflowCommentModal.php` - 新規または既存拡張):**
+        * 汎用的なコメント入力モーダルを作成。親からアクションタイプと `ledgerId` を受け取る。
+        * 実行ボタンクリック時に、コメントとアクションタイプを親にイベントで通知。
+    3. **親コンポーネント (`Show.php`, `ModifyColumn.php`) でのイベント処理とアクション実行:**
+        * コメントモーダルからのイベントを受け取り、対応する `WorkflowService` のメソッドを呼び出す。その際、*
+          *編集画面で事前保存された最新の `Ledger` とその `content` (またはそのDiff)** を `editedContent`
+          として渡すか、Service側で最新を取得する。
+    4. **`WorkflowService` メソッド修正:**
+        *
+       `requestApproval(ledgerId, approverId, inspectorId, ?string $comments = null, ?array $editedContent = null, ?array $editedContentAttached = null)`
+        *
+       `approve(ledgerId, approverId, ?string $comments = null, ?array $editedContent = null, ?array $editedContentAttached = null)`
+        * `returnToDraft(ledgerId, modifierId, ?string $comments)` (コメントは必須化も検討)
+        * 上記のメソッドで、`editedContent` があればそれを新しい `LedgerDiff` の `content` に、コメントも `comments` に記録。
+          `Ledger` 本体の `content` も更新。
+    5. **通知処理の修正:**
+        * 点検/承認時に内容が編集された場合、それを明示する通知メッセージ（例:
+          「内容が更新され、承認されました」）を送信。既存の通知タイプ (`approved`, `inspection_completed`)
+          のメッセージを調整するか、新しい通知タイプ (`workflow_updated_and_approved` など) を検討。コメントも通知に含める。
+    6. **差分表示機能の検討 (オプションだが強く推奨):**
+        * 詳細画面で、現在の内容と、このワークフローが開始された時点（または最後にDRAFTでなかった時点）の内容との差分を表示する機能。
+          `sebastian/diff` ライブラリなどを活用。
+* **成果物:**
+    * 詳細画面を起点とした、より安全で分かりやすいワークフロー操作。
+    * 点検者/承認者が内容変更を行う場合、その事実と理由が明確に記録・通知される仕組み。
+    * 再上程時の変更点提示による、確認作業の効率化。
 
 ---
 
