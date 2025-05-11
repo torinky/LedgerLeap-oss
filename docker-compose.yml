@@ -21,7 +21,8 @@ services:
       - sail
     depends_on:
       mysql:
-        condition: service_healthy
+#        condition: service_healthy
+        condition: service_started
       redis:
         condition: service_started
       tika:
@@ -47,7 +48,8 @@ services:
       - sail
     depends_on:
       mysql:
-        condition: service_healthy
+#        condition: service_healthy
+        condition: service_started
       redis:
         condition: service_started
       tika:
@@ -79,7 +81,8 @@ services:
       - sail
     depends_on:
       mysql:
-        condition: service_healthy
+        condition: service_started
+#        condition: service_healthy
       redis:
         condition: service_started
     restart: always
