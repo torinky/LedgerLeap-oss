@@ -59,19 +59,67 @@
                     @endif
 
                     {{-- カラムごとの差分表示 --}}
-                    <h4 class="text-md font-semibold mt-6 mb-3">{{ __('ledger.content') }}</h4>
                     @if(!empty($contentChanges) && auth()->user()->can('view', $ledgerRecord))
-                        <div class="border border-base-300 rounded-lg p-2 md:p-4">
-                            @foreach($contentChanges as $columnId => $change)
-                                <x-column-diff-display
-                                        :column-name="$change['column_name']"
-                                        :old-value="$change['old']"
-                                        :new-value="$change['new']"
-                                        :is-changed="$change['changed']"
-                                        :column-type="$change['column_type']"
-                                        wire:key="diff-{{ $ledgerRecord->id }}-{{ $columnId }}"
+
+                        <div class="border border-base-300 rounded-lg">
+                            @if($comparisonTargetDiff)
+                                <x-mary-toggle wire:model.live="hasChangedColumns" label="{{ __('ledger.show_diff') }}"
                                 />
-                            @endforeach
+                            @endif
+                            <table class="table table-compact w-full">
+                                @if($hasChangedColumns)
+                                    <thead>
+                                        <tr>
+                                            <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                                {{ __('ledger.column.title') }}
+                                            </th>
+                                            <th>
+                                                {{ __('ledger.after_change') }}
+                                            </th>
+                                            <th>
+                                                {{ __('ledger.before_change') }}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                @endif
+                                <tbody>
+
+                                @foreach($contentChanges as $columnId => $change)
+                                    {{--                                        @dd($change)--}}
+                                    <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
+                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                            {{ $change['column_name'] }}
+                                            @if($change['changed'])
+                                                <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
+                                            @endif
+                                        </th>
+                                        <td class="break-words align-top pt-2">
+                                            <div class="text-sm">
+                                                @if($change['column_define_current'])
+                                                    {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
+                                                                  ->show($change['column_define_current'], $change['current_value']??'', $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                                @else
+                                                    <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
+                                                @endif
+                                            </div>
+                                        </td>
+                                        @if($change['changed'] && $hasChangedColumns)
+                                            <td class="break-words align-top pt-2">
+                                                <div class="text-xs text-base-content/60 mb-0.5">{{ __('ledger.before_change_colon') }}</div>
+                                                <div class="text-sm opacity-70 mb-2">
+                                                    @if($change['column_define_old'])
+                                                        {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
+                                                                      ->show($change['column_define_old'], $change['old_value'], $canView) }}
+                                                    @else
+                                                        <span class="text-gray-400">---</span> {{-- 古い定義がない --}}
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     @else
                         {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
@@ -260,19 +308,19 @@
 
 
         {{-- 戻し理由入力モーダル --}}
-{{--
+        {{--
         <x-mary-modal wire:model="returnToDraftModal"
-                      title="{{ __('ledger.workflow.return_to_draft_reason') }}">
-            <x-mary-textarea label="{{ __('ledger.workflow.comments') }}" wire:model="returnComment"
-                             placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
-                             hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
-            <x-slot:actions>
-                <x-mary-button label="{{ __('Cancel') }}" @click="$wire.returnToDraftModal = false"/>
-                <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
-                               wire:click="returnTaskToDraft" spinner/>
-            </x-slot:actions>
+          title="{{ __('ledger.workflow.return_to_draft_reason') }}">
+        <x-mary-textarea label="{{ __('ledger.workflow.comments') }}" wire:model="returnComment"
+                 placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
+                 hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
+        <x-slot:actions>
+        <x-mary-button label="{{ __('Cancel') }}" @click="$wire.returnToDraftModal = false"/>
+        <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
+                   wire:click="returnTaskToDraft" spinner/>
+        </x-slot:actions>
         </x-mary-modal>
---}}
+        --}}
 
     </div>
 </div>

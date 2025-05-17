@@ -23,7 +23,7 @@ class ColumnHtmlService
     private $id = '';
 
     private $nameBase = '';
-
+    private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
     public const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
@@ -38,34 +38,131 @@ class ColumnHtmlService
     private array $attachmentContents;
 
     /**
+     * @param object|array $columnDefineData ColumnDefineのオブジェクトまたはカラム定義情報を持つ配列
+     * @param mixed $initialValue
+     * @param bool $canView
+     * @param array $attrs
+     * @param string $idPrefix
+     * @param bool $asCreate
      * @return HtmlString
      */
-    public function show(ColumnDefine $columnDefine, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false)
+    public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false): HtmlString
     {
-        if ($columnDefine !== null) {
-            $this->mount($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
+        if ($columnDefineData) { // null でないことを確認
+            $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
+        } else {
+            // カラム定義がない場合は、値をそのまま表示するか、エラー表示
+            return new HtmlString($canView ? e((string)$initialValue) : '<div class="text-gray-400 text-center">***</div>');
         }
 
         $html = '';
         if (!$canView) {
-            // 権限がない場合は伏せ字にする
-            $html = '<div class="text-gray-400 text-center">***</div>'; // または「閲覧権限なし」などのメッセージ
-        } elseif ($columnDefine->type == 'files' && is_array($this->initialValue)) {
+            $html = '<div class="text-gray-400 text-center">***</div>';
+        } elseif ($this->getColumnDefineProperty('type') == 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
         } elseif (is_array($this->initialValue)) {
             $displayValues = array_filter($this->initialValue, 'strlen');
-            $displayValues = array_keys($displayValues);
-            if (!empty($displayValues)) {
-                $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
+            // チェックボックスや複数選択の場合、キーではなく値（ラベル）を表示したい場合がある
+            // ここではキーを表示する前提
+            $options = $this->getColumnDefineProperty('options', []);
+            $displayLabels = [];
+            foreach ($displayValues as $key => $value) {
+                // $value が true のような boolean の場合、$key が実際の選択肢
+                if (is_bool($value) && $value === true && isset($options[$key])) {
+                    $displayLabels[] = $options[$key];
+                } elseif (!is_bool($value) && isset($options[$value])) { // select の場合
+                    $displayLabels[] = $options[$value];
+                } elseif (!is_numeric($key) && isset($options[$key])) { // chk でキーが文字列の場合
+                    $displayLabels[] = $options[$key];
+                } elseif (is_string($key) && !is_numeric($key)) { // オプションにないキーだが表示する場合
+                    $displayLabels[] = $key;
+                }
+            }
+            if(empty($displayLabels)) $displayLabels = array_keys($displayValues);
+
+
+            if (!empty($displayLabels)) {
+                $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayLabels)) . '</span>';
+            } else {
+                $html = '<span class="text-gray-400">---</span>'; // 何も選択されていない場合
             }
         } else {
-            $html = $this->initialValue;
+            // HTMLエンティティをエスケープして表示
+            $html = nl2br(e((string)$this->initialValue)); // 改行も反映
+            if (empty(trim((string)$this->initialValue))) {
+                $html = '<span class="text-gray-400">---</span>';
+            }
         }
 
         $html = $this->highlightKeywords($html);
 
         return new HtmlString($html);
     }
+
+    /**
+     * @param object|array $columnDefineData
+     * @param mixed $initialValue
+     * @param array $attrs
+     * @param bool $asCreate
+     * @param string $idPrefix
+     * @return void
+     */
+    public function mount(object|array $columnDefineData, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = ''): void
+    {
+        $this->attrs = $attrs;
+        $this->columnDefineData = $columnDefineData; // 配列またはオブジェクトをそのまま保持
+
+        $id = $this->getColumnDefineProperty('id'); // ヘルパー経由で取得
+        $this->nameBase = 'content[' . $id . ']';
+        $this->valueNameBase = $this->nameBase;
+        $this->initialValue = $initialValue;
+        $this->asCreate = $asCreate;
+        $this->id = $idPrefix . $this->valueNameBase;
+    }
+
+    /**
+     * カラム定義データからプロパティを取得するヘルパー
+     */
+    private function getColumnDefineProperty(string $key, $default = null)
+    {
+        if (is_object($this->columnDefineData) && isset($this->columnDefineData->{$key})) {
+            return $this->columnDefineData->{$key};
+        }
+        if (is_array($this->columnDefineData) && isset($this->columnDefineData[$key])) {
+            return $this->columnDefineData[$key];
+        }
+        return $default;
+    }
+
+    /**
+     * @return HtmlString
+     */
+//    public function show(ColumnDefine $columnDefine, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false)
+//    {
+//        if ($columnDefine !== null) {
+//            $this->mount($columnDefine, $initialValue, $attrs, $asCreate, $idPrefix);
+//        }
+//
+//        $html = '';
+//        if (!$canView) {
+//            // 権限がない場合は伏せ字にする
+//            $html = '<div class="text-gray-400 text-center">***</div>'; // または「閲覧権限なし」などのメッセージ
+//        } elseif ($columnDefine->type == 'files' && is_array($this->initialValue)) {
+//            $html = $this->getFileHtml();
+//        } elseif (is_array($this->initialValue)) {
+//            $displayValues = array_filter($this->initialValue, 'strlen');
+//            $displayValues = array_keys($displayValues);
+//            if (!empty($displayValues)) {
+//                $html = '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', $displayValues) . '</span>' ?? '';
+//            }
+//        } else {
+//            $html = $this->initialValue;
+//        }
+//
+//        $html = $this->highlightKeywords($html);
+//
+//        return new HtmlString($html);
+//    }
 
     /**
      * @return string
@@ -113,20 +210,20 @@ class ColumnHtmlService
     /**
      * @return void
      */
-    public function mount(ColumnDefine $columnDefine, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = '')
-    {
-        $this->attrs = $attrs;
-        $this->columnDefine = $columnDefine;
-
-        $this->nameBase = 'content[' . $columnDefine->id . ']';
-        //        $this->valueNameBase = $this->nameBase. "[value]";
-        $this->valueNameBase = $this->nameBase;
-        //        $this->idNameBase = $this->nameBase. "[id]";
-        //        $this->orderNameBase = $this->nameBase. "[order]";
-        $this->initialValue = $initialValue;
-        $this->asCreate = $asCreate;
-        $this->id = $idPrefix . $this->valueNameBase;
-    }
+//    public function mount(ColumnDefine $columnDefine, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = '')
+//    {
+//        $this->attrs = $attrs;
+//        $this->columnDefine = $columnDefine;
+//
+//        $this->nameBase = 'content[' . $columnDefine->id . ']';
+//        //        $this->valueNameBase = $this->nameBase. "[value]";
+//        $this->valueNameBase = $this->nameBase;
+//        //        $this->idNameBase = $this->nameBase. "[id]";
+//        //        $this->orderNameBase = $this->nameBase. "[order]";
+//        $this->initialValue = $initialValue;
+//        $this->asCreate = $asCreate;
+//        $this->id = $idPrefix . $this->valueNameBase;
+//    }
 
     public function setAttachments(array|string $attachments)
     {
@@ -161,6 +258,7 @@ class ColumnHtmlService
     public function getFileHtml(): string
     {
         $html = '';
+        if (!is_array($this->initialValue)) return $html; // 値が配列でない場合は空
         //            dd($this->initialValue);
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
             $hit = isset($this->attachments[$hashedFilename]->hit) && $this->attachments[$hashedFilename]->hit == true;

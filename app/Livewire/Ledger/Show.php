@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
+use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
@@ -55,6 +56,8 @@ class Show extends Component
     public $selectedTab = 'details';
 
     // WorkflowService をインジェクト
+    public bool $hasChangedColumns=false;
+
     public function boot(WorkflowService $workflowService): void
     {
         $this->workflowService = $workflowService;
@@ -80,7 +83,7 @@ class Show extends Component
         // $this->authorize('view', $this->ledgerRecord);
 
         // 権限チェックはせず画面内のカラムを伏せる
-//        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord->define]);
+        $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
     }
 
     protected function loadWorkflowHistory(): void
@@ -349,59 +352,63 @@ class Show extends Component
     {
         $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
         $this->contentChanges = [];
+//        dd($this->comparisonTargetDiff);
 
-        $currentContentArray = $this->ledgerRecord->content ?? []; // 現在のLedgerのcontent
-        $columnDefineArray = collect($this->ledgerDefineRecord->column_define)->keyBy('id')->all();
+        $currentContentArray = $this->ledgerRecord->content ?? [];
+        $currentAttachmentsArray = $this->ledgerRecord->content_attached ?? [];
+        $currentColumnDefines = collect($this->ledgerDefineRecord->column_define)->keyBy('id')->all(); // これは stdClass の配列
 
-        if (!$this->comparisonTargetDiff) {
-            // 比較対象がない場合は、全カラムを「変更なし」として現在の値をnewにセット
-            foreach ($columnDefineArray as $columnId => $column) {
-                $this->contentChanges[$columnId] = [
-                    'old' => null, // 比較対象がないのでoldはnull
-                    'new' => Arr::get($currentContentArray, $columnId),
-                    'changed' => false,
-                    'column_name' => $column->name,
-                    'column_type' => $column->type,
-                ];
-            }
-//            return;
+        $oldColumnDefines = [];
+        $oldContentArray = [];
+        $oldAttachmentsArray = [];
+
+        if ($this->comparisonTargetDiff && isset($this->comparisonTargetDiff->column_define)) {
+            // LedgerDiff->column_define も AsColumnDefinesArrayJson キャストされていれば stdClass の配列
+            $oldColumnDefines = collect($this->comparisonTargetDiff->column_define)->keyBy('id')->all();
+            $oldContentArray = $this->comparisonTargetDiff->content ?? [];
+            $oldAttachmentsArray = $this->comparisonTargetDiff->content_attached ?? [];
         }
 
-        $oldContentArray = $this->comparisonTargetDiff->content ?? [];
+        $allColumnIds = array_unique(array_merge(array_keys($currentColumnDefines), array_keys($oldColumnDefines)));
+        sort($allColumnIds);
 
-        // 現在のカラム定義に基づいてループ
-        foreach ($columnDefineArray as $columnId => $column) {
+        $this->hasChangedColumns = false;
+
+        foreach ($allColumnIds as $columnId) {
+            $currentColumnDefineData = $currentColumnDefines[$columnId] ?? null;
+            $oldColumnDefineData = $oldColumnDefines[$columnId] ?? null;
+
+            // --- カラム定義データをそのまま配列/stdClassとして渡す ---
+            $displayColumnDefineForCurrent = $currentColumnDefineData ? (array)$currentColumnDefineData : null;
+            $displayColumnDefineForOld = $oldColumnDefineData ? (array)$oldColumnDefineData : null;
+            // -------------------------------------------------
+
             $currentValue = Arr::get($currentContentArray, $columnId);
-            $oldValue = Arr::get($oldContentArray, $columnId);
+            $currentAttachments = Arr::get($currentAttachmentsArray, $columnId);
+            $oldValue = $this->comparisonTargetDiff ? Arr::get($oldContentArray, $columnId) : null;
+            $oldAttachments = $this->comparisonTargetDiff ? Arr::get($oldAttachmentsArray, $columnId) : null;
 
-            // 値を比較可能な文字列に変換 (配列やオブジェクトも考慮)
+            // ... (isChanged の計算は変更なし) ...
             $normalizedCurrent = is_array($currentValue) || is_object($currentValue) ? json_encode($currentValue) : strval($currentValue);
-            $normalizedOld = is_array($oldValue) || is_object($oldValue) ? json_encode($oldValue) : strval($oldValue);
+            $normalizedOld = $this->comparisonTargetDiff && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : strval($oldValue);
+            $isChanged = $this->comparisonTargetDiff && ($normalizedCurrent !== $normalizedOld);
+            if (!$this->comparisonTargetDiff) $isChanged = false;
+            if ($isChanged) $this->hasChangedColumns = true;
 
-            $isChanged = $normalizedCurrent !== $normalizedOld;
+
+
 
             $this->contentChanges[$columnId] = [
-                'old' => $oldValue,
-                'new' => $currentValue,
+                'column_define_current' => $displayColumnDefineForCurrent, // 配列/stdClass
+                'current_value' => $currentValue,
+                'current_attachments' => $currentAttachments,
+                'column_define_old' => $displayColumnDefineForOld, // 配列/stdClass
+                'old_value' => $oldValue,
+                'old_attachments' => $oldAttachments,
                 'changed' => $isChanged,
-                'column_name' => $column->name,
-                'column_type' => $column->type,
+                'column_name' => $currentColumnDefineData->name ?? ($oldColumnDefineData->name ?? __('ledger.column_deleted', ['id' => $columnId])),
             ];
         }
-
-        // (任意) 比較元のDiffにしかなかったカラム（削除されたカラム）の扱い
-        foreach (array_keys($oldContentArray) as $oldColumnId) {
-            if (!isset($columnDefineArray[$oldColumnId]) && !isset($this->contentChanges[$oldColumnId])) {
-                $this->contentChanges[$oldColumnId] = [
-                    'old' => Arr::get($oldContentArray, $oldColumnId),
-                    'new' => null, // 現在の定義にはないのでnewはnull
-                    'changed' => true, // 削除されたので変更あり
-                    'column_name' => __('カラム削除됨 (:id)', ['id' => $oldColumnId]), // 仮の名称 翻訳キー: ledger.column_deleted
-                    'column_type' => 'deleted', // 差分表示用カスタムタイプ
-                ];
-            }
-        }
-        // Log::debug('Content Changes Prepared:', $this->contentChanges);
     }
 
     /**
@@ -411,8 +418,10 @@ class Show extends Component
     protected function findComparisonTargetDiff(): ?LedgerDiff
     {
         // ワークフローが無効、またはDRAFT/NONE状態なら比較対象なし
-        if (!$this->ledgerRecord->workflow_enabled ||
-            in_array($this->ledgerRecord->status, [WorkflowStatus::DRAFT, WorkflowStatus::NONE])) {
+        if (!$this->ledgerRecord->define->workflow_enabled
+//            ||
+//            in_array($this->ledgerRecord->status, [WorkflowStatus::DRAFT, WorkflowStatus::NONE])
+        ) {
             return null;
         }
 
@@ -427,13 +436,13 @@ class Show extends Component
         if (!$latestDiffId) {
             // 最新Diffがない場合 (DRAFTから直接PENDINGになったばかりなど) は、バージョン1のDiffなど
             return $this->ledgerRecord->ledgerDiff()
-                ->where('version', 1) // または content is not null
+//                ->where('version', 1) // または content is not null
                 ->whereNotNull('content')
                 ->where('content', '<>', '[]')
                 ->orderBy('id', 'asc')
                 ->first();
         }
-
+//dd($latestDiffId);
         // 最新Diffがステータス変更のみ (content が空) の場合
         $latestDiffRecord = $this->ledgerRecord->latestDiff;
         if ($latestDiffRecord && (empty($latestDiffRecord->content) || $latestDiffRecord->content == '[]' || $latestDiffRecord->content == '{}')) {
@@ -443,6 +452,8 @@ class Show extends Component
                 ->where('content', '<>', '[]')
                 ->latest('id')
                 ->first();
+        }else{
+//            return $latestDiffRecord;
         }
         // 最新Diffが内容変更を含む場合、その一つ前のcontentを持つDiff
         return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
