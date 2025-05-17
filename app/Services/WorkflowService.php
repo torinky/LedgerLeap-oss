@@ -204,14 +204,14 @@ class WorkflowService
      * @return Ledger 更新後の Ledger
      * @throws Throwable
      */
-    public function requestApproval(int $ledgerId, int $approverId, int $inspectorId): Ledger
+    public function requestApproval(int $ledgerId, int $approverId, int $inspectorId, ?string $comments): Ledger
     {
         // ToDo: 権限チェック (inspectorId が点検を完了できるか？)
         $ledger = null;
         $ledgerDiff = null; // 作成する Diff を保持
         $applicant = null; // 申請者
 
-        DB::transaction(function () use ($ledgerId, $approverId, $inspectorId, &$ledger, &$ledgerDiff, &$applicant) {
+        DB::transaction(function () use ($ledgerId, $approverId, $inspectorId, $comments, &$ledger, &$ledgerDiff, &$applicant) {
             $ledger = Ledger::findOrFail($ledgerId);
             $applicant = $ledger->creator; // 申請者を取得
             $ledgerDiff = $ledger->latestDiff()->first();
@@ -234,7 +234,8 @@ class WorkflowService
                 'approver_id' => $approverId, // 次の承認者
                 'requested_at' => $ledgerDiff->requested_at,
                 'inspected_at' => now(), // 点検完了日時
-                'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'comments' => $comments,
+                'approved_at' => null, 'returned_at' => null,
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
@@ -259,7 +260,7 @@ class WorkflowService
             $notificationType = NotificationType::where('name', 'approval_requested')->first();
             $folder = $ledger->define?->folder;
             if ($recipient && $notificationType) {
-                $this->notificationService->sendWorkflowNotification($recipient, $notificationType, $ledgerDiff, null, $folder);
+                $this->notificationService->sendWorkflowNotification($recipient, $notificationType, $ledgerDiff, $comments, $folder);
             }
         }
         // 点検完了通知 (申請者向け - オプション)
@@ -267,7 +268,7 @@ class WorkflowService
             $notificationType = NotificationType::where('name', 'inspection_completed')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {
-                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, null, $folder);
+                $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, $comments, $folder);
             }
         }
         // --- ここまで ---
@@ -428,7 +429,7 @@ class WorkflowService
         });
         // --- 通知処理 ---
         if ($applicant && $ledgerDiff) {
-            if(!($applicant instanceof User)){
+            if (!($applicant instanceof User)) {
 
                 dd($applicant, $ledgerDiff);
             }
@@ -618,6 +619,7 @@ class WorkflowService
             ->filter(fn($item) => $item['id'] !== null)
             ->toArray();
     }
+
     /**
      * ワークフロータスクを引き継ぐ
      *

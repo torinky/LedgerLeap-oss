@@ -51,17 +51,37 @@
                                                 label="{{ __('ledger.workflow.return_to_draft_short') }}"
                                                 icon="o-arrow-uturn-left"
                                                 class="btn-sm btn-warning" wire:click="openReturnToDraftModal"
-                                                spinner/>
+                                                spinner="openReturnToDraftModal"/>
                                     @endif
                                 </div>
                             </div>
                         </x-mary-card>
                     @endif
 
-                    <x-ledger.detail.table
-                            :ledgerRecord="$ledgerRecord"
-                            :canView="auth()->user()->can('view', $ledgerRecord)"
-                    />
+                    {{-- カラムごとの差分表示 --}}
+                    <h4 class="text-md font-semibold mt-6 mb-3">{{ __('ledger.content') }}</h4>
+                    @if(!empty($contentChanges) && auth()->user()->can('view', $ledgerRecord))
+                        <div class="border border-base-300 rounded-lg p-2 md:p-4">
+                            @foreach($contentChanges as $columnId => $change)
+                                <x-column-diff-display
+                                        :column-name="$change['column_name']"
+                                        :old-value="$change['old']"
+                                        :new-value="$change['new']"
+                                        :is-changed="$change['changed']"
+                                        :column-type="$change['column_type']"
+                                        wire:key="diff-{{ $ledgerRecord->id }}-{{ $columnId }}"
+                                />
+                            @endforeach
+                        </div>
+                    @else
+                        {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
+                        {{--                            <x-ledger.detail.table :ledgerRecord="$ledgerRecord" :canView="true" />--}}
+                        <x-ledger.detail.table
+                                :ledgerRecord="$ledgerRecord"
+                                :canView="auth()->user()->can('view', $ledgerRecord)"
+                        />
+                    @endif
+
                     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
                         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
                         <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
@@ -207,8 +227,9 @@
                         @endif
                         @if($this->canReturnToDraft())
                             <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
-                                           icon="o-arrow-uturn-left"
-                                           class="btn-sm btn-warning" wire:click="openReturnToDraftModal" spinner/>
+                                           icon="o-arrow-uturn-left" class="btn-warning btn-sm md:btn-md"
+                                           wire:click="openReturnToDraftModal"
+                                           spinner="openReturnToDraftModal"/>
                         @endif
 
                         {{-- 閉じるボタン --}}
@@ -233,8 +254,13 @@
         {{-- 担当者選択モーダルコンポーネント呼び出し --}}
         @livewire('workflow.workflow-assignee-modal', key('assignee-modal-show'))
 
+        {{-- コメント入力モーダル (新規追加) --}}
+        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id],
+        key('workflow-comment-modal-show'))
+
 
         {{-- 戻し理由入力モーダル --}}
+{{--
         <x-mary-modal wire:model="returnToDraftModal"
                       title="{{ __('ledger.workflow.return_to_draft_reason') }}">
             <x-mary-textarea label="{{ __('ledger.workflow.comments') }}" wire:model="returnComment"
@@ -246,6 +272,7 @@
                                wire:click="returnTaskToDraft" spinner/>
             </x-slot:actions>
         </x-mary-modal>
+--}}
 
     </div>
 </div>

@@ -15,8 +15,8 @@
     'action_logout' => 'ログアウトしました',
     'action_returned_to_draft' => 'を作成中に戻しました',
     'action_success' => 'アクションが正常に実行されました。',
-    'action_updated' => 'を更新しました。',
     'action_task_claimed' => 'を引き継ぎました',
+    'action_updated' => 'を更新しました。',
     'add' => '追加する',
     'admin' => '管理',
     'after_change' => '変更後',
@@ -128,14 +128,15 @@
     'edit_profile_title' => 'プロフィールを変更する',
     'enable' => '有効にする',
     'error' => 'エラー',
-    'errors' => [
-        'cannot_claim_not_pending_task' => '進行中ではないタスクは引き継げません。',
-        'applicant_cannot_claim' => '申請者自身はタスクを引き継げません。',
-        'latest_diff_not_found' => '最新の履歴が見つからず、処理を続行できませんでした。',
-        'already_assignee' => 'あなたは既にこのタスクの担当者です。',
-        'no_permission_to_claim' => 'このタスクを引き継ぐ権限がありません。',
-        'cannot_execute_action' => '処理を実行できませんでした。',
-    ],
+    'errors' =>
+        [
+            'already_assignee' => 'あなたは既にこのタスクの担当者です。',
+            'applicant_cannot_claim' => '申請者自身はタスクを引き継げません。',
+            'cannot_claim_not_pending_task' => '進行中ではないタスクは引き継げません。',
+            'cannot_execute_action' => '処理を実行できませんでした。',
+            'latest_diff_not_found' => '最新の履歴が見つからず、処理を続行できませんでした。',
+            'no_permission_to_claim' => 'このタスクを引き継ぐ権限がありません。',
+        ],
     'expand' => '拡大する',
     'expand_all' => 'すべて展開',
     'explanation' => '説明',
@@ -222,13 +223,13 @@
                 [
                     'view_approval_tasks' => '承認タスクを確認する',
                     'view_approved_ledger' => '承認された台帳を確認する',
+                    'view_claimed_task' => '引き継がれたタスクを確認する',
                     'view_details' => '詳細を確認する',
                     'view_inspection_tasks' => '点検タスクを確認する',
                     'view_ledger' => '台帳を確認する',
                     'view_ledger_status' => '台帳の状況を確認する',
-                    'view_tasks' => 'タスク一覧を確認する',
-                    'view_claimed_task' => '引き継がれたタスクを確認する',
                     'view_task_details' => 'タスク詳細を確認する',
+                    'view_tasks' => 'タスク一覧を確認する',
                 ],
             'body' =>
                 [
@@ -241,13 +242,13 @@
                             'inspection_requested' => '依頼者: :requesterName',
                             'returned' => '操作者: :causerName',
                             'summary' => '現在、あなたに割り当てられている未処理のタスクは以下の通りです。',
-                            'task_claimed_common' => '台帳名: :ledgerTitle', // 引き継ぎ通知共通
+                            'task_claimed_common' => '台帳名: :ledgerTitle',
                         ],
                     'line2' =>
                         [
                             'inspection_completed' => '承認ステップに進みました。',
                             'summary' => 'ご確認をお願いいたします。',
-                            'task_claimed_comment_prefix' => 'コメント:', // 引き継ぎコメントの接頭辞
+                            'task_claimed_comment_prefix' => 'コメント:',
                         ],
                 ],
             'footer' =>
@@ -263,9 +264,9 @@
                     'inspection_requested' => ':userName さん、以下の台帳の点検依頼が届いています。',
                     'returned' => ':applicantName さん、申請した台帳「:title」が「作成中」ステータスに戻りました。',
                     'summary' => '未処理のワークフロータスクがあります',
+                    'task_claimed_to_applicant' => ':applicantName さん、申請した台帳「:title」の担当者が :originalAssigneeName さんから :newAssigneeName さんに変更されました。',
                     'task_claimed_to_new_assignee' => ':newAssigneeName さん、以下のタスクがあなたに割り当てられました（:claimerName さんによる引き継ぎ）。',
                     'task_claimed_to_original_assignee' => ':originalAssigneeName さん、あなたのタスク「:title」は :claimerName さんに引き継がれました。',
-                    'task_claimed_to_applicant' => ':applicantName さん、申請した台帳「:title」の担当者が :originalAssigneeName さんから :newAssigneeName さんに変更されました。',
                 ],
             'label' =>
                 [
@@ -283,7 +284,7 @@
                     'inspection_requested' => '[ :appName ] 台帳「:title」の点検依頼',
                     'returned' => '[ :appName ] 台帳「:title」が「作成中」に戻りました',
                     'summary' => '[ :appName ] 未処理のワークフロータスクがあります (:count 件)',
-                    'task_claimed' => '[ :appName ] 台帳「:title」の担当者が変更されました', // 引き継ぎメール件名
+                    'task_claimed' => '[ :appName ] 台帳「:title」の担当者が変更されました',
                 ],
         ],
     'main_abilities_title' => '主なできること',
@@ -373,8 +374,8 @@
         [
             'App\\Models\\Folder' => 'フォルダー',
             'App\\Models\\Ledger' => '台帳',
-            'App\\Models\\LedgerDiff' => '台帳の状態',
             'App\\Models\\LedgerDefine' => '台帳定義',
+            'App\\Models\\LedgerDiff' => '台帳の状態',
             'App\\Models\\Organization' => '組織',
             'App\\Models\\Permission' => '権限',
             'App\\Models\\Role' => 'ロール',
@@ -411,6 +412,7 @@
             'role_user_attached' => 'ロールがユーザーに割り当て',
             'role_user_detached' => 'ロールがユーザーから解除',
             'status_returned_to_draft' => '作成中に戻された通知 (申請者向け)',
+            'task_claimed' => 'タスク引き継ぎ通知',
             'unknown' => '不明な通知',
             'user_created' => 'ユーザー作成',
             'user_deleted' => 'ユーザー削除',
@@ -418,8 +420,6 @@
             'user_organization_detached' => 'ユーザーが組織から離脱',
             'user_updated' => 'ユーザー情報更新',
             'workflow_summary' => '未処理タスク通知 (担当者向け)',
-            'task_claimed' => 'タスク引き継ぎ通知', // 新しい通知タイプの表示名
-
         ],
     'notification_types_description' =>
         [
@@ -428,9 +428,8 @@
             'inspection_completed' => '（任意）申請したレコードの点検が完了し、承認ステップに進んだ場合に通知します。',
             'inspection_requested' => '（任意）自分が点検担当者に指定された場合に通知します。',
             'status_returned_to_draft' => '申請したレコードが点検者・承認者によって作成中に戻された場合に通知します。',
+            'task_claimed' => 'ワークフロータスクの担当者が変更（引き継ぎ）された場合に通知します。',
             'workflow_summary' => '担当者に未処理の点検・承認タスクがある場合に定期的に通知します。',
-            'task_claimed' => 'ワークフロータスクの担当者が変更（引き継ぎ）された場合に通知します。', // 新しい通知タイプの説明
-
         ],
     'notifications' => '通知',
     'notify' => '通知',
@@ -599,6 +598,7 @@
         [
             'action_at' => '操作日時',
             'action_by' => '操作者',
+            'age' => '滞留時間',
             'approval_requested_message' => '承認申請を送信しました。',
             'approve' => '承認',
             'approved_by' => '承認者',
@@ -608,9 +608,15 @@
             'can_request_inspection_only_from_draft' => '点検依頼は作成中の状態からのみ可能です。',
             'cannot_edit_approved' => '承認済みのレコードは編集できません。',
             'cannot_request_inspection_approved' => '承認済みのレコードの点検依頼はできません。',
+            'claim_and_start' => '引き継いで処理を開始',
+            'claim_comment_placeholder' => '引き継ぎ理由などを入力...',
+            'claim_task' => 'タスクを引き継ぐ',
+            'claim_task_comment_title' => 'タスク引き継ぎコメント',
+            'comment_optional' => 'コメント (任意)',
             'comments' => 'コメント/理由',
             'confirm_edit_while_pending_text' => 'このレコードは現在ワークフロー処理中です。編集・保存するとステータスが「作成中/編集中」に戻り、再度申請が必要になります。続行しますか？',
             'confirm_edit_while_pending_title' => 'ワークフロー中の項目編集',
+            'current_assignee' => '現在の担当者',
             'current_status' => '現在のステータス',
             'edit_reason_hint' => 'ワークフロー中の項目を編集した理由を入力してください。',
             'edit_reason_label' => '編集理由（任意）',
@@ -629,8 +635,11 @@
             'no_approvers_found' => '承認者の候補が見つかりません。',
             'no_edit_permission' => '編集権限がありません。',
             'no_history' => 'ワークフロー履歴はありません。',
+            'no_other_related_tasks' => '関連するワークフロータスクはありません。',
             'no_pending_tasks' => '未処理のタスクはありません。',
+            'no_task_to_claim' => '引き継ぎ対象のタスクが選択されていません。',
             'optional_comment' => '（任意）',
+            'other_related_tasks_title' => 'その他の関連タスク',
             'pending_tasks' => '未処理タスク',
             'pending_tasks_description' => 'あなたの確認や承認を待っているタスクがあります。',
             'recommended_role' => '推奨 (役割)',
@@ -653,6 +662,10 @@
             'select_inspector' => '点検者を選択',
             'select_next_approver' => '次の承認者を選択',
             'select_next_inspector' => '点検者を選択してください',
+            'comment_placeholder' => 'コメントを入力してください...',
+            'comment_hint_optional_return_reason' => '（任意ですが、差し戻しの場合は理由を記載してください）',
+            'comment_hint_return_reason_required' => '差し戻しの理由を記載してください。',
+
             'status' =>
                 [
                     'approved' => '承認済み',
@@ -664,26 +677,20 @@
                     'pending_inspection' => '点検待ち',
                 ],
             'summary_notification_message' => '未処理の点検依頼が :inspection_count 件、承認依頼が :approval_count 件あります。',
+            'task_claimed_successfully' => 'タスクを引き継ぎました。',
+            'task_not_found' => 'タスクが見つかりませんでした。',
+            'task_type' => 'タスク種別',
+            'task_type_claimable' => '引き継ぎ可能',
+            'task_type_my_submission' => '申請中',
+            'tasks_title' => 'ワークフロータスク',
             'title' => '点検/承認',
             'view_content_at_this_point' => 'この時点の内容を見る',
             'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
-            'other_related_tasks_title' => 'その他の関連タスク',
-            'no_other_related_tasks' => '関連するワークフロータスクはありません。',
-            'task_type' => 'タスク種別',
-            'current_assignee' => '現在の担当者',
-            'age' => '滞留時間',
-            'task_type_my_submission' => '申請中',
-            'task_type_claimable' => '引き継ぎ可能',
-            'claim_task' => 'タスクを引き継ぐ',
-            'claim_task_comment_title' => 'タスク引き継ぎコメント',
-            'comment_optional' => 'コメント (任意)',
-            'claim_comment_placeholder' => '引き継ぎ理由などを入力...',
-            'claim_and_start' => '引き継いで処理を開始',
-            'tasks_title' => 'ワークフロータスク', // ページタイトル用
-            'task_not_found' => 'タスクが見つかりませんでした。',
-            'no_task_to_claim' => '引き継ぎ対象のタスクが選択されていません。',
-            'task_claimed_successfully' => 'タスクを引き継ぎました。',
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'column_deleted' => 'カラム削除 (:id)',
+    'changed' => '変更あり',
+    'before_change_colon' => '変更前:',
+    'after_change_colon' => '変更後:',
 ];

@@ -14,8 +14,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection; // Eloquent Collection
-use Illuminate\Support\Collection as BaseCollection; // Support Collection
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+
+// Eloquent Collection
+use Illuminate\Support\Collection as BaseCollection;
+
+// Support Collection
 use Illuminate\Database\Eloquent\Builder;
 use Mary\Traits\Toast;
 
@@ -38,13 +42,12 @@ class OtherRelatedTasksList extends Component
     public ?array $claimingTaskData = null; // 整形済みタスクデータを保持
     public string $claimComment = '';
 
-    public  $claimingTask;
+    public $claimingTask;
 
     public function boot(WorkflowService $workflowService, UserService $userService): void
     {
         $this->workflowService = $workflowService;
         $this->userService = $userService;
-        $this->tasksData = collect(); // 初期化
     }
 
     public function mount(): void
@@ -100,9 +103,19 @@ class OtherRelatedTasksList extends Component
     }
 
     /**
-     * ユーザーが特定のタスクを引き継ぎ可能か判定する (変更なし)
+     * ユーザーが特定のタスクを引き継ぎ可能か判定する
      */
-    protected function canUserClaimTask(Ledger $ledger, User $user): bool { /* ... */ }
+    protected function canUserClaimTask(Ledger $ledger, User $user): bool
+    {
+        if (!$ledger->status->isWorkflowPending()) return false; // 進行中でないと不可
+        if ($ledger->creator_id === $user->id) return false; // 申請者は引き継げない
+        if ($ledger->latestDiff?->inspector_id === $user->id || $ledger->latestDiff?->approver_id === $user->id) return false; // 担当者は引き継げない
+
+        // ユーザーがそのタスクのフォルダに対して点検または承認権限を持っているか
+        $requiredPermission = ($ledger->status === WorkflowStatus::PENDING_INSPECTION) ? FolderPermissionType::INSPECT : FolderPermissionType::APPROVE;
+        return $ledger->define?->folder && $this->userService->hasFolderPermission($user, $ledger->define->folder, $requiredPermission);
+    }
+
 
     public function sortBy($field): void
     {
@@ -121,9 +134,23 @@ class OtherRelatedTasksList extends Component
         $this->loadTasks(); // 再ソートしてロード
     }
 
-    // ... (render, claimTask関連メソッドは後で) ...
     public function render()
     {
+        // --- ここからログ出力追加 ---
+/*
+        Log::debug('OtherRelatedTasksList Rendering Start');
+        Log::debug('Current Page from getPage(): ' . $this->getPage());
+        Log::debug('Total items in tasksData: ' . $this->tasksData->count());
+        Log::debug('Items per page: ' . $this->perPage);
+
+        $itemsForCurrentPage = $this->tasksData->forPage($this->getPage(), $this->perPage);
+        Log::debug('Number of items for current page: ' . $itemsForCurrentPage->count());
+
+        if ($this->tasksData->count() > 0 && $itemsForCurrentPage->isEmpty() && $this->getPage() > 1) {
+            Log::warning('Attempting to access a page that has no items, but tasksData is not empty. This might indicate an issue with page number or tasksData content.');
+        }
+*/
+
         $paginatedTasks = new \Illuminate\Pagination\LengthAwarePaginator(
             $this->tasksData->forPage($this->getPage(), $this->perPage),
             $this->tasksData->count(),
@@ -190,15 +217,17 @@ class OtherRelatedTasksList extends Component
     public function openClaimTaskCommentModal(int $ledgerId): void
     {
         // tasksData から対象のタスクデータを取得
-        $this->loadTasks();
+//        $this->loadTasks();
         $this->claimingTaskData = $this->tasksData->firstWhere('ledger_id', $ledgerId);
 //        dd($ledgerId,$this->claimingTaskData,$this->tasksData);
         if ($this->claimingTaskData) {
             $this->claimComment = '';
             $this->showClaimCommentModal = true;
         } else {
-            $this->error(__('ledger.workflow.task_not_found'));        }
+            $this->error(__('ledger.workflow.task_not_found'));
+        }
     }
+
     /**
      * コメント付きでタスクを引き継ぐ
      */

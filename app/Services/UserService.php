@@ -350,9 +350,9 @@ class UserService
     public function hasFolderPermission(User $user, Folder $folder, FolderPermissionType $requiredPermission): bool
     {
         // スーパー管理者は常に true
-        if ($user->hasRole('Super Admin')) {
-            return true;
-        }
+//        if ($user->hasRole('Super Admin')) {
+//            return true;
+//        }
 
         // ユーザーが持つ全ロールIDを取得
         $roleIds = $this->getAllUniqueRolesForUser($user)->pluck('id')->toArray();

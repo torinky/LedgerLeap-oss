@@ -7,6 +7,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Arr;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -35,6 +36,14 @@ class Show extends Component
     public ?int $selectedApproverId = null;
     public array $approverOptions = [];
     public string $returnComment = ''; // 詳細画面ではタスクIDは不要
+
+    public bool $showCommentModal = false; // <<<--- コメントモーダル表示用
+    public string $actionTypeForModal = ''; // <<<--- モーダルに渡すアクションタイプ
+    public string $commentForModal = '';    // <<<--- モーダルとバインドするコメント
+
+    // --- 差分表示用 ---
+    public ?LedgerDiff $comparisonTargetDiff = null; // 比較対象の古いDiff
+    public array $contentChanges = []; // カラムごとの変更内容
     protected WorkflowService $workflowService;
 
     // --- モーダル制御用プロパティ ---
@@ -66,7 +75,7 @@ class Show extends Component
         $this->ledgerDefineRecord = $this->ledgerRecord->define;
 
         $this->loadWorkflowHistory();
-
+        $this->prepareContentDiff(); // <<<--- 差分データ準備を呼び出し
         // 権限チェック (閲覧権限) - 必要に応じて実装
         // $this->authorize('view', $this->ledgerRecord);
 
@@ -87,19 +96,19 @@ class Show extends Component
     /**
      * 点検完了・承認申請モーダルを開く
      */
-/*    public function openApprovalRequestModal(): void
-    {
-        // 権限チェック (自分が点検者か？)
-        if (!$this->canRequestApproval()) return;
+    /*    public function openApprovalRequestModal(): void
+        {
+            // 権限チェック (自分が点検者か？)
+            if (!$this->canRequestApproval()) return;
 
-        $this->selectedApproverId = null;
-        $this->loadApproverOptions(); // 承認者候補ロード
-        if (empty($this->approverOptions)) {
-            $this->error(__('ledger.workflow.no_approvers_found'));
-            return;
-        }
-        $this->approvalRequestModal = true;
-    }*/
+            $this->selectedApproverId = null;
+            $this->loadApproverOptions(); // 承認者候補ロード
+            if (empty($this->approverOptions)) {
+                $this->error(__('ledger.workflow.no_approvers_found'));
+                return;
+            }
+            $this->approvalRequestModal = true;
+        }*/
     /**
      * 承認者選択モーダルを開く (旧 openApprovalRequestModal)
      */
@@ -127,11 +136,12 @@ class Show extends Component
             initialUserId: $initialApproverId // <<<--- 初期選択ID
         );
     }
+
     /**
      * モーダルから承認者が選択されたときのイベントリスナー
      */
     #[On('assignee-selected')]
-    public function handleAssigneeSelected(int $userId, string $roleType): void
+/*    public function handleAssigneeSelected(int $userId, string $roleType): void
     {
         // このコンポーネントは承認者選択のみを扱う想定
         if ($roleType !== 'approver') {
@@ -144,6 +154,19 @@ class Show extends Component
 
         // モーダルは子コンポーネント側で閉じるはず
         $this->showAssigneeModal = false;
+    }*/
+    #[On('assignee-selected')]
+    public function handleAssigneeSelected(int $userId, string $roleType): void
+    {
+        if ($roleType !== 'approver' || !$this->canRequestApproval()) {
+            // このコンポーネントからの承認者選択以外は無視、または権限がない場合は処理しない
+            $this->error(__('messages.error.unauthorized'));
+            Log::warning("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
+            return;
+        }
+        $this->selectedApproverId = $userId; // 一時的に保持 (コメントモーダルに渡すため)
+        // ★ 担当者選択後、コメント入力モーダルを開く
+        $this->openCommentModal('request_approval_with_comment');
     }
 
     /**
@@ -152,9 +175,15 @@ class Show extends Component
     protected function requestApprovalInternal(int $approverId): void
     {
         // 権限チェック (再度確認)
-        if (!$this->canRequestApproval()) { $this->error(__('messages.error.unauthorized')); return; }
+        if (!$this->canRequestApproval()) {
+            $this->error(__('messages.error.unauthorized'));
+            return;
+        }
         // 担当者IDのバリデーション (念のため)
-        if(!User::find($approverId)){ $this->error(__('ledger.workflow.invalid_approver')); return; }
+        if (!User::find($approverId)) {
+            $this->error(__('ledger.workflow.invalid_approver'));
+            return;
+        }
 
         try {
             // Service 呼び出し (引数は Ledger ID, 承認者ID, 点検者ID=自分)
@@ -187,10 +216,14 @@ class Show extends Component
     public function openReturnToDraftModal(): void
     {
         // 権限チェック (自分が担当者か？)
-        if (!$this->canReturnToDraft()) return;
+        if (!$this->canReturnToDraft()) {
+            $this->error(__('messages.error.unauthorized'));
+            return;
+        }
 
-        $this->returnComment = ''; // コメントをリセット
-        $this->returnToDraftModal = true;
+//        $this->returnComment = ''; // コメントをリセット
+//        $this->returnToDraftModal = true;
+        $this->openCommentModal('return_to_draft');
     }
 
     /**
@@ -307,5 +340,285 @@ class Show extends Component
     {
         return view('livewire.ledger.show')
             ->layout('layouts.app'); // レイアウト指定
+    }
+
+    /**
+     * 差分表示のためのデータを準備する
+     */
+    protected function prepareContentDiff(): void
+    {
+        $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
+        $this->contentChanges = [];
+
+        $currentContentArray = $this->ledgerRecord->content ?? []; // 現在のLedgerのcontent
+        $columnDefineArray = collect($this->ledgerDefineRecord->column_define)->keyBy('id')->all();
+
+        if (!$this->comparisonTargetDiff) {
+            // 比較対象がない場合は、全カラムを「変更なし」として現在の値をnewにセット
+            foreach ($columnDefineArray as $columnId => $column) {
+                $this->contentChanges[$columnId] = [
+                    'old' => null, // 比較対象がないのでoldはnull
+                    'new' => Arr::get($currentContentArray, $columnId),
+                    'changed' => false,
+                    'column_name' => $column->name,
+                    'column_type' => $column->type,
+                ];
+            }
+//            return;
+        }
+
+        $oldContentArray = $this->comparisonTargetDiff->content ?? [];
+
+        // 現在のカラム定義に基づいてループ
+        foreach ($columnDefineArray as $columnId => $column) {
+            $currentValue = Arr::get($currentContentArray, $columnId);
+            $oldValue = Arr::get($oldContentArray, $columnId);
+
+            // 値を比較可能な文字列に変換 (配列やオブジェクトも考慮)
+            $normalizedCurrent = is_array($currentValue) || is_object($currentValue) ? json_encode($currentValue) : strval($currentValue);
+            $normalizedOld = is_array($oldValue) || is_object($oldValue) ? json_encode($oldValue) : strval($oldValue);
+
+            $isChanged = $normalizedCurrent !== $normalizedOld;
+
+            $this->contentChanges[$columnId] = [
+                'old' => $oldValue,
+                'new' => $currentValue,
+                'changed' => $isChanged,
+                'column_name' => $column->name,
+                'column_type' => $column->type,
+            ];
+        }
+
+        // (任意) 比較元のDiffにしかなかったカラム（削除されたカラム）の扱い
+        foreach (array_keys($oldContentArray) as $oldColumnId) {
+            if (!isset($columnDefineArray[$oldColumnId]) && !isset($this->contentChanges[$oldColumnId])) {
+                $this->contentChanges[$oldColumnId] = [
+                    'old' => Arr::get($oldContentArray, $oldColumnId),
+                    'new' => null, // 現在の定義にはないのでnewはnull
+                    'changed' => true, // 削除されたので変更あり
+                    'column_name' => __('カラム削除됨 (:id)', ['id' => $oldColumnId]), // 仮の名称 翻訳キー: ledger.column_deleted
+                    'column_type' => 'deleted', // 差分表示用カスタムタイプ
+                ];
+            }
+        }
+        // Log::debug('Content Changes Prepared:', $this->contentChanges);
+    }
+
+    /**
+     * 比較対象となる過去のLedgerDiffを特定するロジック
+     * 例: このワークフローの「実質的な開始点」のDiff (最後にDRAFTでなく、内容が記録されたもの)
+     */
+    protected function findComparisonTargetDiff(): ?LedgerDiff
+    {
+        // ワークフローが無効、またはDRAFT/NONE状態なら比較対象なし
+        if (!$this->ledgerRecord->workflow_enabled ||
+            in_array($this->ledgerRecord->status, [WorkflowStatus::DRAFT, WorkflowStatus::NONE])) {
+            return null;
+        }
+
+        // 比較対象の候補:
+        // 1. 最新のDiff (latestDiff) が内容変更を伴うもので、かつ現在のステータスと異なる場合、その一つ前。
+        // 2. ワークフロー履歴を遡り、現在のステータスが開始される直前の内容を持つDiff。
+        // 3. または、このLedgerのバージョンが1より大きい場合、バージョン-1の最新のDiff。
+
+        // まずはシンプルなロジック: 最新のDiffの一つ前で content があるものを探す
+        // (ただし、最新Diffがステータス変更のみの場合、その前のcontentを持つDiffが比較対象になる)
+        $latestDiffId = $this->ledgerRecord->latest_diff_id;
+        if (!$latestDiffId) {
+            // 最新Diffがない場合 (DRAFTから直接PENDINGになったばかりなど) は、バージョン1のDiffなど
+            return $this->ledgerRecord->ledgerDiff()
+                ->where('version', 1) // または content is not null
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->orderBy('id', 'asc')
+                ->first();
+        }
+
+        // 最新Diffがステータス変更のみ (content が空) の場合
+        $latestDiffRecord = $this->ledgerRecord->latestDiff;
+        if ($latestDiffRecord && (empty($latestDiffRecord->content) || $latestDiffRecord->content == '[]' || $latestDiffRecord->content == '{}')) {
+            return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+                ->where('id', '<', $latestDiffId)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->latest('id')
+                ->first();
+        }
+        // 最新Diffが内容変更を含む場合、その一つ前のcontentを持つDiff
+        return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+            ->where('id', '<', $latestDiffId)
+            ->whereNotNull('content')
+            ->where('content', '<>', '[]')
+            ->latest('id')
+            ->first();
+
+        // より複雑なロジックの例 (ワークフローの「開始点」を特定)
+        // $historyAsc = $this->workflowHistory()->orderBy('created_at', 'asc')->get(); // mountで取得済み
+        // $startOfCurrentFlowDiff = null;
+        // foreach ($historyAsc->reverse() as $diff) { // 新しい方から遡る
+        //     if ($diff->status === WorkflowStatus::DRAFT && $diff->id < $latestDiffId) {
+        //         // DRAFT に戻った記録があれば、それより後の最初のPENDINGが今のフローの起点
+        //         $startOfCurrentFlowDiff = $historyAsc->where('id', '>', $diff->id)
+        //                                            ->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
+        //                                            ->sortBy('id')->first();
+        //         break;
+        //     }
+        // }
+        // if (!$startOfCurrentFlowDiff) { // DRAFTに戻った記録がなければ、最初のPENDINGが起点
+        //     $startOfCurrentFlowDiff = $historyAsc->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
+        //                                        ->sortBy('id')->first();
+        // }
+        // // 起点Diffの一つ前でcontentがあるものを探す
+        // if ($startOfCurrentFlowDiff) {
+        //     return $historyAsc->where('id', '<', $startOfCurrentFlowDiff->id)
+        //                     ->whereNotNull('content')->where('content', '<>', '[]')
+        //                     ->last();
+        // }
+        // return null; // それでも見つからなければ比較対象なし
+    }
+
+    // --- コメント入力モーダルを開く ---
+    /*    public function openCommentModal(string $actionType): void
+        {
+            $this->actionTypeForModal = $actionType;
+            $this->commentForModal = ''; // コメントをリセット
+            $this->resetValidation('commentForModal'); // バリデーションエラーをクリア
+            $this->showCommentModal = true;
+        }*/
+
+    public function openCommentModal(string $actionType): void
+    {
+        $title = '';
+        $actionLabel = '';
+        $actionClass = '';
+        // 差し戻し時はコメント必須にするか等のロジックもここやモーダル側で制御可能
+        // $isCommentRequired = $actionType === 'return_to_draft';
+
+        switch ($actionType) {
+            case 'approve':
+                $title = __('ledger.workflow.approve') . ' - ' . __('ledger.workflow.comments');
+                $actionLabel = __('ledger.workflow.approve');
+                $actionClass = 'btn-primary';
+                break;
+            case 'return_to_draft':
+                $title = __('ledger.workflow.return_to_draft') . ' - ' . __('ledger.workflow.comments');
+                $actionLabel = __('ledger.workflow.return_to_draft');
+                $actionClass = 'btn-warning';
+                break;
+            case 'request_approval_with_comment': // 点検完了(承認申請)でコメントを付けたい場合
+                if (is_null($this->selectedApproverId)) { // 先に担当者選択が必要
+                    $this->warning(__('ledger.workflow.select_approver_first'));
+                    $this->openApproverSelectModal(); // 担当者選択モーダルを開く
+                    return;
+                }
+                $title = __('ledger.workflow.request_approval_short') . ' - ' . __('ledger.workflow.comments');
+                $actionLabel = __('ledger.workflow.request_approval');
+                $actionClass = 'btn-success';
+                break;
+        }
+
+        if ($title) {
+            $this->dispatch('open-workflow-comment-modal',
+                title: $title,
+                actionLabel: $actionLabel,
+                actionClass: $actionClass,
+                actionType: $actionType,
+                ledgerId: $this->ledgerRecord->id,
+                initialComment: '' // 必要なら以前のコメントなどを渡す
+            );
+        }
+    }
+
+    // --- コメント付きでアクション実行 ---
+    public function executeActionWithComment(): void
+    {
+        $this->validate(['commentForModal' => 'nullable|string|max:1000']); // コメントのバリデーション
+
+        $ledgerId = $this->ledgerRecord->id;
+        $modifierId = Auth::id();
+        $comment = $this->commentForModal;
+
+        try {
+            if ($this->actionTypeForModal === 'approve') {
+                $this->ledgerRecord = $this->workflowService->approve($ledgerId, $modifierId, $comment);
+                $this->success(__('ledger.workflow.approved_message'));
+            } elseif ($this->actionTypeForModal === 'return_to_draft') {
+                $this->ledgerRecord = $this->workflowService->returnToDraft($ledgerId, $modifierId, $comment);
+                $this->success(__('ledger.workflow.returned_to_draft_message'));
+            }
+            // 必要に応じて他のアクションタイプも追加
+            // (例: request_approval_with_comment)
+
+            $this->loadWorkflowHistory(); // 履歴を更新
+            $this->prepareContentDiff();  // 差分情報も更新
+        } catch (\Exception $e) {
+            Log::error("Workflow action '{$this->actionTypeForModal}' failed: " . $e->getMessage());
+            $this->error(__('messages.error.generic'), $e->getMessage());
+        } finally {
+            $this->showCommentModal = false;
+            $this->commentForModal = '';
+            $this->actionTypeForModal = '';
+        }
+    }
+
+
+    public function getCommentModalTitle(): string
+    {
+        return match ($this->actionTypeForModal) {
+            'approve' => __('ledger.workflow.approve') . ' - ' . __('ledger.workflow.comments'),
+            'return_to_draft' => __('ledger.workflow.return_to_draft') . ' - ' . __('ledger.workflow.comments'),
+            default => __('ledger.workflow.comments'),
+        };
+    }
+
+    public function getCommentModalActionLabel(): string
+    {
+        return match ($this->actionTypeForModal) {
+            'approve' => __('ledger.workflow.approve'),
+            'return_to_draft' => __('ledger.workflow.return_to_draft'),
+            default => __('Execute'), // 翻訳キー: actions.execute
+        };
+    }
+
+    public function getCommentModalActionClass(): string
+    {
+        return match ($this->actionTypeForModal) {
+            'approve' => 'btn-primary',
+            'return_to_draft' => 'btn-warning',
+            default => 'btn-secondary',
+        };
+    }
+
+    #[On('workflow-action-with-comment')] // イベントリスナー
+    public function handleActionWithComment(string $actionType, int $ledgerId, ?string $comment): void
+    {
+        if ($ledgerId !== $this->ledgerRecord->id) return; // 対象が異なる場合は無視
+
+        $this->commentForModal = $comment ?? ''; // モーダルが閉じた後なので、再利用はしないが一応
+        $modifierId = Auth::id();
+
+        try {
+            if ($actionType === 'approve') {
+                if (!$this->canApprove()) throw new \Exception(__('messages.error.unauthorized'));
+                $this->ledgerRecord = $this->workflowService->approve($ledgerId, $modifierId, $comment);
+                $this->success(__('ledger.workflow.approved_message'));
+            } elseif ($actionType === 'return_to_draft') {
+                if (!$this->canReturnToDraft()) throw new \Exception(__('messages.error.unauthorized'));
+                $this->ledgerRecord = $this->workflowService->returnToDraft($ledgerId, $modifierId, $comment);
+                $this->success(__('ledger.workflow.returned_to_draft_message'));
+            } elseif ($actionType === 'request_approval_with_comment') {
+                if (!$this->canRequestApproval() || is_null($this->selectedApproverId)) {
+                    throw new \Exception(__('messages.error.unauthorized_or_missing_approver'));
+                }
+                // WorkflowService の requestApproval もコメントを受け取るように修正が必要
+                $this->ledgerRecord = $this->workflowService->requestApproval($ledgerId, $this->selectedApproverId, $modifierId, $comment);
+                $this->success(__('ledger.workflow.approval_requested_message'));
+            }
+            $this->loadWorkflowHistory();
+            $this->prepareContentDiff();
+        } catch (\Exception $e) { /* ... */
+        } finally {
+            $this->selectedApproverId = null;
+        }
     }
 }
