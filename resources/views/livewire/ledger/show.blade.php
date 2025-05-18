@@ -12,7 +12,6 @@
                         class="shadow-md"
             >
 
-                <div class="p-0 bg-base-100 rounded-b-xl grid grid-cols-1 gap-10 sm:gap-1 ">
 
                     @if($ledgerRecord->define->workflow_enabled)
                         <x-mary-card>
@@ -59,15 +58,14 @@
                     @endif
 
                     {{-- カラムごとの差分表示 --}}
-                    @if(!empty($contentChanges))
-{{--@dd($contentChanges)--}}
+                    @if($hasChangedColumns)
                         <div class="border border-base-300 rounded-lg">
-                            @if($comparisonTargetDiff)
-                                <x-mary-toggle wire:model.live="hasChangedColumns" label="{{ __('ledger.show_diff') }}"
+                            @if($hasChangedColumns)
+                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
                                 />
                             @endif
                             <table class="table table-compact w-full">
-                                @if($hasChangedColumns)
+                                @if($showChanges)
                                     <thead>
                                     <tr>
                                         <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
@@ -75,9 +73,11 @@
                                         </th>
                                         <th>
                                             {{ __('ledger.after_change') }}
+                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $ledgerRecord->version }} </span>
                                         </th>
                                         <th>
                                             {{ __('ledger.before_change') }}
+                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $comparisonTargetDiff->version }} </span>
                                         </th>
                                     </tr>
                                     </thead>
@@ -85,7 +85,6 @@
                                 <tbody>
 
                                 @foreach($contentChanges as $columnId => $change)
-                                    {{--                                        @dd($change)--}}
                                     <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
                                         <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
                                             {{ $change['column_name'] }}
@@ -107,7 +106,7 @@
                                                 @endif
                                             </div>
                                         </td>
-                                        @if($change['changed'] && $hasChangedColumns)
+                                        @if($showChanges)
                                             <td class="break-words align-top pt-2">
                                                 <div class="text-sm opacity-70 mb-2">
                                                     @if (!$canView)
@@ -130,8 +129,6 @@
                         </div>
                     @else
                         {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
-                        {{--                            <x-ledger.detail.table :ledgerRecord="$ledgerRecord" :canView="true" />--}}
-                        @dd($ledgerRecord)
                         <x-ledger.detail.table
                                 :ledgerRecord="$ledgerRecord"
                                 :canView="$canView"
@@ -144,7 +141,6 @@
                         <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
                     </div>
 
-                </div>
             </x-mary-tab>
 
 

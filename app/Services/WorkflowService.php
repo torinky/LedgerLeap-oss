@@ -429,10 +429,10 @@ class WorkflowService
         });
         // --- 通知処理 ---
         if ($applicant && $ledgerDiff) {
-            if (!($applicant instanceof User)) {
+/*            if (!($applicant instanceof User)) {
 
                 dd($applicant, $ledgerDiff);
-            }
+            }*/
             $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {

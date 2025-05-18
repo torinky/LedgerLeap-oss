@@ -37,17 +37,17 @@ class ColumnHtmlService
      */
     private array $attachmentContents;
 
-   /**
-      * カラム定義データをもとに値をHTMLとして表示する
-      *
-      * @param object|array $columnDefineData ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
-      * @param mixed $initialValue 初期値（カラムの値）
-      * @param bool $canView 閲覧権限があるかどうか（falseの場合は空文字を返す）
-      * @param array $attrs 追加属性（HTML属性など）
-      * @param string $idPrefix id属性のプレフィックス
-      * @param bool $asCreate 新規作成モードかどうか
-      * @return HtmlString 生成されたHTML文字列
-      */
+    /**
+     * カラム定義データをもとに値をHTMLとして表示する
+     *
+     * @param object|array $columnDefineData ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
+     * @param mixed $initialValue 初期値（カラムの値）
+     * @param bool $canView 閲覧権限があるかどうか（falseの場合は空文字を返す）
+     * @param array $attrs 追加属性（HTML属性など）
+     * @param string $idPrefix id属性のプレフィックス
+     * @param bool $asCreate 新規作成モードかどうか
+     * @return HtmlString 生成されたHTML文字列
+     */
     public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false): HtmlString
     {
         if (!$columnDefineData) {
@@ -68,24 +68,24 @@ class ColumnHtmlService
         } elseif (is_array($this->initialValue)) {
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
-        }else{
+        } else {
             $html = $this->initialValue;
         }
         return new HtmlString($this->highlightKeywords($html));
     }
 
     /**
-      * 配列値をHTMLとしてレンダリングする
-      *
-      * @param string $type カラムのタイプ（例: chk, files, select など）
-      * @param array $values カラムの値（配列形式）
-      * @param array $options 選択肢のラベルなどのオプション配列
-      * @return string レンダリングされたHTML文字列
-      *
-      * chk型の場合はチェックされた項目のみラベル表示。
-      * files型以外の配列は値をバッジで表示。
-      * files型で値が空の場合は空文字を返す。
-      */
+     * 配列値をHTMLとしてレンダリングする
+     *
+     * @param string $type カラムのタイプ（例: chk, files, select など）
+     * @param array $values カラムの値（配列形式）
+     * @param array $options 選択肢のラベルなどのオプション配列
+     * @return string レンダリングされたHTML文字列
+     *
+     * chk型の場合はチェックされた項目のみラベル表示。
+     * files型以外の配列は値をバッジで表示。
+     * files型で値が空の場合は空文字を返す。
+     */
     private function renderArrayValue($type, $values, $options): string
     {
         if ($type === 'chk' && !empty($options)) {
@@ -224,41 +224,43 @@ class ColumnHtmlService
     {
         $html = '';
         if (!is_array($this->initialValue)) return $html; // 値が配列でない場合は空
-        //            dd($this->initialValue);
+
+        $thumbnails = [];
+        $files = [];
+
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
             $hit = isset($this->attachments[$hashedFilename]->hit) && $this->attachments[$hashedFilename]->hit == true;
-            if ($hit) {
-                $hitClass = 'badge-error';
-            } else {
-                $hitClass = 'badge-accent';
-            }
+            $hitClass = $hit ? 'badge-error' : 'badge-accent';
 
             $url = Storage::url('public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $hashedFilename);
-            //                画像ファイルか確認
+
             if (Storage::exists('public/Ledger/thumbs/' . basename($hashedFilename))) {
                 $thumbnailUrl = Storage::url('Ledger/thumbs/' . basename($hashedFilename));
-                $html .= <<<HTML
-<a href="{$url}"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
-HTML;
+                $thumbnails[] = <<<HTML
+    <a href="{$url}"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
+    HTML;
             } else {
                 if (empty($this->attachmentContents[$hashedFilename]) || !isset($this->attachmentContents[$hashedFilename]->meta->content)) {
-                    $html .= <<<HTML
-<a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
-HTML;
+                    $files[] = <<<HTML
+    <a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
+    HTML;
                 } else {
                     $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
-
-                    $html .= <<<HTML
-<div class="tooltip" data-tip="{$content}">
-<a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4 "
-   ><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
-</div>
-HTML;
-
+                    $files[] = <<<HTML
+    <div class="tooltip" data-tip="{$content}">
+    <a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4 "
+       ><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
+    </div>
+    HTML;
                 }
-
             }
-            //                dd($hitClass);
+        }
+
+        if (!empty($thumbnails)) {
+            $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center;">' . implode('', $thumbnails) . '</div>';
+        }
+        if (!empty($files)) {
+            $html .= implode('', $files);
         }
 
         return $html;

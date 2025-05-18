@@ -49,7 +49,7 @@ class Show extends Component
 
     // --- モーダル制御用プロパティ ---
     public bool $showAssigneeModal = false; // 承認者選択モーダル用
-    public string $assigneeModalRoleType = 'approver'; // 固定で approver
+    protected string $assigneeModalRoleType = 'approver'; // 固定で approver
 
     public Collection $workflowHistory; // ワークフロー履歴用プロパティ
 
@@ -57,6 +57,7 @@ class Show extends Component
 
     // WorkflowService をインジェクト
     public bool $hasChangedColumns=false;
+    public bool $showChanges=false;
 
     public function boot(WorkflowService $workflowService): void
     {
@@ -341,8 +342,7 @@ class Show extends Component
 
     public function render()
     {
-        return view('livewire.ledger.show')
-            ->layout('layouts.app'); // レイアウト指定
+        return view('livewire.ledger.show')->layout('layouts.app'); // レイアウト指定
     }
 
     /**
@@ -352,10 +352,10 @@ class Show extends Component
     {
         $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
         $this->contentChanges = [];
-//        dd($this->comparisonTargetDiff);
 
         $currentContentArray = $this->ledgerRecord->content ?? [];
-        $currentAttachmentsArray = $this->ledgerRecord->content_attached ?? [];
+        //attachementはメタデータなので差分表示では不要
+//        $currentAttachmentsArray = $this->ledgerRecord->content_attached ?? [];
         $currentColumnDefines = collect($this->ledgerDefineRecord->column_define)->keyBy('id')->all(); // これは stdClass の配列
 
         $oldColumnDefines = [];
@@ -384,24 +384,22 @@ class Show extends Component
             // -------------------------------------------------
 
             $currentValue = Arr::get($currentContentArray, $columnId);
-            $currentAttachments = Arr::get($currentAttachmentsArray, $columnId);
+//            $currentAttachments = Arr::get($currentAttachmentsArray, $columnId);
             $oldValue = $this->comparisonTargetDiff ? Arr::get($oldContentArray, $columnId) : null;
             $oldAttachments = $this->comparisonTargetDiff ? Arr::get($oldAttachmentsArray, $columnId) : null;
 
-            // ... (isChanged の計算は変更なし) ...
-            $normalizedCurrent = is_array($currentValue) || is_object($currentValue) ? json_encode($currentValue) : strval($currentValue);
-            $normalizedOld = $this->comparisonTargetDiff && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : strval($oldValue);
+            $normalizedCurrent = is_array($currentValue) || is_object($currentValue) ? json_encode($currentValue) : (string)$currentValue;
+            $normalizedOld = $this->comparisonTargetDiff && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string)$oldValue;
+
             $isChanged = $this->comparisonTargetDiff && ($normalizedCurrent !== $normalizedOld);
             if (!$this->comparisonTargetDiff) $isChanged = false;
             if ($isChanged) $this->hasChangedColumns = true;
 
 
-
-
             $this->contentChanges[$columnId] = [
                 'column_define_current' => $displayColumnDefineForCurrent, // 配列/stdClass
                 'current_value' => $currentValue,
-                'current_attachments' => $currentAttachments,
+//                'current_attachments' => $currentAttachments,
                 'column_define_old' => $displayColumnDefineForOld, // 配列/stdClass
                 'old_value' => $oldValue,
                 'old_attachments' => $oldAttachments,
@@ -417,76 +415,111 @@ class Show extends Component
      */
     protected function findComparisonTargetDiff(): ?LedgerDiff
     {
-        // ワークフローが無効、またはDRAFT/NONE状態なら比較対象なし
-        if (!$this->ledgerRecord->define->workflow_enabled
-//            ||
-//            in_array($this->ledgerRecord->status, [WorkflowStatus::DRAFT, WorkflowStatus::NONE])
-        ) {
+        // ワークフローが無効なら比較対象なし
+        if (!$this->ledgerRecord->define->workflow_enabled) {
             return null;
         }
 
-        // 比較対象の候補:
-        // 1. 最新のDiff (latestDiff) が内容変更を伴うもので、かつ現在のステータスと異なる場合、その一つ前。
-        // 2. ワークフロー履歴を遡り、現在のステータスが開始される直前の内容を持つDiff。
-        // 3. または、このLedgerのバージョンが1より大きい場合、バージョン-1の最新のDiff。
-
-        // まずはシンプルなロジック: 最新のDiffの一つ前で content があるものを探す
-        // (ただし、最新Diffがステータス変更のみの場合、その前のcontentを持つDiffが比較対象になる)
         $latestDiffId = $this->ledgerRecord->latest_diff_id;
-        if (!$latestDiffId) {
-            // 最新Diffがない場合 (DRAFTから直接PENDINGになったばかりなど) は、バージョン1のDiffなど
-            return $this->ledgerRecord->ledgerDiff()
-//                ->where('version', 1) // または content is not null
-                ->whereNotNull('content')
-                ->where('content', '<>', '[]')
-                ->orderBy('id', 'asc')
-                ->first();
+        // contentの「キャスト前」値を取得
+        $currentRawContent = $this->ledgerRecord->getRawOriginal('content');
+
+        if (!$latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
+            // 最新Diffがない場合や現在のcontentが空の場合
+            return null;
         }
-//dd($latestDiffId);
-        // 最新Diffがステータス変更のみ (content が空) の場合
-        $latestDiffRecord = $this->ledgerRecord->latestDiff;
-        if ($latestDiffRecord && (empty($latestDiffRecord->content) || $latestDiffRecord->content == '[]' || $latestDiffRecord->content == '{}')) {
-            return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
-                ->where('id', '<', $latestDiffId)
-                ->whereNotNull('content')
-                ->where('content', '<>', '[]')
-                ->latest('id')
-                ->first();
-        }else{
-//            return $latestDiffRecord;
-        }
-        // 最新Diffが内容変更を含む場合、その一つ前のcontentを持つDiff
-        return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
-            ->where('id', '<', $latestDiffId)
+
+        // SQLでcontentが現在のcontentと異なる直近のDiffを取得（キャスト前の値で比較）
+        $diff = LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
             ->whereNotNull('content')
             ->where('content', '<>', '[]')
-            ->latest('id')
+            ->where('id', '<', $latestDiffId)
+            ->whereRaw('content != ?', [$currentRawContent])
+            ->orderBy('id', 'desc')
             ->first();
 
-        // より複雑なロジックの例 (ワークフローの「開始点」を特定)
-        // $historyAsc = $this->workflowHistory()->orderBy('created_at', 'asc')->get(); // mountで取得済み
-        // $startOfCurrentFlowDiff = null;
-        // foreach ($historyAsc->reverse() as $diff) { // 新しい方から遡る
-        //     if ($diff->status === WorkflowStatus::DRAFT && $diff->id < $latestDiffId) {
-        //         // DRAFT に戻った記録があれば、それより後の最初のPENDINGが今のフローの起点
-        //         $startOfCurrentFlowDiff = $historyAsc->where('id', '>', $diff->id)
-        //                                            ->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
-        //                                            ->sortBy('id')->first();
-        //         break;
-        //     }
-        // }
-        // if (!$startOfCurrentFlowDiff) { // DRAFTに戻った記録がなければ、最初のPENDINGが起点
-        //     $startOfCurrentFlowDiff = $historyAsc->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
-        //                                        ->sortBy('id')->first();
-        // }
-        // // 起点Diffの一つ前でcontentがあるものを探す
-        // if ($startOfCurrentFlowDiff) {
-        //     return $historyAsc->where('id', '<', $startOfCurrentFlowDiff->id)
-        //                     ->whereNotNull('content')->where('content', '<>', '[]')
-        //                     ->last();
-        // }
-        // return null; // それでも見つからなければ比較対象なし
+        return $diff;
     }
+//    protected function findComparisonTargetDiff(): ?LedgerDiff
+//    {
+//        // ワークフローが無効、またはDRAFT/NONE状態なら比較対象なし
+//        if (!$this->ledgerRecord->define->workflow_enabled
+////            ||
+////            in_array($this->ledgerRecord->status, [WorkflowStatus::DRAFT, WorkflowStatus::NONE])
+//        ) {
+//            return null;
+//        }
+//
+//        // 比較対象の候補:
+//        // 1. 最新のDiff (latestDiff) が内容変更を伴うもので、かつ現在のステータスと異なる場合、その一つ前。
+//        // 2. ワークフロー履歴を遡り、現在のステータスが開始される直前の内容を持つDiff。
+//        // 3. または、このLedgerのバージョンが1より大きい場合、バージョン-1の最新のDiff。
+//
+//        // まずはシンプルなロジック: 最新のDiffの一つ前で content があるものを探す
+//        // (ただし、最新Diffがステータス変更のみの場合、その前のcontentを持つDiffが比較対象になる)
+//        $latestDiffId = $this->ledgerRecord->latest_diff_id;
+//        if (!$latestDiffId) {
+//            // 最新Diffがない場合 (DRAFTから直接PENDINGになったばかりなど) は、バージョン1のDiffなど
+//            return $this->ledgerRecord->ledgerDiff()
+////                ->where('version', 1) // または content is not null
+//                ->whereNotNull('content')
+//                ->where('content', '<>', '[]')
+//                ->orderBy('id', 'asc')
+//                ->first();
+//        }
+////dd($latestDiffId);
+//        // 最新Diffがステータス変更のみ (content が空) の場合
+//        $latestDiffRecord = $this->ledgerRecord->latestDiff;
+//        if ($latestDiffRecord && (empty($latestDiffRecord->content) || $latestDiffRecord->content == '[]' )) {
+///*            $latestDiffRecord =LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+//                ->where('id', '<', $latestDiffId)
+//                ->whereNotNull('content')
+//                ->where('content', '<>', '[]')
+//                ->latest('id')
+//                ->first();
+//            dd($latestDiffRecord->content);*/
+//            return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+//                ->where('id', '<', $latestDiffId)
+//                ->whereNotNull('content')
+//                ->where('content', '<>', '[]')
+//                ->latest('id')
+//                ->first();
+//
+//        }else{
+////            return $latestDiffRecord;
+//        }
+//        // 最新Diffが内容変更を含む場合、その一つ前のcontentを持つDiff
+//        return LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+//            ->where('id', '<', $latestDiffId)
+//            ->whereNotNull('content')
+//            ->where('content', '<>', '[]')
+//            ->latest('id')
+//            ->first();
+//
+//        // より複雑なロジックの例 (ワークフローの「開始点」を特定)
+//        // $historyAsc = $this->workflowHistory()->orderBy('created_at', 'asc')->get(); // mountで取得済み
+//        // $startOfCurrentFlowDiff = null;
+//        // foreach ($historyAsc->reverse() as $diff) { // 新しい方から遡る
+//        //     if ($diff->status === WorkflowStatus::DRAFT && $diff->id < $latestDiffId) {
+//        //         // DRAFT に戻った記録があれば、それより後の最初のPENDINGが今のフローの起点
+//        //         $startOfCurrentFlowDiff = $historyAsc->where('id', '>', $diff->id)
+//        //                                            ->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
+//        //                                            ->sortBy('id')->first();
+//        //         break;
+//        //     }
+//        // }
+//        // if (!$startOfCurrentFlowDiff) { // DRAFTに戻った記録がなければ、最初のPENDINGが起点
+//        //     $startOfCurrentFlowDiff = $historyAsc->whereIn('status', [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])
+//        //                                        ->sortBy('id')->first();
+//        // }
+//        // // 起点Diffの一つ前でcontentがあるものを探す
+//        // if ($startOfCurrentFlowDiff) {
+//        //     return $historyAsc->where('id', '<', $startOfCurrentFlowDiff->id)
+//        //                     ->whereNotNull('content')->where('content', '<>', '[]')
+//        //                     ->last();
+//        // }
+//        // return null; // それでも見つからなければ比較対象なし
+//    }
 
     // --- コメント入力モーダルを開く ---
     /*    public function openCommentModal(string $actionType): void

@@ -695,4 +695,5 @@
     'changed' => '変更あり',
     'before_change_colon' => '変更前:',
     'after_change_colon' => '変更後:',
+    'version' => 'バージョン',
 ];
