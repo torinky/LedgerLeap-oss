@@ -369,8 +369,10 @@ class Show extends Component
             $oldAttachmentsArray = $this->comparisonTargetDiff->content_attached ?? [];
         }
 
-        $allColumnIds = array_unique(array_merge(array_keys($currentColumnDefines), array_keys($oldColumnDefines)));
-        sort($allColumnIds);
+        $allColumnDefines = collect($currentColumnDefines)
+            ->sortBy('order')
+            ->all();
+        $allColumnIds = array_map(fn($col) => $col->id, $allColumnDefines);
 
         $this->hasChangedColumns = false;
 
