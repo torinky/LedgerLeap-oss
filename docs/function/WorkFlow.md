@@ -932,68 +932,68 @@
 
 ---
 
-### ステップ 10: 台帳詳細/編集画面からのワークフローアクションと変更点提示
+### ステップ 10: 台帳詳細/編集画面からのワークフローアクションと変更点提示 (一部実施中)
 
-* **目的:** 点検者または承認者が、**台帳詳細画面を起点**として、必要に応じて内容を編集（編集画面で行う）し、コメントを付与して、ワークフローを進行できるようにする。その際、
-  **再上程の場合は、カラムごとに変更点を分かりやすく提示する**ことを目指す。
+* **目的:** 点検者または承認者が、台帳詳細画面を起点として、必要に応じて内容を編集（編集画面で行う）し、コメントを付与して、ワークフローを進行できるようにする。その際、再上程の場合は、カラムごとに変更点を分かりやすく提示する。
 * **方針:**
     * タスクリストからは原則として台帳詳細画面 (`Show.php`) に遷移させる。
-    * 詳細画面がワークフローアクションの主要な起点の一つとなる。ここでは**カラムごとの差分表示**を重視する。
+    * 詳細画面がワークフローアクションの主要な起点の一つとなる。ここではカラムごとの差分表示を重視する。
     * 内容編集は詳細画面から編集画面 (`ModifyColumn.php`) に遷移して行う。
-    * ワークフローアクション（点検完了、承認、差し戻し）実行時には、コメント入力モーダルを表示する。
-    * 編集画面からも、内容保存と同時にコメント付きでワークフローアクションを実行できるようにする。
-    * `LedgerDiff` には、ステータス変更時のコメントと、内容変更の両方を適切に記録する。
-* **タスク:**
-    1. **差分表示機能の検討・実装 (`Show.php`):**
-        * **差分対象の特定:** 現在の `Ledger` の `content` と、比較対象となる過去の `LedgerDiff` の `content`
-          を特定するロジックを実装（例: このワークフローが開始された時点のDiff、または前回DRAFTでなかった時点のDiff）。
-        * **カラムごとの差分比較:** 特定した2つの `content`（JSON配列を想定）をカラムごとに比較し、変更があったカラムを特定する。
-        * **差分表示方法:**
-            * 変更があったカラムの値を並べて表示し、視覚的に差が分かるようにする（例: 背景色変更、太字など）。
-            * **HTMLレベルでの詳細な差分表示の検討:**
-              文字列ベースのカラムについては、変更前後のテキストをHTMLとして比較し、行単位や単語単位での変更箇所をハイライトする機能の導入を検討する（自力実装または適切なJavaScriptライブラリの利用）。既存の
-              `DiffDisplay` コンポーネントの改良または新規作成。
-        * 詳細画面の「基本情報」タブ（または専用の「変更点」タブ）に、上記差分情報を表示するUIを実装。
-    2. **コメント入力モーダル (`WorkflowCommentModal.php` - 新規作成):**
-        * 汎用的なコメント入力モーダルコンポーネントを作成。
-        * 親からアクションタイプ（`approve_with_comment`, `return_to_draft_with_comment` 等）と対象 `ledgerId` を受け取る。
-        * 実行ボタンクリック時に、入力されたコメントとアクションタイプを親にイベントで通知する。
-    3. **台帳詳細画面 (`Show.php`) のアクションボタン実装:**
-        * フッターまたは適切な位置に、現在のステータスとログインユーザーの権限に応じたアクションボタンを配置:
-            * 「承認する」（`canApprove` 時）: クリックでコメント入力モーダル (`actionType='approve'`) を開く。
-            * 「点検完了（承認申請する）」（`canRequestApproval` 時）: クリックで担当者選択モーダル (`WorkflowAssigneeModal` で
-              `roleType='approver'`) を開く。**このモーダルにコメント入力欄を追加するか、別途コメントモーダルを挟むことを検討。
-              **
-            * 「作成中に戻す」（`canReturnToDraft` 時）: クリックでコメント入力モーダル (`actionType='return_to_draft'`)
-              を開く。
-            * 「編集する」: 編集画面へ遷移。
-        * コメントモーダル/担当者選択モーダルからのイベントを受け取り、コメントと共に `WorkflowService` の対応メソッドを呼び出す。
-    4. **台帳編集画面 (`ModifyColumn.php`) のアクションボタン実装:**
-        * フッターのアクションボタンエリアを改修:
-            * 「下書き保存」ボタン。
-            * **自分が現在の担当者（点検者/承認者）の場合:**
-                * 「コメントを付けて点検完了（承認申請）」ボタン: クリック → **現在のフォーム内容で下書き保存** →
-                  担当者選択モーダル（コメント入力欄付き、または別途コメントモーダル） → `WorkflowService::requestApproval`
-                  呼び出し。
-                * 「コメントを付けて承認」ボタン: クリック → **現在のフォーム内容で下書き保存** → コメント入力モーダル →
-                  `WorkflowService::approve` 呼び出し。
-                * 「コメントを付けて作成中に戻す」ボタン: クリック → コメント入力モーダル →
-                  `WorkflowService::returnToDraft` 呼び出し（フォーム内容は保存しない）。
-            * **自分が申請者でDRAFT状態の場合:**
-                * 「点検依頼」ボタン（担当者選択モーダルを開く）。
-    5. **`WorkflowService` メソッド修正:**
-        * `requestApproval(ledgerId, approverId, inspectorId, ?string $comments = null)`: コメントを `LedgerDiff` に記録。
-        * `approve(ledgerId, approverId, ?string $comments = null)`: コメントを `LedgerDiff` に記録。
-        * `returnToDraft(ledgerId, modifierId, ?string $comments)`: コメントを `LedgerDiff` に記録 (
-          コメントは必須化も検討)。
-        * **内容変更の記録:** 編集画面からのアクションの場合、`WorkflowService` 側では、事前に `ModifyColumn` で内容が保存された最新の
-          `Ledger` および対応する `LedgerDiff` を参照し、ステータス変更とコメントを記録した**追加の `LedgerDiff`** (
-          contentなし) を作成する。
-    6. **通知処理の修正:**
+    * ワークフローアクション実行時には、汎用的なコメント入力モーダル (`WorkflowCommentModal`) を表示する。
+    * 編集画面からのワークフローアクション実行時、現在のフォーム内容、コメント、新しいステータスを1つの新しい `LedgerDiff`
+      レコードにまとめて記録する。
+* **実施済みタスク (ステップ10.1, 10.2, 10.3の一部):**
+    1. **差分表示機能の実装 (`Show.php`):**
+        * **比較対象 `LedgerDiff` 特定ロジック (`findComparisonTargetDiff`):** 直近の `content` が記録された過去の
+          `LedgerDiff` を比較対象として特定するロジックを実装。[完了]
+        * **差分計算ロジック (`prepareContentDiff`):** 特定した比較対象Diffと現在の `Ledger` の `content`
+          をカラムIDベースで比較。変更の有無、変更前後の値、表示用カラム名、カラム定義（現在と過去）を `$contentChanges`
+          配列に格納。[完了]
+    2. **詳細画面ビューでの差分強調表示 (`show.blade.php`):**
+        * 「基本情報」タブ内に差分表示のオン/オフトグルを設置。
+        * `$contentChanges` をループし、テーブル形式で各カラムを表示。変更があった行は背景色を変更。変更前後の値を
+          `ColumnHtmlService` を利用して表示。[完了]
+    3. **コメント入力モーダル (`WorkflowCommentModal.php`, `workflow-comment-modal.blade.php`):**
+        * 汎用的なコメント入力モーダルコンポーネントを作成済み。[完了]
+        * 親コンポーネントからイベント (`open-workflow-comment-modal`)
+          で呼び出され、タイトル、ボタンラベル、アクションタイプ、対象LedgerID、初期コメントを受け取る。
+        * 実行ボタンクリック時に、入力コメントとアクションタイプを親にイベント (`workflow-action-with-comment`) で通知する。
+    4. **台帳詳細画面 (`Show.php`) からのコメントモーダル連携:**
+        * 「承認」「差し戻し」ボタンクリック時に `openCommentModal(actionType)` を呼び出し、そこから
+          `open-workflow-comment-modal` イベントを発行してコメントモーダルを開く。
+        * 「点検完了（承認申請）」ボタンクリック時 (`openApproverSelectModal`)、担当者選択モーダル (`WorkflowAssigneeModal`)
+          からの `assignee-selected` イベントを受けた後、`handleAssigneeSelected` 内で
+          `openCommentModal('request_approval_with_comment')` を呼び出す。
+        * `workflow-action-with-comment` イベントをリッスンする `handleActionWithComment` メソッドで、アクションタイプに応じた
+          `WorkflowService` のメソッドをコメント付きで呼び出し、画面を更新。
+
+* **残りのタスク (ステップ10.4, 10.5, 10.6):**
+    1. **台帳編集画面 (`ModifyColumn.php`) のアクションボタン実装:**
+        * フッターのアクションボタンエリアを改修。
+        * 自分が現在の担当者（点検者/承認者）の場合:
+            * 「コメントを付けて点検完了（承認申請）」ボタン: クリック → **現在のフォーム内容で下書き保存** →
+              担当者選択モーダル（コメント入力欄付き、または別途コメントモーダル） → `WorkflowService::requestApproval`
+              呼び出し。
+            * 「コメントを付けて承認」ボタン: クリック → **現在のフォーム内容で下書き保存** → コメント入力モーダル →
+              `WorkflowService::approve` 呼び出し。
+            * 「コメントを付けて作成中に戻す」ボタン: クリック → コメント入力モーダル → `WorkflowService::returnToDraft`
+              呼び出し（フォーム内容は保存しない）。
+        * 自分が申請者でDRAFT状態の場合:
+            * 「点検依頼」ボタン（担当者選択モーダルを開く）。
+    2. **`WorkflowService` メソッド修正:**
+        *
+        `requestApproval(ledgerId, approverId, inspectorId, ?string $comments = null, ?array $editedContent = null, ?array $editedContentAttached = null)`:
+        `editedContent` があればそれを新しい `LedgerDiff` の `content` に記録。コメントも記録。`Ledger` 本体も更新。
+        *
+        `approve(ledgerId, approverId, ?string $comments = null, ?array $editedContent = null, ?array $editedContentAttached = null)`:
+        同上。
+        * `returnToDraft(ledgerId, modifierId, ?string $comments)`: コメントを記録。
+    3. **通知処理の修正:**
         * 各種ワークフローアクションの通知メール・システム内通知の文面に、入力されたコメントを含めるように
           `GenericNotification` や関連Mailableを修正。
-        * 内容が変更された上で点検/承認された場合、その旨を通知に含めることを検討 (例: 「内容が更新され、承認されました」)。
-* **成果物:**
+        * 内容が変更された上で点検/承認された場合、その旨を通知に含める。
+
+* **成果物 (ステップ10完了時):**
     * 詳細画面を中心とした、差分確認とワークフローアクション実行のフロー。
     * 点検者/承認者が内容変更を行う場合、その変更履歴とコメントが明確に記録・通知される仕組み。
     * より実運用に即した、確認と承認のプロセス。
