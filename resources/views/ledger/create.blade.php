@@ -15,8 +15,8 @@
                         class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
             </div>
     </x-slot>
-        {{--    <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 xl:grid-cols-2 gap-10 ">--}}
-        <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5 ">
+        {{--    <divclass="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 xl:grid-cols-2 gap-10 ">--}}
+        <div class="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5 ">
 
             <div class="collapse bg-base-200 collapse-arrow border-base-300 border">
                 <input type="checkbox" id="createDescription" checked/>

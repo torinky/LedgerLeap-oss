@@ -2,7 +2,7 @@
     @php
         use App\Enums\WorkflowStatus;
     @endphp
-    <div class="p-4 md:p-8 bg-base-100 rounded-b-xl"> {{-- パディング調整 --}}
+    <div class="p-0 bg-base-100 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
 
         {{-- タブ UI の導入 --}}
         <x-mary-tabs wire:model="selectedTab" class="mb-10"> {{-- 下にマージン追加 --}}
@@ -12,7 +12,7 @@
                         class="shadow-md"
             >
 
-                <div class="p-8 bg-base-100 rounded-b-xl grid grid-cols-1 gap-10">
+                <div class="p-0 bg-base-100 rounded-b-xl grid grid-cols-1 gap-10 sm:gap-1 ">
 
                     @if($ledgerRecord->define->workflow_enabled)
                         <x-mary-card>
@@ -59,8 +59,8 @@
                     @endif
 
                     {{-- カラムごとの差分表示 --}}
-                    @if(!empty($contentChanges) && auth()->user()->can('view', $ledgerRecord))
-
+                    @if(!empty($contentChanges))
+{{--@dd($contentChanges)--}}
                         <div class="border border-base-300 rounded-lg">
                             @if($comparisonTargetDiff)
                                 <x-mary-toggle wire:model.live="hasChangedColumns" label="{{ __('ledger.show_diff') }}"
@@ -69,17 +69,17 @@
                             <table class="table table-compact w-full">
                                 @if($hasChangedColumns)
                                     <thead>
-                                        <tr>
-                                            <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                                {{ __('ledger.column.title') }}
-                                            </th>
-                                            <th>
-                                                {{ __('ledger.after_change') }}
-                                            </th>
-                                            <th>
-                                                {{ __('ledger.before_change') }}
-                                            </th>
-                                        </tr>
+                                    <tr>
+                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                            {{ __('ledger.column.title') }}
+                                        </th>
+                                        <th>
+                                            {{ __('ledger.after_change') }}
+                                        </th>
+                                        <th>
+                                            {{ __('ledger.before_change') }}
+                                        </th>
+                                    </tr>
                                     </thead>
                                 @endif
                                 <tbody>
@@ -95,9 +95,13 @@
                                         </th>
                                         <td class="break-words align-top pt-2">
                                             <div class="text-sm">
-                                                @if($change['column_define_current'])
+                                                @if (!$canView)
+                                                    <x-ledger.not-authorized-message />
+                                                @elseif (empty($change['current_value']))
+                                                    <x-ledger.empty-message />
+                                                @elseif($change['column_define_current'])
                                                     {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
-                                                                  ->show($change['column_define_current'], $change['current_value']??'', $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                                                  ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
                                                 @else
                                                     <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                                 @endif
@@ -105,13 +109,16 @@
                                         </td>
                                         @if($change['changed'] && $hasChangedColumns)
                                             <td class="break-words align-top pt-2">
-                                                <div class="text-xs text-base-content/60 mb-0.5">{{ __('ledger.before_change_colon') }}</div>
                                                 <div class="text-sm opacity-70 mb-2">
-                                                    @if($change['column_define_old'])
+                                                    @if (!$canView)
+                                                        <x-ledger.not-authorized-message />
+                                                    @elseif (empty($change['old_value']))
+                                                        <x-ledger.empty-message />
+                                                    @elseif($change['column_define_old'])
                                                         {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
                                                                       ->show($change['column_define_old'], $change['old_value'], $canView) }}
                                                     @else
-                                                        <span class="text-gray-400">---</span> {{-- 古い定義がない --}}
+                                                        <span class="text-ghost">---</span> {{-- 古い定義がない --}}
                                                     @endif
                                                 </div>
                                             </td>
@@ -124,9 +131,10 @@
                     @else
                         {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
                         {{--                            <x-ledger.detail.table :ledgerRecord="$ledgerRecord" :canView="true" />--}}
+                        @dd($ledgerRecord)
                         <x-ledger.detail.table
                                 :ledgerRecord="$ledgerRecord"
-                                :canView="auth()->user()->can('view', $ledgerRecord)"
+                                :canView="$canView"
                         />
                     @endif
 
@@ -148,79 +156,67 @@
                         class="shadow-md"
                         label="{{ $historyTabTitle }}" icon="o-list-bullet">
                 <x-mary-card>
-                    <div class="overflow-x-auto">
-                        <table class="table table-sm w-full  table-zebra">
-                            <thead>
-                            <tr>
-                                <th>{{ __('ledger.workflow.history_datetime') }}</th>
-                                <th>{{ __('ledger.workflow.history_user') }}</th>
-                                <th>{{ __('ledger.workflow.history_action') }}</th>
-                                <th>{{ __('ledger.workflow.history_detail') }}</th>
-                                <th class="text-center">{{-- データリンク列 --}}</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @forelse ($workflowHistory as $diff)
-                                <tr wire:key="history-{{ $diff->id }}" class=" hover:bg-base-300">
-                                    {{-- 日時 --}}
-                                    <td>{{ $diff->created_at->isoFormat('YYYY/MM/DD HH:mm:ss') }}</td>
-                                    {{-- 操作者 --}}
-                                    <td>{{ $diff->modifier->name ?? 'N/A' }}</td>
-                                    {{-- アクション/ステータス --}}
-                                    <td>
-                                        @if ($diff->status !== \App\Enums\WorkflowStatus::NONE)
-                                            {{-- ワークフロー有効時のステータスバッジ --}}
-                                            <x-mary-badge :value="$diff->status->label()"
-                                                          class="badge-sm {{ $diff->status->colorClass() }}"/>
-                                            {{-- アクション名をより具体的に表示するヘルパー関数やロジックをここに追加しても良い --}}
-                                            {{-- 例: getWorkflowActionDescription($diff) --}}
-                                        @else
-                                            {{-- ワークフロー無効時の表示 (例: "変更") --}}
-                                            <span class="text-xs">{{ __('ledger.workflow.history_action_modified') }}</span> {{-- 新しい翻訳キー --}}
-                                        @endif
-                                    </td>
-                                    {{-- 詳細 (担当者、コメント、データリンク) --}}
-                                    <td>
-                                        @if ($diff->status !== \App\Enums\WorkflowStatus::NONE)
-                                            {{-- ワークフロー有効時の担当者・コメント表示 --}}
-                                            @if ($diff->status === WorkflowStatus::PENDING_INSPECTION && $diff->inspector)
-                                                <span class="text-xs">{{ __('ledger.workflow.next_inspector') }}: {{ $diff->inspector->name }}</span>
-                                            @elseif ($diff->status === WorkflowStatus::PENDING_APPROVAL && $diff->approver)
-                                                <span class="text-xs">{{ __('ledger.workflow.next_approver') }}: {{ $diff->approver->name }}</span>
-                                            @elseif ($diff->status === WorkflowStatus::APPROVED && $diff->approver)
-                                                <span class="text-xs">{{ __('ledger.workflow.approved_by') }}: {{ $diff->approver->name }}</span>
-                                            @endif
-                                            @if ($diff->comments)
-                                                <div class="text-xs mt-1 p-1 bg-base-200 rounded"
-                                                     title="{{ __('ledger.workflow.comments') }}">{!! nl2br(e($diff->comments)) !!}</div>
-                                            @endif
-                                        @else
-                                            {{-- ワークフロー無効時は担当者・コメント欄は空 or 非表示 --}}
-                                            <span class="text-xs">{{ __('ledger.workflow.workflow_inactive_at_this_point') }}</span>
-                                        @endif
-                                    </td>
-                                    {{-- データ内容がある Diff へのリンク --}}
-                                    <td class="text-center">
-                                        @if ($diff->content)
-                                            {{-- content が空でない場合 --}}
-                                            <a href="{{ route('ledgerDiff.show', ['ledgerId' => $ledgerRecord->id, 'diffId' => $diff->id]) }}"
-                                               class="btn btn-square tooltip"
-                                               target="_blank"
-                                               data-tip="{{ __('ledger.view_content_at_this_point') }}">
-                                                <i class="far fa-eye"></i>
-                                            </a>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4"
-                                        class="text-center py-4">{{ __('ledger.workflow.no_history') }}</td> {{-- 新しい翻訳キー --}}
-                                </tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                    <x-mary-table class="table-sm w-full table-zebra overflow-x-auto"
+                                  :headers="[
+                            ['key' => 'created_at', 'label' => __('ledger.workflow.history_datetime')],
+                            ['key' => 'modifier_name', 'label' => __('ledger.workflow.history_user')],
+                            ['key' => 'status', 'label' => __('ledger.workflow.history_action')],
+                            ['key' => 'detail', 'label' => __('ledger.workflow.history_detail')],
+                            ['key' => 'actions', 'label' => '', 'class' => 'text-center'],
+                        ]"
+                                  :rows="$workflowHistory"
+                                  wire:key="workflow-history-table"
+                    >
+                        @scope('cell_created_at', $diff)
+                        {{ $diff->created_at->isoFormat('YYYY/MM/DD HH:mm:ss') }}
+                        @endscope
+
+                        @scope('cell_modifier_name', $diff)
+                        {{ $diff->modifier->name ?? 'N/A' }}
+                        @endscope
+
+                        @scope('cell_status', $diff)
+                        @if ($diff->status !== WorkflowStatus::NONE)
+                            <x-mary-badge :value="$diff->status->label()"
+                                          class="badge-sm {{ $diff->status->colorClass() }}"/>
+                        @else
+                            <span class="text-xs">{{ __('ledger.workflow.history_action_modified') }}</span>
+                        @endif
+                        @endscope
+
+                        @scope('cell_detail', $diff)
+                        @if ($diff->status !== WorkflowStatus::NONE)
+                            @if ($diff->status === WorkflowStatus::PENDING_INSPECTION && $diff->inspector)
+                                <span class="text-xs">{{ __('ledger.workflow.next_inspector') }}: {{ $diff->inspector->name }}</span>
+                            @elseif ($diff->status === WorkflowStatus::PENDING_APPROVAL && $diff->approver)
+                                <span class="text-xs">{{ __('ledger.workflow.next_approver') }}: {{ $diff->approver->name }}</span>
+                            @elseif ($diff->status === WorkflowStatus::APPROVED && $diff->approver)
+                                <span class="text-xs">{{ __('ledger.workflow.approved_by') }}: {{ $diff->approver->name }}</span>
+                            @endif
+                            @if ($diff->comments)
+                                <div class="text-xs mt-1 p-1 bg-base-200 rounded"
+                                     title="{{ __('ledger.workflow.comments') }}">{!! nl2br(e($diff->comments)) !!}</div>
+                            @endif
+                        @else
+                            <span class="text-xs">{{ __('ledger.workflow.workflow_inactive_at_this_point') }}</span>
+                        @endif
+                        @endscope
+
+                        @scope('cell_actions', $diff)
+                        @if ($diff->content)
+                            <a href="{{ route('ledgerDiff.show', ['ledgerId' => $diff->ledger_id, 'diffId' => $diff->id]) }}"
+                               class="btn btn-square tooltip"
+                               target="_blank"
+                               data-tip="{{ __('ledger.view_content_at_this_point') }}">
+                                <i class="far fa-eye"></i>
+                            </a>
+                        @endif
+                        @endscope
+
+                        <x-slot:empty>
+                            <x-mary-icon name="o-cube" label="{{ __('ledger.workflow.no_history') }}"/>
+                        </x-slot:empty>
+                    </x-mary-table>
                 </x-mary-card>
             </x-mary-tab>
         </x-mary-tabs>

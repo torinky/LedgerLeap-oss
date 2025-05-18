@@ -5,6 +5,7 @@
     @endif
 --}}
     <x-mary-modal wire:model="showCommentModal" :title="$modalTitle">
+        {{ $text??'' }}
         <x-mary-textarea
                 label="{{ __('ledger.workflow.comments') }}"
                 wire:model="comment"

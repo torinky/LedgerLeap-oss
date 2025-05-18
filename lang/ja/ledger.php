@@ -126,6 +126,7 @@
     'editTitle' => '台帳の編集',
     'edit_notifications_settings_title' => '通知される条件を変更する',
     'edit_profile_title' => 'プロフィールを変更する',
+    'empty' => 'データなし',
     'enable' => '有効にする',
     'error' => 'エラー',
     'errors' =>

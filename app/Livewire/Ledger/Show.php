@@ -502,6 +502,8 @@ class Show extends Component
         $title = '';
         $actionLabel = '';
         $actionClass = '';
+        $text = '';
+
         // 差し戻し時はコメント必須にするか等のロジックもここやモーダル側で制御可能
         // $isCommentRequired = $actionType === 'return_to_draft';
 
@@ -515,6 +517,7 @@ class Show extends Component
                 $title = __('ledger.workflow.return_to_draft') . ' - ' . __('ledger.workflow.comments');
                 $actionLabel = __('ledger.workflow.return_to_draft');
                 $actionClass = 'btn-warning';
+//                $text = __('ledger.workflow.confirm_edit_while_pending_text');
                 break;
             case 'request_approval_with_comment': // 点検完了(承認申請)でコメントを付けたい場合
                 if (is_null($this->selectedApproverId)) { // 先に担当者選択が必要
@@ -535,7 +538,8 @@ class Show extends Component
                 actionClass: $actionClass,
                 actionType: $actionType,
                 ledgerId: $this->ledgerRecord->id,
-                initialComment: '' // 必要なら以前のコメントなどを渡す
+                initialComment: '', // 必要なら以前のコメントなどを渡す
+                text: $text
             );
         }
     }

@@ -20,9 +20,10 @@ class WorkflowCommentModal extends Component
     public ?int $targetLedgerId = null;
 
     public string $comment = '';
+    public string $text='';
 
     #[On('open-workflow-comment-modal')]
-    public function open(string $title, string $actionLabel, string $actionClass, string $actionType, int $ledgerId, ?string $initialComment = ''): void
+    public function open(string $title, string $actionLabel, string $actionClass, string $actionType, int $ledgerId, ?string $initialComment = '', ?string $text = ''): void
     {
         $this->modalTitle = $title;
         $this->actionButtonLabel = $actionLabel;
@@ -32,6 +33,7 @@ class WorkflowCommentModal extends Component
         $this->comment = $initialComment ?? '';
         $this->resetValidation('comment');
         $this->showCommentModal = true;
+        $this->text = $text;
 //        dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId,$this->comment);
         $this->render();
     }

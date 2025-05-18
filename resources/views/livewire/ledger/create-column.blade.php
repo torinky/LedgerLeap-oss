@@ -34,7 +34,7 @@
             {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
             <x-mary-form wire:submit="store"
                          method="post"
-                         class="card w-full bg-neutral-500/10 shadow-xl">
+                         class="card mb-32 w-full bg-neutral-500/10 shadow-xl">
                 @csrf
                 {{--            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">--}}
 
@@ -43,7 +43,7 @@
                 @endphp
 
 
-                <div class="card-body mb-32 space-y-3 pt-2">
+                <div class="card-body space-y-3 pt-2">
                     <x-mary-progress value="{{$progress}}" max="100"
                                      class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
                     @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
