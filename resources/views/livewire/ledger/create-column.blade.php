@@ -1,7 +1,7 @@
 <div>
     <div
-        class="background-image-change"
-        x-data="{
+            class="background-image-change"
+            x-data="{
             currentBg: null,
             updateBackground(columnId) {
                 this.currentBg = $wire.backgroundImages[columnId] || null;
@@ -22,103 +22,154 @@
                 }
             }
         }"
-        x-init="focusFirstInput()"
+            x-init="focusFirstInput()"
     >
 
         {{--    css生成のためのダミー--}}
-    <div class="hidden">
-        <div class="bg-success"></div>
-        <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
-    </div>
-    @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-        {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
-        <x-mary-form wire:submit="store"
-                     method="post"
-                     class="card w-full bg-neutral-500/10 shadow-xl">
-            @csrf
-            {{--            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">--}}
+        <div class="hidden">
+            <div class="bg-success"></div>
+            <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
+        </div>
+        @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
+            {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}"--}}
+            <x-mary-form wire:submit="store"
+                         method="post"
+                         class="card mb-32 w-full bg-neutral-500/10 shadow-xl">
+                @csrf
+                {{--            <input type="hidden" name="ledger_define_id" value="{{ $ledgerDefineRecord->id }}">--}}
 
-            @php
-                $columnJs=[];
-            @endphp
+                @php
+                    $columnJs=[];
+                @endphp
 
 
-            <div class="card-body mb-32 space-y-3 pt-2">
-                <x-mary-progress value="{{$progress}}" max="100"
-                                 class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
-                @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                    <div class="flex">
-                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
-                        <div
-                            wire:key="content-{{$columnDefine->id}}"
-                            x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                            class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                            @if($loop->first)
-                                x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                            x-init="updateBackground('{{ $columnDefine->id }}')"
-                            @endif
+                <div class="card-body space-y-3 pt-2">
+                    <x-mary-progress value="{{$progress}}" max="100"
+                                     class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
+                    @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
+                        <div class="flex">
+                            <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
+                            <div
+                                    wire:key="content-{{$columnDefine->id}}"
+                                    x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                                    class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                                    @if($loop->first)
+                                        x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                                    x-init="updateBackground('{{ $columnDefine->id }}')"
+                                    @endif
 
-                        >
+                            >
 
-                            @if($columnDefine->type=='files')
+                                @if($columnDefine->type=='files')
 
-                                <div class="">
-                                    <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
-                                                         wire:model.live="content"
+                                    <div class="">
+                                        <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
+                                                             wire:model.live="content"
+                                                             wire:key="content-file-{{$columnDefine->id}}"
+                                                             :columnDefine="$columnDefine"
+                                                             :ledgerRecord="$ledgerRecord??[]"
+                                                             multiple
+                                                             allowImagePreview
+                                                             imagePreviewMaxHeight="200"
+                                        />
+                                    </div>
+                                @else
+                                    <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
+                                                         wire:model="content"
+                                                         wire:key="content-input-{{$columnDefine->id}}"
                                                          :columnDefine="$columnDefine"
                                                          :ledgerRecord="$ledgerRecord??[]"
-                                                         multiple
-                                                         allowImagePreview
-                                                         imagePreviewMaxHeight="200"
                                     />
-                                </div>
-                            @else
-                                <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
-                                                     wire:model="content"
-                                                     :columnDefine="$columnDefine"
-                                                     :ledgerRecord="$ledgerRecord??[]"
-                                />
 
-                            @endif
-                        </div>
-                    </div>
-
-                @endforeach
-            </div>
-
-
-            {{--
-                            <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
-                                <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
-                                        class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
-                                <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                        class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                @endif
                             </div>
-            --}}
+                        </div>
+
+                    @endforeach
+                </div>
 
 
-            <div
-                class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                    <div class="card-body ">
-                        <div class="card-actions justify-center items-center">
-                            <x-mary-button label="{{__('ledger.create_message')}}" icon="s-plus-circle"
-                                           class="btn btn-lg btn-warning btn-wide mr-4" type="submit" spinner="store"/>
-                            <a href="{{route('ledger.import.show',['ledgerDefineId'=>$ledgerDefineRecord->id])}}"
-                               class="btn btn-outline btn-info mr-4"><i
-                                    class="fa-solid fa-file-csv ml-2"></i>{{__('ledger.import_file')}}</a>
-                            {{--
-                                                            <a href="#" class="btn btn-outline btn-info" onclick="window.close();"><i
-                                                                    class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
-                            --}}
-                            <x-ledger.close-window-button/>
+                {{--
+                                <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
+                                    <button type="submit" class="btn btn-outline btn-warning btn-wide"><i
+                                            class="fa-solid fa-pencil mr-2"></i>{{__('save')}}</button>
+                                    <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                                            class="fa-solid fa-close mr-2"></i>{{__('close')}}</a>
+                                </div>
+                --}}
+
+
+                {{-- アクションボタンエリア --}}
+                <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                    <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                        <div class="card-body p-4"> {{-- パディング調整 --}}
+                            <div class="flex flex-wrap items-center justify-center gap-4 w-full"> {{-- gap で間隔調整 --}}
+                                @if ($ledgerDefineRecord->workflow_enabled)
+                                    <div class="join flex flex-wrap items-center justify-center w-full">
+
+                                        {{-- 下書き保存ボタン --}}
+                                        <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
+                                                       class="btn-secondary btn-wide join-item"
+                                                       wire:click.prevent="saveDraft"
+                                                       spinner="saveDraft"
+                                                       wire:key="save-draft-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
+                                        />
+
+                                        {{-- ToDo: 将来的に Role 選択も可能にする --}}
+                                        {{-- 点検依頼ボタン (モーダルを開く) --}}
+                                        {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
+
+                                        <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                                       icon="o-paper-airplane"
+                                                       class="btn-success btn-wide join-item"
+                                                       {{-- モーダルを開くメソッドを呼び出す --}}
+                                                       wire:click.prevent="requestInspection"
+                                                       spinner="requestInspection"
+                                        />
+                                    </div>
+
+                                    {{-- (ステップ2以降で追加) 点検完了（承認申請）ボタン --}}
+                                    {{-- @if($this->canRequestApproval()) --}}
+                                    {{-- <x-mary-button label="{{ __('ledger.workflow.request_approval') }}" ... /> --}}
+                                    {{-- @endif --}}
+
+                                    {{-- (ステップ2以降で追加) 承認ボタン --}}
+                                    {{-- @if($this->canApprove()) --}}
+                                    {{-- <x-mary-button label="{{ __('ledger.workflow.approve') }}" ... /> --}}
+                                    {{-- @endif --}}
+
+                                @else
+
+                                    {{-- 直接保存ボタン --}}
+                                    <div class="flex flex-wrap items-center justify-center w-full">
+                                        <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
+                                        icon="o-pencil"
+                                                       class="btn-primary btn-wide join-item"
+                                                       wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
+                                                       spinner="saveDirectly"
+                                        />
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="flex flex-wrap items-center justify-center w-full">
+                                <x-ledger.close-window-button/>
+                            </div>
+
+                            {{-- 現在のステータス表示 --}}
+                            <div class="text-center text-xs text-base-content/70 mt-2">
+                                {{__('ledger.workflow.current_status')}}: {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </x-mary-form>
+            </x-mary-form>
 
-    @endif
+        @endif
     </div>
+
+    {{-- 担当者選択モーダルコンポーネントを呼び出し --}}
+    {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
+    @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+
 </div>
 

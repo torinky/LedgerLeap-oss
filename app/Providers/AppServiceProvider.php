@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Database\MySqlConnection;
+use App\Models\LedgerDiff;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
+use App\Observers\LedgerDiffObserver;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Database\Connection;
@@ -63,6 +65,5 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
     }
 }

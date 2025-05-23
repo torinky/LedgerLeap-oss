@@ -3,25 +3,34 @@
 namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Enums\WorkflowStatus;
 use App\Http\Requests\Ledger\StoreRequest;
 use App\Jobs\Ledger\AttachedFileScanJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\LedgerDiff;
+use App\Models\User;
+use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\Facades\Image;
 use Intervention\Image\ImageManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
+use function PHPUnit\Framework\isNan;
+use function PHPUnit\Framework\isNull;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
@@ -30,17 +39,17 @@ class CreateColumn extends Component
 {
     use Toast, WithFileUploads;
 
-    public array $content;
+    public array $content = []; // 初期値を空配列に
 
-    public array $labelColor;
+    public array $labelColor = [];
 
     public mixed $ledgerDefineRecord;
 
     public int $ledgerDefineId;
 
-    public mixed $ledgerRecord;
+    public ?int $ledgerId = null;
 
-    public string $ledgerId;
+    public ?Ledger $ledgerRecord = null;
 
     private array $contentAttached = [];
 
@@ -52,34 +61,75 @@ class CreateColumn extends Component
 
     public $requredColumnIds = [];
 
+
+    // --- 推奨担当者IDを保持する一時プロパティ ---
+    public ?int $initialInspectorId = null;
     /**
      * @var mixed|null
      */
     public $totalRequireColumnCount = 0;
+    // --- 担当者選択モーダル制御用 ---
+    public bool $showAssigneeModal = false;
+    public string $assigneeModalRoleType = 'inspector'; // モーダルに渡す roleType
+//    public ?int $assigneeModalSelectedUserId = null; // モーダルで選択されたIDを一時保持 (任意)
+    // --------------------------------
 
-    public function mount(request $request): void
+    // --- selectedUserId はモーダルで選択された結果を受け取る ---
+    // 親コンポーネント側で選択状態を保持する必要がなくなる場合もある
+    // public ?int $selectedUserId = null; // ← モーダルから受け取るので不要になるかも
+    // selectedInspectorId は WorkflowAssigneeSelect とバインドするため維持する (初期値 null)
+
+    protected WorkflowService $workflowService; // WorkflowService をインジェクト
+
+
+    // WorkflowService をインジェクト
+    public function boot(WorkflowService $workflowService): void
     {
-        //new record create
+        $this->workflowService = $workflowService;
+    }
+
+    // mount は Create と Modify で異なるので、各クラスで実装 or 親で共通化
+    public function mount(Request $request): void
+    {
+        // Create 用の mount ロジック
         $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
-        $this->ledgerDefineRecord = LedgerDefine::where('ledger_defines.id', $this->ledgerDefineId)->first();
-        $this->ledgerRecord = null;
-
+        $this->ledgerDefineRecord = LedgerDefine::findOrFail($this->ledgerDefineId);
+        $this->initColumns(); // メソッド名を変更
+        $this->initBackgroundImages();
         $this->initRequireColumns();
+        $this->updateProgress(); // 初期進捗を計算
+        $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
+    }
 
-        foreach ($this->ledgerDefineRecord->column_define as $column) {
-            if ($column->type === 'files' || $column->type === 'chk') {
-                $this->content[$column->id] = [];
-            } else {
-                $this->content[$column->id] = '';
+    // カラム初期化処理 (Create / Modify 共通化)
+    protected function initColumns(): void
+    {
+        foreach ($this->ledgerDefineRecord->column_define ?? [] as $column) {
+            $defaultValue = match ($column->type) {
+                'files', 'chk' => [],
+                default => '',
+            };
+            // content がまだセットされていない場合のみデフォルト値を設定
+            if (!isset($this->content[$column->id])) {
+                $this->content[$column->id] = $this->ledgerRecord?->content[$column->id] ?? $defaultValue;
             }
-            if ($column->required) {
-                $this->labelColor[$column->id] = 'warning';
-            } else {
-                $this->labelColor[$column->id] = 'muted';
+
+            // labelColor の初期設定
+            if (!isset($this->labelColor[$column->id])) {
+                $currentValue = $this->content[$column->id] ?? $defaultValue;
+                if (!empty($currentValue)) {
+                    $this->labelColor[$column->id] = 'success';
+                } elseif ($column->required) {
+                    $this->labelColor[$column->id] = 'warning';
+                } else {
+                    $this->labelColor[$column->id] = 'muted';
+                }
             }
         }
-
-        $this->initBackgroundImages();
+        // DBからの復元時に存在しないキーを埋める (Modify用)
+        if ($this->ledgerRecord ?? $this->content) {
+            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+        }
     }
 
     public function initRequireColumns(): void
@@ -116,6 +166,10 @@ class CreateColumn extends Component
     public function updated($propertyName): void
     {
         $propertyPath = explode('.', $propertyName);
+        //        dd($propertyName);
+        if (count($propertyPath) < 2) {
+            return;
+        }
         $columnId = $propertyPath[1];
 
         try {
@@ -167,64 +221,90 @@ class CreateColumn extends Component
 
     }
 
+
     /**
-     * @throws Exception
+     * ワークフロー無効時の直接保存処理 (LedgerDiff 作成を追加)
      */
-    public function store(StoreRequest $request)
+    public function saveDirectly(): void
     {
+        // ワークフローが無効であることを再確認
+        if ($this->ledgerDefineRecord?->workflow_enabled) { // プロパティ名を修正 isWorkflowEnabled -> workflow_enabled
+            $this->error('Workflow is enabled for this definition.');
+            return;
+        }
+        // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
+        // if ($this->ledgerRecord?->isLocked()) { ... }
+
+        // バリデーション
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $userId = Auth::id();
+        $this->processFilesForSave(); // ファイル処理
+
         try {
-            $this->validate();
+            // トランザクション開始
+            DB::beginTransaction();
 
-            //        dd($this->content, $this->contentAttached);
-
-            foreach ($this->ledgerDefineRecord->column_define as $column) {
-
-                if ($column->type === 'files') {
-
-                    $filenames = [];
-                    $fileContents = [];
-                    foreach ($this->content[$column->id] as $uploadedFile) {
-                        $stored = $this->storeFile($uploadedFile, $column->id);
-                        $filenames[$stored->hashedBaseName] = $stored->originalName;
-                        $fileContents[$stored->hashedBaseName] = null;
-                    }
-                    //                $filenames = $this->storeFile($column->id);
-                    //dd($filenames,$fileContents);
-                    $this->content[$column->id] = $filenames;
-                    $this->contentAttached[$column->id] = $fileContents;
-                }
-            }
-            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
-            $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
-            //dd($this->content);
-            //        dd($this->content, $this->contentAttached);
-            //        createに数字キーの配列を渡すとModelのメソッドに渡るまでの間にキーの値が消えるため呼び出し元で歯抜けがないように配列のキーを作っておく必要がある
-            //        数字キーによるソートもcreateに渡すまでの間に済ませておく
-            $this->ledgerRecord = Ledger::create([
+            $ledgerData = [
+                'ledger_define_id' => $this->ledgerDefineId,
                 'content' => $this->content,
                 'content_attached' => $this->contentAttached,
-                'ledger_define_id' => $this->ledgerDefineRecord->id,
-                'creator_id' => Auth::user()->id,
-                'modifier_id' => Auth::user()->id,
-            ]);
-            //dd($this->content);
-            $this->addAttachedFileRecord();
+                'modifier_id' => $userId,
+                'status' => WorkflowStatus::NONE, // <<<--- NONE ステータス
+                // version は Ledger::create / update でよしなにされるはず
+            ];
 
-            /*            return redirect()->route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
-                            ->with('status', __('ledger.stored.success'));*/
-            $this->dispatch('ledgerStored', $this->ledgerRecord->id);
-            $this->success(
-                __('ledger.stored.success'),
-                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerRecord->id])
-            );
+            if ($this->ledgerId && $this->ledgerRecord) { // 更新の場合
+                // 承認済みチェック (念のため)
+                if ($this->ledgerRecord->isLocked()) {
+                    throw new \Exception(__('ledger.workflow.cannot_edit_approved'));
+                }
+                $ledgerData['version'] = $this->ledgerRecord->version + 1;
+                $this->ledgerRecord->update($ledgerData);
+                $ledger = $this->ledgerRecord->refresh(); // 更新後のデータを再取得
+                $message = __('ledger.updated.success');
+            } else { // 新規作成の場合
+                $ledgerData['creator_id'] = $userId;
+                $ledgerData['version'] = 1; // 新規作成時のバージョン
+                $ledger = Ledger::create($ledgerData);
+                $this->ledgerId = $ledger->id; // ID をセット
+                $this->ledgerRecord = $ledger; // レコードをセット
+                $message = __('ledger.stored.success');
+            }
 
-            return;
-        } catch (Exception $e) {
-            $this->addError('storedFailed', __('ledger.stored.failed'));
-            //TODO: 例外処理
-            error_log($e->getMessage());
+            // --- LedgerDiff 作成処理を追加 ---
+            $columnDefine = $ledger->define->column_define; // Ledger から Define を取得
+            $ledgerVersion = $ledger->version;
+
+            $diffData = [
+                'ledger_id' => $ledger->id,
+                'content' => $ledger->content, // 保存された内容
+                'content_attached' => $ledger->content_attached, // 保存された内容
+                'column_define' => $columnDefine,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $userId, // 今回の操作者
+                'status' => WorkflowStatus::NONE, // <<<--- NONE ステータス
+                'version' => $ledgerVersion,
+                // 他のワークフローカラムは NULL
+                'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
+                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+            ];
+            $ledgerDiff = LedgerDiff::create($diffData);
+
+            // Ledger の latest_diff_id を更新
+            $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
+            // --- ここまで追加 ---
+
+            DB::commit(); // トランザクション確定
+
+            $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
+            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+
+        } catch (Throwable $e) { // Throwable をキャッチ
+            DB::rollBack(); // エラー時ロールバック
+            Log::error('Direct save failed: ' . $e->getMessage());
+            $this->error(__('messages.error.generic'));
         }
-
     }
 
     /**
@@ -365,6 +445,9 @@ class CreateColumn extends Component
             $validationRules[$columnName] = $rules;
         }
 
+        // selectedUserId のルール
+//        $validationRules['selectedUserId'] = ['nullable', 'integer', 'exists:users,id'];
+
         return $validationRules;
     }
 
@@ -375,6 +458,8 @@ class CreateColumn extends Component
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $attributes["content.{$column->id}"] = $column->name;
         }
+        // selectedUserId の属性名
+//        $attributes['selectedUserId'] = __('ledger.workflow.next_inspector');
 
         return $attributes;
     }
@@ -388,4 +473,350 @@ class CreateColumn extends Component
         ];
 
     }
+
+    // 下書き保存
+    public function saveDraft(): void
+    {
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY)); // content のみバリデーション
+        $userId = Auth::id();
+        $this->processFilesForSave(); // ファイル処理
+
+        try {
+            // WorkflowService を呼び出し、戻り値を受け取る
+            $result = $this->workflowService->saveDraft(
+                $this->ledgerId, // 新規なら null
+                $this->ledgerDefineId,
+                $this->content,
+                $this->contentAttached,
+                $userId
+            );
+
+            // 戻り値から ID とレコードを更新
+            $this->ledgerId = $result['ledger']->id;
+            $this->ledgerRecord = $result['ledger']; // ledgerRecord も更新
+
+            $this->addAttachedFileRecordIfNecessary();
+            $this->success(__('ledger.draft_saved'));
+        } catch (\Exception $e) {
+            Log::error('Draft save failed: ' . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
+
+    // 点検依頼
+    // --- 点検依頼メソッドの修正 ---
+//    public function requestInspection()
+//    {
+//        // 選択された担当者IDは $this->selectedUserId を使う
+//        $this->validate(array_merge(
+//            array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY),
+//            // selectedUserId のバリデーションルール名に変更
+//            ['selectedUserId' => ['required', 'integer', 'exists:users,id']]
+//        ));
+//
+//        // $selectedUserId は wire:model でバインドされているプロパティを使う
+//        $selectedAssigneeId = $this->selectedUserId;
+//
+//        $userId = Auth::id();
+//
+//
+//        // 下書きがまだ保存されていない場合は保存
+//        if (is_null($this->ledgerId)) {
+//            Log::debug("Ledger not saved yet, saving draft before requesting inspection.");
+//            try {
+//                // saveDraft 内で $this->ledgerId がセットされる
+//                $this->saveDraftInternal(); // 下書き保存の内部ロジック呼び出し
+//                if(is_null($this->ledgerId)){
+//                    throw new \Exception("Failed to get Ledger ID after saving draft.");
+//                }
+//            } catch (\Exception $e) {
+//                Log::error("Failed to save draft before inspection request: " . $e->getMessage());
+//                $this->error(__('messages.error.generic'));
+//                return;
+//            }
+//        }
+//
+//        try {
+//            // WorkflowService に $selectedAssigneeId を渡す
+//            $result = $this->workflowService->requestInspection(
+//                $this->ledgerId,
+//                $userId,
+//                $selectedAssigneeId
+//            );
+//
+//            $this->addAttachedFileRecordIfNecessary();
+//            $this->success(__('ledger.workflow.inspection_requested_message'),
+//                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+//
+//        } catch (\Exception $e) {
+//            Log::error('Inspection request failed: ' . $e->getMessage());
+//            $this->error(__('messages.error.generic'));
+//        }
+//    }
+
+    // --- 下書き保存メソッド (requestInspection から呼ばれる内部用) ---
+    protected function saveDraftInternal(): void
+    {
+        $this->processFilesForSave(); // ファイル処理は先に行う
+
+        // バリデーションは requestInspection で実施済みなので不要
+        // $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $userId = Auth::id();
+         $this->processFilesForSave();
+
+        try {
+            $result = $this->workflowService->saveDraft(
+                $this->ledgerId, // null のはず
+                $this->ledgerDefineId,
+                $this->content,
+                $this->contentAttached,
+                $userId
+            );
+            $this->ledgerId = $result['ledger']->id;
+            $this->ledgerRecord = $result['ledger'];
+             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加は呼び出し元で行う
+            // $this->success(__('ledger.draft_saved')); // 成功メッセージは最終的なアクションで出す
+        } catch (\Exception $e) {
+            Log::error('Draft save internal failed: ' . $e->getMessage());
+            // エラーは呼び出し元に伝播させる
+            throw $e;
+        }
+    }
+
+
+    /**
+     * ファイル処理の共通化 (store から移動)
+     */
+    protected function processFilesForSave(): void
+    {
+        $this->newAttachedFiles = []; // 初期化
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type === 'files') {
+                $storedFiles = [];
+                // content 内のアップロード済みファイルを取得 (TemporaryUploadedFile)
+                $uploadedFiles = $this->content[$column->id] ?? [];
+                // array であることを確認
+                if (!is_array($uploadedFiles)) {
+                    $uploadedFiles = [];
+                }
+
+                $validUploads = array_filter($uploadedFiles, fn($file) => $file instanceof TemporaryUploadedFile);
+
+                foreach ($validUploads as $uploadedFile) {
+                    $stored = $this->storeFile($uploadedFile, $column->id);
+                    if ($stored) {
+                        $storedFiles[] = $stored;
+                    }
+                }
+
+                // ModifyColumn の場合、既存ファイルとのマージ処理が必要
+                if ($this instanceof ModifyColumn) {
+                    $this->mergeContentFiles($column, $storedFiles); // 既存メソッド呼び出し
+                } else { // CreateColumn の場合
+                    $filenames = [];
+                    $fileContents = [];
+                    foreach ($storedFiles as $stored) {
+                        $filenames[$stored->hashedBaseName] = $stored->originalName;
+                        $fileContents[$stored->hashedBaseName] = null;
+                    }
+                    $this->content[$column->id] = $filenames;
+                    $this->contentAttached[$column->id] = $fileContents;
+                }
+            }
+        }
+        // Normalize は Service 側で行うか、ここで実行
+        $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+        $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
+    }
+
+    // 点検者の選択肢を取得
+    public function getInspectorOptions(): array
+    {
+        $options = [];
+        // 推奨ユーザー
+        if ($this->ledgerDefineRecord?->recommendedInspector) {
+            $inspector = $this->ledgerDefineRecord->recommendedInspector;
+            // 配列形式に 'id' と 'name' を含める
+            $options[$inspector->id] = ['id' => $inspector->id, 'name' => $inspector->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
+        }
+        // 推奨ロール
+        if ($this->ledgerDefineRecord?->recommendedInspectorRole) {
+            // ロールからユーザーを取得
+            $roleUsers = $this->ledgerDefineRecord->recommendedInspectorRole->users()->orderBy('name')->get();
+            foreach ($roleUsers as $user) {
+                // 重複を避ける
+                if (!isset($options[$user->id])) {
+                    $options[$user->id] = ['id' => $user->id, 'name' => $user->name . ' (' . __('ledger.workflow.recommended_role') . ')'];
+                }
+            }
+        }
+        // その他の全ユーザー (重複を除く)
+        $allUsers = User::orderBy('name')->get();
+        foreach ($allUsers as $user) {
+            if (!isset($options[$user->id])) {
+                $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
+            }
+        }
+
+        // MaryUI Select の options 形式 (id と name を持つ配列) に変換
+        return array_values($options); // キーをリセットして配列として返す
+    }
+
+    // ファイルマージ（Create用デフォルト）
+    protected function mergeFilesForSave(object $column, array $storedFiles): void
+    {
+        $filenames = [];
+        $fileContents = [];
+        foreach ($storedFiles as $stored) {
+            $filenames[$stored->hashedBaseName] = $stored->originalName;
+            $fileContents[$stored->hashedBaseName] = null;
+        }
+        $this->content[$column->id] = $filenames;
+        $this->contentAttached[$column->id] = $fileContents;
+    }
+
+    // ファイルレコード追加（共通化）
+    protected function addAttachedFileRecordIfNecessary(): void
+    {
+        if ($this->ledgerId && !empty($this->newAttachedFiles)) {
+            $this->addAttachedFileRecord(); // 既存メソッド呼び出し
+        }
+    }
+
+    // --- loadRecommendedPersonnel メソッドで selectedUserId に初期値をセット ---
+    protected function loadRecommendedPersonnel(): void
+    {
+        return;
+    }
+
+    // --- 担当者選択モーダルを開くメソッド (実績ベースで初期値を決定) ---
+    public function openAssigneeModal(string $roleType): void
+    {
+        if (is_null($this->ledgerId)) {
+            Log::error("Cannot open assignee modal without a saved ledger.");
+            $this->error(__('ledger.workflow.save_first_before_assigning'));
+            return;
+        }
+
+        $this->assigneeModalRoleType = $roleType;
+
+        // --- 実績ベースで初期選択ユーザーIDを決定 ---
+        $initialUserId = null;
+        if ($roleType === 'inspector') {
+            // WorkflowAssigneeSelect のロジックを一部流用して最も頻度の高いユーザーを取得
+            // (本来は Service/Repository に切り出すべきロジック)
+            $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineId, 'inspector', 1);
+            if (!empty($frequentUsers)) {
+                $initialUserId = $frequentUsers[0]['id'];
+                Log::debug("Initial inspector ID based on frequency: {$initialUserId}");
+            } else {
+                Log::debug("No frequent inspector found.");
+            }
+        }
+        // TODO: 承認者用の初期値決定ロジック
+        // ------------------------------------
+
+        $this->resetValidation();
+        $this->showAssigneeModal = true;
+
+        $this->dispatch('open-assignee-modal',
+            ledgerDefineId: $this->ledgerDefineId,
+            folderId: $this->ledgerDefineRecord->folder_id,
+            roleType: $roleType,
+            ledgerId: $this->ledgerId, // <<<--- 必ず値が入っているはず
+            initialUserId: $initialUserId // <<<--- 実績ベースの初期選択ID
+        );
+    }
+
+    // --- モーダルから担当者が選択されたときのイベントリスナー ---
+    #[On('assignee-selected')]
+    public function handleAssigneeSelected(int $userId, string $roleType): void
+    {
+        Log::debug("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
+        // ここで $userId を使って WorkflowService のメソッドを呼び出す
+        if ($roleType === 'inspector') {
+            $this->requestInspectionInternal($userId); // 内部メソッド呼び出し
+        } elseif ($roleType === 'approver') {
+            // TODO: 承認申請処理 (Show.php や PendingList.php で実装)
+            // $this->requestApprovalInternal($userId);
+        }
+        // モーダルは子コンポーネント側で閉じられる想定
+        $this->showAssigneeModal = false; //念のため親でも閉じる
+    }
+
+    // --- 点検依頼の実行ロジック (内部メソッド化) ---
+    protected function requestInspectionInternal(int $assigneeId): void
+    {
+        // Content のバリデーション
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        // 担当者IDのバリデーション (念のため)
+        if(!User::find($assigneeId)){
+            $this->error(__('ledger.workflow.invalid_assignee')); // エラーメッセージ
+            return;
+        }
+
+        $userId = Auth::id();
+        $this->processFilesForSave(); // ファイル処理
+
+        // 下書き保存チェック＆実行
+        if (is_null($this->ledgerId)) {
+            try {
+                $this->saveDraftInternal();
+                if(is_null($this->ledgerId)) throw new \RuntimeException("Failed to get Ledger ID.");
+            } catch (\Exception $e) { /* エラー処理 */ return; }
+        }
+
+        try {
+            // WorkflowService に $assigneeId を渡す
+            $result = $this->workflowService->requestInspection(
+                $this->ledgerId,
+                $userId,
+                $assigneeId
+            );
+            $this->addAttachedFileRecordIfNecessary();
+            $this->success(__('ledger.workflow.inspection_requested_message'),
+                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+        } catch (\Exception $e) {
+            Log::error('Inspection request failed: ' . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
+
+// --- 点検依頼ボタンのアクション (下書き保存 -> モーダル表示) ---
+    public function requestInspection(): void
+    {
+        // まず Content のバリデーションのみ実行
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+
+        // 下書き保存を実行 (ファイル処理含む)
+        try {
+            $userId = Auth::id();
+            $this->processFilesForSave(); // ファイル処理を先に行う
+            $result = $this->workflowService->saveDraft(
+                $this->ledgerId, // 既存ID or null
+                $this->ledgerDefineId,
+                $this->content,
+                $this->contentAttached,
+                $userId
+            );
+            $this->ledgerId = $result['ledger']->id;     // 必ず ID がセットされる
+            $this->ledgerRecord = $result['ledger']; // レコードも更新
+            $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加
+            Log::info("Draft saved successfully before opening assignee modal. Ledger ID: {$this->ledgerId}");
+
+            // 下書き保存成功後にモーダルを開く
+            $this->openAssigneeModal('inspector');
+
+        } catch (\Exception $e) {
+            Log::error('Draft save failed before inspection request: ' . $e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }
+
+    protected function getInitialApproverId(): ?int
+    {
+        // TODO: 承認者の推奨ロジック
+        return null;
+    }
+
 }

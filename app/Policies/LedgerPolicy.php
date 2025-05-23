@@ -14,6 +14,7 @@ class LedgerPolicy
     use HandlesAuthorization;
 
     protected $userService;
+    private LedgerDefinePolicy $ledgerDefinePolicy;
 
     public function __construct(UserService $userService, LedgerDefinePolicy $ledgerDefinePolicy)
     {

@@ -1,41 +1,319 @@
 <div>
-    <x-ledger.detail.table
-        :ledgerRecord="$ledgerRecord"
-        :canView="auth()->user()->can('view', $ledgerRecord)"
-    />
-    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
-        <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
-        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
-    </div>
+    @php
+        use App\Enums\WorkflowStatus;
+    @endphp
+    <div class="p-0 bg-base-100 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
 
-    <div
-        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-            <div class="card-body flex flex-row justify-center items-center">
-                <div class="card-actions justify-center place-items-center">
-                    <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-                       class="btn btn-primary btn-lg btn-wide"
-                    ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
+        {{-- タブ UI の導入 --}}
+        <x-mary-tabs wire:model="selectedTab" class="mb-10"> {{-- 下にマージン追加 --}}
 
-                    @if($ledgerRecord->ledger_diff_count>0)
-                        <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
-                           class="btn btn-outline btn-info ml-5"
-                        ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.modifies')}}
-                            <div class="badge badge-info badge-outline">{{$ledgerRecord->ledger_diff_count}}</div>
-                        </a>
+            {{-- 基本情報タブ --}}
+            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
+                        class="shadow-md"
+            >
+
+
+                    @if($ledgerRecord->define->workflow_enabled)
+                        <x-mary-card>
+                            <div class="flex justify-between items-center ">
+                                <div>
+                                    <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
+                                    <x-mary-badge :value="$ledgerRecord->status->label()"
+                                                  class="{{ $ledgerRecord->status->colorClass() }}"/>
+                                    {{-- 担当者表示--}}
+
+                                    @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
+                                    @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
+                                    @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
+                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
+                                    @endif
+                                </div>
+                                {{-- アクションボタン--}}
+
+                                <div class="flex gap-2 items-center">
+                                    @if($this->canRequestApproval())
+                                        <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                       icon="o-check-badge"
+                                                       class="btn-lg btn-success"
+                                                       {{-- モーダルを開くメソッド呼び出し --}}
+                                                       wire:click="openApproverSelectModal"
+                                                       spinner="openApproverSelectModal"/>
+                                    @endif
+                                    @if($this->canApprove())
+                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                                       class="btn-lg btn-primary" wire:click="approveTask" spinner/>
+                                    @endif
+                                    @if($this->canReturnToDraft())
+                                        <x-mary-button
+                                                label="{{ __('ledger.workflow.return_to_draft_short') }}"
+                                                icon="o-arrow-uturn-left"
+                                                class="btn-sm btn-warning" wire:click="openReturnToDraftModal"
+                                                spinner="openReturnToDraftModal"/>
+                                    @endif
+                                </div>
+                            </div>
+                        </x-mary-card>
                     @endif
 
-                    {{--
-                                        <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
-                                                class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
-                    --}}
-                    <x-ledger.close-window-button
-                        :closeWindowMessage="__('ledger.close_view_window_message')"
-                        :cancel="__('ledger.cancel')"
-                    />
+                    {{-- カラムごとの差分表示 --}}
+                    @if($hasChangedColumns)
+                        <div class="border border-base-300 rounded-lg">
+                            @if($hasChangedColumns)
+                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
+                                />
+                            @endif
+                            <table class="table table-compact w-full">
+                                @if($showChanges)
+                                    <thead>
+                                    <tr>
+                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                            {{ __('ledger.column.title') }}
+                                        </th>
+                                        <th>
+                                            {{ __('ledger.after_change') }}
+                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $ledgerRecord->version }} </span>
+                                        </th>
+                                        <th>
+                                            {{ __('ledger.before_change') }}
+                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $comparisonTargetDiff->version }} </span>
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                @endif
+                                <tbody>
+
+                                @foreach($contentChanges as $columnId => $change)
+                                    <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
+                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                            {{ $change['column_name'] }}
+                                            @if($change['changed'])
+                                                <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
+                                            @endif
+                                        </th>
+                                        <td class="break-words align-top pt-2">
+                                            <div class="text-sm">
+                                                @if (!$canView)
+                                                    <x-ledger.not-authorized-message />
+                                                @elseif (empty($change['current_value']))
+                                                    <x-ledger.empty-message />
+                                                @elseif($change['column_define_current'])
+                                                    {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
+                                                                  ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                                @else
+                                                    <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
+                                                @endif
+                                            </div>
+                                        </td>
+                                        @if($showChanges)
+                                            <td class="break-words align-top pt-2">
+                                                <div class="text-sm opacity-70 mb-2">
+                                                    @if (!$canView)
+                                                        <x-ledger.not-authorized-message />
+                                                    @elseif (empty($change['old_value']))
+                                                        <x-ledger.empty-message />
+                                                    @elseif($change['column_define_old'])
+                                                        {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
+                                                                      ->show($change['column_define_old'], $change['old_value'], $canView) }}
+                                                    @else
+                                                        <span class="text-ghost">---</span> {{-- 古い定義がない --}}
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
+                        <x-ledger.detail.table
+                                :ledgerRecord="$ledgerRecord"
+                                :canView="$canView"
+                        />
+                    @endif
+
+                    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
+                        <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
+                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
+                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
+                    </div>
+
+            </x-mary-tab>
+
+
+            @php
+                $historyTabTitle = $ledgerRecord->define->workflow_enabled ? __('ledger.tab.workflow_history') : __('ledger.history_title');
+            @endphp
+            {{-- ワークフロー履歴タブ --}}
+            <x-mary-tab name="history"
+                        class="shadow-md"
+                        label="{{ $historyTabTitle }}" icon="o-list-bullet">
+                <x-mary-card>
+                    <x-mary-table class="table-sm w-full table-zebra overflow-x-auto"
+                                  :headers="[
+                            ['key' => 'created_at', 'label' => __('ledger.workflow.history_datetime')],
+                            ['key' => 'modifier_name', 'label' => __('ledger.workflow.history_user')],
+                            ['key' => 'status', 'label' => __('ledger.workflow.history_action')],
+                            ['key' => 'detail', 'label' => __('ledger.workflow.history_detail')],
+                            ['key' => 'actions', 'label' => '', 'class' => 'text-center'],
+                        ]"
+                                  :rows="$workflowHistory"
+                                  wire:key="workflow-history-table"
+                    >
+                        @scope('cell_created_at', $diff)
+                        {{ $diff->created_at->isoFormat('YYYY/MM/DD HH:mm:ss') }}
+                        @endscope
+
+                        @scope('cell_modifier_name', $diff)
+                        {{ $diff->modifier->name ?? 'N/A' }}
+                        @endscope
+
+                        @scope('cell_status', $diff)
+                        @if ($diff->status !== WorkflowStatus::NONE)
+                            <x-mary-badge :value="$diff->status->label()"
+                                          class="badge-sm {{ $diff->status->colorClass() }}"/>
+                        @else
+                            <span class="text-xs">{{ __('ledger.workflow.history_action_modified') }}</span>
+                        @endif
+                        @endscope
+
+                        @scope('cell_detail', $diff)
+                        @if ($diff->status !== WorkflowStatus::NONE)
+                            @if ($diff->status === WorkflowStatus::PENDING_INSPECTION && $diff->inspector)
+                                <span class="text-xs">{{ __('ledger.workflow.next_inspector') }}: {{ $diff->inspector->name }}</span>
+                            @elseif ($diff->status === WorkflowStatus::PENDING_APPROVAL && $diff->approver)
+                                <span class="text-xs">{{ __('ledger.workflow.next_approver') }}: {{ $diff->approver->name }}</span>
+                            @elseif ($diff->status === WorkflowStatus::APPROVED && $diff->approver)
+                                <span class="text-xs">{{ __('ledger.workflow.approved_by') }}: {{ $diff->approver->name }}</span>
+                            @endif
+                            @if ($diff->comments)
+                                <div class="text-xs mt-1 p-1 bg-base-200 rounded"
+                                     title="{{ __('ledger.workflow.comments') }}">{!! nl2br(e($diff->comments)) !!}</div>
+                            @endif
+                        @else
+                            <span class="text-xs">{{ __('ledger.workflow.workflow_inactive_at_this_point') }}</span>
+                        @endif
+                        @endscope
+
+                        @scope('cell_actions', $diff)
+                        @if ($diff->content)
+                            <a href="{{ route('ledgerDiff.show', ['ledgerId' => $diff->ledger_id, 'diffId' => $diff->id]) }}"
+                               class="btn btn-square tooltip"
+                               target="_blank"
+                               data-tip="{{ __('ledger.view_content_at_this_point') }}">
+                                <i class="far fa-eye"></i>
+                            </a>
+                        @endif
+                        @endscope
+
+                        <x-slot:empty>
+                            <x-mary-icon name="o-cube" label="{{ __('ledger.workflow.no_history') }}"/>
+                        </x-slot:empty>
+                    </x-mary-table>
+                </x-mary-card>
+            </x-mary-tab>
+        </x-mary-tabs>
+
+
+        {{-- フッターパネル (アクションボタン集約) --}}
+        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
+            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity "> {{-- 透明度調整 --}}
+                <div class="card-body p-4">
+                    <div class="flex flex-wrap items-center justify-center gap-4">
+
+                        {{-- 編集ボタン --}}
+                        @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
+                        @if($canUpdate && !$ledgerRecord->isLocked())
+                            <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                               class="btn btn-primary btn-xl btn-wide"
+                            ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
+                        @else
+                            <div class="tooltip"
+                                 data-tip="{{ $ledgerRecord->isLocked() ? __('ledger.workflow.record_locked') : __('ledger.no_edit_permission') }}">
+                                <button class="btn btn-primary btn-xl btn-wide" disabled><i
+                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
+                            </div>
+                        @endif
+
+                        {{-- 変更履歴ボタン --}}
+                        @if($ledgerRecord->ledgerDiff()->where(DB::raw('content'), '!=', '')->count() > 0)
+                            {{-- 変更履歴がある場合のみ --}}
+                            <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
+                               class="btn btn-outline btn-info btn-wide"
+                            ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.view_history')}}
+                                @if($ledgerRecord->version-1>0)
+                                    <div class="badge badge-sm badge-info tooltip"
+                                         data-tip="{{ __('ledger.reviseCount') }}"> {{ $ledgerRecord->version-1 }}
+                                    </div>
+                                @endif
+                            </a>
+                        @endif
+
+                        {{-- ワークフローアクションボタン --}}
+                        @if($this->canRequestApproval())
+                            <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                           icon="o-check-badge"
+                                           class="btn-lg btn-success"
+                                           {{-- モーダルを開くメソッド呼び出し --}}
+                                           wire:click="openApproverSelectModal"
+                                           spinner="openApproverSelectModal"/>
+                        @endif
+                        @if($this->canApprove())
+                            <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                           class="btn-lg btn-primary" wire:click="approveTask" spinner/>
+                        @endif
+                        @if($this->canReturnToDraft())
+                            <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
+                                           icon="o-arrow-uturn-left" class="btn-warning btn-sm md:btn-md"
+                                           wire:click="openReturnToDraftModal"
+                                           spinner="openReturnToDraftModal"/>
+                        @endif
+
+                        {{-- 閉じるボタン --}}
+                        <x-ledger.close-window-button/>
+
+                    </div>
+                    {{-- 現在のステータス表示 --}}
+                    <div class="text-center text-xs text-base-content/70 mt-2">
+                        {{ __('ledger.workflow.current_status') }} :
+                        <x-mary-badge :value="$ledgerRecord->status->label()"
+                                      class="badge-xs {{ $ledgerRecord->status->colorClass() }}"/>
+                        @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
+                            ({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})
+                        @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
+                            ({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
+
+        {{-- 担当者選択モーダルコンポーネント呼び出し --}}
+        @livewire('workflow.workflow-assignee-modal', key('assignee-modal-show'))
+
+        {{-- コメント入力モーダル (新規追加) --}}
+        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id],
+        key('workflow-comment-modal-show'))
+
+
+        {{-- 戻し理由入力モーダル --}}
+        {{--
+        <x-mary-modal wire:model="returnToDraftModal"
+          title="{{ __('ledger.workflow.return_to_draft_reason') }}">
+        <x-mary-textarea label="{{ __('ledger.workflow.comments') }}" wire:model="returnComment"
+                 placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
+                 hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
+        <x-slot:actions>
+        <x-mary-button label="{{ __('Cancel') }}" @click="$wire.returnToDraftModal = false"/>
+        <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
+                   wire:click="returnTaskToDraft" spinner/>
+        </x-slot:actions>
+        </x-mary-modal>
+        --}}
+
     </div>
 </div>
+

@@ -17,7 +17,7 @@
 
 
 
-    <div class="container mx-auto px-4">
+    <div class="container max-w-full px-0 md:px-4">
         <livewire:ledger.records-table/>
     </div>
 

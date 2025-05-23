@@ -92,7 +92,7 @@ class RecordsTable extends Component
         $this->initSearchContext();
 
         // 現在のフォルダーIDを初期化
-        $this->selectedFolderId = $request->folderId();
+        $this->selectedFolderIds = [$request->folderId()];
         $this->currentFolderId = $request->currentFolderId();
 
         // もし台帳IDが指定されていれば、選択済みリストに追加

@@ -40,14 +40,25 @@
                 @endif
             </button>
             <input
-                wire:change="focusLedgerDefine({{$ledgerDefine->id}})"
-                wire:model="filter.{{$column_define->id}}"
-                wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
-                type="search"
-                class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
-                placeholder="&#xf0b0; {{__('ledger.filter')}}...">
+                    wire:change="focusLedgerDefine({{$ledgerDefine->id}})"
+                    wire:model="filter.{{$column_define->id}}"
+                    wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
+                    type="search"
+                    class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
+                    placeholder="&#xf0b0; {{__('ledger.filter')}}...">
         </td>
     @endforeach
+
+    {{-- ステータス列ヘッダー --}}
+    @if($ledgerDefine->workflow_enabled)
+        <th class="px-4 py-2 text-center bg-accent bg-opacity-30">
+            <span class="text-sm font-bold">{{ __('ledger.workflow.status.label') }}</span>
+            {{-- 必要ならソートボタン --}}
+            {{-- <button class="btn btn-xs" wire:click.self="$parent.sort('status')">...</button> --}}
+            {{-- 必要ならフィルタ (Select) --}}
+            {{-- <select wire:model.live="$parent.filterStatus" class="select select-xs ...">...</select> --}}
+        </th>
+    @endif
 
     <td class="px-4 py-2 text-center bg-accent bg-opacity-30">
         <span class="text-sm font-bold">

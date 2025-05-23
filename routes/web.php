@@ -11,6 +11,7 @@ use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateCont
 use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
 use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
 use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
@@ -18,6 +19,7 @@ use App\Livewire\MyPortal;
 use App\Livewire\Notifications\UserNotificationList;
 use App\Livewire\Notifications\Settings;
 use App\Livewire\UserActivityLog;
+use App\Livewire\Workflow\PendingList;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,7 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::middleware('auth')->group(function () {
 
@@ -116,8 +118,16 @@ Route::middleware('auth')->group(function () {
             ->where('ledgerId', '[0-9]+');*/
 
     //    ledgerDiff
-    Route::get('/ledgerDiff/{ledgerId}', LedgerDiffShowController::class)->name('ledgerDiff.show')
-        ->where('ledgerId', '[0-9]+');
+    Route::get('/ledgerDiff/{ledgerId}/{diffId?}', LedgerDiffShowController::class) // ShowController を使う場合
+    ->name('ledgerDiff.show')
+        ->where('ledgerId', '[0-9]+')
+        ->where('diffId', '[0-9]+'); // diffId も数字のみ
+
+    // もし Livewire を直接ルートにバインドする場合
+    // Route::get('/ledgerDiff/{ledgerId}/{diffId?}', App\Livewire\Ledger\ShowDiff::class)
+    //     ->name('ledgerDiff.show')
+    //     ->where('ledgerId', '[0-9]+')
+    //     ->where('diffId', '[0-9]+');
 
     //folder
     Route::get('/folder/edit/{folderId}', [FolderUpdateController::class, 'edit'])
@@ -140,18 +150,26 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/synonyms/{word}', [SynonymController::class, 'search']);
 
-    Route::get('/notifications', UserNotificationList::class)
-        ->middleware(['auth'])
-        ->name('notifications.index');
-    Route::get('/notifications/settings', Settings::class)
-        ->middleware(['auth'])
-        ->name('notifications.settings');
-    Route::get('/activity-log', UserActivityLog::class)
-        ->middleware(['auth'])
-        ->name('activity-log');
+    // --- 通知関連ルート ---
+    // 修正: /notifications はコントローラーを向く
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    /*    Route::get('/notifications', UserNotificationList::class)
+            ->middleware(['auth'])
+            ->name('notifications.index');*/
+    // 設定画面はそのまま
+    Route::get('/notifications/settings', Settings::class)->name('notifications.settings');
+
+    // 削除 or リダイレクト: /activity-log は /notifications?tab=activity へ
+    // Route::get('/activity-log', UserActivityLog::class)->name('activity-log'); // <<<--- 削除またはリダイレクトに変更
+    Route::redirect('/activity-log', '/notifications?tab=activity', 301)->name('activity-log'); // 例: リダイレクト
+
+    // --- ワークフロー関連ルート ---
+    // 削除: 承認待ちリスト単独ページは廃止
+    Route::redirect('/workflow/pending', '/notifications?tab=tasks', 301)->name('workflow.pending'); // 例: リダイレクト
+    // Route::get('/workflow/pending', PendingList::class)->name('workflow.pending'); // <<<--- 削除
+
 
     Route::get('/my-portal', MyPortal::class)->name('my-portal');
-
 });
 
 Route::get('/phpinfo', function () {

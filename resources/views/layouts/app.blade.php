@@ -49,6 +49,9 @@
     </main>
 </div>
 {{--        @livewireScripts--}}
+<fooer>
+    {{$footer ?? ''}}
+</fooer>
 @stack('scripts')
 </body>
 </html>

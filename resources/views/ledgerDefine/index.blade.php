@@ -12,7 +12,7 @@
     <x-slot name="drawer">
         <livewire:folder.tree/>
     </x-slot>
-    <div class="container mx-auto px-4">
+    <div class="container max-w-full px-0 md:px-4">
         <livewire:ledger-define.records-table/>
     </div>
 </x-appWithDrawer-layout>

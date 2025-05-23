@@ -8,7 +8,7 @@ use App\Casts\AsColumnArrayJson;
 use App\Enums\WorkflowStatus;
 use App\Services\Ledger\SearchContext;
 use Exception;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,7 +36,7 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
-        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id',
+        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version'
     ];
 
     /**
@@ -58,7 +58,7 @@ class Ledger extends Model
      *
      * @return void
      */
-    public function scopeSearch(Builder $query, string $freeWord)
+    public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
@@ -67,7 +67,7 @@ class Ledger extends Model
         //        dd($freeWord);
         //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
         //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        $query->where(function (Builder $q) use ($freeWord) {
+        $query->where(function (EloquentBuilder $q) use ($freeWord) {
             $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
                 ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
         });
@@ -81,7 +81,7 @@ class Ledger extends Model
      *
      * @return void
      */
-    public function scopeSearchContext(Builder $query, SearchContext $searchContext)
+    public function scopeSearchContext(EloquentBuilder $query, SearchContext $searchContext)
     {
 
         foreach ($searchContext->keywords as $keyword) {
@@ -94,7 +94,7 @@ class Ledger extends Model
     /**
      * 指定されたフィルタ条件で content をフィルタリングするスコープです。
      */
-    public static function scopeContentsFilter(Builder $query, array $filter): void
+    public static function scopeContentsFilter(EloquentBuilder $query, array $filter): void
     {
         if (empty($filter)) {
             return;
@@ -185,13 +185,14 @@ class Ledger extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'content', 'ledger_define_id']) // 変更を監視する属性
+            ->logOnly(['name', 'content', 'ledger_define_id', 'status', 'version', 'modifier_id']) // 変更を監視する属性
             ->logOnlyDirty() // 変更があった場合のみ記録
             ->dontSubmitEmptyLogs() // 空のログは記録しない
             ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName))
-            ->logFillable();
-        // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-        // ->dontLogIfAttributesChangedOnly(['column_define']) // 特定の属性のみが変更された場合はログを記録しない
+            ->logFillable()
+            // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id']) // 特定の属性のみが変更された場合はログを記録しない
+            ;
     }
 
     /**
@@ -222,12 +223,11 @@ class Ledger extends Model
     }
 
     /**
-     * 最新の LedgerDiff レコードへのリレーション (オプション)
-     * これにより $ledger->latestDiff で最新の承認情報などにアクセスできる
+     * 最新の LedgerDiff レコードへのリレーション
      */
-    public function latestDiff()
+    public function latestDiff(): BelongsTo
     {
-        return $this->hasOne(LedgerDiff::class)->latestOfMany();
+        return $this->belongsTo(LedgerDiff::class, 'latest_diff_id');
     }
 
     /**
@@ -243,5 +243,19 @@ class Ledger extends Model
     public function isLocked(): bool
     {
         return $this->status === WorkflowStatus::APPROVED;
+    }
+
+    // クラス定数として必要なリレーションを定義
+    public const NEEDED_RELATIONS = [
+        'define:id,title,folder_id',
+        'creator:id,name',
+        'latestDiff.inspector:id,name',
+        'latestDiff.approver:id,name',
+    ];
+
+    public function scopeWithNeededRelations(EloquentBuilder $query): EloquentBuilder
+    {
+        // 定数を使ってリレーションを指定
+        return $query->with(self::NEEDED_RELATIONS);
     }
 }

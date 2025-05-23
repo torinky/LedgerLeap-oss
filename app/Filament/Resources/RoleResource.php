@@ -6,11 +6,12 @@ use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleR
 use App\Enums\FolderPermissionType;
 use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
-use App\Filament\Resources\RoleResource\RelationManagers\FolderRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
 use App\Models\Folder;
 use App\Models\NotificationType;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use Filament\Forms\Components\Grid;
@@ -23,6 +24,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class RoleResource extends BaseRoleResource
 {
@@ -47,8 +49,9 @@ class RoleResource extends BaseRoleResource
 
     public static function form(Form $form): Form
     {
-        $parentForm = parent::form($form);
-        $components = $parentForm->getComponents();
+        // --- 既存の parentForm と components の取得は不要になる ---
+        // $parentForm = parent::form($form);
+        // $components = $parentForm->getComponents();
 
         return $form
             ->schema([
@@ -56,7 +59,6 @@ class RoleResource extends BaseRoleResource
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                //                        ...$components,
                                 TextInput::make('name')
                                     ->label(__('role.name'))
                                     ->required()
@@ -69,20 +71,56 @@ class RoleResource extends BaseRoleResource
                                     ->visible(fn() => config('filament-spatie-roles-permissions.should_show_guard', true))
                                     ->required(),
 
+                                // --- Permissions Select の変更 ---
                                 Select::make('permissions')
                                     ->columnSpanFull()
                                     ->label(__('role.permissions'))
                                     ->relationship(
                                         name: 'permissions',
+                                        // titleAttribute: 'name', // titleAttribute の代わりに getOptionLabelFromRecordUsing を使用
                                         modifyQueryUsing: fn(Builder $query) => $query->orderBy('name'),
                                     )
-                                    ->visible(config('filament-spatie-roles-permissions.should_show_permissions_for_roles'))
-                                    ->getOptionLabelFromRecordUsing(fn(Model $record) => __('permission.name.' . $record->name) . ' (' . $record->guard_name . ')')
-                                    ->searchable(['name', 'guard_name']) // searchable on both name and guard_name
+                                    ->multiple()
                                     ->preload(config('filament-spatie-roles-permissions.preload_permissions'))
-                                    ->multiple(),
+                                    ->searchable(['name']) // name のみで検索可能にする（必要なら guard_name も）
+                                    // --- ここから グループ化と翻訳のためのカスタマイズ ---
+                                    ->getOptionLabelFromRecordUsing(function (Model $record) {
+                                        $group = self::getPermissionGroup($record->name);
+                                        $groupLabel = $group ? (__('permission.group.' . $group) . ' - ') : ''; // グループ名をプレフィックスに
+                                        return $groupLabel . __('permission.name.' . $record->name);
+                                        // return __('permission.name.' . $record->name) . ' (' . $record->guard_name . ')'; // 元の表示
+                                    })
+                                    // オプションをグループごとにソートする (任意)
+                                    ->options(function () {
+                                        // グループ化してソートしたオプションリストを生成
+                                        $permissions = Permission::orderBy('name')->get();
+                                        $groupedPermissions = $permissions->groupBy(function ($permission) {
+                                            return self::getPermissionGroup($permission->name) ?? 'other'; // グループ判定
+                                        })->sortBy(function ($group, $key) {
+                                            // グループの表示順を定義 (必要に応じて調整)
+                                            $order = [
+                                                'user' => 1, 'organization' => 2, 'role' => 3, 'permission' => 4,
+                                                'folder' => 5, 'folder_permission' => 6, // folder_permissions を仮に folder_permission グループとする
+                                                'ledger_define' => 7, 'ledger' => 8,
+                                                'workflow_notification' => 9, 'notification' => 10,
+                                                'activity_log' => 11, // view_activity_logs を activity_log グループとする
+                                                'other' => 99, // グループ未定義のもの
+                                            ];
+                                            return $order[$key] ?? 99;
+                                        });
+
+                                        $options = [];
+                                        foreach ($groupedPermissions as $groupKey => $permissionsInGroup) {
+                                            foreach ($permissionsInGroup as $permission) {
+                                                $options[$permission->id] = self::getFormattedPermissionLabel($permission);
+                                            }
+                                        }
+                                        return $options;
+                                    }),
+                                // --- ここまで グループ化と翻訳のためのカスタマイズ ---
 
                                 Select::make('global_notify') // グローバル通知のチェックボックス
+                                // --- 変更なし ---
                                 ->label(__('role.global_notify'))
                                     ->options(function () {
                                         return NotificationType::where('folder_relation', null)->pluck('name', 'id')
@@ -93,6 +131,7 @@ class RoleResource extends BaseRoleResource
                                             ->toArray();
                                     })
                                     ->afterStateHydrated(function ($component, ?Role $record) {
+                                        if (!$record) return; // 新規作成時は処理しない
                                         $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
                                         $hasGlobalNotify = RoleFolderPermission::where('role_id', $record->id)
                                             ->where('folder_id', 1) // ルートフォルダーのID
@@ -104,24 +143,29 @@ class RoleResource extends BaseRoleResource
                                     })
                                     ->dehydrateStateUsing(function ($component, Role $record, $state) {
                                         $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
+                                        // state が null (未選択) の場合は空配列として扱う
+                                        $selectedTypes = $state ?? [];
+
                                         // 削除された通知タイプをNOTIFY_OFFにする
                                         RoleFolderPermission::where('role_id', $record->id)
                                             ->where('folder_id', 1)
                                             ->whereIn('notification_type_id', $globalNotifyTypes)
-                                            ->whereNotIn('notification_type_id', $state)
+                                            ->whereNotIn('notification_type_id', $selectedTypes)
                                             ->update(['permission' => FolderPermissionType::NOTIFY_OFF, 'modifier_id' => auth()->id()]);
 
                                         // 選択された通知タイプをNOTIFY_ONにする
-                                        foreach ($state as $globalNotifyTypeId) {
+                                        foreach ($selectedTypes as $globalNotifyTypeId) {
                                             RoleFolderPermission::updateOrCreate(
                                                 ['role_id' => $record->id, 'folder_id' => 1, 'notification_type_id' => $globalNotifyTypeId],
                                                 ['permission' => FolderPermissionType::NOTIFY_ON, 'modifier_id' => auth()->id()]
                                             );
                                         }
-
+                                        // dehydrateStateUsing は状態を保存するだけなので、null を返すか何もしない
+                                        return null; // この Select の状態自体は保存しない
                                     })
                                     ->multiple()
                                     ->columnSpanFull(),
+
 
                                 TextInput::make('description')
                                     ->label(__('ledger.description'))
@@ -202,7 +246,7 @@ class RoleResource extends BaseRoleResource
             //            PermissionRelationManager::class,
             OrganizationRelationManager::class,
             UserRelationManager::class,
-            FolderRelationManager::class,
+            FolderPermissionRelationManager::class,
             NotificationSettingsRelationManager::class,
         ];
     }
@@ -245,4 +289,30 @@ class RoleResource extends BaseRoleResource
     {
         return auth()->user()->can('delete', Role::class);
     }
+
+    // --- 権限名からグループキーを判定するヘルパーメソッド ---
+    protected static function getPermissionGroup(string $permissionName): ?string
+    {
+        if (Str::contains($permissionName, ['users'])) return 'user';
+        if (Str::contains($permissionName, ['organizations'])) return 'organization';
+        if (Str::contains($permissionName, ['roles'])) return 'role';
+        if (Str::contains($permissionName, ['permissions'])) return 'permission'; // 'manage_permissions' など
+        if (Str::contains($permissionName, ['folder_permissions'])) return 'folder_permission'; // フォルダー権限設定
+        if (Str::contains($permissionName, ['ledgers']) && !Str::contains($permissionName, ['define'])) return 'ledger'; // 台帳操作
+        if (Str::contains($permissionName, ['ledger_defines'])) return 'ledger_define'; // 台帳定義
+        if (Str::contains($permissionName, ['folders']) && !Str::contains($permissionName, ['rolefolder'])) return 'folder'; // フォルダ管理
+        if (Str::contains($permissionName, ['workflow', 'email'])) return 'workflow_notification'; // ワークフロー通知
+        if (Str::contains($permissionName, ['notify'])) return 'notification'; // システム内通知
+        if (Str::contains($permissionName, ['activity_logs'])) return 'activity_log'; // アクティビティログ
+        return null; // グループが見つからない場合
+    }
+
+    // --- 整形された権限ラベルを取得するヘルパーメソッド ---
+    protected static function getFormattedPermissionLabel(Permission $permission): string
+    {
+        $group = self::getPermissionGroup($permission->name);
+        $groupLabel = $group ? (__('permission.group.' . $group) . ' - ') : '';
+        return $groupLabel . __('permission.name.' . $permission->name);
+    }
+
 }

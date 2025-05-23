@@ -1,4 +1,4 @@
-<?php /** @noinspection UnknownInspectionInspection */
+<?php
 
 namespace App\Casts;
 
@@ -21,24 +21,44 @@ class AsColumnArrayJson extends AsJson
     public function get($model, $key, $value, $attributes): mixed
     {
         $content = $attributes[$key] ?? $value;
+
+        // データベースからの値が空文字列の場合、空配列を返します。
+        // これは、空配列に対して '' を保存した場合のケースを処理します。
+        if ($content === '') {
+            return []; // または、空文字列読み取り時の望ましい動作に応じて null を返す
+        }
+        // すでに null であるか、文字列でない場合は、JSON デコード試行前にそのまま返します。
+        if ($content === null || !is_string($content)) {
+            return $content;
+        }
+
         try {
-            // JSON文字列をデコードして連想配列に変換します。
-            $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+            // JSON文字列をデコードします。
+            // 必要であれば、set の動作により合わせるために連想配列 (true) を使用しますが、
+            // 現在のコードはオブジェクト (false) を使用しています。今のところ一貫性を保ちます。
+            $decodedContent = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
-//            dd($value,$key,$attributes,$e);
-            Log::alert('JSON decode error: ' . $e->getMessage());
-            return null;
+            Log::alert('JSON decode error: ' . $e->getMessage() . ' for value: ' . $content);
+            return null; // または空配列 [] を返す？
         }
 
-        // デコードされた連想配列の各要素を処理します。
-        if (is_array($content) || is_object($content)) {
-            foreach ($content as $index => $item) {
-                $content[$index] = $this->getContent($item);
+        // デコードされた配列/オブジェクトの各要素を処理します。
+        if (is_array($decodedContent) || is_object($decodedContent)) {
+            // 配列/オブジェクトの要素を参照で変更するか、新しいものを作成する方法が必要です。
+            $processedContent = is_object($decodedContent) ? clone $decodedContent : $decodedContent;
+            foreach ($decodedContent as $index => $item) {
+                if (is_object($processedContent)) {
+                    $processedContent->{$index} = $this->getContent($item);
+                } else {
+                    $processedContent[$index] = $this->getContent($item);
+                }
             }
+            return $processedContent;
         }
 
-        return $content;
+        // JSON デコードされたが配列/オブジェクトではなかった場合 (例: 単なる文字列 "foo")、それを返します。
+        return $decodedContent;
     }
 
     /**
@@ -48,15 +68,28 @@ class AsColumnArrayJson extends AsJson
      */
     public function getContent(mixed $item): mixed
     {
-        if (empty($item)) {
-            // 空文字列の場合は空文字列として扱います。
-            $item = '';
-        } elseif (Str::startsWith($item, "___serialized___")) {
+        // 空文字列のみを特別扱いしたい場合は、厳密な比較を使用します。
+        if ($item === '') {
+            return '';
+        }
+        // json_decode 後に発生する可能性のある null 値を処理します。
+        if ($item === null) {
+            return null; // または望ましい動作に応じて ''
+        }
+
+        if (is_string($item) && Str::startsWith($item, "___serialized___")) {
             $temp = substr($item, 16);
-            $item = unserialize($temp);
+            // unserialize のエラーハンドリングを追加します。
+            $unserialized = @unserialize($temp);
+            if ($unserialized === false && $temp !== serialize(false)) {
+                Log::warning('Failed to unserialize value: ' . $temp);
+                return $item; // 失敗時には元のシリアライズされた文字列を返す？ それとも null？
+            }
+            return $unserialized;
         }
         return $item;
     }
+
 
     /**
      * モデルの属性に値を設定します。
@@ -70,16 +103,51 @@ class AsColumnArrayJson extends AsJson
      */
     public function set($model, $key, $value, $attributes): array
     {
+        // 利用可能であれば $value を直接使用します。
         $content = $value ?? $attributes[$key];
+
+        // 値が配列かどうかを確認します。
         if (is_array($content)) {
-            // 1階層目はjson配列にする
-            $content = array_values($content);
-            foreach ($content as $index => $item) {
-                $content[$index] = $this->setContent($item);
+            // 配列内のすべての要素が空配˚または空文字列であるかを確認します。
+            $allEmpty = true;
+            foreach ($content as $item) {
+                // 要素が空配列ではなく、かつ空文字列でもない場合、空でないとみなします。
+                if ($item !== [] && $item !== '') {
+                    $allEmpty = false;
+                    // 空でない要素が見つかったので、これ以上確認する必要はありません。
+                    break;
+                }
             }
+
+            // すべての要素が空だった場合、キーに対して空文字列を返します。
+            if ($allEmpty) {
+                return [$key => ''];
+            }
+
+            // すべてが空ではなかった場合、元の処理ロジックに進みます。
+            // 1階層目はjson配列にする (強制的にインデックス配列にする)
+            $processedContent = array_values($content);
+            foreach ($processedContent as $index => $item) {
+                $processedContent[$index] = $this->setContent($item);
+            }
+            // 処理された配列で content を更新します。
+            $content = $processedContent;
+
+        } elseif ($content === null || $content === '') {
+            // 入力値自体が null または空文字列の場合も空文字列を返します。
+            return [$key => ''];
         }
 
-        return [$key => json_encode($content, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)
+        // $content が配列でなかった場合、または空でない要素を含む配列だった場合、
+        // またはその他の空でない値だった場合、JSON としてエンコードします。
+        // 注意: json_encode(null) は文字列 'null' になります。
+        // 上記の `elseif ($content === null)` チェックは、代わりに '' が必要な場合にこれを防ぎます。
+
+        return [$key => json_encode(
+        // (処理された可能性のある) content をエンコードします。
+            $content,
+            JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
+        )
         ];
     }
 
@@ -89,15 +157,21 @@ class AsColumnArrayJson extends AsJson
      */
     public function setContent(mixed $item): mixed
     {
-        if (empty($item)) {
-            $item = '';
-        } elseif (is_array($item) || is_object($item)) {
-//            Mroongaの仕様でjson2階層目以降は第1階層に展開されて保存されてしまうため、serializeする
-            $item = "___serialized___" . serialize($item);
+        // JSON 配列内での保存において、null と空文字列を同じように扱いますか？
+        // null を JSON 内で null として保持する必要がある場合は、明示的に処理します。
+        // 現在のロジックでは、null と '' の両方を '' に変換します。
+        if ($item === null || $item === '') {
+            // null または空文字列を配列内で空文字列として保存します。
+            return '';
         }
 
+        // メイン配列内の配列/オブジェクトに対するシリアライズロジックを保持します。
+        if (is_array($item) || is_object($item)) {
+            // Mroongaの仕様でjson2階層目以降は第1階層に展開されて保存されてしまうため、serializeする
+            return "___serialized___" . serialize($item);
+        }
+
+        // 他の型 (文字列、数値、ブール値) はそのまま返します。
         return $item;
-
     }
-
 }

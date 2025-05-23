@@ -6,6 +6,7 @@ use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use App\Repositories\WorkflowTaskRepository;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
 
@@ -38,6 +39,10 @@ class MyPortal extends Component
     public array $readableFolderIds = []; // 読み取り可能フォルダID (Write/Manage も含む)
 
 
+// --- 承認待ち件数用 ---
+    public int $pendingTaskCount = 0;
+//    protected WorkflowTaskRepository $taskRepository;
+
     // 表示する主要権限リスト (ここで定義)
     protected array $permissionsToCheck = [
         'create_ledgers',         // 台帳を作成できる
@@ -45,18 +50,20 @@ class MyPortal extends Component
         'create_ledger_defines',  // 台帳定義を作成できる
         'create_folders',         // フォルダーを作成できる
         'update_folders',         // フォルダーを更新できる
-        'manage_user',            // ユーザーを管理できる (Seederにはないが、想定として)
-        'manage_organization',    // 組織を管理できる (Seederにはないが、想定として)
+        'manage_users',            // ユーザーを管理できる (Seederにはないが、想定として)
+        'manage_organizations',    // 組織を管理できる (Seederにはないが、想定として)
         'view_activity_logs',     // アクティビティログを閲覧できる
     ];
     // WritableFolderRepository をインジェクト
     protected WritableFolderRepository $writableFolderRepository;
 
     // Livewire 8+ の場合、コンストラクタインジェクションより boot() や mount() でのインジェクトが推奨される場合あり
-    public function boot(WritableFolderRepository $repository): void
+    // Repository をインジェクト
+    public function boot(WritableFolderRepository $writableFolderRepository): void
     {
-        $this->writableFolderRepository = $repository;
+        $this->writableFolderRepository = $writableFolderRepository;
     }
+
 
     /**
      * コンポーネントのマウント時にデータを準備
@@ -77,6 +84,12 @@ class MyPortal extends Component
 
         // ステップ4で追加: 全フォルダツリー用データの準備
         $this->prepareAllFolderTreeData();
+
+        // --- 承認待ち件数を取得 ---
+//        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
+        // --- 承認待ち件数を取得 (修正) ---
+        // $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // 古い方法
+        $this->pendingTaskCount = $this->user->pending_inspection_count + $this->user->pending_approval_count; // <<<--- 修正: User モデルから直接取得
 
     }
 
@@ -171,6 +184,13 @@ class MyPortal extends Component
             ->orderBy('_lft')
             ->take(5)
             ->get();
+
+        if ($this->assignedFolders->count() == 0) {
+            $this->assignedFolders = Folder::whereIn('id', $targetFolderIds)
+                ->where('id', '!=', 1) // ルートフォルダを除外
+                ->orderBy('_lft')
+                ->get();
+        }
     }
 
     /**
