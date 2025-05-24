@@ -91,7 +91,7 @@ jobs:
           php artisan config:clear
           php artisan view:clear
           php artisan route:clear
-          php artisan key:generate
+          php artisan key:generate --env=testing 
           git config --local core.fileMode false
           chmod -R 777 storage bootstrap/cache
 
@@ -118,4 +118,4 @@ jobs:
         run: php artisan db:seed --force
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: ./vendor/bin/pest
