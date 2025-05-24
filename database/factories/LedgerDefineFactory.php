@@ -53,11 +53,14 @@ class LedgerDefineFactory extends Factory
                     $this->faker->boolean(),
                     $this->faker->boolean()
                 );*/
+        // Correctly get type identifiers once before the loop
+        $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
+
         for ($i = 2; $i < $columnDefineLoop; $i++) {
             $tempColumnDefine = new ColumnDefine(
                 $i,
                 $this->faker->realText(10),
-                $this->faker->randomElement(ColumnDefine::$types),
+                $this->faker->randomElement($typeIdentifiers), // Use the fetched type identifiers
                 $i + 1,
                 $this->faker->words(random_int(3, 10)),
                 $this->faker->boolean(),

@@ -95,7 +95,7 @@
             <legend class="fieldset-legend mb-0.5">{{ __('ledger.landing_page_select_label') }}</legend>
             <select name="login_landing_page" id="login_landing_page" class="select w-full mt-1 block w-full">
                 @php
-                    $currentLandingPage = old('login_landing_page', $user->login_landing_page->value);
+                    $currentLandingPage = old('login_landing_page', $user->login_landing_page);
                 @endphp
                 @foreach(LoginLandingPage::cases() as $case)
                     <option value="{{ $case->value }}" @selected($currentLandingPage === $case->value)>

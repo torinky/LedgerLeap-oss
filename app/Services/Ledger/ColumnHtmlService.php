@@ -50,7 +50,7 @@ class ColumnHtmlService
      */
     public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false): HtmlString
     {
-        if (!$columnDefineData) {
+        if (!$this->columnDefineData && !$columnDefineData) {
             return new HtmlString($canView ? e((string)$initialValue) : '');
         }
         if (!$canView) {
@@ -71,7 +71,7 @@ class ColumnHtmlService
         } else {
             $html = $this->initialValue;
         }
-        return new HtmlString($this->highlightKeywords($html));
+        return new HtmlString($this->highlightKeywords($html)??'');
     }
 
     /**
