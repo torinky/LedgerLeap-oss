@@ -7,11 +7,14 @@ use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class FolderResource extends Resource
@@ -25,36 +28,81 @@ class FolderResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
+        ->schema([
+            Section::make(__('ledger.basic_information'))
             ->schema([
                 Forms\Components\TextInput::make('title')
+                    ->label(__('ledger.folder.title'))
                     ->required()
                     ->maxLength(255),
+                SelectTree::make('parent_id')
+                    ->label(__('ledger.folder.parent'))
+                    ->relationship('parent', 'title', 'parent_id')
+                    // ->withCount() // 必要に応じて
+                    ->enableBranchNode()
+                    ->defaultOpenLevel(1), // 必要に応じて調整
                 Forms\Components\Select::make('creator_id')
-                    ->label('Creator')
+                    ->label(__('ledger.creator.name'))
                     ->relationship('creator', 'name')
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->default(fn () => auth()->id())
+                    ->disabledOn('edit'), // 編集時は無効化
                 Forms\Components\Select::make('modifier_id')
-                    ->label('Modifier')
+                    ->label(__('ledger.modifier.name'))
                     ->relationship('modifier', 'name')
                     ->searchable()
-                    ->required(),
-                SelectTree::make('parent_id')
-                    ->label('Parent Folder')
-                    ->relationship('parent', 'title', 'parent_id')
-                    ->withCount()
-                    ->enableBranchNode()
-//                    ->alwaysOpen()
-                    ->defaultOpenLevel(10),
-                Forms\Components\Select::make('roles')
-                    ->relationship('roles', 'name')
+                    ->required()
+                    ->default(fn () => auth()->id())
+                    ->dehydrated(true), // 常に送信する
+            ])->columns(2),
+
+            Section::make(__('ledger.workflow.required_roles_setting'))
+            ->description(__('ledger.workflow.required_roles_setting_helper'))
+            ->schema([
+                Select::make('requiredInspectorRoles') // リレーション名に合わせる
+                ->label(__('ledger.workflow.required_inspector_roles'))
+                ->relationship('requiredInspectorRoles', 'name') // リレーション名と表示カラム
+                ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->placeholder(__('ledger.select_roles'))
+                    ->helperText(__('ledger.workflow.required_inspector_roles_helper'))
+            ->saveRelationshipsUsing(static function (Model $record, $state) { // $state は選択されたロールIDの配列
+                if (is_array($state)) {
+                    $syncData = collect($state)->mapWithKeys(fn ($roleId) => [$roleId => ['type' => 'inspector']])->all();
+                    // attachではなくsyncを使うのが一般的。既存の関連は解除され、新しいものだけが残る。
+                    // もし既存の関連を維持しつつ追加したい場合は、ロジックを調整する必要がある。
+                    $record->requiredInspectorRoles()->sync($syncData);
+                } else {
+                    // 何も選択されなかった場合は空でsync（全ての関連を解除）
+                    $record->requiredInspectorRoles()->sync([]);
+                }
+            })
+            ,
+                Select::make('requiredApproverRoles') // リレーション名に合わせる
+                ->label(__('ledger.workflow.required_approver_roles'))
+                ->relationship('requiredApproverRoles', 'name')
                     ->multiple()
-                    ->label('Roles')
-                    ->required(),
-                Forms\Components\Hidden::make('lft'),
-                Forms\Components\Hidden::make('rgt'),
-                Forms\Components\Hidden::make('lvl'),
-            ]);
+                    ->preload()
+                    ->searchable()
+                    ->placeholder(__('ledger.select_roles'))
+                    ->helperText(__('ledger.workflow.required_approver_roles_helper'))
+                    ->saveRelationshipsUsing(static function (Model $record, $state) {
+                        if (is_array($state)) {
+                            $syncData = collect($state)->mapWithKeys(fn ($roleId) => [$roleId => ['type' => 'approver']])->all();
+                            $record->requiredApproverRoles()->sync($syncData);
+                        } else {
+                            $record->requiredApproverRoles()->sync([]);
+                        }
+                    })
+                ,
+            ])->columns(2),
+
+            // Forms\Components\Hidden::make('lft'), // NodeTrait が自動で処理するはず
+            // Forms\Components\Hidden::make('rgt'),
+            // Forms\Components\Hidden::make('lvl'),
+        ]);
     }
 
     public static function table(Table $table): Table

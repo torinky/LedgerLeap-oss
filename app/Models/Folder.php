@@ -285,4 +285,24 @@ class Folder extends Model
     {
         return $this;
     }
+
+    /**
+     * このフォルダに設定された必須点検ロールを取得するリレーション
+     */
+    public function requiredInspectorRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'folder_required_roles', 'folder_id', 'role_id')
+            ->wherePivot('type', 'inspector')
+            ->withTimestamps();
+    }
+
+    /**
+     * このフォルダに設定された必須承認ロールを取得するリレーション
+     */
+    public function requiredApproverRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'folder_required_roles', 'folder_id', 'role_id')
+            ->wherePivot('type', 'approver')
+            ->withTimestamps();
+    }
 }
