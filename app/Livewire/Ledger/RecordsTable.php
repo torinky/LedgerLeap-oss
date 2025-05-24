@@ -85,7 +85,9 @@ class RecordsTable extends Component
         // 検索キーワードの初期化
         $search = $request->keyword();
         if (empty($this->search) && !empty($search)) {
-            $this->search = $search ?? session()->get('search') ?? '';
+            $this->search = $search;
+        } elseif (empty($this->search)) {
+            $this->search = session()->get('search', '');
         }
         $this->synonymServiceConfig = $synonymServiceConfig;
         $this->filter = $request->filter ?? [];

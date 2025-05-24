@@ -87,51 +87,52 @@
                     <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
                         <div class="card-body p-4">
                             <div class="flex flex-wrap items-center justify-center gap-4">
-<div class="join flex flex-wrap items-center justify-center w-full">
+                                <div class="join flex flex-wrap items-center justify-center w-full">
 
-                                @if ($ledgerDefineRecord->workflow_enabled)
-                                    {{-- 保存ボタン (常に表示、クリック時のアクションは saveChanges) --}}
-                                    {{-- 承認済み (isLocked) の場合は無効化 --}}
-                                    <x-mary-button label="{{ __('ledger.save_changes') }}"
-                                                   icon="o-pencil"
-                                                   class="btn-primary btn-wide join-item"
-                                                   wire:click.prevent="saveChanges"
-                                                   spinner="saveChanges"
-                                                   :disabled="$ledgerRecord?->isLocked()"/>
+                                    @if ($ledgerDefineRecord->workflow_enabled)
+                                        {{-- 保存ボタン (常に表示、クリック時のアクションは saveChanges) --}}
+                                        {{-- 承認済み (isLocked) の場合は無効化 --}}
+                                        <x-mary-button label="{{ __('ledger.save_changes') }}"
+                                                       icon="o-pencil"
+                                                       class="btn-primary btn-wide join-item"
+                                                       wire:click.prevent="saveChanges"
+                                                       spinner="saveChanges"
+                                                       :disabled="$ledgerRecord?->isLocked()"/>
 
-                                    {{-- 点検者選択 UI (DRAFT 状態の場合に表示) --}}
-                                    @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
-                                        <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                                       icon="o-paper-airplane"
-                                                       class="btn-success btn-wide join-item" {{-- 色変更 --}}
-                                                       {{-- モーダルを開くメソッドを呼び出す --}}
-                                                       wire:click.prevent="requestInspection"
-                                                       spinner="requestInspection"
-                                                {{-- disabled は不要 --}}
-                                        />                                    @endif
+                                        {{-- 点検者選択 UI (DRAFT 状態の場合に表示) --}}
+                                        @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
+                                            <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                                           icon="o-paper-airplane"
+                                                           class="btn-success btn-wide join-item" {{-- 色変更 --}}
+                                                           {{-- モーダルを開くメソッドを呼び出す --}}
+                                                           wire:click.prevent="requestInspection"
+                                                           spinner="requestInspection"
+                                                    {{-- disabled は不要 --}}
+                                            />
+                                        @endif
 
-                                @else
-                                    {{-- 直接保存ボタン --}}
-                                    <x-mary-button label="{{ __('ledger.save') }}"
-                                                   icon="o-pencil"
-                                                   class="btn-primary btn-wide join-item"
-                                                   wire:click.prevent="saveDirectly"
-                                                   spinner="saveDirectly"
-                                                   :disabled="$ledgerRecord?->isLocked()" {{-- 承認済み(通常はNONEになるはずだが念のため) --}}
-                                    />
+                                    @else
+                                        {{-- 直接保存ボタン --}}
+                                        <x-mary-button label="{{ __('ledger.save') }}"
+                                                       icon="o-pencil"
+                                                       class="btn-primary btn-wide join-item"
+                                                       wire:click.prevent="saveDirectly"
+                                                       spinner="saveDirectly"
+                                                       :disabled="$ledgerRecord?->isLocked()" {{-- 承認済み(通常はNONEになるはずだが念のため) --}}
+                                        />
 
-                                @endif
-</div>
+                                    @endif
+                                </div>
                                 <div class="flex flex-wrap items-center justify-center w-full">
 
-                                {{-- 既存の削除ボタン --}}
-                                @if ($ledgerRecord?->id && !$ledgerRecord?->isLocked())
-                                    {{-- 承認済みは削除も不可？ --}}
-                                    <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i
-                                                class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
-                                @endif
+                                    {{-- 既存の削除ボタン --}}
+                                    @if ($ledgerRecord?->id && !$ledgerRecord?->isLocked())
+                                        {{-- 承認済みは削除も不可？ --}}
+                                        <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i
+                                                    class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
+                                    @endif
 
-                                <x-ledger.close-window-button/>
+                                    <x-ledger.close-window-button/>
 
                                 </div>
                             </div>
@@ -171,7 +172,7 @@
 
             </x-mary-form>
 
-            {{-- 担当者選択モーダルコンポーネント呼び出し (変更なし) --}}
+            {{-- 担当者選択モーダルコンポーネント呼び出し --}}
             @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
 
             {{-- 編集確認モーダル --}}
@@ -186,8 +187,8 @@
                 </div>
 
                 <x-slot:actions>
-                    <x-mary-button label="{{ __('Cancel') }}" @click="$wire.confirmingEdit = false"/>
-                    <x-mary-button label="{{ __('ledger.save_and_return_to_draft') }}" {{-- 新しい翻訳キー --}}
+                    <x-mary-button label="{{ __('Cancel') }}" @click="$wire.confirmingEdit = false" icon="o-x-circle"/>
+                    <x-mary-button label="{{ __('ledger.save_and_return_to_draft') }}" icon="o-arrow-uturn-left"
                     class="btn-warning" wire:click="saveChangesAndReturnToDraft" spinner="saveChangesAndReturnToDraft"/>
                 </x-slot:actions>
             </x-mary-modal>

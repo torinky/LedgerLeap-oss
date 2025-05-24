@@ -15,8 +15,8 @@
 
                     @if($ledgerRecord->define->workflow_enabled)
                         <x-mary-card>
-                            <div class="flex justify-between items-center ">
-                                <div>
+                            <div class="flex w-full  items-center ">
+                                <div class="justify-start w-full">
                                     <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
                                     <x-mary-badge :value="$ledgerRecord->status->label()"
                                                   class="{{ $ledgerRecord->status->colorClass() }}"/>
@@ -32,27 +32,28 @@
                                 </div>
                                 {{-- アクションボタン--}}
 
-                                <div class="flex gap-2 items-center">
+                                    <div class="join flex flex-wrap items-center justify-end w-full">
+
                                     @if($this->canRequestApproval())
                                         <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
                                                        icon="o-check-badge"
-                                                       class="btn-lg btn-success"
+                                                       class="join-item btn-wide btn-success"
                                                        {{-- モーダルを開くメソッド呼び出し --}}
                                                        wire:click="openApproverSelectModal"
                                                        spinner="openApproverSelectModal"/>
                                     @endif
                                     @if($this->canApprove())
                                         <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                       class="btn-lg btn-primary" wire:click="approveTask" spinner/>
+                                                       class="join-item btn-wide btn-primary" wire:click="approveTask" spinner/>
                                     @endif
                                     @if($this->canReturnToDraft())
                                         <x-mary-button
                                                 label="{{ __('ledger.workflow.return_to_draft_short') }}"
                                                 icon="o-arrow-uturn-left"
-                                                class="btn-sm btn-warning" wire:click="openReturnToDraftModal"
+                                                class="join-item btn-warning" wire:click="openReturnToDraftModal"
                                                 spinner="openReturnToDraftModal"/>
                                     @endif
-                                </div>
+                                    </div>
                             </div>
                         </x-mary-card>
                     @endif
@@ -223,22 +224,43 @@
             <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity "> {{-- 透明度調整 --}}
                 <div class="card-body p-4">
                     <div class="flex flex-wrap items-center justify-center gap-4">
+                        <div class="join flex flex-wrap items-center justify-center w-full">
 
                         {{-- 編集ボタン --}}
                         @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
                         @if($canUpdate && !$ledgerRecord->isLocked())
                             <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-                               class="btn btn-primary btn-xl btn-wide"
+                               class="join-item btn btn-primary btn-wide"
                             ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
                         @else
                             <div class="tooltip"
                                  data-tip="{{ $ledgerRecord->isLocked() ? __('ledger.workflow.record_locked') : __('ledger.no_edit_permission') }}">
-                                <button class="btn btn-primary btn-xl btn-wide" disabled><i
+                                <button class="join-item btn btn-primary btn-wide" disabled><i
                                             class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
                             </div>
                         @endif
+                            {{-- ワークフローアクションボタン --}}
+                            @if($this->canRequestApproval())
+                                <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                               icon="o-check-badge"
+                                               class="join-item btn-wide btn-success"
+                                               {{-- モーダルを開くメソッド呼び出し --}}
+                                               wire:click="openApproverSelectModal"
+                                               spinner="openApproverSelectModal"/>
+                            @endif
+                            @if($this->canApprove())
+                                <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                               class="join-item btn-wide btn-primary" wire:click="approveTask" spinner/>
+                            @endif
+                            @if($this->canReturnToDraft())
+                                <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
+                                               icon="o-arrow-uturn-left" class=" join-item btn-warning "
+                                               wire:click="openReturnToDraftModal"
+                                               spinner="openReturnToDraftModal"/>
+                            @endif
+                        </div>
 
-                        {{-- 変更履歴ボタン --}}
+                            {{-- 変更履歴ボタン --}}
                         @if($ledgerRecord->ledgerDiff()->where(DB::raw('content'), '!=', '')->count() > 0)
                             {{-- 変更履歴がある場合のみ --}}
                             <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
@@ -250,26 +272,6 @@
                                     </div>
                                 @endif
                             </a>
-                        @endif
-
-                        {{-- ワークフローアクションボタン --}}
-                        @if($this->canRequestApproval())
-                            <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                           icon="o-check-badge"
-                                           class="btn-lg btn-success"
-                                           {{-- モーダルを開くメソッド呼び出し --}}
-                                           wire:click="openApproverSelectModal"
-                                           spinner="openApproverSelectModal"/>
-                        @endif
-                        @if($this->canApprove())
-                            <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                           class="btn-lg btn-primary" wire:click="approveTask" spinner/>
-                        @endif
-                        @if($this->canReturnToDraft())
-                            <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
-                                           icon="o-arrow-uturn-left" class="btn-warning btn-sm md:btn-md"
-                                           wire:click="openReturnToDraftModal"
-                                           spinner="openReturnToDraftModal"/>
                         @endif
 
                         {{-- 閉じるボタン --}}

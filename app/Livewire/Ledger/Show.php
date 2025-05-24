@@ -666,7 +666,10 @@ class Show extends Component
             }
             $this->loadWorkflowHistory();
             $this->prepareContentDiff();
-        } catch (\Exception $e) { /* ... */
+        } catch (\Exception $e) {
+            Log::error("Workflow action '{$actionType}' failed: " . $e->getMessage());
+            $this->error(__('messages.error.generic'), $e->getMessage());
+
         } finally {
             $this->selectedApproverId = null;
         }
