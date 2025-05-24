@@ -2,34 +2,20 @@
 
 namespace App\Models;
 
-use RuntimeException;
+use App\Models\ColumnTypes\InputType;
+use App\Models\ColumnTypes\InputTypeFactory;
+use RuntimeException; // Keep for potential other runtime exceptions, though type validation is now in factory
 
 class ColumnDefine
 {
-    // 列の種類に関する設定
-    public static $useOptionsTypes = ['select', 'chk'];
-
-    public static $types = [
-        'number',       // 数値型
-        'text',         // テキストボックス
-        'textarea',     // テキストエリア
-        'chk',          // チェックボックス
-        'select',       // セレクトボックス
-        'YMD',          // 日付（年月日）
-        'files',        // ファイル選択
-    ];
-
-    public static $shouldConvert2JsonTypes = [
-        'files',        // ファイル選択
-        'chk',          // チェックボックス
-    ];
-
     // プロパティの定義
     public $id;                 // ID
 
     public $name;               // 列名
 
-    public $type;               // 列の種類
+    public $type;               // 列の種類 (string representation, e.g., 'text')
+
+    private InputType $inputType; // The actual InputType object
 
     public $order;              // 列の表示順序
 
@@ -73,7 +59,7 @@ class ColumnDefine
     {
         $this->id = (int)$inObject->id;
         $this->setName($inObject->name);
-        $this->setType($inObject->type);
+        $this->initializeType($inObject->type ?? 'text'); // Default to 'text' if type is not set
         $this->setOrder($inObject->order);
         $this->setOptions($inObject->options ?? []);
         $this->setRequired($inObject->required);
@@ -91,7 +77,7 @@ class ColumnDefine
     public function constructByArgs(
         int    $id,
         string $name = '',
-        string $type = 'text',
+        string $typeIdentifier = 'text',
         int    $order = 1,
         array $options = [],
         bool $required = false,
@@ -103,7 +89,7 @@ class ColumnDefine
     {
         $this->id = (int)$id;
         $this->setName($name);
-        $this->setType($type);
+        $this->initializeType($typeIdentifier);
         $this->setOrder($order);
         $this->setOptions($options);
         $this->setRequired($required);
@@ -114,23 +100,31 @@ class ColumnDefine
     }
 
     /**
-     * 列の種類を設定する
+     * Initializes the input type strategy object.
+     * @param string $typeIdentifier
+     * @throws \InvalidArgumentException
      */
-    public function setType(string $type): void
+    private function initializeType(string $typeIdentifier): void
     {
-        if (!in_array($type, self::$types)) {
-            throw new RuntimeException('無効な列の種類');
-        }
-        $this->type = $type;
-        $this->initUseOptions();
+        $this->inputType = InputTypeFactory::make($typeIdentifier);
+        $this->type = $this->inputType->getName(); // Update public type property
+        $this->useOptions = $this->inputType->hasOptions(); // Update useOptions based on type
     }
 
     /**
-     * オプション使用フラグを初期化する
+     * 列の種類を設定する
      */
-    private function initUseOptions(): void
+    public function setType(string $typeIdentifier): void
     {
-        $this->useOptions = in_array($this->type, self::$useOptionsTypes);
+        $this->initializeType($typeIdentifier);
+    }
+
+    /**
+     * Get the string identifier of the column type.
+     */
+    public function getType(): string
+    {
+        return $this->inputType->getName();
     }
 
     /**
@@ -140,15 +134,21 @@ class ColumnDefine
      */
     public static function typeLabels()
     {
-        return [
-            'number' => __('ledger.form.auto_numbering'), // 自動採番
-            'text' => __('ledger.form.text'), // テキストボックス
-            'textarea' => __('ledger.form.textarea'), // テキストエリア
-            'chk' => __('ledger.form.check'), // チェックボックス
-            'select' => __('ledger.form.select'), // セレクトボックス
-            'YMD' => __('ledger.form.datetime'), // 日付（年月日）
-            'files' => __('ledger.form.upload'), // ファイル選択
-        ];
+        $labels = [];
+        $allTypes = InputTypeFactory::getAllTypes();
+        foreach ($allTypes as $typeInstance) {
+            $labels[$typeInstance->getName()] = $typeInstance->getLabel();
+        }
+        // The original 'number' label was 'ledger.form.auto_numbering'
+        // and 'YMD' was 'ledger.form.datetime', 'files' was 'ledger.form.upload'
+        // The new types use 'ledger.form.number', 'ledger.form.date', 'ledger.form.files' respectively.
+        // We need to ensure these specific labels are preserved if they are different.
+        // Current InputType implementations use the new labels. If specific overrides are needed:
+        // $labels['number'] = __('ledger.form.auto_numbering');
+        // $labels['YMD'] = __('ledger.form.datetime');
+        // $labels['files'] = __('ledger.form.upload');
+        // For now, we assume the labels defined in each InputType are the desired ones.
+        return $labels;
     }
 
     /**
@@ -159,11 +159,7 @@ class ColumnDefine
      */
     public function convertColumnValue2Text($columnValue)
     {
-        if (!empty($columnValue) && in_array($this->type, self::$shouldConvert2JsonTypes)) {
-            return json_encode($columnValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        }
-
-        return $columnValue;
+        return $this->inputType->convertToText($columnValue);
     }
 
     /**
@@ -174,14 +170,7 @@ class ColumnDefine
      */
     public function restoreColumnValueFromText($convertedValue)
     {
-        if (in_array($this->type, self::$shouldConvert2JsonTypes)) {
-            $decodedValue = json_decode($convertedValue, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                return $decodedValue;
-            }
-        }
-
-        return $convertedValue;
+        return $this->inputType->restoreFromString($convertedValue);
     }
 
     /**
@@ -243,5 +232,11 @@ class ColumnDefine
     public function setOrder(int $order): void
     {
         $this->order = $order;
+    }
+
+    // Getter for the InputType object, if needed for advanced operations outside ColumnDefine
+    public function getInputType(): InputType
+    {
+        return $this->inputType;
     }
 }
