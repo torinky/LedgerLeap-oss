@@ -1,17 +1,27 @@
 <div>
-    <x-mary-form wire:submit="save">
-        <x-mary-header
-                :title="$isCreating ? __('ledger.folder.form.header.create') : __('ledger.folder.form.header.edit_name', ['name' => $folder->title ?? ''])"
-                separator>
-            {{-- 翻訳キー変更 --}}
-            <x-slot:actions>
-                {{-- 「ウィンドウを閉じる」ボタンは常に表示して良い --}}
-                <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()" icon="o-x-mark"
-                               class="btn-ghost"/>
-            </x-slot:actions>
-        </x-mary-header>
+    <x-mary-header
+            :title="$isCreating ?
+                __('ledger.folder.form.header.create') :
+                __('ledger.folder.form.header.edit_name', ['name' => $folder->title ?? ''])"
+            separator
+            class="mx-2 md:mx-8 lg:mx-12 mt-2 md:mt-4 lg:mt-6"
+    >
+        {{--
+                <x-slot:actions>
+                    --}}
+        {{-- 「ウィンドウを閉じる」ボタンは常に表示して良い --}}{{--
 
-        <div class="space-y-4 p-4 {{ $formDisabled ? 'opacity-50 pointer-events-none' : '' }}"> {{-- 削除後は無効化 --}}
+                    <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()" icon="o-x-mark"
+                                   class="btn-ghost"/>
+                </x-slot:actions>
+        --}}
+    </x-mary-header>
+
+    <x-mary-form wire:submit="save"
+                 class="card mb-32 bg-neutral-500/10 shadow-xl mx-2 md:mx-8 lg:mx-12"
+    >
+
+        <div class="card-body space-y-4 p-4 {{ $formDisabled ? 'opacity-50 pointer-events-none' : '' }}"> {{-- 削除後は無効化 --}}
             <x-mary-input label="{{ __('ledger.folder.form.label.title') }}" wire:model="title" required/>
 
             {{-- 親フォルダ選択 --}}
@@ -64,45 +74,55 @@
             @error('selectedApproverRoleIds') <span class="text-xs text-error">{{ $message }}</span> @enderror
         </div>
 
-        <x-slot:actions>
-            <div class="flex justify-between w-full">
-                <div>
-                    @if(!$isCreating && $folder->exists && !$formDisabled)
-                        <x-mary-button label="{{ __('actions.delete') }}" wire:click="confirmFolderDeletion"
-                                       icon="o-trash" class="btn-error btn-outline" spinner="confirmFolderDeletion"/>
-                    @endif
-                </div>
-                <div class="flex items-center gap-2">
-                    @if($formDisabled)
-                        {{-- 削除後は閉じるボタンのみ --}}
-                        <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()"
-                                       class="btn-primary"/>
-                    @else
-                        @if($justSaved && !$isCreating)
-                            {{-- 更新保存直後 --}}
-                            <x-mary-button label="{{ __('actions.continue_editing') }}" class="btn-ghost"
-                                           wire:click="$set('justSaved', false)"/>
-                            <x-mary-button label="{{ __('actions.close_window_after_save') }}" onclick="window.close()"
-                                           class="btn-primary" icon="o-x-mark"/>
-                        @elseif($justSaved && $isCreating)
-                            {{-- 新規保存直後 --}}
-                            <x-mary-button label="{{ __('ledger.create_another') }}" class="btn-outline"
-                                           wire:click="resetFormForNew" spinner="resetFormForNew"/>
-                            <x-mary-button label="{{ __('ledger.edit_this_folder') }}"
-                                           wire:click="$set('justSaved', false)" class="btn-ghost"/>
-                            <x-mary-button label="{{ __('ledger.close_window_after_save') }}" onclick="window.close()"
+        {{--        <x-slot:actions>--}}
+        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                <div class="card-body p-4">
+                    <div class="flex  items-center justify-center gap-4">
+                        @if($formDisabled)
+                            {{-- 削除後は閉じるボタンのみ --}}
+                            <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()"
                                            class="btn-primary"/>
                         @else
-                            {{-- 通常の保存/更新ボタン --}}
-                            <x-mary-button label="{{ __('ledger.cancel_and_close') }}" onclick="window.close()"
-                                           class="btn-ghost" icon="o-x-mark"/>
-                            <x-mary-button label="{{ $isCreating ? __('actions.create') : __('actions.update') }}"
-                                           class="btn-primary" type="submit" spinner="save" icon="o-pencil-square"/>
+                            @if($justSaved && !$isCreating)
+                                {{-- 更新保存直後 --}}
+                                <x-mary-button label="{{ __('actions.continue_editing') }}"
+                                               class="btn-ghost"
+                                               wire:click="$set('justSaved', false)"/>
+                                <x-mary-button label="{{ __('actions.close_window_after_save') }}"
+                                               onclick="window.close()"
+                                               class="btn-primary" icon="o-x-mark"/>
+                            @elseif($justSaved && $isCreating)
+                                {{-- 新規保存直後 --}}
+                                <x-mary-button label="{{ __('ledger.create_another') }}" class="btn-outline"
+                                               wire:click="resetFormForNew" spinner="resetFormForNew"/>
+                                <x-mary-button label="{{ __('ledger.edit_this_folder') }}"
+                                               wire:click="$set('justSaved', false)" class="btn-ghost"/>
+                                <x-mary-button label="{{ __('ledger.close_window_after_save') }}"
+                                               onclick="window.close()"
+                                               class="btn-primary"/>
+                            @else
+                                {{-- 通常の保存/更新ボタン --}}
+                                <x-mary-button
+                                        label="{{ $isCreating ? __('actions.create') : __('actions.update') }}"
+                                        class="btn-primary md:btn-wide" type="submit" spinner="save"
+                                        icon="o-pencil-square"/>
+                                <x-mary-button label="{{ __('ledger.cancel_and_close') }}"
+                                               onclick="window.close()"
+                                               class="btn-ghost" icon="o-x-mark"/>
+                            @endif
                         @endif
-                    @endif
+                        @if(!$isCreating && $folder->exists && !$formDisabled)
+                            <x-mary-button label="{{ __('actions.delete') }}"
+                                           wire:click="confirmFolderDeletion"
+                                           icon="o-trash" class="btn-error btn-outline"
+                                           spinner="confirmFolderDeletion"/>
+                        @endif
+                    </div>
                 </div>
             </div>
-        </x-slot:actions>
+        </div>
+        {{--        </x-slot:actions>--}}
     </x-mary-form>
 
     {{-- 削除確認モーダル --}}
@@ -113,7 +133,8 @@
             <p class="text-sm text-warning">{{ __('ledger.folder.form.warning.cannot_delete_if_children_exist') }}</p>
         </div>
         <x-slot:actions>
-            <x-mary-button label="{{ __('actions.cancel') }}" @click="$wire.confirmingFolderDeletion = false" icon="o-x-mark"/>
+            <x-mary-button label="{{ __('actions.cancel') }}" @click="$wire.confirmingFolderDeletion = false"
+                           icon="o-x-mark"/>
             <x-mary-button label="{{ __('actions.delete_confirm') }}" class="btn-error" wire:click="deleteFolder"
                            spinner="deleteFolder" icon="o-trash"/>
         </x-slot:actions>

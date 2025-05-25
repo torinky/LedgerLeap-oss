@@ -68,8 +68,6 @@ class FolderForm extends Component
         $this->availableParentFolders = collect();
         $this->availableRoles = collect();
 
-//        !empty($folder) ? $this->folder = $folder : $this->folder = new Folder();
-
         if (!isset($this->folder) || !$this->folder instanceof Folder) {
             $this->folder = new Folder();
         }
@@ -339,7 +337,7 @@ class FolderForm extends Component
     public function render()
     {
         return view('livewire.folder.folder-form')
-            ->layout('layouts.app', ['title' => __('ledger.folder.settings.title')]);
+            ->layout('layouts.app', ['title' => __('ledger.folder.settings')]);
 
     }
 }
