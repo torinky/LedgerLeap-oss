@@ -63,7 +63,7 @@ class Create extends Component
             'modifier_id' => auth()->id(),
         ]);
 
-        return redirect()->route('folder.edit', ['folderId' => $folderRecord->id])
+        return redirect()->route('folder.edit', $folderRecord)
             ->with('status', __('ledger.folder.created'));
 
     }

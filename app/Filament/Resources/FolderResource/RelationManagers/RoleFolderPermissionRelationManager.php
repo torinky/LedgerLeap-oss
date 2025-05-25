@@ -58,7 +58,7 @@ class RoleFolderPermissionRelationManager extends RelationManager
                                 return $folderPermission->isAccessType();
                             })
                             ->mapWithKeys(function ($folderPermission) {
-                                return [$folderPermission->value => __('ledger.permissions.' . $folderPermission->value)];
+                                return [$folderPermission->value => __('permission.name.' . $folderPermission->value)];
                             })->toArray();
                     })
                     ->afterStateUpdated(function ($state, $column, $record) {

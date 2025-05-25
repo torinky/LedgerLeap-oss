@@ -45,6 +45,7 @@
     'close' => '閉じる',
     'close_view_window_message' => '閲覧を終了してウィンドウを閉じますか？',
     'close_window' => 'ウィンドウを閉じる',
+    'cancel_and_close' => 'ウィンドウを閉じる',
     'close_window_message' => '編集内容を破棄してウィンドウを閉じますか？',
     'close_window_modal' => '閉じようとしています',
     'collapse' => '展開／折りたたむ',
@@ -181,6 +182,42 @@
             'title' => 'フォルダー名',
             'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
             'writable' => '書き込み可能',
+            'form' => [
+                'header' => [
+                    'create' => 'フォルダを新規作成',
+                    'edit' => 'フォルダ編集',
+                    'edit_name' => 'フォルダ編集: :name', // 編集時タイトル用
+                ],
+                'label' => [
+                    'title' => 'フォルダ名',
+                    'parent_id' => '親フォルダ',
+                ],
+                'placeholder' => [
+                    'select_parent_or_null' => 'ルートフォルダにする場合は選択解除', // 変更
+                    'select_roles' => 'ロールを検索または選択...',
+                ],
+                'message' => [
+                    'first_folder_is_root' => '最初のフォルダはルートフォルダとして作成されます。',
+                    'created_successfully' => 'フォルダを作成しました。',
+                    'updated_successfully' => 'フォルダを更新しました。',
+                    'deleted_successfully' => 'フォルダを削除しました。',
+                    'delete_has_children' => '子フォルダが存在するため削除できません。先に子フォルダを削除または移動してください。',
+                    'delete_has_defines' => 'このフォルダには台帳定義が存在するため削除できません。',
+                    'created_successfully_name' => 'フォルダ「:name」を作成しました。',
+                    'updated_successfully_name' => 'フォルダ「:name」を更新しました。',
+                    'confirm_delete_body' => '本当にこのフォルダ「:name」を削除してもよろしいですか？元に戻すことはできません。',
+                ],
+                'modal_title' => [
+                    'confirm_delete' => 'フォルダ削除の確認',
+                ],
+                'warning'=>[
+                    'cannot_delete_if_children_exist' => '子フォルダや、このフォルダに属する台帳定義が存在する場合は削除できません。',
+                ],
+                'option' => [ // 追加
+                    'no_parent' => '（親フォルダなし - ルート）',
+                ],
+
+            ],
         ],
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
@@ -475,13 +512,6 @@
             'update_ledgers' => 'アクセス可能な台帳の情報を更新できます。',
             'view_activity_logs' => 'アクティビティログを閲覧できます。',
         ],
-    'permissions' =>
-        [
-            'admin' => '管理権限',
-            'delete' => '削除権限',
-            'read' => '読み込み',
-            'write' => '書き込み',
-        ],
     'preview' => 'プレビュー',
     'price' => '価格',
     'record' => '記録',
@@ -495,6 +525,7 @@
     'reset_search' => '検索条件をリセット',
     'restore' => '復元する',
     'reviseCount' => '改訂回数',
+    'role' => 'ロール',
     'role_label' =>
         [
             'Editor' => '編集者',

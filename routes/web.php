@@ -14,6 +14,7 @@ use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
+use App\Livewire\Folder\FolderForm;
 use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
 use App\Livewire\MyPortal;
 use App\Livewire\Notifications\UserNotificationList;
@@ -130,7 +131,12 @@ Route::middleware('auth')->group(function () {
     //     ->where('diffId', '[0-9]+');
 
     //folder
-    Route::get('/folder/edit/{folderId}', [FolderUpdateController::class, 'edit'])
+    // Folder Routes (Livewire に移行)
+    Route::get('/folders/create/{parentId?}', FolderForm::class)->name('folder.create');
+    Route::get('/folders/{folder}/edit', FolderForm::class)->name('folder.edit');
+
+
+/*    Route::get('/folder/edit/{folderId}', [FolderUpdateController::class, 'edit'])
         ->name('folder.edit')
         ->where('folderId', '[0-9]+');
 
@@ -146,7 +152,7 @@ Route::middleware('auth')->group(function () {
         ->name('folder.createWithFolderId')
         ->where('folderId', '[0-9]+');
 
-    Route::post('/folder/create', [FolderCreateController::class, 'store'])->name('folder.store');
+    Route::post('/folder/create', [FolderCreateController::class, 'store'])->name('folder.store');*/
 
     Route::get('/synonyms/{word}', [SynonymController::class, 'search']);
 

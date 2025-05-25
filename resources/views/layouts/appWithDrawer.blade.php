@@ -37,7 +37,7 @@
 
         <input id="app-drawer" type="checkbox" class="drawer-toggle"/>
 
-        <main class="drawer-content ">
+        <main class="drawer-content h-screen">
             {{ $slot }}
         </main>
         <div class="drawer-side z-10 h-screen">

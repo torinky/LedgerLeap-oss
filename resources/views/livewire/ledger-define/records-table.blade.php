@@ -22,7 +22,7 @@
                         <div class="indicator">
                             @if($canUpdateFolder)
                                 <a
-                                    href="{{ route('folder.edit', ['folderId'=>$folderRecord->id]) }}"
+                                    href="{{ route('folder.edit', $folderRecord) }}"
                                     class="btn btn-ghost tooltip flex items-center"
                                     data-tip="{{__('ledger.folder.edit')}}"
                                     target="folderEdit_{{$folderRecord->id}}}}"
@@ -118,7 +118,7 @@
                 <div class="card-actions place-items-center">
 
                     @can('create',$currentFolder)
-                        <a href="{{ route('folder.createWithFolderId',$currentFolderId)}}"
+                        <a href="{{ route('folder.create',$currentFolderId)}}"
                            class="btn btn-primary btn-lg mx-3"
                            target="folderCreate">
                             <span class="fa-layers fa-fw mr-2">

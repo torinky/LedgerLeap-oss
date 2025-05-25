@@ -53,8 +53,9 @@ class FolderResource extends Resource
                     ->relationship('modifier', 'name')
                     ->searchable()
                     ->required()
-                    ->default(fn () => auth()->id())
-                    ->dehydrated(true), // 常に送信する
+                    ->dehydrated(true) // 常に送信する
+                    ->visible(fn() => auth()->check()) // ログインユーザーのみ表示
+                    ,
             ])->columns(2),
 
             Section::make(__('ledger.workflow.required_roles_setting'))
@@ -104,7 +105,6 @@ class FolderResource extends Resource
             // Forms\Components\Hidden::make('lvl'),
         ]);
     }
-
     public static function table(Table $table): Table
     {
         return $table
@@ -136,6 +136,9 @@ class FolderResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
                 Tables\Actions\RestoreBulkAction::make(),
                 Tables\Actions\ForceDeleteBulkAction::make(),
+            ])
+            ->headerActions([
+                Tables\Actions\CreateAction::make(),
             ]);
 
     }
