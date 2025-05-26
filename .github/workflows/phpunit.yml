@@ -79,6 +79,7 @@ jobs:
         run: |
           npm install
           npm ci
+          npm install vite --save-dev
 
       - name: Build Frontend Assets
         working-directory: ./
