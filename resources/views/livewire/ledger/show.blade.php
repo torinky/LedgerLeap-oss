@@ -13,15 +13,15 @@
             >
 
 
-                    @if($ledgerRecord->define->workflow_enabled)
-                        <x-mary-card>
-                            <div class="flex w-full  items-center ">
-                                <div class="justify-start w-full">
+                @if($ledgerRecord->define->workflow_enabled)
+                    <x-mary-card>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"> {{-- 表示調整用に grid に変更 --}}
+                                {{-- 左側: ステータスと担当者 --}}
+                                <div>
                                     <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
                                     <x-mary-badge :value="$ledgerRecord->status->label()"
                                                   class="{{ $ledgerRecord->status->colorClass() }}"/>
-                                    {{-- 担当者表示--}}
-
+                                    {{-- 担当者表示 --}}
                                     @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
                                         <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
                                     @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
@@ -29,10 +29,68 @@
                                     @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
                                         <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
                                     @endif
+
+                                    {{-- ★★★ 必須ロール進捗表示エリア ★★★ --}}
+                                    @if(!empty($requiredRolesProgress))
+                                        <div class="mt-3 space-y-1">
+                                            {{-- 点検進捗 --}}
+                                            @if($requiredRolesProgress['inspection']['total_count'] > 0)
+                                                <div class="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                                    {{ __('必須点検') }}
+                                                    : {{ $requiredRolesProgress['inspection']['completed_count'] }}
+                                                    / {{ $requiredRolesProgress['inspection']['total_count'] }}
+                                                    @if ($requiredRolesProgress['inspection']['is_all_completed'])
+                                                        <x-mary-icon name="o-check-circle"
+                                                                     class="w-4 h-4 text-success inline-block ml-1"/>
+                                                    @else
+                                                        <x-mary-icon name="o-ellipsis-horizontal-circle"
+                                                                     class="w-4 h-4 text-warning inline-block ml-1"/>
+                                                    @endif
+                                                </div>
+                                                <progress class="progress progress-warning w-full h-2 tooltip"
+                                                          value="{{ $requiredRolesProgress['inspection']['completed_count'] }}"
+                                                          max="{{ $requiredRolesProgress['inspection']['total_count'] }}"
+                                                          data-tip="{{ __('完了済:') }} {{ $requiredRolesProgress['inspection']['completed_roles']->pluck('name')->implode(', ') ?: __('なし') }}\n{{ __('未完了:') }} {{ $requiredRolesProgress['inspection']['pending_roles']->pluck('name')->implode(', ') ?: __('なし') }}">
+                                                </progress>
+                                            @endif
+
+                                            {{-- 承認進捗 --}}
+                                            @if($requiredRolesProgress['approval']['total_count'] > 0)
+                                                <div class="text-xs font-medium text-gray-600 dark:text-gray-400 mt-2">
+                                                    {{ __('必須承認') }}
+                                                    : {{ $requiredRolesProgress['approval']['completed_count'] }}
+                                                    / {{ $requiredRolesProgress['approval']['total_count'] }}
+                                                    @if ($requiredRolesProgress['approval']['is_all_completed'])
+                                                        <x-mary-icon name="o-check-circle"
+                                                                     class="w-4 h-4 text-success inline-block ml-1"/>
+                                                    @else
+                                                        <x-mary-icon name="o-ellipsis-horizontal-circle"
+                                                                     class="w-4 h-4 text-warning inline-block ml-1"/>
+                                                    @endif
+                                                </div>
+                                                <progress
+                                                        class="progress {{ $requiredRolesProgress['approval']['is_all_completed'] && $requiredRolesProgress['inspection']['is_all_completed'] && $ledgerRecord->status === WorkflowStatus::APPROVED ? 'progress-success' : 'progress-info' }} w-full h-2 tooltip"
+                                                        value="{{ $requiredRolesProgress['approval']['completed_count'] }}"
+                                                        max="{{ $requiredRolesProgress['approval']['total_count'] }}"
+                                                        data-tip="{{ __('完了済:') }} {{ $requiredRolesProgress['approval']['completed_roles']->pluck('name')->implode(', ') ?: __('なし') }}\n{{ __('未完了:') }} {{ $requiredRolesProgress['approval']['pending_roles']->pluck('name')->implode(', ') ?: __('なし') }}">
+                                                </progress>
+                                            @endif
+                                        </div>
+                                        {{-- 承認済みで必須ロール未完了の場合の警告 --}}
+                                        @if($ledgerRecord->status === WorkflowStatus::APPROVED && (!$requiredRolesProgress['inspection']['is_all_completed'] || !$requiredRolesProgress['approval']['is_all_completed']))
+                                            <div class="mt-2 text-xs text-error flex items-center">
+                                                <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 mr-1"/>
+                                                {{ __('承認済みですが、未完了の必須ロールがあります。') }}
+                                            </div>
+                                        @endif
+                                    @endif
+                                    {{-- ★★★ ここまで ★★★ --}}
                                 </div>
+
+
                                 {{-- アクションボタン--}}
 
-                                    <div class="join flex flex-wrap items-center justify-end w-full">
+                                <div class="join flex flex-wrap items-center justify-end w-full">
 
                                     @if($this->canRequestApproval())
                                         <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
@@ -44,7 +102,8 @@
                                     @endif
                                     @if($this->canApprove())
                                         <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                       class="join-item btn-wide btn-primary" wire:click="approveTask" spinner/>
+                                                       class="join-item btn-wide btn-primary" wire:click="approveTask"
+                                                       spinner/>
                                     @endif
                                     @if($this->canReturnToDraft())
                                         <x-mary-button
@@ -53,94 +112,96 @@
                                                 class="join-item btn-warning" wire:click="openReturnToDraftModal"
                                                 spinner="openReturnToDraftModal"/>
                                     @endif
-                                    </div>
+                                </div>
                             </div>
-                        </x-mary-card>
-                    @endif
+                    </x-mary-card>
+                @endif
 
-                    {{-- カラムごとの差分表示 --}}
-                    @if($hasChangedColumns)
-                        <div class="border border-base-300 rounded-lg">
-                            @if($hasChangedColumns)
-                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
-                                />
+                {{-- カラムごとの差分表示 --}}
+                @if($hasChangedColumns)
+                    <div class="border border-base-300 rounded-lg">
+                        @if($hasChangedColumns)
+                            <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
+                            />
+                        @endif
+                        <table class="table table-compact w-full">
+                            @if($showChanges)
+                                <thead>
+                                <tr>
+                                    <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                        {{ __('ledger.column.title') }}
+                                    </th>
+                                    <th>
+                                        {{ __('ledger.after_change') }}
+                                        <span class="badge badge-xs badge-warning ml-1 tooltip"
+                                              data-tip="{{ __('ledger.version') }}">Ver. {{ $ledgerRecord->version }} </span>
+                                    </th>
+                                    <th>
+                                        {{ __('ledger.before_change') }}
+                                        <span class="badge badge-xs badge-warning ml-1 tooltip"
+                                              data-tip="{{ __('ledger.version') }}">Ver. {{ $comparisonTargetDiff->version }} </span>
+                                    </th>
+                                </tr>
+                                </thead>
                             @endif
-                            <table class="table table-compact w-full">
-                                @if($showChanges)
-                                    <thead>
-                                    <tr>
-                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                            {{ __('ledger.column.title') }}
-                                        </th>
-                                        <th>
-                                            {{ __('ledger.after_change') }}
-                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $ledgerRecord->version }} </span>
-                                        </th>
-                                        <th>
-                                            {{ __('ledger.before_change') }}
-                                            <span class="badge badge-xs badge-warning ml-1 tooltip" data-tip="{{ __('ledger.version') }}">Ver. {{ $comparisonTargetDiff->version }} </span>
-                                        </th>
-                                    </tr>
-                                    </thead>
-                                @endif
-                                <tbody>
+                            <tbody>
 
-                                @foreach($contentChanges as $columnId => $change)
-                                    <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
-                                        <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                            {{ $change['column_name'] }}
-                                            @if($change['changed'])
-                                                <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
+                            @foreach($contentChanges as $columnId => $change)
+                                <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
+                                    <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                        {{ $change['column_name'] }}
+                                        @if($change['changed'])
+                                            <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
+                                        @endif
+                                    </th>
+                                    <td class="break-words align-top pt-2">
+                                        <div class="text-sm">
+                                            @if (!$canView)
+                                                <x-ledger.not-authorized-message/>
+                                            @elseif (empty($change['current_value']))
+                                                <x-ledger.empty-message/>
+                                            @elseif($change['column_define_current'])
+                                                {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
+                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                            @else
+                                                <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                             @endif
-                                        </th>
+                                        </div>
+                                    </td>
+                                    @if($showChanges)
                                         <td class="break-words align-top pt-2">
-                                            <div class="text-sm">
+                                            <div class="text-sm opacity-70 mb-2">
                                                 @if (!$canView)
-                                                    <x-ledger.not-authorized-message />
-                                                @elseif (empty($change['current_value']))
-                                                    <x-ledger.empty-message />
-                                                @elseif($change['column_define_current'])
-                                                    {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
-                                                                  ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                                    <x-ledger.not-authorized-message/>
+                                                @elseif (empty($change['old_value']))
+                                                    <x-ledger.empty-message/>
+                                                @elseif($change['column_define_old'])
+                                                    {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
+                                                                  ->show($change['column_define_old'], $change['old_value'], $canView) }}
                                                 @else
-                                                    <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
+                                                    <span class="text-ghost">---</span> {{-- 古い定義がない --}}
                                                 @endif
                                             </div>
                                         </td>
-                                        @if($showChanges)
-                                            <td class="break-words align-top pt-2">
-                                                <div class="text-sm opacity-70 mb-2">
-                                                    @if (!$canView)
-                                                        <x-ledger.not-authorized-message />
-                                                    @elseif (empty($change['old_value']))
-                                                        <x-ledger.empty-message />
-                                                    @elseif($change['column_define_old'])
-                                                        {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
-                                                                      ->show($change['column_define_old'], $change['old_value'], $canView) }}
-                                                    @else
-                                                        <span class="text-ghost">---</span> {{-- 古い定義がない --}}
-                                                    @endif
-                                                </div>
-                                            </td>
-                                        @endif
-                                    </tr>
-                                @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
-                        <x-ledger.detail.table
-                                :ledgerRecord="$ledgerRecord"
-                                :canView="$canView"
-                        />
-                    @endif
-
-                    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
-                        <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
-                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
-                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
+                                    @endif
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
                     </div>
+                @else
+                    {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
+                    <x-ledger.detail.table
+                            :ledgerRecord="$ledgerRecord"
+                            :canView="$canView"
+                    />
+                @endif
+
+                <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
+                    <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
+                    <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
+                    <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
+                </div>
 
             </x-mary-tab>
 
@@ -226,19 +287,19 @@
                     <div class="flex flex-wrap items-center justify-center gap-4">
                         <div class="join flex flex-wrap items-center justify-center w-full">
 
-                        {{-- 編集ボタン --}}
-                        @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
-                        @if($canUpdate && !$ledgerRecord->isLocked())
-                            <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
-                               class="join-item btn btn-primary btn-wide"
-                            ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
-                        @else
-                            <div class="tooltip"
-                                 data-tip="{{ $ledgerRecord->isLocked() ? __('ledger.workflow.record_locked') : __('ledger.no_edit_permission') }}">
-                                <button class="join-item btn btn-primary btn-wide" disabled><i
-                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
-                            </div>
-                        @endif
+                            {{-- 編集ボタン --}}
+                            @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
+                            @if($canUpdate && !$ledgerRecord->isLocked())
+                                <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                                   class="join-item btn btn-primary btn-wide"
+                                ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
+                            @else
+                                <div class="tooltip"
+                                     data-tip="{{ $ledgerRecord->isLocked() ? __('ledger.workflow.record_locked') : __('ledger.no_edit_permission') }}">
+                                    <button class="join-item btn btn-primary btn-wide" disabled><i
+                                                class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
+                                </div>
+                            @endif
                             {{-- ワークフローアクションボタン --}}
                             @if($this->canRequestApproval())
                                 <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
@@ -260,7 +321,7 @@
                             @endif
                         </div>
 
-                            {{-- 変更履歴ボタン --}}
+                        {{-- 変更履歴ボタン --}}
                         @if($ledgerRecord->ledgerDiff()->where(DB::raw('content'), '!=', '')->count() > 0)
                             {{-- 変更履歴がある場合のみ --}}
                             <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"

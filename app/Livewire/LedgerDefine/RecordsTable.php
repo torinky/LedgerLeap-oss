@@ -42,6 +42,7 @@ class RecordsTable extends Component
     /**
      * @return Application|Factory|View|\Illuminate\Foundation\Application
      */
+    #[On('folderSavedAndRefreshList')]
     public function render(IndexRequest $request)
     {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->firstOrFail();
@@ -91,5 +92,13 @@ class RecordsTable extends Component
     {
         Folder::fixtree();
         $this->prepareFolderAsset();
+    }
+    #[On('folderSavedAndRefreshList')]
+    public function refreshList(): void
+    {
+        // リストを再読み込みする処理
+        // 例: $this->folders = Folder::get()->toTree();
+        //     または、このコンポーネント自体をリフレッシュ
+        $this->dispatch('$refresh');
     }
 }
