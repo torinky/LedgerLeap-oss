@@ -30,12 +30,14 @@
     'associate' => '仲間',
     'attach' => '添付する',
     'attribute' => '属性',
+    'basic_information' => '基本情報',
     'basic_operations_info' => 'その他、フォルダの権限に応じて台帳の閲覧などの基本的な操作が可能です。',
     'basic_operations_permission' => '台帳の閲覧などの基本的な操作が可能です。',
     'before_change' => '変更前',
     'before_change_colon' => '変更前:',
     'browse' => 'ブラウズ',
     'cancel' => 'キャンセル',
+    'cancel_and_close' => 'ウィンドウを閉じる',
     'changed' => '変更あり',
     'changes' => '変更点',
     'choose' => '選ぶ',
@@ -45,7 +47,6 @@
     'close' => '閉じる',
     'close_view_window_message' => '閲覧を終了してウィンドウを閉じますか？',
     'close_window' => 'ウィンドウを閉じる',
-    'cancel_and_close' => 'ウィンドウを閉じる',
     'close_window_message' => '編集内容を破棄してウィンドウを閉じますか？',
     'close_window_modal' => '閉じようとしています',
     'collapse' => '展開／折りたたむ',
@@ -167,6 +168,49 @@
             'created' => 'フォルダーが作成されました',
             'edit' => 'フォルダーを編集',
             'fix' => 'ツリー構造を修復する',
+            'form' =>
+                [
+                    'header' =>
+                        [
+                            'create' => 'フォルダを新規作成',
+                            'edit' => 'フォルダ編集',
+                            'edit_name' => 'フォルダ編集: :name',
+                        ],
+                    'label' =>
+                        [
+                            'parent_id' => '親フォルダ',
+                            'title' => 'フォルダ名',
+                        ],
+                    'message' =>
+                        [
+                            'confirm_delete_body' => '本当にこのフォルダ「:name」を削除してもよろしいですか？元に戻すことはできません。',
+                            'created_successfully' => 'フォルダを作成しました。',
+                            'created_successfully_name' => 'フォルダ「:name」を作成しました。',
+                            'delete_has_children' => '子フォルダが存在するため削除できません。先に子フォルダを削除または移動してください。',
+                            'delete_has_defines' => 'このフォルダには台帳定義が存在するため削除できません。',
+                            'deleted_successfully' => 'フォルダを削除しました。',
+                            'first_folder_is_root' => '最初のフォルダはルートフォルダとして作成されます。',
+                            'updated_successfully' => 'フォルダを更新しました。',
+                            'updated_successfully_name' => 'フォルダ「:name」を更新しました。',
+                        ],
+                    'modal_title' =>
+                        [
+                            'confirm_delete' => 'フォルダ削除の確認',
+                        ],
+                    'option' =>
+                        [
+                            'no_parent' => '（親フォルダなし - ルート）',
+                        ],
+                    'placeholder' =>
+                        [
+                            'select_parent_or_null' => 'ルートフォルダにする場合は選択解除',
+                            'select_roles' => 'ロールを検索または選択...',
+                        ],
+                    'warning' =>
+                        [
+                            'cannot_delete_if_children_exist' => '子フォルダや、このフォルダに属する台帳定義が存在する場合は削除できません。',
+                        ],
+                ],
             'goto_ledger' => '同じ階層の台帳リストに移動',
             'manageable' => '管理できます',
             'not_allow_create' => 'フォルダーの作成権限がありません',
@@ -179,46 +223,10 @@
             'remove' => 'フォルダーを削除する',
             'remove_message' => 'このフォルダーを削除しようとしています',
             'scoped' => '関係フォルダ',
+            'settings' => 'フォルダー設定',
             'title' => 'フォルダー名',
             'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
             'writable' => '書き込み可能',
-            'settings' => 'フォルダー設定',
-            'form' => [
-                'header' => [
-                    'create' => 'フォルダを新規作成',
-                    'edit' => 'フォルダ編集',
-                    'edit_name' => 'フォルダ編集: :name', // 編集時タイトル用
-                ],
-                'label' => [
-                    'title' => 'フォルダ名',
-                    'parent_id' => '親フォルダ',
-                ],
-                'placeholder' => [
-                    'select_parent_or_null' => 'ルートフォルダにする場合は選択解除', // 変更
-                    'select_roles' => 'ロールを検索または選択...',
-                ],
-                'message' => [
-                    'first_folder_is_root' => '最初のフォルダはルートフォルダとして作成されます。',
-                    'created_successfully' => 'フォルダを作成しました。',
-                    'updated_successfully' => 'フォルダを更新しました。',
-                    'deleted_successfully' => 'フォルダを削除しました。',
-                    'delete_has_children' => '子フォルダが存在するため削除できません。先に子フォルダを削除または移動してください。',
-                    'delete_has_defines' => 'このフォルダには台帳定義が存在するため削除できません。',
-                    'created_successfully_name' => 'フォルダ「:name」を作成しました。',
-                    'updated_successfully_name' => 'フォルダ「:name」を更新しました。',
-                    'confirm_delete_body' => '本当にこのフォルダ「:name」を削除してもよろしいですか？元に戻すことはできません。',
-                ],
-                'modal_title' => [
-                    'confirm_delete' => 'フォルダ削除の確認',
-                ],
-                'warning'=>[
-                    'cannot_delete_if_children_exist' => '子フォルダや、このフォルダに属する台帳定義が存在する場合は削除できません。',
-                ],
-                'option' => [ // 追加
-                    'no_parent' => '（親フォルダなし - ルート）',
-                ],
-
-            ],
         ],
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
@@ -336,10 +344,11 @@
     'mark_all_as_read' => 'すべて既読にする',
     'mark_as_read' => '既読にする',
     'message' => 'お知らせ',
+    'modifier' =>
+        [
+            'name' => '最終変更者',
+        ],
     'modifies' => '変更履歴を確認',
-    'modifier'=>[
-        'name' => '最終変更者'
-    ],
     'modify_message' => '変更する',
     'my_portal_title' => 'マイポータル',
     'name' => '名前',
@@ -555,6 +564,7 @@
     'select' => '選択する',
     'select_all' => 'すべて選択',
     'select_message' => 'フォルダまたは台帳を選択',
+    'select_roles' => 'ロールを選択',
     'send' => '送信する',
     'setting' => '設定',
     'settings' =>
@@ -637,15 +647,8 @@
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認',
     'view_history' => '変更履歴を見る',
-    'select_roles' => 'ロールを選択',
     'workflow' =>
         [
-            'required_roles_setting'=>'ワークフローでの必須ロール設定',
-            'required_roles_setting_helper' => 'このフォルダ内の台帳でワークフローを進める際に、ここで設定されたロールの担当者による点検/承認を必須にします。',
-            'required_inspector_roles'=>'点検を必須にするロール',
-            'required_inspector_roles_helper' => '複数のロールを選択できます。このフォルダ内の点検ステップで、ここで設定されたロールの担当者による点検を必須にします。',
-            'required_approver_roles'=>'承認を必須にするロール',
-            'required_approver_roles_helper' => '複数のロールを選択できます。このフォルダ内の承認ステップで、ここで設定されたロールの担当者による承認を必須にします。',
             'action_at' => '操作日時',
             'action_by' => '操作者',
             'age' => '滞留時間',
@@ -666,6 +669,7 @@
             'comment_hint_return_reason_required' => '差し戻しの理由を記載してください。',
             'comment_optional' => 'コメント (任意)',
             'comment_placeholder' => 'コメントを入力してください...',
+            'comment_hint_optional' => '（知らせるべきコメントがあれば記載してください）',
             'comments' => 'コメント/理由',
             'confirm_edit_while_pending_text' => 'このレコードは現在ワークフロー処理中です。編集・保存するとステータスが「作成中/編集中」に戻り、再度申請が必要になります。続行しますか？',
             'confirm_edit_while_pending_title' => 'ワークフロー中の項目編集',
@@ -702,7 +706,17 @@
             'request_approval_short' => '承認申請',
             'request_inspection' => '作成完了（点検依頼）',
             'requested_at' => '申請日時',
+            'inspection_completed' => '点検完了',
+            'inspection_pending' => '点検待ち',
+            'approval_pending' => '承認待ち',
+            'approval_completed' => '承認済み',
             'requester' => '申請者',
+            'required_approver_roles' => '承認が必須なロール',
+            'required_approver_roles_helper' => '複数のロールを選択できます。このフォルダ内の承認ステップで、ここで設定されたロールの担当者による承認を必須にします。',
+            'required_inspector_roles' => '点検が必須なロール',
+            'required_inspector_roles_helper' => '複数のロールを選択できます。このフォルダ内の点検ステップで、ここで設定されたロールの担当者による点検を必須にします。',
+            'required_roles_setting' => 'ワークフローでの必須ロール設定',
+            'required_roles_setting_helper' => 'このフォルダ内の台帳でワークフローを進める際に、ここで設定されたロールの担当者による点検/承認を必須にします。',
             'return_reason_placeholder' => '理由を入力してください...',
             'return_to_draft' => '作成中に戻す',
             'return_to_draft_reason' => '作成中に戻す理由',
@@ -715,6 +729,7 @@
             'select_inspector' => '点検者を選択',
             'select_next_approver' => '次の承認者を選択',
             'select_next_inspector' => '点検者を選択してください',
+            'required_roles_not_completed' => '承認済みですが、確認がされていないロールがあります。',
             'status' =>
                 [
                     'approved' => '承認済み',
@@ -738,5 +753,5 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-    'basic_information' => '基本情報',
+    'none' => 'なし',
 ];

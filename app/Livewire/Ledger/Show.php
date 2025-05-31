@@ -361,116 +361,57 @@ class Show extends Component
     {
         $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
         $this->contentChanges = [];
-
         $currentContentArray = $this->ledgerRecord->content ?? [];
-        // column_define は LedgerDefine モデルから取得し、必要な情報のみを抽出する
-        $currentColumnDefinesSource = $this->ledgerDefineRecord->column_define ?? [];
-        $currentColumnDefines = [];
-        foreach ($currentColumnDefinesSource as $def) {
-            // $def がオブジェクトの場合、必要なプロパティを抽出して配列にする
-            // $def が既に適切な配列形式であれば、そのまま利用できるか検討
-            if (is_object($def)) {
-                $currentColumnDefines[$def->id] = [
-                    'id' => $def->id,
-                    'name' => $def->name,
-                    'type' => $def->type,
-                    // 'inputType' は ColumnHtml::show で使われるため、
-                    // inputType オブジェクトそのものではなく、その型名や必要な情報だけを渡すか、
-                    // ColumnHtml::show 側で $def->type から inputType を解決するようにする。
-                    // ここでは一旦 'type' のみとし、ColumnHtml::show の修正も視野に入れる。
-                    'order' => $def->order ?? null,
-                    'useOptions' => $def->useOptions ?? false,
-                    'options' => isset($def->options) && is_array($def->options) ? $def->options : [],
-                    'required' => $def->required ?? false,
-                    'unique' => $def->unique ?? false,
-                    'sortBy' => $def->sortBy ?? false,
-                    'hint' => $def->hint ?? '',
-                    'file' => isset($def->file) && is_array($def->file) ? $def->file : [],
-                    // 必要に応じて他のプロパティも追加
-                ];
-            } elseif (is_array($def) && isset($def['id'])) {
-                // 既に配列だが、inputType のようなオブジェクトが含まれていないか確認
-                // ここでは、$def が安全な配列であることを期待する
-                $currentColumnDefines[$def['id']] = $def; // ただし、この場合もネストしたオブジェクトに注意
-            }
-        }
 
+        $currentColumnDefines = Columndefine::normalizeArrayOrCollection($this->ledgerDefineRecord->column_define);
 
-        $oldColumnDefines = [];
-        $oldContentArray = [];
-        // $oldAttachmentsArray = []; // 差分表示では未使用
+        $hasComparison = $this->comparisonTargetDiff && isset($this->comparisonTargetDiff->column_define);
+        $oldColumnDefines = $hasComparison
+            ? Columndefine::normalizeArrayOrCollection($this->comparisonTargetDiff->column_define)
+            : [];
+        $oldContentArray = $hasComparison
+            ? ($this->comparisonTargetDiff->content ?? [])
+            : [];
 
-        if ($this->comparisonTargetDiff && isset($this->comparisonTargetDiff->column_define)) {
-            $oldColumnDefinesSource = $this->comparisonTargetDiff->column_define ?? [];
-            foreach ($oldColumnDefinesSource as $def) {
-                if (is_object($def)) {
-                    $oldColumnDefines[$def->id] = [
-                        'id' => $def->id,
-                        'name' => $def->name,
-                        'type' => $def->type,
-                        'order' => $def->order ?? null,
-                        'useOptions' => $def->useOptions ?? false,
-                        'options' => isset($def->options) && is_array($def->options) ? $def->options : [],
-                        'required' => $def->required ?? false,
-                        'unique' => $def->unique ?? false,
-                        'sortBy' => $def->sortBy ?? false,
-                        'hint' => $def->hint ?? '',
-                        'file' => isset($def->file) && is_array($def->file) ? $def->file : [],
-                    ];
-                } elseif (is_array($def) && isset($def['id'])) {
-                    $oldColumnDefines[$def['id']] = $def;
-                }
-            }
-            $oldContentArray = $this->comparisonTargetDiff->content ?? [];
-            // $oldAttachmentsArray = $this->comparisonTargetDiff->content_attached ?? [];
-        }
-
-        // $allColumnDefines は $currentColumnDefines を基準にする
-        $allColumnDefinesSorted = collect($currentColumnDefines)
-            ->sortBy('order') // 'order' が存在することを前提
-            ->all();
-        $allColumnIds = array_keys($allColumnDefinesSorted); // id をキーとして取得
+        $sortedColumnDefines = collect($currentColumnDefines)->sortBy('order')->all();
+        $sortedColumnIds = array_keys($sortedColumnDefines);
 
         $this->hasChangedColumns = false;
 
-        foreach ($allColumnIds as $columnId) {
-            // $currentColumnDefines と $oldColumnDefines は既に id => defineData の形式になっている
-            $displayColumnDefineForCurrent = $currentColumnDefines[$columnId] ?? null;
-            $displayColumnDefineForOld = $oldColumnDefines[$columnId] ?? null;
+        foreach ($sortedColumnIds as $columnId) {
+            $currentColDef = $currentColumnDefines[$columnId] ?? null;
+            $oldColDef = $oldColumnDefines[$columnId] ?? null;
 
-            // current_value と old_value は、AsColumnArrayJson キャストにより既に配列になっているはず
-            // ただし、ネストしたオブジェクトがないか注意
-            $currentValueRaw = Arr::get($currentContentArray, $columnId);
-            $currentValue = !is_null($currentValueRaw) && (is_object($currentValueRaw) || is_array($currentValueRaw))
-                ? json_decode(json_encode($currentValueRaw), true) // 再帰的に配列に変換
-                : $currentValueRaw;
+            $currentRawValue = Arr::get($currentContentArray, $columnId);
+            $currentValue = (is_object($currentRawValue) || is_array($currentRawValue))
+                ? json_decode(json_encode($currentRawValue), true)
+                : $currentRawValue;
 
-            // $currentAttachments = Arr::get($currentAttachmentsArray, $columnId); // 差分表示では未使用
+            $oldRawValue = $hasComparison ? Arr::get($oldContentArray, $columnId) : null;
+            $oldValue = $hasComparison && (is_object($oldRawValue) || is_array($oldRawValue))
+                ? json_decode(json_encode($oldRawValue), true)
+                : $oldRawValue;
 
-            $oldValueRaw = $this->comparisonTargetDiff ? Arr::get($oldContentArray, $columnId) : null;
-            $oldValue = $this->comparisonTargetDiff && !is_null($oldValueRaw) && (is_object($oldValueRaw) || is_array($oldValueRaw))
-                ? json_decode(json_encode($oldValueRaw), true) // 再帰的に配列に変換
-                : $oldValueRaw;
-            // $oldAttachments = $this->comparisonTargetDiff ? Arr::get($oldAttachmentsArray, $columnId) : null; // 差分表示では未使用
+            $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string)$currentValue;
+            $normalizedOld = $hasComparison && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string)$oldValue;
+            $isChanged = $hasComparison && ($normalizedCurrent !== $normalizedOld);
+            if ($isChanged) {
+                $this->hasChangedColumns = true;
+            }
 
-            $normalizedCurrent = is_array($currentValue) || is_object($currentValue) ? json_encode($currentValue) : (string)$currentValue;
-            $normalizedOld = $this->comparisonTargetDiff && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string)$oldValue;
-
-            $isChanged = $this->comparisonTargetDiff && ($normalizedCurrent !== $normalizedOld);
-            if (!$this->comparisonTargetDiff) $isChanged = false;
-            if ($isChanged) $this->hasChangedColumns = true;
-
-            $columnName = $displayColumnDefineForCurrent['name']
-                ?? ($displayColumnDefineForOld['name']
-                    ?? __('ledger.column_deleted', ['id' => $columnId]));
+            if (isset($currentColDef['name'])) {
+                $columnName = $currentColDef['name'];
+            } elseif (isset($oldColDef['name'])) {
+                $columnName = $oldColDef['name'];
+            } else {
+                $columnName = __('ledger.column_deleted', ['id' => $columnId]);
+            }
 
             $this->contentChanges[$columnId] = [
-                'column_define_current' => $displayColumnDefineForCurrent, // 単純な配列
+                'column_define_current' => $currentColDef,
                 'current_value' => $currentValue,
-                // 'current_attachments' => $currentAttachments,
-                'column_define_old' => $displayColumnDefineForOld, // 単純な配列
+                'column_define_old' => $oldColDef,
                 'old_value' => $oldValue,
-                // 'old_attachments' => $oldAttachments,
                 'changed' => $isChanged,
                 'column_name' => $columnName,
             ];

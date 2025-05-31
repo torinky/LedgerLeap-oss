@@ -15,105 +15,145 @@
 
                 @if($ledgerRecord->define->workflow_enabled)
                     <x-mary-card>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"> {{-- 表示調整用に grid に変更 --}}
-                                {{-- 左側: ステータスと担当者 --}}
-                                <div>
-                                    <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
-                                    <x-mary-badge :value="$ledgerRecord->status->label()"
-                                                  class="{{ $ledgerRecord->status->colorClass() }}"/>
-                                    {{-- 担当者表示 --}}
-                                    @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
-                                        <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
-                                    @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
-                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
-                                    @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
-                                        <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
-                                    @endif
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"> {{-- 表示調整用に grid に変更 --}}
+                            {{-- 左側: ステータスと担当者 --}}
+                            <div>
+                                <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
+                                <x-mary-badge :value="$ledgerRecord->status->label()"
+                                              class="{{ $ledgerRecord->status->colorClass() }}"/>
+                                {{-- 担当者表示 --}}
+                                @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
+                                    <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
+                                @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
+                                    <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
+                                @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
+                                    <span class="text-sm ml-2">({{ __('ledger.workflow.approved_by') }}: {{ $ledgerRecord->latestDiff->approver->name }} at {{ $ledgerRecord->latestDiff->approved_at?->isoFormat('YYYY/MM/DD HH:mm') }})</span>
+                                @endif
 
-                                    {{-- ★★★ 必須ロール進捗表示エリア ★★★ --}}
-                                    @if(!empty($requiredRolesProgress))
-                                        <div class="mt-3 space-y-1">
-                                            {{-- 点検進捗 --}}
-                                            @if($requiredRolesProgress['inspection']['total_count'] > 0)
-                                                <div class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                                    {{ __('必須点検') }}
-                                                    : {{ $requiredRolesProgress['inspection']['completed_count'] }}
-                                                    / {{ $requiredRolesProgress['inspection']['total_count'] }}
-                                                    @if ($requiredRolesProgress['inspection']['is_all_completed'])
-                                                        <x-mary-icon name="o-check-circle"
-                                                                     class="w-4 h-4 text-success inline-block ml-1"/>
-                                                    @else
-                                                        <x-mary-icon name="o-ellipsis-horizontal-circle"
-                                                                     class="w-4 h-4 text-warning inline-block ml-1"/>
+                                {{-- ★★★ 必須ロール進捗表示エリア ★★★ --}}
+                                @if(!empty($requiredRolesProgress))
+                                    <div class="mt-3 space-y-1">
+                                        {{-- 点検進捗 --}}
+                                        @if($requiredRolesProgress['inspection']['total_count'] > 0)
+                                            <div class="text-xs font-medium text-gray-600 dark:text-gray-400 tooltip w-full">
+                                                <div class="tooltip-content p-2 space-y-2">
+                                                    {{ __('ledger.workflow.inspection_completed') }} :
+                                                    @foreach($requiredRolesProgress['inspection']['completed_roles'] as $role)
+                                                        <x-mary-badge :value="$role->name"
+                                                                      class="badge-success badge-sm"/>
+                                                    @endforeach
+                                                    @if($requiredRolesProgress['inspection']['completed_roles']->isEmpty())
+                                                        {{ __('ledger.none') }}
                                                     @endif
+                                                    <br/>
+                                                    {{ __('ledger.workflow.inspection_pending') }} :
+                                                    @foreach($requiredRolesProgress['inspection']['pending_roles'] as $role)
+                                                        <x-mary-badge :value="$role->name"
+                                                                      class="badge-warning badge-sm"/>
+                                                    @endforeach
+                                                    @if($requiredRolesProgress['inspection']['pending_roles']->isEmpty())
+                                                        {{ __('ledger.none') }}
+                                                    @endif
+
                                                 </div>
-                                                <progress class="progress progress-warning w-full h-2 tooltip"
+                                                {{ __('ledger.workflow.required_inspector_roles') }}
+                                                : {{ $requiredRolesProgress['inspection']['completed_count'] }}
+                                                / {{ $requiredRolesProgress['inspection']['total_count'] }}
+                                                @if ($requiredRolesProgress['inspection']['is_all_completed'])
+                                                    <x-mary-icon name="o-check-circle"
+                                                                 class="w-4 h-4 text-success inline-block ml-1"/>
+                                                @else
+                                                    <x-mary-icon name="o-ellipsis-horizontal-circle"
+                                                                 class="w-4 h-4 text-warning inline-block ml-1"/>
+                                                @endif
+                                                <progress class="progress progress-warning w-full h-2 "
                                                           value="{{ $requiredRolesProgress['inspection']['completed_count'] }}"
                                                           max="{{ $requiredRolesProgress['inspection']['total_count'] }}"
-                                                          data-tip="{{ __('完了済:') }} {{ $requiredRolesProgress['inspection']['completed_roles']->pluck('name')->implode(', ') ?: __('なし') }}\n{{ __('未完了:') }} {{ $requiredRolesProgress['inspection']['pending_roles']->pluck('name')->implode(', ') ?: __('なし') }}">
+                                                >
                                                 </progress>
-                                            @endif
-
-                                            {{-- 承認進捗 --}}
-                                            @if($requiredRolesProgress['approval']['total_count'] > 0)
-                                                <div class="text-xs font-medium text-gray-600 dark:text-gray-400 mt-2">
-                                                    {{ __('必須承認') }}
-                                                    : {{ $requiredRolesProgress['approval']['completed_count'] }}
-                                                    / {{ $requiredRolesProgress['approval']['total_count'] }}
-                                                    @if ($requiredRolesProgress['approval']['is_all_completed'])
-                                                        <x-mary-icon name="o-check-circle"
-                                                                     class="w-4 h-4 text-success inline-block ml-1"/>
-                                                    @else
-                                                        <x-mary-icon name="o-ellipsis-horizontal-circle"
-                                                                     class="w-4 h-4 text-warning inline-block ml-1"/>
-                                                    @endif
-                                                </div>
-                                                <progress
-                                                        class="progress {{ $requiredRolesProgress['approval']['is_all_completed'] && $requiredRolesProgress['inspection']['is_all_completed'] && $ledgerRecord->status === WorkflowStatus::APPROVED ? 'progress-success' : 'progress-info' }} w-full h-2 tooltip"
-                                                        value="{{ $requiredRolesProgress['approval']['completed_count'] }}"
-                                                        max="{{ $requiredRolesProgress['approval']['total_count'] }}"
-                                                        data-tip="{{ __('完了済:') }} {{ $requiredRolesProgress['approval']['completed_roles']->pluck('name')->implode(', ') ?: __('なし') }}\n{{ __('未完了:') }} {{ $requiredRolesProgress['approval']['pending_roles']->pluck('name')->implode(', ') ?: __('なし') }}">
-                                                </progress>
-                                            @endif
-                                        </div>
-                                        {{-- 承認済みで必須ロール未完了の場合の警告 --}}
-                                        @if($ledgerRecord->status === WorkflowStatus::APPROVED && (!$requiredRolesProgress['inspection']['is_all_completed'] || !$requiredRolesProgress['approval']['is_all_completed']))
-                                            <div class="mt-2 text-xs text-error flex items-center">
-                                                <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 mr-1"/>
-                                                {{ __('承認済みですが、未完了の必須ロールがあります。') }}
                                             </div>
                                         @endif
-                                    @endif
-                                    {{-- ★★★ ここまで ★★★ --}}
-                                </div>
 
+                                        {{-- 承認進捗 --}}
+                                        @if($requiredRolesProgress['approval']['total_count'] > 0)
+                                            <div class="text-xs font-medium text-gray-600 dark:text-gray-400 mt-2  tooltip w-full">
+                                                <div class="tooltip-content p-2 space-y-2">
+                                                    {{ __('ledger.workflow.approval_completed') }} :
+                                                    @foreach($requiredRolesProgress['approval']['completed_roles'] as $role)
+                                                        <x-mary-badge :value="$role->name"
+                                                                      class="badge-success badge-sm"/>
+                                                    @endforeach
+                                                    @if($requiredRolesProgress['approval']['completed_roles']->isEmpty())
+                                                        {{ __('ledger.none') }}
+                                                    @endif
+                                                    <br/>
+                                                    {{ __('ledger.workflow.approval_pending') }} :
+                                                    @foreach($requiredRolesProgress['approval']['pending_roles'] as $role)
+                                                        <x-mary-badge :value="$role->name"
+                                                                      class="badge-warning badge-sm"/>
+                                                    @endforeach
+                                                    @if($requiredRolesProgress['approval']['pending_roles']->isEmpty())
+                                                        {{ __('ledger.none') }}
+                                                    @endif
 
-                                {{-- アクションボタン--}}
-
-                                <div class="join flex flex-wrap items-center justify-end w-full">
-
-                                    @if($this->canRequestApproval())
-                                        <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                                       icon="o-check-badge"
-                                                       class="join-item btn-wide btn-success"
-                                                       {{-- モーダルを開くメソッド呼び出し --}}
-                                                       wire:click="openApproverSelectModal"
-                                                       spinner="openApproverSelectModal"/>
+                                                </div>
+                                                {{ __('ledger.workflow.required_approver_roles') }}
+                                                : {{ $requiredRolesProgress['approval']['completed_count'] }}
+                                                / {{ $requiredRolesProgress['approval']['total_count'] }}
+                                                @if ($requiredRolesProgress['approval']['is_all_completed'])
+                                                    <x-mary-icon name="o-check-circle"
+                                                                 class="w-4 h-4 text-success inline-block ml-1"/>
+                                                @else
+                                                    <x-mary-icon name="o-ellipsis-horizontal-circle"
+                                                                 class="w-4 h-4 text-warning inline-block ml-1"/>
+                                                @endif
+                                            <progress
+                                                    class="progress {{ $requiredRolesProgress['approval']['is_all_completed'] && $requiredRolesProgress['inspection']['is_all_completed'] && $ledgerRecord->status === WorkflowStatus::APPROVED ? 'progress-success' : 'progress-info' }} w-full h-2 "
+                                                    value="{{ $requiredRolesProgress['approval']['completed_count'] }}"
+                                                    max="{{ $requiredRolesProgress['approval']['total_count'] }}"
+                                                    >
+                                            </progress>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    {{-- 承認済みで必須ロール未完了の場合の警告 --}}
+                                    @if($ledgerRecord->status === WorkflowStatus::APPROVED && (!$requiredRolesProgress['inspection']['is_all_completed'] || !$requiredRolesProgress['approval']['is_all_completed']))
+                                        <div class="mt-2 text-xs text-error flex items-center">
+                                            <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 mr-1"/>
+                                            {{ __('ledger.workflow.required_roles_not_completed') }}
+                                        </div>
                                     @endif
-                                    @if($this->canApprove())
-                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                       class="join-item btn-wide btn-primary" wire:click="approveTask"
-                                                       spinner/>
-                                    @endif
-                                    @if($this->canReturnToDraft())
-                                        <x-mary-button
-                                                label="{{ __('ledger.workflow.return_to_draft_short') }}"
-                                                icon="o-arrow-uturn-left"
-                                                class="join-item btn-warning" wire:click="openReturnToDraftModal"
-                                                spinner="openReturnToDraftModal"/>
-                                    @endif
-                                </div>
+                                @endif
+                                {{-- ★★★ ここまで ★★★ --}}
                             </div>
+
+
+                            {{-- アクションボタン--}}
+
+                            <div class="join flex flex-wrap items-center justify-end w-full">
+
+                                @if($this->canRequestApproval())
+                                    <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                   icon="o-check-badge"
+                                                   class="join-item btn-wide btn-success"
+                                                   {{-- モーダルを開くメソッド呼び出し --}}
+                                                   wire:click="openApproverSelectModal"
+                                                   spinner="openApproverSelectModal"/>
+                                @endif
+                                @if($this->canApprove())
+                                    <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                                   class="join-item btn-wide btn-success" wire:click="approveTask"
+                                                   spinner/>
+                                @endif
+                                @if($this->canReturnToDraft())
+                                    <x-mary-button
+                                            label="{{ __('ledger.workflow.return_to_draft_short') }}"
+                                            icon="o-arrow-uturn-left"
+                                            class="join-item btn-warning" wire:click="openReturnToDraftModal"
+                                            spinner="openReturnToDraftModal"/>
+                                @endif
+                            </div>
+                        </div>
                     </x-mary-card>
                 @endif
 
@@ -164,7 +204,7 @@
                                                 {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
                                                               ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
                                             @else
-                                                <span class="text-error">{{ __('定義不明') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
+                                                <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                             @endif
                                         </div>
                                     </td>
@@ -311,7 +351,7 @@
                             @endif
                             @if($this->canApprove())
                                 <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                               class="join-item btn-wide btn-primary" wire:click="approveTask" spinner/>
+                                               class="join-item btn-wide btn-success" wire:click="approveTask" spinner/>
                             @endif
                             @if($this->canReturnToDraft())
                                 <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
@@ -379,4 +419,3 @@
 
     </div>
 </div>
-

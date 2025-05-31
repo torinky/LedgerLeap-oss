@@ -239,4 +239,30 @@ class ColumnDefine
     {
         return $this->inputType;
     }
+
+    public static function normalizeArrayOrCollection( $columnDefinesSource): array
+    {
+        $result = [];
+        foreach ($columnDefinesSource as $colDef) {
+            if (is_object($colDef)) {
+                $result[$colDef->id] = [
+                    'id' => $colDef->id,
+                    'name' => $colDef->name,
+                    'type' => $colDef->type,
+                    'order' => $colDef->order ?? null,
+                    'useOptions' => $colDef->useOptions ?? false,
+                    'options' => isset($colDef->options) && is_array($colDef->options) ? $colDef->options : [],
+                    'required' => $colDef->required ?? false,
+                    'unique' => $colDef->unique ?? false,
+                    'sortBy' => $colDef->sortBy ?? false,
+                    'hint' => $colDef->hint ?? '',
+                    'file' => isset($colDef->file) && is_array($colDef->file) ? $colDef->file : [],
+                ];
+            } elseif (is_array($colDef) && isset($colDef['id'])) {
+                $result[$colDef['id']] = $colDef;
+            }
+        }
+        return $result;
+    }
+
 }

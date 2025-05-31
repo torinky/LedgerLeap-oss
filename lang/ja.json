@@ -267,7 +267,7 @@
     "ledger.settings.folder": "フォルダー",
     "ledger.settings.framework": "フォルダーと台帳の枠組み",
     "ledger.settings.permissions": "権限",
-    "ledger.settings.roles": "役割",
+    "ledger.settings.roles": "ロール",
     "ledger.settings.user_management": "ユーザー管理",
     "ledger.show_details": "詳細を表示する",
     "ledger.stored.failed": "保存に失敗しました",
