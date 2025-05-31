@@ -1,10 +1,11 @@
+@php use App\Enums\WorkflowStatus; @endphp
 <div>
     <x-mary-card :title="__('ledger.workflow.other_related_tasks_title')">
 
         <x-mary-table :headers="[
                 ['key' => 'ledger_title', 'label' => __('ledger.title'), 'sortable' => true],
                 ['key' => 'task_type_display', 'label' => __('ledger.workflow.task_type')],
-                ['key' => 'status_display', 'label' => __('ledger.workflow.status.label')],
+                ['key' => 'status_and_progress', 'label' => __('ledger.workflow.status.label')],
                 ['key' => 'current_assignee_display', 'label' => __('ledger.workflow.current_assignee')],
                 ['key' => 'applicant_name', 'label' => __('ledger.workflow.requester')],
                 ['key' => 'ledger_updated_at', 'label' => __('ledger.workflow.last_updated_at'), 'sortable' => true],
@@ -29,14 +30,83 @@
             @endif
             @endscope
 
-            @scope('cell_status_display', $taskData)
-            <x-mary-badge :value="$taskData['status_label']" class="badge-sm {{ $taskData['status_color_class'] }}"/>
+            @scope('cell_status_and_progress', $taskData)
+            <div class="space-2 grid grid-cols-1">
+                <x-mary-badge :value="$taskData['status_label']"
+                              class="badge-sm {{ $taskData['status_color_class'] }}"/>
+                {{-- 必須ロール進捗サマリー表示 --}}
+                @if($taskData['required_roles_progress_summary'])
+                    @php $progress = $taskData['required_roles_progress_summary']; @endphp
+                    {{--                @dd($progress)--}}
+                    {{-- 点検進捗 --}}
+                    @if($progress['inspection_total'] > 0)
+                        <span class="tooltip tooltip-left">
+                            <div class="tooltip-content p-2 space-y-2 text-sm">
+{{--                                <div class="h3"> {{ __('ledger.workflow.required_inspector_roles') }}:</div>--}}
+                                <strong>{{__('ledger.workflow.inspection_completed')}}:</strong>
+                                @foreach($progress['inspection_completed_roles_names'] as $role)
+                                    <span class="badge badge-success badge-sm">{{ trim($role) }}</span>
+                                @endforeach
+                                @if($progress['inspection_completed_roles_names']->isEmpty())
+                                    {{ __('ledger.none') }}
+                                @endif
+                                <br>
+                                <strong>{{__('ledger.workflow.inspection_pending')}}:</strong>
+                                @foreach($progress['inspection_pending_roles_names'] as $role)
+                                    <span class="badge badge-warning badge-sm">{{ trim($role) }}</span>
+                                @endforeach
+                                @if($progress['inspection_pending_roles_names']->isEmpty())
+                                    {{ __('ledger.none') }}
+                                @endif
+                            </div>
+                            <x-mary-icon
+                                    name="{{ $progress['inspection_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
+                                    class="w-4 h-4 {{ $progress['inspection_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                            <span class="text-xs">{{ $progress['inspection_completed'] }}/{{ $progress['inspection_total'] }}</span>
+                        </span>
+                    @endif
+                    {{-- 承認進捗 --}}
+                    @if($progress['approval_total'] > 0)
+
+                        <span class="tooltip tooltip-left">
+                            <div class="tooltip-content p-2 space-y-2 text-sm">
+{{--                                <div class="h3"> {{ __('ledger.workflow.required_approver_roles') }}:</div>--}}
+                                <strong>{{__('ledger.workflow.approval_completed')}}:</strong>
+                                @foreach($progress['approval_completed_roles_names'] as $role)
+                                    <span class="badge badge-success badge-sm">{{ trim($role) }}</span>
+                                @endforeach
+                                @if($progress['approval_completed_roles_names']->isEmpty())
+                                    {{ __('ledger.none') }}
+                                @endif
+                                <br>
+                                <strong>{{__('ledger.workflow.approval_pending')}}:</strong>
+                                @foreach($progress['approval_pending_roles_names'] as $role)
+                                    <span class="badge badge-warning badge-sm">{{ trim($role) }}</span>
+                                @endforeach
+                                @if($progress['approval_pending_roles_names']->isEmpty())
+                                    {{ __('ledger.none') }}
+                                @endif
+                            </div>
+                            <x-mary-icon
+                                    name="{{ $progress['approval_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
+                                    class="w-4 h-4 {{ $progress['approval_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                            <span class="text-xs">{{ $progress['approval_completed'] }}/{{ $progress['approval_total'] }}</span>
+                        </span>
+                    @endif
+                    @if($taskData['status_value'] === WorkflowStatus::APPROVED->value && (!$progress['inspection_all_completed'] || !$progress['approval_all_completed']))
+                        <span class="tooltip" data-tip="{{ __('ledger.workflow.required_roles_not_completed') }}">
+                                <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 text-error"/>
+                        </span>
+                    @endif
+                @endif
+            </div>
+
             @endscope
 
             @scope('cell_current_assignee_display', $taskData)
-            @if ($taskData['status_value'] === \App\Enums\WorkflowStatus::PENDING_INSPECTION->value)
+            @if ($taskData['status_value'] === WorkflowStatus::PENDING_INSPECTION->value)
                 {{ $taskData['current_inspector_name'] ?? '-' }}
-            @elseif ($taskData['status_value'] === \App\Enums\WorkflowStatus::PENDING_APPROVAL->value)
+            @elseif ($taskData['status_value'] === WorkflowStatus::PENDING_APPROVAL->value)
                 {{ $taskData['current_approver_name'] ?? '-' }}
             @else
                 -

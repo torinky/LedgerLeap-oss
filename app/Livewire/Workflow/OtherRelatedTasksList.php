@@ -84,10 +84,31 @@ class OtherRelatedTasksList extends Component
      */
     private function formatTaskData(Ledger $ledger, string $taskType): array
     {
+        $progressDetails = [];
+//        dd($ledger,$ledger->define?->workflow_enabled,$ledger->define?->folder);
+        if ($ledger->define?->workflow_enabled && $ledger->define?->folder) {
+            $progress = $ledger->getRequiredRolesProgressDetails();
+            $progressDetails = [
+                'inspection_completed' => $progress['inspection']['completed_count'],
+//                'inspection_roles_count' => $progress['inspection']['pending_roles']->count(),
+                'inspection_total' => $progress['inspection']['total_count'],
+                'inspection_all_completed' => $progress['inspection']['is_all_completed'],
+                'inspection_pending_roles_names' => $progress['inspection']['pending_roles']->pluck('name'),
+                'inspection_completed_roles_names' => $progress['inspection']['completed_roles']->pluck('name'),
+//                'pending_approval_roles_count' => $progress['approval']['pending_roles']->count(),
+                'approval_completed' => $progress['approval']['completed_count'],
+                'approval_total' => $progress['approval']['total_count'],
+                'total_approval_roles_count' => $progress['approval']['total_count'],
+                'approval_all_completed' => $progress['approval']['is_all_completed'],
+                'approval_pending_roles_names' => $progress['approval']['pending_roles']->pluck('name'),
+                'approval_completed_roles_names' => $progress['approval']['completed_roles']->pluck('name'),
+            ];
+        }
+
         return [
             'ledger_id' => $ledger->id,
             'ledger_title' => $ledger->define?->title ?? __('ledger.unknown_ledger'),
-            'status_value' => $ledger->status->value, // Enumのvalue
+            'status_value' => $ledger->status->value,
             'status_label' => $ledger->status->label(),
             'status_color_class' => $ledger->status->colorClass(),
             'current_inspector_name' => $ledger->latestDiff?->inspector?->name,
@@ -97,11 +118,9 @@ class OtherRelatedTasksList extends Component
             'ledger_created_at' => $ledger->created_at,
             'task_type' => $taskType,
             'is_locked' => $ledger->isLocked(),
-            // Eloquentモデル自体を渡すと循環参照や不要なデータも含まれるため、必要な情報だけを抽出
-            // 'ledger_instance' => $ledger, // 必要なら限定的に渡す
+            'required_roles_progress_summary' => !empty($progressDetails) ? $progressDetails : null,
         ];
     }
-
     /**
      * ユーザーが特定のタスクを引き継ぎ可能か判定する
      */

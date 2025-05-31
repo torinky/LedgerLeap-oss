@@ -247,7 +247,7 @@ class Ledger extends Model
 
     // クラス定数として必要なリレーションを定義
     public const NEEDED_RELATIONS = [
-        'define:id,title,folder_id',
+        'define:id,title,workflow_enabled,folder_id',
         'creator:id,name',
         'latestDiff.inspector:id,name',
         'latestDiff.approver:id,name',

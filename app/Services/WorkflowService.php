@@ -325,7 +325,8 @@ class WorkflowService
                 'requested_at' => $latestDiff->requested_at,
                 'inspected_at' => $latestDiff->inspected_at,
                 'approved_at' => now(), // 承認日時
-                'returned_at' => null, 'comments' => null,
+                'returned_at' => null,
+                'comments' => null,
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
@@ -333,7 +334,7 @@ class WorkflowService
             $ledger->update([
                 'status' => WorkflowStatus::APPROVED,
                 'modifier_id' => $approverId,
-                'version' => $ledger->version + 1, // バージョンアップ
+//                'version' => $ledger->version + 1,
                 'latest_diff_id' => $ledgerDiff->id, // ステータスのみのDiffも最新とする
                 'comments' => null, // クリア
             ]);

@@ -706,7 +706,7 @@
             'request_approval_short' => '承認申請',
             'request_inspection' => '作成完了（点検依頼）',
             'requested_at' => '申請日時',
-            'inspection_completed' => '点検完了',
+            'inspection_completed' => '点検済み',
             'inspection_pending' => '点検待ち',
             'approval_pending' => '承認待ち',
             'approval_completed' => '承認済み',

@@ -51,6 +51,10 @@ class PendingList extends Component
      * @var mixed|null
      */
     private mixed $workflowService;
+    /**
+     * @var mixed|null
+     */
+    public string $comments='';
 
     public function boot(WorkflowTaskRepository $repository, WorkflowService $workflowService): void
     {
@@ -66,6 +70,27 @@ class PendingList extends Component
         // ---件数をイベントで親に通知 ---
         $this->dispatch('update-tab-count', tab: 'tasks', count: $this->totalPendingTasks);
 
+        // --- 各タスクに進捗情報を追加 ---
+        $pendingTasks->getCollection()->transform(function (Ledger $ledger) {
+            if ($ledger->define?->workflow_enabled && $ledger->define?->folder) {
+                $progress = $ledger->getRequiredRolesProgressDetails();
+                $ledger->required_roles_progress_summary = [ // 新しいプロパティとして追加
+                    'inspection_completed' => $progress['inspection']['completed_count'],
+                    'inspection_total' => $progress['inspection']['total_count'],
+                    'inspection_all_completed' => $progress['inspection']['is_all_completed'],
+                    'inspection_pending_roles_names' => $progress['inspection']['pending_roles']->pluck('name'),
+                    'inspection_completed_roles_names' => $progress['inspection']['completed_roles']->pluck('name'),
+                    'approval_completed' => $progress['approval']['completed_count'],
+                    'approval_total' => $progress['approval']['total_count'],
+                    'approval_all_completed' => $progress['approval']['is_all_completed'],
+                    'approval_pending_roles_names' => $progress['approval']['pending_roles']->pluck('name'),
+                    'approval_completed_roles_names' => $progress['approval']['completed_roles']->pluck('name'),
+                ];
+            } else {
+                $ledger->required_roles_progress_summary = null; // ワークフロー無効ならnull
+            }
+            return $ledger;
+        });
         return view('livewire.workflow.pending-list', [
             'pendingTasks' => $pendingTasks,
         ]);
@@ -159,7 +184,8 @@ class PendingList extends Component
             $this->workflowService->requestApproval(
                 $ledgerDiff->ledger_id,
                 $validated['selectedApproverId'],
-                Auth::id() // 点検者ID
+                Auth::id(), // 点検者ID
+                $this->comments
             );
             $this->dispatch('close-modal', 'approval-request-modal');
             $this->success(__('ledger.workflow.approval_requested_message'));
@@ -384,7 +410,8 @@ class PendingList extends Component
             $this->workflowService->requestApproval(
                 $this->modalLedgerId,
                 $approverId,
-                Auth::id()
+                Auth::id(),
+                $this->comments
             );
             $this->success(__('ledger.workflow.approval_requested_message'));
             // リスト更新のために $this->render() を再実行させるか、リフレッシュイベントを発行

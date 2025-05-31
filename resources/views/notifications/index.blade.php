@@ -14,7 +14,7 @@
     </x-slot>
 
     <div class="py-2">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class=" sm:px-6 lg:px-8">
             <div class="bg-base-100 overflow-hidden shadow-xl sm:rounded-lg">
                 {{-- Alpine.js でタブの状態と件数を管理 --}}
                 <div x-data="{

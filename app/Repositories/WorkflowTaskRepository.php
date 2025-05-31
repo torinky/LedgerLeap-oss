@@ -19,7 +19,7 @@ class WorkflowTaskRepository
         $userRoleIds = $user->getAllUniqueRoles()->pluck('id')->toArray();
 
         return Ledger::query() // <<<--- Ledger を起点にする
-        ->with(['creator:id,name', 'define:id,title', 'latestDiff']) // latestDiff を Eager Load
+        ->with(['creator:id,name', 'define:id,title,workflow_enabled,folder_id', 'latestDiff']) // latestDiff を Eager Load
         ->where(function ($query) use ($user, $userRoleIds) {
             // ステータスが点検待ちで、最新Diffの点検者が自分
             $query->where('status', WorkflowStatus::PENDING_INSPECTION)
