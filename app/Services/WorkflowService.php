@@ -59,7 +59,11 @@ class WorkflowService
                 if ($ledger->isLocked()) {
                     throw new Exception("Cannot save draft for an approved record.");
                 }
-                $currentVersion = $ledger->version + 1; // <<<--- 更新時はインクリメント
+
+                $currentVersion = $ledger->version ;
+                if ($content !== $ledger->content) {
+                    $currentVersion = $ledger->version + 1; // <<<--- 更新時はインクリメント
+                }
             } else {
                 $isNewLedger = true;
                 $currentVersion = 1;
@@ -308,12 +312,14 @@ class WorkflowService
      * 承認処理を行う
      * 新しい LedgerDiff (Content無し) を作成し、Ledger を承認済みに更新し内容を反映
      *
-     * @param int $ledgerId
-     * @param int $approverId
+     * @param int $ledgerId 台帳レコードID
+     * @param int $currentApproverId 現在の承認者ID
+     * @param string|null $comments 承認コメント
+     * @param int|null $nextApproverId 次の承認者ID
      * @return Ledger 更新後の Ledger
      * @throws Throwable
      */
-    public function approve(int $ledgerId, int $approverId, ?string $comments=null): Ledger
+/*    public function approve(int $ledgerId, int $approverId, ?string $comments=null): Ledger
     {
         // ToDo: 権限チェック (approverId が承認できるか？)
         $ledger = null;
@@ -439,6 +445,116 @@ class WorkflowService
         return $ledger->refresh();
 
     }
+*/
+    public function approve(int $ledgerId, int $currentApproverId, ?string $comments = null, ?int $nextApproverId = null): Ledger
+    {
+        $ledger = null; $newLedgerDiff = null; $applicant = null;
+        DB::transaction(function () use ($ledgerId, $currentApproverId, $comments, $nextApproverId, &$ledger, &$newLedgerDiff, &$applicant) {
+            $ledger = Ledger::with([
+                'define.folder.requiredInspectorRoles',
+                'define.folder.requiredApproverRoles'
+            ])->findOrFail($ledgerId);
+            $applicant = $ledger->creator;
+            $previousDiff = $ledger->latestDiff;
+
+            if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL || $previousDiff?->approver_id !== $currentApproverId) {
+                throw new \Exception(__('messages.error.unauthorized_or_invalid_status'));
+            }
+            if (!$this->userService->hasFolderPermission(User::find($currentApproverId), $ledger->define->folder, FolderPermissionType::APPROVE)) {
+                throw new \Exception(__('messages.error.no_permission_to_approve'));
+            }
+            if (empty($previousDiff?->completed_inspector_role_ids) && $ledger->define->folder->requiredInspectorRoles->isNotEmpty()) {
+                throw new \Exception(__('ledger.workflow.error.approve_requires_prior_inspection'));
+            }
+
+            // 今回の承認者によって完了した必須承認ロールを特定し、リストに追加
+            $completedInspectorRoleIds = $previousDiff?->completed_inspector_role_ids ?? [];
+            $completedApproverRoleIds = $previousDiff?->completed_approver_role_ids ?? [];
+            $currentApproverUser = User::find($currentApproverId);
+            if ($currentApproverUser && $ledger->define?->folder) {
+                foreach ($ledger->define->folder->requiredApproverRoles as $requiredRole) {
+                    if ($currentApproverUser->hasRole($requiredRole->name) && !in_array($requiredRole->id, $completedApproverRoleIds)) {
+                        $completedApproverRoleIds[] = $requiredRole->id;
+                    }
+                }
+            }
+            $completedApproverRoleIds = array_unique($completedApproverRoleIds);
+
+            // このアクションで全ての必須ロールが完了するかどうかを判定
+            // (Ledger モデルの getRequiredRolesProgressDetails を、仮の完了済みロールIDで呼び出すイメージ)
+            $allRequiredInspectionsDone = collect($ledger->define->folder->requiredInspectorRoles)
+                ->every(fn($role) => in_array($role->id, $completedInspectorRoleIds));
+            $allRequiredApprovalsDone = collect($ledger->define->folder->requiredApproverRoles)
+                ->every(fn($role) => in_array($role->id, $completedApproverRoleIds));
+
+            $nextStatus = ($allRequiredInspectionsDone && $allRequiredApprovalsDone)
+                ? WorkflowStatus::APPROVED
+                : WorkflowStatus::PENDING_APPROVAL;
+
+            $newLedgerDiff = LedgerDiff::create([
+                'ledger_id' => $ledgerId, 'content' => '', 'column_define' => '',
+                'ledger_define_id' => $ledger->ledger_define_id, 'creator_id' => $ledger->creator_id,
+                'modifier_id' => $currentApproverId, // 今回のアクション実行者
+                'status' => $nextStatus,
+                'version' => $ledger->version,
+                'inspector_id' => $previousDiff?->inspector_id,
+                // 次の担当者を設定: 最終承認ならnull、そうでなければ $nextApproverId (UIから指定)
+                'approver_id' => ($nextStatus === WorkflowStatus::APPROVED) ? null : $nextApproverId,
+                'requested_at' => $previousDiff?->requested_at,
+                'inspected_at' => $previousDiff?->inspected_at,
+                'approved_at' => ($nextStatus === WorkflowStatus::APPROVED) ? now() : null,
+                'comments' => $comments,
+                'completed_inspector_role_ids' => $completedInspectorRoleIds,
+                'completed_approver_role_ids' => $completedApproverRoleIds,
+            ]);
+
+            $ledger->update([
+                'status' => $nextStatus,
+                'modifier_id' => $currentApproverId,
+                'latest_diff_id' => $newLedgerDiff->id,
+            ]);
+
+            $this->decrementPendingTaskCount($currentApproverId, 'approval');
+            if ($nextStatus === WorkflowStatus::PENDING_APPROVAL && $nextApproverId) {
+                $this->incrementPendingTaskCount($nextApproverId, 'approval');
+            }
+        });
+
+        // --- 通知処理 ---
+        if ($newLedgerDiff) {
+            // 申請者への通知
+            if ($applicant) {
+                $notificationType = ($newLedgerDiff->status === WorkflowStatus::APPROVED)
+                    ? NotificationType::where('name', 'approved')->first()
+                    : NotificationType::where('name', 'approval_requested')->first(); // 承認が進んだことを通知 (任意)
+                if ($notificationType) {
+                    $this->notificationService->sendWorkflowNotification(
+                        $applicant,
+                        $notificationType,
+                        $newLedgerDiff,
+                        $comments,
+                        $ledger->define?->folder
+                    );
+                }
+            }
+            // 次の承認者への通知
+            if ($newLedgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $newLedgerDiff->approver_id) {
+                $nextRecipient = User::find($newLedgerDiff->approver_id);
+                $approvalRequestType = NotificationType::where('name', 'approval_requested')->first();
+                if ($nextRecipient && $approvalRequestType) {
+                    $this->notificationService->sendWorkflowNotification(
+                        $nextRecipient,
+                        $approvalRequestType,
+                        $newLedgerDiff,
+                        __('ledger.mail.greeting.approval_requested_forwarded', ['previous_approver' => User::find($currentApproverId)?->name ?? '']),
+                        $ledger->define?->folder
+                    );
+                }
+            }
+        }
+        return $ledger->refresh();
+    }
+
 
     /**
      * ステータスを DRAFT に戻す (担当者が「作成中に戻す」ボタンを押した時)
@@ -584,7 +700,10 @@ class WorkflowService
             $currentStatus = $ledger->status; // 戻す前のステータス
             $latestDiff = $ledger->latestDiff()->first();
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff->inspector_id : $latestDiff->approver_id;
-            $ledgerVersion = $ledger->version + 1; // 現在の Ledger バージョン+1を取得
+            $ledgerVersion = $ledger->version;
+            if ($newContent !== $ledger->content) {
+                $ledgerVersion = $ledger->version + 1; // <<<--- 更新時はインクリメント
+            }
 
             // 1. 新しい LedgerDiff を作成 (Content有り)
             $diffData = [
@@ -704,29 +823,30 @@ class WorkflowService
      * @param string $roleType 'inspector' または 'approver'
      * @param int $limit 取得する最大件数
      * @param string $searchQuery ユーザー名での検索クエリ (オプション)
+     * @param array $excludeUserIds 除外するユーザーIDリスト (オプション)
      * @return array [['id' => userId, 'name' => userName, 'count' => N], ...]
      */
-    public function getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = ''): array
+    public function getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = '', array $excludeUserIds = []): array
     {
         $column = ($roleType === 'inspector') ? 'inspector_id' : 'approver_id';
-
         $query = LedgerDiff::select("ledger_diffs.{$column} as user_id", 'users.name as user_name', DB::raw('count(*) as count'))
             ->join('users', 'users.id', '=', "ledger_diffs.{$column}")
-            ->where('ledger_diffs.ledger_define_id', $ledgerDefineId) // テーブル名を明確化
+            ->where('ledger_diffs.ledger_define_id', $ledgerDefineId)
             ->whereNotNull("ledger_diffs.{$column}")
+            ->when(!empty($excludeUserIds), function ($q) use ($column, $excludeUserIds) { // 除外IDの条件
+                $q->whereNotIn("ledger_diffs.{$column}", $excludeUserIds);
+            })
             ->when($searchQuery, function ($q) use ($searchQuery) {
                 $q->where('users.name', 'like', "%{$searchQuery}%");
             })
             ->groupBy('user_id', 'users.name')
             ->orderByDesc('count')
             ->limit($limit);
-
         return $query->get()
             ->map(fn($diff) => ['id' => $diff->user_id, 'name' => $diff->user_name ?? __('ledger.unknown_user'), 'count' => $diff->count])
             ->filter(fn($item) => $item['id'] !== null)
             ->toArray();
     }
-
     /**
      * ワークフロータスクを引き継ぐ
      *

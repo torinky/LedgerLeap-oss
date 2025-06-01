@@ -356,33 +356,40 @@
                                 </div>
                             @endif
                             {{-- ワークフローアクションボタン --}}
+                            {{-- 点検完了（承認申請）ボタン --}}
                             @if($this->canRequestApproval())
                                 <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                               icon="o-check-badge"
-                                               class="join-item btn-wide btn-success"
-                                               {{-- モーダルを開くメソッド呼び出し --}}
-                                               wire:click="openApproverSelectModal"
+                                               icon="o-check-badge" class="join-item btn-success btn-sm md:btn-md"
+                                               wire:click="openApproverSelectModal" {{-- 担当者選択モーダルを開く --}}
                                                spinner="openApproverSelectModal"/>
-                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id())
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id() && !$this->ledgerRecord->canProceedToApprovalStep())
                                 {{-- 点検者だが、必須点検が完了していない場合 --}}
-                                <div class="tooltip"
-                                     data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}">
+                                <div class="tooltip" data-tip="{{ __('ledger.workflow.tooltip.inspection_not_all_completed_for_request_approval') }}"> {{-- 新翻訳キー --}}
                                     <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                                   icon="o-check-badge" class="join-item btn-wide btn-success"
+                                                   icon="o-check-badge" class="join-item btn-success btn-sm md:btn-md"
                                                    disabled/>
                                 </div>
                             @endif
+
+                            {{-- 承認ボタン --}}
                             @if($this->canApprove())
                                 <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                               class="join-item btn-wide btn-success" wire:click="approveTask" spinner/>
-                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
-                                {{-- 承認者だが、必須点検または必須承認が完了していない場合 --}}
-                                <div class="tooltip"
-                                     data-tip="{{ __('ledger.workflow.error_approval_not_completed') }}">
+                                               class="join-item btn-primary btn-sm md:btn-md" {{-- 色をprimaryに変更（任意） --}}
+                                               wire:click="approveTask" {{-- コメントモーダルを開く approveTask を呼び出す --}}
+                                               spinner/>
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id() && !$this->ledgerRecord->hasAnyRequiredInspectionBeenDoneForCurrentContent())
+                                {{-- 承認担当者だが、いずれの必須点検も完了していない場合 --}}
+                                <div class="tooltip" data-tip="{{ __('ledger.workflow.tooltip.approve_requires_any_prior_inspection') }}"> {{-- 新翻訳キー --}}
                                     <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                   class="join-item btn-wide btn-success" disabled/>
+                                                   class="join-item btn-primary btn-sm md:btn-md" disabled/>
                                 </div>
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
+                                {{-- 承認担当者だが、他の理由で承認できない場合（例：必須承認が残っているが、UI上ではボタンは押せる状態にしておき、Service側で最終判定する。またはここで canBeFinallyApproved で厳密に制御する） --}}
+                                {{-- 現状の canApprove は hasAnyRequiredInspectionBeenDoneForCurrentContent のみ見ている --}}
+                                {{-- もし、最終承認でない場合にボタンを非表示/非活性にしたいなら、canApprove のロジックを canBeFinallyApproved に近づける必要がある --}}
+                                {{-- ここでは、押せるが最終承認にならない場合は、中間承認として次の担当者選択に移る想定 --}}
                             @endif
+
                             @if($this->canReturnToDraft())
                                 <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
                                                icon="o-arrow-uturn-left" class=" join-item btn-warning "
