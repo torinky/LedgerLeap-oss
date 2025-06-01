@@ -107,12 +107,12 @@
                                                     <x-mary-icon name="o-ellipsis-horizontal-circle"
                                                                  class="w-4 h-4 text-warning inline-block ml-1"/>
                                                 @endif
-                                            <progress
-                                                    class="progress {{ $requiredRolesProgress['approval']['is_all_completed'] && $requiredRolesProgress['inspection']['is_all_completed'] && $ledgerRecord->status === WorkflowStatus::APPROVED ? 'progress-success' : 'progress-info' }} w-full h-2 "
-                                                    value="{{ $requiredRolesProgress['approval']['completed_count'] }}"
-                                                    max="{{ $requiredRolesProgress['approval']['total_count'] }}"
-                                                    >
-                                            </progress>
+                                                <progress
+                                                        class="progress {{ $requiredRolesProgress['approval']['is_all_completed'] && $requiredRolesProgress['inspection']['is_all_completed'] && $ledgerRecord->status === WorkflowStatus::APPROVED ? 'progress-success' : 'progress-info' }} w-full h-2 "
+                                                        value="{{ $requiredRolesProgress['approval']['completed_count'] }}"
+                                                        max="{{ $requiredRolesProgress['approval']['total_count'] }}"
+                                                >
+                                                </progress>
                                             </div>
                                         @endif
                                     </div>
@@ -139,11 +139,26 @@
                                                    {{-- モーダルを開くメソッド呼び出し --}}
                                                    wire:click="openApproverSelectModal"
                                                    spinner="openApproverSelectModal"/>
+                                @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id())
+                                    {{-- 点検者だが、必須点検が完了していない場合 --}}
+                                    <div class="tooltip"
+                                         data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}">
+                                        <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                       icon="o-check-badge" class="join-item btn-wide btn-success"
+                                                       disabled/>
+                                    </div>
                                 @endif
                                 @if($this->canApprove())
                                     <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
                                                    class="join-item btn-wide btn-success" wire:click="approveTask"
                                                    spinner/>
+                                @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
+                                    {{-- 承認者だが、必須点検または必須承認が完了していない場合 --}}
+                                    <div class="tooltip"
+                                         data-tip="{{ __('ledger.workflow.error_approval_not_completed') }}">
+                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                                       class="join-item btn-wide btn-success" disabled/>
+                                    </div>
                                 @endif
                                 @if($this->canReturnToDraft())
                                     <x-mary-button
@@ -348,10 +363,25 @@
                                                {{-- モーダルを開くメソッド呼び出し --}}
                                                wire:click="openApproverSelectModal"
                                                spinner="openApproverSelectModal"/>
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id())
+                                {{-- 点検者だが、必須点検が完了していない場合 --}}
+                                <div class="tooltip"
+                                     data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}">
+                                    <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                   icon="o-check-badge" class="join-item btn-wide btn-success"
+                                                   disabled/>
+                                </div>
                             @endif
                             @if($this->canApprove())
                                 <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
                                                class="join-item btn-wide btn-success" wire:click="approveTask" spinner/>
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
+                                {{-- 承認者だが、必須点検または必須承認が完了していない場合 --}}
+                                <div class="tooltip"
+                                     data-tip="{{ __('ledger.workflow.error_approval_not_completed') }}">
+                                    <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                                   class="join-item btn-wide btn-success" disabled/>
+                                </div>
                             @endif
                             @if($this->canReturnToDraft())
                                 <x-mary-button label="{{ __('ledger.workflow.return_to_draft_short') }}"
@@ -397,7 +427,7 @@
         {{-- 担当者選択モーダルコンポーネント呼び出し --}}
         @livewire('workflow.workflow-assignee-modal', key('assignee-modal-show'))
 
-        {{-- コメント入力モーダル (新規追加) --}}
+        {{-- コメント入力モーダル --}}
         @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id],
         key('workflow-comment-modal-show'))
 

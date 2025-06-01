@@ -25,7 +25,9 @@ class LedgerDiff extends Model
         'inspected_at' => 'datetime',
         'approved_at' => 'datetime',
         'returned_at' => 'datetime',
-    ];
+        'completed_inspector_role_ids' => 'array',
+        'completed_approver_role_ids' => 'array',
+        ];
 
     protected $fillable = [
         'content', 'ledger_id', 'column_define', 'ledger_define_id',
@@ -41,6 +43,8 @@ class LedgerDiff extends Model
         'comments',
         'version',
         'created_at', 'updated_at',
+        'completed_inspector_role_ids',
+        'completed_approver_role_ids',
     ];
 
     /**

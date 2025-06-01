@@ -86,6 +86,8 @@ class WorkflowService
                 'modifier_id' => $modifierId,
                 'status' => WorkflowStatus::DRAFT, // この Diff 作成時のステータス
                 'version' => $currentVersion,
+                'completed_inspector_role_ids' => [], // 内容変更なのでリセット
+                'completed_approver_role_ids' => [],  // 内容変更なのでリセット
                 // 他のワークフローカラムは NULL
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
@@ -154,6 +156,8 @@ class WorkflowService
                 'approver_id' => null,
                 'requested_at' => now(),
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'completed_inspector_role_ids' => $ledger->latestDiff?->completed_inspector_role_ids ?? [],
+                'completed_approver_role_ids' => $ledger->latestDiff?->completed_approver_role_ids ?? [],
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
@@ -215,9 +219,26 @@ class WorkflowService
             $ledger = Ledger::findOrFail($ledgerId);
             $applicant = $ledger->creator; // 申請者を取得
             $ledgerDiff = $ledger->latestDiff()->first();
-            if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledgerDiff->inspector_id !== $inspectorId) {
+            $previousDiff = $ledgerDiff;
+
+            if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || $ledger->latestDiff?->inspector_id !== $inspectorId) {
                 throw new Exception("User not authorized or invalid status for requesting approval.");
             }
+            // 権限チェック: 点検者がそのフォルダで点検権限を持つか
+            if (!$this->userService->hasFolderPermission(User::find($inspectorId), $ledger->define->folder, FolderPermissionType::INSPECT)) {
+                throw new Exception(__('messages.error.no_permission_to_inspect'));
+            }
+
+            $completedInspectorRoleIds = $previousDiff?->completed_inspector_role_ids ?? [];
+            $inspectorUser = User::find($inspectorId);
+            if ($inspectorUser && $ledger->define->folder) {
+                foreach ($ledger->define->folder->requiredInspectorRoles as $requiredRole) {
+                    if ($inspectorUser->hasRole($requiredRole->name) && !in_array($requiredRole->id, $completedInspectorRoleIds)) {
+                        $completedInspectorRoleIds[] = $requiredRole->id;
+                    }
+                }
+            }
+
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
             // LedgerDiff を作成 (content 等は NULL)
@@ -236,6 +257,9 @@ class WorkflowService
                 'inspected_at' => now(), // 点検完了日時
                 'comments' => $comments,
                 'approved_at' => null, 'returned_at' => null,
+                'completed_inspector_role_ids' => array_unique($completedInspectorRoleIds),
+                'completed_approver_role_ids' => $previousDiff?->completed_approver_role_ids ?? [], // 承認ロールは引き継ぎ
+
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
@@ -289,23 +313,70 @@ class WorkflowService
      * @return Ledger 更新後の Ledger
      * @throws Throwable
      */
-    public function approve(int $ledgerId, int $approverId): Ledger
+    public function approve(int $ledgerId, int $approverId, ?string $comments=null): Ledger
     {
         // ToDo: 権限チェック (approverId が承認できるか？)
         $ledger = null;
         $ledgerDiff = null; // 作成する Diff を保持
         $applicant = null;
+        $nextStatus = null;
 
-        DB::transaction(function () use ($ledgerId, $approverId, &$ledger, &$ledgerDiff, &$applicant) {
+        DB::transaction(function () use ($ledgerId, $approverId, $comments, &$ledger, &$ledgerDiff, &$applicant, &$nextStatus) {
             $ledger = Ledger::findOrFail($ledgerId);
-            $applicant = $ledger->creator;
-            $latestDiff = $ledger->latestDiff()->first();
+            // --- 進行条件チェック (最終承認条件) ---
+            if (!$ledger->canBeFinallyApproved()) {
+                // 詳細なエラーメッセージを生成 (どのロールが未完了かなど)
+                $progress = $ledger->getRequiredRolesProgressDetails();
+                $pendingInspectors = $progress['inspection']['pending_roles']->pluck('name')->implode(', ');
+                $pendingApprovers = $progress['approval']['pending_roles']->pluck('name')->implode(', ');
+                $errors = [];
+                if (!empty($pendingInspectors)) $errors[] = __('ledger.workflow.error_inspection_not_completed_detail', ['roles' => $pendingInspectors]);
+                if (!empty($pendingApprovers)) $errors[] = __('ledger.workflow.error_approval_not_completed_detail', ['roles' => $pendingApprovers]);
+                throw new Exception(implode(' ', $errors) ?: __('ledger.workflow.error_workflow_conditions_not_met'));
+            }
 
-            if (!$latestDiff) {
+            $applicant = $ledger->creator;
+            $previousDiff = $ledger->latestDiff()->first();
+
+            // 権限チェック: 承認者がそのフォルダで承認権限を持つか
+            if (!$this->userService->hasFolderPermission(User::find($approverId), $ledger->define->folder, FolderPermissionType::APPROVE)) {
+                throw new Exception(__('messages.error.no_permission_to_approve'));
+            }
+            // ★「いずれかの必須点検ロールによる点検が完了しているか」のチェック
+            if (empty($previousDiff?->completed_inspector_role_ids) && $ledger->define->folder->requiredInspectorRoles->isNotEmpty()) {
+                throw new Exception(__('ledger.workflow.error.approve_requires_prior_inspection'));
+            }
+            $completedInspectorRoleIds = $previousDiff?->completed_inspector_role_ids ?? [];
+            $completedApproverRoleIds = $previousDiff?->completed_approver_role_ids ?? [];
+            $approverUser = User::find($approverId);
+            if ($approverUser && $ledger->define->folder) {
+                foreach ($ledger->define->folder->requiredApproverRoles as $requiredRole) {
+                    if ($approverUser->hasRole($requiredRole->name) && !in_array($requiredRole->id, $completedApproverRoleIds)) {
+                        $completedApproverRoleIds[] = $requiredRole->id;
+                    }
+                }
+            }
+            // --- 次のステータスを決定 (ステップ13で厳格化) ---
+            // この承認で全ての必須ロールが完了したかを確認
+            $allInspectionsDone = collect($ledger->define->folder->requiredInspectorRoles)->every(
+                fn($role) => in_array($role->id, $completedInspectorRoleIds)
+            );
+            $allApprovalsDone = collect($ledger->define->folder->requiredApproverRoles)->every(
+                fn($role) => in_array($role->id, $completedApproverRoleIds)
+            );
+
+            $nextStatus = ($allInspectionsDone && $allApprovalsDone)
+                ? WorkflowStatus::APPROVED
+                : WorkflowStatus::PENDING_APPROVAL;
+            // ---------------------------------------------
+
+
+
+            if (!$previousDiff) {
                 Log::error("Could not find LedgerDiff with content for Ledger ID: {$ledgerId} during approval.");
                 throw new Exception("Cannot approve without content data.");
             }
-            if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL || $latestDiff->approver_id !== $approverId) {
+            if ($ledger->status !== WorkflowStatus::PENDING_APPROVAL || $ledger->latestDiff?->approver_id !== $approverId) {
                 throw new Exception("User not authorized or invalid status for approving.");
             }
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
@@ -318,25 +389,26 @@ class WorkflowService
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $approverId,
-                'status' => WorkflowStatus::APPROVED, // このアクション時点のステータス
+                'status' => $nextStatus, // このアクション時点のステータス
                 'version' => $ledgerVersion, // <<<--- Ledger の version を記録
-                'inspector_id' => $latestDiff->inspector_id, // 前の担当者
+                'inspector_id' => $previousDiff->inspector_id, // 前の担当者
                 'approver_id' => $approverId, // 承認者
-                'requested_at' => $latestDiff->requested_at,
-                'inspected_at' => $latestDiff->inspected_at,
-                'approved_at' => now(), // 承認日時
+                'requested_at' => $previousDiff->requested_at,
+                'inspected_at' => $previousDiff->inspected_at,
+                'approved_at' => ($nextStatus === WorkflowStatus::APPROVED) ? now() : null,
                 'returned_at' => null,
-                'comments' => null,
+                'comments' => $comments,
+                'completed_inspector_role_ids' => array_unique($completedInspectorRoleIds),
+                'completed_approver_role_ids' => array_unique($completedApproverRoleIds),
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
             // Ledger を更新 (最新の Diff 内容を反映)
             $ledger->update([
-                'status' => WorkflowStatus::APPROVED,
+                'status' => $nextStatus,
                 'modifier_id' => $approverId,
 //                'version' => $ledger->version + 1,
                 'latest_diff_id' => $ledgerDiff->id, // ステータスのみのDiffも最新とする
-                'comments' => null, // クリア
             ]);
 
             // カウンター更新 (承認者-)
@@ -345,12 +417,20 @@ class WorkflowService
             // event(new ApprovalCompleted($ledgerDiff));
         });
         // --- 通知処理 ---
-        if ($applicant && $ledgerDiff) {
+        if ($applicant && $ledgerDiff &&  ($nextStatus === WorkflowStatus::APPROVED)) {
             $notificationType = NotificationType::where('name', 'approved')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {
                 $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, null, $folder);
             }
+        }else{
+            $recipient = User::find($approverId);
+            $notificationType = NotificationType::where('name', 'approval_requested')->first();
+            $folder = $ledger->define?->folder;
+            if ($recipient && $notificationType) {
+                $this->notificationService->sendWorkflowNotification($recipient, $notificationType, $ledgerDiff, $comments, $folder);
+            }
+
         }
         // --- ここまで ---
         // ToDo: Activity Log 記録 (ステップ4)
@@ -381,13 +461,29 @@ class WorkflowService
             $ledger = Ledger::findOrFail($ledgerId);
             $applicant = $ledger->creator;
             $currentStatus = $ledger->status;
-            $latestDiff = $ledger->latestDiff()->first();
-            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $latestDiff?->inspector_id : $latestDiff?->approver_id; // <<<--- 最新Diffから担当者取得
+            $previousDiff = $ledger->latestDiff()->first();
+            $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $previousDiff?->inspector_id : $previousDiff?->approver_id; // <<<--- 最新Diffから担当者取得
 
             if (in_array($ledger->status, [WorkflowStatus::DRAFT, WorkflowStatus::APPROVED])) {
                 throw new Exception("Invalid status for returning to draft.");
             }
             // ToDo: さらに $modifierId が $latestDiff->inspector_id または $latestDiff->approver_id と一致するかチェック
+
+/*            if (!in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+                throw new \Exception(__('messages.error.invalid_status_for_return'));
+            }*/
+
+            // 権限チェック
+            $actor = User::find($modifierId);
+            $canReturn = false;
+            if ($currentStatus === WorkflowStatus::PENDING_INSPECTION && $previousDiff?->inspector_id === $modifierId && $this->userService->hasFolderPermission($actor, $ledger->define->folder, FolderPermissionType::INSPECT)) {
+                $canReturn = true;
+            } elseif ($currentStatus === WorkflowStatus::PENDING_APPROVAL && $previousDiff?->approver_id === $modifierId && $this->userService->hasFolderPermission($actor, $ledger->define->folder, FolderPermissionType::APPROVE)) {
+                $canReturn = true;
+            }
+            if (!$canReturn) {
+                throw new Exception(__('messages.error.unauthorized_to_return_to_draft'));
+            }
 
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
@@ -403,11 +499,13 @@ class WorkflowService
                 'version' => $ledgerVersion, // <<<--- Ledger の version を記録
                 'comments' => $comments,
                 'returned_at' => now(), // 戻された日時
-                'inspector_id' => $latestDiff->inspector_id, // 戻す直前の担当者
-                'approver_id' => $latestDiff->approver_id,  // 戻す直前の担当者
-                'requested_at' => $latestDiff->requested_at,
-                'inspected_at' => self::getInspectedAtCarbonDate($latestDiff->inspected_at),
+                'inspector_id' => $previousDiff->inspector_id, // 戻す直前の担当者
+                'approver_id' => $previousDiff->approver_id,  // 戻す直前の担当者
+                'requested_at' => $previousDiff->requested_at,
+                'inspected_at' => self::getInspectedAtCarbonDate($previousDiff->inspected_at),
                 'approved_at' => null, // クリア
+                'completed_inspector_role_ids' => $previousDiff?->completed_inspector_role_ids ?? [],
+                'completed_approver_role_ids' => $previousDiff?->completed_approver_role_ids ?? [],
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
@@ -420,9 +518,18 @@ class WorkflowService
             ]);
 
             // カウンター調整 (担当者-)
-            if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
+/*            if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL])) {
                 $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
                 $this->decrementPendingTaskCount($handlerId, $taskType);
+            }*/
+
+            // カウンター調整
+            if ($previousDiff) {
+                $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
+                $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $previousDiff->inspector_id : $previousDiff->approver_id;
+                if ($handlerId) {
+                    $this->decrementPendingTaskCount($handlerId, $taskType);
+                }
             }
 
             // ToDo: イベント発行
@@ -430,10 +537,7 @@ class WorkflowService
         });
         // --- 通知処理 ---
         if ($applicant && $ledgerDiff) {
-/*            if (!($applicant instanceof User)) {
 
-                dd($applicant, $ledgerDiff);
-            }*/
             $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {
@@ -500,6 +604,8 @@ class WorkflowService
                 'inspected_at' => null,
                 'approved_at' => null,
                 'returned_at' => now(), // 編集により戻された日時
+                'completed_inspector_role_ids' => [], // 内容変更なのでリセット
+                'completed_approver_role_ids' => [],  // 内容変更なのでリセット
             ];
             $newLedgerDiff = LedgerDiff::create($diffData);
 
@@ -694,7 +800,10 @@ class WorkflowService
                 // 新しい担当者を設定
                 'inspector_id' => ($newStatus === WorkflowStatus::PENDING_INSPECTION) ? $claimer->id : $latestDiff->inspector_id,
                 'approver_id' => ($newStatus === WorkflowStatus::PENDING_APPROVAL) ? $claimer->id : $latestDiff->approver_id,
+                'completed_inspector_role_ids' => $latestDiff->completed_inspector_role_ids ?? [],
+                'completed_approver_role_ids' => $latestDiff->completed_approver_role_ids ?? [],
             ];
+
             $newLedgerDiff = LedgerDiff::create($newDiffData);
 
             // 5. Ledger の latest_diff_id と modifier_id を更新

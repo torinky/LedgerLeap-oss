@@ -271,28 +271,36 @@ class Show extends Component
     /**
      * 承認を実行
      */
+//    public function approveTask(): void
+//    {
+//        // 権限チェック
+//        if (!$this->canApprove()) {
+//            $this->error(__('messages.error.unauthorized'));
+//            return;
+//        }
+//
+//        try {
+//            // 修正: Service 呼び出し (引数は Ledger ID)
+//            $this->ledgerRecord = $this->workflowService->approve(
+//                $this->ledgerRecord->id,
+//                Auth::id()
+//            );
+//            $this->loadWorkflowHistory();
+//            $this->success(__('ledger.workflow.approved_message'));
+//        } catch (\Exception $e) {
+//            Log::error("Approval failed: " . $e->getMessage());
+//            $this->error(__('messages.error.generic'));
+//        }
+//    }
+    // approveTask メソッドは、WorkflowService::approve を呼ぶ前に再度 canBeFinallyApproved をチェックする方がより安全
     public function approveTask(): void
     {
-        // 権限チェック
-        if (!$this->canApprove()) {
-            $this->error(__('messages.error.unauthorized'));
+        if (!$this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
+            $this->error(__('messages.error.unauthorized_or_conditions_not_met')); // 翻訳キー例
             return;
         }
-
-        try {
-            // 修正: Service 呼び出し (引数は Ledger ID)
-            $this->ledgerRecord = $this->workflowService->approve(
-                $this->ledgerRecord->id,
-                Auth::id()
-            );
-            $this->loadWorkflowHistory();
-            $this->success(__('ledger.workflow.approved_message'));
-        } catch (\Exception $e) {
-            Log::error("Approval failed: " . $e->getMessage());
-            $this->error(__('messages.error.generic'));
-        }
+        $this->openCommentModal('approve'); // コメントモーダルを開く
     }
-
     /**
      * 作成中に戻す
      */
@@ -326,27 +334,27 @@ class Show extends Component
     }
 
     // --- 権限チェック用ヘルパーメソッド ---
-    public function canRequestApproval(): bool
+    public function canRequestApproval(): bool // 点検者が「承認申請」できるか
     {
-        // 現在のユーザーが点検者であるか、かつステータスが点検待ちか
-        return $this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION &&
-            $this->ledgerRecord->latestDiff?->inspector_id === Auth::id();
+//        dd($this->ledgerRecord->canProceedToApprovalStep());
+        return $this->ledgerRecord->canProceedToApprovalStep() &&
+            ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION || $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)&&
+            $this->ledgerRecord->latestDiff?->inspector_id === Auth::id()
+            ; // ★必須点検ロール完了チェック追加
     }
 
-    public function canApprove(): bool
+    public function canApprove(): bool // 承認者が「承認」できるか
     {
-        // 現在のユーザーが承認者であるか、かつステータスが承認待ちか
         return $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
-            $this->ledgerRecord->latestDiff?->approver_id === Auth::id();
+            $this->ledgerRecord->latestDiff?->approver_id === Auth::id() &&
+            $this->ledgerRecord->canBeFinallyApproved(); // ★全必須ロール完了チェック追加
     }
 
     public function canReturnToDraft(): bool
     {
-        // 現在のユーザーが点検者または承認者であるか、かつステータスが承認待ちまたは点検待ちか
-        return (
-            ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $this->ledgerRecord->latestDiff?->inspector_id === Auth::id()) ||
-            ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $this->ledgerRecord->latestDiff?->approver_id === Auth::id())
-        );
+        // 差し戻しは、自分が現在の担当者であれば、必須ロールの完了状況に関わらず可能とする
+        return ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $this->ledgerRecord->latestDiff?->inspector_id === Auth::id()) ||
+            ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $this->ledgerRecord->latestDiff?->approver_id === Auth::id());
     }
 
     public function render()

@@ -259,6 +259,52 @@ class Ledger extends Model
         return $query->with(self::NEEDED_RELATIONS);
     }
 
+
+    /**
+     * 現在の内容に対して、全ての必須点検ロールによる点検が完了しているか
+     */
+    public function areAllRequiredInspectionsCompleted(): bool
+    {
+        if (!$this->define?->workflow_enabled || !$this->define?->folder) {
+            return true; // ワークフロー無効またはフォルダ未設定なら、点検は不要とみなす
+        }
+        $progress = $this->getRequiredRolesProgressDetails();
+        return $progress['inspection']['is_all_completed'];
+    }
+
+    /**
+     * 現在の内容に対して、全ての必須承認ロールによる承認が完了しているか
+     */
+    public function areAllRequiredApprovalsCompleted(): bool
+    {
+        if (!$this->define?->workflow_enabled || !$this->define?->folder) {
+            return true; // ワークフロー無効またはフォルダ未設定なら、承認は不要とみなす
+        }
+        $progress = $this->getRequiredRolesProgressDetails();
+        return $progress['approval']['is_all_completed'];
+    }
+
+    /**
+     * ワークフローを次の承認ステップに進められるか
+     * (全ての必須点検が完了しているか)
+     */
+    public function canProceedToApprovalStep(): bool
+    {
+        $progress = $this->getRequiredRolesProgressDetails();
+//        dd($progress);
+        return !$progress['inspection']['is_all_completed'];
+    }
+
+    /**
+     * この台帳を最終承認できるか
+     * (全ての必須点検と全ての必須承認が完了しているか)
+     */
+    public function canBeFinallyApproved(): bool
+    {
+        $progress = $this->getRequiredRolesProgressDetails();
+        return !$progress['inspection']['is_all_completed'] || !$progress['approval']['is_all_completed'];
+    }
+
     /**
      * この台帳のワークフローにおいて、必須ロールの処理進捗状況を取得する。
      *
@@ -268,141 +314,65 @@ class Ledger extends Model
     public function getRequiredRolesProgressDetails(): array
     {
         $result = [
-            'inspection' => [
-                'total_roles' => collect(),
-                'completed_roles' => collect(),
-                'pending_roles' => collect(),
-                'completed_count' => 0,
-                'total_count' => 0,
-                'is_all_completed' => false,
-            ],
-            'approval' => [
-                'total_roles' => collect(),
-                'completed_roles' => collect(),
-                'pending_roles' => collect(),
-                'completed_count' => 0,
-                'total_count' => 0,
-                'is_all_completed' => false,
-            ],
+            'inspection' => ['total_roles' => collect(), 'completed_roles' => collect(), 'pending_roles' => collect(), 'completed_count' => 0, 'total_count' => 0, 'is_all_completed' => false],
+            'approval' => ['total_roles' => collect(), 'completed_roles' => collect(), 'pending_roles' => collect(), 'completed_count' => 0, 'total_count' => 0, 'is_all_completed' => false],
         ];
 
-        if (!($this->define?->workflow_enabled) || !($this->define?->folder)) {
-            return $result; // ワークフロー無効、または定義やフォルダがなければ進捗計算をスキップ
-        }
+        if (!$this->define?->workflow_enabled || !$this->define?->folder || !$this->latestDiff) {
+            // フォルダ設定がない場合や、まだDiffが一度も作られていない場合はデフォルト値を返す
+            if ($this->define?->folder) { // フォルダ設定はあるが進捗がない場合
+                $result['inspection']['total_roles'] = $this->define->folder->requiredInspectorRoles;
+                $result['inspection']['total_count'] = $result['inspection']['total_roles']->count();
+                $result['inspection']['pending_roles'] = $result['inspection']['total_roles'];
+                $result['inspection']['is_all_completed'] = $result['inspection']['total_count'] === 0;
 
-        $folder = $this->define?->folder;
-        $requiredInspectorRoles = $folder->requiredInspectorRoles; // Folderモデルのリレーション
-        $requiredApproverRoles = $folder->requiredApproverRoles;   // Folderモデルのリレーション
-        $result['inspection']['total_roles'] = $requiredInspectorRoles;
-        $result['inspection']['total_count'] = $requiredInspectorRoles->count();
-        $result['approval']['total_roles'] = $requiredApproverRoles;
-        $result['approval']['total_count'] = $requiredApproverRoles->count();
-
-        // 比較の基準となるDiff (最後に内容が変更されたDiff) を特定
-        $baselineDiff = $this->findBaselineDiffForProgressCheck();
-        $relevantDiffs = collect();
-
-        if ($baselineDiff) {
-            // ベースラインDiff以降の全てのDiffを取得 (ステータス変更やコメントのみのDiffも含む)
-            $relevantDiffs = $this->ledgerDiff()
-                ->where('id', '>=', $baselineDiff->id)
-                ->orderBy('id', 'asc') // 古い順から処理するため
-                ->with('modifier.roles') // modifierとそのロールをEager Load
-                ->get();
-        } else {
-            // ベースラインが見つからない場合 (例: contentを持つDiffがまだない) は、
-            // 全てのDiffを対象にするか、あるいは進捗0とするか。
-            // ここでは一旦全てのDiffを対象とする (最初の点検からカウントするため)
-            $relevantDiffs = $this->ledgerDiff()
-                ->orderBy('id', 'asc')
-                ->with('modifier.roles')
-                ->get();
-        }
-
-        if ($relevantDiffs->isEmpty()) {
-            $result['inspection']['pending_roles'] = $requiredInspectorRoles;
-            $result['approval']['pending_roles'] = $requiredApproverRoles;
+                $result['approval']['total_roles'] = $this->define->folder->requiredApproverRoles;
+                $result['approval']['total_count'] = $result['approval']['total_roles']->count();
+                $result['approval']['pending_roles'] = $result['approval']['total_roles'];
+                $result['approval']['is_all_completed'] = $result['approval']['total_count'] === 0;
+            }
             return $result;
         }
 
-        // 点検進捗の計算
-        $completedInspectorRoleIds = [];
-        foreach ($requiredInspectorRoles as $inspectorRole) {
-            foreach ($relevantDiffs as $diff) {
-                // modifier が必須点検ロールを持っていて、
-                // かつ、そのDiffが点検完了を示すアクションの結果であるか
-                // (例: PENDING_APPROVAL になったDiff、または APPROVED になったDiff)
-                if ($diff->modifier && $diff->modifier->hasRole($inspectorRole->name) &&
-                    ($diff->status === WorkflowStatus::PENDING_APPROVAL || $diff->status === WorkflowStatus::APPROVED)) {
-                    if (!in_array($inspectorRole->id, $completedInspectorRoleIds)) {
-                        $completedInspectorRoleIds[] = $inspectorRole->id;
-                        $result['inspection']['completed_roles']->push($inspectorRole);
-                    }
-                    break; // このロールの点検は完了
-                }
+        $folder = $this->define->folder;
+        $latestDiff = $this->latestDiff;
+
+        // --- 点検進捗 ---
+        $requiredInspectorRoles = $folder->requiredInspectorRoles;
+        $result['inspection']['total_roles'] = $requiredInspectorRoles;
+        $result['inspection']['total_count'] = $requiredInspectorRoles->count();
+        $completedInspectorRoleIds = $latestDiff->completed_inspector_role_ids ?? [];
+
+        foreach ($requiredInspectorRoles as $role) {
+//            dd($role, $completedInspectorRoleIds);
+            if (in_array($role->id, $completedInspectorRoleIds)) {
+                $result['inspection']['completed_roles']->push($role);
+            } else {
+                $result['inspection']['pending_roles']->push($role);
             }
         }
         $result['inspection']['completed_count'] = $result['inspection']['completed_roles']->count();
-        $result['inspection']['pending_roles'] = $requiredInspectorRoles->filter(function ($role) use ($completedInspectorRoleIds) {
-            return !in_array($role->id, $completedInspectorRoleIds);
-        });
+        $result['inspection']['is_all_completed'] = ($result['inspection']['total_count'] > 0
+            && $result['inspection']['completed_count'] >= $result['inspection']['total_count'])
+            || $result['inspection']['total_count'] === 0;
 
 
-        // 承認進捗の計算
-        $completedApproverRoleIds = [];
-        // 承認は、全ての必須点検が完了していることが前提となるか？ (今回は考慮しない)
-        foreach ($requiredApproverRoles as $approverRole) {
-            foreach ($relevantDiffs as $diff) {
-                // modifier が必須承認ロールを持っていて、
-                // かつ、そのDiffが承認アクションの結果であるか (status が APPROVED)
-                if ($diff->modifier && $diff->modifier->hasRole($approverRole->name) &&
-                    $diff->status === WorkflowStatus::APPROVED) {
-                    if (!in_array($approverRole->id, $completedApproverRoleIds)) {
-                        $completedApproverRoleIds[] = $approverRole->id;
-                        $result['approval']['completed_roles']->push($approverRole);
-                    }
-                    break; // このロールの承認は完了
-                }
+        // --- 承認進捗 ---
+        $requiredApproverRoles = $folder->requiredApproverRoles;
+        $result['approval']['total_roles'] = $requiredApproverRoles;
+        $result['approval']['total_count'] = $requiredApproverRoles->count();
+        $completedApproverRoleIds = $latestDiff->completed_approver_role_ids ?? [];
+
+        foreach ($requiredApproverRoles as $role) {
+            if (in_array($role->id, $completedApproverRoleIds)) {
+                $result['approval']['completed_roles']->push($role);
+            } else {
+                $result['approval']['pending_roles']->push($role);
             }
         }
         $result['approval']['completed_count'] = $result['approval']['completed_roles']->count();
-        $result['approval']['pending_roles'] = $requiredApproverRoles->filter(function ($role) use ($completedApproverRoleIds) {
-            return !in_array($role->id, $completedApproverRoleIds);
-        });
+        $result['approval']['is_all_completed'] = ($result['approval']['total_count'] > 0 && $result['approval']['completed_count'] >= $result['approval']['total_count']) || $result['approval']['total_count'] === 0;
 
         return $result;
-    }
-
-    /**
-     * 必須ロールの進捗判定の基準となるLedgerDiff (最後に内容が変更されたDiff) を特定する。
-     * 見つからない場合は、バージョン1のcontentありDiffを返す。
-     * それもなければnullを返す。
-     */
-    public function findBaselineDiffForProgressCheck(): ?LedgerDiff
-    {
-        // 1. 最新のDiffから遡り、最初にcontentが記録されているものを探す (これが最新の内容変更)
-        $lastContentChangeDiff = $this->ledgerDiff()
-            ->whereNotNull('content')
-            ->where(function(EloquentBuilder $q) { // JSONカラムの空判定
-                $q->where('content', '<>', '[]')
-                    ->orWhere('content', '<>', '{}');
-            })
-            ->orderByDesc('id')
-            ->first();
-
-        if ($lastContentChangeDiff) {
-            return $lastContentChangeDiff;
-        }
-
-        // 2. contentを持つDiffが一つもない場合は、最初のDiffを基準とするか、nullとする。
-        //    ここでは、最初のDiff（バージョン1）でcontentがあればそれを返す。
-        return $this->ledgerDiff()
-            ->where('version', 1)
-            ->whereNotNull('content')
-            ->where(function(EloquentBuilder $q) {
-                $q->where('content', '<>', '[]')
-                    ->orWhere('content', '<>', '{}');
-            })
-            ->first();
     }
 }

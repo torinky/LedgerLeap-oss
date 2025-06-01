@@ -33,7 +33,9 @@ return new class extends Migration {
             $table->timestamp('approved_at')->nullable();  // 承認完了日時
             $table->timestamp('returned_at')->nullable();  // 作成中に戻された日時
             $table->text('comments')->nullable();          // 作成中に戻す理由などのコメント
-            // --- ここまで ---
+
+            $table->json('completed_inspector_role_ids')->comment('このDiff作成時点で内容に対し点検完了した必須点検ロールIDの配列');
+            $table->json('completed_approver_role_ids')->comment('このDiff作成時点で内容に対し承認完了した必須承認ロールIDの配列');
 
             $table->timestamps(); // created_at は Diff 作成日時, updated_at は Diff 更新日時
         });

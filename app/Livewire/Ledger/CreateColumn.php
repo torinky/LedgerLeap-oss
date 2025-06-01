@@ -288,6 +288,9 @@ class CreateColumn extends Component
                 // 他のワークフローカラムは NULL
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'completed_inspector_role_ids' =>  [],
+                'completed_approver_role_ids' =>  [],
+
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
 
