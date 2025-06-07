@@ -3,16 +3,19 @@
 namespace App\Livewire\Workflow;
 
 use App\Enums\FolderPermissionType;
+use App\Enums\WorkflowStatus;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Support\Collection; // Collection を use
+use App\Services\WorkflowService;
+use Illuminate\Support\Collection as SupportCollection;
+
+// SupportCollection を use
 use Livewire\Component;
 use Livewire\Attributes\Modelable;
 use Livewire\Attributes\Locked;
-// use Livewire\Attributes\Computed; // Computed は使わない
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class WorkflowAssigneeSelect extends Component
@@ -29,36 +32,43 @@ class WorkflowAssigneeSelect extends Component
     #[Modelable]
     public ?int $selectedUserId = null;
 
+    #[Locked]
+    public array $requiredInspectorRoleIds = []; // 親から渡される
+    #[Locked]
+    public array $requiredApproverRoleIds = [];  // 親から渡される
+
     public string $searchQuery = ''; // 検索クエリ用プロパティ
     // 検索用メソッド名 (MaryUI デフォルトは 'search')
     // public string $searchFunctionName = 'searchAssignees';
+    protected WorkflowService $workflowService; // WorkflowService をインジェクト
 
     // MaryUI <x-choices> に渡すオプションリスト (Collection 型)
-    public Collection $options;
+    public SupportCollection $options;
 
     protected UserService $userService;
 
-    public function boot(UserService $userService): void
+    public function boot(UserService $userService, WorkflowService $workflowService): void // WorkflowService を追加
     {
         $this->userService = $userService;
+        $this->workflowService = $workflowService; // インジェクト
+
         // 初期オプションを Collection で初期化
         $this->options = collect([]);
     }
 
-    public function mount(int $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null, ?int $initialUserId = null): void
+    public function mount(
+        int  $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null,
+        ?int $initialUserId = null, array $requiredInspectorRoleIds = [], array $requiredApproverRoleIds = []
+    ): void
     {
         $this->ledgerDefineId = $ledgerDefineId;
         $this->folderId = $folderId;
         $this->roleType = $roleType;
         $this->ledgerId = $ledgerId;
-        // --- selectedUserId の初期値をセット ---
-        // wire:model で渡される値よりも mount で渡された初期値を優先する場合はここで設定
-        // ただし、@Modelable があると wire:model が優先される可能性が高い
-//         $this->selectedUserId = $initialUserId;
-        // ------------------------------------
-        $this->searchAssignees(); // 初期オプションをロード
-        // mount 時点で selectedUserId (wire:model で渡された値 or initialUserId) がセットされているので、
-        // loadOptions 内で選択中ユーザーをリストに含める処理が機能するはず。
+        $this->selectedUserId = $initialUserId;
+        $this->requiredInspectorRoleIds = $requiredInspectorRoleIds;
+        $this->requiredApproverRoleIds = $requiredApproverRoleIds;
+        $this->searchAssignees('');
     }
 
     /**
@@ -69,151 +79,205 @@ class WorkflowAssigneeSelect extends Component
      */
     public function searchAssignees(string $value = ''): void
     {
-        // ★ 引数で渡された検索語をプロパティに保存
         $this->searchQuery = $value;
         Log::debug("Searching assignees with query: '{$this->searchQuery}', roleType: {$this->roleType}, selectedUserId: {$this->selectedUserId}");
 
-        // 統合・ソート済みの候補リストを取得 (前回実装したロジック)
-        if ($this->roleType === 'inspector') {
-            $combinedOptions = $this->fetchInspectorOptions(
-                $this->ledgerDefineId, $this->folderId, $this->ledgerId, $this->searchQuery // 検索語を渡す
-            );
-        } elseif ($this->roleType === 'approver') {
-            // TODO: 承認者用の取得ロジック
-            $combinedOptions = $this->fetchApproverOptions(
-                $this->ledgerDefineId, $this->folderId, $this->ledgerId, $this->searchQuery
-            );
-        } else {
-            $combinedOptions = [];
+        $this->options = $this->fetchOptions($this->roleType,
+            ($this->roleType === 'inspector') ? FolderPermissionType::INSPECT : FolderPermissionType::APPROVE
+        );
+
+        // 選択中のユーザーがオプションに含まれているか確認し、なければ追加
+        if ($this->selectedUserId && !$this->options->contains('id', $this->selectedUserId)) {
+            $selectedUser = User::with(['organizations', 'roles'])->find($this->selectedUserId);
+            if ($selectedUser) {
+                // 選択中ユーザーにカスタム属性を付与してリストの先頭に追加
+                $selectedUser->custom_reasons = ['selected']; // 仮の理由
+                $selectedUser->custom_sort_priority = -1; // 最優先
+                $this->options->prepend($selectedUser);
+            }
+        }
+        // 再度ソート
+        $this->options = $this->options->sortBy([
+            ['custom_sort_priority', 'asc'],
+            ['name', 'asc'],
+        ])->unique('id')->values();
+
+
+        Log::debug("Assignee options updated. Count: " . $this->options->count());
+    }
+
+    /**
+     * 点検者候補リストを取得・統合・ソートする
+     */
+    protected function fetchInspectorOptions(): SupportCollection
+    {
+        return $this->fetchOptions('inspector', FolderPermissionType::INSPECT);
+    }
+
+    /**
+     * 承認者候補リストを取得・統合・ソートする
+     */
+    protected function fetchApproverOptions(): SupportCollection
+    {
+        return $this->fetchOptions('approver', FolderPermissionType::APPROVE);
+    }
+
+    /**
+     * 担当者候補リストを取得する共通ロジック
+     */
+    protected function fetchOptions(string $roleType, FolderPermissionType $requiredPermission): SupportCollection
+    {
+        $folder = Folder::find($this->folderId); // 必須ロールはFolderモデルのリレーションで取得済みのはず
+        if (!$folder) return collect();
+
+        $usersWithOptions = collect(); // Userモデルと追加情報を格納するコレクション
+        $addedUserIds = [];
+
+        $targetRequiredRoles = ($roleType === 'inspector') ? $folder->requiredInspectorRoles : $folder->requiredApproverRoles;
+
+        // 1. フォルダ必須ロールの担当者
+        foreach ($targetRequiredRoles as $role) {
+            foreach ($role->users()->with(['organizations', 'roles'])->where('name', 'like', "%{$this->searchQuery}%")->get() as $user) {
+                if (!isset($addedUserIds[$user->id])) {
+                    $user->custom_reasons = ['required_role'];
+                    $user->custom_sort_priority = 1;
+                    $usersWithOptions->push($user);
+                    $addedUserIds[$user->id] = true;
+                } // 理由追加は map 後に行う
+            }
         }
 
-        // 選択中のユーザー情報を取得し、候補リストに必ず含める
-        $selectedOption = null;
-        if ($this->selectedUserId) {
-            // 既存の候補リストから探す
-            $selectedKey = array_search($this->selectedUserId, array_column($combinedOptions, 'id'));
-            if ($selectedKey !== false) {
-                $selectedOption = $combinedOptions[$selectedKey];
-                // 一旦削除して後で先頭に追加する or そのままにしておく
-                unset($combinedOptions[$selectedKey]); // 一旦削除
+        // 2. 実績ベース推奨ユーザー
+        $frequentUserIdsAndNames = $this->workflowService->getFrequentAssignees($this->ledgerDefineId, $roleType, 10, $this->searchQuery); // 少し多めに取得
+        foreach ($frequentUserIdsAndNames as $userData) {
+            $userId = $userData['id'];
+            if (isset($addedUserIds[$userId])) { // 既にリストにあれば理由追加
+                $usersWithOptions = $usersWithOptions->map(function (User $u) use ($userId) {
+                    if ($u->id === $userId) {
+                        $reasons = $u->custom_reasons ?? [];
+                        $reasons[] = 'frequent';
+                        $u->custom_reasons = $reasons;
+                    }
+                    return $u;
+                });
             } else {
-                // 候補リストにない場合はDBから取得
-                $user = User::find($this->selectedUserId);
+                $user = User::with(['organizations', 'roles'])->find($userId);
                 if ($user) {
-                    // 理由をどうするか？ (例: 'selected' or 'authorized'?)
-                    $selectedOption = ['id' => $user->id, 'name' => $user->name, 'reasons' => ['selected'], 'sort_priority' => 0]; // 最優先に
+                    $user->custom_reasons = ['frequent'];
+                    $user->custom_sort_priority = 2;
+                    $usersWithOptions->push($user);
+                    $addedUserIds[$user->id] = true;
                 }
             }
         }
 
-        // 候補リストを MaryUI <x-choices> 用の形式 (id, name を持つ配列 or Collection) に変換
-        $finalOptions = collect($combinedOptions)->map(function ($opt) {
-            $reasonLabels = array_map(fn($r) => $this->getReasonLabel($r), $opt['reasons'] ?? []);
-            $displayName = $opt['name'] . (!empty($reasonLabels) ? ' ' . implode(' ', $reasonLabels) : '');
-            return ['id' => (int)$opt['id'], 'name' => $displayName];
-        });
-
-        // 選択中のユーザーがいれば、リストの先頭に追加（またはマージ）
-        if ($selectedOption) {
-            $reasonLabels = array_map(fn($r) => $this->getReasonLabel($r), $selectedOption['reasons'] ?? []);
-            $displayName = $selectedOption['name'] . (!empty($reasonLabels) ? ' ' . implode(' ', $reasonLabels) : '');
-            // 既にリストに含まれていない場合のみ追加 (unsetした場合) or 常に先頭に追加する場合
-            // $finalOptions->prepend(['id' => $selectedOption['id'], 'name' => $displayName]);
-            $finalOptions = $finalOptions->prepend(['id' => $selectedOption['id'], 'name' => $displayName])->unique('id'); // uniqueで重複削除
-        }
-
-        // $this->options を更新
-        $this->options = $finalOptions;
-        Log::debug("Assignee options loaded/updated. Count: " . $this->options->count());
-    }
-
-
-    /**
-     * 点検者候補リストを取得・統合・ソートする (修正: 検索クエリを追加)
-     */
-    protected function fetchInspectorOptions(int $ledgerDefineId, int $folderId, ?int $currentLedgerId, string $searchQuery = ''): array
-    {
-        $requiredPermission = FolderPermissionType::INSPECT;
-        $folder = Folder::find($folderId);
-        if (!$folder) return [];
-
-        // --- データ取得 ---
-        // 実績ベース (検索語を渡す)
-        $frequentInspectors = $this->getFrequentAssignees($ledgerDefineId, 'inspector', 5, $searchQuery);
-        // 権限ベース (修正: 検索語を引数で渡す)
-        $authorizedUsers = $this->userService->getUsersWithFolderPermission($folder, $requiredPermission, $searchQuery);
-        // 直近担当者 (検索に関わらず取得しておく)
-        $recentInspector = $this->getRecentAssignee($currentLedgerId, 'inspector');
-
-        // --- 統合リスト作成 (検索結果を考慮) ---
-        $options = [];
-        $addedUserIds = [];
-
-        // 1. 直近担当者 (検索語にヒットするか、選択中であれば表示)
-        if ($recentInspector && !isset($addedUserIds[$recentInspector->id]) && (empty($searchQuery) || stripos($recentInspector->name, $searchQuery) !== false || $this->selectedUserId === $recentInspector->id)) {
-            $options[$recentInspector->id] = ['id' => $recentInspector->id, 'name' => $recentInspector->name, 'reasons' => ['recent'], 'sort_priority' => 1];
-            $addedUserIds[$recentInspector->id] = true;
-        }
-
-        // 2. 実績多数ユーザー (検索語を考慮)
-        foreach ($frequentInspectors as $user) {
-            // 実績取得時に既に検索語で絞られているはず
-            $userId = $user['id'];
-            if (!isset($addedUserIds[$userId])) {
-                $options[$userId] = ['id' => $userId, 'name' => $user['name'], 'reasons' => ['frequent'], 'sort_priority' => 2];
-                $addedUserIds[$userId] = true;
-            } elseif (isset($options[$userId])) {
-                $options[$userId]['reasons'][] = 'frequent';
-                $options[$userId]['sort_priority'] = min($options[$userId]['sort_priority'], 2);
+        // 3. 直近の担当者履歴
+        if ($this->ledgerId) {
+            $recentAssignee = $this->getRecentAssignee($this->ledgerId, $roleType);
+            if ($recentAssignee && (empty($this->searchQuery) || stripos($recentAssignee->name, $this->searchQuery) !== false)) {
+                if (isset($addedUserIds[$recentAssignee->id])) {
+                    $usersWithOptions = $usersWithOptions->map(function (User $u) use ($recentAssignee) {
+                        if ($u->id === $recentAssignee->id) {
+                            $reasons = $u->custom_reasons ?? [];
+                            $reasons[] = 'recent';
+                            $u->custom_reasons = $reasons;
+                            $u->custom_sort_priority = min($u->custom_sort_priority ?? 99, 0);
+                        }
+                        return $u;
+                    });
+                } else {
+                    $recentAssignee->loadMissing(['organizations', 'roles']);
+                    $recentAssignee->custom_reasons = ['recent'];
+                    $recentAssignee->custom_sort_priority = 0;
+                    $usersWithOptions->push($recentAssignee);
+                    $addedUserIds[$recentAssignee->id] = true;
+                }
             }
         }
 
-        // 3. その他の権限保有ユーザー (検索語でフィルタ済み)
+        // 4. その他の権限保有ユーザー
+        $authorizedUsers = $this->userService->getUsersWithFolderPermission($folder, $requiredPermission, $this->searchQuery);
         foreach ($authorizedUsers as $user) {
-            $userId = $user->id;
-            if (!isset($addedUserIds[$userId])) {
-                $options[$userId] = ['id' => $userId, 'name' => $user->name, 'reasons' => ['authorized'], 'sort_priority' => 3];
-                $addedUserIds[$userId] = true;
-            } elseif (isset($options[$userId]) && !in_array('authorized', $options[$userId]['reasons'])) {
-                $options[$userId]['reasons'][] = 'authorized';
+            if (isset($addedUserIds[$user->id])) {
+                $usersWithOptions = $usersWithOptions->map(function (User $u) use ($user) {
+                    if ($u->id === $user->id && !in_array('authorized', $u->custom_reasons ?? [])) {
+                        $reasons = $u->custom_reasons ?? [];
+                        $reasons[] = 'authorized';
+                        $u->custom_reasons = $reasons;
+                    }
+                    return $u;
+                });
+            } else {
+                $user->loadMissing(['organizations', 'roles']);
+                $user->custom_reasons = ['authorized'];
+                $user->custom_sort_priority = 3;
+                $usersWithOptions->push($user);
+                $addedUserIds[$user->id] = true;
             }
         }
 
-        // --- ソート ---
-        $sortedOptions = array_values($options);
-        usort($options, function ($a, $b) {
-            return $a['sort_priority'] <=> $b['sort_priority'] ?: strcmp($a['name'], $b['name']);
-        });
+        // 5. 「過去の承認ルート」からの候補者
+        $pastRouteUsers = $this->getPastRouteAssignees($this->ledgerDefineId, $roleType, 3);
+        foreach ($pastRouteUsers as $user) {
+            if (empty($this->searchQuery) || stripos($user->name, $this->searchQuery) !== false) {
+                if (isset($addedUserIds[$user->id])) {
+                    $usersWithOptions = $usersWithOptions->map(function (User $u) use ($user) {
+                        if ($u->id === $user->id && !in_array('past_route', $u->custom_reasons ?? [])) {
+                            $reasons = $u->custom_reasons ?? [];
+                            $reasons[] = 'past_route';
+                            $u->custom_reasons = $reasons;
+                            $u->custom_sort_priority = min($u->custom_sort_priority ?? 99, 2);
+                        }
+                        return $u;
+                    });
+                } else {
+                    $user->loadMissing(['organizations', 'roles']);
+                    $user->custom_reasons = ['past_route'];
+                    $user->custom_sort_priority = 2;
+                    $usersWithOptions->push($user);
+                    $addedUserIds[$user->id] = true;
+                }
+            }
+        }
 
-        return $sortedOptions;
+        // 最終的なソートと、表示に必要なカスタム属性の最終整形
+        return $usersWithOptions->unique('id')->sortBy([
+            ['custom_sort_priority', 'asc'],
+            ['name', 'asc'],
+        ])->values()->map(function (User $user) {
+            $user->custom_organization_name = $user->primaryOrganization()?->name ?? ($user->organizations()->first()?->name ?? '');
+            $user->custom_roles_string = $user->getAllUniqueRoles()->pluck('name')->implode(', ');
+
+            // ★ 理由アイコン情報を追加
+            $presentations = [];
+            if (!empty($user->custom_reasons)) {
+                foreach ($user->custom_reasons as $reasonCode) {
+                    $presentations[] = $this->getReasonPresentation($reasonCode);
+                }
+            }
+            $user->custom_reason_presentations = $presentations;
+            return $user;
+        });
     }
 
     /**
-     * 実績ベースの推奨担当者を取得
+     * 理由コードに対応する Heroicon 名とツールチップ用翻訳キーの配列を返す
+     *
+     * @param string $reason
+     * @return array ['icon' => string, 'tooltip_key' => string]
      */
-    protected function getFrequentAssignees(int $ledgerDefineId, string $roleType, int $limit, string $searchQuery = ''): array
+    protected function getReasonPresentation(string $reason): array
     {
-        $column = ($roleType === 'inspector') ? 'inspector_id' : 'approver_id';
-
-        $query = LedgerDiff::select("{$column} as user_id", DB::raw('count(*) as count'))
-            ->join('users', 'users.id', '=', "ledger_diffs.{$column}") // users テーブルを JOIN
-            ->where('ledger_define_id', $ledgerDefineId)
-            ->whereNotNull("ledger_diffs.{$column}") // テーブル名を明確化
-            ->when($searchQuery, function ($q) use ($searchQuery) { // 検索クエリでフィルタ
-                $q->where('users.name', 'like', "%{$searchQuery}%");
-            })
-            ->groupBy('user_id', 'users.name') // group by に name も追加
-            ->orderByDesc('count')
-            ->limit($limit)
-            ->select("ledger_diffs.{$column} as user_id", 'users.name as user_name', DB::raw('count(*) as count')); // select を最後に
-
-        return $query->get()
-            ->map(fn($diff) => ['id' => $diff->user_id, 'name' => $diff->user_name ?? __('ledger.unknown_user'), 'count' => $diff->count])
-            ->filter(fn($item) => $item['id'] !== null)
-            ->toArray();
+        return match ($reason) {
+            'recent' => ['icon' => 'o-clock', 'tooltip_key' => 'ledger.workflow.reason_tooltip.recent'],
+            'frequent' => ['icon' => 'o-star', 'tooltip_key' => 'ledger.workflow.reason_tooltip.frequent'],
+            'authorized' => ['icon' => 'o-check-badge', 'tooltip_key' => 'ledger.workflow.reason_tooltip.authorized'],
+            'required_role' => ['icon' => 'o-identification', 'tooltip_key' => 'ledger.workflow.reason_tooltip.required_role'], // identification or clipboard-document-check
+            'past_route' => ['icon' => 'o-arrow-path', 'tooltip_key' => 'ledger.workflow.reason_tooltip.past_route'], // arrow-path or ArrowPathRoundedSquareIcon
+            'selected' => ['icon' => 's-check-circle', 'tooltip_key' => 'ledger.workflow.reason_tooltip.selected'], // s-check-circle (solid)
+            default => ['icon' => '', 'tooltip_key' => ''],
+        };
     }
-
-    // --- getRecentAssignee, getReasonLabel は変更なし ---
 
     /**
      * 直近の担当者を取得
@@ -235,18 +299,35 @@ class WorkflowAssigneeSelect extends Component
         return $latestDiff?->{$roleType};
     }
 
+
     /**
-     * 理由コードに対応するラベル（アイコン）を返す
+     * 同じ台帳定義の過去の完了案件から担当者を取得する (新規)
      */
-    protected function getReasonLabel(string $reason): string
+    protected function getPastRouteAssignees(int $ledgerDefineId, string $roleType, int $limit): SupportCollection
     {
-        return match ($reason) {
-            'recent' => '🕒', // 直近
-            'frequent' => '⭐', // 実績
-            'authorized' => '✅', // 権限
-            default => '',
-        };
+        $column = ($roleType === 'inspector') ? 'inspector_id' : 'approver_id';
+
+        // 最新の完了済みLedgerを取得
+        $completedLedgers = Ledger::where('ledger_define_id', $ledgerDefineId)
+            ->where('status', WorkflowStatus::APPROVED)
+            ->orderByDesc('updated_at') // または承認日時
+            ->limit($limit * 2) // 複数の担当者がいる可能性を考慮して少し多めに取得
+            ->get();
+
+        $assigneeIds = collect();
+        foreach ($completedLedgers as $ledger) {
+            // そのLedgerの最終承認Diffまたは関連するDiffから担当者IDを取得
+            $diffs = $ledger->ledgerDiff()->whereNotNull($column)->orderByDesc('id')->get();
+            foreach ($diffs as $diff) {
+                if ($diff->{$column}) {
+                    $assigneeIds->push($diff->{$column});
+                }
+            }
+        }
+        // IDの出現頻度でソートし、上位を取得、Userモデルを返す
+        return User::whereIn('id', $assigneeIds->countBy()->sortDesc()->keys()->take($limit))->get();
     }
+
 
     public function render()
     {
@@ -268,74 +349,6 @@ class WorkflowAssigneeSelect extends Component
         // 検索クエリが残っている場合、そのクエリで再検索する必要がある
         $this->searchAssignees($this->searchQuery);
         Log::debug("selectedUserId updated to {$value}, options reloaded.");
-    }
-
-    /**
-     * 承認者候補リストを取得・統合・ソートする
-     *
-     * @param int $ledgerDefineId
-     * @param int $folderId
-     * @param ?int $currentLedgerId
-     * @param string $searchQuery
-     * @return array
-     */
-    protected function fetchApproverOptions(int $ledgerDefineId, int $folderId, ?int $currentLedgerId, string $searchQuery = ''): array
-    {
-        $requiredPermission = FolderPermissionType::APPROVE; // <<<--- 承認権限
-        $folder = Folder::find($folderId);
-        if (!$folder) return [];
-
-        // --- データ取得 ---
-        // 実績ベース (承認者)
-        $frequentApprovers = $this->getFrequentAssignees($ledgerDefineId, 'approver', 5, $searchQuery);
-        // 権限ベース (承認権限)
-        $authorizedUsers = $this->userService->getUsersWithFolderPermission($folder, $requiredPermission, $searchQuery);
-        // 直近担当者 (承認者)
-        $recentApprover = $this->getRecentAssignee($currentLedgerId, 'approver');
-
-        // --- 統合リスト作成 (ロジックは点検者と同じ) ---
-        $options = [];
-        $addedUserIds = [];
-
-        // 1. 直近承認者
-        if ($recentApprover && !isset($addedUserIds[$recentApprover->id]) && ($this->selectedUserId === $recentApprover->id || empty($searchQuery) || stripos($recentApprover->name, $searchQuery) !== false) ) {
-            $options[$recentApprover->id] = ['id' => $recentApprover->id, 'name' => $recentApprover->name, 'reasons' => ['recent'], 'sort_priority' => 1];
-            $addedUserIds[$recentApprover->id] = true;
-        }
-
-        // 2. 実績多数承認者
-        foreach ($frequentApprovers as $user) {
-            $userId = $user['id'];
-            if (!isset($addedUserIds[$userId])) {
-                $options[$userId] = ['id' => $userId, 'name' => $user['name'], 'reasons' => ['frequent'], 'sort_priority' => 2];
-                $addedUserIds[$userId] = true;
-            } elseif (isset($options[$userId])) {
-                $options[$userId]['reasons'][] = 'frequent';
-                $options[$userId]['sort_priority'] = min($options[$userId]['sort_priority'], 2);
-            }
-        }
-
-        // 3. その他の承認権限保有ユーザー
-        foreach ($authorizedUsers as $user) {
-            $userId = $user->id;
-            if (!isset($addedUserIds[$userId])) {
-                $options[$userId] = ['id' => $userId, 'name' => $user->name, 'reasons' => ['authorized'], 'sort_priority' => 3];
-                $addedUserIds[$userId] = true;
-            } elseif (isset($options[$userId]) && !in_array('authorized', $options[$userId]['reasons'])) {
-                $options[$userId]['reasons'][] = 'authorized';
-            }
-        }
-
-        // --- ソート ---
-        $sortedOptions = array_values($options);
-        usort($sortedOptions, function ($a, $b) {
-            if ($a['sort_priority'] !== $b['sort_priority']) {
-                return $a['sort_priority'] <=> $b['sort_priority'];
-            }
-            return $a['name'] <=> $b['name'];
-        });
-
-        return $sortedOptions;
     }
 
 }

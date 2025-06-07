@@ -454,6 +454,9 @@ class WorkflowService
                 'define.folder.requiredInspectorRoles',
                 'define.folder.requiredApproverRoles'
             ])->findOrFail($ledgerId);
+            if(!$ledger){
+                throw new Exception("Ledger not found");
+            }
             $applicant = $ledger->creator;
             $previousDiff = $ledger->latestDiff;
 

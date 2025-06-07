@@ -374,7 +374,7 @@
                             {{-- 承認ボタン --}}
                             @if($this->canApprove())
                                 <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                               class="join-item btn-primary btn-sm md:btn-md" {{-- 色をprimaryに変更（任意） --}}
+                                               class="join-item btn-success btn-sm md:btn-md" {{-- 色をprimaryに変更（任意） --}}
                                                wire:click="approveTask" {{-- コメントモーダルを開く approveTask を呼び出す --}}
                                                spinner/>
                             @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id() && !$this->ledgerRecord->hasAnyRequiredInspectionBeenDoneForCurrentContent())

@@ -657,7 +657,7 @@
             'approved_by' => '承認者',
             'approved_message' => '承認しました。',
             'approver' => '承認者',
-            'assignee_search_placeholder' => '文字入力して担当者を検索',
+            'assignee_search_placeholder' => '担当者を検索または選択...',
             'can_request_inspection_only_from_draft' => '点検依頼は作成中の状態からのみ可能です。',
             'cannot_edit_approved' => '承認済みのレコードは編集できません。',
             'cannot_request_inspection_approved' => '承認済みのレコードの点検依頼はできません。',
@@ -756,6 +756,20 @@
             'error_approval_not_completed_detail' => '必須承認未完了: :roles',
             'error_inspection_not_completed_detail' => '必須点検未完了: :roles',
             'error_workflow_conditions_not_met' => 'ワークフローの完了条件を満たしていません。',
+            'no_inspectors_found' => '点検者の候補が見つかりません。', // 新規
+            'assignee_select_placeholder' => '選択してください', // 選択肢クリア時用
+            'reason_tooltip' => [ // 新規
+                'recent' => '直近の担当者',
+                'frequent' => '実績多数',
+                'authorized' => '権限あり',
+                'required_role' => '必須ロール担当者',
+                'past_route' => '過去のルートでの担当者',
+                'selected' => '現在選択中',
+            ],
+            'tooltip' => [
+                'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です。',
+            ],
+            'approval_forwarded_message' => 'あなたの承認処理は完了し、次の承認者に依頼されました。',
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
