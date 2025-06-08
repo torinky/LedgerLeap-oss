@@ -4,7 +4,6 @@ namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Enums\WorkflowStatus;
-use App\Http\Requests\Ledger\StoreRequest;
 use App\Jobs\Ledger\AttachedFileScanJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -29,8 +28,6 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
-use function PHPUnit\Framework\isNan;
-use function PHPUnit\Framework\isNull;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
@@ -61,17 +58,19 @@ class CreateColumn extends Component
 
     public $requredColumnIds = [];
 
-
     // --- 推奨担当者IDを保持する一時プロパティ ---
     public ?int $initialInspectorId = null;
+
     /**
      * @var mixed|null
      */
     public $totalRequireColumnCount = 0;
+
     // --- 担当者選択モーダル制御用 ---
     public bool $showAssigneeModal = false;
+
     public string $assigneeModalRoleType = 'inspector'; // モーダルに渡す roleType
-//    public ?int $assigneeModalSelectedUserId = null; // モーダルで選択されたIDを一時保持 (任意)
+    //    public ?int $assigneeModalSelectedUserId = null; // モーダルで選択されたIDを一時保持 (任意)
     // --------------------------------
 
     // --- selectedUserId はモーダルで選択された結果を受け取る ---
@@ -80,7 +79,6 @@ class CreateColumn extends Component
     // selectedInspectorId は WorkflowAssigneeSelect とバインドするため維持する (初期値 null)
 
     protected WorkflowService $workflowService; // WorkflowService をインジェクト
-
 
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService): void
@@ -92,7 +90,7 @@ class CreateColumn extends Component
     public function mount(Request $request): void
     {
         // Create 用の mount ロジック
-        $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $this->ledgerDefineId = (int) $request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::findOrFail($this->ledgerDefineId);
         $this->initColumns(); // メソッド名を変更
         $this->initBackgroundImages();
@@ -110,14 +108,14 @@ class CreateColumn extends Component
                 default => '',
             };
             // content がまだセットされていない場合のみデフォルト値を設定
-            if (!isset($this->content[$column->id])) {
+            if (! isset($this->content[$column->id])) {
                 $this->content[$column->id] = $this->ledgerRecord?->content[$column->id] ?? $defaultValue;
             }
 
             // labelColor の初期設定
-            if (!isset($this->labelColor[$column->id])) {
+            if (! isset($this->labelColor[$column->id])) {
                 $currentValue = $this->content[$column->id] ?? $defaultValue;
-                if (!empty($currentValue)) {
+                if (! empty($currentValue)) {
                     $this->labelColor[$column->id] = 'success';
                 } elseif ($column->required) {
                     $this->labelColor[$column->id] = 'warning';
@@ -152,7 +150,7 @@ class CreateColumn extends Component
                     return null;
                 }
 
-                return asset('storage/' . $value->path);
+                return asset('storage/'.$value->path);
             })->toArray();
         //        dd($this->columnFile,$backgroundImages);
         //        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
@@ -195,32 +193,30 @@ class CreateColumn extends Component
                 }
             }
         } catch (ValidationException $e) {
-            error_log('ValidationException occurred: ' . $e->getMessage());
+            error_log('ValidationException occurred: '.$e->getMessage());
             $this->error(__('ledger.validation.failed'), $e->getMessage());
         }
     }
 
     public function updateProgress(): void
     {
-        if (!isset($this->requredColumnIds)) {
+        if (! isset($this->requredColumnIds)) {
             $this->initRequireColumns();
         }
         $rawCount = collect($this->content)->filter(function ($value, $key) {
-            if (!is_array(($value))) {
+            if (! is_array(($value))) {
                 $value = trim($value);
             } else {
                 $value = array_filter($value, 'strlen');
             }
 
-            return !empty($value) && in_array($key, $this->requredColumnIds);
+            return ! empty($value) && in_array($key, $this->requredColumnIds);
         })->count();
 
         if ($rawCount > 0) {
             $this->progress = $rawCount / $this->totalRequireColumnCount * 100;
         }
-
     }
-
 
     /**
      * ワークフロー無効時の直接保存処理 (LedgerDiff 作成を追加)
@@ -230,13 +226,14 @@ class CreateColumn extends Component
         // ワークフローが無効であることを再確認
         if ($this->ledgerDefineRecord?->workflow_enabled) { // プロパティ名を修正 isWorkflowEnabled -> workflow_enabled
             $this->error('Workflow is enabled for this definition.');
+
             return;
         }
         // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
         // if ($this->ledgerRecord?->isLocked()) { ... }
 
         // バリデーション
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -288,8 +285,8 @@ class CreateColumn extends Component
                 // 他のワークフローカラムは NULL
                 'inspector_id' => null, 'approver_id' => null, 'requested_at' => null,
                 'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
-                'completed_inspector_role_ids' =>  [],
-                'completed_approver_role_ids' =>  [],
+                'completed_inspector_role_ids' => [],
+                'completed_approver_role_ids' => [],
 
             ];
             $ledgerDiff = LedgerDiff::create($diffData);
@@ -302,10 +299,9 @@ class CreateColumn extends Component
 
             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
             $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
-
         } catch (Throwable $e) { // Throwable をキャッチ
             DB::rollBack(); // エラー時ロールバック
-            Log::error('Direct save failed: ' . $e->getMessage());
+            Log::error('Direct save failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -319,7 +315,7 @@ class CreateColumn extends Component
         $fileHashName = $file->store('public/Ledger/Attachments');
         //        $filenames[$file->getClientOriginalName()] = $fileHashName;
 
-        $result = (object)[
+        $result = (object) [
             'originalName' => $file->getClientOriginalName(),
             'hashedBaseName' => basename($fileHashName),
             'hashedName' => $fileHashName,
@@ -338,7 +334,7 @@ class CreateColumn extends Component
             $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
                 $constraint->aspectRatio();
             });
-            $image->save(storage_path('app/public/Ledger/thumbs/' . basename($fileHashName)));
+            $image->save(storage_path('app/public/Ledger/thumbs/'.basename($fileHashName)));
         }
 
         //        ファイルからメタ情報、テキストを抽出する
@@ -374,12 +370,12 @@ class CreateColumn extends Component
     {
         $this->cleanupOldUploads();
 
-        $files = collect($tmpPath)->map(fn($i) => TemporaryUploadedFile::createFromLivewire($i))->toArray();
+        $files = collect($tmpPath)->map(fn ($i) => TemporaryUploadedFile::createFromLivewire($i))->toArray();
         $this->dispatch('upload:finished', $name, collect($files)->map->getFilename()->toArray())->self();
 
         //        $files = array_merge($this->getPropertyValue($name), $files);
         $presentValue = $this->getPropertyValue($name);
-        if (!empty($presentValue)) {
+        if (! empty($presentValue)) {
             $files = array_merge($presentValue, $files);
         }
 
@@ -402,7 +398,6 @@ class CreateColumn extends Component
                 new AttachedFileScanJob($newAttachedFile->id),
             ])->dispatch();
         }
-
     }
 
     /**
@@ -414,7 +409,7 @@ class CreateColumn extends Component
 
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $columnId = $column->id;
-            $columnName = 'content.' . $columnId;
+            $columnName = 'content.'.$columnId;
             $columnType = $column->type;
 
             $rules = [];
@@ -426,7 +421,7 @@ class CreateColumn extends Component
                 $rules[] = 'string';
             } elseif ($columnType === 'YMD') {
                 $rules[] = 'date_format:Y-m-d';
-            } elseif ($column->type === 'chk' && $column->useOptions && !empty($column->options)) {
+            } elseif ($column->type === 'chk' && $column->useOptions && ! empty($column->options)) {
                 // チェックボックスのバリデーションルールを定義
                 $rules["content.{$column->id}"] = ['in_options', $column->options];
 
@@ -434,7 +429,6 @@ class CreateColumn extends Component
                 if ($column->required) {
                     array_unshift($rules["content.{$column->id}"], 'at_least_one_checked');
                 }
-
             } elseif ($columnType === 'select') {
                 $rules[] = Rule::in($column->options);
             }
@@ -449,7 +443,7 @@ class CreateColumn extends Component
         }
 
         // selectedUserId のルール
-//        $validationRules['selectedUserId'] = ['nullable', 'integer', 'exists:users,id'];
+        //        $validationRules['selectedUserId'] = ['nullable', 'integer', 'exists:users,id'];
 
         return $validationRules;
     }
@@ -462,7 +456,7 @@ class CreateColumn extends Component
             $attributes["content.{$column->id}"] = $column->name;
         }
         // selectedUserId の属性名
-//        $attributes['selectedUserId'] = __('ledger.workflow.next_inspector');
+        //        $attributes['selectedUserId'] = __('ledger.workflow.next_inspector');
 
         return $attributes;
     }
@@ -474,13 +468,12 @@ class CreateColumn extends Component
             'content.*.at_least_one_checked' => __('validation.filled'),
 
         ];
-
     }
 
     // 下書き保存
     public function saveDraft(): void
     {
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY)); // content のみバリデーション
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY)); // content のみバリデーション
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -501,61 +494,12 @@ class CreateColumn extends Component
             $this->addAttachedFileRecordIfNecessary();
             $this->success(__('ledger.draft_saved'));
         } catch (\Exception $e) {
-            Log::error('Draft save failed: ' . $e->getMessage());
+            Log::error('Draft save failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
 
-    // 点検依頼
-    // --- 点検依頼メソッドの修正 ---
-//    public function requestInspection()
-//    {
-//        // 選択された担当者IDは $this->selectedUserId を使う
-//        $this->validate(array_merge(
-//            array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY),
-//            // selectedUserId のバリデーションルール名に変更
-//            ['selectedUserId' => ['required', 'integer', 'exists:users,id']]
-//        ));
-//
-//        // $selectedUserId は wire:model でバインドされているプロパティを使う
-//        $selectedAssigneeId = $this->selectedUserId;
-//
-//        $userId = Auth::id();
-//
-//
-//        // 下書きがまだ保存されていない場合は保存
-//        if (is_null($this->ledgerId)) {
-//            Log::debug("Ledger not saved yet, saving draft before requesting inspection.");
-//            try {
-//                // saveDraft 内で $this->ledgerId がセットされる
-//                $this->saveDraftInternal(); // 下書き保存の内部ロジック呼び出し
-//                if(is_null($this->ledgerId)){
-//                    throw new \Exception("Failed to get Ledger ID after saving draft.");
-//                }
-//            } catch (\Exception $e) {
-//                Log::error("Failed to save draft before inspection request: " . $e->getMessage());
-//                $this->error(__('messages.error.generic'));
-//                return;
-//            }
-//        }
-//
-//        try {
-//            // WorkflowService に $selectedAssigneeId を渡す
-//            $result = $this->workflowService->requestInspection(
-//                $this->ledgerId,
-//                $userId,
-//                $selectedAssigneeId
-//            );
-//
-//            $this->addAttachedFileRecordIfNecessary();
-//            $this->success(__('ledger.workflow.inspection_requested_message'),
-//                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
-//
-//        } catch (\Exception $e) {
-//            Log::error('Inspection request failed: ' . $e->getMessage());
-//            $this->error(__('messages.error.generic'));
-//        }
-//    }
+ 
 
     // --- 下書き保存メソッド (requestInspection から呼ばれる内部用) ---
     protected function saveDraftInternal(): void
@@ -565,7 +509,7 @@ class CreateColumn extends Component
         // バリデーションは requestInspection で実施済みなので不要
         // $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
-         $this->processFilesForSave();
+        $this->processFilesForSave();
 
         try {
             $result = $this->workflowService->saveDraft(
@@ -577,15 +521,14 @@ class CreateColumn extends Component
             );
             $this->ledgerId = $result['ledger']->id;
             $this->ledgerRecord = $result['ledger'];
-             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加は呼び出し元で行う
+            $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加は呼び出し元で行う
             // $this->success(__('ledger.draft_saved')); // 成功メッセージは最終的なアクションで出す
         } catch (\Exception $e) {
-            Log::error('Draft save internal failed: ' . $e->getMessage());
+            Log::error('Draft save internal failed: '.$e->getMessage());
             // エラーは呼び出し元に伝播させる
             throw $e;
         }
     }
-
 
     /**
      * ファイル処理の共通化 (store から移動)
@@ -599,11 +542,11 @@ class CreateColumn extends Component
                 // content 内のアップロード済みファイルを取得 (TemporaryUploadedFile)
                 $uploadedFiles = $this->content[$column->id] ?? [];
                 // array であることを確認
-                if (!is_array($uploadedFiles)) {
+                if (! is_array($uploadedFiles)) {
                     $uploadedFiles = [];
                 }
 
-                $validUploads = array_filter($uploadedFiles, fn($file) => $file instanceof TemporaryUploadedFile);
+                $validUploads = array_filter($uploadedFiles, fn ($file) => $file instanceof TemporaryUploadedFile);
 
                 foreach ($validUploads as $uploadedFile) {
                     $stored = $this->storeFile($uploadedFile, $column->id);
@@ -640,7 +583,7 @@ class CreateColumn extends Component
         if ($this->ledgerDefineRecord?->recommendedInspector) {
             $inspector = $this->ledgerDefineRecord->recommendedInspector;
             // 配列形式に 'id' と 'name' を含める
-            $options[$inspector->id] = ['id' => $inspector->id, 'name' => $inspector->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
+            $options[$inspector->id] = ['id' => $inspector->id, 'name' => $inspector->name.' ('.__('ledger.workflow.recommended_user').')'];
         }
         // 推奨ロール
         if ($this->ledgerDefineRecord?->recommendedInspectorRole) {
@@ -648,15 +591,15 @@ class CreateColumn extends Component
             $roleUsers = $this->ledgerDefineRecord->recommendedInspectorRole->users()->orderBy('name')->get();
             foreach ($roleUsers as $user) {
                 // 重複を避ける
-                if (!isset($options[$user->id])) {
-                    $options[$user->id] = ['id' => $user->id, 'name' => $user->name . ' (' . __('ledger.workflow.recommended_role') . ')'];
+                if (! isset($options[$user->id])) {
+                    $options[$user->id] = ['id' => $user->id, 'name' => $user->name.' ('.__('ledger.workflow.recommended_role').')'];
                 }
             }
         }
         // その他の全ユーザー (重複を除く)
         $allUsers = User::orderBy('name')->get();
         foreach ($allUsers as $user) {
-            if (!isset($options[$user->id])) {
+            if (! isset($options[$user->id])) {
                 $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
             }
         }
@@ -681,7 +624,7 @@ class CreateColumn extends Component
     // ファイルレコード追加（共通化）
     protected function addAttachedFileRecordIfNecessary(): void
     {
-        if ($this->ledgerId && !empty($this->newAttachedFiles)) {
+        if ($this->ledgerId && ! empty($this->newAttachedFiles)) {
             $this->addAttachedFileRecord(); // 既存メソッド呼び出し
         }
     }
@@ -689,15 +632,15 @@ class CreateColumn extends Component
     // --- loadRecommendedPersonnel メソッドで selectedUserId に初期値をセット ---
     protected function loadRecommendedPersonnel(): void
     {
-        return;
     }
 
     // --- 担当者選択モーダルを開くメソッド (実績ベースで初期値を決定) ---
     public function openAssigneeModal(string $roleType): void
     {
         if (is_null($this->ledgerId)) {
-            Log::error("Cannot open assignee modal without a saved ledger.");
+            Log::error('Cannot open assignee modal without a saved ledger.');
             $this->error(__('ledger.workflow.save_first_before_assigning'));
+
             return;
         }
 
@@ -709,11 +652,11 @@ class CreateColumn extends Component
             // WorkflowAssigneeSelect のロジックを一部流用して最も頻度の高いユーザーを取得
             // (本来は Service/Repository に切り出すべきロジック)
             $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineId, 'inspector', 1);
-            if (!empty($frequentUsers)) {
+            if (! empty($frequentUsers)) {
                 $initialUserId = $frequentUsers[0]['id'];
                 Log::debug("Initial inspector ID based on frequency: {$initialUserId}");
             } else {
-                Log::debug("No frequent inspector found.");
+                Log::debug('No frequent inspector found.');
             }
         }
         // TODO: 承認者用の初期値決定ロジック
@@ -722,7 +665,8 @@ class CreateColumn extends Component
         $this->resetValidation();
         $this->showAssigneeModal = true;
 
-        $this->dispatch('open-assignee-modal',
+        $this->dispatch(
+            'open-assignee-modal',
             ledgerDefineId: $this->ledgerDefineId,
             folderId: $this->ledgerDefineRecord->folder_id,
             roleType: $roleType,
@@ -744,17 +688,18 @@ class CreateColumn extends Component
             // $this->requestApprovalInternal($userId);
         }
         // モーダルは子コンポーネント側で閉じられる想定
-        $this->showAssigneeModal = false; //念のため親でも閉じる
+        $this->showAssigneeModal = false; // 念のため親でも閉じる
     }
 
     // --- 点検依頼の実行ロジック (内部メソッド化) ---
     protected function requestInspectionInternal(int $assigneeId): void
     {
         // Content のバリデーション
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         // 担当者IDのバリデーション (念のため)
-        if(!User::find($assigneeId)){
+        if (! User::find($assigneeId)) {
             $this->error(__('ledger.workflow.invalid_assignee')); // エラーメッセージ
+
             return;
         }
 
@@ -765,8 +710,18 @@ class CreateColumn extends Component
         if (is_null($this->ledgerId)) {
             try {
                 $this->saveDraftInternal();
-                if(is_null($this->ledgerId)) throw new \RuntimeException("Failed to get Ledger ID.");
-            } catch (\Exception $e) { /* エラー処理 */ return; }
+                if (is_null($this->ledgerId)) {
+                    throw new \RuntimeException('Failed to get Ledger ID.');
+                }
+            } catch (\Exception $e) {
+                Log::error('SaveDraft failed: ' . $e->getMessage(), [
+                    'ledger_id' => $this->ledgerId,
+                    'user_id' => Auth::id(),
+                    'error' => $e
+                ]);
+                $this->error(__('messages.error.generic'));
+                return;
+            }
         }
 
         try {
@@ -777,19 +732,21 @@ class CreateColumn extends Component
                 $assigneeId
             );
             $this->addAttachedFileRecordIfNecessary();
-            $this->success(__('ledger.workflow.inspection_requested_message'),
-                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+            $this->success(
+                __('ledger.workflow.inspection_requested_message'),
+                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId])
+            );
         } catch (\Exception $e) {
-            Log::error('Inspection request failed: ' . $e->getMessage());
+            Log::error('Inspection request failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
 
-// --- 点検依頼ボタンのアクション (下書き保存 -> モーダル表示) ---
+    // --- 点検依頼ボタンのアクション (下書き保存 -> モーダル表示) ---
     public function requestInspection(): void
     {
         // まず Content のバリデーションのみ実行
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
 
         // 下書き保存を実行 (ファイル処理含む)
         try {
@@ -809,9 +766,8 @@ class CreateColumn extends Component
 
             // 下書き保存成功後にモーダルを開く
             $this->openAssigneeModal('inspector');
-
         } catch (\Exception $e) {
-            Log::error('Draft save failed before inspection request: ' . $e->getMessage());
+            Log::error('Draft save failed before inspection request: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -821,5 +777,4 @@ class CreateColumn extends Component
         // TODO: 承認者の推奨ロジック
         return null;
     }
-
 }

@@ -36,7 +36,7 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
-        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version'
+        'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version',
     ];
 
     /**
@@ -114,8 +114,8 @@ class Ledger extends Model
             $mroongaColumnCount = $column + 1;
             //            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
             $query->where(function (Builder $q) use ($mroongaColumnCount, $filterStr) {
-                $q->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . ' +"' . $filterStr . "\"' IN BOOLEAN MODE)")
-                    ->orWhereRaw("match(`content_attached`) against ('*W" . $mroongaColumnCount . ' +' . $filterStr . "' IN BOOLEAN MODE)");
+                $q->whereRaw("match(`content`) against ('*W".$mroongaColumnCount.' +"'.$filterStr."\"' IN BOOLEAN MODE)")
+                    ->orWhereRaw("match(`content_attached`) against ('*W".$mroongaColumnCount.' +'.$filterStr."' IN BOOLEAN MODE)");
             });
         }
 
@@ -188,11 +188,10 @@ class Ledger extends Model
             ->logOnly(['name', 'content', 'ledger_define_id', 'status', 'version', 'modifier_id']) // 変更を監視する属性
             ->logOnlyDirty() // 変更があった場合のみ記録
             ->dontSubmitEmptyLogs() // 空のログは記録しない
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName))
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName))
             ->logFillable()
             // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-            ->dontLogIfAttributesChangedOnly(['latest_diff_id']) // 特定の属性のみが変更された場合はログを記録しない
-            ;
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id']); // 特定の属性のみが変更された場合はログを記録しない
     }
 
     /**
@@ -259,16 +258,16 @@ class Ledger extends Model
         return $query->with(self::NEEDED_RELATIONS);
     }
 
-
     /**
      * 現在の内容に対して、全ての必須点検ロールによる点検が完了しているか
      */
     public function areAllRequiredInspectionsCompleted(): bool
     {
-        if (!$this->define?->workflow_enabled || !$this->define?->folder) {
+        if (! $this->define?->workflow_enabled || ! $this->define?->folder) {
             return true; // ワークフロー無効またはフォルダ未設定なら、点検は不要とみなす
         }
         $progress = $this->getRequiredRolesProgressDetails();
+
         return $progress['inspection']['is_all_completed'];
     }
 
@@ -277,10 +276,11 @@ class Ledger extends Model
      */
     public function areAllRequiredApprovalsCompleted(): bool
     {
-        if (!$this->define?->workflow_enabled || !$this->define?->folder) {
+        if (! $this->define?->workflow_enabled || ! $this->define?->folder) {
             return true; // ワークフロー無効またはフォルダ未設定なら、承認は不要とみなす
         }
         $progress = $this->getRequiredRolesProgressDetails();
+
         return $progress['approval']['is_all_completed'];
     }
 
@@ -291,8 +291,8 @@ class Ledger extends Model
     public function canProceedToApprovalStep(): bool
     {
         $progress = $this->getRequiredRolesProgressDetails();
-//        dd($progress);
-        return !$progress['inspection']['is_all_completed'];
+
+        return ! $progress['inspection']['is_all_completed'];
     }
 
     /**
@@ -302,14 +302,18 @@ class Ledger extends Model
     public function canBeFinallyApproved(): bool
     {
         $progress = $this->getRequiredRolesProgressDetails();
-        return !$progress['inspection']['is_all_completed'] || !$progress['approval']['is_all_completed'];
+
+        return $progress['inspection']['completed_count'] > 0
+        && (
+            ! $progress['inspection']['is_all_completed'] || ! $progress['approval']['is_all_completed']
+        );
     }
 
     /**
      * この台帳のワークフローにおいて、必須ロールの処理進捗状況を取得する。
      *
      * @return array ['inspection' => ['total_roles' => Collection<Role>, 'completed_roles' => Collection<Role>, 'pending_roles' => Collection<Role>, 'completed_count' => int, 'total_count' => int],
-     *                'approval' => ['total_roles' => Collection<Role>, 'completed_roles' => Collection<Role>, 'pending_roles' => Collection<Role>, 'completed_count' => int, 'total_count' => int]]
+     *               'approval' => ['total_roles' => Collection<Role>, 'completed_roles' => Collection<Role>, 'pending_roles' => Collection<Role>, 'completed_count' => int, 'total_count' => int]]
      */
     public function getRequiredRolesProgressDetails(): array
     {
@@ -318,7 +322,7 @@ class Ledger extends Model
             'approval' => ['total_roles' => collect(), 'completed_roles' => collect(), 'pending_roles' => collect(), 'completed_count' => 0, 'total_count' => 0, 'is_all_completed' => false],
         ];
 
-        if (!$this->define?->workflow_enabled || !$this->define?->folder || !$this->latestDiff) {
+        if (! $this->define?->workflow_enabled || ! $this->define?->folder || ! $this->latestDiff) {
             // フォルダ設定がない場合や、まだDiffが一度も作られていない場合はデフォルト値を返す
             if ($this->define?->folder) { // フォルダ設定はあるが進捗がない場合
                 $result['inspection']['total_roles'] = $this->define->folder->requiredInspectorRoles;
@@ -331,6 +335,7 @@ class Ledger extends Model
                 $result['approval']['pending_roles'] = $result['approval']['total_roles'];
                 $result['approval']['is_all_completed'] = $result['approval']['total_count'] === 0;
             }
+
             return $result;
         }
 
@@ -344,7 +349,7 @@ class Ledger extends Model
         $completedInspectorRoleIds = $latestDiff->completed_inspector_role_ids ?? [];
 
         foreach ($requiredInspectorRoles as $role) {
-//            dd($role, $completedInspectorRoleIds);
+            //                        dd($role, $completedInspectorRoleIds);
             if (in_array($role->id, $completedInspectorRoleIds)) {
                 $result['inspection']['completed_roles']->push($role);
             } else {
@@ -353,9 +358,9 @@ class Ledger extends Model
         }
         $result['inspection']['completed_count'] = $result['inspection']['completed_roles']->count();
         $result['inspection']['is_all_completed'] = ($result['inspection']['total_count'] > 0
-            && $result['inspection']['completed_count'] >= $result['inspection']['total_count'])
+                && $result['inspection']['completed_count'] >= $result['inspection']['total_count'])
             || $result['inspection']['total_count'] === 0;
-
+        //                dd($result);
 
         // --- 承認進捗 ---
         $requiredApproverRoles = $folder->requiredApproverRoles;
@@ -374,5 +379,26 @@ class Ledger extends Model
         $result['approval']['is_all_completed'] = ($result['approval']['total_count'] > 0 && $result['approval']['completed_count'] >= $result['approval']['total_count']) || $result['approval']['total_count'] === 0;
 
         return $result;
+    }
+
+    /**
+     * 現在の内容に対して、いずれかの必須点検ロールによる点検が完了した実績があるか
+     * (getRequiredRolesProgressDetails の結果を利用)
+     */
+    public function hasAnyRequiredInspectionBeenDoneForCurrentContent(): bool
+    {
+        // ワークフローが無効、またはフォルダ/必須点検ロールが未設定なら、
+        // この条件は「常に満たされている」または「考慮不要」とみなす。
+        // 承認アクションの前提条件として使うため、「満たされている」と解釈するのが自然か。
+        if (! $this->define?->workflow_enabled
+            || ! $this->define?->folder
+            || $this->define->folder->requiredInspectorRoles->isEmpty()
+        ) {
+            return true;
+        }
+
+        $progress = $this->getRequiredRolesProgressDetails(); // 内部で latestDiff を参照
+
+        return $progress['inspection']['completed_count'] > 0;
     }
 }

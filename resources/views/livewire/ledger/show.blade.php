@@ -139,7 +139,11 @@
                                                    {{-- モーダルを開くメソッド呼び出し --}}
                                                    wire:click="openApproverSelectModal"
                                                    spinner="openApproverSelectModal"/>
-                                @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id())
+                                @elseif(
+                                    $ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
+                                    && $ledgerRecord->latestDiff?->inspector_id === Auth::id()
+                                    && !$this->ledgerRecord->canProceedToApprovalStep()
+                                )
                                     {{-- 点検者だが、必須点検が完了していない場合 --}}
                                     <div class="tooltip"
                                          data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}">
@@ -150,7 +154,7 @@
                                 @endif
                                 @if($this->canApprove())
                                     <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
-                                                   class="join-item btn-wide btn-success" wire:click="approveTask"
+                                                   class="join-item btn-success" wire:click="approveTask"
                                                    spinner/>
                                 @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
                                     {{-- 承認者だが、必須点検または必須承認が完了していない場合 --}}
@@ -362,9 +366,11 @@
                                                icon="o-check-badge" class="join-item btn-success btn-sm md:btn-md"
                                                wire:click="openApproverSelectModal" {{-- 担当者選択モーダルを開く --}}
                                                spinner="openApproverSelectModal"/>
-                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === Auth::id() && !$this->ledgerRecord->canProceedToApprovalStep())
+                            @elseif($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
+                                && $ledgerRecord->latestDiff?->inspector_id === Auth::id()
+                                 && !$this->ledgerRecord->canProceedToApprovalStep())
                                 {{-- 点検者だが、必須点検が完了していない場合 --}}
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.tooltip.inspection_not_all_completed_for_request_approval') }}"> {{-- 新翻訳キー --}}
+                                <div class="tooltip" data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}"> {{-- 新翻訳キー --}}
                                     <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
                                                    icon="o-check-badge" class="join-item btn-success btn-sm md:btn-md"
                                                    disabled/>

@@ -20,34 +20,47 @@ use Mary\Traits\Toast;
 
 class Show extends Component
 {
-    use Toast, AuthorizesRequests;
+    use AuthorizesRequests, Toast;
 
     public $canView = false;
 
     public Ledger $ledgerRecord; // タイプヒントを明確に
+
     public $ledgerDefineRecord; // define はリレーションでアクセス可能
 
     public $canUpdate = false;
+
     // --- Workflow Action 用 ---
     public bool $approvalRequestModal = false;
+
     public bool $returnToDraftModal = false;
+
     public ?int $selectedApproverId = null;    // 次の承認者選択用
+
     public bool $showAssigneeModalForNext = false; // 次の承認者選択モーダル表示用
+
     public string $nextAssigneeRoleType = 'approver'; // 固定
+
     public array $approverOptions = [];
+
     public string $returnComment = ''; // 詳細画面ではタスクIDは不要
 
     public bool $showCommentModal = false; // <<<--- コメントモーダル表示用
+
     public string $actionTypeForModal = ''; // <<<--- モーダルに渡すアクションタイプ
+
     public string $commentForModal = '';    // <<<--- モーダルとバインドするコメント
 
     // --- 差分表示用 ---
     public ?LedgerDiff $comparisonTargetDiff = null; // 比較対象の古いDiff
+
     public array $contentChanges = []; // カラムごとの変更内容
+
     protected WorkflowService $workflowService;
 
     // --- モーダル制御用プロパティ ---
     public bool $showAssigneeModal = false; // 承認者選択モーダル用
+
     protected string $assigneeModalRoleType = 'approver'; // 固定で approver
 
     public Collection $workflowHistory; // ワークフロー履歴用プロパティ
@@ -55,11 +68,11 @@ class Show extends Component
     public $selectedTab = 'details';
 
     // WorkflowService をインジェクト
-    public bool $hasChangedColumns=false;
-    public bool $showChanges=false;
+    public bool $hasChangedColumns = false;
+
+    public bool $showChanges = false;
 
     public array $requiredRolesProgress = []; //  必須ロール進捗情報
-
 
     public function boot(WorkflowService $workflowService): void
     {
@@ -75,7 +88,7 @@ class Show extends Component
             'modifier:id,name', // <<<--- 取得カラム指定推奨
             'creator:id,name',
             'latestDiff.inspector:id,name', // <<<--- 最新Diffの担当者も取得
-            'latestDiff.approver:id,name'
+            'latestDiff.approver:id,name',
         ])
             ->findOrFail($ledgerId);
         $this->ledgerDefineRecord = $this->ledgerRecord->define;
@@ -87,13 +100,12 @@ class Show extends Component
         if ($this->ledgerDefineRecord->workflow_enabled && $this->ledgerRecord->define?->folder) {
             $this->requiredRolesProgress = $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
-
         // 権限チェック (閲覧権限) - 必要に応じて実装
         // $this->authorize('view', $this->ledgerRecord);
 
         // 権限チェックはせず画面内のカラムを伏せる
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
-     }
+    }
 
     protected function loadWorkflowHistory(): void
     {
@@ -104,17 +116,16 @@ class Show extends Component
             ->get();
     }
 
-
-
     /**
      * 承認者選択モーダルを開く (旧 openApprovalRequestModal)
      */
     public function openApproverSelectModal(): void // <<<--- メソッド名変更
     {
         // 権限チェック (自分が点検者か？) - Service 側でも行う
-        if (!$this->canRequestApproval()) {
+        if (! $this->canRequestApproval()) {
             $this->error(__('messages.error.unauthorized')); // Or custom message
-            Log::error('Approval request failed: ' . Auth::id() . ' is not the inspector of ledger ' . $this->ledgerRecord->id);
+            Log::error('Approval request failed: '.Auth::id().' is not the inspector of ledger '.$this->ledgerRecord->id);
+
             return;
         }
 
@@ -137,18 +148,19 @@ class Show extends Component
     /**
      * モーダルから承認者が選択されたときのイベントリスナー
      */
-
     #[On('assignee-selected')]
     public function handleAssigneeSelected(int $userId, string $roleType): void
     {
         if ($this->actionTypeForModal == 'approve_and_select_next') {
             $this->handleNextApproverSelected($userId, $roleType); // <<<--- handleNextApproverSelected を呼び出し
+
             return;
         }
-        if ($roleType !== 'approver' || !$this->canRequestApproval()) {
+        if ($roleType !== 'approver' || ! $this->canRequestApproval()) {
             // このコンポーネントからの承認者選択以外は無視、または権限がない場合は処理しない
             $this->error(__('messages.error.unauthorized'));
             Log::warning("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
+
             return;
         }
         $this->selectedApproverId = $userId; // 一時的に保持 (コメントモーダルに渡すため)
@@ -156,16 +168,14 @@ class Show extends Component
         $this->openCommentModal('request_approval_with_comment');
     }
 
-
-
     // --- 承認者の初期選択IDを取得するヘルパー ---
     protected function getInitialApproverId(): ?int
     {
         // 実績ベースで取得 (CreateColumn と同じロジック)
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineRecord->id, 'approver', 1);
-        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
-    }
 
+        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+    }
 
     /**
      * 作成中に戻すモーダルを開く
@@ -173,13 +183,14 @@ class Show extends Component
     public function openReturnToDraftModal(): void
     {
         // 権限チェック (自分が担当者か？)
-        if (!$this->canReturnToDraft()) {
+        if (! $this->canReturnToDraft()) {
             $this->error(__('messages.error.unauthorized'));
+
             return;
         }
 
-//        $this->returnComment = ''; // コメントをリセット
-//        $this->returnToDraftModal = true;
+        //        $this->returnComment = ''; // コメントをリセット
+        //        $this->returnToDraftModal = true;
         $this->openCommentModal('return_to_draft');
     }
 
@@ -188,13 +199,15 @@ class Show extends Component
      */
     public function loadApproverOptions(): void
     {
-        if (!$this->ledgerDefineRecord) return;
+        if (! $this->ledgerDefineRecord) {
+            return;
+        }
 
         $options = [];
         // 推奨ユーザー
         if ($this->ledgerDefineRecord->recommendedApprover) {
             $approver = $this->ledgerDefineRecord->recommendedApprover;
-            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
+            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name.' ('.__('ledger.workflow.recommended_user').')'];
             $this->selectedApproverId = $approver->id;
         }
         // 推奨ロール
@@ -204,22 +217,23 @@ class Show extends Component
         // その他ユーザー
         $allUsers = User::orderBy('name')->get();
         foreach ($allUsers as $user) {
-            if (!isset($options[$user->id])) {
+            if (! isset($options[$user->id])) {
                 $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
             }
         }
         $this->approverOptions = array_values($options);
     }
 
-
-     public function approveTask(): void
+    public function approveTask(): void
     {
-        if (!$this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
+        if (! $this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
             $this->error(__('messages.error.unauthorized_or_conditions_not_met')); // 翻訳キー例
+
             return;
         }
         $this->openCommentModal('approve'); // コメントモーダルを開く
     }
+
     /**
      * 中間承認で、次の承認者を選択するモーダルを開く
      */
@@ -237,17 +251,18 @@ class Show extends Component
             roleType: 'approver',
             ledgerId: $this->ledgerRecord->id,
             initialUserId: $initialNextApproverId,
-        // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
-        // targetEvent: 'next-approver-selected-for-show'
+            // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
+            // targetEvent: 'next-approver-selected-for-show'
         );
     }
+
     /**
      * 次の承認者選択モーダルから担当者が選択されたときのイベントリスナー
      */
-//    #[On('assignee-selected')] // 既存のリスナーと競合しないように、または条件分岐
+    //    #[On('assignee-selected')] // 既存のリスナーと競合しないように、または条件分岐
     public function handleNextApproverSelected(int $userId, string $roleType): void
     {
-//        dd($roleType, $this->actionTypeForModal);
+        //        dd($roleType, $this->actionTypeForModal);
         if ($this->actionTypeForModal !== 'approve_and_select_next' || $roleType !== 'approver') {
             return;
         }
@@ -268,7 +283,7 @@ class Show extends Component
             $this->mount($this->ledgerRecord->id); // ★ mount を呼び出し
 
         } catch (\Exception $e) {
-            Log::error("Finalizing approval with next assignee failed: " . $e->getMessage());
+            Log::error('Finalizing approval with next assignee failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'), $e->getMessage());
         } finally {
             $this->commentForModal = '';
@@ -276,21 +291,25 @@ class Show extends Component
             $this->selectedApproverId = null; // 使用後クリア
         }
     }
+
     // --- 次の承認者の初期選択IDを取得 (自分と現在の承認担当者を除く) ---
     protected function getInitialApproverIdExcludingSelfAndCurrent(): ?int
     {
         $excludeIds = [$this->ledgerRecord->latestDiff?->approver_id, Auth::id()];
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineRecord->id, 'approver', 5, '', $excludeIds);
-        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+
+        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
+
     /**
      * 作成中に戻す
      */
     public function returnTaskToDraft(): void
     {
         // 権限チェック
-        if (!$this->canReturnToDraft()) {
+        if (! $this->canReturnToDraft()) {
             $this->error(__('messages.error.unauthorized'));
+
             return;
         }
 
@@ -308,7 +327,7 @@ class Show extends Component
             $this->loadWorkflowHistory();
             $this->success(__('ledger.workflow.returned_to_draft_message'));
         } catch (\Exception $e) {
-            Log::error("Return to draft failed: " . $e->getMessage());
+            Log::error('Return to draft failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         } finally {
             $this->returnComment = '';
@@ -318,18 +337,21 @@ class Show extends Component
     // --- 権限チェック用ヘルパーメソッド ---
     public function canRequestApproval(): bool // 点検者が「承認申請」できるか
     {
-//        dd($this->ledgerRecord->canProceedToApprovalStep());
-        return $this->ledgerRecord->canProceedToApprovalStep() &&
-            ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION || $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)&&
-            $this->ledgerRecord->latestDiff?->inspector_id === Auth::id()
-            ; // ★必須点検ロール完了チェック追加
+        //        dd($this->ledgerRecord->canProceedToApprovalStep());
+        return $this->ledgerRecord->canProceedToApprovalStep()
+            && ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
+                || $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)
+            && $this->ledgerRecord->latestDiff?->inspector_id === Auth::id(); // ★必須点検ロール完了チェック追加
     }
 
     public function canApprove(): bool // 承認者が「承認」できるか
     {
-        return $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
-            $this->ledgerRecord->latestDiff?->approver_id === Auth::id() &&
-            $this->ledgerRecord->canBeFinallyApproved(); // ★全必須ロール完了チェック追加
+        return ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
+            $this->ledgerRecord->latestDiff?->approver_id === Auth::id()) ||
+            ($this->ledgerRecord->status !== WorkflowStatus::DRAFT
+                && $this->ledgerRecord->status !== WorkflowStatus::APPROVED
+                && $this->ledgerRecord->canBeFinallyApproved()
+            ); // ★全必須ロール完了チェック追加
     }
 
     public function canReturnToDraft(): bool
@@ -382,8 +404,8 @@ class Show extends Component
                 ? json_decode(json_encode($oldRawValue), true)
                 : $oldRawValue;
 
-            $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string)$currentValue;
-            $normalizedOld = $hasComparison && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string)$oldValue;
+            $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string) $currentValue;
+            $normalizedOld = $hasComparison && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string) $oldValue;
             $isChanged = $hasComparison && ($normalizedCurrent !== $normalizedOld);
             if ($isChanged) {
                 $this->hasChangedColumns = true;
@@ -415,7 +437,7 @@ class Show extends Component
     protected function findComparisonTargetDiff(): ?LedgerDiff
     {
         // ワークフローが無効なら比較対象なし
-        if (!$this->ledgerRecord->define->workflow_enabled) {
+        if (! $this->ledgerRecord->define->workflow_enabled) {
             return null;
         }
 
@@ -423,7 +445,7 @@ class Show extends Component
         // contentの「キャスト前」値を取得
         $currentRawContent = $this->ledgerRecord->getRawOriginal('content');
 
-        if (!$latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
+        if (! $latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
             // 最新Diffがない場合や現在のcontentが空の場合
             return null;
         }
@@ -440,7 +462,6 @@ class Show extends Component
         return $diff;
     }
 
-
     public function openCommentModal(string $actionType): void
     {
         $title = '';
@@ -453,23 +474,24 @@ class Show extends Component
 
         switch ($actionType) {
             case 'approve':
-                $title = __('ledger.workflow.approve') . ' - ' . __('ledger.workflow.comments');
+                $title = __('ledger.workflow.approve').' - '.__('ledger.workflow.comments');
                 $actionLabel = __('ledger.workflow.approve');
                 $actionClass = 'btn-primary';
                 break;
             case 'return_to_draft':
-                $title = __('ledger.workflow.return_to_draft') . ' - ' . __('ledger.workflow.comments');
+                $title = __('ledger.workflow.return_to_draft').' - '.__('ledger.workflow.comments');
                 $actionLabel = __('ledger.workflow.return_to_draft');
                 $actionClass = 'btn-warning';
-//                $text = __('ledger.workflow.confirm_edit_while_pending_text');
+                //                $text = __('ledger.workflow.confirm_edit_while_pending_text');
                 break;
             case 'request_approval_with_comment': // 点検完了(承認申請)でコメントを付けたい場合
                 if (is_null($this->selectedApproverId)) { // 先に担当者選択が必要
                     $this->warning(__('ledger.workflow.select_approver_first'));
                     $this->openApproverSelectModal(); // 担当者選択モーダルを開く
+
                     return;
                 }
-                $title = __('ledger.workflow.request_approval_short') . ' - ' . __('ledger.workflow.comments');
+                $title = __('ledger.workflow.request_approval_short').' - '.__('ledger.workflow.comments');
                 $actionLabel = __('ledger.workflow.request_approval');
                 $actionClass = 'btn-success';
                 break;
@@ -511,7 +533,7 @@ class Show extends Component
             $this->loadWorkflowHistory(); // 履歴を更新
             $this->prepareContentDiff();  // 差分情報も更新
         } catch (\Exception $e) {
-            Log::error("Workflow action '{$this->actionTypeForModal}' failed: " . $e->getMessage());
+            Log::error("Workflow action '{$this->actionTypeForModal}' failed: ".$e->getMessage());
             $this->error(__('messages.error.generic'), $e->getMessage());
         } finally {
             $this->showCommentModal = false;
@@ -520,12 +542,11 @@ class Show extends Component
         }
     }
 
-
     public function getCommentModalTitle(): string
     {
         return match ($this->actionTypeForModal) {
-            'approve' => __('ledger.workflow.approve') . ' - ' . __('ledger.workflow.comments'),
-            'return_to_draft' => __('ledger.workflow.return_to_draft') . ' - ' . __('ledger.workflow.comments'),
+            'approve' => __('ledger.workflow.approve').' - '.__('ledger.workflow.comments'),
+            'return_to_draft' => __('ledger.workflow.return_to_draft').' - '.__('ledger.workflow.comments'),
             default => __('ledger.workflow.comments'),
         };
     }
@@ -551,7 +572,9 @@ class Show extends Component
     #[On('workflow-action-with-comment')] // イベントリスナー
     public function handleActionWithComment(string $actionType, int $ledgerId, ?string $comment): void
     {
-        if ($ledgerId !== $this->ledgerRecord->id) return; // 対象が異なる場合は無視
+        if ($ledgerId !== $this->ledgerRecord->id) {
+            return;
+        } // 対象が異なる場合は無視
 
         $this->commentForModal = $comment ?? ''; // モーダルが閉じた後なので、再利用はしないが一応
         $modifierId = Auth::id();
@@ -560,7 +583,9 @@ class Show extends Component
             if ($actionType === 'approve') {
 
                 // ★ 承認アクションの実行
-                if (!$this->canApprove()) throw new \Exception(__('messages.error.unauthorized'));
+                if (! $this->canApprove()) {
+                    throw new \Exception(__('messages.error.unauthorized'));
+                }
 
                 // サービスを呼び出す前に、この承認で最終承認になるか、次の承認者が必要か判定
                 $progress = $this->ledgerRecord->getRequiredRolesProgressDetails();
@@ -568,14 +593,14 @@ class Show extends Component
                 $tempCompletedApproverRoles = $progress['approval']['completed_roles']->pluck('id')->toArray();
                 $modifierRoles = User::find($modifierId)?->roles()->pluck('id')->toArray() ?? [];
                 foreach ($this->ledgerRecord->define->folder->requiredApproverRoles as $reqRole) {
-                    if (in_array($reqRole->id, $modifierRoles) && !in_array($reqRole->id, $tempCompletedApproverRoles)) {
+                    if (in_array($reqRole->id, $modifierRoles) && ! in_array($reqRole->id, $tempCompletedApproverRoles)) {
                         $tempCompletedApproverRoles[] = $reqRole->id;
                     }
                 }
 
                 $allInspectionsDone = $progress['inspection']['is_all_completed'];
                 $allApprovalsWillBeDone = collect($this->ledgerRecord->define->folder->requiredApproverRoles)
-                    ->every(fn($role) => in_array($role->id, $tempCompletedApproverRoles));
+                    ->every(fn ($role) => in_array($role->id, $tempCompletedApproverRoles));
 
                 if ($allInspectionsDone && $allApprovalsWillBeDone) {
                     // 全て完了するので、最終承認として実行
@@ -586,14 +611,17 @@ class Show extends Component
                     $this->commentForModal = $comment; // コメントを保持
                     $this->actionTypeForModal = 'approve_and_select_next'; // 新しいアクションタイプ
                     $this->openNextApproverSelectModal(); // 次の承認者選択モーダルを開く
+
                     return; // ここで処理を中断し、モーダルからの結果を待つ
                 }
             } elseif ($actionType === 'return_to_draft') {
-                if (!$this->canReturnToDraft()) throw new \Exception(__('messages.error.unauthorized'));
+                if (! $this->canReturnToDraft()) {
+                    throw new \Exception(__('messages.error.unauthorized'));
+                }
                 $this->ledgerRecord = $this->workflowService->returnToDraft($ledgerId, $modifierId, $comment);
                 $this->success(__('ledger.workflow.returned_to_draft_message'));
             } elseif ($actionType === 'request_approval_with_comment') {
-                if (!$this->canRequestApproval() || is_null($this->selectedApproverId)) {
+                if (! $this->canRequestApproval() || is_null($this->selectedApproverId)) {
                     throw new \Exception(__('messages.error.unauthorized_or_missing_approver'));
                 }
                 // WorkflowService の requestApproval もコメントを受け取るように修正が必要
@@ -605,9 +633,8 @@ class Show extends Component
             // mount を呼び出して $requiredRolesProgress を再計算・再表示させる
             $this->mount($this->ledgerRecord->id); // ★ mount を呼び出し
 
-
         } catch (\Exception $e) {
-            Log::error("Workflow action '{$actionType}' failed: " . $e->getMessage());
+            Log::error("Workflow action '{$actionType}' failed: ".$e->getMessage());
             $this->error(__('messages.error.generic'), $e->getMessage());
 
         } finally {
