@@ -35,6 +35,23 @@
                 @endif
             </div>
 
+            {{-- ★★★ 凡例表示エリア ★★★ --}}
+            <div class="border-t border-base-300 pt-4 mt-4">
+                <h4 class="text-sm font-semibold mb-2 text-base-content/80">{{ __('ledger.workflow.legend_title') }}</h4> {{-- 翻訳キー: ledger.workflow.legend_title --}}
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+
+                    @foreach(App\Livewire\Workflow\WorkflowAssigneeSelect::getAllReasonPresentations() as $legend)
+                        @if($legend['icon'] && $legend['legend_key'])
+                            <div class="flex items-center space-x-1">
+                                <x-mary-icon :name="$legend['icon']" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                <span>{{ __($legend['legend_key']) }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+
+
             <div class="modal-action">
                 {{-- キャンセルボタン --}}
                 <x-mary-button label="{{ __('Cancel') }}" wire:click="closeModal" class="btn "

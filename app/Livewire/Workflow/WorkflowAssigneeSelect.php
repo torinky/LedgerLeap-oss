@@ -11,21 +11,23 @@ use App\Models\User;
 use App\Services\UserService;
 use App\Services\WorkflowService;
 use Illuminate\Support\Collection as SupportCollection;
-
 // SupportCollection を use
-use Livewire\Component;
-use Livewire\Attributes\Modelable;
-use Livewire\Attributes\Locked;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\Modelable;
+use Livewire\Component;
 
 class WorkflowAssigneeSelect extends Component
 {
     #[Locked]
     public int $ledgerDefineId;
+
     #[Locked]
     public int $folderId;
+
     #[Locked]
     public string $roleType; // 'inspector' or 'approver'
+
     #[Locked]
     public ?int $ledgerId = null;
 
@@ -34,10 +36,12 @@ class WorkflowAssigneeSelect extends Component
 
     #[Locked]
     public array $requiredInspectorRoleIds = []; // 親から渡される
+
     #[Locked]
     public array $requiredApproverRoleIds = [];  // 親から渡される
 
     public string $searchQuery = ''; // 検索クエリ用プロパティ
+
     // 検索用メソッド名 (MaryUI デフォルトは 'search')
     // public string $searchFunctionName = 'searchAssignees';
     protected WorkflowService $workflowService; // WorkflowService をインジェクト
@@ -57,10 +61,9 @@ class WorkflowAssigneeSelect extends Component
     }
 
     public function mount(
-        int  $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null,
+        int $ledgerDefineId, int $folderId, string $roleType, ?int $ledgerId = null,
         ?int $initialUserId = null, array $requiredInspectorRoleIds = [], array $requiredApproverRoleIds = []
-    ): void
-    {
+    ): void {
         $this->ledgerDefineId = $ledgerDefineId;
         $this->folderId = $folderId;
         $this->roleType = $roleType;
@@ -75,7 +78,7 @@ class WorkflowAssigneeSelect extends Component
      * MaryUI searchable から呼び出される検索メソッド
      * (search-function 属性で名前変更可能)
      *
-     * @param string $value 検索クエリ
+     * @param  string  $value  検索クエリ
      */
     public function searchAssignees(string $value = ''): void
     {
@@ -87,7 +90,7 @@ class WorkflowAssigneeSelect extends Component
         );
 
         // 選択中のユーザーがオプションに含まれているか確認し、なければ追加
-        if ($this->selectedUserId && !$this->options->contains('id', $this->selectedUserId)) {
+        if ($this->selectedUserId && ! $this->options->contains('id', $this->selectedUserId)) {
             $selectedUser = User::with(['organizations', 'roles'])->find($this->selectedUserId);
             if ($selectedUser) {
                 // 選択中ユーザーにカスタム属性を付与してリストの先頭に追加
@@ -102,8 +105,7 @@ class WorkflowAssigneeSelect extends Component
             ['name', 'asc'],
         ])->unique('id')->values();
 
-
-        Log::debug("Assignee options updated. Count: " . $this->options->count());
+        Log::debug('Assignee options updated. Count: '.$this->options->count());
     }
 
     /**
@@ -128,7 +130,9 @@ class WorkflowAssigneeSelect extends Component
     protected function fetchOptions(string $roleType, FolderPermissionType $requiredPermission): SupportCollection
     {
         $folder = Folder::find($this->folderId); // 必須ロールはFolderモデルのリレーションで取得済みのはず
-        if (!$folder) return collect();
+        if (! $folder) {
+            return collect();
+        }
 
         $usersWithOptions = collect(); // Userモデルと追加情報を格納するコレクション
         $addedUserIds = [];
@@ -138,7 +142,7 @@ class WorkflowAssigneeSelect extends Component
         // 1. フォルダ必須ロールの担当者
         foreach ($targetRequiredRoles as $role) {
             foreach ($role->users()->with(['organizations', 'roles'])->where('name', 'like', "%{$this->searchQuery}%")->get() as $user) {
-                if (!isset($addedUserIds[$user->id])) {
+                if (! isset($addedUserIds[$user->id])) {
                     $user->custom_reasons = ['required_role'];
                     $user->custom_sort_priority = 1;
                     $usersWithOptions->push($user);
@@ -158,6 +162,7 @@ class WorkflowAssigneeSelect extends Component
                         $reasons[] = 'frequent';
                         $u->custom_reasons = $reasons;
                     }
+
                     return $u;
                 });
             } else {
@@ -183,6 +188,7 @@ class WorkflowAssigneeSelect extends Component
                             $u->custom_reasons = $reasons;
                             $u->custom_sort_priority = min($u->custom_sort_priority ?? 99, 0);
                         }
+
                         return $u;
                     });
                 } else {
@@ -200,11 +206,12 @@ class WorkflowAssigneeSelect extends Component
         foreach ($authorizedUsers as $user) {
             if (isset($addedUserIds[$user->id])) {
                 $usersWithOptions = $usersWithOptions->map(function (User $u) use ($user) {
-                    if ($u->id === $user->id && !in_array('authorized', $u->custom_reasons ?? [])) {
+                    if ($u->id === $user->id && ! in_array('authorized', $u->custom_reasons ?? [])) {
                         $reasons = $u->custom_reasons ?? [];
                         $reasons[] = 'authorized';
                         $u->custom_reasons = $reasons;
                     }
+
                     return $u;
                 });
             } else {
@@ -222,12 +229,13 @@ class WorkflowAssigneeSelect extends Component
             if (empty($this->searchQuery) || stripos($user->name, $this->searchQuery) !== false) {
                 if (isset($addedUserIds[$user->id])) {
                     $usersWithOptions = $usersWithOptions->map(function (User $u) use ($user) {
-                        if ($u->id === $user->id && !in_array('past_route', $u->custom_reasons ?? [])) {
+                        if ($u->id === $user->id && ! in_array('past_route', $u->custom_reasons ?? [])) {
                             $reasons = $u->custom_reasons ?? [];
                             $reasons[] = 'past_route';
                             $u->custom_reasons = $reasons;
                             $u->custom_sort_priority = min($u->custom_sort_priority ?? 99, 2);
                         }
+
                         return $u;
                     });
                 } else {
@@ -250,33 +258,47 @@ class WorkflowAssigneeSelect extends Component
 
             // ★ 理由アイコン情報を追加
             $presentations = [];
-            if (!empty($user->custom_reasons)) {
+            if (! empty($user->custom_reasons)) {
                 foreach ($user->custom_reasons as $reasonCode) {
                     $presentations[] = $this->getReasonPresentation($reasonCode);
                 }
             }
             $user->custom_reason_presentations = $presentations;
+
             return $user;
         });
     }
 
     /**
-     * 理由コードに対応する Heroicon 名とツールチップ用翻訳キーの配列を返す
+     * 理由コードに対応する Heroicon 名、ツールチップ用翻訳キー、凡例用ラベル翻訳キーの配列を返す
      *
-     * @param string $reason
-     * @return array ['icon' => string, 'tooltip_key' => string]
+     * @return array ['icon' => string, 'tooltip_key' => string, 'legend_key' => string]
      */
-    protected function getReasonPresentation(string $reason): array
+    protected static function getReasonPresentation(string $reason): array
     {
         return match ($reason) {
-            'recent' => ['icon' => 'o-clock', 'tooltip_key' => 'ledger.workflow.reason_tooltip.recent'],
-            'frequent' => ['icon' => 'o-star', 'tooltip_key' => 'ledger.workflow.reason_tooltip.frequent'],
-            'authorized' => ['icon' => 'o-check-badge', 'tooltip_key' => 'ledger.workflow.reason_tooltip.authorized'],
-            'required_role' => ['icon' => 'o-identification', 'tooltip_key' => 'ledger.workflow.reason_tooltip.required_role'], // identification or clipboard-document-check
-            'past_route' => ['icon' => 'o-arrow-path', 'tooltip_key' => 'ledger.workflow.reason_tooltip.past_route'], // arrow-path or ArrowPathRoundedSquareIcon
-            'selected' => ['icon' => 's-check-circle', 'tooltip_key' => 'ledger.workflow.reason_tooltip.selected'], // s-check-circle (solid)
-            default => ['icon' => '', 'tooltip_key' => ''],
+            'recent' => ['icon' => 'o-clock',           'tooltip_key' => 'ledger.workflow.reason_tooltip.recent',         'legend_key' => 'ledger.workflow.reason_legend.recent'],
+            'frequent' => ['icon' => 'o-star',            'tooltip_key' => 'ledger.workflow.reason_tooltip.frequent',       'legend_key' => 'ledger.workflow.reason_legend.frequent'],
+            'authorized' => ['icon' => 'o-check-badge',   'tooltip_key' => 'ledger.workflow.reason_tooltip.authorized',     'legend_key' => 'ledger.workflow.reason_legend.authorized'],
+            'required_role' => ['icon' => 'o-identification', 'tooltip_key' => 'ledger.workflow.reason_tooltip.required_role',  'legend_key' => 'ledger.workflow.reason_legend.required_role'],
+            'past_route' => ['icon' => 'o-arrow-path',      'tooltip_key' => 'ledger.workflow.reason_tooltip.past_route',     'legend_key' => 'ledger.workflow.reason_legend.past_route'],
+            'selected' => ['icon' => 's-check-circle',  'tooltip_key' => 'ledger.workflow.reason_tooltip.selected',       'legend_key' => 'ledger.workflow.reason_legend.selected'],
+            default => ['icon' => '', 'tooltip_key' => '', 'legend_key' => ''],
         };
+    }
+
+    /**
+     * 利用可能な全ての理由の表示情報を取得する (凡例表示用)
+     */
+    public static function getAllReasonPresentations(): array
+    {
+        $allReasons = ['recent', 'frequent', 'authorized', 'required_role', 'past_route']; // selected は除く
+        $presentations = [];
+        foreach ($allReasons as $reason) {
+            $presentations[$reason] = self::getReasonPresentation($reason);
+        }
+
+        return $presentations;
     }
 
     /**
@@ -284,7 +306,7 @@ class WorkflowAssigneeSelect extends Component
      */
     protected function getRecentAssignee(?int $ledgerId, string $roleType): ?User
     {
-        if (!$ledgerId) {
+        if (! $ledgerId) {
             return null;
         }
         // 修正: roleType に応じてカラムを決定
@@ -298,7 +320,6 @@ class WorkflowAssigneeSelect extends Component
 
         return $latestDiff?->{$roleType};
     }
-
 
     /**
      * 同じ台帳定義の過去の完了案件から担当者を取得する (新規)
@@ -324,10 +345,10 @@ class WorkflowAssigneeSelect extends Component
                 }
             }
         }
+
         // IDの出現頻度でソートし、上位を取得、Userモデルを返す
         return User::whereIn('id', $assigneeIds->countBy()->sortDesc()->keys()->take($limit))->get();
     }
-
 
     public function render()
     {
@@ -343,6 +364,7 @@ class WorkflowAssigneeSelect extends Component
         // 選択がクリアされた場合は何もしない (またはオプションをリセット)
         if (is_null($value)) {
             $this->searchAssignees(''); // 初期状態に戻すなど
+
             return;
         }
         // 選択されたIDを含むオプションリストを再生成
@@ -350,5 +372,4 @@ class WorkflowAssigneeSelect extends Component
         $this->searchAssignees($this->searchQuery);
         Log::debug("selectedUserId updated to {$value}, options reloaded.");
     }
-
 }

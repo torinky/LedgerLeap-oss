@@ -16,9 +16,10 @@
         @error('comment') <span class="text-xs text-error mt-1">{{ $message }}</span> @enderror
 
         <x-slot:actions>
-            <x-mary-button label="{{ __('Cancel') }}" @click="$wire.closeModal()"/> {{-- closeModal を呼び出す --}}
+            <x-mary-button label="{{ __('Cancel') }}" @click="$wire.closeModal()" icon="o-x-circle"/> {{-- closeModal を呼び出す --}}
             <x-mary-button :label="$actionButtonLabel" :class="$actionButtonClass" wire:click="executeAction"
-                           spinner="executeAction"/>
+                           spinner="executeAction" icon="{{ $actionType === 'return_to_draft' ? 'o-arrow-uturn-left' : 'o-check-circle' }}"
+            />
         </x-slot:actions>
     </x-mary-modal>
 </div>
