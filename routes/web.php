@@ -21,6 +21,7 @@ use App\Livewire\Notifications\UserNotificationList;
 use App\Livewire\Notifications\Settings;
 use App\Livewire\UserActivityLog;
 use App\Livewire\Workflow\PendingList;
+use App\Models\CustomActivity;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -176,6 +177,39 @@ Route::middleware('auth')->group(function () {
 
 
     Route::get('/my-portal', MyPortal::class)->name('my-portal');
+
+    Route::get('/test-activity', function () {
+        return view('test-activity');
+    })->middleware(['auth', 'verified'])->name('test-activity');
+
+
+/*    Route::get('/test-policy-check', function () {
+        if (!Auth::check()) {
+            return "ユーザーが認証されていません。ログインしてください。";
+        }
+
+        $user = Auth::user();
+        dump("テストルート: ユーザー: " . $user->name);
+
+        // viewAny が呼ばれることを期待
+        $canViewAny = $user->can('viewAny', CustomActivity::class);
+        dump("user->can('viewAny', CustomActivity::class): ", $canViewAny);
+
+        // can('view', Model::class) は viewAny を探す
+        $canView = $user->can('view', CustomActivity::class);
+        dump("user->can('view', CustomActivity::class): ", $canView);
+
+
+        // Gateファサードを直接使用
+        $gateAllowsViewAny = Gate::forUser($user)->allows('viewAny', CustomActivity::class);
+        dump("Gate::allows('viewAny', CustomActivity::class): ", $gateAllowsViewAny);
+
+        $gateAllowsView = Gate::forUser($user)->allows('view', CustomActivity::class);
+        dump("Gate::allows('view', CustomActivity::class): ", $gateAllowsView);
+
+
+        return "ポリシーテスト完了。ActivityLogPolicy内のdd出力を確認してください。";
+    });*/
 });
 
 Route::get('/phpinfo', function () {

@@ -788,4 +788,99 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'activity' => [
+        'title' => '活動履歴',
+        'column' => [
+            'time' => '日時',
+            'causer' => '操作者',
+            'subject' => '対象リソース',
+            'operation' => '操作内容',
+            'changes' => '変更内容',
+            'comment' => 'コメント',
+        ],
+        'no_activities_found' => '該当する活動履歴はありません。',
+        'system_user' => 'システム', // causerがnullの場合
+        'unknown_user' => '不明なユーザー', // causerが存在しない場合
+        'subject' => [
+            'unknown' => '不明なリソース',
+        ],
+        'model_name' => [
+            'ledger' => '台帳レコード',
+            'ledger_define' => '台帳定義',
+            'folder' => 'フォルダ',
+            'user' => 'ユーザー',
+            'role' => 'ロール',
+            'organization' => '組織',
+            'permission' => '権限', // 追加
+            'role_folder_permission' => 'ロールフォルダ権限', // 追加
+        ],
+        // 操作内容 (event) の翻訳
+        'created' => ':resource が作成されました。',
+        'updated' => ':resource が更新されました。',
+        'deleted' => ':resource が削除されました。',
+        'restored' => ':resource が復元されました。',
+        'force_deleted' => ':resource が完全に削除されました。',
+        'system_operation' => 'システムによる :operation', // システム操作の場合
+
+        // ActivityLog の event ごとの詳細 (activitylog.php から移植・統合)
+        'event' => [ // 新たに 'event' ネストを追加
+            'ledger_created' => '台帳レコードが作成されました。', // :resource を使わず、汎用的なメッセージにするか検討
+            'ledger_updated' => '台帳レコードが更新されました。',
+            'ledger_deleted' => '台帳レコードが削除されました。',
+            'folder_created' => 'フォルダが作成されました。',
+            'folder_updated' => 'フォルダが更新されました。',
+            'folder_deleted' => 'フォルダが削除されました。',
+            'ledger_define_created' => '台帳定義が作成されました。',
+            'ledger_define_updated' => '台帳定義が更新されました。',
+            'ledger_define_deleted' => '台帳定義が削除されました。',
+            'user_created' => 'ユーザーが作成されました。',
+            'user_updated' => 'ユーザー情報が更新されました。',
+            'user_deleted' => 'ユーザーが削除されました。',
+            'organization_created' => '組織が作成されました。',
+            'organization_updated' => '組織情報が更新されました。',
+            'organization_deleted' => '組織が削除されました。',
+            'role_created' => 'ロールが作成されました。',
+            'role_updated' => 'ロール情報が更新されました。',
+            'role_deleted' => 'ロールが削除されました。',
+            'permission_created' => '権限が作成されました。',
+            'permission_updated' => '権限情報が更新されました。',
+            'permission_deleted' => '権限が削除されました。',
+            'login' => 'ログインしました。',
+            'logout' => 'ログアウトしました。',
+            'user_organization_attached' => ':resource にユーザーが追加されました。', // 例: 組織
+            'user_organization_detached' => ':resource からユーザーが削除されました。',
+            'role_user_attached' => ':resource にロールが追加されました。', // 例: ユーザー
+            'role_user_detached' => ':resource からロールが削除されました。',
+            'role_permission_attached' => ':resource に権限が追加されました。', // 例: ロール
+            'role_permission_detached' => ':resource から権限が削除されました。',
+            'role_folder_permission_created' => 'ロールフォルダ権限が作成されました。',
+            'role_folder_permission_updated' => 'ロールフォルダ権限が更新されました。',
+            'role_folder_permission_deleted' => 'ロールフォルダ権限が削除されました。', // 必要に応じて追加
+        ],
+
+        'changes' => [
+            'content_changed' => 'コンテンツ内容が変更されました',
+            'column_define_changed' => 'カラム定義が変更されました',
+            'password_changed' => 'パスワードが変更されました',
+            'no_significant_changes' => '実質的な変更はありません',
+            'removed' => '削除されました',
+            'attribute' => '属性', // 変更
+            'before_change' => '変更前', // 変更
+            'after_change' => '変更後', // 変更
+            'attached' => '関連付け', // 新規追加
+            'detached' => '関連解除', // 新規追加
+        ],
+        'workflow' => [
+            'requested_inspection' => ':resource の点検が依頼されました。',
+            'inspection_completed' => ':resource の点検が完了し、承認が依頼されました。',
+            'approved' => ':resource が承認されました。',
+            'returned_to_draft' => ':resource が下書きに戻されました。',
+            'edited_while_pending' => ':resource が承認フロー中に編集され、下書きに戻されました。',
+            'task_claimed' => ':resource の担当タスクが引き継がれました。',
+        ],
+        'no_permission' => 'アクティビティログの閲覧権限がありません。', // これも ledger.php に移す
+        'activitylog' => 'アクティビティログ', // これも ledger.php に移す
+    ],
+    // ActivityLog で使用されていた既存のキーも ledger.activity.event.* にマッピング
+    'no_activity_logs' => 'アクティビティログはありません。',
 ];

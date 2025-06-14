@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Services\NotificationService;
-use Spatie\Activitylog\Models\Activity as SpatieActivity;
+use Spatie\Activitylog\Models\Activity ;
 
-class CustomActivity extends SpatieActivity
+class CustomActivity extends Activity
 {
     protected static function booted()
     {
