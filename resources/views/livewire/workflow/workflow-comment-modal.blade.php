@@ -4,7 +4,8 @@
     @dd($modalTitle,$actionButtonLabel,$actionButtonClass,$actionType,$targetLedgerId,$comment)
     @endif
 --}}
-    <x-mary-modal wire:model="showCommentModal" :title="$modalTitle">
+    <x-mary-modal wire:model="showCommentModal" :title="$modalTitle"
+    icon="o-chat-bubble-bottom-center-text">
         {{ $text??'' }}
         <x-mary-textarea
                 label="{{ __('ledger.workflow.comments') }}"

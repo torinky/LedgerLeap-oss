@@ -784,7 +784,7 @@
             'view_content_at_this_point' => 'この時点の内容を見る',
             'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
             'request_inspection_comment_title' => '点検依頼コメント',
-            'send_inspection_request' => 'コメントを付けて点検依頼を送信',
+            'send_inspection_request' => '点検依頼を送信',
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',

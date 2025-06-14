@@ -177,7 +177,8 @@
 
             {{-- 編集確認モーダル --}}
             <x-mary-modal wire:model="confirmingEdit"
-                          title="{{ __('ledger.workflow.confirm_edit_while_pending_title') }}" persistent>
+                          title="{{ __('ledger.workflow.confirm_edit_while_pending_title') }}" persistent
+                          icon="o-exclamation-triangle">
                 {{ __('ledger.workflow.confirm_edit_while_pending_text') }}
 
                 <div class="mt-4">

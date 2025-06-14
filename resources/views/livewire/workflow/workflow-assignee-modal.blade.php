@@ -5,6 +5,7 @@
     <div class="modal {{ $showModal ? 'modal-open' : '' }}" role="dialog">
         <div class="modal-box">
             <h3 class="font-bold text-lg">
+                <x-mary-icon name="o-user" class="text-neutral" />
                 {{-- roleType に応じてタイトルを変更 --}}
                 @if ($roleType === 'inspector')
                     {{ __('ledger.workflow.select_next_inspector') }}
@@ -37,7 +38,7 @@
 
             {{-- ★★★ 凡例表示エリア ★★★ --}}
             <div class="border-t border-base-300 pt-4 mt-4">
-                <h4 class="text-sm font-semibold mb-2 text-base-content/80">{{ __('ledger.workflow.legend_title') }}</h4> {{-- 翻訳キー: ledger.workflow.legend_title --}}
+{{--                <h4 class="text-sm font-semibold mb-2 text-base-content/80">{{ __('ledger.workflow.legend_title') }}</h4> --}}
                 <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
 
                     @foreach(App\Livewire\Workflow\WorkflowAssigneeSelect::getAllReasonPresentations() as $legend)
