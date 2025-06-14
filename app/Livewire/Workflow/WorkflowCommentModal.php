@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Workflow;
 
+use App\Livewire\Ledger\CreateColumn;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Livewire\Ledger\Show;
 use Livewire\Attributes\On;
@@ -52,8 +53,11 @@ class WorkflowCommentModal extends Component
             actionType: $this->actionType,
             ledgerId: $this->targetLedgerId,
             comment: $this->comment
-        )->to(Show::class, ModifyColumn::class); // 対象コンポーネントを指定 (必要なら)
-
+        )
+//            コンポーネントを絞るとModifyColumnに向けたイベントが発火しないのでグローバルにする
+//            ->to(Show::class)->to(ModifyColumn::class)->to(CreateColumn::class)
+        ; // 対象コンポーネントを指定 (必要なら)
+//dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId, $this->comment);
         $this->closeModal();
     }
 

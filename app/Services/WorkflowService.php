@@ -129,20 +129,21 @@ class WorkflowService
      * 点検依頼を処理する
      * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param  int  $ledgerId  台帳レコードID
-     * @param  int  $requesterId  点検依頼を行った User ID
-     * @param  int  $inspectorId  次の担当者 User ID
+     * @param int $ledgerId 台帳レコードID
+     * @param int $requesterId 点検依頼を行った User ID
+     * @param int $inspectorId 次の担当者 User ID
+     * @param string|null $comments 点検コメント (任意)
      * @return Ledger 更新後の Ledger
      *
      * @throws Throwable
      */
-    public function requestInspection(int $ledgerId, int $requesterId, int $inspectorId): Ledger
+    public function requestInspection(int $ledgerId, int $requesterId, int $inspectorId, ?string $comments = null): Ledger
     {
         // ToDo: 権限チェック (requesterId が点検依頼できるか？)
         $ledger = null; // 先に宣言
         $ledgerDiff = null; // 先に宣言
 
-        DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId, &$ledger, &$ledgerDiff) {
+        DB::transaction(function () use ($ledgerId, $requesterId, $inspectorId, $comments, &$ledger, &$ledgerDiff) {
             $ledger = Ledger::findOrFail($ledgerId);
             if ($ledger->status !== WorkflowStatus::DRAFT) {
                 throw new Exception('Inspection can only be requested from Draft status.');
@@ -162,7 +163,8 @@ class WorkflowService
                 'inspector_id' => $inspectorId, // 次の担当者
                 'approver_id' => null,
                 'requested_at' => now(),
-                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null, 'comments' => null,
+                'inspected_at' => null, 'approved_at' => null, 'returned_at' => null,
+                'comments' => $comments,
                 'completed_inspector_role_ids' => $ledger->latestDiff?->completed_inspector_role_ids ?? [],
                 'completed_approver_role_ids' => $ledger->latestDiff?->completed_approver_role_ids ?? [],
             ];

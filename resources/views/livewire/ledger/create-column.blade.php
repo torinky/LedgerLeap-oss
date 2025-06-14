@@ -170,6 +170,10 @@
     {{-- 担当者選択モーダルコンポーネントを呼び出し --}}
     {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
     @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+    {{-- コメント入力モーダル --}}
+    @livewire('workflow.workflow-comment-modal', ['ledgerId' => null],
+    key('workflow-comment-modal-create'))
+
 
 </div>
 

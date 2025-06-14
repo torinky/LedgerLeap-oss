@@ -61,6 +61,11 @@ class CreateColumn extends Component
     // --- 推奨担当者IDを保持する一時プロパティ ---
     public ?int $initialInspectorId = null;
 
+    // --- コメントモーダル制御用 (新規追加) ---
+    public bool $showInspectionCommentModal = false; // 点検依頼用コメントモーダル
+    public string $inspectionComment = '';         // 点検依頼コメント
+    public ?int $tempSelectedInspectorId = null;  // 担当者選択モーダルで一時的に保持するID
+
     /**
      * @var mixed|null
      */
@@ -679,10 +684,14 @@ class CreateColumn extends Component
     #[On('assignee-selected')]
     public function handleAssigneeSelected(int $userId, string $roleType): void
     {
+//        dd("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
         Log::debug("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
         // ここで $userId を使って WorkflowService のメソッドを呼び出す
         if ($roleType === 'inspector') {
-            $this->requestInspectionInternal($userId); // 内部メソッド呼び出し
+//            $this->requestInspectionInternal($userId); // 内部メソッド呼び出し
+            $this->tempSelectedInspectorId = $userId; // 一時的にIDを保持
+            // ★ 次にコメント入力モーダルを開く
+            $this->openInspectionCommentModal();
         } elseif ($roleType === 'approver') {
             // TODO: 承認申請処理 (Show.php や PendingList.php で実装)
             // $this->requestApprovalInternal($userId);
@@ -690,9 +699,92 @@ class CreateColumn extends Component
         // モーダルは子コンポーネント側で閉じられる想定
         $this->showAssigneeModal = false; // 念のため親でも閉じる
     }
+    // --- 点検依頼コメント入力モーダルを開くメソッド (新規追加) ---
+    public function openInspectionCommentModal(): void
+    {
+        if (is_null($this->tempSelectedInspectorId) || is_null($this->ledgerId)) {
+            Log::error("Cannot open inspection comment modal: Inspector ID or Ledger ID is missing.");
+            $this->error(__('messages.error.generic'));
+            return;
+        }
+        $this->inspectionComment = ''; // コメントをリセット
+        $this->resetValidation('inspectionComment');
+        // $this->showInspectionCommentModal = true; // WorkflowCommentModal を直接制御しない
+
+        // WorkflowCommentModal を開くイベントを発行
+        $this->dispatch(
+            'open-workflow-comment-modal',
+            title: __('ledger.workflow.request_inspection_comment_title'), // 新しい翻訳キー
+            actionLabel: __('ledger.workflow.send_inspection_request'),    // 新しい翻訳キー
+            actionClass: 'btn-primary',
+            actionType: 'request_inspection_with_comment', // 新しいアクションタイプ
+            ledgerId: $this->ledgerId,
+            initialComment: '' // 初期コメントはなし
+        );
+    }
+// --- コメントモーダルからコメント付きで実行するイベントリスナー (新規追加) ---
+    #[On('workflow-action-with-comment')]
+    public function handleRequestInspectionWithComment(string $actionType, int $ledgerId, ?string $comment): void
+    {
+//        dd($actionType,$ledgerId,$comment);
+        if ($actionType !== 'request_inspection_with_comment'
+            || $ledgerId !== $this->ledgerId || is_null($this->tempSelectedInspectorId)
+            // Ledger ID が一致しない、または担当者IDが未設定の場合は処理しない
+        ) {
+//            dd("Invalid request_inspection_with_comment action: ActionType: {$actionType}, Ledger ID: {$ledgerId}, Selected Inspector ID: {$this->tempSelectedInspectorId}");
+            Log::error("Invalid request_inspection_with_comment action: ActionType: {$actionType}, Ledger ID: {$ledgerId}, Selected Inspector ID: {$this->tempSelectedInspectorId}");
+            return; // 対象外のアクションや情報不足
+        }
+        // 担当者IDとコメントを使って点検依頼処理を実行
+        if (is_null($this->ledgerId)) {
+            Log::error("Cannot request inspection with comment: Ledger ID is missing after draft save.");
+            $this->error(__('ledger.workflow.save_first_before_assigning')); // 保存されていないエラーメッセージ
+            $this->tempSelectedInspectorId = null; // 担当者IDをリセット
+            $this->inspectionComment = '';       // リセット
+            return;
+        }
+
+        $selectedAssigneeId = $this->tempSelectedInspectorId;
+        $this->inspectionComment = $comment ?? ''; // モーダルから受け取ったコメント
+
+        // Content のバリデーションは requestInspection ですでに完了している
+        // 担当者IDのバリデーション
+        if (!User::find($selectedAssigneeId)) {
+            $this->error(__('ledger.workflow.invalid_assignee'));
+            $this->tempSelectedInspectorId = null; // 担当者IDをリセット
+            return;
+        }
+
+        $requesterId = Auth::id();
+
+        try {
+            // WorkflowService に担当者IDとコメントを渡す
+            // requestInspection メソッドにコメント引数を追加する必要がある
+            $result = $this->workflowService->requestInspection(
+                $this->ledgerId,
+                $requesterId,
+                $selectedAssigneeId,
+                $this->inspectionComment
+                // ★ コメントを渡す
+            );
+
+            $this->addAttachedFileRecordIfNecessary(); // これは saveDraft 内で呼ばれるべきか？
+            $this->success(
+                __('ledger.workflow.inspection_requested_message'),
+                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId])
+            );
+        } catch (\Exception $e) {
+            Log::error('Inspection request with comment failed: ' . $e->getMessage());
+            $this->error(__('ledger.workflow.inspection_request_failed')); // 点検依頼失敗のエラーメッセージ
+        } finally {
+            $this->tempSelectedInspectorId = null; // 使用後リセット
+            $this->inspectionComment = '';       // 使用後リセット
+            // $this->showInspectionCommentModal = false; // WorkflowCommentModal側で閉じる
+        }
+    }
 
     // --- 点検依頼の実行ロジック (内部メソッド化) ---
-    protected function requestInspectionInternal(int $assigneeId): void
+/*    protected function requestInspectionInternal(int $assigneeId): void
     {
         // Content のバリデーション
         $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
@@ -740,10 +832,10 @@ class CreateColumn extends Component
             Log::error('Inspection request failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
-    }
+    }*/
 
     // --- 点検依頼ボタンのアクション (下書き保存 -> モーダル表示) ---
-    public function requestInspection(): void
+/*    public function requestInspection(): void
     {
         // まず Content のバリデーションのみ実行
         $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
@@ -768,6 +860,35 @@ class CreateColumn extends Component
             $this->openAssigneeModal('inspector');
         } catch (\Exception $e) {
             Log::error('Draft save failed before inspection request: '.$e->getMessage());
+            $this->error(__('messages.error.generic'));
+        }
+    }*/
+    // --- 点検依頼ボタンのアクション (下書き保存 -> 担当者選択モーダル表示) ---
+    public function requestInspection(): void
+    {
+        // 1. Content のバリデーション
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+
+        // 2. 下書き保存を実行 (ファイル処理含む)
+        try {
+            $userId = Auth::id();
+            $this->processFilesForSave();
+            $result = $this->workflowService->saveDraft(
+                $this->ledgerId,
+                $this->ledgerDefineId,
+                $this->content,
+                $this->contentAttached,
+                $userId
+            );
+            $this->ledgerId = $result['ledger']->id;
+            $this->ledgerRecord = $result['ledger'];
+            $this->addAttachedFileRecordIfNecessary();
+            Log::info("Draft saved successfully before opening assignee modal. Ledger ID: {$this->ledgerId}");
+
+            // 3. 下書き保存成功後に担当者選択モーダルを開く
+            $this->openAssigneeModal('inspector');
+        } catch (\Exception $e) {
+            Log::error('Draft save failed before inspection request: ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }

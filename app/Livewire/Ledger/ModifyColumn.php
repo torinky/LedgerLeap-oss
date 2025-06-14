@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\On;
 
 class ModifyColumn extends CreateColumn
 {
@@ -30,18 +31,18 @@ class ModifyColumn extends CreateColumn
     public function mount(request $request): void
     {
 
-        $this->ledgerId = (int) $request->route('ledgerId');
+        $this->ledgerId = (int)$request->route('ledgerId');
         if ($this->ledgerId) {
             // edit
             $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
-            if (! empty($this->ledgerRecord->define)) {
+            if (!empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
                 $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
                     return $column->required;
                 })->count();
             }
-            if (! empty($this->ledgerRecord->content)) {
+            if (!empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
             }
             $this->initColumns(); // カラム初期化 (必須マーク色など)
@@ -54,7 +55,7 @@ class ModifyColumn extends CreateColumn
                     $this->deletedContent[$column->id] = [];
                     $this->content[$column->id] = [];
                 }
-                if (! empty($this->content[$column->id])) {
+                if (!empty($this->content[$column->id])) {
                     $this->labelColor[$column->id] = 'success';
                 } elseif ($column->required) {
                     $this->labelColor[$column->id] = 'warning';
@@ -84,7 +85,7 @@ class ModifyColumn extends CreateColumn
         }
 
         // 既存ファイルの削除処理
-        if (! empty($this->ledgerRecord->content[$column->id])) {
+        if (!empty($this->ledgerRecord->content[$column->id])) {
             /*
              * fileの保存状態
              * ['originalFilename'=>'savedFilePath']
@@ -120,7 +121,7 @@ class ModifyColumn extends CreateColumn
 
     private function getThumbnailUrl($filename): string
     {
-        return Storage::url('Ledger/thumbs/'.basename($filename));
+        return Storage::url('Ledger/thumbs/' . basename($filename));
     }
 
     public function storeLedgerDiff(): void
@@ -182,7 +183,7 @@ class ModifyColumn extends CreateColumn
     public function saveChanges(): void
     {
         // ワークフローが無効なら直接保存
-        if (! $this->ledgerDefineRecord?->workflow_enabled) {
+        if (!$this->ledgerDefineRecord?->workflow_enabled) {
             $this->saveDirectly(); // 親クラスの直接保存メソッド呼び出し
 
             return;
@@ -222,7 +223,7 @@ class ModifyColumn extends CreateColumn
      */
     public function saveChangesAndReturnToDraft(): void
     {
-        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -245,7 +246,7 @@ class ModifyColumn extends CreateColumn
             $this->editReason = null;
 
         } catch (\Exception $e) {
-            Log::error('Saving edited record failed: '.$e->getMessage());
+            Log::error('Saving edited record failed: ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -266,7 +267,7 @@ class ModifyColumn extends CreateColumn
             return;
         }
 
-        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -282,7 +283,7 @@ class ModifyColumn extends CreateColumn
             $this->addAttachedFileRecordIfNecessary();
             $this->success(__('ledger.draft_saved'));
         } catch (\Exception $e) {
-            Log::error('Draft save failed (modify): '.$e->getMessage());
+            Log::error('Draft save failed (modify): ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -296,50 +297,58 @@ class ModifyColumn extends CreateColumn
 
             return;
         }
+        parent::requestInspection();
         // 下書き保存と併せて申請する場合に対応
-        $this->saveDraft();
+//        $this->saveDraft();
         // モーダルを開く
-        $this->openAssigneeModal('inspector');
+//        $this->openAssigneeModal('inspector');
     }
 
-    // --- 点検依頼の実行ロジック (親クラスから流用 - saveDraftInternal 呼び出し不要) ---
-    protected function requestInspectionInternal(int $assigneeId): void
+    #[On('workflow-action-with-comment')]
+    public function handleRequestInspectionWithComment(string $actionType, int $ledgerId, ?string $comment): void
     {
-        // Content のバリデーション
-        // $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
-        // 担当者IDのバリデーション
-        if (! User::find($assigneeId)) {
-            $this->error(__('ledger.workflow.invalid_assignee'));
+        // 1. この ModifyColumn インスタンスが処理すべきイベントかを確認
+        //    ModifyColumn が関与する可能性のある actionType を具体的に指定する
+        //    例: 'request_inspection_with_comment_for_modify', 'edit_and_return_to_draft' など
+        //    ここでは、ModifyColumn が点検依頼のコメント付きアクションを処理すると仮定します。
+        //    また、ledgerId が現在のコンポーネントの ledgerId と一致することも重要です。
 
-            return;
-        }
-
-        $userId = Auth::id();
-        // $this->processFilesForSave(); // ファイル処理は保存時に行うのでここでは不要？ 必要ならコメント解除
-
-        // ledgerId は必ず存在するはず
-        if (is_null($this->ledgerId)) {
-            Log::error('Ledger ID is null in ModifyColumn.');
+        // この ModifyColumn インスタンスが対象とする ledgerId かどうかを確認
+        if ($ledgerId !== $this->ledgerId) {
+            Log::error("[ModifyColumn] Received 'workflow-action-with-comment' for a different ledger. Component Ledger ID: {$this->ledgerId}, Event Ledger ID: {$ledgerId}. Ignoring.");
             $this->error(__('messages.error.generic'));
-
-            return;
+            return; // 自分の担当する台帳でなければ無視
         }
 
-        try {
-            // WorkflowService に $assigneeId を渡す
-            $result = $this->workflowService->requestInspection(
-                $this->ledgerId,
-                $userId,
-                $assigneeId
-            );
-            // $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加は保存時に行う
-            $this->success(__('ledger.workflow.inspection_requested_message'),
-                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
-        } catch (\Exception $e) {
-            Log::error('Inspection request failed (modify): '.$e->getMessage());
-            $this->error(__('messages.error.generic'));
+        // この ModifyColumn インスタンスが処理すべき actionType かどうかを確認
+        // CreateColumn と ModifyColumn で共通の actionType を使っている場合、
+        // より具体的な条件や、ModifyColumn 独自の actionType を使うことを検討してください。
+        // ここでは、ModifyColumn が 'request_inspection_with_comment' を処理するケースと、
+        // フロー中編集の 'save_edited_record_with_reason' (仮) のようなものを想定します。
+
+        // 例: 点検依頼のコメント付きアクションの場合 (CreateColumn と共通の可能性あり)
+        if ($actionType === 'request_inspection_with_comment') {
+            // さらに ModifyColumn 特有の条件があれば追加
+            // (例: 現在のステータスが DRAFT であることなど)
+            if ($this->ledgerRecord?->status !== WorkflowStatus::DRAFT) {
+                Log::error("[ModifyColumn] Received 'request_inspection_with_comment' but status is not DRAFT. Ledger ID: {$this->ledgerId}. Ignoring.");
+                $this->error(__('messages.error.generic'));
+                return;
+            }
+
+            Log::debug("[ModifyColumn] Handling 'request_inspection_with_comment'. Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
+//            dd("[ModifyColumn] Action: {$actionType}, Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
+
+            // 親クラスのメソッドを呼び出すか、ModifyColumn 固有の処理を記述
+            parent::handleRequestInspectionWithComment($actionType, $ledgerId, $comment);
+            return; // 処理が終わったら抜ける
         }
+
+        // 上記のどの条件にも当てはまらない場合は、この ModifyColumn インスタンスが処理すべきイベントではない
+        Log::debug("[ModifyColumn] Received 'workflow-action-with-comment' with unhandled actionType: {$actionType} for Ledger ID: {$ledgerId}. Ignoring.");
+        $this->error(__('messages.error.generic'));
     }
+
 
     // --- ワークフロー無効時の直接保存 (親クラスのメソッドを呼び出す) ---
     public function saveDirectly(): void
@@ -354,51 +363,4 @@ class ModifyColumn extends CreateColumn
         parent::saveDirectly();
     }
 
-    // 点検依頼 (Modify 時も基本的に同じだが、権限や状態チェックが必要)
-    //    public function requestInspection(): void
-    //    {
-    //        if ($this->ledgerRecord?->status !== WorkflowStatus::DRAFT) {
-    //            $this->error(__('ledger.workflow.cannot_request_inspection_approved'));
-    //
-    //            return;
-    //        }
-    //
-    //        // 承認済みならエラー
-    //        if ($this->ledgerRecord?->isLocked()) {
-    //            $this->error(__('ledger.workflow.cannot_request_inspection_approved'));
-    //
-    //            return;
-    //        }
-    //        // ステータスが DRAFT でなければエラー (フロー中編集は saveChanges 経由)
-    //        if ($this->ledgerRecord?->status !== WorkflowStatus::DRAFT) {
-    //            $this->error(__('ledger.workflow.can_request_inspection_only_from_draft'));
-    //
-    //            return;
-    //        }
-    //
-    //        // バリデーション
-    //        $validated = $this->validate(array_merge(
-    //            array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY),
-    //            ['selectedInspectorId' => ['required', 'integer', 'exists:users,id']]
-    //        ));
-    //
-    //        $userId = Auth::id();
-    //        $this->processFilesForSave();
-    //
-    //        try {
-    // //            dd($this->ledgerId, $userId, $validated['selectedInspectorId']);
-    //            $result = $this->workflowService->requestInspection(
-    //                $this->ledgerId, // 既存 ID を渡す
-    //                $userId,
-    //                $validated['selectedInspectorId']
-    //            );
-    //            $this->ledgerRecord = $result; // ステータスが更新されたレコードを反映
-    //            $this->addAttachedFileRecordIfNecessary();
-    //            $this->success(__('ledger.workflow.inspection_requested_message'),
-    //                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
-    //        } catch (\Exception $e) {
-    //            Log::error('Inspection request failed (modify): ' . $e->getMessage());
-    //            $this->error(__('messages.error.generic'));
-    //        }
-    //    }
 }
