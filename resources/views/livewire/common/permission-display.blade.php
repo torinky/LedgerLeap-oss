@@ -1,6 +1,10 @@
 <div class="card p-4 bg-base-100 shadow-xl">
-    <h3 class="text-xl font-semibold mb-4 text-base-content">{{ __('ledger.access_and_permissions.title') }}</h3>
 
+    <x-mary-header :title="__('ledger.access_and_permissions.title')"
+                   size="text-xl" separator progress-indicator
+                   icon="o-shield-check"
+    >
+    </x-mary-header>
 
     {{-- ログインユーザーの最高権限概要 --}}
     <div class="mb-6 p-4 rounded-lg bg-info/20 text-info-content border border-info/50">
@@ -20,10 +24,14 @@
         @endif
         <p class="text-sm mt-2 text-info-content/80">{{ __('ledger.access_and_permissions.check_details_below') }}</p>
     </div>
+    <div class="divider"></div>
 
     {{-- アクセス権限を持つロールのリスト --}}
     <div class="mb-6">
-        <h4 class="text-lg font-semibold mb-3 text-base-content">{{ __('ledger.access_and_permissions.roles_with_access') }}</h4>
+        <h4 class="text-lg font-semibold mb-3 text-base-content">
+{{--            {{ __('ledger.access_and_permissions.roles_with_access') }}--}}
+            <x-mary-icon name="o-sparkles" label="{{ __('ledger.access_and_permissions.roles_with_access') }}"></x-mary-icon>
+        </h4>
         @if ($this->accessRoles->isEmpty())
             <div class="alert alert-info bg-info/10 text-info-content border-info">
                 <i class="fas fa-exclamation-circle text-info"></i>
@@ -51,8 +59,7 @@
 
                 @scope('cell_permissions', $item)
                 @forelse($item->permissions as $permission)
-{{--                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">--}}
-                    <span class="badge badge-{{ $permission->getColor() }} mr-1 mb-1">
+                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
                             {{ $permission->getLabel() }}
                         </span>
                 @empty
@@ -73,9 +80,67 @@
         @endif
     </div>
 
+    <div class="divider"></div>
+
+    {{-- アクセス権限を持つ組織のリスト --}}
+    <div class="mb-6">
+        <h4 class="text-lg font-semibold mb-3 text-base-content">
+            <x-mary-icon name="o-building-office-2" label="{{ __('ledger.access_and_permissions.organizations_with_access') }}"/>
+        </h4>
+        @if ($this->accessOrganizations->isEmpty())
+            <div class="alert alert-info bg-info/10 text-info-content border-info">
+                <i class="fas fa-building text-info"></i>
+                <span>{{ __('ledger.access_and_permissions.no_organizations_found') }}</span>
+            </div>
+        @else
+            <x-mary-table
+                    class="table-compact w-full table-zebra overflow-x-auto"
+                    :headers="[
+                    ['key' => 'organization_name', 'label' => __('ledger.access_and_permissions.column.organization_name'), 'class' => 'min-w-[8rem]'],
+                    ['key' => 'permissions', 'label' => __('ledger.access_and_permissions.column.permissions'), 'class' => 'min-w-[12rem]'],
+                    ['key' => 'source', 'label' => __('ledger.access_and_permissions.column.source'), 'class' => 'min-w-[6rem]'],
+                ]"
+                    :rows="$this->accessOrganizations"
+                    striped
+            >
+                @scope('cell_organization_name', $item)
+                <span class="font-medium text-base-content">{{ $item->display_name }}</span> {{-- 階層表示名を使用 --}}
+                @if($item->is_inherited)
+                    <span class="tooltip tooltip-bottom text-base-content/70" data-tip="{{ __('ledger.access_and_permissions.inherited_from_parent') }}">
+                            <i class="fas fa-level-up-alt ml-1 text-sm"></i>
+                        </span>
+                @endif
+                @endscope
+
+                @scope('cell_permissions', $item)
+                @forelse($item->permissions as $permission)
+                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
+                            {{ $permission->getLabel() }}
+                        </span>
+                @empty
+                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>
+                @endforelse
+                @endscope
+
+                @scope('cell_source', $item)
+                <span class="badge badge-outline text-base-content/70">
+                        {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
+                    </span>
+                @endscope
+
+                <x-slot:empty>
+                    <x-mary-icon name="o-building-office-2" label="{{ __('ledger.access_and_permissions.no_organizations_found') }}"/>
+                </x-slot:empty>
+            </x-mary-table>
+        @endif
+    </div>
+    <div class="divider"></div>
+
     {{-- アクセス可能なユーザーのリスト --}}
     <div>
-        <h4 class="text-lg font-semibold mb-3 text-base-content">{{ __('ledger.access_and_permissions.users_with_access') }}</h4>
+        <h4 class="text-lg font-semibold mb-3 text-base-content">
+            <x-mary-icon name="o-users" label="{{ __('ledger.access_and_permissions.users_with_access') }}"/>
+        </h4>
 
         {{-- ユーザー検索フィルター --}}
         <div class="mb-4">
@@ -84,8 +149,12 @@
                     placeholder="{{ __('ledger.access_and_permissions.search_users_placeholder') }}"
                     icon="o-magnifying-glass"
                     class="bg-base-200 text-base-content placeholder-base-content/50"
-                    loading
-            />
+            >
+                <x-slot:append>
+                    {{-- ローディングインジケーター --}}
+                    <x-mary-loading wire:loading class="my-4" />
+                </x-slot:append>
+            </x-mary-input>
         </div>
 
         @if ($this->accessUsers->isEmpty())
@@ -99,6 +168,7 @@
                     :headers="[
                     ['key' => 'name', 'label' => __('ledger.access_and_permissions.column.user_name'), 'class' => 'min-w-[8rem]'],
                     ['key' => 'email', 'label' => __('ledger.access_and_permissions.column.email'), 'class' => 'min-w-[8rem]'],
+                    ['key' => 'organizations', 'label' => __('ledger.access_and_permissions.column.organizations'), 'class' => 'min-w-[10rem]'],
                     ['key' => 'roles', 'label' => __('ledger.access_and_permissions.column.roles'), 'class' => 'min-w-[10rem]'],
                 ]"
                     :rows="$this->accessUsers"
@@ -106,8 +176,6 @@
             >
                 @scope('cell_name', $user)
                 <span class="font-medium text-base-content">{{ $user->name }}
-                    {{-- ローディングインジケーター --}}
-                <x-mary-loading wire:loading class="my-4" />
                 </span>
                 @endscope
 
@@ -115,9 +183,19 @@
                 <span class="text-base-content/80">{{ $user->email }}</span>
                 @endscope
 
+                @scope('cell_organizations', $user)
+                @forelse($user->organizations->sortBy('name') as $org) {{-- 組織名をソート --}}
+                <span class="badge badge-neutral text-neutral-content mr-1 mb-1">
+                            {{ $org->name }}@if($org->pivot->is_primary) <span class="text-xs ml-1 font-bold text-info-content/80">(主)</span>@endif
+                        </span>
+                @empty
+                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_organizations') }}</span>
+                @endforelse
+                @endscope
+
                 @scope('cell_roles', $user)
-                @forelse($user->getAllUniqueRoles() as $role)
-                    <span class="badge badge-neutral  mr-1 mb-1">
+                @forelse($user->roles->sortBy('name') as $role) {{-- ロール名をソート --}}
+                <span class="badge badge-neutral text-neutral-content mr-1 mb-1 opacity-80">
                             {{ $role->name }}
                         </span>
                 @empty

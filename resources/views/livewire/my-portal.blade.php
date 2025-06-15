@@ -5,7 +5,9 @@
 
     <x-slot name="header">
         <x-mary-header :title="__('ledger.my_portal_title')" subtitle="ようこそ、{{ Auth::user()->name }} さん！"
-                       size="text-xl" separator progress-indicator>
+                       size="text-xl" separator progress-indicator
+                       icon="o-home-modern"
+        >
             {{-- 必要であれば右側にアクションボタンなどを追加できる --}}
             <x-slot:actions>
                 <x-mary-button label="{{ __('ledger.edit_profile_title') }}" icon="o-user"

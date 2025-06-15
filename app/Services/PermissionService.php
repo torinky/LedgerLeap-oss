@@ -6,11 +6,14 @@ use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder; // 追加
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * 権限表示に関するロジックを提供するサービス
@@ -29,7 +32,7 @@ class PermissionService
      *
      * @param int $resourceId
      * @param string $resourceType
-     * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, is_direct: bool}>
+     * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
     public function getAccessRolesWithPermissions(int $resourceId, string $resourceType): Collection
     {
@@ -63,13 +66,30 @@ class PermissionService
         if ($targetFolder) {
             $allRoles = Role::all(); // 全ロールを取得 (最適化の余地あり)
             foreach ($allRoles as $role) {
-                $folderPermissions = $targetFolder->getAllPermissionsWithInheritance($role); // 包含関係考慮済み
-                $accessPermissions = collect($folderPermissions)->filter(fn($p) => FolderPermissionType::tryFrom($p)?->isAccessType());
+                // Folder の getAllPermissionsWithInheritance を利用して、そのロールが持つ権限を継承含めて取得
+                // ここで取得されるのは `permission.value` の文字列配列
+                $folderPermissionsValues = $targetFolder->getAllPermissionsWithInheritance($role);
+                $accessPermissions = collect();
+
+                // 取得した文字列値を FolderPermissionType Enum に変換し、アクセスタイプのみをフィルタリング
+                foreach ($folderPermissionsValues as $permValue) {
+                    $permType = FolderPermissionType::tryFrom($permValue);
+                    if ($permType && $permType->isAccessType()) {
+                        // 既に同じ強度の権限が追加されていないか確認し、重複を防ぐ
+                        $foundStrongerOrEqual = $accessPermissions->contains(fn($p) => $p->getOrder() >= $permType->getOrder());
+                        if (!$foundStrongerOrEqual) {
+                            // より弱い権限を置き換える
+                            $accessPermissions = $accessPermissions->filter(fn($p) => !$permType->includes($p));
+                            $accessPermissions->push($permType);
+                        }
+                    }
+                }
+                $accessPermissions = $accessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder());
 
                 if ($accessPermissions->isNotEmpty()) {
                     $rolesWithPermissions->push((object)[
                         'role' => $role,
-                        'permissions' => $accessPermissions->map(fn($p) => FolderPermissionType::from($p)),
+                        'permissions' => $accessPermissions,
                         'source' => 'folder', // 権限のソース
                         'is_inherited' => $targetFolder->id !== $resourceId // 対象がフォルダ自身でなければ継承
                     ]);
@@ -81,10 +101,10 @@ class PermissionService
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
             $ledgerDefineRoles = $targetLedgerDefine->roles;
             foreach ($ledgerDefineRoles as $role) {
-                // HasModelRoles トレイトの hasPermissionTo() を使用
                 $directPermissions = collect();
-                foreach (FolderPermissionType::accessPermissions() as $permType) { // アクセス権限タイプを全て試す
-                    if ($targetLedgerDefine->hasPermissionTo($permType->value, $role->name)) { // ロール名でチェック
+                // HasModelRoles トレイトの hasPermissionTo() を使用して、台帳定義に直接紐づく権限をチェック
+                foreach (FolderPermissionType::accessPermissions() as $permType) {
+                    if ($targetLedgerDefine->hasPermissionTo($permType->value, $role->name)) {
                         $directPermissions->push($permType);
                     }
                 }
@@ -92,7 +112,7 @@ class PermissionService
                 if ($directPermissions->isNotEmpty()) {
                     $rolesWithPermissions->push((object)[
                         'role' => $role,
-                        'permissions' => $directPermissions,
+                        'permissions' => $directPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
                         'source' => 'ledger_define',
                         'is_inherited' => false // 台帳定義への直接割り当て
                     ]);
@@ -100,42 +120,160 @@ class PermissionService
             }
         }
 
-        // ロールIDとソースでユニーク化し、権限を結合
-        return $rolesWithPermissions->groupBy(fn($item) => $item->role->id . '_' . $item->source)
-            ->map(function ($groupedItems) {
-                $uniquePermissions = collect();
-                foreach ($groupedItems as $item) {
-                    // 各パーミッションタイプとその包含関係を考慮してユニークな集合を形成
-                    foreach ($item->permissions as $perm) {
+        // ロールIDでグループ化し、権限を結合（重複するロールがあった場合に権限をマージ）
+        // ここでユニーク化することで、同じロールがフォルダと台帳定義の両方で権限を持つ場合でも、
+        // 権限タイプをマージして一つのエントリとして表示できる。
+        return $rolesWithPermissions->groupBy(fn($item) => $item->role->id) // ロールIDでグループ化
+        ->map(function ($groupedItems) {
+            $role = $groupedItems->first()->role;
+            $uniquePermissions = collect();
+            $sources = collect();
+            $isInherited = false;
+
+            foreach ($groupedItems as $item) {
+                // 各パーミッションタイプとその包含関係を考慮してユニークな集合を形成
+                foreach ($item->permissions as $perm) {
+                    $added = false;
+                    foreach ($uniquePermissions as $idx => $existingPerm) {
+                        if ($existingPerm->includes($perm)) {
+                            $added = true;
+                            break;
+                        }
+                        if ($perm->includes($existingPerm)) {
+                            $uniquePermissions->forget($idx);
+                            $uniquePermissions->push($perm);
+                            $added = true;
+                            break;
+                        }
+                    }
+                    if (!$added) {
+                        $uniquePermissions->push($perm);
+                    }
+                }
+                $sources->push($item->source);
+                if ($item->is_inherited) $isInherited = true;
+            }
+            $uniquePermissions = $uniquePermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder());
+
+            return (object)[
+                'role' => $role,
+                'permissions' => $uniquePermissions,
+                'source' => $sources->unique()->implode(', '),
+                'is_inherited' => $isInherited
+            ];
+        })->values()->sortBy(fn($item) => $item->role->name);
+    }
+
+    /**
+     * 指定されたリソースにアクセス可能な組織とその権限タイプを取得する
+     *
+     * @param int $resourceId
+     * @param string $resourceType
+     * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
+     */
+    public function getAccessOrganizationsWithPermissions(int $resourceId, string $resourceType): Collection
+    {
+        $organizationsWithPermissions = collect();
+
+        // 1. 対象リソースにアクセス権限を持つロールを取得
+        $accessRoles = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
+            ->filter(fn($item) => $item->permissions->isNotEmpty());
+
+        if ($accessRoles->isEmpty()) {
+            return collect();
+        }
+
+        // アクセス権限を持つロールのIDリスト
+        $accessRoleIds = $accessRoles->pluck('role.id')->unique()->toArray();
+
+        // 2. そのロールが直接割り当てられている組織を取得
+        $directOrganizations = Organization::whereHas('roles', function (Builder $query) use ($accessRoleIds) {
+            $query->whereIn('roles.id', $accessRoleIds);
+        })->get()->keyBy('id');
+
+        // 3. そのロールが割り当てられている組織の祖先組織を取得 (継承を考慮)
+        $inheritedOrganizations = collect();
+        foreach ($directOrganizations as $org) {
+            $inheritedOrganizations = $inheritedOrganizations->merge($org->ancestors);
+        }
+        $allRelevantOrganizations = $directOrganizations->merge($inheritedOrganizations->unique('id'));
+
+        // 組織の親子関係を考慮してツリーを再構築 (パフォーマンスが課題になる可能性あり)
+        $rootOrganizations = $allRelevantOrganizations->whereNull('parent_id');
+        $this->buildOrganizationTree($rootOrganizations, $allRelevantOrganizations);
+
+
+        // 4. 各関連組織に対して、最終的な権限を計算
+        foreach ($allRelevantOrganizations as $org) { // buildOrganizationTree で再構築されたコレクション
+            $orgAccessPermissions = collect();
+            $orgSources = collect();
+            $orgIsInherited = false;
+
+            // この組織が持つ全てのロール（直接付与されたロールと親組織から継承されたロール）
+            $orgRoles = $org->getAllRoles(); // Organization モデルの getAllRoles() を使用
+
+            foreach ($accessRoles as $accessItem) {
+                // この組織のロールが、アクセス権限を持つロールのいずれかであるか
+                if ($orgRoles->contains('id', $accessItem->role->id)) {
+                    // アクセス権限をマージ
+                    foreach ($accessItem->permissions as $perm) {
                         $added = false;
-                        foreach ($uniquePermissions as $idx => $existingPerm) {
-                            if ($existingPerm->includes($perm)) { // 既存のものが新しいものを含むなら何もしない
+                        foreach ($orgAccessPermissions as $idx => $existingPerm) {
+                            if ($existingPerm->includes($perm)) {
                                 $added = true;
                                 break;
                             }
-                            if ($perm->includes($existingPerm)) { // 新しいものが既存のものを含むなら既存を置き換える
-                                $uniquePermissions->forget($idx);
-                                $uniquePermissions->push($perm);
+                            if ($perm->includes($existingPerm)) {
+                                $orgAccessPermissions->forget($idx);
+                                $orgAccessPermissions->push($perm);
                                 $added = true;
                                 break;
                             }
                         }
                         if (!$added) {
-                            $uniquePermissions->push($perm);
+                            $orgAccessPermissions->push($perm);
                         }
                     }
+                    $orgSources->push($accessItem->source);
+                    if ($accessItem->is_inherited) $orgIsInherited = true;
                 }
-                // より強い権限が残るようにソート
-                $uniquePermissions = $uniquePermissions->sortByDesc(fn($p) => $p->getOrder());
+            }
 
-                return (object)[
-                    'role' => $groupedItems->first()->role,
-                    'permissions' => $uniquePermissions->unique('value'), // Enum値でさらにユニーク化
-                    'source' => $groupedItems->first()->source,
-                    'is_inherited' => $groupedItems->first()->is_inherited ?? false
-                ];
-            })->values()->sortBy(fn($item) => $item->role->name); // ロール名でソート
+            if ($orgAccessPermissions->isNotEmpty()) {
+                $organizationsWithPermissions->push((object)[
+                    'organization' => $org,
+                    'permissions' => $orgAccessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
+                    'source' => $orgSources->unique()->implode(', '),
+                    'is_inherited' => $orgIsInherited
+                ]);
+            }
+        }
+
+        // 組織名を階層表示のために整形してからソート
+        return $organizationsWithPermissions->map(function($item) {
+            $item->display_name = $item->organization->ancestors->pluck('name')->implode(' > ') . ($item->organization->ancestors->isNotEmpty() ? ' > ' : '') . $item->organization->name;
+            return $item;
+        })->sortBy('display_name')->values();
     }
+
+    /**
+     * 組織コレクションからツリーを構築するヘルパー
+     * （NestedSet モデルの children リレーションが正しくロードされていない場合に対応）
+     *
+     * @param Collection $nodes
+     * @param Collection $allOrganizations
+     * @return void
+     */
+    private function buildOrganizationTree(Collection $nodes, Collection $allOrganizations): void
+    {
+        foreach ($nodes as $node) {
+            // `$node->children` のリレーションを上書きするのではなく、
+            // `$allOrganizations` から直接子を探して新しいコレクションを作成
+            $node->setRelation('children', $allOrganizations->filter(fn($org) => $org->parent_id === $node->id)->values());
+            $this->buildOrganizationTree($node->children, $allOrganizations);
+        }
+    }
+
 
     /**
      * 指定されたリソースにアクセス可能なユーザーのリストを取得する
@@ -143,37 +281,42 @@ class PermissionService
      * @param int $resourceId
      * @param string $resourceType
      * @param string|null $searchQuery
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator<User>
      */
-    public function getAccessUsers(int $resourceId, string $resourceType, ?string $searchQuery = null) // : LengthAwarePaginator
+    public function getAccessUsers(int $resourceId, string $resourceType, ?string $searchQuery = null): LengthAwarePaginator
     {
+        // まず、対象リソースにアクセス権限を持つロールを取得する
         $accessRoles = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
-            ->filter(fn($item) => $item->permissions->isNotEmpty()) // アクセス権限を持つもののみ
+            ->filter(fn($item) => $item->permissions->isNotEmpty())
             ->pluck('role'); // ロールモデルのコレクション
 
         if ($accessRoles->isEmpty()) {
-            return collect(); // 誰もアクセスできない
+            return (new User())->newQuery()->paginate(10); // 空のPaginatorを返す
         }
 
         $query = User::query()->distinct();
 
-        // ロール経由でアクセスできるユーザー
-        $query->whereHas('roles', function ($q) use ($accessRoles) {
-            $q->whereIn('id', $accessRoles->pluck('id'));
+        // ユーザーに直接割り当てられたロール、または所属組織に割り当てられたロールが
+        // アクセス可能なロールに含まれるユーザーを取得
+        $query->where(function (Builder $q) use ($accessRoles) {
+            // ユーザーに直接割り当てられたロールが accessRoles に含まれる場合
+            $q->whereHas('roles', function ($subQ) use ($accessRoles) {
+                $subQ->whereIn('roles.id', $accessRoles->pluck('id'));
+            })
+                // ユーザーが所属する組織に割り当てられたロールが accessRoles に含まれる場合
+                ->orWhereHas('organizations.roles', function ($subQ) use ($accessRoles) {
+                    $subQ->whereIn('roles.id', $accessRoles->pluck('id'));
+                });
         });
 
-        // ユーザーが所属する組織を通してアクセスできるユーザー
-        // これは複雑になるため、ここではロール経由のアクセスに絞るか、別途詳細なロジックが必要。
-        // 現状、SpatieのPermissionTraitはユーザーと組織に直接ロールを付与できるため、
-        // 上記の whereHas('roles') が、ユーザーに直接付与されたロールと、
-        // ユーザーが所属する組織に付与されたロールの両方をカバーすることになる。
-        // `UserService::getAllUniqueRolesForUser()` が既に組織のロールも考慮している。
-        // ここでは `$accessRoles` に含まれるロールを持つユーザーをシンプルに取得する。
-
+        // ユーザーの組織とロールをイーガーロードして N+1 問題を避ける
+        $query->with(['organizations', 'roles']);
 
         if ($searchQuery) {
-            $query->where('name', 'like', '%' . $searchQuery . '%')
-                ->orWhere('email', 'like', '%' . $searchQuery . '%');
+            $query->where(function($q) use ($searchQuery) {
+                $q->where('name', 'like', '%' . $searchQuery . '%')
+                    ->orWhere('email', 'like', '%' . $searchQuery . '%');
+            });
         }
 
         return $query->paginate(10);
@@ -182,6 +325,7 @@ class PermissionService
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
+     * (このメソッドは変更なし)
      *
      * @param int $resourceId
      * @param string $resourceType
@@ -196,7 +340,7 @@ class PermissionService
 
         // スーパー管理者なら ADMIN を返す
         if ($user->hasRole('super_admin')) {
-//            return FolderPermissionType::ADMIN;
+            return FolderPermissionType::ADMIN;
         }
 
         $targetFolder = null;

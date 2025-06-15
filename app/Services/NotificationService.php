@@ -155,9 +155,10 @@ class NotificationService
         $subject = $activity->subject;
         Log::info('NotificationService::getNotifiableRecipients called', ['subject' => $subject, 'activity' => $activity]);
         // subject (変更されたモデル) からフォルダーを特定し、その子孫フォルダーも取得
-        $folder = $subject->folder()->first();
-
-        if (!$folder) {
+        if (method_exists($subject, 'folder') && $subject->folder()) {
+            // フォルダが存在する場合の処理
+            $folder = $subject->folder()->first();
+        } else {
             \Log::info('Folder not found for subject: ' . get_class($subject));
             return collect();
         }

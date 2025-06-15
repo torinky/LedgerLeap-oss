@@ -901,6 +901,9 @@
         'no_roles' => 'ロールなし',
         'inherited_from_parent' => '親フォルダ/定義から継承',
         'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
+        'organizations_with_access' => 'アクセス権限を持つ組織',
+        'no_organizations_found' => 'このリソースにアクセス権限を持つ組織は見つかりませんでした。',
+        'no_organizations' => '所属組織なし',
         'column' => [
             'role_name' => 'ロール名',
             'permissions' => '権限',
@@ -908,6 +911,8 @@
             'user_name' => 'ユーザー名',
             'email' => 'メールアドレス',
             'roles' => 'ロール',
+            'organization_name' => '組織名', // 新規追加
+            'organizations' => '所属組織', // 新規追加
         ],
         'source' => [
             'folder' => 'フォルダ',

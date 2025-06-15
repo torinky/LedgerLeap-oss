@@ -6,9 +6,10 @@ use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Organization; // 追加
 use App\Models\Role;
 use App\Models\User;
-use App\Services\PermissionService; // PermissionService を使用
+use App\Services\PermissionService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -24,12 +25,11 @@ class PermissionDisplay extends Component
 
     // アクセス可能なユーザーリストの検索/フィルタリング
     public ?string $searchUserQuery = null;
-    public ?int $filterRoleId = null;
-    public ?string $filterPermissionType = null; // FolderPermissionType の value
+    public ?int $filterRoleId = null; // 未使用だが定義は残す
+    public ?string $filterPermissionType = null; // 未使用だが定義は残す
 
     protected PermissionService $permissionService;
 
-    // リッスンするイベントを定義 (例: フィルタリング変更時など)
     protected $listeners = ['refreshPermissions' => '$refresh'];
 
     public function boot(PermissionService $permissionService)
@@ -53,10 +53,19 @@ class PermissionDisplay extends Component
     }
 
     /**
+     * アクセス可能な組織と権限のリストを取得
+     * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
+     */
+    public function getAccessOrganizationsProperty(): Collection
+    {
+        return $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
+    }
+
+    /**
      * アクセス可能なユーザーのリストを取得
      * @return LengthAwarePaginator<User>
      */
-    public function getAccessUsersProperty()
+    public function getAccessUsersProperty(): LengthAwarePaginator
     {
         return $this->permissionService->getAccessUsers($this->resourceId, $this->resourceType, $this->searchUserQuery);
     }
@@ -70,7 +79,6 @@ class PermissionDisplay extends Component
         return $this->permissionService->getCurrentUserHighestPermission($this->resourceId, $this->resourceType);
     }
 
-
     public function render()
     {
         // 権限表示の前提として、最低限の閲覧権限（例: view_folder や view_ledger_define, view_ledger）があるべき
@@ -80,7 +88,7 @@ class PermissionDisplay extends Component
         }
 
         // TODO: より厳密な権限チェック
-        // 例えば、当該フォルダへのREAD権限がない場合は表示しないなど
+        // 例えば、当該リソースに対する view_access_permissions のような権限が必要であればここでチェック
         // 現状は、権限がないと getAccessRolesProperty() などが空を返すため、表示内容で制御
 
         return view('livewire.common.permission-display');
