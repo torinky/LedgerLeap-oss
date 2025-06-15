@@ -223,8 +223,7 @@ class GenericNotification extends Notification implements ShouldQueue
      * @param mixed $notifiable
      * @return array
      */
-    public
-    function toDatabase($notifiable)
+    public function toDatabase($notifiable)
     {
         //        dd($notifiable); // 追加: $notifiable の内容を確認
         Log::info('GenericNotification::toDatabase called', ['notifiable' => $notifiable]);

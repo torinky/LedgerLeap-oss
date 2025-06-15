@@ -87,10 +87,12 @@
                         </div>
 
                         <input type="radio" name="notification_tabs" role="tab" class="tab"
-                               aria-label="{{ __('activitylog.activitylog') }}" {{ $activeTab === 'activity' ? 'checked' : '' }} />
+                               aria-label="{{ __('ledger.activity.title') }}" {{ $activeTab === 'activity' ? 'checked' : '' }}
+                               :checked="activeTab === 'activity'" @click="activeTab = 'activity'" />
                         <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
                             {{-- アクティビティログ Livewire コンポーネント呼び出し --}}
-                            @livewire('user-activity-log') {{-- 既存コンポーネント名 --}}
+                            {{-- @livewire('user-activity-log') --}} {{-- 既存コンポーネント名 --}}
+                            @livewire('common.activity-history-display') {{-- 共通コンポーネントに置き換え --}}
                         </div>
 
                     </div>

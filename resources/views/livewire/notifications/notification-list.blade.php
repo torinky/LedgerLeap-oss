@@ -43,23 +43,12 @@
                         </div>
                     </div>
 
-                    {{-- 変更履歴表示 (changes があれば) --}}
-                    @if ($display['changes'] && isset($display['changes']['attributes']))
+                    {{-- 変更履歴表示 (changes_formatted があれば) --}}
+                    @if ($display['changes_formatted'])
                         <div class="mt-2">
-                            <h6 class="text-sm font-medium">{{__('ledger.changes')}}:</h6>
+                            <h6 class="text-sm font-medium">{{__('ledger.activity.column.changes')}}:</h6>
                             <div class="overflow-x-auto">
-                                <table class="table table-xs w-full">
-                                    {{-- ... (テーブルヘッダー) ... --}}
-                                    <tbody>
-                                    @foreach($display['changes']['attributes'] as $attribute => $newValue)
-                                        <x-diff-display
-                                                :attribute="$attribute"
-                                                :old="$display['changes']['old'][$attribute] ?? null"
-                                                :new="$newValue"
-                                        />
-                                    @endforeach
-                                    </tbody>
-                                </table>
+                                {!! $display['changes_formatted'] !!}
                             </div>
                         </div>
                     @endif

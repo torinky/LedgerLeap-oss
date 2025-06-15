@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Notifications;
 
+use App\Helpers\ActivityLogFormatter;
+use App\Models\CustomActivity;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +16,7 @@ class NotificationList extends Component
 {
     use WithPagination;
 
-    public int $totalNotifications = 0; // <<<--- 追加: 合計件数用プロパティ
+    public int $totalNotifications = 0; // 合計件数用プロパティ
 
     public function mount(NotificationService $notificationService)
     {
@@ -81,9 +83,9 @@ class NotificationList extends Component
             'link' => $payload['link'] ?? null,
             'link_text' => __('ledger.view_details'),
             'comments' => $payload['comments'] ?? null,
-            'changes' => $payload['changes'] ?? null,
             'timestamp' => $notification->created_at->diffForHumans(),
             'is_unread' => $notification->unread(),
+            'changes_formatted' => null,
         ];
 
         $notificationClassName = $notification->type;
@@ -94,62 +96,46 @@ class NotificationList extends Component
         $routeName = $payload['route'] ?? null;
         $routeParams = $payload['route_params'] ?? []; // payload に route_params があれば使う
 
-        // --- メッセージ生成 ---
-        $subjectLabel = $subjectType ? (__('ledger.notification_types.' . $subjectType) ?? class_basename($subjectType)) : '';
-        $eventLabel = $event ? __('ledger.action_' . $event) : '';
-        $subjectName = '';
-        if ($subjectType === 'App\\Models\\Ledger') {
-            $subjectName = $payload['ledger_name'] ?? "ID:{$subjectId}";
-        } elseif ($subjectId) {
-            $subjectName = "{$subjectLabel} ID:{$subjectId}";
-        }
 
-        if ($notificationClassName === 'App\\Notifications\\WorkflowSummaryNotification') { // Summary 通知の場合
-            $displayData['message'] = $payload['message'] ?? __('ledger.workflow.summary_notification_default'); // Summary 用メッセージ
-        } else { // GenericNotification やその他の場合
-            $baseMessage = $subjectName ? "{$subjectLabel}「{$subjectName}」" : "{$subjectLabel} ";
-            if ($causerName) {
-                $baseMessage = "<strong>{$causerName}</strong> " . __('ledger.performed_action') . " {$baseMessage}";
+        // --- Activity Log の changes 部分のフォーマット ---
+        // Notification のデータに activity_log_id が含まれている場合
+        if (!empty($payload['activity_log_id'])) {
+            $activityLog = CustomActivity::find($payload['activity_log_id']);
+            $displayData['message'] =
+                "<strong>{$causerName}</strong>"
+                . __('ledger.user_action_suffix')
+                . ActivityLogFormatter::getSubjectNameForDisplay($activityLog ?? null)
+                .__('ledger.user_object_suffix')
+                . ActivityLogFormatter::getOperationDescription($activityLog ?? null);
+            if (empty($displayData['link'])) {
+                $displayData['link'] = ActivityLogFormatter::getSubjectDetailLink($activityLog ?? null);
             }
-            $displayData['message'] = $baseMessage . $eventLabel;
-        }
+            $displayData['changes_formatted'] = ActivityLogFormatter::formatChanges($activityLog ?? null);
+            return $displayData; // 早期リターン
 
-        // --- リンク生成 ---
-        if (empty($displayData['link'])) {
-            if ($routeName && Route::has($routeName)) {
-                // ルートパラメータ名を特定 (仮)
-                $routeParamName = match ($routeName) {
-                    'ledger.show' => 'ledgerId',
-                    'ledgerDiff.show' => 'ledgerId', // diffId も必要なら routeParams で渡す
-                    default => 'id'
-                };
-                // payload に route_params があればそれを使う
-                if (!empty($routeParams)) {
-                    $linkParams = $routeParams;
-                    // subjectId がパラメータに含まれていない場合は追加する (念のため)
-                    if ($subjectId && !in_array($subjectId, $linkParams) && !isset($linkParams[$routeParamName])) {
-                        $linkParams[$routeParamName] = $subjectId;
-                    }
-                } elseif ($subjectId) {
-                    $linkParams = [$routeParamName => $subjectId];
-                } else {
-                    $linkParams = []; // パラメータなし
-                }
-
-                try {
-                    $displayData['link'] = route($routeName, $linkParams);
-                } catch (\Exception $e) {
-                    Log::warning("Failed to generate route '{$routeName}' for notification ID: {$notification->id}", ['params' => $linkParams, 'error' => $e->getMessage()]);
-                    $displayData['link_text'] = __('ledger.link_unavailable');
-                }
-
+        } else {
+            // --- メッセージ生成 ---
+            $subjectLabel = $subjectType ? (__('ledger.activity.model_name.' . strtolower(class_basename($subjectType))) ?? class_basename($subjectType)) : ''; // 翻訳キーを ledger.activity.model_name.* に変更
+            $eventLabel = $event ? __('ledger.activity.event.' . $event) : ''; // 翻訳キーを ledger.activity.event.* に変更
+            $subjectName = '';
+            if ($subjectType === 'App\\Models\\Ledger') {
+                $subjectName = $payload['ledger_name'] ?? "ID:{$subjectId}";
             } elseif ($subjectId) {
-                $displayData['link'] = null;
-                $displayData['link_text'] = __('ledger.link_unavailable');
-            } else {
-                $displayData['link'] = null; // リンクなし
+                $subjectName = "ID:{$subjectId}"; // subjectLabel をメッセージに含めるのでここでは ID のみ
             }
 
+            if ($notificationClassName === 'App\\Notifications\\WorkflowSummaryNotification') { // Summary 通知の場合
+                $displayData['message'] = $payload['message'] ?? __('ledger.workflow.summary_notification_default'); // Summary 用メッセージ
+            } else { // GenericNotification やその他の場合
+                $baseMessage = $subjectName ? "{$subjectLabel}「{$subjectName}」" : "{$subjectLabel} ";
+               $baseMessage .=__('ledger.user_object_suffix');
+                if ($causerName) {
+                    // $causer_name は 'causer_name' キーで直接渡されることを想定
+                    $baseMessage = "<strong>{$causerName}</strong>" . __('ledger.user_action_suffix')
+                        . "{$baseMessage}"; // 自然な日本語になるよう調整
+                }
+                $displayData['message'] = $baseMessage . " {$eventLabel}"; // eventLabel を最後に結合
+            }
         }
 
         return $displayData;
