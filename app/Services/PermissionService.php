@@ -9,7 +9,7 @@ use App\Models\LedgerDefine;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder; // 追加
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -29,6 +29,7 @@ class PermissionService
 
     /**
      * 指定されたリソースに対するアクセス可能なロールとその権限タイプを取得する
+     * (変更なし)
      *
      * @param int $resourceId
      * @param string $resourceType
@@ -121,8 +122,6 @@ class PermissionService
         }
 
         // ロールIDでグループ化し、権限を結合（重複するロールがあった場合に権限をマージ）
-        // ここでユニーク化することで、同じロールがフォルダと台帳定義の両方で権限を持つ場合でも、
-        // 権限タイプをマージして一つのエントリとして表示できる。
         return $rolesWithPermissions->groupBy(fn($item) => $item->role->id) // ロールIDでグループ化
         ->map(function ($groupedItems) {
             $role = $groupedItems->first()->role;
@@ -169,7 +168,7 @@ class PermissionService
      *
      * @param int $resourceId
      * @param string $resourceType
-     * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
+     * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool, direct_roles: Collection<Role>, inherited_roles: Collection<Role>}>
      */
     public function getAccessOrganizationsWithPermissions(int $resourceId, string $resourceType): Collection
     {
@@ -186,35 +185,33 @@ class PermissionService
         // アクセス権限を持つロールのIDリスト
         $accessRoleIds = $accessRoles->pluck('role.id')->unique()->toArray();
 
-        // 2. そのロールが直接割り当てられている組織を取得
-        $directOrganizations = Organization::whereHas('roles', function (Builder $query) use ($accessRoleIds) {
+        // 2. アクセス可能なロールに紐づく組織を効率的に取得
+        //    直接そのロールを持つ組織、またはその組織の子孫組織
+        $relevantOrganizations = Organization::whereHas('roles', function (Builder $query) use ($accessRoleIds) {
             $query->whereIn('roles.id', $accessRoleIds);
-        })->get()->keyBy('id');
+        })->with('ancestors', 'roles')->get(); // 祖先と直接ロールをイーガーロード
 
-        // 3. そのロールが割り当てられている組織の祖先組織を取得 (継承を考慮)
-        $inheritedOrganizations = collect();
-        foreach ($directOrganizations as $org) {
-            $inheritedOrganizations = $inheritedOrganizations->merge($org->ancestors);
-        }
-        $allRelevantOrganizations = $directOrganizations->merge($inheritedOrganizations->unique('id'));
+        // 関連する全ての組織とその祖先を結合し、ツリーを構築
+        $allRelevantOrganizations = $relevantOrganizations->flatMap(fn($org) => $org->ancestors->push($org))->unique('id');
 
-        // 組織の親子関係を考慮してツリーを再構築 (パフォーマンスが課題になる可能性あり)
+        // ツリー構造を再構築 (nestedsetのchildrenリレーションが正しくロードされるように)
         $rootOrganizations = $allRelevantOrganizations->whereNull('parent_id');
         $this->buildOrganizationTree($rootOrganizations, $allRelevantOrganizations);
 
-
-        // 4. 各関連組織に対して、最終的な権限を計算
-        foreach ($allRelevantOrganizations as $org) { // buildOrganizationTree で再構築されたコレクション
+        // 4. 各関連組織に対して、最終的な権限とロール情報を計算
+        foreach ($allRelevantOrganizations as $org) {
             $orgAccessPermissions = collect();
             $orgSources = collect();
             $orgIsInherited = false;
 
             // この組織が持つ全てのロール（直接付与されたロールと親組織から継承されたロール）
-            $orgRoles = $org->getAllRoles(); // Organization モデルの getAllRoles() を使用
+            $orgAllRoles = $org->getAllRoles();
+            $orgDirectRoles = $org->getDirectRoles(); // 直接のロール
+            $orgInheritedRoles = $org->getInheritedRoles(); // 継承ロール
 
             foreach ($accessRoles as $accessItem) {
-                // この組織のロールが、アクセス権限を持つロールのいずれかであるか
-                if ($orgRoles->contains('id', $accessItem->role->id)) {
+                // この組織がアクセス可能なロールのIDを持っているか
+                if ($orgAllRoles->contains('id', $accessItem->role->id)) {
                     // アクセス権限をマージ
                     foreach ($accessItem->permissions as $perm) {
                         $added = false;
@@ -244,7 +241,9 @@ class PermissionService
                     'organization' => $org,
                     'permissions' => $orgAccessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
                     'source' => $orgSources->unique()->implode(', '),
-                    'is_inherited' => $orgIsInherited
+                    'is_inherited' => $orgIsInherited,
+                    'direct_roles' => $orgDirectRoles->sortBy('name'), // 直接のロール
+                    'inherited_roles' => $orgInheritedRoles->sortBy('name') // 継承ロール
                 ]);
             }
         }
@@ -267,8 +266,6 @@ class PermissionService
     private function buildOrganizationTree(Collection $nodes, Collection $allOrganizations): void
     {
         foreach ($nodes as $node) {
-            // `$node->children` のリレーションを上書きするのではなく、
-            // `$allOrganizations` から直接子を探して新しいコレクションを作成
             $node->setRelation('children', $allOrganizations->filter(fn($org) => $org->parent_id === $node->id)->values());
             $this->buildOrganizationTree($node->children, $allOrganizations);
         }
@@ -312,20 +309,47 @@ class PermissionService
         // ユーザーの組織とロールをイーガーロードして N+1 問題を避ける
         $query->with(['organizations', 'roles']);
 
-        if ($searchQuery) {
-            $query->where(function($q) use ($searchQuery) {
-                $q->where('name', 'like', '%' . $searchQuery . '%')
-                    ->orWhere('email', 'like', '%' . $searchQuery . '%');
-            });
-        }
+        // 各ユーザーに対して、直接のロールと組織からの継承ロールを分類して追加する
+        // paginate() の前に with() でロードしておけば、後でアクセスする際にクエリが発生しない
+        // Collection の map を使うと paginate の後で処理できる
+        $users = $query->paginate(10);
 
-        return $query->paginate(10);
+        $users->getCollection()->transform(function ($user) {
+            $user->display_organizations = $user->organizations; // 既存の表示に使用
+
+            $directRoles = collect();
+            $inheritedRoles = collect();
+
+            // ユーザーに直接割り当てられたロールを分類
+            $user->roles->each(function($role) use (&$directRoles) {
+                $directRoles->push($role);
+            });
+
+            // 所属組織から継承されるロールを分類
+            $user->organizations->each(function($org) use (&$inheritedRoles, $directRoles) {
+                $org->getAllRoles()->diff($org->roles)->each(function($role) use (&$inheritedRoles, $directRoles) {
+                    // 組織継承ロールがユーザーの直接ロールと重複しないようにする
+                    if (!$directRoles->contains('id', $role->id)) {
+                        $inheritedRoles->push($role);
+                    }
+                });
+            });
+
+            $user->categorized_roles = [
+                'direct' => $directRoles->unique('id')->sortBy('name'),
+                'inherited_from_organizations' => $inheritedRoles->unique('id')->sortBy('name'),
+            ];
+            return $user;
+        });
+
+
+        return $users;
     }
 
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
-     * (このメソッドは変更なし)
+     * (変更なし)
      *
      * @param int $resourceId
      * @param string $resourceType

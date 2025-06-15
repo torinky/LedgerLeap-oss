@@ -920,5 +920,8 @@
             'unknown' => '不明',
         ],
         'no_permission' => 'この情報へのアクセス権限がありません。',
+        'direct_role' => '直接割り当てられたロール',
+        'inherited_role' => '組織から継承されたロール',
+        'no_roles_assigned' => 'ロールなし', // 新規追加
     ],
 ];
