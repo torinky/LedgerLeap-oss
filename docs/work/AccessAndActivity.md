@@ -49,39 +49,51 @@
 
 ---
 
-### **ステップ 1.5: `UserActivityLog` の削除と `ActivityHistoryDisplay` への統合、`NotificationList` からのActivity
-Log表示ロジックの共通化**
+### **✅ ステップ 1.5: `UserActivityLog` の削除と `ActivityHistoryDisplay` への統合、`NotificationList` からのActivity Log表示ロジックの共通化 (完了)**
 
-* **目的**:
-    * 重複するアクティビティログ表示ロジックを `ActivityHistoryDisplay` に集約し、`UserActivityLog` コンポーネントを削除する。
-    * `NotificationList` コンポーネント内でActivity Logの変更差分を表示するロジックを、`ActivityHistoryDisplay` の
-      `formatChanges` メソッドと共通化する。
-    * これにより、コードの保守性を高め、UI/UXの一貫性を確保する。
+*   **目的**:
+    *   重複するアクティビティログ表示ロジックを `ActivityHistoryDisplay` に集約し、`UserActivityLog` コンポーネントを削除する。
+    *   `NotificationList` コンポーネント内でActivity Logの変更差分および表示メッセージを `ActivityLogFormatter` を使用して共通化する。
+    *   これにより、コードの保守性を高め、UI/UXの一貫性を確保する。
 
-* **作業内容**:
+*   **作業内容**:
+    1.  **`app/Helpers/ActivityLogFormatter.php` の機能拡張**:
+        *   `ActivityHistoryDisplay` の `getOperationDescription`, `getSubjectNameForDisplay`, `getRelatedEntityNameForDisplay`, `formatChanges`, `formatComment`, `getSubjectDisplay`, `getCauserDisplayName`, `getSubjectDetailLink`, `getCauserDetailLink` メソッドを**静的メソッド**としてここに全て移動・実装。
+        *   これらのメソッドは、`CustomActivity` モデルインスタンスまたは通知ペイロードのような**配列**を引数として受け取り、適切な整形済み文字列やHTML、リンクを返すように汎用化。
+        *   `formatChanges` メソッドは、DaisyUIのテキストカラークラスを適用し、変更を視覚的に分かりやすく表現。JSONカラムやリレーション関連の変更も適切に処理。
+    2.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
+        *   コンポーネント自身のメソッド (`getOperationDescription` など) を全て削除し、`ActivityLogFormatter::` で静的呼び出しする形に変更。コンポーネントはデータの取得とビューへの受け渡しに専念。
+        *   `paginationTheme` を `mary` に明示的に設定。
+    3.  **`app/Livewire/Notifications/NotificationList.php` の修正**:
+        *   `App\Helpers\ActivityLogFormatter` を `use` 宣言に追加。
+        *   `formatNotificationData` メソッド内で、通知データの `payload` からActivity Log関連の情報を抽出し、**`ActivityLogFormatter::` の静的メソッド群を呼び出してメッセージ、リンク、コメント、整形済み変更差分を生成するように変更**。
+        *   これにより、Activity Logに基づく通知とその他の通知の両方で、一貫した表示ロジックが適用されるようになった。
+        *   変更差分の表示は `changes_formatted` プロパティを利用。
+    4.  **`resources/views/notifications/index.blade.php` の修正**:
+        *   `@livewire('user-activity-log')` の呼び出しを `@livewire('common.activity-history-display')` に置き換え。
+        *   `activity` タブの `aria-label` を `__('ledger.activity.title')` に修正。
+    5.  **`resources/views/livewire/notifications/notification-list.blade.php` の修正**:
+        *   変更差分表示部分で、`$display['changes_formatted']` を直接出力するように変更。
+        *   変更履歴のタイトルを `__('ledger.activity.column.changes')` に統一。
+    6.  **翻訳ファイルの統合と追加**:
+        *   `lang/ja/ledger.php` に、`ActivityLogFormatter` で使用される新しい翻訳キー（リレーション操作に関するもの、複雑なデータ、不明なロール/フォルダなど）を全て追加・修正。
+        *   `lang/ja/activitylog.php` は削除。
+    7.  **`UserActivityLog` および `x-diff-display` コンポーネントの削除**:
+        *   `app/Livewire/UserActivityLog.php` および `resources/views/livewire/user-activity-log.blade.php` を削除。
+        *   `resources/views/components/diff-display.blade.php` を削除（他の場所での利用がないことを確認済み）。
 
-    1. **`UserActivityLog` コンポーネントの削除と置き換え**:
-        * `app/Livewire/UserActivityLog.php` ファイルを削除。
-        * `resources/views/livewire/user-activity-log.blade.php` ファイルを削除。
-        * `app/Http/Controllers/UserNotificationController.php` (
-          統合された通知・アクティビティログ・タスク画面のコントローラー) を修正し、`ActivityHistoryDisplay` を呼び出すように変更。
-            * 具体的には、`resources/views/notifications/index.blade.php` 内で `@livewire('user-activity-log')` を
-              `@livewire('common.activity-history-display')` に置き換える。
-            * （`ActivityHistoryDisplay` は `$resourceId`, `$resourceType` が `null` の場合に全件表示モードになるため、引数なしで呼び出す）
+*   **動作確認**:
+    *   **`/notifications` 画面**:
+        *   「活動履歴」タブでシステム全体のActivity Logが正しく表示され、`UserActivityLog` の機能を完全に代替していることを確認。
+        *   「通知」タブで、各種通知（特に台帳更新、ワークフロー関連、リレーション操作などActivity Logに関連するもの）が、`ActivityLogFormatter` を通して整形されたメッセージ、リンク、コメント、変更差分で表示されることを確認。
+        *   Activity Logベースではない通知（例: `WorkflowSummaryNotification`）も引き続き正しく表示されることを確認。
+    *   **`/test-activity` 画面 (Ledger/LedgerDefine/Folderのアクティビティ)**:
+        *   絞り込み表示と全件表示の両方で Activity Log が正しく表示され、`ActivityLogFormatter` が正しく適用されていることを確認。
+        *   変更差分の表示、操作内容の表示、リンクの生成が `NotificationList` と同じく一貫した品質で表示されることを確認。
+        *   権限がないユーザーでアクセスした場合、権限がない旨のメッセージが表示されることを確認。
+    *   **全体的なパフォーマンス**: Activity Logの表示がパフォーマンスに大きな影響を与えないことを確認。
 
-    2. **`NotificationList` からのActivity Log表示ロジックの共通化**:
-        * `app/Livewire/Notifications/NotificationList.php` を修正。
-        * 現在 `formatNotificationData` メソッド内で `changes` を処理し、`x-diff-display` コンポーネントを呼び出している部分がある。
-        * この `changes` の整形ロジックを、`ActivityHistoryDisplay` が持つ `formatChanges` メソッドと同等にする必要がある。
-        * **対応方針検討**: `ActivityHistoryDisplay::formatChanges` はインスタンスメソッドであるため、`NotificationList`
-          から直接呼び出すのは適切ではありません。以下のいずれかの方針を検討します。
-            * **A) ActivityLogFormatter サービス/トレイトの導入（推奨）**: `formatChanges`
-              ロジックを独立したサービスまたはトレイト（例: `App\Helpers\ActivityLogFormatter` または
-              `App\Traits\FormatActivityLogChanges`）として切り出す。これを `ActivityHistoryDisplay` と `NotificationList`
-              の両方から利用するようにする。
-            * **B) `NotificationList` の ActivityLog 表示を簡略化**: `NotificationList`
-              では変更差分の詳細表示はせず、単に「変更あり」のようなメッセージに留め、詳細が必要な場合は `Ledger/Show.php`
-              の「活動履歴」タブへのリンクを促す。
+*   **成果物**: Activity Logの表示に関する全てのロジックが `ActivityLogFormatter` ヘルパークラスに集約され、`ActivityHistoryDisplay` と `NotificationList` の両方から再利用されるようになった。これにより、コードの重複が解消され、保守性およびUI/UXの一貫性が大幅に向上した。`UserActivityLog` コンポーネントは廃止された。
 
 ---
 
