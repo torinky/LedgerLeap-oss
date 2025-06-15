@@ -126,13 +126,13 @@ enum FolderPermissionType: string
     public function getColor(): string
     {
         return match ($this) {
-            self::READ => 'gray', // READ は基本なのでグレーに
+            self::READ => 'neutral', // READ は基本なのでグレーに
             self::WRITE => 'info',
             self::INSPECT => 'warning', // 点検は注意喚起的な色？
             self::APPROVE => 'success', // 承認は成功色
             self::ADMIN => 'danger', // ADMIN は強い権限なので赤系？ or primary?
             self::NOTIFY_ON, self::NOTIFY_OFF => 'primary', // 通知は別の色
-            default => 'gray',
+            default => 'neutral',
         };
     }
 

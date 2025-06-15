@@ -97,21 +97,40 @@
 
 ---
 
-#### **ステップ 2: `App\Livewire\Common\PermissionDisplay` の基本実装**
+### **ステップ 2: `App\Livewire\Common\PermissionDisplay` の基本実装**
 
-* **目的**: どのリソースタイプ（Ledger, LedgerDefine, Folder）にも対応できる共通の権限情報表示コンポーネントの作成。
-* **作業内容**:
-    1. `app/Livewire/Common/PermissionDisplay.php` を作成。
-    2. コンポーネント内で `$resourceId`, `$resourceType` プロパティを受け取るように定義。
-    3. `mount()` メソッドで、`$resourceType` と `$resourceId` に基づいて、そのリソースに最終的に適用される権限情報を取得するロジックを実装。
-        * `Ledger` の場合は、親の `LedgerDefine` を経由して `Folder` の権限を取得。
-        * `Folder` の場合は、`RoleFolderPermission` を直接参照。
-        * `LedgerDefine` の場合は、`HasModelRoles` で直接紐づいたロールと、親 `Folder` の権限を取得。
-        * `UserService` や `Folder` モデルの既存の権限関連メソッド（`getAllPermissionsWithInheritance` など）を最大限活用。
-    4. ログインユーザーが持つ権限の概要を判定し、表示するロジックを実装。
-    5. ビュー `resources/views/livewire/common/permission-display.blade.php` を作成。
-    6. 取得した権限情報を、階層的な権限元、ロールごとの権限タイプ（アイコン/バッジ付き）の形式で表示。
-    7. アクセス可能なユーザー/ロール一覧を表示し、ページネーションを実装。
+このステップでは、特定のリソース（台帳レコード、台帳定義、フォルダ）に対するアクセス権限を視覚的に表示する汎用コンポーネントを実装します。
+
+*   **目的**:
+    *   `$resourceId` と `$resourceType` を受け取り、指定されたリソース、またはその親階層のリソースに適用される権限情報を取得し、表示する。
+    *   ログインユーザーの権限概要、関連するロールと権限タイプ、アクセス可能なユーザー/ロールの一覧を提示する。
+
+*   **作業内容**:
+
+    1.  **`app/Livewire/Common/PermissionDisplay.php` の作成**:
+        *   `$resourceId`, `$resourceType` プロパティを受け取るように定義します。
+        *   `mount()` メソッドで、これらのプロパティを初期化します。
+        *   ログインユーザーの権限概要（例: 「あなたは閲覧権限があります」）を判定し、表示するためのプロパティを準備します。
+        *   指定されたリソース、およびその親階層のフォルダや台帳定義から、関連するロールとそれらの持つアクセス権限 (`RoleFolderPermission`) を取得するロジックを実装します。
+            *   `Folder` モデルの `getAllPermissionsWithInheritance` や `UserService::hasFolderPermission` など、既存の権限関連メソッドを活用します。
+            *   `Ledger` の場合は `define` を介して `folder` の権限を取得し、`LedgerDefine` の場合は自身の権限と `folder` の権限を取得します。
+            *   `RoleFolderPermission` の `permission` カラムは `FolderPermissionType` Enum であるため、その `getLabel()` や `getColor()` を利用して表示します。
+        *   アクセス可能な**ユーザー/ロールの一覧**を取得します。（これは `UserService::getUsersWithFolderPermission` を利用できるかもしれません。）
+        *   ページネーションを実装します。
+
+    2.  **`resources/views/livewire/common/permission-display.blade.php` の作成**:
+        *   ログインユーザーの権限概要を画面上部に簡潔に表示します。
+        *   階層的な権限元（例: 「この権限は親フォルダ `XXX` から継承されています」）を視覚的に表示します。
+        *   ロールごとの権限一覧をテーブル形式で表示します。
+            *   ロール名、権限タイプ（アイコンやバッジで `READ`, `WRITE`, `INSPECT`, `APPROVE`, `ADMIN` を表示）。
+            *   `FolderPermissionType` の `getLabel()` や `getColor()` を利用して表示。
+        *   アクセス可能なユーザー/ロールの一覧をテーブルまたはリスト形式で表示します。
+        *   `mary` UI のページネーションコンポーネントを使用します。
+
+    3.  **翻訳ファイルの追加・修正**:
+        *   `lang/ja/ledger.php` に、`PermissionDisplay` で使用する新しい翻訳キー（例: `permission_overview`, `inherited_from`, `roles_with_access`, `users_with_access`、各権限タイプのラベルなど）を追加・修正します。
+
+---
 
 #### **ステップ 3: `Ledger/Show.php` (レコード詳細画面) への共通コンポーネント統合**
 

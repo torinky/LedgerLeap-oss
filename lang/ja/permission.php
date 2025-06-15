@@ -27,9 +27,13 @@ return [
         'ledger_define' => '台帳定義管理',
         'ledger' => '台帳操作',
         'workflow_notification' => 'ワークフロー通知',
-        'notification' => 'システム内通知',
         'activity_log' => 'アクティビティログ',
         'other' => 'その他',
+        'general' => '一般',
+        'management' => '管理',
+        'workflow' => 'ワークフロー',
+        'notification' => '通知',
+        'access_control' => 'アクセス制御',
     ],
 
     // --- 権限名の翻訳キー ---
@@ -124,6 +128,9 @@ return [
     'edit_permission' => "権限の編集",
     'detach_folder_permissions_modal_heading'=>':folder の権限を解除します',
     'detach_folder_permissions_modal_description'=>'このフォルダーに対する全てのアクセス権限をこのロールから解除しますか？',
+    // ActivityLogFormatter などで使われる可能性のある汎用権限メッセージ
+    'view_any_activity' => '全ての活動ログを閲覧',
+    'view_activity_logs' => '活動ログを閲覧',
 
 
 ];

@@ -888,5 +888,32 @@
     // ActivityLog で使用されていた既存のキーも ledger.activity.event.* にマッピング
     'no_activity_logs' => 'アクティビティログはありません。', // activity.no_activities_found に統合済みだが、一時的に残す
 
-
+    'access_and_permissions' => [
+        'title' => 'アクセスと権限',
+        'your_access_level' => 'あなたのアクセスレベル',
+        'no_direct_access' => 'このリソースへの直接のアクセス権限はありません。',
+        'check_details_below' => '詳細については以下のリストを確認してください。',
+        'roles_with_access' => 'アクセス権限を持つロール',
+        'users_with_access' => 'アクセス可能なユーザー',
+        'no_roles_found' => 'このリソースにアクセス権限を持つロールは見つかりませんでした。',
+        'no_users_found' => 'このリソースにアクセス可能なユーザーは見つかりませんでした。',
+        'no_specific_permissions' => '特定の権限なし',
+        'no_roles' => 'ロールなし',
+        'inherited_from_parent' => '親フォルダ/定義から継承',
+        'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
+        'column' => [
+            'role_name' => 'ロール名',
+            'permissions' => '権限',
+            'source' => 'ソース',
+            'user_name' => 'ユーザー名',
+            'email' => 'メールアドレス',
+            'roles' => 'ロール',
+        ],
+        'source' => [
+            'folder' => 'フォルダ',
+            'ledger_define' => '台帳定義',
+            'unknown' => '不明',
+        ],
+        'no_permission' => 'この情報へのアクセス権限がありません。',
+    ],
 ];

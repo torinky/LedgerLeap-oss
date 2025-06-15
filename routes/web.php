@@ -14,6 +14,7 @@ use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
+use App\Livewire\Common\PermissionDisplay;
 use App\Livewire\Folder\FolderForm;
 use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
 use App\Livewire\MyPortal;
@@ -22,6 +23,9 @@ use App\Livewire\Notifications\Settings;
 use App\Livewire\UserActivityLog;
 use App\Livewire\Workflow\PendingList;
 use App\Models\CustomActivity;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -210,6 +214,92 @@ Route::middleware('auth')->group(function () {
 
         return "ポリシーテスト完了。ActivityLogPolicy内のdd出力を確認してください。";
     });*/
+
+
+    // 新しい汎用Livewireコンポーネントテストルート
+    Route::get('/test-component/{component}', function ($component, \Illuminate\Http\Request $request) {
+        // コンポーネント名を完全修飾クラス名に変換
+        $componentClass = "App\\Livewire\\Common\\" . Str::studly($component); // 例: 'activity-history-display' -> 'ActivityHistoryDisplay'
+
+        if (!class_exists($componentClass)) {
+            abort(404, "Livewire component [{$componentClass}] not found.");
+        }
+
+        // クエリパラメータからコンポーネントのプロパティを抽出
+        $props = $request->except('component');
+
+        // resourceId と resourceType が数値や特定文字列でない場合はキャスト
+        if (isset($props['resourceId'])) {
+            $props['resourceId'] = (int) $props['resourceId'];
+        }
+        if (isset($props['includeRelatedResources'])) {
+            $props['includeRelatedResources'] = filter_var($props['includeRelatedResources'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return view('test-livewire-component', [
+            'componentName' => $componentClass,
+            'componentProps' => $props,
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-livewire-component');
+
+// 特定のリソースのテスト用短縮ルート (オプション、上記汎用ルートで十分だが利便性のため)
+    Route::get('/test-activity-ledger/{ledger}', function (Ledger $ledger) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'activity-history-display',
+            'resourceId' => $ledger->id,
+            'resourceType' => 'Ledger',
+            'includeRelatedResources' => true,
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-activity-ledger');
+
+    Route::get('/test-activity-folder/{folder}', function (Folder $folder) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'activity-history-display',
+            'resourceId' => $folder->id,
+            'resourceType' => 'Folder',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-activity-folder');
+
+    Route::get('/test-activity-ledger-define/{ledgerDefine}', function (LedgerDefine $ledgerDefine) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'activity-history-display',
+            'resourceId' => $ledgerDefine->id,
+            'resourceType' => 'LedgerDefine',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-activity-ledger-define');
+
+    Route::get('/test-activity-all', function () {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'activity-history-display',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-activity-all');
+
+
+    Route::get('/test-permissions-ledger/{ledger}', function (Ledger $ledger) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'permission-display',
+            'resourceId' => $ledger->id,
+            'resourceType' => 'Ledger',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-permissions-ledger');
+
+    Route::get('/test-permissions-ledger-define/{ledgerDefine}', function (LedgerDefine $ledgerDefine) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'permission-display',
+            'resourceId' => $ledgerDefine->id,
+            'resourceType' => 'LedgerDefine',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-permissions-ledger-define');
+
+    Route::get('/test-permissions-folder/{folder}', function (Folder $folder) {
+        return redirect()->route('test-livewire-component', [
+            'component' => 'permission-display',
+            'resourceId' => $folder->id,
+            'resourceType' => 'Folder',
+        ]);
+    })->middleware(['auth', 'verified'])->name('test-permissions-folder');
+
+
 });
 
 Route::get('/phpinfo', function () {

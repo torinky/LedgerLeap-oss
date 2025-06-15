@@ -105,7 +105,7 @@ class NotificationList extends Component
                 "<strong>{$causerName}</strong>"
                 . __('ledger.user_action_suffix')
                 . ActivityLogFormatter::getSubjectNameForDisplay($activityLog ?? null)
-                .__('ledger.user_object_suffix')
+                . __('ledger.user_object_suffix')
                 . ActivityLogFormatter::getOperationDescription($activityLog ?? null);
             if (empty($displayData['link'])) {
                 $displayData['link'] = ActivityLogFormatter::getSubjectDetailLink($activityLog ?? null);
@@ -128,7 +128,7 @@ class NotificationList extends Component
                 $displayData['message'] = $payload['message'] ?? __('ledger.workflow.summary_notification_default'); // Summary 用メッセージ
             } else { // GenericNotification やその他の場合
                 $baseMessage = $subjectName ? "{$subjectLabel}「{$subjectName}」" : "{$subjectLabel} ";
-               $baseMessage .=__('ledger.user_object_suffix');
+                $baseMessage .= __('ledger.user_object_suffix');
                 if ($causerName) {
                     // $causer_name は 'causer_name' キーで直接渡されることを想定
                     $baseMessage = "<strong>{$causerName}</strong>" . __('ledger.user_action_suffix')
