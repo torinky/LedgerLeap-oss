@@ -58,7 +58,7 @@
             </div>
 
             <div class="mt-4">
-{{--                {{ $activities->links() }}--}}
+                {{ $activities->links() }}
             </div>
         @endif
     @endif

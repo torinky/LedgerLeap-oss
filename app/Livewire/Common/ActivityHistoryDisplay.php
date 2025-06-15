@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -23,7 +24,7 @@ class ActivityHistoryDisplay extends Component
     public ?int $resourceId = null;
     public ?string $resourceType = null; // 'Ledger', 'LedgerDefine', 'Folder'
     public bool $includeRelatedResources = false; // レコードのアクティビティ表示時に、親の台帳定義とフォルダのアクティビティも含めるか
-    public string $paginationTheme = 'mary';
+//    public string $paginationTheme = 'app';
 
     // フィルタリング用プロパティ (MVPでは非実装だが定義しておく)
     public ?string $filterCauserName = null;
@@ -31,6 +32,14 @@ class ActivityHistoryDisplay extends Component
     public ?string $filterStartDate = null;
     public ?string $filterEndDate = null;
     public ?string $searchQuery = null;
+
+    // DaisyUI Theme Colors for Changes Display
+    private const TEXT_COLOR_SUCCESS = 'text-success';         // For added items, success states, etc.
+    private const TEXT_COLOR_ERROR = 'text-error';           // For removed items, error states, etc.
+    private const TEXT_COLOR_INFO = 'text-info';             // For general changes, informational content
+    private const TEXT_COLOR_NEUTRAL = 'text-neutral-content'; // For neutral or less emphasized information
+    private const TEXT_STYLE_MUTED = 'text-base-content/70'; // For muted text (e.g., null values)
+    private const TEXT_STYLE_ITALIC_MUTED = 'italic ' . self::TEXT_STYLE_MUTED; // For italic muted text
 
     /**
      * コンポーネントの初期化
@@ -40,8 +49,11 @@ class ActivityHistoryDisplay extends Component
      * @param bool $includeRelatedResources
      * @return void
      */
-    public function mount(?int $resourceId = null, ?string $resourceType = null, bool $includeRelatedResources = false): void
-    {
+    public function mount(
+        ?int $resourceId = null,
+        ?string $resourceType = null,
+        bool $includeRelatedResources = false
+    ): void {
         $this->resourceId = $resourceId;
         $this->resourceType = $resourceType;
         $this->includeRelatedResources = $includeRelatedResources;
@@ -161,7 +173,7 @@ class ActivityHistoryDisplay extends Component
     public function render()
     {
         // ログ閲覧権限チェック
-        if (!auth()->check() || ! auth()->user()->can('viewAny', \App\Models\CustomActivity::class)){
+        if (!auth()->check() || !auth()->user()->can('viewAny', \App\Models\CustomActivity::class)) {
             return view('livewire.common.activity-history-display-no-permission');
         }
 
@@ -195,7 +207,14 @@ class ActivityHistoryDisplay extends Component
             return __("ledger.activity.{$eventKey}", ['resource' => $subjectName]);
         }
         // ワークフロー関連のカスタムイベント
-        if (in_array($eventKey, ['requested_inspection', 'inspection_completed', 'approved', 'returned_to_draft', 'edited_while_pending', 'task_claimed'])) {
+        if (in_array(
+            $eventKey,
+            [
+                'requested_inspection',
+                'inspection_completed',
+                'approved', 'returned_to_draft', 'edited_while_pending', 'task_claimed'
+            ]
+        )) {
             return __("ledger.activity.workflow.{$eventKey}", ['resource' => $subjectName]);
         }
         // ログイン・ログアウト
@@ -245,19 +264,33 @@ class ActivityHistoryDisplay extends Component
 
         if ($activity->subject instanceof Ledger) {
             return $activity->subject->define->title ?? ('Ledger ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof LedgerDefine) {
+        }
+
+        if ($activity->subject instanceof LedgerDefine) {
             return $activity->subject->title ?? ('LedgerDefine ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof Folder) {
+        }
+
+        if ($activity->subject instanceof Folder) {
             return $activity->subject->title ?? ('Folder ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof User) {
+        }
+
+        if ($activity->subject instanceof User) {
             return $activity->subject->name ?? ('User ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof Role) {
+        }
+
+        if ($activity->subject instanceof Role) {
             return $activity->subject->name ?? ('Role ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof Organization) {
+        }
+
+        if ($activity->subject instanceof Organization) {
             return $activity->subject->name ?? ('Organization ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof Permission) { // Permission モデルの場合を追加
+        }
+
+        if ($activity->subject instanceof Permission) { // Permission モデルの場合を追加
             return $activity->subject->name ?? ('Permission ID: ' . $activity->subject->id);
-        } elseif ($activity->subject instanceof RoleFolderPermission) { // RoleFolderPermission モデルの場合を追加
+        }
+
+        if ($activity->subject instanceof RoleFolderPermission) { // RoleFolderPermission モデルの場合を追加
             return __('ledger.activity.model_name.role_folder_permission') . ' ID: ' . $activity->subject->id; // 特定の表示名
         }
         return class_basename($activity->subject_type) . ' ID: ' . $activity->subject_id;
@@ -306,7 +339,7 @@ class ActivityHistoryDisplay extends Component
      * 変更差分を表示するためのフォーマット
      *
      * @param CustomActivity $activity
-     * @return string|\Illuminate\Support\HtmlString
+     * @return string|HtmlString
      */
     public function formatChanges(CustomActivity $activity)
     {
@@ -335,13 +368,13 @@ class ActivityHistoryDisplay extends Component
             if ($key === 'deleted_at') {
                 if ($newValue !== null && $oldValue === null) {
                     $changes->push(
-                        '<strong>' . $key . ':</strong> ' .
-                        '<span class="text-green-500">' . __('ledger.activity.changes.attached') . '</span>'
+                        '<strong>' . e($key) . ':</strong> ' .
+                        '<span class="' . self::TEXT_COLOR_SUCCESS . '">' . __('ledger.activity.changes.attached') . '</span>'
                     );
                 } elseif ($newValue === null && $oldValue !== null) {
                     $changes->push(
-                        '<strong>' . $key . ':</strong> ' .
-                        '<span class="text-red-500 line-through">' . __('ledger.activity.changes.detached') . '</span>'
+                        '<strong>' . e($key) . ':</strong> ' .
+                        '<span class="' . self::TEXT_COLOR_ERROR . ' line-through">' . __('ledger.activity.changes.detached') . '</span>'
                     );
                 }
                 continue;
@@ -350,7 +383,7 @@ class ActivityHistoryDisplay extends Component
             // パスワード変更
             if ($key === 'password') {
                 $changes->push(
-                    '<span class="text-gray-500">' . __('ledger.activity.changes.password_changed') . '</span>'
+                    '<span class="' . self::TEXT_STYLE_MUTED . '">' . __('ledger.activity.changes.password_changed') . '</span>'
                 );
                 continue;
             }
@@ -373,7 +406,7 @@ class ActivityHistoryDisplay extends Component
                 ) {
                     if ($decodedNew !== $decodedOld) {
                         // JSON由来か、元々配列だったかの区別なく、内容が変更されたと表示
-                        $changes->push('<strong>' . e($key) . ':</strong> <span class="text-blue-500">' . __('ledger.activity.changes.content_changed') . '</span>');
+                        $changes->push('<strong>' . e($key) . ':</strong> <span class="' . self::TEXT_COLOR_INFO . '">' . __('ledger.activity.changes.content_changed') . '</span>');
                     }
                 }
                 // 一方または両方がJSONデコードに失敗したか、型が異なるが、文字列として比較して異なる場合
@@ -386,25 +419,25 @@ class ActivityHistoryDisplay extends Component
 
                     // null の場合の表示を調整
                     if (is_null($oldValue)) {
-                        $displayOld = '<span class="italic text-gray-500">null</span>';
+                        $displayOld = '<span class="' . self::TEXT_STYLE_ITALIC_MUTED . '">null</span>';
                     }
                     if (is_null($newValue)) {
-                        $displayNew = '<span class="italic text-gray-500">null</span>';
+                        $displayNew = '<span class="' . self::TEXT_STYLE_ITALIC_MUTED . '">null</span>';
                     }
 
-
+                    // JSONデコード失敗時や非JSON文字列の変更
                     $changes->push(
                         '<strong>' . e($key) . ':</strong> ' .
-                        '<span class="text-red-500 line-through">' . $displayOld . '</span> → ' .
-                        '<span class="text-green-500">' . $displayNew . '</span>'
+                        '<span class="' . self::TEXT_COLOR_ERROR . ' line-through">' . $displayOld . '</span> → ' .
+                        '<span class="' . self::TEXT_COLOR_SUCCESS . '">' . $displayNew . '</span>'
                     );
                 }
                 continue;
             }
             // JSON文字列ではないが、配列やオブジェクトの場合の表示を調整
             if (is_array($newValue) || is_object($newValue) || is_array($oldValue) || is_object($oldValue)) {
-                 // これらの型の場合は、JSON処理のところで 'content_changed' または 'complex_data' として処理されるべき
-                 continue;
+                // これらの型の場合は、JSON処理のところで 'content_changed' または 'complex_data' として処理されるべき
+                continue;
             }
             // boolean の場合は 'true'/'false' に変換
             $displayNewValue = is_bool($newValue) ? ($newValue ? 'true' : 'false') : (is_null($newValue) ? 'null' : (string)$newValue);
@@ -415,13 +448,13 @@ class ActivityHistoryDisplay extends Component
                 if ($old->has($key)) { // 既存の属性が変更された場合
                     $changes->push(
                         '<strong>' . $key . ':</strong> ' .
-                        '<span class="text-red-500 line-through">' . e($displayOldValue) . '</span> → ' .
-                        '<span class="text-green-500">' . e($displayNewValue) . '</span>'
+                        '<span class="' . self::TEXT_COLOR_ERROR . ' line-through">' . e($displayOldValue) . '</span> → ' .
+                        '<span class="' . self::TEXT_COLOR_SUCCESS . '">' . e($displayNewValue) . '</span>'
                     );
                 } else { // 新規に追加された属性
                     $changes->push(
                         '<strong>' . $key . ':</strong> ' .
-                        '<span class="text-green-500">' . e($displayNewValue) . '</span>'
+                        '<span class="' . self::TEXT_COLOR_SUCCESS . '">' . e($displayNewValue) . '</span>'
                     );
                 }
             }
@@ -432,8 +465,8 @@ class ActivityHistoryDisplay extends Component
             if (!$attributes->has($key) && !in_array($key, ['latest_diff_id', 'updated_at', 'modifier_id', 'created_at', 'creator_id', 'deleted_at'])) { // deleted_at は上で処理済み
                 $changes->push(
                     '<strong>' . $key . ':</strong> ' .
-                    '<span class="text-red-500 line-through">' . e(is_bool($value) ? ($value ? 'true' : 'false') : (is_null($value) ? 'null' : (string)$value)) . '</span> → ' .
-                    '<span class="text-gray-500">' . __('ledger.activity.changes.removed') . '</span>'
+                    '<span class="' . self::TEXT_COLOR_ERROR . ' line-through">' . e(is_bool($value) ? ($value ? 'true' : 'false') : (is_null($value) ? 'null' : (string)$value)) . '</span> → ' .
+                    '<span class="' . self::TEXT_STYLE_MUTED . '">' . __('ledger.activity.changes.removed') . '</span>'
                 );
             }
         }
@@ -445,13 +478,13 @@ class ActivityHistoryDisplay extends Component
 
         // リレーションイベントの場合の特別なメッセージ
         if ($activity->event === 'attached') {
-            $changes->push('<span class="text-green-500">' . __('ledger.activity.changes.attached') . '</span>');
+            $changes->push('<span class="' . self::TEXT_COLOR_SUCCESS . '">' . __('ledger.activity.changes.attached') . '</span>');
         } elseif ($activity->event === 'detached') {
-            $changes->push('<span class="text-red-500">' . __('ledger.activity.changes.detached') . '</span>');
+            $changes->push('<span class="' . self::TEXT_COLOR_ERROR . '">' . __('ledger.activity.changes.detached') . '</span>');
         }
 
 
-        return new \Illuminate\Support\HtmlString($changes->implode('<br>'));
+        return new HtmlString($changes->implode('<br>'));
     }
 
 
@@ -574,8 +607,7 @@ class ActivityHistoryDisplay extends Component
         }
 
         if ($activity->subject instanceof LedgerDefine) {
-            // return route('filament.admin.resources.ledger-defines.view', $activity->subject);
-            return null;
+             return route('ledgerByDefineId', $activity->subject);
         }
 
         if ($activity->subject instanceof Folder) {
