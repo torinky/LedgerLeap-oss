@@ -1,6 +1,45 @@
 <?php return [
     'Impersonate' => 'なりすまし',
     'Impersonation' => 'なりすまし',
+    'access_and_permissions' =>
+        [
+            'check_details_below' => '詳細については以下のリストを確認してください。',
+            'column' =>
+                [
+                    'email' => 'メールアドレス',
+                    'organization_name' => '組織名',
+                    'organizations' => '所属組織',
+                    'permissions' => '権限',
+                    'role_name' => 'ロール名',
+                    'roles' => 'ロール',
+                    'source' => 'ソース',
+                    'user_name' => 'ユーザー名',
+                ],
+            'direct_role' => '直接割り当てられたロール',
+            'inherited_from_parent' => '親フォルダ/定義から継承',
+            'inherited_role' => '組織から継承されたロール',
+            'no_direct_access' => 'このリソースへの直接のアクセス権限はありません。',
+            'no_organizations' => '所属組織なし',
+            'no_organizations_found' => 'このリソースにアクセス権限を持つ組織は見つかりませんでした。',
+            'no_permission' => 'この情報へのアクセス権限がありません。',
+            'no_roles' => 'ロールなし',
+            'no_roles_assigned' => 'ロールなし',
+            'no_roles_found' => 'このリソースにアクセス権限を持つロールは見つかりませんでした。',
+            'no_specific_permissions' => '特定の権限なし',
+            'no_users_found' => 'このリソースにアクセス可能なユーザーは見つかりませんでした。',
+            'organizations_with_access' => 'アクセス権限を持つ組織',
+            'roles_with_access' => 'アクセス権限を持つロール',
+            'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
+            'source' =>
+                [
+                    'folder' => 'フォルダ',
+                    'ledger_define' => '台帳定義',
+                    'unknown' => '不明',
+                ],
+            'title' => 'アクセスと権限',
+            'users_with_access' => 'アクセス可能なユーザー',
+            'your_access_level' => 'あなたのアクセスレベル',
+        ],
     'action_approval_requested' => 'の承認を依頼しました',
     'action_approved' => 'を承認しました',
     'action_attached' => 'を割り当てました',
@@ -17,6 +56,105 @@
     'action_success' => 'アクションが正常に実行されました。',
     'action_task_claimed' => 'を引き継ぎました',
     'action_updated' => 'を更新しました。',
+    'activity' =>
+        [
+            'changes' =>
+                [
+                    'after_change' => '変更後',
+                    'attached' => '関連付け',
+                    'attribute' => '属性',
+                    'before_change' => '変更前',
+                    'column_define_changed' => 'カラム定義が変更されました',
+                    'complex_data' => '[複雑なデータ]',
+                    'content_changed' => 'コンテンツ内容が変更されました',
+                    'detached' => '関連解除',
+                    'no_significant_changes' => '実質的な変更はありません',
+                    'password_changed' => 'パスワードが変更されました',
+                    'related_entity_of' => ':relation の関連エンティティ',
+                    'removed' => '削除されました',
+                ],
+            'column' =>
+                [
+                    'causer' => '操作者',
+                    'changes' => '変更内容',
+                    'comment' => 'コメント',
+                    'operation' => '操作内容',
+                    'subject' => '対象リソース',
+                    'time' => '日時',
+                ],
+            'event' =>
+                [
+                    'attached' => '関連付けられました。',
+                    'detached' => '関連解除されました。',
+                    'folder_created' => 'フォルダが作成されました。',
+                    'folder_deleted' => 'フォルダが削除されました。',
+                    'folder_updated' => 'フォルダが更新されました。',
+                    'inspection_requested' => '点検が依頼されました。',
+                    'ledger_created' => '台帳レコードが作成されました。',
+                    'ledger_deleted' => '台帳レコードが削除されました。',
+                    'ledger_updated' => '台帳レコードが更新されました。',
+                    'ledgerdefine_created' => '台帳定義が作成されました。',
+                    'ledgerdefine_deleted' => '台帳定義が削除されました。',
+                    'ledgerdefine_updated' => '台帳定義が更新されました。',
+                    'login' => 'ログインしました。',
+                    'logout' => 'ログアウトしました。',
+                    'organization_created' => '組織が作成されました。',
+                    'organization_deleted' => '組織が削除されました。',
+                    'organization_updated' => '組織情報が更新されました。',
+                    'organization_users_attached' => ':resource にユーザー「:related_entity」が追加されました。',
+                    'organization_users_detached' => ':resource からユーザー「:related_entity」が削除されました。',
+                    'permission_created' => '権限が作成されました。',
+                    'permission_deleted' => '権限が削除されました。',
+                    'permission_updated' => '権限情報が更新されました。',
+                    'role_created' => 'ロールが作成されました。',
+                    'role_deleted' => 'ロールが削除されました。',
+                    'role_permissions_attached' => ':resource に権限「:related_entity」が追加されました。',
+                    'role_permissions_detached' => ':resource から権限「:related_entity」が削除されました。',
+                    'role_updated' => 'ロール情報が更新されました。',
+                    'rolefolderpermission_created' => 'ロールフォルダ権限が作成されました。',
+                    'rolefolderpermission_deleted' => 'ロールフォルダ権限が削除されました。',
+                    'rolefolderpermission_updated' => 'ロールフォルダ権限が更新されました。',
+                    'updated' => '更新されました。',
+                    'user_created' => 'ユーザーが作成されました。',
+                    'user_deleted' => 'ユーザーが削除されました。',
+                    'user_roles_attached' => ':resource にロール「:related_entity」が追加されました。',
+                    'user_roles_detached' => ':resource からロール「:related_entity」が削除されました。',
+                    'user_updated' => 'ユーザー情報が更新されました。',
+                ],
+            'model_name' =>
+                [
+                    'folder' => 'フォルダ',
+                    'ledger' => '台帳レコード',
+                    'ledger_define' => '台帳定義',
+                    'ledgerdiff' => '変更履歴',
+                    'organization' => '組織',
+                    'permission' => '権限',
+                    'role' => 'ロール',
+                    'role_folder_permission' => 'ロールフォルダ権限',
+                    'user' => 'ユーザー',
+                ],
+            'no_activities_found' => '該当する活動履歴はありません。',
+            'no_permission' => '活動履歴の閲覧権限がありません。',
+            'subject' =>
+                [
+                    'unknown' => '不明なリソース',
+                    'unknown_folder' => '不明なフォルダ',
+                    'unknown_role' => '不明なロール',
+                ],
+            'system_user' => 'システム',
+            'title' => '活動履歴',
+            'unknown_user' => '不明なユーザー',
+            'workflow' =>
+                [
+                    'approved' => ':resource が承認されました。',
+                    'edited_while_pending' => ':resource が承認フロー中に編集され、下書きに戻されました。',
+                    'inspection_completed' => ':resource の点検が完了し、承認が依頼されました。',
+                    'pending_tasks' => '未処理タスク',
+                    'requested_inspection' => ':resource の点検が依頼されました。',
+                    'returned_to_draft' => ':resource が下書きに戻されました。',
+                    'task_claimed' => ':resource の担当タスクが引き継がれました。',
+                ],
+        ],
     'add' => '追加する',
     'admin' => '管理',
     'after_change' => '変更後',
@@ -389,6 +527,7 @@
     'new' => '新着',
     'new_relation_attach' => '新たに紐付け',
     'no' => 'いいえ',
+    'no_activity_logs' => 'アクティビティログはありません。',
     'no_assigned_folders' => '担当フォルダはありません。',
     'no_comment' => '理由の記載はありません',
     'no_content_in_this_diff' => 'この履歴には内容の変更記録はありません。',
@@ -737,6 +876,7 @@
             'request_approval' => '承認申請',
             'request_approval_short' => '承認申請',
             'request_inspection' => '作成完了（点検依頼）',
+            'request_inspection_comment_title' => '点検依頼コメント',
             'requested_at' => '申請日時',
             'requester' => '申請者',
             'required_approver_roles' => '承認が必須なロール',
@@ -758,6 +898,7 @@
             'select_inspector' => '点検者を選択',
             'select_next_approver' => '次の承認者を選択',
             'select_next_inspector' => '点検者を選択してください',
+            'send_inspection_request' => '点検依頼を送信',
             'status' =>
                 [
                     'approved' => '承認済み',
@@ -784,144 +925,7 @@
             'tooltip_conditions_not_met_inspection' => '必須点検ロールの処理が完了していません。',
             'view_content_at_this_point' => 'この時点の内容を見る',
             'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
-            'request_inspection_comment_title' => '点検依頼コメント',
-            'send_inspection_request' => '点検依頼を送信',
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-    'activity' => [
-        'title' => '活動履歴',
-        'column' => [
-            'time' => '日時',
-            'causer' => '操作者',
-            'subject' => '対象リソース',
-            'operation' => '操作内容',
-            'changes' => '変更内容',
-            'comment' => 'コメント',
-        ],
-        'no_activities_found' => '該当する活動履歴はありません。',
-        'system_user' => 'システム', // causerがnullの場合
-        'unknown_user' => '不明なユーザー', // causerが存在しない場合
-        'subject' => [
-            'unknown' => '不明なリソース',
-            'unknown_role' => '不明なロール',
-            'unknown_folder' => '不明なフォルダ',
-        ],
-        'model_name' => [
-            'ledger' => '台帳レコード',
-            'ledgerdiff' => '変更履歴',
-            'ledger_define' => '台帳定義',
-            'folder' => 'フォルダ',
-            'user' => 'ユーザー',
-            'role' => 'ロール',
-            'organization' => '組織',
-            'permission' => '権限',
-            'role_folder_permission' => 'ロールフォルダ権限',
-        ],
-        // 操作内容 (event) の翻訳 - subject_type_base の代わりに実際のモデル名を使用
-        'event' => [
-            'ledger_created' => '台帳レコードが作成されました。',
-            'ledger_updated' => '台帳レコードが更新されました。',
-            'ledger_deleted' => '台帳レコードが削除されました。',
-            'folder_created' => 'フォルダが作成されました。',
-            'folder_updated' => 'フォルダが更新されました。',
-            'folder_deleted' => 'フォルダが削除されました。',
-            'ledgerdefine_created' => '台帳定義が作成されました。', // key名を修正 (ledger_define -> ledgerdefine)
-            'ledgerdefine_updated' => '台帳定義が更新されました。', // key名を修正
-            'ledgerdefine_deleted' => '台帳定義が削除されました。', // key名を修正
-            'user_created' => 'ユーザーが作成されました。',
-            'user_updated' => 'ユーザー情報が更新されました。',
-            'user_deleted' => 'ユーザーが削除されました。',
-            'organization_created' => '組織が作成されました。',
-            'organization_updated' => '組織情報が更新されました。',
-            'organization_deleted' => '組織が削除されました。',
-            'role_created' => 'ロールが作成されました。',
-            'role_updated' => 'ロール情報が更新されました。',
-            'role_deleted' => 'ロールが削除されました。',
-            'permission_created' => '権限が作成されました。',
-            'permission_updated' => '権限情報が更新されました。',
-            'permission_deleted' => '権限が削除されました。',
-            'login' => 'ログインしました。',
-            'logout' => 'ログアウトしました。',
-            'organization_users_attached' => ':resource にユーザー「:related_entity」が追加されました。', // usersリレーション
-            'organization_users_detached' => ':resource からユーザー「:related_entity」が削除されました。', // usersリレーション
-            'user_roles_attached' => ':resource にロール「:related_entity」が追加されました。', // user_rolesリレーション (user_roles_attached)
-            'user_roles_detached' => ':resource からロール「:related_entity」が削除されました。', // user_rolesリレーション
-            'role_permissions_attached' => ':resource に権限「:related_entity」が追加されました。', // permissionsリレーション (role_permissions_attached)
-            'role_permissions_detached' => ':resource から権限「:related_entity」が削除されました。', // permissionsリレーション
-            'rolefolderpermission_created' => 'ロールフォルダ権限が作成されました。', // key名を修正
-            'rolefolderpermission_updated' => 'ロールフォルダ権限が更新されました。', // key名を修正
-            'rolefolderpermission_deleted' => 'ロールフォルダ権限が削除されました。', // 新規追加
-
-            // 汎用的な attached/detached
-            'attached' => '関連付けられました。',
-            'detached' => '関連解除されました。',
-            'updated' => '更新されました。',
-            'inspection_requested' => '点検が依頼されました。',
-        ],
-
-        'changes' => [
-            'content_changed' => 'コンテンツ内容が変更されました',
-            'column_define_changed' => 'カラム定義が変更されました',
-            'password_changed' => 'パスワードが変更されました',
-            'no_significant_changes' => '実質的な変更はありません',
-            'removed' => '削除されました',
-            'attribute' => '属性',
-            'before_change' => '変更前',
-            'after_change' => '変更後',
-            'attached' => '関連付け',
-            'detached' => '関連解除',
-            'complex_data' => '[複雑なデータ]', // 新規追加
-            'related_entity_of' => ':relation の関連エンティティ', // 新規追加
-        ],
-        'workflow' => [
-            'requested_inspection' => ':resource の点検が依頼されました。',
-            'inspection_completed' => ':resource の点検が完了し、承認が依頼されました。',
-            'approved' => ':resource が承認されました。',
-            'returned_to_draft' => ':resource が下書きに戻されました。',
-            'edited_while_pending' => ':resource が承認フロー中に編集され、下書きに戻されました。',
-            'task_claimed' => ':resource の担当タスクが引き継がれました。',
-            'pending_tasks' => '未処理タスク', // workflow.pending_tasks へ移動
-        ],
-        'no_permission' => '活動履歴の閲覧権限がありません。', // activitylog.no_permission から移動
-    ],
-    // ActivityLog で使用されていた既存のキーも ledger.activity.event.* にマッピング
-    'no_activity_logs' => 'アクティビティログはありません。', // activity.no_activities_found に統合済みだが、一時的に残す
-
-    'access_and_permissions' => [
-        'title' => 'アクセスと権限',
-        'your_access_level' => 'あなたのアクセスレベル',
-        'no_direct_access' => 'このリソースへの直接のアクセス権限はありません。',
-        'check_details_below' => '詳細については以下のリストを確認してください。',
-        'roles_with_access' => 'アクセス権限を持つロール',
-        'users_with_access' => 'アクセス可能なユーザー',
-        'no_roles_found' => 'このリソースにアクセス権限を持つロールは見つかりませんでした。',
-        'no_users_found' => 'このリソースにアクセス可能なユーザーは見つかりませんでした。',
-        'no_specific_permissions' => '特定の権限なし',
-        'no_roles' => 'ロールなし',
-        'inherited_from_parent' => '親フォルダ/定義から継承',
-        'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
-        'organizations_with_access' => 'アクセス権限を持つ組織',
-        'no_organizations_found' => 'このリソースにアクセス権限を持つ組織は見つかりませんでした。',
-        'no_organizations' => '所属組織なし',
-        'column' => [
-            'role_name' => 'ロール名',
-            'permissions' => '権限',
-            'source' => 'ソース',
-            'user_name' => 'ユーザー名',
-            'email' => 'メールアドレス',
-            'roles' => 'ロール',
-            'organization_name' => '組織名', // 新規追加
-            'organizations' => '所属組織', // 新規追加
-        ],
-        'source' => [
-            'folder' => 'フォルダ',
-            'ledger_define' => '台帳定義',
-            'unknown' => '不明',
-        ],
-        'no_permission' => 'この情報へのアクセス権限がありません。',
-        'direct_role' => '直接割り当てられたロール',
-        'inherited_role' => '組織から継承されたロール',
-        'no_roles_assigned' => 'ロールなし', // 新規追加
-    ],
 ];

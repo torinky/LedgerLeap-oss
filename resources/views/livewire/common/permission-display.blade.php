@@ -11,10 +11,19 @@
         @if ($this->currentUserHighestPermission)
             <p class="text-lg font-medium">
                 <i class="fas fa-user-check mr-2"></i>
-                {{ __('ledger.access_and_permissions.your_access_level') }}:
-                <span class="badge font-bold badge-lg badge-{{ $this->currentUserHighestPermission->getColor() }} text-{{ $this->currentUserHighestPermission->getColor() }}-content">
-                    {{ $this->currentUserHighestPermission->getLabel() }}
+                <span class="mr-2">
+                    {{ __('ledger.access_and_permissions.your_access_level') }}:
                 </span>
+                {{--
+                                <span class="badge font-bold badge-lg badge-{{ $this->currentUserHighestPermission->getColor() }} text-{{ $this->currentUserHighestPermission->getColor() }}-content">
+                                    {{ $this->currentUserHighestPermission->getLabel() }}
+                                </span>
+                --}}
+                @foreach($this->currentUserAllPermissions as $permission)
+                    <span class="badge font-bold badge-lg badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content">
+                            {{ $permission->getLabel() }}
+                        </span>
+                @endforeach
             </p>
         @else
             <p class="text-lg font-medium">
@@ -29,8 +38,9 @@
     {{-- アクセス権限を持つロールのリスト --}}
     <div class="mb-6">
         <h4 class="text-lg font-semibold mb-3 text-base-content">
-{{--            {{ __('ledger.access_and_permissions.roles_with_access') }}--}}
-            <x-mary-icon name="o-sparkles" label="{{ __('ledger.access_and_permissions.roles_with_access') }}"></x-mary-icon>
+            {{--            {{ __('ledger.access_and_permissions.roles_with_access') }}--}}
+            <x-mary-icon name="o-sparkles"
+                         label="{{ __('ledger.access_and_permissions.roles_with_access') }}"></x-mary-icon>
         </h4>
         @if ($this->accessRoles->isEmpty())
             <div class="alert alert-info bg-info/10 text-info-content border-info">
@@ -43,7 +53,7 @@
                     :headers="[
                     ['key' => 'role_name', 'label' => __('ledger.access_and_permissions.column.role_name'), 'class' => 'min-w-[8rem]'],
                     ['key' => 'permissions', 'label' => __('ledger.access_and_permissions.column.permissions'), 'class' => 'min-w-[12rem]'],
-                    ['key' => 'source', 'label' => __('ledger.access_and_permissions.column.source'), 'class' => 'min-w-[6rem]'],
+//                    ['key' => 'source', 'label' => __('ledger.access_and_permissions.column.source'), 'class' => 'min-w-[6rem]'],
                 ]"
                     :rows="$this->accessRoles"
                     striped
@@ -51,7 +61,8 @@
                 @scope('cell_role_name', $item)
                 <span class="font-medium text-base-content">{{ $item->role->name }}</span>
                 @if($item->is_inherited)
-                    <span class="tooltip tooltip-bottom text-base-content/70" data-tip="{{ __('ledger.access_and_permissions.inherited_from_parent') }}">
+                    <span class="tooltip tooltip-bottom text-base-content/70"
+                          data-tip="{{ __('ledger.access_and_permissions.inherited_from_parent') }}">
                             <i class="fas fa-level-up-alt ml-1 text-sm"></i>
                         </span>
                 @endif
@@ -67,14 +78,17 @@
                 @endforelse
                 @endscope
 
+{{--
                 @scope('cell_source', $item)
                 <span class="badge badge-outline text-base-content/70">
                         {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
                     </span>
                 @endscope
+--}}
 
                 <x-slot:empty>
-                    <x-mary-icon name="o-folder-minus" label="{{ __('ledger.access_and_permissions.no_roles_found') }}"/>
+                    <x-mary-icon name="o-folder-minus"
+                                 label="{{ __('ledger.access_and_permissions.no_roles_found') }}"/>
                 </x-slot:empty>
             </x-mary-table>
         @endif
@@ -85,7 +99,8 @@
     {{-- アクセス権限を持つ組織のリスト --}}
     <div class="mb-6">
         <h4 class="text-lg font-semibold mb-3 text-base-content">
-            <x-mary-icon name="o-building-office-2" label="{{ __('ledger.access_and_permissions.organizations_with_access') }}"/>
+            <x-mary-icon name="o-building-office-2"
+                         label="{{ __('ledger.access_and_permissions.organizations_with_access') }}"/>
         </h4>
         @if ($this->accessOrganizations->isEmpty())
             <div class="alert alert-info bg-info/10 text-info-content border-info">
@@ -97,9 +112,9 @@
                     class="table-compact w-full table-zebra overflow-x-auto"
                     :headers="[
                     ['key' => 'organization_name', 'label' => __('ledger.access_and_permissions.column.organization_name'), 'class' => 'min-w-[8rem]'],
-                    ['key' => 'permissions', 'label' => __('ledger.access_and_permissions.column.permissions'), 'class' => 'min-w-[12rem]'],
                     ['key' => 'roles', 'label' => __('ledger.access_and_permissions.column.roles'), 'class' => 'min-w-[10rem]'], {{-- ロールカラムを追加 --}}
-                    ['key' => 'source', 'label' => __('ledger.access_and_permissions.column.source'), 'class' => 'min-w-[6rem]'],
+                    ['key' => 'permissions', 'label' => __('ledger.access_and_permissions.column.permissions'), 'class' => 'min-w-[12rem]'],
+{{--                    ['key' => 'source', 'label' => __('ledger.access_and_permissions.column.source'), 'class' => 'min-w-[6rem]'],--}}
                 ]"
                     :rows="$this->accessOrganizations"
                     striped
@@ -107,26 +122,17 @@
                 @scope('cell_organization_name', $item)
                 <span class="font-medium text-base-content">{{ $item->display_name }}</span>
                 @if($item->is_inherited)
-                    <span class="tooltip tooltip-bottom text-base-content/70" data-tip="{{ __('ledger.access_and_permissions.inherited_from_parent') }}">
+                    <span class="tooltip tooltip-bottom text-base-content/70"
+                          data-tip="{{ __('ledger.access_and_permissions.inherited_from_parent') }}">
                             <i class="fas fa-level-up-alt ml-1 text-sm"></i>
                         </span>
                 @endif
                 @endscope
 
-                @scope('cell_permissions', $item)
-                @forelse($item->permissions as $permission)
-                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
-                            {{ $permission->getLabel() }}
-                        </span>
-                @empty
-                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>
-                @endforelse
-                @endscope
-
                 @scope('cell_roles', $item) {{-- 新しいロール表示スコープ --}}
                 @forelse($item->direct_roles as $role)
                     <div class="tooltip" data-tip="{{ __('ledger.access_and_permissions.direct_role') }}">
-                        <span class="badge badge-primary text-primary-content mr-1 mb-1" >
+                        <span class="badge badge-primary text-primary-content mr-1 mb-1">
                             {{ $role->name }}
                         </span>
                     </div>
@@ -148,16 +154,30 @@
                 @endif
                 @endscope
 
+                @scope('cell_permissions', $item)
+                @forelse($item->permissions as $permission)
+                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
+                            {{ $permission->getLabel() }}
+                        </span>
+                @empty
+                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>
+                @endforelse
+                @endscope
+
+{{--
                 @scope('cell_source', $item)
                 <span class="badge badge-outline text-base-content/70">
                         {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
                     </span>
                 @endscope
+--}}
 
                 <x-slot:empty>
-                    <x-mary-icon name="o-building-office-2" label="{{ __('ledger.access_and_permissions.no_organizations_found') }}"/>
+                    <x-mary-icon name="o-building-office-2"
+                                 label="{{ __('ledger.access_and_permissions.no_organizations_found') }}"/>
                 </x-slot:empty>
-            </x-mary-table>        @endif
+            </x-mary-table>
+        @endif
     </div>
     <div class="divider"></div>
 
@@ -177,7 +197,7 @@
             >
                 <x-slot:append>
                     {{-- ローディングインジケーター --}}
-                    <x-mary-loading wire:loading class="my-4" />
+                    <x-mary-loading wire:loading class="my-4"/>
                 </x-slot:append>
             </x-mary-input>
         </div>
@@ -195,6 +215,7 @@
                     ['key' => 'email', 'label' => __('ledger.access_and_permissions.column.email'), 'class' => 'min-w-[8rem]'],
                     ['key' => 'organizations', 'label' => __('ledger.access_and_permissions.column.organizations'), 'class' => 'min-w-[10rem]'],
                     ['key' => 'roles', 'label' => __('ledger.access_and_permissions.column.roles'), 'class' => 'min-w-[10rem]'],
+                    ['key' => 'permissions', 'label' => __('ledger.access_and_permissions.column.permissions'), 'class' => 'min-w-[12rem]'],
                 ]"
                     :rows="$this->accessUsers"
                     striped
@@ -210,8 +231,10 @@
                 @scope('cell_organizations', $user)
                 @forelse($user->organizations->sortBy('name') as $org)
                     <span class="badge badge-neutral text-neutral-content mr-1 mb-1">
-                            {{ $org->name }}@if($org->pivot->is_primary) <span class="text-xs ml-1 font-bold text-info-content/80">(主)</span>@endif
-                        </span>
+                            {{ $org->name }}@if($org->pivot->is_primary)
+                            <span class="text-xs ml-1 font-bold text-info-content/80">(主)</span>
+                        @endif
+                    </span>
                 @empty
                     <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_organizations') }}</span>
                 @endforelse
@@ -219,23 +242,43 @@
 
                 @scope('cell_roles', $user)
                 @forelse($user->categorized_roles['direct'] as $role)
-                    <span class="badge badge-primary text-primary-content mr-1 mb-1" title="{{ __('ledger.access_and_permissions.direct_role') }}">
+                    <span class="badge badge-primary text-primary-content mr-1 mb-1"
+                          title="{{ __('ledger.access_and_permissions.direct_role') }}">
                             {{ $role->name }}
-                        </span>
+                    </span>
                 @empty
                     {{-- 直接のロールがない場合は表示しない --}}
                 @endforelse
                 @forelse($user->categorized_roles['inherited_from_organizations'] as $role)
-                    <span class="badge badge-neutral text-neutral-content mr-1 mb-1" title="{{ __('ledger.access_and_permissions.inherited_role') }}">
+                    <span class="badge badge-neutral text-neutral-content mr-1 mb-1"
+                          title="{{ __('ledger.access_and_permissions.inherited_role') }}">
                             {{ $role->name }}
                             <i class="fas fa-level-up-alt ml-1 text-xs"></i>
-                        </span>
+                    </span>
                 @empty
                     {{-- 継承ロールがない場合は表示しない --}}
                 @endforelse
                 @if($user->categorized_roles['direct']->isEmpty() && $user->categorized_roles['inherited_from_organizations']->isEmpty())
                     <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_roles_assigned') }}</span>
                 @endif
+                @endscope
+
+                @scope('cell_permissions', $item)
+                @forelse($item->categorized_permissions['direct'] as $permission)
+                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
+                            {{ $permission->getLabel() }}
+                    </span>
+                @empty
+{{--                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>--}}
+                @endforelse
+                @forelse($item->categorized_permissions['inherited_from_organizations'] as $permission)
+                    <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
+                            {{ $permission->getLabel() }}
+                            <i class="fas fa-level-up-alt ml-1 text-xs"></i>
+                    </span>
+                @empty
+{{--                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>--}}
+                @endforelse
                 @endscope
 
                 <x-slot:empty>

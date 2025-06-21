@@ -80,12 +80,13 @@ class PermissionService
                         $foundStrongerOrEqual = $accessPermissions->contains(fn($p) => $p->getOrder() >= $permType->getOrder());
                         if (!$foundStrongerOrEqual) {
                             // より弱い権限を置き換える
-                            $accessPermissions = $accessPermissions->filter(fn($p) => !$permType->includes($p));
+//                            $accessPermissions = $accessPermissions->filter(fn($p) => !$permType->includes($p));
                             $accessPermissions->push($permType);
                         }
                     }
                 }
                 $accessPermissions = $accessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder());
+//                dd($accessPermissions);
 
                 if ($accessPermissions->isNotEmpty()) {
                     $rolesWithPermissions->push((object)[
@@ -120,9 +121,8 @@ class PermissionService
                 }
             }
         }
-
         // ロールIDでグループ化し、権限を結合（重複するロールがあった場合に権限をマージ）
-        return $rolesWithPermissions->groupBy(fn($item) => $item->role->id) // ロールIDでグループ化
+/*        $result = $rolesWithPermissions->groupBy(fn($item) => $item->role->id) // ロールIDでグループ化
         ->map(function ($groupedItems) {
             $role = $groupedItems->first()->role;
             $uniquePermissions = collect();
@@ -160,7 +160,9 @@ class PermissionService
                 'source' => $sources->unique()->implode(', '),
                 'is_inherited' => $isInherited
             ];
-        })->values()->sortBy(fn($item) => $item->role->name);
+        })->values()->sortBy(fn($item) => $item->role->name);*/
+
+        return $rolesWithPermissions;
     }
 
     /**
@@ -214,26 +216,33 @@ class PermissionService
                 if ($orgAllRoles->contains('id', $accessItem->role->id)) {
                     // アクセス権限をマージ
                     foreach ($accessItem->permissions as $perm) {
-                        $added = false;
-                        foreach ($orgAccessPermissions as $idx => $existingPerm) {
-                            if ($existingPerm->includes($perm)) {
-                                $added = true;
-                                break;
-                            }
-                            if ($perm->includes($existingPerm)) {
-                                $orgAccessPermissions->forget($idx);
-                                $orgAccessPermissions->push($perm);
-                                $added = true;
-                                break;
-                            }
-                        }
-                        if (!$added) {
+//                        $added = false;
+//                        foreach ($orgAccessPermissions as $idx => $existingPerm) {
+//                            if ($existingPerm->includes($perm)) {
+//                                $added = true;
+//                                break;
+//                            }
+//                            if ($perm->includes($existingPerm)) {
+//                                $orgAccessPermissions->forget($idx);
+//                                $orgAccessPermissions->push($perm);
+//                                $added = true;
+//                                break;
+//                            }
+//                        }
+//                        if (!$added) {
                             $orgAccessPermissions->push($perm);
-                        }
+//                        }
                     }
                     $orgSources->push($accessItem->source);
                     if ($accessItem->is_inherited) $orgIsInherited = true;
                 }
+            }
+
+            // 直接割り当てたロールと重複していたら除外
+            if ($orgInheritedRoles->isNotEmpty()) {
+                $orgInheritedRoles = $orgInheritedRoles->reject(function ($role) use ($orgDirectRoles) {
+                    return $orgDirectRoles->contains('id', $role->id);
+                })->values();
             }
 
             if ($orgAccessPermissions->isNotEmpty()) {
@@ -282,6 +291,10 @@ class PermissionService
      */
     public function getAccessUsers(int $resourceId, string $resourceType, ?string $searchQuery = null): LengthAwarePaginator
     {
+        $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
+        $targetFolder = $resolved['folder'];
+        $targetLedgerDefine = $resolved['ledgerDefine'];
+
         // まず、対象リソースにアクセス権限を持つロールを取得する
         $accessRoles = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
             ->filter(fn($item) => $item->permissions->isNotEmpty())
@@ -314,7 +327,12 @@ class PermissionService
         // Collection の map を使うと paginate の後で処理できる
         $users = $query->paginate(10);
 
-        $users->getCollection()->transform(function ($user) {
+        $accessRolesWithPerms = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
+            ->filter(fn($item) => $item->permissions->isNotEmpty());
+        // 修正点: diff を実行する前に、$accessRolesWithPerms から Role モデルのコレクションを pluck する
+        $accessRoleModels = $accessRolesWithPerms->pluck('role')->filter();
+
+        $users->getCollection()->transform(function ($user) use ($targetFolder, $accessRoleModels) {
             $user->display_organizations = $user->organizations; // 既存の表示に使用
 
             $directRoles = collect();
@@ -326,47 +344,68 @@ class PermissionService
             });
 
             // 所属組織から継承されるロールを分類
-            $user->organizations->each(function($org) use (&$inheritedRoles, $directRoles) {
-                $org->getAllRoles()->diff($org->roles)->each(function($role) use (&$inheritedRoles, $directRoles) {
+            $user->organizations->each(function($org) use (&$inheritedRoles, $directRoles, $accessRoleModels) {
+
+                $accessRoleModels->diff($org->getInheritedRoles())->each(function($role) use (&$inheritedRoles, $directRoles) {
                     // 組織継承ロールがユーザーの直接ロールと重複しないようにする
                     if (!$directRoles->contains('id', $role->id)) {
                         $inheritedRoles->push($role);
                     }
                 });
             });
-
             $user->categorized_roles = [
                 'direct' => $directRoles->unique('id')->sortBy('name'),
                 'inherited_from_organizations' => $inheritedRoles->unique('id')->sortBy('name'),
             ];
+
+            $user->folderPermissions = collect();
+            $directPermissions=collect();
+            $inheritedPermissions=collect();
+            if($targetFolder) {
+                foreach ($user->categorized_roles['direct'] as $role) {
+                    $permValues = $targetFolder->getAllPermissionsWithInheritance($role);
+                    foreach ($permValues as $permValue) {
+                        $permType = FolderPermissionType::tryFrom($permValue);
+                        if ($permType && $permType->isAccessType()) {
+                            $directPermissions->push($permType);
+                        }
+                    }
+                }
+                foreach ($user->categorized_roles['inherited_from_organizations'] as $role) {
+                    $permValues = $targetFolder->getAllPermissionsWithInheritance($role);
+                    foreach ($permValues as $permValue) {
+                        $permType = FolderPermissionType::tryFrom($permValue);
+                        // ユーザーに直接割り当てられた権限と重複しないようにする
+                        if ($permType && $permType->isAccessType()
+                            && !$directPermissions->contains('value', $permType->value)
+                        ) {
+                            $inheritedPermissions->push($permType);
+                        }
+                    }
+                }
+            }
+            $user->categorized_permissions = [
+                'direct' => $directPermissions->unique('name')->sortBy('name'),
+                'inherited_from_organizations' => $inheritedPermissions->unique('name')->sortBy('name'),
+            ];
+
             return $user;
         });
-
 
         return $users;
     }
 
 
+
     /**
-     * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
-     * (変更なし)
+     * 指定されたリソースID・タイプから対象のフォルダ・台帳定義を取得する共通処理
      *
      * @param int $resourceId
      * @param string $resourceType
-     * @return FolderPermissionType|null
+     * @return array{folder: ?Folder, ledgerDefine: ?LedgerDefine}
      */
-    public function getCurrentUserHighestPermission(int $resourceId, string $resourceType): ?FolderPermissionType
+    private function resolveTargetFolderAndLedgerDefine(int $resourceId, string $resourceType): array
     {
-        $user = Auth::user();
-        if (!$user) {
-            return null;
-        }
-
-        // スーパー管理者なら ADMIN を返す
-        if ($user->hasRole('super_admin')) {
-            return FolderPermissionType::ADMIN;
-        }
-
         $targetFolder = null;
         $targetLedgerDefine = null;
 
@@ -388,8 +427,39 @@ class PermissionService
                 $targetFolder = Folder::find($resourceId);
                 break;
             default:
-                return null;
+                // 何もしない
+                break;
         }
+
+        return [
+            'folder' => $targetFolder,
+            'ledgerDefine' => $targetLedgerDefine,
+        ];
+    }
+
+    /**
+     * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
+     * (変更なし)
+     *
+     * @param int $resourceId
+     * @param string $resourceType
+     * @return FolderPermissionType|null
+     */
+    public function getCurrentUserHighestPermission(int $resourceId, string $resourceType): ?FolderPermissionType
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        // スーパー管理者なら ADMIN を返す
+        if ($user->hasRole('super_admin')) {
+//            return FolderPermissionType::ADMIN;
+        }
+
+        $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
+        $targetFolder = $resolved['folder'];
+        $targetLedgerDefine = $resolved['ledgerDefine'];
 
         $highestPermission = null;
 
@@ -423,5 +493,54 @@ class PermissionService
         }
 
         return $highestPermission;
+    }
+
+    /**
+     * ログインユーザーが指定されたリソースに対して持つ全ての権限を取得する
+     *
+     * @param int $resourceId
+     * @param string $resourceType
+     * @return FolderPermissionType[]|null
+     */
+    public function getCurrentUserAllPermissions(int $resourceId, string $resourceType): ?array
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        // スーパー管理者なら全権限を返す
+        if ($user->hasRole('super_admin')) {
+//            return FolderPermissionType::cases();
+        }
+
+        $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
+        $targetFolder = $resolved['folder'];
+        $targetLedgerDefine = $resolved['ledgerDefine'];
+
+        $permissions = [];
+
+        // 1. フォルダの権限 (継承含む)
+        if ($targetFolder) {
+            foreach (FolderPermissionType::cases() as $permissionType) {
+                if ($this->userService->hasFolderPermission($user, $targetFolder, $permissionType)) {
+                    $permissions[$permissionType->value] = $permissionType;
+                }
+            }
+        }
+
+        // 2. 台帳定義の直接権限 (LedgerDefine または Ledger が対象の場合のみ)
+        if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
+            $userRoles = $this->userService->getAllUniqueRolesForUser($user);
+            foreach ($userRoles as $userRole) {
+                foreach (FolderPermissionType::cases() as $permissionType) {
+                    if ($targetLedgerDefine->hasPermissionTo($permissionType->value, $userRole->name)) {
+                        $permissions[$permissionType->value] = $permissionType;
+                    }
+                }
+            }
+        }
+
+        return array_values($permissions);
     }
 }

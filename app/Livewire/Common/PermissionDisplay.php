@@ -79,6 +79,11 @@ class PermissionDisplay extends Component
         return $this->permissionService->getCurrentUserHighestPermission($this->resourceId, $this->resourceType);
     }
 
+    public function getCurrentUserAllPermissionsProperty(): ?array
+    {
+        return $this->permissionService->getCurrentUserAllPermissions($this->resourceId, $this->resourceType);
+    }
+
     public function render()
     {
         // 権限表示の前提として、最低限の閲覧権限（例: view_folder や view_ledger_define, view_ledger）があるべき
