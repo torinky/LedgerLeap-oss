@@ -1,10 +1,11 @@
 <div class="card p-4 bg-base-100 shadow-xl">
 
+{{--
     <x-mary-header :title="__('ledger.access_and_permissions.title')"
-                   size="text-xl" separator progress-indicator
+                   separator progress-indicator
                    icon="o-shield-check"
-    >
-    </x-mary-header>
+    />
+--}}
 
     {{-- ログインユーザーの最高権限概要 --}}
     <div class="mb-6 p-4 rounded-lg bg-info/20 text-info-content border border-info/50">
@@ -22,7 +23,7 @@
                 @foreach($this->currentUserAllPermissions as $permission)
                     <span class="badge font-bold badge-lg badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content">
                             {{ $permission->getLabel() }}
-                        </span>
+                    </span>
                 @endforeach
             </p>
         @else

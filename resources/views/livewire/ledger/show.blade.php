@@ -2,28 +2,35 @@
     @php
         use App\Enums\WorkflowStatus;
     @endphp
-    <div class="p-0 bg-base-100 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
+    <div class="p-0 bg-base-200 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
 
         {{-- タブ UI の導入 --}}
         <x-mary-tabs wire:model="selectedTab" class="mb-10"> {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
             <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
-                        class="shadow-md"
+                        class="shadow-lg space-y-4"
             >
-
+                {{--                <x-mary-header title="{{ __('ledger.tab.details') }}" icon="o-document-text"/>--}}
 
                 @if($ledgerRecord->define->workflow_enabled)
-                    <x-mary-card>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center"> {{-- 表示調整用に grid に変更 --}}
+                    <x-mary-card title="{{ __('ledger.workflow.current_status') }}"
+                                 shadow separator
+                    >
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center"> {{-- 表示調整用に grid に変更 --}}
                             {{-- 左側: ステータスと担当者 --}}
-                            <div>
-                                <h3 class="text-lg font-semibold mb-1">{{ __('ledger.workflow.current_status') }}</h3>
+                            <div class="flex items-center w-full justify-center">
                                 <x-mary-badge :value="$ledgerRecord->status->label()"
-                                              class="{{ $ledgerRecord->status->colorClass() }}"/>
+                                              class="{{ $ledgerRecord->status->colorClass() }} text-lg p-2"/>
+
+                            </div>
+
+                            <div>
                                 {{-- 担当者表示 --}}
                                 @if($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector)
-                                    <span class="text-sm ml-2">({{ __('ledger.workflow.inspector') }}: {{ $ledgerRecord->latestDiff->inspector->name }})</span>
+                                    <span class=" text-sm ml-2
+                                ">({{ __('ledger.workflow.inspector') }}
+                                : {{ $ledgerRecord->latestDiff->inspector->name }})</span>
                                 @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver)
                                     <span class="text-sm ml-2">({{ __('ledger.workflow.approver') }}: {{ $ledgerRecord->latestDiff->approver->name }})</span>
                                 @elseif($ledgerRecord->status === WorkflowStatus::APPROVED && $ledgerRecord->latestDiff?->approver)
@@ -124,9 +131,8 @@
                                         </div>
                                     @endif
                                 @endif
-                                {{-- ★★★ ここまで ★★★ --}}
-                            </div>
 
+                            </div>
 
                             {{-- アクションボタン--}}
 
@@ -147,20 +153,23 @@
                                     {{-- 点検者だが、必須点検が完了していない場合 --}}
                                     <div class="tooltip"
                                          data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}">
-                                        <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
-                                                       icon="o-check-badge" class="join-item btn-wide btn-success"
-                                                       disabled/>
+                                        <x-mary-button
+                                                label="{{ __('ledger.workflow.request_approval_short') }}"
+                                                icon="o-check-badge" class="join-item btn-wide btn-success"
+                                                disabled/>
                                     </div>
                                 @endif
                                 @if($this->canApprove())
-                                    <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                    <x-mary-button label="{{ __('ledger.workflow.approve') }}"
+                                                   icon="o-check-circle"
                                                    class="join-item btn-success" wire:click="approveTask"
                                                    spinner/>
                                 @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id())
                                     {{-- 承認者だが、必須点検または必須承認が完了していない場合 --}}
                                     <div class="tooltip"
                                          data-tip="{{ __('ledger.workflow.error_approval_not_completed') }}">
-                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
+                                        <x-mary-button label="{{ __('ledger.workflow.approve') }}"
+                                                       icon="o-check-circle"
                                                        class="join-item btn-wide btn-success" disabled/>
                                     </div>
                                 @endif
@@ -172,15 +181,20 @@
                                             spinner="openReturnToDraftModal"/>
                                 @endif
                             </div>
+
                         </div>
                     </x-mary-card>
                 @endif
 
-                {{-- カラムごとの差分表示 --}}
-                @if($hasChangedColumns)
-                    <div class="border border-base-300 rounded-lg">
+                <x-mary-card title="{{ __('ledger.details') }}" shadow separator
+                             icon="o-document-text"
+                >
+
+                    {{-- カラムごとの差分表示 --}}
+                    @if($hasChangedColumns)
                         @if($hasChangedColumns)
                             <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
+                                           class="m-3"
                             />
                         @endif
                         <table class="table table-compact w-full">
@@ -247,20 +261,20 @@
                             @endforeach
                             </tbody>
                         </table>
-                    </div>
-                @else
-                    {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
-                    <x-ledger.detail.table
-                            :ledgerRecord="$ledgerRecord"
-                            :canView="$canView"
-                    />
-                @endif
+                    @else
+                        {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
+                        <x-ledger.detail.table
+                                :ledgerRecord="$ledgerRecord"
+                                :canView="$canView"
+                        />
+                    @endif
 
-                <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
-                    <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
-                    <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
-                    <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
-                </div>
+                    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
+                        <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}
+                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.updated_at').$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}</span>
+                        <span class="ml-3"><i class="fa-solid fa-clock mr-2"></i>{{__('ledger.named.created_at').$ledgerRecord->created_at->format('Y-m-d H:i:s')}}</span>
+                    </div>
+                </x-mary-card>
 
             </x-mary-tab>
 
@@ -336,8 +350,29 @@
                     </x-mary-table>
                 </x-mary-card>
             </x-mary-tab>
-        </x-mary-tabs>
 
+            {{-- ★★★ 総合活動履歴タブ ★★★ --}}
+            <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
+                        class="shadow-md">
+                    @livewire('common.activity-history-display', [
+                    'resourceId' => $ledgerRecord->id,
+                    'resourceType' => 'Ledger',
+                    'includeRelatedResources' => true,
+                    'hiddenColumns' => ['subject']
+                    ], key('activity-history-'.$ledgerRecord->id))
+
+            </x-mary-tab>
+
+            {{-- ★★★ アクセスと権限タブ ★★★ --}}
+            <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
+                        class="shadow-md">
+                    @livewire('common.permission-display', [
+                    'resourceId' => $ledgerRecord->id,
+                    'resourceType' => 'Ledger'
+                    ], key('permission-display-'.$ledgerRecord->id))
+            </x-mary-tab>
+
+        </x-mary-tabs>
 
         {{-- フッターパネル (アクションボタン集約) --}}
         <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
@@ -370,7 +405,8 @@
                                 && $ledgerRecord->latestDiff?->inspector_id === Auth::id()
                                  && !$this->ledgerRecord->canProceedToApprovalStep())
                                 {{-- 点検者だが、必須点検が完了していない場合 --}}
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}"> {{-- 新翻訳キー --}}
+                                <div class="tooltip"
+                                     data-tip="{{ __('ledger.workflow.error_inspection_not_completed') }}"> {{-- 新翻訳キー --}}
                                     <x-mary-button label="{{ __('ledger.workflow.request_approval_short') }}"
                                                    icon="o-check-badge" class="join-item btn-success btn-sm md:btn-md"
                                                    disabled/>
@@ -385,7 +421,8 @@
                                                spinner/>
                             @elseif($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === Auth::id() && !$this->ledgerRecord->hasAnyRequiredInspectionBeenDoneForCurrentContent())
                                 {{-- 承認担当者だが、いずれの必須点検も完了していない場合 --}}
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.tooltip.approve_requires_any_prior_inspection') }}"> {{-- 新翻訳キー --}}
+                                <div class="tooltip"
+                                     data-tip="{{ __('ledger.workflow.tooltip.approve_requires_any_prior_inspection') }}"> {{-- 新翻訳キー --}}
                                     <x-mary-button label="{{ __('ledger.workflow.approve') }}" icon="o-check-circle"
                                                    class="join-item btn-primary btn-sm md:btn-md" disabled/>
                                 </div>

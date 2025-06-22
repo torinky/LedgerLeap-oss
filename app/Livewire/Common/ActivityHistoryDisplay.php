@@ -27,6 +27,9 @@ class ActivityHistoryDisplay extends Component
     public bool $includeRelatedResources = false; // レコードのアクティビティ表示時に、親の台帳定義とフォルダのアクティビティも含めるか
 //    public string $paginationTheme = 'app';
 
+    // ★★★ 非表示にするカラムのキーを格納する配列 ★★★
+    public array $hiddenColumns = [];
+
     // フィルタリング用プロパティ (MVPでは非実装だが定義しておく)
     public ?string $filterCauserName = null;
     public ?string $filterEventType = null;
@@ -53,11 +56,13 @@ class ActivityHistoryDisplay extends Component
     public function mount(
         ?int $resourceId = null,
         ?string $resourceType = null,
-        bool $includeRelatedResources = false
+        bool $includeRelatedResources = false,
+        array $hiddenColumns = []
     ): void {
         $this->resourceId = $resourceId;
         $this->resourceType = $resourceType;
         $this->includeRelatedResources = $includeRelatedResources;
+        $this->hiddenColumns = $hiddenColumns;
     }
 
     /**
@@ -180,10 +185,35 @@ class ActivityHistoryDisplay extends Component
 
         $activities = $this->getActivitiesQuery()->paginate(10);
 
+        // ★★★ Bladeに渡すヘッダー情報を動的に生成 ★★★
+        $headers = $this->getVisibleHeaders();
+
         return view('livewire.common.activity-history-display', [
             'activities' => $activities,
+            'headers' => $headers,
         ]);
     }
+    /**
+     * 表示するヘッダーのリストを生成する
+     *
+     * @return array
+     */
+    protected function getVisibleHeaders(): array
+    {
+        $allHeaders = [
+            ['key' => 'time', 'label' => __('ledger.activity.column.time'), 'class' => 'min-w-[10rem]'],
+            ['key' => 'causer', 'label' => __('ledger.activity.column.causer'), 'class' => 'min-w-[6rem]'],
+            ['key' => 'subject', 'label' => __('ledger.activity.column.subject'), 'class' => 'min-w-[10rem]'],
+            ['key' => 'operation', 'label' => __('ledger.activity.column.operation'), 'class' => 'min-w-[10rem]'],
+            ['key' => 'changes', 'label' => __('ledger.activity.column.changes')],
+            ['key' => 'comment', 'label' => __('ledger.activity.column.comment'), 'class' => 'min-w-[10rem]'],
+        ];
+
+        return array_filter($allHeaders, function($header) {
+            return !in_array($header['key'], $this->hiddenColumns);
+        });
+    }
+
 
     // ActivityLogFormatter に移譲
     public function getOperationDescription(CustomActivity $activity): string

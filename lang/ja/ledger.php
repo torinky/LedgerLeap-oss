@@ -741,6 +741,8 @@
         [
             'details' => '基本情報',
             'workflow_history' => 'ワークフロー履歴',
+            'activity_history' => '活動履歴',
+            'access_and_permissions' => 'アクセスと権限',
         ],
     'tag' =>
         [
