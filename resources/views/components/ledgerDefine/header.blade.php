@@ -6,6 +6,8 @@
     'breadcrumbsPerLedgerDefine'=>[],
     'keywords'=>[],
     'filter'=>[],
+    'ledgerDefineId'=>null,
+    'ledgerDefineRecordsKeyById'=>[],
 ])
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
@@ -15,6 +17,20 @@
         <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
         />
     <div class="flex-grow text-right">
+        <x-mary-button
+                wire:click="openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                label="{{ __('ledger.access_and_permissions.title') }}"
+                icon="o-shield-check"
+                class="btn-xs btn-ghost"
+                spinner
+        />
+        <x-mary-button
+                wire:click="openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                label="{{ __('ledger.activity.title') }}"
+                icon="o-clock"
+                class="btn-xs btn-ghost"
+                spinner
+        />
         <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
            data-tip="{{__('ledger.close')}}"
            wire:click="toggleLedgerDefineId({{ $ledgerDefine->id }})"

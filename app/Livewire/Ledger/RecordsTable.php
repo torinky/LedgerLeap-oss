@@ -72,6 +72,12 @@ class RecordsTable extends Component
 
     private $synonymServiceConfig;
 
+    public bool $showPermissionModal = false;
+    public bool $showActivityModal = false;
+    public ?string $modalTitle = null;
+    public ?int $modalResourceId = null;
+    public ?string $modalResourceType = null;
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -233,6 +239,10 @@ class RecordsTable extends Component
             return $ledger;
         });
 
+        $currentFolder = Folder::find($this->currentFolderId);
+        $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
+
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
@@ -240,6 +250,8 @@ class RecordsTable extends Component
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
+            'currentFolder' => $currentFolder,
+            'currentUserPermissionForFolder' => $currentUserPermission,
         ]);
     }
 
@@ -398,5 +410,21 @@ class RecordsTable extends Component
     {
         // perPageを変更した場合、currentPageを最初のページにリセットする
         $this->resetPage();
+    }
+
+    public function openPermissionModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->modalResourceType = $resourceType;
+        $this->modalResourceId = $resourceId;
+        $this->modalTitle = $title . ' ' . __('ledger.access_and_permissions.title');
+        $this->showPermissionModal = true;
+    }
+
+    public function openActivityModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->modalResourceType = $resourceType;
+        $this->modalResourceId = $resourceId;
+        $this->modalTitle = $title . ' ' . __('ledger.activity.title');
+        $this->showActivityModal = true;
     }
 }
