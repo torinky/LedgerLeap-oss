@@ -165,73 +165,185 @@
 *   **成果物**: ユーザーが台帳詳細画面から、そのレコードに関する活動履歴と権限情報にシームレスにアクセスできる、統合されたUIが完成した。共通コンポーネントは、呼び出し元のコンテキストに応じて表示をカスタマイズできる柔軟性も備えている。
 
 ---
-### **ステップ 4: `Ledger/RecordsTable.php` への概要情報とモーダル導線追加**
+---
 
-**目的**:
-*   ユーザーが台帳レコード一覧を見る前に、現在表示しているフォルダや、リストアップされている各台帳定義の**権限・活動状況の概要**を把握できるようにする。
-*   概要情報から、ステップ1・2で作成した詳細表示コンポーネント (`ActivityHistoryDisplay`, `PermissionDisplay`) をモーダルで呼び出し、詳細を確認できるようにする。
-*   これにより、ユーザーは個別のレコード詳細画面に遷移することなく、より上位の階層（フォルダ、台帳定義）の情報を効率的に確認できるようになる。
+### **✅ ステップ 4: `Ledger/RecordsTable.php` への概要情報とモーダル導線追加 (完了)**
 
-**作業内容**:
+*   **目的**:
+    *   台帳一覧／検索画面 (`RecordsTable`) に、現在表示しているフォルダや各台帳定義の権限・活動状況の概要を提示する。
+    *   概要情報から、詳細情報コンポーネント (`ActivityHistoryDisplay`, `PermissionDisplay`) をモーダルで呼び出し、ユーザーが効率的に情報を確認できるようにする。
 
-1.  **`RecordsTable` 画面に「フォルダ概要パネル」を追加**:
-    *   **場所**: 画面上部、台帳定義リストやレコードリストの上。
-    *   **機能**:
-        *   現在表示しているフォルダ名と、そのフォルダに対するログインユーザーの最高権限を簡潔に表示する。
-        *   「フォルダの権限詳細」「フォルダの活動履歴」ボタンを設置する。
+*   **作業内容**:
+    1.  **`app/Livewire/Ledger/RecordsTable.php` の修正**:
+        *   モーダルウィンドウの表示状態を制御するプロパティ (`$showPermissionModal`, `$showActivityModal`) と、モーダルに渡すリソース情報を格納するプロパティ (`$modalTitle`, `$modalResourceId`, `$modalResourceType`) を追加。
+        *   モーダルを開くための `openPermissionModal()` と `openActivityModal()` メソッドを実装。これらのメソッドは、ビューのボタンから `wire:click` で呼び出される。
+        *   `render()` メソッド内で `PermissionService` を利用し、現在表示中のフォルダ (`$currentFolder`) に対するログインユーザーの最高権限を取得し、ビューに渡すロジックを追加。
+    2.  **`resources/views/livewire/ledger/records-table.blade.php` の修正**:
+        *   画面上部（パンくずリストの下）に、現在のフォルダ名、ログインユーザーの権限概要、そして詳細モーダルを開くための「権限詳細」「活動履歴」ボタンを含む**フォルダ概要パネル**を追加。
+        *   ファイルの末尾に、権限表示用と活動履歴表示用の `<x-mary-modal>` を2つ配置。モーダルは Livewire プロパティにバインドされ、内部で `@livewire` ディレクティブを使用して共通コンポーネントを動的に読み込む。
+    3.  **`resources/views/components/ledgerDefine/header.blade.php` の修正**:
+        *   各台帳定義のヘッダー部分に、その台帳定義に対する「権限詳細」「活動履歴」ボタンを追加。
+        *   これらのボタンも、`RecordsTable` コンポーネントの `openPermissionModal()` / `openActivityModal()` メソッドを呼び出す。
 
-2.  **`RecordsTable` 画面の各「台帳定義」行に概要情報を追加**:
-    *   **場所**: 各台帳定義 (`LedgerDefine`) の行、またはその行を展開した際。
-    *   **機能**:
-        *   その台帳定義に対するログインユーザーの最高権限をアイコン等で簡潔に表示。
-        *   その台帳定義の直近の活動（最終更新日時と更新者など）を表示。
-        *   「台帳定義の権限詳細」「台帳定義の活動履歴」ボタンを設置する。
+*   **動作確認**:
+    *   台帳一覧画面で、画面上部に現在のフォルダの概要パネルが表示され、「権限詳細」「活動履歴」ボタンをクリックすると、そのフォルダを対象としたモーダルが表示されることを確認。
+    *   各台帳定義のヘッダー部分にあるボタンをクリックすると、その台帳定義を対象としたモーダルが表示されることを確認。
+    *   モーダル内で `PermissionDisplay` および `ActivityHistoryDisplay` コンポーネントが正しく表示され、機能することを確認。
 
-3.  **詳細情報モーダルの実装**:
-    *   **機能**: 上記の各ボタンがクリックされた際に、対応する共通コンポーネント (`PermissionDisplay`, `ActivityHistoryDisplay`) を**モーダルウィンドウで表示**する。
-    *   **実装**:
-        *   `RecordsTable` コンポーネントに、モーダル表示を制御するためのプロパティ（例: `showPermissionModal`, `showActivityModal`）と、モーダルに渡すためのプロパティ（例: `modalResourceId`, `modalResourceType`）を追加する。
-        *   各ボタンの `wire:click` イベントで、これらのプロパティをセットし、モーダルを開く。
-        *   `MaryUI` の `<x-mary-modal>` コンポーネントを使用し、その中に `@livewire(...)` で共通コンポーネントを動的に呼び出す。
+*   **成果物**: 台帳一覧画面が、単なるレコードの入り口だけでなく、フォルダや台帳定義といった上位階層の情報を確認するためのハブとしても機能するようになった。ユーザーは個別の詳細画面に遷移することなく、必要な情報をモーダルで素早く確認できるようになった。
 
 ---
 
-#### **ステップ 4: `ActivityHistoryDisplay` の「総合アクティビティ」対応強化**
+---
 
-* **目的**: レコード、台帳定義、フォルダの活動ログを単一のタブで表示できるようにする。
-* **作業内容**:
-    1. `app/Livewire/Common\ActivityHistoryDisplay.php` を修正。
-    2. `mount()` メソッドで、`$resourceId`, `$resourceType` に加え、`$includeRelatedResources` (boolean)
-       などのオプションを受け取るように変更。
-    3. `$includeRelatedResources` が `true` の場合、対象レコードの `ledger_define_id` と `folder_id`
-       を取得し、それらに関連するアクティビティも一緒に取得するロジックを追加。
-        * `CustomActivity::where(function ($query) use ($ledgerId, $ledgerDefineId, $folderId) { ... })`
-          のようにOR条件でクエリを構築。
-    4. 各アクティビティの表示に、それがどのリソース（レコード、台帳定義、フォルダ）に対する操作かを明確に示すラベルを追加。
+#### **ペルソナA: 管理者 / 部門長 (佐藤 健太)**
+
+*   **目標**: 情報セキュリティ確保、コンプライアンス、監査対応、問題究明。
+
+##### **シナリオ1: フォルダ単位での監査**
+*   **状況**: 「『2024年度_重要プロジェクト』フォルダに関して、誰がいつ、どのような操作を行ったか、**このフォルダに関連する全ての活動**を時系列で確認したい。」
+*   **期待する情報**:
+    *   **フォルダ自体の変更**: フォルダ名の変更、フォルダの移動、権限設定の変更など。
+    *   **配下の台帳定義の変更**: このフォルダ内に新しい台帳定義が作成された、既存の定義が変更された、など。
+    *   **配下の台帳レコードの操作**: このフォルダ内の台帳で、新しいレコードが作成された、既存のレコードが更新・承認・削除された、など。
+    *   **不要な情報**: このフォルダの**親フォルダ**や**兄弟フォルダ**の活動履歴。これらはノイズになる。
+*   **結論**:
+    *   `ActivityHistoryDisplay` を `resourceType: 'Folder'` で呼び出した場合、そのフォルダ自身と、**そのフォルダおよび全ての子孫フォルダに属する**台帳定義・台帳レコードの活動履歴を全て表示すべき。
+
+##### **シナリオ2: 台帳定義単位での監査**
+*   **状況**: 「『製品仕様書』という台帳定義について、定義自体の変更履歴と、**この仕様書に基づいて作成された全てのレコード**に対する操作（誰が作成し、誰が承認したかなど）をまとめて確認したい。」
+*   **期待する情報**:
+    *   **台帳定義自体の変更**: カラムの追加・削除、ワークフロー設定の変更など。
+    *   **この定義に紐づく全レコードの操作**: レコードの作成、更新、承認、差し戻し、削除など。
+    *   **不要な情報**: この台帳定義が属するフォルダの変更履歴や、同じフォルダ内の他の台帳定義に関する活動履歴。
+*   **結論**:
+    *   `ActivityHistoryDisplay` を `resourceType: 'LedgerDefine'` で呼び出した場合、その台帳定義自身と、**その台帳定義に紐づく全ての**台帳レコードの活動履歴を表示すべき。
+
+##### **シナリオ3: 個別レコードの詳細調査**
+*   **状況**: 「特定の顧客情報レコード（ID: 123）について、誰が閲覧し、誰が編集し、誰が承認したのか、このレコードに関する全ての履歴を時系列で追跡したい。」
+*   **期待する情報**:
+    *   **台帳レコード自身の操作**: レコードの作成、更新、承認、差し戻し、削除など。
+    *   **関連する親リソースの変更**: このレコードの挙動に影響を与えた可能性のある、親である台帳定義やフォルダの変更履歴も同時に確認できると、原因究明の際に役立つことがある。（例: 「レコードが編集できなくなった」→「親フォルダの権限が変更されていた」）。
+*   **結論**:
+    *   `ActivityHistoryDisplay` を `resourceType: 'Ledger'` で呼び出した場合（台帳詳細画面のタブ）、その台帳レコード自身の活動履歴に加え、**親である台帳定義とフォルダの活動履歴も**含めて表示するのが望ましい。これは、現在の `includeRelatedResources: true` の挙動が、このシナリオには合致していることを意味します。
 
 ---
 
-#### **ステップ 5: `Ledger/RecordsTable.php` への概要情報とモーダル導線追加**
+#### **ペルソナB: 実務担当者 / 現場リーダー (田中 美咲)**
 
-* **目的**: 台帳一覧/検索画面に、フォルダ概要パネルと、各台帳定義ごとの概要情報および詳細への導線を追加する。
-* **作業内容**:
-    1. `app/Livewire/Common/FolderSummary.php` を作成。
-    2. `resources/views/livewire/common/folder-summary.blade.php` を作成。
-    3. `app/Livewire/Ledger/RecordsTable.php` を修正。
-    4. `records-table.blade.php` の画面上部に `@livewire('common.folder-summary', ['folderId' => $currentFolderId])`
-       を埋め込む。
-    5. `FolderSummary` コンポーネント内で、現在のフォルダの権限概要（ログインユーザー視点）と、Activity / Permission
-       詳細モーダルを開くボタンを実装。
-        * モーダルは `ActivityHistoryDisplay` や `PermissionDisplay` を動的に読み込む形を検討。
-    6. 各 `LedgerDefine` 行に、その定義の権限概要（アイコン等）と直近の活動概要（最終更新者、日時）を表示。
-    7. 各 `LedgerDefine` 行に、Activity / Permission 詳細モーダルを開くボタンを実装。
+*   **目標**: 業務の進捗確認、過去の作業内容の確認。
+
+##### **シナリオ4: 担当フォルダの状況把握**
+*   **状況**: 「自分が担当している『品質管理記録』フォルダで、最近誰がどんな作業をしたかざっと確認したい。新しい記録は誰が追加した？承認待ちは誰が処理した？」
+*   **期待する情報**:
+    *   管理者（佐藤）のシナリオ1と同様、このフォルダ配下で発生したレコードの作成・更新・承認などの活動履歴。フォルダ自体の設定変更にはあまり関心がない。
+*   **結論**:
+    *   管理者と同じく、`resourceType: 'Folder'` で呼び出した場合は、そのフォルダ配下の全ての活動履歴が表示されることが望ましい。
 
 ---
 
-### **今後の課題（PermissionDisplay 改善案）**
+### **ステップ5の作業内容の再定義**
+
+上記の深掘り検討に基づき、ステップ5の作業内容を以下のように具体的に再定義します。
+
+**`app/Livewire/Common/ActivityHistoryDisplay.php` の `getActivitiesQuery()` メソッドの修正ロジック:**
+
+1.  **`resourceType` が `'Folder'` の場合**:
+    *   `Folder::descendantsAndSelf($this->resourceId)->pluck('id')` を使って、対象フォルダとその全ての子孫フォルダのIDリストを取得する。
+    *   `subject_type` が `Folder` で `subject_id` がこのIDリストに含まれるログを取得。
+    *   `subject_type` が `LedgerDefine` で、その `folder_id` がこのIDリストに含まれるログを取得。
+    *   `subject_type` が `Ledger` で、その `Ledger` の `define->folder_id` がこのIDリストに含まれるログを取得。
+    *   これらの条件を `OR` で結合する。
+    *   `includeRelatedResources` はこのモードでは使用しない（常に子孫を含める）。
+
+2.  **`resourceType` が `'LedgerDefine'` の場合**:
+    *   `subject_type` が `LedgerDefine` で `subject_id` が `$this->resourceId` であるログを取得。
+    *   `subject_type` が `Ledger` で、その `ledger_define_id` が `$this->resourceId` であるログを取得。
+    *   これらの条件を `OR` で結合する。
+    *   `includeRelatedResources` はこのモードでは使用しない。
+
+3.  **`resourceType` が `'Ledger'` の場合**:
+    *   `subject_type` が `Ledger` で `subject_id` が `$this->resourceId` であるログを取得。
+    *   **かつ、`$this->includeRelatedResources` が `true` の場合**:
+        *   親の `LedgerDefine` のログ（`subject_type` = `LedgerDefine`, `subject_id` = `ledger->ledger_define_id`）を取得。
+        *   親の `Folder` のログ（`subject_type` = `Folder`, `subject_id` = `ledger->define->folder_id`）を取得。
+    *   これらの条件を `OR` で結合する。
+
+---
+
+#### **ステップ 5: アクティビティログの表示範囲の最適化**
+
+*   **目的**: `ActivityHistoryDisplay` コンポーネントで、各リソース（フォルダ、台帳定義）の活動履歴を表示する際に、ユーザーの期待に沿った範囲のログのみを表示するように修正する。
+*   **作業内容**:
+    1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
+        *   `getActivitiesQuery()` メソッド内のロジックを修正。
+        *   `resourceType` が `'Folder'` の場合:
+            *   そのフォルダ自身 (`subject_type` = `Folder`, `subject_id` = `$resourceId`) のアクティビティログを取得する。
+            *   そのフォルダに直接属する `LedgerDefine` のアクティビティログを取得する。
+            *   そのフォルダに属する `LedgerDefine` から作成された `Ledger` のアクティビティログを取得する。
+            *   `includeRelatedResources` は、この文脈では「子孫フォルダの活動履歴を含めるか」というオプションとして再定義するか、一旦このステップでは無視する。
+        *   `resourceType` が `'LedgerDefine'` の場合:
+            *   その台帳定義自身 (`subject_type` = `LedgerDefine`, `subject_id` = `$resourceId`) のアクティビティログを取得する。
+            *   その台帳定義から作成された全ての `Ledger` (`subject_type` = `Ledger`) のアクティビティログを取得する。
+            *   `includeRelatedResources` は、この文脈では「親フォルダの活動履歴を含めるか」というオプションになるが、ユーザーの期待に反するため、`false` の挙動（親を含めない）をデフォルトとする。
+    2.  **`resources/views/livewire/ledger/records-table.blade.php` の修正**:
+        *   台帳定義の活動履歴モーダルを呼び出す際に、`includeRelatedResources` を `false` に設定する（または削除する）。
+    3.  **動作確認**:
+        *   フォルダの活動履歴モーダルで、そのフォルダと配下の台帳定義・レコードのログのみが表示されることを確認。
+        *   台帳定義の活動履歴モーダルで、その台帳定義と、それから作成されたレコードのログのみが表示されることを確認。
+
+---
+
+#### **ステップ 6: 表示の冗長性の解消**
+
+*   **目的**: フォルダや台帳定義の活動履歴モーダルで、自明な「対象リソース」列を非表示にする。
+*   **作業内容**:
+    1.  **`resources/views/livewire/ledger/records-table.blade.php` の修正**:
+        *   `openActivityModal` を呼び出すボタンの `wire:click` イベントを修正し、`ActivityHistoryDisplay` に `'hiddenColumns' => ['subject']` を渡すようにする。
+        *   フォルダの活動履歴モーダルと台帳定義の活動履歴モーダルの両方でこの設定を適用する。
+    2.  **動作確認**:
+        *   フォルダおよび台帳定義の活動履歴モーダルを開いた際に、「対象リソース」列が表示されていないことを確認。
+        *   `/notifications` 画面の「活動履歴」タブでは、引き続き「対象リソース」列が表示されていることを確認。
+
+---
+
+#### **ステップ 7: フィルタリング機能の実装（MVP）**
+
+*   **目的**: `ActivityHistoryDisplay` と `PermissionDisplay` に、主要なフィルタリング機能を追加する。
+*   **作業内容**:
+    1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
+        *   フィルタリング用の public プロパティ (`$filterCauserName`, `$filterEventType`, `$filterStartDate`, `$filterEndDate`) を追加。
+        *   `getActivitiesQuery()` メソッド内で、これらのプロパティが設定されている場合に `where` 句を追加するロジックを実装。
+    2.  **`resources/views/livewire/common/activity-history-display.blade.php` の修正**:
+        *   テーブルの上部に、操作者や操作タイプを選択する `x-mary-select` や、日付を選択する `x-mary-datepicker` などのフィルタ入力UIを配置。
+    3.  **`app/Livewire/Common/PermissionDisplay.php` の修正**:
+        *   フィルタリング用の public プロパティ (`$filterRoleId`, `$filterPermissionType`) を追加。
+        *   `getAccessRolesProperty` や `getAccessUsersProperty` などのプロパティ内で、これらのフィルタを適用するロジックを実装。
+    4.  **`resources/views/livewire/common/permission-display.blade.php` の修正**:
+        *   各リストの上部に、ロール名や権限タイプで絞り込むための `x-mary-select` などのフィルタ入力UIを配置。
+    5.  **動作確認**:
+        *   各コンポーネントで、フィルタUIが正しく表示され、選択した条件でリストの内容が絞り込まれることを確認。
+        *   フィルタをリセットするボタンも追加し、動作を確認。
+
+---
+
+### **今後の課題**
 
 *   **フィルタリング機能の強化**:
     *   **権限タイプによる絞り込み**: 特定の権限（例: 「承認権限」を持つロール・組織・ユーザー）のみを表示するフィルタ機能。
     *   **組織/ロール名による絞り込み**: 組織名またはロール名でリストをフィルタリングする機能。
+    
 *   **UI/UXの改善**:
     *   **ユーザーリストの所属組織名表示**: 組織名を親組織からのフルパス（例: `本社 > 営業部 > 東日本営業部`）で表示し、ツールチップや省略記法 (`...`) を活用してテーブルの幅を取りすぎないようにする工夫。
+
+*   **表示されるアクティビティログの範囲**:
+    *   **現状**: 台帳定義の活動履歴モーダルで `includeRelatedResources` を `true` にすると、その台帳定義が属する「フォルダ」の変更履歴も表示されてしまう。
+    *   **ユーザーの期待**: ユーザーは「台帳定義」の活動履歴を見たい場合、その定義自体の変更履歴に加え、「その定義で作成された全レコード」に対する操作（作成、更新、承認など）が表示されることを期待する可能性が高い。フォルダ自体の変更履歴はノイズになりうる。
+    *   **再検討事項**: ペルソナのシナリオに立ち返り、各リソース（フォルダ、台帳定義）のアクティビティ履歴モーダルで表示すべきログの範囲（`subject_type` と `subject_id`）を再定義する必要がある。`includeRelatedResources` の挙動を見直すか、より柔軟なフィルタリングオプションを設けるか検討する。
+
+*   **表示の冗長性**:
+    *   **現状**: フォルダの活動履歴モーダルで、`ActivityHistoryDisplay` に「対象リソース」列が表示され、全て同じフォルダ名になるため冗長。
+    *   **ユーザーの期待**: 特定のリソースの活動履歴を見ている場合、そのリソース名は自明なので非表示にしたい。ただし、関連リソース（例: 子フォルダや台帳定義）のログも表示する場合は、この列は必要になる。
+    *   **再検討事項**: フォルダの活動履歴モーダルで `hiddenColumns` を使って「対象リソース」列を非表示にする。また、「上位フォルダの活動履歴を含めるか」というオプション（現在の `includeRelatedResources` とは逆の方向）が必要かどうかも検討する。
+
+---
