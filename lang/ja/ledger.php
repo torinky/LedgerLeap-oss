@@ -81,6 +81,7 @@
                     'operation' => '操作内容',
                     'subject' => '対象リソース',
                     'time' => '日時',
+                    'description' => '説明',
                 ],
             'event' =>
                 [
@@ -123,6 +124,10 @@
                     'user_roles_detached' => ':resource からロール「:related_entity」が削除されました。',
                     'user_updated' => 'ユーザー情報が更新されました。',
                 ],
+            'filter' => [
+                'start_date' => '開始日',
+                'end_date' => '終了日',
+            ],
             'model_name' =>
                 [
                     'folder' => 'フォルダ',
@@ -157,6 +162,9 @@
                     'task_claimed' => ':resource の担当タスクが引き継がれました。',
                 ],
         ],
+    'all_users' => '全てのユーザー',
+    'all_operations' => '全ての操作',
+    'reset' => 'リセット',
     'add' => '追加する',
     'admin' => '管理',
     'after_change' => '変更後',

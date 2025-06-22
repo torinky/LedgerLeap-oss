@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -30,12 +31,19 @@ class ActivityHistoryDisplay extends Component
     // ★★★ 非表示にするカラムのキーを格納する配列 ★★★
     public array $hiddenColumns = [];
 
-    // フィルタリング用プロパティ (MVPでは非実装だが定義しておく)
+    // フィルタリング用プロパティ
     public ?string $filterCauserName = null;
     public ?string $filterEventType = null;
     public ?string $filterStartDate = null;
     public ?string $filterEndDate = null;
     public ?string $searchQuery = null;
+    public ?int $filterByUserId = null;
+    public ?string $filterByEvent = ''; // 初期値を空文字列に
+
+    // ★★★ 新規追加: フィルタ選択肢用プロパティ ★★★
+    public Collection $userOptions;
+    public Collection $eventOptions;
+    public Collection $descriptionOptions;
 
     // DaisyUI Theme Colors for Changes Display
     private const TEXT_COLOR_SUCCESS = 'text-success';         // For added items, success states, etc.
@@ -44,6 +52,7 @@ class ActivityHistoryDisplay extends Component
     private const TEXT_COLOR_NEUTRAL = 'text-neutral-content'; // For neutral or less emphasized information
     private const TEXT_STYLE_MUTED = 'text-base-content/70'; // For muted text (e.g., null values)
     private const TEXT_STYLE_ITALIC_MUTED = 'italic ' . self::TEXT_STYLE_MUTED; // For italic muted text
+    public ?string $filterByDescription='';
 
     /**
      * コンポーネントの初期化
@@ -54,15 +63,19 @@ class ActivityHistoryDisplay extends Component
      * @return void
      */
     public function mount(
-        ?int $resourceId = null,
+        ?int    $resourceId = null,
         ?string $resourceType = null,
-        bool $includeRelatedResources = false,
-        array $hiddenColumns = []
-    ): void {
+        bool    $includeRelatedResources = false,
+        array   $hiddenColumns = []
+    ): void
+    {
         $this->resourceId = $resourceId;
         $this->resourceType = $resourceType;
         $this->includeRelatedResources = $includeRelatedResources;
         $this->hiddenColumns = $hiddenColumns;
+
+        // ★★★ フィルタ選択肢を初期化 ★★★
+        $this->userOptions = User::orderBy('name')->get(['id', 'name']);
     }
 
     /**
@@ -89,11 +102,12 @@ class ActivityHistoryDisplay extends Component
 
         // 特定のリソースに絞り込む場合
         if ($this->resourceId !== null && $this->resourceType !== null) {
-
             switch ($this->resourceType) {
                 case 'Folder':
                     $folder = Folder::find($this->resourceId);
-                    if (!$folder) return $query->whereRaw('0=1');
+                    if (!$folder) {
+                        return $query->whereRaw('0=1');
+                    }
 
                     // 対象フォルダとその全ての子孫フォルダのIDリストを取得
                     $folderIds = $folder->descendantsAndSelf($folder->id)->pluck('id');
@@ -170,10 +184,44 @@ class ActivityHistoryDisplay extends Component
             $query->whereNotNull('subject_id');
         }
 
-        // TODO: フィルタリング機能 (filterCauserName, filterEventType, filterStartDate, filterEndDate)
+        // ★★★ フィルタリング機能の適用 ★★★
+        if ($this->filterByUserId) {
+            $query->where('causer_id', $this->filterByUserId);
+        }
+        if ($this->filterByEvent) {
+            $query->where('event', $this->filterByEvent);
+        }
+        if ($this->filterByDescription) {
+            $query->where('description', $this->filterByDescription);
+        }
+        if ($this->filterStartDate) {
+            $query->where('created_at', '>=', $this->filterStartDate . ' 00:00:00');
+        }
+        if ($this->filterEndDate) {
+            $query->where('created_at', '<=', $this->filterEndDate . ' 23:59:59');
+        }
         // TODO: 検索機能 (searchQuery)
 
         return $query;
+    }
+
+    /**
+     * フィルタが更新された際にページネーションをリセットする
+     */
+    public function updated($propertyName): void
+    {
+        if (in_array($propertyName, ['filterByUserId', 'filterByEvent', 'filterByDescription', 'filterStartDate', 'filterEndDate'])) {
+            $this->resetPage();
+        }
+    }
+
+    /**
+     * フィルタをリセットする
+     */
+    public function resetFilters(): void
+    {
+        $this->reset(['filterByUserId', 'filterByEvent', 'filterByDescription', 'filterStartDate', 'filterByDescription', 'filterEndDate']);
+        $this->resetPage();
     }
 
     /**
@@ -184,9 +232,20 @@ class ActivityHistoryDisplay extends Component
     public function render()
     {
         // ログ閲覧権限チェック
-        if (!auth()->check() || !auth()->user()->can('viewAny', \App\Models\CustomActivity::class)) {
+        if (!auth()->check() || !auth()->user()->can('viewAny', CustomActivity::class)) {
             return view('livewire.common.activity-history-display-no-permission');
         }
+
+        $this->eventOptions = CustomActivity::select('event')
+            ->whereNotNull('event')
+            ->distinct()
+            ->orderBy('event')
+            ->get();
+        $this->descriptionOptions = CustomActivity::select('description')
+            ->whereNotNull('description')
+            ->distinct()
+            ->orderBy('description')
+            ->get();
 
         $activities = $this->getActivitiesQuery()->paginate(10);
 
@@ -198,6 +257,7 @@ class ActivityHistoryDisplay extends Component
             'headers' => $headers,
         ]);
     }
+
     /**
      * 表示するヘッダーのリストを生成する
      *
@@ -214,7 +274,7 @@ class ActivityHistoryDisplay extends Component
             ['key' => 'comment', 'label' => __('ledger.activity.column.comment'), 'class' => 'min-w-[10rem]'],
         ];
 
-        return array_filter($allHeaders, function($header) {
+        return array_filter($allHeaders, function ($header) {
             return !in_array($header['key'], $this->hiddenColumns);
         });
     }

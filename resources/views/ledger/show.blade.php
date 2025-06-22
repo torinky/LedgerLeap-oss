@@ -1,4 +1,10 @@
 <x-app-layout title="{{__('ledger.details')}}">
+    @push('scripts')
+        @vite(['resources/js/ledgerShow.js'])
+    @endpush
+    @push('stylesheets')
+        @vite(['resources/sass/ledgerShow.scss'])
+    @endpush
     <x-slot name="header" class="sticky top-0 z-10">
         <div class="ttl_3d5 md:flex md:items-center space-x-4 bg-info/40 rounded">
             <h2 class="font-black text-lg text-info-content/60 md:text-xl">

@@ -7,6 +7,72 @@
         @if(!auth()->check() || !auth()->user()->can('view', \App\Models\CustomActivity::class))
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
+            {{-- ★★★ 新規追加: フィルタリングUI ★★★ --}}
+            <x-mary-card shadow>
+
+                <x-mary-header
+                        title="{{ __('ledger.filter') }}"
+                        icon="o-funnel"
+                        size="text-md"
+                />
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {{-- 操作者フィルタ --}}
+                    <div>
+                        <x-mary-select
+                                label="{{ __('ledger.activity.column.causer') }}"
+                                :options="$this->userOptions"
+                                wire:model.live="filterByUserId"
+                                placeholder="{{ __('ledger.all_users') }}"
+                                allow-empty
+                        />
+                    </div>
+                    {{-- 操作タイプフィルタ --}}
+                    <div>
+                        <x-mary-select
+                                label="{{ __('ledger.activity.column.operation') }}"
+                                :options="$this->eventOptions"
+                                option-value="event"
+                                option-label="event"
+                                wire:model.live="filterByEvent"
+                                placeholder="{{ __('ledger.all_operations') }}"
+                                allow-empty
+                        />
+                    </div>
+                    <div>
+                        <x-mary-select
+                                label="{{ __('ledger.activity.column.description') }}"
+                                :options="$this->descriptionOptions"
+                                option-value="description"
+                                option-label="description"
+                                wire:model.live="filterByDescription"
+                                placeholder="{{ __('ledger.all_operations') }}"
+                                allow-empty
+                        />
+                    </div>
+                    {{-- 期間フィルタ --}}
+                    <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-mary-datepicker
+                                label="{{ __('ledger.activity.filter.start_date') }}"
+                                wire:model.live="filterStartDate"
+                                icon="o-calendar"
+                        />
+                        <x-mary-datepicker
+                                label="{{ __('ledger.activity.filter.end_date') }}"
+                                wire:model.live="filterEndDate"
+                                icon="o-calendar"
+                        />
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <x-mary-button
+                            label="{{ __('ledger.reset') }}"
+                            wire:click="resetFilters"
+                            class="btn-sm btn-ghost"
+                            icon="o-arrow-path"
+                    />
+                </div>
+            </x-mary-card>
+
             <x-mary-table
                     class="table-sm w-full table-zebra overflow-x-auto"
                     :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
