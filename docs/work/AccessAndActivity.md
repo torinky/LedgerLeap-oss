@@ -192,7 +192,7 @@
 
 *   **成果物**: 台帳一覧画面が、単なるレコードの入り口だけでなく、フォルダや台帳定義といった上位階層の情報を確認するためのハブとしても機能するようになった。ユーザーは個別の詳細画面に遷移することなく、必要な情報をモーダルで素早く確認できるようになった。
 
----
+
 
 ---
 
@@ -271,59 +271,97 @@
 
 ---
 
-#### **ステップ 5: アクティビティログの表示範囲の最適化**
+### **✅ ステップ 5: アクティビティログの表示範囲の最適化 (完了)**
 
-*   **目的**: `ActivityHistoryDisplay` コンポーネントで、各リソース（フォルダ、台帳定義）の活動履歴を表示する際に、ユーザーの期待に沿った範囲のログのみを表示するように修正する。
+*   **目的**:
+    *   `ActivityHistoryDisplay` コンポーネントで、各リソース（フォルダ、台帳定義）の活動履歴を表示する際に、ユーザーの期待に沿った範囲のログのみを表示するように修正する。
+
 *   **作業内容**:
-    1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
-        *   `getActivitiesQuery()` メソッド内のロジックを修正。
-        *   `resourceType` が `'Folder'` の場合:
-            *   そのフォルダ自身 (`subject_type` = `Folder`, `subject_id` = `$resourceId`) のアクティビティログを取得する。
-            *   そのフォルダに直接属する `LedgerDefine` のアクティビティログを取得する。
-            *   そのフォルダに属する `LedgerDefine` から作成された `Ledger` のアクティビティログを取得する。
-            *   `includeRelatedResources` は、この文脈では「子孫フォルダの活動履歴を含めるか」というオプションとして再定義するか、一旦このステップでは無視する。
-        *   `resourceType` が `'LedgerDefine'` の場合:
-            *   その台帳定義自身 (`subject_type` = `LedgerDefine`, `subject_id` = `$resourceId`) のアクティビティログを取得する。
-            *   その台帳定義から作成された全ての `Ledger` (`subject_type` = `Ledger`) のアクティビティログを取得する。
-            *   `includeRelatedResources` は、この文脈では「親フォルダの活動履歴を含めるか」というオプションになるが、ユーザーの期待に反するため、`false` の挙動（親を含めない）をデフォルトとする。
-    2.  **`resources/views/livewire/ledger/records-table.blade.php` の修正**:
-        *   台帳定義の活動履歴モーダルを呼び出す際に、`includeRelatedResources` を `false` に設定する（または削除する）。
-    3.  **動作確認**:
-        *   フォルダの活動履歴モーダルで、そのフォルダと配下の台帳定義・レコードのログのみが表示されることを確認。
-        *   台帳定義の活動履歴モーダルで、その台帳定義と、それから作成されたレコードのログのみが表示されることを確認。
+    1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の `getActivitiesQuery()` メソッドを全面的に修正**:
+        *   **`resourceType` が `'Folder'` の場合**:
+            *   `Folder::descendantsAndSelf()` を利用して、そのフォルダ自身と**全ての子孫フォルダ**を対象範囲と定義。
+            *   対象範囲内の全フォルダ、全台帳定義、全台帳レコードに関連する活動履歴を `whereHasMorph` などを用いて効率的に取得するようロジックを修正。
+        *   **`resourceType` が `'LedgerDefine'` の場合**:
+            *   その台帳定義自身の活動履歴と、その定義に紐づく**全ての台帳レコード**の活動履歴のみを取得するようロジックを修正。
+        *   **`resourceType` が `'Ledger'` の場合**:
+            *   その台帳レコード自身の活動履歴を取得。
+            *   `includeRelatedResources` が `true` の場合に限り、親の台帳定義とフォルダの活動履歴も取得する既存のロジックを維持。
+
+*   **動作確認**:
+    *   **フォルダの活動履歴**: モーダルを開くと、そのフォルダ自身と、その配下（子孫フォルダ含む）の全ての台帳定義・レコードに関連する活動履歴が表示されることを確認。親フォルダや兄弟フォルダのログは表示されない。
+    *   **台帳定義の活動履歴**: モーダルを開くと、その台帳定義自体の変更履歴と、その定義から作成された全てのレコードの操作履歴が表示されることを確認。フォルダや他の台帳定義のログは表示されない。
+    *   **台帳レコードの活動履歴**: 台帳詳細画面のタブで、レコード自身のログと、親リソース（台帳定義、フォルダ）のログが表示されることを確認。
+
+*   **成果物**: 各リソースの活動履歴表示が、ユーザーの期待（自身と配下の情報をまとめて見る）に沿った直感的なものになった。これにより、監査や状況把握の効率が向上した。
+---
+
+### **ステップ 6: キャンセル**
 
 ---
 
-#### **ステップ 6: 表示の冗長性の解消**
+### **ステップ 7: `ActivityHistoryDisplay` へのフィルタリング機能実装 (MVP)**
 
-*   **目的**: フォルダや台帳定義の活動履歴モーダルで、自明な「対象リソース」列を非表示にする。
-*   **作業内容**:
-    1.  **`resources/views/livewire/ledger/records-table.blade.php` の修正**:
-        *   `openActivityModal` を呼び出すボタンの `wire:click` イベントを修正し、`ActivityHistoryDisplay` に `'hiddenColumns' => ['subject']` を渡すようにする。
-        *   フォルダの活動履歴モーダルと台帳定義の活動履歴モーダルの両方でこの設定を適用する。
-    2.  **動作確認**:
-        *   フォルダおよび台帳定義の活動履歴モーダルを開いた際に、「対象リソース」列が表示されていないことを確認。
-        *   `/notifications` 画面の「活動履歴」タブでは、引き続き「対象リソース」列が表示されていることを確認。
+*   **目的**:
+    *   `ActivityHistoryDisplay` コンポーネントに、**操作者**、**操作タイプ**、**期間**によるフィルタリング機能を追加する。
+    *   これにより、管理者（佐藤さん）は特定のユーザーの行動追跡や特定の操作タイプの監査を、実務担当者（田中さん）は自身の操作履歴の確認を、それぞれ効率的に行えるようにする。
 
----
-
-#### **ステップ 7: フィルタリング機能の実装（MVP）**
-
-*   **目的**: `ActivityHistoryDisplay` と `PermissionDisplay` に、主要なフィルタリング機能を追加する。
 *   **作業内容**:
     1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
-        *   フィルタリング用の public プロパティ (`$filterCauserName`, `$filterEventType`, `$filterStartDate`, `$filterEndDate`) を追加。
-        *   `getActivitiesQuery()` メソッド内で、これらのプロパティが設定されている場合に `where` 句を追加するロジックを実装。
+        *   フィルタリング用の `public` プロパティを追加: `$filterByUserId` (int), `$filterByEvent` (string), `$filterStartDate` (string), `$filterEndDate` (string)。
+        *   `getActivitiesQuery()` メソッドを修正し、各フィルタプロパティに値が設定されている場合に、以下の `where` 句をクエリに追加する。
+            *   `$filterByUserId`: `where('causer_id', $this->filterByUserId)`
+            *   `$filterByEvent`: `where('event', $this->filterByEvent)`
+            *   `$filterStartDate`: `where('created_at', '>=', $this->filterStartDate)`
+            *   `$filterEndDate`: `where('created_at', '<=', $this->filterEndDate)`
+        *   `render()` メソッド内で、フィルタの選択肢となるデータ（全ユーザーリスト、`activity_log` テーブルに存在するユニークな `event` 名リスト）を取得し、ビューに渡す。
+        *   フィルタ用のプロパティが更新された際にページネーションをリセットするため、`updated()` ライフサイクルフック（例: `updatedFilterByUserId()`）を追加。
+        *   フィルタを全てリセットする `resetFilters()` メソッドを追加。
     2.  **`resources/views/livewire/common/activity-history-display.blade.php` の修正**:
-        *   テーブルの上部に、操作者や操作タイプを選択する `x-mary-select` や、日付を選択する `x-mary-datepicker` などのフィルタ入力UIを配置。
-    3.  **`app/Livewire/Common/PermissionDisplay.php` の修正**:
-        *   フィルタリング用の public プロパティ (`$filterRoleId`, `$filterPermissionType`) を追加。
-        *   `getAccessRolesProperty` や `getAccessUsersProperty` などのプロパティ内で、これらのフィルタを適用するロジックを実装。
-    4.  **`resources/views/livewire/common/permission-display.blade.php` の修正**:
-        *   各リストの上部に、ロール名や権限タイプで絞り込むための `x-mary-select` などのフィルタ入力UIを配置。
-    5.  **動作確認**:
-        *   各コンポーネントで、フィルタUIが正しく表示され、選択した条件でリストの内容が絞り込まれることを確認。
-        *   フィルタをリセットするボタンも追加し、動作を確認。
+        *   テーブルの上部に、フィルタUIを配置するためのセクション（例: `<div class="flex ... gap-2 mb-4">`）を追加。
+        *   **操作者フィルタ**: `x-mary-select` を使用し、全ユーザーのリストをドロップダウンで表示。`wire:model.live` で `$filterByUserId` プロパティにバインドする。
+        *   **操作タイプフィルタ**: `x-mary-select` を使用し、ユニークなイベントタイプリストをドロップダウンで表示。`wire:model.live` で `$filterByEvent` プロパティにバインドする。
+        *   **期間フィルタ**: `x-mary-datepicker` を2つ（開始日・終了日）配置し、`wire:model.live` で `$filterStartDate`, `$filterEndDate` プロパティにバインドする。
+        *   フィルタをクリアするための「リセット」ボタン (`x-mary-button`) を追加し、`wire:click="resetFilters"` にバインドする。
+
+*   **動作確認**:
+    *   `ActivityHistoryDisplay` が表示される各画面（`/notifications` の活動履歴タブ、各リソースの活動履歴モーダル）で、フィルタUIが表示されることを確認。
+    *   操作者、操作タイプ、期間の各フィルタが単独で正しく機能し、アクティビティログのリストが絞り込まれることを確認。
+    *   複数のフィルタを組み合わせて使用できることを確認。
+    *   「リセット」ボタンで全てのフィルタが解除され、リストが元に戻ることを確認。
+    *   フィルタを変更した際に、ページネーションが1ページ目に戻ることを確認。
+
+*   **成果物**: ユーザーが操作者、操作タイプ、期間で活動履歴を絞り込めるようになり、監査や履歴追跡の効率が向上する。
+
+---
+
+### **ステップ 8: `PermissionDisplay` へのフィルタリング機能実装 (MVP)**
+
+*   **目的**:
+    *   `PermissionDisplay` コンポーネントに、**ロール名**、**組織名**、**権限タイプ**によるフィルタリング機能を追加する。
+    *   これにより、管理者（佐藤さん）は特定のロールや組織が持つ権限範囲を正確に把握したり、特定の強い権限（例: `ADMIN`）を持つユーザーを棚卸ししたりすることが容易になる。
+
+*   **作業内容**:
+    1.  **`app/Livewire/Common/PermissionDisplay.php` の修正**:
+        *   フィルタリング用の `public` プロパティを追加: `$filterByRoleId` (int), `$filterByOrganizationId` (int), `$filterByPermissionValue` (string)。
+        *   `getAccessRolesProperty` メソッドを修正し、`$filterByRoleId` や `$filterByPermissionValue` が設定されている場合に、結果のコレクションを `filter()` メソッドで絞り込むロジックを追加。
+        *   `getAccessOrganizationsProperty` メソッドを修正し、`$filterByOrganizationId` や `$filterByPermissionValue` が設定されている場合に、結果のコレクションを `filter()` メソッドで絞り込むロジックを追加。
+        *   `getAccessUsersProperty` メソッドを修正し、各フィルタが設定されている場合に、ユーザーが持つロールや所属組織に基づいてリストを絞り込む `whereHas` 条件をクエリに追加する。
+        *   `render()` メソッド内で、フィルタの選択肢となるデータ（全ロールリスト、全組織リスト、全権限タイプリスト）を取得し、ビューに渡す。
+        *   フィルタが変更された際にページネーションをリセットする `updated()` ライフサイクルフックと、フィルタをリセットする `resetFilters()` メソッドを追加。
+    2.  **`resources/views/livewire/common/permission-display.blade.php` の修正**:
+        *   各リスト（組織、ロール、ユーザー）の上部に、フィルタUIを配置するためのセクションを追加する。
+        *   **ロールフィルタ**: `x-mary-select` を使用し、全ロールのリストをドロップダウンで表示。`wire:model.live` で `$filterByRoleId` にバインドする。
+        *   **組織フィルタ**: `x-mary-select` を使用し、全組織のリストをドロップダウンで表示。`wire:model.live` で `$filterByOrganizationId` にバインドする。
+        *   **権限タイプフィルタ**: `x-mary-select` を使用し、権限タイプリスト（`READ`, `WRITE` など）をドロップダウンで表示。`wire:model.live` で `$filterByPermissionValue` にバインドする。
+        *   フィルタをクリアするための「リセット」ボタンを追加する。
+
+*   **動作確認**:
+    *   `PermissionDisplay` が表示される各画面（台帳詳細の権限タブ、各リソースの権限モーダル）で、フィルタUIが表示されることを確認。
+    *   ロール、組織、権限タイプの各フィルタが単独で正しく機能し、表示されるリスト（組織リスト、ロールリスト、ユーザーリスト）が絞り込まれることを確認。
+    *   複数のフィルタを組み合わせて使用できることを確認。
+    *   「リセット」ボタンでフィルタが解除されることを確認。
+
+*   **成果物**: 管理者が複雑な権限設定の中から、特定のロール、組織、権限に絞って情報を確認できるようになり、権限のレビューや棚卸しの精度と効率が向上する。
 
 ---
 
