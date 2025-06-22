@@ -79,8 +79,6 @@ class PermissionService
                         // 既に同じ強度の権限が追加されていないか確認し、重複を防ぐ
                         $foundStrongerOrEqual = $accessPermissions->contains(fn($p) => $p->getOrder() >= $permType->getOrder());
                         if (!$foundStrongerOrEqual) {
-                            // より弱い権限を置き換える
-//                            $accessPermissions = $accessPermissions->filter(fn($p) => !$permType->includes($p));
                             $accessPermissions->push($permType);
                         }
                     }
@@ -121,47 +119,6 @@ class PermissionService
                 }
             }
         }
-        // ロールIDでグループ化し、権限を結合（重複するロールがあった場合に権限をマージ）
-/*        $result = $rolesWithPermissions->groupBy(fn($item) => $item->role->id) // ロールIDでグループ化
-        ->map(function ($groupedItems) {
-            $role = $groupedItems->first()->role;
-            $uniquePermissions = collect();
-            $sources = collect();
-            $isInherited = false;
-
-            foreach ($groupedItems as $item) {
-                // 各パーミッションタイプとその包含関係を考慮してユニークな集合を形成
-                foreach ($item->permissions as $perm) {
-                    $added = false;
-                    foreach ($uniquePermissions as $idx => $existingPerm) {
-                        if ($existingPerm->includes($perm)) {
-                            $added = true;
-                            break;
-                        }
-                        if ($perm->includes($existingPerm)) {
-                            $uniquePermissions->forget($idx);
-                            $uniquePermissions->push($perm);
-                            $added = true;
-                            break;
-                        }
-                    }
-                    if (!$added) {
-                        $uniquePermissions->push($perm);
-                    }
-                }
-                $sources->push($item->source);
-                if ($item->is_inherited) $isInherited = true;
-            }
-            $uniquePermissions = $uniquePermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder());
-
-            return (object)[
-                'role' => $role,
-                'permissions' => $uniquePermissions,
-                'source' => $sources->unique()->implode(', '),
-                'is_inherited' => $isInherited
-            ];
-        })->values()->sortBy(fn($item) => $item->role->name);*/
-
         return $rolesWithPermissions;
     }
 
@@ -216,22 +173,7 @@ class PermissionService
                 if ($orgAllRoles->contains('id', $accessItem->role->id)) {
                     // アクセス権限をマージ
                     foreach ($accessItem->permissions as $perm) {
-//                        $added = false;
-//                        foreach ($orgAccessPermissions as $idx => $existingPerm) {
-//                            if ($existingPerm->includes($perm)) {
-//                                $added = true;
-//                                break;
-//                            }
-//                            if ($perm->includes($existingPerm)) {
-//                                $orgAccessPermissions->forget($idx);
-//                                $orgAccessPermissions->push($perm);
-//                                $added = true;
-//                                break;
-//                            }
-//                        }
-//                        if (!$added) {
-                            $orgAccessPermissions->push($perm);
-//                        }
+                        $orgAccessPermissions->push($perm);
                     }
                     $orgSources->push($accessItem->source);
                     if ($accessItem->is_inherited) $orgIsInherited = true;
