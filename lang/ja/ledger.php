@@ -84,6 +84,8 @@
                 ],
             'event' =>
                 [
+                    'created' => '作成されました。',
+                    'deleted' => '削除されました。',
                     'attached' => '関連付けられました。',
                     'detached' => '関連解除されました。',
                     'folder_created' => 'フォルダが作成されました。',

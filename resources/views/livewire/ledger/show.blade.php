@@ -358,7 +358,7 @@
                     'resourceId' => $ledgerRecord->id,
                     'resourceType' => 'Ledger',
                     'includeRelatedResources' => true,
-                    'hiddenColumns' => ['subject']
+{{--                    'hiddenColumns' => ['subject']--}}
                     ], key('activity-history-'.$ledgerRecord->id))
 
             </x-mary-tab>

@@ -4,7 +4,6 @@
 
 
     <x-mary-card>
-        <x-mary-loading wire:loading class="my-4"/>
         @if(!auth()->check() || !auth()->user()->can('view', \App\Models\CustomActivity::class))
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
@@ -52,6 +51,10 @@
                     <x-mary-icon name="o-cube" label="{{ __('ledger.activity.no_activities_found') }}"/>
                 </x-slot:empty>
             </x-mary-table>
+            <div class="mt-4">
+                <x-mary-loading wire:loading class=""/>
+                {{ $activities->links() }}
+            </div>
         @endif
 
     </x-mary-card>

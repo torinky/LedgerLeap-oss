@@ -12,7 +12,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -77,93 +77,98 @@ class ActivityHistoryDisplay extends Component
 
     /**
      * アクティビティログを取得するクエリを構築
+     * (★☆★ このメソッドを全面的に修正 ★☆★)
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
     private function getActivitiesQuery()
     {
         $query = CustomActivity::query()
-            ->with(['causer', 'subject']) // 操作者と対象モデルをイーガーロード
-            ->orderBy('created_at', 'desc'); // 最新のログが上に来るようにソート
+            ->with(['causer', 'subject'])
+            ->orderBy('created_at', 'desc');
 
         // 特定のリソースに絞り込む場合
         if ($this->resourceId !== null && $this->resourceType !== null) {
-            $subjectTypes = [];
-            $subjectIds = [];
 
-            // 基本となるリソースのsubject_typeとsubject_idを設定
             switch ($this->resourceType) {
-                case 'Ledger':
-                    $subjectTypes[] = Ledger::class;
-                    $subjectIds[] = $this->resourceId;
-                    break;
-                case 'LedgerDefine':
-                    $subjectTypes[] = LedgerDefine::class;
-                    $subjectIds[] = $this->resourceId;
-                    break;
                 case 'Folder':
-                    $subjectTypes[] = Folder::class;
-                    $subjectIds[] = $this->resourceId;
+                    $folder = Folder::find($this->resourceId);
+                    if (!$folder) return $query->whereRaw('0=1');
+
+                    // 対象フォルダとその全ての子孫フォルダのIDリストを取得
+                    $folderIds = $folder->descendantsAndSelf($folder->id)->pluck('id');
+
+                    $query->where(function (EloquentBuilder $q) use ($folderIds) {
+                        // 1. フォルダ自身のログ
+                        $q->where(function (EloquentBuilder $subQ) use ($folderIds) {
+                            $subQ->where('subject_type', Folder::class)
+                                ->whereIn('subject_id', $folderIds);
+                        })
+                            // 2. 配下の台帳定義のログ
+                            ->orWhereHasMorph('subject', [LedgerDefine::class], function (EloquentBuilder $subjectQuery) use ($folderIds) {
+                                $subjectQuery->whereIn('folder_id', $folderIds);
+                            })
+                            // 3. 配下の台帳レコードのログ
+                            ->orWhereHasMorph('subject', [Ledger::class], function (EloquentBuilder $subjectQuery) use ($folderIds) {
+                                $subjectQuery->whereHas('define', function (EloquentBuilder $defineQuery) use ($folderIds) {
+                                    $defineQuery->whereIn('folder_id', $folderIds);
+                                });
+                            });
+                    });
                     break;
+
+                case 'LedgerDefine':
+                    $query->where(function (EloquentBuilder $q) {
+                        // 1. 台帳定義自身のログ
+                        $q->where(function (EloquentBuilder $subQ) {
+                            $subQ->where('subject_type', LedgerDefine::class)
+                                ->where('subject_id', $this->resourceId);
+                        })
+                            // 2. その定義に紐づく全レコードのログ
+                            ->orWhereHasMorph('subject', [Ledger::class], function (EloquentBuilder $subjectQuery) {
+                                $subjectQuery->where('ledger_define_id', $this->resourceId);
+                            });
+                    });
+                    break;
+
+                case 'Ledger':
+                    $query->where(function (EloquentBuilder $q) {
+                        // 1. 台帳レコード自身のログ
+                        $q->where(function (EloquentBuilder $subQ) {
+                            $subQ->where('subject_type', Ledger::class)
+                                ->where('subject_id', $this->resourceId);
+                        });
+
+                        // 2. 関連リソースのログを含める場合 (親の台帳定義とフォルダ)
+                        if ($this->includeRelatedResources) {
+                            $ledger = Ledger::find($this->resourceId);
+                            if ($ledger && $ledger->define) {
+                                $q->orWhere(function (EloquentBuilder $subQ) use ($ledger) {
+                                    $subQ->where('subject_type', LedgerDefine::class)
+                                        ->where('subject_id', $ledger->ledger_define_id);
+                                });
+                                if ($ledger->define->folder) {
+                                    $q->orWhere(function (EloquentBuilder $subQ) use ($ledger) {
+                                        $subQ->where('subject_type', Folder::class)
+                                            ->where('subject_id', $ledger->define->folder_id);
+                                    });
+                                }
+                            }
+                        }
+                    });
+                    break;
+
                 default:
                     // 未知のリソースタイプの場合は空のクエリを返す
                     return $query->whereRaw('0=1');
             }
-
-            // 関連リソースのアクティビティを含める場合
-            if ($this->includeRelatedResources) {
-                $baseModel = null;
-                // モデルの取得と関連リソースIDの追加
-                if ($this->resourceType === 'Ledger') {
-                    $baseModel = Ledger::find($this->resourceId);
-                    if ($baseModel && $baseModel->define) {
-                        $subjectTypes[] = LedgerDefine::class;
-                        $subjectIds[] = $baseModel->define->id;
-                        if ($baseModel->define->folder) {
-                            $subjectTypes[] = Folder::class;
-                            $subjectIds[] = $baseModel->define->folder->id;
-                        }
-                    }
-                } elseif ($this->resourceType === 'LedgerDefine') {
-                    $baseModel = LedgerDefine::find($this->resourceId);
-                    if ($baseModel && $baseModel->folder) {
-                        $subjectTypes[] = Folder::class;
-                        $subjectIds[] = $baseModel->folder->id;
-                    }
-                }
-            }
-
-            // ユニークな subject_type と subject_id の組み合わせでフィルタリング
-            $query->where(function ($q) use ($subjectTypes, $subjectIds) {
-                $processedTypes = [];
-                foreach ($subjectTypes as $index => $type) {
-                    if (!in_array($type, $processedTypes)) {
-                        $q->orWhere(function ($subQ) use ($type, $subjectIds, $subjectTypes) {
-                            $filteredSubjectIdsForType = collect($subjectIds)
-                                ->filter(fn($id, $idx) => $subjectTypes[$idx] === $type)
-                                ->unique()
-                                ->values()
-                                ->toArray();
-                            $subQ->where('subject_type', $type)
-                                ->whereIn('subject_id', $filteredSubjectIdsForType);
-                        });
-                        $processedTypes[] = $type;
-                    }
-                }
-            });
         }
 
-        // subject_idとsubject_typeの両方がnullのActivityログを除外 (リソースに紐づくアクティビティの文脈では)
-        // ただし、ユーザーログイン/ログアウトなどcauser_type/subject_typeがUserでsubject_idがnullのものは含める
-        $query->where(function ($q) {
-            $q->whereNotNull('subject_id')
-                ->orWhere(function ($subQ) {
-                    // subject_id が null で、causer_type が User.class の場合 (例: login/logout)
-                    $subQ->whereNull('subject_id')
-                        ->where('causer_type', User::class);
-                });
-        });
-
+        // subject が null のログは、このコンテキストでは表示しない (ログイン/ログアウトなど)
+        // 全件表示モード以外の場合のみ適用
+        if ($this->resourceId !== null && $this->resourceType !== null) {
+            $query->whereNotNull('subject_id');
+        }
 
         // TODO: フィルタリング機能 (filterCauserName, filterEventType, filterStartDate, filterEndDate)
         // TODO: 検索機能 (searchQuery)

@@ -171,7 +171,7 @@ class ActivityLogFormatter
      * @param CustomActivity|array $activity
      * @return string
      */
-    protected static function getRelatedEntityNameForDisplay(CustomActivity|array $activity): string
+    public static function getRelatedEntityNameForDisplay(CustomActivity|array $activity): string
     {
         $properties = ($activity instanceof CustomActivity) ? $activity->properties : collect($activity['properties'] ?? []);
 
