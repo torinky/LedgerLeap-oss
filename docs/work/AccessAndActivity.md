@@ -135,16 +135,66 @@
 
 ---
 
-#### **ステップ 3: `Ledger/Show.php` (レコード詳細画面) への共通コンポーネント統合**
+### **✅ ステップ 3: `Ledger/Show.php` (レコード詳細画面) への共通コンポーネント統合 (完了)**
 
-* **目的**: 台帳レコード詳細画面に、作成した共通コンポーネントをタブとして組み込む。
-* **作業内容**:
-    1. `app/Livewire/Ledger/Show.php` を修正。
-    2. `show.blade.php` に新たなタブを追加。例えば「総合活動履歴」「アクセスと権限」。
-    3. 各タブ内に、対応する共通コンポーネント (
-       `@livewire('common.activity-history-display', ['resourceId' => $ledger->id, 'resourceType' => 'Ledger'])` など)
-       を埋め込む。
-    4. 既存のワークフロー履歴タブと新しいタブが機能することを確認。
+*   **目的**:
+    *   ステップ1と2で作成した共通コンポーネント (`ActivityHistoryDisplay` と `PermissionDisplay`) を、台帳レコード詳細画面に新しいタブとして組み込む。
+    *   `ActivityHistoryDisplay` に特定のカラムを非表示にするオプションを追加し、台帳詳細画面では「対象リソース」列を非表示にする。
+
+*   **作業内容**:
+    1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
+        *   `mount` メソッドに `$hiddenColumns` パラメータを追加。
+        *   `render` メソッド内で、`$hiddenColumns` に基づいて表示するテーブルヘッダーを動的に生成する `getVisibleHeaders` メソッドを実装。
+    2.  **`resources/views/livewire/common/activity-history-display.blade.php` の修正**:
+        *   `x-mary-table` の `:headers` 属性に、PHP側から渡された `$headers` 変数をバインドするように修正。
+    3.  **`app/Livewire/Ledger/Show.php` の修正**:
+        *   Bladeテンプレートから `PermissionDisplay` コンポーネントに渡すための `currentUserAllPermissions` プロパティを追加。
+    4.  **`resources/views/livewire/ledger/show.blade.php` の修正**:
+        *   既存の `<x-mary-tabs>` コンポーネント内に、「総合活動履歴」と「アクセスと権限」のタブ (`<x-mary-tab>`) を追加。
+        *   各タブ内に、対応する共通コンポーネントを `@livewire` ディレクティブで埋め込み。
+        *   `ActivityHistoryDisplay` の呼び出し時に `'hiddenColumns' => ['subject']` を指定し、「対象リソース」列を非表示にした。
+    5.  **`lang/ja/ledger.php` の修正**:
+        *   新しいタブのラベル用の翻訳キー (`tab.activity_history`, `tab.access_and_permissions`) を追加。
+
+*   **動作確認**:
+    *   台帳詳細画面に「総合活動履歴」「アクセスと権限」タブが表示され、クリックで各コンポーネントが表示されることを確認。
+    *   「総合活動履歴」タブで、「対象リソース」列が非表示になっていることを確認。
+    *   「アクセスと権限」タブで、その台帳レコードに関連する権限情報（ログインユーザーの権限、アクセス可能な組織・ロール・ユーザー）が正しく表示されることを確認。
+    *   既存の「詳細」タブや「ワークフロー履歴」タブの機能が影響を受けていないことを確認。
+
+*   **成果物**: ユーザーが台帳詳細画面から、そのレコードに関する活動履歴と権限情報にシームレスにアクセスできる、統合されたUIが完成した。共通コンポーネントは、呼び出し元のコンテキストに応じて表示をカスタマイズできる柔軟性も備えている。
+
+---
+### **ステップ 4: `Ledger/RecordsTable.php` への概要情報とモーダル導線追加**
+
+**目的**:
+*   ユーザーが台帳レコード一覧を見る前に、現在表示しているフォルダや、リストアップされている各台帳定義の**権限・活動状況の概要**を把握できるようにする。
+*   概要情報から、ステップ1・2で作成した詳細表示コンポーネント (`ActivityHistoryDisplay`, `PermissionDisplay`) をモーダルで呼び出し、詳細を確認できるようにする。
+*   これにより、ユーザーは個別のレコード詳細画面に遷移することなく、より上位の階層（フォルダ、台帳定義）の情報を効率的に確認できるようになる。
+
+**作業内容**:
+
+1.  **`RecordsTable` 画面に「フォルダ概要パネル」を追加**:
+    *   **場所**: 画面上部、台帳定義リストやレコードリストの上。
+    *   **機能**:
+        *   現在表示しているフォルダ名と、そのフォルダに対するログインユーザーの最高権限を簡潔に表示する。
+        *   「フォルダの権限詳細」「フォルダの活動履歴」ボタンを設置する。
+
+2.  **`RecordsTable` 画面の各「台帳定義」行に概要情報を追加**:
+    *   **場所**: 各台帳定義 (`LedgerDefine`) の行、またはその行を展開した際。
+    *   **機能**:
+        *   その台帳定義に対するログインユーザーの最高権限をアイコン等で簡潔に表示。
+        *   その台帳定義の直近の活動（最終更新日時と更新者など）を表示。
+        *   「台帳定義の権限詳細」「台帳定義の活動履歴」ボタンを設置する。
+
+3.  **詳細情報モーダルの実装**:
+    *   **機能**: 上記の各ボタンがクリックされた際に、対応する共通コンポーネント (`PermissionDisplay`, `ActivityHistoryDisplay`) を**モーダルウィンドウで表示**する。
+    *   **実装**:
+        *   `RecordsTable` コンポーネントに、モーダル表示を制御するためのプロパティ（例: `showPermissionModal`, `showActivityModal`）と、モーダルに渡すためのプロパティ（例: `modalResourceId`, `modalResourceType`）を追加する。
+        *   各ボタンの `wire:click` イベントで、これらのプロパティをセットし、モーダルを開く。
+        *   `MaryUI` の `<x-mary-modal>` コンポーネントを使用し、その中に `@livewire(...)` で共通コンポーネントを動的に呼び出す。
+
+---
 
 #### **ステップ 4: `ActivityHistoryDisplay` の「総合アクティビティ」対応強化**
 
@@ -158,6 +208,8 @@
         * `CustomActivity::where(function ($query) use ($ledgerId, $ledgerDefineId, $folderId) { ... })`
           のようにOR条件でクエリを構築。
     4. 各アクティビティの表示に、それがどのリソース（レコード、台帳定義、フォルダ）に対する操作かを明確に示すラベルを追加。
+
+---
 
 #### **ステップ 5: `Ledger/RecordsTable.php` への概要情報とモーダル導線追加**
 
@@ -176,7 +228,6 @@
 
 ---
 
----
 ### **今後の課題（PermissionDisplay 改善案）**
 
 *   **フィルタリング機能の強化**:
