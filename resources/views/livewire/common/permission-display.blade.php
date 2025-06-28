@@ -300,7 +300,9 @@
 
                 @scope('cell_organizations', $user)
                 @forelse($user->organizations->sortBy('name') as $org)
-                    <span class="badge badge-neutral text-neutral-content mr-1 mb-1">
+                    <span class="badge badge-neutral text-neutral-content mr-1 mb-1 tooltip"
+                          data-tip="{{$org->fullname}}"
+                    >
                             {{ $org->name }}@if($org->pivot->is_primary)
                             <span class="text-xs ml-1 font-bold text-info-content/80">(主)</span>
                         @endif
