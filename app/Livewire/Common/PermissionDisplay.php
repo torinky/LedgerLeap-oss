@@ -28,6 +28,16 @@ class PermissionDisplay extends Component
     public ?int $filterRoleId = null; // 未使用だが定義は残す
     public ?string $filterPermissionType = null; // 未使用だが定義は残す
 
+    // ★★★ フィルタリング用プロパティ ★★★
+    public ?int $filterByRoleId = null;
+    public ?int $filterByOrganizationId = null;
+    public ?string $filterByPermissionValue = '';
+
+    // ★★★ フィルタ選択肢用プロパティ ★★★
+    public Collection $roleOptions;
+    public Collection $organizationOptions;
+    public array $permissionOptions; // Enumから生成するためarray
+
     protected PermissionService $permissionService;
 
     protected $listeners = ['refreshPermissions' => '$refresh'];
@@ -41,33 +51,138 @@ class PermissionDisplay extends Component
     {
         $this->resourceId = $resourceId;
         $this->resourceType = $resourceType;
+
+        // ★★★ フィルタ選択肢を初期化 ★★★
+        $this->roleOptions = Role::orderBy('name')->get(['id', 'name']);
+        $this->organizationOptions = Organization::orderBy('name')->get(['id', 'name']); // 階層表示は別途検討
+        $this->permissionOptions = FolderPermissionType::asAccessSelectArray();
+
+    }
+
+
+    /**
+     * ロールを検索する
+     */
+    public function roleSearch(string $value = ''): void
+    {
+        $query = Role::orderBy('name');
+
+        if ($value) {
+            $query->where('name', 'like', "%{$value}%");
+        }
+
+        // 常に現在選択されているロールを検索結果に含める
+        if ($this->filterByRoleId) {
+            $query->orWhere('id', $this->filterByRoleId);
+        }
+
+        $this->roleOptions = $query->take(10)->get(['id', 'name']);
+    }
+
+    /**
+     * 組織を検索する
+     */
+    public function organizationSearch(string $value = ''): void
+    {
+        $query = Organization::orderBy('name');
+
+        if ($value) {
+            $query->where('name', 'like', "%{$value}%");
+        }
+
+        // 常に現在選択されている組織を検索結果に含める
+        if ($this->filterByOrganizationId) {
+            $query->orWhere('id', $this->filterByOrganizationId);
+        }
+
+        $this->organizationOptions = $query->take(10)->get(['id', 'name']);
     }
 
     /**
      * アクセス可能なロールと権限のリストを取得
      * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
-    public function getAccessRolesProperty(): Collection
+/*    public function getAccessRolesProperty(): Collection
     {
         return $this->permissionService->getAccessRolesWithPermissions($this->resourceId, $this->resourceType);
+    }*/
+    /**
+     * アクセス可能なロールと権限のリストを取得 (フィルタ適用)
+     * @return Collection<object{...}>
+     */
+    public function getAccessRolesProperty(): Collection
+    {
+        $allRoles = $this->permissionService->getAccessRolesWithPermissions($this->resourceId, $this->resourceType);
+
+        if ($this->filterByRoleId) {
+            $allRoles = $allRoles->where('role.id', $this->filterByRoleId);
+        }
+        if ($this->filterByPermissionValue) {
+            $allRoles = $allRoles->filter(function ($item) {
+                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
+            });
+        }
+
+        return $allRoles;
     }
 
     /**
      * アクセス可能な組織と権限のリストを取得
      * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
-    public function getAccessOrganizationsProperty(): Collection
+/*    public function getAccessOrganizationsProperty(): Collection
     {
         return $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
+    }*/
+    /**
+     * アクセス可能な組織と権限のリストを取得 (フィルタ適用)
+     * @return Collection<object{...}>
+     */
+    public function getAccessOrganizationsProperty(): Collection
+    {
+        $allOrganizations = $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
+
+        if ($this->filterByOrganizationId) {
+            $allOrganizations = $allOrganizations->where('organization.id', $this->filterByOrganizationId);
+        }
+        if ($this->filterByPermissionValue) {
+            $allOrganizations = $allOrganizations->filter(function ($item) {
+                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
+            });
+        }
+        if ($this->filterByRoleId) {
+            $allOrganizations = $allOrganizations->filter(function ($item) {
+                return $item->direct_roles->contains('id', $this->filterByRoleId) || $item->inherited_roles->contains('id', $this->filterByRoleId);
+            });
+        }
+
+        return $allOrganizations;
     }
 
     /**
      * アクセス可能なユーザーのリストを取得
      * @return LengthAwarePaginator<User>
      */
+/*    public function getAccessUsersProperty(): LengthAwarePaginator
+    {
+        return $this->permissionService->getAccessUsers(
+            $this->resourceId, $this->resourceType, $this->searchUserQuery);
+    }*/
+    /**
+     * アクセス可能なユーザーのリストを取得 (フィルタ適用)
+     * @return LengthAwarePaginator<User>
+     */
     public function getAccessUsersProperty(): LengthAwarePaginator
     {
-        return $this->permissionService->getAccessUsers($this->resourceId, $this->resourceType, $this->searchUserQuery);
+        // フィルタ条件をサービスに渡すように変更
+        return $this->permissionService->getAccessUsers(
+            $this->resourceId,
+            $this->resourceType,
+            $this->searchUserQuery,
+            $this->filterByRoleId,
+            $this->filterByOrganizationId,
+            $this->filterByPermissionValue
+        );
     }
 
     /**
@@ -104,4 +219,27 @@ class PermissionDisplay extends Component
     {
         $this->resetPage('accessUsersPage');
     }
+
+    /**
+     * フィルタが更新された際にページネーションをリセットする
+     */
+    public function updated($propertyName): void
+    {
+        if (in_array($propertyName, ['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue'])) {
+            $this->resetPage();
+        }
+    }
+
+    /**
+     * フィルタをリセットする
+     */
+    public function resetFilters(): void
+    {
+        $this->reset(['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue', 'searchUserQuery']);
+        $this->resetPage();
+    }
+
+
+
+
 }

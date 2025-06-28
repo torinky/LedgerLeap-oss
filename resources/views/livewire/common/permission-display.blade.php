@@ -7,6 +7,58 @@
     />
 --}}
 
+    {{-- ★★★ フィルタリングUI ★★★ --}}
+    <div class="mb-6 p-4 pt-0 bg-base-200 rounded-lg">
+{{--        <h4 class="font-semibold text-base-content mb-2">{{ __('Filter') }}</h4>--}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {{-- ロールフィルタ --}}
+            <div>
+                <x-mary-choices
+                        label="{{ __('ledger.access_and_permissions.column.role_name') }}"
+                        wire:model.live="filterByRoleId"
+                        :options="$roleOptions"
+                        search-function="roleSearch"
+                        placeholder="{{ __('ledger.all_roles') }}"
+                        single
+                        clearable
+                        searchable
+                />
+            </div>
+            {{-- 組織フィルタ --}}
+            <div>
+                <x-mary-choices
+                        label="{{ __('ledger.access_and_permissions.column.organization_name') }}"
+                        wire:model.live="filterByOrganizationId"
+                        :options="$organizationOptions"
+                        search-function="organizationSearch"
+                        placeholder="{{ __('ledger.all_organizations') }}"
+                        single
+                        clearable
+                        searchable
+                />
+            </div>
+            {{-- 権限タイプフィルタ --}}
+            <div>
+                <x-mary-select
+                        label="{{ __('ledger.access_and_permissions.column.permissions') }}"
+                        :options="$permissionOptions"
+                        wire:model.live="filterByPermissionValue"
+                        placeholder="{{ __('ledger.all_permissions') }}"
+                        allow-empty
+                />
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <x-mary-button
+                    label="{{ __('ledger.reset') }}"
+                    wire:click="resetFilters"
+                    class="btn-sm btn-ghost"
+                    icon="o-arrow-path"
+            />
+        </div>
+    </div>
+
+    <div class="divider"></div>
     {{-- ログインユーザーの最高権限概要 --}}
     <div class="mb-6 p-4 rounded-lg bg-info/20 text-info-content border border-info/50">
         @if ($this->currentUserHighestPermission)
@@ -242,7 +294,8 @@
                 @endscope
 
                 @scope('cell_roles', $user)
-                @forelse($user->categorized_roles['direct'] as $role)
+                {{-- `optional()` と `?? []` を使って null アクセスを防止 --}}
+                @forelse(optional($user->categorized_roles)['direct'] ?? [] as $role)
                     <span class="badge badge-primary text-primary-content mr-1 mb-1"
                           title="{{ __('ledger.access_and_permissions.direct_role') }}">
                             {{ $role->name }}
@@ -250,7 +303,7 @@
                 @empty
                     {{-- 直接のロールがない場合は表示しない --}}
                 @endforelse
-                @forelse($user->categorized_roles['inherited_from_organizations'] as $role)
+                @forelse(optional($user->categorized_roles)['inherited_from_organizations'] ?? [] as $role)
                     <span class="badge badge-neutral text-neutral-content mr-1 mb-1"
                           title="{{ __('ledger.access_and_permissions.inherited_role') }}">
                             {{ $role->name }}
@@ -259,26 +312,27 @@
                 @empty
                     {{-- 継承ロールがない場合は表示しない --}}
                 @endforelse
-                @if($user->categorized_roles['direct']->isEmpty() && $user->categorized_roles['inherited_from_organizations']->isEmpty())
+                @if(empty(optional($user->categorized_roles)['direct']) && empty(optional($user->categorized_roles)['inherited_from_organizations']))
                     <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_roles_assigned') }}</span>
                 @endif
                 @endscope
 
                 @scope('cell_permissions', $item)
-                @forelse($item->categorized_permissions['direct'] as $permission)
+                {{-- こちらも同様に修正 --}}
+                @forelse(optional($item->categorized_permissions)['direct'] ?? [] as $permission)
                     <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
                             {{ $permission->getLabel() }}
                     </span>
                 @empty
-{{--                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>--}}
+                    {{-- 表示なし --}}
                 @endforelse
-                @forelse($item->categorized_permissions['inherited_from_organizations'] as $permission)
+                @forelse(optional($item->categorized_permissions)['inherited_from_organizations'] ?? [] as $permission)
                     <span class="badge badge-{{ $permission->getColor() }} text-{{ $permission->getColor() }}-content mr-1 mb-1">
                             {{ $permission->getLabel() }}
                             <i class="fas fa-level-up-alt ml-1 text-xs"></i>
                     </span>
                 @empty
-{{--                    <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>--}}
+                    {{-- 表示なし --}}
                 @endforelse
                 @endscope
 

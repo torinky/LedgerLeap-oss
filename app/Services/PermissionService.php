@@ -229,81 +229,141 @@ class PermissionService
      * @param int $resourceId
      * @param string $resourceType
      * @param string|null $searchQuery
+     * @param int|null $filterByRoleId
+     * @param int|null $filterByOrganizationId
+     * @param string|null $filterByPermissionValue
      * @return LengthAwarePaginator<User>
      */
-    public function getAccessUsers(int $resourceId, string $resourceType, ?string $searchQuery = null): LengthAwarePaginator
+    public function getAccessUsers(
+        int     $resourceId,
+        string  $resourceType,
+        ?string $searchQuery = null,
+        ?int    $filterByRoleId = null,
+        ?int    $filterByOrganizationId = null,
+        ?string $filterByPermissionValue = ''
+    ): LengthAwarePaginator
     {
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];
-        $targetLedgerDefine = $resolved['ledgerDefine'];
 
-        // まず、対象リソースにアクセス権限を持つロールを取得する
-        $accessRoles = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
-            ->filter(fn($item) => $item->permissions->isNotEmpty())
-            ->pluck('role'); // ロールモデルのコレクション
+        // まず、対象リソースにアクセス権限を持つロールと権限の情報を取得
+        $accessItems = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
+            ->filter(fn($item) => $item->permissions->isNotEmpty());
 
-        if ($accessRoles->isEmpty()) {
-            return (new User())->newQuery()->paginate(10); // 空のPaginatorを返す
+        // ★★★ 権限タイプでフィルタリング ★★★
+        if ($filterByPermissionValue) {
+            $accessItems = $accessItems->filter(function ($item) use ($filterByPermissionValue) {
+                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $filterByPermissionValue);
+            });
+        }
+        // ★★★ ロールでフィルタリング ★★★
+        if ($filterByRoleId) {
+            $accessItems = $accessItems->where('role.id', $filterByRoleId);
+        }
+
+        // フィルタリング後のロールIDリストを取得
+        $accessRoleIds = $accessItems->pluck('role.id')->unique()->filter()->all();
+
+        // アクセス可能なロールがない場合は、ユーザーもいないので空の結果を返す
+        if (empty($accessRoleIds)) {
+            return (new User())->newQuery()->whereRaw('1 = 0')->paginate(10);
         }
 
         $query = User::query()->distinct();
 
-        // ユーザーに直接割り当てられたロール、または所属組織に割り当てられたロールが
-        // アクセス可能なロールに含まれるユーザーを取得
-        $query->where(function (Builder $q) use ($accessRoles) {
-            // ユーザーに直接割り当てられたロールが accessRoles に含まれる場合
-            $q->whereHas('roles', function ($subQ) use ($accessRoles) {
-                $subQ->whereIn('roles.id', $accessRoles->pluck('id'));
-            })
-                // ユーザーが所属する組織に割り当てられたロールが accessRoles に含まれる場合
-                ->orWhereHas('organizations.roles', function ($subQ) use ($accessRoles) {
-                    $subQ->whereIn('roles.id', $accessRoles->pluck('id'));
+        if ($filterByRoleId) {
+            // 指定ロールを直接持つユーザー取得
+            $query
+                ->whereHas('roles', function ($q) use ($filterByRoleId) {
+                    $q->where('roles.id', $filterByRoleId);
+                })
+                ->with(['organizations.ancestors', 'roles']);
+        }
+
+        // ★★★ 組織IDでフィルタリングする場合 ★★★
+        if ($filterByOrganizationId) {
+            // 組織とその子孫組織に所属するユーザーをフィルタリング対象とする
+            $organization = Organization::find($filterByOrganizationId);
+            if ($organization) {
+                $orgIds = $organization->descendantsAndSelf($organization->id)->pluck('id');
+                $query->whereHas('organizations', function ($q) use ($orgIds) {
+                    $q->whereIn('organizations.id', $orgIds);
                 });
+            } else {
+                // 存在しない組織IDが指定された場合は結果を0件にする
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        // ユーザーに直接割り当てられたロール、または所属組織（とその祖先）に割り当てられたロールが
+        // アクセス可能なロールに含まれるユーザーを取得
+        $query->where(function (Builder $q) use ($accessRoleIds) {
+            // ユーザーに直接割り当てられたロール
+            $q->whereHas('roles', function ($subQ) use ($accessRoleIds) {
+                $subQ->whereIn('roles.id', $accessRoleIds);
+            });
+
+            // ユーザーが所属する組織（とその祖先）に割り当てられたロール
+            $q->orWhereHas('organizations', function ($orgQuery) use ($accessRoleIds) {
+                // 組織自身が持つロール
+                $orgQuery->whereHas('roles', function ($roleQuery) use ($accessRoleIds) {
+                    $roleQuery->whereIn('roles.id', $accessRoleIds);
+                });
+                // 組織の祖先が持つロール
+                $orgQuery->orWhereHas('ancestors.roles', function ($roleQuery) use ($accessRoleIds) {
+                    $roleQuery->whereIn('roles.id', $accessRoleIds);
+                });
+            });
         });
 
         // ユーザーの組織とロールをイーガーロードして N+1 問題を避ける
-        $query->with(['organizations', 'roles']);
+        $query->with(['organizations.ancestors', 'roles']);
 
-        // 各ユーザーに対して、直接のロールと組織からの継承ロールを分類して追加する
-        // paginate() の前に with() でロードしておけば、後でアクセスする際にクエリが発生しない
-        // Collection の map を使うと paginate の後で処理できる
+        if ($searchQuery) {
+            $query->where(function ($q) use ($searchQuery) {
+                $q->where('name', 'like', '%' . $searchQuery . '%')
+                    ->orWhere('email', 'like', '%' . $searchQuery . '%');
+            });
+        }
+
+        // ★★★ ユーザーのロールでフィルタリング ★★★
+        if ($filterByRoleId) {
+            $directRoleUsers= User::query()->with('roles')->where('role.id', $filterByRoleId);
+        }
+
         $users = $query->paginate(10);
 
-        $accessRolesWithPerms = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
-            ->filter(fn($item) => $item->permissions->isNotEmpty());
-        // 修正点: diff を実行する前に、$accessRolesWithPerms から Role モデルのコレクションを pluck する
-        $accessRoleModels = $accessRolesWithPerms->pluck('role')->filter();
 
-        $users->getCollection()->transform(function ($user) use ($targetFolder, $accessRoleModels) {
-            $user->display_organizations = $user->organizations; // 既存の表示に使用
 
-            $directRoles = collect();
+
+        $users->getCollection()->transform(function ($user) use ($targetFolder,$filterByRoleId) {
+            // ユーザーの直接ロール
+            $directRoles = $user->roles->keyBy('id');
+
+//            dd($directRoles);
+
+            // ユーザーが組織から継承するロール
             $inheritedRoles = collect();
-
-            // ユーザーに直接割り当てられたロールを分類
-            $user->roles->each(function($role) use (&$directRoles) {
-                $directRoles->push($role);
-            });
-
-            // 所属組織から継承されるロールを分類
-            $user->organizations->each(function($org) use (&$inheritedRoles, $directRoles, $accessRoleModels) {
-
-                $accessRoleModels->diff($org->getInheritedRoles())->each(function($role) use (&$inheritedRoles, $directRoles) {
-                    // 組織継承ロールがユーザーの直接ロールと重複しないようにする
-                    if (!$directRoles->contains('id', $role->id)) {
-                        $inheritedRoles->push($role);
+            $user->organizations->each(function ($org) use (&$inheritedRoles, $directRoles) {
+                // 組織が持つ全ロール（直接＋継承）を取得
+                $org->getAllRoles()->each(function ($role) use (&$inheritedRoles, $directRoles) {
+                    // ユーザーの直接ロールと重複せず、まだ追加されていないロールを追加
+                    if (!$directRoles->has($role->id) && !$inheritedRoles->has($role->id)) {
+                        $inheritedRoles->put($role->id, $role);
                     }
                 });
             });
+
             $user->categorized_roles = [
-                'direct' => $directRoles->unique('id')->sortBy('name'),
-                'inherited_from_organizations' => $inheritedRoles->unique('id')->sortBy('name'),
+                'direct' => $directRoles->sortBy('name')->values(),
+                'inherited_from_organizations' => $inheritedRoles->sortBy('name')->values(),
             ];
 
-            $user->folderPermissions = collect();
-            $directPermissions=collect();
-            $inheritedPermissions=collect();
-            if($targetFolder) {
+            // 権限の計算
+            $directPermissions = collect();
+            $inheritedPermissions = collect();
+            if ($targetFolder) {
+                // 直接ロールに紐づく権限
                 foreach ($user->categorized_roles['direct'] as $role) {
                     $permValues = $targetFolder->getAllPermissionsWithInheritance($role);
                     foreach ($permValues as $permValue) {
@@ -313,22 +373,20 @@ class PermissionService
                         }
                     }
                 }
+                // 継承ロールに紐づく権限
                 foreach ($user->categorized_roles['inherited_from_organizations'] as $role) {
                     $permValues = $targetFolder->getAllPermissionsWithInheritance($role);
                     foreach ($permValues as $permValue) {
                         $permType = FolderPermissionType::tryFrom($permValue);
-                        // ユーザーに直接割り当てられた権限と重複しないようにする
-                        if ($permType && $permType->isAccessType()
-                            && !$directPermissions->contains('value', $permType->value)
-                        ) {
+                        if ($permType && $permType->isAccessType()) {
                             $inheritedPermissions->push($permType);
                         }
                     }
                 }
             }
             $user->categorized_permissions = [
-                'direct' => $directPermissions->unique('name')->sortBy('name'),
-                'inherited_from_organizations' => $inheritedPermissions->unique('name')->sortBy('name'),
+                'direct' => $directPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
+                'inherited_from_organizations' => $inheritedPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
             ];
 
             return $user;

@@ -27,7 +27,7 @@
                                 searchFunction="userSearch" {{-- 検索時に `search` メソッドを呼び出す --}}
                                 placeholder="{{ __('ledger.all_users') }}"
                                 single
-                                clearble
+                                clearable
                                 searchable
                         />
                     </div>

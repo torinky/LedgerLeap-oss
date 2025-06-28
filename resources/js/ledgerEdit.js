@@ -31,6 +31,7 @@ FilePond.setOptions(ja_ja)
 window.FilePond = FilePond
 
 window.flatpickr = flatpickr
+window.flatpickr.localize(flatpickr.l10ns.ja);
 
 window.flatpickr(".datepicker", {
     locale: Japanese,
