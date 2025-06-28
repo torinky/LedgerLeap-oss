@@ -1,4 +1,4 @@
-<div class="card p-4 bg-base-100 shadow-xl">
+<div class="card p-4 pt-0 bg-base-100 shadow-xl">
 
 {{--
     <x-mary-header :title="__('ledger.access_and_permissions.title')"

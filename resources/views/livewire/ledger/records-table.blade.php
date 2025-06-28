@@ -222,11 +222,11 @@
 
     @endif
 
-    {{-- ★★★ 新規追加: モーダル定義 ★★★ --}}
+    {{-- ★★★ モーダル定義 ★★★ --}}
     <x-mary-modal wire:model="showPermissionModal" class="backdrop-blur"
         boxClass="w-11/12 max-w-5xl my-4"
     >
-        <x-mary-header :title="$modalTitle" separator />
+        <x-mary-header :title="$modalTitle" icon="o-shield-check" separator />
         @if($showPermissionModal)
             @livewire('common.permission-display', [
             'resourceId' => $modalResourceId,
@@ -234,14 +234,14 @@
             ], key('permission-modal-'.$modalResourceId.'-'.$modalResourceType))
         @endif
         <x-slot:actions>
-            <x-mary-button label="{{ __('Close') }}" @click="$wire.showPermissionModal = false" />
+            <x-mary-button label="{{ __('Close') }}" icon="o-x-circle" @click="$wire.showPermissionModal = false" />
         </x-slot:actions>
     </x-mary-modal>
 
     <x-mary-modal wire:model="showActivityModal" class="backdrop-blur"
           boxClass="w-11/12 max-w-5xl my-4"
     >
-        <x-mary-header :title="$modalTitle" separator />
+        <x-mary-header :title="$modalTitle" icon="o-clock" separator />
         @if($showActivityModal)
             @livewire('common.activity-history-display', [
             'resourceId' => $modalResourceId,
@@ -251,7 +251,7 @@
             ], key('activity-modal-'.$modalResourceId.'-'.$modalResourceType))
         @endif
         <x-slot:actions>
-            <x-mary-button label="{{ __('Close') }}" @click="$wire.showActivityModal = false" />
+            <x-mary-button label="{{ __('Close') }}" icon="o-x-circle" @click="$wire.showActivityModal = false" />
         </x-slot:actions>
     </x-mary-modal>
 </div>

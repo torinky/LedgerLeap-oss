@@ -1,11 +1,18 @@
 <x-appWithDrawer-layout title="{{__('ledger.records_title')}}">
-{{--
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl leading-tight">
-            {{ __('Ledger Records') }}
-        </h2>
-    </x-slot>
---}}
+    @push('scripts')
+        @vite(['resources/js/ledgerIndex.js'])
+    @endpush
+    @push('stylesheets')
+        @vite(['resources/sass/ledgerIndex.scss'])
+    @endpush
+
+    {{--
+        <x-slot name="header">
+            <h2 class="font-semibold text-xl leading-tight">
+                {{ __('Ledger Records') }}
+            </h2>
+        </x-slot>
+    --}}
     @push('stylesheets')
         {{--        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">--}}
         @vite(['resources/sass/ledgerIndex.scss'])

@@ -299,38 +299,38 @@
 
 ---
 
-### **ステップ 7: `ActivityHistoryDisplay` へのフィルタリング機能実装 (MVP)**
+### **✅ ステップ 7: `ActivityHistoryDisplay` へのフィルタリング機能実装 (MVP) (完了)**
 
 *   **目的**:
-    *   `ActivityHistoryDisplay` コンポーネントに、**操作者**、**操作タイプ**、**期間**によるフィルタリング機能を追加する。
-    *   これにより、管理者（佐藤さん）は特定のユーザーの行動追跡や特定の操作タイプの監査を、実務担当者（田中さん）は自身の操作履歴の確認を、それぞれ効率的に行えるようにする。
+    *   `ActivityHistoryDisplay` コンポーネントに、**操作者**、**操作内容 (`event`)**、**操作説明 (`description`)**、**期間**によるフィルタリング機能を追加する。
+    *   これにより、管理者やユーザーが膨大な活動履歴の中から目的のログを効率的に探し出せるようにする。
 
 *   **作業内容**:
     1.  **`app/Livewire/Common/ActivityHistoryDisplay.php` の修正**:
-        *   フィルタリング用の `public` プロパティを追加: `$filterByUserId` (int), `$filterByEvent` (string), `$filterStartDate` (string), `$filterEndDate` (string)。
-        *   `getActivitiesQuery()` メソッドを修正し、各フィルタプロパティに値が設定されている場合に、以下の `where` 句をクエリに追加する。
-            *   `$filterByUserId`: `where('causer_id', $this->filterByUserId)`
-            *   `$filterByEvent`: `where('event', $this->filterByEvent)`
-            *   `$filterStartDate`: `where('created_at', '>=', $this->filterStartDate)`
-            *   `$filterEndDate`: `where('created_at', '<=', $this->filterEndDate)`
-        *   `render()` メソッド内で、フィルタの選択肢となるデータ（全ユーザーリスト、`activity_log` テーブルに存在するユニークな `event` 名リスト）を取得し、ビューに渡す。
-        *   フィルタ用のプロパティが更新された際にページネーションをリセットするため、`updated()` ライフサイクルフック（例: `updatedFilterByUserId()`）を追加。
+        *   フィルタリング用の `public` プロパティを追加: `$filterByUserId` (int), `$filterByEvent` (string), `$filterByDescription` (string), `$filterStartDate` (string), `$filterEndDate` (string)。
+        *   `getActivitiesQuery()` メソッドを修正し、各フィルタプロパティに値が設定されている場合に、対応する `where` 句をクエリに追加するロジックを実装。
+        *   `render()` メソッド内で、フィルタの選択肢となるデータ（ユニークな `event` 名リスト、ユニークな `description` リスト）を取得し、ビューに渡すロジックを追加。
+        *   `mount()` メソッド内で、操作者フィルタの初期選択肢となる全ユーザーリスト (`$userOptions`) を準備。
+        *   **`userSearch()` メソッドを実装**: `x-mary-choices` コンポーネントのサーバーサイド検索に対応するため、入力値に基づいてユーザーを検索し、`$userOptions` を動的に更新するロジックを実装。
+        *   フィルタ用のプロパティが更新された際にページネーションをリセットするため、`updated()` ライフサイクルフックを追加。
         *   フィルタを全てリセットする `resetFilters()` メソッドを追加。
     2.  **`resources/views/livewire/common/activity-history-display.blade.php` の修正**:
-        *   テーブルの上部に、フィルタUIを配置するためのセクション（例: `<div class="flex ... gap-2 mb-4">`）を追加。
-        *   **操作者フィルタ**: `x-mary-select` を使用し、全ユーザーのリストをドロップダウンで表示。`wire:model.live` で `$filterByUserId` プロパティにバインドする。
-        *   **操作タイプフィルタ**: `x-mary-select` を使用し、ユニークなイベントタイプリストをドロップダウンで表示。`wire:model.live` で `$filterByEvent` プロパティにバインドする。
-        *   **期間フィルタ**: `x-mary-datepicker` を2つ（開始日・終了日）配置し、`wire:model.live` で `$filterStartDate`, `$filterEndDate` プロパティにバインドする。
-        *   フィルタをクリアするための「リセット」ボタン (`x-mary-button`) を追加し、`wire:click="resetFilters"` にバインドする。
+        *   テーブルの上部に、フィルタUIを配置するためのセクション（`x-mary-card` 内）を追加。
+        *   **操作者フィルタ**: `x-mary-choices` を使用し、`searchFunction="userSearch"` を指定してサーバーサイド検索を実装。
+        *   **操作タイプフィルタ**: `x-mary-select` を使用し、ユニークな `event` 名をドロップダウンで表示。
+        *   **操作説明フィルタ**: `x-mary-select` を使用し、ユニークな `description` をドロップダウンで表示。
+        *   **期間フィルタ**: `x-mary-datepicker` を2つ（開始日・終了日）配置。
+        *   フィルタをクリアするための「リセット」ボタン (`x-mary-button`) を追加。
 
 *   **動作確認**:
-    *   `ActivityHistoryDisplay` が表示される各画面（`/notifications` の活動履歴タブ、各リソースの活動履歴モーダル）で、フィルタUIが表示されることを確認。
-    *   操作者、操作タイプ、期間の各フィルタが単独で正しく機能し、アクティビティログのリストが絞り込まれることを確認。
+    *   `ActivityHistoryDisplay` が表示される各画面で、フィルタUIが表示されることを確認。
+    *   **操作者フィルタ**: `choices` コンポーネントでユーザーを検索し、選択すると、そのユーザーの操作履歴のみにリストが絞り込まれることを確認。
+    *   **操作タイプ・操作説明フィルタ**: ドロップダウンから項目を選択すると、リストが正しく絞り込まれることを確認。
+    *   **期間フィルタ**: 日付範囲を指定すると、リストが正しく絞り込まれることを確認。
     *   複数のフィルタを組み合わせて使用できることを確認。
     *   「リセット」ボタンで全てのフィルタが解除され、リストが元に戻ることを確認。
-    *   フィルタを変更した際に、ページネーションが1ページ目に戻ることを確認。
 
-*   **成果物**: ユーザーが操作者、操作タイプ、期間で活動履歴を絞り込めるようになり、監査や履歴追跡の効率が向上する。
+*   **成果物**: ユーザーが操作者、操作タイプ、操作説明、期間で活動履歴を絞り込めるようになり、監査や履歴追跡の効率が大幅に向上した。特に、ユーザー数の多い環境でも快適に操作できる操作者フィルタが実装された。
 
 ---
 

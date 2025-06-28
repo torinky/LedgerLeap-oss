@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -279,6 +280,27 @@ class ActivityHistoryDisplay extends Component
         });
     }
 
+    /**
+     * `x-mary-choices` 用の検索
+     *
+     * @return void
+     */
+    public function userSearch(string $value = ''): void
+    {
+        // 検索クエリを更新するだけで、userOptions computed プロパティが自動的に再計算される
+        $query = User::orderBy('name');
+
+        if ($value) {
+            $query->where('name', 'like', "%{$value}%");
+        }
+
+        // 常に現在選択されているユーザーを検索結果に含める
+        if ($this->filterByUserId) {
+            $query->orWhere('id', $this->filterByUserId);
+        }
+
+        $this->userOptions = $query->take(10)->get();
+    }
 
     // ActivityLogFormatter に移譲
     public function getOperationDescription(CustomActivity $activity): string

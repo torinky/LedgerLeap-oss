@@ -3,27 +3,32 @@
     {{--    <x-mary-header title="{{ __('ledger.activity.title') }}" icon="o-clock" />--}}
 
 
-    <x-mary-card>
+    <x-mary-card class="pt-0">
         @if(!auth()->check() || !auth()->user()->can('view', \App\Models\CustomActivity::class))
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
             {{-- ★★★ 新規追加: フィルタリングUI ★★★ --}}
             <x-mary-card shadow>
 
+{{--
                 <x-mary-header
                         title="{{ __('ledger.filter') }}"
                         icon="o-funnel"
                         size="text-md"
                 />
+--}}
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                     {{-- 操作者フィルタ --}}
                     <div>
-                        <x-mary-select
+                        <x-mary-choices
                                 label="{{ __('ledger.activity.column.causer') }}"
-                                :options="$this->userOptions"
                                 wire:model.live="filterByUserId"
+                                :options="$userOptions" {{-- computed プロパティをバインド --}}
+                                searchFunction="userSearch" {{-- 検索時に `search` メソッドを呼び出す --}}
                                 placeholder="{{ __('ledger.all_users') }}"
-                                allow-empty
+                                single
+                                clearble
+                                searchable
                         />
                     </div>
                     {{-- 操作タイプフィルタ --}}
