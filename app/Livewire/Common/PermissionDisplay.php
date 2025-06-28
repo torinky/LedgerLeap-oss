@@ -6,10 +6,13 @@ use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Organization; // 追加
+use App\Models\Organization;
+
+// 追加
 use App\Models\Role;
 use App\Models\User;
 use App\Services\PermissionService;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -54,8 +57,20 @@ class PermissionDisplay extends Component
 
         // ★★★ フィルタ選択肢を初期化 ★★★
         $this->roleOptions = Role::orderBy('name')->get(['id', 'name']);
-        $this->organizationOptions = Organization::orderBy('name')->get(['id', 'name']); // 階層表示は別途検討
+        $this->organizationOptions = Organization::with('parent')->get()->map(function ($org) {
+            return [
+                'id' => $org->id,
+                'name' => $org->name,
+                'full_name' => $org->full_name,
+            ];
+        });
         $this->permissionOptions = FolderPermissionType::asAccessSelectArray();
+        $this->permissionOptions = array_map(function ($label, $value) {
+            return [
+                'value' => $value,
+                'label' => $label,
+            ];
+        }, $this->permissionOptions, array_keys($this->permissionOptions));
 
     }
 
@@ -94,18 +109,23 @@ class PermissionDisplay extends Component
         if ($this->filterByOrganizationId) {
             $query->orWhere('id', $this->filterByOrganizationId);
         }
-
-        $this->organizationOptions = $query->take(10)->get(['id', 'name']);
+        $this->organizationOptions = $query->take(10)->get()->map(function ($org) {
+            return [
+                'id' => $org->id,
+                'name' => $org->name,
+                'full_name' => $org->full_name,
+            ];
+        });
     }
 
     /**
      * アクセス可能なロールと権限のリストを取得
      * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
-/*    public function getAccessRolesProperty(): Collection
-    {
-        return $this->permissionService->getAccessRolesWithPermissions($this->resourceId, $this->resourceType);
-    }*/
+    /*    public function getAccessRolesProperty(): Collection
+        {
+            return $this->permissionService->getAccessRolesWithPermissions($this->resourceId, $this->resourceType);
+        }*/
     /**
      * アクセス可能なロールと権限のリストを取得 (フィルタ適用)
      * @return Collection<object{...}>
@@ -130,10 +150,10 @@ class PermissionDisplay extends Component
      * アクセス可能な組織と権限のリストを取得
      * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
-/*    public function getAccessOrganizationsProperty(): Collection
-    {
-        return $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
-    }*/
+    /*    public function getAccessOrganizationsProperty(): Collection
+        {
+            return $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
+        }*/
     /**
      * アクセス可能な組織と権限のリストを取得 (フィルタ適用)
      * @return Collection<object{...}>
@@ -159,19 +179,12 @@ class PermissionDisplay extends Component
         return $allOrganizations;
     }
 
-    /**
-     * アクセス可能なユーザーのリストを取得
-     * @return LengthAwarePaginator<User>
-     */
-/*    public function getAccessUsersProperty(): LengthAwarePaginator
-    {
-        return $this->permissionService->getAccessUsers(
-            $this->resourceId, $this->resourceType, $this->searchUserQuery);
-    }*/
+
     /**
      * アクセス可能なユーザーのリストを取得 (フィルタ適用)
      * @return LengthAwarePaginator<User>
      */
+    #[Computed]
     public function getAccessUsersProperty(): LengthAwarePaginator
     {
         // フィルタ条件をサービスに渡すように変更
@@ -226,7 +239,9 @@ class PermissionDisplay extends Component
     public function updated($propertyName): void
     {
         if (in_array($propertyName, ['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue'])) {
-            $this->resetPage();
+            $this->resetPage('accessUsersPage');
+            $this->resetPage('accessOrganizationsPage');
+            $this->resetPage('accessRolesPage');
         }
     }
 
@@ -238,8 +253,6 @@ class PermissionDisplay extends Component
         $this->reset(['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue', 'searchUserQuery']);
         $this->resetPage();
     }
-
-
 
 
 }

@@ -1,15 +1,15 @@
 <div class="card p-4 pt-0 bg-base-100 shadow-xl">
 
-{{--
-    <x-mary-header :title="__('ledger.access_and_permissions.title')"
-                   separator progress-indicator
-                   icon="o-shield-check"
-    />
---}}
+    {{--
+        <x-mary-header :title="__('ledger.access_and_permissions.title')"
+                       separator progress-indicator
+                       icon="o-shield-check"
+        />
+    --}}
 
     {{-- ★★★ フィルタリングUI ★★★ --}}
     <div class="mb-6 p-4 pt-0 bg-base-200 rounded-lg">
-{{--        <h4 class="font-semibold text-base-content mb-2">{{ __('Filter') }}</h4>--}}
+        {{--        <h4 class="font-semibold text-base-content mb-2">{{ __('Filter') }}</h4>--}}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {{-- ロールフィルタ --}}
             <div>
@@ -35,13 +35,30 @@
                         single
                         clearable
                         searchable
-                />
+                >
+                    @scope('item', $org)
+                    <x-mary-list-item :item="$org" value="id" no-hover no-separator>
+                        <x-slot:value>
+                            <span>{{ $org['name'] }}</span>
+                        </x-slot:value>
+                        <x-slot:sub-value>
+                            @if(!empty($org['full_name']) && $org['full_name'] !== $org['name'])
+                                <span class="block text-xs text-neutral">
+                                    {{ $org['full_name'] }}
+                                </span>
+                            @endif
+                        </x-slot:sub-value>
+                    </x-mary-list-item>
+                    @endscope
+                </x-mary-choices>
             </div>
             {{-- 権限タイプフィルタ --}}
             <div>
                 <x-mary-select
                         label="{{ __('ledger.access_and_permissions.column.permissions') }}"
                         :options="$permissionOptions"
+                        option-label="label"
+                        option-value="value"
                         wire:model.live="filterByPermissionValue"
                         placeholder="{{ __('ledger.all_permissions') }}"
                         allow-empty
@@ -131,13 +148,13 @@
                 @endforelse
                 @endscope
 
-{{--
-                @scope('cell_source', $item)
-                <span class="badge badge-outline text-base-content/70">
-                        {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
-                    </span>
-                @endscope
---}}
+                {{--
+                                @scope('cell_source', $item)
+                                <span class="badge badge-outline text-base-content/70">
+                                        {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
+                                    </span>
+                                @endscope
+                --}}
 
                 <x-slot:empty>
                     <x-mary-icon name="o-folder-minus"
@@ -217,13 +234,13 @@
                 @endforelse
                 @endscope
 
-{{--
-                @scope('cell_source', $item)
-                <span class="badge badge-outline text-base-content/70">
-                        {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
-                    </span>
-                @endscope
---}}
+                {{--
+                                @scope('cell_source', $item)
+                                <span class="badge badge-outline text-base-content/70">
+                                        {{ __('ledger.access_and_permissions.source.' . ($item->source ?? 'unknown')) }}
+                                    </span>
+                                @endscope
+                --}}
 
                 <x-slot:empty>
                     <x-mary-icon name="o-building-office-2"

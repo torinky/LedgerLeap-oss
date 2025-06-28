@@ -172,4 +172,10 @@ class Organization extends Model
     {
         return $this->getAllRoles()->flatMap->permissions->unique('id');
     }
+
+    public function getFullNameAttribute()
+    {
+        // ancestorsAndSelf()はルートから自分までを順に返す
+        return $this->ancestorsAndSelf($this->id)->pluck('name')->implode(' / ');
+    }
 }

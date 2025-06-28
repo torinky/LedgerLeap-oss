@@ -264,11 +264,6 @@ class PermissionService
         // フィルタリング後のロールIDリストを取得
         $accessRoleIds = $accessItems->pluck('role.id')->unique()->filter()->all();
 
-        // アクセス可能なロールがない場合は、ユーザーもいないので空の結果を返す
-        if (empty($accessRoleIds)) {
-            return (new User())->newQuery()->whereRaw('1 = 0')->paginate(10);
-        }
-
         $query = User::query()->distinct();
 
         if ($filterByRoleId) {
@@ -276,8 +271,7 @@ class PermissionService
             $query
                 ->whereHas('roles', function ($q) use ($filterByRoleId) {
                     $q->where('roles.id', $filterByRoleId);
-                })
-                ->with(['organizations.ancestors', 'roles']);
+                });
         }
 
         // ★★★ 組織IDでフィルタリングする場合 ★★★
@@ -297,7 +291,7 @@ class PermissionService
 
         // ユーザーに直接割り当てられたロール、または所属組織（とその祖先）に割り当てられたロールが
         // アクセス可能なロールに含まれるユーザーを取得
-        $query->where(function (Builder $q) use ($accessRoleIds) {
+        $query->orWhere(function (Builder $q) use ($accessRoleIds) {
             // ユーザーに直接割り当てられたロール
             $q->whereHas('roles', function ($subQ) use ($accessRoleIds) {
                 $subQ->whereIn('roles.id', $accessRoleIds);
@@ -326,21 +320,11 @@ class PermissionService
             });
         }
 
-        // ★★★ ユーザーのロールでフィルタリング ★★★
-        if ($filterByRoleId) {
-            $directRoleUsers= User::query()->with('roles')->where('role.id', $filterByRoleId);
-        }
-
         $users = $query->paginate(10);
-
-
-
 
         $users->getCollection()->transform(function ($user) use ($targetFolder,$filterByRoleId) {
             // ユーザーの直接ロール
             $directRoles = $user->roles->keyBy('id');
-
-//            dd($directRoles);
 
             // ユーザーが組織から継承するロール
             $inheritedRoles = collect();

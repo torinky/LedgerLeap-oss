@@ -96,7 +96,7 @@ class UserService
             return true;
         }
 
-        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
+        $organizationWithAncestors = $organization->ancestorsAndSelf($organization->id)->pluck('id');
         $userOrganizations = $user->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
 
         foreach ($userOrganizations as $org) {
@@ -123,7 +123,7 @@ class UserService
             return true;
         }
 
-        $organizationWithAncestors = $organization->ancestorsAndSelf()->pluck('id');
+        $organizationWithAncestors = $organization->ancestorsAndSelf($organization->id)->pluck('id');
         $userOrganizations = $user->organizations()->whereIn('organizations.id', $organizationWithAncestors)->get();
 
         foreach ($userOrganizations as $org) {
