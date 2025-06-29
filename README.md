@@ -1,6 +1,6 @@
 # LedgerLeap
 
-Ledger and Document Management System
+LedgerLeap is a web-based ledger and document management system designed to streamline information management and sharing within an organization. It provides robust features like full-text search (including attachments), flexible permission control, and **detailed activity and access tracking** to enhance security and auditability.
 
 ---
 
