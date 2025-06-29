@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Computed;
@@ -53,7 +54,7 @@ class ActivityHistoryDisplay extends Component
     private const TEXT_COLOR_NEUTRAL = 'text-neutral-content'; // For neutral or less emphasized information
     private const TEXT_STYLE_MUTED = 'text-base-content/70'; // For muted text (e.g., null values)
     private const TEXT_STYLE_ITALIC_MUTED = 'italic ' . self::TEXT_STYLE_MUTED; // For italic muted text
-    public ?string $filterByDescription='';
+    public ?string $filterByDescription = '';
 
     /**
      * コンポーネントの初期化
@@ -95,7 +96,7 @@ class ActivityHistoryDisplay extends Component
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    private function getActivitiesQuery()
+    public function getActivitiesQuery()
     {
         $query = CustomActivity::query()
             ->with(['causer', 'subject'])
@@ -109,21 +110,16 @@ class ActivityHistoryDisplay extends Component
                     if (!$folder) {
                         return $query->whereRaw('0=1');
                     }
-
-                    // 対象フォルダとその全ての子孫フォルダのIDリストを取得
-                    $folderIds = $folder->descendantsAndSelf($folder->id)->pluck('id');
+                    $folderIds = $folder->descendantsAndSelf($this->resourceId)->pluck('id');
 
                     $query->where(function (EloquentBuilder $q) use ($folderIds) {
-                        // 1. フォルダ自身のログ
                         $q->where(function (EloquentBuilder $subQ) use ($folderIds) {
                             $subQ->where('subject_type', Folder::class)
                                 ->whereIn('subject_id', $folderIds);
                         })
-                            // 2. 配下の台帳定義のログ
                             ->orWhereHasMorph('subject', [LedgerDefine::class], function (EloquentBuilder $subjectQuery) use ($folderIds) {
                                 $subjectQuery->whereIn('folder_id', $folderIds);
                             })
-                            // 3. 配下の台帳レコードのログ
                             ->orWhereHasMorph('subject', [Ledger::class], function (EloquentBuilder $subjectQuery) use ($folderIds) {
                                 $subjectQuery->whereHas('define', function (EloquentBuilder $defineQuery) use ($folderIds) {
                                     $defineQuery->whereIn('folder_id', $folderIds);
@@ -134,12 +130,10 @@ class ActivityHistoryDisplay extends Component
 
                 case 'LedgerDefine':
                     $query->where(function (EloquentBuilder $q) {
-                        // 1. 台帳定義自身のログ
                         $q->where(function (EloquentBuilder $subQ) {
                             $subQ->where('subject_type', LedgerDefine::class)
                                 ->where('subject_id', $this->resourceId);
                         })
-                            // 2. その定義に紐づく全レコードのログ
                             ->orWhereHasMorph('subject', [Ledger::class], function (EloquentBuilder $subjectQuery) {
                                 $subjectQuery->where('ledger_define_id', $this->resourceId);
                             });
@@ -148,13 +142,11 @@ class ActivityHistoryDisplay extends Component
 
                 case 'Ledger':
                     $query->where(function (EloquentBuilder $q) {
-                        // 1. 台帳レコード自身のログ
                         $q->where(function (EloquentBuilder $subQ) {
                             $subQ->where('subject_type', Ledger::class)
                                 ->where('subject_id', $this->resourceId);
                         });
 
-                        // 2. 関連リソースのログを含める場合 (親の台帳定義とフォルダ)
                         if ($this->includeRelatedResources) {
                             $ledger = Ledger::find($this->resourceId);
                             if ($ledger && $ledger->define) {
@@ -174,18 +166,14 @@ class ActivityHistoryDisplay extends Component
                     break;
 
                 default:
-                    // 未知のリソースタイプの場合は空のクエリを返す
                     return $query->whereRaw('0=1');
             }
         }
 
-        // subject が null のログは、このコンテキストでは表示しない (ログイン/ログアウトなど)
-        // 全件表示モード以外の場合のみ適用
         if ($this->resourceId !== null && $this->resourceType !== null) {
             $query->whereNotNull('subject_id');
         }
 
-        // ★★★ フィルタリング機能の適用 ★★★
         if ($this->filterByUserId) {
             $query->where('causer_id', $this->filterByUserId);
         }
@@ -193,15 +181,14 @@ class ActivityHistoryDisplay extends Component
             $query->where('event', $this->filterByEvent);
         }
         if ($this->filterByDescription) {
-            $query->where('description', $this->filterByDescription);
+            $query->where('description', 'like', '%' . $this->filterByDescription . '%');
         }
         if ($this->filterStartDate) {
-            $query->where('created_at', '>=', $this->filterStartDate . ' 00:00:00');
+            $query->where('created_at', '>=', Carbon::parse($this->filterStartDate)->startOfDay());
         }
         if ($this->filterEndDate) {
-            $query->where('created_at', '<=', $this->filterEndDate . ' 23:59:59');
+            $query->where('created_at', '<=', Carbon::parse($this->filterEndDate)->endOfDay());
         }
-        // TODO: 検索機能 (searchQuery)
 
         return $query;
     }
