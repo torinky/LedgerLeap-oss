@@ -1,4 +1,4 @@
-<div class="card p-4 pt-0 bg-base-100 shadow-xl">
+<div>
 
     {{--
         <x-mary-header :title="__('ledger.access_and_permissions.title')"
@@ -8,7 +8,7 @@
     --}}
 
     {{-- ★★★ フィルタリングUI ★★★ --}}
-    <div class="mb-6 p-4 pt-0 bg-base-200 rounded-lg">
+    <x-mary-card class="pt-0" shadow>
         {{--        <h4 class="font-semibold text-base-content mb-2">{{ __('Filter') }}</h4>--}}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {{-- ロールフィルタ --}}
@@ -73,7 +73,7 @@
                     icon="o-arrow-path"
             />
         </div>
-    </div>
+    </x-mary-card>
 
     <div class="divider"></div>
     {{-- ログインユーザーの最高権限概要 --}}

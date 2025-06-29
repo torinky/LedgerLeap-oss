@@ -3,12 +3,12 @@
     {{--    <x-mary-header title="{{ __('ledger.activity.title') }}" icon="o-clock" />--}}
 
 
-    <x-mary-card class="pt-0">
+
         @if(!auth()->check() || !auth()->user()->can('view', \App\Models\CustomActivity::class))
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
-            {{-- ★★★ 新規追加: フィルタリングUI ★★★ --}}
-            <x-mary-card shadow>
+            {{-- ★★★ フィルタリングUI ★★★ --}}
+            <x-mary-card  class="pt-0" shadow>
 
 {{--
                 <x-mary-header
@@ -77,12 +77,14 @@
                     />
                 </div>
             </x-mary-card>
+            <div class="divider"></div>
 
             <x-mary-table
-                    class="table-sm w-full table-zebra overflow-x-auto"
+                    class="table-sm w-full overflow-x-auto bg-base-100"
                     :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
                     :rows="$activities"
                     striped
+                    hover
             >
 
                 @scope('cell_time', $activity)
@@ -128,6 +130,6 @@
             </div>
         @endif
 
-    </x-mary-card>
+
 
 </div>
