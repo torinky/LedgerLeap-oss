@@ -16,7 +16,8 @@
         });
     </script>
 
-    <form wire:submit.prevent="save">
+    <form wire:submit.prevent="save" x-data="{ isDirty: @js($isDirty) }"
+          @is-dirty-changed.window="isDirty = $event.detail.isDirty">
         @if(!empty($columns))
             <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3">
                 @foreach($columns as $index => $column)
@@ -47,7 +48,8 @@
                                                 <x-mary-input label="{{__('ledger.column.title')}}"
                                                               placeholder="{{__('ledger.column.title')}}"
                                                               icon="o-table-cells"
-                                                              required wire:model="columns.{{$index}}.name"
+                                                              required
+                                                              wire:model.live="columns.{{$index}}.name"
                                                               wire:key="name-{{$column['id']}}" class="input-accent"/>
 
                                                 @php
@@ -105,11 +107,20 @@
                                                 @endif
 
                                                 <div class="mt-3 flex items-center justify-end w-full space-x-2">
-                                                    <x-mary-button label="{{__('actions.save')}}"
-                                                                   wire:click="saveColumn({{$index}})"
-                                                                   icon="o-pencil-square"
-                                                                   class="btn-primary btn-sm"
-                                                                   spinner="saveColumn({{$index}})"/>
+                                                    @if($isDirty)
+                                                        <x-mary-button label="{{__('actions.save')}}"
+                                                                       wire:click="saveColumn({{$index}})"
+                                                                       icon="o-pencil-square"
+                                                                       class="btn-primary btn-sm"
+                                                                       spinner="saveColumn({{$index}})"
+                                                        />
+                                                    @else
+                                                        <x-mary-button label="{{__('actions.save')}}"
+                                                                       icon="o-pencil-square"
+                                                                       class="btn-primary btn-sm"
+                                                                       disabled
+                                                        />
+                                                    @endif
                                                     <label for="delete-modal-{{$column['id']}}"
                                                            class="btn btn-outline btn-sm btn-error ml-10 justify-self-end"><i
                                                                 class="fa-solid fa-trash mr-1"></i> {{__('ledger.column.remove')}}
@@ -147,11 +158,21 @@
                 <i class="fa-solid fa-plus-circle mr-1"></i>
                 {{__('ledger.column.add')}}
             </button>
-            <x-mary-button label="{{__('actions.save')}}"
-                           type="submit"
-                           icon="o-pencil-square"
-                           class="btn-primary"
-                           spinner="save"/>
+            @if($isDirty)
+                <x-mary-button label="{{__('actions.save')}}"
+                               type="submit"
+                               icon="o-pencil-square"
+                               class="btn-primary"
+                               spinner="save"
+                />
+            @else
+                <x-mary-button label="{{__('actions.save')}}"
+                               type="submit"
+                               icon="o-pencil-square"
+                               class="btn-primary"
+                               disabled
+                />
+            @endif
         </div>
     </form>
 </div>

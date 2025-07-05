@@ -26,6 +26,8 @@ class ModifyColumn extends Component
 
     public $columnUploadedFile = [];
 
+    public bool $isDirty = false; // フォームが変更されたかどうかを追跡
+
     public function mount(Request $request): void
     {
         if ($request->isMethod('POST')) {
@@ -44,12 +46,12 @@ class ModifyColumn extends Component
                 'type' => $columnDefineObject->type,
                 'order' => $columnDefineObject->order,
                 'useOptions' => $columnDefineObject->useOptions,
-                'options' => (array) $columnDefineObject->options,
-                'required' => (bool) $columnDefineObject->required,
-                'unique' => (bool) $columnDefineObject->unique,
-                'sortBy' => (bool) $columnDefineObject->sortBy,
-                'hint' => (string) $columnDefineObject->hint,
-                'file' => (array) $columnDefineObject->file,
+                'options' => (array)$columnDefineObject->options,
+                'required' => (bool)$columnDefineObject->required,
+                'unique' => (bool)$columnDefineObject->unique,
+                'sortBy' => (bool)$columnDefineObject->sortBy,
+                'hint' => (string)$columnDefineObject->hint,
+                'file' => (array)$columnDefineObject->file,
                 'is_collapsed' => false, // 初期状態で折りたたむ
             ];
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
@@ -62,6 +64,8 @@ class ModifyColumn extends Component
             // アップロード用プロパティの初期化
             $this->columnUploadedFile[$column['id']] = null;
         }
+
+        $this->isDirty = false; // 初期化時にダーティフラグをリセット
     }
 
     public function render(request $request)
@@ -98,6 +102,7 @@ class ModifyColumn extends Component
             return $a['order'] <=> $b['order'];
         });
 
+        $this->isDirty=true;
         $this->columns = $newOrderedColumns;
     }
 
@@ -138,9 +143,12 @@ class ModifyColumn extends Component
             if (!$hasOptions) {
                 $this->columns[$columnIndex]['options'] = [];
             }
+            $this->isDirty = true; // フォームが変更された
         } elseif (isset($this->columns[$columnIndex]) && $parts[1] === 'is_collapsed') {
             // is_collapsed の変更をAlpine.jsに通知
             $this->dispatch('toggle-collapse', ['is_collapsed' => $value])->self();
+        } else {
+            $this->isDirty = true; // その他のカラムプロパティが変更された
         }
     }
 
@@ -165,6 +173,8 @@ class ModifyColumn extends Component
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
+
+        $this->isDirty = false; // 保存後にダーティフラグをリセット
 
         $this->success(__('ledger.column.saved'));
     }
@@ -205,6 +215,8 @@ class ModifyColumn extends Component
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
+
+        $this->isDirty = false; // 保存後にダーティフラグをリセット
 
         $this->success(__('ledger.define.saved'));
     }
