@@ -19,81 +19,48 @@ class ModifyColumn extends Component
 {
     use Toast, WithFileUploads;
 
-    //    https://laravel-livewire.com/screencasts/s8-dragging-list
     #[Locked]
-    public $ledgerDefineRecord;
+    public LedgerDefine $ledgerDefineRecord;
 
-    public $columnType = [];
-
-    public $maxColumnId = 0;
-
-    public $maxColumnOrder = 0;
-
-    public $columnOptions = [];
-
-    public $columnName = [];
-
-    public $columnRequired = [];           // 必須項目フラグ
-
-    public $columnUnique = [];     // 重複不可フラグ
-
-    public $columnSortBy = [];             // ソート対象フラグ
-
-    public $columnHint = []; // ヒント
-
-    public $columnFile = []; // ファイル
+    public array $columns = [];
 
     public $columnUploadedFile = [];
 
-    public $backgroundImages = [];
-
-    public function mount(request $request)
+    public function mount(Request $request): void
     {
         if ($request->isMethod('POST')) {
             return;
         }
 
-        $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $this->ledgerDefineRecord = LedgerDefine::findOrNew($ledgerDefineId);
 
-        $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
+        // Ensure $this->columns is initialized as an array of associative arrays.
+        $this->columns = collect($this->ledgerDefineRecord->column_define)->map(function ($columnDefineObject) {
+            // ColumnDefineオブジェクトのプロパティを連想配列に変換
+            return [
+                'id' => $columnDefineObject->id,
+                'name' => $columnDefineObject->name,
+                'type' => $columnDefineObject->type,
+                'order' => $columnDefineObject->order,
+                'useOptions' => $columnDefineObject->useOptions,
+                'options' => (array) $columnDefineObject->options,
+                'required' => (bool) $columnDefineObject->required,
+                'unique' => (bool) $columnDefineObject->unique,
+                'sortBy' => (bool) $columnDefineObject->sortBy,
+                'hint' => (string) $columnDefineObject->hint,
+                'file' => (array) $columnDefineObject->file,
+            ];
+        })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
 
-        $columnDefines = collect($this->ledgerDefineRecord->column_define);
-
-        $this->columnType = $columnDefines->pluck('type', 'id');
-        // idを0から開始できるようにする
-        $this->maxColumnId = $columnDefines->pluck('id')->max();
-        if (count($this->ledgerDefineRecord->column_define) == 0) {
-            $this->maxColumnId = -1;
-        }
-        $this->maxColumnOrder = $columnDefines->pluck('order')->max();
-
-        //        options初期化
-        $this->columnOptions = $columnDefines->pluck('options', 'id');
-        $this->columnName = $columnDefines->pluck('name', 'id');
-        //        dd($this->columnName);
-        $this->columnRequired = $columnDefines->pluck('required', 'id');
-        $this->columnUnique = $columnDefines->pluck('unique', 'id');
-        $this->columnSortBy = $columnDefines->pluck('sortBy', 'id');
-        $this->columnHint = $columnDefines->pluck('hint', 'id');
-        $this->columnFile = $columnDefines->pluck('file', 'id')
-            ->map(function ($value) {
-                return (array)$value;
-            });
-        // サムネイル生成処理を追加
-        //        dd($this->columnFile);
-        foreach ($this->columnFile as $columnId => $file) {
-            if (!isset($file['path'])) {
-                continue;
+        // サムネイル生成とアップロード済みファイル用の初期化
+        foreach ($this->columns as $index => $column) {
+            if (isset($column['file']['path'])) {
+                $this->createThumbnail($column['file']['path']);
             }
-            $this->createThumbnail($file['path']);
+            // アップロード用プロパティの初期化
+            $this->columnUploadedFile[$column['id']] = null;
         }
-        $this->initBackgroundImages();
-
-        foreach ($this->columnFile as $columnId => $file) {
-            $this->columnUploadedFile[$columnId] = (object)['name' => '', 'path' => ''];
-        }
-
     }
 
     public function render(request $request)
@@ -107,243 +74,148 @@ class ModifyColumn extends Component
      * @param array $columnOrder
      * @return void
      */
-    public function updateColumnOrder($columnOrder)
+    public function updateColumnOrder($orderedItems)
     {
-        if (!$this->canModifyColumns()) return;
+        // $orderedItems is an array of arrays, e.g., [['value' => 1, 'order' => 0], ['value' => 2, 'order' => 1]]
+        // First, create a map of current columns by their IDs for efficient lookup
+        $columnsById = collect($this->columns)->keyBy('id');
 
-        // https://laravel-livewire.com/screencasts/s8-dragging-list
-        $this->ledgerDefineRecord->column_define = collect($columnOrder)->map(function ($order, $key) {
-            $result = collect($this->ledgerDefineRecord->column_define)->where('id', (int)$order['value'])->firstOrFail();
-            $result->order = $order['order'];
+        $newOrderedColumns = [];
+        foreach ($orderedItems as $item) {
+            $id = (int) $item['value'];
+            $order = (int) $item['order'];
 
-            return $result;
-        })->toArray();
+            if ($columnsById->has($id)) {
+                $column = $columnsById->get($id);
+                $column['order'] = $order + 1; // Update the order based on the new position
+                $newOrderedColumns[] = $column;
+            }
+        }
 
-        $this->store();
+        // Sort the newOrderedColumns by their updated 'order' property
+        usort($newOrderedColumns, function ($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
 
+        $this->columns = $newOrderedColumns;
     }
 
     /**
      * @param int $columnId
      * @return void
      */
-    public function removeColumn($columnId)
+    public function removeColumn($index)
     {
         if (!$this->canModifyColumns()) return;
 
-        $this->ledgerDefineRecord->column_define = collect($this->ledgerDefineRecord->column_define)
-//            ->dd()
-            ->reject(fn($columnDefine, $key) => $columnDefine->id == $columnId)
-//            ->dd()
-            ->values()
-            ->map(function ($columnDefine, $key) {
-                $columnDefine->order = $key + 1;
+        $columns = collect($this->columns);
+        $columns->forget($index);
 
-                return $columnDefine;
-            })
-//            ->dd()
-//            ->all();
-            ->toArray();
+        // Re-index the array and update order
+        $this->columns = $columns->values()->map(function ($column, $key) {
+            $column['order'] = $key + 1;
+            return $column;
+        })->all();
+    }
 
-        //      DBに投入しないと反映されない（レスポンスがhtmlなので変数がjsに再バインドされるわけでは無さそう）
-        $this->store();
+    public function updatedColumnsType($value, $key)
+    {
+        // $key will be in the format "0.type", "1.type", etc.
+        // We need to extract the numeric index.
+        $parts = explode('.', $key);
+        $columnIndex = (int) $parts[0];
+
+        // Ensure the column exists
+        if (isset($this->columns[$columnIndex])) {
+            // Determine if the new type has options
+            $hasOptions = \App\Models\ColumnTypes\InputTypeFactory::make($value)->hasOptions();
+
+            // Update the useOptions property for the specific column
+            $this->columns[$columnIndex]['useOptions'] = $hasOptions;
+
+            // If the new type does not use options, clear any existing options
+            if (!$hasOptions) {
+                $this->columns[$columnIndex]['options'] = [];
+            }
+        }
+    }
+
+    public function saveColumn($index)
+    {
+        if (!$this->canModifyColumns()) return;
+
+        $this->validate([
+            "columns.{$index}.name" => 'required|string|max:255',
+            "columns.{$index}.type" => 'required|string',
+            "columns.{$index}.options" => 'array',
+            "columns.{$index}.required" => 'boolean',
+            "columns.{$index}.unique" => 'boolean',
+            "columns.{$index}.sortBy" => 'boolean',
+            "columns.{$index}.hint" => 'nullable|string|max:255',
+        ]);
+
+        // Update the main ledgerDefineRecord's column_define with the current state of $this->columns
+        $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
+            return $column;
+        })->toArray();
+
+        $this->ledgerDefineRecord->modifier_id = auth()->id();
+        $this->ledgerDefineRecord->save();
+
+        $this->success(__('ledger.column.saved'));
     }
 
     public function addColumn()
     {
         if (!$this->canModifyColumns()) return;
 
-        $this->maxColumnId++;
-        $this->maxColumnOrder++;
+        $maxId = collect($this->columns)->max('id') ?? -1;
 
-        $this->ledgerDefineRecord->column_define = collect($this->ledgerDefineRecord->column_define)
-            ->add(
-                new ColumnDefine($this->maxColumnId, 'no name', 'text', $this->maxColumnOrder)
-            )
-            ->toArray();
-        $this->columnType[$this->maxColumnId] = 'text';
+        $newColumn = [
+            'id' => $maxId + 1,
+            'name' => 'no name',
+            'type' => 'text',
+            'order' => count($this->columns) + 1,
+            'useOptions' => false, // Default value
+            'options' => [], // Default value
+            'required' => false, // Default value
+            'unique' => false, // Default value
+            'sortBy' => false, // Default value
+            'hint' => '', // Default value
+            'file' => [], // Default value
+        ];
 
-        $this->store();
-
+        $this->columns[] = $newColumn;
     }
 
-    public function applyOptions($columnId)
-    {
-
-        foreach ($this->ledgerDefineRecord->column_define as $cKey => $columnDefine) {
-            if ($columnDefine->id == $columnId) {
-                $oldOptions = $this->ledgerDefineRecord->column_define[$columnDefine->id]->options;
-                break;
-            }
-        }
-
-        $newOptions = $this->columnOptions[$columnId] ?? [];
-
-        // 比較ロジック
-        if ($this->optionsHaveChanged($oldOptions, $newOptions)) {
-            $this->ledgerDefineRecord->column_define[$columnDefine->id]->options = $newOptions;
-            //            dd($this->ledgerDefineRecord->column_define);
-            $this->store();
-        }
-    }
-
-    private function optionsHaveChanged($oldOptions, $newOptions)
-    {
-        return array_diff($oldOptions, $newOptions) !== [] || array_diff($newOptions, $oldOptions) !== [];
-    }
-
-    public function applyProperty($columnId, $propertyName, $newValue)
+    public function save()
     {
         if (!$this->canModifyColumns()) return;
 
-        $setterMethod = 'set' . ucfirst($propertyName);
-        foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
-            if ($columnDefine->id == $columnId) {
-                $oldValue = $columnDefine->$propertyName;
-                break;
-            }
-        }
-
-        if (!isset($oldValue) || $oldValue != $newValue) {
-            foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
-                if ($columnDefine->id == $columnId) {
-                    $columnDefine->$setterMethod($newValue);
-                    break;
-                }
-            }
-            $this->store();
-        }
-    }
-
-    public function applyName($columnId)
-    {
-        $this->applyProperty($columnId, 'name', $this->columnName[$columnId] ?? []);
-    }
-
-    public function applyRequired($columnId)
-    {
-        $this->applyProperty($columnId, 'required', $this->columnRequired[$columnId] ?? []);
-    }
-
-    public function applyType($columnId)
-    {
-        $this->applyProperty($columnId, 'type', $this->columnType[$columnId] ?? []);
-    }
-
-    public function applyUnique($columnId)
-    {
-        $this->applyProperty($columnId, 'unique', $this->columnUnique[$columnId] ?? []);
-    }
-
-    public function applySortBy($columnId)
-    {
-        $this->applyProperty($columnId, 'sortBy', $this->columnSortBy[$columnId] ?? []);
-    }
-
-    public function store()
-    {
-        if (!$this->canModifyColumns()) return;
+        // Before saving, ensure all columns are simple associative arrays.
+        $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
+            // Just return the array, as it should already be in the correct format.
+            return $column;
+        })->toArray();
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
-        // イベントを発行
-        $this->dispatch('ledgerDefineRecordStored');
 
-        // セッションにメッセージを保存
-        //        session()->flash('status', __('ledger.define.saved'));
-        /*        $this->toast(
-                    type: 'success',
-                    title:  __('ledger.define.saved'),
-                    description: null,                  // optional (text)
-                    position: 'toast-top toast-end',    // optional (daisyUI classes)
-                    icon: 'o-information-circle',       // Optional (any icon)
-                    css: 'alert-info',                  // Optional (daisyUI classes)
-                    timeout: 3000,                      // optional (ms)
-                    redirectTo: null
-                );*/
         $this->success(__('ledger.define.saved'));
-
-        //        throw ToastException::success(__('ledger.define.saved'));
     }
 
-    public function updated($propertyName)
-    {
-        $propertyParts = explode('.', $propertyName);
-        $columnId = (int)end($propertyParts);
-        $classPropertyName = reset($propertyParts);
-
-        $this->validateOnly($propertyName);
-
-        $columnDefinePropertyName = Str::camel(strtr($classPropertyName, ['column' => '']));
-
-        if (!isset($this->{$classPropertyName}[$columnId])) {
-            $this->{$classPropertyName}[$columnId] = [];
-            //                    dd($this->{$classPropertyName},$classPropertyName, $columnDefinePropertyName, $columnId);
-        }
-        if ($classPropertyName === 'columnUploadedFile') {
-            $this->storeFile($columnId);
-        } else {
-            $this->applyProperty($columnId, $columnDefinePropertyName, $this->{$classPropertyName}[$columnId]);
-        }
-
-    }
-
-    public function createThumbnail($path): void
-    {
-        $thumbnailPath = Storage::disk('public')->path('thumbnails/' . $path);
-        if (!is_dir(dirname($thumbnailPath))) {
-            if (!mkdir($concurrentDirectory = dirname($thumbnailPath), 0777, true) && !is_dir($concurrentDirectory)) {
-                throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
-            }
-        }
-
-        $sourcePath = Storage::disk('public')->path($path);
-        if (!file_exists($thumbnailPath) && file_exists($sourcePath)) {
-            $img = Image::make($sourcePath);
-            $img->resize(200, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            $img->save($thumbnailPath);
-        }
-    }
-
-    public function initBackgroundImages(): void
-    {
-        $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
-            ->map(function ($value) {
-                if (empty($value->path)) {
-                    return null;
-                }
-
-                return asset('storage/' . $value->path);
-            })->toArray();
-        //        dd($this->columnFile,$backgroundImages);
-        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
-    }
-
-    /**
-     * このクラスのpublicパラメータとcolumnDefineクラスに合わせてバリデーションの内容を定義します。
-     */
     protected function rules(): array
     {
-        $validationRules = [
-            'columnName.*' => 'required|string|max:255',
-            //            'columnType.*' => 'required|string|in:text,number,date',
-            'columnType.*' => 'required|string',
-            'columnOptions.*' => 'array',
-            'columnRequired.*' => 'boolean',
-            'columnUnique.*' => 'boolean',
-            'columnSortBy.*' => 'boolean',
-            'columnHint.*' => 'nullable|string|max:255',
+        return [
+            'columns.*.name' => 'required|string|max:255',
+            'columns.*.type' => 'required|string',
+            'columns.*.options' => 'array',
+            'columns.*.required' => 'boolean',
+            'columns.*.unique' => 'boolean',
+            'columns.*.sortBy' => 'boolean',
+            'columns.*.hint' => 'nullable|string|max:255',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
         ];
-        // Add dynamic rules based on columnDefine
-        foreach ($this->ledgerDefineRecord->column_define as $columnDefine) {
-            // Example dynamic rule, customize as needed
-            $validationRules["columnOptions.{$columnDefine->id}"] = 'required_if:columnTypes.' . $columnDefine->id . ',select';
-        }
-
-        return $validationRules;
     }
 
     public function storeFile($columnId)
