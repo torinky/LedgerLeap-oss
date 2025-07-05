@@ -50,7 +50,7 @@ class AsColumnDefinesArrayJson extends AsJson
             $data[$dKey] = new ColumnDefine($item);
         }
 
-        // 変換された連想配列をArrayObjectに変換して返します。
-        return new ArrayObject($data);
+        // 変換された連想配列を、IDをキーにしたコレクションに変換して返します。
+        return collect($data)->keyBy('id');
     }
 }

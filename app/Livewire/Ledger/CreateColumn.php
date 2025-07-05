@@ -10,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use App\Rules\UniqueColumnValue;
 use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
@@ -92,10 +93,10 @@ class CreateColumn extends Component
     }
 
     // mount は Create と Modify で異なるので、各クラスで実装 or 親で共通化
-    public function mount(Request $request): void
+    public function mount(int $ledgerDefineId): void
     {
         // Create 用の mount ロジック
-        $this->ledgerDefineId = (int) $request->route('ledgerDefineId');
+        $this->ledgerDefineId = $ledgerDefineId;
         $this->ledgerDefineRecord = LedgerDefine::findOrFail($this->ledgerDefineId);
         $this->initColumns(); // メソッド名を変更
         $this->initBackgroundImages();
@@ -441,6 +442,10 @@ class CreateColumn extends Component
             // 必要に応じて追加のバリデーションルールを追加
             if ($column->required & $column->type !== 'chk') {
                 $rules[] = 'required';
+            }
+
+            if ($column->unique) {
+                $rules[] = new UniqueColumnValue($this->ledgerDefineId, $columnId, $this->ledgerId);
             }
 
             // カラムごとのバリデーションルールを配列に追加

@@ -28,10 +28,10 @@ class ModifyColumn extends CreateColumn
 
     public ?int $selectedInspectorId = null;
 
-    public function mount(request $request): void
+    public function mount(int $ledgerId): void
     {
 
-        $this->ledgerId = (int)$request->route('ledgerId');
+        $this->ledgerId = $ledgerId;
         if ($this->ledgerId) {
             // edit
             $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);

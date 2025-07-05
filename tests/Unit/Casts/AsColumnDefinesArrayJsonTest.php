@@ -32,11 +32,13 @@ class AsColumnDefinesArrayJsonTest extends TestCase
 
         // 元のArrayObjectと復元されたArrayObjectの要素が一致することを確認します。
         $this->assertEquals(count($data), count($decodedData));
-        for ($i = 0, $iMax = count($data); $i < $iMax; $i++) {
-            $this->assertInstanceOf(ColumnDefine::class, $decodedData[$i]);
-            $this->assertEquals($data[$i]['id'], $decodedData[$i]->id);
-            $this->assertEquals($data[$i]['name'], $decodedData[$i]->name);
-            $this->assertEquals($data[$i]['type'], $decodedData[$i]->type);
+        foreach ($decodedData as $decodedItem) {
+            $this->assertInstanceOf(ColumnDefine::class, $decodedItem);
+            // Find the original data by ID
+            $originalItem = collect($data)->firstWhere('id', $decodedItem->id);
+            $this->assertNotNull($originalItem);
+            $this->assertEquals($originalItem['name'], $decodedItem->name);
+            $this->assertEquals($originalItem['type'], $decodedItem->type);
         }
     }
 

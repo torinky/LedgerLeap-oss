@@ -22,7 +22,10 @@ class UpdateController extends Controller
             abort(403);
         }
 
-        return View::make('ledger.edit', ['ledgerDefineRecord' => $ledgerRecord->define]);
+        return View::make('ledger.edit', [
+            'ledgerDefineRecord' => $ledgerRecord->define,
+            'ledger' => $ledgerRecord,
+        ]);
 
     }
 

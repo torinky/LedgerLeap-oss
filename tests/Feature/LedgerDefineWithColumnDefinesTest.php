@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
 use App\Models\User; // Required by LedgerDefineFactory
-use ArrayObject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 class LedgerDefineWithColumnDefinesTest extends TestCase
@@ -30,26 +30,18 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         $retrievedLedgerDefine = LedgerDefine::find($createdLedgerDefine->id);
 
         $this->assertInstanceOf(LedgerDefine::class, $retrievedLedgerDefine);
-        $this->assertInstanceOf(ArrayObject::class, $retrievedLedgerDefine->column_define);
+        $this->assertInstanceOf(Collection::class, $retrievedLedgerDefine->column_define);
         $this->assertNotEmpty($retrievedLedgerDefine->column_define);
 
-        // Get the original column_define array for easier comparison (optional, but can be useful)
-        // The factory creates ColumnDefine objects, then they are serialized to JSON in the DB,
-        // then deserialized by the AsColumnDefinesArrayJson cast.
-        $originalColumnDefines = $createdLedgerDefine->column_define; // This is already an ArrayObject of ColumnDefine objects
+        // The factory creates ColumnDefine objects, which are then keyed by ID by the cast.
+        $originalColumnDefines = collect($createdLedgerDefine->column_define)->keyBy('id');
 
-        foreach ($retrievedLedgerDefine->column_define as $index => $columnDefine) {
+        foreach ($retrievedLedgerDefine->column_define as $columnDefine) {
             $this->assertInstanceOf(ColumnDefine::class, $columnDefine);
 
-            // Find the original column define for comparison.
-            // This assumes the order is preserved, which it should be.
-            $originalColumn = null;
-            foreach ($originalColumnDefines as $origCol) {
-                if ($origCol->id === $columnDefine->id) {
-                    $originalColumn = $origCol;
-                    break;
-                }
-            }
+            // Find the original column define for comparison using the ID as the key.
+            $originalColumn = $originalColumnDefines->get($columnDefine->id);
+            
             $this->assertNotNull($originalColumn, "Original column with ID {$columnDefine->id} not found for comparison.");
 
             $this->assertEquals($originalColumn->id, $columnDefine->id);
@@ -77,7 +69,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         User::factory()->create();
 
         // Define a set of ColumnDefine objects with diverse types
-        $columnDefinesArray = [
+        $columnDefines = [
             new ColumnDefine(0, 'Text Column', 'text', 1, [], false, false, false, 'Hint1', []),
             new ColumnDefine(1, 'Checkbox Column', 'chk', 2, ['opt1', 'opt2'], true, false, true, 'Hint2', []),
             new ColumnDefine(2, 'Files Column', 'files', 3, [], false, true, false, 'Hint3', []),
@@ -86,9 +78,6 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             new ColumnDefine(5, 'Date Column', 'YMD', 6, [], true, false, true, 'Hint6', []),
             new ColumnDefine(6, 'Textarea Column', 'textarea', 7, [], false, false, false, 'Hint7', []),
         ];
-        
-        // Convert to ArrayObject for the model
-        $columnDefines = new ArrayObject($columnDefinesArray);
 
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
         $retrievedLedgerDefine = LedgerDefine::find($ledgerDefine->id);
@@ -180,10 +169,10 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             User::factory()->create();
         }
 
-        $columnDefines = new \ArrayObject([
+        $columnDefines = [
             new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1), // Existing type
             $phoneColumn, // Our new phone type
-        ]);
+        ];
 
         /** @var LedgerDefine $ledgerDefine */
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
@@ -192,7 +181,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         /** @var LedgerDefine $retrievedLedgerDefine */
         $retrievedLedgerDefine = LedgerDefine::find($ledgerDefine->id);
         $this->assertInstanceOf(LedgerDefine::class, $retrievedLedgerDefine);
-        $this->assertInstanceOf(\ArrayObject::class, $retrievedLedgerDefine->column_define);
+        $this->assertInstanceOf(Collection::class, $retrievedLedgerDefine->column_define);
 
         $retrievedPhoneColumn = null;
         foreach ($retrievedLedgerDefine->column_define as $col) {

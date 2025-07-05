@@ -29,7 +29,7 @@
                 </div>
             </div>
 
-            <livewire:ledger.modify-column/>
+            <livewire:ledger.modify-column :ledger-id="$ledger->id"/>
     </div>
 
 </x-app-layout>

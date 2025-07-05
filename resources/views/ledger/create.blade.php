@@ -30,8 +30,7 @@
             </div>
 
 
-            <livewire:ledger.create-column/>
-
+            <livewire:ledger.create-column :ledger-define-id="$ledgerDefineRecord->id" />
         </div>
 
 
