@@ -223,7 +223,8 @@
             'type' => '入力形式',
             'unique' => '重複を禁止',
             'will_ledger_delete_message' => '登録されたこの列の内容も削除します！',
-            'saved' => '台帳の列の設定を保存しました'
+            'saved' => '台帳の列の設定を保存しました',
+            'delete_file_message' => '「:name」の背景画像を削除します。この操作は元に戻せません。',
         ],
     'column_deleted' => 'カラム削除 (:id)',
     'comment' => 'コメントする',
@@ -276,7 +277,7 @@
             'number' => '自動採番',
             'check' => '複数選択',
             'datetime' => '日時',
-            'date'=>'日付',
+            'date' => '日付',
             'select' => '1つを選択',
             'text' => '1行テキスト',
             'textarea' => '複数行テキスト',

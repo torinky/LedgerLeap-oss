@@ -5,7 +5,7 @@
     @push('stylesheets')
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
-        <x-slot name="header" class="sticky top-0 z-10 ">
+        <x-slot name="header" class="sticky top-0 z-50 ">
             <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
                 <h2 class="font-black text-xl text-warning-content/60 md:text-2xl flex items-center">
         <span class="fa-layers fa-fw mr-2">
@@ -32,11 +32,11 @@
             --}}
 
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 space-y-5">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 space-y-5 z-10">
                     <!-- 2段組みのコンテンツ -->
                     <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">
 
-                    <div class="card w-full bg-base-300 shadow-xl mx-5">
+                    <div class="card w-full bg-base-300 shadow-xl mx-5 z-0">
                         <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
                             <i class="fa-solid fa-gear"></i> {{__('ledger.define.basic_setting')}}
                         </h2>
@@ -44,7 +44,7 @@
                             <livewire:ledger-define.edit/>
                         </div>
                     </div>
-                    <div class="card w-full bg-base-300 shadow-xl mx-5">
+                    <div class="card w-full bg-base-300 shadow-xl mx-5 z-10">
                         <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
                             <i class="fa-regular fa-rectangle-list"></i> {{__('ledger.column.group_title')}}
                         </h2>
@@ -57,7 +57,7 @@
 
                     {{--                </form>--}}
                     </div>
-                    <div class="flex flex-wrap items-center justify-center w-full">
+                    <div class="flex flex-wrap items-center justify-center w-full z-0">
                         <div class="card w-full bg-base-300 shadow-xl mx-5">
                             <h2 class="card-title font-bold bg-secondary/70 text-secondary-content/70 rounded-t-box px-4 py-2 ">
                                 <i class="fa-solid fa-magnifying-glass"></i> {{__('ledger.define.preview')}}
