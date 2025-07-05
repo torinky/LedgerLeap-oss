@@ -77,7 +77,7 @@
 
                                             <div class="basis-1/2 space-y-4 m-3">
                                                 <x-mary-textarea label="{{__('ledger.column.hint')}}"
-                                                                 wire:model="columns.{{$index}}.hint"
+                                                                 wire:model.live="columns.{{$index}}.hint"
                                                                  class="input-accent w-full"
                                                                  wire:key="hint-{{$column['id']}}"/>
 
@@ -87,14 +87,30 @@
                                                         <img src="{{ asset('storage/thumbnails/'.$column['file']['path']) }}"
                                                              alt="{{ $column['file']['name'] }}">
                                                     </a>
-                                                    <button class="btn btn-sm tooltip"
-                                                            data-tip="{{__('ledger.column.delete_file')}}"
-                                                            wire:click="deleteFile({{$index}})">
+                                                    <label for="delete-file-modal-{{$column['id']}}"
+                                                           class="btn btn-sm tooltip"
+                                                           data-tip="{{__('ledger.column.delete_file')}}">
                                                         <i class="fa-solid fa-trash"></i>
-                                                    </button>
+                                                    </label>
+                                                    <!-- 背景画像削除確認モーダル -->
+                                                    <input type="checkbox" id="delete-file-modal-{{$column['id']}}"
+                                                           class="modal-toggle hidden"/>
+                                                    <div class="modal" role="dialog" class="z-50">
+                                                        <div class="modal-box">
+                                                            <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
+                                                            <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>
+                                                            <div class="modal-action">
+                                                                <label for="delete-file-modal-{{$column['id']}}"
+                                                                       wire:click.prevent="deleteFile({{$column['id']}})"
+                                                                       class="btn btn-error">{{__('actions.delete')}}</label>
+                                                                <label for="delete-file-modal-{{$column['id']}}"
+                                                                       class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 @else
                                                     <x-mary-file label="{{__('ledger.column.bg_file')}}"
-                                                                 wire:model="columnUploadedFile.{{$column['id']}}"
+                                                                 wire:model.live="columnUploadedFile.{{$column['id']}}"
                                                                  class="input-accent" wire:key="file-{{$column['id']}}"
                                                                  hint="png, jpg, jpeg, gif, svg"/>
                                                 @endif

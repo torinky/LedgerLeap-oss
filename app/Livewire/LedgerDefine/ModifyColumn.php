@@ -166,6 +166,11 @@ class ModifyColumn extends Component
             "columns.{$index}.hint" => 'nullable|string|max:255',
         ]);
 
+        // ファイルがアップロードされている場合、storeFileを呼び出す
+        if (isset($this->columnUploadedFile[$this->columns[$index]['id']])) {
+            $this->storeFile($this->columns[$index]['id']);
+        }
+
         // Update the main ledgerDefineRecord's column_define with the current state of $this->columns
         $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
             return $column;
@@ -239,22 +244,29 @@ class ModifyColumn extends Component
     {
         if (!$this->canModifyColumns()) return;
 
+        // columnUploadedFile は Livewire の一時ファイル
         if (isset($this->columnUploadedFile[$columnId])) {
-            //            dd($this->columnUploadedFile[$columnId]);
             $file = $this->columnUploadedFile[$columnId];
-            //            dd($this->columnFile[$columnId]);
             $originalFileName = $file->getClientOriginalName();
             $fileName = "ledger_{$this->ledgerDefineRecord->id}_column_{$columnId}_{$originalFileName}";
             $filePath = $file->storeAs('column_files', $fileName, 'public');
-            $this->createThumbnail($filePath);
-            $this->columnFile[$columnId] = ['name' => $originalFileName, 'path' => $filePath];
-            $this->ledgerDefineRecord->column_define[$columnId]->file = $this->columnFile[$columnId];
 
-            $this->backgroundImages[$columnId] = asset('storage/' . $filePath);
-            $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+            // サムネイル作成 (必要であれば)
+             $this->createThumbnail($filePath);
 
-            $this->store();
+            // $this->columns 配列内の該当カラムの 'file' プロパティを更新
+            foreach ($this->columns as $index => &$column) {
+                if ($column['id'] == $columnId) {
+                    $column['file'] = ['name' => $originalFileName, 'path' => $filePath];
+                    break;
+                }
+            }
+            unset($column); // 参照を解除
 
+            // isDirty フラグを立てる
+            $this->isDirty = true;
+
+            // ファイルアップロード後の保存は saveColumn または save メソッドで行う
         }
     }
 
@@ -262,19 +274,46 @@ class ModifyColumn extends Component
     {
         if (!$this->canModifyColumns()) return;
 
-        $filePath = $this->ledgerDefineRecord->column_define[$columnId]->file->path ?? null;
+        // $this->columns から該当カラムを見つける
+        $columnIndex = null;
+        foreach ($this->columns as $idx => $column) {
+            if ($column['id'] == $columnId) {
+                $columnIndex = $idx;
+                break;
+            }
+        }
 
+        if (is_null($columnIndex)) {
+            return; // カラムが見つからない場合は何もしない
+        }
+
+        $filePath = $this->columns[$columnIndex]['file']['path'] ?? null;
+        $thumbnailPath = null;
+
+        if ($filePath) {
+            // サムネイルのパスを生成
+            $pathParts = pathinfo($filePath);
+            $thumbnailPath = 'thumbnails/' . $pathParts['dirname'] . '/' . $pathParts['filename'] . '.' . $pathParts['extension'];
+        }
+
+        // 元のファイルを削除
         if ($filePath && Storage::disk('public')->exists($filePath)) {
             Storage::disk('public')->delete($filePath);
         }
 
-        $this->columnFile[$columnId] = null;
-        $this->ledgerDefineRecord->column_define[$columnId]->file = null;
+        // サムネイルを削除
+        if ($thumbnailPath && Storage::disk('public')->exists($thumbnailPath)) {
+            Storage::disk('public')->delete($thumbnailPath);
+        }
 
-        $this->backgroundImages[$columnId] = null;
-        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
+        // $this->columns 配列内の該当カラムの 'file' プロパティをクリア
+        $this->columns[$columnIndex]['file'] = [];
 
-        $this->store();
+        // isDirty フラグを立てる
+        $this->isDirty = true;
+
+        // ファイル削除後の保存は saveColumn または save メソッドで行う
+        $this->save();
     }
 
     /**
@@ -296,4 +335,22 @@ class ModifyColumn extends Component
         return true;
     }
 
+    public function createThumbnail($path): void
+    {
+        $thumbnailPath = Storage::disk('public')->path('thumbnails/' . $path);
+        if (!is_dir(dirname($thumbnailPath))) {
+            if (!mkdir($concurrentDirectory = dirname($thumbnailPath), 0777, true) && !is_dir($concurrentDirectory)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+            }
+        }
+
+        $sourcePath = Storage::disk('public')->path($path);
+        if (!file_exists($thumbnailPath) && file_exists($sourcePath)) {
+            $img = Image::make($sourcePath);
+            $img->resize(200, null, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            $img->save($thumbnailPath);
+        }
+    }
 }
