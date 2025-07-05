@@ -50,6 +50,7 @@ class ModifyColumn extends Component
                 'sortBy' => (bool) $columnDefineObject->sortBy,
                 'hint' => (string) $columnDefineObject->hint,
                 'file' => (array) $columnDefineObject->file,
+                'is_collapsed' => false, // 初期状態で折りたたむ
             ];
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
 
@@ -137,6 +138,9 @@ class ModifyColumn extends Component
             if (!$hasOptions) {
                 $this->columns[$columnIndex]['options'] = [];
             }
+        } elseif (isset($this->columns[$columnIndex]) && $parts[1] === 'is_collapsed') {
+            // is_collapsed の変更をAlpine.jsに通知
+            $this->dispatch('toggle-collapse', ['is_collapsed' => $value])->self();
         }
     }
 
@@ -183,6 +187,7 @@ class ModifyColumn extends Component
             'sortBy' => false, // Default value
             'hint' => '', // Default value
             'file' => [], // Default value
+            'is_collapsed' => true, // 新規追加時は開いた状態にする
         ];
 
         $this->columns[] = $newColumn;
