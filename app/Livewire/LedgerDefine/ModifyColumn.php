@@ -118,15 +118,15 @@ class ModifyColumn extends Component
         })->all();
     }
 
-    public function updatedColumnsType($value, $key)
+    public function updatedColumns($value, $key)
     {
         // $key will be in the format "0.type", "1.type", etc.
         // We need to extract the numeric index.
         $parts = explode('.', $key);
         $columnIndex = (int) $parts[0];
 
-        // Ensure the column exists
-        if (isset($this->columns[$columnIndex])) {
+        // Ensure the column exists and the changed property is 'type'
+        if (isset($this->columns[$columnIndex]) && $parts[1] === 'type') {
             // Determine if the new type has options
             $hasOptions = \App\Models\ColumnTypes\InputTypeFactory::make($value)->hasOptions();
 
