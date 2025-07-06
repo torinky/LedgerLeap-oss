@@ -116,10 +116,26 @@
                                                 @endif
 
                                                 @if($columns[$index]['useOptions'])
-                                                    <x-mary-tags label="{{__('ledger.options')}}"
-                                                                 wire:model="columns.{{$index}}.options"
-                                                                 wire:key="options-{{$column['id']}}" icon="o-tag"
-                                                                 hint="Hit enter to create a new tag"/>
+                                                    @if($column['type'] === 'auto_number')
+                                                        <x-mary-input label="{{__('ledger.column.auto_number.prefix')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.options.prefix"
+                                                                      wire:key="prefix-{{$column['id']}}"
+                                                                      hint="{{__('ledger.column.auto_number.prefix_hint')}}"/>
+                                                        <x-mary-input label="{{__('ledger.column.auto_number.digits')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.options.digits"
+                                                                      wire:key="digits-{{$column['id']}}"
+                                                                      type="number" min="1"
+                                                                      hint="{{__('ledger.column.auto_number.digits_hint')}}"/>
+                                                        <x-mary-input label="{{__('ledger.column.auto_number.revision')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.options.revision"
+                                                                      wire:key="revision-{{$column['id']}}"
+                                                                      hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
+                                                    @else
+                                                        <x-mary-tags label="{{__('ledger.options')}}"
+                                                                     wire:model="columns.{{$index}}.options"
+                                                                     wire:key="options-{{$column['id']}}" icon="o-tag"
+                                                                     hint="Hit enter to create a new tag"/>
+                                                    @endif
                                                 @endif
 
                                                 <div class="mt-3 flex items-center justify-end w-full space-x-2">

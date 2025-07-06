@@ -74,7 +74,14 @@
                                         />
                                     </div>
                                 @else
-                                    <x-dynamic-component :component="'ledger.form.'. Str::kebab($columnDefine->type)"
+                                    @php
+                                        $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
+                                        // auto_number タイプの場合、text コンポーネントを使用
+                                        if ($columnDefine->type === 'auto_number') {
+                                            $componentName = 'ledger.form.text';
+                                        }
+                                    @endphp
+                                    <x-dynamic-component :component="$componentName"
                                                          wire:model="content"
                                                          wire:key="content-input-{{$columnDefine->id}}"
                                                          :columnDefine="$columnDefine"

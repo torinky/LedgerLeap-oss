@@ -2,13 +2,14 @@
 
 namespace App\Rules;
 
-use App\Models\Ledger;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Database\Eloquent\Collection;
+use App\Traits\MroongaSearchableColumn;
 
 class UniqueColumnValue implements ValidationRule
 {
+    use MroongaSearchableColumn;
+
     /**
      * @var int 台帳定義ID
      */
@@ -60,7 +61,8 @@ class UniqueColumnValue implements ValidationRule
         }
 
         // 1. Mroongaの全文検索で候補を高速に絞り込む
-        $potentialMatches = $this->getPotentialMatches($value);
+        // トレイトのメソッドを呼び出す際に、必要な引数を渡す
+        $potentialMatches = $this->getPotentialMatches($value, $this->columnId, $this->ledgerDefineId, $this->ignoreLedgerId);
 
         // 候補がなければ重複はない
         if ($potentialMatches->isEmpty()) {
@@ -82,38 +84,5 @@ class UniqueColumnValue implements ValidationRule
                 }
             }
         }
-    }
-
-    /**
-     * Mroongaを使用して、重複の可能性があるLedgerレコードの候補を取得します。
-     *
-     * @param mixed $value
-     * @return Collection
-     */
-    private function getPotentialMatches(mixed $value): Collection
-    {
-        $query = Ledger::where('ledger_define_id', $this->ledgerDefineId);
-
-        // Mroongaの全文検索では、検索語が配列の場合はJSON文字列に変換する
-        $searchValue = is_array($value) ? json_encode($value) : $value;
-
-        // Mroongaのブーリアンモードでフレーズ検索 `+"..."` を使うため、`"` をエスケープする
-        $escapedSearchValue = addslashes($searchValue);
-
-        // Mroongaのカラム指定検索 (`*W<N>`) を使用して、特定のカラムインデックスを対象にする
-        // カラムインデックスは1ベースなので +1 する
-        $mroongaColumnIndex = $this->columnId + 1;
-
-        $query->whereRaw(
-            "match(`content`) against ('*W{$mroongaColumnIndex} +\"{$escapedSearchValue}\"' IN BOOLEAN MODE)"
-        );
-
-        // 更新時には自分自身のレコードを重複チェックの対象から除外する
-        if ($this->ignoreLedgerId) {
-            $query->where('id', '!=', $this->ignoreLedgerId);
-        }
-
-        // 厳密な比較のために 'id' と 'content' カラムを取得する
-        return $query->get(['id', 'content']);
     }
 }

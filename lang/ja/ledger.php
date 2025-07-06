@@ -225,6 +225,14 @@
             'will_ledger_delete_message' => '登録されたこの列の内容も削除します！',
             'saved' => '台帳の列の設定を保存しました',
             'delete_file_message' => '「:name」の背景画像を削除します。この操作は元に戻せません。',
+            'auto_number' => [
+                'prefix' => '接頭辞',
+                'prefix_hint' => '例: DOC-, PROJ- (連番の前に付く文字列)',
+                'digits' => '桁数',
+                'digits_hint' => '連番の桁数 (例: 3の場合 001, 010, 100)',
+                'revision' => '版記号',
+                'revision_hint' => '例: A, NC (連番の後に付く文字列)',
+            ],
         ],
     'column_deleted' => 'カラム削除 (:id)',
     'comment' => 'コメントする',
@@ -273,8 +281,6 @@
     'folder_permission_readable' => '閲覧可能',
     'form' =>
         [
-            'auto_numbering' => '自動採番',
-            'number' => '自動採番',
             'check' => '複数選択',
             'datetime' => '日時',
             'date' => '日付',
@@ -284,6 +290,8 @@
             'upload' => 'ファイル添付',
             'files' => 'ファイル添付',
             'phone' => '電話番号',
+            'auto_number' => '自動採番',
+            'number' => '数値',
         ],
     'delete' => '削除する',
     'descending' => '降順',

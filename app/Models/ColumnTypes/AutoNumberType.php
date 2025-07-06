@@ -2,21 +2,21 @@
 
 namespace App\Models\ColumnTypes;
 
-class NumberType implements InputType
+class AutoNumberType implements InputType
 {
     public function getName(): string
     {
-        return 'number';
+        return 'auto_number';
     }
 
     public function getLabel(): string
     {
-        return __('ledger.form.number');
+        return __('ledger.form.auto_number');
     }
 
     public function hasOptions(): bool
     {
-        return false;
+        return true;
     }
 
     public function shouldConvertToJson(): bool

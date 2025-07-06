@@ -10,7 +10,9 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use App\Rules\UniqueAutoNumber;
 use App\Rules\UniqueColumnValue;
+use App\Services\NumberingService;
 use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
@@ -86,10 +88,13 @@ class CreateColumn extends Component
 
     protected WorkflowService $workflowService; // WorkflowService をインジェクト
 
+    protected NumberingService $numberingService; // NumberingService をインジェクト
+
     // WorkflowService をインジェクト
-    public function boot(WorkflowService $workflowService): void
+    public function boot(WorkflowService $workflowService, NumberingService $numberingService): void
     {
         $this->workflowService = $workflowService;
+        $this->numberingService = $numberingService;
     }
 
     // mount は Create と Modify で異なるので、各クラスで実装 or 親で共通化
@@ -111,6 +116,7 @@ class CreateColumn extends Component
         foreach ($this->ledgerDefineRecord->column_define ?? [] as $column) {
             $defaultValue = match ($column->type) {
                 'files', 'chk' => [],
+                'auto_number' => $this->numberingService->getNextNumber($column, $this->ledgerDefineId),
                 default => '',
             };
             // content がまだセットされていない場合のみデフォルト値を設定
@@ -445,7 +451,11 @@ class CreateColumn extends Component
             }
 
             if ($column->unique) {
-                $rules[] = new UniqueColumnValue($this->ledgerDefineId, $columnId, $this->ledgerId);
+                if ($column->type === 'auto_number') {
+                    $rules[] = new UniqueAutoNumber($this->ledgerDefineId, $column, $this->ledgerId);
+                } else {
+                    $rules[] = new UniqueColumnValue($this->ledgerDefineId, $columnId, $this->ledgerId);
+                }
             }
 
             // カラムごとのバリデーションルールを配列に追加

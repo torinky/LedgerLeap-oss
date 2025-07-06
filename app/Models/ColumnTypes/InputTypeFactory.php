@@ -10,6 +10,7 @@ class InputTypeFactory
         'text' => TextType::class,
         'textarea' => TextareaType::class,
         'number' => NumberType::class,
+        'auto_number' => AutoNumberType::class,
         'chk' => CheckboxType::class,
         'select' => SelectType::class,
         'YMD' => DateType::class,
