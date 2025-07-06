@@ -186,7 +186,7 @@ class ColumnDefine
      */
     public function setOptions($options): void
     {
-        $this->options = (object)$options;
+        $this->options = (array)$options;
     }
 
     /**

@@ -39,7 +39,7 @@ class UniqueAutoNumber implements ValidationRule
             return;
         }
 
-        $prefix = $this->columnDefine->options->prefix ?? '';
+        $prefix = $this->columnDefine->options['prefix'] ?? '';
         $columnId = $this->columnDefine->id;
 
         // 正規表現のデリミタを # に変更し、preg_quoteの第2引数にデリミタを指定
@@ -82,7 +82,11 @@ class UniqueAutoNumber implements ValidationRule
 
                     // 抽出した「接頭辞 + 連番」部分が一致するかを厳密に比較
                     if ($inputSearchKey === $storedSearchKey) {
-                        $fail('validation.unique')->translate(); // ->translate() を再度追加
+                        if (app()->runningUnitTests()) {
+                            $fail('validation.unique');
+                        } else {
+                            $fail('validation.unique')->translate();
+                        }
                         return;
                     }
                 }

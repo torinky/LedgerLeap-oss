@@ -17,19 +17,10 @@ class NumberingService
     public function getNextNumber(object $columnDefine, int $ledgerDefineId): string
     {
         $options = $columnDefine->options;
-        $prefix = '';
-        $digits = 3;
-        $revision = '';
 
-        if (is_array($options)) {
-            $prefix = $options['prefix'] ?? '';
-            $digits = max(1, (int)($options['digits'] ?? 3));
-            $revision = $options['revision'] ?? '';
-        } elseif (is_object($options)) {
-            $prefix = $options->prefix ?? '';
-            $digits = max(1, (int)($options->digits ?? 3));
-            $revision = $options->revision ?? '';
-        }
+        $prefix = $options['prefix'] ?? '';
+        $digits = max(1, (int)($options['digits'] ?? 3));
+        $revision = $options['revision'] ?? '';
         $isUnique = $columnDefine->unique ?? false;
         $columnId = $columnDefine->id;
 
@@ -53,7 +44,7 @@ class NumberingService
                 }
 
                 if (preg_match($pattern, $contentValue, $matches)) {
-                    $currentNumber = (int) $matches[1];
+                    $currentNumber = (int)$matches[1];
                     if ($currentNumber > $maxNumber) {
                         $maxNumber = $currentNumber;
                     }
