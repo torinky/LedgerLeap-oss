@@ -15,7 +15,8 @@
 * まず、`App\Filament\Resources\LedgerDefineResource`を使って、台帳の枠組みを定義します。
     * 台帳のタイトル、説明を設定します。
     * 列を設定します。列のタイトル、入力形式、必須入力、重複禁止などの属性を設定します。
-        * 入力形式は、`text`, `textarea`, `select`, `check`, `datetime`, `upload`, `auto_numbering`があります。
+        * 入力形式は、`text`, `textarea`, `select`, `check`, `datetime`, `upload`, `auto_numbering`, `number` があります。
+        * `number` 型では、テキスト入力欄とスライダーが連動したUIを提供し、台帳定義で最小値、最大値、刻み幅、単位を設定できます。登録された数値は、詳細画面やリスト画面で単位付きで表示されます。
         * 列は、並び替えが可能です。
         * 列は、追加や削除ができます。
         * 必須入力を設定できます。

@@ -251,7 +251,7 @@ erDiagram
     *   主要カラム: `id`, `title`, `parent_id` (自己参照), `creator_id`, `modifier_id`。
 *   **`ledger_defines`**:
     *   目的: 台帳のテンプレート（カラム構成、ワークフロー設定など）を定義します。
-    *   主要カラム: `id`, `title`, `column_define` (JSON形式でカラム定義を格納), `folder_id`, `workflow_enabled`。
+    *   主要カラム: `id`, `title`, `column_define` (JSON形式でカラム定義を格納。`number` 型の場合、`min`, `max`, `step`, `unit` などの属性を含む), `folder_id`, `workflow_enabled`。
 *   **`ledgers`**:
     *   目的: 台帳レコードの最新データを格納します。`content` カラムはJSON形式で柔軟なデータを保持します。`status` カラムでワークフローの状態を管理します。
     *   主要カラム: `id`, `ledger_define_id`, `content` (JSON), `content_attached` (JSON, 添付ファイル検索用インデックス), `status`, `creator_id`, `modifier_id`, `latest_diff_id`, `version`。
