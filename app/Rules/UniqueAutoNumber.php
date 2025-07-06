@@ -42,10 +42,14 @@ class UniqueAutoNumber implements ValidationRule
         $prefix = $this->columnDefine->options->prefix ?? '';
         $columnId = $this->columnDefine->id;
 
+        // 正規表現のデリミタを # に変更し、preg_quoteの第2引数にデリミタを指定
+        $delimiter = '#';
+        $escapedPrefix = preg_quote($prefix, $delimiter);
+
         // 入力値から接頭辞と連番部分を抽出
         // 例: "DOC-001-A" から "DOC-" と "001" を抽出
         // 正規表現: ^(接頭辞)(\d+)(.*)$  (連番の後に続く版記号などの部分もキャプチャ)
-        $inputPattern = '/^' . preg_quote($prefix, '/') . '(\d+)(.*)$/';
+        $inputPattern = $delimiter . '^' . $escapedPrefix . '(\d+)(.*)$' . $delimiter;
 
         if (!preg_match($inputPattern, $value, $inputMatches)) {
             // 自動採番のパターンに一致しない場合は、このルールでは失敗としない。
@@ -78,7 +82,7 @@ class UniqueAutoNumber implements ValidationRule
 
                     // 抽出した「接頭辞 + 連番」部分が一致するかを厳密に比較
                     if ($inputSearchKey === $storedSearchKey) {
-                        $fail('validation.unique')->translate();
+                        $fail('validation.unique')->translate(); // ->translate() を再度追加
                         return;
                     }
                 }

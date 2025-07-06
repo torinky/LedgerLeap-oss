@@ -21,11 +21,12 @@ class LedgerDefineFactory extends Factory
      */
     public function definition()
     {
+        $this->faker = \Faker\Factory::create('en_US');
         $columnDefineLoop = random_int(3, 20);
         $columnDefine = [];
         $columnDefine[] = new ColumnDefine(
             0,
-            $this->faker->realText(10),
+            $this->faker->word(),
             'chk',
             1,
             $this->faker->words(random_int(3, 10)),
@@ -35,7 +36,7 @@ class LedgerDefineFactory extends Factory
         );
         $columnDefine[] = new ColumnDefine(
             1,
-            $this->faker->realText(10),
+            $this->faker->word(),
             'chk',
             2,
             $this->faker->words(random_int(3, 10)),
@@ -45,7 +46,7 @@ class LedgerDefineFactory extends Factory
         );
         /*        $columnDefine[]=new ColumnDefine(
                     1,
-                    $this->faker->realText(10),
+                    $this->faker->word(),
                     'files',
                     2,
                     [],
@@ -59,14 +60,14 @@ class LedgerDefineFactory extends Factory
         for ($i = 2; $i < $columnDefineLoop; $i++) {
             $tempColumnDefine = new ColumnDefine(
                 $i,
-                $this->faker->realText(10),
+                $this->faker->word(),
                 $this->faker->randomElement($typeIdentifiers), // Use the fetched type identifiers
                 $i + 1,
                 $this->faker->words(random_int(3, 10)),
                 $this->faker->boolean(),
                 $this->faker->boolean(),
                 $this->faker->boolean(),
-                $this->faker->realText(30),
+                $this->faker->word(),
                 ['name' => $this->faker->word() . '.png', 'path' => $this->faker->word() . '.png']
             );
 
@@ -74,16 +75,19 @@ class LedgerDefineFactory extends Factory
         }
 
 
-        $markdownText = $this->faker->paragraphs(3, true);
-        $markdownText = str_replace("\n", "\n\n", $markdownText);
+        $markdownText = $this->faker->paragraph();
+        $markdownText = str_replace("
+", "
+
+", $markdownText);
 
         return [
-            'title' => $this->faker->realText(10),
+            'title' => $this->faker->word(),
             'column_define' => $columnDefine,
             'folder_id' => random_int(1, 10),
             'create_description' => $markdownText,
-            'list_description' => $this->faker->paragraphs(2, true),
-            'detail_description' => $this->faker->paragraphs(4, true),
+            'list_description' => $this->faker->word(),
+            'detail_description' => $this->faker->word(),
             //            'folder_id' => Folder::factory(),
             //            'creator_id' => 1,
             //            'modifier_id' => 1,
