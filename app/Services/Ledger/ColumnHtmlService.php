@@ -65,6 +65,9 @@ class ColumnHtmlService
 
         if ($type === 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
+        } elseif ($type === 'number') {
+            $unit = $this->getColumnDefineProperty('unit');
+            $html = $this->initialValue . $unit;
         } elseif (is_array($this->initialValue)) {
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);

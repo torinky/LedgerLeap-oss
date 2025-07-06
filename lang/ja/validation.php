@@ -28,6 +28,9 @@ return [
     'contains'               => ':attributeに必須項目が含まれていません。',
     'current_password'       => 'パスワードが正しくありません。',
     'date'                   => ':attributeは、正しい日付ではありません。',
+    'custom'                 => [
+        'step_too_large' => ':attributeは、最大値と最小値の差を超えることはできません。',
+    ],
     'date_equals'            => ':attributeは:dateと同じ日付を入力してください。',
     'date_format'            => ':attributeの形式が\':format\'と一致しません。',
     'decimal'                => ':attributeは、小数点以下が:decimalである必要があります。',

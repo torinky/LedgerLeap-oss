@@ -138,6 +138,30 @@
                                                     @endif
                                                 @endif
 
+                                                @if($column['type'] === 'number')
+                                                    <div class="grid grid-cols-2 gap-4">
+                                                        <x-mary-input label="{{__('ledger.column.number.min')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.min"
+                                                                      wire:key="min-{{$column['id']}}"
+                                                                      type="number"
+                                                                      placeholder="{{__('ledger.column.number.min_placeholder')}}"/>
+                                                        <x-mary-input label="{{__('ledger.column.number.max')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.max"
+                                                                      wire:key="max-{{$column['id']}}"
+                                                                      type="number"
+                                                                      placeholder="{{__('ledger.column.number.max_placeholder')}}"/>
+                                                        <x-mary-input label="{{__('ledger.column.number.step')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.step"
+                                                                      wire:key="step-{{$column['id']}}"
+                                                                      type="number"
+                                                                      placeholder="{{__('ledger.column.number.step_placeholder')}}"/>
+                                                        <x-mary-input label="{{__('ledger.column.number.unit')}}"
+                                                                      wire:model.live.debounce="columns.{{$index}}.unit"
+                                                                      wire:key="unit-{{$column['id']}}"
+                                                                      placeholder="{{__('ledger.column.number.unit_placeholder')}}"/>
+                                                    </div>
+                                                @endif
+
                                                 <div class="mt-3 flex items-center justify-end w-full space-x-2">
                                                     @if($isDirty)
                                                         <x-mary-button label="{{__('actions.save')}}"

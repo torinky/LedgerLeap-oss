@@ -430,7 +430,17 @@ class CreateColumn extends Component
             if ($columnType === 'text' || $columnType === 'textarea') {
                 $rules[] = 'string';
             } elseif ($columnType === 'number') {
-                $rules[] = 'string';
+                $rules[] = 'numeric';
+                if (isset($column->min)) {
+                    $rules[] = 'min:'.$column->min;
+                }
+                if (isset($column->max)) {
+                    $rules[] = 'max:'.$column->max;
+                }
+                if (isset($column->step)) {
+                    // 小数点以下の桁数を考慮した倍数チェック
+                    $rules[] = 'multiple_of:'.$column->step;
+                }
             } elseif ($columnType === 'YMD') {
                 $rules[] = 'date_format:Y-m-d';
             } elseif ($column->type === 'chk' && $column->useOptions && ! empty($column->options)) {

@@ -33,6 +33,15 @@ class ColumnDefine
 
     public $file = [];
 
+    // for number type
+    public $min;
+
+    public $max;
+
+    public $step;
+
+    public $unit;
+
     /**
      * コンストラクタ
      *
@@ -67,6 +76,10 @@ class ColumnDefine
         $this->setSortBy($inObject->sortBy);
         $this->setHint($inObject->hint);
         $this->setFile($inObject->file);
+        $this->setMin($inObject->min ?? null);
+        $this->setMax($inObject->max ?? null);
+        $this->setStep($inObject->step ?? null);
+        $this->setUnit($inObject->unit ?? null);
     }
 
     /**
@@ -84,7 +97,11 @@ class ColumnDefine
         bool $unique = false,
         bool   $sortBy = false,
         string $hint = '',
-        array $file = []
+        array $file = [],
+        $min = null,
+        $max = null,
+        $step = null,
+        $unit = null
     )
     {
         $this->id = (int)$id;
@@ -97,6 +114,10 @@ class ColumnDefine
         $this->setSortBy($sortBy);
         $this->setHint($hint);
         $this->setFile($file);
+        $this->setMin($min);
+        $this->setMax($max);
+        $this->setStep($step);
+        $this->setUnit($unit);
     }
 
     /**
@@ -229,6 +250,26 @@ class ColumnDefine
         $this->file = $file;
     }
 
+    public function setMin($min): void
+    {
+        $this->min = $min;
+    }
+
+    public function setMax($max): void
+    {
+        $this->max = $max;
+    }
+
+    public function setStep($step): void
+    {
+        $this->step = $step;
+    }
+
+    public function setUnit($unit): void
+    {
+        $this->unit = $unit;
+    }
+
     public function setOrder(int $order): void
     {
         $this->order = $order;
@@ -257,6 +298,10 @@ class ColumnDefine
                     'sortBy' => $colDef->sortBy ?? false,
                     'hint' => $colDef->hint ?? '',
                     'file' => isset($colDef->file) && is_array($colDef->file) ? $colDef->file : [],
+                    'min' => $colDef->min ?? null,
+                    'max' => $colDef->max ?? null,
+                    'step' => $colDef->step ?? null,
+                    'unit' => $colDef->unit ?? null,
                 ];
             } elseif (is_array($colDef) && isset($colDef['id'])) {
                 $result[$colDef['id']] = $colDef;

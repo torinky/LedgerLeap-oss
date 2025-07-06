@@ -156,7 +156,8 @@ class ModifyColumn extends Component
     {
         if (!$this->canModifyColumns()) return;
 
-        $this->validate([
+        $column = $this->columns[$index];
+        $rules = [
             "columns.{$index}.name" => 'required|string|max:255',
             "columns.{$index}.type" => 'required|string',
             "columns.{$index}.options" => 'array',
@@ -164,7 +165,24 @@ class ModifyColumn extends Component
             "columns.{$index}.unique" => 'boolean',
             "columns.{$index}.sortBy" => 'boolean',
             "columns.{$index}.hint" => 'nullable|string|max:255',
-        ]);
+        ];
+
+        if ($column['type'] === 'number') {
+            $rules["columns.{$index}.min"] = 'required|numeric';
+            $rules["columns.{$index}.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.min'];
+            $rules["columns.{$index}.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
+                $min = $column['min'];
+                $max = $column['max'];
+                if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
+                    if (($max - $min) < $value) {
+                        $fail(__('validation.custom.step_too_large'));
+                    }
+                }
+            }];
+            $rules["columns.{$index}.unit"] = 'nullable|string|max:255';
+        }
+
+        $this->validate($rules);
 
         // ファイルがアップロードされている場合、storeFileを呼び出す
         if (isset($this->columnUploadedFile[$this->columns[$index]['id']])) {
@@ -202,6 +220,10 @@ class ModifyColumn extends Component
             'sortBy' => false, // Default value
             'hint' => '', // Default value
             'file' => [], // Default value
+            'min' => null,
+            'max' => null,
+            'step' => null,
+            'unit' => null,
             'is_collapsed' => true, // 新規追加時は開いた状態にする
         ];
 
@@ -228,7 +250,7 @@ class ModifyColumn extends Component
 
     protected function rules(): array
     {
-        return [
+        $rules = [
             'columns.*.name' => 'required|string|max:255',
             'columns.*.type' => 'required|string',
             'columns.*.options' => 'array',
@@ -238,6 +260,25 @@ class ModifyColumn extends Component
             'columns.*.hint' => 'nullable|string|max:255',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
         ];
+
+        foreach ($this->columns as $index => $column) {
+            if ($column['type'] === 'number') {
+                $rules["columns.{$index}.min"] = 'required|numeric';
+                $rules["columns.{$index}.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.min'];
+                $rules["columns.{$index}.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
+                    $min = $column['min'];
+                    $max = $column['max'];
+                    if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
+                        if (($max - $min) < $value) {
+                            $fail(__('validation.custom.step_too_large'));
+                        }
+                    }
+                }];
+                $rules["columns.{$index}.unit"] = 'nullable|string|max:255';
+            }
+        }
+
+        return $rules;
     }
 
     public function storeFile($columnId)
