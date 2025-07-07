@@ -16,7 +16,7 @@ class NumberType implements InputType
 
     public function hasOptions(): bool
     {
-        return false;
+        return true;
     }
 
     public function shouldConvertToJson(): bool
@@ -36,4 +36,24 @@ class NumberType implements InputType
         }
         return $value;
     }
+    public function setMin($min): void
+    {
+        $this->min = $min;
+    }
+
+    public function setMax($max): void
+    {
+        $this->max = $max;
+    }
+
+    public function setStep($step): void
+    {
+        $this->step = $step;
+    }
+
+    public function setUnit($unit): void
+    {
+        $this->unit = $unit;
+    }
+
 }

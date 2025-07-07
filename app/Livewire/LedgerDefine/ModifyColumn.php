@@ -4,6 +4,7 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
 use App\Models\ColumnDefine;
+use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
@@ -53,6 +54,10 @@ class ModifyColumn extends Component
                 'hint' => (string)$columnDefineObject->hint,
                 'file' => (array)$columnDefineObject->file,
                 'is_collapsed' => false, // 初期状態で折りたたむ
+                'max'=> $columnDefineObject->max,
+                'min'=> $columnDefineObject->min,
+                'step'=> $columnDefineObject->step,
+                'unit'=>$columnDefineObject->unit,
             ];
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
 
@@ -134,7 +139,7 @@ class ModifyColumn extends Component
         // Ensure the column exists and the changed property is 'type'
         if (isset($this->columns[$columnIndex]) && $parts[1] === 'type') {
             // Determine if the new type has options
-            $hasOptions = \App\Models\ColumnTypes\InputTypeFactory::make($value)->hasOptions();
+            $hasOptions = InputTypeFactory::make($value)->hasOptions();
 
             // Update the useOptions property for the specific column
             $this->columns[$columnIndex]['useOptions'] = $hasOptions;
@@ -190,9 +195,8 @@ class ModifyColumn extends Component
         }
 
         // Update the main ledgerDefineRecord's column_define with the current state of $this->columns
-        $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
-            return $column;
-        })->toArray();
+        $this->ledgerDefineRecord->column_define = collect($this->columns)->toArray();
+
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();

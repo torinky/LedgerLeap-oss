@@ -118,49 +118,50 @@
                                                 @if($columns[$index]['useOptions'])
                                                     @if($column['type'] === 'auto_number')
                                                         <x-mary-input label="{{__('ledger.column.auto_number.prefix')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.options.prefix"
+                                                                      wire:model.live="columns.{{$index}}.options.prefix"
                                                                       wire:key="prefix-{{$column['id']}}"
                                                                       hint="{{__('ledger.column.auto_number.prefix_hint')}}"/>
                                                         <x-mary-input label="{{__('ledger.column.auto_number.digits')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.options.digits"
+                                                                      wire:model.live="columns.{{$index}}.options.digits"
                                                                       wire:key="digits-{{$column['id']}}"
                                                                       type="number" min="1"
                                                                       hint="{{__('ledger.column.auto_number.digits_hint')}}"/>
                                                         <x-mary-input label="{{__('ledger.column.auto_number.revision')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.options.revision"
+                                                                      wire:model.live="columns.{{$index}}.options.revision"
                                                                       wire:key="revision-{{$column['id']}}"
                                                                       hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
+                                                    @elseif($column['type'] === 'number')
+                                                        <div class="grid grid-cols-2 gap-4">
+                                                            {{--                                                        @dd($columns[$index])--}}
+                                                            <x-mary-input label="{{__('ledger.column.number.min')}}"
+                                                                          wire:model.live="columns.{{$index}}.min"
+                                                                          wire:key="min-{{$column['id']}}"
+                                                                          type="number"
+                                                                          placeholder="{{__('ledger.column.number.min_placeholder')}}"/>
+                                                            <x-mary-input label="{{__('ledger.column.number.max')}}"
+                                                                          wire:model.live="columns.{{$index}}.max"
+                                                                          wire:key="max-{{$column['id']}}"
+                                                                          type="number"
+                                                                          placeholder="{{__('ledger.column.number.max_placeholder')}}"/>
+                                                            <x-mary-input label="{{__('ledger.column.number.step')}}"
+                                                                          wire:model.live="columns.{{$index}}.step"
+                                                                          wire:key="step-{{$column['id']}}"
+                                                                          type="number"
+                                                                          placeholder="{{__('ledger.column.number.step_placeholder')}}"/>
+                                                            <x-mary-input label="{{__('ledger.column.number.unit')}}"
+                                                                          wire:model.live="columns.{{$index}}.unit"
+                                                                          wire:key="unit-{{$column['id']}}"
+                                                                          placeholder="{{__('ledger.column.number.unit_placeholder')}}"/>
+                                                        </div>
                                                     @else
-                                                        <x-mary-tags label="{{__('ledger.options')}}"
-                                                                     wire:model="columns.{{$index}}.options"
+
+                                                    <x-mary-tags label="{{__('ledger.options')}}"
+                                                                     wire:model.live="columns.{{$index}}.options"
                                                                      wire:key="options-{{$column['id']}}" icon="o-tag"
                                                                      hint="Hit enter to create a new tag"/>
                                                     @endif
                                                 @endif
 
-                                                @if($column['type'] === 'number')
-                                                    <div class="grid grid-cols-2 gap-4">
-                                                        <x-mary-input label="{{__('ledger.column.number.min')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.min"
-                                                                      wire:key="min-{{$column['id']}}"
-                                                                      type="number"
-                                                                      placeholder="{{__('ledger.column.number.min_placeholder')}}"/>
-                                                        <x-mary-input label="{{__('ledger.column.number.max')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.max"
-                                                                      wire:key="max-{{$column['id']}}"
-                                                                      type="number"
-                                                                      placeholder="{{__('ledger.column.number.max_placeholder')}}"/>
-                                                        <x-mary-input label="{{__('ledger.column.number.step')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.step"
-                                                                      wire:key="step-{{$column['id']}}"
-                                                                      type="number"
-                                                                      placeholder="{{__('ledger.column.number.step_placeholder')}}"/>
-                                                        <x-mary-input label="{{__('ledger.column.number.unit')}}"
-                                                                      wire:model.live.debounce="columns.{{$index}}.unit"
-                                                                      wire:key="unit-{{$column['id']}}"
-                                                                      placeholder="{{__('ledger.column.number.unit_placeholder')}}"/>
-                                                    </div>
-                                                @endif
 
                                                 <div class="mt-3 flex items-center justify-end w-full space-x-2">
                                                     @if($isDirty)
