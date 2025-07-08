@@ -5,6 +5,7 @@ namespace App\Services\Ledger;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Collection;
 
 class ColumnHtmlService
 {
@@ -16,7 +17,7 @@ class ColumnHtmlService
 
     private $initialValue;
 
-    private $attachments = [];
+    private Collection $attachments;
 
     private $asCreate = false;
 
@@ -180,8 +181,7 @@ class ColumnHtmlService
     /**
      * @return $this
      */
-    public
-    function setHighlightKeywords($keywords)
+    public function setHighlightKeywords($keywords)
     {
         if (empty($keywords)) {
             return $this;
@@ -194,17 +194,8 @@ class ColumnHtmlService
         return $this;
     }
 
-    /**
-     * @return ColumnHtmlService
-     */
-    public function setAttachments(array|string $attachments)
+    public function setAttachmentCollection(Collection $attachments): static
     {
-        if (empty($attachments)) {
-            $attachments = [];
-        }
-        if (is_string($attachments)) {
-            dd($attachments);
-        }
         $this->attachments = $attachments;
 
         return $this;
@@ -221,37 +212,49 @@ class ColumnHtmlService
     }
 
     /**
-     * @param string $html
+     * @return string
      */
     public function getFileHtml(): string
     {
         $html = '';
-        if (!is_array($this->initialValue)) return $html; // 値が配列でない場合は空
+        if (!is_array($this->initialValue) || !isset($this->attachments)) {
+            return $html;
+        }
+
+//        dd($this->initialValue, $this->attachments);
 
         $thumbnails = [];
         $files = [];
 
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
-            $hit = isset($this->attachments[$hashedFilename]->hit) && $this->attachments[$hashedFilename]->hit == true;
+            $attachment = $this->attachments->get($hashedFilename);
+
+            // 添付ファイル情報が見つからない場合はスキップ
+            if (!$attachment) {
+                continue;
+            }
+
+            $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
 
-            $url = Storage::url('public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $hashedFilename);
+            // セキュアなURLを生成
+            $url = route('file.download', ['attachedFile' => $attachment->id]);
+            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id, 'thumbnail' => 'true']);
 
             if (Storage::exists('public/Ledger/thumbs/' . basename($hashedFilename))) {
-                $thumbnailUrl = Storage::url('Ledger/thumbs/' . basename($hashedFilename));
                 $thumbnails[] = <<<HTML
-    <a href="{$url}"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
+    <a href="{$url}" target="_blank"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
     HTML;
             } else {
                 if (empty($this->attachmentContents[$hashedFilename]) || !isset($this->attachmentContents[$hashedFilename]->meta->content)) {
                     $files[] = <<<HTML
-    <a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
+    <a href="{$url}" target="_blank" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4"><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
     HTML;
                 } else {
                     $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
                     $files[] = <<<HTML
     <div class="tooltip" data-tip="{$content}">
-    <a href="{$url}" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4 "
+    <a href="{$url}" target="_blank" class="badge {$hitClass} opacity-70 hover:opacity-100 mx-1 my-1 py-4 "
        ><i class="fas fa-file mr-2"></i> {$originalFilename}</a>
     </div>
     HTML;

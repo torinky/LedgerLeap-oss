@@ -234,7 +234,8 @@
                                             @elseif (empty($change['current_value']))
                                                 <x-ledger.empty-message/>
                                             @elseif($change['column_define_current'])
-                                                {{ ColumnHtml::setAttachmentContents($change['current_attachments'] ?? [])
+                                                {{ ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
+                                                              ->setAttachmentContents($change['current_attachments'] ?? [])
                                                               ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
                                             @else
                                                 <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
@@ -249,7 +250,8 @@
                                                 @elseif (empty($change['old_value']))
                                                     <x-ledger.empty-message/>
                                                 @elseif($change['column_define_old'])
-                                                    {{ ColumnHtml::setAttachmentContents($change['old_attachments'] ?? [])
+                                                    {{ ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
+                                                                  ->setAttachmentContents($change['old_attachments'] ?? [])
                                                                   ->show($change['column_define_old'], $change['old_value'], $canView) }}
                                                 @else
                                                     <span class="text-ghost">---</span> {{-- 古い定義がない --}}
@@ -266,6 +268,7 @@
                         <x-ledger.detail.table
                                 :ledgerRecord="$ledgerRecord"
                                 :canView="$canView"
+                                :allAttachments="$currentLedgerAttachments"
                         />
                     @endif
 

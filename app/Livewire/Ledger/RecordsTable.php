@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -213,6 +214,13 @@ class RecordsTable extends Component
         // ページネーション実行
         $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
 
+        // 表示される台帳レコードIDリストを取得
+        $ledgerIds = $ledgerRecords->pluck('id');
+        // 関連する添付ファイル情報を一括で取得
+        $allAttachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
+            ->get()
+            ->groupBy('ledger_id'); // ledger_id ごとにグループ化
+
         // 検索結果のフラグを設定
         $ledgerRecords->getCollection()->transform(function ($ledger) {
             if (empty($ledger->content_attached) || empty($this->search)) {
@@ -247,6 +255,7 @@ class RecordsTable extends Component
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
             'ledgerRecordsGroupByDefineIds' => $ledgerRecords->groupBy('ledger_define_id'),
+            'allAttachments' => $allAttachments, // ★ ビューに渡す
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,

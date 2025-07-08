@@ -3,6 +3,7 @@
     'keywords'=>[],
     'canUpdate'=>false,
     'canView'=>false,
+    'allAttachments' => [],
     ])
 <tr class="hover">
     <th class=" border flex-col bg-accent/20">
@@ -47,7 +48,9 @@
             <x-ledger.empty-message/>
         @else
             {{ ColumnHtml::setHighlightKeywords($keywords)
-              ->setAttachments($ledgerRecord->content_attached[$columnDefine->id]??[])->show($columnDefine,$ledgerRecord->content[$columnDefine->id],$canView) }}
+                         ->setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
+                         ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
+                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView) }}
         @endif
         </td>
     @endforeach

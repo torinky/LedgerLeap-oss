@@ -1,6 +1,7 @@
 @props([
     'ledgerRecord'=>[],
     'canView'=>false,
+    'allAttachments'=>collect(),
 ])
 
 <div class="container mx-auto">
@@ -26,7 +27,8 @@
                         @elseif (empty($ledgerRecord->content[$columnDefine->id]))
                             <x-ledger.empty-message />
                         @else
-                            {{ ColumnHtml::setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id]??[])
+                            {{ ColumnHtml::setAttachmentCollection($allAttachments->keyBy('hashedbasename'))
+                                ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id]??[])
                                 ->show($columnDefine,$ledgerRecord->content[$columnDefine->id]??'',$canView) }}
                         @endif
 

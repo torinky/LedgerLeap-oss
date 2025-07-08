@@ -192,6 +192,7 @@
                                         :keywords="$highlights"
                                         :canUpdate="$canUpdate"
                                         :canView="$canView"
+                                        :allAttachments="$allAttachments"
                                     />
                                 @endforeach
                                 </tbody>

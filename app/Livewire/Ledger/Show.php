@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
+use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
@@ -65,6 +66,8 @@ class Show extends Component
 
     public Collection $workflowHistory; // ワークフロー履歴用プロパティ
 
+    public ?Collection $currentLedgerAttachments = null; // ★ 追加
+
     public $selectedTab = 'details';
 
     // WorkflowService をインジェクト
@@ -92,6 +95,9 @@ class Show extends Component
         ])
             ->findOrFail($ledgerId);
         $this->ledgerDefineRecord = $this->ledgerRecord->define;
+
+        // ★ 現在の台帳に紐づく添付ファイルを取得
+        $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
 
         $this->loadWorkflowHistory();
         $this->prepareContentDiff(); // <<<--- 差分データ準備を呼び出し
@@ -375,6 +381,24 @@ class Show extends Component
         $this->contentChanges = [];
         $currentContentArray = $this->ledgerRecord->content ?? [];
 
+        // 現在のレコードの添付ファイル情報を取得
+        $currentAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)
+            ->get()
+            ->keyBy('hashedbasename');
+
+        // 比較対象の古いレコードの添付ファイル情報を取得
+        $oldAttachments = collect();
+        if ($this->comparisonTargetDiff) {
+            // 古いDiffのcontentに含まれるファイルのみを対象にする
+            $oldFileHashes = array_keys($this->comparisonTargetDiff->content ?? []);
+            if (!empty($oldFileHashes)) {
+                $oldAttachments = \App\Models\AttachedFile::where('ledger_id', $this->comparisonTargetDiff->ledger_id)
+                    ->whereIn('hashedbasename', $oldFileHashes)
+                    ->get()
+                    ->keyBy('hashedbasename');
+            }
+        }
+
         $currentColumnDefines = Columndefine::normalizeArrayOrCollection($this->ledgerDefineRecord->column_define);
 
         $hasComparison = $this->comparisonTargetDiff && isset($this->comparisonTargetDiff->column_define);
@@ -426,6 +450,8 @@ class Show extends Component
                 'old_value' => $oldValue,
                 'changed' => $isChanged,
                 'column_name' => $columnName,
+                'current_attachments' => $currentAttachments,
+                'old_attachments' => $oldAttachments,
             ];
         }
     }

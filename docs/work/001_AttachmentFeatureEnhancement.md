@@ -51,39 +51,39 @@
 
 #### Step 3.1: `Show` Livewireコンポーネントの改修（ファイルIDの準備）
 
-*   **状態:** 未着手
+*   **状態:** 完了
 *   **目的:** `ColumnHtmlService` がセキュアなURLを生成できるよう、`AttachedFile` のIDマップを準備する。
 *   **タスク:**
-    1.  `app/Livewire/Ledger/Show.php` の `prepareContentDiff()` メソッド（または `mount` メソッド）を修正します。
-    2.  現在の台帳レコードに紐づく全ての `AttachedFile` レコードを取得し、`['hashedbasename' => 'id']` の形式の連想配列を作成します。
-    3.  この連想配列を、`$this->contentChanges` の各カラムの `'current_attachments_id_map'` や `'old_attachments_id_map'` のような新しいキーに格納します。
+    1.  `app/Livewire/Ledger/Show.php` に `public ?Collection $currentLedgerAttachments = null;` プロパティを追加しました。
+    2.  `app/Livewire/Ledger/Show.php` の `mount()` メソッド内で、現在の台帳レコードに紐づく全ての `AttachedFile` レコードを取得し、`$this->currentLedgerAttachments` に格納しました。
+    3.  `app/Livewire/Ledger/Show.php` の `prepareContentDiff()` メソッド内で、現在の台帳レコードに紐づく全ての `AttachedFile` レコードを取得し、`['hashedbasename' => 'id']` の形式の連想配列を作成し、`$this->contentChanges` の各カラムの `'current_attachments'` や `'old_attachments'` のような新しいキーに格納しました。
 
 #### Step 3.2: `ColumnHtmlService` の改修（IDマップの受け取りとURL生成）
 
-*   **状態:** 未着手
+*   **状態:** 完了
 *   **目的:** `ColumnHtmlService` がIDマップを受け取り、それを使ってセキュアなURLを生成できるようにする。
 *   **タスク:**
-    1.  `app/Services/Ledger/ColumnHtmlService.php` を修正します。
-    2.  `setAttachments()` のような既存のメソッドを拡張、または `setAttachmentIdMap()` のような新しいメソッドを追加し、ビューから渡されたIDマップをプロパティに保持できるようにします。
-    3.  `getFileHtml()` メソッド内で `Storage::url()` を使用している箇所を全て削除します。
-    4.  代わりに、保持したIDマップを使って `hashedFilename` から `AttachedFile` のIDを検索し、`route('files.download', ['attachedFile' => ID])` ヘルパを使ってファイルのダウンロードURLとサムネイルURLを生成するようにロジックを全面的に書き換えます。サムネイルURLには `?thumbnail=true` のようなクエリパラメータを付与します。
+    1.  `app/Services/Ledger/ColumnHtmlService.php` を修正しました。
+    2.  `setAttachments()` を `setAttachmentCollection()` にリネームし、`\Illuminate\Support\Collection` 型を受け取るように変更しました。
+    3.  `getFileHtml()` メソッド内で `Storage::url()` を使用している箇所を全て削除し、代わりに、保持したIDマップを使って `hashedFilename` から `AttachedFile` のIDを検索し、`route('file.download', ['attachedFile' => ID])` ヘルパを使ってファイルのダウンロードURLとサムネイルURLを生成するようにロジックを全面的に書き換えました。サムネイルURLには `?thumbnail=true` のクエリパラメータを付与しました。
 
 #### Step 3.3: `show.blade.php` の修正（IDマップの受け渡し）
 
-*   **状態:** 未着手
+*   **状態:** 完了
 *   **目的:** Livewireコンポーネントで準備したIDマップを `ColumnHtmlService` に渡す。
 *   **タスク:**
-    1.  `resources/views/livewire/ledger/show.blade.php` を修正します。
-    2.  `ColumnHtml::...->show(...)` を呼び出している箇所で、Step 3.1で準備したIDマップ (`$change['current_attachments_id_map']` など) を `ColumnHtmlService` の新しいメソッドに渡すように呼び出し部分を修正します。
+    1.  `resources/views/livewire/ledger/show.blade.php` を修正し、`x-ledger.detail.table` コンポーネントを呼び出す際に、`:allAttachments="$currentLedgerAttachments"` を追加しました。
+    2.  `resources/views/components/ledger/detail/table.blade.php` を修正し、`@props` に `allAttachments` を追加し、`ColumnHtml::setAttachmentCollection($allAttachments->keyBy('hashedbasename'))` を使って添付ファイル情報を渡すように変更しました。
+    3.  `app/Livewire/Ledger/RecordsTable.php` を修正し、`allAttachments` を `x-ledger.table-row` に渡すように変更しました。
+    4.  `resources/views/components/ledger/table-row.blade.php` を修正し、`@props` に `allAttachments` を追加し、`ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))` を使って添付ファイル情報を渡すように変更しました。
 
 #### Step 3.4: `AttachedFileDownloadController` のサムネイル対応
 
-*   **状態:** 未着手
+*   **状態:** 完了
 *   **目的:** セキュアなダウンロードエンドポイントが、サムネイル画像の要求に対応できるようにする。
 *   **タスク:**
-    1.  `app/Http/Controllers/AttachedFileDownloadController.php` の `download` メソッドを修正します。
-    2.  リクエストに `?thumbnail=true` パラメータが含まれているかをチェックします。
-    3.  含まれている場合、認可とログ記録の処理はそのまま実行し、レスポンスとして実ファイルの代わりに、対応するサムネイルファイルを返すロジックを追加します。
+    1.  `app/Http/Controllers/AttachedFileDownloadController.php` の `download` メソッドを修正し、リクエストに `?thumbnail=true` パラメータが含まれているかをチェックし、含まれている場合、認可とログ記録を行った上で、レスポンスとして実ファイルの代わりに、対応するサムネイルファイルを返すロジックを追加しました。
+    2.  `routes/web.php` の `file.download` ルートが正しく定義されていることを確認しました。
 
 ### Step 4: 動作確認（ダウンロード処理）
 
@@ -99,6 +99,25 @@
     *   **テスト3: 異常系（ファイルなし）**
         *   **目的:** 存在しないファイルIDを指定した場合の挙動を確認する。
         *   **期待する結果:** 404 Not Found エラーページが表示される。
+
+## 4. 添付ファイル保存処理のアーキテクチャ
+
+**目的:** 添付ファイルの保存処理の全体像を明確にし、`content` カラムの構造変更の是非を判断する。
+
+**調査結果:**
+*   **処理の起点:** ファイルアップロードは、FilePond (`files.blade.php`) から Livewire の標準アップロード機能 (`@this.upload(...)`) を通じて行われる。
+*   **Livewireコンポーネントの役割 (`CreateColumn.php` / `ModifyColumn.php`):
+    1.  **一時ファイル処理:** Livewire はアップロードされたファイルを一時ディレクトリに保存する。
+    2.  **永続化:** ユーザーが「保存」系のアクションを実行すると、`processFilesForSave()` メソッドが呼び出される。この中で、`storeFile()` が一時ファイルを永続ストレージ (`storage/app/public/Ledger/Attachments`) に移動し、ファイル名をハッシュ化する。
+    3.  **`attached_files` レコードの準備:** `storeFile()` は、DBに保存するためのファイル情報（オリジナル名、ハッシュ名、パス等）を `$this->newAttachedFiles` プロパティに蓄積する。
+    4.  **`ledgers` レコードの保存:** `saveDraft()` や `saveDirectly()` メソッド内で、まず `ledgers` テーブルにレコードが作成・更新される。このとき、`content` カラムには `['hashedbasename' => 'original_filename']` という形式のJSONが保存される。
+    5.  **`attached_files` レコードの保存:** `ledgers` レコードの保存が完了し、`ledger_id` が確定した **後** で、`addAttachedFileRecord()` が呼び出される。このメソッドが `$newAttachedFiles` の内容を元に、`ledger_id` を関連付けて `attached_files` テーブルにレコードを作成する。
+
+**考察と結論:**
+*   **`content` カラムへのID保存は困難:** 現在のアーキテクチャでは、`ledgers` レコードを保存する時点では `attached_files` レコードのIDはまだ存在しない。`content` にIDを含めるには、`ledgers` を一度空の `content` で作成し、`attached_files` を作成後、再度 `ledgers` を更新する必要があり、処理が複雑化する。
+*   **採用方針:** `content` カラムの構造は変更せず、**表示・ダウンロード時に `hashedbasename` をキーとして `attached_files` テーブルを検索し、IDを取得する**方針が、既存の構造を活かせるため最も合理的であると判断する。
+
+---
 
 ### Step 5: OCRによる全文検索対象の拡張とファイル最適化
 
