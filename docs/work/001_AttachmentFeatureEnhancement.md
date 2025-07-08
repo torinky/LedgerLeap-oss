@@ -37,15 +37,53 @@
         3.  **ログ記録の強化:** `activitylog` に、操作イベント名 (`downloaded`)、IPアドレス、ユーザーエージェント、関連ID (`ledger_id`, `ledger_define_id`) を含む詳細な情報を `properties` として記録するようにした。
     *   `routes/web.php` を更新し、`/files/{attachedFile}/download` ルートが上記コントローラーのアクションを指すように設定した。
 
-### Step 3: FilePondのファイル表示URLを新APIエンドポイントに変更
+### Step 3 (改): 詳細画面 (`ledger.show`) の添付ファイル表示をセキュア化
 
-**目的:** FilePondが表示するファイルのURL（プレビュー、ダウンロードリンク等）を、Step 2で作成したセキュアなエンドポイントに差し替える。
+**目的:** `ColumnHtmlService` が生成するファイルURLとサムネイルURLを、認可とログ記録を行うセキュアなエンドポイント経由に変更する。
 
+**調査結果サマリ (訂正):**
+*   台帳の**詳細表示画面** (`ledger.show`) における添付ファイルの表示は、`FilePond` を使う編集画面とは異なり、`app/Services/Ledger/ColumnHtmlService.php` が担っています。
+*   このサービスは、`resources/views/livewire/ledger/show.blade.php` の中で `ColumnHtml` ファサード経由で呼び出されています。
+*   `ColumnHtmlService` の `getFileHtml()` メソッド内で、ファイルのダウンロードURLとサムネイル画像のURLが、セキュアでない `Storage::url()` を使って直接生成されています。これが認可をバイパスできる根本的な原因です。
+*   このサービスは現在、ファイルのハッシュ名しか受け取っておらず、セキュアなURL (`/files/{id}/download`) の生成に必要な `AttachedFile` のIDを知りません。
+
+---
+
+#### Step 3.1: `Show` Livewireコンポーネントの改修（ファイルIDの準備）
+
+*   **状態:** 未着手
+*   **目的:** `ColumnHtmlService` がセキュアなURLを生成できるよう、`AttachedFile` のIDマップを準備する。
 *   **タスク:**
-    *   FilePondに初期ファイル情報を渡しているLivewireコンポーネント（`LedgerForm`などを想定）を修正する。
-    *   サーバーサイド（PHP）で、既存の添付ファイルリストを整形する際に、各ファイルの `source` プロパティに、新しく作成したダウンロード用URL（例: `/files/{id}/download`）を設定する。
-    *   FilePondの `server.load` オプションが、この新しいエンドポイントを指すように設定する。これにより、プレビュー画像の読み込みも認可チェックとログ記録の対象となる。
-    *   FilePondの `filePoster` プラグインを利用している場合、ポスター画像のURLも同様に新しいエンドポイント経由で取得するように設定を変更する。
+    1.  `app/Livewire/Ledger/Show.php` の `prepareContentDiff()` メソッド（または `mount` メソッド）を修正します。
+    2.  現在の台帳レコードに紐づく全ての `AttachedFile` レコードを取得し、`['hashedbasename' => 'id']` の形式の連想配列を作成します。
+    3.  この連想配列を、`$this->contentChanges` の各カラムの `'current_attachments_id_map'` や `'old_attachments_id_map'` のような新しいキーに格納します。
+
+#### Step 3.2: `ColumnHtmlService` の改修（IDマップの受け取りとURL生成）
+
+*   **状態:** 未着手
+*   **目的:** `ColumnHtmlService` がIDマップを受け取り、それを使ってセキュアなURLを生成できるようにする。
+*   **タスク:**
+    1.  `app/Services/Ledger/ColumnHtmlService.php` を修正します。
+    2.  `setAttachments()` のような既存のメソッドを拡張、または `setAttachmentIdMap()` のような新しいメソッドを追加し、ビューから渡されたIDマップをプロパティに保持できるようにします。
+    3.  `getFileHtml()` メソッド内で `Storage::url()` を使用している箇所を全て削除します。
+    4.  代わりに、保持したIDマップを使って `hashedFilename` から `AttachedFile` のIDを検索し、`route('files.download', ['attachedFile' => ID])` ヘルパを使ってファイルのダウンロードURLとサムネイルURLを生成するようにロジックを全面的に書き換えます。サムネイルURLには `?thumbnail=true` のようなクエリパラメータを付与します。
+
+#### Step 3.3: `show.blade.php` の修正（IDマップの受け渡し）
+
+*   **状態:** 未着手
+*   **目的:** Livewireコンポーネントで準備したIDマップを `ColumnHtmlService` に渡す。
+*   **タスク:**
+    1.  `resources/views/livewire/ledger/show.blade.php` を修正します。
+    2.  `ColumnHtml::...->show(...)` を呼び出している箇所で、Step 3.1で準備したIDマップ (`$change['current_attachments_id_map']` など) を `ColumnHtmlService` の新しいメソッドに渡すように呼び出し部分を修正します。
+
+#### Step 3.4: `AttachedFileDownloadController` のサムネイル対応
+
+*   **状態:** 未着手
+*   **目的:** セキュアなダウンロードエンドポイントが、サムネイル画像の要求に対応できるようにする。
+*   **タスク:**
+    1.  `app/Http/Controllers/AttachedFileDownloadController.php` の `download` メソッドを修正します。
+    2.  リクエストに `?thumbnail=true` パラメータが含まれているかをチェックします。
+    3.  含まれている場合、認可とログ記録の処理はそのまま実行し、レスポンスとして実ファイルの代わりに、対応するサムネイルファイルを返すロジックを追加します。
 
 ### Step 4: 動作確認（ダウンロード処理）
 
