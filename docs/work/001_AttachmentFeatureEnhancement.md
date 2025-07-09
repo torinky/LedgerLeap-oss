@@ -188,7 +188,7 @@ graph TD
     end
 
     subgraph "Background: Initial Processing (Tika)"
-        C -- Runs --> D{Tika Service};
+        C -- Runs --> D{Tika Client};
         D -- Text Found --> E{Update Ledger's content_attached};
         E -- Set status: COMPLETED --> F[End];
         D -- No Text & (Image/PDF) --> G[Triggers Job: OcrAndOptimizeFile];
@@ -203,8 +203,8 @@ graph TD
     end
 
     subgraph "Error Handling"
-        D -- Tika Error --> X[Set status: FAILED];
-        H -- OCR Error --> X;
+        D -- Tika Error --> X[Set status: TIKA_FAILED];
+        H -- OCR Error --> Y[Set status: OCR_FAILED];
     end
 ```
 
@@ -218,47 +218,31 @@ graph TD
         *   `PENDING_OCR`: OCR処理待ち。
         *   `OCR_PROCESSING`: OCR処理中。
         *   `COMPLETED`: 全ての処理が完了。
-        *   `FAILED`: いずれかの処理で失敗。
+        *   `TIKA_FAILED`: Tika処理で失敗。
+        *   `OCR_FAILED`: OCR処理で失敗。
 *   **マイグレーション:** `attached_files` テーブルの `status` カラムの `ENUM` 定義を、上記Enumの新しい値を含むように変更します。
 
-#### 7.3. イベント駆動とジョブチェーン
+#### 7.3. Tikaテキスト抽出失敗の判定条件
 
-1.  **イベント:** `AttachedFileCreated` イベントは維持します。
-2.  **リスナー:** `QueueInitialProcessing` リスナーが `AttachedFileCreated` を受け取り、最初のジョブ `ProcessAttachedFile` をディスパッチします。
-3.  **ジョブチェーン:**
-    *   `ProcessAttachedFile` ジョブがTikaでの処理を実行します。
-    *   Tikaがテキストを抽出できなかった場合、`ProcessAttachedFile` ジョブの内部から、次の `OcrAndOptimizeFile` ジョブがディスパッチされます。
+*   **背景:** 既存の `app/Jobs/Ledger/AttachedFileScanJob.php` に見られるように、システムは `vaites/php-apache-tika` ライブラリの `getText()` メソッドを利用してファイルから本文テキストを抽出します。このメソッドは、メタデータを返す `getMetadata()` とは独立しています。
+*   **判定条件:** `getText()` メソッドが返す文字列を `trim()` した結果が、空文字列 (`''`) になる場合を「テキストが抽出できなかった」と判断します。これにより、文字情報を含まない画像やスキャンされたPDFを後続のOCR処理の対象とします。
 
 #### 7.4. ジョブの実装詳細
 
 1.  **初期処理ジョブ (`ProcessAttachedFile.php`):**
-    *   `AttachedFile` IDを引数に取ります。
     *   `handle()` メソッド:
         1.  `status` を `INITIAL_PROCESSING` に更新。
-        2.  `TikaService` を呼び出し、テキスト抽出を試みます。
-        3.  **テキスト抽出成功時:**
-            *   抽出したテキストを、関連する `Ledger` の `content_attached` カラムにマージします。
-            *   `status` を `COMPLETED` に更新し、処理を終了します。
-        4.  **テキスト抽出失敗時:**
-            *   ファイルのMIMEタイプを確認します。
-            *   **画像またはPDFの場合:**
-                *   `status` を `PENDING_OCR` に更新します。
-                *   `OcrAndOptimizeFile::dispatch($this->attachedFile)` を呼び出します。
-            *   **上記以外のファイル形式の場合:**
-                *   `status` を `COMPLETED` に更新します（OCR対象外のため）。
-        5.  **Tikaサービス自体がエラーを返した場合:**
-            *   `status` を `FAILED` に更新し、エラーログを記録します。
+        2.  `vaites/php-apache-tika` の `Client` を使用しテキスト抽出を試行。
+        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
+        4.  **テキスト抽出失敗時 (上記7.3の条件に基づく):** ファイルのMIMEタイプが画像またはPDFの場合、`status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` ジョブをディスパッチ。それ以外の場合は `status` を `COMPLETED` に更新。
+        5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
 
 2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
-    *   `AttachedFile` IDを引数に取ります。
     *   `handle()` メソッド:
         1.  `status` を `OCR_PROCESSING` に更新。
-        2.  `OcrMyPDF` を外部コマンドとして実行し、最適化されたPDFを生成します。
-        3.  **成功時:**
-            *   元のファイルを、生成された最適化済みPDFで置き換えます。
-            *   **再度 `ProcessAttachedFile::dispatch($this->attachedFile)` を呼び出し、最適化済みPDFからTikaによるテキスト抽出を再試行させます。** `status` は `PENDING_INITIAL_PROCESSING` に戻ります。
-        4.  **失敗時:**
-            *   `status` を `FAILED` に更新し、エラーログを記録します。
+        2.  `OcrMyPDF` を実行。
+        3.  **成功時:** 元ファイルを最適化PDFで置き換え、`status` を `PENDING_INITIAL_PROCESSING` に戻して `ProcessAttachedFile` を再度ディスパッチ。
+        4.  **失敗時:** `status` を `OCR_FAILED` に更新。
 
 ---
 
@@ -267,13 +251,16 @@ graph TD
 **目的:** ユーザーがファイルの処理状況を把握し、必要に応じて対応できるようにするためのUIを設計する。
 
 *   **状態表示:**
-    *   **実装:** `AttachedFile` の `status` (拡張されたEnum) に応じて、ファイル名の横にアイコンとツールチップを表示します。
-        *   `PENDING_INITIAL_PROCESSING` / `PENDING_OCR`: 砂時計アイコン ⏳ (`title="処理待ちです"`)
-        *   `INITIAL_PROCESSING` / `OCR_PROCESSING`: 歯車アイコン ⚙️ (回転) (`title="処理中です..."`)
-        *   `COMPLETED`: チェックマークアイコン ✅ (`title="処理完了"`)
-        *   `FAILED`: 警告アイコン ⚠️ (`title="処理に失敗しました。クリックして再試行できます。"`)
+    *   **実装:** `AttachedFile` の `status` に応じて、ファイル名の横にMaryUIの `<x-mary-icon />` をツールチップ付きで表示します。
+        *   `PENDING_...`: `<x-mary-icon name="o-clock" title="処理待ちです" />`
+        *   `..._PROCESSING`: `<x-mary-icon name="o-cog-6-tooth" class="animate-spin" title="処理中です..." />`
+        *   `COMPLETED`: `<x-mary-icon name="o-check-circle" class="text-success" title="処理完了" />`
+        *   `TIKA_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-warning" title="テキスト抽出に失敗しました。クリックで再試行できます。" />`
+        *   `OCR_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-error" title="OCR処理に失敗しました。クリックで再試行できます。" />`
 *   **手動実行:**
-    *   `status` が `FAILED` のファイルにのみ、「再実行」アイコン（例: 🔄）を表示します。
+    *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコンを表示します。
+    *   アイコン: `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />`
     *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーします。
     *   `retryProcessing` アクションは、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットし、`ProcessAttachedFile` ジョブを再度ディスパッチします。
+
 
