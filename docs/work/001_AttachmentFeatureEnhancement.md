@@ -212,37 +212,21 @@ graph TD
 
 *   **状態管理:** 新規カラムは追加せず、既存の `attached_files.status` カラムを拡張してファイルの状態を管理します。
 *   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):**
-    *   既存のEnumに以下の状態を追加・定義します。
-        *   `PENDING_INITIAL_PROCESSING`: 初期処理（Tika）待ち。
-        *   `INITIAL_PROCESSING`: Tikaでの処理中。
-        *   `PENDING_OCR`: OCR処理待ち。
-        *   `OCR_PROCESSING`: OCR処理中。
-        *   `COMPLETED`: 全ての処理が完了。
-        *   `TIKA_FAILED`: Tika処理で失敗。
-        *   `OCR_FAILED`: OCR処理で失敗。
-*   **マイグレーション:** `attached_files` テーブルの `status` カラムの `ENUM` 定義を、上記Enumの新しい値を含むように変更します。
+    *   `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `COMPLETED`, `TIKA_FAILED`, `OCR_FAILED` の状態を定義します。
+*   **オリジナルファイル保持のためのスキーマ変更:**
+    *   **マイグレーション:** `attached_files` テーブルに以下のカラムを追加します。
+        *   `original_file_path`: `string`, nullable. OCR処理前のオリジナルファイルのパスを記録。
+        *   `original_mime_type`: `string`, nullable. オリジナルファイルのMIMEタイプ。
 
 #### 7.3. Tikaテキスト抽出失敗の判定条件
 
-*   **背景:** 既存の `app/Jobs/Ledger/AttachedFileScanJob.php` に見られるように、システムは `vaites/php-apache-tika` ライブラリの `getText()` メソッドを利用してファイルから本文テキストを抽出します。このメソッドは、メタデータを返す `getMetadata()` とは独立しています。
-*   **判定条件:** `getText()` メソッドが返す文字列を `trim()` した結果が、空文字列 (`''`) になる場合を「テキストが抽出できなかった」と判断します。これにより、文字情報を含まない画像やスキャンされたPDFを後続のOCR処理の対象とします。
+*   **背景:** 既存の `app/Jobs/Ledger/AttachedFileScanJob.php` に見られるように、システムは `vaites/php-apache-tika` ライブラリの `getText()` メソッドを利用してファイルから本文テキストを抽出します。
+*   **判定条件:** `getText()` メソッドが返す文字列を `trim()` した結果が、空文字列 (`''`) になる場合を「テキストが抽出できなかった」と判断します。
 
 #### 7.4. `content_attached` の構造と更新方針
 
-*   **構造:** `content_attached` カラムは、全文検索用のJSONデータです。既存の `AttachedFileScanJob` の実装から、その構造は以下のようになっています。
-    ```json
-    {
-        "カラムID": {
-            "ファイルのハッシュ名": {
-                "meta": {
-                    "content": "抽出されたテキスト本文",
-                    // ... Tikaが抽出したその他のメタデータ
-                }
-            }
-        }
-    }
-    ```
-*   **更新方針:** 各非同期ジョブは、この構造に従います。`Ledger`モデルから`content_attached`を配列として取得し、自身が処理したファイルに対応するキー（`[カラムID][ファイルハッシュ名]`）の `meta.content` を更新または新規追加し、配列全体を`Ledger`モデルに書き戻して保存します。これにより、複数の添付ファイルが並行して処理されても、データが競合することなく更新されます。
+*   **構造:** `content_attached` カラムは、`{カラムID: {ファイルハッシュ名: {meta: {content: "..."}}}}` という構造のJSONです。
+*   **更新方針:** 各ジョブは、この構造に従い、`Ledger`モデルから配列として取得した `content_attached`に対し、自身が処理したファイルのテキスト情報 `meta.content` をマージ（追加/上書き）し、配列全体を書き戻します。
 
 #### 7.5. ジョブの実装詳細
 
@@ -250,16 +234,24 @@ graph TD
     *   `handle()` メソッド:
         1.  `status` を `INITIAL_PROCESSING` に更新。
         2.  Tikaでテキスト抽出を試行。
-        3.  **テキスト抽出成功時:** 上記方針に従い、抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
-        4.  **テキスト抽出失敗時:** ファイルのMIMEタイプが画像/PDFなら `status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` ジョブをディスパッチ。それ以外なら `status` を `COMPLETED` に更新。
+        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
+        4.  **テキスト抽出失敗時:** ファイルが画像/PDFなら `status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` をディスパッチ。それ以外なら `status` を `COMPLETED` に更新。
         5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
 
 2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
     *   `handle()` メソッド:
         1.  `status` を `OCR_PROCESSING` に更新。
-        2.  `OcrMyPDF` を実行。
-        3.  **成功時:** 元ファイルを最適化PDFで置き換え、`status` を `PENDING_INITIAL_PROCESSING` に戻して `ProcessAttachedFile` を再度ディスパッチ。
-        4.  **失敗時:** `status` を `OCR_FAILED` に更新。
+        2.  **オリジナルファイルの退避:**
+            *   元のファイル（画像またはPDF）を `storage/app/Ledger/Attachments/Originals/` ディレクトリに移動します。
+            *   移動したパスと元のMIMEタイプを、`attached_files` レコードの `original_file_path` と `original_mime_type` に記録します。
+        3.  **OCRとPDF生成の実行:**
+            *   `OcrMyPDF` を実行し、**テキストレイヤーを持つ最適化済みPDF**を生成させます。入力が画像ファイルの場合も、出力はPDFとなります。
+            *   生成されたPDFを、**元のファイルがあったパス** (`storage/app/public/Ledger/Attachments/`) に保存します。
+        4.  **レコード情報の更新:**
+            *   `attached_files` レコードの `file_name` (拡張子を.pdfに)、`path`, `mime_type`, `size` を、新しく生成されたPDFの情報に更新します。
+        5.  **Tikaによる再処理:**
+            *   `status` を `PENDING_INITIAL_PROCESSING` に戻し、`ProcessAttachedFile` ジョブを再度ディスパッチします。これにより、最適化・テキスト化された新しいPDFファイルから、一貫した方法でテキストが抽出され `content_attached` に反映されます。
+        6.  **失敗時:** `status` を `OCR_FAILED` に更新します。オリジナルファイルの退避処理は行いません。
 
 ---
 
@@ -274,10 +266,11 @@ graph TD
         *   `COMPLETED`: `<x-mary-icon name="o-check-circle" class="text-success" title="処理完了" />`
         *   `TIKA_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-warning" title="テキスト抽出に失敗しました。クリックで再試行できます。" />`
         *   `OCR_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-error" title="OCR処理に失敗しました。クリックで再試行できます。" />`
+*   **結果の提供:**
+    *   **ダウンロード:** 通常のダウンロードリンクでは、常に現在のファイル（OCR処理済みの場合は最適化PDF）がダウンロードされます。
+    *   **オリジナルファイルのダウンロード:** `original_file_path` が記録されているファイルについては、「オリジナルをダウンロード」リンクを追加で表示します。このリンクは `AttachedFileDownloadController` の新しいアクション（例: `downloadOriginal`）を指し、退避させた元のファイルを返します。
 *   **手動実行:**
-    *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコンを表示します。
-    *   アイコン: `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />`
-    *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーします。
-    *   `retryProcessing` アクションは、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットし、`ProcessAttachedFile` ジョブを再度ディスパッチします。
+    *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコン `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />` を表示します。
+    *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーし、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットして、`ProcessAttachedFile` ジョブを再度ディスパッチします。
 
 
