@@ -131,8 +131,6 @@
 
 **目的:** `OcrMyPDF` を日本語対応のDockerサービスとしてLedgerLeap環境に統合する。
 
-*(このステップの計画は前回提案から変更ありません)*
-
 #### 6.1. Dockerfileの作成
 
 *   **場所:** `docker/ocrmypdf/Dockerfile` (新規作成)
@@ -170,6 +168,19 @@
 
       # ... (既存のtika, mailpit等のサービス)
     ```
+
+#### 6.3. 動作確認
+
+*   **Docker環境の正常性:**
+    1.  `./vendor/bin/sail up -d` を実行し、`ocrmypdf` サービスを含む全コンテナがエラーなく起動することを確認します。
+    2.  `./vendor/bin/sail ps` を実行し、`ocrmypdf` コンテナの `STATUS` が `Up` となっていることを確認します。
+*   **日本語言語パックの確認:**
+    1.  `./vendor/bin/sail exec ocrmypdf tesseract --list-langs` を実行します。
+    2.  出力される言語リストの中に `jpn` が含まれていることを確認します。
+*   **基本コマンドの実行確認:**
+    1.  テスト用の画像ファイル（例: `test.png`）を `public` ディレクトリなどに配置します。
+    2.  `./vendor/bin/sail exec ocrmypdf ocrmypdf -l jpn public/test.png public/output.pdf` を実行します。
+    3.  コマンドがエラーなく終了し、`public` ディレクトリに `output.pdf` が生成されることを確認します。
 
 ---
 

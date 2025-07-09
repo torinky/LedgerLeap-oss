@@ -191,6 +191,18 @@ services:
       - './docker/tika/tika-config.xml:/tika-config.xml'
     networks:
       - sail
+  ocrmypdf:
+    build:
+      context: ./docker/ocrmypdf
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    entrypoint: []
+    command: tail -f /dev/null
+    restart: unless-stopped
+    networks:
+      - sail
 networks:
   sail:
     driver: bridge
