@@ -266,9 +266,15 @@ graph TD
         *   `COMPLETED`: `<x-mary-icon name="o-check-circle" class="text-success" title="処理完了" />`
         *   `TIKA_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-warning" title="テキスト抽出に失敗しました。クリックで再試行できます。" />`
         *   `OCR_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-error" title="OCR処理に失敗しました。クリックで再試行できます。" />`
-*   **結果の提供:**
-    *   **ダウンロード:** 通常のダウンロードリンクでは、常に現在のファイル（OCR処理済みの場合は最適化PDF）がダウンロードされます。
-    *   **オリジナルファイルのダウンロード:** `original_file_path` が記録されているファイルについては、「オリジナルをダウンロード」リンクを追加で表示します。このリンクは `AttachedFileDownloadController` の新しいアクション（例: `downloadOriginal`）を指し、退避させた元のファイルを返します。
+*   **結果の提供（ダウンロード）:**
+    *   **実装方針:** ダウンロードリンクの挙動は、`ColumnHtmlService` 内で、ファイルの `original_mime_type` を基に動的に決定します。
+    *   **オリジナルが画像ファイルの場合:**
+        *   メインのダウンロードリンク（ファイル名）は、**オリジナル画像ファイル**をダウンロードするよう設定します（例: `downloadOriginal` アクションを指す）。
+        *   補助リンクとして「テキスト付きPDFをダウンロード」を表示し、こちらはOCR処理後のPDFをダウンロードさせます。
+    *   **オリジナルがPDFファイルの場合:**
+        *   メインのダウンロードリンクは、**OCR処理・最適化後のPDF**をダウンロードするよう設定します。
+        *   補助リンクとして「オリジナルPDFをダウンロード」を表示します。
+    *   **コントローラー:** 上記のダウンロード種別を処理するため、`AttachedFileDownloadController` に `downloadOriginal` アクションを追加するか、既存の `download` アクションをパラメータで拡張する必要があります。
 *   **手動実行:**
     *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコン `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />` を表示します。
     *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーし、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットして、`ProcessAttachedFile` ジョブを再度ディスパッチします。
