@@ -119,76 +119,161 @@
 
 ---
 
-### Step 5: OCRによる全文検索対象の拡張とファイル最適化
+### Step 5: OCRによる全文検索対象の拡張とファイル最適化 (計画)
 
 **目的:** 画像ベースのPDFや画像ファイルに対し、OCR処理（光学文字認識）を実行することで、ファイル内のテキスト情報を抽出する。これにより、今まで検索対象外だったファイルも全文検索できるようにし、システムの検索能力を大幅に向上させる。また、処理済みのファイルは最適化されたクリアテキスト付きPDFとして保存し、利便性を高める。
 
 **背景:** 現状、画像として保存されている書類（スキャンされたPDFや写真など）は、ファイル名以外のテキスト情報が検索対象となっていない。これらのファイルにOCR処理を施すことで、ファイル内の文字をテキストデータとして認識し、Mroongaによる全文検索の対象に含めることが可能になる。
 
-### Step 6: OCR機能の実現可能性調査と技術選定
+---
 
-**目的:** OCR機能を実装するための最適なツールとして提案された `OcrMyPDF` について、その実現可能性、システム要件、および既存のLedgerLeapアーキテクチャとの親和性を詳細に調査・検証する。
+### Step 6: OCR環境構築 (Docker & OcrMyPDF) (計画)
 
-*   **調査タスク:**
-    *   **OcrMyPDFの基本機能調査:**
-        *   対応している入力ファイル形式（PDF, JPEG, PNGなど）の確認。
-        *   日本語の認識精度と、そのために必要な言語パック（`ocrmypdf-lang-jpn`など）の導入方法。
-        *   出力されるPDFの品質（ファイルサイズ、解像度、テキストレイヤーの正確性）。
-        *   処理性能（ファイルサイズやページ数に応じた処理時間）のベンチマーキング。
-    *   **システム要件と依存関係:**
-        *   `OcrMyPDF` が依存する外部ライブラリ（Tesseract OCR, Ghostscriptなど）の特定。
-        *   Laravel Sail（Docker）環境への導入手順の確立。既存の `docker-compose.yml` や `Dockerfile` にどのような変更が必要になるかの調査。
-        *   本番環境（`prod.sh`）での動作要件の確認。
-    *   **エラーハンドリングと堅牢性:**
-        *   OCR処理が失敗するケース（低解像度、特殊なフォント、暗号化PDFなど）の洗い出し。
-        *   処理タイムアウトやリソース超過（メモリ、CPU）発生時の挙動の確認。
-    *   **代替案の検討（必要に応じて）:**
-        *   `OcrMyPDF` の導入が困難な場合に備え、他のOCRソリューション（クラウドベースのAPIなど）を簡易的に調査しておく。
+**目的:** `OcrMyPDF` を日本語対応のDockerサービスとしてLedgerLeap環境に統合する。
 
-**調査結果と結論:**
-*   `docker-compose.yml` には `Apache Tika` サービスは存在するが、OCR機能自体を提供するものではない。
-*   `OcrMyPDF` は `Tesseract OCR` を利用しており、日本語OCRには日本語言語パックが必要。
-*   **導入方法の選択:**
-    *   **専用サービスとして追加:** `docker-compose.yml` に `ocrmypdf` 専用のサービスを追加し、`ocrmypdf` と日本語言語パックがインストールされたDockerイメージを使用するのが、既存のプロジェクトアーキテクチャ（`tika` サービスなど）に合致し、コンテナの責務分離とスケーラビリティの観点から最も適切である。
-    *   既存の `laravel` サービスにインストールする方法もあるが、コンテナの肥大化やリソース管理の複雑化を招く可能性があるため推奨しない。
-*   **日本語対応:** `tesseract-ocr-jpn` などの日本語言語パックの導入が必須。
-*   **処理性能とエラーハンドリング:** OCR処理はCPUリソースを消費するため、コンテナのリソース制限を考慮する必要がある。Laravelからは `Symfony/Process` を利用してコマンドを実行し、終了コードや標準エラー出力でエラーを検知・処理する。
+*(このステップの計画は前回提案から変更ありません)*
 
-**次のステップ:** `docker-compose.yml` に `ocrmypdf` サービスを追加するための具体的なイメージ選定と設定を行う。
+#### 6.1. Dockerfileの作成
 
-### Step 7: OCR処理の非同期実行アーキテクチャ設計
+*   **場所:** `docker/ocrmypdf/Dockerfile` (新規作成)
+*   **内容:**
+    ```Dockerfile
+    # 公式イメージをベースにする
+    FROM jbarlow83/ocrmypdf:latest
 
-**目的:** 大容量のファイルや多数のファイルがアップロードされた場合でも、ユーザーの操作を妨げず、システム全体のパフォーマンスに影響を与えないよう、OCR処理を非同期で実行するためのアーキテクチャを設計する。
+    # システムを更新し、日本語のTesseract言語パックをインストールする
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+        tesseract-ocr-jpn \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+    ```
 
-*   **設計タスク:**
-    *   **トリガーの設計:**
-        *   OCR処理を開始するタイミングを定義する（例: ファイルアップロード完了直後、特定のステータスになった時など）。
-        *   `AttachedFile` モデルにOCR処理の状態（未処理, 処理中, 完了, エラー）を管理するためのステータスカラム（例: `ocr_status`）を追加する。
-    *   **非同期処理の実装:**
-        *   Laravelのキューシステム（Redis + Horizon）を利用したジョブクラス（例: `ProcessOcrJob`）を設計する。
-        *   ジョブは `AttachedFile` のIDを引数に取り、キューワーカーがバックグラウンドで処理を実行する。
-    *   **コマンドの設計:**
-        *   `OcrMyPDF` を実行するためのShellコマンドを設計する。入力ファイルパス、出力ファイルパス、言語指定（`-l jpn`）、最適化オプションなどをコマンドライン引数で渡す。
-        *   `Symfony/Process` コンポーネントを利用して、Laravelジョブ内から安全に外部コマンドを実行する方法を確立する。
-    *   **処理結果のハンドリング:**
-        *   OCR処理が成功した場合:
-            *   生成されたクリアテキスト付きPDFで元のファイルを置き換えるか、あるいは別バージョンとして保存するかの方針を決定する。（ユーザーが元ファイルもダウンロードできるべきか？）
-            *   `AttachedFile` のステータスを「完了」に更新し、ファイルパスやファイルサイズを更新する。
-            *   Apache Tikaによる再インデックスをトリガーし、Mroongaの全文検索対象に含める。
-        *   OCR処理が失敗した場合:
-            *   `AttachedFile` のステータスを「エラー」に更新し、ログに詳細なエラー内容を記録する。
-            *   リトライ処理の要否と、その間隔や回数を決定する。
-            *   処理失敗をユーザーに通知する方法を検討する（UI上の表示、通知機能など）。
+#### 6.2. docker-compose.yml の設定
 
-### Step 8: UI/UXの設計
+*   **場所:** `docker-compose.yml` (修正)
+*   **追加するサービス定義:**
+    ```yaml
+    services:
+      # ... (既存のlaravel.test, mysql, redis等のサービス)
 
-**目的:** ユーザーがOCR機能の状態を把握し、その恩恵を受けられるようにするためのUIを設計する。
+      ocrmypdf:
+        build:
+          context: ./docker/ocrmypdf
+          dockerfile: Dockerfile
+        volumes:
+          - .:/var/www/html
+        working_dir: /var/www/html
+        command: tail -f /dev/null
+        restart: unless-stopped
+        networks:
+          - sail
 
-*   **設計タスク:**
-    *   **状態表示:**
-        *   ファイル一覧や詳細画面で、各ファイルのOCR処理ステータス（処理中, 完了, エラー）をアイコンやテキストで分かりやすく表示する。
-    *   **結果の提供:**
-        *   OCR処理が完了したファイルは、ダウンロード時にクリアテキスト付きPDFが提供されるようにする。
-        *   （もし元ファイルを残す方針の場合）ユーザーが元ファイルとOCR処理済みPDFの両方を選択してダウンロードできるようなUIを検討する。
-    *   **手動実行（オプション）:**
-        *   OCR処理が失敗したファイルや、過去にアップロードされた未処理ファイルに対して、ユーザーが手動でOCR処理を再実行できるボタンの要否を検討する。
+      # ... (既存のtika, mailpit等のサービス)
+    ```
+
+---
+
+### Step 7: OCR非同期処理アーキテクチャの再設計 (計画)
+
+**目的:** ファイルアップロード後、まずTikaでテキスト抽出を試み、失敗した場合にのみOCR処理を起動する、効率的で堅牢な非同期アーキテクチャを設計する。
+
+#### 7.1. アーキテクチャ概要図
+
+```mermaid
+graph TD
+    subgraph "Foreground"
+        A[File Upload] --> B(AttachedFile Record Created);
+        B -- status: PENDING_INITIAL_PROCESSING --> B;
+        B -- Triggers --> C[Job: ProcessAttachedFile];
+    end
+
+    subgraph "Background: Initial Processing (Tika)"
+        C -- Runs --> D{Tika Service};
+        D -- Text Found --> E{Update Ledger's content_attached};
+        E -- Set status: COMPLETED --> F[End];
+        D -- No Text & (Image/PDF) --> G[Triggers Job: OcrAndOptimizeFile];
+        G -- Set status: PENDING_OCR --> G;
+        D -- No Text & Not (Image/PDF) --> F;
+    end
+
+    subgraph "Background: OCR Processing"
+        G -- Runs --> H{ocrmypdf Service};
+        H -- OCR Success --> I{Optimized PDF Created};
+        I -- Triggers Initial Processing Again --> C;
+    end
+
+    subgraph "Error Handling"
+        D -- Tika Error --> X[Set status: FAILED];
+        H -- OCR Error --> X;
+    end
+```
+
+#### 7.2. 状態管理とDBスキーマ
+
+*   **状態管理:** 新規カラムは追加せず、既存の `attached_files.status` カラムを拡張してファイルの状態を管理します。
+*   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):**
+    *   既存のEnumに以下の状態を追加・定義します。
+        *   `PENDING_INITIAL_PROCESSING`: 初期処理（Tika）待ち。
+        *   `INITIAL_PROCESSING`: Tikaでの処理中。
+        *   `PENDING_OCR`: OCR処理待ち。
+        *   `OCR_PROCESSING`: OCR処理中。
+        *   `COMPLETED`: 全ての処理が完了。
+        *   `FAILED`: いずれかの処理で失敗。
+*   **マイグレーション:** `attached_files` テーブルの `status` カラムの `ENUM` 定義を、上記Enumの新しい値を含むように変更します。
+
+#### 7.3. イベント駆動とジョブチェーン
+
+1.  **イベント:** `AttachedFileCreated` イベントは維持します。
+2.  **リスナー:** `QueueInitialProcessing` リスナーが `AttachedFileCreated` を受け取り、最初のジョブ `ProcessAttachedFile` をディスパッチします。
+3.  **ジョブチェーン:**
+    *   `ProcessAttachedFile` ジョブがTikaでの処理を実行します。
+    *   Tikaがテキストを抽出できなかった場合、`ProcessAttachedFile` ジョブの内部から、次の `OcrAndOptimizeFile` ジョブがディスパッチされます。
+
+#### 7.4. ジョブの実装詳細
+
+1.  **初期処理ジョブ (`ProcessAttachedFile.php`):**
+    *   `AttachedFile` IDを引数に取ります。
+    *   `handle()` メソッド:
+        1.  `status` を `INITIAL_PROCESSING` に更新。
+        2.  `TikaService` を呼び出し、テキスト抽出を試みます。
+        3.  **テキスト抽出成功時:**
+            *   抽出したテキストを、関連する `Ledger` の `content_attached` カラムにマージします。
+            *   `status` を `COMPLETED` に更新し、処理を終了します。
+        4.  **テキスト抽出失敗時:**
+            *   ファイルのMIMEタイプを確認します。
+            *   **画像またはPDFの場合:**
+                *   `status` を `PENDING_OCR` に更新します。
+                *   `OcrAndOptimizeFile::dispatch($this->attachedFile)` を呼び出します。
+            *   **上記以外のファイル形式の場合:**
+                *   `status` を `COMPLETED` に更新します（OCR対象外のため）。
+        5.  **Tikaサービス自体がエラーを返した場合:**
+            *   `status` を `FAILED` に更新し、エラーログを記録します。
+
+2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
+    *   `AttachedFile` IDを引数に取ります。
+    *   `handle()` メソッド:
+        1.  `status` を `OCR_PROCESSING` に更新。
+        2.  `OcrMyPDF` を外部コマンドとして実行し、最適化されたPDFを生成します。
+        3.  **成功時:**
+            *   元のファイルを、生成された最適化済みPDFで置き換えます。
+            *   **再度 `ProcessAttachedFile::dispatch($this->attachedFile)` を呼び出し、最適化済みPDFからTikaによるテキスト抽出を再試行させます。** `status` は `PENDING_INITIAL_PROCESSING` に戻ります。
+        4.  **失敗時:**
+            *   `status` を `FAILED` に更新し、エラーログを記録します。
+
+---
+
+### Step 8: UI/UXの設計 (計画)
+
+**目的:** ユーザーがファイルの処理状況を把握し、必要に応じて対応できるようにするためのUIを設計する。
+
+*   **状態表示:**
+    *   **実装:** `AttachedFile` の `status` (拡張されたEnum) に応じて、ファイル名の横にアイコンとツールチップを表示します。
+        *   `PENDING_INITIAL_PROCESSING` / `PENDING_OCR`: 砂時計アイコン ⏳ (`title="処理待ちです"`)
+        *   `INITIAL_PROCESSING` / `OCR_PROCESSING`: 歯車アイコン ⚙️ (回転) (`title="処理中です..."`)
+        *   `COMPLETED`: チェックマークアイコン ✅ (`title="処理完了"`)
+        *   `FAILED`: 警告アイコン ⚠️ (`title="処理に失敗しました。クリックして再試行できます。"`)
+*   **手動実行:**
+    *   `status` が `FAILED` のファイルにのみ、「再実行」アイコン（例: 🔄）を表示します。
+    *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーします。
+    *   `retryProcessing` アクションは、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットし、`ProcessAttachedFile` ジョブを再度ディスパッチします。
+
