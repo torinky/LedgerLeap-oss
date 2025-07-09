@@ -227,14 +227,31 @@ graph TD
 *   **背景:** 既存の `app/Jobs/Ledger/AttachedFileScanJob.php` に見られるように、システムは `vaites/php-apache-tika` ライブラリの `getText()` メソッドを利用してファイルから本文テキストを抽出します。このメソッドは、メタデータを返す `getMetadata()` とは独立しています。
 *   **判定条件:** `getText()` メソッドが返す文字列を `trim()` した結果が、空文字列 (`''`) になる場合を「テキストが抽出できなかった」と判断します。これにより、文字情報を含まない画像やスキャンされたPDFを後続のOCR処理の対象とします。
 
-#### 7.4. ジョブの実装詳細
+#### 7.4. `content_attached` の構造と更新方針
+
+*   **構造:** `content_attached` カラムは、全文検索用のJSONデータです。既存の `AttachedFileScanJob` の実装から、その構造は以下のようになっています。
+    ```json
+    {
+        "カラムID": {
+            "ファイルのハッシュ名": {
+                "meta": {
+                    "content": "抽出されたテキスト本文",
+                    // ... Tikaが抽出したその他のメタデータ
+                }
+            }
+        }
+    }
+    ```
+*   **更新方針:** 各非同期ジョブは、この構造に従います。`Ledger`モデルから`content_attached`を配列として取得し、自身が処理したファイルに対応するキー（`[カラムID][ファイルハッシュ名]`）の `meta.content` を更新または新規追加し、配列全体を`Ledger`モデルに書き戻して保存します。これにより、複数の添付ファイルが並行して処理されても、データが競合することなく更新されます。
+
+#### 7.5. ジョブの実装詳細
 
 1.  **初期処理ジョブ (`ProcessAttachedFile.php`):**
     *   `handle()` メソッド:
         1.  `status` を `INITIAL_PROCESSING` に更新。
-        2.  `vaites/php-apache-tika` の `Client` を使用しテキスト抽出を試行。
-        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
-        4.  **テキスト抽出失敗時 (上記7.3の条件に基づく):** ファイルのMIMEタイプが画像またはPDFの場合、`status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` ジョブをディスパッチ。それ以外の場合は `status` を `COMPLETED` に更新。
+        2.  Tikaでテキスト抽出を試行。
+        3.  **テキスト抽出成功時:** 上記方針に従い、抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
+        4.  **テキスト抽出失敗時:** ファイルのMIMEタイプが画像/PDFなら `status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` ジョブをディスパッチ。それ以外なら `status` を `COMPLETED` に更新。
         5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
 
 2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
