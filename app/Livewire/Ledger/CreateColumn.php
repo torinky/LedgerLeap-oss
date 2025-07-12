@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -325,7 +326,13 @@ class CreateColumn extends Component
     {
 
         $fileHashName = $file->store('public/Ledger/Attachments');
-        //        $filenames[$file->getClientOriginalName()] = $fileHashName;
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $storedFilePath = Storage::path($fileHashName);
+        $mimeType = finfo_file($finfo, $storedFilePath);
+        finfo_close($finfo);
+        Log::info('File MIME Type detected by finfo_file: ' . $mimeType);
+        Log::info('Stored File Path: ' . $storedFilePath);
+        Log::info('File Real Path (Temporary): ' . $file->getRealPath());
 
         $result = (object) [
             'originalName' => $file->getClientOriginalName(),
@@ -362,7 +369,7 @@ class CreateColumn extends Component
             'filename' => $file->getClientOriginalName(),
             'hashedbasename' => basename($fileHashName),
             'path' => $fileHashName,
-            'mime' => $file->getClientMimeType(),
+            'mime' => $mimeType,
             //            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
             //            'contain_content' => ! empty($result->meta->content),

@@ -17,7 +17,6 @@ class AttachedFile extends Model
     ];
 
     protected $casts = [
-        'status' => AttachedFileStatus::class,
     ];
 
     public function ledger(): BelongsTo
@@ -32,15 +31,15 @@ class AttachedFile extends Model
 
     public function optimize()
     {
-        //        $this->status = AttachedFileStatus::OPTIMIZING;
+        //        $this->status = AttachedFileStatus::OPTIMIZING->value;
         // ファイルの最適化処理
-        $this->status = AttachedFileStatus::OPTIMIZED;
+        $this->status = AttachedFileStatus::OPTIMIZED->value;
     }
 
     public function extractMetadata()
     {
-        //        $this->status = AttachedFileStatus::EXTRACTING;
+        //        $this->status = AttachedFileStatus::EXTRACTING->value;
         // メタデータ抽出処理
-        $this->status = AttachedFileStatus::EXTRACTED_AND_SAVED;
+        $this->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value;
     }
 }

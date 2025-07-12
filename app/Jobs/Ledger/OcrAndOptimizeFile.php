@@ -75,13 +75,18 @@ class OcrAndOptimizeFile implements ShouldQueue
         $outputFileName = pathinfo($this->attachedFile->filename, PATHINFO_FILENAME) . '.pdf';
 
         // ocrmypdf コマンドの構築
+        // Process クラスに配列で引数を渡す形式に変更
         $command = [
-            'docker', 'exec', 'ocrmypdf', // docker exec を使用して ocrmypdf コンテナ内で実行
-            'ocrmypdf',
-            '-l', 'jpn',
-            '--image-dpi', '300',
-            $containerOriginalFilePath, // コンテナ内のパスを使用
-            $containerOutputFilePath,   // コンテナ内のパスを使用
+            'docker',
+            'exec',
+            'ledgerleap-ocrmypdf-1',
+            '/app/.venv/bin/ocrmypdf',
+            '-l',
+            'jpn',
+            '--image-dpi',
+            '300',
+            $containerOriginalFilePath,
+            $containerOutputFilePath,
         ];
 
         $process = new Process($command);
