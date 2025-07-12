@@ -16,6 +16,10 @@ class AttachedFile extends Model
         'filename', 'hashedbasename', 'ledger_define_id', 'ledger_id', 'column_id', 'mime', 'path', 'status', 'contain_content', 'optimized', 'creator_id', 'modifier_id',
     ];
 
+    protected $casts = [
+        'status' => AttachedFileStatus::class,
+    ];
+
     public function ledger(): BelongsTo
     {
         return $this->belongsTo(Ledger::class, 'ledger_id');
@@ -24,16 +28,6 @@ class AttachedFile extends Model
     public function define(): BelongsTo
     {
         return $this->belongsTo(LedgerDefine::class, 'ledger_define_id');
-    }
-
-    public function setStatusAttribute($value)
-    {
-        $this->attributes['status'] = AttachedFileStatus::tryFrom($value)?->value;
-    }
-
-    public function getStatusAttribute($value)
-    {
-        return AttachedFileStatus::from($value);
     }
 
     public function optimize()

@@ -4,7 +4,7 @@ namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Enums\WorkflowStatus;
-use App\Jobs\Ledger\AttachedFileScanJob;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -407,7 +407,7 @@ class CreateColumn extends Component
                 'modifier_id' => Auth::user()->id,
             ]));
             Bus::batch([
-                new AttachedFileScanJob($newAttachedFile->id),
+                new ProcessAttachedFile($newAttachedFile),
             ])->dispatch();
         }
     }

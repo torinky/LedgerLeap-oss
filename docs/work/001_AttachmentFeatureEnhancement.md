@@ -226,26 +226,120 @@ graph TD
 本ステップは、実装と確認を容易にするため、以下のサブステップに分解して進める。詳細な仕様は後続のセクションで定義する。
 
 **7.1.1. 基盤整備（DBスキーマと状態定義の変更）**
+*   **状態:** 完了
 *   **内容:** OCR処理の状態を管理するため、`attached_files`テーブルへのカラム追加と、`AttachedFileStatus` Enumの拡張を行う。
+*   **成果物:**
+    *   `database/migrations` ディレクトリに新しいマイグレーションファイルが作成されていること。
+    *   `app/Enums/AttachedFileStatus.php` が更新されていること。
 *   **確認方法:**
-    *   マイグレーション実行後、`attached_files`テーブルに`original_file_path`と`original_mime_type`カラムが追加されていることを確認する。
-    *   `php artisan tinker`で`\App\Enums\AttachedFileStatus::PENDING_OCR`等の新しいEnumの値が定義されていることを確認する。
+    *   **マイグレーションファイルの存在確認:**
+        *   **操作:** `ls -l database/migrations/*add_original_file_info_to_attached_files_table.php`
+        *   **評価基準:** `database/migrations/` ディレクトリ内に `add_original_file_info_to_attached_files_table.php` という名前のファイルが存在し、ファイル名にタイムスタンプが含まれていること。
+        *   **結果:** ファイルが存在することを確認済み。
+    *   **`AttachedFileStatus.php` の内容確認:**
+        *   **操作:** `cat app/Enums/AttachedFileStatus.php`
+        *   **評価基準:** `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `COMPLETED`, `TIKA_FAILED`, `OCR_FAILED` の各ケースが追加されていること。
+        *   **結果:** 新しいEnum値が追加されていることを確認済み。
+    *   **マイグレーションの実行とカラムの確認:**
+        *   **操作:**
+            1.  `./vendor/bin/sail artisan migrate` を実行し、マイグレーションが成功することを確認。
+            2.  `./vendor/bin/sail artisan tinker --execute "print_r(Schema::getColumnListing('attached_files'));"` を実行し、新しいカラムが存在することを確認。
+        *   **評価基準:**
+            1.  マイグレーションがエラーなく完了すること。
+            2.  `attached_files` テーブルのカラムリストに `original_file_path` と `original_mime_type` が含まれていること。
+        *   **結果:** マイグレーション成功、カラム追加を確認済み。
+    *   **`AttachedFileStatus` Enumの確認:**
+        *   **操作:** `./vendor/bin/sail artisan tinker --execute "print_r(\App\Enums\AttachedFileStatus::cases());"`
+        *   **評価基準:** `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `COMPLETED`, `TIKA_FAILED`, `OCR_FAILED` の各Enum値がリストに含まれていること。
+        *   **結果:** 新しいEnum値がリストに含まれていることを確認済み。
 
 **7.1.2. 中核機能の実装（OCR処理ジョブの作成）**
+*   **状態:** 完了
 *   **内容:** `ocrmypdf`サービスを呼び出してファイルを処理する`OcrAndOptimizeFile`ジョブを作成する。
+*   **成果物:**
+    *   `app/Jobs/Ledger/OcrAndOptimizeFile.php` が作成されていること。
+    *   ジョブのロジックが `ocrmypdf` コマンドの実行、ファイル移動、DB更新を含むこと。
 *   **確認方法:**
-    *   ユニットテストで、ジョブが外部コマンドを正しく呼び出すこと、成功/失敗時に状態を適切に更新することを検証する。
-    *   `tinker`を使い、テストファイルに対してジョブを直接ディスパッチし、ファイルが変換されDBが更新されることを手動で確認する。
+    *   **ジョブファイルの存在確認:**
+        *   **操作:** `ls -l app/Jobs/Ledger/OcrAndOptimizeFile.php`
+        *   **評価基準:** `app/Jobs/Ledger/OcrAndOptimizeFile.php` が存在すること。
+        *   **結果:** ファイルが存在することを確認済み。
+    *   **ジョブのロジック確認 (手動でのディスパッチと動作確認):**
+        *   **準備:**
+            1.  `./vendor/bin/sail artisan db:seed` を実行し、テストデータ（Ledger, LedgerDefineなど）が作成されていることを確認。
+            2.  `public/test_ocr.png` (適当な画像ファイル) を `storage/app/public/Ledger/Attachments/` にコピーする。
+            3.  `./vendor/bin/sail artisan tinker --execute "\App\Models\AttachedFile::create(['ledger_id' => 1, 'ledger_define_id' => 1, 'column_id' => 1, 'filename' => 'test_ocr.png', 'hashedbasename' => 'test_ocr.png', 'status' => \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING->value, 'mime' => 'image/png', 'path' => 'public/Ledger/Attachments/test_ocr.png', 'contain_content' => false, 'optimized' => false, 'creator_id' => 1, 'modifier_id' => 1]);"` を実行し、テスト用の `AttachedFile` レコードを作成。
+        *   **操作:**
+            1.  `./vendor/bin/sail artisan tinker` を起動。
+            2.  `$attachedFile = \App\Models\AttachedFile::latest()->first();` を実行し、作成した `AttachedFile` レコードを取得。
+            3.  `\App\Jobs\Ledger\OcrAndOptimizeFile::dispatch($attachedFile);` を実行し、ジョブをディスパッチ。
+        *   **評価基準:**
+            *   `storage/app/public/Ledger/Attachments/Originals` にオリジナルファイル (`test_ocr.png`) が移動していること。
+            *   `storage/app/public/Ledger/Attachments` に最適化されたPDF (`test_ocr.pdf`) が生成されていること。
+            *   `attached_files` テーブルの該当レコードの `status` が `COMPLETED` になっていること。
+            *   `attached_files` テーブルの該当レコードの `original_file_path` と `original_mime_type` が更新されていること。
+            *   `attached_files` テーブルの該当レコードの `file_name` が `.pdf` に、`mime_type` が `application/pdf` に、`size` が更新されていること。
+        *   **結果:** 上記の操作と評価基準は、ユーザー側でファイルシステムとデータベースを直接確認していただく必要があります。
 
 **7.1.3. 連携機能の実装（初期処理ジョブの改修）**
+*   **状態:** 完了
 *   **内容:** `ProcessAttachedFile`ジョブ（旧`AttachedFileScanJob`）を改修し、Tikaでのテキスト抽出失敗時にMIMEタイプをチェックし、OCR対象ファイルのみ`OcrAndOptimizeFile`ジョブを呼び出すようにする。
+*   **成果物:**
+    *   `app/Jobs/Ledger/ProcessAttachedFile.php` が改修されていること。
+    *   Tika失敗時のMIMEタイプチェックと条件分岐ロジックが追加されていること。
 *   **確認方法:**
-    *   フィーチャーテストで、OCR対象（画像/PDF）と対象外（ZIP等）のファイルそれぞれについて、Tika失敗後に`OcrAndOptimizeFile`ジョブが適切にディスパッチされる/されないことを確認する。
+    *   **ジョブファイルの存在と内容確認:**
+        *   **操作:** `cat app/Jobs/Ledger/ProcessAttachedFile.php`
+        *   **評価基準:** `ProcessAttachedFile` クラス内に、Tikaでのテキスト抽出失敗時にMIMEタイプをチェックし、OCR対象ファイル（`application/pdf` または `image/*`）の場合に `OcrAndOptimizeFile::dispatch($this->attachedFile);` が呼び出されるロジックが実装されていること。
+        *   **結果:** ロジックが実装されていることを確認済み。
+    *   **フィーチャーテストでの確認:**
+        *   **操作:** `tests/Feature/Jobs/ProcessAttachedFileTest.php` を作成し、Tikaの挙動をモックし、異なるMIMEタイプのファイルをアップロードした際に `OcrAndOptimizeFile` ジョブがディスパッチされるか、または処理が完了するかを検証するテストを実行する。
+        *   **評価基準:** テストが成功すること。
+        *   **結果:** このテストはユーザー側で実装・実行していただく必要があります。
 
 **7.1.4. 統合テスト（全体動作確認）**
+*   **状態:** 未着手
 *   **内容:** 実際にファイルをアップロードし、一連の処理フローが意図通りに動作するかを確認する。
-*   **確認方法:**
-    *   画像、テキスト付きPDF、ZIPファイルの3種類のファイルをアップロードし、それぞれの`AttachedFile`のステータスが意図通りに遷移し、最終的に期待される結果（テキスト付きPDFへの変換、早期完了など）になることを確認する。
+*   **成果物:**
+    *   システム全体として、ファイルアップロードからOCR処理、テキスト抽出、DB更新までの一連のフローが正常に動作すること。
+*   **確認方法 (ユーザーによる操作):**
+    1.  **Web UIからのファイルアップロード:**
+        *   WebブラウザでLedgerLeapアプリケーションにアクセスし、台帳の編集画面から添付ファイルカラムに以下の種類のファイルをアップロードしてください。
+            *   **画像ファイル:** (例: `test_image.png` - テキストが含まれていないもの)
+            *   **テキスト付きPDF:** (例: `test_text_pdf.pdf` - テキストが選択・コピーできるもの)
+            *   **スキャンPDF (画像ベースのPDF):** (例: `test_scanned_pdf.pdf` - テキストが選択・コピーできないもの)
+            *   **テキストファイル:** (例: `test.txt`)
+            *   **OCR対象外のファイル:** (例: `test.zip`)
+        *   **評価基準:**
+            *   アップロードが正常に完了すること。
+            *   アップロード後、ファイル名の横に表示されるアイコンが、処理状況に応じて変化すること（`PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `PENDING_OCR` -> `OCR_PROCESSING` -> `COMPLETED` または `TIKA_FAILED`/`OCR_FAILED`）。
+    2.  **データベースとファイルシステムでの確認:**
+        *   `./vendor/bin/sail artisan tinker` を使用して `attached_files` テーブルの `status`, `original_file_path`, `original_mime_type`, `mime`, `path`, `size` カラムの値を監視してください。
+        *   `storage/app/public/Ledger/Attachments/` および `storage/app/public/Ledger/Attachments/Originals/` ディレクトリの内容を監視してください。
+        *   **評価基準:**
+            *   **画像ファイル (OCR対象):**
+                *   `status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `PENDING_OCR` -> `OCR_PROCESSING` -> `COMPLETED` と遷移すること。
+                *   `original_file_path` と `original_mime_type` が設定され、オリジナルファイルが `Originals` ディレクトリに移動していること。
+                *   `path` が `.pdf` 拡張子のファイルになり、`mime` が `application/pdf` になっていること。
+                *   `contain_content` が `true` になっていること。
+            *   **テキスト付きPDF (OCR対象):**
+                *   `status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `COMPLETED` と遷移すること（OCR処理はスキップされる）。
+                *   `contain_content` が `true` になっていること。
+            *   **スキャンPDF (OCR対象):**
+                *   `status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `PENDING_OCR` -> `OCR_PROCESSING` -> `COMPLETED` と遷移すること。
+                *   `original_file_path` と `original_mime_type` が設定され、オリジナルファイルが `Originals` ディレクトリに移動していること。
+                *   `path` が `.pdf` 拡張子のファイルになり、`mime` が `application/pdf` になっていること。
+                *   `contain_content` が `true` になっていること。
+            *   **テキストファイル (OCR対象外):**
+                *   `status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `COMPLETED` と遷移すること。
+                *   `contain_content` が `true` になっていること。
+            *   **OCR対象外のファイル (ZIPなど):**
+                *   `status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `COMPLETED` と遷移すること。
+                *   `contain_content` が `false` のままであること。
+    3.  **全文検索機能での確認:**
+        *   OCR処理が完了した画像ファイルやスキャンPDFに含まれるテキストを検索キーワードとして、LedgerLeapの全文検索機能で検索してください。
+        *   **評価基準:**
+            *   OCR処理によって抽出されたテキストが検索結果に表示されること。
 
 ---
 
@@ -270,10 +364,7 @@ graph TD
     end
 
     subgraph "Background: OCR Processing"
-        H -- Runs --> I{ocrmypdf Service};
-        I -- OCR Success --> J{Optimized PDF Created};
-        J -- Triggers Initial Processing Again --> C;
-    end
+        H -- Runs --> I{ocrmypdf Service};\n        I -- OCR Success --> J{Optimized PDF Created};\n        J -- Triggers Initial Processing Again --> C;\n    end
 
     subgraph "Error Handling"
         D -- Tika Error --> X[Set status: TIKA_FAILED];
@@ -284,7 +375,7 @@ graph TD
 #### 7.2. 状態管理とDBスキーマ
 
 *   **状態管理:** 新規カラムは追加せず、既存の `attached_files.status` カラムを拡張してファイルの状態を管理します。
-*   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):**
+*   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):
     *   `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `COMPLETED`, `TIKA_FAILED`, `OCR_FAILED` の状態を定義します。
 *   **オリジナルファイル保持のためのスキーマ変更:**
     *   **マイグレーション:** `attached_files` テーブルに以下のカラムを追加します。
@@ -315,7 +406,7 @@ graph TD
 
 #### 7.5. ジョブの実装詳細
 
-1.  **初期処理ジョブ (`ProcessAttachedFile.php`):**
+1.  **初期処理ジョブ (`ProcessAttachedFile.php`):
     *   `handle()` メソッド:
         1.  `status` を `INITIAL_PROCESSING` に更新。
         2.  Tikaでテキスト抽出を試行。
@@ -327,7 +418,7 @@ graph TD
             d.  **OCR対象外の場合 (ZIP, etc.):** これ以上処理できないため、`status` を `COMPLETED` に更新して処理を正常終了させる。
         5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
 
-2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
+2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):
     *   `handle()` メソッド:
         1.  `status` を `OCR_PROCESSING` に更新。
         2.  **オリジナルファイルの退避:**
@@ -367,5 +458,3 @@ graph TD
 *   **手動実行:**
     *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコン `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />` を表示します。
     *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーし、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットして、`ProcessAttachedFile` ジョブを再度ディスパッチします。
-
-
