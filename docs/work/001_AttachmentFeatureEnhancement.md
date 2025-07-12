@@ -221,7 +221,35 @@ graph TD
 
 **目的:** ファイルアップロード後、まずTikaでテキスト抽出を試み、失敗した場合にのみOCR処理を起動する、効率的で堅牢な非同期アーキテクチャを設計する。
 
-#### 7.1. アーキテクチャ概要図
+#### 7.1. 実装サブステップと確認方法
+
+本ステップは、実装と確認を容易にするため、以下のサブステップに分解して進める。詳細な仕様は後続のセクションで定義する。
+
+**7.1.1. 基盤整備（DBスキーマと状態定義の変更）**
+*   **内容:** OCR処理の状態を管理するため、`attached_files`テーブルへのカラム追加と、`AttachedFileStatus` Enumの拡張を行う。
+*   **確認方法:**
+    *   マイグレーション実行後、`attached_files`テーブルに`original_file_path`と`original_mime_type`カラムが追加されていることを確認する。
+    *   `php artisan tinker`で`\App\Enums\AttachedFileStatus::PENDING_OCR`等の新しいEnumの値が定義されていることを確認する。
+
+**7.1.2. 中核機能の実装（OCR処理ジョブの作成）**
+*   **内容:** `ocrmypdf`サービスを呼び出してファイルを処理する`OcrAndOptimizeFile`ジョブを作成する。
+*   **確認方法:**
+    *   ユニットテストで、ジョブが外部コマンドを正しく呼び出すこと、成功/失敗時に状態を適切に更新することを検証する。
+    *   `tinker`を使い、テストファイルに対してジョブを直接ディスパッチし、ファイルが変換されDBが更新されることを手動で確認する。
+
+**7.1.3. 連携機能の実装（初期処理ジョブの改修）**
+*   **内容:** `ProcessAttachedFile`ジョブ（旧`AttachedFileScanJob`）を改修し、Tikaでのテキスト抽出失敗時にMIMEタイプをチェックし、OCR対象ファイルのみ`OcrAndOptimizeFile`ジョブを呼び出すようにする。
+*   **確認方法:**
+    *   フィーチャーテストで、OCR対象（画像/PDF）と対象外（ZIP等）のファイルそれぞれについて、Tika失敗後に`OcrAndOptimizeFile`ジョブが適切にディスパッチされる/されないことを確認する。
+
+**7.1.4. 統合テスト（全体動作確認）**
+*   **内容:** 実際にファイルをアップロードし、一連の処理フローが意図通りに動作するかを確認する。
+*   **確認方法:**
+    *   画像、テキスト付きPDF、ZIPファイルの3種類のファイルをアップロードし、それぞれの`AttachedFile`のステータスが意図通りに遷移し、最終的に期待される結果（テキスト付きPDFへの変換、早期完了など）になることを確認する。
+
+---
+
+#### 7.2. アーキテクチャ概要図
 
 ```mermaid
 graph TD
@@ -233,22 +261,23 @@ graph TD
 
     subgraph "Background: Initial Processing (Tika)"
         C -- Runs --> D{Tika Client};
-        D -- Text Found --> E{Update Ledger's content_attached};
+        D -- Text Found --> E{Update DB};
         E -- Set status: COMPLETED --> F[End];
-        D -- No Text & (Image/PDF) --> G[Triggers Job: OcrAndOptimizeFile];
-        G -- Set status: PENDING_OCR --> G;
-        D -- No Text & Not (Image/PDF) --> F;
+        D -- No Text --> G{Check MIME Type};
+        G -- PDF or Image --> H[Triggers Job: OcrAndOptimizeFile];
+        H -- Set status: PENDING_OCR --> H;
+        G -- Other (ZIP, EXE, etc.) --> E;
     end
 
     subgraph "Background: OCR Processing"
-        G -- Runs --> H{ocrmypdf Service};
-        H -- OCR Success --> I{Optimized PDF Created};
-        I -- Triggers Initial Processing Again --> C;
+        H -- Runs --> I{ocrmypdf Service};
+        I -- OCR Success --> J{Optimized PDF Created};
+        J -- Triggers Initial Processing Again --> C;
     end
 
     subgraph "Error Handling"
         D -- Tika Error --> X[Set status: TIKA_FAILED];
-        H -- OCR Error --> Y[Set status: OCR_FAILED];
+        I -- OCR Error --> Y[Set status: OCR_FAILED];
     end
 ```
 
@@ -290,8 +319,12 @@ graph TD
     *   `handle()` メソッド:
         1.  `status` を `INITIAL_PROCESSING` に更新。
         2.  Tikaでテキスト抽出を試行。
-        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新。
-        4.  **テキスト抽出失敗時:** ファイルが画像/PDFなら `status` を `PENDING_OCR` に更新して `OcrAndOptimizeFile` をディスパッチ。それ以外なら `status` を `COMPLETED` に更新。
+        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新して処理を終了。
+        4.  **テキスト抽出失敗時:**
+            a.  `AttachedFile` モデルからファイルのMIMEタイプ (`mime_type`) を取得。
+            b.  MIMEタイプが `application/pdf` または `image/*` で始まるかを確認。
+            c.  **OCR対象の場合 (PDF/画像):** `status` を `PENDING_OCR` に更新し、`OcrAndOptimizeFile` ジョブをディスパッチする。
+            d.  **OCR対象外の場合 (ZIP, etc.):** これ以上処理できないため、`status` を `COMPLETED` に更新して処理を正常終了させる。
         5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
 
 2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
