@@ -341,6 +341,18 @@ graph TD
         *   **評価基準:**
             *   OCR処理によって抽出されたテキストが検索結果に表示されること。
 
+#### 7.1.5. OCRmyPDF実行方法の決定
+
+*   **背景:** `queue` コンテナから直接 `ocrmypdf` を実行する際に問題が発生したため、代替案を検討した。OCRmyPDFのフォルダ監視機能と、Docker Outside of Docker (DooD) 方式による `docker exec` 実行の2つの選択肢があった。
+*   **検討結果:**
+    *   **OCRmyPDFのフォルダ監視機能:** Laravelアプリケーションからの直接的なトリガーが不要になるメリットがあるが、処理完了通知やエラーハンドリングなど、Laravelとの連携部分で新たな実装が必要となり、既存のキューシステムとの統合が複雑になる可能性があった。
+    *   **DooD方式 (`docker exec`):** Laravelコンテナから直接OCRmyPDFコンテナ内のコマンドを実行できるため、既存のキューシステムとの統合が容易であり、処理の開始と終了をLaravel側で完全に制御できる。エラーハンドリングやログ記録も既存の仕組みに統合しやすい。セキュリティリスクは存在するが、開発環境での検証においては許容範囲と判断した。
+*   **採用方針:** 既存のアーキテクチャとの整合性、実装の複雑性、および制御の容易さを考慮し、**DooD方式で `docker exec` を実行する**方針を採用する。
+*   **今後の作業:**
+    1.  LaravelコンテナにDocker CLIをインストールする。
+    2.  `docker-compose.yml` でLaravelコンテナにDockerソケットをマウントする。
+    3.  `app/Jobs/Ledger/OcrAndOptimizeFile.php` 内で `ocrmypdf` コマンドを `docker exec ocrmypdf ...` 形式で実行するように修正する。
+
 ---
 
 #### 7.2. アーキテクチャ概要図
@@ -364,7 +376,10 @@ graph TD
     end
 
     subgraph "Background: OCR Processing"
-        H -- Runs --> I{ocrmypdf Service};\n        I -- OCR Success --> J{Optimized PDF Created};\n        J -- Triggers Initial Processing Again --> C;\n    end
+        H -- Runs --> I{ocrmypdf Service};
+        I -- OCR Success --> J{Optimized PDF Created};
+        J -- Triggers Initial Processing Again --> C;
+    end
 
     subgraph "Error Handling"
         D -- Tika Error --> X[Set status: TIKA_FAILED];
