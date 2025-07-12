@@ -349,9 +349,90 @@ graph TD
     *   **DooD方式 (`docker exec`):** Laravelコンテナから直接OCRmyPDFコンテナ内のコマンドを実行できるため、既存のキューシステムとの統合が容易であり、処理の開始と終了をLaravel側で完全に制御できる。エラーハンドリングやログ記録も既存の仕組みに統合しやすい。セキュリティリスクは存在するが、開発環境での検証においては許容範囲と判断した。
 *   **採用方針:** 既存のアーキテクチャとの整合性、実装の複雑性、および制御の容易さを考慮し、**DooD方式で `docker exec` を実行する**方針を採用する。
 *   **今後の作業:**
-    1.  LaravelコンテナにDocker CLIをインストールする。
-    2.  `docker-compose.yml` でLaravelコンテナにDockerソケットをマウントする。
+    1.  `queue` コンテナにDocker CLIをインストールする。
+    2.  `docker-compose.yml` で `queue` コンテナにDockerソケットをマウントし、不要なマウントを削除する。
     3.  `app/Jobs/Ledger/OcrAndOptimizeFile.php` 内で `ocrmypdf` コマンドを `docker exec ocrmypdf ...` 形式で実行するように修正する。
+
+**詳細な実装計画:**
+
+このDooD (Docker Outside of Docker) 方式は、CI/CDパイプラインや開発環境で広く採用されている堅牢なアプローチです。
+
+**1. `docker/app/Dockerfile` の変更:**
+`queue` サービスが使用する `docker/app/Dockerfile` に Docker CLI のインストール手順を追加します。
+
+```dockerfile
+FROM sail-8.4/app
+
+# Docker CLI のインストール
+# Debian/Ubuntu ベースのイメージを想定
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
+    $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update && apt-get install -y docker-ce-cli
+
+# sail ユーザーを docker グループに追加
+# これにより、sail ユーザーが docker コマンドを実行できるようになる
+RUN usermod -aG docker sail
+
+# 不要なキャッシュをクリーンアップ
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+```
+
+**2. `docker-compose.yml` の変更:**
+`queue` サービスから `/usr/local/bin/docker` のマウントを削除します。
+
+```yaml
+  queue:
+    build:
+      context: ./docker/app
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP}'
+    image: sail-8.4/app
+    command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
+    environment:
+      WWWUSER: '${WWWUSER}'
+      LARAVEL_SAIL: 1
+      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+      XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+      IGNITION_LOCAL_SITES_PATH: '${PWD}'
+      LOG_CHANNEL: 'queue'
+    volumes:
+      - '.:/var/www/html'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      # - '/usr/local/bin/docker:/usr/local/bin/docker' # この行を削除
+    networks:
+      - sail
+    depends_on:
+      mysql:
+#        condition: service_healthy
+        condition: service_started
+      redis:
+        condition: service_started
+      tika:
+        condition: service_started
+    restart: on-failure
+```
+
+**3. 変更後の手順:**
+上記の変更をファイルに適用した後、以下の手順で動作を確認します。
+
+1.  **Dockerイメージの再ビルド:**
+    `./vendor/bin/sail build queue`
+2.  **コンテナの再起動:**
+    `./vendor/bin/sail up -d`
+3.  **`queue` コンテナ内で `docker` コマンドが実行できるか確認:**
+    `./vendor/bin/sail exec queue docker ps`
+    これにより、ホストで実行中のコンテナリストが表示されれば成功です。
+
+このアプローチは、コンテナ内でDocker CLIをインストールし、`docker.sock` を介してホストのDockerデーモンと通信するため、より堅牢で一般的なDooDの実装方法です。
 
 ---
 

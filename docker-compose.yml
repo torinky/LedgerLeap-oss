@@ -29,7 +29,7 @@ services:
         condition: service_started
   queue:
     build:
-      context: ./vendor/laravel/sail/runtimes/8.4
+      context: ./docker/app
       dockerfile: Dockerfile
       args:
         WWWGROUP: '${WWWGROUP}'
@@ -44,6 +44,7 @@ services:
       LOG_CHANNEL: 'queue'
     volumes:
       - '.:/var/www/html'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     networks:
       - sail
     depends_on:

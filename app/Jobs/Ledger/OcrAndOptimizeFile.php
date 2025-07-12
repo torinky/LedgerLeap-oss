@@ -76,7 +76,8 @@ class OcrAndOptimizeFile implements ShouldQueue
 
         // ocrmypdf コマンドの構築
         $command = [
-            'ocrmypdf', // ocrmypdfコンテナ内で実行されるため、sail exec ocrmypdf は不要
+            'docker', 'exec', 'ocrmypdf', // docker exec を使用して ocrmypdf コンテナ内で実行
+            'ocrmypdf',
             '-l', 'jpn',
             '--image-dpi', '300',
             $containerOriginalFilePath, // コンテナ内のパスを使用
