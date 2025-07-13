@@ -134,6 +134,7 @@ class OcrAndOptimizeFile implements ShouldQueue
             $this->attachedFile->path = $outputStoragePath;
             $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
             $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
+            $this->attachedFile->optimized = true; // optimized を true に設定
 
             // Debugging Storage::size() issue
             Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));

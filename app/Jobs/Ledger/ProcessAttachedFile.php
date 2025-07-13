@@ -94,6 +94,7 @@ class ProcessAttachedFile implements ShouldQueue
                 $result['meta']['content'] = $extractedText;
                 $this->attachedFile->contain_content = true;
                 $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
+                $this->attachedFile->optimized = $this->attachedFile->optimized; // optimized の値を保持
 
                 // メタデータも更新
                 if (!empty($extractedMeta->mime)) {
@@ -118,6 +119,7 @@ class ProcessAttachedFile implements ShouldQueue
                 } else {
                     // OCR対象外の場合 (ZIP, etc.): これ以上処理できないため、COMPLETED に更新して処理を正常終了
                     $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
+                    $this->attachedFile->optimized = $this->attachedFile->optimized; // optimized の値を保持
                     Log::info('File is not OCR-eligible, marking as completed: ' . $this->attachedFile->id);
                 }
             }

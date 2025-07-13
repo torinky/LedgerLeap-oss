@@ -667,4 +667,30 @@ class Show extends Component
             $this->selectedApproverId = null;
         }
     }
+
+    /**
+     * 添付ファイルの処理を再試行する
+     */
+    public function retryProcessing(int $attachedFileId): void
+    {
+        try {
+            $attachedFile = AttachedFile::findOrFail($attachedFileId);
+
+            // ステータスをPENDING_INITIAL_PROCESSINGにリセット
+            $attachedFile->status = \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING;
+            $attachedFile->save();
+
+            // ジョブを再ディスパッチ
+            \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
+
+            $this->success(__('file.status.retry_success'));
+
+        } catch (\Exception $e) {
+            Log::error("Failed to retry processing for attached file ID {$attachedFileId}: " . $e->getMessage());
+            $this->error(__('file.status.retry_failed'), $e->getMessage());
+        }
+
+        // UIを更新
+        $this->mount($this->ledgerRecord->id);
+    }
 }
