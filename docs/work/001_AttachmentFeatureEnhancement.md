@@ -503,7 +503,7 @@ graph TD
 #### 7.2. 状態管理とDBスキーマ
 
 *   **状態管理:** 新規カラムは追加せず、既存の `attached_files.status` カラムを拡張してファイルの状態を管理します。
-*   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):
+*   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):**
     *   `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `COMPLETED`, `TIKA_FAILED`, `OCR_FAILED` の状態を定義します。
 *   **オリジナルファイル保持のためのスキーマ変更:**
     *   **マイグレーション:** `attached_files` テーブルに以下のカラムを追加します。
@@ -534,32 +534,40 @@ graph TD
 
 #### 7.5. ジョブの実装詳細
 
-1.  **初期処理ジョブ (`ProcessAttachedFile.php`):
+1.  **初期処理ジョブ (`ProcessAttachedFile.php`):**
     *   `handle()` メソッド:
-        1.  `status` を `INITIAL_PROCESSING` に更新。
-        2.  Tikaでテキスト抽出を試行。
-        3.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新して処理を終了。
-        4.  **テキスト抽出失敗時:**
+        1.  **オリジナルファイルの退避:**
+            *   `ProcessAttachedFile` ジョブの開始時に、アップロードされたファイルを `storage/app/public/Ledger/Attachments/Originals/` ディレクトリに移動します。
+            *   移動したパスと元のMIMEタイプを、`attached_files` レコードの `original_file_path` と `original_mime_type` に記録し、`attachedFile` モデルの `path` も更新します。
+            *   **対応した問題:** `OcrAndOptimizeFile` ジョブがオリジナルファイルにアクセスする前に、ファイルが移動されてしまう問題を解決するため、`ProcessAttachedFile` がオリジナルファイルの退避を責任を持つように変更しました。
+        2.  `status` を `INITIAL_PROCESSING` に更新。
+        3.  Tikaでテキスト抽出を試行。
+        4.  **テキスト抽出成功時:** 抽出テキストを `Ledger` の `content_attached` にマージし、`status` を `COMPLETED` に更新して処理を終了。
+        5.  **テキスト抽出失敗時:**
             a.  `AttachedFile` モデルからファイルのMIMEタイプ (`mime_type`) を取得。
             b.  MIMEタイプが `application/pdf` または `image/*` で始まるかを確認。
-            c.  **OCR対象の場合 (PDF/画像):** `status` を `PENDING_OCR` に更新し、`OcrAndOptimizeFile` ジョブをディスパッチする。
+            c.  **OCR対象の場合 (PDF/画像):** `status` を `PENDING_OCR` に更新し、`OcrAndOptimizeFile` ジョブをディスパッチする。この際、`delay(now()->addSeconds(5))` を使用して、ジョブの実行を5秒遅延させます。
             d.  **OCR対象外の場合 (ZIP, etc.):** これ以上処理できないため、`status` を `COMPLETED` に更新して処理を正常終了させる。
-        5.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
+        6.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
+        7.  `content_attached` の更新: `Ledger` モデルの `content_attached` カラムを更新し、変更を保存します。
+        8.  `attachedFile` モデルの変更を保存します。
 
-2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):
+2.  **OCR処理ジョブ (`OcrAndOptimizeFile.php`):**
     *   `handle()` メソッド:
         1.  `status` を `OCR_PROCESSING` に更新。
         2.  **オリジナルファイルの退避:**
-            *   元のファイル（画像またはPDF）を `storage/app/Ledger/Attachments/Originals/` ディレクトリに移動します。
-            *   移動したパスと元のMIMEタイプを、`attached_files` レコードの `original_file_path` と `original_mime_type` に記録します。
+            *   `ProcessAttachedFile` ジョブで既にオリジナルファイルが `storage/app/public/Ledger/Attachments/Originals/` ディレクトリに移動されていることを前提とします。
+            *   `original_file_path` が空の場合にのみ、再度オリジナルファイルの移動を試みます。
         3.  **OCRとPDF生成の実行:**
             *   `OcrMyPDF` を実行し、**テキストレイヤーを持つ最適化済みPDF**を生成させます。入力が画像ファイルの場合も、出力はPDFとなります。
             *   生成されたPDFを、**元のファイルがあったパス** (`storage/app/public/Ledger/Attachments/`) に保存します。
+            *   **実行コマンドの詳細:** `docker exec ledgerleap-ocrmypdf-1 /app/.venv/bin/ocrmypdf -l jpn --image-dpi 300 [入力ファイルパス] [出力ファイルパス]` の形式で実行されます。
+            *   **対応した問題:** `ocrmypdf` コンテナの正確なサービス名 (`ledgerleap-ocrmypdf-1`) と、Python仮想環境内の `ocrmypdf` パス (`/app/.venv/bin/ocrmypdf`) を明示することで、コマンド実行時のパス問題を解決しました。また、日本語OCR (`-l jpn`) と画像DPI設定 (`--image-dpi 300`) を明示しました。
         4.  **レコード情報の更新:**
             *   `attached_files` レコードの `file_name` (拡張子を.pdfに)、`path`, `mime_type`, `size` を、新しく生成されたPDFの情報に更新します。
         5.  **Tikaによる再処理:**
             *   `status` を `PENDING_INITIAL_PROCESSING` に戻し、`ProcessAttachedFile` ジョブを再度ディスパッチします。これにより、最適化・テキスト化された新しいPDFファイルから、一貫した方法でテキストが抽出され `content_attached` に反映されます。
-        6.  **失敗時:** `status` を `OCR_FAILED` に更新します。オリジナルファイルの退避処理は行いません。
+        6.  **失敗時:** `status` を `OCR_FAILED` に更新します。
 
 ---
 
