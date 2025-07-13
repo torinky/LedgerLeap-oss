@@ -240,7 +240,7 @@ class ColumnHtmlService
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
 <div class="tooltip" data-tip="{$attachment->status->tooltip()}">
-    <x-mary-icon name="{$attachment->status->icon()}" class="{$attachment->status->colorClass()} mr-1" />
+    <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} mr-1"></i>
 </div>
 HTML;
 
@@ -248,7 +248,7 @@ HTML;
                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED || $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
                     $retryIconHtml = <<<HTML
 <div class="tooltip" data-tip="再試行">
-    <x-mary-icon name="o-arrow-path" class="cursor-pointer text-blue-500 ml-1" wire:click="retryProcessing({$attachment->id})" />
+    <i class="fa-solid fa-arrow-rotate-right cursor-pointer text-blue-500 ml-1" wire:click="retryProcessing({$attachment->id})"></i>
 </div>
 HTML;
                 }
@@ -275,7 +275,7 @@ HTML;
                 $auxiliaryLinksHtml = <<<HTML
 <div class="flex items-center text-xs text-gray-500 mt-1">
     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data-tip="テキスト付きPDFをダウンロード">
-        <x-mary-icon name="o-file-pdf" class="w-4 h-4" /><i class="fas fa-file-pdf ml-1"></i>
+        <i class="fa-solid fa-file-pdf w-4 h-4"></i>
     </a>
 </div>
 HTML;
@@ -285,7 +285,7 @@ HTML;
                 $auxiliaryLinksHtml = <<<HTML
 <div class="flex items-center text-xs text-gray-500 mt-1">
     <a href="{$originalDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data-tip="オリジナルPDFをダウンロード">
-        <x-mary-icon name="o-file" class="w-4 h-4" />
+        <i class="fa-solid fa-file w-4 h-4"></i>
     </a>
 </div>
 HTML;
@@ -313,8 +313,8 @@ HTML;
                     $files[] = <<<HTML
 <div class="flex items-center mx-1 my-1 py-2">
     {$statusIconHtml}
-    <a href="{$mainDownloadUrl}" target="_blank" class="badge {$hitClass} opacity-70 hover:opacity-100 py-4">
-        <i class="fas fa-file mr-2"></i> {$originalFilename}
+    <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost {$hitClass} opacity-70 hover:opacity-100">
+        <i class="fa-solid fa-file mr-2"></i> {$originalFilename}
     </a>
     {$retryIconHtml}
 </div>

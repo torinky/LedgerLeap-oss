@@ -24,18 +24,18 @@ enum AttachedFileStatus: string
     public function icon(): string
     {
         return match ($this) {
-            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'o-clock',
-            self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'o-cog-6-tooth',
-            self::COMPLETED => 'o-check-circle',
-            self::TIKA_FAILED, self::OCR_FAILED => 'o-exclamation-triangle',
+            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'fa-solid fa-clock',
+            self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'fa-solid fa-gear',
+            self::COMPLETED => 'fa-solid fa-circle-check',
+            self::TIKA_FAILED, self::OCR_FAILED => 'fa-solid fa-triangle-exclamation',
             // 既存のステータス
-            self::UPLOADED => 'o-arrow-up-tray',
-            self::OPTIMIZED => 'o-check-circle',
-            self::OPTIMIZING => 'o-cog-6-tooth',
-            self::OPTIMIZE_FAILED => 'o-exclamation-triangle',
-            self::EXTRACTED_AND_SAVED => 'o-check-circle',
-            self::EXTRACTION_FAILED => 'o-exclamation-triangle',
-            self::EXTRACTING => 'o-cog-6-tooth',
+            self::UPLOADED => 'fa-solid fa-cloud-arrow-up',
+            self::OPTIMIZED => 'fa-solid fa-circle-check',
+            self::OPTIMIZING => 'fa-solid fa-gear',
+            self::OPTIMIZE_FAILED => 'fa-solid fa-triangle-exclamation',
+            self::EXTRACTED_AND_SAVED => 'fa-solid fa-circle-check',
+            self::EXTRACTION_FAILED => 'fa-solid fa-triangle-exclamation',
+            self::EXTRACTING => 'fa-solid fa-gear',
         };
     }
 
