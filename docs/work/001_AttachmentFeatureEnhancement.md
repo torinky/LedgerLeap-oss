@@ -469,6 +469,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ---
 
 #### 7.2. アーキテクチャ概要図
+*   **状態:** 完了
+*   **結果:** 添付ファイル処理の非同期アーキテクチャ（Tikaによる初期処理、OCR処理、状態遷移、エラーハンドリングを含む）が設計され、実装が完了しました。
 
 ```mermaid
 graph TD
@@ -501,6 +503,8 @@ graph TD
 ```
 
 #### 7.2. 状態管理とDBスキーマ
+*   **状態:** 完了
+*   **結果:** `attached_files` テーブルへの `original_file_path` と `original_mime_type` カラムの追加、および `AttachedFileStatus` Enumの拡張が完了しました。これにより、OCR処理の状態管理とオリジナルファイルの追跡が可能になりました。
 
 *   **状態管理:** 新規カラムは追加せず、既存の `attached_files.status` カラムを拡張してファイルの状態を管理します。
 *   **Enumの拡張 (`app/Enums/AttachedFileStatus.php`):**
@@ -511,11 +515,15 @@ graph TD
         *   `original_mime_type`: `string`, nullable. オリジナルファイルのMIMEタイプ。
 
 #### 7.3. Tikaテキスト抽出失敗の判定条件
+*   **状態:** 完了
+*   **結果:** Tikaによるテキスト抽出が空文字列を返す場合に「テキスト抽出失敗」と判断するロジックが実装されました。
 
 *   **背景:** 既存の `app/Jobs/Ledger/AttachedFileScanJob.php` に見られるように、システムは `vaites/php-apache-tika` ライブラリの `getText()` メソッドを利用してファイルから本文テキストを抽出します。
 *   **判定条件:** `getText()` メソッドが返す文字列を `trim()` した結果が、空文字列 (`''`) になる場合を「テキストが抽出できなかった」と判断します。
 
 #### 7.4. `content_attached` の構造と更新方針
+*   **状態:** 完了
+*   **結果:** `content_attached` カラムがJSON形式の配列として扱われ、各ジョブがこの構造に従ってテキスト情報をマージ・更新する方針が確立され、実装されました。これにより、OCRで抽出されたテキストが正しく台帳データに反映されるようになりました。
 
 *   **構造:** `content_attached` カラムは、`{カラムID: {ファイルハッシュ名: {meta: {content: "..."}}}}` という構造のJSONです。
     ```json
