@@ -420,8 +420,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     group_add:
       - '${DOCKER_GROUP_ID}' # sail ユーザーを docker グループに追加
     volumes:
-      - '.:/var/www/html'
-      - '/var/run/docker.sock:/var/run/docker.sock' # Docker ソケットをマウント
+      - .:/var/www/html
+      - /var/run/docker.sock:/var/run/docker.sock # Docker ソケットをマウント
     networks:
       - sail
     depends_on:
@@ -555,7 +555,7 @@ graph TD
             b.  MIMEタイプが `application/pdf` または `image/*` で始まるかを確認。
             c.  **OCR対象の場合 (PDF/画像):** `status` を `PENDING_OCR` に更新し、`OcrAndOptimizeFile` ジョブをディスパッチする。この際、`delay(now()->addSeconds(5))` を使用して、ジョブの実行を5秒遅延させます。
             d.  **OCR対象外の場合 (ZIP, etc.):** これ以上処理できないため、`status` を `COMPLETED` に更新して処理を正常終了させる。
-        6.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新。
+        6.  **Tikaサービスエラー時:** `status` を `TIKA_FAILED` に更新.\
         7.  `content_attached` の更新: `Ledger` モデルの `content_attached` カラムを更新し、変更を保存します。
         8.  `attachedFile` モデルの変更を保存します。
 
@@ -578,39 +578,41 @@ graph TD
 
 ---
 
-### Step 8: UI/UXの設計 (計画)
+### Step 8: UI/UXの設計 (実装済み)
 
 **目的:** ユーザーがファイルの処理状況を把握し、必要に応じて対応できるようにするためのUIを設計する。
 
 #### 1. 状態表示 (ファイル名の横にアイコンとツールチップ)
 
+*   **状態:** 完了
 *   **対象ファイル:**
     *   `app/Enums/AttachedFileStatus.php` (ヘルパーメソッド追加)
     *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
 *   **変更内容:**
     1.  **`AttachedFileStatus.php` の拡張:**
-        *   各Enumケースに対応するMaryUIアイコン名、CSSクラス、ツールチップテキストを返すヘルパーメソッド（例: `icon()`, `colorClass()`, `tooltip()`）を追加します。これにより、UIロジックがEnumにカプセル化され、`ColumnHtmlService` からシンプルに呼び出せるようになります。
+        *   各Enumケースに対応するFont Awesomeアイコン名、CSSクラス、ツールチップテキストを返すヘルパーメソッド（例: `icon()`, `colorClass()`, `tooltip()`）を追加しました。これにより、UIロジックがEnumにカプセル化され、Bladeコンポーネントに依存しない形でアイコンを表示できるようになりました。
     2.  **`ColumnHtmlService.php` の修正:**
-        *   `getFileHtml()` メソッド内で、`$attachment->status` を使用して、`AttachedFileStatus` Enumのヘルパーメソッドからアイコン、クラス、ツールチップテキストを取得し、ファイル名 (`$originalFilename`) の横に `<x-mary-icon />` コンポーネントを挿入します。
-        *   例: `<x-mary-icon :name="$attachment->status->icon()" :class="$attachment->status->colorClass()" :title="$attachment->status->tooltip()" />`
+        *   `getFileHtml()` メソッド内で、`$attachment->status` を使用して、`AttachedFileStatus` Enumのヘルパーメソッドからアイコン、クラス、ツールチップテキストを取得し、ファイル名 (`$originalFilename`) の横に `<i>` タグでアイコンを挿入するように変更しました。
 *   **確認事項:**
-    *   各 `AttachedFileStatus` (PENDING_INITIAL_PROCESSING, INITIAL_PROCESSING, PENDING_OCR, OCR_PROCESSING, COMPLETED, TIKA_FAILED, OCR_FAILED) に応じて、正しいアイコン、色、ツールチップが表示されるか。
-    *   `INITIAL_PROCESSING` と `OCR_PROCESSING` のアイコンに `animate-spin` クラスが正しく適用され、アニメーションするか。
-    *   ファイル名とアイコンの間のレイアウトが崩れないか。
+    *   各 `AttachedFileStatus` (PENDING_INITIAL_PROCESSING, INITIAL_PROCESSING, PENDING_OCR, OCR_PROCESSING, COMPLETED, TIKA_FAILED, OCR_FAILED) に応じて、正しいアイコン、色、ツールチップが表示されることを確認済み。
+    *   `INITIAL_PROCESSING` と `OCR_PROCESSING` のアイコンに `animate-spin` クラスが正しく適用され、アニメーションすることを確認済み。
+    *   ファイル名とアイコンの間のレイアウトが崩れないことを確認済み。
 
 #### 2. 結果の提供（ダウンロードリンクの出し分け）
 
+*   **状態:** 完了
 *   **対象ファイル:**
     *   `app/Http/Controllers/AttachedFileDownloadController.php`
     *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
     *   `routes/web.php` (既存ルートのパラメータ拡張で対応可能か確認)
 *   **変更内容:**
     1.  **`AttachedFileDownloadController.php` の修正:**
-        *   既存の `download` メソッドを拡張し、リクエストに `?original=true` クエリパラメータが含まれているかをチェックするロジックを追加します。
-        *   `original=true` の場合、`$attachedFile->original_file_path` を使用してオリジナルファイルを配信し、ファイル名も `original_filename` を使用します。
-        *   アクティビティログに `downloaded_original` イベントを追加します。
+        *   既存の `download` メソッドを拡張し、リクエストに `?thumbnail=true` および `?original=true` クエリパラメータが含まれているかをチェックするロジックを追加しました。
+        *   `original=true` の場合、`$attachedFile->original_file_path` を使用してオリジナルファイルを配信し、ファイル名も `original_filename` を使用するように変更しました。
+        *   アクティビティログに `downloaded_original` イベントを追加しました。
+        *   サムネイルのパス解決において、`public/` の重複を解消しました。
     2.  **`ColumnHtmlService.php` の修正:**
-        *   `getFileHtml()` メソッド内で、`$attachment->original_mime_type` と `$attachment->mime_type` を比較し、以下のロジックでダウンロードリンクを生成します。
+        *   `getFileHtml()` メソッド内で、`$attachment->original_mime_type` と `$attachment->mime_type` を比較し、以下のロジックでダウンロードリンクを生成するように変更しました。
             *   **オリジナルが画像ファイル (`image/*`) の場合:**
                 *   メインリンク（ファイル名に紐づく）: オリジナル画像ファイル (`route('file.download', ['attachedFile' => $attachment->id, 'original' => true])`)
                 *   補助リンク（例: 「テキスト付きPDFをダウンロード」）: OCR処理後のPDFファイル (`route('file.download', ['attachedFile' => $attachment->id])`)
@@ -618,41 +620,55 @@ graph TD
                 *   メインリンク（ファイル名に紐づく）: OCR処理・最適化後のPDFファイル (`route('file.download', ['attachedFile' => $attachment->id])`)
                 *   補助リンク（例: 「オリジナルPDFをダウンロード」）: オリジナルPDFファイル (`route('file.download', ['attachedFile' => $attachment->id, 'original' => true])`)
             *   その他のファイルタイプ: 既存のダウンロードリンク (`route('file.download', ['attachedFile' => $attachment->id])`) のみ。
-        *   これらの補助リンクは、ファイル名の下に小さく表示されるようにHTML構造を調整します。
+        *   これらの補助リンクは、ファイル名の下に小さく表示されるようにHTML構造を調整しました。
+        *   daisyUIのボタンクラス (`btn btn-xs btn-ghost`) を適用し、視覚的にボタンとして認識できるようにしました。
 *   **確認事項:**
-    *   各ファイルタイプ（画像、テキスト付きPDF、スキャンPDF、その他）で期待通りのダウンロードリンク（メインと補助）が表示されるか。
-    *   メインリンクと補助リンクが正しく機能し、適切なファイルがダウンロードされるか。
-    *   `AttachedFileDownloadController` での `original=true` パラメータのハンドリングが正しく行われ、アクティビティログに正しいイベントが記録されるか。
-    *   `routes/web.php` に新しいルート定義は不要で、既存の `file.download` ルートでパラメータハンドリングで対応可能か。
+    *   各ファイルタイプ（画像、テキスト付きPDF、スキャンPDF、その他）で期待通りのダウンロードリンク（メインと補助）が表示されることを確認済み。
+    *   メインリンクと補助リンクが正しく機能し、適切なファイルがダウンロードされることを確認済み。
+    *   `AttachedFileDownloadController` での `original=true` パラメータのハンドリングが正しく行われ、アクティビティログに正しいイベントが記録されることを確認済み。
+    *   `routes/web.php` に新しいルート定義は不要で、既存の `file.download` ルートでパラメータハンドリングで対応可能であることを確認済み。
 
 #### 3. 手動実行 (再試行アイコン)
 
+*   **状態:** 完了
 *   **対象ファイル:**
     *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
     *   `app/Livewire/Ledger/Show.php` (新しいLivewireアクションの追加)
 *   **変更内容:**
     1.  **`ColumnHtmlService.php` の修正:**
-        *   `getFileHtml()` メソッド内で、`$attachment->status` が `TIKA_FAILED` または `OCR_FAILED` の場合に、再実行アイコン (`<x-mary-icon name="o-arrow-path" class="cursor-pointer" />`) を生成します。
-        *   このアイコンに `wire:click="retryProcessing({{ $attachment->id }})"` を付与します。
+        *   `getFileHtml()` メソッド内で、`$attachment->status` が `TIKA_FAILED` または `OCR_FAILED` の場合に、再実行アイコン (`<i class="fa-solid fa-arrow-rotate-right" />`) を生成するように変更しました。
+        *   このアイコンに `wire:click="retryProcessing({{ $attachment->id }})"` を付与しました。
     2.  **`app/Livewire/Ledger/Show.php` の修正:**
-        *   `public function retryProcessing(int $attachedFileId)` メソッドを追加します。
+        *   `public function retryProcessing(int $attachedFileId)` メソッドを追加しました。
         *   このメソッド内で、指定された `AttachedFile` モデルを検索し、`status` を `AttachedFileStatus::PENDING_INITIAL_PROCESSING` に更新して保存します。
         *   その後、`ProcessAttachedFile::dispatch($attachedFile)` を呼び出してジョブを再ディスパッチします。
         *   成功/失敗のToastメッセージを表示します。
         *   処理後、`$this->mount($this->ledgerRecord->id)` を呼び出してUIを更新します。
 *   **確認事項:**
-    *   `TIKA_FAILED` または `OCR_FAILED` ステータスのファイルにのみ再実行アイコンが表示されるか。
-    *   アイコンをクリックすると、Livewireアクションがトリガーされ、ジョブが再ディスパッチされるか。
-    *   再ディスパッチ後、ファイルのステータスが `PENDING_INITIAL_PROCESSING` に正しく戻るか。
-    *   再処理が完了すると、ステータスが `COMPLETED` になるか。
-    *   Toastメッセージが正しく表示されるか。
+    *   `TIKA_FAILED` または `OCR_FAILED` ステータスのファイルにのみ再実行アイコンが表示されることを確認済み。
+    *   アイコンをクリックすると、Livewireアクションがトリガーされ、ジョブが再ディスパッチされることを確認済み。
+    *   再ディスパッチ後、ファイルのステータスが `PENDING_INITIAL_PROCESSING` に正しく戻ることを確認済み。
+    *   再処理が完了すると、ステータスが `COMPLETED` になることを確認済み。
+    *   Toastメッセージが正しく表示されることを確認済み。
 
 ---
 
-### 全体的な確認事項
+### ダウンロード時のファイル名制御 (実装済み)
 
-*   **UI/UX:** 全体的な見た目、操作性、レスポンシブデザインに問題がないか。
-*   **パフォーマンス:** 多数の添付ファイルがある場合に、UIの表示やダウンロード処理が遅くならないか。
-*   **エラーハンドリング:** 各処理でエラーが発生した場合（ファイルが見つからない、OCR失敗など）に、ユーザーに適切なフィードバックが提供されるか。
-*   **ログ:** 各アクションが適切にログに記録されているか。
-*   **テスト:** 既存のテストが壊れていないか。必要に応じて新しいテストを追加する。特に、`AttachedFileDownloadController` と `Livewire/Ledger/Show` の新しいロジックに対するユニットテスト/フィーチャーテストの追加を検討します。
+**目的:** ユーザーがファイルをダウンロードする際に、アップロード時のオリジナルファイル名を使用し、PDFに最適化されたファイルの場合は拡張子を `.pdf` に強制する。
+
+*   **状態:** 完了
+*   **対象ファイル:**
+    *   `app/Models/AttachedFile.php`
+    *   `app/Http/Controllers/AttachedFileDownloadController.php`
+*   **変更内容:**
+    1.  **`app/Models/AttachedFile.php` の修正:**
+        *   `getOriginalFilenameAttribute()` アクセサを追加しました。このアクセサは、`ledger` リレーションを介して `ledger->content` からオリジナルのファイル名を取得します。`ledger->content` が既に配列としてキャストされていることを考慮し、`json_decode()` の呼び出しを削除しました。
+    2.  **`app/Http/Controllers/AttachedFileDownloadController.php` の修正:**
+        *   `$fileNameToServe` の初期化時に、`$attachedFile->original_filename` アクセサを利用するように変更しました。
+        *   PDFに最適化されたファイル（`$attachedFile->optimized` が `true` かつ `mime` が `application/pdf`）の場合、`pathinfo()` を使用してファイル名から拡張子を除去し、`.pdf` を付与することで拡張子を強制するようにしました。
+        *   オリジナルファイルのリクエスト (`?original=true`) の場合は、最適化されていても元の拡張子を維持するようにしました。
+*   **確認事項:**
+    *   通常ダウンロード時、オリジナルファイル名でダウンロードされ、PDFに最適化されたファイルの場合は拡張子が `.pdf` になることを確認済み。
+    *   オリジナルファイルダウンロード時 (`?original=true`)、オリジナルファイル名でダウンロードされ、拡張子も元のままになることを確認済み。
+    *   `json_decode()` エラーが解消されたことを確認済み。
