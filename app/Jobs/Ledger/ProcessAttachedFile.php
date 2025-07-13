@@ -39,28 +39,37 @@ class ProcessAttachedFile implements ShouldQueue
 
         // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
         $originalDir = 'public/Ledger/Attachments/Originals/';
-        $newOriginalPath = $originalDir . basename($this->attachedFile->path);
+        $currentFilePath = str_replace('public/', '', $this->attachedFile->path);
 
-        try {
-            // ファイルが既に移動済みでないか確認
-            if (!Storage::disk('public')->exists(str_replace('public/', '', $this->attachedFile->path))) {
-                Log::error('Original file not found for moving in ProcessAttachedFile: ' . $this->attachedFile->path);
+        // original_file_path が設定されていない場合のみ、ファイルをOriginalsに移動
+        if (empty($this->attachedFile->original_file_path)) {
+            $newOriginalPath = $originalDir . basename($currentFilePath);
+            try {
+                if (!Storage::disk('public')->exists($currentFilePath)) {
+                    Log::error('Original file not found for moving in ProcessAttachedFile: ' . $currentFilePath);
+                    $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
+                    return;
+                }
+
+                Storage::disk('public')->move($currentFilePath, str_replace('public/', '', $newOriginalPath));
+                $updateData = [
+                    'path' => str_replace('public/', '', $newOriginalPath), // path も更新
+                    'original_file_path' => str_replace('public/', '', $newOriginalPath),
+                    'original_mime_type' => $this->attachedFile->mime,
+                ];
+                $this->attachedFile->update($updateData);
+                $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
+                Log::info('Original file moved to: ' . $newOriginalPath);
+            } catch (\Exception $e) {
+                Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
                 $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
                 return;
             }
-
-            Storage::disk('public')->move(str_replace('public/', '', $this->attachedFile->path), str_replace('public/', '', $newOriginalPath));
-            $this->attachedFile->update([
-                'original_file_path' => str_replace('public/', '', $newOriginalPath),
-                'original_mime_type' => $this->attachedFile->mime,
-                'path' => str_replace('public/', '', $newOriginalPath), // path も更新
-            ]);
-            $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
-            Log::info('Original file moved to: ' . $newOriginalPath);
-        } catch (\Exception $e) {
-            Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
-            $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
-            return;
+        } else {
+            // original_file_path が設定されている場合、ファイルは既にOriginalsにあるか、
+            // OCR処理後のファイルがAttachmentsにあるはずなので、移動は不要。
+            // ここでは何もしない。
+            Log::info('File already processed or moved, skipping initial move in ProcessAttachedFile for file: ' . $this->attachedFile->id);
         }
 
         // 2. status を INITIAL_PROCESSING に更新
