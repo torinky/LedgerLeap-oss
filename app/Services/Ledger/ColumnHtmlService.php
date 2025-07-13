@@ -212,6 +212,24 @@ class ColumnHtmlService
         return $this;
     }
 
+    private function getFileIconClass(string $filename): string
+    {
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        return match (strtolower($extension)) {
+            'pdf' => 'fa-solid fa-file-pdf',
+            'doc', 'docx' => 'fa-solid fa-file-word',
+            'xls', 'xlsx' => 'fa-solid fa-file-excel',
+            'ppt', 'pptx' => 'fa-solid fa-file-powerpoint',
+            'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz' => 'fa-solid fa-file-archive', // Added more archive types
+            'txt', 'log', 'md', 'csv' => 'fa-solid fa-file-lines', // Added more text types
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff' => 'fa-solid fa-file-image', // Added more image types
+            'mp3', 'wav', 'ogg', 'flac' => 'fa-solid fa-file-audio', // Audio
+            'mp4', 'avi', 'mov', 'wmv', 'flv' => 'fa-solid fa-file-video', // Video
+            'html', 'htm', 'xml', 'json', 'js', 'ts', 'php', 'py', 'java', 'c', 'cpp', 'h', 'hpp' => 'fa-solid fa-file-code', // Code/Web
+            default => 'fa-solid fa-file',
+        };
+    }
+
     /**
      * @return string
      */
@@ -293,39 +311,36 @@ HTML;
 
             Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' . $auxiliaryLinksHtml); // Debug output
 
-//            if (Storage::disk('public')->exists('Ledger/thumbs/' . basename($hashedFilename))) {
-                if (Storage::disk('public')->exists('Ledger/thumbs/' . basename($hashedFilename))) {
-                    $thumbnails[] = <<<HTML
+            $contentHtml = '';
+            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]->meta->content)) {
+                $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
+                $contentHtml = <<<HTML
+<div class="tooltip" data-tip="{$content}">
+HTML;
+            }
+
+            if (str_starts_with($attachment->original_mime_type, 'image/')) {
+                $thumbnails[] = <<<HTML
     <div class="flex flex-col items-center mx-1 my-1">
+        {$contentHtml}
         <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
         {$auxiliaryLinksHtml}
     </div>
 HTML;
-                } else {
-                    $contentHtml = '';
-                    if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]->meta->content)) {
-                        $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
-                        $contentHtml = <<<HTML
-<div class="tooltip" data-tip="{$content}">
-HTML;
-                    }
-
-                    $files[] = <<<HTML
+            } else {
+                $files[] = <<<HTML
 <div class="flex items-center mx-1 my-1 py-2">
+    {$contentHtml}
     {$statusIconHtml}
-    <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost {$hitClass} opacity-70 hover:opacity-100">
-        <i class="fa-solid fa-file mr-2"></i> {$originalFilename}
+    <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost {$hitClass} opacity-70 hover:opacity-100 flex flex-col items-center">
+        <i class="{$this->getFileIconClass($originalFilename)} fa-3x mb-2"></i>
+        <span>{$originalFilename}</span>
     </a>
     {$retryIconHtml}
 </div>
 {$auxiliaryLinksHtml}
 HTML;
-
-                    if (!empty($contentHtml)) {
-                        $files[count($files) - 1] = $contentHtml . $files[count($files) - 1] . '</div>'; // Tooltip div close
-                    }
-                }
-//            }
+            }
         }
         if (!empty($thumbnails)) {
             $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center;">' . implode('', $thumbnails) . '</div>';
