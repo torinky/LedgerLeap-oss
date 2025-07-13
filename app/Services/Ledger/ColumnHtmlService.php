@@ -257,20 +257,22 @@ class ColumnHtmlService
             // Check if $attachment->status is an instance of AttachedFileStatus enum
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
-<div class="tooltip" data-tip="{$attachment->status->tooltip()}">
-    <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} mr-1"></i>
-</div>
-HTML;
+ <div class="tooltip" data-tip="{$attachment->status->tooltip()}">
+     <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} mr-1"></i>
+ </div>
+ HTML;
 
-                // Add retry icon if status is FAILED
-                if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED || $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
-                    $retryIconHtml = <<<HTML
-<div class="tooltip" data-tip="再試行">
-    <i class="fa-solid fa-arrow-rotate-right cursor-pointer text-blue-500 ml-1" wire:click="retryProcessing({$attachment->id})"></i>
-</div>
-HTML;
-                }
-            }
+                 // Add retry icon if status is FAILED
+                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
+                     $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
+                     $retryIconHtml = <<<HTML
+ <div class="tooltip" data-tip="再試行">
+     <i class="fa-solid fa-arrow-rotate-right cursor-pointer text-blue-500 ml-1" wire:click="
+ retryProcessing({$attachment->id})"></i>
+ </div>
+ HTML;
+                 }
+             }
 
             $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
@@ -278,11 +280,14 @@ HTML;
             // メインのダウンロードURL (OCR処理後のファイルまたはオリジナルファイル)
             $mainDownloadUrl = route('file.download', ['attachedFile' => $attachment->id]);
             // サムネイルURL
-            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id,
+                'thumbnail' => 'true']);
 
             // ダウンロードリンクの出し分けに必要なURLを事前に定義
-            $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id, 'original' => true]);
-            $optimizedPdfDownloadUrl = route('file.download', ['attachedFile' => $attachment->id]); // OCR処理後のPDF
+            $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id,
+                'original' => true]);
+            $optimizedPdfDownloadUrl = route('file.download', ['attachedFile' => $attachment
+                ->id]); // OCR処理後のPDF
 
             $auxiliaryLinksHtml = '';
 
@@ -291,63 +296,82 @@ HTML;
                 // オリジナルが画像の場合：メインはオリジナル画像、補助はOCR後PDF
                 $mainDownloadUrl = $originalDownloadUrl; // Main link is original image
                 $auxiliaryLinksHtml = <<<HTML
-<div class="flex items-center text-xs text-gray-500 mt-1">
-    <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data-tip="テキスト付きPDFをダウンロード">
-        <i class="fa-solid fa-file-pdf w-4 h-4"></i>
-    </a>
-</div>
-HTML;
-            } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment->optimized) {
+ <div class="flex items-center text-xs text-gray-500 mt-1">
+     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" 
+ data-tip="テキスト付きPDFをダウンロード">
+         <i class="fa-solid fa-file-pdf w-4 h-4"></i>
+     </a>
+ </div>
+ HTML;
+            } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment
+                    ->optimized) {
                 // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
                 $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
                 $auxiliaryLinksHtml = <<<HTML
-<div class="flex items-center text-xs text-gray-500 mt-1">
-    <a href="{$originalDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data-tip="オリジナルPDFをダウンロード">
-        <i class="fa-solid fa-file w-4 h-4"></i>
-    </a>
-</div>
-HTML;
+ <div class="flex items-center text-xs text-gray-500 mt-1">
+     <a href="{$originalDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data
+ -tip="オリジナルPDFをダウンロード">
+         <i class="fa-solid fa-file w-4 h-4"></i>
+     </a>
+ </div>
+ HTML;
             }
 
-            Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' . $auxiliaryLinksHtml); // Debug output
+            Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' .
+                $auxiliaryLinksHtml); // Debug output
 
-            $contentHtml = '';
-            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]->meta->content)) {
+            $contentHtmlStart = '';
+            $contentHtmlEnd = '';
+//            dd($this->attachmentContents, $hashedFilename);
+            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this
+                        ->attachmentContents[$hashedFilename]->meta->content)) {
                 $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
-                $contentHtml = <<<HTML
-<div class="tooltip" data-tip="{$content}">
-HTML;
+                $contentHtmlStart = <<<HTML
+ <div class="tooltip" data-tip="{$content}">
+ HTML;
+
+                $contentHtmlEnd = <<<HTML
+ </div>
+ HTML;
+
             }
 
-            if (str_starts_with($attachment->original_mime_type, 'image/')) {
+            // 画像ファイルでサムネイルが存在する場合
+            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk(
+                    'public')->exists('Ledger/thumbs/' . basename($hashedFilename))) {
                 $thumbnails[] = <<<HTML
-    <div class="flex flex-col items-center mx-1 my-1">
-        {$contentHtml}
-        <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {$hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
-        {$auxiliaryLinksHtml}
-    </div>
-HTML;
-            } else {
+ {$contentHtmlStart}
+     <div class="flex flex-col items-center mx-1 my-1">
+         <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
+ $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
+         {$auxiliaryLinksHtml}
+     </div>
+ {$contentHtmlEnd}
+ HTML;
+            } else { // 画像ファイルだがサムネイルがない場合、または画像以外のファイルの場合
                 $files[] = <<<HTML
-<div class="flex items-center mx-1 my-1 py-2">
-    {$contentHtml}
-    {$statusIconHtml}
-    <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost {$hitClass} opacity-70 hover:opacity-100 flex flex-col items-center">
-        <i class="{$this->getFileIconClass($originalFilename)} fa-3x mb-2"></i>
-        <span>{$originalFilename}</span>
-    </a>
-    {$retryIconHtml}
-</div>
-{$auxiliaryLinksHtml}
-HTML;
+ {$contentHtmlStart}
+ <div class="flex items-center mx-1 my-1 py-2">
+     {$statusIconHtml}
+     <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
+ opacity-70 hover:opacity-100 flex flex-col items-center py-10">
+         <i class="{$this->getFileIconClass($originalFilename)} fa-3x mb-2"></i>
+         <span>{$originalFilename}</span>
+     </a>
+     {$retryIconHtml}
+ </div>
+ {$contentHtmlEnd}
+ {$auxiliaryLinksHtml}
+ HTML;
             }
         }
-        if (!empty($thumbnails)) {
-            $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center;">' . implode('', $thumbnails) . '</div>';
-        }
-        if (!empty($files)) {
+//        if (!empty($thumbnails)) {
+            $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center;">' .
+                implode('', $thumbnails).implode('', $files) . '</div>';
+//        }
+/*        if (!empty($files)) {
             $html .= implode('', $files);
-        }
+        }*/
 
         return $html;
     }
