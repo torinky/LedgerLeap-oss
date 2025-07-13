@@ -582,22 +582,77 @@ graph TD
 
 **目的:** ユーザーがファイルの処理状況を把握し、必要に応じて対応できるようにするためのUIを設計する。
 
-*   **状態表示:**
-    *   **実装:** `AttachedFile` の `status` に応じて、ファイル名の横にMaryUIの `<x-mary-icon />` をツールチップ付きで表示します。
-        *   `PENDING_...`: `<x-mary-icon name="o-clock" title="処理待ちです" />`
-        *   `..._PROCESSING`: `<x-mary-icon name="o-cog-6-tooth" class="animate-spin" title="処理中です..." />`
-        *   `COMPLETED`: `<x-mary-icon name="o-check-circle" class="text-success" title="処理完了" />`
-        *   `TIKA_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-warning" title="テキスト抽出に失敗しました。クリックで再試行できます。" />`
-        *   `OCR_FAILED`: `<x-mary-icon name="o-exclamation-triangle" class="text-error" title="OCR処理に失敗しました。クリックで再試行できます。" />`
-*   **結果の提供（ダウンロード）:**
-    *   **実装方針:** ダウンロードリンクの挙動は、`ColumnHtmlService` 内で、ファイルの `original_mime_type` を基に動的に決定します。
-    *   **オリジナルが画像ファイルの場合:**
-        *   メインのダウンロードリンク（ファイル名）は、**オリジナル画像ファイル**をダウンロードするよう設定します（例: `downloadOriginal` アクションを指す）。
-        *   補助リンクとして「テキスト付きPDFをダウンロード」を表示し、こちらはOCR処理後のPDFをダウンロードさせます。
-    *   **オリジナルがPDFファイルの場合:**
-        *   メインのダウンロードリンクは、**OCR処理・最適化後のPDF**をダウンロードするよう設定します。
-        *   補助リンクとして「オリジナルPDFをダウンロード」を表示します。
-    *   **コントローラー:** 上記のダウンロード種別を処理するため、`AttachedFileDownloadController` に `downloadOriginal` アクションを追加するか、既存の `download` アクションをパラメータで拡張する必要があります。
-*   **手動実行:**
-    *   `status` が `TIKA_FAILED` または `OCR_FAILED` のファイルにのみ、再実行アイコン `<x-mary-icon name="o-arrow-path" class="cursor-pointer" />` を表示します。
-    *   このアイコンはLivewireアクション (`retryProcessing($id)`) をトリガーし、対象ファイルの `status` を `PENDING_INITIAL_PROCESSING` にリセットして、`ProcessAttachedFile` ジョブを再度ディスパッチします。
+#### 1. 状態表示 (ファイル名の横にアイコンとツールチップ)
+
+*   **対象ファイル:**
+    *   `app/Enums/AttachedFileStatus.php` (ヘルパーメソッド追加)
+    *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
+*   **変更内容:**
+    1.  **`AttachedFileStatus.php` の拡張:**
+        *   各Enumケースに対応するMaryUIアイコン名、CSSクラス、ツールチップテキストを返すヘルパーメソッド（例: `icon()`, `colorClass()`, `tooltip()`）を追加します。これにより、UIロジックがEnumにカプセル化され、`ColumnHtmlService` からシンプルに呼び出せるようになります。
+    2.  **`ColumnHtmlService.php` の修正:**
+        *   `getFileHtml()` メソッド内で、`$attachment->status` を使用して、`AttachedFileStatus` Enumのヘルパーメソッドからアイコン、クラス、ツールチップテキストを取得し、ファイル名 (`$originalFilename`) の横に `<x-mary-icon />` コンポーネントを挿入します。
+        *   例: `<x-mary-icon :name="$attachment->status->icon()" :class="$attachment->status->colorClass()" :title="$attachment->status->tooltip()" />`
+*   **確認事項:**
+    *   各 `AttachedFileStatus` (PENDING_INITIAL_PROCESSING, INITIAL_PROCESSING, PENDING_OCR, OCR_PROCESSING, COMPLETED, TIKA_FAILED, OCR_FAILED) に応じて、正しいアイコン、色、ツールチップが表示されるか。
+    *   `INITIAL_PROCESSING` と `OCR_PROCESSING` のアイコンに `animate-spin` クラスが正しく適用され、アニメーションするか。
+    *   ファイル名とアイコンの間のレイアウトが崩れないか。
+
+#### 2. 結果の提供（ダウンロードリンクの出し分け）
+
+*   **対象ファイル:**
+    *   `app/Http/Controllers/AttachedFileDownloadController.php`
+    *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
+    *   `routes/web.php` (既存ルートのパラメータ拡張で対応可能か確認)
+*   **変更内容:**
+    1.  **`AttachedFileDownloadController.php` の修正:**
+        *   既存の `download` メソッドを拡張し、リクエストに `?original=true` クエリパラメータが含まれているかをチェックするロジックを追加します。
+        *   `original=true` の場合、`$attachedFile->original_file_path` を使用してオリジナルファイルを配信し、ファイル名も `original_filename` を使用します。
+        *   アクティビティログに `downloaded_original` イベントを追加します。
+    2.  **`ColumnHtmlService.php` の修正:**
+        *   `getFileHtml()` メソッド内で、`$attachment->original_mime_type` と `$attachment->mime_type` を比較し、以下のロジックでダウンロードリンクを生成します。
+            *   **オリジナルが画像ファイル (`image/*`) の場合:**
+                *   メインリンク（ファイル名に紐づく）: オリジナル画像ファイル (`route('file.download', ['attachedFile' => $attachment->id, 'original' => true])`)
+                *   補助リンク（例: 「テキスト付きPDFをダウンロード」）: OCR処理後のPDFファイル (`route('file.download', ['attachedFile' => $attachment->id])`)
+            *   **オリジナルがPDFファイル (`application/pdf`) の場合:**
+                *   メインリンク（ファイル名に紐づく）: OCR処理・最適化後のPDFファイル (`route('file.download', ['attachedFile' => $attachment->id])`)
+                *   補助リンク（例: 「オリジナルPDFをダウンロード」）: オリジナルPDFファイル (`route('file.download', ['attachedFile' => $attachment->id, 'original' => true])`)
+            *   その他のファイルタイプ: 既存のダウンロードリンク (`route('file.download', ['attachedFile' => $attachment->id])`) のみ。
+        *   これらの補助リンクは、ファイル名の下に小さく表示されるようにHTML構造を調整します。
+*   **確認事項:**
+    *   各ファイルタイプ（画像、テキスト付きPDF、スキャンPDF、その他）で期待通りのダウンロードリンク（メインと補助）が表示されるか。
+    *   メインリンクと補助リンクが正しく機能し、適切なファイルがダウンロードされるか。
+    *   `AttachedFileDownloadController` での `original=true` パラメータのハンドリングが正しく行われ、アクティビティログに正しいイベントが記録されるか。
+    *   `routes/web.php` に新しいルート定義は不要で、既存の `file.download` ルートでパラメータハンドリングで対応可能か。
+
+#### 3. 手動実行 (再試行アイコン)
+
+*   **対象ファイル:**
+    *   `app/Services/Ledger/ColumnHtmlService.php` (`getFileHtml` メソッド内)
+    *   `app/Livewire/Ledger/Show.php` (新しいLivewireアクションの追加)
+*   **変更内容:**
+    1.  **`ColumnHtmlService.php` の修正:**
+        *   `getFileHtml()` メソッド内で、`$attachment->status` が `TIKA_FAILED` または `OCR_FAILED` の場合に、再実行アイコン (`<x-mary-icon name="o-arrow-path" class="cursor-pointer" />`) を生成します。
+        *   このアイコンに `wire:click="retryProcessing({{ $attachment->id }})"` を付与します。
+    2.  **`app/Livewire/Ledger/Show.php` の修正:**
+        *   `public function retryProcessing(int $attachedFileId)` メソッドを追加します。
+        *   このメソッド内で、指定された `AttachedFile` モデルを検索し、`status` を `AttachedFileStatus::PENDING_INITIAL_PROCESSING` に更新して保存します。
+        *   その後、`ProcessAttachedFile::dispatch($attachedFile)` を呼び出してジョブを再ディスパッチします。
+        *   成功/失敗のToastメッセージを表示します。
+        *   処理後、`$this->mount($this->ledgerRecord->id)` を呼び出してUIを更新します。
+*   **確認事項:**
+    *   `TIKA_FAILED` または `OCR_FAILED` ステータスのファイルにのみ再実行アイコンが表示されるか。
+    *   アイコンをクリックすると、Livewireアクションがトリガーされ、ジョブが再ディスパッチされるか。
+    *   再ディスパッチ後、ファイルのステータスが `PENDING_INITIAL_PROCESSING` に正しく戻るか。
+    *   再処理が完了すると、ステータスが `COMPLETED` になるか。
+    *   Toastメッセージが正しく表示されるか。
+
+---
+
+### 全体的な確認事項
+
+*   **UI/UX:** 全体的な見た目、操作性、レスポンシブデザインに問題がないか。
+*   **パフォーマンス:** 多数の添付ファイルがある場合に、UIの表示やダウンロード処理が遅くならないか。
+*   **エラーハンドリング:** 各処理でエラーが発生した場合（ファイルが見つからない、OCR失敗など）に、ユーザーに適切なフィードバックが提供されるか。
+*   **ログ:** 各アクションが適切にログに記録されているか。
+*   **テスト:** 既存のテストが壊れていないか。必要に応じて新しいテストを追加する。特に、`AttachedFileDownloadController` と `Livewire/Ledger/Show` の新しいロジックに対するユニットテスト/フィーチャーテストの追加を検討します。
