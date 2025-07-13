@@ -461,8 +461,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 このアプローチは、コンテナ内でDocker CLIをインストールし、`docker.sock` を介してホストのDockerデーモンと通信するため、より堅牢で一般的なDooDの実装方法です。
 
 **対応した問題:**
-*   **Dockerfile名の不一致:** ドキュメントで `Dockerfile` と記載されていた箇所を、実際のファイル名である `DockerfileQueue` に修正しました。
-*   **`docker-compose.yml` の詳細の欠落:** `queue` サービスにおける `DOCKER_GROUP_ID` の `args` と `environment` 変数、および `group_add` の設定がドキュメントに不足していたため追記しました。これにより、`queue` コンテナ内で `docker` コマンドを `sail` ユーザーで実行するための権限設定が明確になりました。
+*   **`docker-compose.yml` の詳細の欠落:** `queue` サービスにおける `DOCKER_GROUP_ID` の `args` と `environment` 変数、および `group_add` の設定が不足しocrmypdfが実行できない状態だったていたため追加しました。これにより、`queue` コンテナ内で `docker` コマンドを `sail` ユーザーで実行するための権限設定が明確になりました。
 *   **`ocrmypdf` サービスの `entrypoint`:** `docker-compose.yml` の `ocrmypdf` サービスに `entrypoint: []` が設定されていることをドキュメントに追記しました。これは、コンテナ起動時のデフォルトのエントリポイントを上書きし、`command` で指定された `tail -f /dev/null` のみが実行されるようにするために重要です。
 *   **`mysql` サービスの `condition`:** `docker-compose.yml` の `queue` サービスにおける `mysql` の `depends_on` の `condition` が `service_started` とコメントアウトされていましたが、実際の `docker-compose.yml` では `service_healthy` になっていたため、これを反映しました。
 
