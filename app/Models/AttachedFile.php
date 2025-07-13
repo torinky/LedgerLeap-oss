@@ -21,6 +21,20 @@ class AttachedFile extends Model
     protected $casts = [
     ];
 
+    public function getOriginalFilenameAttribute(): ?string
+    {
+        if ($this->ledger && $this->ledger->content) {
+            $ledgerContent = $this->ledger->content; // json_decode() を削除
+            foreach ($ledgerContent as $columnData) {
+                if (isset($columnData[$this->hashedbasename])) {
+                    return $columnData[$this->hashedbasename];
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function ledger(): BelongsTo
     {
         return $this->belongsTo(Ledger::class, 'ledger_id');

@@ -21,19 +21,24 @@ class AttachedFileDownloadController extends Controller
         $isThumbnailRequest = $request->boolean('thumbnail');
         $isOriginalRequest = $request->boolean('original'); // New
         $filePath = '';
-        $fileNameToServe = $attachedFile->filename; // Default to current filename
+        $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
+
+        // PDFに最適化されたファイルの場合、拡張子を.pdfに強制
+        if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
+            $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME) . '.pdf';
+        }
 
         if ($isThumbnailRequest) {
             $filePath = 'Ledger/thumbs/' . $attachedFile->hashedbasename;
-            Log::info('Thumbnail request: filePath = ' . $filePath); // 追加
-        } elseif ($isOriginalRequest && $attachedFile->original_file_path) { // New
-            // original_file_path は public ディスクからの相対パスとして保存されていることを想定
+            Log::info('Thumbnail request: filePath = ' . $filePath);
+        } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
             $filePath = $attachedFile->original_file_path;
-            $fileNameToServe = $attachedFile->original_filename; // Use original filename
-            Log::info('Original request: filePath = ' . $filePath); // 追加
+            // オリジナルファイルのリクエストの場合、最適化されていても元の拡張子を維持
+            $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
+            Log::info('Original request: filePath = ' . $filePath);
         } else {
             $filePath = $attachedFile->path;
-            Log::info('Normal download request: filePath = ' . $filePath); // 追加
+            Log::info('Normal download request: filePath = ' . $filePath);
         }
 
         // 3. ファイルの物理的な存在を確認
