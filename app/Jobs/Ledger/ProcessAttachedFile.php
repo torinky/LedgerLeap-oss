@@ -68,7 +68,7 @@ class ProcessAttachedFile implements ShouldQueue
 
         $ledger = Ledger::where('id', $this->attachedFile->ledger_id)->firstOrFail();
         $contentAttached = $ledger->content_attached;
-        $result = $contentAttached[$this->attachedFile->column_id][$this->attachedFile->hashedbasename] ?? (object)['meta' => ['content' => '']];
+        $result = $contentAttached[$this->attachedFile->column_id][$this->attachedFile->hashedbasename] ?? ['meta' => ['content' => '']];
 
         $filePath = storage_path('app/public/' . str_replace('public/', '', $this->attachedFile->path));
 
@@ -82,7 +82,7 @@ class ProcessAttachedFile implements ShouldQueue
 
             if (!empty($extractedText)) {
                 // テキスト抽出成功時
-                $result->meta->content = $extractedText;
+                $result['meta']['content'] = $extractedText;
                 $this->attachedFile->contain_content = true;
                 $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
 

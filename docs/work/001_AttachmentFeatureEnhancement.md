@@ -217,7 +217,7 @@ graph TD
 
 ---
 
-### Step 7: OCR非同期処理アーキテクチャの再設計 (計画)
+### Step 7: OCR非同期処理アーキテクチャの再設計
 
 **目的:** ファイルアップロード後、まずTikaでテキスト抽出を試み、失敗した場合にのみOCR処理を起動する、効率的で堅牢な非同期アーキテクチャを設計する。
 
@@ -298,7 +298,7 @@ graph TD
         *   **結果:** このテストはユーザー側で実装・実行していただく必要があります。
 
 **7.1.4. 統合テスト（全体動作確認）**
-*   **状態:** 未着手
+*   **状態:** 完了
 *   **内容:** 実際にファイルをアップロードし、一連の処理フローが意図通りに動作するかを確認する。
 *   **成果物:**
     *   システム全体として、ファイルアップロードからOCR処理、テキスト抽出、DB更新までの一連のフローが正常に動作すること。
@@ -340,6 +340,7 @@ graph TD
         *   OCR処理が完了した画像ファイルやスキャンPDFに含まれるテキストを検索キーワードとして、LedgerLeapの全文検索機能で検索してください。
         *   **評価基準:**
             *   OCR処理によって抽出されたテキストが検索結果に表示されること。
+*   **結果:** これまでのログとユーザーからの動作確認の報告により、ファイルアップロードからTikaによる初期テキスト抽出、OCR処理、そして最終的なTikaによる再処理とDB更新までの一連のフローが正常に動作することを確認しました。特に、OCRによって画像ファイルからテキストが抽出され、`content_attached`に反映されていることがログから確認できました。
 
 #### 7.1.5. OCRmyPDF実行方法の決定
 
@@ -348,7 +349,7 @@ graph TD
     *   **OCRmyPDFのフォルダ監視機能:** Laravelアプリケーションからの直接的なトリガーが不要になるメリットがあるが、処理完了通知やエラーハンドリングなど、Laravelとの連携部分で新たな実装が必要となり、既存のキューシステムとの統合が複雑になる可能性があった。
     *   **DooD方式 (`docker exec`):** Laravelコンテナから直接OCRmyPDFコンテナ内のコマンドを実行できるため、既存のキューシステムとの統合が容易であり、処理の開始と終了をLaravel側で完全に制御できる。エラーハンドリングやログ記録も既存の仕組みに統合しやすい。セキュリティリスクは存在するが、開発環境での検証においては許容範囲と判断した。
 *   **採用方針:** 既存のアーキテクチャとの整合性、実装の複雑性、および制御の容易さを考慮し、**DooD方式で `docker exec` を実行する**方針を採用する。
-*   **今後の作業:**
+*   **実装済み:**
     1.  `queue` コンテナにDocker CLIをインストールする。
     2.  `docker-compose.yml` で `queue` コンテナにDockerソケットをマウントし、不要なマウントを削除する。
     3.  `app/Jobs/Ledger/OcrAndOptimizeFile.php` 内で `ocrmypdf` コマンドを `docker exec ocrmypdf ...` 形式で実行するように修正する。
@@ -357,68 +358,93 @@ graph TD
 
 このDooD (Docker Outside of Docker) 方式は、CI/CDパイプラインや開発環境で広く採用されている堅牢なアプローチです。
 
-**1. `docker/app/Dockerfile` の変更:**
-`queue` サービスが使用する `docker/app/Dockerfile` に Docker CLI のインストール手順を追加します。
+**1. `docker/app/DockerfileQueue` の変更:**
+`queue` サービスが使用する `docker/app/DockerfileQueue` に Docker CLI のインストール手順と、`sail` ユーザーを `docker` グループに追加するロジックを追加します。
 
 ```dockerfile
 FROM sail-8.4/app
 
+# Build 引数を再宣言
+ARG DOCKER_GROUP_ID=999
+
 # Docker CLI のインストール
-# Debian/Ubuntu ベースのイメージを想定
-RUN apt-get update && apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
-    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
-    $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-    && apt-get update && apt-get install -y docker-ce-cli
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg lsb-release \
+    && rm -f /etc/apt/keyrings/docker.gpg \
+    && install -m0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+       | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+       https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+       | tee /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y docker-ce-cli \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# sail ユーザーを docker グループに追加
+# GID に対応する既存グループ名を取得し、sail ユーザーを追加
 # これにより、sail ユーザーが docker コマンドを実行できるようになる
-RUN usermod -aG docker sail
+RUN if getent group "${DOCKER_GROUP_ID}" >/dev/null 2>&1; then \
+      GROUP_NAME=$(getent group "${DOCKER_GROUP_ID}" | cut -d: -f1) && \
+      usermod -aG "${GROUP_NAME}" sail; \
+    else \
+      groupadd -g "${DOCKER_GROUP_ID}" docker && \
+      usermod -aG docker sail; \
+    fi
 
-# 不要なキャッシュをクリーンアップ
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD docker version >/dev/null 2>&1 || exit 1
 ```
 
 **2. `docker-compose.yml` の変更:**
-`queue` サービスから `/usr/local/bin/docker` のマウントを削除します。
+`queue` サービスのビルド設定、環境変数、ボリューム、依存関係を更新します。
 
 ```yaml
   queue:
     build:
       context: ./docker/app
-      dockerfile: Dockerfile
+      dockerfile: DockerfileQueue # DockerfileQueue を使用
       args:
         WWWGROUP: '${WWWGROUP}'
+        DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}' # DOCKER_GROUP_ID をビルド引数に追加
     image: sail-8.4/app
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
+      DOCKER_GROUP_ID: "${DOCKER_GROUP_ID}" # DOCKER_GROUP_ID を環境変数に追加
       LARAVEL_SAIL: 1
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
       XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
       IGNITION_LOCAL_SITES_PATH: '${PWD}'
       LOG_CHANNEL: 'queue'
+    group_add:
+      - '${DOCKER_GROUP_ID}' # sail ユーザーを docker グループに追加
     volumes:
       - '.:/var/www/html'
-      - '/var/run/docker.sock:/var/run/docker.sock'
-      # - '/usr/local/bin/docker:/usr/local/bin/docker' # この行を削除
+      - '/var/run/docker.sock:/var/run/docker.sock' # Docker ソケットをマウント
     networks:
       - sail
     depends_on:
       mysql:
-#        condition: service_healthy
-        condition: service_started
+        condition: service_healthy # mysql の状態を healthy に変更
       redis:
         condition: service_started
       tika:
         condition: service_started
     restart: on-failure
+
+  ocrmypdf:
+    build:
+      context: ./docker/ocrmypdf
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    entrypoint: [] # entrypoint を空に設定
+    command: tail -f /dev/null
+    restart: unless-stopped
+    networks:
+      - sail
 ```
 
 **3. 変更後の手順:**
@@ -433,6 +459,12 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
     これにより、ホストで実行中のコンテナリストが表示されれば成功です。
 
 このアプローチは、コンテナ内でDocker CLIをインストールし、`docker.sock` を介してホストのDockerデーモンと通信するため、より堅牢で一般的なDooDの実装方法です。
+
+**対応した問題:**
+*   **Dockerfile名の不一致:** ドキュメントで `Dockerfile` と記載されていた箇所を、実際のファイル名である `DockerfileQueue` に修正しました。
+*   **`docker-compose.yml` の詳細の欠落:** `queue` サービスにおける `DOCKER_GROUP_ID` の `args` と `environment` 変数、および `group_add` の設定がドキュメントに不足していたため追記しました。これにより、`queue` コンテナ内で `docker` コマンドを `sail` ユーザーで実行するための権限設定が明確になりました。
+*   **`ocrmypdf` サービスの `entrypoint`:** `docker-compose.yml` の `ocrmypdf` サービスに `entrypoint: []` が設定されていることをドキュメントに追記しました。これは、コンテナ起動時のデフォルトのエントリポイントを上書きし、`command` で指定された `tail -f /dev/null` のみが実行されるようにするために重要です。
+*   **`mysql` サービスの `condition`:** `docker-compose.yml` の `queue` サービスにおける `mysql` の `depends_on` の `condition` が `service_started` とコメントアウトされていましたが、実際の `docker-compose.yml` では `service_healthy` になっていたため、これを反映しました。
 
 ---
 

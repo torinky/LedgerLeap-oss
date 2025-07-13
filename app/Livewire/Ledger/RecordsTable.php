@@ -234,8 +234,21 @@ class RecordsTable extends Component
                 }
                 foreach ($attached as $hashedfilename => $metaData) {
                     foreach ($hits as $hit) {
-                        if (stripos($metaData->meta->content, $hit) !== false) {
-                            $contentAttached[$key][$hashedfilename]->hit = true;
+                        // $metaDataが配列かオブジェクトかを判定
+                        $content = null;
+                        if (is_array($metaData) && isset($metaData['meta']['content'])) {
+                            $content = $metaData['meta']['content'];
+                        } elseif (is_object($metaData) && isset($metaData->meta->content)) {
+                            $content = $metaData->meta->content;
+                        }
+
+                        if ($content !== null && stripos($content, $hit) !== false) {
+                            // hitフラグも型で分岐
+                            if (is_array($metaData)) {
+                                $contentAttached[$key][$hashedfilename]['hit'] = true;
+                            } else {
+                                $contentAttached[$key][$hashedfilename]->hit = true;
+                            }
                             break;
                         }
                     }
