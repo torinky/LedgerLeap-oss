@@ -21,8 +21,7 @@ services:
       - sail
     depends_on:
       mysql:
-#        condition: service_healthy
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
       tika:
@@ -30,18 +29,22 @@ services:
   queue:
     build:
       context: ./docker/app
-      dockerfile: Dockerfile
+      dockerfile: DockerfileQueue
       args:
         WWWGROUP: '${WWWGROUP}'
+        DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}'
     image: sail-8.4/app
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
+      DOCKER_GROUP_ID: "${DOCKER_GROUP_ID}"
       LARAVEL_SAIL: 1
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
       XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
       IGNITION_LOCAL_SITES_PATH: '${PWD}'
       LOG_CHANNEL: 'queue'
+    group_add:
+      - '${DOCKER_GROUP_ID}'
     volumes:
       - '.:/var/www/html'
       - '/var/run/docker.sock:/var/run/docker.sock'
@@ -49,8 +52,8 @@ services:
       - sail
     depends_on:
       mysql:
-#        condition: service_healthy
-        condition: service_started
+        condition: service_healthy
+#        condition: service_started
       redis:
         condition: service_started
       tika:
@@ -82,8 +85,8 @@ services:
       - sail
     depends_on:
       mysql:
-        condition: service_started
-#        condition: service_healthy
+#        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
     restart: always

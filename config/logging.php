@@ -133,6 +133,12 @@ return [
             'level' => 'debug',
             'days' => 14, // ログを保持する日数
         ],
+        'schedule' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/schedule.log'),
+            'level' => 'debug',
+            'days' => 14, // ログを保持する日数
+        ],
     ],
 
 ];

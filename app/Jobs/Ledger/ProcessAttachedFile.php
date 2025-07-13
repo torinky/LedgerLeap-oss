@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
 
 class ProcessAttachedFile implements ShouldQueue
@@ -36,14 +37,40 @@ class ProcessAttachedFile implements ShouldQueue
     {
         Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
-        // 1. status を INITIAL_PROCESSING に更新
+        // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
+        $originalDir = 'public/Ledger/Attachments/Originals/';
+        $newOriginalPath = $originalDir . basename($this->attachedFile->path);
+
+        try {
+            // ファイルが既に移動済みでないか確認
+            if (!Storage::disk('public')->exists(str_replace('public/', '', $this->attachedFile->path))) {
+                Log::error('Original file not found for moving in ProcessAttachedFile: ' . $this->attachedFile->path);
+                $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
+                return;
+            }
+
+            Storage::disk('public')->move(str_replace('public/', '', $this->attachedFile->path), str_replace('public/', '', $newOriginalPath));
+            $this->attachedFile->update([
+                'original_file_path' => str_replace('public/', '', $newOriginalPath),
+                'original_mime_type' => $this->attachedFile->mime,
+                'path' => str_replace('public/', '', $newOriginalPath), // path も更新
+            ]);
+            $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
+            Log::info('Original file moved to: ' . $newOriginalPath);
+        } catch (\Exception $e) {
+            Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
+            $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
+            return;
+        }
+
+        // 2. status を INITIAL_PROCESSING に更新
         $this->attachedFile->update(['status' => AttachedFileStatus::INITIAL_PROCESSING->value]);
 
         $ledger = Ledger::where('id', $this->attachedFile->ledger_id)->firstOrFail();
         $contentAttached = $ledger->content_attached;
         $result = $contentAttached[$this->attachedFile->column_id][$this->attachedFile->hashedbasename] ?? (object)['meta' => ['content' => '']];
 
-        $filePath = storage_path('app/' . $this->attachedFile->path);
+        $filePath = storage_path('app/public/' . str_replace('public/', '', $this->attachedFile->path));
 
         try {
             $tikaClient = Client::make('tika', 9998);
@@ -75,7 +102,9 @@ class ProcessAttachedFile implements ShouldQueue
                 if (str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) {
                     // OCR対象の場合 (PDF/画像): PENDING_OCR に更新し、OcrAndOptimizeFile ジョブをディスパッチ
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
-                    OcrAndOptimizeFile::dispatch($this->attachedFile);
+                    $this->attachedFile->save(); // ステータス変更を保存
+                    Log::info('AttachedFile path before dispatching OcrAndOptimizeFile: ' . $this->attachedFile->path);
+                    OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
                     Log::info('Dispatched OcrAndOptimizeFile for file: ' . $this->attachedFile->id);
                 } else {
                     // OCR対象外の場合 (ZIP, etc.): これ以上処理できないため、COMPLETED に更新して処理を正常終了

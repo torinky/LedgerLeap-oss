@@ -387,7 +387,6 @@ class CreateColumn extends Component
      */
     public function finishUpload(string $name, string $tmpPath, $isMultiple): void
     {
-        $this->cleanupOldUploads();
 
         $files = collect($tmpPath)->map(fn ($i) => TemporaryUploadedFile::createFromLivewire($i))->toArray();
         $this->dispatch('upload:finished', $name, collect($files)->map->getFilename()->toArray())->self();
