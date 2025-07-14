@@ -218,7 +218,6 @@
                                 </thead>
                             @endif
                             <tbody>
-
                             @foreach($contentChanges as $columnId => $change)
                                 <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
                                     <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
@@ -235,8 +234,8 @@
                                                 <x-ledger.empty-message/>
                                             @elseif($change['column_define_current'])
                                                 {{ ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
-                                                              ->setAttachmentContents($change['current_attachments'] ?? [])
-                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }} {{-- keywords渡しも追加 --}}
+                                                              ->setAttachmentContents($change['current_attachment_contents'] ?? [])
+                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }}
                                             @else
                                                 <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                             @endif
@@ -251,7 +250,7 @@
                                                     <x-ledger.empty-message/>
                                                 @elseif($change['column_define_old'])
                                                     {{ ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
-                                                                  ->setAttachmentContents($change['old_attachments'] ?? [])
+                                                                  ->setAttachmentContents($change['old_attachment_contents'] ?? [])
                                                                   ->show($change['column_define_old'], $change['old_value'], $canView) }}
                                                 @else
                                                     <span class="text-ghost">---</span> {{-- 古い定義がない --}}

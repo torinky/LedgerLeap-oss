@@ -49,6 +49,7 @@ class WorkflowService
         array $contentAttached,
         int $modifierId
     ): array {
+        Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached); // デバッグログ追加
         // ToDo: 権限チェック (modifierId が下書き保存できるか？)
 
         return DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $modifierId) {
@@ -644,6 +645,7 @@ class WorkflowService
         int $modifierId,
         ?string $comments
     ): array {
+        Log::debug('[WorkflowService::saveEditedRecord] Received content_attached:', is_array($newContentAttached) ? $newContentAttached : []); // デバッグログ追加
         if ($ledger->isLocked()) {
             throw new Exception('Cannot modify an approved record.');
         }

@@ -18,7 +18,7 @@ class ModifyColumn extends CreateColumn
 {
     public array $deletedContent = [];
 
-    private array $contentAttached = [];
+    
 
     // --- Workflow ---
     public bool $confirmingEdit = false; // 編集確認モーダルの表示状態
@@ -44,6 +44,9 @@ class ModifyColumn extends CreateColumn
             }
             if (!empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
+            }
+            if (!empty($this->ledgerRecord->content_attached)) {
+                $this->contentAttached = $this->ledgerRecord->content_attached;
             }
             $this->initColumns(); // カラム初期化 (必須マーク色など)
             $this->initRequireColumns();

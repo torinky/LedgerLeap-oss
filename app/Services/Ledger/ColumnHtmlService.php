@@ -206,6 +206,9 @@ class ColumnHtmlService
     {
         if (empty($contents)) {
             $contents = [];
+        }else{
+
+//            dd($contents);
         }
         $this->attachmentContents = $contents;
 
@@ -322,10 +325,13 @@ class ColumnHtmlService
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-//            dd($this->attachmentContents, $hashedFilename);
+            if (!empty($this->attachmentContents)){
+
+//                dd($this->attachmentContents, $hashedFilename);
+            }
             if (!empty($this->attachmentContents[$hashedFilename]) && isset($this
-                        ->attachmentContents[$hashedFilename]->meta->content)) {
-                $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]->meta->content, 0, 300, '...'));
+                        ->attachmentContents[$hashedFilename]['meta']['content'])) {
+                $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]['meta']['content'], 0, 300, '...'));
                 $contentHtmlStart = <<<HTML
  <div class="tooltip" data-tip="{$content}">
  HTML;

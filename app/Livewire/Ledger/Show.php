@@ -380,6 +380,7 @@ class Show extends Component
         $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
         $this->contentChanges = [];
         $currentContentArray = $this->ledgerRecord->content ?? [];
+        $currentContentAttached = $this->ledgerRecord->content_attached ?? [];
 
         // 現在のレコードの添付ファイル情報を取得
         $currentAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)
@@ -408,6 +409,7 @@ class Show extends Component
         $oldContentArray = $hasComparison
             ? ($this->comparisonTargetDiff->content ?? [])
             : [];
+        $oldContentAttached = $hasComparison ? ($this->comparisonTargetDiff->content_attached ?? []) : [];
 
         $sortedColumnDefines = collect($currentColumnDefines)->sortBy('order')->all();
         $sortedColumnIds = array_keys($sortedColumnDefines);
@@ -452,6 +454,8 @@ class Show extends Component
                 'column_name' => $columnName,
                 'current_attachments' => $currentAttachments,
                 'old_attachments' => $oldAttachments,
+                'current_attachment_contents' => $currentContentAttached[$columnId] ?? [],
+                'old_attachment_contents' => $oldContentAttached[$columnId] ?? [],
             ];
         }
     }

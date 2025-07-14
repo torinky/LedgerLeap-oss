@@ -20,15 +20,22 @@ class AsColumnArrayJson extends AsJson
      */
     public function get($model, $key, $value, $attributes): mixed
     {
+        // Log::info('AsColumnArrayJson: get method called for key: ' . $key);
+        // Log::info('AsColumnArrayJson: Raw value from DB: ' . Str::limit(json_encode($value), 500));
+        // Log::info('AsColumnArrayJson: Attributes value for key: ' . Str::limit(json_encode($attributes[$key] ?? null), 500));
+
         $content = $attributes[$key] ?? $value;
+        // Log::info('AsColumnArrayJson: Content to process: ' . Str::limit(json_encode($content), 500));
 
         // データベースからの値が空文字列の場合、空配列を返します。
         // これは、空配列に対して '' を保存した場合のケースを処理します。
         if ($content === '') {
+            // Log::info('AsColumnArrayJson: Content is empty string, returning empty array.');
             return []; // または、空文字列読み取り時の望ましい動作に応じて null を返す
         }
         // すでに null であるか、文字列でない場合は、JSON デコード試行前にそのまま返します。
         if ($content === null || !is_string($content)) {
+            // Log::info('AsColumnArrayJson: Content is null or not a string, returning as is.');
             return $content;
         }
 
@@ -37,14 +44,16 @@ class AsColumnArrayJson extends AsJson
             // 必要であれば、set の動作により合わせるために連想配列 (true) を使用しますが、
             // 現在のコードはオブジェクト (false) を使用しています。今のところ一貫性を保ちます。
             $decodedContent = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+            // Log::info('AsColumnArrayJson: Decoded content: ' . Str::limit(json_encode($decodedContent), 500));
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
-            Log::alert('JSON decode error: ' . $e->getMessage() . ' for value: ' . $content);
+            Log::alert('AsColumnArrayJson: JSON decode error: ' . $e->getMessage() . ' for value: ' . Str::limit($content, 500));
             return null; // または空配列 [] を返す？
         }
 
         // デコードされた配列/オブジェクトの各要素を処理します。
         if (is_array($decodedContent) || is_object($decodedContent)) {
+            // Log::info('AsColumnArrayJson: Decoded content is array or object, processing elements.');
             // 配列/オブジェクトの要素を参照で変更するか、新しいものを作成する方法が必要です。
             $processedContent = is_object($decodedContent) ? clone $decodedContent : $decodedContent;
             foreach ($decodedContent as $index => $item) {
@@ -54,10 +63,12 @@ class AsColumnArrayJson extends AsJson
                     $processedContent[$index] = $this->getContent($item);
                 }
             }
+            // Log::info('AsColumnArrayJson: Processed content: ' . Str::limit(json_encode($processedContent), 500));
             return $processedContent;
         }
 
         // JSON デコードされたが配列/オブジェクトではなかった場合 (例: 単なる文字列 "foo")、それを返します。
+        // Log::info('AsColumnArrayJson: Decoded content is not array/object, returning as is.');
         return $decodedContent;
     }
 
@@ -79,12 +90,14 @@ class AsColumnArrayJson extends AsJson
 
         if (is_string($item) && Str::startsWith($item, "___serialized___")) {
             $temp = substr($item, 16);
+            // Log::info('AsColumnArrayJson: getContent: Attempting to unserialize: ' . Str::limit($temp, 500));
             // unserialize のエラーハンドリングを追加します。
             $unserialized = @unserialize($temp);
             if ($unserialized === false && $temp !== serialize(false)) {
-                Log::warning('Failed to unserialize value: ' . $temp);
+                Log::warning('AsColumnArrayJson: getContent: Failed to unserialize value: ' . Str::limit($temp, 500));
                 return $item; // 失敗時には元のシリアライズされた文字列を返す？ それとも null？
             }
+            // Log::info('AsColumnArrayJson: getContent: Successfully unserialized: ' . Str::limit(json_encode($unserialized), 500));
             return $unserialized;
         }
         return $item;
@@ -119,23 +132,28 @@ class AsColumnArrayJson extends AsJson
                 }
             }
 
-            // すべての要素が空だった場合、キーに対して空文字列を返します。
+            // すべての要素が空だった場合、キーに対して空のJSON配列を返します。
             if ($allEmpty) {
-                return [$key => ''];
+                // Log::info('AsColumnArrayJson: set: All elements are empty, returning empty JSON array.');
+                return [$key => '[]'];
             }
 
             // すべてが空ではなかった場合、元の処理ロジックに進みます。
             // 1階層目はjson配列にする (強制的にインデックス配列にする)
             $processedContent = array_values($content);
+            // Log::info('AsColumnArrayJson: set: Content after array_values: ' . Str::limit(json_encode($processedContent), 500));
             foreach ($processedContent as $index => $item) {
                 $processedContent[$index] = $this->setContent($item);
             }
             // 処理された配列で content を更新します。
             $content = $processedContent;
+            // Log::info('AsColumnArrayJson: set: Content after setContent loop: '
+            //     . Str::limit(json_encode($content), 500));
 
         } elseif ($content === null || $content === '') {
-            // 入力値自体が null または空文字列の場合も空文字列を返します。
-            return [$key => ''];
+            // 入力値自体が null または空文字列の場合も空のJSON配列を返します。
+            // Log::info('AsColumnArrayJson: set: Input content is null or empty string, returning empty JSON array.');
+            return [$key => '[]']; // Changed from '' to '[]'
         }
 
         // $content が配列でなかった場合、または空でない要素を含む配列だった場合、
@@ -143,12 +161,13 @@ class AsColumnArrayJson extends AsJson
         // 注意: json_encode(null) は文字列 'null' になります。
         // 上記の `elseif ($content === null)` チェックは、代わりに '' が必要な場合にこれを防ぎます。
 
-        return [$key => json_encode(
+        $jsonString = json_encode(
         // (処理された可能性のある) content をエンコードします。
             $content,
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
-        )
-        ];
+        );
+        // Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
+        return [$key => $jsonString];
     }
 
     /**

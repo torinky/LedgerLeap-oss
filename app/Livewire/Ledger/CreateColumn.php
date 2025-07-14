@@ -52,7 +52,7 @@ class CreateColumn extends Component
 
     public ?Ledger $ledgerRecord = null;
 
-    private array $contentAttached = [];
+    public array $contentAttached = [];
 
     private array $newAttachedFiles = [];
 
