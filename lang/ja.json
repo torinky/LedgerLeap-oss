@@ -174,7 +174,7 @@
     "ledger.define.preview": "プレビュー",
     "ledger.define.remove": "台帳を削除する",
     "ledger.define.remove_message": "この台帳を削除しようとしています",
-    "ledger.define.saved": "定義が保存されました",
+    "ledger.define.saved": "台帳定義を保存しました。",
     "ledger.define.setting": "台帳／フォルダ設定の管理",
     "ledger.define.title": "台帳名",
     "ledger.delete": "削除する",

@@ -83,7 +83,7 @@ return [
     'price'           => '価格',
     'record'          => '記録',
     'restore'         => '復元',
-    'save'            => '保存する',
+    'save'            => '保存',
     'save_and_close'  => '保存して閉じる',
     'save_and_return' => '保存して戻る',
     'search'          => '検索',
