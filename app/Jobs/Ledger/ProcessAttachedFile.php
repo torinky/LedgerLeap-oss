@@ -113,6 +113,17 @@ class ProcessAttachedFile implements ShouldQueue
                 $extractedText = trim($tikaClient->getText($filePath));
                 $extractedMeta = $tikaClient->getMetadata($filePath);
 
+                // Tikaから取得したメタデータを$result['meta']にマージ
+                // $extractedMetaはオブジェクトなので、配列に変換してマージする
+                if (is_object($extractedMeta)) {
+                    foreach ($extractedMeta as $key => $value) {
+                        // contentは既に処理済みなので上書きしない
+                        if ($key !== 'content') {
+                            $result['meta'][$key] = $value;
+                        }
+                    }
+                }
+
                 if (!empty($extractedText)) {
                     // テキスト抽出成功時
                     $result['meta']['content'] = $extractedText;
