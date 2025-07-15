@@ -4,6 +4,17 @@ namespace App\Models\ColumnTypes;
 
 class AutoNumberType implements InputType
 {
+    public ?string $prefix;
+    public ?int $digits;
+    public ?string $revision;
+
+    public function __construct(array $options = [])
+    {
+        $this->prefix = $options['prefix'] ?? null;
+        $this->digits = $options['digits'] ?? null;
+        $this->revision = $options['revision'] ?? null;
+    }
+
     public function getName(): string
     {
         return 'auto_number';
@@ -31,9 +42,6 @@ class AutoNumberType implements InputType
 
     public function restoreFromString($value)
     {
-        if (is_numeric($value)) {
-            return $value + 0; // Converts to int or float
-        }
         return $value;
     }
 }

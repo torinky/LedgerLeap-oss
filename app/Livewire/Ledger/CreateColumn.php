@@ -10,6 +10,8 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use App\Models\ColumnTypes\AutoNumberType;
+use App\Models\ColumnTypes\NumberType;
 use App\Rules\UniqueAutoNumber;
 use App\Rules\UniqueColumnValue;
 use App\Services\NumberingService;
@@ -117,7 +119,9 @@ class CreateColumn extends Component
         foreach ($this->ledgerDefineRecord->column_define ?? [] as $column) {
             $defaultValue = match ($column->type) {
                 'files', 'chk' => [],
-                'auto_number' => $this->numberingService->getNextNumber($column, $this->ledgerDefineId),
+                'auto_number' => $column->getInputType() instanceof \App\Models\ColumnTypes\AutoNumberType
+                    ? $this->numberingService->getNextNumber($column, $this->ledgerDefineId)
+                    : '',
                 default => '',
             };
             // content がまだセットされていない場合のみデフォルト値を設定
@@ -429,24 +433,35 @@ class CreateColumn extends Component
             $columnId = $column->id;
             $columnName = 'content.'.$columnId;
             $columnType = $column->type;
+            $inputType = (new \App\Models\ColumnDefine($column))->getInputType();
 
             $rules = [];
 
             // カラムの種類に基づいた共通のバリデーションルールを追加
             if ($columnType === 'text' || $columnType === 'textarea') {
                 $rules[] = 'string';
-            } elseif ($columnType === 'number') {
+            } elseif ($columnType === 'number' && $inputType instanceof \App\Models\ColumnTypes\NumberType) {
                 $rules[] = 'numeric';
-                if (isset($column->min)) {
-                    $rules[] = 'min:'.$column->min;
+                if (isset($inputType->min)) {
+                    $rules[] = 'min:'.$inputType->min;
                 }
-                if (isset($column->max)) {
-                    $rules[] = 'max:'.$column->max;
+                if (isset($inputType->max)) {
+                    $rules[] = 'max:'.$inputType->max;
                 }
-                if (isset($column->step)) {
+                if (isset($inputType->step)) {
                     // 小数点以下の桁数を考慮した倍数チェック
-                    $rules[] = 'multiple_of:'.$column->step;
+                    $rules[] = 'multiple_of:'.$inputType->step;
                 }
+            } elseif ($columnType === 'auto_number' && $inputType instanceof \App\Models\ColumnTypes\AutoNumberType) {
+                $rules[] = 'string'; // auto_number は文字列として扱う
+
+                // 自動採番の最終的な文字長を計算
+                $prefixLength = strlen($inputType->prefix ?? '');
+                $digitsLength = (int)($inputType->digits ?? 0);
+                $revisionLength = strlen($inputType->revision ?? '');
+                $maxAutoNumberLength = $prefixLength + $digitsLength + $revisionLength;
+
+                $rules[] = 'max:'.$maxAutoNumberLength;
             } elseif ($columnType === 'YMD') {
                 $rules[] = 'date_format:Y-m-d';
             } elseif ($column->type === 'chk' && $column->useOptions && ! empty($column->options)) {

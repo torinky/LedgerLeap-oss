@@ -33,15 +33,6 @@ class ColumnDefine
 
     public $file = [];
 
-    // for number type
-    public $min;
-
-    public $max;
-
-    public $step;
-
-    public $unit;
-
     /**
      * コンストラクタ
      *
@@ -53,6 +44,8 @@ class ColumnDefine
     {
         if (is_object($inObject)) {
             $this->constructByObject($inObject);
+        } elseif (is_array($inObject)) {
+            $this->constructByObject((object) $inObject);
         } elseif (func_num_args() > 1) {
             $this->constructByArgs(...func_get_args());
         }
@@ -68,18 +61,15 @@ class ColumnDefine
     {
         $this->id = (int)$inObject->id;
         $this->setName($inObject->name);
-        $this->initializeType($inObject->type ?? 'text'); // Default to 'text' if type is not set
         $this->setOrder($inObject->order);
-        $this->setOptions($inObject->options ?? []);
+        $this->setOptions((array)($inObject->options ?? []));
         $this->setRequired($inObject->required);
         $this->setUnique($inObject->unique);
         $this->setSortBy($inObject->sortBy);
         $this->setHint($inObject->hint);
         $this->setFile($inObject->file);
-        $this->setMin($inObject->min ?? null);
-        $this->setMax($inObject->max ?? null);
-        $this->setStep($inObject->step ?? null);
-        $this->setUnit($inObject->unit ?? null);
+
+        $this->initializeType((array) $inObject);
     }
 
     /**
@@ -97,16 +87,11 @@ class ColumnDefine
         bool $unique = false,
         bool   $sortBy = false,
         string $hint = '',
-        array $file = [],
-        $min = null,
-        $max = null,
-        $step = null,
-        $unit = null
+        array $file = []
     )
     {
         $this->id = (int)$id;
         $this->setName($name);
-        $this->initializeType($typeIdentifier);
         $this->setOrder($order);
         $this->setOptions($options);
         $this->setRequired($required);
@@ -114,20 +99,18 @@ class ColumnDefine
         $this->setSortBy($sortBy);
         $this->setHint($hint);
         $this->setFile($file);
-        $this->setMin($min);
-        $this->setMax($max);
-        $this->setStep($step);
-        $this->setUnit($unit);
+
+        $this->initializeType(['type' => $typeIdentifier, 'options' => $options]);
     }
 
     /**
      * Initializes the input type strategy object.
-     * @param string $typeIdentifier
+     * @param array $columnDefineArray
      * @throws \InvalidArgumentException
      */
-    private function initializeType(string $typeIdentifier): void
+    private function initializeType(array $columnDefineArray): void
     {
-        $this->inputType = InputTypeFactory::make($typeIdentifier);
+        $this->inputType = InputTypeFactory::make($columnDefineArray);
         $this->type = $this->inputType->getName(); // Update public type property
         $this->useOptions = $this->inputType->hasOptions(); // Update useOptions based on type
     }
@@ -137,7 +120,7 @@ class ColumnDefine
      */
     public function setType(string $typeIdentifier): void
     {
-        $this->initializeType($typeIdentifier);
+        $this->initializeType(['type' => $typeIdentifier, 'options' => $this->options]);
     }
 
     /**
@@ -160,15 +143,6 @@ class ColumnDefine
         foreach ($allTypes as $typeInstance) {
             $labels[$typeInstance->getName()] = $typeInstance->getLabel();
         }
-        // The original 'number' label was 'ledger.form.auto_numbering'
-        // and 'YMD' was 'ledger.form.datetime', 'files' was 'ledger.form.upload'
-        // The new types use 'ledger.form.number', 'ledger.form.date', 'ledger.form.files' respectively.
-        // We need to ensure these specific labels are preserved if they are different.
-        // Current InputType implementations use the new labels. If specific overrides are needed:
-        // $labels['number'] = __('ledger.form.auto_numbering');
-        // $labels['YMD'] = __('ledger.form.datetime');
-        // $labels['files'] = __('ledger.form.upload');
-        // For now, we assume the labels defined in each InputType are the desired ones.
         return $labels;
     }
 
@@ -250,26 +224,6 @@ class ColumnDefine
         $this->file = $file;
     }
 
-    public function setMin($min): void
-    {
-        $this->min = $min;
-    }
-
-    public function setMax($max): void
-    {
-        $this->max = $max;
-    }
-
-    public function setStep($step): void
-    {
-        $this->step = $step;
-    }
-
-    public function setUnit($unit): void
-    {
-        $this->unit = $unit;
-    }
-
     public function setOrder(int $order): void
     {
         $this->order = $order;
@@ -298,10 +252,6 @@ class ColumnDefine
                     'sortBy' => $colDef->sortBy ?? false,
                     'hint' => $colDef->hint ?? '',
                     'file' => isset($colDef->file) && is_array($colDef->file) ? $colDef->file : [],
-                    'min' => $colDef->min ?? null,
-                    'max' => $colDef->max ?? null,
-                    'step' => $colDef->step ?? null,
-                    'unit' => $colDef->unit ?? null,
                 ];
             } elseif (is_array($colDef) && isset($colDef['id'])) {
                 $result[$colDef['id']] = $colDef;

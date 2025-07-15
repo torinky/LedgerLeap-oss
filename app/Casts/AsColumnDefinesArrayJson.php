@@ -28,7 +28,7 @@ class AsColumnDefinesArrayJson extends AsJson
 
         try {
             // JSON文字列をデコードして連想配列に変換します。
-            $data = json_decode($attributes[$key], false, 512, JSON_THROW_ON_ERROR);
+            $data = json_decode($attributes[$key], true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
             Log::alert($e);

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\Ledger;
 use Illuminate\Support\Str;
 
@@ -10,19 +11,19 @@ class NumberingService
     /**
      * 次の自動採番番号を生成する
      *
-     * @param object $columnDefine カラム定義オブジェクト (id, name, type, options, uniqueなど)
+     * @param AutoNumberType $columnType カラム定義オブジェクト (id, name, type, options, uniqueなど)
      * @param int $ledgerDefineId 台帳定義ID
      * @return string 次の採番番号
      */
-    public function getNextNumber(object $columnDefine, int $ledgerDefineId): string
+    public function getNextNumber(\App\Models\ColumnDefine $columnDefine, int $ledgerDefineId): string
     {
-        $options = $columnDefine->options;
+        $columnType = $columnDefine->getInputType(); // AutoNumberType オブジェクトを取得
+        $columnId = $columnDefine->id; // ColumnDefine から id を取得
 
-        $prefix = $options['prefix'] ?? '';
-        $digits = max(1, (int)($options['digits'] ?? 3));
-        $revision = $options['revision'] ?? '';
+        $prefix = $columnType->prefix ?? '';
+        $digits = max(1, (int)($columnType->digits ?? 3));
+        $revision = $columnType->revision ?? '';
         $isUnique = $columnDefine->unique ?? false;
-        $columnId = $columnDefine->id;
 
         $maxNumber = 0;
 

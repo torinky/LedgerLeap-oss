@@ -118,7 +118,6 @@ class ModifyColumn extends CreateColumn
         } else {
             $this->content[$column->id] = $addedFilenames;
             $this->contentAttached[$column->id] = $addedFileContents;
-
         }
     }
 

@@ -4,6 +4,19 @@ namespace App\Models\ColumnTypes;
 
 class NumberType implements InputType
 {
+    public ?float $min;
+    public ?float $max;
+    public ?float $step;
+    public ?string $unit;
+
+    public function __construct(array $options = [])
+    {
+        $this->min = $options['min'] ?? null;
+        $this->max = $options['max'] ?? null;
+        $this->step = $options['step'] ?? null;
+        $this->unit = $options['unit'] ?? null;
+    }
+
     public function getName(): string
     {
         return 'number';
@@ -36,24 +49,4 @@ class NumberType implements InputType
         }
         return $value;
     }
-    public function setMin($min): void
-    {
-        $this->min = $min;
-    }
-
-    public function setMax($max): void
-    {
-        $this->max = $max;
-    }
-
-    public function setStep($step): void
-    {
-        $this->step = $step;
-    }
-
-    public function setUnit($unit): void
-    {
-        $this->unit = $unit;
-    }
-
 }

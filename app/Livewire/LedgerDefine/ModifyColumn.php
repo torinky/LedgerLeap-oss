@@ -4,7 +4,9 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
 use App\Models\ColumnDefine;
+use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\ColumnTypes\InputTypeFactory;
+use App\Models\ColumnTypes\NumberType;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
@@ -54,10 +56,20 @@ class ModifyColumn extends Component
                 'hint' => (string)$columnDefineObject->hint,
                 'file' => (array)$columnDefineObject->file,
                 'is_collapsed' => false, // 初期状態で折りたたむ
-                'max'=> $columnDefineObject->max,
-                'min'=> $columnDefineObject->min,
-                'step'=> $columnDefineObject->step,
-                'unit'=>$columnDefineObject->unit,
+                'options' => array_merge(
+                    (array)$columnDefineObject->options,
+                    $columnDefineObject->getInputType() instanceof NumberType ? [
+                        'min' => $columnDefineObject->getInputType()->min,
+                        'max' => $columnDefineObject->getInputType()->max,
+                        'step' => $columnDefineObject->getInputType()->step,
+                        'unit' => $columnDefineObject->getInputType()->unit,
+                    ] : [],
+                    $columnDefineObject->getInputType() instanceof AutoNumberType ? [
+                        'prefix' => $columnDefineObject->getInputType()->prefix,
+                        'digits' => $columnDefineObject->getInputType()->digits,
+                        'revision' => $columnDefineObject->getInputType()->revision,
+                    ] : []
+                ),
             ];
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
 
@@ -139,7 +151,7 @@ class ModifyColumn extends Component
         // Ensure the column exists and the changed property is 'type'
         if (isset($this->columns[$columnIndex]) && $parts[1] === 'type') {
             // Determine if the new type has options
-            $hasOptions = InputTypeFactory::make($value)->hasOptions();
+            $hasOptions = InputTypeFactory::make(['type' => $value])->hasOptions();
 
             // Update the useOptions property for the specific column
             $this->columns[$columnIndex]['useOptions'] = $hasOptions;
@@ -173,18 +185,22 @@ class ModifyColumn extends Component
         ];
 
         if ($column['type'] === 'number') {
-            $rules["columns.{$index}.min"] = 'required|numeric';
-            $rules["columns.{$index}.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.min'];
-            $rules["columns.{$index}.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
-                $min = $column['min'];
-                $max = $column['max'];
+            $rules["columns.{$index}.options.min"] = 'required|numeric';
+            $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+            $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
+                $min = $column['options']['min'] ?? null;
+                $max = $column['options']['max'] ?? null;
                 if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
                     if (($max - $min) < $value) {
                         $fail(__('validation.custom.step_too_large'));
                     }
                 }
             }];
-            $rules["columns.{$index}.unit"] = 'nullable|string|max:255';
+            $rules["columns.{$index}.options.unit"] = 'nullable|string|max:255';
+        } elseif ($column['type'] === 'auto_number') {
+            $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
+            $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
+            $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
         }
 
         $this->validate($rules);
@@ -224,10 +240,7 @@ class ModifyColumn extends Component
             'sortBy' => false, // Default value
             'hint' => '', // Default value
             'file' => [], // Default value
-            'min' => null,
-            'max' => null,
-            'step' => null,
-            'unit' => null,
+            'options' => [], // Default value
             'is_collapsed' => true, // 新規追加時は開いた状態にする
         ];
 
@@ -267,18 +280,22 @@ class ModifyColumn extends Component
 
         foreach ($this->columns as $index => $column) {
             if ($column['type'] === 'number') {
-                $rules["columns.{$index}.min"] = 'required|numeric';
-                $rules["columns.{$index}.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.min'];
-                $rules["columns.{$index}.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
-                    $min = $column['min'];
-                    $max = $column['max'];
+                $rules["columns.{$index}.options.min"] = 'required|numeric';
+                $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+                $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
+                    $min = $column['options']['min'] ?? null;
+                    $max = $column['options']['max'] ?? null;
                     if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
                         if (($max - $min) < $value) {
                             $fail(__('validation.custom.step_too_large'));
                         }
                     }
                 }];
-                $rules["columns.{$index}.unit"] = 'nullable|string|max:255';
+                $rules["columns.{$index}.options.unit"] = 'nullable|string|max:255';
+            } elseif ($column['type'] === 'auto_number') {
+                $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
+                $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
+                $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
             }
         }
 

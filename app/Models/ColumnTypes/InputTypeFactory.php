@@ -21,13 +21,17 @@ class InputTypeFactory
     /**
      * @throws InvalidArgumentException
      */
-    public static function make(string $typeIdentifier): InputType
+    public static function make(array $columnDefineArray): InputType
     {
+        $typeIdentifier = $columnDefineArray['type'] ?? 'text';
+        $options = $columnDefineArray['options'] ?? [];
+
         if (!isset(self::$typeMap[$typeIdentifier])) {
-            throw new InvalidArgumentException("Unknown input type identifier: {$typeIdentifier}");
+            throw new InvalidArgumentException("Invalid input type: {$typeIdentifier}");
         }
+
         $className = self::$typeMap[$typeIdentifier];
-        return new $className();
+        return new $className($options);
     }
 
     public static function getAllTypes(): array

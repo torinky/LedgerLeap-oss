@@ -7,11 +7,11 @@
 ])
 
 @php
-    // min, max, step, unit の値を取得。未設定の場合は適切なデフォルト値を設定。
-    $min = $columnDefine->min ?? 0;
-    $max = $columnDefine->max ?? 100;
-    $step = $columnDefine->step ?? 1;
-    $unit = $columnDefine->unit ?? '';
+    // columnDefine->options から値を取得
+    $min = $columnDefine->options['min'] ?? 0;
+    $max = $columnDefine->options['max'] ?? 100;
+    $step = $columnDefine->options['step'] ?? 1;
+    $unit = $columnDefine->options['unit'] ?? '';
 @endphp
 
 <div class="form-control">
