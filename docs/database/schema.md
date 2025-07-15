@@ -148,6 +148,9 @@ erDiagram
         string file_name
         string mime_type
         bigint size
+        string status
+        string original_file_path
+        string original_mime_type
         datetime created_at
         datetime updated_at
     }
@@ -280,8 +283,8 @@ erDiagram
     *   目的: `tags` と他のモデル（例: `LedgerDefine`）との多対多の関係（ポリモーフィック）を定義する中間テーブル。
     *   主要カラム: `tag_id`, `taggable_type`, `taggable_id`。
 *   **`attached_files`**:
-    *   目的: `ledgers` レコードに添付されたファイルのメタデータ（パス、ファイル名、MIMEタイプ、サイズなど）を格納します。
-    *   主要カラム: `id`, `ledger_id`, `file_path`, `file_name`, `mime_type`, `size`。
+    *   目的: `ledgers` レコードに添付されたファイルのメタデータ（パス、ファイル名、MIMEタイプ、サイズなど）を格納します。OCR処理の状態管理やオリジナルファイルのパスも保持します。
+    *   主要カラム: `id`, `ledger_id`, `file_path`, `file_name`, `mime_type`, `size`, `status`, `original_file_path`, `original_mime_type`。
 *   **`notifications`**:
     *   目的: (Laravel標準) システム内で発生した通知（ワークフロー関連、お知らせなど）を格納します。
     *   主要カラム: `id`, `type` (通知クラス名), `notifiable_type`, `notifiable_id`, `data` (JSON), `read_at`。
