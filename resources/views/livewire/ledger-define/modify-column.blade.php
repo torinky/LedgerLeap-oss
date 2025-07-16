@@ -134,22 +134,22 @@
                                                         <div class="grid grid-cols-2 gap-4">
                                                             {{--                                                        @dd($columns[$index])--}}
                                                             <x-mary-input label="{{__('ledger.column.number.min')}}"
-                                                                          wire:model.live="columns.{{$index}}.min"
+                                                                          wire:model.live="columns.{{$index}}.options.min"
                                                                           wire:key="min-{{$column['id']}}"
                                                                           type="number"
                                                                           placeholder="{{__('ledger.column.number.min_placeholder')}}"/>
                                                             <x-mary-input label="{{__('ledger.column.number.max')}}"
-                                                                          wire:model.live="columns.{{$index}}.max"
+                                                                          wire:model.live="columns.{{$index}}.options.max"
                                                                           wire:key="max-{{$column['id']}}"
                                                                           type="number"
                                                                           placeholder="{{__('ledger.column.number.max_placeholder')}}"/>
                                                             <x-mary-input label="{{__('ledger.column.number.step')}}"
-                                                                          wire:model.live="columns.{{$index}}.step"
+                                                                          wire:model.live="columns.{{$index}}.options.step"
                                                                           wire:key="step-{{$column['id']}}"
                                                                           type="number"
                                                                           placeholder="{{__('ledger.column.number.step_placeholder')}}"/>
                                                             <x-mary-input label="{{__('ledger.column.number.unit')}}"
-                                                                          wire:model.live="columns.{{$index}}.unit"
+                                                                          wire:model.live="columns.{{$index}}.options.unit"
                                                                           wire:key="unit-{{$column['id']}}"
                                                                           placeholder="{{__('ledger.column.number.unit_placeholder')}}"/>
                                                         </div>

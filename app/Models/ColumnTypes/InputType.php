@@ -10,4 +10,5 @@ interface InputType
     public function shouldConvertToJson(): bool;
     public function convertToText($value);
     public function restoreFromString($value);
+    public function getValidationRules(): array;
 }

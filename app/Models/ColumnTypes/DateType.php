@@ -61,4 +61,9 @@ class DateType implements InputType
         // However, the original restore logic for 'YMD' directly returned strtotime($value)
         return $time; // Returns Unix timestamp
     }
+
+    public function getValidationRules(): array
+    {
+        return ['date_format:Y-m-d'];
+    }
 }

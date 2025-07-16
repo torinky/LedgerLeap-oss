@@ -33,4 +33,9 @@ class TextareaType implements InputType
     {
         return (string) $value;
     }
+
+    public function getValidationRules(): array
+    {
+        return ['string'];
+    }
 }

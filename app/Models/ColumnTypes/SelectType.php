@@ -35,4 +35,9 @@ class SelectType implements InputType
     {
         return (string) $value;
     }
+
+    public function getValidationRules(): array
+    {
+        return ['string'];
+    }
 }

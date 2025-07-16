@@ -44,4 +44,13 @@ class AutoNumberType implements InputType
     {
         return $value;
     }
+
+    public function getValidationRules(): array
+    {
+        $prefixLength = strlen($this->prefix ?? '');
+        $digitsLength = (int)($this->digits ?? 0);
+        $minAutoNumberLength = $prefixLength + $digitsLength;
+
+        return ['string', 'min:'.$minAutoNumberLength];
+    }
 }

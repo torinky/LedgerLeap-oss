@@ -52,4 +52,9 @@ class FilesType implements InputType
         }
         return $value;
     }
+
+    public function getValidationRules(): array
+    {
+        return ['array'];
+    }
 }

@@ -49,4 +49,19 @@ class NumberType implements InputType
         }
         return $value;
     }
+
+    public function getValidationRules(): array
+    {
+        $rules = ['numeric'];
+        if (isset($this->min)) {
+            $rules[] = 'min:'.$this->min;
+        }
+        if (isset($this->max)) {
+            $rules[] = 'max:'.$this->max;
+        }
+        if (isset($this->step)) {
+            $rules[] = 'multiple_of:'.$this->step;
+        }
+        return $rules;
+    }
 }

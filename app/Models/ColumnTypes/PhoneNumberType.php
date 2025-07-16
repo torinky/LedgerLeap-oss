@@ -38,4 +38,9 @@ class PhoneNumberType implements InputType
         // Further formatting or validation could be added here if needed.
         return (string) $value;
     }
+
+    public function getValidationRules(): array
+    {
+        return ['string', 'regex:/^[0-9\-]+$/'];
+    }
 }

@@ -432,53 +432,35 @@ class CreateColumn extends Component
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $columnId = $column->id;
             $columnName = 'content.'.$columnId;
-            $columnType = $column->type;
-            $inputType = (new \App\Models\ColumnDefine($column))->getInputType();
+            $inputType = $column->getInputType();
 
-            $rules = [];
+            // 1. InputTypeから型固有のルールを取得
+            $rules = $inputType->getValidationRules();
 
-            // カラムの種類に基づいた共通のバリデーションルールを追加
-            if ($columnType === 'text' || $columnType === 'textarea') {
-                $rules[] = 'string';
-            } elseif ($columnType === 'number' && $inputType instanceof \App\Models\ColumnTypes\NumberType) {
-                $rules[] = 'numeric';
-                if (isset($inputType->min)) {
-                    $rules[] = 'min:'.$inputType->min;
+            // 2. 共通のルールをマージ
+            if ($column->type === 'chk') {
+                // チェックボックスの場合、選択肢の中から選ばれていることを検証
+                if (!empty($column->options)) {
+                    $rules[] = Rule::in(array_keys($column->options));
                 }
-                if (isset($inputType->max)) {
-                    $rules[] = 'max:'.$inputType->max;
-                }
-                if (isset($inputType->step)) {
-                    // 小数点以下の桁数を考慮した倍数チェック
-                    $rules[] = 'multiple_of:'.$inputType->step;
-                }
-            } elseif ($columnType === 'auto_number' && $inputType instanceof \App\Models\ColumnTypes\AutoNumberType) {
-                $rules[] = 'string'; // auto_number は文字列として扱う
-
-                // 自動採番の最終的な文字長を計算
-                $prefixLength = strlen($inputType->prefix ?? '');
-                $digitsLength = (int)($inputType->digits ?? 0);
-                $revisionLength = strlen($inputType->revision ?? '');
-                $maxAutoNumberLength = $prefixLength + $digitsLength + $revisionLength;
-
-                $rules[] = 'max:'.$maxAutoNumberLength;
-            } elseif ($columnType === 'YMD') {
-                $rules[] = 'date_format:Y-m-d';
-            } elseif ($column->type === 'chk' && $column->useOptions && ! empty($column->options)) {
-                // チェックボックスのバリデーションルールを定義
-                $rules["content.{$column->id}"] = ['in_options', $column->options];
-
-                // 必須項目で少なくとも1つの選択肢をチェックするルールを追加
+                // 必須項目の場合、少なくとも1つ選択されていることを検証
                 if ($column->required) {
-                    array_unshift($rules["content.{$column->id}"], 'at_least_one_checked');
+                    array_unshift($rules, 'required');
+                    $rules[] = 'min:1'; // 配列の要素が1つ以上あることを確認
                 }
-            } elseif ($columnType === 'select') {
-                $rules[] = Rule::in($column->options);
-            }
-
-            // 必要に応じて追加のバリデーションルールを追加
-            if ($column->required & $column->type !== 'chk') {
-                $rules[] = 'required';
+            } elseif ($column->type === 'select') {
+                // セレクトボックスの場合、選択肢の中から選ばれていることを検証
+                if (!empty($column->options)) {
+                    $rules[] = Rule::in(array_keys($column->options));
+                }
+                if ($column->required) {
+                    array_unshift($rules, 'required');
+                }
+            } else {
+                // その他の型
+                if ($column->required) {
+                    array_unshift($rules, 'required');
+                }
             }
 
             if ($column->unique) {
@@ -492,9 +474,6 @@ class CreateColumn extends Component
             // カラムごとのバリデーションルールを配列に追加
             $validationRules[$columnName] = $rules;
         }
-
-        // selectedUserId のルール
-        //        $validationRules['selectedUserId'] = ['nullable', 'integer', 'exists:users,id'];
 
         return $validationRules;
     }

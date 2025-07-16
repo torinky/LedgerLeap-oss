@@ -7,11 +7,12 @@
 ])
 
 @php
-    // columnDefine->options から値を取得
-    $min = $columnDefine->options['min'] ?? 0;
-    $max = $columnDefine->options['max'] ?? 100;
-    $step = $columnDefine->options['step'] ?? 1;
-    $unit = $columnDefine->options['unit'] ?? '';
+    // columnDefine オブジェクトから InputType を取得し、プロパティを読み込む
+    $inputType = $columnDefine->getInputType();
+    $min = $inputType->min ?? 0;
+    $max = $inputType->max ?? 100;
+    $step = $inputType->step ?? 1;
+    $unit = $inputType->unit ?? '';
 @endphp
 
 <div class="form-control">
