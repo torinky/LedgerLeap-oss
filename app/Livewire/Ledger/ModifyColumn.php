@@ -27,6 +27,7 @@ class ModifyColumn extends CreateColumn
     // ---------------
 
     public ?int $selectedInspectorId = null;
+    public array $attachmentIdMap = []; // 添付ファイルのIDマップ
 
     public function mount(int $ledgerId): void
     {
@@ -53,10 +54,18 @@ class ModifyColumn extends CreateColumn
             $this->updateProgress();
             //            $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
 
+            // --- Attachment ID マップの作成 ---
+            $this->attachmentIdMap = AttachedFile::where('ledger_id', $this->ledgerId)
+                ->pluck('id', 'hashedbasename')
+                ->toArray();
+            // --------------------------------
+
             foreach ($this->ledgerDefineRecord->column_define as $column) {
                 if ($column->type === 'files') {
                     $this->deletedContent[$column->id] = [];
-                    $this->content[$column->id] = [];
+                    // FilePondで既存ファイルを表示するために、contentを空にしない
+                    // ただし、新規アップロードとの区別のため、ここでは既存ファイルのみを保持する
+                    $this->content[$column->id] = $this->ledgerRecord->content[$column->id] ?? [];
                 }
                 if (!empty($this->content[$column->id])) {
                     $this->labelColor[$column->id] = 'success';
@@ -121,9 +130,17 @@ class ModifyColumn extends CreateColumn
         }
     }
 
-    private function getThumbnailUrl($filename): string
+    public function getThumbnailUrl($filename): string
     {
-        return Storage::url('Ledger/thumbs/' . basename($filename));
+        $hashedBasename = basename($filename);
+        $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
+
+        if ($attachmentId) {
+            return route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+        }
+
+        // フォールバックまたはエラー処理
+        return ''; // or a default thumbnail URL
     }
 
     public function storeLedgerDiff(): void
@@ -254,6 +271,39 @@ class ModifyColumn extends CreateColumn
     }
 
     // --- 親クラスから継承・オーバーライドするメソッド ---
+
+    /**
+     * バリデーションの前に、ファイルが変更されていない場合でも
+     * 既存のファイル情報を content プロパティにマージする。
+     */
+    protected function prepareForValidation($attributes)
+    {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type === 'files') {
+                $columnId = $column->id;
+
+                // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
+                $newUploads = collect($this->content[$columnId] ?? [])
+                    ->filter(fn ($file) => $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                    ->all();
+
+                // 画面上で削除されずに残っている既存ファイル
+                $existingFiles = collect($this->ledgerRecord->content[$columnId] ?? [])
+                    ->reject(function ($originalFilename, $hashedBasename) use ($columnId) {
+                        $fullPath = 'public/Ledger/Attachments/' . $hashedBasename;
+                        return in_array($fullPath, $this->deletedContent[$columnId] ?? [], true);
+                    })
+                    ->all();
+
+                // バリデーションのために、新規ファイルと既存ファイルを結合したものを content にセットする
+                // これにより、ファイルが必須の場合でも、既存ファイルがあればバリデーションをパスする
+                // 注意: ここでセットするのはバリデーション目的。実際の保存処理は processFilesForSave で行う。
+                $this->content[$columnId] = array_merge($newUploads, $existingFiles);
+            }
+        }
+
+        return $attributes;
+    }
 
     /**
      * 下書きとして保存する処理

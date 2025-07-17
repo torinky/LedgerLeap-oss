@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AttachedFileDownloadController;
+use App\Http\Controllers\FilePondController; // 追加
 use App\Http\Controllers\Folder\CreateController as FolderCreateController;
 use App\Http\Controllers\Folder\UpdateController as FolderUpdateController;
 use App\Http\Controllers\Ledger\CreateController as LedgerCreateController;
@@ -304,6 +305,11 @@ Route::middleware('auth')->group(function () {
     // Attachment Download Route
     Route::get('/files/{attachedFile}/download', [AttachedFileDownloadController::class, 'download'])
         ->name('file.download')
+        ->where('attachedFile', '[0-9]+');
+
+    // FilePond 専用のファイルロードルート
+    Route::get('/filepond/load/{attachedFile}', [FilePondController::class, 'load'])
+        ->name('filepond.load')
         ->where('attachedFile', '[0-9]+');
 
 });

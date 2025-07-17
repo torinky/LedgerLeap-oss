@@ -35,9 +35,9 @@
                 allowImagePreview: {{ $attributes->has('allowImagePreview') ? 'true' : 'false' }},
                 imagePreviewMaxHeight: {{ $attributes->has('imagePreviewMaxHeight') ? $attributes->get('imagePreviewMaxHeight') : '256' }},
                 allowFileTypeValidation: {{ $attributes->has('allowFileTypeValidation') ? 'true' : 'false' }},
-                acceptedFileTypes: {!! $attributes->get('acceptedFileTypes') ?? 'null' !!},
+                acceptedFileTypes: {!! json_encode($attributes->get('acceptedFileTypes')) !!},
                 allowFileSizeValidation: {{ $attributes->has('allowFileSizeValidation') ? 'true' : 'false' }},
-                maxFileSize: {!! $attributes->has('maxFileSize') ? "'".$attributes->get('maxFileSize')."'" : 'null' !!},
+                maxFileSize: {!! json_encode($attributes->get('maxFileSize')) !!},
                 credits: false,
                 filePosterMaxHeight: 200,
                 server: {
@@ -70,52 +70,50 @@
                     },
                 },
 
-
-                    @if(!empty( $ledgerRecord->content[$columnDefine->id]) && is_array($ledgerRecord->content[$columnDefine->id]))
-                        @php($position=0)
-                        files: [
-                        @foreach ($ledgerRecord->content[$columnDefine->id] as $filename => $originalFilename )
-                            {
-                            @php($filename = 'public/Ledger/Attachments' . DIRECTORY_SEPARATOR . $filename)
-                            @if(!Storage::exists($filename))
-                                source: '',
-                                options: {
-                                   type: 'local',
-                                   file: {
-                                        name: '[Not Found] {{$originalFilename}}',
-                                        size: 0,
-                                        type: '{{Storage::mimeType($filename)}}',
-                                   },
-                                   metadata:{
-                                        poster:'{{$this->getThumbnailUrl( $filename)}}',
-                                        position: {{$position}},
-                                        filename:'not_exist'
-                                   },
-                                },
-                            @else
-                                source: '{{ Storage::url($filename) }}',
-                                options: {
-                                   type: 'local',
-                                   file: {
-                                        name: '{{$originalFilename}}',
-                                        size: {{Storage::size($filename)}},
-                                        type: '{{Storage::mimeType($filename)}}',
-                                   },
-                                   metadata:{
-                                        poster:'{{$this->getThumbnailUrl( $filename)}}',
-                                        position: {{$position}},
-                                        filename:'{{$filename}}'
-                                   },
-                                },
-                            @endif
+                @if(!empty( $ledgerRecord->content[$columnDefine->id]) && is_array($ledgerRecord->content[$columnDefine->id]))
+                    files: [
+                    @foreach ($ledgerRecord->content[$columnDefine->id] as $hashedBasename => $originalFilename )
+                        @php($attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null)
+                        @php($fullPath = 'public/Ledger/Attachments/Originals/' . $hashedBasename)
+                        {
+                        @if(!$attachmentId || !Storage::exists($fullPath))
+                            source: '',
+                            options: {
+                               type: 'local',
+                               file: {
+                                    name: '[Not Found] {{$originalFilename}}',
+                                    size: 0,
+                                    type: 'application/octet-stream',
+                               },
+                               metadata:{
+                                    poster:'',
+                                    position: {{ $loop->index }},
+                                    filename:'not_exist'
+                               },
                             },
-                            @php($position++)
-                        @endforeach
+                        @else
+                            source: '{{ $attachmentId }}',
+                            options: {
+                               type: 'local',
+                               file: {
+                                    name: '{{$originalFilename}}',
+                                    size: {{Storage::size($fullPath)}},
+                                    type: '{{Storage::mimeType($fullPath)}}',
+                               },
+                               metadata:{
+                                    poster:'{{ route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]) }}',
+                                    position: {{ $loop->index }},
+                                    filename:'{{$fullPath}}'
+                               },
+                            },
+                        @endif
+                        },
+                    @endforeach
                     ],
-                    onremovefile: (error, file) => {
-                        @this.set('deletedContent.{{$columnDefine->id}}.'+file.getMetadata('position'),file.getMetadata('filename'));
-                    }
-                    @endif
+                onremovefile: (error, file) => {
+                    @this.set('deletedContent.{{$columnDefine->id}}.'+file.getMetadata('position'),file.getMetadata('filename'));
+                }
+                @endif
             });
         });
     }

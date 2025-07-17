@@ -12,47 +12,51 @@ class AttachedFileDownloadController extends Controller
 {
     public function download(Request $request, AttachedFile $attachedFile)
     {
-        // 1. 認可チェック (先に行う方がセキュア)
-        if (Gate::denies('view', $attachedFile->ledger)) {
-            abort(404);
+        Log::info('[DownloadController@download] Started.', [
+            'attached_file_id' => $attachedFile->id,
+            'is_thumbnail' => $request->boolean('thumbnail'),
+            'is_original' => $request->boolean('original'),
+        ]);
+
+        // 1. 認可チェック
+        try {
+            Gate::authorize('view', $attachedFile->ledger);
+            Log::info('[DownloadController@download] Authorization successful.');
+        } catch (\Exception $e) {
+            Log::error('[DownloadController@download] Authorization failed.', ['error' => $e->getMessage()]);
+            abort(403, 'Forbidden');
         }
 
-        // 2. サムネイルリクエストか判定
+        // 2. パスとファイル名を決定
         $isThumbnailRequest = $request->boolean('thumbnail');
-        $isOriginalRequest = $request->boolean('original'); // New
+        $isOriginalRequest = $request->boolean('original');
         $filePath = '';
         $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
 
-        // PDFに最適化されたファイルの場合、拡張子を.pdfに強制
-        if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
-            $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME) . '.pdf';
-        }
-
         if ($isThumbnailRequest) {
             $filePath = 'Ledger/thumbs/' . $attachedFile->hashedbasename;
-            Log::info('Thumbnail request: filePath = ' . $filePath);
         } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
             $filePath = $attachedFile->original_file_path;
-            // オリジナルファイルのリクエストの場合、最適化されていても元の拡張子を維持
             $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
-            Log::info('Original request: filePath = ' . $filePath);
         } else {
             $filePath = $attachedFile->path;
-            Log::info('Normal download request: filePath = ' . $filePath);
+            if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
+                $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME) . '.pdf';
+            }
         }
+        Log::info('[DownloadController@download] Determined file path and name.', ['path' => $filePath, 'serve_as' => $fileNameToServe]);
 
         // 3. ファイルの物理的な存在を確認
-        // Storage::exists() はデフォルトディスク (local) を見るため、public ディスクを明示
         if (!Storage::disk('public')->exists($filePath)) {
-            Log::warning('File not found: ' . $filePath); // 追加
-            abort(404);
+            Log::error('[DownloadController@download] File not found in public disk.', ['path' => $filePath]);
+            abort(404, 'File Not Found');
         }
 
-        // 4. アクティビティログの記録 (サムネイル閲覧でも記録)
+        // 4. アクティビティログの記録
         activity()
             ->performedOn($attachedFile)
             ->causedBy(auth()->user())
-            ->event($isThumbnailRequest ? 'viewed_thumbnail' : ($isOriginalRequest ? 'downloaded_original' : 'downloaded')) // イベント名を変更
+            ->event($isThumbnailRequest ? 'viewed_thumbnail' : ($isOriginalRequest ? 'downloaded_original' : 'downloaded'))
             ->withProperties([
                 'ledger_id' => $attachedFile->ledger->id,
                 'ledger_define_id' => $attachedFile->ledger->ledger_define_id,
@@ -60,28 +64,22 @@ class AttachedFileDownloadController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ])
-            ->log("User " . ($isThumbnailRequest ? 'viewed thumbnail for' : ($isOriginalRequest ? 'downloaded original of' : 'downloaded an attachment:')) . " {$fileNameToServe}");
+            ->log("User activity logged for file: {$fileNameToServe}");
 
-        // 5. ダウンロード/インライン表示レスポンスの生成
+        // 5. レスポンス生成
         if ($isThumbnailRequest) {
-            $mimeType = Storage::disk('public')->mimeType($filePath); // 追加
-            Log::info('Thumbnail response: mimeType = ' . $mimeType); // 追加
-            // サムネイルはインラインで表示
+            Log::info('[DownloadController@download] Returning thumbnail response.');
             return Storage::disk('public')->response($filePath);
-        } else {
-            $mimeType = Storage::disk('public')->mimeType($filePath);
-            $disposition = 'attachment'; // デフォルトはダウンロード
-
-            // ブラウザでプレビュー可能なMIMEタイプの場合、インライン表示を試みる
-            if (in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'])) {
-                $disposition = 'inline';
-            }
-            Log::info('Normal/Original response: mimeType = ' . $mimeType . ', disposition = ' . $disposition); // 追加
-
-            return response()->file(Storage::disk('public')->path($filePath), [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => $disposition . '; filename="' . $fileNameToServe . '"'
-            ]);
         }
+
+        $mimeType = Storage::disk('public')->mimeType($filePath);
+        $disposition = in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']) ? 'inline' : 'attachment';
+
+        Log::info('[DownloadController@download] Returning file response.', ['mime' => $mimeType, 'disposition' => $disposition]);
+
+        return response()->file(Storage::disk('public')->path($filePath), [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => $disposition . '; filename="' . $fileNameToServe . '"'
+        ]);
     }
 }
