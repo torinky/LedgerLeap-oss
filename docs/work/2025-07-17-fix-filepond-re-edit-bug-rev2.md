@@ -22,13 +22,13 @@
 
 - **タスク:**
     1.  **コントローラーの作成:**
-        -   `php artisan make:controller FilePondController` を実行し、`app/Http/Controllers/FilePondController.php` を作成する。
+        -   `php artisan make:controller FilePondController` を実行し、`app/Http/Controllers/FilePondController.php` を作成する。(完了)
     2.  **メソッドの実装 (`FilePondController.php`):**
-        -   `public function load(AttachedFile $attachedFile)` メソッドを実装する。
-        -   メソッド内では、`Gate::authorize('view', $attachedFile->ledger)` を用いて認可チェックのみを行う。
-        -   `Storage::disk('public')->response($attachedFile->path)` を返し、ファイルの内容を `Content-Disposition` ヘッダーなしで直接レスポンスする。
+        -   `public function load(AttachedFile $attachedFile)` メソッドを実装する。(完了)
+        -   メソッド内では、`Gate::authorize('view', $attachedFile->ledger)` を用いて認可チェックのみを行う。(完了)
+        -   `Storage::disk('public')->response($attachedFile->path)` を返し、ファイルの内容を `Content-Disposition` ヘッダーなしで直接レスポンスする。(完了)
     3.  **ルートの定義 (`routes/web.php`):**
-        -   `Route::get('/filepond/load/{attachedFile}', [FilePondController::class, 'load'])->name('filepond.load');` を追加し、新しいエンドポイントを定義する。
+        -   `Route::get('/filepond/load/{attachedFile}', [FilePondController::class, 'load'])->name('filepond.load');` を追加し、新しいエンドポイントを定義する。(完了)
 
 ### ステップ 2: FilePondコンポーネント (Blade) の修正
 
@@ -36,10 +36,11 @@
 
 - **タスク:**
     1.  **`resources/views/components/ledger/form/files.blade.php` の修正:**
-        -   FilePondの `setOptions` 内に `server` オブジェクトを追加（または修正）する。
-        -   `server` オブジェクトに `load` プロパティを追加し、`'{{ route('filepond.load', '') }}/'` を設定する。FilePondは `source` の値をこの末尾に自動的に追加する。
-        -   `files` オプションのループ内で、`source` には `AttachedFile` のID (`$attachmentId`) のみを設定する。
-        -   `metadata.poster` には、サムネイル画像を表示するため、既存のセキュアなダウンロードルート `route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true])` を引き続き使用する。
+        -   FilePondの `setOptions` 内に `server` オブジェクトを追加（または修正）する。(完了)
+        -   `server` オブジェクトに `load` プロパティを追加し、`attachedFile` パラメータを正しく渡すように設定する。(完了)
+        -   `files` オプションのループ内で、`source` には `AttachedFile` のID (`$attachmentId`) のみを設定する。(完了)
+        -   `metadata.poster` には、サムネイル画像を表示するため、既存のセキュアなダウンロードルート `route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true])` を引き続き使用する。(完了)
+        -   `window.addEventListener('load', ...)` ラッパーを削除し、FilePondの初期化を `x-init` の直下で行うように修正する。(完了)
 
 ### ステップ 3: バリデーションロジックの修正
 
@@ -47,10 +48,10 @@
 
 - **タスク:**
     1.  **`app/Livewire/Ledger/ModifyColumn.php` の修正:**
-        -   Livewireのライフサイクルフックである `prepareForValidation()` メソッドをオーバーライドする。
-        -   このメソッド内で、ファイルカラムの `content` プロパティを動的に再構築するロジックを実装する。
+        -   Livewireのライフサイクルフックである `prepareForValidation()` メソッドをオーバーライドする。(完了)
+        -   このメソッド内で、ファイルカラムの `content` プロパティを動的に再構築するロジックを実装する。(完了)
             -   **再構築する内容 = (新規アップロードファイル) + (画面上で削除されずに残っている既存ファイル)**
-        -   これにより、バリデーション実行時には `content` プロパティに既存のファイル情報が含まれる状態になり、必須項目チェックを正しくパスできるようになる。
+        -   これにより、バリデーション実行時には `content` プロパティに既存のファイル情報が含まれる状態になり、必須項目チェックを正しくパスできるようになる。(完了)
 
 ## 5. 期待される効果
 
