@@ -28,7 +28,6 @@
             wire:ignore
             x-data
             x-init="() => {
-        window.addEventListener('load', () => {
             const post = FilePond.create($refs.content_{{$columnDefine->id}});
             post.setOptions({
                 allowMultiple: {{ $attributes->has('multiple') ? 'true' : 'false' }},
@@ -61,12 +60,9 @@
     --}}
 
                     load: (source, load, error, progress, abort, headers) => {
-                        var request = new Request(source);
-                        fetch(request).then(function(response) {
-                          response.blob().then(function(myBlob) {
-                            load(myBlob)
-                          });
-                        });
+                        // source は AttachedFile の ID
+                        // route() ヘルパーに直接パラメータを渡すことで、Laravelが正しいURLを生成する
+                        fetch(`{{ route('filepond.load', ['attachedFile' => '__ATTACHED_FILE_ID__']) }}`.replace('__ATTACHED_FILE_ID__', source)).then(response => response.blob()).then(load);
                     },
                 },
 
@@ -115,7 +111,6 @@
                 }
                 @endif
             });
-        });
     }
     "
         >
