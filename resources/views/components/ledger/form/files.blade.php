@@ -1,6 +1,6 @@
 @props([
     'class'=>'',
-    'hintClass'=> 'label-text-alt text-gray-400 ps-1 ',
+    'hintClass'=>'label-text-alt text-gray-400 ps-1 ',
     'columnDefine'=>[],
     ])
 
@@ -51,14 +51,6 @@
                         @this.removeUpload('content.{{$columnDefine->id}}', filename, load)
                     },
 
-    {{--
-                    load: (uniqueFileId, load, error, progress, abort, headers) => {
-                        fetch(`{{ route('media.restore', ['course', $filename]) }}`).then((res) => {
-                            return res.blob();
-                         }).then(load);
-                    },
-    --}}
-
                     load: (source, load, error, progress, abort, headers) => {
                         // source は AttachedFile の ID
                         // route() ヘルパーに直接パラメータを渡すことで、Laravelが正しいURLを生成する
@@ -69,8 +61,41 @@
                 @if(!empty( $ledgerRecord->content[$columnDefine->id]) && is_array($ledgerRecord->content[$columnDefine->id]))
                     files: [
                     @foreach ($ledgerRecord->content[$columnDefine->id] as $hashedBasename => $originalFilename )
-                        @php($attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null)
-                        @php($fullPath = 'public/Ledger/Attachments/Originals/' . $hashedBasename)
+                        @php
+                            $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
+                            $fullPath = 'public/Ledger/Attachments/Originals/' . $hashedBasename;
+                            $posterUrl = '';
+                            if ($attachmentId && Storage::exists($fullPath)) {
+                                $mimeType = Storage::mimeType($fullPath);
+                                if (str_starts_with($mimeType, 'image/')) {
+                                    $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+                                } else {
+                                    switch ($mimeType) {
+                                        case 'application/pdf':
+                                            $posterUrl = asset('images/icons/file-pdf.svg');
+                                            break;
+                                        case 'application/zip':
+                                        case 'application/x-zip-compressed':
+                                            $posterUrl = asset('images/icons/file-earmark-zip.svg');
+                                            break;
+                                        case 'application/msword':
+                                        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                                            $posterUrl = asset('images/icons/file-earmark-word.svg');
+                                            break;
+                                        case 'application/vnd.ms-excel':
+                                        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                                            $posterUrl = asset('images/icons/file-earmark-excel.svg');
+                                            break;
+                                        case 'application/vnd.ms-powerpoint':
+                                        case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                                            $posterUrl = asset('images/icons/file-earmark-ppt.svg');
+                                            break;
+                                        default:
+                                            $posterUrl = asset('images/icons/file-earmark.svg');
+                                    }
+                                }
+                            }
+                        @endphp
                         {
                         @if(!$attachmentId || !Storage::exists($fullPath))
                             source: '',
@@ -97,7 +122,7 @@
                                     type: '{{Storage::mimeType($fullPath)}}',
                                },
                                metadata:{
-                                    poster:'{{ route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]) }}',
+                                    poster:'{{ $posterUrl }}',
                                     position: {{ $loop->index }},
                                     filename:'{{$fullPath}}'
                                },
@@ -107,7 +132,7 @@
                     @endforeach
                     ],
                 onremovefile: (error, file) => {
-                    @this.set('deletedContent.{{$columnDefine->id}}.'+file.getMetadata('position'),file.getMetadata('filename'));
+                    @this.set('deletedContent.{{$columnDefine->id}}.'.concat(file.getMetadata('position')),file.getMetadata('filename'));
                 }
                 @endif
             });
