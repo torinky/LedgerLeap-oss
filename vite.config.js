@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/ledgerEdit.js',
                 'resources/js/ledgerDefineEdit.js',
+                'resources/js/ledgerShow.js',
             ],
             refresh: true,
         }),
