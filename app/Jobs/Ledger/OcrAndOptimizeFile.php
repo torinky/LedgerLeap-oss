@@ -33,7 +33,7 @@ class OcrAndOptimizeFile implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('OcrAndOptimizeFile job started for file: ' . $this->attachedFile->id);
+        // Log::info('OcrAndOptimizeFile job started for file: ' . $this->attachedFile->id);
 
         // 1. status を OCR_PROCESSING に更新
         $this->attachedFile->update(['status' => AttachedFileStatus::OCR_PROCESSING->value]);
@@ -41,7 +41,7 @@ class OcrAndOptimizeFile implements ShouldQueue
         // Determine the input file path for OCR
         $inputFilePathForOcr = $this->attachedFile->original_file_path ?: $this->attachedFile->path;
 
-        Log::info('Input file path for OCR: ' . $inputFilePathForOcr);
+        // Log::info('Input file path for OCR: ' . $inputFilePathForOcr);
         if (!Storage::disk('public')->exists($inputFilePathForOcr)) {
             Log::error('Original file does not exist at path for OCR: ' . $inputFilePathForOcr);
             $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
@@ -60,19 +60,19 @@ class OcrAndOptimizeFile implements ShouldQueue
 
             try {
                 Storage::disk('public')->move($this->attachedFile->path, $newOriginalPath);
-                if (Storage::disk('public')->exists($newOriginalPath)) {
-                    Log::info('File successfully moved and exists at new path: ' . $newOriginalPath);
-                } else {
-                    Log::error('File moved but not found at new path: ' . $newOriginalPath);
-                }
+                // if (Storage::disk('public')->exists($newOriginalPath)) {
+                //     Log::info('File successfully moved and exists at new path: ' . $newOriginalPath);
+                // } else {
+                //     Log::error('File moved but not found at new path: ' . $newOriginalPath);
+                // }
                 $this->attachedFile->update([
                     'original_file_path' => $newOriginalPath,
                     'original_mime_type' => $originalMimeType,
                     'path' => $newOriginalPath, // Update path to point to the original location
                 ]);
                 $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
-                Log::info('Original file moved to: ' . $newOriginalPath);
-                Log::info('AttachedFile original_file_path after update: ' . $this->attachedFile->original_file_path);
+                // Log::info('Original file moved to: ' . $newOriginalPath);
+                // Log::info('AttachedFile original_file_path after update: ' . $this->attachedFile->original_file_path);
                 $originalFilePath = Storage::disk('public')->path($newOriginalPath); // Update physical path
             } catch (\Exception $e) {
                 Log::error('Failed to move original file: ' . $e->getMessage());
@@ -83,20 +83,20 @@ class OcrAndOptimizeFile implements ShouldQueue
             // 既に退避済みであれば、そのパスを使用
             $originalFilePath = Storage::disk('public')->path($this->attachedFile->original_file_path);
             $originalMimeType = $this->attachedFile->original_mime_type;
-            Log::info('Original file already exists at: ' . $this->attachedFile->original_file_path);
+            // Log::info('Original file already exists at: ' . $this->attachedFile->original_file_path);
         }
 
-        Log::info('AttachedFile path before output path calculation: ' . $this->attachedFile->path);
-        Log::info('Dirname of attachedFile path: ' . dirname($this->attachedFile->path));
+        // Log::info('AttachedFile path before output path calculation: ' . $this->attachedFile->path);
+        // Log::info('Dirname of attachedFile path: ' . dirname($this->attachedFile->path));
 
         // Determine the new path for the OCR\'d PDF within the storage system
         $outputFileName = pathinfo($this->attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf';
         $outputStoragePath = AttachedFilePathHelper::getAttachmentPath($this->attachedFile->ledger_define_id, $outputFileName);
 
-        Log::info('Calculated outputStoragePath: ' . $outputStoragePath);
+        // Log::info('Calculated outputStoragePath: ' . $outputStoragePath);
 
-        Log::info('AttachedFile path before Storage::path($outputStoragePath): ' . $this->attachedFile->path);
-        Log::info('outputStoragePath before Storage::path($outputStoragePath): ' . $outputStoragePath);
+        // Log::info('AttachedFile path before Storage::path($outputStoragePath): ' . $this->attachedFile->path);
+        // Log::info('outputStoragePath before Storage::path($outputStoragePath): ' . $outputStoragePath);
 
         // Get the physical path for the OCR\'d PDF output
         $outputPhysicalPath = Storage::disk('public')->path($outputStoragePath);
@@ -137,22 +137,22 @@ class OcrAndOptimizeFile implements ShouldQueue
             $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
             $this->attachedFile->optimized = true; // optimized を true に設定
 
-            Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
-            try {
-                $fileContent = Storage::disk('public')->get($this->attachedFile->path);
-                Log::info('File content length: ' . strlen($fileContent));
-            } catch (\Exception $e) {
-                Log::error('Failed to get file content: ' . $e->getMessage());
-            }
+            // Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
+            // try {
+            //     $fileContent = Storage::disk('public')->get($this->attachedFile->path);
+            //     Log::info('File content length: ' . strlen($fileContent));
+            // } catch (\Exception $e) {
+            //     Log::error('Failed to get file content: ' . $e->getMessage());
+            // }
 
             $this->attachedFile->size = Storage::disk('public')->size($this->attachedFile->path);
             $this->attachedFile->save();
-            Log::info('OCR and optimization successful for file: ' . $this->attachedFile->id);
+            // Log::info('OCR and optimization successful for file: ' . $this->attachedFile->id);
 
             // 5. Tikaによる再処理
             $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
             ProcessAttachedFile::dispatch($this->attachedFile);
-            Log::info('Dispatched ProcessAttachedFile for re-processing: ' . $this->attachedFile->id);
+            // Log::info('Dispatched ProcessAttachedFile for re-processing: ' . $this->attachedFile->id);
 
         } catch (\Exception $e) {
             Log::error('OCR and optimization failed for file ' . $this->attachedFile->id . ': ' . $e->getMessage());
