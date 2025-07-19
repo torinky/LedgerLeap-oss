@@ -449,4 +449,22 @@ class RecordsTable extends Component
         $this->modalTitle = $title . ' ' . __('ledger.activity.title');
         $this->showActivityModal = true;
     }
+
+    public function retryProcessing(int $attachedFileId): void
+    {
+        $attachedFile = AttachedFile::find($attachedFileId);
+
+        if (!$attachedFile) {
+            $this->dispatch('toast', type: 'error', message: __('ledger.messages.file_not_found'));
+            return;
+        }
+
+        try {
+            $attachedFile->update(['status' => \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
+            \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
+            $this->dispatch('toast', type: 'success', message: __('ledger.messages.processing_retried'));
+        } catch (\Exception $e) {
+            $this->dispatch('toast', type: 'error', message: __('ledger.messages.processing_retry_failed', ['error' => $e->getMessage()]));
+        }
+    }
 }
