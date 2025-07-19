@@ -25,7 +25,7 @@
 
 ## 4. 実装計画 (ステップ・バイ・ステップ)
 
-### ステップ 1: Bladeコンポーネント (`files.blade.php`) の簡素化
+### ステップ 1: Bladeコンポーネント (`files.blade.php`) の簡素化 (完了)
 
 -   **目的:** BladeコンポーネントからPHPロジックを完全に排除し、表示に専念させる。
 -   **対象ファイル:**
@@ -40,7 +40,7 @@
         ```
     5.  `onremovefile` のJavaScriptコードを、`window.Livewire.find('{{ $this->id() }}').set(...)` の形式で、JavaScriptのテンプレートリテラルを適切に使用して記述する。
 
-### ステップ 2: LivewireコンポーネントへのFilePond初期化ロジックの移譲
+### ステップ 2: LivewireコンポーネントへのFilePond初期化ロジックの移譲 (完了)
 
 -   **目的:** `files.blade.php` 内のPHPロジックをLivewireコンポーネントに移設し、FilePond用のデータ配列を生成する。
 -   **対象ファイル:**
@@ -52,7 +52,7 @@
     3.  ロードした情報をもとに、`files.blade.php` に記述されていたロジック（`AttachedFile` の検索、`AttachedFilePathHelper` を使ったパス解決、MIMEタイプに応じたポスターURLの決定など）を実行する。
     4.  各ファイルについて、FilePondの `files` オプションが要求する形式の連想配列を生成し、`$this->filePondInitialFiles[$columnDefine->id]` に格納する。
 
-### ステップ 3: 呼び出し元のビューの修正
+### ステップ 3: 呼び出し元のビューの修正 (完了)
 
 -   **目的:** Livewireコンポーネントで準備したデータを、Bladeコンポーネントに正しく渡す。
 -   **対象ファイル:**
@@ -68,6 +68,19 @@
             ...
         />
         ```
+
+### ステップ 4: Font Awesome アイコンのオンプレミス配信設定 (計画中)
+
+-   **目的:** `node_modules` ディレクトリ内の Font Awesome アイコンを `public` ディレクトリにコピーすることなく、HTTP 経由で直接参照できるようにする。これにより、リソースの無駄を省き、ビルドプロセスを簡素化する。
+-   **考慮事項:**
+    -   **`node_modules` からの直接参照のメリット:** アイコンファイルを `public` ディレクトリにコピーする手間が省け、ディスク容量の節約にもなる。また、Font Awesome のバージョンアップ時にも `node_modules` を更新するだけで済むため、管理が容易になる。
+    -   **`FilePondPluginFilePoster` の要件:** FilePond の `metadata.poster` オプションは画像 URL を期待するため、単に `<i>` タグに Font Awesome のクラス名（例: `<i class="fa-solid fa-file-pdf"></i>`）を付与するだけでは機能しない。画像として配信されるエンドポイントが必要となる。
+    -   **Laravel `Storage` クラスの検討:** `Storage` クラスを使って `node_modules` をディスクとして設定し、そこからファイルを配信することも可能だが、`config/filesystems.php` の変更や、それを呼び出すためのルート・ロジックが必要となり、実装の複雑性は専用コントローラーと大差ない。また、`Storage` の本来の用途（アプリケーションのファイル管理）とは異なるため、意図が不明瞭になる可能性がある。
+    -   **結論:** 既存の Laravel のルーティングとコントローラーの仕組みを活用し、`node_modules` から直接 SVG ファイルを読み込んで HTTP レスポンスとして返す専用のコントローラーとルートを作成するアプローチが、最も直接的で管理しやすいと判断した。
+-   **タスク:**
+    1.  **コントローラーの作成:** `app/Http/Controllers/FontAwesomeIconController.php` を作成し、`serveIcon` メソッドを実装する。このメソッドは、リクエストされたアイコンのスタイル（例: `solid`）とアイコン名を受け取り、`node_modules` ディレクトリから対応する SVG ファイルを読み込み、`image/svg+xml` の `Content-Type` で直接レスポンスとして返す。
+    2.  **ルートの定義:** `routes/web.php` に `Route::get('/fontawesome/{style}/{icon}.svg', [FontAwesomeIconController::class, 'serveIcon'])->name('fontawesome.icon');` を追加し、新しいエンドポイントを定義する。
+
 
 ## 5. 期待される効果
 

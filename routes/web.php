@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachedFileDownloadController;
 use App\Http\Controllers\FilePondController; // 追加
+use App\Http\Controllers\FontAwesomeIconController;
 use App\Http\Controllers\Folder\CreateController as FolderCreateController;
 use App\Http\Controllers\Folder\UpdateController as FolderUpdateController;
 use App\Http\Controllers\Ledger\CreateController as LedgerCreateController;
@@ -311,6 +312,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/filepond/load/{attachedFile}', [FilePondController::class, 'load'])
         ->name('filepond.load')
         ->where('attachedFile', '[0-9]+');
+
+    // Font Awesome アイコン配信ルート
+    Route::get('/fontawesome/{style}/{icon}.svg', [App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
+        ->name('fontawesome.icon');
 
 });
 

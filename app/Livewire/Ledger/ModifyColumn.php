@@ -474,26 +474,49 @@ class ModifyColumn extends CreateColumn
                         } else {
                             switch ($displayMimeType) {
                                 case 'application/pdf':
-                                    $posterUrl = asset('images/icons/file-pdf-solid.svg');
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
                                     break;
                                 case 'application/zip':
                                 case 'application/x-zip-compressed':
-                                    $posterUrl = asset('images/icons/file-earmark-zip.svg');
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
                                     break;
                                 case 'application/msword':
                                 case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                                    $posterUrl = asset('images/icons/file-earmark-word.svg');
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
                                     break;
                                 case 'application/vnd.ms-excel':
                                 case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-                                    $posterUrl = asset('images/icons/file-earmark-excel.svg');
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
                                     break;
                                 case 'application/vnd.ms-powerpoint':
                                 case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                                    $posterUrl = asset('images/icons/file-earmark-ppt.svg');
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
+                                    break;
+                                case 'text/plain':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
+                                    break;
+                                case 'text/html':
+                                case 'text/css':
+                                case 'application/javascript':
+                                case 'application/json':
+                                case 'application/xml':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
+                                    break;
+                                case 'text/csv':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
                                     break;
                                 default:
-                                    $posterUrl = asset('images/icons/file-earmark.svg');
+                                    if (str_starts_with($displayMimeType, 'audio/')) {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
+                                    } elseif (str_starts_with($displayMimeType, 'video/')) {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
+                                    } elseif (str_starts_with($displayMimeType, 'image/')) {
+                                        // サムネイルが生成できない画像ファイルなどのフォールバック
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
+                                    } else {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
+                                    }
+                                    break;
                             }
                         }
                     }
