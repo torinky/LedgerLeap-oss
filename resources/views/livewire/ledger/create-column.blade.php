@@ -50,30 +50,23 @@
                         <div class="flex">
                             <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
                             <div
-                                    wire:key="content-{{$columnDefine->id}}"
+                                    wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
                                     x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
                                     class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
                                     @if($loop->first)
                                         x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
                                     x-init="updateBackground('{{ $columnDefine->id }}')"
                                     @endif
-
                             >
-
-                                @if($columnDefine->type=='files')
-
-                                    <div class="">
-                                        <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
-                                                             wire:model.live="content"
-                                                             wire:key="content-file-{{$columnDefine->id}}"
-                                                             :columnDefine="$columnDefine"
-                                                             :ledgerRecord="$ledgerRecord??[]"
-                                                             multiple
-                                                             allowImagePreview
-                                                             imagePreviewMaxHeight="200"
-                                                             :ledgerDefineId="$ledgerDefineId"
-                                        />
-                                    </div>
+                                @if($columnDefine->type==='files')
+                                    <x-ledger.form.files
+                                            :columnDefine="$columnDefine"
+                                            :ledgerDefineId="$ledgerDefineId"
+                                            :initial-files="[]"
+                                            multiple
+                                            allowImagePreview
+                                            imagePreviewMaxHeight="200"
+                                    />
                                 @else
                                     @php
                                         $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
@@ -82,13 +75,13 @@
                                             $componentName = 'ledger.form.text';
                                         }
                                     @endphp
-                                    <x-dynamic-component :component="$componentName"
-                                                         wire:model="content"
-                                                         wire:key="content-input-{{$columnDefine->id}}"
-                                                         :columnDefine="$columnDefine"
-                                                         :ledgerRecord="$ledgerRecord??[]"
+                                    <x-dynamic-component
+                                            :component="$componentName"
+                                            wire:model.live="content"
+                                            wire:key="content-input-{{$columnDefine->id}}"
+                                            :columnDefine="$columnDefine"
+                                            :ledgerRecord="$ledgerRecord??[]"
                                     />
-
                                 @endif
                             </div>
                         </div>

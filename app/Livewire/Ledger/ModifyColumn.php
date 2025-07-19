@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
+
 use App\Enums\WorkflowStatus;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -19,7 +21,6 @@ class ModifyColumn extends CreateColumn
 {
     public array $deletedContent = [];
 
-    
 
     // --- Workflow ---
     public bool $confirmingEdit = false; // 編集確認モーダルの表示状態
@@ -29,6 +30,7 @@ class ModifyColumn extends CreateColumn
 
     public ?int $selectedInspectorId = null;
     public array $attachmentIdMap = []; // 添付ファイルのIDマップ
+    public array $filePondInitialFiles = []; // FilePond初期化用
 
     public function mount(int $ledgerId): void
     {
@@ -60,6 +62,8 @@ class ModifyColumn extends CreateColumn
                 ->pluck('id', 'hashedbasename')
                 ->toArray();
             // --------------------------------
+
+            $this->prepareFilePondInitialFiles(); // FilePond初期化
 
             foreach ($this->ledgerDefineRecord->column_define as $column) {
                 if ($column->type === 'files') {
@@ -285,7 +289,7 @@ class ModifyColumn extends CreateColumn
 
                 // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
                 $newUploads = collect($this->content[$columnId] ?? [])
-                    ->filter(fn ($file) => $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                    ->filter(fn($file) => $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
                     ->all();
 
                 // 画面上で削除されずに残っている既存ファイル
@@ -416,4 +420,124 @@ class ModifyColumn extends CreateColumn
         parent::saveDirectly();
     }
 
+
+    public function prepareFilePondInitialFiles(): void
+    {
+        $this->filePondInitialFiles = [];
+
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            $columnId = $column->id;
+            $filesForColumn = [];
+
+            if (!empty($this->content[$columnId])
+                && is_array($this->content[$columnId])
+                && $column->type === 'files'
+            ) {
+                $loopIndex = 0;
+                foreach ($this->content[$columnId] as $hashedBasename => $originalFilename) {
+                    $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
+                    /** @var AttachedFile|null $currentAttachedFile */
+                    $currentAttachedFile = $attachmentId ? AttachedFile::find($attachmentId) : null;
+
+                    $storagePath = '';
+                    $displayMimeType = '';
+
+                    if ($currentAttachedFile) {
+                        // 処理失敗時はオリジナルファイルを参照
+                        if (
+                            in_array($currentAttachedFile->status->value, [
+                                AttachedFileStatus::TIKA_FAILED->value,
+                                AttachedFileStatus::OCR_FAILED->value,
+                            ], true)
+                        ) {
+                            $storagePath = $currentAttachedFile->original_file_path;
+                            $displayMimeType = $currentAttachedFile->original_mime_type;
+                        } else {
+                            // 成功時や処理中は、DBに保存されている現在のパスを正とする
+                            $storagePath = $currentAttachedFile->path;
+                            $displayMimeType = $currentAttachedFile->mime;
+                        }
+                    } else {
+                        // 念のため、AttachedFileレコードが見つからない場合のフォールバック
+                        $storagePath = AttachedFilePathHelper::getAttachmentPath(
+                            $this->ledgerDefineId,
+                            $hashedBasename
+                        );
+                    }
+
+                    $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
+                    $posterUrl = '';
+//                    dd($storagePath,$fileExists,$currentAttachedFile,Storage::disk('public')->exists($storagePath));
+                    if ($fileExists) {
+                        if (str_starts_with((string)$displayMimeType, 'image/')) {
+                            $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+                        } else {
+                            switch ($displayMimeType) {
+                                case 'application/pdf':
+                                    $posterUrl = asset('images/icons/file-pdf-solid.svg');
+                                    break;
+                                case 'application/zip':
+                                case 'application/x-zip-compressed':
+                                    $posterUrl = asset('images/icons/file-earmark-zip.svg');
+                                    break;
+                                case 'application/msword':
+                                case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                                    $posterUrl = asset('images/icons/file-earmark-word.svg');
+                                    break;
+                                case 'application/vnd.ms-excel':
+                                case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                                    $posterUrl = asset('images/icons/file-earmark-excel.svg');
+                                    break;
+                                case 'application/vnd.ms-powerpoint':
+                                case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                                    $posterUrl = asset('images/icons/file-earmark-ppt.svg');
+                                    break;
+                                default:
+                                    $posterUrl = asset('images/icons/file-earmark.svg');
+                            }
+                        }
+                    }
+
+                    if (!$attachmentId || !$fileExists) {
+                        $fileObject = [
+                            'source' => '',
+                            'options' => [
+                                'type' => 'local',
+                                'file' => [
+                                    'name' => '[Not Found] ' . $originalFilename,
+                                    'size' => 0,
+                                    'type' => 'application/octet-stream',
+                                ],
+                                'metadata' => [
+                                    'poster' => '',
+                                    'position' => $loopIndex,
+                                    'filename' => 'not_exist',
+                                ],
+                            ],
+                        ];
+                    } else {
+                        $fileObject = [
+                            'source' => $attachmentId,
+                            'options' => [
+                                'type' => 'local',
+                                'file' => [
+                                    'name' => $originalFilename,
+                                    'size' => Storage::disk('public')->size($storagePath),
+                                    'type' => Storage::disk('public')->mimeType($storagePath),
+                                ],
+                                'metadata' => [
+                                    'poster' => $posterUrl,
+                                    'position' => $loopIndex,
+                                    'filename' => $storagePath,
+                                ],
+                            ],
+                        ];
+                    }
+                    $filesForColumn[] = $fileObject;
+                    $loopIndex++;
+                }
+            }
+            $this->filePondInitialFiles[$columnId] = $filesForColumn;
+        }
+    }
 }

@@ -57,19 +57,16 @@
                                     x-init="updateBackground('{{ $columnDefine->id }}')"
                                     @endif
                             >
-                                @if($columnDefine->type=='files')
-                                    <x-dynamic-component :component="'ledger.form.'.$columnDefine->type"
-                                                         wire:model="content"
-                                                         wire:model="deletedContent"
-                                                         wire:key="content-file-{{$columnDefine->id}}"
-                                                         :columnDefine="$columnDefine"
-                                                         :ledgerRecord="$ledgerRecord??[]"
-                                                         multiple
-                                                         allowImagePreview
-                                                         imagePreviewMaxHeight="200"
-                                                         :ledgerDefineId="$ledgerDefineId"
+                                @if($columnDefine->type==='files')
+{{--                                    @dd($filePondInitialFiles,$columnDefine->id)--}}
+                                    <x-ledger.form.files
+                                            :columnDefine="$columnDefine"
+                                            :ledgerDefineId="$ledgerDefineId"
+                                            :initialFiles="$filePondInitialFiles[$columnDefine->id] ?? []"
+                                            multiple
+                                            allowImagePreview
+                                            imagePreviewMaxHeight="200"
                                     />
-
                                 @else
                                     @php
                                         $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);

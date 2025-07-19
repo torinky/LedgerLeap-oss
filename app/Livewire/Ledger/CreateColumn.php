@@ -45,7 +45,10 @@ class CreateColumn extends Component
 
     public array $content = []; // 初期値を空配列に
 
+    public array $filePondInitialFiles = [];
+
     public array $labelColor = [];
+
 
     public mixed $ledgerDefineRecord;
 
