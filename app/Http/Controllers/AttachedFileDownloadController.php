@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\AttachedFilePathHelper;
 
 class AttachedFileDownloadController extends Controller
 {
@@ -33,13 +34,17 @@ class AttachedFileDownloadController extends Controller
         $filePath = '';
         $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
 
+        Log::info('[DownloadController@download] AttachedFile path: '.$attachedFile->path.', original_file_path: '.$attachedFile->original_file_path);
+
         if ($isThumbnailRequest) {
-            $filePath = 'Ledger/thumbs/' . $attachedFile->hashedbasename;
+            $filePath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
         } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
             $filePath = $attachedFile->original_file_path;
             $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
+            Log::info('[DownloadController@download] Original file path from helper: '.$filePath);
         } else {
             $filePath = $attachedFile->path;
+            Log::info('[DownloadController@download] Attachment file path from helper: '.$filePath);
             if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
                 $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME) . '.pdf';
             }

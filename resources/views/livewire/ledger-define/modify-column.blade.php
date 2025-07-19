@@ -210,6 +210,7 @@
             </ul>
         @endif
 
+        </form>
         <div class="mt-6 flex justify-between items-center">
             <button type="button" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm">
                 <i class="fa-solid fa-plus-circle mr-1"></i>
@@ -217,19 +218,20 @@
             </button>
             @if($isDirty)
                 <x-mary-button label="{{__('actions.save')}}"
-                               type="submit"
+                               type="button"
+                               wire:click="save"
                                icon="o-pencil-square"
                                class="btn-primary"
                                spinner="save"
                 />
             @else
                 <x-mary-button label="{{__('actions.save')}}"
-                               type="submit"
+                               type="button"
+                               wire:click="save"
                                icon="o-pencil-square"
                                class="btn-primary"
                                disabled
                 />
             @endif
         </div>
-    </form>
 </div>

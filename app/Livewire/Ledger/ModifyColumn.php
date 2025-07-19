@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
+use App\Helpers\AttachedFilePathHelper;
 
 class ModifyColumn extends CreateColumn
 {
@@ -290,7 +291,7 @@ class ModifyColumn extends CreateColumn
                 // 画面上で削除されずに残っている既存ファイル
                 $existingFiles = collect($this->ledgerRecord->content[$columnId] ?? [])
                     ->reject(function ($originalFilename, $hashedBasename) use ($columnId) {
-                        $fullPath = 'public/Ledger/Attachments/' . $hashedBasename;
+                        $fullPath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefineId, $hashedBasename);
                         return in_array($fullPath, $this->deletedContent[$columnId] ?? [], true);
                     })
                     ->all();

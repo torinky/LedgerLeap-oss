@@ -19,6 +19,7 @@ class AttachedFile extends Model
     ];
 
     protected $casts = [
+        'status' => AttachedFileStatus::class,
     ];
 
     public function getOriginalFilenameAttribute(): ?string

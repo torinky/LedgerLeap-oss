@@ -16,12 +16,12 @@
     *   `hashedbasename`: ハッシュ化されたファイル名（拡張子なし）
     *   `status`: ファイルの処理状態 (`App\Enums\AttachedFileStatus`)
     *   `mime`: ファイルのMIMEタイプ
-    *   `path`: ストレージ内の物理パス
+    *   `path`: ストレージ内の物理パス。OCR処理対象のファイルの場合、OCR処理後に生成された最適化済みPDFのパスが格納されます。
     *   `size`: ファイルサイズ（バイト）
     *   `content`: TikaやOCRによって抽出されたテキストコンテンツ
     *   `contain_content`: テキストコンテンツが含まれているかどうかのフラグ
     *   `optimized`: OCR処理により最適化されたかどうかのフラグ
-    *   `original_file_path`: OCR処理前のオリジナルファイルのパス
+    *   `original_file_path`: OCR処理前のオリジナルファイルのパス。OCR処理対象のファイルの場合、`storage/app/public/Ledger/Attachments/Originals/` ディレクトリに退避されたオリジナルファイルのパスが格納されます。
     *   `original_mime_type`: オリジナルファイルのMIMEタイプ
     *   `creator_id`: 作成者のユーザーID
     *   `modifier_id`: 更新者のユーザーID
@@ -55,7 +55,7 @@
 *   **`getOriginalFilenameAttribute()` (アクセサ)**:
     *   説明: 関連する `Ledger` レコードの `content` カラムに保存されているJSONから、アップロード時のオリジナルファイル名を取得します。
 *   **`getThumbnailPathAttribute()` (アクセサ)**:
-    *   説明: 添付ファイルのサムネイル画像のパスを返します。
+    *   説明: 添付ファイルのサムネイル画像のパスを返します。サムネイルは、`AttachedFileDownloadController` を経由して `/files/{id}/download?thumbnail=true` の形式で提供されます。
 *   **`getActivitylogOptions(): LogOptions`**:
     *   説明: `spatie/laravel-activitylog` の設定。ログに記録する属性やログ名を定義します。
 

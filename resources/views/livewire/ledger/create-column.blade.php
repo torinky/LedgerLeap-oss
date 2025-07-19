@@ -71,6 +71,7 @@
                                                              multiple
                                                              allowImagePreview
                                                              imagePreviewMaxHeight="200"
+                                                             :ledgerDefineId="$ledgerDefineId"
                                         />
                                     </div>
                                 @else

@@ -17,13 +17,13 @@ return new class extends Migration {
             $table->unsignedInteger('column_id')->index();
             $table->string('filename', 500)->index();
             $table->string('hashedbasename', 500)->index();
-            $table->string('original_file_path')->nullable()->after('path');
-            $table->string('original_mime_type')->nullable()->after('mime');
             $table->string('status', 50)->index();
             $table->boolean('contain_content')->index();
             $table->boolean('optimized')->index();
             $table->string('mime', 500)->index();
             $table->text('path');
+            $table->string('original_file_path')->nullable();
+            $table->string('original_mime_type')->nullable();
             $table->unsignedBigInteger('size')->nullable(); // Add this line
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();

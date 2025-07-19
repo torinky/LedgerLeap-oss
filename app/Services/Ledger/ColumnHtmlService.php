@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Collection;
+use App\Helpers\AttachedFilePathHelper;
 
 class ColumnHtmlService
 {
@@ -344,7 +345,8 @@ class ColumnHtmlService
 
             // 画像ファイルでサムネイルが存在する場合
             if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk(
-                    'public')->exists('Ledger/thumbs/' . basename($hashedFilename))) {
+                    'public')->exists($thumbnailStoragePath = AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
+                Log::info('Thumbnail exists at: ' . $thumbnailStoragePath);
                 $thumbnails[] = <<<HTML
  {$contentHtmlStart}
      <div class="flex flex-col items-center mx-1 my-1">
@@ -355,6 +357,9 @@ class ColumnHtmlService
  {$contentHtmlEnd}
  HTML;
             } else { // 画像ファイルだがサムネイルがない場合、または画像以外のファイルの場合
+                if (str_starts_with($attachment->original_mime_type, 'image/')) {
+                    Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)));
+                }
                 $files[] = <<<HTML
  {$contentHtmlStart}
  <div class="flex items-center mx-1 my-1 py-2">

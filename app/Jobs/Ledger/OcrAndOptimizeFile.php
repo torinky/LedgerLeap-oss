@@ -12,6 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
+use App\Helpers\AttachedFilePathHelper;
 
 class OcrAndOptimizeFile implements ShouldQueue
 {
@@ -37,21 +38,25 @@ class OcrAndOptimizeFile implements ShouldQueue
         // 1. status を OCR_PROCESSING に更新
         $this->attachedFile->update(['status' => AttachedFileStatus::OCR_PROCESSING->value]);
 
-        Log::info('AttachedFile path at start of job: ' . $this->attachedFile->path);
-        if (!Storage::disk('public')->exists($this->attachedFile->path)) {
-            Log::error('Original file does not exist at path: ' . $this->attachedFile->path);
+        // Determine the input file path for OCR
+        $inputFilePathForOcr = $this->attachedFile->original_file_path ?: $this->attachedFile->path;
+
+        Log::info('Input file path for OCR: ' . $inputFilePathForOcr);
+        if (!Storage::disk('public')->exists($inputFilePathForOcr)) {
+            Log::error('Original file does not exist at path for OCR: ' . $inputFilePathForOcr);
             $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
             return;
         }
 
-        $originalFilePath = Storage::disk('public')->path($this->attachedFile->path);
+        $originalFilePath = Storage::disk('public')->path($inputFilePathForOcr);
         $originalMimeType = $this->attachedFile->mime; // mime_typeではなくmimeを使用
 
-        // オリジナルファイルが既に退避されているか確認
+        // The original file should have been moved by ProcessAttachedFile.
+        // This block is a fallback/safety check.
         if (empty($this->attachedFile->original_file_path)) {
             // 2. オリジナルファイルの退避
-            $originalDir = 'public/Ledger/Attachments/Originals/';
-            $newOriginalPath = $originalDir . basename($this->attachedFile->path);
+            $originalHashedBasename = basename($this->attachedFile->path);
+            $newOriginalPath = AttachedFilePathHelper::getOriginalAttachmentPath($this->attachedFile->ledger_define_id, $originalHashedBasename);
 
             try {
                 Storage::disk('public')->move($this->attachedFile->path, $newOriginalPath);
@@ -61,13 +66,14 @@ class OcrAndOptimizeFile implements ShouldQueue
                     Log::error('File moved but not found at new path: ' . $newOriginalPath);
                 }
                 $this->attachedFile->update([
-                    'original_file_path' => str_replace('public/', '', $newOriginalPath),
+                    'original_file_path' => $newOriginalPath,
                     'original_mime_type' => $originalMimeType,
+                    'path' => $newOriginalPath, // Update path to point to the original location
                 ]);
                 $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
                 Log::info('Original file moved to: ' . $newOriginalPath);
-                // Debug log: Check attachedFile state after update
                 Log::info('AttachedFile original_file_path after update: ' . $this->attachedFile->original_file_path);
+                $originalFilePath = Storage::disk('public')->path($newOriginalPath); // Update physical path
             } catch (\Exception $e) {
                 Log::error('Failed to move original file: ' . $e->getMessage());
                 $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
@@ -83,29 +89,25 @@ class OcrAndOptimizeFile implements ShouldQueue
         Log::info('AttachedFile path before output path calculation: ' . $this->attachedFile->path);
         Log::info('Dirname of attachedFile path: ' . dirname($this->attachedFile->path));
 
-        // Determine the new path for the OCR'd PDF within the storage system
-        // This path will be used to save the OCR'd PDF
+        // Determine the new path for the OCR\'d PDF within the storage system
         $outputFileName = pathinfo($this->attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf';
-        // The OCR'd PDF should go back to the main Attachments directory, not Originals
-        $outputStoragePath = 'Ledger/Attachments/' . $outputFileName;
+        $outputStoragePath = AttachedFilePathHelper::getAttachmentPath($this->attachedFile->ledger_define_id, $outputFileName);
 
         Log::info('Calculated outputStoragePath: ' . $outputStoragePath);
 
-        // Debug log: Check attachedFile path and outputStoragePath before Storage::path call
         Log::info('AttachedFile path before Storage::path($outputStoragePath): ' . $this->attachedFile->path);
         Log::info('outputStoragePath before Storage::path($outputStoragePath): ' . $outputStoragePath);
 
-        // Get the physical path for the OCR'd PDF output
+        // Get the physical path for the OCR\'d PDF output
         $outputPhysicalPath = Storage::disk('public')->path($outputStoragePath);
 
         // コンテナ内のパスに変換
-        // ocrmypdfコンテナはプロジェクトルートを/var/www/htmlにマウントしているため、
-        // storage/app/public/からの相対パスを結合する
-        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . $this->attachedFile->original_file_path;
-        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $outputStoragePath);
+//        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $inputFilePathForOcr);
+//        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $outputStoragePath);
+        $containerOriginalFilePath = $originalFilePath;
+        $containerOutputFilePath = $outputPhysicalPath;
 
         // ocrmypdf コマンドの構築
-        // Process クラスに配列で引数を渡す形式に変更
         $command = [
             'docker',
             'exec',
@@ -130,13 +132,11 @@ class OcrAndOptimizeFile implements ShouldQueue
             }
 
             // 4. レコード情報の更新
-            // Update the model's path attribute before calculating size
             $this->attachedFile->path = $outputStoragePath;
             $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
             $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
             $this->attachedFile->optimized = true; // optimized を true に設定
 
-            // Debugging Storage::size() issue
             Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
             try {
                 $fileContent = Storage::disk('public')->get($this->attachedFile->path);

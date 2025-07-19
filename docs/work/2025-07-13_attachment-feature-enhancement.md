@@ -139,7 +139,7 @@ graph TD
 *	**処理の起点:** ファイルアップロードは、FilePond (`files.blade.php`) から Livewire の標準アップロード機能 (`@this.upload(...)`) を通じて行われる。
 *	**Livewireコンポーネントの役割 (`CreateColumn.php` / `ModifyColumn.php`):
 	1.	**一時ファイル処理:** Livewire はアップロードされたファイルを一時ディレクトリに保存する。
-	2.	**永続化:** ユーザーが「保存」系のアクションを実行すると、`processFilesForSave()` メソッドが呼び出される。この中で、`storeFile()` が一時ファイルを永続ストレージ (`storage/app/public/Ledger/Attachments`) に移動し、ファイル名をハッシュ化する。
+	2.	**永続化:** ユーザーが「保存」系のアクションを実行すると、`processFilesForSave()` メソッドが呼び出される。この中で、`storeFile()` が一時ファイルを永続ストレージ (`storage/app/public/Ledger/Attachments/{ledger_define_id}/`) に移動し、ファイル名をハッシュ化する。
 	3.	**`attached_files` レコードの準備:** `storeFile()` は、DBに保存するためのファイル情報（オリジナル名、ハッシュ名、パス等）を `$this->newAttachedFiles` プロパティに蓄積する。
 	4.	**`ledgers` レコードの保存:** `saveDraft()` や `saveDirectly()` メソッド内で、まず `ledgers` テーブルにレコードが作成・更新される。このとき、`content` カラムには `['hashedbasename' => 'original_filename']` という形式のJSONが保存される。
 	5.	**`attached_files` レコードの保存:** `ledgers` レコードの保存が完了し、`ledger_id` が確定した **後** で、`addAttachedFileRecord()` が呼び出される。このメソッドが `$newAttachedFiles` の内容を元に、`ledger_id` を関連付けて `attached_files` テーブルにレコードを作成する。
@@ -315,7 +315,7 @@ graph TD
 			*	アップロード後、ファイル名の横に表示されるアイコンが、処理状況に応じて変化すること（`PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `PENDING_OCR` -> `OCR_PROCESSING` -> `COMPLETED` または `TIKA_FAILED`/`OCR_FAILED`）。
 	2.	**データベースとファイルシステムでの確認:**
 		*	`./vendor/bin/sail artisan tinker` を使用して `attached_files` テーブルの `status`, `original_file_path`, `original_mime_type`, `mime`, `path`, `size` カラムの値を監視してください。
-		*	`storage/app/public/Ledger/Attachments/` および `storage/app/public/Ledger/Attachments/Originals/` ディレクトリの内容を監視してください。
+		*	`storage/app/public/Ledger/Attachments/{ledger_define_id}/` および `storage/app/public/Ledger/Attachments/{ledger_define_id}/Originals/` ディレクトリの内容を監視してください。
 		*	**評価基準:**
 			*	**画像ファイル (OCR対象):**
 				*	`status` が `PENDING_INITIAL_PROCESSING` -> `INITIAL_PROCESSING` -> `PENDING_OCR` -> `OCR_PROCESSING` -> `COMPLETED` と遷移すること。
@@ -546,7 +546,7 @@ graph TD
 1.	**初期処理ジョブ (`ProcessAttachedFile.php`):**
 * 	`handle()` メソッド:
 		1.	**オリジナルファイルの退避:**
-			* 	`ProcessAttachedFile` ジョブの開始時に、アップロードされたファイルを `storage/app/public/Ledger/Attachments/Originals/` ディレクトリに移動します。
+			* 	`ProcessAttachedFile` ジョブの開始時に、アップロードされたファイルを `storage/app/public/Ledger/Attachments/{ledger_define_id}/Originals/` ディレクトリに移動します。
 			* 	移動したパスと元のMIMEタイプを、`attached_files` レコードの `original_file_path` と `original_mime_type` に記録し、`attachedFile` モデルの `path` も更新します。
 			* 	**対応した問題:** `OcrAndOptimizeFile` ジョブがオリジナルファイルにアクセスする前に、ファイルが移動されてしまう問題を解決するため、`ProcessAttachedFile` がオリジナルファイルの退避を責任を持つように変更しました。
 		2.	`status` を `INITIAL_PROCESSING` に更新。
@@ -565,11 +565,11 @@ graph TD
 * 	`handle()` メソッド:
 		1.	`status` を `OCR_PROCESSING` に更新。
 		2.	**オリジナルファイルの退避:**
-			* 	`ProcessAttachedFile` ジョブで既にオリジナルファイルが `storage/app/public/Ledger/Attachments/Originals/` ディレクトリに移動されていることを前提とします。
+			* 	`ProcessAttachedFile` ジョブで既にオリジナルファイルが `storage/app/public/Ledger/Attachments/{ledger_define_id}/Originals/` ディレクトリに移動されていることを前提とします。
 			* 	`original_file_path` が空の場合にのみ、再度オリジナルファイルの移動を試みます。
 		3.	**OCRとPDF生成の実行:**
 			* 	`OcrMyPDF` を実行し、**テキストレイヤーを持つ最適化済みPDF**を生成させます。入力が画像ファイルの場合も、出力はPDFとなります。
-			* 	生成されたPDFを、**元のファイルがあったパス** (`storage/app/public/Ledger/Attachments/`) に保存します。
+			* 	生成されたPDFを、**元のファイルがあったパス** (`storage/app/public/Ledger/Attachments/{ledger_define_id}/`) に保存します。
 			* 	**実行コマンドの詳細:** `docker exec ledgerleap-ocrmypdf-1 /app/.venv/bin/ocrmypdf -l jpn --image-dpi 300 [入力ファイルパス] [出力ファイルパス]` の形式で実行されます。
 			* 	**対応した問題:** `ocrmypdf` コンテナの正確なサービス名 (`ledgerleap-ocrmypdf-1`) と、Python仮想環境内の `ocrmypdf` パス (`/app/.venv/bin/ocrmypdf`) を明示することで、コマンド実行時のパス問題を解決しました。また、日本語OCR (`-l jpn`) と画像DPI設定 (`--image-dpi 300`) を明示しました。
 		4.	**レコード情報の更新:**

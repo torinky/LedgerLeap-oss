@@ -1,7 +1,12 @@
+@php
+    use App\Enums\AttachedFileStatus;use App\Helpers\AttachedFilePathHelper;
+    use App\Models\AttachedFile;use \Illuminate\Support\Facades\Storage;
+@endphp
 @props([
     'class'=>'',
     'hintClass'=>'label-text-alt text-gray-400 ps-1 ',
     'columnDefine'=>[],
+    'ledgerDefineId',
     ])
 
 <div class="form-control">
@@ -24,10 +29,10 @@
         </div>
 
         <div
-            class=" rounded-lg opacity-70 hover:opacity-100 @if($columnDefine->required) bg-warning/70 @else bg-neutral/50 @endif "
-            wire:ignore
-            x-data
-            x-init="() => {
+                class=" rounded-lg opacity-70 hover:opacity-100 @if($columnDefine->required) bg-warning/70 @else bg-neutral/50 @endif "
+                wire:ignore
+                x-data
+                x-init="() => {
             const post = FilePond.create($refs.content_{{$columnDefine->id}});
             post.setOptions({
                 allowMultiple: {{ $attributes->has('multiple') ? 'true' : 'false' }},
@@ -63,16 +68,30 @@
                     @foreach ($ledgerRecord->content[$columnDefine->id] as $hashedBasename => $originalFilename )
                         @php
                             $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
-                            $fullPath = 'public/Ledger/Attachments/Originals/' . $hashedBasename;
+                            // 実際のファイルパスを決定 (処理失敗時はオリジナルパスを優先)
+                            $currentAttachedFile = AttachedFile::find($attachmentId);
+                            $storagePath = AttachedFilePathHelper::getAttachmentPath($ledgerDefineId, $hashedBasename);
+                            $displayMimeType = '';
+
+                            if ($currentAttachedFile) {
+                                if (in_array($currentAttachedFile->status->value, [AttachedFileStatus::TIKA_FAILED->value, AttachedFileStatus::OCR_FAILED->value])) {
+                                    $storagePath = $currentAttachedFile->original_file_path; // 失敗時はオリジナルパス
+                                    $displayMimeType = $currentAttachedFile->original_mime_type; // 失敗時はオリジナルMIMEタイプ
+                                } else {
+                                    $displayMimeType = $currentAttachedFile->mime; // 成功時は現在のMIMEタイプ
+                                }
+                            }
+
+                            $fileExists = Storage::disk('public')->exists($storagePath);
                             $posterUrl = '';
-                            if ($attachmentId && Storage::exists($fullPath)) {
-                                $mimeType = Storage::mimeType($fullPath);
-                                if (str_starts_with($mimeType, 'image/')) {
+
+                            if ($fileExists) {
+                                if (\Illuminate\Support\Str::startsWith($displayMimeType, 'image/')) {
                                     $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
                                 } else {
-                                    switch ($mimeType) {
+                                    switch ($displayMimeType) {
                                         case 'application/pdf':
-                                            $posterUrl = asset('images/icons/file-pdf.svg');
+                                            $posterUrl = asset('images/icons/file-pdf-solid.svg');
                                             break;
                                         case 'application/zip':
                                         case 'application/x-zip-compressed':
@@ -97,7 +116,7 @@
                             }
                         @endphp
                         {
-                        @if(!$attachmentId || !Storage::exists($fullPath))
+                        @if(!$attachmentId || !$fileExists)
                             source: '',
                             options: {
                                type: 'local',
@@ -115,17 +134,17 @@
                         @else
                             source: '{{ $attachmentId }}',
                             options: {
-                               type: 'local',
-                               file: {
+                                type: 'local',
+                                file: {
                                     name: '{{$originalFilename}}',
-                                    size: {{Storage::size($fullPath)}},
-                                    type: '{{Storage::mimeType($fullPath)}}',
-                               },
-                               metadata:{
+                                    size: {{Storage::disk('public')->size($storagePath)}},
+                                    type: '{{Storage::disk('public')->mimeType($storagePath)}}',
+                                },
+                                metadata:{
                                     poster:'{{ $posterUrl }}',
                                     position: {{ $loop->index }},
-                                    filename:'{{$fullPath}}'
-                               },
+                                    filename:'{{$storagePath}}'
+                                },
                             },
                         @endif
                         },

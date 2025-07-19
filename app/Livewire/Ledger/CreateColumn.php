@@ -33,6 +33,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use App\Helpers\AttachedFilePathHelper;
 use Mary\Traits\Toast;
 
 /**
@@ -328,10 +329,13 @@ class CreateColumn extends Component
      */
     public function storeFile(TemporaryUploadedFile $file, $columnId = 0): object
     {
+        $hashedBasename = Str::random(40) . '.' . $file->getClientOriginalExtension();
+        $fullPath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefineId, $hashedBasename);
 
-        $fileHashName = $file->store('public/Ledger/Attachments');
+        Storage::disk('public')->put($fullPath, file_get_contents($file->getRealPath()));
+
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $storedFilePath = Storage::path($fileHashName);
+        $storedFilePath = Storage::disk('public')->path($fullPath);
         $mimeType = finfo_file($finfo, $storedFilePath);
         finfo_close($finfo);
         Log::info('File MIME Type detected by finfo_file: ' . $mimeType);
@@ -340,8 +344,8 @@ class CreateColumn extends Component
 
         $result = (object) [
             'originalName' => $file->getClientOriginalName(),
-            'hashedBaseName' => basename($fileHashName),
-            'hashedName' => $fileHashName,
+            'hashedBaseName' => $hashedBasename,
+            'hashedName' => $fullPath,
             //            'meta' => null,
         ];
 
@@ -357,7 +361,9 @@ class CreateColumn extends Component
             $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
                 $constraint->aspectRatio();
             });
-            $image->save(storage_path('app/public/Ledger/thumbs/'.basename($fileHashName)));
+            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(basename($fullPath));
+            $image->save(Storage::disk('public')->path($thumbnailPath));
+            Log::info('Thumbnail saved to: ' . $thumbnailPath);
         }
 
         //        ファイルからメタ情報、テキストを抽出する
@@ -371,8 +377,8 @@ class CreateColumn extends Component
 
         $this->newAttachedFiles[] = [
             'filename' => $file->getClientOriginalName(),
-            'hashedbasename' => basename($fileHashName),
-            'path' => $fileHashName,
+            'hashedbasename' => $hashedBasename,
+            'path' => $fullPath,
             'mime' => $mimeType,
             //            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
@@ -410,6 +416,7 @@ class CreateColumn extends Component
             return;
         }
         foreach ($this->newAttachedFiles as $newAttachedFile) {
+            Log::info('[CreateColumn@addAttachedFileRecord] newAttachedFile before create:', $newAttachedFile);
             $newAttachedFile = AttachedFile::create(array_merge($newAttachedFile, [
                 'ledger_id' => $this->ledgerRecord->id,
                 'ledger_define_id' => $this->ledgerDefineRecord->id,

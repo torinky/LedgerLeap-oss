@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB; // ★ DBファサードをインポート
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
+use App\Helpers\AttachedFilePathHelper;
 
 class ProcessAttachedFile implements ShouldQueue
 {
@@ -39,12 +40,12 @@ class ProcessAttachedFile implements ShouldQueue
         Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
         // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
-        $originalDir = 'public/Ledger/Attachments/Originals/';
-        $currentFilePath = str_replace('public/', '', $this->attachedFile->path);
+        $originalHashedBasename = basename($this->attachedFile->path);
+        $newOriginalPath = AttachedFilePathHelper::getOriginalAttachmentPath($this->attachedFile->ledger_define_id, $originalHashedBasename);
+        $currentFilePath = AttachedFilePathHelper::getAttachmentPath($this->attachedFile->ledger_define_id, $originalHashedBasename);
 
         // original_file_path が設定されていない場合のみ、ファイルをOriginalsに移動
         if (empty($this->attachedFile->original_file_path)) {
-            $newOriginalPath = $originalDir . basename($currentFilePath);
             try {
                 if (!Storage::disk('public')->exists($currentFilePath)) {
                     Log::error('Original file not found for moving in ProcessAttachedFile: ' . $currentFilePath);
@@ -52,10 +53,10 @@ class ProcessAttachedFile implements ShouldQueue
                     return;
                 }
 
-                Storage::disk('public')->move($currentFilePath, str_replace('public/', '', $newOriginalPath));
+                Storage::disk('public')->move($currentFilePath, $newOriginalPath);
                 $updateData = [
-                    'path' => str_replace('public/', '', $newOriginalPath), // path も更新
-                    'original_file_path' => str_replace('public/', '', $newOriginalPath),
+                    'path' => $newOriginalPath, // path も更新
+                    'original_file_path' => $newOriginalPath,
                     'original_mime_type' => $this->attachedFile->mime,
                 ];
                 $this->attachedFile->update($updateData);
@@ -103,11 +104,11 @@ class ProcessAttachedFile implements ShouldQueue
             Log::info('ProcessAttachedFile: Current result for file (before Tika processing): ' . json_encode($result));
             Log::info('ProcessAttachedFile: Current result for file (before Tika processing): ' . json_encode($result));
 
-            $filePath = storage_path('app/public/' . str_replace('public/', '', $this->attachedFile->path));
+            $filePath = Storage::disk('public')->path($this->attachedFile->path);
 
             try {
                 $tikaClient = Client::make('tika', 9998);
-                $tikaClient->setTimeout(120);
+                $tikaClient->setTimeout(300);
 
                 // Tikaでテキスト抽出を試行
                 $extractedText = trim($tikaClient->getText($filePath));
@@ -159,9 +160,16 @@ class ProcessAttachedFile implements ShouldQueue
                 }
 
             } catch (Exception $e) {
-                // Tikaサービスエラー時
-                $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
-                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage());
+                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '\nStack trace: ' . $e->getTraceAsString());
+                $mimeType = $this->attachedFile->mime;
+                if (str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) {
+                    $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
+                    OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
+                    Log::info('Dispatched OcrAndOptimizeFile after Tika error for file: ' . $this->attachedFile->id);
+                } else {
+                    $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
+                    Log::info('File is not OCR-eligible after Tika error, marking as tika_failed: ' . $this->attachedFile->id);
+                }
             }
 
             // content_attached の更新
