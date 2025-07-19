@@ -23,6 +23,7 @@ class ShowDiff extends Component
     public int $offset = 0; // スライダーの位置 (0が最新)
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
+    public ?\Illuminate\Support\Collection $allAttachments = null;
 
     // mount メソッドを修正
     public function mount(int $ledgerId, ?int $diffId = null): void // Request の代わりに ID を受け取る
@@ -38,6 +39,30 @@ class ShowDiff extends Component
 
         // 表示する Diff を決定
         $this->loadDiffRecord();
+
+        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
+    }
+
+    protected function setAttachedFilesFromContent(array $content): void
+    {
+        $fileHashedBasenames = [];
+        foreach ($this->ledgerRecord->define->column_define as $columnDefine) {
+            if ($columnDefine->type === 'files') {
+                $columnId = $columnDefine->id;
+                // content配列のインデックスはcolumnIdと一致する
+                if (isset($content[$columnId]) && is_array($content[$columnId])) {
+                    foreach ($content[$columnId] as $hashedbasename => $originalFilename) {
+                        $fileHashedBasenames[] = $hashedbasename;
+                    }
+                }
+            }
+        }
+
+        if (!empty($fileHashedBasenames)) {
+            $this->ledgerRecord->setRelation('attachedFiles', \App\Models\AttachedFile::whereIn('hashedbasename', $fileHashedBasenames)->get());
+        } else {
+            $this->ledgerRecord->setRelation('attachedFiles', collect());
+        }
     }
 
     // 表示する Diff レコードをロードするメソッド
@@ -78,19 +103,27 @@ class ShowDiff extends Component
                 // 空でないDiffが見つかった場合、そのcontentとcolumn_defineを流用
                 $this->ledgerRecord->content = $latestNonEmptyDiff->content;
                 $this->ledgerRecord->define->column_define = $latestNonEmptyDiff->column_define;
+                // 添付ファイル情報を取得し、ledgerRecordにセット
+                $this->setAttachedFilesFromContent($latestNonEmptyDiff->content);
             } else {
                 // 空でないDiffが見つからない場合、contentとcolumn_defineをnullにする
                 $this->ledgerRecord->content = null;
                 $this->ledgerRecord->define->column_define = null;
+                $this->ledgerRecord->setRelation('attachedFiles', collect()); // 空のコレクションをセット
             }
         } else {
             // contentが空でない場合、そのままセット
             $this->ledgerRecord->content = $this->currentDiffRecord->content;
             $this->ledgerRecord->define->column_define = $this->currentDiffRecord->column_define;
+            // 添付ファイル情報を取得し、ledgerRecordにセット
+            $this->setAttachedFilesFromContent($this->currentDiffRecord->content);
         }
 
         $this->ledgerRecord->modifier = $this->currentDiffRecord->modifier;
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
+
+//        \Illuminate\Support\Facades\Log::info('ShowDiff: loadDiffRecord - ledgerRecord->content after setting', ['content' => $this->ledgerRecord->content]);
+//        \Illuminate\Support\Facades\Log::info('ShowDiff: loadDiffRecord - ledgerRecord->attachedFiles after setting', ['attachedFiles' => $this->ledgerRecord->attachedFiles ? $this->ledgerRecord->attachedFiles->toArray() : 'null']);
 //        dd($this->currentDiffRecord->column_define);
 
     }

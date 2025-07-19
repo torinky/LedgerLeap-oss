@@ -64,29 +64,11 @@
         </div>
     @endif
 
-    @if($currentDiffRecord && !empty($currentDiffRecord->content) && $currentDiffRecord->content != '[]' && $currentDiffRecord->content != '{}')
-        {{--
-                <x-ledger.detail.table
-                        :ledgerRecord="$currentDiffRecord" --}}
-        {{-- Diff レコードを渡す --}}{{--
-
-                        :columnDefine="$currentDiffRecord->column_define" --}}
-        {{-- Diff の定義を渡す --}}{{--
-
-                        :canView="auth()->user()->can('view', $ledgerRecord)"
-                />
-        --}}
-    @else
-        {{-- content が記録されていない Diff の場合にメッセージ表示 --}}
-
-        <div class="alert alert-info max-w-md mx-auto"><i
-                    class="fas fa-info-circle"></i>{{__('ledger.no_content_in_this_diff')}}</div>
-    @endif
-
     @if($ledgerRecord->content)
         <x-ledger.detail.table
                 :ledgerRecord="$ledgerRecord"
                 :canView="auth()->user()->can('view', $ledgerRecord)"
+                :allAttachments="$allAttachments"
         />
     @else
         <div class="alert alert-info"><i class="fas fa-info-circle"></i>{{__('ledger.no_change_content')}}</div>
