@@ -207,7 +207,7 @@ class ColumnHtmlService
     {
         if (empty($contents)) {
             $contents = [];
-        }else{
+        } else {
 
 //            dd($contents);
         }
@@ -261,22 +261,24 @@ class ColumnHtmlService
             // Check if $attachment->status is an instance of AttachedFileStatus enum
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
- <div class="tooltip" data-tip="{$attachment->status->tooltip()}">
-     <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} mr-1"></i>
- </div>
- HTML;
+<span class="indicator-item">
+    <div class="tooltip" data-tip="{$attachment->status->tooltip()}">
+        <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} text-lg"></i>
+    </div>
+</span>
+HTML;
 
-                 // Add retry icon if status is FAILED
-                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
-                     $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
-                     $retryIconHtml = <<<HTML
- <div class="tooltip" data-tip="再試行">
-     <i class="fa-solid fa-arrow-rotate-right cursor-pointer text-blue-500 ml-1" wire:click="
- retryProcessing({$attachment->id})"></i>
- </div>
- HTML;
-                 }
-             }
+                // Add retry icon if status is FAILED
+                if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
+                    $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
+                    $retryIconHtml = <<<HTML
+<div class="tooltip btn btn-ghost " data-tip="再試行">
+    <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
+    wire:click="retryProcessing({$attachment->id})"></i>
+</div>
+HTML;
+                }
+            }
 
             $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
@@ -301,24 +303,25 @@ class ColumnHtmlService
                 $mainDownloadUrl = $originalDownloadUrl; // Main link is original image
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
-     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" 
+     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-sm btn-ghost tooltip" 
  data-tip="テキスト付きPDFをダウンロード">
          <i class="fa-solid fa-file-pdf w-4 h-4"></i>
      </a>
  </div>
- HTML;
+HTML;
             } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment
                     ->optimized) {
                 // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
                 $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
-     <a href="{$originalDownloadUrl}" target="_blank" class="btn btn-xs btn-ghost tooltip" data
- -tip="オリジナルPDFをダウンロード">
+     <a href="{$originalDownloadUrl}" target="_blank" 
+     class="btn btn-xs btn-ghost tooltip" 
+     data-tip="オリジナルPDFをダウンロード">
          <i class="fa-solid fa-file w-4 h-4"></i>
      </a>
  </div>
- HTML;
+HTML;
             }
 
             Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' .
@@ -326,7 +329,7 @@ class ColumnHtmlService
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-            if (!empty($this->attachmentContents)){
+            if (!empty($this->attachmentContents)) {
 
 //                dd($this->attachmentContents, $hashedFilename);
             }
@@ -339,7 +342,7 @@ class ColumnHtmlService
 
                 $contentHtmlEnd = <<<HTML
  </div>
- HTML;
+HTML;
 
             }
 
@@ -348,41 +351,44 @@ class ColumnHtmlService
                     'public')->exists($thumbnailStoragePath = AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
                 Log::info('Thumbnail exists at: ' . $thumbnailStoragePath);
                 $thumbnails[] = <<<HTML
- {$contentHtmlStart}
-     <div class="flex flex-col items-center mx-1 my-1">
+<div class="indicator"> 
+{$statusIconHtml}
+{$contentHtmlStart}
+<!--     <div class="flex flex-col items-center mx-1 my-1">-->
          <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
  $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
          {$auxiliaryLinksHtml}
-     </div>
+<!--     </div>-->
  {$contentHtmlEnd}
- HTML;
+</div>
+HTML;
             } else { // 画像ファイルだがサムネイルがない場合、または画像以外のファイルの場合
                 if (str_starts_with($attachment->original_mime_type, 'image/')) {
                     Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)));
                 }
                 $files[] = <<<HTML
+ <div class="indicator">
  {$contentHtmlStart}
- <div class="flex items-center mx-1 my-1 py-2">
+<!-- <div class="flex items-center mx-1 my-1 py-2">-->
      {$statusIconHtml}
      <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
- opacity-70 hover:opacity-100 flex flex-col items-center py-10">
-         <i class="{$this->getFileIconClass($originalFilename)} fa-3x mb-2"></i>
+ opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
+         <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
          <span>{$originalFilename}</span>
      </a>
+<!--</div>-->
+</div>
      {$retryIconHtml}
- </div>
  {$contentHtmlEnd}
  {$auxiliaryLinksHtml}
- HTML;
+HTML;
             }
         }
-//        if (!empty($thumbnails)) {
-            $html .= '<div style="display: flex; flex-wrap: wrap; align-items: center;">' .
-                implode('', $thumbnails).implode('', $files) . '</div>';
-//        }
-/*        if (!empty($files)) {
-            $html .= implode('', $files);
-        }*/
+
+        $html .= '<div class="flex flex-wrap items-center gap-4">'
+            . implode('', $thumbnails)
+            . implode('', $files)
+            . '</div>';
 
         return $html;
     }
