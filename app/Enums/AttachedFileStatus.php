@@ -60,21 +60,21 @@ enum AttachedFileStatus: string
     public function tooltip(): string
     {
         return match ($this) {
-            self::PENDING_INITIAL_PROCESSING => __('file.status.pending_initial_processing'),
-            self::INITIAL_PROCESSING => __('file.status.initial_processing'),
-            self::PENDING_OCR => __('file.status.pending_ocr'),
-            self::OCR_PROCESSING => __('file.status.ocr_processing'),
-            self::COMPLETED => __('file.status.completed'),
-            self::TIKA_FAILED => __('file.status.tika_failed'),
-            self::OCR_FAILED => __('file.status.ocr_failed'),
+            self::PENDING_INITIAL_PROCESSING => __('ledger.uploadedFile.status.pending_initial_processing'),
+            self::INITIAL_PROCESSING => __('ledger.uploadedFile.status.initial_processing'),
+            self::PENDING_OCR => __('ledger.uploadedFile.status.pending_ocr'),
+            self::OCR_PROCESSING => __('ledger.uploadedFile.status.ocr_processing'),
+            self::COMPLETED => __('ledger.uploadedFile.status.completed'),
+            self::TIKA_FAILED => __('ledger.uploadedFile.status.tika_failed'),
+            self::OCR_FAILED => __('ledger.uploadedFile.status.ocr_failed'),
             // 既存のステータス
-            self::UPLOADED => __('file.status.uploaded'),
-            self::OPTIMIZED => __('file.status.optimized'),
-            self::OPTIMIZING => __('file.status.optimizing'),
-            self::OPTIMIZE_FAILED => __('file.status.optimize_failed'),
-            self::EXTRACTED_AND_SAVED => __('file.status.extracted_and_saved'),
-            self::EXTRACTION_FAILED => __('file.status.extraction_failed'),
-            self::EXTRACTING => __('file.status.extracting'),
+            self::UPLOADED => __('ledger.uploadedFile.status.uploaded'),
+            self::OPTIMIZED => __('ledger.uploadedFile.status.optimized'),
+            self::OPTIMIZING => __('ledger.uploadedFile.status.optimizing'),
+            self::OPTIMIZE_FAILED => __('ledger.uploadedFile.status.optimize_failed'),
+            self::EXTRACTED_AND_SAVED => __('ledger.uploadedFile.status.extracted_and_saved'),
+            self::EXTRACTION_FAILED => __('ledger.uploadedFile.status.extraction_failed'),
+            self::EXTRACTING => __('ledger.uploadedFile.status.extracting'),
         };
     }
 }

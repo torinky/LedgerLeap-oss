@@ -972,4 +972,23 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'uploadedFile'=>[
+        'status' => [
+            'pending_initial_processing' => '初期処理待ち',
+            'initial_processing' => '初期処理中',
+            'pending_ocr' => 'OCR処理待ち',
+            'ocr_processing' => 'OCR処理中',
+            'completed' => '完了',
+            'tika_failed' => 'テキスト/メタデータ抽出失敗',
+            'ocr_failed' => 'OCR処理失敗',
+            'uploaded' => 'アップロード済み',
+            'optimized' => '最適化済み',
+            'optimizing' => '最適化中',
+            'optimize_failed' => '最適化失敗',
+            'extracted_and_saved' => 'テキスト抽出完了',
+            'extraction_failed' => 'テキスト抽出失敗',
+            'extracting' => 'テキスト抽出中',
+        ],
+
+    ]
 ];
