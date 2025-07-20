@@ -486,9 +486,12 @@ class ModifyColumn extends CreateColumn
                     $posterUrl = '';
 
                     if ($fileExists) {
-                        if (str_starts_with((string)$displayMimeType, 'image/')) {
+                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
+                        if (Storage::disk('public')->exists($thumbnailPath)) {
+                            // サムネイルが存在する場合
                             $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
                         } else {
+                            // サムネイルが存在しない場合、MIMEタイプに基づいてFontAwesomeアイコンのURLを生成
                             switch ($displayMimeType) {
                                 case 'application/pdf':
                                     $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
@@ -528,7 +531,6 @@ class ModifyColumn extends CreateColumn
                                     } elseif (str_starts_with($displayMimeType, 'video/')) {
                                         $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
                                     } elseif (str_starts_with($displayMimeType, 'image/')) {
-                                        // サムネイルが生成できない画像ファイルなどのフォールバック
                                         $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
                                     } else {
                                         $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
