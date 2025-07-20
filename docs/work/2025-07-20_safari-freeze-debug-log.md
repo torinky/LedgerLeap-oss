@@ -152,11 +152,11 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 ### 8.1. リファクタリングの実施
 - **結論:** 調査の結果、問題の根本原因は、FilePondの`server.load`（非同期ロード）の仕組みを利用せず、高負荷な`prepareFilePondInitialFiles()`メソッドで全ファイル情報を一括でフロントエンドに送信していたことであったと断定。
 - **対応:**
-    1.  `prepareFilePondInitialFiles()`メソッドを、ファイルIDの配列のみを返すシンプルな実装に修正。
-    2.  `FilePondController@load`が、ダウンロードヘッダーを付与しない、ファイルコンテンツを直接返すレスポンスを生成するように修正。
+    1.  `prepareFilePondInitialFiles()`メソッドを、ファイルIDの配列のみを返すシンプルな実装に修正。**完了**
+    2.  `FilePondController@load`が、ダウンロードヘッダーを付与しない、ファイルコンテンツを直接返すレスポンスを生成するように修正。**完了**
 
 ### 8.2. 新たな問題の発生：403 Forbidden エラー
-- **結果:** 上記リファクタリング後、フリーズは解消されたものの、各ファイルの読み込み時に「読み込み中にエラーが発生」と表示されるようになった。ブラウザの開発者ツールで確認したところ、`/filepond/load/{id}`へのリクエストが**403 Forbidden**エラーを返していることが判明。
+- **結果:** 上記リファクタリング後、フリーズは解消されたものの、各ファイルの読み込み時に「読み込み中にエラーが発生」と表示されるようになった。ブラウザの開発者ツールで確認したところ、`/filepond/load/{id}`へのリクエストが**403 Forbidden**エラーを返していることが判明。**確認済み**
 - **原因分析:**
     - 403エラーは、リクエストが認証はされているものの、リソースへのアクセスが**認可**されていないことを示す。
     - `FilePondController@load`内の`Gate::authorize('view', $attachedFile->ledger);`が失敗していることが原因と特定。
@@ -165,10 +165,10 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 ### 8.3. 認証メカニズムの調査と修正
 - **仮説:** FilePondからの`fetch`リクエストは非同期APIリクエストであり、`routes/web.php`で定義されているために`web`ミドルウェアグループのセッションベース認証が正しく機能せず、**ゲストユーザー**として扱われている可能性が高い。
 - **対応:**
-    1.  `filepond.load`ルートを`routes/web.php`から`routes/api.php`へ移動。
-    2.  移動したルートを`auth:sanctum`ミドルウェアで保護し、ルート名を`api.filepond.load`に変更。
-    3.  `files.blade.php`内の`fetch`リクエストのURLを新しいAPIルート (`/api/filepond/load/...`) に変更し、エラーハンドリングを強化。
-- **結果:** **状況は変わらず、依然として403エラーが発生。**
+    1.  `filepond.load`ルートを`routes/web.php`から`routes/api.php`へ移動。**完了**
+    2.  移動したルートを`auth:sanctum`ミドルウェアで保護し、ルート名を`api.filepond.load`に変更。**完了**
+    3.  `files.blade.php`内の`fetch`リクエストのURLを新しいAPIルート (`/api/filepond/load/...`) に変更し、エラーハンドリングを強化。**完了**
+- **結果:** **状況は変わらず、依然として403エラーが発生。** **確認済み**
 
 ## 9. 現在の状況と今後の方向性
 
@@ -185,18 +185,26 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 
 ### 10.1. `fetch`リクエストへの認証情報追加
 - **問題:** `api`ルートへの移行後も403エラーが継続。リクエストに認証情報が含まれていない可能性が浮上。
-- **対応:** `resources/views/components/ledger/form/files.blade.php`の`fetch`呼び出しに、`credentials: 'include'`オプションと`X-XSRF-TOKEN`ヘッダーを追加。
-- **結果:** 403エラーは継続。`FilePondController@load`のログが出力されないことから、リクエストが正しく`api/filepond/load`に送信されていないことが判明。
+- **対応:** `resources/views/components/ledger/form/files.blade.php`の`fetch`呼び出しに、`credentials: 'include'`オプションと`X-XSRF-TOKEN`ヘッダーを追加。**完了**
+- **結果:** 403エラーは継続。`FilePondController@load`のログが出力されないことから、リクエストが正しく`api/filepond/load`に送信されていないことが判明。**確認済み**
 
 ### 10.2. `route()`ヘルパーの誤用と構文エラーの修正
 - **問題:** `files.blade.php`内でJavaScriptの変数`source`を`route()`ヘルパーに直接渡そうとしたため、PHPが`source`を未定義の定数として解釈し、`SyntaxError: Unexpected token '}'`が発生。
-- **対応:** `route()`ヘルパーの使用を中止し、JavaScriptのテンプレートリテラル (`/api/filepond/load/${source}`) を使用してURLを構築するように修正。
-- **結果:** 構文エラーは解消されたが、依然として`DownloadController@download`が呼び出され、403エラーが継続。`FilePondController@load`のログは出力されず。
+- **対応:** `route()`ヘルパーの使用を中止し、JavaScriptのテンプレートリテラル (`/api/filepond/load/${source}`) を使用してURLを構築するように修正。**完了**
+- **結果:** 構文エラーは解消されたが、依然として`DownloadController@download`が呼び出され、403エラーが継続。`FilePondController@load`のログは出力されず。**確認済み**
 
 ### 10.3. `initialFiles`の渡し方とFilePondの動作の調整
 - **問題:** `files: {{ Illuminate\Support\Js::from($initialFiles) }}`の形式で初期ファイルを渡すと、FilePondがLivewireのファイルハンドリングをトリガーし、`DownloadController`を呼び出してしまうことが判明。
-- **対応:** `files: {{ Illuminate\Support\Js::from($initialFiles) }}`の行を削除し、`x-init`内で`initialFiles`をループ処理し、`post.addFile(file.source, file.options)`を使って明示的にFilePondにファイルを追加するように変更。
-- **結果:** `DownloadController@download`が呼び出されなくなり、`FilePondController@load`のログが出力されるようになった。403エラーも解消され、ファイルが表示されるようになった。これにより、FilePondの初期ファイル表示に関する問題は解決した。
+- **対応:** `files: {{ Illuminate\Support\Js::from($initialFiles) }}`の行を削除し、`x-init`内で`initialFiles`をループ処理し、`post.addFile(file.source, file.options)`を使って明示的にFilePondにファイルを追加するように変更。**完了**
+- **結果:** `DownloadController@download`が呼び出されなくなり、`FilePondController@load`のログが出力されるようになった。403エラーも解消され、ファイルが表示されるようになった。これにより、FilePondの初期ファイル表示に関する問題は解決した。**確認済み**
+
+## 10.4. `filepond/load` (server.load) の廃止と `post.addFile` による初期ファイル表示への最終調整
+
+- **問題:** Section 8.1で`server.load`方式へのリファクタリングを試み、`filepond/load`エンドポイントを準備したが、大容量ファイルを多数扱う際のパフォーマンス問題や、FilePondの挙動との整合性の問題が継続した。特に、初期ファイル表示において`server.load`経由で全てのファイル情報をロードするアプローチは、Safariでのフリーズ問題の根本的な解決には至らなかった。
+- **対応:**
+    - `filepond/load`エンドポイントは、初期ファイル表示の目的では使用しない方針に変更された。
+    - 代わりに、Section 10.3で実施したように、`ModifyColumn.php`で生成された`$filePondInitialFiles`（完全なファイルメタデータを含む）をLivewireコンポーネントのプロパティとして渡し、`resources/views/components/ledger/form/files.blade.php`の`x-init`内でJavaScriptの`post.addFile(file.source, file.options)`メソッドを使ってFilePondに直接ファイルを追加する方式が採用された。
+- **結果:** この変更は、初期ファイル表示時のパフォーマンス改善を目的としたものであり、Safariでのフリーズ問題の直接的な解決には至らなかった。`filepond/load`エンドポイントは、FilePondの他の機能（例: ファイルのプレビューやダウンロード）で引き続き使用される可能性があるが、初期ロードの目的では廃止された。
 
 ## 11. サムネイル/アイコン表示の再問題化と原因特定
 
@@ -208,17 +216,17 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 
 ### 11.2. サムネイル/アイコン表示の再有効化の試み
 - **対応:**
-    1.  `resources/js/ledgerEdit.js`で`FilePondPluginImagePreview`と`FilePondPluginFilePoster`の登録を元に戻した。
-    2.  `resources/views/components/ledger/form/files.blade.blade.php`で`allowImagePreview`を`true`に戻した。
-    3.  `ModifyColumn.php`の`prepareFilePondInitialFiles()`を修正し、`AttachedFile`のIDだけでなく、ファイル名、サイズ、MIMEタイプ、そしてサムネイル/アイコンのURLを生成し、FilePondが期待する形式のオブジェクトを`$filePondInitialFiles`に格納するようにした。
-    4.  `files.blade.php`の`addFile()`呼び出しを修正し、`ModifyColumn.php`で生成した完全なファイルオブジェクトを渡すようにした。
-- **結果:** 編集画面のサムネイルが表示されなくなった。リスト表示などのサムネイルも表示されないまま。
+    1.  `resources/js/ledgerEdit.js`で`FilePondPluginImagePreview`と`FilePondPluginFilePoster`の登録を元に戻した。**完了**
+    2.  `resources/views/components/ledger/form/files.blade.blade.php`で`allowImagePreview`を`true`に戻した。**完了**
+    3.  `ModifyColumn.php`の`prepareFilePondInitialFiles()`を修正し、`AttachedFile`のIDだけでなく、ファイル名、サイズ、MIMEタイプ、そしてサムネイル/アイコンのURLを生成し、FilePondが期待する形式のオブジェクトを`$filePondInitialFiles`に格納するようにした。**完了**
+    4.  `files.blade.php`の`addFile()`呼び出しを修正し、`ModifyColumn.php`で生成した完全なファイルオブジェクトを渡すようにした。**完了**
+- **結果:** 編集画面のサムネイルが表示されなくなった。リスト表示などのサムネイルも表示されないまま。**確認済み**
 
 ### 11.3. `AttachedFileDownloadController`のサムネイル返却ロジックの調整とロールバック
 - **問題:** `AttachedFileDownloadController`がサムネイルを返す際に、FilePondが期待する`Content-Type`と`Content-Disposition`ヘッダーが正しく設定されていないため、サムネイルが表示されない可能性が浮上。
 - **対応:** `AttachedFileDownloadController`のサムネイルを返す部分を、`Response::make()`を使って`Content-Disposition`ヘッダーを付けずにファイルの内容を直接返すように修正。
-- **結果:** 編集画面のサムネイルは表示されないまま。リスト表示などのサムネイルも表示されないまま。
-- **ロールバック:** 上記の`AttachedFileDownloadController`への変更をロールバックした。
+- **結果:** 編集画面のサムネイルは表示されないまま。リスト表示などのサムネイルも表示されないまま。**確認済み**
+- **ロールバック:** 上記の`AttachedFileDownloadController`への変更をロールバックした。**完了**
 
 ## 12. 現在の状況と今後の方向性
 
@@ -231,10 +239,10 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 ### 12.1. `AttachedFileDownloadController`のサムネイル返却ロジックの再調整
 
 - **問題:** `AttachedFileDownloadController`がサムネイルを返す際に、`Content-Disposition: attachment`ヘッダーが設定されるため、FilePondが画像をインラインで表示できない。
-- **対応:** `AttachedFileDownloadController@download`メソッドにおいて、サムネイルリクエストの場合に`Content-Disposition: inline`を明示的に設定するように修正。
+- **対応:** `AttachedFileDownloadController@download`メソッドにおいて、サムネイルリクエストの場合に`Content-Disposition: inline`を明示的に設定するように修正。**完了**
     - 変更前: `return Storage::disk('public')->response($filePath);`
     - 変更後: `return response()->file(Storage::disk('public')->path($filePath), ['Content-Type' => $mimeType, 'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"']);`
-- **結果:** `AttachedFileDownloadController`の修正は完了したが、Safariでのフリーズ問題は解消されなかった。Chromeでは問題なく動作するため、FilePondまたはそのプラグインとSafariの間の互換性問題が原因である可能性が高い。
+- **結果:** `AttachedFileDownloadController`の修正は完了したが、Safariでのフリーズ問題は解消されなかった。Chromeでは問題なく動作するため、FilePondまたはそのプラグインとSafariの間の互換性問題が原因である可能性が高い。**確認済み**
 
 ## 13. 新たな仮説と今後の方向性
 
@@ -330,3 +338,11 @@ SafariのWebインスペクタで、FilePondが内部的に出力するログや
         -   **アクション:**
             *   使用しているSafariの正確なバージョン（macOSのバージョンも含む）を特定する。
             *   AppleのWebKitバグトラッカーや関連する開発者フォーラムで、そのバージョンにおけるパフォーマンス問題やフリーズに関する報告がないか検索する。
+
+## 16. 現在の進捗状況と残りの課題
+
+ドキュメントのSection 12.1までのコード変更はすべて適用済みであり、FilePondの初期ファイル表示に関する問題は解決している状態です。
+
+しかし、ドキュメントのSection 12以降に記載されている通り、**Safariでのフリーズ問題は依然として解決していません。** サムネイル表示不良は解消されたものの、フリーズのタイミングと性質が変化しており、FilePondの初期化やサムネイル表示だけでなく、DOMの複雑性、Livewire/Alpine.jsのリアクティビティ、またはSafariのレンダリングエンジン自体のパフォーマンスが複合的に影響している可能性が指摘されています。
+
+したがって、現在の状況は「**ドキュメントに記載されたコード変更は完了したが、問題の根本的な解決には至っておらず、次のデバッグフェーズ（Section 14と15に記載されている調査・デバッグステップ）に移行している**」と整理できます。
