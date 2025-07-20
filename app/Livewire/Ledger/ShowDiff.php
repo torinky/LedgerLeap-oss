@@ -7,10 +7,17 @@ use App\Models\LedgerDiff;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
+use App\Models\AttachedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 
 class ShowDiff extends Component
 {
+    public array $attachmentIdMap = []; // 添付ファイルのIDマップ
+    public array $attachmentsInfoByColumn = []; // カラムごとの添付ファイル情報
+
     // ledgerRecord は表示する Diff の内容を入れるように変更
     public ?LedgerDiff $currentDiffRecord = null; // 表示中の Diff
     public $ledgerDefineRecord; // Define は必要
@@ -41,6 +48,12 @@ class ShowDiff extends Component
         $this->loadDiffRecord();
 
         $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
+
+        // --- Attachment ID マップの作成 --- (ModifyColumn と同様)
+        $this->attachmentIdMap = $this->ledgerRecord->attachedFiles
+            ->pluck('id', 'hashedbasename')
+            ->toArray();
+        // --------------------------------
     }
 
     protected function setAttachedFilesFromContent(array $content): void
@@ -62,6 +75,118 @@ class ShowDiff extends Component
             $this->ledgerRecord->setRelation('attachedFiles', \App\Models\AttachedFile::whereIn('hashedbasename', $fileHashedBasenames)->get());
         } else {
             $this->ledgerRecord->setRelation('attachedFiles', collect());
+        }
+    }
+
+    public function prepareAttachmentsInfo(): void
+    {
+        $this->attachmentsInfoByColumn = [];
+
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type !== 'files') {
+                continue;
+            }
+
+            $columnId = $column->id;
+            $filesForColumn = [];
+
+            if (!empty($this->ledgerRecord->content[$columnId]) && is_array($this->ledgerRecord->content[$columnId])) {
+                $loopIndex = 0;
+                foreach ($this->ledgerRecord->content[$columnId] as $hashedBasename => $originalFilename) {
+                    $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
+                    /** @var AttachedFile|null $currentAttachedFile */
+                    $currentAttachedFile = $attachmentId ? AttachedFile::find($attachmentId) : null;
+
+                    $storagePath = '';
+                    $displayMimeType = '';
+
+                    if ($currentAttachedFile) {
+                        if (
+                            in_array($currentAttachedFile->status->value, [
+                                AttachedFileStatus::TIKA_FAILED->value,
+                                AttachedFileStatus::OCR_FAILED->value,
+                            ], true)
+                        ) {
+                            $storagePath = $currentAttachedFile->original_file_path;
+                            $displayMimeType = $currentAttachedFile->original_mime_type;
+                        } else {
+                            $storagePath = $currentAttachedFile->path;
+                            $displayMimeType = $currentAttachedFile->mime;
+                        }
+                    } else {
+                        $storagePath = AttachedFilePathHelper::getAttachmentPath(
+                            $this->ledgerDefineRecord->id,
+                            $hashedBasename
+                        );
+                    }
+
+                    $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
+                    $posterUrl = '';
+
+                    if ($fileExists) {
+                        if (str_starts_with((string)$displayMimeType, 'image/')) {
+                            $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+                        } else {
+                            switch ($displayMimeType) {
+                                case 'application/pdf':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
+                                    break;
+                                case 'application/zip':
+                                case 'application/x-zip-compressed':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
+                                    break;
+                                case 'application/msword':
+                                case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
+                                    break;
+                                case 'application/vnd.ms-excel':
+                                case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
+                                    break;
+                                case 'application/vnd.ms-powerpoint':
+                                case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
+                                    break;
+                                case 'text/plain':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
+                                    break;
+                                case 'text/html':
+                                case 'text/css':
+                                case 'application/javascript':
+                                case 'application/json':
+                                case 'application/xml':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
+                                    break;
+                                case 'text/csv':
+                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
+                                    break;
+                                default:
+                                    if (str_starts_with($displayMimeType, 'audio/')) {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
+                                    } elseif (str_starts_with($displayMimeType, 'video/')) {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
+                                    } elseif (str_starts_with($displayMimeType, 'image/')) {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
+                                    } else {
+                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+
+                    $filesForColumn[] = [
+                        'originalFilename' => $originalFilename,
+                        'hashedBasename' => $hashedBasename,
+                        'downloadUrl' => $attachmentId ? route('file.download', ['attachedFile' => $attachmentId]) : '',
+                        'mimeType' => $displayMimeType,
+                        'size' => $fileExists ? Storage::disk('public')->size($storagePath) : 0,
+                    ];
+                    $loopIndex++;
+                }
+            }
+
+            $this->attachmentsInfoByColumn[$columnId] = $filesForColumn;
         }
     }
 
@@ -121,6 +246,8 @@ class ShowDiff extends Component
 
         $this->ledgerRecord->modifier = $this->currentDiffRecord->modifier;
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
+
+        $this->prepareAttachmentsInfo();
 
 //        \Illuminate\Support\Facades\Log::info('ShowDiff: loadDiffRecord - ledgerRecord->content after setting', ['content' => $this->ledgerRecord->content]);
 //        \Illuminate\Support\Facades\Log::info('ShowDiff: loadDiffRecord - ledgerRecord->attachedFiles after setting', ['attachedFiles' => $this->ledgerRecord->attachedFiles ? $this->ledgerRecord->attachedFiles->toArray() : 'null']);

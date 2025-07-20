@@ -107,25 +107,38 @@ class ModifyColumn extends CreateColumn
              * fileの保存状態
              * ['originalFilename'=>'savedFilePath']
              */
-            $tmpContent = $this->ledgerRecord->content[$column->id] ?? [];
-            $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
 
             $deletedBaseFilenames = [];
-            //            パスがついているのでファイル名を取得
+            // パスがついているのでファイル名を取得
             foreach ($this->deletedContent[$column->id] as $deletedFilePath) {
                 $deletedBaseFilenames[] = basename($deletedFilePath);
             }
-            foreach ($this->ledgerRecord->content[$column->id] as $hashedBaseName => $filepath) {
-                if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
+            // $this->ledgerRecord->content[$column->id] が配列であることを保証
+            $currentColumnContent = $this->ledgerRecord->content[$column->id] ?? [];
+            if (!is_array($currentColumnContent)) {
+                $currentColumnContent = [];
+            }
+            // $tmpContent は $currentColumnContent から初期化
+            $tmpContent = $currentColumnContent;
+
+            // $tmpContentAttached は $this->ledgerRecord->content_attached から初期化
+            $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
+            if (!is_array($tmpContentAttached)) {
+                $tmpContentAttached = [];
+            }
+
+            foreach ($currentColumnContent as $hashedBaseName => $filepath) {
+                if (in_array($filepath, $deletedBaseFilenames, true)) {
                     unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
                     // 実体ファイルを消したければここに削除処理を追加
-                    AttachedFile::where('hashedbasename', $hashedBaseName)
+/*                    AttachedFile::where('hashedbasename', $hashedBaseName)
                         ->where('ledger_id', $this->ledgerRecord->id)
                         ->where('ledger_define_id', $this->ledgerRecord->ledger_define_id)
                         ->where('column_id', $column->id)
-                        ->delete();
+                        ->delete();*/
                 }
             }
+
             // 以前保存したファイルとのマージ
             $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
             $this->contentAttached[$column->id] = array_merge($addedFileContents, $tmpContentAttached);
@@ -171,7 +184,8 @@ class ModifyColumn extends CreateColumn
         $addedFileContents = [];
         foreach ($storedFiles as $stored) {
             $addedFilenames[$stored->hashedBaseName] = $stored->originalName;
-            $addedFileContents[$stored->hashedBaseName] = null;
+            // content_attached の構造を維持するため、meta と content のプレースホルダーを追加
+            $addedFileContents[$stored->hashedBaseName] = ['meta' => ['content' => '']];
         }
 
         // 既存ファイルの取得 (DBから再取得が安全)
@@ -188,11 +202,11 @@ class ModifyColumn extends CreateColumn
             if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
                 unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
                 // 実体ファイル削除や AttachedFile レコード削除はここで行う
-                AttachedFile::where('hashedbasename', $hashedBaseName)
-                    ->where('ledger_id', $this->ledgerId) // ledgerId を使う
-                    ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
-                    ->where('column_id', $column->id)
-                    ->delete();
+                // AttachedFile::where('hashedbasename', $hashedBaseName)
+                    //     ->where('ledger_id', $this->ledgerId) // ledgerId を使う
+                    //     ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
+                    //     ->where('column_id', $column->id)
+                    //     ->delete();
             }
         }
 
@@ -534,9 +548,8 @@ class ModifyColumn extends CreateColumn
                                 'type' => $fileExists ? Storage::disk('public')->mimeType($storagePath) : 'application/octet-stream',
                             ],
                             'metadata' => [
-                                'poster' => $posterUrl,
-                                'position' => $loopIndex,
                                 'filename' => $originalFilename,
+                                'hashedBasename' => $hashedBasename,
                             ],
                         ],
                     ];

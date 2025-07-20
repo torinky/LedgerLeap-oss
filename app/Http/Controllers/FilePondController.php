@@ -30,6 +30,8 @@ class FilePondController extends Controller
         // Content-Disposition ヘッダーなしでファイルコンテンツを返す
         return Response::make($file, 200, [
             'Content-Type' => $type,
+            'Content-Length' => Storage::disk('public')->size($path),
+            'Content-Disposition' => 'attachment; filename="' . $attachedFile->original_file_name . '"',
         ]);
     }
 }

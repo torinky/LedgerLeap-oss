@@ -73,8 +73,12 @@ class AttachedFileDownloadController extends Controller
 
         // 5. レスポンス生成
         if ($isThumbnailRequest) {
-            Log::info('[DownloadController@download] Returning thumbnail response.');
-            return Storage::disk('public')->response($filePath);
+            Log::info('[DownloadController@download] Returning thumbnail response with inline disposition.');
+            $mimeType = Storage::disk('public')->mimeType($filePath);
+            return response()->file(Storage::disk('public')->path($filePath), [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"'
+            ]);
         }
 
         $mimeType = Storage::disk('public')->mimeType($filePath);
