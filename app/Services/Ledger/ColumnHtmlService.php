@@ -262,7 +262,7 @@ class ColumnHtmlService
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
 <span class="indicator-item">
-    <div class="tooltip" data-tip="{$attachment->status->tooltip()}">
+    <div class="tooltip tooltip-bottom" data-tip="{$attachment->status->tooltip()}">
         <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} text-lg"></i>
     </div>
 </span>
@@ -271,8 +271,10 @@ HTML;
                 // Add retry icon if status is FAILED
                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
                     $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
+                    // 翻訳キーからテキストを取得
+                    $retryTooltipText = __('ledger.uploadedFile.retry');
                     $retryIconHtml = <<<HTML
-<div class="tooltip btn btn-ghost " data-tip="再試行">
+<div class="tooltip btn btn-ghost " data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
     wire:click="retryProcessing({$attachment->id})"></i>
 </div>
@@ -313,6 +315,10 @@ HTML;
                     ->optimized) {
                 // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
                 $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
+
+                // 翻訳キーからツールチップのテキストを取得
+                $downloadPdfTooltip = __('ledger.uploadedFile.download_pdf_with_text');
+
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
      <a href="{$originalDownloadUrl}" target="_blank" 

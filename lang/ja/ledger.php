@@ -989,6 +989,7 @@
             'extraction_failed' => 'テキスト抽出失敗',
             'extracting' => 'テキスト抽出中',
         ],
-
-    ]
+        'download_pdf_with_text'=>"テキスト付きPDFをダウンロード",
+        'retry'=>"テキスト抽出/OCRを再試行",
+    ],
 ];
