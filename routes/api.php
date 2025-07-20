@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\FilePondController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,8 +22,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ledger/{ledgerDefineId}/download-excel-csv', [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV'])
         ->name('ledger.downloadExcelCSV');
 
-    // FilePond 専用のファイルロードルート (Sanctum認証)
-    Route::get('/filepond/load/{attachedFile}', [FilePondController::class, 'load'])
-        ->name('api.filepond.load') // ルート名を変更
-        ->where('attachedFile', '[0-9]+');
+    
 });

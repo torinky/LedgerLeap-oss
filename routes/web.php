@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AttachedFileDownloadController;
-use App\Http\Controllers\FilePondController; // 追加
 use App\Http\Controllers\FontAwesomeIconController;
 use App\Http\Controllers\Folder\CreateController as FolderCreateController;
 use App\Http\Controllers\Folder\UpdateController as FolderUpdateController;
@@ -16,17 +15,10 @@ use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateCont
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\FileDownloadController;
 use App\Http\Controllers\SynonymController;
-use App\Livewire\Common\PermissionDisplay;
 use App\Livewire\Folder\FolderForm;
-use App\Livewire\LedgerDefine\Create as LedgerDefineCreateComponent;
 use App\Livewire\MyPortal;
-use App\Livewire\Notifications\UserNotificationList;
 use App\Livewire\Notifications\Settings;
-use App\Livewire\UserActivityLog;
-use App\Livewire\Workflow\PendingList;
-use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;

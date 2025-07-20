@@ -53,36 +53,7 @@
                             @this.removeUpload('content.{{$columnDefine->id}}', filename, load)
                         },
 
-                        load: (source, load, error, progress, abort, headers) => {
-                            // source は AttachedFile の ID
-                            // apiルートに変更し、認証情報をヘッダーに含める
-                            fetch(`/api/filepond/load/${source}`, {
-                                credentials: 'include', // ★★★ Cookieをリクエストに含めるために必須 ★★★
-                                headers: {
-                                    'Accept': 'application/json',
-                                    // CSRFトークンはCookieベースのSanctum認証では通常不要だが、念のため追加
-                                    'X-XSRF-TOKEN': document.cookie.match(/XSRF-TOKEN=([^;]+)/)[1],
-                                }
-                            })
-                            .then(async response => {
-                                if (!response.ok) {
-                                    // サーバーからのエラーレスポンスを処理
-                                    const text = await response.text();
-                                    error(`Server error: ${response.status} ${response.statusText} - ${text}`);
-                                    return;
-                                }
-                                return response.blob();
-                            })
-                            .then(blob => {
-                                if (blob) {
-                                    load(blob);
-                                }
-                            })
-                            .catch(e => {
-                                console.error('FilePond load error:', e);
-                                error('Network error while loading file.');
-                            });
-                        },
+                        
                     },
                     onremovefile: (error, file) => {
                         const columnId = {{ $columnDefine->id }};
@@ -92,12 +63,10 @@
                     }
                 });
 
-                // ★★★ ここから追加 ★★★
                 const initialFiles = {{ Illuminate\Support\Js::from($initialFiles) }};
                 initialFiles.forEach(file => {
                     post.addFile(file.source, file.options); // sourceとoptionsを渡す
                 });
-                // ★★★ ここまで追加 ★★★
             }"
         >
             <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"

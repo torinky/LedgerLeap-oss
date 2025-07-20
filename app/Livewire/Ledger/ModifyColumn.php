@@ -539,7 +539,7 @@ class ModifyColumn extends CreateColumn
                     }
 
                     $fileObject = [
-                        'source' => $attachmentId, // FilePondがloadする際のID
+                        'source' => route('file.download', ['attachedFile' => $attachmentId]), // FilePondが直接ロードするURL
                         'options' => [
                             'type' => 'local',
                             'file' => [
@@ -550,6 +550,7 @@ class ModifyColumn extends CreateColumn
                             'metadata' => [
                                 'filename' => $originalFilename,
                                 'hashedBasename' => $hashedBasename,
+                                'poster' => $posterUrl, // サムネイル/アイコンのURLを追加
                             ],
                         ],
                     ];
