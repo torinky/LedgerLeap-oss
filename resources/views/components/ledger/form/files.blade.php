@@ -33,7 +33,7 @@
                 const post = FilePond.create($refs.content_{{$columnDefine->id}});
                 post.setOptions({
                     allowMultiple: {{ $attributes->has('multiple') ? 'true' : 'false' }},
-                    allowImagePreview: {{ $attributes->has('allowImagePreview') ? 'true' : 'false' }},
+                    allowImagePreview: true,
                     imagePreviewMaxHeight: {{ $attributes->has('imagePreviewMaxHeight') ? $attributes->get('imagePreviewMaxHeight') : '256' }},
                     allowFileTypeValidation: {{ $attributes->has('allowFileTypeValidation') ? 'true' : 'false' }},
                     acceptedFileTypes: {{ Illuminate\Support\Js::from($attributes->get('acceptedFileTypes')) }},
@@ -55,14 +55,35 @@
 
                         load: (source, load, error, progress, abort, headers) => {
                             // source は AttachedFile の ID
-                            // route() ヘルパーに直接パラメータを渡すことで、Laravelが正しいURLを生成する
-                            fetch(`{{ route('filepond.load', ['attachedFile' => '__ATTACHED_FILE_ID__']) }}`
-                            .replace('__ATTACHED_FILE_ID__', source))
-                            .then(response => response.blob())
-                            .then(load);
+                            // apiルートに変更し、認証情報をヘッダーに含める
+                            fetch(`/api/filepond/load/${source}`, {
+                                credentials: 'include', // ★★★ Cookieをリクエストに含めるために必須 ★★★
+                                headers: {
+                                    'Accept': 'application/json',
+                                    // CSRFトークンはCookieベースのSanctum認証では通常不要だが、念のため追加
+                                    'X-XSRF-TOKEN': document.cookie.match(/XSRF-TOKEN=([^;]+)/)[1],
+                                }
+                            })
+                            .then(async response => {
+                                if (!response.ok) {
+                                    // サーバーからのエラーレスポンスを処理
+                                    const text = await response.text();
+                                    error(`Server error: ${response.status} ${response.statusText} - ${text}`);
+                                    return;
+                                }
+                                return response.blob();
+                            })
+                            .then(blob => {
+                                if (blob) {
+                                    load(blob);
+                                }
+                            })
+                            .catch(e => {
+                                console.error('FilePond load error:', e);
+                                error('Network error while loading file.');
+                            });
                         },
                     },
-                    files: {{ Illuminate\Support\Js::from($initialFiles) }},
                     onremovefile: (error, file) => {
                         const columnId = {{ $columnDefine->id }};
                         const position = file.getMetadata('position');
@@ -70,6 +91,13 @@
                         window.Livewire.find('{{ $this->id() }}').set(`deletedContent.${columnId}.${position}`, filename);
                     }
                 });
+
+                // ★★★ ここから追加 ★★★
+                const initialFiles = {{ Illuminate\Support\Js::from($initialFiles) }};
+                initialFiles.forEach(file => {
+                    post.addFile(file.source, file.options); // sourceとoptionsを渡す
+                });
+                // ★★★ ここまで追加 ★★★
             }"
         >
             <input id="content[{{$columnDefine->id}}]" type="file" name="content[{{$columnDefine->id}}]"

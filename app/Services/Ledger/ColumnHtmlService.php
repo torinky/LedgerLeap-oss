@@ -330,8 +330,9 @@ HTML;
 HTML;
             }
 
-            Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' .
+/*            Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' .
                 $auxiliaryLinksHtml); // Debug output
+*/
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';

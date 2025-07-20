@@ -426,13 +426,16 @@ class ModifyColumn extends CreateColumn
         $this->filePondInitialFiles = [];
 
         foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type !== 'files') {
+                continue;
+            }
+
             $columnId = $column->id;
             $filesForColumn = [];
 
-            if (!empty($this->content[$columnId])
-                && is_array($this->content[$columnId])
-                && $column->type === 'files'
-            ) {
+            // contentのキー（hashedBasename）を元に、attachmentIdMapからIDを取得し、
+            // FilePondが要求する 'source' をキーとするオブジェクトの配列に変換する
+            if (!empty($this->content[$columnId]) && is_array($this->content[$columnId])) {
                 $loopIndex = 0;
                 foreach ($this->content[$columnId] as $hashedBasename => $originalFilename) {
                     $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
@@ -467,7 +470,7 @@ class ModifyColumn extends CreateColumn
 
                     $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
                     $posterUrl = '';
-//                    dd($storagePath,$fileExists,$currentAttachedFile,Storage::disk('public')->exists($storagePath));
+
                     if ($fileExists) {
                         if (str_starts_with((string)$displayMimeType, 'image/')) {
                             $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
@@ -521,45 +524,27 @@ class ModifyColumn extends CreateColumn
                         }
                     }
 
-                    if (!$attachmentId || !$fileExists) {
-                        $fileObject = [
-                            'source' => '',
-                            'options' => [
-                                'type' => 'local',
-                                'file' => [
-                                    'name' => '[Not Found] ' . $originalFilename,
-                                    'size' => 0,
-                                    'type' => 'application/octet-stream',
-                                ],
-                                'metadata' => [
-                                    'poster' => '',
-                                    'position' => $loopIndex,
-                                    'filename' => 'not_exist',
-                                ],
+                    $fileObject = [
+                        'source' => $attachmentId, // FilePondがloadする際のID
+                        'options' => [
+                            'type' => 'local',
+                            'file' => [
+                                'name' => $originalFilename,
+                                'size' => $fileExists ? Storage::disk('public')->size($storagePath) : 0,
+                                'type' => $fileExists ? Storage::disk('public')->mimeType($storagePath) : 'application/octet-stream',
                             ],
-                        ];
-                    } else {
-                        $fileObject = [
-                            'source' => $attachmentId,
-                            'options' => [
-                                'type' => 'local',
-                                'file' => [
-                                    'name' => $originalFilename,
-                                    'size' => Storage::disk('public')->size($storagePath),
-                                    'type' => Storage::disk('public')->mimeType($storagePath),
-                                ],
-                                'metadata' => [
-                                    'poster' => $posterUrl,
-                                    'position' => $loopIndex,
-                                    'filename' => $storagePath,
-                                ],
+                            'metadata' => [
+                                'poster' => $posterUrl,
+                                'position' => $loopIndex,
+                                'filename' => $originalFilename,
                             ],
-                        ];
-                    }
+                        ],
+                    ];
                     $filesForColumn[] = $fileObject;
                     $loopIndex++;
                 }
             }
+
             $this->filePondInitialFiles[$columnId] = $filesForColumn;
         }
     }
