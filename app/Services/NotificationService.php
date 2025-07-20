@@ -153,7 +153,13 @@ class NotificationService
     public function getNotifiableRecipients(Activity $activity, NotificationType $notificationType): Collection
     {
         $subject = $activity->subject;
-        Log::info('NotificationService::getNotifiableRecipients called', ['subject' => $subject, 'activity' => $activity]);
+//        Log::info('NotificationService::getNotifiableRecipients called', ['subject' => $subject, 'activity' => $activity]);
+        // subjectとactivityオブジェクト全体ではなく、クラス名とIDのみをログに出力して簡潔にします。
+        Log::info('NotificationService::getNotifiableRecipients called', [
+            'subject_class' => get_class($subject),
+            'subject_id' => $subject->id,
+            'activity_id' => $activity->id,
+        ]);
         // subject (変更されたモデル) からフォルダーを特定し、その子孫フォルダーも取得
         if (method_exists($subject, 'folder') && $subject->folder()) {
             // フォルダが存在する場合の処理
