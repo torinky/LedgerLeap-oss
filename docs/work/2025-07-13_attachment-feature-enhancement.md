@@ -571,12 +571,19 @@ graph TD
 			* 	`OcrMyPDF` を実行し、**テキストレイヤーを持つ最適化済みPDF**を生成させます。入力が画像ファイルの場合も、出力はPDFとなります。
 			* 	生成されたPDFを、**元のファイルがあったパス** (`storage/app/public/Ledger/Attachments/{ledger_define_id}/`) に保存します。
 			* 	**実行コマンドの詳細:** `docker exec ledgerleap-ocrmypdf-1 /app/.venv/bin/ocrmypdf -l jpn --image-dpi 300 [入力ファイルパス] [出力ファイルパス]` の形式で実行されます。
-			* 	**対応した問題:** `ocrmypdf` コンテナの正確なサービス名 (`ledgerleap-ocrmypdf-1`) と、Python仮想環境内の `ocrmypdf` パス (`/app/.venv/bin/ocrmypdf`) を明示することで、コマンド実行時のパス問題を解決しました。また、日本語OCR (`-l jpn`) と画像DPI設定 (`--image-dpi 300`) を明示しました。
+			* 	**対応した問題:**
+				* 	`ocrmypdf` コンテナの正確なサービス名 (`ledgerleap-ocrmypdf-1`) と、Python仮想環境内の `ocrmypdf` パス (`/app/.venv/bin/ocrmypdf`) を明示することで、コマンド実行時のパス問題を解決しました。また、日本語OCR (`-l jpn`) と画像DPI設定 (`--image-dpi 300`) を明示しました。
+				* 	**Dockerコンテナ内のパス指定の修正:** `OcrAndOptimizeFile.php`内で`Storage::disk('public')->path(...)`で取得されるホストの物理パスを、`ocrmypdf`コンテナ内から見た絶対パスに変換するように修正しました。
 		4.	**レコード情報の更新:**
 			* 	`attached_files` レコードの `file_name` (拡張子を.pdfに)、`path`、`mime_type`、`size` を、新しく生成されたPDFの情報に更新します。
 		5.	**Tikaによる再処理:**
 			* 	`status` を `PENDING_INITIAL_PROCESSING` に戻し、`ProcessAttachedFile` ジョブを再度ディスパッチします。これにより、最適化・テキスト化された新しいPDFファイルから、一貫した方法でテキストが抽出され `content_attached` に反映されます。
+			* 	**対応した問題:** `ProcessAttachedFile.php`において、OCR処理後のファイルがTikaでテキスト抽出できなかった場合に、`optimized`フラグをチェックせずに再度OCRジョブをディスパッチしていたため、無限ループが発生していました。`optimized`フラグをチェックする条件を追加し、無限ループを解消しました。
 		6.	**失敗時:** `status` を `OCR_FAILED` に更新します。
+
+**追加の対応:**
+*   **`queue`コンテナの停止:** 最初の問題として`queue`コンテナが停止していたため、ジョブが処理されずに`jobs`テーブルに蓄積されていました。`./vendor/bin/sail up -d queue`コマンドで`queue`コンテナを起動することで解決しました。
+*   **`jobs`テーブルへのジョブ継続登録:** 上記の修正により、ジョブが正常に完了し、`jobs`テーブルから削除されるようになりました。
 
 ---
 

@@ -37,6 +37,7 @@ class ProcessAttachedFile implements ShouldQueue
      */
     public function handle(): void
     {
+        Log::info('ProcessAttachedFile: ID: ' . $this->attachedFile->id . ', Status: ' . $this->attachedFile->status->value);
         // Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
         // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
@@ -139,33 +140,42 @@ class ProcessAttachedFile implements ShouldQueue
                     // Log::info('Tika text extraction successful for file: ' . $this->attachedFile->id);
                 } else {
                     // テキスト抽出失敗時
-                    // Log::info('Tika text extraction failed for file: ' . $this->attachedFile->id . '. Checking MIME type for OCR.');
+                    // Log::info('Tika text extraction failed for file: ' . $this->attachedFile->id + '. Checking MIME type for OCR.');
                     $mimeType = $this->attachedFile->mime;
-                    // Log::info('MIME Type for OCR check: ' . $mimeType);
-                    // Log::info('Is PDF: ' . (str_starts_with($mimeType, 'application/pdf') ? 'true' : 'false'));
-                    // Log::info('Is Image: ' . (str_starts_with($mimeType, 'image/') ? 'true' : 'false'));
+                    // Log::info('MIME Type for OCR check: ' + $mimeType);
+                    // Log::info('Is PDF: ' + (str_starts_with($mimeType, 'application/pdf') ? 'true' : 'false'));
+                    // Log::info('Is Image: ' + (str_starts_with($mimeType, 'image/') ? 'true' : 'false'));
 
-                    if (str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) {
-                        // OCR対象の場合 (PDF/画像): PENDING_OCR に更新し、OcrAndOptimizeFile ジョブをディスパッチ
+                    if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
+                        // OCR対象の場合 (PDF/画像) かつまだ最適化されていない場合: PENDING_OCR に更新し、OcrAndOptimizeFile ジョブをディスパッチ
                         $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
-                        // Log::info('AttachedFile path before dispatching OcrAndOptimizeFile: ' . $this->attachedFile->path);
                         OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
                         // Log::info('Dispatched OcrAndOptimizeFile for file: ' . $this->attachedFile->id);
+                    } else if ($this->attachedFile->optimized) {
+                        // OCR対象だが既に最適化されている場合 (TikaがOCR済みPDFからテキスト抽出できなかったケース)
+                        $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
+                        // Log::info('File is OCR-eligible but already optimized, marking as tika_failed: ' . $this->attachedFile->id);
                     } else {
                         // OCR対象外の場合 (ZIP, etc.): これ以上処理できないため、COMPLETED に更新して処理を正常終了
                         $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
                         $this->attachedFile->optimized = $this->attachedFile->optimized; // optimized の値を保持
                         // Log::info('File is not OCR-eligible, marking as completed: ' . $this->attachedFile->id);
                     }
+
                 }
 
             } catch (Exception $e) {
-                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '\nStack trace: ' . $e->getTraceAsString());
+                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '
+Stack trace: ' . $e->getTraceAsString());
                 $mimeType = $this->attachedFile->mime;
-                if (str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) {
+                if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
                     OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
                     // Log::info('Dispatched OcrAndOptimizeFile after Tika error for file: ' . $this->attachedFile->id);
+                } else if ($this->attachedFile->optimized) {
+                    // OCR対象だが既に最適化されている場合 (TikaがOCR済みPDFからテキスト抽出できなかったケース)
+                    $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
+                    // Log::info('File is OCR-eligible but already optimized after Tika error, marking as tika_failed: ' . $this->attachedFile->id);
                 } else {
                     $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
                     // Log::info('File is not OCR-eligible after Tika error, marking as tika_failed: ' . $this->attachedFile->id);

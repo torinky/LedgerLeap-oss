@@ -104,8 +104,8 @@ class OcrAndOptimizeFile implements ShouldQueue
         // コンテナ内のパスに変換
 //        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $inputFilePathForOcr);
 //        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $outputStoragePath);
-        $containerOriginalFilePath = $originalFilePath;
-        $containerOutputFilePath = $outputPhysicalPath;
+        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace(Storage::disk('public')->path(''), '', $originalFilePath);
+        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace(Storage::disk('public')->path(''), '', $outputPhysicalPath);
 
         // ocrmypdf コマンドの構築
         $command = [
