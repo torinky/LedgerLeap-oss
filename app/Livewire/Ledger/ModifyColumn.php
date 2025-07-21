@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use App\Helpers\AttachedFilePathHelper;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class ModifyColumn extends CreateColumn
 {
@@ -65,90 +66,17 @@ class ModifyColumn extends CreateColumn
 
             $this->prepareFilePondInitialFiles(); // FilePond初期化
 
-            foreach ($this->ledgerDefineRecord->column_define as $column) {
-                if ($column->type === 'files') {
-                    $this->deletedContent[$column->id] = [];
-                    // FilePondで既存ファイルを表示するために、contentを空にしない
-                    // ただし、新規アップロードとの区別のため、ここでは既存ファイルのみを保持する
-                    $this->content[$column->id] = $this->ledgerRecord->content[$column->id] ?? [];
-                }
-                if (!empty($this->content[$column->id])) {
-                    $this->labelColor[$column->id] = 'success';
-                } elseif ($column->required) {
-                    $this->labelColor[$column->id] = 'warning';
-                } else {
-                    $this->labelColor[$column->id] = 'muted';
-                }
-            }
         }
         $this->initBackgroundImages();
     }
 
     public function render(): View
     {
+        $this->refreshRequiredLabel();
+
         return view('livewire.ledger.modify-column');
     }
 
-    /**
-     * @param [object] $addingStoredFiles
-     */
-    public function mergeContentFiles(mixed $column, $addingStoredFiles): void
-    {
-        $addedFilenames = [];
-        $addedFileContents = [];
-        foreach ($addingStoredFiles as $stored) {
-            $addedFilenames[$stored->hashedBaseName] = $stored->originalName;
-            $addedFileContents[$stored->hashedBaseName] = null;
-        }
-
-        // 既存ファイルの削除処理
-        if (!empty($this->ledgerRecord->content[$column->id])) {
-            /*
-             * fileの保存状態
-             * ['originalFilename'=>'savedFilePath']
-             */
-
-            $deletedBaseFilenames = [];
-            // パスがついているのでファイル名を取得
-            foreach ($this->deletedContent[$column->id] as $deletedFilePath) {
-                $deletedBaseFilenames[] = basename($deletedFilePath);
-            }
-            // $this->ledgerRecord->content[$column->id] が配列であることを保証
-            $currentColumnContent = $this->ledgerRecord->content[$column->id] ?? [];
-            if (!is_array($currentColumnContent)) {
-                $currentColumnContent = [];
-            }
-            // $tmpContent は $currentColumnContent から初期化
-            $tmpContent = $currentColumnContent;
-
-            // $tmpContentAttached は $this->ledgerRecord->content_attached から初期化
-            $tmpContentAttached = $this->ledgerRecord->content_attached[$column->id] ?? [];
-            if (!is_array($tmpContentAttached)) {
-                $tmpContentAttached = [];
-            }
-
-            foreach ($currentColumnContent as $hashedBaseName => $filepath) {
-                if (in_array($filepath, $deletedBaseFilenames, true)) {
-                    unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
-                    // 実体ファイルを消したければここに削除処理を追加
-/*                    AttachedFile::where('hashedbasename', $hashedBaseName)
-                        ->where('ledger_id', $this->ledgerRecord->id)
-                        ->where('ledger_define_id', $this->ledgerRecord->ledger_define_id)
-                        ->where('column_id', $column->id)
-                        ->delete();*/
-                }
-            }
-
-            // 以前保存したファイルとのマージ
-            $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
-            $this->contentAttached[$column->id] = array_merge($addedFileContents, $tmpContentAttached);
-        } else {
-            $this->content[$column->id] = $addedFilenames;
-            $this->contentAttached[$column->id] = $addedFileContents;
-        }
-    }
-
-    
 
     public function storeLedgerDiff(): void
     {
@@ -167,6 +95,46 @@ class ModifyColumn extends CreateColumn
     }
 
     // Modify 用のファイルマージ処理をオーバーライド
+
+    /**
+     * @return void
+     */
+    public function refreshRequiredLabel(): void
+    {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type === 'files') {
+                $this->deletedContent[$column->id] = [];
+                // FilePondで既存ファイルを表示するために、contentを空にしない
+                // ただし、新規アップロードとの区別のため、ここでは既存ファイルのみを保持する
+                $this->content[$column->id] = $this->ledgerRecord->content[$column->id] ?? [];
+            }
+            if (is_array($this->content[$column->id])) {
+                $allValuesEmpty = true;
+                foreach ($this->content[$column->id] as $value) {
+                    if (!empty($value)) {
+                        $allValuesEmpty = false;
+                        break;
+                    }
+                }
+                if ($allValuesEmpty) {
+                    if ($column->required) {
+                        $this->labelColor[$column->id] = 'warning';
+                    } else {
+                        $this->labelColor[$column->id] = 'muted';
+                    }
+                } else {
+                    $this->labelColor[$column->id] = 'success';
+                }
+            } elseif (!empty($this->content[$column->id])) {
+                $this->labelColor[$column->id] = 'success';
+            } elseif ($column->required) {
+                $this->labelColor[$column->id] = 'warning';
+            } else {
+                $this->labelColor[$column->id] = 'muted';
+            }
+        }
+    }
+
     protected function mergeFilesForSave(object $column, array $storedFiles): void
     {
         $addedFilenames = [];
@@ -178,26 +146,29 @@ class ModifyColumn extends CreateColumn
         }
 
         // 既存ファイルの取得 (DBから再取得が安全)
-        $existingLedger = Ledger::find($this->ledgerId);
-        $tmpContent = $existingLedger?->content[$column->id] ?? [];
-        $tmpContentAttached = $existingLedger?->content_attached[$column->id] ?? [];
+        $tmpContent = $this->content[$column->id] ?? [];
+        $tmpContentAttached = $this->contentAttached[$column->id] ?? [];
+
+//        dd($column->id,$this->deletedContent ,$tmpContent);
 
         // 削除指定されたファイルを既存リストから除去
-        $deletedBaseFilenames = [];
-        foreach ($this->deletedContent[$column->id] ?? [] as $deletedFilePath) {
-            $deletedBaseFilenames[] = basename($deletedFilePath);
-        }
-        foreach ($tmpContent as $hashedBaseName => $originalName) { // $filepath ではなく $originalName
+        $deletedBaseFilenames = $this->deletedContent[$column->id] ?? [];
+        foreach ($tmpContent as $hashedBaseName => $originalName) {
             if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
-                unset($tmpContent[$hashedBaseName], $tmpContentAttached[$hashedBaseName]);
+                unset($tmpContent[$hashedBaseName]);
+                unset($tmpContentAttached[$hashedBaseName]);
                 // 実体ファイル削除や AttachedFile レコード削除はここで行う
                 // AttachedFile::where('hashedbasename', $hashedBaseName)
-                    //     ->where('ledger_id', $this->ledgerId) // ledgerId を使う
-                    //     ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
-                    //     ->where('column_id', $column->id)
-                    //     ->delete();
+                //     ->where('ledger_id', $this->ledgerId) // ledgerId を使う
+                //     ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
+                //     ->where('column_id', $column->id)
+                //     ->delete();
             }
         }
+
+        // TemporaryUploadedFile オブジェクトをフィルタリング
+        $tmpContent = collect($tmpContent)->filter(fn($value) => !($value instanceof TemporaryUploadedFile))->all();
+        $tmpContentAttached = collect($tmpContentAttached)->filter(fn($value) => !($value instanceof TemporaryUploadedFile))->all();
 
         // 新規ファイルと残った既存ファイルをマージ
         $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
@@ -292,14 +263,13 @@ class ModifyColumn extends CreateColumn
 
                 // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
                 $newUploads = collect($this->content[$columnId] ?? [])
-                    ->filter(fn($file) => $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                    ->filter(fn($file) => $file instanceof TemporaryUploadedFile)
                     ->all();
 
                 // 画面上で削除されずに残っている既存ファイル
                 $existingFiles = collect($this->ledgerRecord->content[$columnId] ?? [])
                     ->reject(function ($originalFilename, $hashedBasename) use ($columnId) {
-                        $fullPath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefineId, $hashedBasename);
-                        return in_array($fullPath, $this->deletedContent[$columnId] ?? [], true);
+                        return in_array($hashedBasename, $this->deletedContent[$columnId] ?? [], true);
                     })
                     ->all();
 
@@ -309,7 +279,6 @@ class ModifyColumn extends CreateColumn
                 $this->content[$columnId] = array_merge($newUploads, $existingFiles);
             }
         }
-
         return $attributes;
     }
 

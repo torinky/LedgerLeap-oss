@@ -10,15 +10,12 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use App\Models\ColumnTypes\AutoNumberType;
-use App\Models\ColumnTypes\NumberType;
 use App\Rules\UniqueAutoNumber;
 use App\Rules\UniqueColumnValue;
 use App\Services\NumberingService;
 use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +24,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Intervention\Image\Facades\Image;
-use Intervention\Image\ImageManager;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -587,7 +582,7 @@ class CreateColumn extends Component
 
                 // ModifyColumn の場合、既存ファイルとのマージ処理が必要
                 if ($this instanceof ModifyColumn) {
-                    $this->mergeContentFiles($column, $storedFiles); // 既存メソッド呼び出し
+                    $this->mergeFilesForSave($column, $storedFiles); // ModifyColumn の mergeFilesForSave を呼び出す
                 } else { // CreateColumn の場合
                     $filenames = [];
                     $fileContents = [];

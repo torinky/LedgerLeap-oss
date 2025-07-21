@@ -65,9 +65,10 @@
 
                     onremovefile: (error, file) => {
                         if (error) return;
-                        const fileIndex = pond.getFiles().indexOf(file);
-                        const filename = file.serverId || file.filename || `file_${fileIndex}`;
-                        window.Livewire.find(componentId).set(`deletedContent.${columnId}.${fileIndex}`, filename);
+                        const hashedBasename = file.getMetadata('hashedBasename');
+                        if (hashedBasename && !window.Livewire.find(componentId).get(`deletedContent.${columnId}`).includes(hashedBasename)) {
+                            window.Livewire.find(componentId).set(`deletedContent.${columnId}`, [...window.Livewire.find(componentId).get(`deletedContent.${columnId}`), hashedBasename]);
+                        }
                     },
 
                     onerror: (error, file) => {
