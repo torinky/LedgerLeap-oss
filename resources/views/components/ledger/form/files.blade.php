@@ -47,7 +47,7 @@
                     allowFileSizeValidation: {{ $attributes->has('allowFileSizeValidation') ? 'true' : 'false' }},
                     maxFileSize: {{ Illuminate\Support\Js::from($attributes->get('maxFileSize')) }},
                     credits: false,
-                    filePosterMaxHeight: 200,
+                    filePosterMaxHeight: 100,
                     itemInsertInterval: initialFiles.length > 10 ? 0 : 10,
 
                     server: {

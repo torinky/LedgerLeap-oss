@@ -48,7 +48,6 @@
                     @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                         <div class="flex">
                             <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
-                            <div class="w-4"> {{$labelColor[$columnDefine->id]}} {{$columnDefine->required}} {{(bool)$content[$columnDefine->id]}}</div>
                             <div
                                     wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
                             x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
