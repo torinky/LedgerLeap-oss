@@ -270,15 +270,24 @@ HTML;
 
                 // Add retry icon if status is FAILED
                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
-                    $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED) {
+                    $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED ||
+                    $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
                     // 翻訳キーからテキストを取得
                     $retryTooltipText = __('ledger.uploadedFile.retry');
                     $retryIconHtml = <<<HTML
-<div class="tooltip btn btn-ghost " data-tip="{$retryTooltipText}">
+<div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
     wire:click="retryProcessing({$attachment->id})"></i>
 </div>
 HTML;
+                }
+
+                // サムネイル生成失敗時に再ディスパッチ
+                if ($attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
+                    // ここでは簡易的に、THUMBNAIL_FAILEDであれば再試行とみなす
+                    // より厳密な試行回数チェックはジョブ側で行う
+                    \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachment->id));
+                    Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: ' . $attachment->id);
                 }
             }
 
@@ -294,8 +303,9 @@ HTML;
             // ダウンロードリンクの出し分けに必要なURLを事前に定義
             $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id,
                 'original' => true]);
-            $optimizedPdfDownloadUrl = route('file.download', ['attachedFile' => $attachment
-                ->id]); // OCR処理後のPDF
+            $optimizedPdfDownloadUrl = route('file.download',
+                ['attachedFile' => $attachment->id]
+            ); // OCR処理後のPDF
 
             $auxiliaryLinksHtml = '';
 
@@ -303,27 +313,29 @@ HTML;
             if (str_starts_with($attachment->original_mime_type, 'image/')) {
                 // オリジナルが画像の場合：メインはオリジナル画像、補助はOCR後PDF
                 $mainDownloadUrl = $originalDownloadUrl; // Main link is original image
-                $auxiliaryLinksHtml = <<<HTML
- <div class="flex items-center text-xs text-gray-500 mt-1">
-     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-sm btn-ghost tooltip" 
- data-tip="テキスト付きPDFをダウンロード">
-         <i class="fa-solid fa-file-pdf w-4 h-4"></i>
-     </a>
- </div>
-HTML;
-            } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment
-                    ->optimized) {
-                // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
-                $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
-
                 // 翻訳キーからツールチップのテキストを取得
                 $downloadPdfTooltip = __('ledger.uploadedFile.download_pdf_with_text');
 
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
+     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-square btn-ghost tooltip" 
+ data-tip="{$downloadPdfTooltip}">
+         <i class="fa-solid fa-file-pdf w-4 h-4"></i>
+     </a>
+ </div>
+HTML;
+            } elseif ($attachment->original_mime_type === 'application/pdf'
+                && $attachment->optimized) {
+                // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
+                $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
+
+                $downloadPdfTooltip=__('ledger.uploadedFile.download_original_pdf');
+
+                $auxiliaryLinksHtml = <<<HTML
+ <div class="flex items-center text-xs text-gray-500 mt-1">
      <a href="{$originalDownloadUrl}" target="_blank" 
-     class="btn btn-xs btn-ghost tooltip" 
-     data-tip="オリジナルPDFをダウンロード">
+     class="btn btn-square btn-ghost tooltip" 
+     data-tip="{$downloadPdfTooltip}">
          <i class="fa-solid fa-file w-4 h-4"></i>
      </a>
  </div>
@@ -361,11 +373,11 @@ HTML;
 <div class="indicator"> 
 {$statusIconHtml}
 {$contentHtmlStart}
-<!--     <div class="flex flex-col items-center mx-1 my-1">-->
+     <div class="flex flex-col items-center mx-1 my-1">
          <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
  $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
          {$auxiliaryLinksHtml}
-<!--     </div>-->
+     </div>
  {$contentHtmlEnd}
 </div>
 HTML;
@@ -374,20 +386,22 @@ HTML;
                     Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)));
                 }
                 $files[] = <<<HTML
- <div class="indicator">
  {$contentHtmlStart}
-<!-- <div class="flex items-center mx-1 my-1 py-2">-->
+ <div class="flex items-center mx-1 my-1 py-2">
+<div class="indicator">
      {$statusIconHtml}
      <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
  opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
          <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
          <span>{$originalFilename}</span>
      </a>
-<!--</div>-->
+ </div>
+         <div class="flex justify-center items-center gap-1 mt-2">
+             {$retryIconHtml}
+             {$auxiliaryLinksHtml}
+         </div>
 </div>
-     {$retryIconHtml}
  {$contentHtmlEnd}
- {$auxiliaryLinksHtml}
 HTML;
             }
         }

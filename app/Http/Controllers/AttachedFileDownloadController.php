@@ -62,8 +62,16 @@ class AttachedFileDownloadController extends Controller
                     'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"'
                 ]);
             } else {
-                Log::info('[DownloadController@download] Thumbnail not found, returning FontAwesome icon URL.');
-                // サムネイルが存在しない場合、MIMEタイプに基づいてFontAwesomeアイコンのURLを返す
+                Log::info('[DownloadController@download] Thumbnail not found, checking status for re-dispatch.');
+                // サムネイルが存在しない場合、ステータスがTHUMBNAIL_FAILEDであれば再ディスパッチを試みる
+                if ($attachedFile->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
+                    // ジョブの試行回数が最大試行回数未満の場合のみ再ディスパッチ
+                    // ここでは簡易的に、AttachedFileのstatusがTHUMBNAIL_FAILEDであれば再試行とみなす
+                    // より厳密な試行回数チェックはジョブ側で行う
+                    \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
+                    Log::info('[DownloadController@download] Re-dispatched GenerateThumbnail job for ID: ' . $attachedFile->id);
+                }
+                // 既存のフォールバックロジック（FontAwesomeアイコンへのリダイレクト）
                 $displayMimeType = $attachedFile->mime;
                 switch ($displayMimeType) {
                     case 'application/pdf':

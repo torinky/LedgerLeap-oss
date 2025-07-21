@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\AttachedFileStatus;
+use App\Jobs\Ledger\GenerateThumbnail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Bus;
 
 class AttachedFile extends Model
 {
@@ -21,6 +23,14 @@ class AttachedFile extends Model
     protected $casts = [
         'status' => AttachedFileStatus::class,
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (AttachedFile $attachedFile) {
+            // サムネイル生成ジョブをディスパッチ
+            Bus::dispatch(new GenerateThumbnail($attachedFile->id));
+        });
+    }
 
     public function getOriginalFilenameAttribute(): ?string
     {

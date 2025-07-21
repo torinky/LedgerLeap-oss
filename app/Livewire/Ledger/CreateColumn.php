@@ -357,17 +357,7 @@ class CreateColumn extends Component
         //        $allowedMimeTypes = ['image/jpeg', 'image/gif', 'image/png', 'image/bmp', 'image/svg+xml'];
         //        if (in_array($contentType, $allowedMimeTypes)) {
         //        dd($file->getClientMimeType(),$file->getRealPath());
-        if (Str::endsWith($file->getRealPath(), ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'])) {
-            // Create a thumbnail of the image using Intervention Image Library
-            $imageManager = new ImageManager;
-            $img = Image::make($file->getRealPath());
-            $image = $imageManager->make($img)->resize(null, 200, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(basename($fullPath));
-            $image->save(Storage::disk('public')->path($thumbnailPath));
-            Log::info('Thumbnail saved to: ' . $thumbnailPath);
-        }
+        
 
         //        ファイルからメタ情報、テキストを抽出する
         /*        $tikaClient = Client::make('tika', 9998);

@@ -687,6 +687,12 @@ class Show extends Component
             // ジョブを再ディスパッチ
             \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
 
+            // サムネイル生成ジョブも再ディスパッチ
+            if ($attachedFile->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
+                \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
+                Log::info('[Show] Re-dispatched GenerateThumbnail job for ID: ' . $attachedFile->id);
+            }
+
             $this->success(__('file.status.retry_success'));
 
         } catch (\Exception $e) {

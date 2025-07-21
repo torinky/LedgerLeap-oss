@@ -11,6 +11,7 @@ enum AttachedFileStatus: string
     case COMPLETED = 'completed';
     case TIKA_FAILED = 'tika_failed';
     case OCR_FAILED = 'ocr_failed';
+    case THUMBNAIL_FAILED = 'thumbnail_failed';
 
     // 既存のステータスも残しておくが、将来的には新しいステータスに統合することを検討
     case UPLOADED = 'uploaded';
@@ -27,7 +28,7 @@ enum AttachedFileStatus: string
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'fa-solid fa-clock',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'fa-solid fa-gear',
             self::COMPLETED => 'fa-solid fa-circle-check',
-            self::TIKA_FAILED, self::OCR_FAILED => 'fa-solid fa-triangle-exclamation',
+            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED => 'fa-solid fa-triangle-exclamation',
             // 既存のステータス
             self::UPLOADED => 'fa-solid fa-cloud-arrow-up',
             self::OPTIMIZED => 'fa-solid fa-circle-check',
@@ -45,7 +46,7 @@ enum AttachedFileStatus: string
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'text-info',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'text-warning animate-spin',
             self::COMPLETED => 'text-success',
-            self::TIKA_FAILED, self::OCR_FAILED => 'text-error',
+            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED => 'text-error',
             // 既存のステータス
             self::UPLOADED => 'text-info',
             self::OPTIMIZED => 'text-success',
@@ -67,6 +68,7 @@ enum AttachedFileStatus: string
             self::COMPLETED => __('ledger.uploadedFile.status.completed'),
             self::TIKA_FAILED => __('ledger.uploadedFile.status.tika_failed'),
             self::OCR_FAILED => __('ledger.uploadedFile.status.ocr_failed'),
+            self::THUMBNAIL_FAILED => __('ledger.uploadedFile.status.thumbnail_failed'),
             // 既存のステータス
             self::UPLOADED => __('ledger.uploadedFile.status.uploaded'),
             self::OPTIMIZED => __('ledger.uploadedFile.status.optimized'),

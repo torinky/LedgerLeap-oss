@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Jobs;
+namespace tests\Unit\Jobs;
 
 use App\Enums\AttachedFileStatus;
 use App\Jobs\Ledger\OcrAndOptimizeFile;

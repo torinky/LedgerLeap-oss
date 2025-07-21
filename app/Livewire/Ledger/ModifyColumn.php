@@ -148,18 +148,7 @@ class ModifyColumn extends CreateColumn
         }
     }
 
-    public function getThumbnailUrl($filename): string
-    {
-        $hashedBasename = basename($filename);
-        $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
-
-        if ($attachmentId) {
-            return route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
-        }
-
-        // フォールバックまたはエラー処理
-        return ''; // or a default thumbnail URL
-    }
+    
 
     public function storeLedgerDiff(): void
     {
