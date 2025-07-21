@@ -231,10 +231,12 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
 ## 12. 現在の状況と今後の方向性
 
 - **問題の再確認:** FilePondの初期ファイル表示は解決したが、サムネイル/アイコンの表示が依然として問題。
+- **新たな問題:** 画像以外のファイルのサムネイル（FontAwesomeアイコン）が404エラーを返す。
 - **今後のデバッグ方針:**
     - `AttachedFileDownloadController`の`download`メソッドが、サムネイルリクエスト時に正しい画像データとMIMEタイプを返しているか、ブラウザの開発者ツールでネットワークタブを確認し、レスポンスの内容を直接検証する。
     - `FilePondPluginFilePoster`が`poster`オプションをどのように解釈し、画像をロードしているかを、FilePondのドキュメントやソースコードで再確認する。
     - `ModifyColumn.php`で`posterUrl`を生成する際に、`route('file.download', ...)`ではなく、`Storage::url()`を直接使用するアプローチを再検討する。この際、`Storage::url()`が返すURLが、ブラウザから直接アクセス可能なものであることを確認する。
+    - **FontAwesomeアイコンの404エラー調査:** `AttachedFileDownloadController`がリダイレクトする先の`fontawesome.icon`ルート、またはそのルートでアイコンを配信している`FontAwesomeIconController`が正しく機能しているかを確認する。特に、`FontAwesomeIconController`が実際にアイコンファイルを返しているか、ルーティングが正しいか、ファイルパスが正しいかなどを検証する。
 
 ### 12.1. `AttachedFileDownloadController`のサムネイル返却ロジックの再調整
 
@@ -243,6 +245,21 @@ FilePond自体のドキュメントや、Web上の他の開発者の知見を調
     - 変更前: `return Storage::disk('public')->response($filePath);`
     - 変更後: `return response()->file(Storage::disk('public')->path($filePath), ['Content-Type' => $mimeType, 'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"']);`
 - **結果:** `AttachedFileDownloadController`の修正は完了したが、Safariでのフリーズ問題は解消されなかった。Chromeでは問題なく動作するため、FilePondまたはそのプラグインとSafariの間の互換性問題が原因である可能性が高い。**確認済み**
+
+### 12.2. FontAwesomeアイコン配信ルートのAPI化と認証
+
+- **問題:** 画像以外のファイルのサムネイルとして`AttachedFileDownloadController`がリダイレクトするFontAwesomeアイコンのURLが404エラーを返していた。これは、`fontawesome.icon`ルートが`routes/web.php`に定義されており、APIリクエストからのアクセス時に認証が正しく行われなかったためと判明。
+- **対応:**
+    1.  `routes/web.php`から`fontawesome.icon`ルートを削除した。**完了**
+    2.  `routes/api.php`に`fontawesome.icon`ルートを移動し、`auth:sanctum`ミドルウェアで保護した。ルート名は`api.fontawesome.icon`に変更した。**完了**
+    3.  `AttachedFileDownloadController.php`内の`fontawesome.icon`ルートへのリダイレクト名を`api.fontawesome.icon`に変更した。**完了**
+- **結果:** この変更により、画像以外のファイルのサムネイル（FontAwesomeアイコン）が正しく表示されるようになった。**確認済み**
+
+### 12.3. `AttachedFileDownloadController`におけるファイル存在チェックのタイミング変更
+
+- **問題:** 画像以外のファイルのサムネイル（FontAwesomeアイコン）が404エラーを返していた問題は、`AttachedFileDownloadController`内で物理的なサムネイルファイルの存在チェックが、FontAwesomeアイコンへのリダイレクト処理よりも前に実行されていたためと判明した。これにより、物理サムネイルが存在しない場合に、アイコンへのリダイレクトが行われる前に404エラーが返されていた。
+- **対応:** `AttachedFileDownloadController@download`メソッドのロジックを修正し、サムネイルリクエストの場合のFontAwesomeアイコンへのリダイレクト処理を、物理ファイルの存在チェックよりも優先して実行するように変更した。**完了**
+- **結果:** この変更により、物理サムネイルが存在しない場合でも、FontAwesomeアイコンへのリダイレクトが正しく行われるようになり、画像以外のファイルのサムネイルの404エラーが解消された。**確認済み**
 
 ## 13. 新たな仮説と今後の方向性
 

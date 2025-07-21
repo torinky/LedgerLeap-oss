@@ -22,5 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ledger/{ledgerDefineId}/download-excel-csv', [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV'])
         ->name('ledger.downloadExcelCSV');
 
-    
+    // Font Awesome アイコン配信ルート
+    Route::get('/fontawesome/{style}/{icon}.svg', [App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
+        ->name('api.fontawesome.icon');
 });

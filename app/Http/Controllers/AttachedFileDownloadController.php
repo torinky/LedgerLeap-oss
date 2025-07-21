@@ -51,6 +51,58 @@ class AttachedFileDownloadController extends Controller
         }
         Log::info('[DownloadController@download] Determined file path and name.', ['path' => $filePath, 'serve_as' => $fileNameToServe]);
 
+        // 5. レスポンス生成
+        if ($isThumbnailRequest) {
+            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
+            if (Storage::disk('public')->exists($thumbnailPath)) {
+                Log::info('[DownloadController@download] Returning actual thumbnail response with inline disposition.');
+                $mimeType = Storage::disk('public')->mimeType($thumbnailPath);
+                return response()->file(Storage::disk('public')->path($thumbnailPath), [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"'
+                ]);
+            } else {
+                Log::info('[DownloadController@download] Thumbnail not found, returning FontAwesome icon URL.');
+                // サムネイルが存在しない場合、MIMEタイプに基づいてFontAwesomeアイコンのURLを返す
+                $displayMimeType = $attachedFile->mime;
+                switch ($displayMimeType) {
+                    case 'application/pdf':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
+                    case 'application/zip':
+                    case 'application/x-zip-compressed':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
+                    case 'application/msword':
+                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
+                    case 'application/vnd.ms-excel':
+                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
+                    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
+                    case 'text/plain':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
+                    case 'text/html':
+                    case 'text/css':
+                    case 'application/javascript':
+                    case 'application/json':
+                    case 'application/xml':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
+                    case 'text/csv':
+                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
+                    default:
+                        if (str_starts_with($displayMimeType, 'audio/')) {
+                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
+                        } elseif (str_starts_with($displayMimeType, 'video/')) {
+                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
+                        } elseif (str_starts_with($displayMimeType, 'image/')) {
+                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
+                        } else {
+                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
+                        }
+                }
+            }
+        }
+
         // 3. ファイルの物理的な存在を確認
         if (!Storage::disk('public')->exists($filePath)) {
             Log::error('[DownloadController@download] File not found in public disk.', ['path' => $filePath]);
@@ -70,59 +122,6 @@ class AttachedFileDownloadController extends Controller
                 'user_agent' => $request->userAgent(),
             ])
             ->log("User activity logged for file: {$fileNameToServe}");
-
-        // 5. レスポンス生成
-        if ($isThumbnailRequest) {
-            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
-            if (Storage::disk('public')->exists($thumbnailPath)) {
-                Log::info('[DownloadController@download] Returning actual thumbnail response with inline disposition.');
-                $mimeType = Storage::disk('public')->mimeType($thumbnailPath);
-                return response()->file(Storage::disk('public')->path($thumbnailPath), [
-                    'Content-Type' => $mimeType,
-                    'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"'
-                ]);
-            } else {
-                Log::info('[DownloadController@download] Thumbnail not found, returning FontAwesome icon URL.');
-                // サムネイルが存在しない場合、MIMEタイプに基づいてFontAwesomeアイコンのURLを返す
-                $displayMimeType = $attachedFile->mime;
-                switch ($displayMimeType) {
-                    case 'application/pdf':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
-                    case 'application/zip':
-                    case 'application/x-zip-compressed':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
-                    case 'application/msword':
-                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
-                    case 'application/vnd.ms-excel':
-                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
-                    case 'application/vnd.ms-powerpoint':
-                    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
-                    case 'text/plain':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
-                    case 'text/html':
-                    case 'text/css':
-                    case 'application/javascript':
-                    case 'application/json':
-                    case 'application/xml':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
-                    case 'text/csv':
-                        return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
-                    default:
-                        if (str_starts_with($displayMimeType, 'audio/')) {
-                            return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
-                        } elseif (str_starts_with($displayMimeType, 'video/')) {
-                            return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
-                        } elseif (str_starts_with($displayMimeType, 'image/')) {
-                            return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
-                        } else {
-                            return redirect()->route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
-                        }
-                }
-            }
-        }
 
         $mimeType = Storage::disk('public')->mimeType($filePath);
         $disposition = in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']) ? 'inline' : 'attachment';

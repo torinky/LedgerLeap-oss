@@ -300,9 +300,7 @@ Route::middleware('auth')->group(function () {
         ->name('file.download')
         ->where('attachedFile', '[0-9]+');
 
-    // Font Awesome アイコン配信ルート
-    Route::get('/fontawesome/{style}/{icon}.svg', [App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
-        ->name('fontawesome.icon');
+    
 
 });
 

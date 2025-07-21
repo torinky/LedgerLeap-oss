@@ -486,58 +486,8 @@ class ModifyColumn extends CreateColumn
                     $posterUrl = '';
 
                     if ($fileExists) {
-                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
-                        if (Storage::disk('public')->exists($thumbnailPath)) {
-                            // サムネイルが存在する場合
-                            $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
-                        } else {
-                            // サムネイルが存在しない場合、MIMEタイプに基づいてFontAwesomeアイコンのURLを生成
-                            switch ($displayMimeType) {
-                                case 'application/pdf':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
-                                    break;
-                                case 'application/zip':
-                                case 'application/x-zip-compressed':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
-                                    break;
-                                case 'application/msword':
-                                case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
-                                    break;
-                                case 'application/vnd.ms-excel':
-                                case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
-                                    break;
-                                case 'application/vnd.ms-powerpoint':
-                                case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
-                                    break;
-                                case 'text/plain':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
-                                    break;
-                                case 'text/html':
-                                case 'text/css':
-                                case 'application/javascript':
-                                case 'application/json':
-                                case 'application/xml':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
-                                    break;
-                                case 'text/csv':
-                                    $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
-                                    break;
-                                default:
-                                    if (str_starts_with($displayMimeType, 'audio/')) {
-                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
-                                    } elseif (str_starts_with($displayMimeType, 'video/')) {
-                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
-                                    } elseif (str_starts_with($displayMimeType, 'image/')) {
-                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
-                                    } else {
-                                        $posterUrl = route('fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
-                                    }
-                                    break;
-                            }
-                        }
+//                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
+                        $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
                     }
 
                     $fileObject = [
@@ -557,7 +507,7 @@ class ModifyColumn extends CreateColumn
                         ],
                     ];
                     $filesForColumn[] = $fileObject;
-                    $loopIndex++;
+//                    $loopIndex++;
                 }
             }
 
