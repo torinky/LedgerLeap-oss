@@ -111,20 +111,20 @@ services:
       retries: 3
       timeout: 5s
   redis:
-      image: 'redis:alpine'
-      ports:
-          - '${FORWARD_REDIS_PORT:-6379}:6379'
-      volumes:
-          - 'sail-redis:/data'
-      networks:
-          - sail
-      healthcheck:
-          test:
-              - CMD
-              - redis-cli
-              - ping
-          retries: 3
-          timeout: 5s
+    image: 'redis:alpine'
+    ports:
+      - '${FORWARD_REDIS_PORT:-6379}:6379'
+    volumes:
+      - 'sail-redis:/data'
+    networks:
+      - sail
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
+      timeout: 5s
   tika:
     image: apache/tika:latest
     platform: linux/amd64
@@ -142,8 +142,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/var/www/html
-    working_dir: /var/w
-ww/html
+    working_dir: /var/www/html
     entrypoint: []
     command: tail -f /dev/null
     restart: unless-stopped
