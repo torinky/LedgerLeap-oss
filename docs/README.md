@@ -136,10 +136,12 @@ LedgerLeap の開発環境は **Laravel Sail (Docker)** を使用して簡単に
    ```
    初回起動時はイメージのビルドに時間がかかります。`docker-compose.yml` には以下のサービスが含まれています:
     * `laravel`: アプリケーション本体 (PHP-FPM)
-    * `queue`: Laravel Queue Worker
+    * `queue`: Laravel Queue Worker (Redisを利用)
+    * `scheduler`: Laravel Scheduler (Redisを利用)
     * `mysql`: Mroonga 付き MySQL データベース
-    * `redis`: キャッシュ、セッション、キュー用
+    * `redis`: キャッシュ、セッション、キュー用 (デフォルトで有効)
     * `tika`: Apache Tika サーバー (ファイル内容抽出用)
+    * `ocrmypdf`: OCR処理用サーバー
     * `mailpit`: 開発用メールサーバー
     * `meilisearch`: (現状利用されていない可能性あり)
     * `selenium`: (ブラウザテスト用)

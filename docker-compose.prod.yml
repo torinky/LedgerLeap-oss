@@ -24,35 +24,42 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_started
       tika:
         condition: service_started
   queue:
     build:
-      context: ./vendor/laravel/sail/runtimes/8.4
-      dockerfile: Dockerfile
+      context: ./docker/app
+      dockerfile: DockerfileQueue
       args:
         WWWGROUP: '${WWWGROUP}'
+        DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}'
     image: sail-8.4/app
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
+      DOCKER_GROUP_ID: "${DOCKER_GROUP_ID}"
       LARAVEL_SAIL: 1
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
       XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
       IGNITION_LOCAL_SITES_PATH: '${PWD}'
+      LOG_CHANNEL: 'queue'
+    group_add:
+      - '${DOCKER_GROUP_ID}'
     volumes:
       - '.:/var/www/html'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     networks:
       - sail
     depends_on:
       mysql:
         condition: service_healthy
-      #      redis:
-      #        condition: service_started
+      redis:
+        condition: service_started
       tika:
         condition: service_started
     restart: on-failure
-  #    restart: unless-stopped
 
   # --- scheduler サービス ---
   scheduler:
@@ -103,54 +110,21 @@ services:
       test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
       retries: 3
       timeout: 5s
-  #    redis:
-  #        image: 'redis:alpine'
-  #        ports:
-  #            - '${FORWARD_REDIS_PORT:-6379}:6379'
-  #        volumes:
-  #            - 'sail-redis:/data'
-  #        networks:
-  #            - sail
-  #        healthcheck:
-  #            test:
-  #                - CMD
-  #                - redis-cli
-  #                - ping
-  #            retries: 3
-  #            timeout: 5s
-  #    meilisearch:
-  #        image: 'getmeili/meilisearch:latest'
-  #        platform: linux/amd64
-  #        ports:
-  #            - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
-  #        volumes:
-  #            - 'sail-meilisearch:/meili_data'
-  #        networks:
-  #            - sail
-  #        healthcheck:
-  #            test:
-  #                - CMD
-  #                - wget
-  #                - '--no-verbose'
-  #                - '--spider'
-  #                - 'http://localhost:7700/health'
-  #            retries: 3
-  #            timeout: 5s
-  #    mailpit:
-  #        image: 'axllent/mailpit:latest'
-  #        ports:
-  #            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-  #            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
-  #        networks:
-  #            - sail
-  #    selenium:
-  #        image: seleniarm/standalone-chromium
-  #        extra_hosts:
-  #            - 'host.docker.internal:host-gateway'
-  #        volumes:
-  #            - '/dev/shm:/dev/shm'
-  #        networks:
-  #            - sail
+  redis:
+      image: 'redis:alpine'
+      ports:
+          - '${FORWARD_REDIS_PORT:-6379}:6379'
+      volumes:
+          - 'sail-redis:/data'
+      networks:
+          - sail
+      healthcheck:
+          test:
+              - CMD
+              - redis-cli
+              - ping
+          retries: 3
+          timeout: 5s
   tika:
     image: apache/tika:latest
     platform: linux/amd64
@@ -162,13 +136,24 @@ services:
       - './docker/tika/tika-config.xml:/tika-config.xml'
     networks:
       - sail
+  ocrmypdf:
+    build:
+      context: ./docker/ocrmypdf
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/w
+ww/html
+    entrypoint: []
+    command: tail -f /dev/null
+    restart: unless-stopped
+    networks:
+      - sail
 networks:
   sail:
     driver: bridge
 volumes:
   sail-mysql:
     driver: local
-#    sail-redis:
-#        driver: local
-#    sail-meilisearch:
-#        driver: local
+  sail-redis:
+    driver: local
