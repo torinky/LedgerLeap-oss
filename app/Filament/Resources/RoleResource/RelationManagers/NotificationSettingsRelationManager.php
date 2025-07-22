@@ -43,7 +43,9 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\Select;
 use Exception;
 
 // ★ 例外処理用
@@ -118,7 +120,7 @@ class NotificationSettingsRelationManager extends RelationManager
                 // ★ Folder のタイトルを表示 (リレーション経由)
                 TextColumn::make('folder.title')
                     ->label(__('ledger.folder.title'))
-                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
+//                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
                     ->sortable()
                 , // 基本的なソートを有効化 (Joinなし)
 
@@ -133,7 +135,7 @@ class NotificationSettingsRelationManager extends RelationManager
                         }
                         return __('N/A');
                     })
-                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
+//                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
                     ->sortable(), // 基本的なソートを有効化 (Joinなし)
 
                 // ★ 通知 ON/OFF の表示 (RoleFolderPermission の permission 属性を直接使用)
@@ -187,6 +189,44 @@ class NotificationSettingsRelationManager extends RelationManager
 
             ])
             ->filters([
+                Filter::make('folder_id')
+                    ->form([
+                        Select::make('value')
+                            ->label(__('ledger.folder.title'))
+                            ->relationship('folder', 'title')
+                            ->searchable()
+                            ->multiple()
+                            ->preload(),
+                    ])
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (blank($data['value'])) {
+                            return $query;
+                        }
+                        return $query->whereIn('folder_id', $data['value']);
+                    })
+                    ->label(__('ledger.folder.title')),
+
+                Filter::make('notification_type_id')
+                    ->form([
+                        Select::make('value')
+                            ->label(__('ledger.notification_type'))
+                            ->options(function () {
+                                // 日本語のラベルでオプションを生成
+                                return NotificationType::all()->mapWithKeys(function ($type) {
+                                    $label = __('ledger.notification_types.' . $type->name, [], $type->name);
+                                    return [$type->id => $label];
+                                })->all();
+                            })
+                            ->searchable() // 日本語ラベルで検索可能にする
+                            ->multiple(),
+                    ])
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (blank($data['value'])) {
+                            return $query;
+                        }
+                        return $query->whereIn('notification_type_id', $data['value']);
+                    })
+                    ->label(__('ledger.notification_type')),
                 // 必要に応じてフィルタを追加
             ])
             ->headerActions([

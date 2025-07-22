@@ -7,12 +7,22 @@ use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class UserRelationManager extends RelationManager
 {
     protected static string $relationship = 'users';
 
-    public static function getTitle($ownerRecord, string $pageClass): string
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('ledger.user');
+    }
+    public static function getModelLabel(): string
+    {
+        return __('ledger.user');
+    }
+
+    public static function getPluralLabel(): string
     {
         return __('ledger.user');
     }

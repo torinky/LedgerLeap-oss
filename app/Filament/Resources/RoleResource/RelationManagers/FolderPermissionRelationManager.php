@@ -37,6 +37,9 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\Select;
+
 // ★ クラス名を変更
 class FolderPermissionRelationManager extends RelationManager
 {
@@ -118,7 +121,7 @@ class FolderPermissionRelationManager extends RelationManager
                 // ★ Folder タイトルはグループヘッダーで表示されるため、カラムとしては不要になる場合がある
                 TextColumn::make('folder.title')
                     ->label(__('フォルダ名'))
-                    ->searchable(isIndividual: true) // 個別検索のみ
+//                    ->searchable(isIndividual: true) // 個別検索のみ
                     ->sortable()
                 ,
                 // ★ 設定されているアクセス権限を表示 (Enum のラベルを使用)
@@ -127,10 +130,41 @@ class FolderPermissionRelationManager extends RelationManager
                     ->badge()
                     ->color(fn(?FolderPermissionType $state): string => $state?->getColor() ?? 'gray')
                     ->formatStateUsing(fn(?FolderPermissionType $state): string => $state?->getLabel() ?? '-')
-                    ->searchable() // permission の value で検索
+//                    ->searchable() // permission の value で検索
                     ->sortable(),
             ])
             ->filters([
+                Filter::make('folder_id')
+                    ->form([
+                        Select::make('value')
+                            ->label(__('ledger.folder.title'))
+                            ->relationship('folder', 'title')
+                            ->searchable()
+                            ->multiple()
+                            ->preload(),
+                    ])
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (blank($data['value'])) {
+                            return $query;
+                        }
+                        return $query->whereIn('folder_id', $data['value']);
+                    })
+                    ->label(__('ledger.folder.title')),
+
+                Filter::make('permission')
+                    ->form([
+                        Select::make('value')
+                            ->label(__('permission.title'))
+                            ->options(FolderPermissionType::asAccessSelectArray())
+                            ->multiple(),
+                    ])
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (blank($data['value'])) {
+                            return $query;
+                        }
+                        return $query->whereIn('permission', $data['value']);
+                    })
+                    ->label(__('permission.title')),
                 //
             ])
             ->headerActions([

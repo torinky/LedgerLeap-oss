@@ -8,9 +8,11 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
-use Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrganizationRelationManager extends RelationManager
 {
@@ -35,26 +37,13 @@ class OrganizationRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
+        // この form メソッドは EditAction で使用されます
         return $form
             ->schema([
-                Forms\Components\Select::make('id')
-                    ->label(__('ledger.organization'))
-                    ->options(Organization::pluck('name', 'id'))
-                    ->required()
-                    ->searchable(),
+                // EditAction のフォームでは Select は不要なため、is_primary のみに絞ります
                 Forms\Components\Toggle::make('is_primary')
                     ->label(__('ledger.organizations.primary'))
-                    ->default(false)
-                    ->afterStateUpdated(function ($state, $livewire, $set) {
-                        if ($state) {
-                            // 他の組織のis_primaryをfalseに設定
-                            $livewire->getOwnerRecord()->organizations()->updateExistingPivot(
-                                $livewire->getOwnerRecord()->organizations()->pluck('organization_id'),
-                                ['is_primary' => false]
-                            );
-                            $set('is_primary', true);
-                        }
-                    }),
+                    ->default(false),
             ]);
     }
 
@@ -66,9 +55,31 @@ class OrganizationRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('name')
                     ->label(__('ledger.organizations.name'))
                     ->searchable(),
-                Tables\Columns\IconColumn::make('pivot.is_primary')
-                    ->boolean()
-                    ->label(__('ledger.organizations.primary')),
+
+                ToggleColumn::make('pivot.is_primary')
+                    ->label(__('ledger.organizations.primary'))
+                    // afterStateUpdated の代わりに updateStateUsing を使用して更新ロジックを上書き
+                    ->updateStateUsing(function (RelationManager $livewire, Model $record, bool $state) {
+                        // トランザクションを開始して、処理の原子性を保証
+                        DB::transaction(function () use ($livewire, $record, $state) {
+                            /** @var User $user */
+                            $user = $livewire->getOwnerRecord();
+
+                            // トグルが ON にされた場合のみ排他制御を実行
+                            if ($state) {
+                                // このユーザーの他の主所属をすべて解除
+                                $user->organizations()
+                                    ->wherePivot('is_primary', true)
+                                    ->where('organization_id', '!=', $record->id)
+                                    ->update(['is_primary' => false]);
+                            }
+
+                            // クリックされた組織の中間テーブル情報を更新
+                            $user->organizations()->updateExistingPivot($record->id, [
+                                'is_primary' => $state,
+                            ]);
+                        });
+                    }),
             ])
             ->filters([
                 //
@@ -82,18 +93,25 @@ class OrganizationRelationManager extends RelationManager
                             ->label(__('ledger.organizations.primary'))
                             ->default(false),
                     ])
-                    ->using(function (RelationManager $livewire, array $data): array {
-                        $this->handleOrganizationAssociation($livewire->getOwnerRecord()->id, $data['recordId'], $data['is_primary']);
-
-                        return $data;
+                    // afterコールバック内の排他制御ロジックは引き続き必要
+                    ->after(function (RelationManager $livewire, array $data) {
+                        if ($data['is_primary']) {
+                            $user = $livewire->getOwnerRecord();
+                            $user->organizations()
+                                ->where('organization_id', '!=', $data['recordId'])
+                                ->update(['is_primary' => false]);
+                        }
                     }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->using(function (Organization $record, array $data): Organization {
-                        $this->handleOrganizationAssociation($this->getOwnerRecord()->id, $record->id, $data['is_primary']);
-
-                        return $record;
+                    // afterコールバック内の排他制御ロジックは引き続き必要
+                    ->after(function (Model $record, array $data) {
+                        if ($data['is_primary']) {
+                            $this->getOwnerRecord()->organizations()
+                                ->where('organization_id', '!=', $record->id)
+                                ->update(['is_primary' => false]);
+                        }
                     }),
                 Tables\Actions\DetachAction::make(),
             ])
@@ -102,29 +120,5 @@ class OrganizationRelationManager extends RelationManager
                     Tables\Actions\DetachBulkAction::make(),
                 ]),
             ]);
-    }
-
-    protected function handleOrganizationAssociation(int $userId, int $organizationId, bool $isPrimary): void
-    {
-        $user = User::findOrFail($userId);
-
-        // ユーザーと組織を関連付ける（または既存の関連を更新する）
-        $user->organizations()->syncWithoutDetaching([
-            $organizationId => ['is_primary' => $isPrimary],
-        ]);
-
-        if ($isPrimary) {
-            // 他の組織のis_primaryをfalseに設定
-            $user->organizations()
-                ->where('organization_id', '!=', $organizationId)
-                ->update(['is_primary' => false]);
-        }
-
-        // ログ出力
-        Log::info('Organization association updated', [
-            'user_id' => $userId,
-            'organization_id' => $organizationId,
-            'is_primary' => $isPrimary,
-        ]);
     }
 }
