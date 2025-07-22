@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleResource;
 use App\Enums\FolderPermissionType;
-use App\Filament\Resources\OrganizationResource\RelationManagers\UserRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
@@ -245,7 +245,7 @@ class RoleResource extends BaseRoleResource
         return [
             //            PermissionRelationManager::class,
             OrganizationRelationManager::class,
-            UserRelationManager::class,
+            \App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager::class,
             FolderPermissionRelationManager::class,
             NotificationSettingsRelationManager::class,
         ];

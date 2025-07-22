@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\OrganizationResource\RelationManagers;
+namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,12 +12,11 @@ class UserRelationManager extends RelationManager
 {
     protected static string $relationship = 'users';
 
-//    protected static ?string $title= 'Users';
-
     public static function getTitle($ownerRecord, string $pageClass): string
     {
         return __('ledger.user');
     }
+
     public function form(Form $form): Form
     {
         return $form
@@ -29,9 +28,7 @@ class UserRelationManager extends RelationManager
                     ->email()
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Toggle::make('is_primary')
-                    ->label('Primary Organization')
-                    ->default(false),
+                // is_primary トグルはロールとの関連性では不要なため削除
             ]);
     }
 
@@ -42,9 +39,6 @@ class UserRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('name'),
                 Tables\Columns\TextColumn::make('email'),
-                Tables\Columns\IconColumn::make('is_primary')
-                    ->boolean()
-                    ->label('Primary'),
                 Tables\Columns\TextColumn::make('organizations') // カラム名をリレーション名に変更
                 ->label(__('ledger.organizations.title'))
                     ->badge() // 配列の各要素をバッジとして表示
@@ -62,9 +56,7 @@ class UserRelationManager extends RelationManager
                         $action->getRecordSelect()
                             ->multiple() // 複数ユーザーを選択可能にする
                             ->searchable(), // ユーザーを検索可能にする
-                        Forms\Components\Toggle::make('is_primary')
-                            ->label('Primary Organization')
-                            ->default(false),
+                        // is_primary トグルはロールとの関連性では不要なため削除
                     ]),
             ])
             ->actions([

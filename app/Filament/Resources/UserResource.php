@@ -116,6 +116,11 @@ class UserResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
+                // 組織名でのグローバル検索を有効にするための非表示カラム
+                Tables\Columns\TextColumn::make('organizations.name')
+                    ->label('Organization') // ラベルは必須だが表示はされない
+                    ->searchable()
+                    ->hidden(),
                 Tables\Columns\TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
@@ -148,13 +153,15 @@ class UserResource extends Resource
                         return null;
                     })
                     ->colors(['primary'])
-                    ->searchable(),
+//                    ->searchable()
+                ,
                 Tables\Columns\TextColumn::make('organizations')
                     ->label('organizations')
                     ->badge()
                     ->getStateUsing(fn($record) => $record->organizations()->pluck('name', 'is_primary'))
                     ->colors(['info'])
-                    ->searchable(),
+//                    ->searchable()
+                ,
                 /*                Tables\Columns\TextColumn::make('organizations')
                     ->formatStateUsing(function ($state, $record) {
                         $getBadgeHtml = function ($org) {
