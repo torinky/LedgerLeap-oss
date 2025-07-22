@@ -131,6 +131,6 @@ return [
     // ActivityLogFormatter などで使われる可能性のある汎用権限メッセージ
     'view_any_activity' => '全ての活動ログを閲覧',
     'view_activity_logs' => '活動ログを閲覧',
-
-
+    'permissions'=>'権限',
+    'no_specific_permissions'=>'権限なし',
 ];

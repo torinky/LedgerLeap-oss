@@ -23,6 +23,20 @@ class OrganizationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
+    public static function getLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.organization');
+    }
     public static function form(Form $form): Form
     {
         return $form
@@ -47,57 +61,23 @@ class OrganizationResource extends Resource
                                     ->relationship('permissions', 'name'),*/
                 SelectTree::make('parent_id')
                     ->label(__('ledger.organizations.parent'))
-                    ->relationship('parent', 'name', 'parent_id')
-                    ->withCount()
-//                    ->alwaysOpen()
-                    ->defaultOpenLevel(5),
+                    ->relationship('parent', 'name', 'parent_id') // まずはリレーションで全組織を取得
+                    ->searchable()
+                    ->clearable()
+                    ->placeholder(__('ledger.folder.form.option.no_parent'))
+                    ->defaultOpenLevel(5)
+                    // 編集時に自分自身とその子孫を選択できないようにする
+                    ->hiddenOptions(function (?Model $record): array {
+                        if ($record === null) {
+                            return []; // 新規作成時は何も非表示にしない
+                        }
+                        // 自分自身と、その配下にあるすべての子孫組織のIDを返す
+                        return $record->descendantsAndSelf($record->id)->pluck('id')->toArray();
+                    }),
             ]);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('org_id')
-                    ->label('Organization ID')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('description')
-                    ->limit(50),
-                Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent Organization'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('roles.name')->badge(),
-                Tables\Columns\TextColumn::make('permissions.name')->badge(),
-            ])
-            ->filters([
-                Tables\Filters\TrashedFilter::make(),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-                Tables\Actions\ForceDeleteBulkAction::make(),
-                Tables\Actions\RestoreBulkAction::make(),
-            ])
-            ->reorderable('sort_order')
-            ->defaultSort('sort_order');
-    }
+
 
     public static function getRelations(): array
     {

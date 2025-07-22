@@ -46,9 +46,15 @@ class ListOrganizations extends ListRecords
                     ->label('Organization ID')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('description')
+                    ->label(__('ledger.description'))
                     ->limit(50),
+                Tables\Columns\ViewColumn::make('combined_roles_permissions')
+                    ->label(__('role.combined_roles_and_permissions'))
+                    ->view('filament.tables.columns.user-combined-roles-permissions') // User用ビューを再利用
+//                    ->wrap()
+                ,
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent Organization'),
+                    ->label(__('ledger.organizations.parent')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -60,7 +66,7 @@ class ListOrganizations extends ListRecords
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 //                Tables\Columns\TextColumn::make('roles.name')->badge(),
-                Tables\Columns\TextColumn::make('direct_roles')
+/*                Tables\Columns\TextColumn::make('direct_roles')
                     ->label('Direct Roles')
                     ->badge()
                     ->getStateUsing(fn(Organization $record) => $record->getDirectRoles()->pluck('name'))
@@ -75,8 +81,8 @@ class ListOrganizations extends ListRecords
                 Tables\Columns\TextColumn::make('permissions.name')->badge(),
                 Tables\Columns\ViewColumn::make('permissions')
                     ->label('Permissions')
-                    ->view('filament.tables.columns.permissions-column')])
-            ->filters([
+                    ->view('filament.tables.columns.permissions-column')*/
+            ])->filters([
                 Tables\Filters\TrashedFilter::make(),
                 Filter::make('tree')
                     ->form([

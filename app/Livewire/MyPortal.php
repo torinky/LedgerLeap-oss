@@ -118,7 +118,7 @@ class MyPortal extends Component
         }
 
         // 主所属がある場合は "(主所属)" を付ける
-        $primaryBadge = $this->primaryOrganization ? ' (' . __('ledger.organization_primary_badge') . ')' : '';
+        $primaryBadge = $this->primaryOrganization ? ' (' . __('ledger.organizations.primary') . ')' : '';
 
         $this->roleDisplayString = sprintf('%s %s%s', $orgName, $roleName, $primaryBadge);
 

@@ -25,6 +25,20 @@ class UserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user';
 
+    public static function getTitle($ownerRecord, string $pageClass): string
+    {
+        return __('ledger.user');
+    }
+    public static function getModelLabel(): string
+    {
+        return __('ledger.user');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.user');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -137,48 +151,30 @@ class UserResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\ViewColumn::make('combined_roles_permissions')
-                    ->label('Combined Roles & Permissions')
+                    ->label(__('role.combined_roles_and_permissions')) // ラベルを翻訳キーに変更
                     ->view('filament.tables.columns.user-combined-roles-permissions'),
-                //                Tables\Columns\TextColumn::make('roles.name')->badge(),
-                //                Tables\Columns\TextColumn::make('permissions.name')->badge(),
                 Tables\Columns\TextColumn::make('primary_organization')
-                    ->label('primary organization')
+                    ->label(__('ledger.organizations.primary')) // ラベルを翻訳キーに変更
                     ->badge()
                     ->getStateUsing(function ($record) {
                         $primaryOrganization = $record->PrimaryOrganization();
                         if ($primaryOrganization) {
-                            return $primaryOrganization->name;
+                            // .name を .full_name に変更してフルパスを取得
+                            return $primaryOrganization->full_name;
                         }
-
-                        return null;
+                        // 主所属がない場合のテキスト
+                        return __('ledger.no_primary_organization');
                     })
-                    ->colors(['primary'])
-//                    ->searchable()
-                ,
+                    ->color(fn ($state) => $state === __('ledger.no_primary_organization') ? 'gray' : 'primary'),
+
                 Tables\Columns\TextColumn::make('organizations')
-                    ->label('organizations')
+                    ->label(__('ledger.organization_section_title')) // ラベルを翻訳キーに変更
                     ->badge()
-                    ->getStateUsing(fn($record) => $record->organizations()->pluck('name', 'is_primary'))
-                    ->colors(['info'])
-//                    ->searchable()
-                ,
-                /*                Tables\Columns\TextColumn::make('organizations')
-                    ->formatStateUsing(function ($state, $record) {
-                        $getBadgeHtml = function ($org) {
-                            $style = $org->pivot->is_primary
-                                ? '--c-50:var(--success-50);--c-400:var(--success-400);--c-600:var(--success-600);'
-                                : '--c-50:var(--gray-50);--c-400:var(--gray-400);--c-600:var(--gray-600);';
-                            $colorClass = 'fi-color-custom bg-custom-50 text-custom-600 ring-custom-600/10 dark:bg-custom-400/10 dark:text-custom-400 dark:ring-custom-400/30';
-                            $label = e($org->name).($org->pivot->is_primary ? ' (Primary)' : '');
-
-                            return "<span style='{$style}' class='fi-badge inline-flex items-center justify-center gap-x-1 rounded-md text-xs font-medium ring-1 ring-inset px-2 min-w-[theme(spacing.6)] py-1 {$colorClass}'>{$label}</span>";
-                        };
-
-                        return new HtmlString(
-                            $record->organizations->map($getBadgeHtml)->implode(' ')
-                        );
-                    })
-                    ->html(),*/
+                    // ->organizations->pluck('full_name') で全所属組織のフルパスを取得
+                    ->getStateUsing(fn($record) => $record->organizations->pluck('full_name'))
+                    ->color('info')
+                    ->separator(' ') // バッジ間の区切り文字
+                    ->wrap(), // 折り返しを有効に
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),

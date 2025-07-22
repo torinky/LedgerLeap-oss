@@ -18,6 +18,16 @@ class UserRelationManager extends RelationManager
     {
         return __('ledger.user');
     }
+    public static function getModelLabel(): string
+    {
+        return __('ledger.user');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.user');
+    }
+
     public function form(Form $form): Form
     {
         return $form
@@ -30,7 +40,7 @@ class UserRelationManager extends RelationManager
                     ->required()
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_primary')
-                    ->label('Primary Organization')
+                    ->label(__('ledger.organization.primary'))
                     ->default(false),
             ]);
     }
@@ -46,7 +56,7 @@ class UserRelationManager extends RelationManager
                     ->boolean()
                     ->label('Primary'),
                 Tables\Columns\TextColumn::make('organizations') // カラム名をリレーション名に変更
-                ->label(__('ledger.organizations.title'))
+                ->label(__('ledger.organization'))
                     ->badge() // 配列の各要素をバッジとして表示
                     ->getStateUsing(function ($record) { // $record は User モデルのインスタンス
                         // ユーザーが所属する各組織の full_name アクセサを呼び出して取得

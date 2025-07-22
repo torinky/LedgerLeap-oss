@@ -9,23 +9,41 @@ use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Log;
 
 class OrganizationRelationManager extends RelationManager
 {
     protected static string $relationship = 'organizations';
 
+    /*
+     * Support changing tab title in RelationManager.
+     */
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('ledger.organization');
+    }
+    protected static function getModelLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
+    protected static function getPluralModelLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
     public function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Select::make('id')
-                    ->label('Organization')
+                    ->label(__('ledger.organization'))
                     ->options(Organization::pluck('name', 'id'))
                     ->required()
                     ->searchable(),
                 Forms\Components\Toggle::make('is_primary')
-                    ->label('Primary Organization')
+                    ->label(__('ledger.organizations.primary'))
                     ->default(false)
                     ->afterStateUpdated(function ($state, $livewire, $set) {
                         if ($state) {
@@ -46,11 +64,11 @@ class OrganizationRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Organization Name')
+                    ->label(__('ledger.organizations.name'))
                     ->searchable(),
                 Tables\Columns\IconColumn::make('pivot.is_primary')
                     ->boolean()
-                    ->label('Primary'),
+                    ->label(__('ledger.organizations.primary')),
             ])
             ->filters([
                 //
@@ -61,7 +79,7 @@ class OrganizationRelationManager extends RelationManager
                     ->form(fn(Tables\Actions\AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_primary')
-                            ->label('Primary Organization')
+                            ->label(__('ledger.organizations.primary'))
                             ->default(false),
                     ])
                     ->using(function (RelationManager $livewire, array $data): array {

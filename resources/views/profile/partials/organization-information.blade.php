@@ -17,7 +17,7 @@
                 {{ $organization->name }}
                 {{-- 主所属の場合にバッジを表示 --}}
                 @if ($organization->id === $primaryOrganizationId)
-                    <x-mary-badge value="{{ __('ledger.organization_primary_badge') }}"
+                    <x-mary-badge value="{{ __('ledger.organizations.primary') }}"
                                   class="badge-primary badge-sm ms-2"/>
                 @endif
             </x-slot:value>

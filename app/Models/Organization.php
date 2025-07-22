@@ -178,4 +178,16 @@ class Organization extends Model
         // ancestorsAndSelf()はルートから自分までを順に返す
         return $this->ancestorsAndSelf($this->id)->pluck('name')->implode(' / ');
     }
+
+    /**
+     * 親組織から継承された役割を含む全てのユニークな役割を取得
+     * (user-combined-roles-permissions.blade.phpとの互換性のため)
+     *  For Fillament
+     *
+     * @return mixed
+     */
+    public function getAllUniqueRoles()
+    {
+        return $this->getAllRoles();
+    }
 }

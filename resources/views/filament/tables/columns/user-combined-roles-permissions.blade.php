@@ -1,20 +1,31 @@
-<div>
-    <div class="mb-1">
-        <span class=" text-xs text-muted">Combined Roles:</span>
-        @foreach($getRecord()->getAllUniqueRoles() as $role)
-            {{--            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-1">--}}
-            <span class="badge badge-sm badge-primary">
-                {{ $role->name }}
-            </span>
-        @endforeach
-    </div>
+<div class="space-y-2">
+    {{-- Roles Section --}}
     <div>
-        <span class=" text-xs text-muted">Combined Permissions:</span>
-        @foreach($getRecord()->getAllUniquePermissions() as $permission)
-            {{--            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-1">--}}
-            <span class="badge badge-sm badge-info">
-                {{ $permission->name }}
-            </span>
-        @endforeach
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('role.roles') }}:</span>
+        <div class="flex flex-wrap gap-1 pt-1">
+            @forelse($getRecord()->getAllUniqueRoles() as $role)
+                <x-filament::badge color="primary">
+                    {{-- ledger.php の翻訳を試み、なければロール名をそのまま表示 --}}
+                    {{ trans('ledger.role_label.' . $role->name, [], $role->name) }}
+                </x-filament::badge>
+            @empty
+                <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('role.no_roles_assigned') }}</span>
+            @endforelse
+        </div>
+    </div>
+
+    {{-- Permissions Section --}}
+    <div>
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('permission.permissions') }}:</span>
+        <div class="flex flex-wrap gap-1 pt-1">
+            @forelse($getRecord()->getAllUniquePermissions() as $permission)
+                <x-filament::badge color="info">
+                    {{-- permission.php の翻訳を使用 --}}
+                    {{ __('permission.name.' . $permission->name) }}
+                </x-filament::badge>
+            @empty
+                <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('permission.no_specific_permissions') }}</span>
+            @endforelse
+        </div>
     </div>
 </div>

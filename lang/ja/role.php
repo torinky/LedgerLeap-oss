@@ -2,6 +2,7 @@
 
 return [
     'role' => 'ロール',
+    'roles' => 'ロール',
     'role_list' => 'ロール一覧',
     'edit' => 'ロールの編集',
     'create' => 'ロールの作成',
@@ -16,4 +17,6 @@ return [
     'permissions' => '権限',
     'guard_name' => '認証名',
     'global_notify' => '通知',
+    'combined_roles_and_permissions'=>'最終的なロールと権限',
+    'no_roles_assigned' => 'ロールなし',
 ];

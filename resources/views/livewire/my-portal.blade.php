@@ -75,7 +75,7 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="text-sm text-base-content/70">{{ __('ledger.no_roles_assigned') }}</p>
+                    <p class="text-sm text-base-content/70">{{ __('role.no_roles_assigned') }}</p>
                 @endif
             </div>
         </x-mary-card>
