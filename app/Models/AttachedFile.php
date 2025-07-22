@@ -21,6 +21,7 @@ class AttachedFile extends Model
     ];
 
     protected $casts = [
+        'optimized' => 'boolean',
         'status' => AttachedFileStatus::class,
     ];
 

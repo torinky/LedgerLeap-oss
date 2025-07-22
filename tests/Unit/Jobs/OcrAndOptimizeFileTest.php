@@ -14,8 +14,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Mockery;
-use Symfony\Component\Process\Process;
+//use Mockery;
+use Illuminate\Support\Facades\Process; // ★ use を変更
 use Tests\TestCase;
 
 class OcrAndOptimizeFileTest extends TestCase
@@ -27,121 +27,97 @@ class OcrAndOptimizeFileTest extends TestCase
         parent::setUp();
         Storage::fake('public');
         Bus::fake();
-        $this->app->instance('log', Mockery::mock(\Illuminate\Log\Logger::class));
+        // Process::fake() は各テストメソッド内で個別に設定します
     }
 
     /** @test */
     public function ocr_job_processes_ocr_eligible_files()
     {
-        // Process クラスをモック
-        $processMock = Mockery::mock(Process::class);
-        $processMock->shouldReceive('setTimeout')->andReturnSelf();
-        $processMock->shouldReceive('setIdleTimeout')->andReturnSelf();
-        $processMock->shouldReceive('run');
-        $processMock->shouldReceive('isSuccessful')->andReturn(true);
-        $processMock->shouldReceive('getErrorOutput')->andReturn('');
+        // ★ Process ファサードをフェイク化し、成功をシミュレート
+        Process::fake();
 
-        // Process クラスのインスタンスが生成されるときにモックを返すようにする
-        $this->app->instance(Process::class, $processMock);
-
+        // --- Arrange ---
         $ledger = Ledger::factory()->create();
         $user = User::factory()->create();
-        $columnDefine = new ColumnDefine(
-            1, // id
-            'test_file_column', // name
-            'files', // typeIdentifier
-            1, // order
-            [], // options
-            false, // required
-            false, // unique
-            false, // sortBy
-            '', // hint
-            [] // file
-        );
 
         $attachedFile = AttachedFile::factory()->create([
-            'mime' => 'image/jpeg', // Or application/pdf
-            'status' => AttachedFileStatus::PENDING_OCR->value,
+            'mime' => 'image/jpeg',
+            'status' => AttachedFileStatus::PENDING_OCR, // Enumインスタンスを直接渡す
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledger->ledger_define_id,
-            'column_id' => $columnDefine->id,
+            'column_id' => 1,
             'creator_id' => $user->id,
             'modifier_id' => $user->id,
-            'filename' => 'test.jpeg',
             'hashedbasename' => \Illuminate\Support\Str::random(40) . '.jpeg',
-            'contain_content' => false,
             'optimized' => false,
-            'path' => AttachedFilePathHelper::getOriginalAttachmentPath($ledger->ledger_define_id, 'test.jpeg'), // Use helper for path
-            'original_file_path' => AttachedFilePathHelper::getOriginalAttachmentPath($ledger->ledger_define_id, 'test.jpeg'),
+            'original_file_path' => 'originals/test.jpeg',
         ]);
 
-        Storage::disk('public')->put(AttachedFilePathHelper::getOriginalAttachmentPath($attachedFile->ledger_define_id, 'test.jpeg'), 'dummy image content');
+        // OCR対象の元ファイルを仮想ストレージに配置
+        Storage::disk('public')->put($attachedFile->original_file_path, 'dummy image content');
 
-        $outputPhysicalPath = Storage::disk('public')->path(AttachedFilePathHelper::getAttachmentPath($attachedFile->ledger_define_id, pathinfo($attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf'));
-        // Process モックがファイルを作成するように設定
-        file_put_contents($outputPhysicalPath, 'dummy ocr content');
+        // OCR後の出力ファイルを事前に作成しておく
+        // ジョブ内で Storage::size() が呼ばれるため、ファイルが存在しないとエラーになるのを防ぎます
+        $outputFilename = pathinfo($attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf';
+        $outputStoragePath = AttachedFilePathHelper::getAttachmentPath($attachedFile->ledger_define_id, $outputFilename);
+        Storage::disk('public')->put($outputStoragePath, 'dummy ocr content');
 
+        // --- Act ---
         $job = new OcrAndOptimizeFile($attachedFile);
         $job->handle();
 
+        // --- Assert ---
         // ProcessAttachedFile がディスパッチされたことを確認
         Bus::assertDispatched(ProcessAttachedFile::class);
 
-        // OCR 後のファイルが新しいパスに保存されたことを確認
-        Storage::disk('public')->assertExists(AttachedFilePathHelper::getAttachmentPath($attachedFile->ledger_define_id, pathinfo($attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf'));
+        // データベースのレコードが正しく更新されたことを確認
+        $attachedFile->refresh();
+        $this->assertSame(AttachedFileStatus::PENDING_INITIAL_PROCESSING, $attachedFile->status);
+        $this->assertTrue($attachedFile->optimized);
+        $this->assertEquals('application/pdf', $attachedFile->mime);
+        $this->assertEquals($outputStoragePath, $attachedFile->path);
+
+        // OCR後のファイルが存在することを確認
+        Storage::disk('public')->assertExists($outputStoragePath);
+
+        // (オプション) 実行されたコマンドをアサート
+        Process::assertRan(function ($process) {
+            // 配列をスペースで連結した文字列に変換してから、特定のコマンドが含まれているかチェックします。
+            return str_contains(implode(' ', $process->command), 'ocrmypdf');
+        });
     }
 
     /** @test */
     public function ocr_processing_fails_and_updates_status()
     {
-        // Process クラスをモックし、失敗をシミュレート
-        $processMock = Mockery::mock(Process::class);
-        $processMock->shouldReceive('setTimeout')->andReturnSelf();
-        $processMock->shouldReceive('setIdleTimeout')->andReturnSelf();
-        $processMock->shouldReceive('run');
-        $processMock->shouldReceive('isSuccessful')->andReturn(false);
-        $processMock->shouldReceive('getErrorOutput')->andReturn('OCR error message');
+        // ★ Process ファサードをフェイク化し、失敗をシミュレート
+        Process::fake([
+            '*' => Process::result(
+                exitCode: 1, // 0以外のコードで失敗
+                errorOutput: 'OCR error message'
+            ),
+        ]);
 
-        $this->app->instance(Process::class, $processMock);
-
+        // --- Arrange ---
         $ledger = Ledger::factory()->create();
         $user = User::factory()->create();
-        $columnDefine = new ColumnDefine(
-            1, // id
-            'test_file_column', // name
-            'files', // typeIdentifier
-            1, // order
-            [], // options
-            false, // required
-            false, // unique
-            false, // sortBy
-            '', // hint
-            [] // file
-        );
 
         $attachedFile = AttachedFile::factory()->create([
             'mime' => 'application/pdf',
-            'status' => AttachedFileStatus::PENDING_OCR->value,
-            'ledger_id' => $ledger->id,
-            'ledger_define_id' => $ledger->ledger_define_id,
-            'column_id' => $columnDefine->id,
-            'creator_id' => $user->id,
-            'modifier_id' => $user->id,
-            'filename' => 'test.pdf',
-            'hashedbasename' => \Illuminate\Support\Str::random(40) . '.pdf',
-            'contain_content' => false,
-            'optimized' => false,
-            'path' => AttachedFilePathHelper::getOriginalAttachmentPath($ledger->ledger_define_id, 'test.pdf'),
-            'original_file_path' => AttachedFilePathHelper::getOriginalAttachmentPath($ledger->ledger_define_id, 'test.pdf'),
+            'status' => AttachedFileStatus::PENDING_OCR,
+            'original_file_path' => 'originals/test.pdf',
         ]);
 
-        Storage::disk('public')->put(AttachedFilePathHelper::getOriginalAttachmentPath($attachedFile->ledger_define_id, 'test.pdf'), 'dummy pdf content');
+        Storage::disk('public')->put($attachedFile->original_file_path, 'dummy pdf content');
 
+        // --- Act ---
         $job = new OcrAndOptimizeFile($attachedFile);
         $job->handle();
 
+        // --- Assert ---
         // ステータスが OCR_FAILED に更新されたことを確認
-        $this->assertEquals(AttachedFileStatus::OCR_FAILED->value, $attachedFile->fresh()->status);
+        // ★ Enum インスタンス同士で比較することで、型安全なアサーションになります
+        $this->assertSame(AttachedFileStatus::OCR_FAILED, $attachedFile->fresh()->status);
 
         // ProcessAttachedFile がディスパッチされていないことを確認
         Bus::assertNotDispatched(ProcessAttachedFile::class);

@@ -7,11 +7,17 @@ use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Process\Exceptions\ProcessFailedException;
+
+// ★ use を変更
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
+
+// ★ use を変更
+//use Symfony\Component\Process\Process;
 use App\Helpers\AttachedFilePathHelper;
 
 class OcrAndOptimizeFile implements ShouldQueue
@@ -121,21 +127,19 @@ class OcrAndOptimizeFile implements ShouldQueue
             $containerOutputFilePath,
         ];
 
-        $process = new Process($command);
-        $process->setTimeout(3600); // 1時間
 
         try {
-            $process->run();
+            // ★ Process ファサードを使ってコマンドを実行
+            $result = Process::timeout(3600)->run($command);
 
-            if (!$process->isSuccessful()) {
-                throw new \RuntimeException($process->getErrorOutput());
-            }
+            // ★ 失敗した場合に例外をスローさせる
+            $result->throw();
 
             // 4. レコード情報の更新
-            $this->attachedFile->path = $outputStoragePath;
-            $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
-            $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
-            $this->attachedFile->optimized = true; // optimized を true に設定
+//            $this->attachedFile->path = $outputStoragePath;
+//            $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
+//            $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
+//            $this->attachedFile->optimized = true; // optimized を true に設定
 
             // Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
             // try {
@@ -145,17 +149,31 @@ class OcrAndOptimizeFile implements ShouldQueue
             //     Log::error('Failed to get file content: ' . $e->getMessage());
             // }
 
-            $this->attachedFile->size = Storage::disk('public')->size($this->attachedFile->path);
-            $this->attachedFile->save();
+//            $this->attachedFile->size = Storage::disk('public')->size($this->attachedFile->path);
+//            $this->attachedFile->save();
             // Log::info('OCR and optimization successful for file: ' . $this->attachedFile->id);
+            // --- 成功時の処理 ---
+            $this->attachedFile->update([
+                'path' => $outputStoragePath,
+                'filename' => $outputFileName,
+                'mime' => 'application/pdf',
+                'optimized' => true,
+                'size' => Storage::disk('public')->size($outputStoragePath),
+                'status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value, // Tika再処理のためのステータス
+            ]);
 
             // 5. Tikaによる再処理
-            $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
+//            $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
             ProcessAttachedFile::dispatch($this->attachedFile);
             // Log::info('Dispatched ProcessAttachedFile for re-processing: ' . $this->attachedFile->id);
 
-        } catch (\Exception $e) {
-            Log::error('OCR and optimization failed for file ' . $this->attachedFile->id . ': ' . $e->getMessage());
+        } catch (ProcessFailedException $e) {
+            // --- 失敗時の処理 ---
+            Log::error('OCR and optimization failed for file ' . $this->attachedFile->id, [
+                'error' => $e->getMessage(),
+                'output' => $e->result->output(),
+                'errorOutput' => $e->result->errorOutput(),
+            ]);
             // 失敗時: status を OCR_FAILED に更新
             $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
         }
