@@ -30,8 +30,15 @@ class LedgerColumnValidationTest extends TestCase
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
         $ledgerDefine = LedgerDefine::factory()->create([
             'column_define' => [
-                new ColumnDefine(0, 'Non-Unique', 'text'),
-                new ColumnDefine(id: 1, name: 'Unique Text', typeIdentifier: 'text', unique: true),
+                // ▼▼▼ 名前付き引数から連想配列での初期化に修正 ▼▼▼
+                new ColumnDefine([
+                    'id' => 0, 'name' => 'Non-Unique', 'type' => 'text', 'order' => 1,
+                    'required' => false, 'unique' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                ]),
+                new ColumnDefine([
+                    'id' => 1, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 2,
+                    'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                ]),
             ],
         ]);
 
@@ -59,8 +66,15 @@ class LedgerColumnValidationTest extends TestCase
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
         $ledgerDefine = LedgerDefine::factory()->create([
             'column_define' => [
-                new ColumnDefine(0, 'Non-Unique', 'text'),
-                new ColumnDefine(id: 1, name: 'Unique Text', typeIdentifier: 'text', unique: true),
+                // ▼▼▼ 名前付き引数から連想配列での初期化に修正 ▼▼▼
+                new ColumnDefine([
+                    'id' => 0, 'name' => 'Non-Unique', 'type' => 'text', 'order' => 1,
+                    'required' => false, 'unique' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                ]),
+                new ColumnDefine([
+                    'id' => 1, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 2,
+                    'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                ]),
             ],
         ]);
 
@@ -88,21 +102,25 @@ class LedgerColumnValidationTest extends TestCase
         // 準備: このテスト専用の「number」型カラムを持つ台帳定義を作成
         $numberLedgerDefine = LedgerDefine::factory()->create([
             'column_define' => [
-                // ★★★ ColumnDefineのインスタンス化を修正 ★★★
-                // min, max, step, unit はコンストラクタの `options` 配列に含めます。
-                new ColumnDefine(
-                    id: 0,
-                    name: 'Number Input',
-                    typeIdentifier: 'number',
-                    order: 1,
-                    options: [
+                // ▼▼▼ 名前付き引数から連想配列での初期化に修正 ▼▼▼
+                new ColumnDefine([
+                    'id' => 0,
+                    'name' => 'Number Input',
+                    'type' => 'number', // 'typeIdentifier' から 'type' に変更
+                    'order' => 1,
+                    'options' => [
                         'min' => 10,
                         'max' => 20,
                         'step' => 0.5,
                         'unit' => '℃'
                     ],
-                    required: true
-                ),
+                    'required' => true,
+                    // 不足していたキーを追加
+                    'unique' => false,
+                    'sortBy' => false,
+                    'hint' => '',
+                    'file' => [],
+                ]),
             ],
         ]);
 
