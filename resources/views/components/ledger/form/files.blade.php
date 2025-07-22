@@ -59,15 +59,24 @@
                             );
                         },
                         revert: (filename, load) => {
-                            window.Livewire.find(componentId).removeUpload(`content.${columnId}`, filename, load);
+                            // Livewireサーバーからテンポラリファイルを削除
+                            window.Livewire.find(componentId).removeUpload(`content.${columnId}`, filename, () => {
+                                // removeUploadが成功したら、FilePondに完了を通知
+                                load();
+
+                                // サーバー側のメソッドを呼び出してラベルとプログレスバーを更新
+                                window.Livewire.find(componentId).call('handleNewFileRemoval', columnId);
+                            });
                         }
                     },
 
                     onremovefile: (error, file) => {
                         if (error) return;
                         const hashedBasename = file.getMetadata('hashedBasename');
-                        if (hashedBasename && !window.Livewire.find(componentId).get(`deletedContent.${columnId}`).includes(hashedBasename)) {
-                            window.Livewire.find(componentId).set(`deletedContent.${columnId}`, [...window.Livewire.find(componentId).get(`deletedContent.${columnId}`), hashedBasename]);
+
+                        // 'handleFileRemoval' というサーバー側メソッドを直接呼び出す
+                        if (hashedBasename) {
+                            window.Livewire.find(componentId).call('handleFileRemoval', columnId, hashedBasename);
                         }
                     },
 

@@ -32,4 +32,7 @@
             <livewire:ledger.modify-column :ledger-id="$ledger->id"/>
     </div>
 
+{{--        viteに認識させるためのダミー--}}
+    <div class="hidden bg-error"></div>
+
 </x-app-layout>

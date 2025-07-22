@@ -65,15 +65,15 @@ class ModifyColumn extends CreateColumn
             // --------------------------------
 
             $this->prepareFilePondInitialFiles(); // FilePond初期化
-
         }
         $this->initBackgroundImages();
     }
 
     public function render(): View
     {
-        $this->refreshRequiredLabel();
-
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            $this->updateContentStatusLabel($column);
+        }
         return view('livewire.ledger.modify-column');
     }
 
@@ -97,42 +97,29 @@ class ModifyColumn extends CreateColumn
     // Modify 用のファイルマージ処理をオーバーライド
 
     /**
+     * @param mixed $column
      * @return void
      */
-    public function refreshRequiredLabel(): void
+    public function updateColumnFiles(mixed $column): void
     {
-        foreach ($this->ledgerDefineRecord->column_define as $column) {
-            if ($column->type === 'files') {
-                $this->deletedContent[$column->id] = [];
-                // FilePondで既存ファイルを表示するために、contentを空にしない
-                // ただし、新規アップロードとの区別のため、ここでは既存ファイルのみを保持する
-                $this->content[$column->id] = $this->ledgerRecord->content[$column->id] ?? [];
-            }
-            if (is_array($this->content[$column->id])) {
-                $allValuesEmpty = true;
-                foreach ($this->content[$column->id] as $value) {
-                    if (!empty($value)) {
-                        $allValuesEmpty = false;
-                        break;
-                    }
-                }
-                if ($allValuesEmpty) {
-                    if ($column->required) {
-                        $this->labelColor[$column->id] = 'warning';
-                    } else {
-                        $this->labelColor[$column->id] = 'muted';
-                    }
-                } else {
-                    $this->labelColor[$column->id] = 'success';
-                }
-            } elseif (!empty($this->content[$column->id])) {
-                $this->labelColor[$column->id] = 'success';
-            } elseif ($column->required) {
-                $this->labelColor[$column->id] = 'warning';
-            } else {
-                $this->labelColor[$column->id] = 'muted';
-            }
-        }
+        $columnId = $column->id;
+
+        // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
+        $newUploads = collect($this->content[$columnId] ?? [])
+            ->filter(fn($file) => $file instanceof TemporaryUploadedFile)
+            ->all();
+
+        // 画面上で削除されずに残っている既存ファイル
+        $existingFiles = collect($this->ledgerRecord->content[$columnId] ?? [])
+            ->reject(function ($originalFilename, $hashedBasename) use ($columnId) {
+                return in_array($hashedBasename, $this->deletedContent[$columnId] ?? [], true);
+            })
+            ->all();
+
+        // バリデーションのために、新規ファイルと既存ファイルを結合したものを content にセットする
+        // これにより、ファイルが必須の場合でも、既存ファイルがあればバリデーションをパスする
+        // 注意: ここでセットするのはバリデーション目的。実際の保存処理は processFilesForSave で行う。
+        $this->content[$columnId] = array_merge($newUploads, $existingFiles);
     }
 
     protected function mergeFilesForSave(object $column, array $storedFiles): void
@@ -259,24 +246,7 @@ class ModifyColumn extends CreateColumn
     {
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             if ($column->type === 'files') {
-                $columnId = $column->id;
-
-                // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
-                $newUploads = collect($this->content[$columnId] ?? [])
-                    ->filter(fn($file) => $file instanceof TemporaryUploadedFile)
-                    ->all();
-
-                // 画面上で削除されずに残っている既存ファイル
-                $existingFiles = collect($this->ledgerRecord->content[$columnId] ?? [])
-                    ->reject(function ($originalFilename, $hashedBasename) use ($columnId) {
-                        return in_array($hashedBasename, $this->deletedContent[$columnId] ?? [], true);
-                    })
-                    ->all();
-
-                // バリデーションのために、新規ファイルと既存ファイルを結合したものを content にセットする
-                // これにより、ファイルが必須の場合でも、既存ファイルがあればバリデーションをパスする
-                // 注意: ここでセットするのはバリデーション目的。実際の保存処理は processFilesForSave で行う。
-                $this->content[$columnId] = array_merge($newUploads, $existingFiles);
+                $this->updateColumnFiles($column);
             }
         }
         return $attributes;
@@ -472,4 +442,27 @@ class ModifyColumn extends CreateColumn
             $this->filePondInitialFiles[$columnId] = $filesForColumn;
         }
     }
+    /**
+     * FilePond で既存ファイルが削除されたときにフロントエンドから呼び出される
+     *
+     * @param int $columnId 削除されたファイルが属するカラムのID
+     * @param string $hashedBasename 削除されたファイルのハッシュ化されたベース名
+     */
+    public function handleFileRemoval(int $columnId, string $hashedBasename): void
+    {
+        // 1. 削除リストにファイルを追加
+        $this->deletedContent[$columnId][] = $hashedBasename;
+        // 重複を削除
+        $this->deletedContent[$columnId] = array_unique($this->deletedContent[$columnId]);
+
+        // 2. バリデーション用に content プロパティを更新
+        $column = collect($this->ledgerDefineRecord->column_define)->firstWhere('id', $columnId);
+        if ($column) {
+            $this->updateColumnFiles($column);
+        }
+
+        // 3. ラベルの色を更新
+        $this->updateContentStatusLabel($column, true); // trueで強制更新
+    }
+
 }
