@@ -36,6 +36,20 @@
                 const columnId = parseInt(container.dataset.columnId);
                 const componentId = container.dataset.componentId;
 
+                /**
+                 * MIMEタイプからポスター画像のURLを生成します。
+                 * @param {string} mimeType ファイルのMIMEタイプ
+                 * @returns {string|null} アイコンのURL or null (画像の場合)
+                 */
+                const createPosterUrlFromMime = (mimeType) => {
+                    // 画像の場合はプレビューを表示するためnullを返す
+                    if (!mimeType || mimeType.startsWith('image/')) {
+                        return null;
+                    }
+                    // FontAwesomeIconControllerのAPIエンドポイントを指す
+                    return `{{ route('api.fontawesome.icon.by_mime') }}?type=${encodeURIComponent(mimeType)}`;
+                };
+
                 pond = FilePond.create($refs[`content_${columnId}`]);
 
                 pond.setOptions({
@@ -67,6 +81,19 @@
                                 // サーバー側のメソッドを呼び出してラベルとプログレスバーを更新
                                 window.Livewire.find(componentId).call('handleNewFileRemoval', columnId);
                             });
+                        }
+                    },
+
+                    onprocessfile: (error, file) => {
+                        if (error) {
+                            return;
+                        }
+                        // アップロード成功時にポスターを設定
+                        const posterUrl = createPosterUrlFromMime(file.fileType);
+                        if (posterUrl) {
+                            // file.setMetadata('poster', url, silent)
+                            // 第3引数をtrueにすると、更新イベントを発火させずにUIを更新します
+                            file.setMetadata('poster', posterUrl, true);
                         }
                     },
 

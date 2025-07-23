@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FontAwesomeIconController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,10 +20,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/ledger/{ledgerDefineId}/download-excel-csv', [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV'])
-        ->name('ledger.downloadExcelCSV');
+    Route::get(
+        '/ledger/{ledgerDefineId}/download-excel-csv',
+        [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV']
+    )->name('ledger.downloadExcelCSV');
 
-    // Font Awesome アイコン配信ルート
-    Route::get('/fontawesome/{style}/{icon}.svg', [App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
+
+    // MIMEタイプからアイコンを取得
+    Route::get('/icons/mime', [FontAwesomeIconController::class, 'serveIconByMime'])
+        ->name('api.fontawesome.icon.by_mime');
+
+// スタイルとアイコン名で直接アイコンを取得 (サムネイルのフォールバック用)
+    Route::get('/icons/{style}/{icon}', [FontAwesomeIconController::class, 'serveIcon'])
+        ->whereIn('style', ['solid', 'regular', 'brands'])
         ->name('api.fontawesome.icon');
 });
