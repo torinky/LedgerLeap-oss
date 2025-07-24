@@ -17,19 +17,29 @@ use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\PermissionRegistrar;
+use Studio15\FilamentTree\Concerns\InteractsWithTree;
 
 //use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 
 class Folder extends Model
 {
-//    use HasFactory, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
-    use HasFactory, LogsActivity, NodeTrait, SoftDeletes;
+    use HasFactory, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id',
     ];
 
     protected $guard_name = ['web', 'api'];
+
+    /**
+     * ツリー表示で使用するラベルのカラム名を返します。
+     *
+     * @return string
+     */
+    public static function getTreeLabelAttribute(): string
+    {
+        return 'title';
+    }
 
     protected static function booted()
     {

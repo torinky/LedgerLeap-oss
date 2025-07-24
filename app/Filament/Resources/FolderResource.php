@@ -6,16 +6,19 @@ use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Route;
 
 class FolderResource extends Resource
 {
@@ -155,7 +158,13 @@ class FolderResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListFolders::route('/'),
+            // 'index' => Pages\ListFolders::route('/'), // この行を置き換えます
+            'index' => new PageRegistration(
+                Pages\ListFolders::class,
+                fn (): \Illuminate\Routing\Route => Route::get('/', Pages\ListFolders::class)
+                    ->middleware(Pages\ListFolders::getRouteMiddleware(Filament::getPanel()))
+                    ->withoutMiddleware(Pages\ListFolders::getWithoutRouteMiddleware(Filament::getPanel()))
+            ),
             'create' => Pages\CreateFolder::route('/create'),
             'edit' => Pages\EditFolder::route('/{record}/edit'),
         ];
