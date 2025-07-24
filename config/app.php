@@ -180,6 +180,9 @@ return [
 
         Maatwebsite\Excel\ExcelServiceProvider::class,
         Spatie\Permission\PermissionServiceProvider::class,
+
+        Studio15\FilamentTree\FilamentTreeServiceProvider::class,
+
     ])->toArray(),
 
     /*

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
+use Studio15\FilamentTree\Concerns\InteractsWithTree;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
@@ -16,10 +17,14 @@ use Spatie\Permission\Traits\HasRoles;
 class Organization extends Model
 {
 //    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
-    use HasFactory, HasRoles, LogsActivity, NodeTrait, SoftDeletes;
+    use HasFactory, HasRoles, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree;
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
+    public static function getTreeLabelAttribute(): string
+    {
+        return 'name';  // 例：タイトル列が `name` の場合
+    }
     /**
      * ログに記録する項目
      */

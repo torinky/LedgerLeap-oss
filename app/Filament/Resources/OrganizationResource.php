@@ -6,14 +6,17 @@ use App\Filament\Resources\OrganizationResource\Pages;
 use App\Filament\Resources\OrganizationResource\RelationManagers;
 use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Route;
 
 class OrganizationResource extends Resource
 {
@@ -90,7 +93,16 @@ class OrganizationResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOrganizations::route('/'),
+//            'index' => Pages\ListOrganizations::route('/'),
+            // `::route('/')` の代わりに `PageRegistration` を直接使用します
+            'index' => new PageRegistration(
+                Pages\ListOrganizations::class,
+                // 第2引数をクロージャに変更し、Routeを定義します
+                fn (): \Illuminate\Routing\Route => Route::get('/', Pages\ListOrganizations::class)
+                    // `static::getPanel()` を `Filament::getPanel()` に修正
+                    ->middleware(Pages\ListOrganizations::getRouteMiddleware(Filament::getPanel()))
+                    ->withoutMiddleware(Pages\ListOrganizations::getWithoutRouteMiddleware(Filament::getPanel()))
+            ),
             'create' => Pages\CreateOrganization::route('/create'),
             'edit' => Pages\EditOrganization::route('/{record}/edit'),
         ];
