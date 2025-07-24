@@ -57,15 +57,18 @@ class OrganizationRelationManager extends RelationManager
             // 翻訳キーを修正
             ->heading(__('ledger.organization'))
             ->columns([
-                TextColumn::make('name')
-                    // 翻訳キーを修正
-                    ->label(__('ledger.name'))
-                    ->searchable(),
+                TextColumn::make('full_name') // 内部的な識別子を full_name に変更
+                ->label(__('ledger.organizations.full_name')) // ラベルをフルネーム用に変更
+                // getStateUsing で表示内容（full_name）を明示的に取得
+                ->getStateUsing(fn (Model $record): ?string => $record->full_name)
+                    // 検索は実際の 'name' カラムに対して行うよう明示
+                    ->searchable( ['name'])
+                    // ソートも実際の 'name' カラムに対して行うよう明示
+                    ->sortable( ['name']),
             ])
             ->filters([
                 //
             ])->headerActions([
-                // ▼▼▼ ここから修正 ▼▼▼
                 // 標準のAttachActionをカスタムアクションに置き換え
                 Action::make('attach')
                     ->label(__('ledger.new_relation_attach')) // より適切な翻訳キーに変更
@@ -88,11 +91,17 @@ class OrganizationRelationManager extends RelationManager
                         $livewire->getOwnerRecord()->organizations()->attach($data['organization_ids']);
                     })
                     ->modalWidth('3xl'), // 見やすくするためにモーダルの幅を広げる
-                // ▲▲▲ ここまで修正 ▲▲▲
             ])->actions([
                 DetachAction::make(),
             ])->bulkActions([
                 //
             ]);
+    }
+    /**
+     * N+1問題を回避するため、full_nameで必要となるリレーションをEager Loadする
+     */
+    public function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with('ancestors');
     }
 }

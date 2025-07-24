@@ -173,10 +173,28 @@ class Organization extends Model
         return $this->getAllRoles()->flatMap->permissions->unique('id');
     }
 
-    public function getFullNameAttribute()
+    /**
+     * 上位組織を含めたフルネームを返すアクセサ。
+     *
+     * 'ancestors' リレーションが Eager Loading されている場合はそれを効率的に利用し、
+     * N+1問題を回避してフルパスを生成します。
+     *
+     * @return string
+     */
+    public function getFullNameAttribute(): string
     {
-        // ancestorsAndSelf()はルートから自分までを順に返す
-        return $this->ancestorsAndSelf($this->id)->pluck('name')->implode(' / ');
+        // 'ancestors' リレーションが Eager Loading されているかチェック
+        if ($this->relationLoaded('ancestors')) {
+            // 読み込み済みの祖先の名前コレクションの末尾に、自身の名前を追加する
+            $path = $this->ancestors->pluck('name')->push($this->name);
+
+            // ' > ' 区切りで文字列に変換して返す (より階層が分かりやすくなります)
+            return $path->join(' > ');
+        }
+
+        // フォールバック: Eager Loading されていない場合 (個別のモデル表示などで呼ばれる)
+        // 従来のDBクエリを実行する
+        return $this->ancestorsAndSelf($this->id)->pluck('name')->join(' > ');
     }
 
     /**

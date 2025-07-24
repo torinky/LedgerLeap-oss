@@ -37,6 +37,10 @@ class ChildrenRelationManager extends RelationManager
         // このフォームは「新規作成」アクションで使用されます
         return $form
             ->schema([
+                Forms\Components\TextInput::make('org_id')
+                    ->label('Organization ID')
+                    ->unique(ignoreRecord: true) // 他の組織とIDが重複しないようにバリデーション
+                    ->maxLength(255),
                 Forms\Components\TextInput::make('name')
                     ->label(__('ledger.organizations.name'))
                     ->required()
