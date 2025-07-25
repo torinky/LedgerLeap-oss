@@ -28,6 +28,20 @@ class FolderResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-folder';
 
+    protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['title'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Parent' => $record->parent ? $record->parent->title : 'None',
+        ];
+    }
+
     public static function form(Form $form): Form
     {
         return $form

@@ -24,22 +24,27 @@ class OrganizationResource extends Resource
 
     protected static ?string $model = Organization::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    public static function getLabel(): string
+    // グローバル検索の結果に表示するタイトルとして'name'カラムを使用
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGloballySearchableAttributes(): array
     {
-        return __('ledger.organization');
+        return ['name', 'org_id']; // 'name'と'org_id'を検索対象に
     }
 
-    public static function getModelLabel(): string
+    public static function getGlobalSearchResultDetails(Model $record): array
     {
-        return __('ledger.organization');
+        return [
+            'ID' => $record->org_id,
+        ];
     }
 
-    public static function getPluralLabel(): string
+/*    public static function form(Form $form): Form
     {
         return __('ledger.organization');
-    }
+    }*/
     public static function form(Form $form): Form
     {
         return $form

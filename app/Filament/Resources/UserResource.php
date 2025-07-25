@@ -17,9 +17,25 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+use Illuminate\Database\Eloquent\Model;
+
 class UserResource extends Resource
 {
     public static bool $shouldRegisterNavigation = false;
+
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Email' => $record->email,
+        ];
+    }
 
     protected static ?string $model = User::class;
 

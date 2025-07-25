@@ -32,6 +32,20 @@ class RoleResource extends BaseRoleResource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Guard' => $record->guard_name,
+        ];
+    }
+
     public static function getLabel(): string
     {
         return __('ledger.settings.roles');
