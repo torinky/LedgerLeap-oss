@@ -27,6 +27,20 @@ class OrganizationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
+    public static function getLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('ledger.organization');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.organization');
+    }
     // グローバル検索の結果に表示するタイトルとして'name'カラムを使用
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -42,10 +56,6 @@ class OrganizationResource extends Resource
         ];
     }
 
-/*    public static function form(Form $form): Form
-    {
-        return __('ledger.organization');
-    }*/
     public static function form(Form $form): Form
     {
         return $form

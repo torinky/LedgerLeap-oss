@@ -29,9 +29,12 @@ class ListOrganizations extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->icon('heroicon-o-plus'),
             Actions\Action::make('tree_view')
-                ->label('ツリー表示')
+                ->label(__('ledger.views.tree'))
+                ->color('info')
+                ->icon('heroicon-o-share')
                 ->url(OrganizationResource::getUrl('tree')),
         ];
     }

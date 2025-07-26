@@ -22,7 +22,7 @@ class ListOrganizationsTree extends TreePage
      *
      * @return string|Htmlable
      */
-    public function getTitle(): string | Htmlable
+    public function getTitle(): string|Htmlable
     {
         return __('ledger.organization');
     }
@@ -87,12 +87,30 @@ class ListOrganizationsTree extends TreePage
     }
 
 
+    /**
+     * ツリーの各ノードに表示するアクションを定義します。
+     */
+    public function getTreeActions(): array
+    {
+        return [
+            Actions\EditAction::make()
+                ->url(fn(Organization $record): string => OrganizationResource::getUrl('edit', ['record' => $record])),
+            Actions\DeleteAction::make(),
+            Actions\ForceDeleteAction::make(),
+            Actions\RestoreAction::make(),
+        ];
+    }
+
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->url(OrganizationResource::getUrl('create'))
+                ->icon('heroicon-o-plus'),
             Actions\Action::make('list_view')
-                ->label('リスト表示')
+                ->label(__('ledger.views.list'))
+                ->icon('heroicon-o-list-bullet')
+                ->color('info')
                 ->url(OrganizationResource::getUrl('index')),
         ];
     }
