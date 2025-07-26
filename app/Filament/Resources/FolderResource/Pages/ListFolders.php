@@ -5,122 +5,114 @@ namespace App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource;
 use App\Models\Folder;
 use Filament\Actions;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
-use Illuminate\Contracts\Support\Htmlable;
-use Kalnoy\Nestedset\QueryBuilder;
-use Studio15\FilamentTree\Components\TreePage;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
-class ListFolders extends TreePage
+class ListFolders extends ListRecords
 {
+
     protected static string $resource = FolderResource::class;
 
-    /**
-     * ページのタイトルを日本語化します。
-     */
-    public function getTitle(): string|Htmlable
-    {
-        // lang/ja/ledger.php に 'folders' => 'フォルダー' のようなキーを追加してください
-        return __('ledger.settings.folder');
-    }
-
-    /**
-     * ヘッダーに表示するアクションを定義します。
-     * TreePageのデフォルトのモーダル作成ボタンをオーバーライドし、
-     * 専用の作成ページに遷移させます。
-     */
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->url(FolderResource::getUrl('create')),
+            Actions\Action::make('tree_view')
+                ->label('ツリー表示')
+                ->url(FolderResource::getUrl('tree')),
+            Actions\CreateAction::make(),
         ];
     }
 
-    /**
-     * TreePageで必須のメソッド：使用するモデルを返します。
-     */
-    public static function getModel(): string|QueryBuilder
+    public function table(Table $table): Table
     {
-        return Folder::class;
-    }
+        return $table
+            ->query(fn() => Folder::withDepth()->orderBy('_lft'))
+            ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('フォルダ名')
+                    ->searchable(query: function (EloquentBuilder $query, string $search): EloquentBuilder {
+                        return $query->where('title', 'like', "%{$search}%");
+                    })
+                    ->getStateUsing(function (Folder $record) {
+                        return str_repeat('・', $record->depth) . ' ' . $record->title;
+                    }),
+                Tables\Columns\TextColumn::make('description')
+                    ->label('説明')
+                    ->limit(50),
+                Tables\Columns\TextColumn::make('parent.title')
+                    ->label('親フォルダ')
+                    ->searchable(query: fn(EloquentBuilder $query, string $search): EloquentBuilder => $query->whereRelation('parent', 'title', 'like', "%{$search}%")),
+                Tables\Columns\TextColumn::make('roles.name')
+                    ->label('ロール')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('作成日時')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('更新日時')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('削除日時')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\TrashedFilter::make(),
 
-    /**
-     * ツリー上で新しいフォルダを作成する際のモーダルフォームを定義します。
-     * シンプルにフォルダ名のみとします。
-     */
-    public static function getCreateForm(): array
-    {
-        return [
-            TextInput::make('title')
-                ->label(__('ledger.folder.title'))
-                ->required()
-                ->maxLength(255),
-        ];
-    }
+                // 既存の親フォルダフィルタ
+                Tables\Filters\SelectFilter::make('parent_id')
+                    ->label('親フォルダ')
+                    ->relationship('parent', 'title')
+                    ->searchable()
+                    ->preload(),
 
-    /**
-     * ツリーの各フォルダを編集する際のモーダルフォームを定義します。
-     */
-    public static function getEditForm(): array
-    {
-        return static::getCreateForm();
-    }
+                // 新しく追加する「フォルダで絞り込み」フィルタ
+                Tables\Filters\SelectFilter::make('folder_scope') // フィルタを識別する一意なキー
+                ->label('フォルダで絞り込み')
+                    ->options(Folder::pluck('title', 'id')->all()) // 全てのフォルダを選択肢に
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
 
-    /**
-     * フォルダ作成時に、作成者と更新者を自動で設定します。
-     */
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        $data['creator_id'] = auth()->id();
-        $data['modifier_id'] = auth()->id();
+                        $folder = Folder::find($data['value']);
 
-        return $data;
-    }
+                        // フォルダが見つからない場合は何もしない
+                        if (!$folder) {
+                            return $query;
+                        }
 
-    /**
-     * フォルダ更新時に、更新者を自動で設定します。
-     */
-    protected function mutateFormDataBeforeSave(array $data): array
-    {
-        $data['modifier_id'] = auth()->id();
-
-        return $data;
-    }
-
-    /**
-     * ツリーの各フォルダに表示する情報を定義します。
-     * 元のテーブル定義を参考にしています。
-     */
-    public static function getInfolistColumns(): array
-    {
-        return [
-            TextEntry::make('title')
-                ->label(__('ledger.folder.title')),
-            TextEntry::make('creator.name')
-                ->label(__('ledger.creator.name')),
-            TextEntry::make('modifier.name')
-                ->label(__('ledger.modifier.name')),
-            // フォルダに直接紐づくロールをバッジで表示する例
-            TextEntry::make('roles.name')
-                ->label(__('ledger.settings.roles'))
-                ->badge(),
-        ];
-    }
-
-    /**
-     * ツリーの各フォルダに表示するアクションを定義します。
-     */
-    public function getTreeActions(): array
-    {
-        return [
-            // 詳細な編集は、既存の編集ページに遷移させます
-            Actions\EditAction::make()
-                ->url(fn(Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
-            Actions\DeleteAction::make(),
-            // TrashedFilterがないため、これらのアクションは期待通りに機能しない可能性があります
-            Actions\ForceDeleteAction::make(),
-            Actions\RestoreAction::make(),
-        ];
+                        // 選択されたフォルダ自身とその子孫を対象にする
+                        return $query->whereIsOrDescendantOf($folder);
+                    })
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->actions([
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\ForceDeleteAction::make(),
+                    Tables\Actions\RestoreAction::make(),
+                ]),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
+                ]),
+            ]);
     }
 }

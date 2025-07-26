@@ -29,6 +29,16 @@ class Folder extends Model
         'title', 'modifier_id', 'creator_id', 'parent_id',
     ];
 
+    /**
+     * Get the folder's name (alias for title).
+     *
+     * @return string
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->title;
+    }
+
     protected $guard_name = ['web', 'api'];
 
     /**

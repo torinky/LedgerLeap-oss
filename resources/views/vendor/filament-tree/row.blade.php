@@ -3,6 +3,11 @@
     if($modelClass instanceof \Kalnoy\Nestedset\QueryBuilder) {
         $modelClass = $modelClass->getModel()::class;
     }
+    $resources = [
+        'App\Models\Organization' => 'App\Filament\Resources\OrganizationResource',
+        'App\Models\Folder' => 'App\Filament\Resources\FolderResource',
+    ];
+    $resourceClass = $resources[$modelClass];
 @endphp
 
 <li class="ps-4" data-id="{{ $row->getKey() }}">
@@ -43,7 +48,7 @@
             {{-- 編集ボタンを直接編集画面へ遷移させる --}}
             <x-filament::button
                 tag="a"
-                :href="\App\Filament\Resources\OrganizationResource::getUrl('edit', ['record' => $row->getKey()])"
+                :href="$resourceClass::getUrl('edit', ['record' => $row->getKey()])"
                 size="sm"
                 color="primary"
                 icon="heroicon-s-pencil"
