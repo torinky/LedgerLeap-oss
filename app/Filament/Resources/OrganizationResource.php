@@ -7,6 +7,7 @@ use App\Filament\Resources\OrganizationResource\RelationManagers;
 use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Facades\Filament;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\PageRegistration;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 
 class OrganizationResource extends Resource
 {
-    public static bool $shouldRegisterNavigation = false;
+    
 
     protected static ?string $model = Organization::class;
 
@@ -98,18 +99,30 @@ class OrganizationResource extends Resource
     public static function getPages(): array
     {
         return [
-//            'index' => Pages\ListOrganizations::route('/'),
-            // `::route('/')` の代わりに `PageRegistration` を直接使用します
             'index' => new PageRegistration(
                 Pages\ListOrganizations::class,
-                // 第2引数をクロージャに変更し、Routeを定義します
                 fn (): \Illuminate\Routing\Route => Route::get('/', Pages\ListOrganizations::class)
-                    // `static::getPanel()` を `Filament::getPanel()` に修正
                     ->middleware(Pages\ListOrganizations::getRouteMiddleware(Filament::getPanel()))
                     ->withoutMiddleware(Pages\ListOrganizations::getWithoutRouteMiddleware(Filament::getPanel()))
             ),
-            'create' => Pages\CreateOrganization::route('/create'),
-            'edit' => Pages\EditOrganization::route('/{record}/edit'),
+            'create' => new PageRegistration(
+                Pages\CreateOrganization::class,
+                fn (): \Illuminate\Routing\Route => Route::get('/create', Pages\CreateOrganization::class)
+                    ->middleware(Pages\CreateOrganization::getRouteMiddleware(Filament::getPanel()))
+                    ->withoutMiddleware(Pages\CreateOrganization::getWithoutRouteMiddleware(Filament::getPanel()))
+            ),
+            'edit' => new PageRegistration(
+                Pages\EditOrganization::class,
+                fn (): \Illuminate\Routing\Route => Route::get('/{record}/edit', Pages\EditOrganization::class)
+                    ->middleware(Pages\EditOrganization::getRouteMiddleware(Filament::getPanel()))
+                    ->withoutMiddleware(Pages\EditOrganization::getWithoutRouteMiddleware(Filament::getPanel()))
+            ),
+            'tree' => new PageRegistration(
+                Pages\ListOrganizationsTree::class,
+                fn (): \Illuminate\Routing\Route => Route::get('/tree', Pages\ListOrganizationsTree::class)
+                    ->middleware(Pages\ListOrganizationsTree::getRouteMiddleware(Filament::getPanel()))
+                    ->withoutMiddleware(Pages\ListOrganizationsTree::getWithoutRouteMiddleware(Filament::getPanel()))
+            ),
         ];
     }
 
