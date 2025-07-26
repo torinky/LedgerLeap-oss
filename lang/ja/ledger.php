@@ -337,6 +337,7 @@
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
     'files' => 'ファイル',
     'filter' => 'フィルタ',
+    'folders' => 'フォルダー',
     'folder' =>
         [
             'containing' => '所属するフォルダ',

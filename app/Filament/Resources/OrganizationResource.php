@@ -44,6 +44,16 @@ class OrganizationResource extends Resource
     // グローバル検索の結果に表示するタイトルとして'name'カラムを使用
     protected static ?string $recordTitleAttribute = 'name';
 
+    /**
+     * ナビゲーションメニューにこのリソースを表示しないようにします。
+     *
+     * @return bool
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function getGloballySearchableAttributes(): array
     {
         return ['name', 'org_id']; // 'name'と'org_id'を検索対象に

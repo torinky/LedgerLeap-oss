@@ -32,11 +32,14 @@ class ListFoldersTree extends TreePage
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('list_view')
-                ->label('リスト表示')
-                ->url(FolderResource::getUrl('index')),
             Actions\CreateAction::make()
-                ->url(FolderResource::getUrl('create')),
+                ->url(FolderResource::getUrl('create'))
+                ->icon('heroicon-o-plus'),
+            Actions\Action::make('list_view')
+                ->label(__('ledger.views.list'))
+                ->icon('heroicon-o-list-bullet')
+                ->color('info')
+                ->url(FolderResource::getUrl('index')),
         ];
     }
 

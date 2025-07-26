@@ -29,6 +29,21 @@ class FolderResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-folder';
 
+    public static function getLabel(): string
+    {
+        return __('ledger.folders');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('ledger.folders');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.folders');
+    }
+
     protected static ?string $recordTitleAttribute = 'title';
 
     public static function getGloballySearchableAttributes(): array

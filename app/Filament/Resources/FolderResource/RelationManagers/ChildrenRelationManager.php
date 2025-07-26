@@ -8,50 +8,27 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-/*class ChildrenRelationManager extends RelationManager
-{
-    protected static string $relationship = 'Children';
 
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('folder')
-                    ->required()
-                    ->maxLength(255),
-            ]);
-    }
-
-    public function table(Table $table): Table
-    {
-        return $table
-            ->recordTitleAttribute('folder')
-            ->columns([
-                Tables\Columns\TextColumn::make('folder'),
-            ])
-            ->filters([
-                //
-            ])
-            ->headerActions([
-                Tables\Actions\CreateAction::make(),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
-    }
-}*/
 
 class ChildrenRelationManager extends RelationManager
 {
     protected static string $relationship = 'children';
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getTitle($ownerRecord, string $pageClass): string
+    {
+        return __('ledger.folder.containing');
+    }
+    public static function getModelLabel(): string
+    {
+        return __('ledger.folders');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.folders');
+    }
 
     public function form(Form $form): Form
     {

@@ -18,10 +18,14 @@ class ListFolders extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\CreateAction::make()
+                ->url(FolderResource::getUrl('create'))
+                ->icon('heroicon-o-plus'),
             Actions\Action::make('tree_view')
-                ->label('ツリー表示')
+                ->label(__('ledger.views.tree'))
+                ->color('info')
+                ->icon('heroicon-o-share')
                 ->url(FolderResource::getUrl('tree')),
-            Actions\CreateAction::make(),
         ];
     }
 
@@ -99,13 +103,13 @@ class ListFolders extends ListRecords
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
+//                Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                     Tables\Actions\ForceDeleteAction::make(),
                     Tables\Actions\RestoreAction::make(),
-                ]),
+//                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
