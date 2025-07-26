@@ -78,6 +78,7 @@ class OrganizationRelationManager extends RelationManager
                             ->label(__('ledger.organization'))
                             ->multiple()
                             ->relationship('parent', 'name', 'parent_id')
+                            ->enableBranchNode()
                             ->searchable()
                             ->placeholder(__('ledger.select_organizations_to_attach'))
                             // 既に紐付けられている組織は選択肢から除外する

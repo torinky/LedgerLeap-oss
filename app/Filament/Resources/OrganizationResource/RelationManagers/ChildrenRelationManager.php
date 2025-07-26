@@ -79,6 +79,7 @@ class ChildrenRelationManager extends RelationManager
                             ->label(__('ledger.organizations_to_attach_under')) // 翻訳キーに変更
                             ->multiple()
                             ->relationship('parent', 'name', 'parent_id')
+                            ->enableBranchNode()
                             ->searchable()
                             ->clearable()
                             ->placeholder(__('ledger.select_organizations_to_attach')) // 翻訳キーに変更
