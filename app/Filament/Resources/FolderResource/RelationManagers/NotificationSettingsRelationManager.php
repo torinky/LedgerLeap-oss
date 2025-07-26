@@ -49,7 +49,7 @@ class NotificationSettingsRelationManager extends RelationManager
         return __('ledger.folder.notification');
     }
 
-    public function table(Table $table):Table
+    public function table(Table $table): Table
     {
         return $table
             ->heading(__('ledger.folder.notification'))
@@ -66,13 +66,13 @@ class NotificationSettingsRelationManager extends RelationManager
                 // 4. カラム定義をリレーション先のプロパティを使うように変更
                 // $record は RoleFolderPermission インスタンスになる
                 TextColumn::make('role.name')
-                    ->label(__('ledger.role_name'))
+                    ->label(__('role.name'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('notificationType.name')
                     ->label(__('ledger.notification_type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? __('ledger.notification_types.' . $state, [], $state) : '')
+                    ->formatStateUsing(fn(?string $state) => $state ? __('ledger.notification_types.' . $state, [], $state) : '')
                     ->searchable()
                     ->sortable(),
 
@@ -84,7 +84,7 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->onColor('success')
                     ->offColor('danger')
                     // 初期状態をboolで返す
-                    ->getStateUsing(fn (RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON)
+                    ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON)
                     // 更新処理
                     ->updateStateUsing(function (RoleFolderPermission $record, bool $state) {
                         try {
@@ -115,7 +115,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->searchable(),
                         CheckboxList::make('notification_type_ids')
                             ->label(__('ledger.notification_type'))
-                            ->options(fn () => NotificationType::all()->mapWithKeys(fn ($type) => [$type->id => __('ledger.notification_types.' . $type->name, [], $type->name)]))
+                            ->options(fn() => NotificationType::all()->mapWithKeys(fn($type) => [$type->id => __('ledger.notification_types.' . $type->name, [], $type->name)]))
                             ->columns(3)
                             ->required(),
                         Toggle::make('permission')
@@ -147,7 +147,80 @@ class NotificationSettingsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                // 7. EditActionはToggleColumnと機能が重複するため不要。DeleteActionはそのまま利用。
+                Action::make('edit_notification_setting')
+                    ->label(__('ledger.edit'))
+                    ->icon('heroicon-o-pencil')
+                    ->fillForm(function (Model $record): array {
+                        // $record は RoleFolderPermission のインスタンス
+                        $folder = $this->getOwnerRecord();
+                        $roleId = $record->role_id;
+                        $existingPermissions = RoleFolderPermission::where('folder_id', $folder->id)
+                            ->where('role_id', $roleId)
+                            ->whereIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
+                            ->pluck('notification_type_id')
+                            ->toArray();
+
+                        return [
+                            'role_id' => $roleId,
+                            'notification_type_ids' => $existingPermissions,
+                            'permission' => $record->permission === FolderPermissionType::NOTIFY_ON,
+                        ];
+                    })
+                    ->form([
+                        Select::make('role_id')
+                            ->label(__('ledger.role'))
+                            ->options(Role::pluck('name', 'id'))
+                            ->required()
+                            ->searchable()
+                            ->disabled(), // ロールは変更不可
+                        CheckboxList::make('notification_type_ids')
+                            ->label(__('ledger.notification_type'))
+                            ->options(fn() => NotificationType::all()->mapWithKeys(fn($type) => [$type->id => __('ledger.notification_types.' . $type->name, [], $type->name)]))
+                            ->columns(3)
+                            ->required(),
+                        Toggle::make('permission')
+                            ->label(__('ledger.notify'))
+                            ->default(true),
+                    ])
+                    ->action(function (Model $record, array $data, RelationManager $livewire): void {
+                        $folder = $livewire->getOwnerRecord();
+                        $modifierId = auth()->id();
+                        $selectedNotificationTypeIds = $data['notification_type_ids'];
+                        $roleId = $record->role_id;
+                        $permissionStatus = $data['permission'] ? FolderPermissionType::NOTIFY_ON : FolderPermissionType::NOTIFY_OFF;
+
+                        DB::transaction(function () use ($folder, $roleId, $selectedNotificationTypeIds, $permissionStatus, $modifierId) {
+                            // 既存の通知設定を取得
+                            $existingNotificationSettings = RoleFolderPermission::where('folder_id', $folder->id)
+                                ->where('role_id', $roleId)
+                                ->whereIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
+                                ->get();
+
+                            // 選択された通知タイプを更新または作成
+                            foreach ($selectedNotificationTypeIds as $notificationTypeId) {
+                                RoleFolderPermission::updateOrCreate(
+                                    [
+                                        'folder_id' => $folder->id,
+                                        'role_id' => $roleId,
+                                        'notification_type_id' => $notificationTypeId,
+                                    ],
+                                    [
+                                        'permission' => $permissionStatus,
+                                        'modifier_id' => $modifierId,
+                                    ]
+                                );
+                            }
+
+                            // 選択されなかった通知タイプを削除
+                            foreach ($existingNotificationSettings as $setting) {
+                                if (!in_array($setting->notification_type_id, $selectedNotificationTypeIds)) {
+                                    $setting->delete();
+                                }
+                            }
+                        });
+
+                        Notification::make()->title(__('ledger.notification.updated_success'))->success()->send();
+                    }),
                 DeleteAction::make(),
             ])
             ->bulkActions([
