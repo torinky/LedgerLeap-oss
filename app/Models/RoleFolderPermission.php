@@ -83,6 +83,11 @@ class RoleFolderPermission extends Pivot
         return $this->belongsTo(Folder::class);
     }
 
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
     /**
      * ログに記録する項目
      */

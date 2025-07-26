@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -49,6 +50,13 @@ class Folder extends Model
     public static function getTreeLabelAttribute(): string
     {
         return 'title';
+    }
+    /**
+     * このフォルダに関連するロールフォルダ権限（通知設定を含む）を取得します。
+     */
+    public function roleFolderPermissions(): HasMany
+    {
+        return $this->hasMany(RoleFolderPermission::class);
     }
 
     protected static function booted()
@@ -263,8 +271,9 @@ class Folder extends Model
     {
         return $this->belongsToMany(Role::class, 'role_folder_permissions', 'folder_id', 'role_id')
             ->withPivot('notification_type_id', 'permission')
-            ->withTimestamps();
-        //            ->using(RoleFolderPermission::class)
+            ->withTimestamps()
+            ->using(RoleFolderPermission::class)
+            ;
         //            ->as('setting')
     }
 

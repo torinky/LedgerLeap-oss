@@ -856,9 +856,9 @@
         ],
     'version' => 'バージョン',
     'view' => 'ビュー',
-    'views'=>[
-        'tree'=>'ツリー表示',
-        'list'=>'リスト表示',
+    'views' => [
+        'tree' => 'ツリー表示',
+        'list' => 'リスト表示',
     ],
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認',
@@ -1003,4 +1003,7 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'attach_existing_folder' => "既存のフォルダーを紐付ける",
+    'folders_to_attach_under' => "配下に紐付けるフォルダー",
+    'select_folders_to_attach' => "紐付けるフォルダーを選択",
 ];

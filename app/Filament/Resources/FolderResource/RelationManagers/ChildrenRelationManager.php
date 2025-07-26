@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources\FolderResource\RelationManagers;
 
+use App\Filament\Resources\FolderResource;
+use App\Models\Folder;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
-
-
 
 class ChildrenRelationManager extends RelationManager
 {
@@ -35,21 +36,9 @@ class ChildrenRelationManager extends RelationManager
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')
+                    ->label(__('ledger.folder.title'))
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Select::make('creator_id')
-                    ->relationship('creator', 'name')
-                    ->searchable()
-                    ->required(),
-                Forms\Components\Select::make('modifier_id')
-                    ->relationship('modifier', 'name')
-                    ->searchable()
-                    ->required(),
-                Forms\Components\Select::make('roles')
-                    ->relationship('roles', 'name')
-                    ->multiple()
-                    ->preload()
-                    ->required(),
             ]);
     }
 
@@ -57,27 +46,66 @@ class ChildrenRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title'),
-                Tables\Columns\TextColumn::make('creator.name')->label('Creator'),
-                Tables\Columns\TextColumn::make('modifier.name')->label('Modifier'),
-                Tables\Columns\TextColumn::make('roles.name')
-                    ->label('Roles')
-                    ->bulleted(),
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('ledger.folder.title')),
+                Tables\Columns\TextColumn::make('creator.name')
+                    ->label(__('ledger.creator.name')),
+                Tables\Columns\TextColumn::make('modifier.name')
+                    ->label(__('ledger.modifier.name')),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime(),
+                    ->label(__('ledger.created_at'))
+                    ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
             ])
             ->headerActions([
+                Tables\Actions\Action::make('attach_children')
+                    ->label(__('ledger.attach_existing_folder'))
+                    ->icon('heroicon-o-paper-clip')
+                    ->form([
+                        SelectTree::make('children_ids')
+                            ->label(__('ledger.folders_to_attach_under'))
+                            ->multiple()
+                            ->relationship('parent', 'title', 'parent_id')
+                            ->enableBranchNode()
+                            ->searchable()
+                            ->clearable()
+                            ->placeholder(__('ledger.select_folders_to_attach'))
+                            ->hiddenOptions(function (RelationManager $livewire): array {
+                                $ownerRecord = $livewire->getOwnerRecord();
+                                $ancestorAndSelfIds = $ownerRecord->ancestorsAndSelf($ownerRecord->id)->pluck('id')->toArray();
+                                $childrenIds = $ownerRecord->children()->pluck('id')->toArray();
+
+                                return array_merge($ancestorAndSelfIds, $childrenIds);
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, RelationManager $livewire): void {
+                        $ownerRecord = $livewire->getOwnerRecord();
+                        Folder::whereIn('id', $data['children_ids'])
+                            ->update(['parent_id' => $ownerRecord->id]);
+                    })
+                    ->modalWidth('3xl'),
                 Tables\Actions\CreateAction::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->url(fn (Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
+                Tables\Actions\Action::make('detach_child')
+                    ->label(__('ledger.detach'))
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('ledger.detach_confirmation_title'))
+                    ->modalDescription(__('ledger.detach_confirmation_description'))
+                    ->action(fn (Folder $record) => $record->update(['parent_id' => null])),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 }
