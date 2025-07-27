@@ -1,4 +1,8 @@
 <x-filament-widgets::widget>
+    @once
+        @vite('resources/sass/filamentCustom.scss')
+    @endonce
+
     <x-filament::grid :default="1" :sm="2" :md="3" :lg="4" :xl="4" class="gap-4">
         @foreach ($groups as $group)
             <x-filament::card>
@@ -8,11 +12,13 @@
                 </h3>
                 <div class="space-y-3">
                     @foreach ($group['links'] as $link)
+                        {{-- 変更箇所: hover:bg-primary の代わりにカスタムクラスを適用します --}}
                         <a href="{{ $link['url'] }}"
-                           class="flex items-center p-2 rounded-lg transition-colors duration-200 bg-gray-100/10 hover:bg-gray-100 dark:hover:bg-gray-700 ">
+                           class="flex items-center p-2 rounded-lg transition-colors duration-200 bg-gray-100/10 link-hover-color-{{ $link['color'] ?? 'primary' }}"
+                        >
                             @svg($link['icon'], 'w-5 h-5 me-3 text-' . $link['color'] . '-500')
                             <span
-                                class="text-sm font-medium text-gray-700 dark:text-gray-500">{{ $link['title'] }}</span>
+                                    class="text-gray-700 dark:text-gray-500">{{ $link['title'] }}</span>
                         </a>
                     @endforeach
                 </div>

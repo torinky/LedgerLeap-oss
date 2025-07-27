@@ -1,0 +1,45 @@
+/*@import '../../../../vendor/filament/filament/resources/css/theme.css';*/
+@import '/vendor/filament/filament/resources/css/theme.css';
+@config './tailwind.config.js';
+
+
+
+/*
+ * 3. ここから下にカスタムスタイルを記述します
+ */
+
+/*
+ * ダッシュボードリンクウィジェット ホバースタイル
+ *
+ * Bladeファイル側で付与したカスタムクラス (link-hover-color-*) を使って
+ * ホバー時の背景色を定義します。
+ *
+ * 背景色はDaisyUIのテーマカラーをCSS変数で参照し、
+ * hsl()関数とアルファ値（例: / 0.15）で透過度を指定しています。
+ * この数値を 0.1 (薄い) 〜 0.9 (濃い) の間で調整してください。
+ */
+
+.link-hover-color-primary:hover {
+    background-color: hsl(var(--p) / 0.15); /* Primary */
+}
+
+.link-hover-color-secondary:hover {
+    background-color: hsl(var(--s) / 0.15); /* Secondary */
+}
+
+.link-hover-color-success:hover {
+    background-color: hsl(var(--su) / 0.15); /* Success */
+}
+
+.link-hover-color-warning:hover {
+    background-color: hsl(var(--wa) / 0.15); /* Warning */
+}
+
+.link-hover-color-danger:hover {
+    /* `danger` は DaisyUI/Filament の `error` カラーに対応 */
+    background-color: hsl(var(--er) / 0.15); /* Danger(Error) */
+}
+
+.link-hover-color-info:hover {
+    background-color: hsl(var(--in) / 0.15); /* Info */
+}

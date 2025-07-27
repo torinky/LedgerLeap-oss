@@ -12,6 +12,8 @@ export default defineConfig({
                 'resources/sass/ledgerIndex.scss',
                 'resources/sass/ledgerEdit.scss',
                 'resources/sass/ledgerDefineEdit.scss',
+                'resources/sass/filamentCustom.scss',
+                'resources/css/filamentCustom.css',
                 'resources/js/app.js',
                 'resources/js/ledgerEdit.js',
                 'resources/js/ledgerDefineEdit.js',

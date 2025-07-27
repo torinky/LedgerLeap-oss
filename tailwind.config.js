@@ -1,5 +1,7 @@
 import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
+import typography from '@tailwindcss/typography';
+import daisyui from 'daisyui';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -9,30 +11,29 @@ export default {
         './resources/views/**/*.blade.php',
         './app/Filament/**/*.php',
         './resources/views/filament/**/*.blade.php',
-        './vendor/filament/**/*.blade.php',
-        './vendor/solution-forest/filament-tree/**/*.blade.php'
+        './vendor/filament/**/*.blade.php'
     ],
 
     theme: {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                body: [
+                    'Avenir',
+                    'Helvetica Neue',
+                    'Helvetica',
+                    'Arial',
+                    'Hiragino Sans',
+                    'ヒラギノ角ゴシック',
+                    'メイリオ',
+                    'Meiryo',
+                    'YuGothic',
+                    'Yu Gothic',
+                    'ＭＳ Ｐゴシック',
+                    'MS PGothic',
+                    'sans-serif'
+                ],
             },
-            body: [
-                'Avenir',
-                'Helvetica Neue',
-                'Helvetica',
-                'Arial',
-                'Hiragino Sans',
-                'ヒラギノ角ゴシック',
-                'メイリオ',
-                'Meiryo',
-                'YuGothic',
-                'Yu Gothic',
-                'ＭＳ Ｐゴシック',
-                'MS PGothic',
-                'sans-serif'
-            ],
             screens: {
                 '3xl': '1920px', // 3xlブレークポイントを設定
                 '4xl': '2048px', // 4xlブレークポイントを設定
@@ -47,8 +48,13 @@ export default {
 
     plugins: [
         forms,
-        require('@tailwindcss/forms'),
-        require("@tailwindcss/typography"),
+        typography,
+        daisyui,
     ],
+
+    daisyui: {
+        themes: ["light", "dark"], // アプリケーションで使用するテーマを指定
+        darkTheme: "dark", // ダークモード時のデフォルトテーマ
+    },
 
 };

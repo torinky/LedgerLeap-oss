@@ -44,10 +44,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->setCustomResolverForMySql();
 
-        FilamentView::registerRenderHook(
+/*        FilamentView::registerRenderHook(
             'panels::head.end',
             fn(): string => Blade::render('@vite([\'resources/css/app.css\', \'resources/js/app.js\'])'),
-        );
+        );*/
     }
 
     /**
