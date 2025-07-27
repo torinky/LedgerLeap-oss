@@ -179,6 +179,7 @@
     'assigned_folders_title' => 'あなたが担当する主なフォルダ',
     'associate' => '仲間',
     'attach' => '添付する',
+    'attach_existing_folder' => '既存のフォルダーを紐付ける',
     'attach_existing_organization' => '既存組織を紐付け',
     'attribute' => '属性',
     'basic_information' => '基本情報',
@@ -337,7 +338,6 @@
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
     'files' => 'ファイル',
     'filter' => 'フィルタ',
-    'folders' => 'フォルダー',
     'folder' =>
         [
             'containing' => '所属するフォルダ',
@@ -408,6 +408,8 @@
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
     'folder_permission_readable' => '閲覧可能',
+    'folders' => 'フォルダー',
+    'folders_to_attach_under' => '配下に紐付けるフォルダー',
     'form' =>
         [
             'auto_number' => '自動採番',
@@ -569,7 +571,7 @@
             'unread_notifications' => '未読の通知',
         ],
     'new' => '新着',
-    'new_relation_attach' => '新たに紐付け',
+    'new_relation_attach' => '紐付ける',
     'no' => 'いいえ',
     'no_activity_logs' => 'アクティビティログはありません。',
     'no_assigned_folders' => '担当フォルダはありません。',
@@ -749,6 +751,7 @@
     'searched' => '検索しました',
     'select' => '選択する',
     'select_all' => 'すべて選択',
+    'select_folders_to_attach' => '紐付けるフォルダーを選択',
     'select_message' => 'フォルダまたは台帳を選択',
     'select_organizations_to_attach' => '紐付ける組織を選択...',
     'select_roles' => 'ロールを選択',
@@ -856,13 +859,14 @@
         ],
     'version' => 'バージョン',
     'view' => 'ビュー',
-    'views' => [
-        'tree' => 'ツリー表示',
-        'list' => 'リスト表示',
-    ],
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認',
     'view_history' => '変更履歴を見る',
+    'views' =>
+        [
+            'list' => 'リスト表示',
+            'tree' => 'ツリー表示',
+        ],
     'workflow' =>
         [
             'action_at' => '操作日時',
@@ -1003,7 +1007,4 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-    'attach_existing_folder' => "既存のフォルダーを紐付ける",
-    'folders_to_attach_under' => "配下に紐付けるフォルダー",
-    'select_folders_to_attach' => "紐付けるフォルダーを選択",
 ];

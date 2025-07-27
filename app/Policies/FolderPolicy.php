@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Folder;
 use App\Models\User;
+use App\Repositories\WritableFolderRepository;
 use App\Services\UserService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
@@ -13,10 +14,12 @@ class FolderPolicy
     use HandlesAuthorization;
 
     protected $userService;
+    private WritableFolderRepository $writableFolderRepository;
 
-    public function __construct(UserService $userService)
+    public function __construct(UserService $userService, WritableFolderRepository $writableFolderRepository)
     {
         $this->userService = $userService;
+        $this->writableFolderRepository = $writableFolderRepository;
     }
 
     /**
@@ -50,12 +53,22 @@ class FolderPolicy
     public function create(User $user, $folder = null)
     {
         if (empty($folder)) {
-            return false;
+            $folder = Folder::root();
         }
 
         // ユーザーがフォルダの作成権限を持っているかどうかをチェック
-        return $this->userService->hasPermission($user, 'create_folders')
+        $result = $this->userService->hasPermission($user, 'create_folders')
             && $this->userService->isManageableFolderForUser($user, $folder);
+
+        // 管理可能なフォルダーを一つでも持っていれば作成可能
+        if(!$result) {
+            $writableFolders = $this->writableFolderRepository->getManageableFolderIds($user);
+            if (!empty($writableFolders)) {
+                $result = true;
+            }
+        }
+        return $result;
+
     }
 
     /**

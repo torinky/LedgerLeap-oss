@@ -103,7 +103,14 @@ class FolderPermissionRelationManager extends RelationManager
             ->heading(__('permission.folder_permissions'))
             // ★ クエリでアクセス権限レコードのみをフィルタリング
             ->query(function (EloquentBuilder $query) {
+                // ★ setModel() を復活させ、モデルクラスを明示的に指定
                 $query->setModel(new RoleFolderPermission());
+
+                // ★ 現在のロール（親レコード）を取得
+                $role = $this->getOwnerRecord();
+
+                // ★ 取得したロールのIDで絞り込みを追加
+                $query->where('role_id', $role->id);
                 // アクセス権限タイプのみに絞り込み
                 $query->whereIn('permission', FolderPermissionType::accessPermissionValues());
                 // Folder リレーションを Eager Loading
@@ -120,7 +127,7 @@ class FolderPermissionRelationManager extends RelationManager
             ->columns([
                 // ★ Folder タイトルはグループヘッダーで表示されるため、カラムとしては不要になる場合がある
                 TextColumn::make('folder.title')
-                    ->label(__('フォルダ名'))
+                    ->label(__('ledger.folder.title'))
 //                    ->searchable(isIndividual: true) // 個別検索のみ
                     ->sortable()
                 ,

@@ -24,11 +24,11 @@ class Dashboard extends \Filament\Pages\Dashboard
     protected function getActions(): array
     {
         return [
-            Action::make('updateModel')
+/*            Action::make('updateModel')
                 ->label(__('ledger.folder.fix'))
                 ->action('fixFolderTree')
                 ->icon('heroicon-o-wrench')
-                ->color('info'),
+                ->color('info'),*/
         ];
     }
 

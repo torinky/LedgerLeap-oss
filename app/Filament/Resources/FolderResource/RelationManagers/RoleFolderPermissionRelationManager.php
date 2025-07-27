@@ -120,7 +120,9 @@ class RoleFolderPermissionRelationManager extends RelationManager
 
                         return null;
 
-                    }),
+                    })
+                ->icon('heroicon-o-link')
+                ->color('primary'),
             ])->actions([
                 DetachAction::make(),
             ])->bulkActions([

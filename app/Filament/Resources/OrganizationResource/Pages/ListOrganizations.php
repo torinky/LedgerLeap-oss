@@ -42,18 +42,13 @@ class ListOrganizations extends ListRecords
     public function table(Table $table): Table
     {
         return $table
-            ->query(function (Builder $query) {
-                return Organization::withDepth()->defaultOrder();
-            })
+            ->query(fn() => Organization::withDepth()->orderBy('_lft'))
             ->recordUrl(fn($record) => null)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
-                    ->getStateUsing(function ($record) {
-                        $depth = $record->depth ?? 0;
-                        $prefix = str_repeat('— ', $depth);
-
-                        return $prefix . $record->name;
+                    ->getStateUsing(function (Organization $record) {
+                        return str_repeat('・', $record->depth) . ' ' . $record->name;
                     }),
                 Tables\Columns\TextColumn::make('org_id')
                     ->label('Organization ID')
@@ -123,8 +118,9 @@ class ListOrganizations extends ListRecords
                 Tables\Actions\ForceDeleteBulkAction::make(),
                 Tables\Actions\RestoreBulkAction::make(),
             ])
-            ->reorderable('sort_order')
-            ->defaultSort('sort_order');
+//            ->reorderable('sort_order')
+//            ->defaultSort('sort_order')
+;
 
     }
 }

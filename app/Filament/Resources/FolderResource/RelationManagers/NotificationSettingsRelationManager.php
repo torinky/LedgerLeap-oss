@@ -107,6 +107,7 @@ class NotificationSettingsRelationManager extends RelationManager
                 // 6. AttachActionをカスタムのActionに置き換える
                 Action::make('create_notification_setting')
                     ->label(__('ledger.new_relation_attach'))
+                    ->icon('heroicon-o-link')
                     ->form([
                         Select::make('role_id')
                             ->label(__('ledger.role'))

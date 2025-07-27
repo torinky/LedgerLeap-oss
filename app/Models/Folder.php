@@ -257,15 +257,14 @@ class Folder extends Model
         if (empty($permission)) {
             return $this->belongsToMany(Role::class, RoleFolderPermission::class, 'folder_id', 'role_id')
                 ->withPivot('permission')
-                ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
+                ->wherePivotNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
         }
 
         return $this->belongsToMany(Role::class, RoleFolderPermission::class, 'folder_id', 'role_id')
             ->withPivot('permission')
             ->wherePivot('permission', $permission->value)
-            ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
+            ->wherePivotNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
     }
-
 
     public function notificationSettings()
     {

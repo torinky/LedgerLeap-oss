@@ -19,7 +19,6 @@ class ListFolders extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->url(FolderResource::getUrl('create'))
                 ->icon('heroicon-o-plus'),
             Actions\Action::make('tree_view')
                 ->label(__('ledger.views.tree'))

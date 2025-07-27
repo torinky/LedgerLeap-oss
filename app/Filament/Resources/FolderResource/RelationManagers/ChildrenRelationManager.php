@@ -88,7 +88,8 @@ class ChildrenRelationManager extends RelationManager
                             ->update(['parent_id' => $ownerRecord->id]);
                     })
                     ->modalWidth('3xl'),
-                Tables\Actions\CreateAction::make(),
+                Tables\Actions\CreateAction::make()
+                ->icon('heroicon-o-plus'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
