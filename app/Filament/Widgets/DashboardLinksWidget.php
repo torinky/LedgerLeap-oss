@@ -94,6 +94,12 @@ class DashboardLinksWidget extends Widget
                         'url' => route('filament.admin.resources.tags.index'),
                         'color' => 'success',
                     ],
+                    [
+                        'title' => __('ledger.auto_link_settings'), // ToDo: Add translation
+                        'icon' => 'heroicon-o-link',
+                        'url' => route('filament.admin.resources.auto-links.index'),
+                        'color' => 'info',
+                    ],
                 ],
             ],
         ];
