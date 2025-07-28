@@ -43,7 +43,7 @@ class AutoLinkResource extends Resource
                         ->live()
                         ->afterStateUpdated(function (Set $set, ?string $state) {
                             match ($state) {
-                                'redmine_ticket' => $set('pattern', '/\#(\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
+                                'redmine_ticket' => $set('pattern', '/#(\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
                                 'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
                                 'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
                                 'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/ledgers?query=$1'),
@@ -86,7 +86,7 @@ class AutoLinkResource extends Resource
                         ->live(),
                     Placeholder::make('preview_output')
                         ->label(__('auto_links.fields.preview_output'))
-                        ->content(function (Get $get) {
+                        ->content(function (Get $get) { // Use content() and return HtmlString
                             $pattern = $get('pattern');
                             $template = $get('url_template');
                             $text = $get('preview_text');
@@ -102,7 +102,7 @@ class AutoLinkResource extends Resource
                             preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
 
                             if (empty($matches)) {
-                                return e($text);
+                                return new HtmlString(e($text) . '<p class="text-sm text-gray-500 mt-2">' . __('auto_links.validations.no_matches') . '</p>');
                             }
                             
                             $openInNewTab = $get('open_in_new_tab');
@@ -111,7 +111,8 @@ class AutoLinkResource extends Resource
                             $replacedHtml = preg_replace_callback($pattern, function ($match) use ($template, $target) {
                                 $url = $template;
                                 foreach ($match as $key => $value) {
-                                    $url = str_replace('$' . $key, $value, $url);
+                                    // URLエンコードしてから置換
+                                    $url = str_replace('$' . $key, urlencode($value), $url);
                                 }
                                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';
                             }, $text);
@@ -124,8 +125,11 @@ class AutoLinkResource extends Resource
                                 }
                             }
                             $tableHtml .= '</tbody></table>';
+                            
+                            // Add HTML source view
+                            $sourceHtml = '<div class="mt-4"><h4 class="font-bold">'.__('auto_links.labels.generated_html').':</h4><pre class="p-2 mt-2 text-sm text-gray-500 bg-gray-100 rounded-md dark:bg-gray-900 dark:text-gray-400 overflow-x-auto"><code>' . e($replacedHtml) . '</code></pre></div>';
 
-                            return new HtmlString($replacedHtml . $tableHtml);
+                            return new HtmlString($replacedHtml . $tableHtml . $sourceHtml);
                         }),
                 ])->columnSpan(2),
             ])->columns(3);
