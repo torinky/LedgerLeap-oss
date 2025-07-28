@@ -82,21 +82,33 @@
 
 ## 3. 実装計画 (最終版)
 
-### ステップ 1: データ構造の定義と管理機能の基盤構築
+### ステップ 1: データ構造の定義と管理機能の基盤構築 (詳細設計)
 
 *   **目的:** 自動リンクの定義情報を格納するためのデータベーステーブルと、それを操作するための基本的なモデルおよび管理画面の雛形を作成する。
-*   **タスク:**
-    1.  **マイグレーションファイルの作成:** 
-    *   `pattern` (string): リンク対象を検出するための正規表現。
-        *   `auto_links`テーブル: `pattern`, `url_template`, `label`, `description`, `is_enabled`, `open_in_new_tab`, `priority` (integer, default: 0) を定義。
-        *   `url_template` (string): 変換先のURLテンプレート。
-        *   `label` (string): 管理画面で表示するための分かりやすい名前。
-        *   `description` (text, nullable): この定義が何をするものかの説明。
-        *   `is_enabled` (boolean, default: true): この定義を有効にするかのフラグ。
-        *   `open_in_new_tab` (boolean, default: true): リンクを新しいタブで開くかのフラグ。
-        *   `auto_link_scopes`テーブル: `auto_link_id`と、適用対象のリソースを関連付けるためのポリモーフィックリレーション (`scopeable_id`, `scopeable_type`) を定義。
-    2.  **モデルの作成:** `app/Models/AutoLink.php` を作成し、リレーションシップ (`scopeable`) を定義する。
-    3.  **Filamentリソースの作成:** `php artisan make:filament-resource AutoLink` を実行。
+*   **詳細設計:**
+    1.  **データベースマイグレーションの作成:** 2つのマイグレーションファイルを作成する。
+        *   **`create_auto_links_table`**: 自動リンク定義の本体を格納するテーブル。
+            *   `id` (主キー)
+            *   `label` (string): 管理画面で表示するための分かりやすい名前。
+            *   `pattern` (string): リンク対象を検出するための正規表現パターン。
+            *   `url_template` (string): 変換先のURLテンプレート。正規表現のキャプチャグループ `$1` などを含む。
+            *   `description` (text, nullable): この定義に関する詳細な説明。
+            *   `priority` (integer, default: 0): 複数のルールが競合した場合の適用優先順位。数値が小さいほど優先度が高い。
+            *   `is_enabled` (boolean, default: true): この定義が有効かどうかを示すフラグ。
+            *   `open_in_new_tab` (boolean, default: true): 生成されたリンクを新しいタブで開く (`target="_blank"`) かどうかのフラグ。
+            *   `timestamps`: `created_at` と `updated_at`。
+        *   **`create_auto_link_scopes_table`**: 自動リンク定義の適用範囲を格納する中間テーブル。
+            *   `auto_link_id` (foreign key): `auto_links`テーブルへの参照。
+            *   `scopeable_id` (unsigned big integer): 適用対象リソースのID（例: `folders.id`）。
+            *   `scopeable_type` (string): 適用対象リソースのモデルクラス名（例: `App\Models\Folder`）。
+            *   複合主キー (`auto_link_id`, `scopeable_id`, `scopeable_type`) を設定し、重複登録を防止する。
+    2.  **Eloquentモデルの作成:**
+        *   `app/Models/AutoLink.php` を作成する。
+        *   `$fillable` プロパティに、マイグレーションで定義したカラムを設定する。
+        *   `$casts` プロパティで、`is_enabled` と `open_in_new_tab` を `boolean` 型にキャストする。
+        *   適用範囲のモデル (`Folder` など) とのポリモーフィックリレーション (`morphedByMany`) を定義する。
+    3.  **Filamentリソースの作成:**
+        *   Artisanコマンド `php artisan make:filament-resource AutoLink` を実行し、管理画面の雛形 (`app/Filament/Resources/AutoLinkResource.php` など) を生成する。
 *   **成果物:** 必要なテーブル、モデル、およびFilamentリソースの雛形。
 
 ---
@@ -162,3 +174,19 @@
 *   **成果物:**
     *   権限のないユーザーは`AutoLink`管理画面にアクセス・操作できない状態。
     *   権限のある管理者による全ての操作が、アクティビティログに詳細に記録される状態。
+
+---
+
+## 4. 既存機能との関連性と影響
+
+本機能の実装に先立ち、既存のモデルやデータベース構造を調査し、影響範囲と最適な設計について検討しました。
+
+*   **調査対象**: `app/Models` および `database/migrations` 配下の全ファイル。
+*   **結論**: **独立したテーブル (`auto_links`, `auto_link_scopes`) を新規作成する現在の計画が最適**です。
+
+*   **理由**:
+    1.  **責務の分離**: 既存の類似機能（例: `technical_term_groups` テーブルによる類義語管理）を拡張する方法も検討しましたが、自動リンク機能には「正規表現パターン」「URLテンプレート」「優先順位」「外部リンク設定」といった独自の複雑な属性が多数必要です。既存テーブルを流用すると、本来の責務から逸脱し、モデルとテーブル構造が複雑化するため、将来のメンテナンス性を著しく損なうリスクがあります。
+    2.  **既存機能への影響回避**: 新規テーブルとして完全に分離することで、既存のデータベース構造やロジックへの変更が一切不要になります。これにより、既存機能の動作を破壊するリスクを完全に排除し、新機能の開発とテストを安全かつ独立して進めることができます。
+    3.  **カラムの妥当性**: 計画しているカラムは、機能要件をすべて満たすために必要不可欠であり、現時点での削減は困難です。
+
+以上の理由から、本機能は既存機能に影響を与えることなく、安全に実装可能であると判断しました。
