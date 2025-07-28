@@ -109,18 +109,51 @@
         *   適用範囲のモデル (`Folder` など) とのポリモーフィックリレーション (`morphedByMany`) を定義する。
     3.  **Filamentリソースの作成:**
         *   Artisanコマンド `php artisan make:filament-resource AutoLink` を実行し、管理画面の雛形 (`app/Filament/Resources/AutoLinkResource.php` など) を生成する。
-*   **成果物:** 必要なテーブル、モデル、およびFilamentリソースの雛形。
+*   **成果物:**
+    *   `database/migrations/2025_07_28_105234_create_auto_links_table.php`
+    *   `database/migrations/2025_07_28_105305_create_auto_link_scopes_table.php`
+    *   `app/Models/AutoLink.php`
+    *   `app/Filament/Resources/AutoLinkResource.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/CreateAutoLink.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/EditAutoLink.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/ListAutoLinks.php`
 
 ---
 
-### ステップ 2: リンク定義の管理UI実装 (Filament)
+### ステップ 2: リンク定義の管理UI実装 (Filament) - 詳細設計 (改訂版)
 
-*   **目的:** 管理者が安全かつ効率的に自動リンクの定義をCRUD操作できるようにする。
-*   **タスク:**
-    1.  **`AutoLinkResource.php`の編集:**
-        *   **テーブル (`table()`)**: `label`, `pattern`, `url_template`などを表示。`label`, `description`, `pattern`, `url_template`を対象とした**グローバル検索**を有効にする。
-        *   **アクション**: テーブルの各行に**複製アクション** (`ReplicateAction`) を追加する。
-        *   **フォーム (`form()`)**: `pattern`フィールドに**正規表現バリデーション**を追加。`priority`の`NumberInput`、適用範囲の`Select`を追加。そして、入力に応じて変換結果を非同期で表示する**プレビュー機能**を実装する。
+*   **目的:** 管理者が**多言語対応**されたUIで、安全かつ効率的に自動リンクの定義をCRUD操作できるようにする。**一覧画面からの状態変更**や、**強化されたバリデーション**、**複製機能**も実装する。
+*   **詳細設計:**
+    1.  **`app/Filament/Resources/AutoLinkResource.php` の `form()` メソッドの拡充:**
+        *   **多言語対応:** 全てのフォームコンポーネントのラベルを、Laravelの翻訳ヘルパー `__('auto_links.fields.label_name')` を使用して設定する。
+        *   **メインカラム:**
+            *   `TextInput::make('label')`: ラベル。必須。
+            *   `Textarea::make('description')`: 説明。
+            *   `TextInput::make('pattern')`: 正規表現パターン。必須。`live(onBlur: true)` を設定し、プレビュー機能をトリガー。
+            *   `TextInput::make('url_template')`: URLテンプレート。必須。`live(onBlur: true)` を設定。ヘルプテキストでキャプチャグループの使用法を説明 (`__('auto_links.helps.url_template')`)。
+        *   **サイドカラム:**
+            *   `NumberInput::make('priority')`: 優先度。必須、デフォルト0。
+            *   `Toggle::make('is_enabled')`: 有効/無効フラグ。
+            *   `Toggle::make('open_in_new_tab')`: 外部リンクフラグ。
+            *   `Select::make('scopeable')`: 適用範囲。複数選択可能、リレーション設定。
+        *   **プレビュー機能:**
+            *   `TextInput::make('preview_text')`: プレビュー用テキスト入力欄。`live()` 設定。
+            *   `Placeholder::make('preview_output')`: プレビュー結果表示欄。`content()` 内で `preg_replace` を実行し、結果をHTMLで表示。
+        *   **カスタムバリデーションルールの追加:**
+            *   `pattern` フィールドに、以下のチェックを行うカスタムバリデーションルール (`app/Rules/ValidAutoLinkPattern.php`) を作成して適用する。
+                1.  **正規表現の構文チェック:** `@preg_match()` を使用して、入力されたパターンがPHPで有効な正規表現であるかを確認する。
+                2.  **キャプチャグループの整合性チェック:** `url_template` 内で使用されている最大のキャプチャグループ番号（例: `$3` なら `3`）を取得し、`pattern` にその数以上のキャプチャグループが存在することを検証する。これにより、存在しないキャプチャグループの参照を防ぎます。
+    2.  **`app/Filament/Resources/AutoLinkResource.php` の `table()` メソッドの拡充:**
+        *   **表示カラム:**
+            *   `TextColumn::make('label')`: ラベル。検索・ソート可能。
+            *   `TextColumn::make('pattern')`: 正規表現パターン。検索可能。
+            *   `TextColumn::make('url_template')`: URLテンプレート。検索可能。
+            *   **`ToggleColumn::make('is_enabled')`**: **有効/無効の状態を一覧画面で直接切り替えられるトグルスイッチ**として表示する。
+            *   `TextColumn::make('priority')`: 優先度。ソート可能。
+        *   **アクション:**
+            *   既存の `EditAction`, `DeleteAction` に加え、`ReplicateAction` を追加して**複製機能**を実装します。
+    3.  **翻訳ファイルの作成:**
+        *   `lang/ja/auto_links.php` ファイルを新規に作成し、`fields` や `helps` といったキーで、フォームやテーブルで使用する各項目の日本語ラベルを定義する。
 *   **成果物:** 検索、複製、プレビュー、安全な保存が可能な、高機能な`AutoLink`管理画面。
 
 ---
