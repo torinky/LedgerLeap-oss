@@ -52,7 +52,8 @@ class AutoLinkResource extends Resource
                         }),
                     TextInput::make('label')
                         ->label(__('auto_links.fields.label'))
-                        ->required(),
+                        ->required()
+                        ->unique(ignoreRecord: true),
                     Textarea::make('description')
                         ->label(__('auto_links.fields.description')),
                     TextInput::make('pattern')
@@ -79,6 +80,18 @@ class AutoLinkResource extends Resource
                         ->label(__('auto_links.fields.open_in_new_tab'))
                         ->live() // Add live to update preview
                         ->default(true),
+                    Placeholder::make('created_at')
+                        ->label(__('auto_links.fields.created_at'))
+                        ->content(fn (?AutoLink $record): string => $record?->created_at?->diffForHumans() ?? '- '),
+                    Placeholder::make('creator.name')
+                        ->label(__('auto_links.fields.creator'))
+                        ->content(fn (?AutoLink $record): string => $record?->creator?->name ?? '- '),
+                    Placeholder::make('updated_at')
+                        ->label(__('auto_links.fields.updated_at'))
+                        ->content(fn (?AutoLink $record): string => $record?->updated_at?->diffForHumans() ?? '- '),
+                    Placeholder::make('modifier.name')
+                        ->label(__('auto_links.fields.modifier'))
+                        ->content(fn (?AutoLink $record): string => $record?->modifier?->name ?? '- '),
                 ])->columnSpan(1),
                 Section::make('Preview')->schema([
                     TextInput::make('preview_text')
@@ -154,13 +167,39 @@ class AutoLinkResource extends Resource
                 TextColumn::make('priority')
                     ->label(__('auto_links.fields.priority'))
                     ->sortable(),
+                TextColumn::make('creator.name')
+                    ->label(__('auto_links.fields.creator'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('modifier.name')
+                    ->label(__('auto_links.fields.modifier'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('created_at')
+                    ->label(__('auto_links.fields.created_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->label(__('auto_links.fields.updated_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\ReplicateAction::make(),
+                Tables\Actions\ReplicateAction::make()
+                    ->beforeReplicaSaved(function (AutoLink $replica) {
+                        $originalLabel = $replica->label;
+                        $copyCount = 1;
+                        while (AutoLink::where('label', $originalLabel . ' (' . $copyCount . ')')->exists()) {
+                            $copyCount++;
+                        }
+                        $replica->label = $originalLabel . ' (' . $copyCount . ')';
+                    }),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

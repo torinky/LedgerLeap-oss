@@ -152,35 +152,63 @@
         *   **アクション:**
             *   標準の `EditAction`, `DeleteAction` に加え、`ReplicateAction` を追加し、既存の定義をワンクリックで複製できるようにする。
 
-*   **成果物:** パターンテンプレートによる入力補助、キャプチャグループの可視化によるデバッグ支援、インライン編集、複製機能などを備え、多言語対応された、総合的でユーザーフレンドリーな`AutoLink`管理画面。
+*   **成果物:**
+    *   `lang/ja/auto_links.php`
+    *   `app/Rules/ValidAutoLinkPattern.php`
+    *   `app/Filament/Resources/AutoLinkResource.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/CreateAutoLink.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/EditAutoLink.php`
+    *   `app/Filament/Resources/AutoLinkResource/Pages/ListAutoLinks.php`
+    *   `database/migrations/2025_07_28_122854_add_creator_modifier_to_auto_links_table.php`
 
 ---
 
-### ステップ 3: リンク変換サービスの作成
+### ステップ 3: リンク変換サービスの作成 - 詳細設計
 
-*   **目的:** テキストをリンクに変換する責務を持つ、再利用可能なビジネスロジックを実装する。
-*   **タスク:**
-    1.  **サービスクラスの作成:** `app/Services/AutoLinkService.php` を作成する。
-    2.  **変換ロジックの実装:** `convert(string $text, ?ColumnDefine $column = null, $context = null): string` メソッドを実装する。
-        *   `auto_number`タイプのカラムを優先的に処理する。
-        *   コンテキスト（フォルダID等）を基に、適用すべき`AutoLink`定義をDBから取得する。
-        *   取得したルールを`priority`順にソートして適用し、一度マッチした箇所は後続のルールの対象外とする。
-        *   **（優先）自動採番カラムの特別処理:**
-            *   まず、引数で`ColumnDefine`オブジェクトが渡され、かつそのタイプが`auto_number`であるかを確認する。
-            *   もしそうであれば、そのテキスト全体を対象に、台帳内検索へのリンク（例: `/ledgers?query=...`）を生成して返し、処理を終了する。
-        *   **カスタム定義による処理:**
-            *   上記に該当しない場合、キャッシュから有効な`AutoLink`定義を全て取得する。
-            *   取得した定義をループし、`preg_replace`を使ってテキスト内のパターンに一致する箇所を`<a>`タグに置換する。この際、`url_template`内の`$1`, `$2`といった**キャプチャグループ参照が正しく展開されるように実装する。**
-            *   `open_in_new_tab`がtrueの場合は`target="_blank"`を付与する。
-*   **成果物:** 複雑なルール（優先順位、適用範囲）を考慮してテキストをリンクに変換できる、テスト可能なサービスクラス。
+*   **目的:** テキストをリンクに変換する責務を持つ、再利用可能なビジネスロジックを実装します。このサービスは、台帳レコードの表示や台帳定義の説明文など、様々な場所で利用されることを想定しています。
+*   **詳細設計:**
+    1.  **サービスクラスの作成:**
+        *   `app/Services/AutoLinkService.php` を新規作成します。
+    2.  **`convert` メソッドの実装:**
+        *   メソッドシグネチャ: `public function convert(string $text, ?ColumnDefine $column = null, $context = null): string`
+            *   `$text`: 変換対象の文字列。
+            *   `$column`: オプション。`ColumnDefine` オブジェクト。`auto_number` タイプの場合に特別処理を行うために使用します。
+            *   `$context`: オプション。適用範囲を絞り込むためのコンテキスト情報（例: `Folder` モデルのインスタンス、`LedgerDefine` モデルのインスタンスなど）。
+        *   **ロジックフロー:**
+            1.  **`auto_number` カラムの特別処理:**
+                *   `$column` が `null` でなく、かつ `$column->getType()` が `'auto_number'` であるかをチェックします。
+                *   もし該当する場合、`$text` 全体を対象に、台帳内検索へのリンク（例: `/ledgers?query=` + `$text`）を生成し、`<a>` タグで囲んで即座に返します。このリンクは常に新しいタブで開くようにします。
+                *   この処理は、カスタム定義によるリンク変換よりも**優先**されます。
+            2.  **カスタム定義によるリンク変換:**
+                *   データベースから有効な `AutoLink` 定義を全て取得します。
+                    *   **キャッシュの利用:** パフォーマンス最適化のため、取得した `AutoLink` 定義はキャッシュします。キャッシュキーは適用範囲（`$context`）によって動的に生成するか、グローバルなキャッシュを利用するかを検討します。
+                    *   **適用範囲のフィルタリング:** `$context` が提供されている場合、`auto_link_scopes` テーブルのリレーションシップを利用して、現在のコンテキストに適用される `AutoLink` 定義のみをフィルタリングします。
+                *   取得した `AutoLink` 定義を `priority` カラムの値で昇順にソートします（数値が小さいほど優先度が高い）。
+                *   ソートされた `AutoLink` 定義をループ処理します。
+                    *   各 `AutoLink` 定義の `pattern` と `url_template` を使用して、`preg_replace_callback` 関数で `$text` 内のパターンに一致する部分を `<a>` タグに置換します。
+                    *   `url_template` 内の `$1`, `$2` などのキャプチャグループ参照が、`preg_replace_callback` のコールバック関数内で正しく展開されるように実装します。
+                    *   `AutoLink` 定義の `open_in_new_tab` プロパティが `true` の場合、生成される `<a>` タグに `target="_blank"` 属性を追加します。
+                    *   **「一度マッチした文字列は後続のルールの対象外とする」**: これを実現するためには、`preg_replace_callback` の結果を次のループの `$text` に渡すことで、既にリンク化された部分が再度処理されないようにします。ただし、正規表現の性質上、オーバーラップするマッチングの制御は複雑になる可能性があるため、シンプルな実装では「最初のマッチが優先される」という挙動になることを許容します。厳密な制御が必要な場合は、マッチした範囲を記録し、次のマッチングから除外するなどの工夫が必要ですが、まずはシンプルな実装から始めます。
+    3.  **依存性の注入:**
+        *   必要に応じて、`AutoLinkService` が他のサービスやリポジトリ（例: `AutoLink` モデルを操作するためのリポジトリ）に依存する場合、コンストラクタインジェクションを利用して依存性を注入します。
+*   **成果物:**
+    *   `app/Services/AutoLinkService.php`
 
 ---
 
-### ステップ 4: 台帳詳細画面への適用と動作確認
+### ステップ 4: 台帳詳細画面への適用と動作確認 - 詳細設計
 
-*   **目的:** 作成した`AutoLinkService`を、実際の画面に組み込む。
-*   **タスク:**
-    1.  **`ColumnHtmlService`の修正:** `app/Services/Ledger/ColumnHtmlService.php`の`show()`メソッド内で、`AutoLinkService::convert()`を呼び出す際に、カラム定義オブジェクトとコンテキスト（現在の`Ledger`レコードなど）を渡すように変更する。
+*   **目的:** 作成した`AutoLinkService`を、実際の台帳詳細画面に組み込み、自動リンク機能が正しく動作することを確認します。
+*   **詳細設計:**
+    1.  **`app/Services/Ledger/ColumnHtmlService.php` の修正:**
+        *   `ColumnHtmlService` は、台帳のカラムの値をHTMLとして表示する責務を持っています。このサービス内で `AutoLinkService` を利用し、カラムのテキストを自動リンクに変換します。
+        *   `ColumnHtmlService` のコンストラクタに `AutoLinkService` を依存注入します。
+        *   `show()` メソッド内で、カラムの値をHTMLとして返す前に、`AutoLinkService::convert()` を呼び出します。
+        *   `AutoLinkService::convert()` には、カラムの値、`ColumnDefine` オブジェクト、および現在の `Ledger` レコードをコンテキストとして渡します。これにより、`auto_number` カラムの特別処理や、将来的な適用範囲のフィルタリングが可能になります。
+    2.  **動作確認:**
+        *   台帳詳細画面にアクセスし、自動リンクが設定されたテキストが正しくリンクとして表示されることを確認します。
+        *   `auto_number` タイプとして定義されたカラムの値が、台帳内検索へのリンクとして表示されることを確認します。
+        *   作成したカスタム自動リンク定義（例: Redmineチケット番号）が、台帳のテキスト内で正しくリンクに変換されることを確認します。
 *   **成果物:** 台帳詳細画面で、定義したルール通りに文字列がリンクとして表示される状態。
 
 ---
