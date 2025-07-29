@@ -9,8 +9,13 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Collection;
 use App\Helpers\AttachedFilePathHelper;
 
+use App\Services\AutoLinkService;
+use App\Models\Ledger;
+
 class ColumnHtmlService
 {
+    private AutoLinkService $autoLinkService;
+
     private $attrs = [];
 
     private $columnDefine;
@@ -40,6 +45,11 @@ class ColumnHtmlService
      */
     private array $attachmentContents;
 
+    public function __construct(AutoLinkService $autoLinkService)
+    {
+        $this->autoLinkService = $autoLinkService;
+    }
+
     /**
      * カラム定義データをもとに値をHTMLとして表示する
      *
@@ -49,9 +59,10 @@ class ColumnHtmlService
      * @param array $attrs 追加属性（HTML属性など）
      * @param string $idPrefix id属性のプレフィックス
      * @param bool $asCreate 新規作成モードかどうか
+     * @param Ledger|null $record 現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
      * @return HtmlString 生成されたHTML文字列
      */
-    public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false): HtmlString
+    public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false, ?Ledger $record = null): HtmlString
     {
         if (!$this->columnDefineData && !$columnDefineData) {
             return new HtmlString($canView ? e((string)$initialValue) : '');
@@ -77,6 +88,10 @@ class ColumnHtmlService
         } else {
             $html = $this->initialValue;
         }
+
+        // AutoLinkServiceを適用
+        $html = $this->autoLinkService->convert((string)$html, $this->columnDefineData, $record);
+
         return new HtmlString($this->highlightKeywords($html) ?? '');
     }
 

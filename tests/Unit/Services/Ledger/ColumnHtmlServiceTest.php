@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\ColumnDefine;
+use App\Models\Ledger;
+use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
 
 it('column value is array', function () {
@@ -14,12 +16,16 @@ it('column value is array', function () {
         false,
         false
     );
-    $columnHtml = new ColumnHtmlService;
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService);
     $columnHtml->mount($columnDefine, ['aaa' => 'aaa', 'ccc' => 'ccc']);
 
     $result = $columnHtml->show($columnDefine, [
         'aaa' => true,
-    ]);
+    ], true, [], '', false, null);
 
     $expectedHtml = '<span class="' . ColumnHtmlService::BADGE_CLASS_NAME . '">aaa</span>';
     expect($result->toHtml())->toBe($expectedHtml);
@@ -37,8 +43,11 @@ it('show returns empty string when no initial value', function () {
         false
     );
 
-    $columnHtml = new ColumnHtmlService;
-    $result = $columnHtml->show($columnDefine, null);
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService);
+    $result = $columnHtml->show($columnDefine, null, true, [], '', false, null);
 
     expect($result->toHtml())->toBe('');
 });
@@ -55,11 +64,14 @@ it('highlight keywords in html output', function () {
         false
     );
 
-    $columnHtml = new ColumnHtmlService;
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService);
     $columnHtml->mount($columnDefine, 'This is a test content with keywords');
     $columnHtml->setHighlightKeywords(['test', 'keywords']);
 
-    $result = $columnHtml->show($columnDefine, 'This is a test content with keywords');
+    $result = $columnHtml->show($columnDefine, 'This is a test content with keywords', true, [], '', false, null);
 
     $expectedHtml = 'This is a <span class="text-error font-bold text-lg">test</span> content with <span class="text-error font-bold text-lg">keywords</span>';
     expect($result->toHtml())->toBe($expectedHtml);

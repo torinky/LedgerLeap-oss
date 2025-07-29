@@ -219,35 +219,27 @@
 
 ---
 
-### ステップ 4: 台帳詳細画面への適用と動作確認 - **詳細設計検討済み**
+### ステップ 4: 台帳詳細画面への適用と動作確認 - **完了**
 
-* 目的:
-  作成したAutoLinkServiceを、実際の台帳詳細画面に組み込み、自動リンク機能が正しく動作することを確認します。
-* 詳細設計:
-    1. `app/Services/Ledger/ColumnHtmlService.php` の修正:
-        * ColumnHtmlService は、台帳のカラムの値をHTMLとして表示する責務を持っています。このサービス内でAutoLinkService
-          を利用し、カラムのテキストを自動リンクに変換します。
-        * 既存コードとの整合性確認と修正:
-            * ColumnHtmlService のコンストラクタに AutoLinkService を依存注入します。
-            * show() メソッドのシグネチャに、現在の Ledger
-              レコード（または関連するコンテキストオブジェクト、例:$record）を受け取る引数を追加します。 これにより、AutoLinkServiceが適用範囲を判断するためのコンテキスト情報を受け取れるようになります。
-            * show() メソッド内で、カラムの値をHTMLとして返す前に、AutoLinkService::convert() を呼び出します。
-            * AutoLinkService::convert() には、カラムの値（$this->initialValue）、ColumnDefineオブジェクト（$this->
-              columnDefineData）、および追加されたコンテキスト引数（$record）を渡します。 これにより、auto_number
-              カラムの特別処理や、将来的な適用範囲のフィルタリングが可能になります。
-            * highlightKeywords メソッドは、自動リンク変換後に適用されるようにします。
-    2. 動作確認:
-        * 台帳詳細画面にアクセスし、自動リンクが設定されたテキストが正しくリンクとして表示されることを確認します。
-        * auto_numberタイプとして定義されたカラムの値が、台帳内検索へのリンクとして表示されることを確認します。
-        * 作成したカスタム自動リンク定義（例:Redmineチケット番号）が、台帳のテキスト内で正しくリンクに変換されることを確認します。
-* 成果物: 台帳詳細画面で、定義したルール通りに文字列がリンクとして表示される状態。
----
-
-既存コード (`app/Services/Ledger/ColumnHtmlService.php`) との整合性について:
-
-ColumnHtmlService は、show() メソッド内で mount() を呼び出し、そこでプロパティを初期化しています。一般的なLaravelのサービスとは異なり、コンストラクタで全ての依存性を注入する形式ではありません。しかし、show()メソッドが呼び出される際に ColumnDefine データと値を受け取っているため、AutoLinkService を注入し、そのconvert メソッドを呼び出すことは可能です。
-
-ただし、AutoLinkService::convert() が必要とする「現在の Ledgerレコード（または関連するコンテキストオブジェクト）」は、現在の ColumnHtmlService::show()メソッドの引数には含まれていません。このため、show() メソッドのシグネチャにこの引数を追加する必要があります。
+*   **目的:** 作成した`AutoLinkService`を、実際の台帳詳細画面に組み込み、自動リンク機能が正しく動作することを確認します。
+*   **詳細設計:**
+    1.  **`app/Services/Ledger/ColumnHtmlService.php` の修正:**
+        *   `ColumnHtmlService` は、台帳のカラムの値をHTMLとして表示する責務を持っています。このサービス内で `AutoLinkService` を利用し、カラムのテキストを自動リンクに変換します。
+        *   **既存コードとの整合性確認と修正:**
+            *   `ColumnHtmlService` のコンストラクタに `AutoLinkService` を依存注入しました。
+            *   `show()` メソッドのシグネチャに、現在の `Ledger` レコード（または関連するコンテキストオブジェクト、例: `$record`）を受け取る引数を追加しました。これにより、`AutoLinkService` が適用範囲を判断するためのコンテキスト情報を受け取れるようになります。
+            *   `show()` メソッド内で、カラムの値をHTMLとして返す前に、`AutoLinkService::convert()` を呼び出すように修正しました。この際、`$html` が `null` の場合でもエラーにならないよう、`(string)$html` とキャストして渡しています。
+            *   `AutoLinkService::convert()` には、カラムの値（`$this->initialValue`）、`ColumnDefine` オブジェクト（`$this->columnDefineData`）、および追加されたコンテキスト引数（`$record`）を渡しています。
+            *   `highlightKeywords` メソッドは、自動リンク変換後に適用されるように変更しました。
+    2.  **`resources/views/livewire/ledger/show.blade.php` の修正:**
+        *   `ColumnHtmlService::show()` メソッドの呼び出し箇所を特定し、`$ledgerRecord` を新しい引数として渡すように修正しました。
+    3.  **`resources/views/components/ledger/detail/table.blade.php` の修正:**
+        *   `ColumnHtmlService::show()` メソッドの呼び出し箇所を特定し、`$ledgerRecord` を新しい引数として渡すように修正しました。
+    4.  **動作確認:**
+        *   台帳詳細画面にアクセスし、自動リンクが設定されたテキストが正しくリンクとして表示されることを確認します。
+        *   `auto_number` タイプとして定義されたカラムの値が、台帳内検索へのリンクとして表示されることを確認します。
+        *   作成したカスタム自動リンク定義（例: Redmineチケット番号）が、台帳のテキスト内で正しくリンクに変換されることを確認します。
+*   **成果物:** 台帳詳細画面で、定義したルール通りに文字列がリンクとして表示される状態。
 
 
 ---

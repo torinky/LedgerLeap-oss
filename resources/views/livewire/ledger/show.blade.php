@@ -235,7 +235,7 @@
                                             @elseif($change['column_define_current'])
                                                 {{ ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
                                                               ->setAttachmentContents($change['current_attachment_contents'] ?? [])
-                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $searchKeywords ?? []) }}
+                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $ledgerRecord) }}
                                             @else
                                                 <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                             @endif
