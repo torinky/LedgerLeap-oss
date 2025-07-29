@@ -9,9 +9,17 @@ use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
+use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class AutoLinkService
 {
+    private MarkdownRenderer $markdownRenderer;
+
+    public function __construct(MarkdownRenderer $markdownRenderer)
+    {
+        $this->markdownRenderer = $markdownRenderer;
+    }
+
     /**
      * テキストを自動リンクに変換する
      *
@@ -28,6 +36,9 @@ class AutoLinkService
             $url = url('/ledgers?query=' . urlencode($text));
             return '<a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . e($text) . '</a>';
         }
+
+        // MarkdownをHTMLに変換
+        $html = $this->markdownRenderer->toHtml($text);
 
         // 2. カスタム定義によるリンク変換
         $cacheKey = $this->getCacheKeyForContext($context);
@@ -48,23 +59,25 @@ class AutoLinkService
             return $query->orderBy('priority', 'asc')->get();
         });
 
-        $convertedText = $text;
+        $convertedHtml = $html;
 
         foreach ($autoLinks as $autoLink) {
             // preg_replace_callback を使用して、マッチした部分をリンクに置換
             // 一度マッチした文字列は後続のルールの対象外とするため、変換結果を次のループに渡す
-            $convertedText = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
+            $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
                 $url = $autoLink->url_template;
-                foreach ($matches as $key => $value) {
+                // $1, $2 などのキャプチャグループを置換
+                // $matches[0] は全体マッチなのでスキップ
+                for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
                     // URLエンコードしてから置換
-                    $url = str_replace('$' . $key, urlencode($value), $url);
+                    $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
                 }
                 $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
-            }, $convertedText);
+            }, $convertedHtml);
         }
 
-        return $convertedText;
+        return $convertedHtml;
     }
 
     /**
@@ -77,10 +90,13 @@ class AutoLinkService
     {
         if ($context instanceof Folder) {
             return 'auto_links_folder_' . $context->id;
-        } elseif ($context instanceof LedgerDefine) {
-            return 'auto_links_ledger_define_' . $context->id;
-        } else {
-            return 'auto_links_global';
         }
+
+        if ($context instanceof LedgerDefine) {
+            return 'auto_links_ledger_define_' . $context->id;
+        }
+
+        return 'auto_links_global';
     }
+
 }

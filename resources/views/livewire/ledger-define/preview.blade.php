@@ -78,9 +78,7 @@
                         wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! $ledgerDefineRecord->detail_description !!}
-                    </x-markdown>
+                    {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->detail_description, null, $ledgerDefineRecord) !!}
                 </x-slot:content>
             </x-mary-collapse>
         </x-mary-accordion>
