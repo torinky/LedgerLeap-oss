@@ -249,7 +249,7 @@
 *   **目的:** 他の画面にも自動リンク機能を展開し、パフォーマンスを最適化する。
 *   **詳細設計:**
 
-    ##### 5.1. 台帳一覧画面 (`RecordsTable`) への適用
+    ##### 5.1. 台帳一覧画面 (`RecordsTable`) への適用 - **完了**
 
     *   **対象ファイル:** `app/Livewire/Ledger/RecordsTable.php` および関連するBladeビュー
     *   **現状分析:** `RecordsTable`は、台帳レコードの各カラムの値を表示するために、`ColumnHtmlService`を使用しています。`ColumnHtmlService`は既に`AutoLinkService`を呼び出すように修正されているため、`RecordsTable`側で`ColumnHtmlService`に適切なコンテキスト（`$ledgerRecord`）が渡されているかを確認し、必要に応じて修正します。
@@ -257,6 +257,15 @@
         1.  `app/Livewire/Ledger/RecordsTable.php`の`render()`メソッド、またはカラムの値をレンダリングする部分を特定します。
         2.  各カラムの値を表示する際に、`ColumnHtmlService::show()`メソッドに現在の`$ledgerRecord`インスタンスを引数として渡すように修正します。これにより、`ColumnHtmlService`内で`AutoLinkService`がスコープに応じたリンク定義を適用できるようになります。
         3.  もし`ColumnHtmlService`が使用されていない場合、`RecordsTable`の各カラムのレンダリングロジックに直接`AutoLinkService`を注入し、`convert()`メソッドを呼び出すように変更します。ただし、既存の`ColumnHtmlService`の利用を優先し、一貫性を保つことを推奨します。
+
+**変更内容の要約:**
+*   **変更ファイル:** `resources/views/components/ledger/table-row.blade.php`
+*   **変更詳細:**
+    *   `ColumnHtml::show()` メソッドの呼び出しにおいて、第7引数として `$ledgerRecord` を追加しました。
+    *   変更前: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView)`
+    *   変更後: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord)`
+*   **目的:**
+    *   `ColumnHtmlService` が `AutoLinkService` を呼び出す際に、現在の台帳レコード (`$ledgerRecord`) をコンテキストとして渡せるようにするためです。これにより、`AutoLinkService` は台帳レコードの情報を利用して、より正確な自動リンクの適用範囲を判断し、適切なリンクを生成できるようになります。特に、将来的に自動リンクの適用範囲が特定の台帳レコードに限定されるような機能が追加された場合に、このコンテキスト情報が活用されます.
 
     ##### 5.2. 台帳定義の管理画面 (`LedgerDefineResource`) への適用
 

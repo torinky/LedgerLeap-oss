@@ -50,7 +50,7 @@
             {{ ColumnHtml::setHighlightKeywords($keywords)
                          ->setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
                          ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView) }}
+                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord) }}
         @endif
         </td>
     @endforeach
