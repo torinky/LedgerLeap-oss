@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AutoLinkResource\Pages;
 use App\Models\AutoLink;
 use App\Rules\ValidAutoLinkPattern;
+use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -19,6 +20,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
 class AutoLinkResource extends Resource
@@ -44,7 +46,8 @@ class AutoLinkResource extends Resource
                         ->afterStateUpdated(function (Set $set, ?string $state) {
                             match ($state) {
                                 'redmine_ticket' => $set('pattern', '/#(\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
-                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
+                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\
+/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
                                 'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
                                 'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/ledgers?query=$1'),
                                 default => null,
@@ -66,6 +69,24 @@ class AutoLinkResource extends Resource
                         ->required()
                         ->live(onBlur: true)
                         ->helperText(__('auto_links.helps.url_template')),
+                    Section::make(__('auto_links.sections.scope'))
+                        ->description(__('auto_links.helps.scope_description'))
+                        ->schema([
+                            SelectTree::make('folders')
+                                ->label(__('auto_links.fields.folders'))
+                                ->relationship(
+                                    relationship: 'folders', // リレーション名
+                                    titleAttribute: 'title', // 表示するカラム名
+                                    parentAttribute: 'parent_id' // 親を識別するカラム名
+                                )
+                                ->enableBranchNode() // 親ノード（フォルダ）も選択可能にする
+                                ->defaultOpenLevel(1)
+                                ->multiple() // 複数のフォルダを選択可能にする
+                                ->searchable()
+                                ->placeholder(__('auto_links.placeholders.folders')),
+                            // 必要に応じて、台帳定義を適用範囲にするコンポーネントもここに追加
+                        ])
+                        ->collapsible(),
                 ])->columnSpan(2),
                 Section::make()->schema([
                     TextInput::make('priority')
@@ -80,6 +101,7 @@ class AutoLinkResource extends Resource
                         ->label(__('auto_links.fields.open_in_new_tab'))
                         ->live() // Add live to update preview
                         ->default(true),
+
                     Placeholder::make('created_at')
                         ->label(__('auto_links.fields.created_at'))
                         ->content(fn (?AutoLink $record): string => $record?->created_at?->diffForHumans() ?? '- '),

@@ -45,24 +45,58 @@ class AutoLinkService
             $query = AutoLink::where('is_enabled', true);
 
             if ($context) {
-                // ポリモーフィックリレーションシップを使用して適用範囲をフィルタリング
-                // 現状はFolderとLedgerDefineを想定
-                // スコープ設定機能が未実装のため、一時的に無効化
-                /*
-                if ($context instanceof Folder || $context instanceof LedgerDefine) {
-                    $query->whereHas('scopes', function ($q) use ($context) {
-                        $q->where('auto_link_scopes.scopeable_id', $context->id)
-                            ->where('auto_link_scopes.scopeable_type', $context->getMorphClass());
-                    });
-                }
-                */
+                $query->where(function ($q) use ($context) {
+                    // 1. スコープが設定されていないグローバルな定義を対象にする
+                    $q->whereDoesntHave('scopes');
+
+                    // 2. コンテキストに応じたスコープを持つ定義を対象に追加する
+                    $folder = null;
+                    if ($context instanceof Folder) {
+                        $folder = $context;
+                    } elseif ($context instanceof LedgerDefine) {
+                        $folder = $context->folder;
+                    } elseif ($context instanceof Ledger) {
+                        $folder = $context->define->folder;
+                    }
+
+                    // フォルダのコンテキストがある場合、その階層に紐づく定義を取得
+                    if ($folder) {
+                        $folderIds = $folder->descendantsAndSelf($folder->id)->pluck('id');
+                        $q->orWhereHas('scopes', function ($subQuery) use ($context, $folderIds) {
+                            $subQuery->where(function ($s) use ($context, $folderIds) {
+                                // スコープがフォルダ階層のいずれかに設定されている
+                                $s->where('scopeable_type', (new Folder)->getMorphClass())
+                                  ->whereIn('scopeable_id', $folderIds);
+
+                                // もしコンテキストが台帳定義なら、それに直接紐づくスコープも考慮
+                                if ($context instanceof LedgerDefine) {
+                                    $s->orWhere(function($orS) use ($context) {
+                                        $orS->where('scopeable_id', $context->id)
+                                            ->where('scopeable_type', $context->getMorphClass());
+                                    });
+                                }
+                            });
+                        });
+                    }
+                    Log::debug('AutoLinkService: Retrieved AutoLinks for folder ', [
+                        'contextId'=> $context?->id ,
+                        'folderId'=>$folder->id,
+                        'folderIds'=>$folderIds ?? null,
+                    ]);
+                });
             }
 
             return $query->orderBy('priority', 'asc')->get();
         });
 //        $autoLinks = AutoLink::where('is_enabled', true)->orderBy('priority', 'asc')->get();
 
-        Log::debug('AutoLinkService: Retrieved AutoLinks', ['cacheKey' => $cacheKey, 'autoLinksCount' => count($autoLinks),  'column' => $column?->type ,'autoLinks' => $autoLinks->toArray()]);
+        Log::debug('AutoLinkService: Retrieved AutoLinks', [
+            'cacheKey' => $cacheKey,
+            'autoLinksCount' => count($autoLinks),
+            'column' => $column?->type ,
+            'contextId'=> $context?->id ,
+            'autoLinks' => $autoLinks->toArray()
+        ]);
 
         $convertedHtml = $text;
 
