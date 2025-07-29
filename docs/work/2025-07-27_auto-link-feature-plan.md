@@ -246,12 +246,59 @@
 
 ### ステップ 5: 適用範囲の拡大と最適化 - **未着手**
 
-* **目的:** 他の画面にも自動リンク機能を展開し、パフォーマンスを最適化する。
-* **タスク:**
-    1. 台帳一覧画面 (`RecordsTable`) や **台帳定義の管理画面 (`LedgerDefineResource`)** など、他のテキスト表示箇所にも
-       `AutoLinkService`を適用する。特に、台帳定義の`description`カラムを表示する際に、`AutoLinkService`を通すようにする。
-    2. `AutoLinkService`内で、DBから取得したリンク定義をキャッシュする仕組みを導入する。
-* **成果物:** システム内の複数の画面で自動リンク機能が有効になり、キャッシュにより快適なパフォーマンスが維持される状態。
+*   **目的:** 他の画面にも自動リンク機能を展開し、パフォーマンスを最適化する。
+*   **詳細設計:**
+
+    ##### 5.1. 台帳一覧画面 (`RecordsTable`) への適用
+
+    *   **対象ファイル:** `app/Livewire/Ledger/RecordsTable.php` および関連するBladeビュー
+    *   **現状分析:** `RecordsTable`は、台帳レコードの各カラムの値を表示するために、`ColumnHtmlService`を使用しています。`ColumnHtmlService`は既に`AutoLinkService`を呼び出すように修正されているため、`RecordsTable`側で`ColumnHtmlService`に適切なコンテキスト（`$ledgerRecord`）が渡されているかを確認し、必要に応じて修正します。
+    *   **変更内容:**
+        1.  `app/Livewire/Ledger/RecordsTable.php`の`render()`メソッド、またはカラムの値をレンダリングする部分を特定します。
+        2.  各カラムの値を表示する際に、`ColumnHtmlService::show()`メソッドに現在の`$ledgerRecord`インスタンスを引数として渡すように修正します。これにより、`ColumnHtmlService`内で`AutoLinkService`がスコープに応じたリンク定義を適用できるようになります。
+        3.  もし`ColumnHtmlService`が使用されていない場合、`RecordsTable`の各カラムのレンダリングロジックに直接`AutoLinkService`を注入し、`convert()`メソッドを呼び出すように変更します。ただし、既存の`ColumnHtmlService`の利用を優先し、一貫性を保つことを推奨します。
+
+    ##### 5.2. 台帳定義の管理画面 (`LedgerDefineResource`) への適用
+
+    *   **対象ファイル:** `app/Filament/Resources/LedgerDefineResource.php`
+    *   **現状分析:** `LedgerDefineResource`の`table()`メソッド内で、`description`カラムは通常`TextColumn`として定義されています。`TextColumn`はデフォルトでは生のテキストを表示するため、自動リンクを適用するにはカスタムのレンダリング処理が必要です。
+    *   **変更内容:**
+        1.  `app/Filament/Resources/LedgerDefineResource.php`を開き、`table()`メソッド内の`description`カラムの定義を探します。
+        2.  `TextColumn::make('description')`の定義を以下のように修正し、`html()`メソッドと`formatUsing()`メソッドを組み合わせて`AutoLinkService`を呼び出すようにします。
+            *   `html()`: カラムの内容をHTMLとしてレンダリングすることをFilamentに伝えます。
+            *   `formatUsing(fn (string $state, \Filament\Tables\Columns\TextColumn $column): string => app(\App\Services\AutoLinkService::class)->convert($state, null, $column->getRecord()))`:
+                *   `app(\App\Services\AutoLinkService::class)`: サービスコンテナから`AutoLinkService`のインスタンスを取得します。
+                *   `convert($state, null, $column->getRecord())`: `description`カラムのテキスト（`$state`）を`AutoLinkService`で変換します。`$column->getRecord()`は現在の`LedgerDefine`インスタンスであり、これをコンテキストとして渡すことで、将来的に`LedgerDefine`に紐づくスコープが定義された場合に適切に機能するようにします。
+        3.  同様に、`form()`メソッド内の`description`フィールド（もし表示される場合）についても、表示時に`AutoLinkService`を適用することを検討します。ただし、フォーム入力中はリンク化の必要がないため、表示専用の`Placeholder`や`ViewField`を使用する場合に限定します。
+
+    ##### 5.3. `AutoLinkService`におけるリンク定義のキャッシュ導入
+
+    *   **対象ファイル:** `app/Services/AutoLinkService.php`, `app/Models/AutoLink.php` (またはObserver)
+    *   **現状分析:** 現在、`AutoLinkService::convert()`メソッド内で`AutoLink`定義がデータベースから直接取得されています。これをキャッシュすることで、データベースへのアクセス回数を減らし、パフォーマンスを向上させます。
+    *   **変更内容:**
+        1.  **`AutoLinkService.php`の修正:**
+            *   `convert()`メソッド内で`AutoLink`定義を取得するロジックを、Laravelの`Cache`ファサードを利用するように変更します。
+            *   **キャッシュキーの設計:**
+                *   スコープ（`$context`）が提供される場合: `auto_links_scoped_{context_type}_{context_id}` (例: `auto_links_scoped_App_Models_Folder_123`)
+                *   スコープが提供されない場合（グローバルなリンク定義）: `auto_links_global`
+                *   これにより、スコープごとに異なるキャッシュエントリが作成され、無関係なスコープのキャッシュが影響を受けないようにします。
+            *   **キャッシュの利用:** `Cache::remember()`メソッドを使用して、指定されたキーでキャッシュが存在すればそれを返し、なければクロージャを実行して結果をキャッシュに保存するようにします。
+            *   **キャッシュ期間:** `forever()`を使用するか、適切な期間（例: `60 * 24`分）を設定します。
+        2.  **キャッシュの無効化:**
+            *   `AutoLink`モデルの変更（作成、更新、削除）時に、関連するキャッシュエントリを無効化するメカニズムを実装します。
+            *   **方法1: モデルイベントリスナー (推奨)**
+                *   `app/Models/AutoLink.php`に`boot()`メソッドを追加し、`created`, `updated`, `deleted`イベントをリッスンします。
+                *   各イベント内で、`Cache::forget('auto_links_global')`を呼び出し、グローバルキャッシュを無効化します。
+                *   もしスコープごとのキャッシュを厳密に管理する場合、`AutoLink`と`AutoLinkScope`のリレーションシップを考慮し、関連するスコープのキャッシュも無効化する必要があります。これは複雑になる可能性があるため、まずはグローバルキャッシュの無効化から始め、必要に応じて拡張します。
+            *   **方法2: Observerの利用**
+                *   `php artisan make:observer AutoLinkObserver --model=AutoLink`でObserverを作成し、`AppServiceProvider`に登録します。
+                *   Observerの`created`, `updated`, `deleted`メソッド内でキャッシュを無効化します。
+
+*   **成果物:**
+    *   台帳一覧画面で、台帳レコード内のテキストが自動リンクとして表示される。
+    *   台帳定義の管理画面で、`description`カラムのテキストが自動リンクとして表示される。
+    *   `AutoLinkService`が`AutoLink`定義をキャッシュから取得するようになり、パフォーマンスが向上する。
+    *   `AutoLink`定義の変更時に、関連するキャッシュが適切に無効化される。
 
 ---
 
