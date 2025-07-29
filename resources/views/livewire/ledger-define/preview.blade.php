@@ -1,9 +1,10 @@
+@php use App\Services\AutoLinkService; @endphp
 <div>
 
 
     <div
-        class="background-image-change"
-        x-data="{
+            class="background-image-change"
+            x-data="{
             currentBg: null,
             updateBackground(columnId) {
                 this.currentBg = $wire.backgroundImages[columnId] || null;
@@ -24,7 +25,7 @@
                 }
             }
         }"
-        x-init="focusFirstInput()"
+            x-init="focusFirstInput()"
     >
 
 
@@ -51,11 +52,11 @@
                 <x-slot:heading>
                     {{--                    {{__('ledger.define.create_description')}}--}}
                     <button
-                        wire:click="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
+                            wire:click="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! $ledgerDefineRecord->create_description !!}
+                        {!! app(AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
                     </x-markdown>
                 </x-slot:content>
             </x-mary-collapse>
@@ -63,11 +64,11 @@
                 <x-slot:heading>
                     {{--                    {{__('ledger.define.list_description')}}--}}
                     <button
-                        wire:click="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
+                            wire:click="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! $ledgerDefineRecord->list_description !!}
+                        {!! app(AutoLinkService::class)->convert($ledgerDefineRecord->list_description, null, $ledgerDefineRecord) !!}
                     </x-markdown>
                 </x-slot:content>
             </x-mary-collapse>
@@ -75,10 +76,10 @@
                 <x-slot:heading>
                     {{--                    {{__('ledger.define.detail_description')}}--}}
                     <button
-                        wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
+                            wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->detail_description, null, $ledgerDefineRecord) !!}
+                    {!! app(AutoLinkService::class)->convert($ledgerDefineRecord->detail_description, null, $ledgerDefineRecord) !!}
                 </x-slot:content>
             </x-mary-collapse>
         </x-mary-accordion>
@@ -90,12 +91,12 @@
         <div class=" space-y-3 mt-5 h-fit">
             @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
                 <div
-                    x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                    class="opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80  {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                    @if($loop->first)
-                        x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                    x-init="updateBackground('{{ $columnDefine->id }}')"
-                    @endif
+                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                        class="opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80  {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                        @if($loop->first)
+                            x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                        x-init="updateBackground('{{ $columnDefine->id }}')"
+                        @endif
                 >
                     @if($columnDefine->type=='files')
                         <div class="form-control">
@@ -124,11 +125,11 @@
                             }
                         @endphp
                         <x-dynamic-component
-                            :component="$componentName"
-                            wire:model.live="content"
-                            :columnDefine="$columnDefine"
-                            :ledgerRecord="$ledgerRecord??[]"
-                            :isDemo="true"
+                                :component="$componentName"
+                                wire:model.live="content"
+                                :columnDefine="$columnDefine"
+                                :ledgerRecord="$ledgerRecord??[]"
+                                :isDemo="true"
                         />
                     @endif
                 </div>

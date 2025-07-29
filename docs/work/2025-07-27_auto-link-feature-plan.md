@@ -274,7 +274,7 @@
 
     #### 5.2.1 問題点と見直し
 
-    ##### 5.2.1.1. ** Markdownパースと自動リンク適用順序の問題: **
+    ##### 5.2.1.1. **Markdownパースと自動リンク適用順序の問題:**
     *   **旧アプローチの問題:** `resources/views/livewire/ledger-define/preview.blade.php`内で`x-markdown`コンポーネントの内部で`AutoLinkService::convert()`を呼び出していたため、MarkdownがHTMLに変換される前に自動リンクが適用され、結果的に生成されたリンクのHTMLタグがエスケープされて表示されていました。
     *   **見直し後の解決策:** `AutoLinkService`がMarkdownのパースと自動リンクの適用を両方行うように責務を変更します。これにより、`AutoLinkService`が最終的にHTMLを返すため、BladeビューではそのHTMLを直接表示するだけでよくなります。
 

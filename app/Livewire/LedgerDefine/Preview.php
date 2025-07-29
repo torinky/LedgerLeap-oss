@@ -4,6 +4,7 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -44,6 +45,10 @@ class Preview extends Component
 
     public function render()
     {
+/*        Log::debug('LedgerDefine Preview: create_description', ['content' => $this->ledgerDefineRecord->create_description]);
+        Log::debug('LedgerDefine Preview: list_description', ['content' => $this->ledgerDefineRecord->list_description]);
+        Log::debug('LedgerDefine Preview: detail_description', ['content' => $this->ledgerDefineRecord->detail_description]);*/
+
         return view('livewire.ledger-define.preview');
     }
 

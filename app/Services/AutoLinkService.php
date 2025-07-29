@@ -47,24 +47,28 @@ class AutoLinkService
             if ($context) {
                 // ポリモーフィックリレーションシップを使用して適用範囲をフィルタリング
                 // 現状はFolderとLedgerDefineを想定
+                // スコープ設定機能が未実装のため、一時的に無効化
+                /*
                 if ($context instanceof Folder || $context instanceof LedgerDefine) {
                     $query->whereHas('scopes', function ($q) use ($context) {
                         $q->where('auto_link_scopes.scopeable_id', $context->id)
                             ->where('auto_link_scopes.scopeable_type', $context->getMorphClass());
                     });
                 }
+                */
             }
 
             return $query->orderBy('priority', 'asc')->get();
         });
+//        $autoLinks = AutoLink::where('is_enabled', true)->orderBy('priority', 'asc')->get();
 
-        Log::debug('AutoLinkService: Retrieved AutoLinks', ['autoLinks' => $autoLinks->toArray()]);
+        Log::debug('AutoLinkService: Retrieved AutoLinks', ['cacheKey' => $cacheKey, 'autoLinksCount' => count($autoLinks),  'column' => $column?->type ,'autoLinks' => $autoLinks->toArray()]);
 
         $convertedHtml = $text;
 
         foreach ($autoLinks as $autoLink) {
-            Log::debug('AutoLinkService: Processing AutoLink', ['pattern' => $autoLink->pattern, 'url_template' => $autoLink->url_template]);
-            Log::debug('AutoLinkService: Before preg_replace_callback', ['convertedText' => $convertedHtml]);
+//            Log::debug('AutoLinkService: Processing AutoLink', ['pattern' => $autoLink->pattern, 'url_template' => $autoLink->url_template]);
+//            Log::debug('AutoLinkService: Before preg_replace_callback', ['convertedText' => $convertedHtml]);
             // preg_replace_callback を使用して、マッチした部分をリンクに置換
             // 一度マッチした文字列は後続のルールの対象外とするため、変換結果を次のループに渡す
             $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
@@ -78,7 +82,7 @@ class AutoLinkService
                 $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
             }, $convertedHtml);
-            Log::debug('AutoLinkService: After preg_replace_callback', ['convertedText' => $convertedHtml]);
+//            Log::debug('AutoLinkService: After preg_replace_callback', ['convertedText' => $convertedHtml]);
         }
 
         // MarkdownをHTMLに変換
