@@ -244,138 +244,85 @@
 
 ---
 
-### ステップ 5: 適用範囲の拡大と最適化 - **未着手**
+### ステップ 5: 適用範囲の拡大と最適化 - **進行中**
 
-*   **目的:** 他の画面にも自動リンク機能を展開し、パフォーマンスを最適化する。
+*   **目的:** 自動リンク機能の適用範囲を台帳レコード本体以外にも拡大し、ユーザーシナリオを網羅する。さらに、管理者が適用範囲を直感的に設定できるUIを提供し、システム全体のパフォーマンスを最適化する。
+
 *   **詳細設計:**
 
-    ##### 5.1. 台帳一覧画面 (`RecordsTable`) への適用 - **完了**
+    *   **5.1. 台帳一覧画面 (`RecordsTable`) への適用 - <span style="color: green;">完了</span>**
+        *   **背景・目的:** `ColumnHtmlService`は既に`AutoLinkService`を呼び出すように修正済みであったため、`RecordsTable`から`ColumnHtmlService`を呼び出す際に、コンテキスト情報として現在の`$ledgerRecord`を渡す必要があった。これにより、将来的にレコード単位でリンクの挙動を変える拡張が可能になる。
+        *   **変更内容の要約:**
+            *   **変更ファイル:** `resources/views/components/ledger/table-row.blade.php`
+            *   **変更詳細:** `ColumnHtml::show()` メソッドの呼び出しにおいて、第7引数として `$ledgerRecord` を追加した。
+                *   変更前: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView)`
+                *   変更後: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord)`
+        *   **成果:** `AutoLinkService`が台帳レコードのコンテキストを認識可能になった。
 
-    *   **対象ファイル:** `app/Livewire/Ledger/RecordsTable.php` および関連するBladeビュー
-    *   **現状分析:** `RecordsTable`は、台帳レコードの各カラムの値を表示するために、`ColumnHtmlService`を使用しています。`ColumnHtmlService`は既に`AutoLinkService`を呼び出すように修正されているため、`RecordsTable`側で`ColumnHtmlService`に適切なコンテキスト（`$ledgerRecord`）が渡されているかを確認し、必要に応じて修正します。
-    *   **変更内容:**
-        1.  `app/Livewire/Ledger/RecordsTable.php`の`render()`メソッド、またはカラムの値をレンダリングする部分を特定します。
-        2.  各カラムの値を表示する際に、`ColumnHtmlService::show()`メソッドに現在の`$ledgerRecord`インスタンスを引数として渡すように修正します。これにより、`ColumnHtmlService`内で`AutoLinkService`がスコープに応じたリンク定義を適用できるようになります。
-        3.  もし`ColumnHtmlService`が使用されていない場合、`RecordsTable`の各カラムのレンダリングロジックに直接`AutoLinkService`を注入し、`convert()`メソッドを呼び出すように変更します。ただし、既存の`ColumnHtmlService`の利用を優先し、一貫性を保つことを推奨します。
+    *   **5.2. 台帳定義のプレビュー画面 (`Preview.php`) への適用 - <span style="color: green;">完了</span>**
+        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」に基づき、台帳定義の各種説明文（`create_description`, `list_description`, `detail_description`）に自動リンク機能を適用する必要があった。当初、`x-markdown`コンポーネント内で`AutoLinkService::convert()`を呼び出していたが、MarkdownがHTMLに変換される前にリンク処理が走り、HTMLタグがエスケープされる問題が発生した。
+        *   **調査と判断:** この問題を解決するため、`AutoLinkService`の責務を見直し、Markdownのパースとリンク変換の両方を行うように変更することが最適だと判断した。これにより、処理の順序が保証され、ビューは最終的なHTMLを受け取るだけで済むようになる。
+        *   **変更内容:**
+            1.  `app/Services/AutoLinkService.php`のコンストラクタで`Spatie\LaravelMarkdown\MarkdownRenderer`を依存注入。
+            2.  `convert`メソッド内で、まず`$this->markdownRenderer->toHtml($text)`を呼び出してMarkdownをHTMLに変換し、その後でリンク置換処理を行うように順序を変更した。
+            3.  `resources/views/livewire/ledger-define/preview.blade.php`では、`x-markdown`タグを削除し、`AutoLinkService::convert()`の結果を`{!! ... !!}`で直接表示するように修正した。
+        *   **成果:** 台帳定義のプレビュー画面で3種類の説明文に自動リンクが正しく適用される状態になった。
 
-**変更内容の要約:**
-*   **変更ファイル:** `resources/views/components/ledger/table-row.blade.php`
-*   **変更詳細:**
-    *   `ColumnHtml::show()` メソッドの呼び出しにおいて、第7引数として `$ledgerRecord` を追加しました。
-    *   変更前: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView)`
-    *   変更後: `->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord)`
-*   **目的:**
-    *   `ColumnHtmlService` が `AutoLinkService` を呼び出す際に、現在の台帳レコード (`$ledgerRecord`) をコンテキストとして渡せるようにするためです。これにより、`AutoLinkService` は台帳レコードの情報を利用して、より正確な自動リンクの適用範囲を判断し、適切なリンクを生成できるようになります。特に、将来的に自動リンクの適用範囲が特定の台帳レコードに限定されるような機能が追加された場合に、このコンテキスト情報が活用されます.
+    *   **5.3. `AutoLink`管理UIへの適用範囲設定機能の追加 - <span style="color: red;">未着手</span>**
+        *   **背景・目的:** ユーザーシナリオ5「パフォーマンスとメンテナンス性の確保」で示された「特定の部署でしか使わないルールが全社でチェックされるのは非効率」という課題に対応するため、管理者がGUIで直感的に自動リンクの適用範囲を設定できる機能が必要である。
+        *   **調査と判断:** フォルダは階層構造を持つため、単純なリスト選択では管理者の負担が大きい。他のFilament画面での実装実績を参考に、階層構造を視覚的に表現できる**`Filament\Forms\Components\TreeSelect`** を利用することが最適だと判断した。
+        *   **タスク:**
+            1.  **対象ファイル:** `app/Filament/Resources/AutoLinkResource.php`
+            2.  `AutoLinkResource::form()` に、適用範囲を設定するためのセクションを追加する。
+            3.  `TreeSelect`コンポーネントを使い、`Folder`モデルの親子関係をリレーションで読み込み、適用対象のフォルダを複数選択できるようにする。
+            4.  フォームの保存処理（`create`, `edit`）において、選択されたフォルダ情報を`auto_link_scopes`テーブルに正しく保存・更新（`sync`）するロジックを実装する。
+            5.  `AutoLinkResource::table()` に、設定されている適用範囲の概要（例: 「2個のフォルダ」）を表示するカラムを追加し、一覧性を向上させる。
 
-    ##### 5.2. 台帳定義の管理画面 (`app/Livewire/LedgerDefine/Preview.php`) への適用 - 見直し後の詳細設計
+    *   **5.4. 台帳定義説明文への自動リンク適用（網羅） - <span style="color: red;">未着手</span>**
+        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」を完全に満たすには、ユーザーが台帳定義に触れる全ての画面で説明文の自動リンクが機能する必要がある。現状、プレビュー画面以外（一覧画面、詳細画面、編集画面）で適用漏れがある。
+        *   **調査と判断:** `description`が利用されている画面を網羅的に調査した結果、以下の画面への適用が必要だと判断した。
+        *   **タスク:**
+            1.  **台帳一覧画面への適用:**
+                *   **対象ファイル:** `resources/views/livewire/ledger/records-table.blade.php`
+                *   **修正:** `list_description` を表示している箇所を特定し、`AutoLinkService::convert()` を使ってレンダリングするように修正する。
+            2.  **台帳詳細画面への適用:**
+                *   **対象ファイル:** `resources/views/ledger/show.blade.php`
+                *   **修正:** `detail_description` を表示している箇所を、`AutoLinkService::convert()` を経由してレンダリングするように修正する。
+            3.  **台帳定義編集画面へのプレビュー適用:**
+                *   **対象ファイル:** `app/Livewire/LedgerDefine/Edit.php` および関連するBladeビュー
+                *   **修正:** 各説明文（`create_description`, `list_description`, `detail_description`）の入力フィールドに対応するプレビューエリアを追加し、入力内容が変更されるたびに`AutoLinkService`を呼び出して、リアルタイムで変換結果を表示するロジックを実装する。
 
-    #### 目的
-    台帳定義の`create_description`, `list_description`, `detail_description`に自動リンク機能を適用する。特に、Markdown形式で記述された説明文が正しくHTMLに変換され、その上で自動リンクが適用されるようにする。
+    *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: red;">未着手</span>**
+        *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にキャッシュ機構を導入する。また、そのキャッシュはステップ5.3で設定された適用範囲を正しく反映する必要がある。
+        *   **調査と判断:** `AutoLink`定義やその適用範囲（`AutoLinkScope`）が変更された際に、関連するキャッシュを自動的に無効化（パージ）する仕組みが不可欠である。これには、モデルのライフサイクルイベントを監視できるObserverパターンが最適だと判断した。
+        *   **タスク:**
+            1.  **`AutoLinkService.php`の修正:**
+                *   `convert()`メソッド内の`AutoLink`定義取得ロジックを、`Cache::remember()`を使用するように変更する。
+                *   **キャッシュキー設計:** コンテキスト（`Folder`など）に応じた一意なキー（例: `auto_links_folder_123`）を生成する。
+                *   **適用範囲フィルタリング:** `AutoLink`定義を取得するクエリに、`$context`に基づいて`auto_link_scopes`テーブルを`whereHas`で結合し、適用範囲が一致するルールのみを読み込むロジックをキャッシュ生成クロージャ内に実装する。
+            2.  **キャッシュ無効化の実装:**
+                *   `AutoLinkObserver`および`AutoLinkScopeObserver`を作成し、`AppServiceProvider`に登録する。
+                *   `AutoLink`モデルまたは`AutoLinkScope`モデルが変更（`created`, `updated`, `deleted`）された際に、関連するキャッシュエントリを自動的に無効化するロジックを実装する。
 
-    #### 5.2.1 問題点と見直し
-
-    ##### 5.2.1.1. **Markdownパースと自動リンク適用順序の問題:**
-    *   **旧アプローチの問題:** `resources/views/livewire/ledger-define/preview.blade.php`内で`x-markdown`コンポーネントの内部で`AutoLinkService::convert()`を呼び出していたため、MarkdownがHTMLに変換される前に自動リンクが適用され、結果的に生成されたリンクのHTMLタグがエスケープされて表示されていました。
-    *   **見直し後の解決策:** `AutoLinkService`がMarkdownのパースと自動リンクの適用を両方行うように責務を変更します。これにより、`AutoLinkService`が最終的にHTMLを返すため、BladeビューではそのHTMLを直接表示するだけでよくなります。
-
-    ##### 5.2.1.2. **`AutoLinkService.php`内の`preg_replace_callback`の`str_replace`誤用:**
-    *   **旧アプローチの問題:** `url_template`内のキャプチャグループ（例: `$1`）を置換する際に、`str_replace(' . $key, ...)`という構文エラーが発生していました。
-    *   **見直し後の解決策:** `preg_replace_callback`のコールバック関数内で、`$matches`配列のインデックスを直接利用し、`url_template`内の`$1`, `$2`などを正確に置換する、より堅牢なロジックを適用します。
-
-    ##### 5.2.1.3.  **`AutoLinkService.php`内の`whereHas`における`$this->id`の問題:**
-    *   **旧アプローチの問題:** `AutoLinkService`のインスタンスの`id`を参照してしまい、`AutoLink`モデルのIDを参照できていませんでした。
-    *   **見直し後の解決策:** `AutoLink`モデルに`scopes`リレーション（`AutoLinkScope`モデルへの`hasMany`リレーション）を追加し、`AutoLinkScope`モデルを作成することで、`whereHas('scopes', ...)`のロジックが正しく機能するようになりました。この点については、これ以上の修正は不要と判断します。
-
-    #### 5.2.2 変更内容
-
-    ##### 5.2.2.1.  **`app/Services/AutoLinkService.php`の修正:**
-    *   **`Spatie\LaravelMarkdown\MarkdownRenderer`の注入:** コンストラクタで`Spatie\LaravelMarkdown\MarkdownRenderer`を依存注入します。
-    *   **`convert`メソッドの処理順序の変更:**
-        *   `auto_number`カラムの特別処理はそのまま維持します。
-        *   それ以外のテキストに対しては、まず`$this->markdownRenderer->toHtml($text)`を呼び出し、MarkdownをHTMLに変換します。
-        *   変換されたHTML (`$html`) に対して、既存の`AutoLink`定義に基づくリンク置換処理を行います。
-    *   **`preg_replace_callback`内の`url_template`置換ロジックの修正:**
-        `preg_replace_callback`のコールバック関数内で、`$autoLink->url_template`内の`$1`, `$2`などのキャプチャグループを`$matches`配列の対応する値で置換するロジックを以下のように修正します。
-
-      ```php
-                  // AutoLinkService.php の convert メソッド内
-                  foreach ($autoLinks as $autoLink) {
-                      $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
-                          $url = $autoLink->url_template;
-                          // $1, $2 などのキャプチャグループを置換
-                          // $matches[0] は全体マッチなのでスキップ
-                          for ($i = 1; $i < count($matches); $i++) {
-                              // URLエンコードしてから置換
-                              $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
-                          }
-                          $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-                          return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
-                      }, $convertedHtml);
-                  }
-      ```
-    ##### 5.2.2.2.  **`resources/views/livewire/ledger-define/preview.blade.php`の修正:**
-      *   `create_description`, `list_description`, `detail_description`を表示している箇所から`<x-markdown>`タグを削除します。
-      *   `AutoLinkService::convert()`の呼び出し結果を直接`{!! ... !!}`で表示するように戻します。
-
-      ```blade
-              {{-- 修正前 --}}
-              <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                  {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
-              </x-markdown>
-        
-              {{-- 修正後 --}}
-              {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
-      ```
-
-      *   同様に、`list_description`と`detail_description`についても修正します。
-
-  #### 成果物
-
-  *   `app/Services/AutoLinkService.php`がMarkdownのパースと自動リンクの適用を両方行うようになる。
-  *   台帳定義の管理画面（`app/Livewire/LedgerDefine/Preview.php`が使用する`resources/views/livewire/ledger-define/preview.blade.php`）において、`create_description`, `list_description`, `detail_description`の各説明文に自動リンク機能が正しく適用される。
-
-  ##### 5.3. `AutoLinkService`におけるリンク定義のキャッシュ導入
-
-  *   **対象ファイル:** `app/Services/AutoLinkService.php`, `app/Models/AutoLink.php` (またはObserver)
-  *   **現状分析:** 現在、`AutoLinkService::convert()`メソッド内で`AutoLink`定義がデータベースから直接取得されています。これをキャッシュすることで、データベースへのアクセス回数を減らし、パフォーマンスを向上させます。
-  *   **変更内容:**
-      1.  **`AutoLinkService.php`の修正:**
-          *   `convert()`メソッド内で`AutoLink`定義を取得するロジックを、Laravelの`Cache`ファサードを利用するように変更します。
-          *   **キャッシュキーの設計:**
-              *   スコープ（`$context`）が提供される場合: `auto_links_scoped_{context_type}_{context_id}` (例: `auto_links_scoped_App_Models_Folder_123`)
-              *   スコープが提供されない場合（グローバルなリンク定義）: `auto_links_global`
-              *   これにより、スコープごとに異なるキャッシュエントリが作成され、無関係なスコープのキャッシュが影響を受けないようにします。
-          *   **キャッシュの利用:** `Cache::remember()`メソッドを使用して、指定されたキーでキャッシュが存在すればそれを返し、なければクロージャを実行して結果をキャッシュに保存するようにします。
-          *   **キャッシュ期間:** `forever()`を使用するか、適切な期間（例: `60 * 24`分）を設定します。
-      2.  **キャッシュの無効化:**
-          *   `AutoLink`モデルの変更（作成、更新、削除）時に、関連するキャッシュエントリを無効化するメカニズムを実装します。
-          *   **方法1: モデルイベントリスナー (推奨)**
-              *   `app/Models/AutoLink.php`に`boot()`メソッドを追加し、`created`, `updated`, `deleted`イベントをリッスンします。
-              *   各イベント内で、`Cache::forget('auto_links_global')`を呼び出し、グローバルキャッシュを無効化します。
-              *   もしスコープごとのキャッシュを厳密に管理する場合、`AutoLink`と`AutoLinkScope`のリレーションシップを考慮し、関連するスコープのキャッシュも無効化する必要があります。これは複雑になる可能性があるため、まずはグローバルキャッシュの無効化から始め、必要に応じて拡張します。
-          *   **方法2: Observerの利用**
-              *   `php artisan make:observer AutoLinkObserver --model=AutoLink`でObserverを作成し、`AppServiceProvider`に登録します。
-              *   Observerの`created`, `updated`, `deleted`メソッド内でキャッシュを無効化します。
-
-*   **成果物:**
-    *   台帳一覧画面で、台帳レコード内のテキストが自動リンクとして表示される。
-    *   台帳定義の管理画面で、`description`カラムのテキストが自動リンクとして表示される。
-    *   `AutoLinkService`が`AutoLink`定義をキャッシュから取得するようになり、パフォーマンスが向上する。
-    *   `AutoLink`定義の変更時に、関連するキャッシュが適切に無効化される。
+*   **成果物 (ステップ5全体):**
+    *   台帳一覧画面および詳細画面の台帳定義説明文に、自動リンクが適用される。
+    *   管理者が`AutoLink`定義の適用範囲をフォルダ階層から直感的に設定できる。
+    *   `AutoLinkService`が適用範囲を考慮した上で、キャッシュを利用して効率的に動作する。
+    *   `AutoLink`定義やその適用範囲の変更が、即座にキャッシュに反映される。
 
 ---
 
-### ステップ 6: 権限管理と監査証跡の実装 - **未着手**
+### ステップ 6: 権限管理と監査証跡の実装 - <span style="color: red;">未着手</span>
 
-* **目的:** `AutoLink`定義へのアクセスを特定の管理者に制限し、全ての操作履歴を記録する。
-* **タスク:**
-    1. **ポリシーの作成と登録:** `AutoLinkPolicy`を作成し、`AuthServiceProvider`に登録する。
-    2. **ポリシーのロジック実装:** 各アクション（`viewAny`, `create`, `update`, `delete`）で、ユーザーの権限をチェックするロジックを実装する。
-    3. **監査証跡の実装:** `AutoLink`モデルに`spatie/laravel-activitylog`の`LogsActivity`
-       トレイトを適用し、分かりやすいログメッセージを生成するように設定する。
-* **成果物:**
-    * 権限のないユーザーは`AutoLink`管理画面にアクセス・操作できない状態。
-    * 権限のある管理者による全ての操作が、アクティビティログに詳細に記録される状態。
+*   **目的:** ユーザーシナリオ3「権限と監査」に対応するため、`AutoLink`定義へのアクセスを特定の管理者に制限し、全ての操作履歴を記録する。
+*   **タスク:**
+    1.  **ポリシーの作成と登録:** `AutoLinkPolicy`を作成し、`AuthServiceProvider`に登録する。
+    2.  **ポリシーのロジック実装:** 各アクション（`viewAny`, `create`, `update`, `delete`）で、ユーザーが特定の権限（例: `manage_system_settings`）を持つかをチェックするロジックを実装する。
+    3.  **監査証跡の実装:** `AutoLink`モデルに`spatie/laravel-activitylog`の`LogsActivity`トレイトを適用し、`logOnlyDirty()` を利用して変更があった属性のみを記録する。ログに分かりやすいメッセージ（例: 「自動リンク 'Redmineチケット' を作成しました」）が記録されるように`getDescriptionForEvent`をオーバーライドする。
+*   **成果物:**
+    *   権限のないユーザーは`AutoLink`管理画面にアクセス・操作できない状態。
+    *   権限のある管理者による全ての操作が、アクティビティログに詳細に記録される状態。
+
 
 ---
 
