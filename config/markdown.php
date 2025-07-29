@@ -33,7 +33,9 @@ return [
      *
      * More info: https://spatie.be/docs/laravel-markdown/v1/using-the-blade-component/passing-options-to-commonmark
      */
-    'commonmark_options' => [],
+    'commonmark_options' => [
+        'html_input' => 'allow',
+    ],
 
     /*
      * Rendering markdown to HTML can be resource intensive. By default

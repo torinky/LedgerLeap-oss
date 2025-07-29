@@ -44,6 +44,11 @@ class AutoLink extends Model
         });
     }
 
+    public function scopes()
+    {
+        return $this->hasMany(AutoLinkScope::class);
+    }
+
     public function scopeable()
     {
         return $this->morphedByMany(Folder::class, 'scopeable', 'auto_link_scopes');

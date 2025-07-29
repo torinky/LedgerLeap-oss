@@ -8,6 +8,7 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
@@ -37,8 +38,6 @@ class AutoLinkService
             return '<a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . e($text) . '</a>';
         }
 
-        // MarkdownをHTMLに変換
-        $html = $this->markdownRenderer->toHtml($text);
 
         // 2. カスタム定義によるリンク変換
         $cacheKey = $this->getCacheKeyForContext($context);
@@ -50,8 +49,8 @@ class AutoLinkService
                 // 現状はFolderとLedgerDefineを想定
                 if ($context instanceof Folder || $context instanceof LedgerDefine) {
                     $query->whereHas('scopes', function ($q) use ($context) {
-                        $q->where('scopeable_id', $context->id)
-                            ->where('scopeable_type', $context->getMorphClass());
+                        $q->where('auto_link_scopes.scopeable_id', $context->id)
+                            ->where('auto_link_scopes.scopeable_type', $context->getMorphClass());
                     });
                 }
             }
@@ -59,9 +58,13 @@ class AutoLinkService
             return $query->orderBy('priority', 'asc')->get();
         });
 
-        $convertedHtml = $html;
+        Log::debug('AutoLinkService: Retrieved AutoLinks', ['autoLinks' => $autoLinks->toArray()]);
+
+        $convertedHtml = $text;
 
         foreach ($autoLinks as $autoLink) {
+            Log::debug('AutoLinkService: Processing AutoLink', ['pattern' => $autoLink->pattern, 'url_template' => $autoLink->url_template]);
+            Log::debug('AutoLinkService: Before preg_replace_callback', ['convertedText' => $convertedHtml]);
             // preg_replace_callback を使用して、マッチした部分をリンクに置換
             // 一度マッチした文字列は後続のルールの対象外とするため、変換結果を次のループに渡す
             $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
@@ -70,14 +73,16 @@ class AutoLinkService
                 // $matches[0] は全体マッチなのでスキップ
                 for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
                     // URLエンコードしてから置換
-                    $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+                    $url = str_replace('$'. $i, urlencode($matches[$i]), $url);
                 }
                 $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
             }, $convertedHtml);
+            Log::debug('AutoLinkService: After preg_replace_callback', ['convertedText' => $convertedHtml]);
         }
 
-        return $convertedHtml;
+        // MarkdownをHTMLに変換
+        return $this->markdownRenderer->toHtml($convertedHtml);
     }
 
     /**

@@ -274,90 +274,88 @@
 
     #### 5.2.1 問題点と見直し
 
-    5.2.1.1. ** Markdownパースと自動リンク適用順序の問題: **
-        *   **旧アプローチの問題:** `resources/views/livewire/ledger-define/preview.blade.php`内で`x-markdown`コンポーネントの内部で`AutoLinkService::convert()`を呼び出していたため、MarkdownがHTMLに変換される前に自動リンクが適用され、結果的に生成されたリンクのHTMLタグがエスケープされて表示されていました。
-        *   **見直し後の解決策:** `AutoLinkService`がMarkdownのパースと自動リンクの適用を両方行うように責務を変更します。これにより、`AutoLinkService`が最終的にHTMLを返すため、BladeビューではそのHTMLを直接表示するだけでよくなります。
+    ##### 5.2.1.1. ** Markdownパースと自動リンク適用順序の問題: **
+    *   **旧アプローチの問題:** `resources/views/livewire/ledger-define/preview.blade.php`内で`x-markdown`コンポーネントの内部で`AutoLinkService::convert()`を呼び出していたため、MarkdownがHTMLに変換される前に自動リンクが適用され、結果的に生成されたリンクのHTMLタグがエスケープされて表示されていました。
+    *   **見直し後の解決策:** `AutoLinkService`がMarkdownのパースと自動リンクの適用を両方行うように責務を変更します。これにより、`AutoLinkService`が最終的にHTMLを返すため、BladeビューではそのHTMLを直接表示するだけでよくなります。
 
-    5.2.1.2. **`AutoLinkService.php`内の`preg_replace_callback`の`str_replace`誤用:**
-        *   **旧アプローチの問題:** `url_template`内のキャプチャグループ（例: `$1`）を置換する際に、`str_replace(' . $key, ...)`という構文エラーが発生していました。
-        *   **見直し後の解決策:** `preg_replace_callback`のコールバック関数内で、`$matches`配列のインデックスを直接利用し、`url_template`内の`$1`, `$2`などを正確に置換する、より堅牢なロジックを適用します。
+    ##### 5.2.1.2. **`AutoLinkService.php`内の`preg_replace_callback`の`str_replace`誤用:**
+    *   **旧アプローチの問題:** `url_template`内のキャプチャグループ（例: `$1`）を置換する際に、`str_replace(' . $key, ...)`という構文エラーが発生していました。
+    *   **見直し後の解決策:** `preg_replace_callback`のコールバック関数内で、`$matches`配列のインデックスを直接利用し、`url_template`内の`$1`, `$2`などを正確に置換する、より堅牢なロジックを適用します。
 
-    5.2.1.3.  **`AutoLinkService.php`内の`whereHas`における`$this->id`の問題:**
-        *   **旧アプローチの問題:** `AutoLinkService`のインスタンスの`id`を参照してしまい、`AutoLink`モデルのIDを参照できていませんでした。
-        *   **見直し後の解決策:** `AutoLink`モデルに`scopes`リレーション（`AutoLinkScope`モデルへの`hasMany`リレーション）を追加し、`AutoLinkScope`モデルを作成することで、`whereHas('scopes', ...)`のロジックが正しく機能するようになりました。この点については、これ以上の修正は不要と判断します。
+    ##### 5.2.1.3.  **`AutoLinkService.php`内の`whereHas`における`$this->id`の問題:**
+    *   **旧アプローチの問題:** `AutoLinkService`のインスタンスの`id`を参照してしまい、`AutoLink`モデルのIDを参照できていませんでした。
+    *   **見直し後の解決策:** `AutoLink`モデルに`scopes`リレーション（`AutoLinkScope`モデルへの`hasMany`リレーション）を追加し、`AutoLinkScope`モデルを作成することで、`whereHas('scopes', ...)`のロジックが正しく機能するようになりました。この点については、これ以上の修正は不要と判断します。
 
     #### 5.2.2 変更内容
 
-    5.2.2.1.  **`app/Services/AutoLinkService.php`の修正:**
-        *   **`Spatie\LaravelMarkdown\MarkdownRenderer`の注入:** コンストラクタで`Spatie\LaravelMarkdown\MarkdownRenderer`を依存注入します。
-        *   **`convert`メソッドの処理順序の変更:**
-            *   `auto_number`カラムの特別処理はそのまま維持します。
-            *   それ以外のテキストに対しては、まず`$this->markdownRenderer->toHtml($text)`を呼び出し、MarkdownをHTMLに変換します。
-            *   変換されたHTML (`$html`) に対して、既存の`AutoLink`定義に基づくリンク置換処理を行います。
-        *   **`preg_replace_callback`内の`url_template`置換ロジックの修正:**
-            `preg_replace_callback`のコールバック関数内で、`$autoLink->url_template`内の`$1`, `$2`などのキャプチャグループを`$matches`配列の対応する値で置換するロジックを以下のように修正します。
+    ##### 5.2.2.1.  **`app/Services/AutoLinkService.php`の修正:**
+    *   **`Spatie\LaravelMarkdown\MarkdownRenderer`の注入:** コンストラクタで`Spatie\LaravelMarkdown\MarkdownRenderer`を依存注入します。
+    *   **`convert`メソッドの処理順序の変更:**
+        *   `auto_number`カラムの特別処理はそのまま維持します。
+        *   それ以外のテキストに対しては、まず`$this->markdownRenderer->toHtml($text)`を呼び出し、MarkdownをHTMLに変換します。
+        *   変換されたHTML (`$html`) に対して、既存の`AutoLink`定義に基づくリンク置換処理を行います。
+    *   **`preg_replace_callback`内の`url_template`置換ロジックの修正:**
+        `preg_replace_callback`のコールバック関数内で、`$autoLink->url_template`内の`$1`, `$2`などのキャプチャグループを`$matches`配列の対応する値で置換するロジックを以下のように修正します。
 
-```php
-            // AutoLinkService.php の convert メソッド内
-            foreach ($autoLinks as $autoLink) {
-                $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
-                    $url = $autoLink->url_template;
-                    // $1, $2 などのキャプチャグループを置換
-                    // $matches[0] は全体マッチなのでスキップ
-                    for ($i = 1; $i < count($matches); $i++) {
-                        // URLエンコードしてから置換
-                        $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
-                    }
-                    $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-                    return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
-                }, $convertedHtml);
-            }
-```
+      ```php
+                  // AutoLinkService.php の convert メソッド内
+                  foreach ($autoLinks as $autoLink) {
+                      $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
+                          $url = $autoLink->url_template;
+                          // $1, $2 などのキャプチャグループを置換
+                          // $matches[0] は全体マッチなのでスキップ
+                          for ($i = 1; $i < count($matches); $i++) {
+                              // URLエンコードしてから置換
+                              $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+                          }
+                          $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
+                          return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
+                      }, $convertedHtml);
+                  }
+      ```
+    ##### 5.2.2.2.  **`resources/views/livewire/ledger-define/preview.blade.php`の修正:**
+      *   `create_description`, `list_description`, `detail_description`を表示している箇所から`<x-markdown>`タグを削除します。
+      *   `AutoLinkService::convert()`の呼び出し結果を直接`{!! ... !!}`で表示するように戻します。
 
-    5.2.2.2.  **`resources/views/livewire/ledger-define/preview.blade.php`の修正:**
-        *   `create_description`, `list_description`, `detail_description`を表示している箇所から`<x-markdown>`タグを削除します。
-        *   `AutoLinkService::convert()`の呼び出し結果を直接`{!! ... !!}`で表示するように戻します。
+      ```blade
+              {{-- 修正前 --}}
+              <x-markdown class="prose text-sm leading-relaxed max-w-none">
+                  {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
+              </x-markdown>
+        
+              {{-- 修正後 --}}
+              {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
+      ```
 
-```blade
-        {{-- 修正前 --}}
-        <x-markdown class="prose text-sm leading-relaxed max-w-none">
-            {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
-        </x-markdown>
+      *   同様に、`list_description`と`detail_description`についても修正します。
 
-        {{-- 修正後 --}}
-        {!! app(\App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->create_description, null, $ledgerDefineRecord) !!}
-```
+  #### 成果物
 
-        *   同様に、`list_description`と`detail_description`についても修正します。
+  *   `app/Services/AutoLinkService.php`がMarkdownのパースと自動リンクの適用を両方行うようになる。
+  *   台帳定義の管理画面（`app/Livewire/LedgerDefine/Preview.php`が使用する`resources/views/livewire/ledger-define/preview.blade.php`）において、`create_description`, `list_description`, `detail_description`の各説明文に自動リンク機能が正しく適用される。
 
-    #### 成果物
+  ##### 5.3. `AutoLinkService`におけるリンク定義のキャッシュ導入
 
-    *   `app/Services/AutoLinkService.php`がMarkdownのパースと自動リンクの適用を両方行うようになる。
-    *   台帳定義の管理画面（`app/Livewire/LedgerDefine/Preview.php`が使用する`resources/views/livewire/ledger-define/preview.blade.php`）において、`create_description`, `list_description`, `detail_description`の各説明文に自動リンク機能が正しく適用される。
-
-
-    ##### 5.3. `AutoLinkService`におけるリンク定義のキャッシュ導入
-
-    *   **対象ファイル:** `app/Services/AutoLinkService.php`, `app/Models/AutoLink.php` (またはObserver)
-    *   **現状分析:** 現在、`AutoLinkService::convert()`メソッド内で`AutoLink`定義がデータベースから直接取得されています。これをキャッシュすることで、データベースへのアクセス回数を減らし、パフォーマンスを向上させます。
-    *   **変更内容:**
-        1.  **`AutoLinkService.php`の修正:**
-            *   `convert()`メソッド内で`AutoLink`定義を取得するロジックを、Laravelの`Cache`ファサードを利用するように変更します。
-            *   **キャッシュキーの設計:**
-                *   スコープ（`$context`）が提供される場合: `auto_links_scoped_{context_type}_{context_id}` (例: `auto_links_scoped_App_Models_Folder_123`)
-                *   スコープが提供されない場合（グローバルなリンク定義）: `auto_links_global`
-                *   これにより、スコープごとに異なるキャッシュエントリが作成され、無関係なスコープのキャッシュが影響を受けないようにします。
-            *   **キャッシュの利用:** `Cache::remember()`メソッドを使用して、指定されたキーでキャッシュが存在すればそれを返し、なければクロージャを実行して結果をキャッシュに保存するようにします。
-            *   **キャッシュ期間:** `forever()`を使用するか、適切な期間（例: `60 * 24`分）を設定します。
-        2.  **キャッシュの無効化:**
-            *   `AutoLink`モデルの変更（作成、更新、削除）時に、関連するキャッシュエントリを無効化するメカニズムを実装します。
-            *   **方法1: モデルイベントリスナー (推奨)**
-                *   `app/Models/AutoLink.php`に`boot()`メソッドを追加し、`created`, `updated`, `deleted`イベントをリッスンします。
-                *   各イベント内で、`Cache::forget('auto_links_global')`を呼び出し、グローバルキャッシュを無効化します。
-                *   もしスコープごとのキャッシュを厳密に管理する場合、`AutoLink`と`AutoLinkScope`のリレーションシップを考慮し、関連するスコープのキャッシュも無効化する必要があります。これは複雑になる可能性があるため、まずはグローバルキャッシュの無効化から始め、必要に応じて拡張します。
-            *   **方法2: Observerの利用**
-                *   `php artisan make:observer AutoLinkObserver --model=AutoLink`でObserverを作成し、`AppServiceProvider`に登録します。
-                *   Observerの`created`, `updated`, `deleted`メソッド内でキャッシュを無効化します。
+  *   **対象ファイル:** `app/Services/AutoLinkService.php`, `app/Models/AutoLink.php` (またはObserver)
+  *   **現状分析:** 現在、`AutoLinkService::convert()`メソッド内で`AutoLink`定義がデータベースから直接取得されています。これをキャッシュすることで、データベースへのアクセス回数を減らし、パフォーマンスを向上させます。
+  *   **変更内容:**
+      1.  **`AutoLinkService.php`の修正:**
+          *   `convert()`メソッド内で`AutoLink`定義を取得するロジックを、Laravelの`Cache`ファサードを利用するように変更します。
+          *   **キャッシュキーの設計:**
+              *   スコープ（`$context`）が提供される場合: `auto_links_scoped_{context_type}_{context_id}` (例: `auto_links_scoped_App_Models_Folder_123`)
+              *   スコープが提供されない場合（グローバルなリンク定義）: `auto_links_global`
+              *   これにより、スコープごとに異なるキャッシュエントリが作成され、無関係なスコープのキャッシュが影響を受けないようにします。
+          *   **キャッシュの利用:** `Cache::remember()`メソッドを使用して、指定されたキーでキャッシュが存在すればそれを返し、なければクロージャを実行して結果をキャッシュに保存するようにします。
+          *   **キャッシュ期間:** `forever()`を使用するか、適切な期間（例: `60 * 24`分）を設定します。
+      2.  **キャッシュの無効化:**
+          *   `AutoLink`モデルの変更（作成、更新、削除）時に、関連するキャッシュエントリを無効化するメカニズムを実装します。
+          *   **方法1: モデルイベントリスナー (推奨)**
+              *   `app/Models/AutoLink.php`に`boot()`メソッドを追加し、`created`, `updated`, `deleted`イベントをリッスンします。
+              *   各イベント内で、`Cache::forget('auto_links_global')`を呼び出し、グローバルキャッシュを無効化します。
+              *   もしスコープごとのキャッシュを厳密に管理する場合、`AutoLink`と`AutoLinkScope`のリレーションシップを考慮し、関連するスコープのキャッシュも無効化する必要があります。これは複雑になる可能性があるため、まずはグローバルキャッシュの無効化から始め、必要に応じて拡張します。
+          *   **方法2: Observerの利用**
+              *   `php artisan make:observer AutoLinkObserver --model=AutoLink`でObserverを作成し、`AppServiceProvider`に登録します。
+              *   Observerの`created`, `updated`, `deleted`メソッド内でキャッシュを無効化します。
 
 *   **成果物:**
     *   台帳一覧画面で、台帳レコード内のテキストが自動リンクとして表示される。
