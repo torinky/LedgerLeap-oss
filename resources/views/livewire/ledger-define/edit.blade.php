@@ -24,17 +24,10 @@
                             wire:click.prevent="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-mary-textarea
-                            label="{{__('ledger.define.create_description')}}"
-                            wire:model.live="createDescription"
-                            rows="5"
+                    <x-mary-markdown
+                            {{--                        label="{{__('ledger.define.create_description')}}"--}}
+                            wire:model="createDescription"
                     />
-                    <div class="mt-2 p-4 border rounded-md bg-base-200">
-                        <label class="label-text font-bold">プレビュー</label>
-                        <div class="prose text-sm leading-relaxed max-w-none mt-1">
-                            {!! $this->createDescriptionPreview !!}
-                        </div>
-                    </div>
                 </x-slot:content>
             </x-mary-collapse>
             <x-mary-collapse name="listDescription">
@@ -44,17 +37,10 @@
                             wire:click.prevent="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-mary-textarea
-                            label="{{__('ledger.define.list_description')}}"
-                            wire:model.live="listDescription"
-                            rows="5"
+                    <x-mary-markdown
+                            {{--                        label="{{__('ledger.define.list_description')}}"--}}
+                            wire:model="listDescription"
                     />
-                    <div class="mt-2 p-4 border rounded-md bg-base-200">
-                        <label class="label-text font-bold">プレビュー</label>
-                        <div class="prose text-sm leading-relaxed max-w-none mt-1">
-                            {!! $this->listDescriptionPreview !!}
-                        </div>
-                    </div>
                 </x-slot:content>
             </x-mary-collapse>
             <x-mary-collapse name="detailDescription">
@@ -64,17 +50,10 @@
                             wire:click.prevent="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    <x-mary-textarea
-                            label="{{__('ledger.define.detail_description')}}"
-                            wire:model.live="detailDescription"
-                            rows="5"
+                    <x-mary-markdown
+                            {{--                        label="{{__('ledger.define.detail_description')}}"--}}
+                            wire:model="detailDescription"
                     />
-                    <div class="mt-2 p-4 border rounded-md bg-base-200">
-                        <label class="label-text font-bold">プレビュー</label>
-                        <div class="prose text-sm leading-relaxed max-w-none mt-1">
-                            {!! $this->detailDescriptionPreview !!}
-                        </div>
-                    </div>
                 </x-slot:content>
             </x-mary-collapse>
         </x-mary-accordion>
