@@ -295,16 +295,28 @@
         *   **成果:** 台帳の新規作成、一覧、詳細、そして台帳定義の編集という、ユーザーが説明文に触れる全ての主要画面で、意図通りに自動リンクが機能する状態となった。
 
     *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: red;">未着手</span>**
-        *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にキャッシュ機構を導入する。また、そのキャッシュはステップ5.3で設定された適用範囲を正しく反映する必要がある。
-        *   **調査と判断:** `AutoLink`定義やその適用範囲（`AutoLinkScope`）が変更された際に、関連するキャッシュを自動的に無効化（パージ）する仕組みが不可欠である。これには、モデルのライフサイクルイベントを監視できるObserverパターンが最適だと判断した。
-        *   **タスク:**
-            1.  **`AutoLinkService.php`の修正:**
-                *   `convert()`メソッド内の`AutoLink`定義取得ロジックを、`Cache::remember()`を使用するように変更する。
-                *   **キャッシュキー設計:** コンテキスト（`Folder`など）に応じた一意なキー（例: `auto_links_folder_123`）を生成する。
-                *   **適用範囲フィルタリング:** `AutoLink`定義を取得するクエリに、`$context`に基づいて`auto_link_scopes`テーブルを`whereHas`で結合し、適用範囲が一致するルールのみを読み込むロジックをキャッシュ生成クロージャ内に実装する。
-            2.  **キャッシュ無効化の実装:**
-                *   `AutoLinkObserver`および`AutoLinkScopeObserver`を作成し、`AppServiceProvider`に登録する。
-                *   `AutoLink`モデルまたは`AutoLinkScope`モデルが変更（`created`, `updated`, `deleted`）された際に、関連するキャッシュエントリを自動的に無効化するロジックを実装する。
+        *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にデータベースから取得したリンク定義をキャッシュする機構を導入する。また、定義やその適用範囲が変更された際には、キャッシュを即座に無効化（パージ）し、常に最新の定義が適用されることを保証する。
+        *   **調査と判断（アーキテクチャ選定）:**
+            *   **課題:** `AutoLink`定義は、それ自体の変更だけでなく、適用範囲となる`Folder`の階層構造の変更によっても、実際に適用されるルールが変化する。これらの変更を漏れなく検知し、かつパフォーマンスを損なわないキャッシュ無効化戦略が必要とされた。
+            *   **検討したアプローチ:**
+                1.  **関連モデル（Ledger, Folder等）のObserverで都度無効化:** `Ledger`や`Folder`が変更されるたびにキャッシュを無効化する方法。`Ledger`は更新頻度が極めて高く、キャッシュヒット率が著しく低下し、逆に性能を悪化させる懸念が大きいため、この方法は不採用とした。
+                2.  **`AutoLink`の変更のみを検知:** `AutoLink`モデルの変更のみをObserverで検知する方法。シンプルだが、フォルダ階層の変更に対応できない点が課題だった。
+            *   **最終的な設計方針（ハイブリッドアプローチ）:** 上記の課題を解決するため、以下の技術を組み合わせたハイブリッドアプローチを採用することが最適だと判断した。
+                *   **Observerパターン (`AutoLinkObserver`, `FolderObserver`):** `AutoLink`定義の変更と、適用範囲に影響する`Folder`の階層変更という、2つの主要な変更トリガーを漏れなく監視する。
+                *   **キャッシュタグ (`Cache Tags`):** コンテキストによって動的にキーが変わるキャッシュ（例: `auto_links_folder_123`）を、`auto_links`という単一のタグでグループ化する。これにより、無効化処理が「タグを指定して一括削除」というシンプルなロジックになり、確実性とメンテナンス性が向上する。
+                *   **Pivotモデルと`$touches`プロパティ:** `AutoLink`と`Folder`の中間テーブル`auto_link_scopes`の変更が、親である`AutoLink`モデルの`updated`イベントを発火させるようにする。これにより、`AutoLinkObserver`が適用範囲の変更を直接検知できるようになる。
+
+        *   **タスク（詳細設計）:**
+            1.  **キャッシュキー生成ロジックの修正:** `AutoLinkService`内の`getCacheKeyForContext`メソッドを修正し、コンテキストが`Ledger`モデルの場合でも、`$ledger->define->folder_id`を辿って、その台帳が属するフォルダに基づいた一意なキャッシュキー（例: `auto_links_folder_123`）が生成されるようにします。これにより、異なるフォルダの台帳でキャッシュが衝突する問題を完全に防ぎます。
+            2.  **Pivotモデルの作成とリレーションの更新:**
+                *   `app/Models/AutoLinkScope.php`を新規作成し、`$touches = ['autoLink'];` を設定する。
+                *   `app/Models/AutoLink.php`の`folders()`リレーションを修正し、`->using(AutoLinkScope::class)`を追加する。
+            3.  **キャッシュ無効化Observerの実装:**
+                *   `app/Observers/AutoLinkObserver.php`を作成。`saved`と`deleted`イベントで`Cache::tags('auto_links')->flush();`を実行する。
+                *   `app/Observers/FolderObserver.php`を作成（または追記）。`saved`イベント内で`$folder->wasChanged('parent_id')`をチェックし、親子関係が変更された場合のみ`Cache::tags('auto_links')->flush();`を実行する。これにより、不要なキャッシュクリアを抑制する。
+                *   `AppServiceProvider`に両Observerを登録する。
+            4.  **キャッシュロジックのタグ対応:**
+                *   `app/Services/AutoLinkService.php`の`convert()`メソッド内の`Cache::remember(...)`を`Cache::tags(['auto_links'])->remember(...)`に修正する。
 
 *   **成果物 (ステップ5全体):**
     *   台帳一覧画面および詳細画面の台帳定義説明文に、自動リンクが適用される。
