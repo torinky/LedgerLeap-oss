@@ -280,18 +280,23 @@
         *   **成果:** 管理画面で`AutoLink`定義に適用範囲（フォルダ）を設定でき、その設定がリンク変換時に正しく（子孫フォルダを含めて）反映されるようになった。
 
     *   **5.4. 台帳定義説明文への自動リンク適用（網羅） - <span style="color: red;">未着手</span>**
-        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」を完全に満たすには、ユーザーが台帳定義に触れる全ての画面で説明文の自動リンクが機能する必要がある。現状、プレビュー画面以外（一覧画面、詳細画面、編集画面）で適用漏れがある。
-        *   **調査と判断:** `description`が利用されている画面を網羅的に調査した結果、以下の画面への適用が必要だと判断した。
+        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」を完全に満たすには、ユーザーが台帳定義に触れる全ての主要画面で説明文の自動リンクが機能する必要がある。現状、プレビュー画面 (`LedgerDefine/Preview`) 以外（一覧画面、詳細画面、編集画面）で適用漏れがあり、ユーザー体験に一貫性がない状態となっている。
+        *   **調査と判断:**
+            *   **既存サービス:** `AutoLinkService`は、Markdownテキストを受け取り、リンク変換済みのHTMLを返す機能が既に実装されており、これを最大限に再利用する方針が最も効率的である。
+            *   **静的表示画面の特定:** ユーザーが主に情報を閲覧する「台帳一覧画面」と「台帳詳細画面」を特定。これらの画面では、Bladeビュー内で直接`AutoLinkService`を呼び出し、結果をHTMLとして表示する方法が、既存の構造への影響も少なく、シンプルで最適だと判断した。
+            *   **動的表示画面の特定:** 管理者が定義を編集する「台帳定義編集画面」では、入力内容の変更に応じて即座に変換結果を確認できるリアルタイム性が求められる。この要件を満たすには、LivewireのComputed Propertyと`wire:model.live`を組み合わせ、サーバーサイドで変換処理を行い、その結果をフロントエンドに動的に反映させるアーキテクチャが最適であると判断した。これにより、クライアントサイドに複雑なJavaScriptロジックを持つことなく、リッチなUXを実現できる。
         *   **タスク:**
             1.  **台帳一覧画面への適用:**
-                *   **対象ファイル:** `resources/views/livewire/ledger/records-table.blade.php`
-                *   **修正:** `list_description` を表示している箇所を特定し、`AutoLinkService::convert()` を使ってレンダリングするように修正する。
+                *   **対象:** `resources/views/livewire/ledger/records-table.blade.php`
+                *   **修正方針:** `list_description` を表示している箇所で `AutoLinkService::convert()` を呼び出し、結果を `{!! ... !!}` でHTMLとしてレンダリングする。
             2.  **台帳詳細画面への適用:**
-                *   **対象ファイル:** `resources/views/ledger/show.blade.php`
-                *   **修正:** `detail_description` を表示している箇所を、`AutoLinkService::convert()` を経由してレンダリングするように修正する。
-            3.  **台帳定義編集画面へのプレビュー適用:**
-                *   **対象ファイル:** `app/Livewire/LedgerDefine/Edit.php` および関連するBladeビュー
-                *   **修正:** 各説明文の入力フィールドに対応するプレビューエリアを追加し、入力内容が変更されるたびに`AutoLinkService`を呼び出して、リアルタイムで変換結果を表示するロジックを実装する。
+                *   **対象:** `resources/views/livewire/ledger/show.blade.php`
+                *   **修正方針:** `detail_description` を表示している箇所で `AutoLinkService::convert()` を呼び出し、結果を `{!! ... !!}` でHTMLとしてレンダリングする。
+            3.  **台帳定義編集画面へのリアルタイムプレビュー適用:**
+                *   **対象:** `app/Livewire/LedgerDefine/Edit.php` 及び関連Bladeビュー
+                *   **修正方針:**
+                    *   PHP側: 3種類の説明文（`create_description`, `list_description`, `detail_description`）それぞれに対応するComputed Property（例: `createDescriptionPreview`）を定義し、その中で`AutoLinkService`を呼び出す。
+                    *   Blade側: 各`textarea`に`wire:model.live`を設定し、入力とプロパティを即時同期させる。`textarea`の下にプレビューエリアを設け、対応するComputed Propertyを`{!! ... !!}`で表示する。
 
     *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: red;">未着手</span>**
         *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にキャッシュ機構を導入する。また、そのキャッシュはステップ5.3で設定された適用範囲を正しく反映する必要がある。
