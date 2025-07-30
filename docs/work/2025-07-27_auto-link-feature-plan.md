@@ -279,24 +279,22 @@
             4.  **適用ロジック:** `app/Services/AutoLinkService.php`の`convert`メソッド内のクエリを修正。コンテキスト（`Ledger`, `LedgerDefine`, `Folder`）から基準となるフォルダを特定し、そのフォルダの`descendantsAndSelf`（自身とすべての子孫）を適用範囲とするようにした。また、スコープが設定されていないグローバルな定義は常に読み込まれるように`whereDoesntHave`と`orWhereHas`を組み合わせて実装した。
         *   **成果:** 管理画面で`AutoLink`定義に適用範囲（フォルダ）を設定でき、その設定がリンク変換時に正しく（子孫フォルダを含めて）反映されるようになった。
 
-    *   **5.4. 台帳定義説明文への自動リンク適用（網羅） - <span style="color: red;">未着手</span>**
-        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」を完全に満たすには、ユーザーが台帳定義に触れる全ての主要画面で説明文の自動リンクが機能する必要がある。現状、プレビュー画面 (`LedgerDefine/Preview`) 以外（一覧画面、詳細画面、編集画面）で適用漏れがあり、ユーザー体験に一貫性がない状態となっている。
+    *   **5.4. 台帳定義説明文への自動リンク適用（網羅） - <span style="color: green;">完了</span>**
+        *   **背景・目的:** ユーザーシナリオ7「台帳定義の理解促進」を完全に満たすには、ユーザーが台帳定義に触れる全ての主要画面で説明文の自動リンクが機能する必要がある。当初の計画ではプレビュー、一覧、詳細、編集の各画面を対象としていた。
         *   **調査と判断:**
             *   **既存サービス:** `AutoLinkService`は、Markdownテキストを受け取り、リンク変換済みのHTMLを返す機能が既に実装されており、これを最大限に再利用する方針が最も効率的である。
-            *   **静的表示画面の特定:** ユーザーが主に情報を閲覧する「台帳一覧画面」と「台帳詳細画面」を特定。これらの画面では、Bladeビュー内で直接`AutoLinkService`を呼び出し、結果をHTMLとして表示する方法が、既存の構造への影響も少なく、シンプルで最適だと判断した。
-            *   **動的表示画面の特定:** 管理者が定義を編集する「台帳定義編集画面」では、入力内容の変更に応じて即座に変換結果を確認できるリアルタイム性が求められる。この要件を満たすには、LivewireのComputed Propertyと`wire:model.live`を組み合わせ、サーバーサイドで変換処理を行い、その結果をフロントエンドに動的に反映させるアーキテクチャが最適であると判断した。これにより、クライアントサイドに複雑なJavaScriptロジックを持つことなく、リッチなUXを実現できる。
-        *   **タスク:**
-            1.  **台帳一覧画面への適用:**
-                *   **対象:** `resources/views/livewire/ledger/records-table.blade.php`
-                *   **修正方針:** `list_description` を表示している箇所で `AutoLinkService::convert()` を呼び出し、結果を `{!! ... !!}` でHTMLとしてレンダリングする。
-            2.  **台帳詳細画面への適用:**
-                *   **対象:** `resources/views/livewire/ledger/show.blade.php`
-                *   **修正方針:** `detail_description` を表示している箇所で `AutoLinkService::convert()` を呼び出し、結果を `{!! ... !!}` でHTMLとしてレンダリングする。
-            3.  **台帳定義編集画面へのリアルタイムプレビュー適用:**
-                *   **対象:** `app/Livewire/LedgerDefine/Edit.php` 及び関連Bladeビュー
-                *   **修正方針:**
-                    *   PHP側: 3種類の説明文（`create_description`, `list_description`, `detail_description`）それぞれに対応するComputed Property（例: `createDescriptionPreview`）を定義し、その中で`AutoLinkService`を呼び出す。
-                    *   Blade側: 各`textarea`に`wire:model.live`を設定し、入力とプロパティを即時同期させる。`textarea`の下にプレビューエリアを設け、対応するComputed Propertyを`{!! ... !!}`で表示する。
+            *   **静的表示画面の特定:** ユーザーが主に情報を閲覧する「台帳一覧画面」「台帳詳細画面」「台帳新規作成画面」を対象として特定。これらの画面では、Bladeビュー内で直接`AutoLinkService`を呼び出し、結果をHTMLとして表示する方法が、既存の構造への影響も少なく、シンプルで最適だと判断した。
+            *   **動的表示画面の特定:** 管理者が定義を編集する「台帳定義編集画面」では、入力内容の変更に応じて即座に変換結果を確認できるリアルタイム性が求められる。この要件を満たすには、LivewireのComputed Propertyと`wire:model.live`を組み合わせ、サーバーサイドで変換処理を行い、その結果をフロントエンドに動的に反映させるアーキテクチャが最適であると判断した。
+        *   **実装と確認:**
+            1.  **台帳一覧画面:** `resources/views/components/ledgerDefine/header.blade.php` 内の `list_description` 表示箇所を修正し、`AutoLinkService` を経由して表示するように変更した。
+            2.  **台帳定義編集画面:** `app/Livewire/LedgerDefine/Edit.php` に3種類の説明文（作成用、一覧用、詳細用）に対応するComputed Propertyを実装。関連するBladeビューも修正し、リアルタイムプレビュー機能を追加した。
+            3.  **ユーザー確認とフィードバック:**
+                *   **適用漏れの指摘:** 当初の計画から「台帳新規作成画面」への適用が漏れていることが判明した。
+                *   **表示箇所の不備:** 「台帳詳細画面」において、当初実装したLivewireコンポーネント (`livewire/ledger/show.blade.php`) 内での表示は、画面レイアウトの観点から不適切であることが判明した。
+        *   **最終的な修正:**
+            *   **新規作成画面:** ユーザーからのフィードバックに基づき、`resources/views/ledger/create.blade.php` に `create_description` の表示ロジックを追加した。
+            *   **詳細画面:** 表示の適正化のため、`resources/views/ledger/show.blade.php` のレイアウト内に `detail_description` の表示ロジックを移設した。
+        *   **成果:** 台帳の新規作成、一覧、詳細、そして台帳定義の編集という、ユーザーが説明文に触れる全ての主要画面で、意図通りに自動リンクが機能する状態となった。
 
     *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: red;">未着手</span>**
         *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にキャッシュ機構を導入する。また、そのキャッシュはステップ5.3で設定された適用範囲を正しく反映する必要がある。

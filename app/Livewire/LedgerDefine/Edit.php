@@ -7,9 +7,12 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Services\AutoLinkService;
 
 class Edit extends Component
 {
@@ -151,6 +154,32 @@ class Edit extends Component
     {
         $this->descriptionGroup = $name;
         $this->dispatch('toggleDescriptionGroup', name: $name);
+    }
 
+    #[Computed]
+    public function createDescriptionPreview(): string
+    {
+        if (empty($this->createDescription)) {
+            return '';
+        }
+        return App::make(AutoLinkService::class)->convert($this->createDescription, null, $this->ledgerDefineRecord);
+    }
+
+    #[Computed]
+    public function listDescriptionPreview(): string
+    {
+        if (empty($this->listDescription)) {
+            return '';
+        }
+        return App::make(AutoLinkService::class)->convert($this->listDescription, null, $this->ledgerDefineRecord);
+    }
+
+    #[Computed]
+    public function detailDescriptionPreview(): string
+    {
+        if (empty($this->detailDescription)) {
+            return '';
+        }
+        return App::make(AutoLinkService::class)->convert($this->detailDescription, null, $this->ledgerDefineRecord);
     }
 }

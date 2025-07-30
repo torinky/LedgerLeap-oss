@@ -23,9 +23,9 @@
                 <label for="createDescription"
                        class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
                 <div class="collapse-content">
-                    <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! $ledgerDefineRecord->create_description !!}
-                    </x-markdown>
+                    @if($ledgerDefineRecord->detail_description)
+                        {!! app(App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->detail_description, null, $ledgerDefineRecord) !!}
+                    @endif
                 </div>
             </div>
 

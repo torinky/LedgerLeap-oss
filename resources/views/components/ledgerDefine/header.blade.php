@@ -37,9 +37,9 @@
         ><i class="fas fa-times"></i></a>
     </div>
 </div>
-<x-markdown class="prose text-xs leading-relaxed w-full max-w-none px-4">
-    {!! $ledgerDefine->list_description !!}
-</x-markdown>
+<div class="prose text-xs leading-relaxed w-full max-w-none px-4">
+    {!! app(App\Services\AutoLinkService::class)->convert($ledgerDefine->list_description, null, $ledgerDefine) !!}
+</div>
 
 <div class="grid justify-items-end mx-4">
 
