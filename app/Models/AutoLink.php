@@ -56,7 +56,8 @@ class AutoLink extends Model
 
     public function folders()
     {
-        return $this->morphedByMany(Folder::class, 'scopeable', 'auto_link_scopes');
+        return $this->morphedByMany(Folder::class, 'scopeable', 'auto_link_scopes')
+            ->using(AutoLinkScope::class);
     }
 
     public function creator(): BelongsTo

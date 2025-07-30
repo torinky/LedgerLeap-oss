@@ -335,4 +335,9 @@ class Folder extends Model
             ->wherePivot('type', 'approver')
             ->withTimestamps();
     }
+
+    public function autoLinks()
+    {
+        return $this->morphToMany(AutoLink::class, 'scopeable', 'auto_link_scopes');
+    }
 }

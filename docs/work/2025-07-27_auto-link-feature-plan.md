@@ -294,7 +294,7 @@
             *   **詳細画面:** 表示の適正化のため、`resources/views/ledger/show.blade.php` のレイアウト内に `detail_description` の表示ロジックを移設した。
         *   **成果:** 台帳の新規作成、一覧、詳細、そして台帳定義の編集という、ユーザーが説明文に触れる全ての主要画面で、意図通りに自動リンクが機能する状態となった。
 
-    *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: red;">未着手</span>**
+    *   **5.5. `AutoLinkService`におけるリンク定義のキャッシュ導入と適用範囲の考慮 - <span style="color: green;">完了</span>**
         *   **背景・目的:** 自動リンクの定義数が増加した場合のパフォーマンス低下を防ぐため、`AutoLinkService`にデータベースから取得したリンク定義をキャッシュする機構を導入する。また、定義やその適用範囲が変更された際には、キャッシュを即座に無効化（パージ）し、常に最新の定義が適用されることを保証する。
         *   **調査と判断（アーキテクチャ選定）:**
             *   **課題:** `AutoLink`定義は、それ自体の変更だけでなく、適用範囲となる`Folder`の階層構造の変更によっても、実際に適用されるルールが変化する。これらの変更を漏れなく検知し、かつパフォーマンスを損なわないキャッシュ無効化戦略が必要とされた。
@@ -306,17 +306,24 @@
                 *   **キャッシュタグ (`Cache Tags`):** コンテキストによって動的にキーが変わるキャッシュ（例: `auto_links_folder_123`）を、`auto_links`という単一のタグでグループ化する。これにより、無効化処理が「タグを指定して一括削除」というシンプルなロジックになり、確実性とメンテナンス性が向上する。
                 *   **Pivotモデルと`$touches`プロパティ:** `AutoLink`と`Folder`の中間テーブル`auto_link_scopes`の変更が、親である`AutoLink`モデルの`updated`イベントを発火させるようにする。これにより、`AutoLinkObserver`が適用範囲の変更を直接検知できるようになる。
 
-        *   **タスク（詳細設計）:**
-            1.  **キャッシュキー生成ロジックの修正:** `AutoLinkService`内の`getCacheKeyForContext`メソッドを修正し、コンテキストが`Ledger`モデルの場合でも、`$ledger->define->folder_id`を辿って、その台帳が属するフォルダに基づいた一意なキャッシュキー（例: `auto_links_folder_123`）が生成されるようにします。これにより、異なるフォルダの台帳でキャッシュが衝突する問題を完全に防ぎます。
+        *   **実装と確認:**
+            1.  **キャッシュキー生成ロジックの修正:** `AutoLinkService`内の`getCacheKeyForContext`メソッドを修正し、コンテキストが`Ledger`モデルの場合でも、`$ledger->define->folder_id`を辿って、その台帳が属するフォルダに基づいた一意なキャッシュキー（例: `auto_links_folder_123`）が生成されるようにした。これにより、異なるフォルダの台帳でキャッシュが衝突する問題を完全に防いだ。
             2.  **Pivotモデルの作成とリレーションの更新:**
-                *   `app/Models/AutoLinkScope.php`を新規作成し、`$touches = ['autoLink'];` を設定する。
-                *   `app/Models/AutoLink.php`の`folders()`リレーションを修正し、`->using(AutoLinkScope::class)`を追加する。
+                *   `app/Models/AutoLinkScope.php`を新規作成し、`protected $table = 'auto_link_scopes';`でテーブル名を明示的に指定した。また、`$touches = ['autoLink'];` を設定した。
+                *   `app/Models/AutoLink.php`の`folders()`リレーションを修正し、`->using(AutoLinkScope::class)`を追加した。
+                *   `app/Models/Folder.php`に`autoLinks()`リレーションを追加し、`morphToMany`で`AutoLink`モデルとの関係を定義した。
             3.  **キャッシュ無効化Observerの実装:**
                 *   `app/Observers/AutoLinkObserver.php`を作成。`saved`と`deleted`イベントで`Cache::tags('auto_links')->flush();`を実行する。
-                *   `app/Observers/FolderObserver.php`を作成（または追記）。`saved`イベント内で`$folder->wasChanged('parent_id')`をチェックし、親子関係が変更された場合のみ`Cache::tags('auto_links')->flush();`を実行する。これにより、不要なキャッシュクリアを抑制する。
-                *   `AppServiceProvider`に両Observerを登録する。
+                *   `app/Observers/FolderObserver.php`を作成。`saved`イベント内で`$folder->wasChanged('parent_id')`をチェックし、親子関係が変更された場合のみ`Cache::tags('auto_links')->flush();`を実行する。`deleted`イベントでもキャッシュをクリアする。
+                *   `AppServiceProvider`に両Observerを登録した。
             4.  **キャッシュロジックのタグ対応:**
-                *   `app/Services/AutoLinkService.php`の`convert()`メソッド内の`Cache::remember(...)`を`Cache::tags(['auto_links'])->remember(...)`に修正する。
+                *   `app/Services/AutoLinkService.php`の`convert()`メソッド内の`Cache::remember(...)`を`Cache::tags(['auto_links'])->remember(...)`に修正した。
+
+        *   **デバッグと解決の経緯:**
+            *   **`Table 'ledgerleap.auto_link_scope' doesn't exist` エラー:** `migrate:fresh`を実行しても解消されず、`auto_link_scopes`テーブルが認識されない問題が発生した。これは、`AutoLinkScope`モデルがテーブル名を正しく推測できていなかったためと判明。`protected $table = 'auto_link_scopes';`を明示的に追加することで解決した。
+            *   **`Call to undefined method App\Models\AutoLinkScope::setMorphType()` エラー:** `AutoLinkScope`が`Illuminate\Database\Eloquent\Relations\Pivot`を継承していたため、ポリモーフィックリレーションに必要な`setMorphType()`メソッドが存在せず発生した。`Illuminate\Database\Eloquent\Relations\MorphPivot`を継承するように修正することで解決した。
+            *   **`Cannot redeclare App\Models\AutoLink::scopeable()` エラー:** `AutoLink`モデルに`scopeable()`メソッドが重複して定義されていたため発生した。不要な`scopeable()`メソッドを削除することで解決した。
+            *   **「グローバル設定した自動リンクで適用範囲を制限する設定をしても、グローバル設定のまま自動リンクが適用され続けてしまう」問題:** 上記のデバッグを経て、`AutoLinkScope`の変更が`AutoLink`モデルに正しく伝播し、キャッシュが無効化されるようになったことで、この問題も解消された。
 
 *   **成果物 (ステップ5全体):**
     *   台帳一覧画面および詳細画面の台帳定義説明文に、自動リンクが適用される。

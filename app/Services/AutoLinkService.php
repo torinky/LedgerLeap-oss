@@ -41,7 +41,7 @@ class AutoLinkService
 
         // 2. カスタム定義によるリンク変換
         $cacheKey = $this->getCacheKeyForContext($context);
-        $autoLinks = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($context) {
+        $autoLinks = Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
             $query = AutoLink::where('is_enabled', true);
 
             if ($context) {
@@ -137,6 +137,13 @@ class AutoLinkService
 
         if ($context instanceof LedgerDefine) {
             return 'auto_links_ledger_define_' . $context->id;
+        }
+
+        if ($context instanceof Ledger) {
+            // Ledgerの場合は、それが属するFolderのIDに基づいてキーを生成する
+            if ($context->define && $context->define->folder) {
+                return 'auto_links_folder_' . $context->define->folder->id;
+            }
         }
 
         return 'auto_links_global';

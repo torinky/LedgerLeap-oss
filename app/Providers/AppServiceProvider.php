@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 use App\Database\MySqlConnection;
+use App\Models\AutoLink;
+use App\Models\Folder;
 use App\Models\LedgerDiff;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
+use App\Observers\AutoLinkObserver;
+use App\Observers\FolderObserver;
 use App\Observers\LedgerDiffObserver;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
@@ -65,5 +69,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        AutoLink::observe(AutoLinkObserver::class);
+        Folder::observe(FolderObserver::class);
     }
 }

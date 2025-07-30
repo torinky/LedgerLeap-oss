@@ -2,27 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphPivot;
 
-class AutoLinkScope extends Model
+class AutoLinkScope extends MorphPivot
 {
     protected $table = 'auto_link_scopes';
 
-    protected $fillable = [
-        'auto_link_id',
-        'scopeable_id',
-        'scopeable_type',
-    ];
+    /**
+     * 親モデルのタイムスタンプを更新するリレーション
+     *
+     * @var string[]
+     */
+    protected $touches = ['autoLink'];
 
-    public function autoLink(): BelongsTo
+    public function autoLink()
     {
         return $this->belongsTo(AutoLink::class);
-    }
-
-    public function scopeable(): MorphTo
-    {
-        return $this->morphTo();
     }
 }
