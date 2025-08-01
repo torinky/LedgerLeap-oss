@@ -333,16 +333,47 @@
 
 ---
 
-### ステップ 6: 権限管理と監査証跡の実装 - <span style="color: red;">未着手</span>
+### ステップ 6: 権限管理と監査証跡の実装 - <span style="color: blue;">設計完了</span>
 
-*   **目的:** ユーザーシナリオ3「権限と監査」に対応するため、`AutoLink`定義へのアクセスを特定の管理者に制限し、全ての操作履歴を記録する。
-*   **タスク:**
-    1.  **ポリシーの作成と登録:** `AutoLinkPolicy`を作成し、`AuthServiceProvider`に登録する。
-    2.  **ポリシーのロジック実装:** 各アクション（`viewAny`, `create`, `update`, `delete`）で、ユーザーが特定の権限（例: `manage_system_settings`）を持つかをチェックするロジックを実装する。
-    3.  **監査証跡の実装:** `AutoLink`モデルに`spatie/laravel-activitylog`の`LogsActivity`トレイトを適用し、`logOnlyDirty()` を利用して変更があった属性のみを記録する。ログに分かりやすいメッセージ（例: 「自動リンク 'Redmineチケット' を作成しました」）が記録されるように`getDescriptionForEvent`をオーバーライドする。
+*   **目的:** ユーザーシナリオ3「権限と監査」で示された「`AutoLink`定義の変更は特定の管理者のみに許可し、全ての変更履歴を追跡可能にする」という要件に対応します。これにより、重要なシステム設定である自動リンク機能のセキュリティと信頼性を確保します。
+
+*   **詳細設計:**
+
+    *   **6.1. 権限の定義と永続化 (Seeder & 翻訳)**
+        *   **背景・目的:** `AutoLink`の管理操作を保護するため、専用の権限を定義する必要があります。プロジェクトには既に権限とロールを一元管理する`RolesAndPermissionsSeeder.php`が存在するため、この既存の仕組みに則って権限を追加し、一貫性を保ちます。
+        *   **調査と判断:** `database/seeders/RolesAndPermissionsSeeder.php`を確認し、権限を`$permissions`配列に、ロールへの割り当てを`$roles`配列で行う既存の設計パターンを特定しました。このパターンに従うことで、既存のシーダー実行ロジックをそのまま活用でき、最も安全かつ効率的に権限を追加できると判断しました。
+        *   **実装内容:**
+            1.  **権限定義の追加:** `RolesAndPermissionsSeeder.php`の`$permissions`配列に、キー`manage_auto_links`、値`自動リンクを管理できる`を追加します。これを「システム設定グループ」に分類します。
+            2.  **ロールへの割り当て:** 同ファイル内の`$roles`配列で、`Super Admin`と`Organization Admin`の権限リストに`manage_auto_links`を追加します。`Super Admin`は全権限を持つ設定のため自動で割り当てられますが、組織単位での設定管理を担う`Organization Admin`にもこの権限を付与することが、実際の運用に適していると判断しました。
+
+    *   **6.2. 権限管理の実装 (Policy)**
+        *   **背景・目的:** 定義した`manage_auto_links`権限に基づき、実際のHTTPリクエストレベルでアクセス制御を行うため、LaravelのPolicy機能を利用します。
+        *   **実装内容:**
+            1.  **Policy作成:** `php artisan make:policy AutoLinkPolicy --model=AutoLink`コマンドで`app/Policies/AutoLinkPolicy.php`を生成します。
+            2.  **Policy登録:** `app/Providers/AuthServiceProvider.php`の`$policies`プロパティに`AutoLink::class => AutoLinkPolicy::class`を登録します。
+            3.  **ロジック実装:** `AutoLinkPolicy`内の各メソッド（`viewAny`, `create`, `update`, `delete`等）で、`$user->can('manage_auto_links')`を返すように実装し、権限チェックを一元化します。
+
+    *   **6.3. 監査証跡の実装 (Activity Log)**
+        *   **背景・目的:** 「いつ、誰が、どの`AutoLink`定義を、どのように変更したか」を記録し、監査要件を満たすために`spatie/laravel-activitylog`パッケージを利用します。
+        *   **実装内容:**
+            1.  **モデルへのトレイト適用:** `app/Models/AutoLink.php`に`LogsActivity`トレイトを追加します。
+            2.  **ログ内容のカスタマイズ:** 同モデルに`getActivitylogOptions()`メソッドを実装します。
+                *   `logOnlyDirty()`: 変更があった属性のみを記録し、ログのノイズを減らします。
+                *   `logOnly([...])`: `label`, `pattern`, `url_template`など、監査に重要と考えられる属性のみを記録対象とします。
+                *   `setDescriptionForEvent(...)`: 「自動リンク 'Redmineチケット' を作成しました」のように、ログメッセージが人間にとって分かりやすい形式になるよう設定します。
+        *   **【推奨事項】適用範囲の変更記録:** `AutoLink`の属性だけでなく、適用範囲（どのフォルダに適用されるか）の変更も重要な監査情報です。この関連付けの変更はモデルの`updated`イベントでは直接検知できないため、Filamentの`EditAutoLink`ページ等で、レコード保存後に手動でログを記録する処理を追加することを推奨します。
+
 *   **成果物:**
-    *   権限のないユーザーは`AutoLink`管理画面にアクセス・操作できない状態。
-    *   権限のある管理者による全ての操作が、アクティビティログに詳細に記録される状態。
+    *   **新規作成:**
+        *   `app/Policies/AutoLinkPolicy.php`
+    *   **修正:**
+        *   `database/seeders/RolesAndPermissionsSeeder.php`
+        *   `app/Providers/AuthServiceProvider.php`
+        *   `app/Models/AutoLink.php`
+        *   （推奨事項を実装する場合）`app/Filament/Resources/AutoLinkResource/Pages/EditAutoLink.php`
+    *   **状態:**
+        *   `manage_auto_links`権限を持たないユーザーは、`AutoLink`管理機能にアクセス・操作できなくなります。
+        *   権限を持つ管理者による全ての操作が、アクティビティログに詳細に記録されるようになります。
 
 
 ---
