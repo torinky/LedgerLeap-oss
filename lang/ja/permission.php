@@ -106,6 +106,8 @@ return [
         // ... (view_users など) ...
         'receive_workflow_summary_email' => 'ワークフロー集約メール受信',
         'receive_workflow_action_email' => 'ワークフロー個別メール受信',
+
+        'manage_auto_links'=>'自動リンクの管理'
     ],
     // --- FolderRelationManager 用 ---
     'folder_permissions' => 'フォルダーアクセス権限',

@@ -69,6 +69,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'restore_folders' => 'フォルダーを復元できる',
             'force_delete_folders' => 'フォルダーを完全に削除できる', // フォルダ管理グループ
 
+            'manage_auto_links' => '自動リンクを管理できる', // システム設定グループ
             'notify' => '通知を受け取る（システム内）', // 通知グループ
             'view_activity_logs' => 'アクティビティログを閲覧できる', // その他グループ
 
@@ -110,6 +111,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
                     'view_folder_permissions', 'create_folder_permissions', 'update_folder_permissions', 'delete_folder_permissions',
                     'view_activity_logs',
+                    'manage_auto_links',
                     'notify', // システム内通知も受け取る想定
                 ], $defaultEmailPermissions),
             ],

@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class AutoLink extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'label',
@@ -42,6 +44,32 @@ class AutoLink extends Model
                 $autoLink->modifier_id = Auth::id();
             }
         });
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'label',
+                'pattern',
+                'url_template',
+                'description',
+                'priority',
+                'is_enabled',
+                'open_in_new_tab',
+            ])
+            ->logOnlyDirty()
+            ->setDescriptionForEvent(fn(string $eventName) => "自動リンク「{$this->label}」を{$this->getEventDescription($eventName)}しました");
+    }
+
+    private function getEventDescription(string $eventName): string
+    {
+        return match ($eventName) {
+            'created' => '作成',
+            'updated' => '更新',
+            'deleted' => '削除',
+            default => '操作',
+        };
     }
 
     public function scopes()

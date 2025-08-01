@@ -12,7 +12,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "alpinejs": "^3.14.9",
     "autoprefixer": "^10.4.21",
-    "daisyui": "^5.0.48",
+    "daisyui": "^5.0.50",
     "filepond-plugin-file-poster": "^2.5.2",
     "laravel-vite-plugin": "^2.0.0",
     "postcss": "^8.5.6",

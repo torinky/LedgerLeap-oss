@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\AutoLink;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -10,6 +11,7 @@ use App\Models\Organization;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\AutoLinkPolicy;
 use App\Policies\CustomActivityPolicy;
 use App\Policies\FolderPolicy;
 use App\Policies\LedgerDefinePolicy;
@@ -34,6 +36,7 @@ class AuthServiceProvider extends ServiceProvider
         Permission::class => PermissionPolicy::class,
         Role::class => RolePolicy::class,
         CustomActivity::class =>CustomActivityPolicy::class,
+        AutoLink::class => AutoLinkPolicy::class,
 
     ];
 
