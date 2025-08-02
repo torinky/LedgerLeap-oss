@@ -444,6 +444,54 @@
 
 ## 6. 機能改善・不具合修正ログ
 
+### 6.0. [2025-08-02] `AutoLinkService` の責務変更と関連箇所の修正計画
+
+*   **課題・背景:**
+    *   `AutoLinkService` の `convert` メソッドが、Markdown変換と自動リンク適用という2つの異なる責務を持っていたため、HTMLコンテンツがMarkdownとして誤ってパースされ、HTMLタグがエスケープされて画面に表示される問題が発生した。
+    *   特に、`ColumnHtmlService` から渡されるファイル添付の表示HTMLがこの問題の影響を受けていた。
+
+*   **目的:**
+    *   `AutoLinkService` の責務を「HTML文字列を受け取り、その中のテキストノードに自動リンクを適用してHTML文字列を返す」という単一の機能に絞る。
+    *   これにより、コードの明確性と保守性を向上させ、各コンポーネントが自身の表示形式（MarkdownかHTMLか）を決定し、`AutoLinkService` には最終的なHTMLを渡すことで、責務の分離を徹底する。
+
+*   **詳細計画:**
+
+    #### 1. `app/Services/AutoLinkService.php` の修正
+
+    *   **変更内容:**
+        *   `Spatie\LaravelMarkdown\MarkdownRenderer` の依存性注入を削除する。
+        *   コンストラクタから `MarkdownRenderer` の引数を削除する。
+        *   `convert` メソッドのシグネチャから `$isHtml` 引数を削除する。
+        *   `convert` メソッド内のMarkdown変換ロジック (`$this->markdownRenderer->toHtml($text)`) を全て削除する。
+        *   `convert` メソッドのPHPDocコメントを更新し、`$text` が「変換対象のHTML文字列」であることを明記する。
+        *   `autoLinks->isEmpty()` の条件分岐で、`return $this->markdownRenderer->toHtml($text);` の部分を `return $text;` に変更する。
+
+    *   **理由:** `AutoLinkService` の責務を自動リンクの適用に限定し、MarkdownからHTMLへの変換は呼び出し元で行うようにする。これにより、サービスがよりシンプルになり、テストも容易になる。
+
+    #### 2. `app/Services/Ledger/ColumnHtmlService.php` の修正
+
+    *   **変更内容:**
+        *   `show` メソッド内で `AutoLinkService::convert` を呼び出す箇所 (`$html = $this->autoLinkService->convert((string)$html, $this->columnDefineData, $record);`) は、既に `$html` がHTML文字列であるため、変更は不要。
+
+    *   **理由:** `ColumnHtmlService` は、ファイル添付などのHTMLを生成しており、その結果を `AutoLinkService` に渡すため、この変更によって影響はない。
+
+    #### 3. 台帳定義の説明文を表示しているBladeテンプレートの修正
+
+    台帳定義の説明文はMarkdownで保存されているため、`AutoLinkService` に渡す前にMarkdownからHTMLに変換する必要がある。
+
+    *   **対象ファイル:**
+        *   `resources/views/livewire/ledger-define/preview.blade.php`
+        *   `resources/views/components/ledgerDefine/header.blade.php`
+        *   `resources/views/ledger/create.blade.php`
+        *   `resources/views/ledger/show.blade.php`
+
+    *   **変更内容（各ファイル共通）:**
+        *   `AutoLinkService::convert` を呼び出す前に、`app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml(...)` を使用してMarkdownをHTMLに変換する処理を追加する。
+
+    *   **理由:** `AutoLinkService` がMarkdown変換の責務を持たなくなるため、呼び出し元で明示的にMarkdownをHTMLに変換する必要がある。これにより、各ビューが自身の表示ロジックを完全に制御できるようになる。
+
+
+
 このセクションでは、初期リリース後の機能改善や不具合修正に関する技術的な記録を追記します。
 
 ### 6.1. [2025-08-02] HTML構造を破壊するリンク置換の修正 - <span style="color: green;">完了</span>

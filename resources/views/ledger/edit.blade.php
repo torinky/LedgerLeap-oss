@@ -24,7 +24,9 @@
                        class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
                 <div class="collapse-content">
                     <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! $ledgerDefineRecord->create_description !!}
+                        {!! app(App\Services\AutoLinkService::class)
+->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)
+->toHtml($ledgerDefineRecord->create_description, null, $ledgerDefineRecord)) !!}
                     </x-markdown>
                 </div>
             </div>

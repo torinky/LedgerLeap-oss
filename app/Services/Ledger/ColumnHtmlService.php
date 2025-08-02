@@ -375,14 +375,13 @@ HTML;
                 $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
                 // 長さを制限し、HTML特殊文字をエスケープ
                 $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
-                $contentHtmlStart = <<<HTML
+                if(!empty($content)) {
+                    $contentHtmlStart = <<<HTML
  <div class="tooltip" data-tip="{$content}">
  HTML;
 
-                $contentHtmlEnd = <<<HTML
- </div>
-HTML;
-
+                    $contentHtmlEnd = "</div>";
+                }
             }
 
             // 画像ファイルでサムネイルが存在する場合
@@ -407,7 +406,7 @@ HTML;
                 }
                 $files[] = <<<HTML
  {$contentHtmlStart}
- <div class="flex items-center mx-1 my-1 py-2">
+<div class="flex items-center mx-1 my-1 py-2">
 <div class="indicator">
      {$statusIconHtml}
      <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
@@ -415,11 +414,11 @@ HTML;
          <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
          <span>{$originalFilename}</span>
      </a>
- </div>
-         <div class="flex justify-center items-center gap-1 mt-2">
-             {$retryIconHtml}
-             {$auxiliaryLinksHtml}
-         </div>
+</div>
+<div class="flex justify-center items-center gap-1 mt-2">
+ {$retryIconHtml}
+ {$auxiliaryLinksHtml}
+</div>
 </div>
  {$contentHtmlEnd}
 HTML;

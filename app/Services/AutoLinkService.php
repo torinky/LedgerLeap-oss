@@ -9,21 +9,16 @@ use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
-use Spatie\LaravelMarkdown\MarkdownRenderer;
-
 class AutoLinkService
 {
-    private MarkdownRenderer $markdownRenderer;
-
-    public function __construct(MarkdownRenderer $markdownRenderer)
+    public function __construct()
     {
-        $this->markdownRenderer = $markdownRenderer;
     }
 
     /**
      * テキストを自動リンクに変換する
      *
-     * @param string $text 変換対象の文字列
+     * @param string $text 変換対象のHTML文字列
      * @param ColumnDefine|null $column オプション。ColumnDefine オブジェクト。auto_number タイプの場合に特別処理を行うために使用
      * @param mixed $context オプション。適用範囲を絞り込むためのコンテキスト情報（例: Folder モデルのインスタンス、LedgerDefine モデルのインスタンスなど）
      * @return string 変換後のHTML文字列
@@ -50,11 +45,11 @@ class AutoLinkService
         $autoLinks = $this->getAutoLinksForContext($context);
 
         if ($autoLinks->isEmpty()) {
-            // 適用するリンク定義がない場合は、Markdown変換のみ行って返す
-            return $this->markdownRenderer->toHtml($text);
+            // 適用するリンク定義がない場合は、そのまま返す
+            return $text;
         }
 
-        $htmlishText = $this->markdownRenderer->toHtml($text);
+        $htmlishText = $text;
 
         // DOMDocumentを使用してHTMLを安全に処理
         $dom = new \DOMDocument();

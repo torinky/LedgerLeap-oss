@@ -24,7 +24,9 @@
                        class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
                 <div class="collapse-content">
                     @if($ledgerDefineRecord->detail_description)
-                        {!! app(App\Services\AutoLinkService::class)->convert($ledgerDefineRecord->detail_description, null, $ledgerDefineRecord) !!}
+                        {!! app(App\Services\AutoLinkService::class)
+->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)
+->toHtml($ledgerDefineRecord->create_description, null, $ledgerDefineRecord)) !!}
                     @endif
                 </div>
             </div>
