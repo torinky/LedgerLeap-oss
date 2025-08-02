@@ -484,15 +484,136 @@
         *   リンクの直後または直前に、リンクの種類を示す小さなアイコン（例: 外部リンクを示すアイコン、Redmineのロゴ、仕様書アイコンなど）を表示する。
         *   これにより、一目でリンクの種類を判別できるようになる。
 
-*   **実装方針:**
-    *   **`AutoLink` モデルの活用:**
-        *   `AutoLink` モデルの `label` や `description` をツールチップの内容として活用する。
-        *   アイコンについては、`AutoLink` モデルに新しいカラム（例: `icon_class` や `link_type`）を追加し、それに応じて適切なアイコンクラス（Font Awesomeなど）を割り当てることを検討する。
-        *   **マイグレーションについて:** 開発中のシステムであるため、差分マイグレーションは不要。直接カラムを追加する。
-    *   **`AutoLinkService` の変更:**
-        *   `convert` メソッド内で `<a>` タグを生成する際に、`title` 属性とアイコンを追加するロジックを組み込む。
+*   **詳細設計（再々検討版）:**
 
-*   **関連ファイル:**
-    *   `app/Models/AutoLink.php` (アイコン関連カラムの追加検討)
-    *   `app/Filament/Resources/AutoLinkResource.php` (アイコン選択UIの追加検討)
-    *   `app/Services/AutoLinkService.php` (リンク生成ロジックの修正)
+    #### 1. 変更のポイント
+
+    *   **アイコンプレビューの導入:** `link_type` の `Select` フィールドの隣に、選択されたアイコンをリアルタイムで表示するプレビューを追加します。これにより、ユーザーは選択したアイコンが実際にどのように表示されるかを即座に確認でき、視覚的なフィードバックが向上します。
+    *   **デフォルトアイコンの明示:** `link_type` が `default` の場合に表示されるアイコンを明確にし、ユーザーがその意味を理解しやすくします。
+    *   **翻訳の徹底:** UI上の全ての文字列は、ハードコーディングせず、翻訳ファイル経由で表示されることを改めて確認します。
+
+    #### 2. 詳細設計
+
+    #### 2.1. データ構造の変更
+
+    1.  **`auto_links`テーブルへのカラム追加**
+        *   `database/migrations/..._create_auto_links_table.php` を修正します。
+        *   **カラム名:** `link_type`
+        *   **型:** `string`
+        *   **属性:** `nullable`
+        *   **目的:** リンクの種類を示す識別子（例: `default`, `external`, `document`, `ticket`）を保存します。
+
+    2.  **`AutoLink`モデルの更新**
+        *   `app/Models/AutoLink.php` の `$fillable` 配列に `'link_type'` を追加します。
+
+    #### 2.2. 設定ファイルの新設
+
+    1.  **`config/ledgerleap.php` の作成**
+        *   アイコンと識別子のマッピングを一元管理するため、新しい設定ファイルを作成します。
+        *   **内容:**
+            ```php
+            return [
+                'auto_links' => [
+                    'link_types' => [
+                        'default' => [
+                            'icon' => 'o-link',
+                            'label_key' => 'auto_links.link_types.default', // 翻訳キー
+                        ],
+                        'external' => [
+                            'icon' => 'o-arrow-top-right-on-square',
+                            'label_key' => 'auto_links.link_types.external',
+                        ],
+                        'document' => [
+                            'icon' => 'o-document-text',
+                            'label_key' => 'auto_links.link_types.document',
+                        ],
+                        'ticket' => [
+                            'icon' => 'o-ticket',
+                            'label_key' => 'auto_links.link_types.ticket',
+                        ],
+                        // ... 他のタイプを追加可能
+                    ],
+                ],
+            ];
+            ```
+
+    #### 2.3. 管理UIの改修 (`AutoLinkResource`)
+
+    `app/Filament/Resources/AutoLinkResource.php` の `form()` メソッドを修正します。
+
+    1.  **リンクタイプ選択フィールドの追加:**
+        *   `Select::make('link_type')` を追加します。
+        *   `options()` メソッドで、`config('ledgerleap.auto_links.link_types')` を読み込み、選択肢を動的に生成します。
+        *   `allowHtml()` を `true` に設定し、選択肢内のHTMLを有効化します。
+        *   `default('default')` を設定します。
+        *   `live()` メソッドの追加: 選択が変更されたときにリアルタイムでフォームを更新するために `live()` を追加します。
+        *   `afterStateUpdated()` メソッドの追加: `link_type` が更新された際に、プレビュー用の状態を更新するロジックを追加します。
+
+    2.  **アイコンプレビューの追加:**
+        *   `Select::make('link_type')` の直後に `Placeholder::make('icon_preview')` を追加します。
+        *   このプレースホルダーの `content()` メソッド内で、現在の `link_type` の値に基づいてアイコンをレンダリングします。
+        *   `getState()` を使用して現在の `link_type` の値を取得し、`config('ledgerleap.auto_links.link_types.'.$state.'.icon', 'o-link')` のようにしてアイコンクラス名を取得します。
+        *   取得したアイコンクラス名を使って、`Blade::render()` で `<x-icon>` コンポーネントのHTMLを生成し、表示します。
+        *   ヘルプテキストの追加: プレビューの下に、このアイコンが何を示すのかを説明するヘルプテキスト（翻訳済み）を表示します。
+
+        ```php
+        // app/Filament/Resources/AutoLinkResource.php の form() メソッド内
+        // ...
+        Forms\Components\Select::make('link_type')
+            ->label(__('auto_links.link_type'))
+            ->helperText(__('auto_links.link_type_helper'))
+            ->options(
+                collect(config('ledgerleap.auto_links.link_types'))
+                    ->mapWithKeys(function ($type, $key) {
+                        $label = __($type['label_key']);
+                        $icon = $type['icon'];
+                        return [$key => Blade::render("<x-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
+                    })
+                    ->all()
+            )
+            ->allowHtml()
+            ->default('default')
+            ->live() // リアルタイム更新を有効にする
+            ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
+                // プレビューを更新するために、ダミーの値をセットするなどしてフォームを再描画させる
+                // または、Placeholderのcontent()がgetState()を直接参照するようにする
+            }),
+
+        Forms\Components\Placeholder::make('icon_preview')
+            ->label(__('auto_links.icon_preview')) // 新しい翻訳キー
+            ->content(function (Forms\Get $get) {
+                $linkType = $get('link_type') ?? 'default'; // デフォルト値を考慮
+                $iconName = config('ledgerleap.auto_links.link_types.'.$linkType.'.icon', 'o-link');
+                $labelKey = config('ledgerleap.auto_links.link_types.'.$linkType.'.label_key', 'auto_links.link_types.default');
+                $label = __($labelKey);
+
+                return Blade::render(<<<HTML
+                    <div class="flex items-center space-x-2">
+                        <x-icon name="{$iconName}" class="h-6 w-6 text-primary-500" />
+                        <span class="text-gray-600 dark:text-gray-400">{$label}</span>
+                    </div>
+                HTML);
+            })
+            ->columnSpanFull(), // 全幅を使用
+        // ...
+        ```
+
+    #### 2.4. リンク生成ロジックの修正 (`AutoLinkService`)
+
+    *   `AutoLink`モデルの `link_type` の値から、設定ファイル経由でアイコンクラス名を取得。
+    *   `title`属性とアイコンのHTMLを生成。
+
+    #### 2.5. 翻訳ファイルの更新
+
+    `lang/ja/auto_links.php` に、以下のキーと翻訳を追加します。
+
+    *   `link_type`: "リンクの種類" (フィールドラベル)
+    *   `link_type_helper`: "リンクの目的を示すアイコンを選択します。選択されたアイコンは、リンクの横に表示されます。" (ヘルプテキスト)
+    *   `tooltip_prefix`: "自動リンク: "
+    *   `icon_preview`: "選択されたアイコン"
+    *   `link_types`:
+        *   `default`: "デフォルト"
+        *   `external`: "外部リンク"
+        *   `document`: "ドキュメント"
+        *   `ticket`: "チケット"
+
