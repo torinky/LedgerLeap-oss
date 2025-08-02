@@ -11,10 +11,12 @@ use App\Helpers\AttachedFilePathHelper;
 
 use App\Services\AutoLinkService;
 use App\Models\Ledger;
+use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class ColumnHtmlService
 {
     private AutoLinkService $autoLinkService;
+    private MarkdownRenderer $markdownRenderer;
 
     private $attrs = [];
 
@@ -45,9 +47,10 @@ class ColumnHtmlService
      */
     private array $attachmentContents;
 
-    public function __construct(AutoLinkService $autoLinkService)
+    public function __construct(AutoLinkService $autoLinkService, MarkdownRenderer $markdownRenderer)
     {
         $this->autoLinkService = $autoLinkService;
+        $this->markdownRenderer = $markdownRenderer;
     }
 
     /**
@@ -79,6 +82,12 @@ class ColumnHtmlService
 
         if ($type === 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
+        } elseif ($type === 'textarea') {
+            // 1. MarkdownをHTMLに変換
+            $html = $this->markdownRenderer->toHtml((string) $this->initialValue);
+
+            // 2. 自動リンクを適用
+            $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record);
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $html = $this->initialValue . $unit;
@@ -86,11 +95,8 @@ class ColumnHtmlService
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
         } else {
-            $html = $this->initialValue;
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         }
-
-        // AutoLinkServiceを適用
-        $html = $this->autoLinkService->convert((string)$html, $this->columnDefineData, $record);
 
         return new HtmlString($this->highlightKeywords($html) ?? '');
     }

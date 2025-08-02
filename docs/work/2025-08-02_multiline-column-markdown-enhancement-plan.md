@@ -49,24 +49,65 @@
 
 ## 3. 実装計画 (ステップ・バイ・ステップ)
 
-### ステップ 1: `ColumnHtmlService` の改修
+### ステップ 1: `ColumnHtmlService` の改修 (詳細設計)
 
-*   **目的:** `textarea` タイプのカラム値を表示する際に、Markdown変換と自動リンク処理を適用する。
+*   **目的:** `textarea` タイプのカラム値を表示する際に、Markdown変換と自動リンク処理を適用する。この実装は、既存の台帳定義説明文の表示ロジックを踏襲し、一貫性を保つ。
 *   **対象ファイル:** `app/Services/Ledger/ColumnHtmlService.php`
-*   **タスク:**
-    1.  `show()` メソッド内に、`$columnDefineData->type === 'textarea'` の条件分岐を追加する。
-    2.  分岐内で、まず `Spatie\LaravelMarkdown\MarkdownRenderer` を使って `$value` (カラムのテキスト) をHTMLに変換する。
-    3.  次に、変換後のHTMLを `AutoLinkService::convert()` に渡し、自動リンク処理を適用する。
-    4.  最終的に生成されたHTMLを返す。
+*   **詳細設計:** 
+    1.  **依存性の注入:** 
+        *   `ColumnHtmlService` のコンストラクタに、`Spatie\LaravelMarkdown\MarkdownRenderer` を追加でインジェクトする。`AutoLinkService` は既に注入済みであることを確認する。
+        ```php
+        // app/Services/Ledger/ColumnHtmlService.php (コンストラクタのイメージ)
+        public function __construct(
+            protected AutoLinkService $autoLinkService,
+            protected \Spatie\LaravelMarkdown\MarkdownRenderer $markdownRenderer // これを追加
+        ) {
+        }
+        ```
+    2.  **`show()` メソッドのロジック修正:** 
+        *   `show()` メソッドの内部で、カラムタイプをチェックする条件分岐を追加する。
+        *   `textarea` 型の場合は、まず `markdownRenderer` でHTMLに変換し、次にその結果を `autoLinkService` に渡してリンクを適用する。
+        *   その他の型は、既存の `htmlspecialchars` によるエスケープ処理を維持する。
+        *   キーワードハイライト処理は、全ての処理の最後に適用する。
+        ```php
+        // app/Services/Ledger/ColumnHtmlService.php の show() メソッド内のロジックイメージ
+        
+        // ...（既存の初期化処理）... 
+
+        if (is_null($this->initialValue)) {
+            return null;
+        }
+
+        $html = '';
+        // textarea型の場合の特別処理
+        if ($this->columnDefineData->type === 'textarea') {
+            // 1. MarkdownをHTMLに変換
+            $html = $this->markdownRenderer->toHtml((string) $this->initialValue);
+            
+            // 2. 自動リンクを適用
+            $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record);
+
+        } else if ($this->columnDefineData->type === 'files') {
+            // ... (既存のファイル処理) ...
+            $html = $this->getFileHtml();
+
+        } else {
+            // その他の型は、これまで通りHTMLエスケープ
+            $html = htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8');
+        }
+
+        // 最後にキーワードハイライトを適用
+        return $this->highlightKeywords($html);
+        ```
 *   **成果物:** 台帳の詳細画面や一覧画面で、複数行カラムの内容がMarkdownとしてレンダリングされ、かつ自動リンクが適用された状態で表示される。
 
 ### ステップ 2: (任意) 入力支援UIの導入
 
 *   **目的:** Markdownに不慣れなユーザーでも簡単に入力できるよう、リッチテキストエディタを導入する。
-*   **対象ファイル:**
+*   **対象ファイル:** 
     *   `resources/views/livewire/ledger/create-column.blade.php`
     *   `resources/views/livewire/ledger/modify-column.blade.php`
-*   **タスク:**
+*   **タスク:** 
     1.  `textarea` タイプのカラムを表示する箇所で、標準の `<textarea>` の代わりに、Markdown対応のリッチテキストエディタコンポーネント（例: [EasyMDE](https://github.com/Ionaru/easy-markdown-editor), またはMaryUIに組み込みのエディタがあればそれを利用）を導入する。
     2.  エディタのコンテンツを、対応するLivewireコンポーネントのプロパティ (`$content`) に `wire:model` でバインドする。
 *   **成果物:** ユーザーがMarkdownを直感的に編集できるUI。
