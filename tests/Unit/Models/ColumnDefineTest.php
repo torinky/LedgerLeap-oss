@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\Unit\Models; // Corrected namespace
+namespace Tests\Unit\Models;
 
 use App\Models\ColumnDefine;
-use App\Models\ColumnTypes\InputTypeFactory; // Added
-use InvalidArgumentException; // Added for setType test
-use RuntimeException; // Keep if other methods might throw it
-use Tests\TestCase; // Corrected namespace
+use App\Models\ColumnTypes\InputTypeFactory;
+use InvalidArgumentException;
+use RuntimeException;
+use Tests\TestCase;
 
 class ColumnDefineTest extends TestCase
 {
@@ -16,14 +16,14 @@ class ColumnDefineTest extends TestCase
         $data = (object)[
             'id' => 1,
             'name' => 'column1',
-            'type' => 'text', // Type identifier string
+            'type' => 'text',
             'order' => 2,
             'options' => ['option1', 'option2'],
             'required' => true,
             'unique' => false,
             'sortBy' => true,
             'hint' => '',
-            'file' => [], // file should be an array
+            'file' => [],
         ];
 
         // オブジェクトによる初期化のテスト
@@ -32,15 +32,19 @@ class ColumnDefineTest extends TestCase
         // オブジェクトのプロパティが期待通りにセットされているかテスト
         $this->assertEquals($data->id, $column->id);
         $this->assertEquals($data->name, $column->name);
-        $this->assertEquals($data->type, $column->getType()); // Use getType()
+        $this->assertEquals($data->type, $column->getType());
         $this->assertEquals($data->order, $column->order);
-        $this->assertFalse($column->useOptions); // 'text' has no options
+        $this->assertFalse($column->useOptions);
         $this->assertEquals($data->options, $column->options);
         $this->assertEquals($data->required, $column->required);
         $this->assertEquals($data->unique, $column->unique);
         $this->assertEquals($data->sortBy, $column->sortBy);
         $this->assertEquals($data->hint, $column->hint);
         $this->assertEquals($data->file, $column->file);
+
+        // 新しいプロパティのデフォルト値を確認
+        $this->assertEquals(3, $column->display_level);
+        $this->assertNull($column->group);
     }
 
     /**
@@ -53,20 +57,22 @@ class ColumnDefineTest extends TestCase
     public function test_value_initialization(): void
     {
         // 値による初期化のテスト
-        // Note: The original test had 11 arguments, but constructorByArgs takes 10.
-        // Assuming the last '' was a typo or for a property not in constructByArgs.
         $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, false, 'hint text', []);
         // オブジェクトのプロパティが期待通りにセットされているかテスト
         $this->assertEquals(2, $column->id);
         $this->assertEquals('column2', $column->name);
-        $this->assertEquals('select', $column->getType()); // Use getType()
+        $this->assertEquals('select', $column->getType());
         $this->assertEquals(1, $column->order);
-        $this->assertTrue($column->useOptions); // 'select' has options
+        $this->assertTrue($column->useOptions);
         $this->assertEquals(['option1', 'option2'], $column->options);
         $this->assertFalse($column->required);
         $this->assertTrue($column->unique);
-        $this->assertEquals('hint text', $column->hint); // Check hint
+        $this->assertEquals('hint text', $column->hint);
         $this->assertFalse($column->sortBy);
+
+        // 新しいプロパティのデフォルト値を確認
+        $this->assertEquals(3, $column->display_level);
+        $this->assertNull($column->group);
     }
 
     /**
@@ -83,15 +89,15 @@ class ColumnDefineTest extends TestCase
         $column = new ColumnDefine(3, 'column3', 'text');
 
         $column->setType('textarea');
-        $this->assertEquals('textarea', $column->getType()); // Use getType()
-        $this->assertFalse($column->useOptions); // 'textarea' has no options
+        $this->assertEquals('textarea', $column->getType());
+        $this->assertFalse($column->useOptions);
 
         $column->setType('chk');
-        $this->assertEquals('chk', $column->getType()); // Use getType()
-        $this->assertTrue($column->useOptions); // 'chk' has options
+        $this->assertEquals('chk', $column->getType());
+        $this->assertTrue($column->useOptions);
 
         // 無効な列の種類を設定しようとする場合のテスト
-        $this->expectException(InvalidArgumentException::class); // Changed from RuntimeException
+        $this->expectException(InvalidArgumentException::class);
         $column->setType('invalid_type');
     }
 
@@ -214,7 +220,7 @@ class ColumnDefineTest extends TestCase
         $convertedValue = $column->convertColumnValue2Text($numberValue);
 
         // Assert
-        $this->assertEquals('12345', (string)$convertedValue); // Cast to string for comparison
+        $this->assertEquals('12345', (string)$convertedValue);
     }
 
     /**
@@ -248,13 +254,12 @@ class ColumnDefineTest extends TestCase
     {
         // Arrange
         $column = new ColumnDefine(1, 'column1', 'textarea', 1);
-        $textareaValue = "Hello, World!\nThis is a multi-line text."; // Use double quotes for \n
+        $textareaValue = "Hello, World!\nThis is a multi-line text.";
 
         // Act
         $convertedValue = $column->convertColumnValue2Text($textareaValue);
 
         // Assert
-        // TextareaType's convertToText just casts to string, no explicit \\n replacement
         $this->assertEquals("Hello, World!\nThis is a multi-line text.", $convertedValue);
     }
 
@@ -269,7 +274,7 @@ class ColumnDefineTest extends TestCase
     public function test_column_type_conversion_for_select_type()
     {
         // Arrange
-        $column = new ColumnDefine(0, 'test', 'select'); // Minimal constructor
+        $column = new ColumnDefine(0, 'test', 'select');
         $column->setOptions(['Option 1', 'Option 2', 'Option 3']);
         $selectedValue = 'Option 2';
 
@@ -294,14 +299,13 @@ class ColumnDefineTest extends TestCase
     public function test_column_type_conversion_for_text_area_type_with_multiple_lines()
     {
         // Arrange
-        $column = new ColumnDefine(0, 'test', 'textarea'); // Use constructor
-        $textareaValue = "Hello, World!\nThis is a multi-line text."; // Use double quotes for \n
+        $column = new ColumnDefine(0, 'test', 'textarea');
+        $textareaValue = "Hello, World!\nThis is a multi-line text.";
 
         // Act
         $convertedValue = $column->convertColumnValue2Text($textareaValue);
 
         // Assert
-        // TextareaType's convertToText just casts to string.
         $this->assertEquals("Hello, World!\nThis is a multi-line text.", $convertedValue);
     }
 
@@ -315,8 +319,8 @@ class ColumnDefineTest extends TestCase
     public function test_set_options_with_empty_array()
     {
         // Arrange
-        $column = new ColumnDefine(0, 'test', 'select'); // Use constructor
-        $column->options = []; // This direct assignment is fine for testing setOptions
+        $column = new ColumnDefine(0, 'test', 'select');
+        $column->options = [];
 
         // Act
         $column->setOptions([]);
@@ -366,16 +370,14 @@ class ColumnDefineTest extends TestCase
     public function test_column_type_conversion_for_chk_type_with_duplicate_options()
     {
         // Arrange
-        $column = new ColumnDefine(0, 'test', 'chk'); // Use constructor
-        // options property itself is not directly used by convertColumnValue2Text for chk type
-        // The input to convertColumnValue2Text is the value to be converted.
-        $chkValue = ['Option 1', 'Option 2', 'Option 1'];
+        $column = new ColumnDefine(0, 'test', 'chk');
+        $chkValue = ['option1', 'option2', 'option1'];
 
         // Act
         $convertedValue = $column->convertColumnValue2Text($chkValue);
 
         // Assert
-        $expectedConvertedValue = json_encode(['Option 1', 'Option 2', 'Option 1'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $expectedConvertedValue = json_encode(['option1', 'option2', 'option1'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $this->assertEquals($expectedConvertedValue, $convertedValue);
     }
 
@@ -413,7 +415,7 @@ class ColumnDefineTest extends TestCase
 
         $textValueNonNumeric = 'abc';
         $restoredValueNonNumeric = $column->restoreColumnValueFromText($textValueNonNumeric);
-        $this->assertEquals('abc', $restoredValueNonNumeric); // Stays as string if not numeric
+        $this->assertEquals('abc', $restoredValueNonNumeric);
     }
 
     /** @test */
@@ -427,7 +429,7 @@ class ColumnDefineTest extends TestCase
         // Test invalid JSON
         $invalidJsonValue = '["option1","option2"';
         $restoredInvalid = $column->restoreColumnValueFromText($invalidJsonValue);
-        $this->assertNull($restoredInvalid); // json_decode returns null for malformed JSON
+        $this->assertNull($restoredInvalid);
     }
 
     /** @test */
@@ -445,7 +447,7 @@ class ColumnDefineTest extends TestCase
         $column = new ColumnDefine(1, 'test_ymd', 'YMD');
         $textValue = '2023-10-26';
         $restoredValue = $column->restoreColumnValueFromText($textValue);
-        $this->assertEquals(strtotime('2023-10-26'), $restoredValue); // YMD returns timestamp
+        $this->assertEquals(strtotime('2023-10-26'), $restoredValue);
 
         $emptyValue = '';
         $restoredEmpty = $column->restoreColumnValueFromText($emptyValue);
@@ -453,7 +455,7 @@ class ColumnDefineTest extends TestCase
 
         $invalidDate = 'not-a-date';
         $restoredInvalidDate = $column->restoreColumnValueFromText($invalidDate);
-        $this->assertNull($restoredInvalidDate); // strtotime returns false, DateType returns null
+        $this->assertNull($restoredInvalidDate);
     }
 
     /** @test */
@@ -471,7 +473,7 @@ class ColumnDefineTest extends TestCase
         // Test invalid JSON
         $invalidJsonValue = '[{"name":"file1.jpg"';
         $restoredInvalid = $column->restoreColumnValueFromText($invalidJsonValue);
-        $this->assertNull($restoredInvalid); // json_decode returns null
+        $this->assertNull($restoredInvalid);
 
         // Test already array (should pass through)
         $arrayValue = [["name" => "file3.txt"]];
@@ -487,5 +489,80 @@ class ColumnDefineTest extends TestCase
             $column = new ColumnDefine(1, 'test_col', $typeIdentifier);
             $this->assertEquals($inputTypeInstance->hasOptions(), $column->useOptions, "Failed for type: {$typeIdentifier}");
         }
+    }
+
+    /** @test */
+    public function test_column_define_initializes_with_default_display_level_and_group()
+    {
+        $data = (object)[
+            'id' => 1,
+            'name' => 'Test Column',
+            'type' => 'text',
+            'order' => 1,
+            'options' => [],
+            'required' => false,
+            'unique' => false,
+            'sortBy' => false,
+            'hint' => '',
+            'file' => [],
+        ];
+
+        $column = new ColumnDefine($data);
+
+        $this->assertEquals(3, $column->display_level);
+        $this->assertNull($column->group);
+    }
+
+    /** @test */
+    public function test_column_define_initializes_with_specified_display_level_and_group()
+    {
+        $data = (object)[
+            'id' => 2,
+            'name' => 'Another Column',
+            'type' => 'number',
+            'order' => 2,
+            'options' => [],
+            'required' => true,
+            'unique' => false,
+            'sortBy' => false,
+            'hint' => '',
+            'file' => [],
+            'display_level' => 1,
+            'group' => 'Basic Info',
+        ];
+
+        $column = new ColumnDefine($data);
+
+        $this->assertEquals(1, $column->display_level);
+        $this->assertEquals('Basic Info', $column->group);
+    }
+
+    /** @test */
+    public function test_column_define_handles_existing_data_without_new_properties()
+    {
+        // Simulate old data structure (array without display_level or group)
+        $oldData = [
+            'id' => 3,
+            'name' => 'Old Column',
+            'type' => 'textarea',
+            'order' => 3,
+            'options' => [],
+            'required' => false,
+            'unique' => false,
+            'sortBy' => false,
+            'hint' => '',
+            'file' => [],
+        ];
+
+        // Test with object conversion
+        $columnObject = new ColumnDefine((object)$oldData);
+        $this->assertEquals(3, $columnObject->display_level);
+        $this->assertNull($columnObject->group);
+
+        // Test with array conversion (via normalizeArrayOrCollection)
+        $normalizedData = ColumnDefine::normalizeArrayOrCollection([$oldData]);
+        $this->assertArrayHasKey(3, $normalizedData);
+        $this->assertEquals(3, $normalizedData[3]['display_level']);
+        $this->assertNull($normalizedData[3]['group']);
     }
 }

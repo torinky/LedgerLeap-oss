@@ -33,6 +33,10 @@ class ColumnDefine
 
     public $file = [];
 
+    public int $display_level; // 追加: 表示レベル
+
+    public ?string $group;      // 追加: グループ名
+
     /**
      * コンストラクタ
      *
@@ -69,6 +73,10 @@ class ColumnDefine
         $this->setHint($inObject->hint);
         $this->setFile($inObject->file);
 
+        // 新しいプロパティの初期化
+        $this->display_level = (int)($inObject->display_level ?? 3); // デフォルト値は3
+        $this->group = $inObject->group ?? null; // デフォルト値はnull
+
         $this->initializeType((array) $inObject);
     }
 
@@ -99,6 +107,10 @@ class ColumnDefine
         $this->setSortBy($sortBy);
         $this->setHint($hint);
         $this->setFile($file);
+
+        // 新しいプロパティの初期化 (constructByArgsではデフォルト値のみ)
+        $this->display_level = 3;
+        $this->group = null;
 
         $this->initializeType(['type' => $typeIdentifier, 'options' => $options]);
     }
@@ -252,8 +264,13 @@ class ColumnDefine
                     'sortBy' => $colDef->sortBy ?? false,
                     'hint' => $colDef->hint ?? '',
                     'file' => isset($colDef->file) && is_array($colDef->file) ? $colDef->file : [],
+                    'display_level' => $colDef->display_level ?? 3, // デフォルト値を追加
+                    'group' => $colDef->group ?? null, // デフォルト値を追加
                 ];
             } elseif (is_array($colDef) && isset($colDef['id'])) {
+                // 配列の場合も同様にデフォルト値を適用
+                $colDef['display_level'] = $colDef['display_level'] ?? 3;
+                $colDef['group'] = $colDef['group'] ?? null;
                 $result[$colDef['id']] = $colDef;
             }
         }
