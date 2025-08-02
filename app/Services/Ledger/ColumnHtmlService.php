@@ -367,9 +367,14 @@ HTML;
 
 //                dd($this->attachmentContents, $hashedFilename);
             }
-            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this
-                        ->attachmentContents[$hashedFilename]['meta']['content'])) {
-                $content = htmlspecialchars(mb_strimwidth($this->attachmentContents[$hashedFilename]['meta']['content'], 0, 300, '...'));
+            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
+                $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
+                // HTMLタグを除去
+                $plainTextContent = strip_tags($rawContent);
+                // 改行をスペースに置換してdata-tip属性の安全性を確保
+                $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
+                // 長さを制限し、HTML特殊文字をエスケープ
+                $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
                 $contentHtmlStart = <<<HTML
  <div class="tooltip" data-tip="{$content}">
  HTML;

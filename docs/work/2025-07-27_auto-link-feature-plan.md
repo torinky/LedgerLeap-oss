@@ -439,3 +439,33 @@
 2.  **関連ドキュメント一覧の更新**
     *   **変更箇所:** `/docs/README.md` や関連するインデックスファイル。
     *   **変更内容:** 新規作成したモデル仕様書、サービス仕様書へのリンクを追加する。
+
+---
+
+## 6. 機能改善・不具合修正ログ
+
+このセクションでは、初期リリース後の機能改善や不具合修正に関する技術的な記録を追記します。
+
+### 6.1. [2025-08-02] HTML構造を破壊するリンク置換の修正 - <span style="color: green;">完了</span>
+
+*   **課題・背景:**
+    *   `AutoLinkService` の変換処理が、入力文字列にHTMLタグが含まれている場合でも、タグの属性内まで無差別に置換してしまい、HTML構造を破壊する不具合が確認された。特に、添付ファイルのツールチップ表示で問題が顕在化していた。
+    *   また、`DOMDocument` 導入後に、台帳のカラムの先頭の空白が詰まって表示される問題が発生した。
+
+*   **調査:**
+    *   **HTML構造破壊の原因:** `AutoLinkService`の`convert`メソッドが、入力文字列全体に対して単純な`preg_replace_callback`を実行していることが原因と特定。HTMLのテキストノードとタグを区別できていなかった。
+    *   **空白詰めの原因:** `DOMDocument::loadHTML()` に `LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD` オプションを指定していたため、`<body>` タグなどが生成されず、その後の `saveHTML()` でコンテンツが正しく取得できていなかった。また、`DOMDocument` がHTMLをパースする際に、タグ間の改行や空白を独立したテキストノードとして認識し、それが最終出力に含まれることで表示上の問題を引き起こしていた。
+
+*   **実装と判断理由:**
+    *   **HTML構造破壊の修正:** `convert`メソッドのロジックを修正し、`DOMDocument` を導入。正規表現 `/(<[^>]*>)|([^<]+)/` を使用して「HTMLタグ」と「それ以外のテキストノード」を区別して処理するように変更した。HTMLタグはそのまま維持し、テキストノードに対してのみ自動リンクの置換処理を適用することで、HTMLの属性値などが意図せず変換されることを防いだ。この方法が、既存のロジックへの影響を最小限に抑えつつ、問題を解決するのに最適だと判断した。
+    *   **空白詰めの修正:**
+        1.  `DOMDocument::loadHTML()` から `LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD` オプションを削除し、`<body>` タグなどが正しく生成されるようにした。これにより、`saveHTML()` がコンテンツを正しく出力できるようになった。
+        2.  `DOMDocument::loadHTML()` に `LIBXML_NOBLANKS` オプションを追加し、空白のみのテキストノードを無視するようにした。これにより、DOMツリーから余分な空白ノードが取り除かれた。
+        3.  最終的なHTML出力に対して `trim()` と `preg_replace('/>\s+</', '><', $innerHtml)` を適用し、タグ間の余分な空白や改行をさらに除去した。これにより、表示上の不自然な空白が解消された。
+    *   **デバッグログの削除:** 不具合解消に伴い、`app/Services/AutoLinkService.php` に一時的に追加していた `Log::debug` ステートメントはすべて削除した。これは本番環境でのパフォーマンスやログの肥大化を避けるため、およびコードのクリーンアップのために必要であると判断した。
+
+*   **関連ファイル:**
+    *   `app/Services/AutoLinkService.php`
+    *   `app/Services/Ledger/ColumnHtmlService.php` (data-tipサニタイズ)
+    *   `resources/views/components/ledger/detail/table.blade.php` (HTMLエスケープ解除)
+    *   `resources/views/livewire/ledger/show.blade.php` (HTMLエスケープ解除)

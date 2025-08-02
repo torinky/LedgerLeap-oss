@@ -8,8 +8,6 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class AutoLinkService
@@ -31,25 +29,102 @@ class AutoLinkService
      */
     public function convert(string $text, ?ColumnDefine $column = null, $context = null): string
     {
+        // 0. 入力が空の場合はそのまま返す
+        if (empty($text)) {
+            return '';
+        }
+
         // 1. auto_number カラムの特別処理
         if ($column && $column->getType() === 'auto_number') {
-            // 台帳内検索へのリンクを生成
             $url = url('/ledgers?query=' . urlencode($text));
             return '<a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . e($text) . '</a>';
         }
 
-
         // 2. カスタム定義によるリンク変換
+        $autoLinks = $this->getAutoLinksForContext($context);
+
+        if ($autoLinks->isEmpty()) {
+            // 適用するリンク定義がない場合は、Markdown変換のみ行って返す
+            return $this->markdownRenderer->toHtml($text);
+        }
+
+        $htmlishText = $this->markdownRenderer->toHtml($text);
+
+        // DOMDocumentを使用してHTMLを安全に処理
+        $dom = new \DOMDocument();
+        // HTML5タグを正しく解釈させ、エラー出力を抑制
+        libxml_use_internal_errors(true);
+        // UTF-8を明示的に指定し、HTMLエンティティが文字化けするのを防ぐ
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $htmlishText, LIBXML_NOBLANKS);
+        libxml_clear_errors();
+
+        $xpath = new \DOMXPath($dom);
+        // テキストノードのみを検索対象とする (scriptやstyleタグ内は除外)
+        $textNodes = $xpath->query('//text()[not(ancestor::script) and not(ancestor::style)]');
+
+        foreach ($textNodes as $textNode) {
+            $originalText = $textNode->nodeValue;
+            $convertedText = $originalText;
+
+            foreach ($autoLinks as $autoLink) {
+                // パターンに 'u' (UTF-8) フラグを追加して、マルチバイト文字に正しく対応
+                $pattern = $autoLink->pattern . (str_contains($autoLink->pattern, 'u') ? '' : 'u');
+
+                $convertedText = preg_replace_callback(
+                    $pattern,
+                    function ($matches) use ($autoLink) {
+                        $url = $autoLink->url_template;
+                        for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
+                            $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+                        }
+                        $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
+                        return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
+                    },
+                    $convertedText
+                );
+            }
+
+            // テキストが変更された場合、ノードを置換
+            if ($originalText !== $convertedText) {
+                $fragment = $dom->createDocumentFragment();
+                // @でエラーを抑制しつつ、HTML文字列をフラグメントに読み込ませる
+                @$fragment->appendXML($convertedText);
+                $textNode->parentNode->replaceChild($fragment, $textNode);
+            }
+        }
+
+        // bodyタグ内のコンテンツを返す
+        $body = $dom->getElementsByTagName('body')->item(0);
+        $innerHtml = '';
+        if ($body) {
+            foreach ($body->childNodes as $child) {
+                $innerHtml .= $dom->saveHTML($child);
+            }
+        }
+
+        // 余分な空白や改行を除去
+        $innerHtml = trim($innerHtml);
+        $innerHtml = preg_replace('/>\s+</', '><', $innerHtml); // タグ間の空白を除去
+
+        return $innerHtml;
+    }
+
+    /**
+     * コンテキストに応じたAutoLink定義を取得する（キャッシュ利用）
+     *
+     * @param mixed $context
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    private function getAutoLinksForContext($context)
+    {
         $cacheKey = $this->getCacheKeyForContext($context);
-        $autoLinks = Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
+        return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
             $query = AutoLink::where('is_enabled', true);
 
             if ($context) {
                 $query->where(function ($q) use ($context) {
-                    // 1. スコープが設定されていないグローバルな定義を対象にする
-                    $q->whereDoesntHave('scopes');
+                    $q->whereDoesntHave('scopes'); // グローバルな定義
 
-                    // 2. コンテキストに応じたスコープを持つ定義を対象に追加する
                     $folder = null;
                     if ($context instanceof Folder) {
                         $folder = $context;
@@ -59,68 +134,18 @@ class AutoLinkService
                         $folder = $context->define->folder;
                     }
 
-                    // フォルダのコンテキストがある場合、その階層に紐づく定義を取得
                     if ($folder) {
-                        $folderIds = $folder->descendantsAndSelf($folder->id)->pluck('id');
-                        $q->orWhereHas('scopes', function ($subQuery) use ($context, $folderIds) {
-                            $subQuery->where(function ($s) use ($context, $folderIds) {
-                                // スコープがフォルダ階層のいずれかに設定されている
-                                $s->where('scopeable_type', (new Folder)->getMorphClass())
-                                  ->whereIn('scopeable_id', $folderIds);
-
-                                // もしコンテキストが台帳定義なら、それに直接紐づくスコープも考慮
-                                if ($context instanceof LedgerDefine) {
-                                    $s->orWhere(function($orS) use ($context) {
-                                        $orS->where('scopeable_id', $context->id)
-                                            ->where('scopeable_type', $context->getMorphClass());
-                                    });
-                                }
-                            });
+                        $folderIds = $folder->descendantsAndSelf($folder)->pluck('id');
+                        $q->orWhereHas('scopes', function ($subQuery) use ($folderIds) {
+                            $subQuery->where('scopeable_type', (new Folder)->getMorphClass())
+                                ->whereIn('scopeable_id', $folderIds);
                         });
                     }
-                    Log::debug('AutoLinkService: Retrieved AutoLinks for folder ', [
-                        'contextId'=> $context?->id ,
-                        'folderId'=>$folder->id,
-                        'folderIds'=>$folderIds ?? null,
-                    ]);
                 });
             }
 
             return $query->orderBy('priority', 'asc')->get();
         });
-//        $autoLinks = AutoLink::where('is_enabled', true)->orderBy('priority', 'asc')->get();
-
-        Log::debug('AutoLinkService: Retrieved AutoLinks', [
-            'cacheKey' => $cacheKey,
-            'autoLinksCount' => count($autoLinks),
-            'column' => $column?->type ,
-            'contextId'=> $context?->id ,
-            'autoLinks' => $autoLinks->toArray()
-        ]);
-
-        $convertedHtml = $text;
-
-        foreach ($autoLinks as $autoLink) {
-//            Log::debug('AutoLinkService: Processing AutoLink', ['pattern' => $autoLink->pattern, 'url_template' => $autoLink->url_template]);
-//            Log::debug('AutoLinkService: Before preg_replace_callback', ['convertedText' => $convertedHtml]);
-            // preg_replace_callback を使用して、マッチした部分をリンクに置換
-            // 一度マッチした文字列は後続のルールの対象外とするため、変換結果を次のループに渡す
-            $convertedHtml = preg_replace_callback($autoLink->pattern, function ($matches) use ($autoLink) {
-                $url = $autoLink->url_template;
-                // $1, $2 などのキャプチャグループを置換
-                // $matches[0] は全体マッチなのでスキップ
-                for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
-                    // URLエンコードしてから置換
-                    $url = str_replace('$'. $i, urlencode($matches[$i]), $url);
-                }
-                $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-                return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
-            }, $convertedHtml);
-//            Log::debug('AutoLinkService: After preg_replace_callback', ['convertedText' => $convertedHtml]);
-        }
-
-        // MarkdownをHTMLに変換
-        return $this->markdownRenderer->toHtml($convertedHtml);
     }
 
     /**
@@ -148,5 +173,4 @@ class AutoLinkService
 
         return 'auto_links_global';
     }
-
 }

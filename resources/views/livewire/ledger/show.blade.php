@@ -233,9 +233,9 @@
                                             @elseif (empty($change['current_value']))
                                                 <x-ledger.empty-message/>
                                             @elseif($change['column_define_current'])
-                                                {{ ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
+                                                {!! ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
                                                               ->setAttachmentContents($change['current_attachment_contents'] ?? [])
-                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $ledgerRecord) }}
+                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $ledgerRecord) !!}
                                             @else
                                                 <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
                                             @endif
@@ -249,9 +249,9 @@
                                                 @elseif (empty($change['old_value']))
                                                     <x-ledger.empty-message/>
                                                 @elseif($change['column_define_old'])
-                                                    {{ ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
+                                                    {!! ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
                                                                   ->setAttachmentContents($change['old_attachment_contents'] ?? [])
-                                                                  ->show($change['column_define_old'], $change['old_value'], $canView) }}
+                                                                  ->show($change['column_define_old'], $change['old_value'], $canView) !!}
                                                 @else
                                                     <span class="text-ghost">---</span> {{-- 古い定義がない --}}
                                                 @endif
