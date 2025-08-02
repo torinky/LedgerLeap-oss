@@ -494,7 +494,7 @@
 
     #### 2. 詳細設計
 
-    #### 2.1. データ構造の変更
+    #### 2.1. データ構造の変更 - <span style="color: green;">完了</span>
 
     1.  **`auto_links`テーブルへのカラム追加**
         *   `database/migrations/..._create_auto_links_table.php` を修正します。

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->integer('priority')->default(0);
             $table->boolean('is_enabled')->default(true);
             $table->boolean('open_in_new_tab')->default(true);
+            $table->string('link_type')->nullable();
             $table->unsignedBigInteger('creator_id')->nullable();
             $table->unsignedBigInteger('modifier_id')->nullable();
             $table->timestamps();

@@ -21,6 +21,7 @@ class AutoLink extends Model
         'priority',
         'is_enabled',
         'open_in_new_tab',
+        'link_type',
         'creator_id',
         'modifier_id',
     ];
