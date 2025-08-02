@@ -7,6 +7,7 @@ use App\Models\Ledger;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
@@ -37,7 +38,12 @@ class AutoLinkService
         // 1. auto_number カラムの特別処理
         if ($column && $column->getType() === 'auto_number') {
             $url = url('/ledgers?query=' . urlencode($text));
-            return '<a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . e($text) . '</a>';
+            $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
+            $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
+
+            $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+
+            return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($text) . '</a></div>';
         }
 
         // 2. カスタム定義によるリンク変換
@@ -75,10 +81,16 @@ class AutoLinkService
                     function ($matches) use ($autoLink) {
                         $url = $autoLink->url_template;
                         for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
-                            $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+                            $url = str_replace('$'. $i, urlencode($matches[$i]), $url);
                         }
                         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-                        return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($matches[0]) . '</a>';
+                        $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
+                        $tooltip = $autoLink->label; // AutoLinkのラベルを直接使用
+
+                        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+                        // DaisyUIのツールチップに対応するため、divでラップ
+                        $result = '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($matches[0]) . '</a></div>';
+                        return $result;
                     },
                     $convertedText
                 );

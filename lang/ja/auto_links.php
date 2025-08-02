@@ -44,6 +44,8 @@ return [
     'labels' => [
         'generated_html' => '生成されたHTML',
     ],
+    'tooltip_prefix' => '自動リンク: ',
+    'tooltip_auto_number' => '台帳内検索: :value',
     'link_types' => [
         'default' => 'デフォルト',
         'external' => '外部リンク',
