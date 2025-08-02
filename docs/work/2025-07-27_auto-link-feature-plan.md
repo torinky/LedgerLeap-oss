@@ -537,7 +537,7 @@
             ];
             ```
 
-    #### 2.3. 管理UIの改修 (`AutoLinkResource`)
+    #### 2.3. 管理UIの改修 (`AutoLinkResource`) - <span style="color: green;">完了</span>
 
     `app/Filament/Resources/AutoLinkResource.php` の `form()` メソッドを修正します。
 
@@ -553,7 +553,7 @@
         *   `Select::make('link_type')` の直後に `Placeholder::make('icon_preview')` を追加します。
         *   このプレースホルダーの `content()` メソッド内で、現在の `link_type` の値に基づいてアイコンをレンダリングします。
         *   `getState()` を使用して現在の `link_type` の値を取得し、`config('ledgerleap.auto_links.link_types.'.$state.'.icon', 'o-link')` のようにしてアイコンクラス名を取得します。
-        *   取得したアイコンクラス名を使って、`Blade::render()` で `<x-icon>` コンポーネントのHTMLを生成し、表示します。
+        *   取得したアイコンクラス名を使って、`Blade::render()` で `<x-mary-icon>` コンポーネントのHTMLを生成し、表示します。
         *   ヘルプテキストの追加: プレビューの下に、このアイコンが何を示すのかを説明するヘルプテキスト（翻訳済み）を表示します。
 
         ```php
@@ -567,14 +567,14 @@
                     ->mapWithKeys(function ($type, $key) {
                         $label = __($type['label_key']);
                         $icon = $type['icon'];
-                        return [$key => Blade::render("<x-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
+                        return [$key => Blade::render("<x-mary-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
                     })
                     ->all()
             )
             ->allowHtml()
             ->default('default')
             ->live() // リアルタイム更新を有効にする
-            ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
+            ->afterStateUpdated(function ($get, $set) {
                 // プレビューを更新するために、ダミーの値をセットするなどしてフォームを再描画させる
                 // または、Placeholderのcontent()がgetState()を直接参照するようにする
             }),
@@ -603,7 +603,7 @@
     *   `AutoLink`モデルの `link_type` の値から、設定ファイル経由でアイコンクラス名を取得。
     *   `title`属性とアイコンのHTMLを生成。
 
-    #### 2.5. 翻訳ファイルの更新
+    #### 2.5. 翻訳ファイルの更新 - <span style="color: green;">完了</span>
 
     `lang/ja/auto_links.php` に、以下のキーと翻訳を追加します。
 

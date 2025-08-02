@@ -21,6 +21,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 
 class AutoLinkResource extends Resource
@@ -101,6 +102,43 @@ class AutoLinkResource extends Resource
                         ->label(__('auto_links.fields.open_in_new_tab'))
                         ->live() // Add live to update preview
                         ->default(true),
+
+                    Select::make('link_type')
+                        ->label(__('auto_links.fields.link_type'))
+                        ->helperText(__('auto_links.helps.link_type_helper'))
+                        ->options(
+                            collect(config('ledgerleap.auto_links.link_types'))
+                                ->mapWithKeys(function ($type, $key) {
+                                    $label = __($type['label_key']);
+                                    $icon = $type['icon'];
+                                    return [$key => Blade::render("<x-mary-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
+                                })
+                                ->all()
+                        )
+                        ->allowHtml()
+                        ->default('default')
+                        ->live() // リアルタイム更新を有効にする
+                        ->afterStateUpdated(function ( $get,  $set) {
+                            // プレビューを更新するために、ダミーの値をセットするなどしてフォームを再描画させる
+                            // または、Placeholderのcontent()がgetState()を直接参照するようにする
+                        }),
+
+                    Placeholder::make('icon_preview')
+                        ->label(__('auto_links.fields.icon_preview')) // 新しい翻訳キー
+                        ->content(function (Get $get) {
+                            $linkType = $get('link_type') ?? 'default'; // デフォルト値を考慮
+                            $iconName = config('ledgerleap.auto_links.link_types.'.$linkType.'.icon', 'o-link');
+                            $labelKey = config('ledgerleap.auto_links.link_types.'.$linkType.'.label_key', 'auto_links.link_types.default');
+                            $label = __($labelKey);
+
+                            return new HtmlString(Blade::render(<<<HTML
+                                <div class="flex items-center space-x-2">
+                                    <x-mary-icon name="{$iconName}" class="h-6 w-6 text-primary-500" />
+                                    <span class="text-gray-600 dark:text-gray-400">{$label}</span>
+                                </div>
+                            HTML));
+                        })
+                        ->columnSpanFull(), // 全幅を使用
 
                     Placeholder::make('created_at')
                         ->label(__('auto_links.fields.created_at'))
