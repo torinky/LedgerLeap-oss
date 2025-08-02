@@ -59,37 +59,23 @@
     3.  `tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php` に、この変更を検証するためのユニットテストを追加し、テストが成功することを確認しました。
 *   **成果物:** 台帳の詳細画面や一覧画面で、複数行カラムの内容がMarkdownとしてレンダリングされ、かつ自動リンクが適用された状態で表示される。
 
-### ステップ 2: 入力支援UIの導入 (詳細設計)
+### ステップ 2: 入力支援UIの導入 (実装) - <span style="color: green;">完了</span>
 
 *   **目的:** Markdownに不慣れなユーザーでも簡単に入力できるよう、リッチテキストエディタを導入する。
-*   **状態:** 詳細設計完了
+*   **状態:** 完了
 *   **背景と技術選定の経緯:**
     *   当初、Alpine.jsを活用して独自のシンプルなMarkdown入力支援ツールバーを実装する案を検討しました。これは、外部ライブラリへの依存を最小限に抑えるためでした。
     *   しかし、その後の調査で、`ledger-define/edit.blade.php`（台帳定義の編集画面）において、MaryUIフレームワークに組み込まれている `<x-mary-markdown>` コンポーネントが既に利用されていることが判明しました。
     *   プロジェクト全体のUIの一貫性を保ち、開発効率を最大化し、将来のメンテナンス性を向上させるため、この既存のコンポーネントを全面的に採用する方針に決定しました。
-*   **実装方針:**
-    *   台帳の作成・編集画面において、`textarea` 型のカラムを描画している箇所を、`<x-mary-markdown>` コンポーネントの呼び出しに差し替えます。
-*   **対象ファイル:**
-    *   `resources/views/livewire/ledger/create-column.blade.php`
-    *   `resources/views/livewire/ledger/modify-column.blade.php`
-*   **具体的な修正内容:**
-    *   両ファイル内の `@if ($column['type'] === 'textarea')` ブロックを、以下のように `<x-mary-markdown>` を使用する形に修正します。
-    ```html
-    {{-- 変更前 (想定) --}}
-    <x-mary-textarea
-        label="{{ $column['name'] }}"
-        wire:model.defer="content.{{ $column['id'] }}"
-    />
-
-    {{-- 変更後 --}}
-    <x-mary-markdown
-        label="{{ $column['name'] }}"
-        wire:model.defer="content.{{ $column['id'] }}"
-        placeholder="{{ $column['options']['placeholder'] ?? '' }}"
-        hint="{{ $column['options']['hint'] ?? '' }}"
-    />
-    ```
-*   **成果物:** ユーザーがMarkdownを直感的に編集できる、実績のあるUIが提供される。
+*   **実装内容:**
+    1.  **コンポーネントの置き換え:**
+        *   `resources/views/components/ledger/form/textarea.blade.php` の内容を、`<x-mary-markdown>` コンポーネントを呼び出すように全面的に書き換えました。
+    2.  **アセットの読み込み設定:**
+        *   当初、UIが表示されない問題が発生しましたが、原因は `<x-mary-markdown>` が依存するJavaScriptおよびCSSアセットが読み込まれていなかったためでした。
+        *   `resources/js/ledgerEdit.js` に `import EasyMDE from 'easymde';` と `window.EasyMDE = EasyMDE;` を追加しました。
+        *   `resources/sass/ledgerEdit.scss` に `@use "easymde/dist/easymde.min.css" as *;` を追加しました。
+        *   これにより、Viteを通じて必要なアセットが読み込まれ、UIが正常に表示されるようになりました。
+*   **成果物:** ユーザーがMarkdownを直感的に編集できる、実績のあるUIが台帳の作成・編集画面に提供されるようになった。
 
 ## 4. 既存機能との関連性と影響
 

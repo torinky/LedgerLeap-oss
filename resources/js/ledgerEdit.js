@@ -3,6 +3,7 @@ console.log('LedgerEdit.js loaded successfully.')
 // const $ = require("jquery");
 // require('select2');
 
+
 // import * as FilePond from 'filepond';
 import FilePondPluginImagePreview from 'filepond-plugin-image-preview'
 import FilePondPluginFilePoster from 'filepond-plugin-file-poster';
@@ -14,6 +15,8 @@ import ja_ja from 'filepond/locale/ja-ja.js'
 import * as FilePond from 'filepond'
 import flatpickr from "flatpickr"
 import {Japanese} from "flatpickr/dist/l10n/ja.js";
+
+import EasyMDE from 'easymde';
 
 window.FilePondPluginImagePreview = FilePondPluginImagePreview
 
@@ -38,6 +41,8 @@ window.flatpickr(".datepicker", {
     showMonths: 3,
     wrap: true,
 });
+
+window.EasyMDE = EasyMDE;
 
 /*
 $(document).ready(function () {
