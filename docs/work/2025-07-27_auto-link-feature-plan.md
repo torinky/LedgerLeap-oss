@@ -600,8 +600,62 @@
 
     #### 2.4. リンク生成ロジックの修正 (`AutoLinkService`)
 
-    *   `AutoLink`モデルの `link_type` の値から、設定ファイル経由でアイコンクラス名を取得。
-    *   `title`属性とアイコンのHTMLを生成。
+    `app/Services/AutoLinkService.php` の `convert` メソッドは、入力されたテキストを解析し、定義された自動リンクルールに基づいてHTMLリンクに変換する主要なロジックを担っています。このメソッドは、以下のステップで処理を実行します。
+
+    1.  **入力のチェック**:
+        *   まず、`$text` が空である場合は、変換処理を行わずに空文字列を返します。
+
+    2.  **`auto_number` カラムの特別処理**:
+        *   もし `$column` が渡され、そのタイプが `'auto_number'` である場合、このカラムの値は特別なリンクとして処理されます。
+        *   これは、台帳内検索へのリンク（例: `/ledgers?query=XXX`）として生成され、常に新しいタブで開きます。
+        *   アイコンは `config('ledgerleap.auto_links.link_types.default.icon')` から取得され、ツールチップには `auto_links.tooltip_auto_number` の翻訳が使用されます。
+        *   `Blade::render()` を使用して `<x-mary-icon>` コンポーネントのHTMLを生成し、リンクテキストの前に挿入します。
+        *   生成されたリンクは `div` タグでラップされ、DaisyUIのツールチップ機能 (`data-tip`) が適用されます。
+        *   この処理は、後述するカスタム定義によるリンク変換よりも**優先**され、処理が完了すると即座に結果が返されます。
+
+    3.  **カスタム定義によるリンク変換の準備**:
+        *   `getAutoLinksForContext($context)` メソッドを呼び出し、現在のコンテキスト（フォルダ、台帳定義、台帳レコードなど）に適用される有効な `AutoLink` 定義のコレクションを取得します。このメソッドはキャッシュを利用してパフォーマンスを最適化します。
+        *   適用される `AutoLink` 定義がない場合、入力テキストをMarkdownからHTMLに変換 (`$this->markdownRenderer->toHtml($text)`) した上で、そのまま返します。
+
+    4.  **HTMLの安全な処理とテキストノードの抽出**:
+        *   入力テキストがMarkdownからHTMLに変換された後、`DOMDocument` を使用してHTMLをパースします。これにより、HTML構造を破壊することなく、テキストコンテンツのみを対象にリンク変換を行うことができます。
+        *   `libxml_use_internal_errors(true)` と `libxml_clear_errors()` を使用して、HTMLパース時の警告を抑制します。
+        *   `$dom->loadHTML('<?xml encoding="UTF-8">' . $htmlishText, LIBXML_NOBLANKS);` でUTF-8エンコーディングを指定し、空白のみのテキストノードを無視します。
+        *   `DOMXPath` を使用して、`script` や `style` タグ内を除く全てのテキストノード (`//text()[not(ancestor::script) and not(ancestor::style)]`) を取得します。これにより、HTMLタグの属性値やスクリプトコードが誤ってリンク化されるのを防ぎます。
+
+    5.  **テキストノードごとのリンク変換**:
+        *   取得した各テキストノードに対してループ処理を行います。
+        *   各テキストノードの元のテキスト (`$originalText`) を取得し、これを変換対象のテキスト (`$convertedText`) とします。
+        *   取得した `AutoLink` 定義のコレクションを優先度順にループします。
+        *   **`preg_replace_callback` による置換**:
+            *   各 `AutoLink` 定義の `pattern` (正規表現) を使用し、`preg_replace_callback` 関数で `$convertedText` 内のパターンに一致する部分を `<a>` タグに置換します。
+            *   正規表現には `'u'` (UTF-8) フラグが自動的に追加され、マルチバイト文字に正しく対応します。
+            *   コールバック関数内で、`$matches` 配列（正規表現のマッチ結果）からキャプチャグループ (`$1`, `$2` など) を取得し、`$autoLink->url_template` 内の `$1`, `$2` などを対応するURLエンコードされた値に置換して、最終的なURLを生成します。
+            *   `$autoLink->open_in_new_tab` が `true` の場合、生成される `<a>` タグに `target="_blank"` 属性を追加します。
+            *   **アイコンとツールチップの統合**:
+                *   `$autoLink->link_type` の値に基づき、`config('ledgerleap.auto_links.link_types')` から対応するアイコン名を取得します。
+                *   `Blade::render()` を使用して `<x-mary-icon>` コンポーネントのHTMLを生成し、リンクテキストの前に挿入します。
+                *   ツールチップのテキストは `AutoLink` 定義の `label` を直接使用します。
+                *   生成されたリンクは `div` タグでラップされ、DaisyUIのツールチップ機能 (`data-tip`) が適用されます。
+            *   **「一度マッチした文字列は後続のルールの対象外とする」**: `preg_replace_callback` の結果を次のループの `$convertedText` に渡すことで、既にリンク化された部分が再度処理されないようにします。
+
+    6.  **DOMの更新**:
+        *   テキストノードの `$originalText` と `$convertedText` が異なる場合（つまり、リンク変換が行われた場合）、`DOMDocument::createDocumentFragment()` を使用して変換後のHTMLフラグメントを作成し、元のテキストノードをこのフラグメントで置き換えます。これにより、DOMツリーが更新されます。
+
+    7.  **最終的なHTML出力の取得とクリーンアップ**:
+        *   全てのテキストノードの処理が完了した後、`DOMDocument` の `body` タグ内のコンテンツを再構築し、最終的なHTML文字列を取得します。
+        *   `trim()` と `preg_replace('/>\s+</', '><', $innerHtml)` を使用して、HTMLの先頭・末尾の余分な空白や、タグ間の不要な空白・改行を除去し、整形されたHTMLを返します。
+
+    ### `getAutoLinksForContext` および `getCacheKeyForContext` メソッド
+
+    *   **`getAutoLinksForContext($context)`**: このプライベートメソッドは、与えられたコンテキスト（`Folder`、`LedgerDefine`、`Ledger` のインスタンス、または `null`）に基づいて、適用可能な `AutoLink` 定義をデータベースから取得します。
+        *   パフォーマンス向上のため、取得した定義はキャッシュされます。キャッシュキーは `getCacheKeyForContext` メソッドによって生成されます。
+        *   クエリは、グローバルな定義（適用範囲が設定されていないもの）と、現在のコンテキスト（およびその子孫フォルダ）に適用される定義をフィルタリングします。
+        *   取得された定義は `priority` カラムで昇順にソートされ、優先度の高いものから適用されるように準備されます。
+    *   **`getCacheKeyForContext($context)`**: このプロテクテッドメソッドは、与えられたコンテキストに基づいて一意のキャッシュキーを生成します。
+        *   `Folder`、`LedgerDefine`、`Ledger` の各インスタンスに対して、それぞれのIDや関連するフォルダIDを含むキーを生成します。
+        *   コンテキストが提供されない場合や、関連するフォルダを特定できない場合は、グローバルなキャッシュキー (`auto_links_global`) を使用します。
+        *   これにより、異なるコンテキスト間でのキャッシュの衝突を防ぎ、かつ関連するデータが変更された際に正確にキャッシュを無効化（パージ）できるようになっています。
 
     #### 2.5. 翻訳ファイルの更新 - <span style="color: green;">完了</span>
 
