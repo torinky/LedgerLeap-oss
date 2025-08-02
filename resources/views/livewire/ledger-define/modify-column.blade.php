@@ -58,20 +58,37 @@
                                                     }, array_keys($columnInputTypes), array_values($columnInputTypes));
                                                 @endphp
                                                 <x-mary-select label="{{__('ledger.column.type')}}"
-                                                               icon="o-chevron-up-down"
-                                                               wire:model.live="columns.{{$index}}.type"
-                                                               wire:key="type-{{$column['id']}}" :options="$typeOptions"
+                                                                icon="o-chevron-up-down"
+                                                                wire:model.live="columns.{{$index}}.type"
+                                                                wire:key="type-{{$column['id']}}" :options="$typeOptions"
+                                                                class="input-accent" required/>
+
+                                                @php
+                                                    $displayLevelOptions = array_map(function($value, $name) {
+                                                        return ['id' => $value, 'name' => $name];
+                                                    }, array_keys(__('ledger.form.display_level_options')), array_values(__('ledger.form.display_level_options')));
+                                                @endphp
+                                                <x-mary-select label="{{__('ledger.form.display_level')}}"
+                                                               icon="o-list-bullet"
+                                                               wire:model.live="columns.{{$index}}.display_level"
+                                                               wire:key="display-level-{{$column['id']}}" :options="$displayLevelOptions"
                                                                class="input-accent" required/>
+
+                                                <x-mary-input label="{{__('ledger.form.group_name')}}"
+                                                              placeholder="{{__('ledger.form.group_name')}}"
+                                                              icon="o-folder"
+                                                              wire:model.live="columns.{{$index}}.group"
+                                                              wire:key="group-{{$column['id']}}" class="input-accent"/>
 
                                                 <hr/>
                                                 <x-mary-checkbox label="{{__('ledger.column.required')}}"
-                                                                 wire:model="columns.{{$index}}.required"
+                                                                 wire:model.live="columns.{{$index}}.required"
                                                                  wire:key="required-{{$column['id']}}"/>
                                                 <x-mary-checkbox label="{{__('ledger.column.unique')}}"
-                                                                 wire:model="columns.{{$index}}.unique"
+                                                                 wire:model.live="columns.{{$index}}.unique"
                                                                  wire:key="unique-{{$column['id']}}"/>
                                                 <x-mary-checkbox label="{{__('ledger.column.sort')}}"
-                                                                 wire:model="columns.{{$index}}.sortBy"
+                                                                 wire:model.live="columns.{{$index}}.sortBy"
                                                                  wire:key="sortBy-{{$column['id']}}"/>
                                             </div>
 

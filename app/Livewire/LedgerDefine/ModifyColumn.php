@@ -55,6 +55,8 @@ class ModifyColumn extends Component
                 'sortBy' => (bool)$columnDefineObject->sortBy,
                 'hint' => (string)$columnDefineObject->hint,
                 'file' => (array)$columnDefineObject->file,
+                'display_level' => $columnDefineObject->display_level, // 追加
+                'group' => $columnDefineObject->group,             // 追加
                 'is_collapsed' => false, // 初期状態で折りたたむ
                 'options' => array_merge(
                     (array)$columnDefineObject->options,
@@ -240,7 +242,8 @@ class ModifyColumn extends Component
             'sortBy' => false, // Default value
             'hint' => '', // Default value
             'file' => [], // Default value
-            'options' => [], // Default value
+            'display_level' => 3, // 追加: デフォルトの表示レベル
+            'group' => null,      // 追加: デフォルトのグループ名
             'is_collapsed' => true, // 新規追加時は開いた状態にする
         ];
 
@@ -276,6 +279,8 @@ class ModifyColumn extends Component
             'columns.*.sortBy' => 'boolean',
             'columns.*.hint' => 'nullable|string|max:255',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
+            'columns.*.display_level' => ['required', 'integer', 'min:1', 'max:3'],
+            'columns.*.group' => ['nullable', 'string', 'max:255'],
         ];
 
         foreach ($this->columns as $index => $column) {
