@@ -77,9 +77,19 @@ class Show extends Component
 
     public array $requiredRolesProgress = []; //  必須ロール進捗情報
 
+    #[Url(as: 'dl')]
+    public int $displayLevel = 1;
+
     public function boot(WorkflowService $workflowService): void
     {
         $this->workflowService = $workflowService;
+    }
+
+    public function setDisplayLevel(int $level): void
+    {
+        if (in_array($level, [1, 2, 3])) {
+            $this->displayLevel = $level;
+        }
     }
 
     // WorkflowService をインジェクト
@@ -111,6 +121,10 @@ class Show extends Component
 
         // 権限チェックはせず画面内のカラムを伏せる
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
+
+        if (!in_array($this->displayLevel, [1, 2, 3])) {
+            $this->displayLevel = 1;
+        }
     }
 
     protected function loadWorkflowHistory(): void
@@ -369,7 +383,23 @@ class Show extends Component
 
     public function render()
     {
-        return view('livewire.ledger.show')->layout('layouts.app'); // レイアウト指定
+        $filteredColumns = [];
+        if (!empty($this->ledgerDefineRecord) && !empty($this->ledgerDefineRecord->column_define)) {
+            $filteredColumns = collect($this->ledgerDefineRecord->column_define)
+                ->filter(function ($column) {
+                    // display_level がない場合はデフォルトで 3 (詳細) として扱う
+                    $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
+                    return $columnDisplayLevel <= $this->displayLevel;
+                })
+                ->sortBy(function($column) {
+                    return is_array($column) ? $column['order'] : $column->order;
+                })
+                ->all();
+        }
+
+        return view('livewire.ledger.show', [
+            'filteredColumns' => $filteredColumns,
+        ])->layout('layouts.app'); // レイアウト指定
     }
 
     /**

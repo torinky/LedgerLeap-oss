@@ -189,6 +189,22 @@
                 <x-mary-card title="{{ __('ledger.details') }}" shadow separator
                              icon="o-document-text"
                 >
+                    <x-slot:menu>
+                        @php
+                            $displayLevelOptions = [
+                                ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                                ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                                ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                            ];
+                        @endphp
+                        <x-mary-group
+                                wire:model.live="displayLevel"
+                                :options="$displayLevelOptions"
+                                class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary"
+                                option-value="id"
+                                option-label="name"
+                        />
+                    </x-slot:menu>
 
                     {{-- カラムごとの差分表示 --}}
                     @if($hasChangedColumns)
@@ -218,7 +234,11 @@
                                 </thead>
                             @endif
                             <tbody>
+                            @php
+                                $filteredColumnIds = array_map(fn($col) => data_get($col, 'id'), $filteredColumns);
+                            @endphp
                             @foreach($contentChanges as $columnId => $change)
+                                @if(in_array($columnId, $filteredColumnIds))
                                 <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
                                     <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
                                         {{ $change['column_name'] }}
@@ -259,6 +279,7 @@
                                         </td>
                                     @endif
                                 </tr>
+                                @endif
                             @endforeach
                             </tbody>
                         </table>
@@ -268,6 +289,7 @@
                                 :ledgerRecord="$ledgerRecord"
                                 :canView="$canView"
                                 :allAttachments="$currentLedgerAttachments"
+                                :filteredColumns="$filteredColumns"
                         />
                     @endif
 
