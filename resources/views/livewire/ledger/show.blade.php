@@ -206,6 +206,11 @@
                         />
                     </x-slot:menu>
 
+                    {{-- 差分表示トグルをここに再挿入 --}}
+                    @if($hasChangedColumns)
+                        <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" class="m-3"/>
+                    @endif
+
                     {{-- 新しいグループ化構造 --}}
                     @foreach($groupedColumns as $groupName => $columnsInGroup)
                         <x-mary-collapse :name="'group-'.$loop->index"

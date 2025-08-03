@@ -49,6 +49,14 @@
         *   **現象:** `AutoLinkService` で `ColumnDefine` オブジェクトを期待する箇所に配列が渡され、TypeErrorが発生。
         *   **原因:** `render()` メソッドでフィルタリングした結果が、オブジェクトではなく連想配列になっていたため。
         *   **解決策:** データを直接利用するサービス (`ColumnHtmlService`) 側で責任を持つのが適切と判断し、`show()` メソッドの入り口でデータ型をチェックし、配列であれば `ColumnDefine` オブジェクトに変換する処理を追加しました。
+    *   **課題4: 差分表示UIの消失**
+        *   **現象:** グループ化UIの導入後、差分表示を切り替えるトグルスイッチが画面から消滅した。
+        *   **原因:** グループ化UIの導入時に、差分表示トグルが含まれるBladeのブロック全体を置き換えてしまったため。
+        *   **解決策:** `resources/views/livewire/ledger/show.blade.php` 内の適切な位置に、`$hasChangedColumns` の条件付きで `x-mary-toggle` コンポーネントを再挿入した。
+    *   **課題5: 差分表示がデフォルトで無効**
+        *   **現象:** 差分が検出されても、差分表示がデフォルトで有効にならず、手動でトグルを切り替える必要があった。
+        *   **原因:** `showChanges` プロパティの初期値が `false` であったため。
+        *   **解決策:** `app/Livewire/Ledger/Show.php` の `mount()` メソッド内で、`prepareContentDiff()` 実行後に `hasChangedColumns` が `true` の場合、`showChanges` を `true` に設定するロジックを追加した。
 
 *   **成果物:**
     *   `app/Livewire/Ledger/Show.php` の修正。

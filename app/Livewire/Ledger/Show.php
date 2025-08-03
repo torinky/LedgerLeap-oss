@@ -121,6 +121,11 @@ class Show extends Component
         $this->loadWorkflowHistory();
         $this->prepareContentDiff();
 
+        // 差分がある場合、デフォルトで差分表示を有効にする
+        if ($this->hasChangedColumns) {
+            $this->showChanges = true;
+        }
+
         if ($this->ledgerDefineRecord->workflow_enabled && $this->ledgerRecord->define?->folder) {
             $this->requiredRolesProgress = $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
@@ -151,6 +156,7 @@ class Show extends Component
                 }
             }
         }
+        Log::debug('Show.php mount() - Initial hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false'));
     }
 
     protected function loadWorkflowHistory(): void
@@ -409,6 +415,7 @@ class Show extends Component
 
     public function render()
     {
+        Log::debug('Show.php render() - hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false') . ', showChanges: ' . ($this->showChanges ? 'true' : 'false'));
         $filteredColumns = [];
         if (!empty($this->ledgerDefineRecord) && !empty($this->ledgerDefineRecord->column_define)) {
             $filteredColumns = collect($this->ledgerDefineRecord->column_define)
@@ -450,7 +457,9 @@ class Show extends Component
      */
     protected function prepareContentDiff(): void
     {
+        Log::debug('prepareContentDiff() started.');
         $this->comparisonTargetDiff = $this->findComparisonTargetDiff();
+        Log::debug('prepareContentDiff() - comparisonTargetDiff exists: ' . ($this->comparisonTargetDiff ? 'true' : 'false'));
         $this->contentChanges = [];
         $currentContentArray = $this->ledgerRecord->content ?? [];
         $currentContentAttached = $this->ledgerRecord->content_attached ?? [];
@@ -526,7 +535,8 @@ class Show extends Component
             $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string) $currentValue;
             $normalizedOld = (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string) $oldValue;
             $isChanged = $hasComparison && ($normalizedCurrent !== $normalizedOld);
-//            dd($oldValue,$hasComparison, $normalizedCurrent, $normalizedOld, $isChanged);
+            Log::debug("prepareContentDiff() - Column ID: {$columnId}, isChanged: " . ($isChanged ? 'true' : 'false'));
+
             if ($isChanged) {
                 $this->hasChangedColumns = true;
             }
@@ -552,6 +562,7 @@ class Show extends Component
                 'old_attachment_contents' => $oldContentAttached[$columnId] ?? [],
             ];
         }
+        Log::debug('prepareContentDiff() - Final hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false'));
     }
 
     /**
