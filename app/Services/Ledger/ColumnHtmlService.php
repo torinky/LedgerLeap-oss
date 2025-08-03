@@ -92,7 +92,11 @@ class ColumnHtmlService
             // 2. 自動リンクを適用
             $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record);
         } elseif ($type === 'number') {
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $unit = $this->columnDefineData->getInputType()->unit ?? '';
+            $html = $this->initialValue .' '. $unit;
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+        }else{
+            $html = $this->initialValue;
         }
 
         return new HtmlString($this->highlightKeywords($html) ?? '');
@@ -279,11 +283,9 @@ class ColumnHtmlService
             // Check if $attachment->status is an instance of AttachedFileStatus enum
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
-<span class="indicator-item">
     <div class="tooltip tooltip-bottom" data-tip="{$attachment->status->tooltip()}">
         <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} text-lg"></i>
     </div>
-</span>
 HTML;
 
                 // Add retry icon if status is FAILED
@@ -335,12 +337,10 @@ HTML;
                 $downloadPdfTooltip = __('ledger.uploadedFile.download_pdf_with_text');
 
                 $auxiliaryLinksHtml = <<<HTML
- <div class="flex items-center text-xs text-gray-500 mt-1">
      <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-square btn-ghost tooltip" 
  data-tip="{$downloadPdfTooltip}">
          <i class="fa-solid fa-file-pdf w-4 h-4"></i>
      </a>
- </div>
 HTML;
             } elseif ($attachment->original_mime_type === 'application/pdf'
                 && $attachment->optimized) {
@@ -393,13 +393,17 @@ HTML;
                 Log::info('Thumbnail exists at: ' . $thumbnailStoragePath);
                 $thumbnails[] = <<<HTML
 <div class="indicator"> 
-{$statusIconHtml}
+<span class="indicator-item">
+    {$statusIconHtml}
+    {$auxiliaryLinksHtml}
+</span>
+         
 {$contentHtmlStart}
-     <div class="flex flex-col items-center mx-1 my-1">
+
+<!--     <div class="flex flex-col items-center mx-1 my-1">-->
          <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
  $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
-         {$auxiliaryLinksHtml}
-     </div>
+<!--     </div>-->
  {$contentHtmlEnd}
 </div>
 HTML;
@@ -411,16 +415,16 @@ HTML;
  {$contentHtmlStart}
 <div class="flex items-center mx-1 my-1 py-2">
 <div class="indicator">
-     {$statusIconHtml}
+<span class="indicator-item">
+ {$statusIconHtml}
+ {$retryIconHtml}
+ {$auxiliaryLinksHtml}
+ </span>
      <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
  opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
          <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
          <span>{$originalFilename}</span>
      </a>
-</div>
-<div class="flex justify-center items-center gap-1 mt-2">
- {$retryIconHtml}
- {$auxiliaryLinksHtml}
 </div>
 </div>
  {$contentHtmlEnd}
