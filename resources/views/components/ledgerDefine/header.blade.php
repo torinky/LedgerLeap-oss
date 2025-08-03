@@ -11,7 +11,7 @@
 ])
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
-    <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2">
+    <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2 mr-4">
         <span><i class="fa-solid fa-book-open mr-2"></i>{{$ledgerDefine->title}}</span>
     </h3>
         <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"

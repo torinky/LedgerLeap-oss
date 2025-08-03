@@ -10,7 +10,7 @@
                     <a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
                        wire:key="bread_folder_{{$folder->id}}"
                        class="flex items-center">
-                        <i class="fas fa-home mr-2"></i>Top
+                        <i class="fas fa-home"></i>Top
                     </a>
                 </li>
             @else
@@ -18,14 +18,14 @@
                     <a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
                        wire:key="bread_folder_{{$folder->id}}"
                        class="flex items-center">
-                        <i class="fas fa-folder-open mr-2"></i>{{$folder->title}}
+                        <i class="fas fa-folder-open"></i>{{$folder->title}}
                     </a>
                 </li>
             @endif
         @endforeach
         @if(!is_null($thisLedgerDefine->title))
             <li class="flex items-center">
-                <i class="fas fa-book-open mr-2"></i>{{$thisLedgerDefine->title}}
+                <i class="fas fa-book-open"></i>{{$thisLedgerDefine->title}}
             </li>
         @endif
     </ul>
