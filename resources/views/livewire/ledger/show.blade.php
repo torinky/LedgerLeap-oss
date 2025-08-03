@@ -206,92 +206,73 @@
                         />
                     </x-slot:menu>
 
-                    {{-- カラムごとの差分表示 --}}
-                    @if($hasChangedColumns)
-                        @if($hasChangedColumns)
-                            <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}"
-                                           class="m-3"
-                            />
-                        @endif
-                        <table class="table table-compact w-full">
-                            @if($showChanges)
-                                <thead>
-                                <tr>
-                                    <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                        {{ __('ledger.column.title') }}
-                                    </th>
-                                    <th>
-                                        {{ __('ledger.after_change') }}
-                                        <span class="badge badge-xs badge-warning ml-1 tooltip"
-                                              data-tip="{{ __('ledger.version') }}">Ver. {{ $ledgerRecord->version }} </span>
-                                    </th>
-                                    <th>
-                                        {{ __('ledger.before_change') }}
-                                        <span class="badge badge-xs badge-warning ml-1 tooltip"
-                                              data-tip="{{ __('ledger.version') }}">Ver. {{ $comparisonTargetDiff->version }} </span>
-                                    </th>
-                                </tr>
-                                </thead>
-                            @endif
-                            <tbody>
-                            @php
-                                $filteredColumnIds = array_map(fn($col) => data_get($col, 'id'), $filteredColumns);
-                            @endphp
-                            @foreach($contentChanges as $columnId => $change)
-                                @if(in_array($columnId, $filteredColumnIds))
-                                <tr class="{{ $change['changed'] ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
-                                    <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                        {{ $change['column_name'] }}
-                                        @if($change['changed'])
-                                            <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
-                                        @endif
-                                    </th>
-                                    <td class="break-words align-top pt-2">
-                                        <div class="text-sm">
-                                            @if (!$canView)
-                                                <x-ledger.not-authorized-message/>
-                                            @elseif (empty($change['current_value']))
-                                                <x-ledger.empty-message/>
-                                            @elseif($change['column_define_current'])
-                                                {!! ColumnHtml::setAttachmentCollection($change['current_attachments'] ?? collect())
-                                                              ->setAttachmentContents($change['current_attachment_contents'] ?? [])
-                                                              ->show($change['column_define_current'], $change['current_value'], $canView, [], '', false, $ledgerRecord) !!}
-                                            @else
-                                                <span class="text-error">{{ __('ledger.no_definition') }}</span> {{-- 現在の定義がない (削除されたカラム) --}}
-                                            @endif
-                                        </div>
-                                    </td>
-                                    @if($showChanges)
-                                        <td class="break-words align-top pt-2">
-                                            <div class="text-sm opacity-70 mb-2">
-                                                @if (!$canView)
-                                                    <x-ledger.not-authorized-message/>
-                                                @elseif (empty($change['old_value']))
-                                                    <x-ledger.empty-message/>
-                                                @elseif($change['column_define_old'])
-                                                    {!! ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
-                                                                  ->setAttachmentContents($change['old_attachment_contents'] ?? [])
-                                                                  ->show($change['column_define_old'], $change['old_value'], $canView) !!}
-                                                @else
-                                                    <span class="text-ghost">---</span> {{-- 古い定義がない --}}
-                                                @endif
-                                            </div>
-                                        </td>
+                    {{-- 新しいグループ化構造 --}}
+                    @foreach($groupedColumns as $groupName => $columnsInGroup)
+                        <x-mary-collapse :name="'group-'.$loop->index"
+                                         :collapsed="in_array($groupName, $collapsedGroups)"
+                                         class="mb-4" {{-- Collapse間のマージンを追加 --}}
+                        >
+                            <x-slot:heading>
+                                <h3 class="text-lg font-bold flex items-center"
+                                    wire:click.prevent="toggleGroup('{{ $groupName }}')" {{-- wire:click でトグル --}}
+                                >
+                                    {{ $groupName }}
+                                    {{-- 必須項目を含むグループのインジケーター --}}
+                                    @if(collect($columnsInGroup)->contains(fn($col) => (is_array($col) ? ($col['required'] ?? false) : ($col->required ?? false))))
+                                        <span class="ml-2 text-error text-sm">{{ __('ledger.form.required_group_indicator') }}</span>
                                     @endif
-                                </tr>
-                                @endif
-                            @endforeach
-                            </tbody>
-                        </table>
-                    @else
-                        {{-- 差分情報がない場合、またはワークフロー非適用の場合など (通常の詳細表示) --}}
-                        <x-ledger.detail.table
-                                :ledgerRecord="$ledgerRecord"
-                                :canView="$canView"
-                                :allAttachments="$currentLedgerAttachments"
-                                :filteredColumns="$filteredColumns"
-                        />
-                    @endif
+                                </h3>
+                            </x-slot:heading>
+                            <x-slot:content>
+                                <table class="table table-zebra table-compact table-hover table-fixed w-full">
+                                    <tbody>
+                                    @foreach($columnsInGroup as $columnDefine)
+                                        @php
+                                            $columnId = data_get($columnDefine, 'id');
+                                            $change = $contentChanges[$columnId] ?? null; // このカラムの変更データを取得
+                                        @endphp
+                                        <tr class="{{ $change && $change['changed'] && $showChanges ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
+                                            <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
+                                                {{ data_get($columnDefine, 'name') }}
+                                                @if($change && $change['changed'] && $showChanges)
+                                                    <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
+                                                @endif
+                                            </th>
+                                            <td class="break-words align-top pt-2">
+                                                @if (!$canView)
+                                                    <x-ledger.not-authorized-message />
+                                                @elseif (empty($ledgerRecord->content[$columnId]))
+                                                    <x-ledger.empty-message />
+                                                @else
+                                                    {!! ColumnHtml::setAttachmentCollection($currentLedgerAttachments->keyBy('hashedbasename'))
+                                                                  ->setAttachmentContents($ledgerRecord->content_attached[$columnId] ?? [])
+                                                                  ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord) !!}
+                                                @endif
+                                            </td>
+                                            @if($showChanges)
+                                                <td class="break-words align-top pt-2">
+                                                    <div class="text-sm opacity-70 mb-2">
+                                                        @if (!$canView)
+                                                            <x-ledger.not-authorized-message/>
+                                                        @elseif (empty($change['old_value']))
+                                                            <x-ledger.empty-message/>
+                                                        @elseif($change['column_define_old'])
+                                                            {!! ColumnHtml::setAttachmentCollection($change['old_attachments'] ?? collect())
+                                                                          ->setAttachmentContents($change['old_attachment_contents'] ?? [])
+                                                                          ->show($change['column_define_old'], $change['old_value'], $canView) !!}
+                                                        @else
+                                                            <span class="text-ghost">---</span> {{-- 古い定義がない --}}
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                            @endif
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </x-slot:content>
+                        </x-mary-collapse>
+                    @endforeach
 
                     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
                         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}

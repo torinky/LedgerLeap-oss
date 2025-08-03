@@ -80,6 +80,8 @@ class Show extends Component
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
 
+    public array $collapsedGroups = [];
+
     public function boot(WorkflowService $workflowService): void
     {
         $this->workflowService = $workflowService;
@@ -92,38 +94,62 @@ class Show extends Component
         }
     }
 
-    // WorkflowService をインジェクト
-    public function mount(int $ledgerId): void // <<<--- Request $request 不要
+    public function toggleGroup(string $groupName): void
     {
-        // Eager load で必要な情報を取得
+        if (in_array($groupName, $this->collapsedGroups)) {
+            $this->collapsedGroups = array_diff($this->collapsedGroups, [$groupName]);
+        } else {
+            $this->collapsedGroups[] = $groupName;
+        }
+    }
+
+    // WorkflowService をインジェクト
+    public function mount(int $ledgerId): void
+    {
         $this->ledgerRecord = Ledger::with([
             'define',
-            'modifier:id,name', // <<<--- 取得カラム指定推奨
+            'modifier:id,name',
             'creator:id,name',
-            'latestDiff.inspector:id,name', // <<<--- 最新Diffの担当者も取得
+            'latestDiff.inspector:id,name',
             'latestDiff.approver:id,name',
         ])
             ->findOrFail($ledgerId);
         $this->ledgerDefineRecord = $this->ledgerRecord->define;
 
-        // ★ 現在の台帳に紐づく添付ファイルを取得
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
 
         $this->loadWorkflowHistory();
-        $this->prepareContentDiff(); // <<<--- 差分データ準備を呼び出し
+        $this->prepareContentDiff();
 
-        // --- 必須ロール進捗情報をロード ---
         if ($this->ledgerDefineRecord->workflow_enabled && $this->ledgerRecord->define?->folder) {
             $this->requiredRolesProgress = $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
-        // 権限チェック (閲覧権限) - 必要に応じて実装
-        // $this->authorize('view', $this->ledgerRecord);
 
-        // 権限チェックはせず画面内のカラムを伏せる
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
         if (!in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
+        }
+
+        // Initialize collapsedGroups: all groups are collapsed by default,
+        // then expand groups that contain required fields.
+        $allGroups = collect($this->ledgerDefineRecord->column_define)
+            ->pluck('group')
+            ->filter() // null/empty のグループ名を除外
+            ->unique()
+            ->toArray();
+
+        $this->collapsedGroups = $allGroups; // 全ての名前付きグループを初期状態で折りたたむ
+
+        // 必須項目を含むグループを特定し、展開状態にする
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            $columnObject = is_array($column) ? new \App\Models\ColumnDefine($column) : $column;
+            if ($columnObject->required) {
+                $groupName = $columnObject->group ?? ''; // デフォルトグループは空文字列として扱う
+                if (in_array($groupName, $this->collapsedGroups)) {
+                    $this->collapsedGroups = array_diff($this->collapsedGroups, [$groupName]);
+                }
+            }
         }
     }
 
@@ -397,9 +423,26 @@ class Show extends Component
                 ->all();
         }
 
+        // フィルタリングされたカラムを 'group' プロパティでグループ化
+        $groupedColumns = collect($filteredColumns)
+            ->groupBy(function ($column) {
+                // 'group' プロパティを使用し、null/empty の場合は空文字列をデフォルトとする
+                $group = is_array($column) ? ($column['group'] ?? '') : ($column->group ?? '');
+                return $group === '' ? __('ledger.form.group_default') : $group; // デフォルトグループ名には翻訳を使用
+            })
+            ->sortBy(function ($columns, $groupName) {
+                // グループを最初のカラムの order でソート、order がなければグループ名でアルファベット順にソート
+                if ($columns->isNotEmpty()) {
+                    $firstColumn = $columns->first();
+                    return is_array($firstColumn) ? ($firstColumn['order'] ?? PHP_INT_MAX) : ($firstColumn->order ?? PHP_INT_MAX);
+                }
+                return $groupName; // groupBy で空のグループは発生しないはずだが、念のため
+            });
+
         return view('livewire.ledger.show', [
-            'filteredColumns' => $filteredColumns,
-        ])->layout('layouts.app'); // レイアウト指定
+            'groupedColumns' => $groupedColumns, // グループ化されたカラムをビューに渡す
+            'filteredColumns' => $filteredColumns, // 差分表示ロジックのために残す
+        ])->layout('layouts.app');
     }
 
     /**
