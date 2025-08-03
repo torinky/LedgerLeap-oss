@@ -80,7 +80,7 @@ class Show extends Component
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
 
-    public array $collapsedGroups = [];
+    public array $collapsedStates = [];
 
     public function boot(WorkflowService $workflowService): void
     {
@@ -91,15 +91,6 @@ class Show extends Component
     {
         if (in_array($level, [1, 2, 3])) {
             $this->displayLevel = $level;
-        }
-    }
-
-    public function toggleGroup(string $groupName): void
-    {
-        if (in_array($groupName, $this->collapsedGroups)) {
-            $this->collapsedGroups = array_diff($this->collapsedGroups, [$groupName]);
-        } else {
-            $this->collapsedGroups[] = $groupName;
         }
     }
 
@@ -121,11 +112,6 @@ class Show extends Component
         $this->loadWorkflowHistory();
         $this->prepareContentDiff();
 
-        // 差分がある場合、デフォルトで差分表示を有効にする
-        if ($this->hasChangedColumns) {
-            $this->showChanges = true;
-        }
-
         if ($this->ledgerDefineRecord->workflow_enabled && $this->ledgerRecord->define?->folder) {
             $this->requiredRolesProgress = $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
@@ -136,27 +122,32 @@ class Show extends Component
             $this->displayLevel = 1;
         }
 
-        // Initialize collapsedGroups: all groups are collapsed by default,
-        // then expand groups that contain required fields.
+        // Initialize collapsedStates: all groups are open by default.
         $allGroups = collect($this->ledgerDefineRecord->column_define)
             ->pluck('group')
             ->filter() // null/empty のグループ名を除外
             ->unique()
             ->toArray();
 
-        $this->collapsedGroups = $allGroups; // 全ての名前付きグループを初期状態で折りたたむ
+        foreach ($allGroups as $groupName) {
+            $this->collapsedStates[$groupName] = false; // デフォルトで開く
+        }
+        $this->collapsedStates['その他'] = false; // デフォルトで開く
 
-        // 必須項目を含むグループを特定し、展開状態にする
+        // 必須項目を含むグループは常に開く（このロジックは不要になるが、念のため残す）
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $columnObject = is_array($column) ? new \App\Models\ColumnDefine($column) : $column;
             if ($columnObject->required) {
                 $groupName = $columnObject->group ?? ''; // デフォルトグループは空文字列として扱う
-                if (in_array($groupName, $this->collapsedGroups)) {
-                    $this->collapsedGroups = array_diff($this->collapsedGroups, [$groupName]);
-                }
+                $this->collapsedStates[$groupName] = false; // 必須項目を含むグループは開く
             }
         }
         Log::debug('Show.php mount() - Initial hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false'));
+    }
+
+    public function toggleGroup(string $groupName): void
+    {
+        $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
     }
 
     protected function loadWorkflowHistory(): void
@@ -415,7 +406,7 @@ class Show extends Component
 
     public function render()
     {
-        Log::debug('Show.php render() - hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false') . ', showChanges: ' . ($this->showChanges ? 'true' : 'false'));
+//        Log::debug('Show.php render() - hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false') . ', showChanges: ' . ($this->showChanges ? 'true' : 'false'));
         $filteredColumns = [];
         if (!empty($this->ledgerDefineRecord) && !empty($this->ledgerDefineRecord->column_define)) {
             $filteredColumns = collect($this->ledgerDefineRecord->column_define)
