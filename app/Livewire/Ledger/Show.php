@@ -441,8 +441,28 @@ class Show extends Component
             : [];
         $oldContentAttached = $hasComparison ? ($this->comparisonTargetDiff->content_attached ?? []) : [];
 
-        $sortedColumnDefines = collect($currentColumnDefines)->sortBy('order')->all();
-        $sortedColumnIds = array_keys($sortedColumnDefines);
+        // ★ 現在と過去のすべてのカラムIDを取得し、ユニークにする
+        $allColumnIds = array_unique(array_merge(
+            array_keys($currentColumnDefines),
+            array_keys($oldColumnDefines)
+        ));
+
+        // ★ ソート順を決定するための情報を集める
+        $columnOrders = [];
+        foreach ($allColumnIds as $id) {
+            // 現在の定義にあればそのorderを、なければ過去のorderを、どちらもなければ非常に大きい値を使う
+            $order = PHP_INT_MAX;
+            if (isset($currentColumnDefines[$id])) {
+                $order = data_get($currentColumnDefines[$id], 'order', PHP_INT_MAX);
+            } elseif (isset($oldColumnDefines[$id])) {
+                $order = data_get($oldColumnDefines[$id], 'order', PHP_INT_MAX);
+            }
+            $columnOrders[$id] = $order;
+        }
+
+        // ★ orderでソート
+        asort($columnOrders);
+        $sortedColumnIds = array_keys($columnOrders);
 
         $this->hasChangedColumns = false;
 
@@ -456,13 +476,14 @@ class Show extends Component
                 : $currentRawValue;
 
             $oldRawValue = $hasComparison ? Arr::get($oldContentArray, $columnId) : null;
-            $oldValue = $hasComparison && (is_object($oldRawValue) || is_array($oldRawValue))
+            $oldValue = (is_object($oldRawValue) || is_array($oldRawValue))
                 ? json_decode(json_encode($oldRawValue), true)
                 : $oldRawValue;
 
             $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string) $currentValue;
-            $normalizedOld = $hasComparison && (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string) $oldValue;
+            $normalizedOld = (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string) $oldValue;
             $isChanged = $hasComparison && ($normalizedCurrent !== $normalizedOld);
+//            dd($oldValue,$hasComparison, $normalizedCurrent, $normalizedOld, $isChanged);
             if ($isChanged) {
                 $this->hasChangedColumns = true;
             }
@@ -496,11 +517,6 @@ class Show extends Component
      */
     protected function findComparisonTargetDiff(): ?LedgerDiff
     {
-        // ワークフローが無効なら比較対象なし
-        if (! $this->ledgerRecord->define->workflow_enabled) {
-            return null;
-        }
-
         $latestDiffId = $this->ledgerRecord->latest_diff_id;
         // contentの「キャスト前」値を取得
         $currentRawContent = $this->ledgerRecord->getRawOriginal('content');

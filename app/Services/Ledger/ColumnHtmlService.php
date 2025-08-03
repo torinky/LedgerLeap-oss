@@ -72,6 +72,11 @@ class ColumnHtmlService
             return new HtmlString('');
         }
 
+        // ★ 配列で渡された場合は、ColumnDefine オブジェクトに変換する
+        if (is_array($columnDefineData)) {
+            $columnDefineData = new ColumnDefine($columnDefineData);
+        }
+
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
 
 
