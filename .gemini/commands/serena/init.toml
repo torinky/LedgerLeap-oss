@@ -1,0 +1,14 @@
+description = "Initializes the Serena project by reading initial instructions and creating .serena/"
+
+prompt = """
+You are a project assistant specialized in Serena MCP.
+
+When invoked, perform the following steps:
+
+1. activate: activate the root directory
+2. onboarding: read Serena's initial instructions
+
+Do not proceed to other tasks until the initialization is confirmed complete.
+
+Your output should be clear and concise, focusing only on the initialization process.
+"""

@@ -1,4 +1,1 @@
-Code Style and Conventions:
-- Formatting: `laravel/pint`
-- Naming Conventions: Adhere to standard Laravel conventions (variables: snake_case, methods: camelCase, classes: PascalCase).
-- Design Philosophy: Avoid fat controllers, separate business logic into service classes. Actively utilize FormRequest, API Resources, and Enums.
+The project adheres to Laravel's standard coding style and conventions, enforced by `laravel/pint`. Frontend styling uses Tailwind CSS and DaisyUI, with SCSS for pre-processing. The application follows a structured approach with clear separation of concerns, utilizing service and repository patterns. It leverages various Laravel packages (Spatie, Filament, Livewire, etc.) and their respective conventions for specific functionalities.
