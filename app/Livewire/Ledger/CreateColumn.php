@@ -409,14 +409,6 @@ class CreateColumn extends Component
                 if ($column->required) {
                     $rules[] = new \App\Rules\RequiredCheckbox;
                 }
-            } elseif ($column->type === 'select') {
-                // セレクトボックスの場合、選択肢の中から選ばれていることを検証
-                if (!empty($column->options)) {
-                    $rules[] = Rule::in(array_keys($column->options));
-                }
-                if ($column->required) {
-                    array_unshift($rules, 'required');
-                }
             } else {
                 // その他の型
                 if ($column->required) {

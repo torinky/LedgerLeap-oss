@@ -4,6 +4,7 @@
     'canUpdate'=>false,
     'canView'=>false,
     'allAttachments' => [],
+    'filteredColumnDefines' => [],
     ])
 <tr class="hover">
     <th class=" border flex-col bg-accent/20">
@@ -40,7 +41,7 @@
 
     </th>
 
-    @foreach($ledgerRecord->define->column_define as $cKey=>$columnDefine)
+    @foreach($filteredColumnDefines as $cKey=>$columnDefine)
         <td class="hover:bg-accent/20 border px-4 py-2">
             @if (!$canView)
             <x-ledger.not-authorized-message/>

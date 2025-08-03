@@ -19,6 +19,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Illuminate\Support\Collection;
 
 class RecordsTable extends Component
 {
@@ -52,6 +53,9 @@ class RecordsTable extends Component
 
     #[Url(as: 'cf')]
     public $currentFolderId;
+
+    #[Url(as: 'dl')]
+    public int $displayLevel = 1;
 
     private $tags = [];
 
@@ -109,6 +113,12 @@ class RecordsTable extends Component
             $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
         }
 
+        // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
+        // そうでない場合、または不正な値の場合はデフォルトの1を使用
+        if (!in_array($this->displayLevel, [1, 2, 3])) {
+            $this->displayLevel = 1;
+        }
+
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
     }
@@ -157,6 +167,21 @@ class RecordsTable extends Component
 
         $this->initSearchContext();
         $this->render($this->searchContext);
+    }
+
+    /**
+     * 表示レベルを設定する
+     *
+     * @param int $level
+     * @return void
+     */
+    public function setDisplayLevel(int $level): void
+    {
+        if (!in_array($level, [1, 2, 3])) {
+            // 不正なレベルが指定された場合は何もしないか、エラーをログに記録
+            return;
+        }
+        $this->displayLevel = $level;
     }
 
     /**
@@ -264,6 +289,16 @@ class RecordsTable extends Component
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
 
 
+        // Filter column_define for each ledgerDefine based on displayLevel
+        $filteredColumnDefines = $ledgerDefineRecords->map(function ($ledgerDefine) {
+            return collect($ledgerDefine->column_define)
+                ->filter(function ($column) {
+                    $columnDisplayLevel = $column->display_level ?? 3;
+                    return $columnDisplayLevel <= $this->displayLevel;
+                })
+                ->sortBy('order');
+        });
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
@@ -274,6 +309,7 @@ class RecordsTable extends Component
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
+            'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
         ]);
     }
 

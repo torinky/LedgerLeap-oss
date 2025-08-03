@@ -75,6 +75,22 @@
 
     <div class="divider"></div>
     <div class="info-block  sticky top-20 z-40 space-y-2">
+        @php
+            $displayLevelOptions = [
+                ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+            ];
+        @endphp
+        <div class="mb-4 flex justify-end">
+            <x-mary-group
+                wire:model.live="displayLevel"
+                :options="$displayLevelOptions"
+                class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary"
+                option-value="id"
+                option-label="name"
+            />
+        </div>
         @if(!empty($highlights))
             <div class="space-x-2 flex  mr-10 rounded-box bg-base-100/80 px-2 justify-center">
                 <span class="self-center"><i
@@ -173,6 +189,7 @@
                             :canView="$canView"
                             :ledgerDefineId="$ledgerDefineId"
                             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
+                            :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">
@@ -183,6 +200,7 @@
                                     :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]"
                                     :orderBy="$orderBy"
                                     :orderAsc="$orderAsc"
+                                    :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
                                 />
                                 </thead>
                                 <tbody>
@@ -193,6 +211,7 @@
                                         :canUpdate="$canUpdate"
                                         :canView="$canView"
                                         :allAttachments="$allAttachments"
+                                        :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
                                     />
                                 @endforeach
                                 </tbody>

@@ -35,6 +35,7 @@ class ColumnHtmlService
     private $nameBase = '';
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
     public const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
+    public const SELECT_BADGE_CLASS_NAME = 'badge badge-neutral badge-outline py-4 mx-1 my-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
@@ -67,9 +68,6 @@ class ColumnHtmlService
      */
     public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false, ?Ledger $record = null): HtmlString
     {
-        if (!$this->columnDefineData && !$columnDefineData) {
-            return new HtmlString($canView ? e((string)$initialValue) : '');
-        }
         if (!$canView) {
             return new HtmlString('');
         }
@@ -82,6 +80,11 @@ class ColumnHtmlService
 
         if ($type === 'files' && is_array($this->initialValue)) {
             $html = $this->getFileHtml();
+        } elseif (is_array($this->initialValue)) {
+            $options = $this->getColumnDefineProperty('options', []);
+            $html = $this->renderArrayValue($type, $this->initialValue, $options);
+        } elseif ($type === 'select') {
+            $html =  '<span class="' . self::SELECT_BADGE_CLASS_NAME . '">' .e($this->initialValue). '</span>';
         } elseif ($type === 'textarea') {
             // 1. MarkdownをHTMLに変換
             $html = $this->markdownRenderer->toHtml((string) $this->initialValue);
@@ -89,12 +92,6 @@ class ColumnHtmlService
             // 2. 自動リンクを適用
             $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record);
         } elseif ($type === 'number') {
-            $unit = $this->columnDefineData->getInputType()->unit ?? '';
-            $html = $this->initialValue . $unit;
-        } elseif (is_array($this->initialValue)) {
-            $options = $this->getColumnDefineProperty('options', []);
-            $html = $this->renderArrayValue($type, $this->initialValue, $options);
-        } else {
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         }
 

@@ -1,3 +1,9 @@
+@props([
+    'ledgerDefine'=>null,
+    'orderBy'=>'id',
+    'orderAsc'=>false,
+    'filteredColumnDefines' => [],
+    ])
 <tr class="hover"
     wire:key="ledger_table_header_{{$ledgerDefine->id}}"
 >
@@ -18,7 +24,7 @@
         </button>
 
     </th>
-    @foreach($ledgerDefine->column_define as $cKey=>$column_define)
+    @foreach($filteredColumnDefines as $cKey=>$column_define)
         <td class="px-4 py-2 space-y-1 text-center bg-accent bg-opacity-30"
             wire:key="ledger_table_header_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
         >
@@ -73,7 +79,7 @@
                 @endif
             @else
                 <i class="fas fa-sort opacity-30"></i>
-            @endif
+                @endif
 
         </button>
     </td>

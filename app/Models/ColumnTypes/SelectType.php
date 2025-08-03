@@ -2,8 +2,18 @@
 
 namespace App\Models\ColumnTypes;
 
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+
 class SelectType implements InputType
 {
+    public array $options;
+
+    public function __construct(array $options = [])
+    {
+        $this->options = $options;
+    }
+
     public function getName(): string
     {
         return 'select';
@@ -38,6 +48,6 @@ class SelectType implements InputType
 
     public function getValidationRules(): array
     {
-        return ['string'];
+        return ['string', Rule::in($this->options)];
     }
 }
