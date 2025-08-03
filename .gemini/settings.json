@@ -1,0 +1,9 @@
+{
+  "theme": "Default",
+  "checkpointing": true,
+  "mcpServers": {
+    "serena": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": ["run", "--directory", "/Users/kazutaka/serena", "serena", "start-mcp-server"]
+    }
+  }}
