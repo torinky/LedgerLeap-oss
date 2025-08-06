@@ -7,7 +7,7 @@
       "args": [
         "run",
         "--directory",
-        "${SERENA_ROOT}",
+        "../../serena",
         "serena-mcp-server",
         "--transport",
         "stdio",
@@ -15,10 +15,13 @@
         "127.0.0.1",
         "--port",
         "9121",
-        "--context",
-        "ide-assistant",
         "--project",
-        "${PROJECT_ROOT}"
-      ]
+        "PROJECT_ROOT"
+      ],
+      "env": {
+        "SERENA_ROOT": "${SERENA_ROOT}",
+        "PROJECT_ROOT":"${PROJECT_ROOT}"
+      }
     }
-  }}
+  }
+}
