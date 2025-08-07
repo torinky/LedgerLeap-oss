@@ -46,46 +46,60 @@
                 <div class="card-body space-y-3 pt-2">
                     <x-mary-progress value="{{$progress}}" max="100"
                                      class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
-                    @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                        <div class="flex">
-                            <div class="w-1 bg-{{$labelColor[$columnDefine->id]}} "></div>
-                            <div
-                                    wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
-                                    x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                                    class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                                    @if($loop->first)
-                                        x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                                    x-init="updateBackground('{{ $columnDefine->id }}')"
+                    @foreach($groupedColumns as $groupName => $columnsInGroup)
+                        <div class="collapse collapse-plus bg-base-200 mb-2" wire:key="group-{{ $groupName }}"
+                             @if(!($collapsedStates[$groupName] ?? true)) open @endif> {{-- falseの時にopen --}}
+                            <div class="collapse-title text-xl font-medium" wire:click="toggleGroup('{{ $groupName }}')">
+                                <h3 class="text-lg font-bold flex items-center">
+                                    {{ $groupName }}
+                                    @if(collect($columnsInGroup)->contains(fn($col) => $col->required))
+                                        <span class="ml-2 text-error text-sm">{{ __('ledger.form.required_group_indicator') }}</span>
                                     @endif
-                            >
-                                @if($columnDefine->type==='files')
-                                    <x-ledger.form.files
-                                            :columnDefine="$columnDefine"
-                                            :ledgerDefineId="$ledgerDefineId"
-                                            :initial-files="[]"
-                                            multiple
-                                            allowImagePreview
-                                            imagePreviewMaxHeight="200"
-                                    />
-                                @else
-                                    @php
-                                        $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
-                                        // auto_number タイプの場合、text コンポーネントを使用
-                                        if ($columnDefine->type === 'auto_number') {
-                                            $componentName = 'ledger.form.text';
-                                        }
-                                    @endphp
-                                    <x-dynamic-component
-                                            :component="$componentName"
-                                            wire:model.live="content"
-                                            wire:key="content-input-{{$columnDefine->id}}"
-                                            :columnDefine="$columnDefine"
-                                            :ledgerRecord="$ledgerRecord??[]"
-                                    />
-                                @endif
+                                </h3>
+                            </div>
+                            <div class="collapse-content">
+                                @foreach($columnsInGroup as $columnDefine)
+                                    <div class="flex mt-2">
+                                        <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
+                                        <div
+                                                wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
+                                                x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                                                class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }}"
+                                                @if($loop->parent->first && $loop->first)
+                                                    x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                                                    x-init="updateBackground('{{ $columnDefine->id }}')"
+                                                @endif
+                                        >
+                                            @if($columnDefine->type==='files')
+                                                <x-ledger.form.files
+                                                        :columnDefine="$columnDefine"
+                                                        :ledgerDefineId="$ledgerDefineId"
+                                                        :initial-files="[]"
+                                                        multiple
+                                                        allowImagePreview
+                                                        imagePreviewMaxHeight="200"
+                                                />
+                                            @else
+                                                @php
+                                                    $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
+                                                    // auto_number タイプの場合、text コンポーネントを使用
+                                                    if ($columnDefine->type === 'auto_number') {
+                                                        $componentName = 'ledger.form.text';
+                                                    }
+                                                @endphp
+                                                <x-dynamic-component
+                                                        :component="$componentName"
+                                                        wire:model.live="content"
+                                                        wire:key="content-input-{{$columnDefine->id}}"
+                                                        :columnDefine="$columnDefine"
+                                                        :ledgerRecord="$ledgerRecord??[]"
+                                                />
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
-
                     @endforeach
                 </div>
 

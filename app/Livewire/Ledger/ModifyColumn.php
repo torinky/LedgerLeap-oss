@@ -67,6 +67,7 @@ class ModifyColumn extends CreateColumn
             $this->prepareFilePondInitialFiles(); // FilePond初期化
         }
         $this->initBackgroundImages();
+        $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
     }
 
     public function render(): View
@@ -74,7 +75,19 @@ class ModifyColumn extends CreateColumn
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $this->updateContentStatusLabel($column);
         }
-        return view('livewire.ledger.modify-column');
+
+        // 親クラスの render ロジックを再利用しつつ、ビューに渡すデータを準備
+        $groupedColumns = collect($this->ledgerDefineRecord->column_define)
+            ->groupBy(function ($column) {
+                return $column->group ?? __('ledger.form.group_default');
+            })
+            ->sortBy(function ($columnsInGroup) {
+                return $columnsInGroup->first()->order ?? PHP_INT_MAX;
+            });
+
+        return view('livewire.ledger.modify-column', [
+            'groupedColumns' => $groupedColumns,
+        ]);
     }
 
 

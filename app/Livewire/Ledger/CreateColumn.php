@@ -92,6 +92,8 @@ class CreateColumn extends Component
 
     protected NumberingService $numberingService; // NumberingService をインジェクト
 
+    public array $collapsedStates = [];
+
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService, NumberingService $numberingService): void
     {
@@ -110,6 +112,35 @@ class CreateColumn extends Component
         $this->initRequireColumns();
         $this->updateProgress(); // 初期進捗を計算
         $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
+        $this->initializeGroups();
+    }
+
+    public function toggleGroup(string $groupName): void
+    {
+        if (isset($this->collapsedStates[$groupName])) {
+            $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
+        }
+    }
+
+    protected function initializeGroups(): void
+    {
+        $allGroups = collect($this->ledgerDefineRecord->column_define)
+            ->pluck('group')
+            ->map(fn ($group) => $group ?? __('ledger.form.group_default')) // nullはデフォルトグループ名に
+            ->unique()
+            ->all();
+
+        $this->collapsedStates = array_fill_keys($allGroups, true); // まず全てを折りたたむ
+
+        // 必須項目を含むグループを展開する
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->required) {
+                $groupName = $column->group ?? __('ledger.form.group_default');
+                if (isset($this->collapsedStates[$groupName])) {
+                    $this->collapsedStates[$groupName] = false; // 展開
+                }
+            }
+        }
     }
 
     // カラム初期化処理 (Create / Modify 共通化)
@@ -169,7 +200,19 @@ class CreateColumn extends Component
             $this->updateContentStatusLabel($column);
         }
 
-        return view('livewire.ledger.create-column');
+        $groupedColumns = collect($this->ledgerDefineRecord->column_define)
+            ->groupBy(function ($column) {
+                // 'group' プロパティを使用し、null/empty の場合はデフォルトグループ名を使う
+                return $column->group ?? __('ledger.form.group_default');
+            })
+            ->sortBy(function ($columnsInGroup) {
+                // グループを最初のカラムの order でソート
+                return $columnsInGroup->first()->order ?? PHP_INT_MAX;
+            });
+
+        return view('livewire.ledger.create-column', [
+            'groupedColumns' => $groupedColumns,
+        ]);
     }
 
     public function updated($propertyName): void
