@@ -64,11 +64,11 @@ class Preview extends Component
     {
         $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
             ->map(function ($value) {
-                if (empty($value->path)) {
+                if (empty($value['path'])) {
                     return null;
                 }
 
-                return asset('storage/' . $value->path);
+                return asset('storage/' . $value['path']);
             })->toArray();
     }
 }

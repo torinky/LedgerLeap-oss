@@ -133,7 +133,7 @@
     6.  `group` プロパティが設定されていないカラムが、「その他」といったデフォルトのグループ名で表示されることを確認する。
 
 
-### **ステップ4.3: 入力フォーム (`CreateColumn`, `ModifyColumn`) のグループ化対応**
+### **ステップ4.3: 入力フォーム (`CreateColumn`, `ModifyColumn`) のグループ化対応 (完了済み)**
 
 *   **目的:**
     詳細表示画面で実装したグループ化機能を、**台帳の新規作成・編集フォーム**にも適用します。これにより、入力項目が業務の流れに沿って整理され、ユーザーは目的の項目を素早く見つけられるようになり、入力作業の効率と正確性が向上します。特に、多数の項目を持つ複雑な台帳において、入力時の認知負荷を軽減し、入力ミスや漏れを防ぐことが本ステップの重要な目的です。
@@ -148,51 +148,64 @@
     *   `app/Livewire/Ledger/ModifyColumn.php` (子コンポーネント)
     *   `resources/views/livewire/ledger/create-column.blade.php` (Bladeビュー)
     *   `resources/views/livewire/ledger/modify-column.blade.php` (Bladeビュー)
+    *   `resources/views/livewire/ledger-define/modify-column.blade.php` (Bladeビュー)
 
-*   **詳細設計:**
+*   **最終的な設計と実装:**
 
     #### 1. `app/Livewire/Ledger/CreateColumn.php` (親クラス) の改修
 
-    入力フォームの共通ロジックを持つこの親クラスに、グループ化のコア機能を追加します。
+    入力フォームの共通ロジックを持つこの親クラスに、グループ化のコア機能を追加しました。
 
     *   **プロパティの追加:**
-        *   グループの開閉状態を管理するため、`Show.php` と同様の `public array $collapsedStates = [];` プロパティを追加します。この配列は `['グループ名' => true/false, ...]` の形式で、各グループの開閉状態（`true`=折りたたまれている, `false`=展開されている）を保持します。
-
+        *   グループの開閉状態を管理するため、`Show.php` と同様の `public array $collapsedStates = [];` プロパティを追加しました。
     *   **メソッドの追加:**
-        *   グループの開閉状態を切り替える `public function toggleGroup(string $groupName): void` メソッドを実装します。ロジックは `Show.php` と同様です。
-
+        *   グループの開閉状態を切り替える `public function toggleGroup(string $groupName): void` メソッドを実装しました。
     *   **グループ初期化ロジックの共通化:**
-        *   `mount()` から呼び出される `protected function initializeGroups(): void` メソッドを新設します。このメソッド内で、全てのユニークなグループ名を取得し、必須項目（`required`）を含むグループを初期状態で展開（`false`）、それ以外を折りたたみ（`true`）に設定します。
-
+        *   `mount()` から呼び出される `protected function initializeGroups(): void` メソッドを新設し、全てのユニークなグループ名を取得し、必須項目を含むグループを初期状態で展開、それ以外を折りたたむように設定しました。
     *   **`mount()` メソッドの改修:**
-        *   `mount()` の最後に、`$this->initializeGroups();` を呼び出す処理を追加します。
-
+        *   `mount()` の最後に、`$this->initializeGroups();` を呼び出す処理を追加しました。
     *   **`render()` メソッドの改修:**
-        *   `Show.php` と同様に、カラム定義を `group` プロパティでグループ化し、`order` プロパティでソートした結果を `$groupedColumns` としてビューに渡すロジックを追加します。
+        *   `Show.php` と同様に、カラム定義を `group` プロパティでグループ化し、`order` プロパティでソートした結果を `$groupedColumns` としてビューに渡すロジックを追加しました。
 
     #### 2. `app/Livewire/Ledger/ModifyColumn.php` (子クラス) の改修
 
     *   **`mount()` メソッドの改修:**
-        *   `ModifyColumn` の `mount` メソッドの最後に、親クラスから継承した `$this->initializeGroups();` を呼び出す処理を追加します。
+        *   `ModifyColumn` の `mount` メソッドの最後に、親クラスから継承した `$this->initializeGroups();` を呼び出す処理を追加しました。
     *   **`render()` メソッドの改修:**
-        *   親クラスの `render()` をオーバーライドし、`modify-column` ビューを返すようにします。グループ化されたカラムを渡すロジックは親クラスのものを再利用します。
+        *   親クラスの `render()` をオーバーライドし、`modify-column` ビューを返しつつ、グループ化されたカラムを渡すロジックを再利用するようにしました。
 
     #### 3. Bladeビューの改修 (`create-column.blade.php` / `modify-column.blade.php`)
 
-    両方のビューファイルを、詳細表示画面（`show.blade.php`）と同様の二重ループ構造に書き換えます。
+    両方のビューファイルを、詳細表示画面（`show.blade.php`）と同様の二重ループ構造に書き換えました。
 
     *   **構造の変更:**
-        1.  既存の `@foreach($ledgerDefineRecord->column_define ...)` ループを削除します。
-        2.  代わりに、`render()` メソッドから渡される `$groupedColumns` をループ処理します（外側ループ）。
-        3.  各グループに対して `<x-mary-collapse>` コンポーネントを配置し、`wire:click` で `toggleGroup` メソッドを呼び出すことで開閉を制御します。
-        4.  `collapse-content` の中で、そのグループに属するカラム (`$columnsInGroup`) をループします（内側ループ）。
-        5.  この内側ループの中で、既存の各入力フォームコンポーネント（`<x-ledger.form.text>`, `<x-ledger.form.files>` など）を配置します。`wire:model` などの既存のデータバインディングはそのまま維持することで、バリデーションやファイルアップロード機能への影響を最小限に抑えます。
+        1.  既存の `@foreach($ledgerDefineRecord->column_define ...)` ループを削除しました。
+        2.  代わりに、`render()` メソッドから渡される `$groupedColumns` をループ処理し（外側ループ）、各グループに対して `<div class="collapse ...">` コンポーネントを配置しました。
+        3.  `wire:click` で `toggleGroup` メソッドを呼び出すことで開閉を制御します。
+        4.  `collapse-content` の中で、そのグループに属するカラム (`$columnsInGroup`) をループし（内側ループ）、既存の各入力フォームコンポーネントを配置しました。
+
+    #### 4. 不具合修正：背景画像の切り替え
+
+    *   **現象:** グループ化対応後、入力項目にキーボードでフォーカスしても、その項目に設定された背景画像に切り替わらなくなりました。
+    *   **原因:** UI構造がアコーディオン形式に変わったことで、Alpine.jsがキーボードのフォーカスイベント (`focusin`) を正しく検知できていませんでした。
+    *   **解決策:**
+        *   `create-column.blade.php` と `modify-column.blade.php`、`ledger-define/modify-column.blade.php` の3つのビューファイルにおいて、各入力項目を囲む `div` または `x-mary-collapse` に `x-on:focusin="updateBackground(...)` を追加し、フォーカス時にも背景画像更新関数が呼ばれるようにしました。
+        *   同時に `focus-within:opacity-100` クラスを追加し、フォーカスが当たっているグループ全体の透明度を100%にして視認性を向上させました。
+        *   `CreateColumn.php` の `initBackgroundImages()` メソッド内で、背景画像のパスをオブジェクト (`$value->path`) ではなく配列 (`$value['path']`) として正しく参照するように修正しました。
+
+*   **成果物:**
+    *   `app/Livewire/Ledger/CreateColumn.php` の修正。
+    *   `app/Livewire/Ledger/ModifyColumn.php` の修正。
+    *   `resources/views/livewire/ledger/create-column.blade.php` の修正。
+    *   `resources/views/livewire/ledger/modify-column.blade.php` の修正。
+    *   `resources/views/livewire/ledger-define/modify-column.blade.php` の修正。
 
 *   **確認方法:**
     *   台帳の作成・編集画面で、入力項目がグループごとに折りたたまれて表示されることを確認する。
     *   必須項目を含むグループが、初期表示で展開されていることを確認する。
     *   各グループのヘッダーをクリックすると、そのグループの内容がスムーズに開閉することを確認する。
     *   全ての入力、バリデーション、保存、ファイルアップロード機能が、グループ化されたUIの中でも従来通り正しく動作することを確認する。
+    *   マウスオーバーだけでなく、キーボードのTabキーなどで入力項目にフォーカスを移動した際にも、対応する背景画像が正しく表示されることを確認する。
 
 ### **ステップ4.4: 入力フォーム (`CreateColumn`, `ModifyColumn`) の表示レベル制御対応**
 

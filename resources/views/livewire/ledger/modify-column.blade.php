@@ -46,7 +46,7 @@
                     <x-mary-progress value="{{$progress}}" max="100"
                                      class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
                     @foreach($groupedColumns as $groupName => $columnsInGroup)
-                        <div class="collapse collapse-plus bg-base-200 mb-2" wire:key="group-{{ $groupName }}"
+                        <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2" wire:key="group-{{ $groupName }}"
                              @if(!($collapsedStates[$groupName] ?? true)) open @endif> {{-- falseの時にopen --}}
                             <div class="collapse-title text-xl font-medium" wire:click="toggleGroup('{{ $groupName }}')">
                                 <h3 class="text-lg font-bold flex items-center">
@@ -61,9 +61,10 @@
                                     <div class="flex mt-2">
                                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
                                         <div
-                                                wire:key="content-{{$columnDefine->id}}" {{-- wire:key 追加推奨 --}}
+                                                wire:key="content-{{$columnDefine->id}}"
                                                 x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                                                class="w-full opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }}"
+                                                x-on:focusin="updateBackground('{{ $columnDefine->id }}')"
+                                                class="w-full opacity-control-block opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }}"
                                                 @if($loop->parent->first && $loop->first)
                                                     x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
                                                     x-init="updateBackground('{{ $columnDefine->id }}')"

@@ -184,14 +184,12 @@ class CreateColumn extends Component
     {
         $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
             ->map(function ($value) {
-                if (empty($value->path)) {
+                if (empty($value['path'])) {
                     return null;
                 }
 
-                return asset('storage/' . $value->path);
+                return asset('storage/' . $value['path']);
             })->toArray();
-        //        dd($this->columnFile,$backgroundImages);
-        //        $this->dispatch('applyBackgroundImages', $this->backgroundImages);
     }
 
     public function render(): View
