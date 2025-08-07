@@ -136,24 +136,63 @@
 ### **ステップ4.3: 入力フォーム (`CreateColumn`, `ModifyColumn`) のグループ化対応**
 
 *   **目的:**
-    ステップ4.2で実装したグループ化機能を、新規作成・編集フォームに適用します。
+    詳細表示画面で実装したグループ化機能を、**台帳の新規作成・編集フォーム**にも適用します。これにより、入力項目が業務の流れに沿って整理され、ユーザーは目的の項目を素早く見つけられるようになり、入力作業の効率と正確性が向上します。特に、多数の項目を持つ複雑な台帳において、入力時の認知負荷を軽減し、入力ミスや漏れを防ぐことが本ステップの重要な目的です。
+
+*   **設計方針:**
+    *   **継承の活用:** `CreateColumn` (親) と `ModifyColumn` (子) という既存のクラス構造を活かし、共通となるグループ化ロジックは親クラス `CreateColumn` に実装します。これにより、コードの重複を避け、保守性を高めます。
+    *   **先行実装の踏襲:** 先行して実装し、安定動作が確認されている詳細表示画面 (`Show.php`) の設計（プロパティ名、メソッド名、グループ化ロジック）を可能な限り踏襲します。これにより、開発効率を高め、UI/UXの一貫性を保ちます。
+    *   **ユーザー中心のデフォルト動作:** 詳細表示画面と同様に、必須項目を含むグループは初期状態で展開し、それ以外のグループは折りたたんでおきます。これにより、ユーザーは重要な項目を見落とすことなく、かつ画面の初期表示が情報過多になるのを防ぎます。
+
 *   **対象ファイル:**
-    *   `app/Livewire/Ledger/CreateColumn.php`
-    *   `resources/views/livewire/ledger/create-column.blade.php`
-    *   `app/Livewire/Ledger/ModifyColumn.php`
-    *   `resources/views/livewire/ledger/modify-column.blade.php`
-*   **実装タスク:**
-    1.  **`CreateColumn.php` の改修:**
-        *   ステップ4.2と同様に、`collapsedGroups` プロパティと `toggleGroup` メソッドを実装します。
-        *   `render()` メソッドでカラムをグループ化し、ビューに渡します。
-        *   `mount()` で `$collapsedGroups` を初期化します。
-    2.  **`create-column.blade.php`, `modify-column.blade.php` の改修:**
-        *   詳細表示画面と同様に、`<x-mary-collapse>` を使った二重ループ構造で入力フォームを再構築します。
-        *   各入力コンポーネントが、グループ化された構造の中でも正しく `wire:model` でデータバインドされ、バリデーションやファイルアップロードが機能することを確認します。
+    *   `app/Livewire/Ledger/CreateColumn.php` (親コンポーネント)
+    *   `app/Livewire/Ledger/ModifyColumn.php` (子コンポーネント)
+    *   `resources/views/livewire/ledger/create-column.blade.php` (Bladeビュー)
+    *   `resources/views/livewire/ledger/modify-column.blade.php` (Bladeビュー)
+
+*   **詳細設計:**
+
+    #### 1. `app/Livewire/Ledger/CreateColumn.php` (親クラス) の改修
+
+    入力フォームの共通ロジックを持つこの親クラスに、グループ化のコア機能を追加します。
+
+    *   **プロパティの追加:**
+        *   グループの開閉状態を管理するため、`Show.php` と同様の `public array $collapsedStates = [];` プロパティを追加します。この配列は `['グループ名' => true/false, ...]` の形式で、各グループの開閉状態（`true`=折りたたまれている, `false`=展開されている）を保持します。
+
+    *   **メソッドの追加:**
+        *   グループの開閉状態を切り替える `public function toggleGroup(string $groupName): void` メソッドを実装します。ロジックは `Show.php` と同様です。
+
+    *   **グループ初期化ロジックの共通化:**
+        *   `mount()` から呼び出される `protected function initializeGroups(): void` メソッドを新設します。このメソッド内で、全てのユニークなグループ名を取得し、必須項目（`required`）を含むグループを初期状態で展開（`false`）、それ以外を折りたたみ（`true`）に設定します。
+
+    *   **`mount()` メソッドの改修:**
+        *   `mount()` の最後に、`$this->initializeGroups();` を呼び出す処理を追加します。
+
+    *   **`render()` メソッドの改修:**
+        *   `Show.php` と同様に、カラム定義を `group` プロパティでグループ化し、`order` プロパティでソートした結果を `$groupedColumns` としてビューに渡すロジックを追加します。
+
+    #### 2. `app/Livewire/Ledger/ModifyColumn.php` (子クラス) の改修
+
+    *   **`mount()` メソッドの改修:**
+        *   `ModifyColumn` の `mount` メソッドの最後に、親クラスから継承した `$this->initializeGroups();` を呼び出す処理を追加します。
+    *   **`render()` メソッドの改修:**
+        *   親クラスの `render()` をオーバーライドし、`modify-column` ビューを返すようにします。グループ化されたカラムを渡すロジックは親クラスのものを再利用します。
+
+    #### 3. Bladeビューの改修 (`create-column.blade.php` / `modify-column.blade.php`)
+
+    両方のビューファイルを、詳細表示画面（`show.blade.php`）と同様の二重ループ構造に書き換えます。
+
+    *   **構造の変更:**
+        1.  既存の `@foreach($ledgerDefineRecord->column_define ...)` ループを削除します。
+        2.  代わりに、`render()` メソッドから渡される `$groupedColumns` をループ処理します（外側ループ）。
+        3.  各グループに対して `<x-mary-collapse>` コンポーネントを配置し、`wire:click` で `toggleGroup` メソッドを呼び出すことで開閉を制御します。
+        4.  `collapse-content` の中で、そのグループに属するカラム (`$columnsInGroup`) をループします（内側ループ）。
+        5.  この内側ループの中で、既存の各入力フォームコンポーネント（`<x-ledger.form.text>`, `<x-ledger.form.files>` など）を配置します。`wire:model` などの既存のデータバインディングはそのまま維持することで、バリデーションやファイルアップロード機能への影響を最小限に抑えます。
+
 *   **確認方法:**
-    *   台帳の作成・編集画面で、入力項目がグループごとに折りたたまれて表示されること。
-    *   グループの開閉が機能すること。
-    *   全ての入力、バリデーション、保存機能が従来通り動作すること。
+    *   台帳の作成・編集画面で、入力項目がグループごとに折りたたまれて表示されることを確認する。
+    *   必須項目を含むグループが、初期表示で展開されていることを確認する。
+    *   各グループのヘッダーをクリックすると、そのグループの内容がスムーズに開閉することを確認する。
+    *   全ての入力、バリデーション、保存、ファイルアップロード機能が、グループ化されたUIの中でも従来通り正しく動作することを確認する。
 
 ### **ステップ4.4: 入力フォーム (`CreateColumn`, `ModifyColumn`) の表示レベル制御対応**
 
