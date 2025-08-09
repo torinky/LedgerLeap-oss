@@ -73,14 +73,78 @@
 *   **切り出すメソッド:** `retryProcessing()`
 *   **連携:** `AttachedFile` モデルや専用のサービスに移動する。UIからの再試行アクションは、Livewire イベントを通じてこのサービスを呼び出す形にする。
 
-## 5. `app/Livewire/Ledger/ShowDiff.php` との関係
+## 5. サービス層の再設計と責務の明確化
 
-`app/Livewire/Ledger/ShowDiff.php` は、台帳の**過去の**変更履歴（Diff）を個別に表示することに特化したコンポーネントであり、`Show.php` の「差分表示」機能とは異なる独立した役割を担っている。
+既存のサービス (`LedgerService`, `WorkflowService`) を調査した結果、リファクタリング計画をより具体的にする。
 
-*   **`ShowDiff.php` の役割:** 特定の `ledgerId` と `diffId` を受け取り、その時点の台帳データと添付ファイルの状態を再現して表示する。これは独立したページで過去のバージョンを閲覧するためのもの。
-*   **`LedgerDiffViewer` との共通化:** `Show.php` から切り出す `LedgerDiffViewer` コンポーネントは、`ShowDiff.php` の表示ロジックの一部を参考にすることができる。特に、`ColumnDefine::normalizeArrayOrCollection()` の利用や、`content` と `content_attached` の処理、添付ファイルの再構築ロジックなどは、独立したサービス（例: `LedgerContentProcessor` や `LedgerDiffProcessor`）として切り出すことで、両方のコンポーネントから再利用でき、コードの重複を排除できる。
-*   **データフローの明確化:**
-    *   `Show.php` は常に最新の `Ledger` モデルを基点とし、`LedgerDiff` はその変更履歴として扱う。
-    *   `ShowDiff.php` は、特定の `LedgerDiff` を基点として、その時点の `Ledger` の状態を再構築する。
+### 5.1. 新規作成するサービス
+
+*   **`LedgerContentProcessor` サービス:**
+    *   **責務:** 台帳の `content` と `column_define` を解釈し、表示用に整形するロジックを担当する。これには、`Show.php` の `render()` 内や `ShowDiff.php` の `loadDiffRecord()` 内の状態再現ロジックが含まれる。
+    *   **理由:** 表示データの整形は、ワークフローや台帳の基本操作とは独立した関心事であり、専用のサービスに切り出すことで責務が明確になる。
+
+*   **`LedgerDiffProcessor` サービス:**
+    *   **責務:** 2つの台帳状態を比較し、変更差分を計算するロジック (`prepareContentDiff`, `findComparisonTargetDiff`) を担当する。
+    *   **理由:** 差分計算は複雑で独立したロジックであるため、専用サービス化が望ましい。
+
+### 5.2. 既存サービスの拡張とモデルへの責務移管
+
+*   **`WorkflowService` (拡張):**
+    *   **責務:** 現在のワークフロー状態遷移ロジックに加え、`Show.php` に存在する権限チェックロジック (`canRequestApproval`, `canApprove`, `canReturnToDraft` など) を移管する。これにより、ワークフローに関するビジネスルールを一元管理する。
+    *   **理由:** 権限チェックはワークフローのコアロジックと密接に関連しており、サービスに含めることで凝集度が高まる。
+
+*   **`AttachedFile` モデル (責務移管):**
+    *   **責務:** `Show.php` の `retryProcessing` メソッドのロジックを、`AttachedFile` モデル自身のメソッド（例: `retryProcessing()`) として実装する。
+    *   **理由:** ファイルの再処理は、`AttachedFile` モデルインスタンスに対する操作であり、モデル自体にメソッドとして持たせるのが最も自然な設計である。
+
+## 6. 段階的なリファクタリング手順
+
+リファクタリングは以下のステップで段階的に進める。各ステップの完了ごとに動作確認とテストを行い、安全性を確保する。
+
+### Step 0: テストハーネスの構築 (最優先)
+
+1.  **`ShowTest.php` の作成:** `tests/Feature/Livewire/Ledger/ShowTest.php` を新規作成する。
+2.  **基本テストの実装:**
+    *   コンポーネントが正常にマウントされること。
+    *   必要なデータ (`LedgerRecord`, `LedgerDefineRecord`) がロードされること。
+    *   台帳名などが表示されることを確認する。
+3.  **ワークフロー状態に応じたテスト:**
+    *   台帳のステータス (`DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL`, `APPROVED`) ごとに、適切なアクションボタンが表示/非表示になることを検証するテストケースを追加する。
+4.  **テストの実行と安定化:** 作成したテストが安定してパスすることを確認する。これがリファクタリングの安全網となる。
+
+### Step 1: サービス層とモデルの抽出 (下準備)
+
+1.  **`LedgerContentProcessor` サービスの作成と適用:**
+    *   計画通りサービスを作成し、`Show.php` と `ShowDiff.php` の表示ロジックを置き換える。
+2.  **`LedgerDiffProcessor` サービスの作成と適用:**
+    *   計画通りサービスを作成し、`Show.php` の差分計算ロジックを置き換える。
+3.  **`WorkflowService` への権限チェックロジック移管:**
+    *   `Show.php` の `can...` で始まるメソッド群を `WorkflowService` に移動し、`Show.php` からはサービスを呼び出すように変更する。
+4.  **`AttachedFile` モデルへの再処理ロジック移管:**
+    *   `Show.php` の `retryProcessing` ロジックを `AttachedFile` モデルに移動する。
+
+### Step 2: `WorkflowPanel` コンポーネントの分離
+
+1.  `app/Livewire/Ledger/WorkflowPanel.php` を作成する。
+2.  計画に基づき、ワークフロー関連のプロパティとメソッドを `Show.php` から `WorkflowPanel.php` に移動する。
+3.  UIを `workflow-panel.blade.php` に切り出し、`Show.php` のビューに `<livewire:ledger.workflow-panel ...>` を組み込む。
+4.  コンポーネント間の連携をイベント (`$dispatch`) で行うように実装する。
+
+### Step 3: `LedgerDiffViewer` コンポーネントの分離
+
+1.  `app/Livewire/Ledger/LedgerDiffViewer.php` を作成する。
+2.  差分表示関連のロジックを移動し、`LedgerDiffProcessor` サービスを利用するように実装する。
+3.  UIを `ledger-diff-viewer.blade.php` に切り出し、`Show.php` のビューに `<livewire:ledger.ledger-diff-viewer ...>` を組み込む。遅延ロード (`lazy`) の適用を検討する。
+
+### Step 4: `Show` 親コンポーネントのクリーンアップ
+
+1.  子コンポーネントに移動したプロパティ、メソッドを `Show.php` から完全に削除する。
+2.  イベントリスナーを整理し、責務が「データ管理と子コンポーネントの統括」に限定されていることを最終確認する。
+
+## 7. 検討事項
+
+*   **テストの拡充:** リファクタリングと並行して、各コンポーネントとサービスのユニットテスト、フィーチャーテストを継続的に作成・拡充する。
+*   **モーダルコンポーネントの共通化:** `WorkflowPanel` で使用する担当者選択モーダルやコメント入力モーダルは、他の箇所でも利用される可能性があるため、より汎用的なコンポーネントとして設計することを検討する。
+*   **パフォーマンス:** `LedgerDiffViewer` の遅延ロードは、初期表示パフォーマンスの観点から積極的に採用すべきか。
 
 このリファクタリングにより、`Show.php` はよりシンプルで管理しやすくなり、各機能が独立して開発・テストできるようになる。
