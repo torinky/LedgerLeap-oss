@@ -1,14 +1,30 @@
-app/: Core application logic (Casts, Console, Database, Enums, Http, Jobs, Livewire, Models, Repositories, Services, Traits, etc.).
-bootstrap/: Framework bootstrap files.
-config/: Configuration files for various services and modules.
-database/: Database migrations, factories, and seeders.
-docker/: Docker configurations for different services (app, mroonga, ocrmypdf, tika).
-docs/: Project documentation.
-lang/: Language translation files.
-public/: Web server root directory.
-resources/: Frontend assets (css, js, sass) and Blade views.
-routes/: Web, API, console, and channel routes.
-storage/: Application generated files (logs, cache, uploads).
-tests/: Application tests (Feature, Unit).
-vendor/: Composer dependencies.
-node_modules/: Node.js dependencies.
+## Codebase Structure
+
+- **`app/`**: Contains the core application logic.
+    - `Casts/`: Custom Eloquent casts.
+    - `Console/`: Artisan commands.
+    - `Database/`: Database-related classes (e.g., Factories, Seeders).
+    - `Enums/`: PHP Enums for fixed value sets.
+    - `Http/`: HTTP layer (Controllers, Middleware, Requests).
+    - `Livewire/`: Livewire components.
+    - `Models/`: Eloquent models.
+    - `Providers/`: Service providers.
+    - `Repositories/`: (Potentially) Repository pattern implementations.
+    - `Rules/`: Custom validation rules.
+    - `Services/`: Business logic services.
+    - `Traits/`: Reusable PHP traits.
+    - `View/`: View-related classes (e.g., Composers, Components).
+- **`bootstrap/`**: Framework bootstrapping files.
+- **`config/`**: Application configuration files.
+- **`database/`**: Database migrations, factories, and seeders.
+- **`docker/`**: Docker-related configurations for various services (app, mroonga, ocrmypdf, tika).
+- **`docs/`**: Project documentation (API, architecture, database, development, function, models, services, work).
+- **`lang/`**: Language translation files.
+- **`node_modules/`**: Frontend JavaScript dependencies.
+- **`public/`**: Web server root directory, contains compiled assets.
+- **`resources/`**: Frontend source files (CSS, JS, SASS) and Blade views.
+- **`routes/`**: Application route definitions (web, api, channels, console).
+- **`scripts/`**: Custom shell scripts.
+- **`storage/`**: Application-generated files (logs, cache, uploaded files).
+- **`tests/`**: Unit and Feature tests.
+- **`vendor/`**: Composer (PHP) dependencies.

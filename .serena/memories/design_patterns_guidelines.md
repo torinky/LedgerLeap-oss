@@ -1,7 +1,8 @@
+プロジェクトには以下のガイドラインやデザインパターンがあります。
+- システムアーキテクチャ概要: `/docs/architecture/overview.md`
+- キューワーカと非同期処理: `/docs/architecture/QueueProcessing.md`
+- データベーススキーマ概要: `/docs/database/schema.md`
+- API仕様概要: `/docs/api/README.md`
+- 各機能の詳細ドキュメント: `/docs/function/` 以下
 
-- **MVC (Model-View-Controller):** The application follows the standard MVC pattern.
-- **Service Layer:** Business logic is encapsulated in service classes within the `app/Services` directory.
-- **Repository Pattern:** Database interactions are abstracted into repository classes in the `app/Repositories` directory.
-- **Jobs & Queues:** Asynchronous tasks are handled by queued jobs in the `app/Jobs` directory.
-- **Livewire Components:** Dynamic UI is built using Livewire components.
-- **Filament for Admin:** The admin interface is built using the Filament framework.
+特に、ファットコントローラを避け、サービスクラスにビジネスロジックを分離する設計思想が採用されています。
