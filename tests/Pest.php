@@ -1,5 +1,41 @@
 <?php
 
+$abortReasons=[];
+
+// フレームワーク未ブート時でも安全な環境変数の取得関数
+$envVar = static function (string $key, mixed $default = null): mixed {
+    return $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key) ?: $default;
+};
+
+// 環境名が production なら中止（app() や config() を使わない）
+$appEnv = $envVar('APP_ENV');
+if ($appEnv === 'production') {
+    $abortReasons[] = 'APP_ENV=production';
+}
+
+// DB 接続情報も環境変数から直接取得（まだ config は使わない）
+$connection = $envVar('DB_CONNECTION', 'mysql');
+$dbName    = $envVar('DB_DATABASE');
+$dbHost    = $envVar('DB_HOST');
+
+/*$prodLikeHosts = ['prod-db.example.com', '10.0.0.', '192.168.10.10']; // 実態に合わせて
+$looksLikeProdHost = $dbHost && collect($prodLikeHosts)->first(fn($h) => str_starts_with((string)$dbHost, $h));
+
+if ($looksLikeProdHost) {
+    $abortReasons[] = "DB_HOST looks like production: $dbHost";
+}*/
+
+// 明示的に本番DB名をブロック（例）
+$blockedDbNames = ['ledgerleap', 'ledgerleap_prod'];
+if (in_array($dbName, $blockedDbNames, true)) {
+    $abortReasons[] = "DB_DATABASE is blocked: $dbName";
+}
+
+if ($abortReasons) {
+    fwrite(STDERR, "[ABORT TEST] Refusing to run tests against a production-like database:\n - " . implode("\n - ", $abortReasons) . "\n");
+    exit(1);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Test Case

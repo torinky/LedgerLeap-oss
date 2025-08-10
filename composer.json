@@ -11,6 +11,7 @@
     "php": "^8.4",
     "ext-fileinfo": "*",
     "ext-mbstring": "*",
+    "ext-pdo": "*",
     "15web/filament-tree": "*",
     "althinect/filament-spatie-roles-permissions": "^2.2",
     "codewithdennis/filament-select-tree": "^3.1",

@@ -157,6 +157,13 @@
 
 これらのテストがすべて実装され、安定してパスすることを確認できれば、Step 0は完了とみなされます。
 
+**上記テストの修正とデバッグに関する留意事項:**
+
+*   `it_toggles_group_and_initializes_collapsed_states()` テストでは、`LedgerDefine` モデルの `column_define` プロパティの `group` キーが `AsColumnDefinesArrayJson` キャストによって正しく処理されない問題が判明しました。これは、`ColumnDefine` クラスの `id` プロパティが `int` 型であるにも関わらず、テストデータで文字列IDが使用されていたため、`int` へのキャスト時に `0` に変換され、グループ情報が失われることが原因でした。テストデータのIDを整数に修正し、`mount` メソッド内の `collapsedStates` 初期化ロジック（特に `foreach ($allGroups as $groupName)` ループの欠落）を修正することで解決しました。また、`toggleGroup` メソッドが非既存グループ名をトグルする際の挙動とテストのアサーションの整合性も調整しました。
+*   `it_deletes_an_attached_file()` テストでは、`AttachedFile` モデルがソフトデリートを使用しているにも関わらず、`assertDatabaseMissing` を使用していたためテストが失敗していました。アサーションを `assertSoftDeleted` に変更することで、テストが正しくパスするようになりました。
+
+これらのテストはすべて実装され、安定してパスすることを確認済みです。これにより、Step 0は完了とみなされます。
+
 ### Step 1: サービス層とモデルの抽出 (下準備)
 
 1.  **`LedgerContentProcessor` サービスの作成と適用:**
