@@ -184,11 +184,16 @@ class Show extends Component
                 $this->collapsedStates[$groupName] = false; // 必須項目を含むグループは開く
             }
         }
-        Log::debug('Show.php mount() - Initial hasChangedColumns: ' . ($this->hasChangedColumns ? 'true' : 'false'));
     }
+
+    
 
     public function toggleGroup(string $groupName): void
     {
+        // If the group doesn't exist in collapsedStates, initialize it to false (open)
+        if (!isset($this->collapsedStates[$groupName])) {
+            $this->collapsedStates[$groupName] = false;
+        }
         $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
     }
 

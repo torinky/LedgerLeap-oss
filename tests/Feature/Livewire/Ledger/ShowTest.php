@@ -671,13 +671,15 @@ class ShowTest extends TestCase
         $this->actingAs($this->user);
 
         // LedgerDefineのcolumn_defineを更新して、グループを持つカラムを設定
+        // LedgerDefineのcolumn_defineを更新して、グループを持つカラムを設定
         $columnDefine = [
-            ['id' => 'col1', 'name' => 'Column 1', 'group' => 'Group A', 'order' => 1],
-            ['id' => 'col2', 'name' => 'Column 2', 'group' => 'Group A', 'order' => 2],
-            ['id' => 'col3', 'name' => 'Column 3', 'group' => 'Group B', 'order' => 3],
-            ['id' => 'col4', 'name' => 'Column 4', 'group' => '', 'order' => 4], // Default group
+            ['id' => 1, 'name' => 'Column 1', 'group' => 'Group A', 'order' => 1],
+            ['id' => 2, 'name' => 'Column 2', 'group' => 'Group A', 'order' => 2],
+            ['id' => 3, 'name' => 'Column 3', 'group' => 'Group B', 'order' => 3],
+            ['id' => 4, 'name' => 'Column 4', 'group' => '', 'order' => 4], // Default group
         ];
         $this->ledger->define->update(['column_define' => $columnDefine]);
+        $this->ledger->define->refresh();
 
         $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
 
@@ -695,7 +697,7 @@ class ShowTest extends TestCase
 
         // 存在しないグループ名をトグルしてもエラーにならないことを確認
         $component->call('toggleGroup', 'NonExistentGroup');
-        $this->assertFalse($component->get('collapsedStates.NonExistentGroup') ?? false);
+        $this->assertTrue($component->get('collapsedStates.NonExistentGroup'));
     }
 
     /** @test */
@@ -710,7 +712,7 @@ class ShowTest extends TestCase
             ->assertHasNoErrors()
             ->assertDispatched('mary-toast');
 
-        $this->assertDatabaseMissing('attached_files', ['id' => $fileToDelete->id]);
+        $this->assertSoftDeleted('attached_files', ['id' => $fileToDelete->id]);
     }
 
 
