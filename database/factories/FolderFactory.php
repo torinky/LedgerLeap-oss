@@ -6,23 +6,33 @@ use App\Models\Folder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Folder>
- */
 class FolderFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            //            'parent_id'=>Folder::factory(),
             'title' => $this->faker->realText(10),
             'modifier_id' => User::factory(),
             'creator_id' => User::factory(),
         ];
+    }
+
+    /**
+     * Indicate that the folder has required roles.
+     *
+     * @param  array  $inspectors
+     * @param  array  $approvers
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function withRequiredRoles(array $inspectors = [], array $approvers = [])
+    {
+        return $this->afterCreating(function (Folder $folder) use ($inspectors, $approvers) {
+            foreach ($inspectors as $role) {
+                $folder->requiredInspectorRoles()->attach($role->id, ['type' => 'inspector']);
+            }
+            foreach ($approvers as $role) {
+                $folder->requiredApproverRoles()->attach($role->id, ['type' => 'approver']);
+            }
+        });
     }
 }

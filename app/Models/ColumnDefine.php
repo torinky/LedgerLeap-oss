@@ -9,7 +9,7 @@ use RuntimeException; // Keep for potential other runtime exceptions, though typ
 class ColumnDefine
 {
     // プロパティの定義
-    public $id;                 // ID
+        public int $id;                 // ID
 
     public $name;               // 列名
 
@@ -67,11 +67,11 @@ class ColumnDefine
         $this->setName($inObject->name);
         $this->setOrder($inObject->order);
         $this->setOptions((array)($inObject->options ?? []));
-        $this->setRequired($inObject->required);
-        $this->setUnique($inObject->unique);
-        $this->setSortBy($inObject->sortBy);
-        $this->setHint($inObject->hint);
-        $this->setFile($inObject->file);
+        $this->setRequired($inObject->required ?? false);
+        $this->setUnique($inObject->unique ?? false);
+        $this->setSortBy($inObject->sortBy ?? false);
+        $this->setHint($inObject->hint ?? '');
+        $this->setFile($inObject->file ?? []);
 
         // 新しいプロパティの初期化
         $this->display_level = (int)($inObject->display_level ?? 3); // デフォルト値は3
