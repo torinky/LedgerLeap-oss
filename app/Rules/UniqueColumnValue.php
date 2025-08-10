@@ -2,9 +2,11 @@
 
 namespace App\Rules;
 
+use App\Traits\MroongaSearchableColumn;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use App\Traits\MroongaSearchableColumn;
+use Illuminate\Translation\PotentiallyTranslatedString;
+use Illuminate\Validation\Rules\Unique;
 
 class UniqueColumnValue implements ValidationRule
 {
@@ -48,9 +50,9 @@ class UniqueColumnValue implements ValidationRule
      * 2. 絞り込まれた候補レコードに対し、PHP側でcontentカラムの値を厳密に比較します。
      *    JSONデコードされた値と入力値を `===` で比較し、型まで含めた完全一致を検証します。
      *
-     * @param  string  $attribute
-     * @param  mixed  $value
-     * @param  \Closure(string): \Illuminate\Translation\PotentiallyTranslatedString  $fail
+     * @param string $attribute
+     * @param mixed $value
+     * @param \Closure(string): PotentiallyTranslatedString $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -78,11 +80,45 @@ class UniqueColumnValue implements ValidationRule
 
                 // 入力値とDBの値が完全に一致するかチェック (型も含む)
                 if ($actualValue === $value) {
-                    $fail('validation.unique')->translate();
-                    // 一致するものが1件でも見つかれば、その時点で検証を終了
+                    // メッセージとしては unique を返す（互換維持）
+                    $fail(__('validation.unique'));
                     return;
                 }
             }
         }
     }
+
+    /**
+     * このクラスと同等条件の Laravel 標準 Unique ルールを生成します。
+     * Livewire の 'unique' 失敗ルール名を表面化するために使用します。
+     */
+    public function toLaravelUniqueRule(): Unique
+    {
+        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")
+            ->where('ledger_define_id', $this->ledgerDefineId);
+
+        if (!is_null($this->ignoreLedgerId)) {
+            $rule = $rule->ignore($this->ignoreLedgerId);
+        }
+
+        // ソフトデリートを考慮している場合は null 条件を追加
+        if (in_array('Illuminate\\Database\\Eloquent\\SoftDeletes', class_uses_recursive(\App\Models\Ledger::class), true)) {
+            $rule = $rule->whereNull('deleted_at');
+        }
+
+        return $rule;
+    }
+
+    /**
+     * このルールの組み合わせ（カスタム検証 + 標準 unique）を返す。
+     * コンポーネント側で array_merge 等でそのまま利用できます。
+     *
+     * @return array{0:self,1:Unique}
+     */
+    public function toRules(): array
+    {
+        return [$this, $this->toLaravelUniqueRule()];
+    }
+
+
 }

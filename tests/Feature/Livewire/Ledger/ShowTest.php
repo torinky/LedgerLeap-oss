@@ -16,14 +16,13 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
-use tests\Support\MroongaJsonTestHelpers;
 use tests\TestCase;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Jobs\Ledger\GenerateThumbnail;
 
 class ShowTest extends TestCase
 {
-    use RefreshDatabase, MroongaJsonTestHelpers;
+    use RefreshDatabase;
 
     private User $user;
     private User $inspector;

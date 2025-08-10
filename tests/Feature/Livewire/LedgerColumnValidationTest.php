@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Livewire;
+namespace tests\Feature\Livewire;
 
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
@@ -9,7 +9,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Tests\TestCase;
+use tests\TestCase;
 
 class LedgerColumnValidationTest extends TestCase
 {
@@ -57,7 +57,7 @@ class LedgerColumnValidationTest extends TestCase
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id])
             ->set('content.1', 'EXISTING_VALUE') // 既存の値と同じ値をセット
             ->call('saveDirectly')
-            ->assertHasErrors(['content.1' => 'unique']);
+            ->assertHasErrors(['content.1' => '指定のUnique Textは既に使用されています。']);
     }
 
     /** @test */

@@ -461,7 +461,9 @@ class CreateColumn extends Component
                 if ($column->type === 'auto_number') {
                     $rules[] = new UniqueAutoNumber($this->ledgerDefineId, $column, $this->ledgerId);
                 } else {
-                    $rules[] = new UniqueColumnValue($this->ledgerDefineId, $columnId, $this->ledgerId);
+                    // UniqueColumnValue 側に処理を集約（カスタム + 標準 unique のペアを返す）
+                    $customUnique = new UniqueColumnValue($this->ledgerDefineId, $columnId, $this->ledgerId);
+                    $rules = array_merge($rules, $customUnique->toRules());
                 }
             }
 

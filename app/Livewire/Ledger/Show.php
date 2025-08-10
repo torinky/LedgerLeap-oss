@@ -90,6 +90,13 @@ class Show extends Component
         $this->workflowService = $workflowService;
     }
 
+    public function updatedDisplayLevel(int $level): void
+    {
+        // displayLevel は wire:model.live で既に更新されている
+        // ここでは filteredColumns を再計算するだけで良い
+        $this->filteredColumns = $this->calculateFilteredColumns();
+    }
+
     public function setDisplayLevel(int $level): void
     {
         if (in_array($level, [1, 2, 3])) {
