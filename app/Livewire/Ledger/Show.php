@@ -15,6 +15,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
@@ -82,6 +83,8 @@ class Show extends Component
 
     public array $collapsedStates = [];
 
+    public array $filteredColumns = []; // ★ New public property
+
     public function boot(WorkflowService $workflowService): void
     {
         $this->workflowService = $workflowService;
@@ -91,7 +94,44 @@ class Show extends Component
     {
         if (in_array($level, [1, 2, 3])) {
             $this->displayLevel = $level;
+            $this->filteredColumns = $this->calculateFilteredColumns(); // ★ Recalculate
         }
+    }
+
+    protected function calculateFilteredColumns(): array
+    {
+        if (empty($this->ledgerDefineRecord) || empty($this->ledgerDefineRecord->column_define)) {
+            return [];
+        }
+
+        return collect($this->ledgerDefineRecord->column_define)
+            ->filter(function ($column) {
+                $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
+                return $columnDisplayLevel <= $this->displayLevel;
+            })
+            ->sortBy(function($column) {
+                return is_array($column) ? $column['order'] : $column->order;
+            })
+            ->map(function ($column) {
+                // Explicitly create a simple associative array from ColumnDefine object
+                // This ensures Livewire can serialize it.
+                return [
+                    'id' => $column->id,
+                    'name' => $column->name,
+                    'type' => $column->type,
+                    'order' => $column->order,
+                    'useOptions' => $column->useOptions,
+                    'options' => $column->options,
+                    'required' => $column->required,
+                    'unique' => $column->unique,
+                    'sortBy' => $column->sortBy,
+                    'hint' => $column->hint,
+                    'file' => $column->file,
+                    'display_level' => $column->display_level,
+                    'group' => $column->group,
+                ];
+            })
+            ->all();
     }
 
     // WorkflowService をインジェクト
@@ -121,6 +161,8 @@ class Show extends Component
         if (!in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
         }
+
+        $this->filteredColumns = $this->calculateFilteredColumns(); // ★ Calculate on mount
 
         // Initialize collapsedStates: all groups are open by default.
         $allGroups = collect($this->ledgerDefineRecord->column_define)
@@ -165,9 +207,9 @@ class Show extends Component
     public function openApproverSelectModal(): void // <<<--- メソッド名変更
     {
         // 権限チェック (自分が点検者か？) - Service 側でも行う
-        if (! $this->canRequestApproval()) {
+        if (!$this->canRequestApproval()) {
             $this->error(__('messages.error.unauthorized')); // Or custom message
-            Log::error('Approval request failed: '.Auth::id().' is not the inspector of ledger '.$this->ledgerRecord->id);
+            Log::error('Approval request failed: ' . Auth::id() . ' is not the inspector of ledger ' . $this->ledgerRecord->id);
 
             return;
         }
@@ -199,7 +241,7 @@ class Show extends Component
 
             return;
         }
-        if ($roleType !== 'approver' || ! $this->canRequestApproval()) {
+        if ($roleType !== 'approver' || !$this->canRequestApproval()) {
             // このコンポーネントからの承認者選択以外は無視、または権限がない場合は処理しない
             $this->error(__('messages.error.unauthorized'));
             Log::warning("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
@@ -217,7 +259,7 @@ class Show extends Component
         // 実績ベースで取得 (CreateColumn と同じロジック)
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineRecord->id, 'approver', 1);
 
-        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
     /**
@@ -226,7 +268,7 @@ class Show extends Component
     public function openReturnToDraftModal(): void
     {
         // 権限チェック (自分が担当者か？)
-        if (! $this->canReturnToDraft()) {
+        if (!$this->canReturnToDraft()) {
             $this->error(__('messages.error.unauthorized'));
 
             return;
@@ -242,7 +284,7 @@ class Show extends Component
      */
     public function loadApproverOptions(): void
     {
-        if (! $this->ledgerDefineRecord) {
+        if (!$this->ledgerDefineRecord) {
             return;
         }
 
@@ -250,7 +292,7 @@ class Show extends Component
         // 推奨ユーザー
         if ($this->ledgerDefineRecord->recommendedApprover) {
             $approver = $this->ledgerDefineRecord->recommendedApprover;
-            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name.' ('.__('ledger.workflow.recommended_user').')'];
+            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
             $this->selectedApproverId = $approver->id;
         }
         // 推奨ロール
@@ -260,7 +302,7 @@ class Show extends Component
         // その他ユーザー
         $allUsers = User::orderBy('name')->get();
         foreach ($allUsers as $user) {
-            if (! isset($options[$user->id])) {
+            if (!isset($options[$user->id])) {
                 $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
             }
         }
@@ -269,7 +311,7 @@ class Show extends Component
 
     public function approveTask(): void
     {
-        if (! $this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
+        if (!$this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
             $this->error(__('messages.error.unauthorized_or_conditions_not_met')); // 翻訳キー例
 
             return;
@@ -294,8 +336,8 @@ class Show extends Component
             roleType: 'approver',
             ledgerId: $this->ledgerRecord->id,
             initialUserId: $initialNextApproverId,
-            // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
-            // targetEvent: 'next-approver-selected-for-show'
+        // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
+        // targetEvent: 'next-approver-selected-for-show'
         );
     }
 
@@ -326,7 +368,7 @@ class Show extends Component
             $this->mount($this->ledgerRecord->id); // ★ mount を呼び出し
 
         } catch (\Exception $e) {
-            Log::error('Finalizing approval with next assignee failed: '.$e->getMessage());
+            Log::error('Finalizing approval with next assignee failed: ' . $e->getMessage());
             $this->error(__('messages.error.generic'), $e->getMessage());
         } finally {
             $this->commentForModal = '';
@@ -341,7 +383,7 @@ class Show extends Component
         $excludeIds = [$this->ledgerRecord->latestDiff?->approver_id, Auth::id()];
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineRecord->id, 'approver', 5, '', $excludeIds);
 
-        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
     /**
@@ -350,7 +392,7 @@ class Show extends Component
     public function returnTaskToDraft(): void
     {
         // 権限チェック
-        if (! $this->canReturnToDraft()) {
+        if (!$this->canReturnToDraft()) {
             $this->error(__('messages.error.unauthorized'));
 
             return;
@@ -370,7 +412,7 @@ class Show extends Component
             $this->loadWorkflowHistory();
             $this->success(__('ledger.workflow.returned_to_draft_message'));
         } catch (\Exception $e) {
-            Log::error('Return to draft failed: '.$e->getMessage());
+            Log::error('Return to draft failed: ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
         } finally {
             $this->returnComment = '';
@@ -390,7 +432,7 @@ class Show extends Component
     public function canApprove(): bool // 承認者が「承認」できるか
     {
         return ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
-            $this->ledgerRecord->latestDiff?->approver_id === Auth::id()) ||
+                $this->ledgerRecord->latestDiff?->approver_id === Auth::id()) ||
             ($this->ledgerRecord->status !== WorkflowStatus::DRAFT
                 && $this->ledgerRecord->status !== WorkflowStatus::APPROVED
                 && $this->ledgerRecord->canBeFinallyApproved()
@@ -422,7 +464,7 @@ class Show extends Component
         }
 
         // フィルタリングされたカラムを 'group' プロパティでグループ化
-        $groupedColumns = collect($filteredColumns)
+        $groupedColumns = collect($this->filteredColumns)
             ->groupBy(function ($column) {
                 // 'group' プロパティを使用し、null/empty の場合は空文字列をデフォルトとする
                 $group = is_array($column) ? ($column['group'] ?? '') : ($column->group ?? '');
@@ -439,7 +481,7 @@ class Show extends Component
 
         return view('livewire.ledger.show', [
             'groupedColumns' => $groupedColumns, // グループ化されたカラムをビューに渡す
-            'filteredColumns' => $filteredColumns, // 差分表示ロジックのために残す
+            'filteredColumns' => $this->filteredColumns, // 差分表示ロジックのために残す
         ])->layout('layouts.app');
     }
 
@@ -781,14 +823,32 @@ class Show extends Component
             // サムネイル生成ジョブも再ディスパッチ
             if ($attachedFile->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
                 \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
-                Log::info('[Show] Re-dispatched GenerateThumbnail job for ID: ' . $attachedFile->id);
             }
 
             $this->success(__('file.status.retry_success'));
 
         } catch (\Exception $e) {
-            Log::error("Failed to retry processing for attached file ID {$attachedFileId}: " . $e->getMessage());
-            $this->error(__('file.status.retry_failed'), $e->getMessage());
+            $this->addError('retryProcessing', __('file.status.retry_failed')); // Livewire のエラーとして追加
+        }
+
+        // UIを更新
+        $this->mount($this->ledgerRecord->id);
+    }
+
+    public function deleteAttachedFile(int $fileId): void
+    {
+        try {
+            $attachedFile = AttachedFile::findOrFail($fileId);
+
+            // Gateなどでの認可チェックをここに実装
+            // Gate::authorize('delete', $attachedFile);
+
+            $attachedFile->delete();
+
+            $this->dispatch('mary-toast', message: __('file.delete_success'), title: 'Success', type: 'success');
+        } catch (\Exception $e) {
+            Log::error('Failed to delete attached file: '.$e->getMessage());
+            $this->error(__('file.delete_failed'));
         }
 
         // UIを更新

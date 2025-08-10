@@ -292,7 +292,7 @@ class Ledger extends Model
     {
         $progress = $this->getRequiredRolesProgressDetails();
 
-        return ! $progress['inspection']['is_all_completed'];
+        return $progress['inspection']['is_all_completed'];
     }
 
     /**

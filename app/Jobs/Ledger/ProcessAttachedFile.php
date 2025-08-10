@@ -24,7 +24,7 @@ class ProcessAttachedFile implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected AttachedFile $attachedFile;
+    public AttachedFile $attachedFile;
 
     /**
      * Create a new job instance.
