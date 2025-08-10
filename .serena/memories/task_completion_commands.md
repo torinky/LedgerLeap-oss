@@ -1,11 +1,11 @@
 After completing a task, the following commands should be run:
-- **Linting/Formatting:** `php artisan pint`
-- **Testing:** `php artisan test` (or `vendor/bin/pest`, `vendor/bin/phpunit`)
+- **Linting/Formatting:** `./vendor/bin/sail artisan pint`
+- **Testing:** `./vendor/bin/sail artisan test` (or `vendor/bin/pest`, `vendor/bin/phpunit`)
 - **Post-update commands (Composer):**
-  - `php artisan vendor:publish --tag=laravel-assets --ansi --force`
-  - `php artisan lang:update`
-  - `php artisan translations:compare --force`
+  - `./vendor/bin/sail artisan vendor:publish --tag=laravel-assets --ansi --force`
+  - `./vendor/bin/sail artisan lang:update`
+  - `./vendor/bin/sail artisan translations:compare --force`
 - **Post-autoload-dump commands (Composer):**
-  - `php artisan package:discover --ansi`
-  - `php artisan ide-helper:generate`
-  - `php artisan filament:upgrade`
+  - `./vendor/bin/sail artisan package:discover --ansi`
+  - `./vendor/bin/sail artisan ide-helper:generate`
+  - `./vendor/bin/sail artisan filament:upgrade`

@@ -1,8 +1,21 @@
-After completing a task, ensure the following:
-1. Run code formatting: `sail pint`
-2. Run code style checks: `sail phpcs`
-3. Run tests: `sail pest` or `sail phpunit`
-4. Ensure all database migrations are applied: `php artisan migrate`
-5. Update IDE helper files: `php artisan ide-helper:generate`
-6. Update language files and compare translations: `php artisan lang:update` and `php artisan translations:compare --force`
-7. For frontend changes, compile assets: `npm run dev` or `npm run build`
+
+Before considering a task complete and creating a pull request, please follow these steps:
+
+1.  **Run Tests:** Ensure all existing and new tests pass successfully.
+    ```bash
+    ./vendor/bin/sail pest
+    ```
+
+2.  **Format Code:** Apply the project's coding standards using Laravel Pint.
+    ```bash
+    ./vendor/bin/sail pint
+    ```
+
+3.  **Review Code:** Perform a self-review of your changes to catch any potential issues.
+
+4.  **Update Documentation:** If your changes affect the system's architecture, functionality, or require new setup steps, update the relevant documents in the `/docs` directory.
+
+5.  **Create Pull Request:** Push your feature branch and create a pull request against the `develop` branch.
+
+6.  **Write a Clear Commit Message:** Follow the Conventional Commits format in Japanese. The message should clearly explain the 'what' and 'why' of the changes.
+    -   **Example:** `feat(ledger): 新しい台帳項目の追加機能`

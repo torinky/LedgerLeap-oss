@@ -1,1 +1,7 @@
-The project utilizes a service layer and repository pattern for managing business logic and data access. Frontend development heavily relies on Livewire and Filament for component-based UI, and Tailwind CSS with DaisyUI for styling. Integration with various third-party packages (e.g., Spatie, Apache Tika, Mroonga) implies adherence to their respective best practices and conventions. The project also uses the Nested Set Model for hierarchical data structures.
+
+- **MVC (Model-View-Controller):** The application follows the standard MVC pattern.
+- **Service Layer:** Business logic is encapsulated in service classes within the `app/Services` directory.
+- **Repository Pattern:** Database interactions are abstracted into repository classes in the `app/Repositories` directory.
+- **Jobs & Queues:** Asynchronous tasks are handled by queued jobs in the `app/Jobs` directory.
+- **Livewire Components:** Dynamic UI is built using Livewire components.
+- **Filament for Admin:** The admin interface is built using the Filament framework.

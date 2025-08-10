@@ -1,25 +1,22 @@
-General:
-- `sail up`: Start the Laravel Sail development environment.
-- `sail down`: Stop the Laravel Sail development environment.
-- `sail composer install`: Install PHP dependencies.
-- `php artisan migrate`: Run database migrations.
-- `php artisan db:seed`: Seed the database.
+Development:
+- `./vendor/bin/sail up -d`: Start the development environment using Laravel Sail.
+- `./vendor/bin/sail npm install`: Install frontend dependencies.
+- `./vendor/bin/sail composer install`: Install backend dependencies.
+- `./vendor/bin/sail npm run dev`: Start the Vite development server for frontend development.
+- `./vendor/bin/sail npm run build`: Build the frontend assets for production.
+- `./vendor/bin/sail artisan migrate`: Run database migrations.
+- `./vendor/bin/sail artisan test`: Run the test suite.
 
 Code Quality:
-- `sail pint`: Run Laravel Pint for code formatting.
-- `sail phpcs`: Run PHP_CodeSniffer for code style checks.
+- `./vendor/bin/sail artisan pint`: Format the code.
+- `./vendor/bin/sail artisan phpcs`: Check for coding standard violations.
 
 Testing:
 - `sail pest`: Run Pest tests.
 - `sail phpunit`: Run PHPUnit tests.
 
-Development:
-- `npm install`: Install Node.js dependencies.
-- `npm run dev`: Compile assets for development.
-- `npm run build`: Compile assets for production.
-
 Utility:
-- `php artisan ide-helper:generate`: Generate IDE helper files.
-- `php artisan filament:upgrade`: Upgrade Filament assets.
-- `php artisan lang:update`: Update language files.
-- `php artisan translations:compare --force`: Compare translations.
+- `./vendor/bin/sail artisan ide-helper:generate`: Generate IDE helper files.
+- `./vendor/bin/sail artisan filament:upgrade`: Upgrade Filament assets.
+- `./vendor/bin/sail artisan lang:update`: Update language files.
+- `./vendor/bin/sail artisan translations:compare --force`: Compare translations.
