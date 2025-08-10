@@ -112,6 +112,51 @@
     *   台帳のステータス (`DRAFT`, `PENDING_INSPECTION`, `PENDING_APPROVAL`, `APPROVED`) ごとに、適切なアクションボタンが表示/非表示になることを検証するテストケースを追加する。
 4.  **テストの実行と安定化:** 作成したテストが安定してパスすることを確認する。これがリファクタリングの安全網となる。
 
+#### Step 0.1: `ShowTest.php` の現状と不足しているテスト
+
+`tests/Feature/Livewire/Ledger/ShowTest.php` は既に存在し、以下の基本的なテストケースが実装されています。
+
+**実装済みのテスト:**
+
+*   **基本的なレンダリングとデータロード:**
+    *   `component_renders_successfully()`: コンポーネントがレンダリングされ、台帳名が表示されることを確認。
+    *   `it_loads_ledger_record_on_mount()`: `mount`時に`ledgerRecord`と`ledgerDefineRecord`が正しくロードされることを確認。
+*   **ワークフローの状態に応じたボタンの表示/非表示:**
+    *   `it_shows_correct_buttons_when_status_is_pending_inspection()`: `PENDING_INSPECTION`ステータスでのボタン表示を検証。
+    *   `it_shows_correct_buttons_when_status_is_pending_approval()`: `PENDING_APPROVAL`ステータスでのボタン表示を検証。
+    *   `it_shows_no_workflow_buttons_when_status_is_approved()`: `APPROVED`ステータスでのボタン表示を検証。
+
+しかし、`Show.php` の以下の機能については、まだテストが不足しています。これらはリファクタリングの安全性を確保するために、Step 0の完了前に実装する必要があります。
+
+**未実装のテスト（追加が必要な項目）:**
+
+1.  **台帳レコードの変更差分表示 (`prepareContentDiff`, `findComparisonTargetDiff`):**
+    *   コンテンツが変更された場合の`prepareContentDiff`のテスト。
+    *   コンテンツが変更されていない場合の`prepareContentDiff`のテスト。
+    *   カラムが追加/削除された場合の`prepareContentDiff`のテスト。
+    *   関連する差分が見つかる場合の`findComparisonTargetDiff`のテスト。
+    *   関連する差分が見つからない場合の`findComparisonTargetDiff`のテスト（例：以前の差分がない、コンテンツが同一）。
+
+2.  **添付ファイルの再処理機能 (`retryProcessing`):**
+    *   `retryProcessing`がジョブを正常にディスパッチし、ステータスを更新することのテスト。
+    *   `retryProcessing`が`attachedFileId`が存在しない場合を適切に処理することのテスト。
+
+3.  **権限チェックロジック (`canRequestApproval`, `canApprove`, `canReturnToDraft`):**
+    *   様々なユーザーロールと台帳の状態の下で`canRequestApproval()`を直接テスト。
+    *   様々なユーザーロールと台帳の状態の下で`canApprove()`を直接テスト。
+    *   様々なユーザーロールと台帳の状態の下で`canReturnToDraft()`を直接テスト。
+    *   （注：これらのメソッドは`WorkflowService`に移動される予定のため、現時点で`ShowTest`でテストすることでカバレッジを確保し、後で`WorkflowService`専用のテストが必要になります。）
+
+4.  **表示レベルによるカラムのフィルタリング (`setDisplayLevel`, `displayLevel`):**
+    *   `setDisplayLevel`が`displayLevel`を正しく更新することのテスト。
+    *   `render()`が`displayLevel`に基づいてカラムをフィルタリングすることのテスト。
+
+5.  **グループ化されたカラムの開閉状態管理 (`toggleGroup`, `collapsedStates`):**
+    *   `toggleGroup`が状態を正しく切り替えることのテスト。
+    *   `mount()`で`collapsedStates`が正しく初期化されることのテスト。
+
+これらのテストがすべて実装され、安定してパスすることを確認できれば、Step 0は完了とみなされます。
+
 ### Step 1: サービス層とモデルの抽出 (下準備)
 
 1.  **`LedgerContentProcessor` サービスの作成と適用:**
