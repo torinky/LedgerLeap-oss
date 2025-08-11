@@ -513,7 +513,7 @@
                  placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
                  hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
         <x-slot:actions>
-        <x-mary-button label="{{ __('Cancel') }}" @click="$wire.returnToDraftModal = false"/>
+        <x-mary-button label="{{ __('actions.cancel') }}" @click="$wire.returnToDraftModal = false"/>
         <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
                    wire:click="returnTaskToDraft" spinner/>
         </x-slot:actions>
