@@ -166,7 +166,9 @@
 
 ### Step 1: サービス層とモデルの抽出 (下準備)
 
-1.  **`LedgerContentProcessor` サービスの作成と適用:**
+詳細計画: [2025-08-11_ledger_show_refactoring_step1_plan.md](./2025-08-11_ledger_show_refactoring_step1_plan.md)
+
+1\.  \*\*`LedgerContentProcessor` サービスの作成と適用:\*\*
     *   計画通りサービスを作成し、`Show.php` と `ShowDiff.php` の表示ロジックを置き換える。
 2.  **`LedgerDiffProcessor` サービスの作成と適用:**
     *   計画通りサービスを作成し、`Show.php` の差分計算ロジックを置き換える。
