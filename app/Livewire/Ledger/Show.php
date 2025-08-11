@@ -708,23 +708,13 @@ class Show extends Component
     {
         try {
             $attachedFile = AttachedFile::findOrFail($attachedFileId);
-
-            // ステータスをPENDING_INITIAL_PROCESSINGにリセット
-            $attachedFile->status = \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING;
-            $attachedFile->save();
-
-            // ジョブを再ディスパッチ
-            \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
-
-            // サムネイル生成ジョブも再ディスパッチ
-            if ($attachedFile->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
-                \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
-            }
+            $attachedFile->retryProcessing();
 
             $this->success(__('file.status.retry_success'));
 
         } catch (\Exception $e) {
-            $this->addError('retryProcessing', __('file.status.retry_failed')); // Livewire のエラーとして追加
+            Log::error("AttachedFile retryProcessing failed for ID: {$attachedFileId}. Error: " . $e->getMessage());
+            $this->addError('retryProcessing', __('file.status.retry_failed'));
         }
 
         // UIを更新

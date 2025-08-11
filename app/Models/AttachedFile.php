@@ -70,4 +70,21 @@ class AttachedFile extends Model
         // メタデータ抽出処理
         $this->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value;
     }
+
+    public function retryProcessing(): void
+    {
+        $thumbnailFailed = ($this->status === AttachedFileStatus::THUMBNAIL_FAILED);
+
+        // ステータスをPENDING_INITIAL_PROCESSINGにリセット
+        $this->status = AttachedFileStatus::PENDING_INITIAL_PROCESSING;
+        $this->save();
+
+        // メインの処理ジョブを再ディスパッチ
+        \App\Jobs\Ledger\ProcessAttachedFile::dispatch($this);
+
+        // サムネイル生成に失敗していた場合、サムネイル生成ジョブも再ディスパッチ
+        if ($thumbnailFailed) {
+            Bus::dispatch(new GenerateThumbnail($this->id));
+        }
+    }
 }

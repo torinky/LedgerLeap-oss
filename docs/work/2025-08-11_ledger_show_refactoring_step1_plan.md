@@ -103,16 +103,24 @@
 
 ### 2.4. `AttachedFile` モデルへの再処理ロジック移管
 
-*   **目的:** `Show.php` の `retryProcessing` メソッドのロジックを `AttachedFile` モデル自身に移動する。
+*   **目的:** `Show.php` の `retryProcessing` メソッドのロジックを `AttachedFile` モデル自身に移動し、モデルの責務を明確にする。
 *   **既存要素の確認:**
     *   `app/Models/AttachedFile.php`: 添付ファイルモデル。
-    *   `app/Jobs/OcrAndOptimizeFile.php`: OCR処理ジョブ。
-    *   `app/Jobs/GenerateThumbnail.php`: サムネイル生成ジョブ。
-*   **実装詳細:**
-    1.  `Show.php` の `retryProcessing()` メソッドのロジックを特定する。
-    2.  このロジックを `AttachedFile` モデルの新しいメソッド（例: `retryProcessing()`）として移動する。
-    3.  `AttachedFile` モデル内で、`OcrAndOptimizeFile` ジョブと `GenerateThumbnail` ジョブをディスパッチするロジックを実装する。
-    4.  `Show.php` からは、`AttachedFile` インスタンスを取得し、その `retryProcessing()` メソッドを呼び出すように変更する。
+    *   `app/Jobs/Ledger/ProcessAttachedFile.php`: メインのファイル処理ジョブ。
+    *   `app/Jobs/Ledger/GenerateThumbnail.php`: サムネイル生成ジョブ。
+*   **作業内容と経緯:**
+    1.  **`AttachedFile` モデルへのロジック移管:**
+        *   `app/Models/AttachedFile.php` に `retryProcessing()` メソッドを新規に作成した。
+        *   `Show.php` から、ステータスを `PENDING_INITIAL_PROCESSING` にリセットし、`ProcessAttachedFile` ジョブを再ディスパッチするロジックを移管した。
+        *   サムネイル生成に失敗している場合に `GenerateThumbnail` ジョブを再ディスパッチするロジックも同様に移管した。
+    2.  **`Livewire/Ledger/Show.php` のリファクタリング:**
+        *   `Show.php` の `retryProcessing()` メソッドを修正し、`AttachedFile` インスタンスを取得してその `retryProcessing()` メソッドを呼び出すだけのシンプルな形に変更した。
+        *   `catch` ブロックに `Log::error` を追加し、エラー発生時の追跡を容易にした。
+*   **テスト結果:**
+    *   `vendor/bin/sail pest tests/Feature/Livewire/Ledger/ShowTest.php --filter it_retries_attached_file_processing` を実行し、リファクタリング後も関連するフィーチャーテストがパスすることを確認した。
+    *   これにより、ロジックの移管が正しく行われ、既存機能へのデグレードがないことが検証された。
+*   **現在の状況:**
+    *   リファクタリング計画の2.4項は完了した。添付ファイルの再処理に関するロジックは `AttachedFile` モデルに集約され、その動作はフィーチャーテストによって保証されている。
 
 ## 3. 最適化の考慮事項
 

@@ -15,6 +15,8 @@ use function Pest\Laravel\actingAs;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    fake()->unique(true); // Reset Faker's unique state
+
     // 既存のログをクリア
     CustomActivity::query()->delete();
 
