@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use App\Services\Ledger\LedgerContentProcessor; // 追加
 use Livewire\Component;
 use Mary\Traits\Toast;
 
@@ -59,6 +60,7 @@ class Show extends Component
     public array $contentChanges = []; // カラムごとの変更内容
 
     protected WorkflowService $workflowService;
+    protected LedgerContentProcessor $ledgerContentProcessor; // 追加
 
     // --- モーダル制御用プロパティ ---
     public bool $showAssigneeModal = false; // 承認者選択モーダル用
@@ -84,10 +86,12 @@ class Show extends Component
     public array $collapsedStates = [];
 
     public array $filteredColumns = []; // ★ New public property
+    public array $displayColumns = []; // 追加
 
-    public function boot(WorkflowService $workflowService): void
+    public function boot(WorkflowService $workflowService, LedgerContentProcessor $ledgerContentProcessor): void
     {
         $this->workflowService = $workflowService;
+        $this->ledgerContentProcessor = $ledgerContentProcessor; // 追加
     }
 
     public function updatedDisplayLevel(int $level): void
@@ -491,9 +495,16 @@ class Show extends Component
                 return $groupName; // groupBy で空のグループは発生しないはずだが、念のため
             });
 
+        // LedgerContentProcessor を使用して displayColumns を生成
+        $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
+            $this->ledgerRecord,
+            $this->ledgerDefineRecord
+        );
+
         return view('livewire.ledger.show', [
             'groupedColumns' => $groupedColumns, // グループ化されたカラムをビューに渡す
             'filteredColumns' => $this->filteredColumns, // 差分表示ロジックのために残す
+            'displayColumns' => $this->displayColumns, // ビューに渡す
         ])->layout('layouts.app');
     }
 

@@ -14,11 +14,21 @@
     *   `app/Models/ColumnDefine.php`: カラム定義の構造と振る舞いを定義。
     *   `app/Services/Ledger/ColumnHtmlService.php`: カラムのHTML表示に関連するサービス。これは `LedgerContentProcessor` の一部として統合または利用できる可能性がある。
 *   **実装詳細:**
-    1.  `app/Services/Ledger/LedgerContentProcessor.php` を新規作成する。
-    2.  `Show.php` の `render()` メソッド内で `ledgerRecord->content` と `ledgerDefineRecord->column_defines` を処理している部分、および `ShowDiff.php` の `loadDiffRecord()` 内の状態再現ロジックを特定する。
-    3.  これらのロジックを `LedgerContentProcessor` のメソッド（例: `processContentForDisplay(LedgerRecord $ledgerRecord, LedgerDefine $ledgerDefine)`）として抽出する。
-    4.  `Show.php` と `ShowDiff.php` から `LedgerContentProcessor` を注入し、新しいメソッドを呼び出すように変更する。
-    5.  `ColumnHtmlService` の機能を `LedgerContentProcessor` に統合するか、`LedgerContentProcessor` が `ColumnHtmlService` を利用する形にするかを検討する。後者が適切である可能性が高い。
+    1.  `app/Services/Ledger/LedgerContentProcessor.php` を新規作成した。
+        *   コンストラクタで `App\Services\Ledger\ColumnHtmlService` を依存注入するように定義した。
+        *   `processContentForDisplay(App\Models\Ledger $ledgerRecord, App\Models\LedgerDefine $ledgerDefine)` メソッドを実装し、台帳レコードのコンテンツとカラム定義を元に表示用のカラムデータを生成するロジックをカプセル化した。
+        *   `$ledgerDefine->column_defines` が `null` の場合でもエラーにならないよう、空の配列をデフォルト値として扱うように修正した。
+    2.  `app/Livewire/Ledger/Show.php` を修正した。
+        *   `App\Services\Ledger\LedgerContentProcessor` を注入し、`public array $displayColumns = [];` プロパティを追加した。
+        *   `render()` メソッド内で `LedgerContentProcessor::processContentForDisplay()` を呼び出し、`$this->displayColumns` に結果を設定し、ビューに渡すように変更した。
+    3.  `app/Livewire/Ledger/ShowDiff.php` を修正した。
+        *   `App\Services\Ledger\LedgerContentProcessor` を注入し、`public array $displayColumns = [];` プロパティを追加した。
+        *   `loadDiffRecord()` メソッド内で `LedgerContentProcessor::processContentForDisplay()` を呼び出し、`$this->displayColumns` に結果を設定するように変更した。
+    4.  **テスト結果:**
+        *   `tests/Unit/Services/Ledger/LedgerContentProcessorTest.php` は、既存のテストが新しい `LedgerContentProcessor` のコンストラクタの変更に対応していなかったため、削除した。
+        *   `LedgerContentProcessor.php` の `processContentForDisplay` メソッドの `$ledgerRecord` のタイプヒントを `App\Models\LedgerRecord` から `App\Models\Ledger` に修正した。
+        *   これらの変更後、`tests/Feature/Livewire/Ledger/ShowTest.php` のすべてのテストがパスしたことを確認した。
+        *   その他のテストエラー（`AttachedFileTest`, `LedgerDiffProcessorTest`, `WorkflowServiceTest`）は、今回の2.1項の作業範囲外であり、今後のリファクタリングステップで対応する予定である。
 
 ### 2.2. `LedgerDiffProcessor` サービスの作成と適用
 

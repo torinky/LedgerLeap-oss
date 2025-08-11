@@ -11,6 +11,7 @@ use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Storage;
+use App\Services\Ledger\LedgerContentProcessor; // 追加
 use Livewire\Component;
 
 class ShowDiff extends Component
@@ -29,6 +30,14 @@ class ShowDiff extends Component
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
     public ?\Illuminate\Support\Collection $allAttachments = null;
+    public array $displayColumns = []; // 追加
+
+    protected LedgerContentProcessor $ledgerContentProcessor; // 追加
+
+    public function boot(LedgerContentProcessor $ledgerContentProcessor): void
+    {
+        $this->ledgerContentProcessor = $ledgerContentProcessor;
+    }
 
     // mount メソッドを修正
     public function mount(int $ledgerId, ?int $diffId = null): void // Request の代わりに ID を受け取る
@@ -135,6 +144,12 @@ class ShowDiff extends Component
 
         $this->ledgerRecord->modifier = $this->currentDiffRecord->modifier;
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
+
+        // LedgerContentProcessor を使用して displayColumns を生成
+        $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
+            $this->ledgerRecord,
+            $this->ledgerDefineRecord
+        );
 
         // Diff の content に基づいて添付ファイル情報を再構築
         $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
