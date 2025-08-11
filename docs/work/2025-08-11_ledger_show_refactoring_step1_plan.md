@@ -80,14 +80,26 @@
 *   **既存要素の確認:**
     *   `app/Services/WorkflowService.php`: 既存のワークフローサービス。
     *   `app/Enums/WorkflowStatus.php`: ワークフローのステータス定義。
-    *   `app/Models/LedgerRecord.php`: 台帳レコードモデル。
+    *   `app/Models/Ledger.php`: 台帳モデル。
     *   `app/Models/User.php`: ユーザーモデル。
-    *   `app/Traits/HasWorkflow.php`: ワークフロー関連のトレイト（もしあれば）。
-*   **実装詳細:**
-    1.  `Show.php` の `canRequestApproval()`, `canApprove()`, `canReturnToDraft()` メソッドを特定する。
-    2.  これらのメソッドのロジックを `WorkflowService` の新しいメソッド（例: `canRequestApproval(User $user, LedgerRecord $ledgerRecord)`, `canApprove(User $user, LedgerRecord $ledgerRecord)`, `canReturnToDraft(User $user, LedgerRecord $ledgerRecord)`）として移動する。
-    3.  `Show.php` から `WorkflowService` を注入し、新しいメソッドを呼び出すように変更する。
-    4.  必要に応じて、`WorkflowService` に `User` や `LedgerRecord` を引数として渡すように調整する。
+*   **作業内容と経緯:**
+    1.  **`WorkflowService` へのロジック移管:**
+        *   `app/Livewire/Ledger/Show.php` に実装されていた複雑な権限チェックロジックを、`app/Services/WorkflowService.php` に移管した。
+        *   移管したメソッドは `canRequestApproval`, `canApprove`, `canReturnToDraft` の3つであり、`Ledger` モデルの内部状態（`canProceedToApprovalStep` や `canBeFinallyApproved` など）を考慮した、より現実に即したロジックとなっている。
+    2.  **`Livewire/Ledger/Show.php` のリファクタリング:**
+        *   `Show.php` の `canRequestApproval`, `canApprove`, `canReturnToDraft` の各メソッドを、`WorkflowService` の対応するメソッドを呼び出すだけのシンプルな実装に修正した。
+    3.  **単体テストの実装 (`WorkflowServiceTest`):**
+        *   移管したロジックの正当性を担保するため、`tests/Unit/Services/WorkflowServiceTest.php` を全面的に刷新した。
+        *   `Ledger` モデルの内部ロジックを `partialMock` を用いて制御し、`WorkflowService` の責務である権限判定ロジックに焦点を当てたテストを実装した。
+        *   担当者の割り当て、ワークフローステータス、前提条件（必須ロールの完了など）といった複数のシナリオを網羅する12のテストケースを作成した。
+*   **テスト結果:**
+    *   `vendor/bin/sail pest tests/Unit/Services/WorkflowServiceTest.php` を実行し、作成した単体テストがすべてパスすることを確認した。
+    *   `vendor/bin/sail pest tests/Feature/Livewire/Ledger/ShowTest.php` を実行し、リファクタリング後も既存のフィーチャーテストがすべてパスすることを確認した。
+    *   これにより、ロジックの分離が正しく行われたこと、そして既存機能へのデグレードが発生していないことが検証された。
+*   **現在の状況:**
+    *   リファクタリング計画の2.3項は完了した。`WorkflowService` が権限チェックの責務を担い、その動作は単体テストとフィーチャーテストによって保証されている。
+
+
 
 ### 2.4. `AttachedFile` モデルへの再処理ロジック移管
 

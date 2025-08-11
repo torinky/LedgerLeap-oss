@@ -31,6 +31,42 @@ class WorkflowService
     }
 
     /**
+     * ユーザーが指定された台帳の承認を依頼できるか判断する
+     * (点検者が「承認申請」できるか)
+     */
+    public function canRequestApproval(User $user, Ledger $ledgerRecord): bool
+    {
+        return $ledgerRecord->canProceedToApprovalStep()
+            && ($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
+                || $ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)
+            && $ledgerRecord->latestDiff?->inspector_id === $user->id;
+    }
+
+    /**
+     * ユーザーが指定された台帳を承認できるか判断する
+     * (承認者が「承認」できるか)
+     */
+    public function canApprove(User $user, Ledger $ledgerRecord): bool
+    {
+        return ($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
+                $ledgerRecord->latestDiff?->approver_id === $user->id) ||
+            ($ledgerRecord->status !== WorkflowStatus::DRAFT
+                && $ledgerRecord->status !== WorkflowStatus::APPROVED
+                && $ledgerRecord->canBeFinallyApproved()
+            );
+    }
+
+    /**
+     * ユーザーが指定された台帳をドラフトに戻せるか判断する
+     */
+    public function canReturnToDraft(User $user, Ledger $ledgerRecord): bool
+    {
+        // 差し戻しは、自分が現在の担当者であれば、必須ロールの完了状況に関わらず可能とする
+        return ($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === $user->id) ||
+            ($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === $user->id);
+    }
+
+    /**
      * 下書きを保存する
      * 新しい LedgerDiff (Content有り) を作成し、Ledger も更新する
      *

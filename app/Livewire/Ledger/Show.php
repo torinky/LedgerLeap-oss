@@ -439,30 +439,19 @@ class Show extends Component
     }
 
     // --- 権限チェック用ヘルパーメソッド ---
-    public function canRequestApproval(): bool // 点検者が「承認申請」できるか
+    public function canRequestApproval(): bool
     {
-        //        dd($this->ledgerRecord->canProceedToApprovalStep());
-        return $this->ledgerRecord->canProceedToApprovalStep()
-            && ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
-                || $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)
-            && $this->ledgerRecord->latestDiff?->inspector_id === Auth::id(); // ★必須点検ロール完了チェック追加
+        return $this->workflowService->canRequestApproval(Auth::user(), $this->ledgerRecord);
     }
 
-    public function canApprove(): bool // 承認者が「承認」できるか
+    public function canApprove(): bool
     {
-        return ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
-                $this->ledgerRecord->latestDiff?->approver_id === Auth::id()) ||
-            ($this->ledgerRecord->status !== WorkflowStatus::DRAFT
-                && $this->ledgerRecord->status !== WorkflowStatus::APPROVED
-                && $this->ledgerRecord->canBeFinallyApproved()
-            ); // ★全必須ロール完了チェック追加
+        return $this->workflowService->canApprove(Auth::user(), $this->ledgerRecord);
     }
 
     public function canReturnToDraft(): bool
     {
-        // 差し戻しは、自分が現在の担当者であれば、必須ロールの完了状況に関わらず可能とする
-        return ($this->ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $this->ledgerRecord->latestDiff?->inspector_id === Auth::id()) ||
-            ($this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $this->ledgerRecord->latestDiff?->approver_id === Auth::id());
+        return $this->workflowService->canReturnToDraft(Auth::user(), $this->ledgerRecord);
     }
 
     public function render()
