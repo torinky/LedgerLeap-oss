@@ -164,25 +164,28 @@
 
 これらのテストはすべて実装され、安定してパスすることを確認済みです。これにより、Step 0は完了とみなされます。
 
-### Step 1: サービス層とモデルの抽出 (下準備)
+### ✅ ステップ1: サービス層とモデルの抽出 (下準備) (完了)
 
-詳細計画: [2025-08-11_ledger_show_refactoring_step1_plan.md](./2025-08-11_ledger_show_refactoring_step1_plan.md)
+*   **目的:**
+    `Show.php` コンポーネントから、表示データの整形、差分計算、権限チェック、ファイル再処理といった、UIから独立可能なビジネスロジックを抽出し、それぞれ責務の明確なサービスクラスやモデルメソッドに移管しました。これは、後続のUIコンポーネント分割を円滑に進めるための重要な下準備です。
 
-1\.  \*\*`LedgerContentProcessor` サービスの作成と適用:\*\*
-    *   計画通りサービスを作成し、`Show.php` と `ShowDiff.php` の表示ロジックを置き換える。
-2.  **`LedgerDiffProcessor` サービスの作成と適用:**
-    *   計画通りサービスを作成し、`Show.php` の差分計算ロジックを置き換える。
-3.  **`WorkflowService` への権限チェックロジック移管:**
-    *   `Show.php` の `can...` で始まるメソッド群を `WorkflowService` に移動し、`Show.php` からはサービスを呼び出すように変更する。
-4.  **`AttachedFile` モデルへの再処理ロジック移管:**
-    *   `Show.php` の `retryProcessing` ロジックを `AttachedFile` モデルに移動する。
+*   **実施済みタスク:**
+    1.  **`LedgerContentProcessor` サービスの作成:** 台帳の `content` と `column_define` を解釈し、表示用に整形するロジックをカプセル化しました。
+    2.  **`LedgerDiffProcessor` サービスの作成:** 2つの台帳状態を比較し、変更差分を計算するロジックをカプセル化しました。
+    3.  **`WorkflowService` への権限チェックロジック移管:** `Show.php` にあった `canRequestApproval` などの権限チェックロジックを `WorkflowService` に移管し、ユニットテストでその動作を保証しました。
+    4.  **`AttachedFile` モデルへの再処理ロジック移管:** 添付ファイルの再処理を行う `retryProcessing` ロジックを `AttachedFile` モデルのメソッドとして移管しました。
+    5.  **テストによる検証:** 上記の変更後、関連するユニットテストおよびフィーチャーテストが全てパスすることを確認し、リファクタリングによるデグレードがないことを保証しました。
 
-### Step 2: `WorkflowPanel` コンポーネントの分離
+*   **成果物:**
+    *   ビジネスロジックがサービス層とモデルに適切に分離され、`Show.php` はUIの状態管理と、これらのサービスを呼び出すことに専念する、よりクリーンな構造になりました。
+    *   各ロジックに対応するユニットテストおよびフィーチャーテストが整備され、将来の変更に対する安全性が向上しました。
 
-1.  `app/Livewire/Ledger/WorkflowPanel.php` を作成する。
-2.  計画に基づき、ワークフロー関連のプロパティとメソッドを `Show.php` から `WorkflowPanel.php` に移動する。
-3.  UIを `workflow-panel.blade.php` に切り出し、`Show.php` のビューに `<livewire:ledger.workflow-panel ...>` を組み込む。
-4.  コンポーネント間の連携をイベント (`$dispatch`) で行うように実装する。
+*   **関連ドキュメント:**
+    *   [Step 1 詳細計画・実績](./2025-08-11_ledger_show_refactoring_step1_plan.md)
+
+### Step 2: `WorkflowPanel` コンポーネントの分離 (計画)
+
+詳細計画: [2025-08-11_ledger_show_refactoring_step2_plan.md](./2025-08-11_ledger_show_refactoring_step2_plan.md)
 
 ### Step 3: `LedgerDiffViewer` コンポーネントの分離
 
