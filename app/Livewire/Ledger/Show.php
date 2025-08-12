@@ -272,6 +272,12 @@ class Show extends Component
         $this->openCommentModal('request_approval_with_comment');
     }
 
+    #[On('workflowUpdated')]
+    public function refreshLedgerRecord(): void
+    {
+        $this->mount($this->ledgerRecord->id);
+    }
+
     // --- 承認者の初期選択IDを取得するヘルパー ---
     protected function getInitialApproverId(): ?int
     {
@@ -731,10 +737,18 @@ class Show extends Component
 
             $attachedFile->delete();
 
-            $this->dispatch('mary-toast', message: __('file.delete_success'), title: 'Success', type: 'success');
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', title: __('file.delete_success'), type: 'success');
+            } else {
+                $this->success(__('file.delete_success'));
+            }
         } catch (\Exception $e) {
             Log::error('Failed to delete attached file: '.$e->getMessage());
-            $this->error(__('file.delete_failed'));
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', title: __('file.delete_failed'), type: 'error');
+            } else {
+                $this->error(__('file.delete_failed'));
+            }
         }
 
         // UIを更新

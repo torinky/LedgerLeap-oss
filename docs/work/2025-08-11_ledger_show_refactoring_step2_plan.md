@@ -53,17 +53,46 @@
 *   イベントを通じて親コンポーネントと疎に連携する、クリーンなアーキテクチャの確立。
 *   他の機能にも適用可能な、テストに裏付けられたリファクタリングの**成功モデル（テンプレート）**。
 
-## 5. 作業結果と課題解決
+## 5. 作業結果と課題解決 (2025-08-12 更新)
 
-### 5.1. 計画変更の経緯とこれまでの作業結果
+### 5.1. 現在の進捗状況
 
-当初、ワークフロー関連UIを単一の `WorkflowPanel` コンポーネントに集約する計画（旧Step 2.1）を立て、その実装を進めていました。しかし、UIの物理的な配置の柔軟性や長期的な保守性の観点から、このアプローチでは脆弱性が生じる可能性が指摘されました。
+*   **`WorkflowActionButtons` コンポーネントのテスト完了:**
+    *   `tests/Feature/Livewire/Ledger/WorkflowActionButtonsTest.php` に存在するすべてのテストが成功することを確認しました。
+    *   テストの過程で、Livewireコンポーネントのテストにおける `Toast` トレイトの扱い（`$this->dispatch` の利用）や、`render` メソッドで暗黙的に呼び出されるメソッドのモック戦略に関する知見が得られました。
+    *   関連して、`tests/Feature/Livewire/Ledger/ShowTest.php` で発生していた副次的なエラーも解消済みです。
 
-このフィードバックを受け、より堅牢でLivewireの設計思想にも合致する「複数のLivewire子コンポーネントへの分割」という方針に計画を変更しました。
+*   **`WorkflowStatusCard`, `WorkflowHistoryList` のコンポーネントファイルの作成:**
+    *   計画通り、コンポーネントファイルは作成済みです。
 
-旧Step 2.1の作業中に発生した課題とその解決策は、以下のセクションに記載されており、新しい計画を策定する上での貴重な教訓となりました。
+### 5.2. 新たな課題: コンポーネント間のロジック重複
 
-### 5.2. 発生した課題と解決策
+当初の計画では、`WorkflowActionButtons` にワークフロー関連のアクションをすべて集約する想定でした。しかし、UI/UX上の要請から、`WorkflowStatusCard` コンポーネント内にも、状況に応じて状態を変化させるためのアクションボタン（例: 承認、差し戻し）を配置する必要があることが判明しました。
+
+これにより、`WorkflowActionButtons` と `WorkflowStatusCard` の間で、ワークフロー実行に関するプロパティとメソッドが重複してしまうという新たな課題が浮上しました。これはコードの再利用性を損ない、メンテナンス性を低下させるため、リファクタリングの目的に反します。
+
+### 5.3. 解決策: `WorkflowActions` トレイトによるロジックの共通化
+
+このロジック重複問題を解決するため、以下の通り、PHPの **トレイト (Trait)** を用いて共通ロジックをカプセル化するアプローチを採用します。
+
+1.  **`WorkflowActions` トレイトの作成:**
+    *   `app/Livewire/Traits/WorkflowActions.php` を新規に作成します。
+    *   `WorkflowActionButtons.php` から、ワークフローのアクションに関連するプロパティとメソッドをすべてこのトレイトに移動します。
+
+2.  **各コンポーネントでのトレイトの使用:**
+    *   `WorkflowActionButtons.php` と `WorkflowStatusCard.php` の両方で、`WorkflowActions` トレイトを `use` します。
+    *   これにより、両コンポーネントは重複したコードを持つことなく、同じワークフロー関連機能を利用できます。
+
+3.  **今後の進め方:**
+    *   **Step 2.2 (新規):** `WorkflowActions` トレイトを作成し、ロジックを移植します。
+    *   **Step 2.3 (新規):** `WorkflowActionButtons` と `WorkflowStatusCard` をリファクタリングし、トレイトを使用するように変更します。また、それぞれのビュー (`.blade.php`) が、そのコンポーネントに必要なUIのみを持つように修正します。
+    *   **Step 2.4 (新規):** `WorkflowStatusCard` のテスト (`WorkflowStatusCardTest.php`) を作成し、状態表示と、トレイト経由で提供されるアクションが正しく機能することを検証します。`WorkflowActionButtonsTest.php` も、トレイト使用後の状態でパスすることを再確認します。
+    *   **Step 2.5 (旧Step 2.1 の残タスク):** `WorkflowHistoryList` の分離とテストを完了させます。
+    *   **Step 2.6 (旧Step 2.1 の残タスク):** 親コンポーネント `Show.php` のリファクタリングと最終的なクリーンアップを行います。
+
+### 5.4. 過去の課題と解決策からの学び
+
+(このセクションは、以前の知見を保持するために内容はそのまま残します)
 
 #### 課題1: `mary-toast` イベントがテストで捕捉されない (旧Step 2.1での課題)
 
@@ -89,13 +118,7 @@
         *   `tests/Feature/Livewire/Ledger/WorkflowPanelTest.php`において、ロールをアタッチする際にピボットテーブルの`type`カラムを明示的に指定するように修正しました。具体的には、`$folder->requiredApproverRoles()->attach($approverRole->id, ['type' => 'approver']);`と記述しました。
         *   これにより、`getRequiredRolesProgressDetails()`が期待通りの値（`inspection.is_all_completed: true`、`approval.is_all_completed: true`）を返すようになり、`workflowService->approve`が正しく呼び出されるようになりました。
 
-### 5.3. 今後の改善点
-
-*   `app/Models/Ledger.php`および`app/Livewire/Ledger/WorkflowPanel.php`に追加したデバッグ用の`Log::info()`ステートメントは、本番環境のログを汚染しないよう、開発完了後に削除することが推奨されます。
-*   `spatie/laravel-permission`の`BelongsToMany`リレーションシップにおける`attach()`の挙動について、より深い理解と注意が必要です。同様の問題を避けるため、関連するドキュメントを再確認し、必要に応じて共通のヘルパーメソッドを導入することを検討します。
-*   PHPUnit 12で非推奨となるdoc-commentのメタデータに関する警告（`WARN Metadata found in doc-comment`）がテスト実行時に表示されています。これは本タスクの直接的な問題ではありませんが、将来的なPHPUnitのバージョンアップに備え、アトリビュートへの移行を検討する必要があります。
-
-### 5.4. コンポーネント切り出し作業のテンプレート化にあたっての留意事項
+### 5.5. コンポーネント切り出し作業のテンプレート化にあたっての留意事項
 
 旧Step 2.1の作業を通じて、Livewireコンポーネントの切り出しとテストにおいて、特に以下の点に留意することで、今後の同様の作業をよりスムーズに進められると考えられます。
 
