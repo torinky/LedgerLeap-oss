@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
@@ -39,9 +40,9 @@ class ShowTest extends TestCase
         
 
         // ユーザーを作成
-        $this->user = User::factory()->create();
-        $this->inspector = User::factory()->create();
-        $this->approver = User::factory()->create();
+        $this->user = User::factory()->create(['email' => 'user_' . Str::random(10) . '@example.com']);
+        $this->inspector = User::factory()->create(['email' => 'inspector_' . Str::random(10) . '@example.com']);
+        $this->approver = User::factory()->create(['email' => 'approver_' . Str::random(10) . '@example.com']);
 
         // ロールを作成
         $this->inspectorRole = Role::create(['name' => 'inspector']);
