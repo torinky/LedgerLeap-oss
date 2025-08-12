@@ -2,7 +2,7 @@
 
 ## 1. 目的
 
-`Show.php` から、ワークフローの状態表示、アクションボタン、関連モーダルといった、ワークフローに特化したUIとそのロジックを、新しいLivewire子コンポーネント `WorkflowPanel` に分離します。これにより、親コンポーネントの責務をさらに軽減し、ワークフロー関連のUIを独立して管理・開発できるようにします。
+`Show.php` から、ワークフローの状態表示、アクションボタン、関連モーダルといった、ワークフローに特化したUIとそのロジックを、ワークフローに特化したUIとそのロジックを、複数のLivewire子コンポーネントに分離します。これにより、親コンポーネントの責務をさらに軽減し、ワークフロー関連のUIを独立して管理・開発できるようにします。
 
 ## 2. 段階的アプローチとテンプレート構築
 
@@ -12,54 +12,65 @@
 
 ## 3. 詳細な作業計画
 
-### Step 2.1: `WorkflowPanel` コンポーネントの分離と段階的移行
+### Step 2.1: ワークフロー関連UIの複数Livewireコンポーネントへの分割と段階的移行
 
 当初、承認機能のみを分離する計画でしたが、UIの整合性維持に課題があったため、より包括的かつ安全な段階的アプローチに見直しました。
 
-1.  **`WorkflowPanel` コンポーネントの作成とロジックのコピー:**
-    *   `vendor/bin/sail artisan make:livewire Ledger/WorkflowPanel` コマンドを実行し、`WorkflowPanel.php` と `workflow-panel.blade.php` を生成します。
-    *   `Show.php` からワークフロー関連のプロパティとメソッド（承認、差し戻し、申請取り下げなど全てのワークフローアクション）を `WorkflowPanel.php` にコピーします。
-    *   `WorkflowPanel.php` は、親から渡される `LedgerRecord` を受け取るための `public Ledger $ledgerRecord;` プロパティを定義します。
+1.  **ワークフロー関連Livewireコンポーネントの作成とロジックの分散:**
+    *   以下のLivewireコンポーネントを生成します。
+        *   `vendor/bin/sail artisan make:livewire Ledger/WorkflowStatusCard`
+        *   `vendor/bin/sail artisan make:livewire Ledger/WorkflowActionButtons`
+        *   `vendor/bin/sail artisan make:livewire Ledger/WorkflowHistoryList`
+    *   `Show.php` からワークフロー関連のプロパティとメソッド（承認、差し戻し、申請取り下げなど全てのワークフローアクション）を、それぞれの責務に応じてこれらの新しいコンポーネントに分散してコピーします。
+    *   各コンポーネントは、親から渡される `LedgerRecord` を受け取るための `public Ledger $ledgerRecord;` プロパティを定義します。
     *   必要なサービス（`WorkflowService` など）をコンストラクタまたは `mount` メソッドで依存注入します。
 
 2.  **ビューの分離と `Show` への埋め込み（元のUIは一時非表示）:**
-    *   `show.blade.php` からワークフロー関連のUI（上部ステータスカード、下部フッターのワークフローアクションボタン）を `workflow-panel.blade.php` にコピーします。
-    *   `show.blade.php` の上部ワークフローUIがあった場所に、`<livewire:ledger.workflow-panel :ledgerRecord="$ledgerRecord" wire:key="workflow-panel-{{ $ledgerRecord->id }}" />` を埋め込みます。
-    *   **元のUI（上部ステータスカードと下部フッターのワークフローアクションボタン）は、`wire:ignore` で囲むことで一時的に非表示にします。**
+    *   `show.blade.php` からワークフロー関連のUI（上部ステータスカード、下部フッターのワークフローアクションボタン、ワークフロー履歴リスト）を、それぞれの責務に応じた新しいコンポーネントのBladeファイル（例: `workflow-status-card.blade.php`, `workflow-action-buttons.blade.php`, `workflow-history-list.blade.php`）にコピーします。
+    *   `show.blade.php` の元のワークフローUIがあった場所に、それぞれのコンポーネントを埋め込みます。
+        *   例: `<livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord" wire:key="status-card-{{ $ledgerRecord->id }}" />`
+        *   例: `<livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord" wire:key="action-buttons-{{ $ledgerRecord->id }}" />`
+        *   例: `<livewire:ledger.workflow-history-list :ledgerRecord="$ledgerRecord" wire:key="history-list-{{ $ledgerRecord->id }}" />`
+    *   **元のUIは、`wire:ignore` で囲むことで一時的に非表示にします。**
 
-3.  **コンポーネント間の連携（イベント駆動とリダイレクト）:**
-    *   `Show.php` のワークフロー関連メソッドは、`WorkflowPanel` の対応するメソッドを呼び出すようにリダイレクトします（例: `public function approveTask() { $this->dispatch('workflow-panel-approve-task'); }`）。`WorkflowPanel` はこれらのイベントを `#[On]` で受け取ります。
-    *   `WorkflowPanel` のアクションメソッドが成功した際に、`$this->dispatch('workflowUpdated');` を実行してイベントを発行します。
+3.  **コンポーネント間の連携（イベント駆動）:**
+    *   各子コンポーネントは、自身の責務範囲内で完結する処理を行い、親コンポーネントや他の子コンポーネントに影響を与える必要がある場合は、Livewire のイベント (`$this->dispatch()`) を使用して通知します。
+    *   ワークフローアクションを実行する子コンポーネント（例: `WorkflowActionButtons`）は、アクションメソッドが成功した際に、`$this->dispatch('workflowUpdated');` を実行してイベントを発行します。
     *   親である `Show.php` は、`#[On('workflowUpdated')]` アトリビュートを使ってこのイベントをリッスンし、`$this->ledgerRecord->refresh()` を実行して最新の台帳情報を再読み込みします。
 
 4.  **テストの作成と実行:**
-    *   **新規作成:** `tests/Feature/Livewire/Ledger/WorkflowPanelTest.php` を作成し、`WorkflowPanel` の機能（アクションボタン表示、モーダル制御、イベントハンドリング、サービス呼び出し、トースト表示など）を検証するユニットテストとフィーチャーテストを実装します。
+    *   **新規作成:** 各子コンポーネント（例: `WorkflowStatusCard`, `WorkflowActionButtons`, `WorkflowHistoryList`）の機能（アクションボタン表示、モーダル制御、イベントハンドリング、サービス呼び出し、トースト表示など）を検証するユニットテストとフィーチャーテストを実装します。
+        *   例: `tests/Feature/Livewire/Ledger/WorkflowActionButtonsTest.php`
     *   **既存テストの実行:** `ShowTest.php` を実行し、既存のフィーチャーテストがパスすることを確認します。
 
 5.  **元のUIとロジックの削除:**
-    *   `WorkflowPanel` が完全に機能していることを確認した後、`show.blade.php` から一時的に非表示にしていた元のUIを完全に削除します。
-    *   `Show.php` から、`WorkflowPanel` に委譲したワークフロー関連のプロパティとメソッドを完全に削除します。
+    *   各子コンポーネントが完全に機能していることを確認した後、`show.blade.php` から一時的に非表示にしていた元のUIを完全に削除します。
+    *   `Show.php` から、各子コンポーネントに委譲したワークフロー関連のプロパティとメソッドを完全に削除します。
 
 ## 4. 期待される成果物
 
-*   ワークフロー関連機能が `WorkflowPanel` コンポーネントに完全に集約され、`Show.php` からワークフローに関するコードが削減され、見通しが改善された状態。
+*   ワークフロー関連機能が複数のLivewire子コンポーネントに適切に分散され、`Show.php` からワークフローに関するコードが削減され、見通しが改善された状態。
 *   イベントを通じて親コンポーネントと疎に連携する、クリーンなアーキテクチャの確立。
 *   他の機能にも適用可能な、テストに裏付けられたリファクタリングの**成功モデル（テンプレート）**。
 
 ## 5. 作業結果と課題解決
 
-### 5.1. Step 2.1の完了とテストのパス
+### 5.1. 計画変更の経緯とこれまでの作業結果
 
-Step 2.1で計画された「承認」機能の分離とテストは完了し、関連するテスト（`tests/Feature/Livewire/Ledger/ShowTest.php` および `tests/Feature/Livewire/Ledger/WorkflowPanelTest.php`）はすべてパスしました。
+当初、ワークフロー関連UIを単一の `WorkflowPanel` コンポーネントに集約する計画（旧Step 2.1）を立て、その実装を進めていました。しかし、UIの物理的な配置の柔軟性や長期的な保守性の観点から、このアプローチでは脆弱性が生じる可能性が指摘されました。
+
+このフィードバックを受け、より堅牢でLivewireの設計思想にも合致する「複数のLivewire子コンポーネントへの分割」という方針に計画を変更しました。
+
+旧Step 2.1の作業中に発生した課題とその解決策は、以下のセクションに記載されており、新しい計画を策定する上での貴重な教訓となりました。
 
 ### 5.2. 発生した課題と解決策
 
-#### 課題1: `mary-toast` イベントがテストで捕捉されない
+#### 課題1: `mary-toast` イベントがテストで捕捉されない (旧Step 2.1での課題)
 
 *   **原因**: Livewireのテストフレームワークは、MaryUIの`Toast`トレイトが内部的に使用する`$this->js()`ヘルパーを介したJavaScriptイベントのディスパッチを直接捕捉できませんでした。
 *   **解決策**: `app/Livewire/Ledger/WorkflowPanel.php` 内の`handleActionWithComment`および`handleNextApproverSelected`メソッドにおいて、`$this->success()`や`$this->error()`の代わりに、Livewireのテストフレームワークが捕捉可能な`$this->dispatch('mary-toast', ...)`を明示的に呼び出すように修正しました。
 
-#### 課題2: `WorkflowService::approve`がテストで呼び出されない (`InvalidCountException`) および`Ledger`モデルのモックに関する`TypeError`
+#### 課題2: `WorkflowService::approve`がテストで呼び出されない (`InvalidCountException`) および`Ledger`モデルのモックに関する`TypeError` (旧Step 2.1での課題)
 
 この課題は複数の要因が絡み合っており、段階的にデバッグと修正を行いました。
 
@@ -86,7 +97,7 @@ Step 2.1で計画された「承認」機能の分離とテストは完了し、
 
 ### 5.4. コンポーネント切り出し作業のテンプレート化にあたっての留意事項
 
-本作業を通じて、Livewireコンポーネントの切り出しとテストにおいて、特に以下の点に留意することで、今後の同様の作業をよりスムーズに進められると考えられます。
+旧Step 2.1の作業を通じて、Livewireコンポーネントの切り出しとテストにおいて、特に以下の点に留意することで、今後の同様の作業をよりスムーズに進められると考えられます。
 
 1.  **LivewireテストとJavaScriptイベントの扱い**: `$this->js()`ヘルパーを介してディスパッチされるJavaScriptイベント（例: MaryUIのToast）は、Livewireのテストフレームワークでは直接捕捉できません。テストでこれらのイベントの発生を検証する必要がある場合は、コンポーネント側で`$this->dispatch('custom-event-name', ...)`のように明示的にLivewireイベントとしてディスパッチする実装を検討してください。これにより、テストの信頼性が向上します。
 
