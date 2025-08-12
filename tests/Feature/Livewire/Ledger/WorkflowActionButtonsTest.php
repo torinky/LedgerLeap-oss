@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Livewire\Ledger;
+namespace tests\Feature\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\WorkflowActionButtons;
@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Tests\TestCase;
+use tests\TestCase;
 
 class WorkflowActionButtonsTest extends TestCase
 {
@@ -36,7 +36,7 @@ class WorkflowActionButtonsTest extends TestCase
 
         $this->ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'status' => WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::PENDING_INSPECTION,
         ]);
 
         $this->workflowServiceMock = $this->mock(WorkflowService::class);

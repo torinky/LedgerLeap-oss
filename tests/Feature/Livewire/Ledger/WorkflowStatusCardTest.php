@@ -36,7 +36,7 @@ class WorkflowStatusCardTest extends TestCase
 
         $this->ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'status' => WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::PENDING_INSPECTION,
         ]);
 
         $this->workflowServiceMock = $this->mock(WorkflowService::class);
