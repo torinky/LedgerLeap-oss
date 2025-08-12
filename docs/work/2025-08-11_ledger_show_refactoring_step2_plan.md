@@ -72,9 +72,8 @@
     *   `tests/Feature/Livewire/Ledger/WorkflowHistoryListTest.php` を作成し、すべてのテストが成功することを確認しました。
 
 *   **`WorkflowActions` トレイトのテストの追加と既存テストの削減:**
-    *   `app/Traits/WorkflowActions.php` トレイトの機能を網羅的にテストするため、`tests/Traits/WorkflowActionsTest.php` を新規に作成し、すべてのテストがパスすることを確認しました。
+    *   `app/Traits/WorkflowActions.php` トレイトの機能を網羅的にテストするため、`tests/Unit/Traits/WorkflowActionsTest.php` を新規に作成し、すべてのテストがパスすることを確認しました。
     *   `tests/Feature/Livewire/Ledger/WorkflowActionButtonsTest.php` および `tests/Feature/Livewire/Ledger/WorkflowStatusCardTest.php` から、`WorkflowActions` トレイトでカバーされる重複するテストケースを削除しました。これにより、各コンポーネントのテストは、コンポーネント固有のレンダリングテストのみに限定され、テストコードの重複が大幅に削減されました。
-    *   `phpunit.xml` に `testsuite name="Traits"` を追加し、`tests/Traits` ディレクトリがテストスイートに含まれるように設定しました。
 
 *   **`Show.php` のリファクタリング完了:**
     *   `Show.php` から、`WorkflowActions` トレイトに移動したプロパティとメソッドを削除しました。
