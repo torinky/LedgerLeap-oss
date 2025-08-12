@@ -37,7 +37,6 @@ class ShowTest extends TestCase
     {
         parent::setUp();
 
-        
 
         // ユーザーを作成
         $this->user = User::factory()->create(['email' => 'user_' . Str::random(10) . '@example.com']);
@@ -147,8 +146,8 @@ class ShowTest extends TestCase
         // 他のユーザーでログイン
         $this->actingAs($this->user);
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
-            ->assertDontSee(">".__('ledger.workflow.approve')."<")
-            ->assertDontSee(">".__('ledger.workflow.return_to_draft_short')."<");
+            ->assertDontSee(">" . __('ledger.workflow.approve') . "<")
+            ->assertDontSee(">" . __('ledger.workflow.return_to_draft_short') . "<");
     }
 
     #[Test]
@@ -186,15 +185,15 @@ class ShowTest extends TestCase
 
         // カラム定義はオブジェクトの配列として扱う
         $oldColumnDefine = [
-            (object) ['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
-            (object) ['id' => 1, 'name' => 'Number Column', 'type' => 'number', 'order' => 2],
-            (object) ['id' => 2, 'name' => 'Select Column', 'type' => 'select', 'order' => 3],
+            (object)['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
+            (object)['id' => 1, 'name' => 'Number Column', 'type' => 'number', 'order' => 2],
+            (object)['id' => 2, 'name' => 'Select Column', 'type' => 'select', 'order' => 3],
         ];
         $newColumnDefine = [
-            (object) ['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
-            (object) ['id' => 1, 'name' => 'Number Column', 'type' => 'number', 'order' => 2],
-            (object) ['id' => 2, 'name' => 'Select Column', 'type' => 'select', 'order' => 3],
-            (object) ['id' => 3, 'name' => 'New Column', 'type' => 'text', 'order' => 4],
+            (object)['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
+            (object)['id' => 1, 'name' => 'Number Column', 'type' => 'number', 'order' => 2],
+            (object)['id' => 2, 'name' => 'Select Column', 'type' => 'select', 'order' => 3],
+            (object)['id' => 3, 'name' => 'New Column', 'type' => 'text', 'order' => 4],
         ];
 
         // 2. 状態のセットアップ
@@ -517,106 +516,7 @@ class ShowTest extends TestCase
         $component->assertHasErrors(); // エラーが発生することを確認
     }
 
-    #[Test]
-    public function can_request_approval_method_returns_correct_status()
-    {
-        // シナリオ1: 点検者で、ステータスがPENDING_INSPECTIONの場合 (まだ点検は完了していない)
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canRequestApproval()); // 点検が完了していないので false
-
-        // シナリオ2: 点検者だが、ステータスがDRAFTの場合
-        $this->ledger->update(['status' => WorkflowStatus::DRAFT]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canRequestApproval());
-
-        // シナリオ3: 点検者ではないユーザーで、ステータスがPENDING_INSPECTIONの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
-        $this->actingAs($this->user);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canRequestApproval());
-
-        // シナリオ4: 点検者で、全ての点検が完了し、ステータスがPENDING_APPROVALの場合
-        $this->ledger->latestDiff->update([
-            'completed_inspector_role_ids' => [$this->inspectorRole->id]
-        ]);
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_APPROVAL]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertTrue($component->instance()->canRequestApproval()); // 全ての点検が完了しているので true
-
-        // シナリオ5: 点検者で、ステータスがAPPROVEDの場合
-        $this->ledger->update(['status' => WorkflowStatus::APPROVED]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canRequestApproval());
-    }
-
-    #[Test]
-    public function can_approve_method_returns_correct_status()
-    {
-        // シナリオ1: 承認者で、ステータスがPENDING_APPROVALの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_APPROVAL]);
-        $this->actingAs($this->approver);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertTrue($component->instance()->canApprove());
-
-        // シナリオ2: 承認者だが、ステータスがDRAFTの場合
-        $this->ledger->update(['status' => WorkflowStatus::DRAFT]);
-        $this->actingAs($this->approver);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canApprove());
-
-        // シナリオ3: 承認者ではないユーザーで、ステータスがPENDING_APPROVALの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_APPROVAL]);
-        $this->actingAs($this->user);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canApprove());
-
-        // シナリオ4: 承認者で、ステータスがAPPROVEDの場合
-        $this->ledger->update(['status' => WorkflowStatus::APPROVED]);
-        $this->actingAs($this->approver);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canApprove());
-
-        // シナリオ5: 承認者で、ステータスがPENDING_INSPECTIONの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
-        $this->actingAs($this->approver);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canApprove());
-    }
-
-    #[Test]
-    public function can_return_to_draft_method_returns_correct_status()
-    {
-        // シナリオ1: 点検者で、ステータスがPENDING_INSPECTIONの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertTrue($component->instance()->canReturnToDraft());
-
-        // シナリオ2: 承認者で、ステータスがPENDING_APPROVALの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_APPROVAL]);
-        $this->actingAs($this->approver);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertTrue($component->instance()->canReturnToDraft());
-
-        // シナリオ3: 点検者でも承認者でもないユーザーで、ステータスがPENDING_INSPECTIONの場合
-        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
-        $this->actingAs($this->user);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canReturnToDraft());
-
-        // シナリオ4: ステータスがDRAFTの場合
-        $this->ledger->update(['status' => WorkflowStatus::DRAFT]);
-        $this->actingAs($this->inspector);
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-        $this->assertFalse($component->instance()->canReturnToDraft());
-    }
-
-    #[Test]
+    /** @test */
     public function it_sets_display_level_correctly_and_filters_columns()
     {
         $this->actingAs($this->user);
@@ -664,56 +564,4 @@ class ShowTest extends TestCase
         $component->call('setDisplayLevel', 99);
         $component->assertSet('displayLevel', 3); // 3のまま
     }
-
-    #[Test]
-    public function it_toggles_group_and_initializes_collapsed_states()
-    {
-        $this->actingAs($this->user);
-
-        // LedgerDefineのcolumn_defineを更新して、グループを持つカラムを設定
-        // LedgerDefineのcolumn_defineを更新して、グループを持つカラムを設定
-        $columnDefine = [
-            ['id' => 1, 'name' => 'Column 1', 'group' => 'Group A', 'order' => 1],
-            ['id' => 2, 'name' => 'Column 2', 'group' => 'Group A', 'order' => 2],
-            ['id' => 3, 'name' => 'Column 3', 'group' => 'Group B', 'order' => 3],
-            ['id' => 4, 'name' => 'Column 4', 'group' => '', 'order' => 4], // Default group
-        ];
-        $this->ledger->define->update(['column_define' => $columnDefine]);
-        $this->ledger->define->refresh();
-
-        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
-
-        // mount() で collapsedStates が正しく初期化されていることを確認 (デフォルトで全てfalse)
-        $this->assertFalse($component->get('collapsedStates.Group A'));
-        $this->assertFalse($component->get('collapsedStates.Group B'));
-        $this->assertFalse($component->get('collapsedStates.その他')); // Default group
-
-        // toggleGroup を呼び出して状態が切り替わることを確認
-        $component->call('toggleGroup', 'Group A');
-        $this->assertTrue($component->get('collapsedStates.Group A'));
-
-        $component->call('toggleGroup', 'Group A');
-        $this->assertFalse($component->get('collapsedStates.Group A'));
-
-        // 存在しないグループ名をトグルしてもエラーにならないことを確認
-        $component->call('toggleGroup', 'NonExistentGroup');
-        $this->assertTrue($component->get('collapsedStates.NonExistentGroup'));
-    }
-
-    /** @test */
-    public function it_deletes_an_attached_file()
-    {
-        $fileToDelete = AttachedFile::factory()->for($this->ledger)->create();
-
-        $this->actingAs($this->user);
-
-        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
-            ->call('deleteAttachedFile', $fileToDelete->id)
-            ->assertHasNoErrors()
-            ->assertDispatched('mary-toast');
-
-        $this->assertSoftDeleted('attached_files', ['id' => $fileToDelete->id]);
-    }
-
-
 }

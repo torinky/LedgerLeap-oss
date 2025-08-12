@@ -76,51 +76,57 @@
 このロジック重複問題を解決するため、以下の通り、PHPの **トレイト (Trait)** を用いて共通ロジックをカプセル化するアプローチを採用します。
 
 1.  **`WorkflowActions` トレイトの作成:**
-    *   `app/Livewire/Traits/WorkflowActions.php` を新規に作成します。
-    *   `WorkflowActionButtons.php` から、ワークフローのアクションに関連するプロパティとメソッドをすべてこのトレイトに移動します。
+    *   `app/Traits/WorkflowActions.php` を新規に作成し、`WorkflowActionButtons.php` からワークフローのアクションに関連するプロパティとメソッドをすべてこのトレイトに移動しました。
 
 2.  **各コンポーネントでのトレイトの使用:**
-    *   `WorkflowActionButtons.php` と `WorkflowStatusCard.php` の両方で、`WorkflowActions` トレイトを `use` します。
-    *   これにより、両コンポーネントは重複したコードを持つことなく、同じワークフロー関連機能を利用できます。
+    *   `app/Livewire/Ledger/WorkflowActionButtons.php` と `app/Livewire/Ledger/WorkflowStatusCard.php` の両方で、`WorkflowActions` トレイトを `use` するように修正しました。
+    *   これにより、両コンポーネントは重複したコードを持つことなく、同じワークフロー関連機能を利用できるようになりました。
 
-3.  **今後の進め方:**
-    *   **Step 2.2 (新規):** `WorkflowActions` トレイトを作成し、ロジックを移植します。
-    *   **Step 2.3 (新規):** `WorkflowActionButtons` と `WorkflowStatusCard` をリファクタリングし、トレイトを使用するように変更します。また、それぞれのビュー (`.blade.php`) が、そのコンポーネントに必要なUIのみを持つように修正します。
-    *   **Step 2.4 (新規):** `WorkflowStatusCard` のテスト (`WorkflowStatusCardTest.php`) を作成し、状態表示と、トレイト経由で提供されるアクションが正しく機能することを検証します。`WorkflowActionButtonsTest.php` も、トレイト使用後の状態でパスすることを再確認します。
-    *   **Step 2.5 (旧Step 2.1 の残タスク):** `WorkflowHistoryList` の分離とテストを完了させます。
-    *   **Step 2.6 (旧Step 2.1 の残タスク):** 親コンポーネント `Show.php` のリファクタリングと最終的なクリーンアップを行います。
+3.  **`WorkflowHistoryList` のテスト完了:**
+    *   `tests/Feature/Livewire/Ledger/WorkflowHistoryListTest.php` を作成し、すべてのテストが成功することを確認しました。
 
-### 5.4. 過去の課題と解決策からの学び
+4.  **`Show.php` のリファクタリング完了:**
+    *   `Show.php` から、`WorkflowActions` トレイトに移動したプロパティとメソッドを削除しました。
+    *   `Show.php` の `boot` メソッドから `WorkflowService` の依存性注入を削除しました。
+    *   `tests/Feature/Livewire/Ledger/ShowTest.php` から、`Show.php` の責務ではなくなったテストケースを削除し、残りのテストがすべて成功することを確認しました。
+
+### 5.4. 今後の進め方
+
+*   **UIの動作確認:**
+    *   ブラウザで実際のアプリケーションを起動し、`Ledger` の詳細画面におけるワークフロー関連のUI（ステータス表示、アクションボタン、履歴表示）が、リファクタリング後も期待通りに動作することを確認します。
+    *   特に、承認、差し戻し、承認申請などのアクションが正しく実行され、トーストメッセージが表示されること、およびワークフローの状態が更新されることを確認します。
+
+### 5.5. 過去の課題と解決策からの学び
 
 (このセクションは、以前の知見を保持するために内容はそのまま残します)
 
-#### 課題1: `mary-toast` イベントがテストで捕捉されない (旧Step 2.1での課題)
+#### 課題1: `mary-toast` イベントがテストで捕捉されない
 
 *   **原因**: Livewireのテストフレームワークは、MaryUIの`Toast`トレイトが内部的に使用する`$this->js()`ヘルパーを介したJavaScriptイベントのディスパッチを直接捕捉できませんでした。
-*   **解決策**: `app/Livewire/Ledger/WorkflowPanel.php` 内の`handleActionWithComment`および`handleNextApproverSelected`メソッドにおいて、`$this->success()`や`$this->error()`の代わりに、Livewireのテストフレームワークが捕捉可能な`$this->dispatch('mary-toast', ...)`を明示的に呼び出すように修正しました。
+*   **解決策**: `app/Livewire/Ledger/WorkflowActionButtons.php` および `app/Livewire/Ledger/Show.php` 内の`$this->success()`や`$this->error()`の呼び出しを、Livewireのテストフレームワークが捕捉可能な`$this->dispatch('mary-toast', ...)`を明示的に呼び出すように修正しました。これにより、テストの信頼性が向上しました。
 
-#### 課題2: `WorkflowService::approve`がテストで呼び出されない (`InvalidCountException`) および`Ledger`モデルのモックに関する`TypeError` (旧Step 2.1での課題)
+#### 課題2: `WorkflowService::approve`がテストで呼び出されない (`InvalidCountException`) および`Ledger`モデルのモックに関する`TypeError`
 
 この課題は複数の要因が絡み合っており、段階的にデバッグと修正を行いました。
 
 *   **初期の`TypeError`の原因**:
-    *   `tests/Feature/Livewire/Ledger/WorkflowPanelTest.php`において、`Ledger`モデルを`Mockery::spy`で過度にモックしたことが原因でした。Livewireのモデルハイドレーションの内部メカニズムが、モックされたオブジェクトのプロパティにアクセスする際に`TypeError`を引き起こしました。
+    *   `tests/Feature/Livewire/Ledger/WorkflowActionButtonsTest.php`において、`Ledger`モデルを`Mockery::spy`で過度にモックしたことが原因でした。Livewireのモデルハイドレーションの内部メカニズムが、モックされたオブジェクトのプロパティにアクセスする際に`TypeError`を引き起こしました。
     *   **解決策**: `Ledger`モデルのモックを止め、代わりに実際のEloquentモデルインスタンスとデータベースセットアップを使用するアプローチに戻しました。
 
 *   **`WorkflowService::approve`が呼び出されない原因 (`InvalidCountException`)**:
-    *   `app/Livewire/Ledger/WorkflowPanel.php`の`handleActionWithComment`メソッド内で、`$allInspectionsDone`と`$allApprovalsWillBeDone`の両方が`true`になる条件が満たされなかったため、`workflowService->approve`が実行されませんでした。
+    *   `app/Livewire/Ledger/WorkflowActionButtons.php`の`handleActionWithComment`メソッド内で、`$allInspectionsDone`と`$allApprovalsWillBeDone`の両方が`true`になる条件が満たされなかったため、`workflowService->approve`が実行されませんでした。
     *   **デバッグ過程**:
-        *   `app/Models/Ledger.php`および`app/Livewire/Ledger/WorkflowPanel.php`に`Log::info()`ステートメントを追加し、`$allInspectionsDone`、`$allApprovalsWillBeDone`、および`$progress`配列の値を詳細に調査しました。
+        *   `app/Models/Ledger.php`および`app/Livewire/Ledger/WorkflowActionButtons.php`に`Log::info()`ステートメントを追加し、`$allInspectionsDone`、`$allApprovalsWillBeDone`、および`$progress`配列の値を詳細に調査しました。
         *   ログの出力から、`Ledger`モデルの`getRequiredRolesProgressDetails()`メソッドが、`inspection.total_count: 1`（期待値は0）および`approval.total_count: 0`（期待値は1）という予期せぬ値を返していることが判明しました。特に、`inspection.total_roles`に`approver`ロールが誤って含まれていました。
     *   **根本原因**:
         *   `spatie/laravel-permission`の`BelongsToMany`リレーションシップ（`requiredInspectorRoles`および`requiredApproverRoles`）において、`attach()`メソッドを使用する際にピボットテーブルの`type`カラムを明示的に指定していなかったことが原因でした。リレーションシップ定義の`wherePivot('type', ...)`句は取得時のフィルタリングには機能しますが、`attach()`時にはデフォルト値を設定しません。このため、`$folder->requiredApproverRoles()->attach($approverRole->id);`の呼び出しでは`type`カラムが正しく設定されず、ロールが意図しない`type`で関連付けられたり、`requiredInspectorRoles`リレーションシップによって誤って取得されたりしていました。
     *   **最終解決策**:
-        *   `tests/Feature/Livewire/Ledger/WorkflowPanelTest.php`において、ロールをアタッチする際にピボットテーブルの`type`カラムを明示的に指定するように修正しました。具体的には、`$folder->requiredApproverRoles()->attach($approverRole->id, ['type' => 'approver']);`と記述しました。
+        *   `tests/Feature/Livewire/Ledger/WorkflowActionButtonsTest.php`において、ロールをアタッチする際にピボットテーブルの`type`カラムを明示的に指定するように修正しました。具体的には、`$folder->requiredApproverRoles()->attach($approverRole->id, ['type' => 'approver']);`と記述しました。
         *   これにより、`getRequiredRolesProgressDetails()`が期待通りの値（`inspection.is_all_completed: true`、`approval.is_all_completed: true`）を返すようになり、`workflowService->approve`が正しく呼び出されるようになりました。
 
-### 5.5. コンポーネント切り出し作業のテンプレート化にあたっての留意事項
+### 5.6. コンポーネント切り出し作業のテンプレート化にあたっての留意事項
 
-旧Step 2.1の作業を通じて、Livewireコンポーネントの切り出しとテストにおいて、特に以下の点に留意することで、今後の同様の作業をよりスムーズに進められると考えられます。
+(このセクションは、以前の知見を保持するために内容はそのまま残します)
 
 1.  **LivewireテストとJavaScriptイベントの扱い**: `$this->js()`ヘルパーを介してディスパッチされるJavaScriptイベント（例: MaryUIのToast）は、Livewireのテストフレームワークでは直接捕捉できません。テストでこれらのイベントの発生を検証する必要がある場合は、コンポーネント側で`$this->dispatch('custom-event-name', ...)`のように明示的にLivewireイベントとしてディスパッチする実装を検討してください。これにより、テストの信頼性が向上します。
 
