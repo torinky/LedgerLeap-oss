@@ -36,10 +36,12 @@ class WorkflowService
      */
     public function canRequestApproval(User $user, Ledger $ledgerRecord): bool
     {
-        return $ledgerRecord->canProceedToApprovalStep()
+        $result = $ledgerRecord->canProceedToApprovalStep()
             && ($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION
                 || $ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL)
             && $ledgerRecord->latestDiff?->inspector_id === $user->id;
+
+        return $result;
     }
 
     /**
@@ -48,12 +50,14 @@ class WorkflowService
      */
     public function canApprove(User $user, Ledger $ledgerRecord): bool
     {
-        return ($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
+        $result = ($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL &&
                 $ledgerRecord->latestDiff?->approver_id === $user->id) ||
             ($ledgerRecord->status !== WorkflowStatus::DRAFT
                 && $ledgerRecord->status !== WorkflowStatus::APPROVED
                 && $ledgerRecord->canBeFinallyApproved()
             );
+
+        return $result;
     }
 
     /**
@@ -61,9 +65,10 @@ class WorkflowService
      */
     public function canReturnToDraft(User $user, Ledger $ledgerRecord): bool
     {
-        // 差し戻しは、自分が現在の担当者であれば、必須ロールの完了状況に関わらず可能とする
-        return ($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === $user->id) ||
+        $result = ($ledgerRecord->status === WorkflowStatus::PENDING_INSPECTION && $ledgerRecord->latestDiff?->inspector_id === $user->id) ||
             ($ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL && $ledgerRecord->latestDiff?->approver_id === $user->id);
+
+        return $result;
     }
 
     /**
@@ -258,9 +263,7 @@ class WorkflowService
      */
     public function requestApproval(int $ledgerId, int $approverId, int $inspectorId, ?string $comments): Ledger
     {
-        // ToDo: 権限チェック (inspectorId が点検を完了できるか？)
-        $ledger = null;
-        $ledgerDiff = null; // 作成する Diff を保持
+        $ledger = Ledger::findOrFail($ledgerId);
         $applicant = null; // 申請者
 
         DB::transaction(function () use (
@@ -272,7 +275,7 @@ class WorkflowService
             &$ledgerDiff,
             &$applicant
         ) {
-            $ledger = Ledger::findOrFail($ledgerId);
+            $ledger->refresh(); // 最新のLedgerオブジェクトを取得
             $applicant = $ledger->creator; // 申請者を取得
             $ledgerDiff = $ledger->latestDiff()->first();
             $previousDiff = $ledgerDiff;
@@ -295,11 +298,6 @@ class WorkflowService
                             }
                         }*/
             // 1. 基本的な状態と担当者の正当性チェック
-            if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION) {
-                throw new InvalidWorkflowActionException(
-                    __('ledger.workflow.error.invalid_status_for_request_approval')
-                );
-            }
             if ($previousDiff?->inspector_id !== $inspectorId) {
                 throw new UnauthorizedWorkflowActionException(__('messages.error.unauthorized_as_inspector'));
             }
@@ -323,7 +321,6 @@ class WorkflowService
             //    ただし、この点検者が必須点検ロールに属していて、その処理を記録することは行う。
 
             $completedInspectorRoleIds = $previousDiff?->completed_inspector_role_ids ?? [];
-            //            if ($inspectorUser && $ledger->define->folder) {
             foreach ($ledger->define->folder->requiredInspectorRoles as $requiredRole) {
                 if ($inspectorUser->hasRole($requiredRole->name)
                     && ! in_array($requiredRole->id, $completedInspectorRoleIds)
@@ -331,7 +328,6 @@ class WorkflowService
                     $completedInspectorRoleIds[] = $requiredRole->id;
                 }
             }
-            //            }
 
             $ledgerVersion = $ledger->version; // 現在の Ledger バージョンを取得
 
@@ -394,9 +390,7 @@ class WorkflowService
                 $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, $comments, $folder);
             }
         }
-        // --- ここまで ---
 
-        // ToDo: Activity Log 記録 (ステップ4)
         Log::info("Inspection completed, approval requested for Ledger ID: {$ledgerId}. Approver: {$approverId}. Diff ID: {$ledgerDiff->id}");
 
         return $ledger->refresh();
@@ -416,17 +410,14 @@ class WorkflowService
      */
     public function approve(int $ledgerId, int $currentApproverId, ?string $comments = null, ?int $nextApproverId = null): Ledger
     {
-        $ledger = null;
+        $ledger = Ledger::with([
+            'define.folder.requiredInspectorRoles',
+            'define.folder.requiredApproverRoles',
+        ])->findOrFail($ledgerId);
         $newLedgerDiff = null;
         $applicant = null;
         DB::transaction(function () use ($ledgerId, $currentApproverId, $comments, $nextApproverId, &$ledger, &$newLedgerDiff, &$applicant) {
-            $ledger = Ledger::with([
-                'define.folder.requiredInspectorRoles',
-                'define.folder.requiredApproverRoles',
-            ])->findOrFail($ledgerId);
-            if (! $ledger) {
-                throw new Exception('Ledger not found');
-            }
+            $ledger->refresh(); // 最新のLedgerオブジェクトを取得
             $applicant = $ledger->creator;
             $previousDiff = $ledger->latestDiff;
 
@@ -450,13 +441,11 @@ class WorkflowService
             // 今回の承認者によって完了した必須承認ロールを記録
             $completedInspectorRoleIds = $previousDiff?->completed_inspector_role_ids ?? []; // 点検ロールは引き継ぎ
             $completedApproverRoleIds = $previousDiff?->completed_approver_role_ids ?? [];
-            //            if ($approverUser && $ledger->define->folder) {
             foreach ($ledger->define->folder->requiredApproverRoles as $requiredRole) {
                 if ($approverUser->hasRole($requiredRole->name) && ! in_array($requiredRole->id, $completedApproverRoleIds)) {
                     $completedApproverRoleIds[] = $requiredRole->id;
                 }
             }
-            //            }
             $completedApproverRoleIds = array_unique($completedApproverRoleIds);
 
             // --- 次のステータスを決定 ---
@@ -562,24 +551,20 @@ class WorkflowService
      */
     public function returnToDraft(int $ledgerId, int $modifierId, ?string $comments): Ledger
     {
-        // ToDo: 権限チェック (modifierId が点検者/承認者か？)
-        $ledger = null;
-        $ledgerDiff = null; // 作成する Diff を保持
+        $ledger = Ledger::findOrFail($ledgerId);
         $applicant = null;
 
         DB::transaction(callback: function () use ($ledgerId, $modifierId, $comments, &$ledger, &$ledgerDiff, &$applicant) {
-            $ledger = Ledger::findOrFail($ledgerId);
+            $ledger->refresh(); // 最新のLedgerオブジェクトを取得
             $applicant = $ledger->creator;
             $currentStatus = $ledger->status;
             $previousDiff = $ledger->latestDiff()->first();
             $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION)
                 ? $previousDiff?->inspector_id : $previousDiff?->approver_id;
-            // <<<--- 最新Diffから担当者取得
 
             if (in_array($ledger->status, [WorkflowStatus::DRAFT, WorkflowStatus::APPROVED])) {
                 throw new Exception('Invalid status for returning to draft.');
             }
-            // ToDo: さらに $modifierId が $latestDiff->inspector_id または $latestDiff->approver_id と一致するかチェック
 
             // 権限チェック
             $actor = User::find($modifierId);
@@ -649,16 +634,16 @@ class WorkflowService
             // ToDo: イベント発行
             // event(new StatusReturnedToDraft($ledgerDiff, $comments));
         });
+
         // --- 通知処理 ---
         if ($applicant && $ledgerDiff) {
             $notificationType = NotificationType::where('name', 'status_returned_to_draft')->first();
             $folder = $ledger->define?->folder;
             if ($notificationType) {
-                // コメントも渡す
                 $this->notificationService->sendWorkflowNotification($applicant, $notificationType, $ledgerDiff, $comments, $folder);
             }
         }
-        // --- ここまで ---
+
         // ToDo: Activity Log 記録 (ステップ4)
         Log::info("Ledger ID: {$ledgerId} returned to DRAFT by User ID: {$modifierId}. Diff ID: {$ledgerDiff->id}");
 
