@@ -32,7 +32,7 @@ class AutoLinkService
 
         // 1. auto_number カラムの特別処理
         if ($column && $column->getType() === 'auto_number') {
-            $url = url('/ledgers?query=' . urlencode($text));
+            $url = route('ledger.lookup', ['query' => $text]);
             $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
             $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
 

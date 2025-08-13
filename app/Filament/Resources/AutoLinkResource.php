@@ -65,7 +65,7 @@ class AutoLinkResource extends Resource
                                 'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\
 /!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
                                 'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
-                                'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/ledgers?query=$1'),
+                                'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/l/$1'),
                                 default => null,
                             };
                         }),

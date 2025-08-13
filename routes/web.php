@@ -16,6 +16,7 @@ use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SynonymController;
+use App\Http\Controllers\LedgerLookupController;
 use App\Livewire\Folder\FolderForm;
 use App\Livewire\MyPortal;
 use App\Livewire\Notifications\Settings;
@@ -53,6 +54,9 @@ Route::middleware('auth')->group(function () {
 require __DIR__ . '/auth.php';
 
 Route::middleware('auth')->group(function () {
+
+    // Auto-link lookup
+    Route::get('/l/{query}', [LedgerLookupController::class, 'handle'])->name('ledger.lookup');
 
     //ledgerDefine
 
