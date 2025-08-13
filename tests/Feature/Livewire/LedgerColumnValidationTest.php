@@ -24,7 +24,7 @@ class LedgerColumnValidationTest extends TestCase
         $this->actingAs($user);
     }
 
-    /** @test */
+    #[Test]
     public function create_column_fails_validation_if_unique_column_is_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -60,7 +60,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasErrors(['content.1' => '指定のUnique Textは既に使用されています。']);
     }
 
-    /** @test */
+    #[Test]
     public function create_column_passes_validation_if_unique_column_is_not_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -96,7 +96,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasNoErrors('content.1');
     }
 
-    /** @test */
+    #[Test]
     public function number_column_validation_works_correctly()
     {
         // 準備: このテスト専用の「number」型カラムを持つ台帳定義を作成

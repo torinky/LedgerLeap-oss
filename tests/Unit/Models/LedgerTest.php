@@ -43,7 +43,7 @@ class LedgerTest extends TestCase
         $this->ledger->save();
     }
 
-    /** @test */
+    #[Test]
     public function canBeFinallyApproved_returns_false_when_nothing_is_completed()
     {
         $this->ledger->latestDiff->update([
@@ -56,7 +56,7 @@ class LedgerTest extends TestCase
         $this->assertFalse($this->ledger->canBeFinallyApproved());
     }
 
-    /** @test */
+    #[Test]
     public function canBeFinallyApproved_returns_true_when_only_inspection_is_completed()
     {
         $this->ledger->latestDiff->update([
@@ -69,7 +69,7 @@ class LedgerTest extends TestCase
         $this->assertTrue($this->ledger->canBeFinallyApproved());
     }
 
-    /** @test */
+    #[Test]
     public function canBeFinallyApproved_returns_false_when_all_roles_are_completed()
     {
         $this->ledger->latestDiff->update([

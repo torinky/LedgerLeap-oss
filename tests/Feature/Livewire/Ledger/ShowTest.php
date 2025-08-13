@@ -39,9 +39,9 @@ class ShowTest extends TestCase
 
 
         // ユーザーを作成
-        $this->user = User::factory()->create(['email' => 'user_' . Str::random(10) . '@example.com']);
-        $this->inspector = User::factory()->create(['email' => 'inspector_' . Str::random(10) . '@example.com']);
-        $this->approver = User::factory()->create(['email' => 'approver_' . Str::random(10) . '@example.com']);
+        $this->user = User::factory()->create();
+        $this->inspector = User::factory()->create();
+        $this->approver = User::factory()->create();
 
         // ロールを作成
         $this->inspectorRole = Role::create(['name' => 'inspector']);
@@ -78,7 +78,7 @@ class ShowTest extends TestCase
         $this->ledger->save();
     }
 
-    /** @test */
+    #[Test]
     public function component_renders_successfully()
     {
         $this->actingAs($this->user);
@@ -88,7 +88,7 @@ class ShowTest extends TestCase
             ->assertSee($this->ledger->define->name);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_ledger_record_on_mount()
     {
         $this->actingAs($this->user);
@@ -98,7 +98,7 @@ class ShowTest extends TestCase
             ->assertSet('ledgerDefineRecord.id', $this->ledger->define->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_correct_buttons_when_status_is_pending_inspection()
     {
         $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
@@ -390,7 +390,7 @@ class ShowTest extends TestCase
     //     $maybeAdded = substr_count($html, 'New Value') >= 1;
     //     $this->assertTrue($maybeAdded, 'Added value should appear');
     // }
-    /** @test */
+    #[Test]
     public function it_finds_comparison_target_diff_correctly()
     {
         // このテストのために、setUpで作成されたdiffを一旦削除してクリーンな状態から始める
@@ -516,7 +516,7 @@ class ShowTest extends TestCase
         $component->assertHasErrors(); // エラーが発生することを確認
     }
 
-    /** @test */
+    #[Test]
     public function it_sets_display_level_correctly_and_filters_columns()
     {
         $this->actingAs($this->user);

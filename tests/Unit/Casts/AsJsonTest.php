@@ -8,9 +8,7 @@ use tests\TestCase;
 
 class AsJsonTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_cast_to_json_and_back()
     {
         // テストに使用するデータを定義します。
@@ -29,9 +27,7 @@ class AsJsonTest extends TestCase
         $this->assertEquals($data, $decodedData);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_handles_invalid_json_gracefully()
     {
         $invalidJson = '{"name": "John Doe", "age": 30';

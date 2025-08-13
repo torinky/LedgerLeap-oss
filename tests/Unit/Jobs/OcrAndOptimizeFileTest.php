@@ -30,7 +30,7 @@ class OcrAndOptimizeFileTest extends TestCase
         // Process::fake() は各テストメソッド内で個別に設定します
     }
 
-    /** @test */
+    #[Test]
     public function ocr_job_processes_ocr_eligible_files()
     {
         // ★ Process ファサードをフェイク化し、成功をシミュレート
@@ -87,7 +87,7 @@ class OcrAndOptimizeFileTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function ocr_processing_fails_and_updates_status()
     {
         // ★ Process ファサードをフェイク化し、失敗をシミュレート

@@ -50,7 +50,7 @@ class WorkflowActionButtonsTest extends TestCase
         $this->workflowServiceMock->shouldReceive('canReturnToDraft')->andReturn($canReturn);
     }
 
-    /** @test */
+    #[Test]
     public function component_renders_successfully()
     {
         $this->setupDefaultRenderMocks(false, false, false);

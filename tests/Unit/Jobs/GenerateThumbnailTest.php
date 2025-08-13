@@ -27,7 +27,7 @@ class GenerateThumbnailTest extends TestCase
         Bus::fake();
     }
 
-    /** @test */
+    #[Test]
     public function it_generates_a_thumbnail_for_an_image_file()
     {
         // --- Arrange ---
@@ -67,7 +67,7 @@ class GenerateThumbnailTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_aborts_if_attached_file_is_not_found()
     {
         // --- Arrange ---
@@ -82,7 +82,7 @@ class GenerateThumbnailTest extends TestCase
         $job->handle($this->app->make(ImageManager::class));
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_status_to_failed_on_exception()
     {
         // --- Arrange ---
@@ -130,7 +130,7 @@ class GenerateThumbnailTest extends TestCase
 
         // 3. Mockeryによるログの検証はテスト終了時に自動で行われる
     }
-    /** @test */
+    #[Test]
     public function it_skips_generation_for_non_image_files()
     {
         // --- Arrange ---

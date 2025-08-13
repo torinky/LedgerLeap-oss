@@ -14,9 +14,10 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
     use RefreshDatabase; // Ensures a clean database for each test
 
     /**
-     * @test
      * Test LedgerDefine creation, serialization, and deserialization of ColumnDefine objects.
      */
+
+    #[Test]
     public function test_ledger_define_with_various_column_types_serialization_and_deserialization()
     {
         // Create a user for the factory
@@ -60,9 +61,9 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
     }
 
     /**
-     * @test
      * Test data integrity round-trip for ColumnDefine values.
      */
+    #[Test]
     public function test_column_value_conversion_round_trip_via_ledger_define()
     {
         // Create a user for the factory

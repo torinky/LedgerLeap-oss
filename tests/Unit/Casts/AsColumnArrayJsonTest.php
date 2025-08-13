@@ -9,9 +9,7 @@ use tests\TestCase;
 
 class AsColumnArrayJsonTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_cast_to_array_and_back()
     {
         // テストに使用するデータを定義します。
@@ -33,9 +31,7 @@ class AsColumnArrayJsonTest extends TestCase
         $this->assertEquals($data, $decodedData);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_handles_invalid_json_gracefully()
     {
         $invalidJson = '{"key": "value", "missing_key":';

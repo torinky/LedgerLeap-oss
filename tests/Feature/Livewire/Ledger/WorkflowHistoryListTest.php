@@ -34,14 +34,14 @@ class WorkflowHistoryListTest extends TestCase
         LedgerDiff::factory()->for($this->ledger)->create(['created_at' => now()]);
     }
 
-    /** @test */
+    #[Test]
     public function component_renders_successfully()
     {
         Livewire::test(WorkflowHistoryList::class, ['ledgerRecord' => $this->ledger])
             ->assertStatus(200);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_workflow_history_on_mount()
     {
         $component = Livewire::test(WorkflowHistoryList::class, ['ledgerRecord' => $this->ledger]);

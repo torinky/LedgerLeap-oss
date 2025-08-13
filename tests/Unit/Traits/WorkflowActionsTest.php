@@ -79,7 +79,7 @@ class WorkflowActionsTest extends TestCase
         $this->workflowServiceMock->shouldReceive('canReturnToDraft')->andReturn($canReturn);
     }
 
-    /** @test */
+    #[Test]
     public function it_opens_approver_select_modal_when_can_request_approval()
     {
         $this->setupDefaultRenderMocks(true, false, false);
@@ -90,7 +90,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('open-assignee-modal');
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_open_approver_select_modal_when_cannot_request_approval()
     {
         $this->setupDefaultRenderMocks(false, false, false);
@@ -101,7 +101,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-error');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_assignee_selected_for_request_approval()
     {
         $this->setupDefaultRenderMocks(true, false, false);
@@ -113,7 +113,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('open-workflow-comment-modal');
     }
 
-    /** @test */
+    #[Test]
     public function it_opens_return_to_draft_modal_when_can_return_to_draft()
     {
         $this->setupDefaultRenderMocks(false, false, true);
@@ -123,7 +123,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('open-workflow-comment-modal');
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_open_return_to_draft_modal_when_cannot_return_to_draft()
     {
         $this->setupDefaultRenderMocks(false, false, false);
@@ -134,7 +134,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-error');
     }
 
-    /** @test */
+    #[Test]
     public function it_opens_comment_modal_for_approve_task_when_can_approve()
     {
         $this->setupDefaultRenderMocks(false, true, false);
@@ -144,7 +144,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('open-workflow-comment-modal');
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_open_comment_modal_for_approve_task_when_cannot_approve()
     {
         $this->setupDefaultRenderMocks(false, false, false);
@@ -155,7 +155,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-error');
     }
 
-    /** @test */
+    #[Test]
     public function it_executes_approve_action_with_comment_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(false, true, false);
@@ -169,7 +169,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-success');
     }
 
-    /** @test */
+    #[Test]
     public function it_executes_return_to_draft_action_with_comment_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(false, false, true);
@@ -183,7 +183,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-success');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_workflow_action_with_comment_for_approve_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(false, true, false);
@@ -196,7 +196,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-success');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_workflow_action_with_comment_for_return_to_draft_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(false, false, true);
@@ -208,7 +208,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-success');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_workflow_action_with_comment_for_request_approval_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(true, false, false);
@@ -221,7 +221,7 @@ class WorkflowActionsTest extends TestCase
             ->assertDispatched('test-mary-toast-success');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_next_approver_selected_and_dispatches_workflow_updated()
     {
         $this->setupDefaultRenderMocks(false, true, false);

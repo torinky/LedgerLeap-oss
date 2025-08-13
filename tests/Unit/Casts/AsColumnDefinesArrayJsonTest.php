@@ -10,9 +10,7 @@ use tests\TestCase;
 
 class AsColumnDefinesArrayJsonTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function it_can_cast_to_array_object_and_back()
     {
         // テストに使用するデータを定義します。
@@ -42,9 +40,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
         }
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_handles_invalid_json_gracefully()
     {
         $invalidJson = '{"name": "Column1", "type": "text"';

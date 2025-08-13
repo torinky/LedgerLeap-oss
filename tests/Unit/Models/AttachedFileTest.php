@@ -14,7 +14,7 @@ class AttachedFileTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_retries_processing_correctly()
     {
         Bus::fake(); // ジョブのディスパッチをフェイク
@@ -38,7 +38,7 @@ class AttachedFileTest extends TestCase
         Bus::assertNotDispatched(GenerateThumbnail::class);
     }
 
-    /** @test */
+    #[Test]
     public function it_retries_processing_and_dispatches_thumbnail_job_if_thumbnail_failed()
     {
         Bus::fake(); // ジョブのディスパッチをフェイク

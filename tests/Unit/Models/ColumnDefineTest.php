@@ -383,7 +383,7 @@ class ColumnDefineTest extends TestCase
 
     // New tests for restoreColumnValueFromText
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_text_type()
     {
         $column = new ColumnDefine(1, 'test_text', 'text');
@@ -392,7 +392,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals('Hello World', $restoredValue);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_textarea_type()
     {
         $column = new ColumnDefine(1, 'test_textarea', 'textarea');
@@ -401,7 +401,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals("Hello World\nNew Line", $restoredValue);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_number_type()
     {
         $column = new ColumnDefine(1, 'test_number', 'number');
@@ -418,7 +418,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals('abc', $restoredValueNonNumeric);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_chk_type()
     {
         $column = new ColumnDefine(1, 'test_chk', 'chk');
@@ -432,7 +432,7 @@ class ColumnDefineTest extends TestCase
         $this->assertNull($restoredInvalid);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_select_type()
     {
         $column = new ColumnDefine(1, 'test_select', 'select');
@@ -441,7 +441,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals('selected_option', $restoredValue);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_ymd_type()
     {
         $column = new ColumnDefine(1, 'test_ymd', 'YMD');
@@ -458,7 +458,7 @@ class ColumnDefineTest extends TestCase
         $this->assertNull($restoredInvalidDate);
     }
 
-    /** @test */
+    #[Test]
     public function test_restore_column_value_for_files_type()
     {
         $column = new ColumnDefine(1, 'test_files', 'files');
@@ -481,7 +481,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals($arrayValue, $restoredArray);
     }
 
-    /** @test */
+    #[Test]
     public function test_use_options_behavior_across_types()
     {
         $allTypes = InputTypeFactory::getAllTypes();
@@ -491,7 +491,7 @@ class ColumnDefineTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function test_column_define_initializes_with_default_display_level_and_group()
     {
         $data = (object)[
@@ -513,7 +513,7 @@ class ColumnDefineTest extends TestCase
         $this->assertNull($column->group);
     }
 
-    /** @test */
+    #[Test]
     public function test_column_define_initializes_with_specified_display_level_and_group()
     {
         $data = (object)[
@@ -537,7 +537,7 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals('Basic Info', $column->group);
     }
 
-    /** @test */
+    #[Test]
     public function test_column_define_handles_existing_data_without_new_properties()
     {
         // Simulate old data structure (array without display_level or group)

@@ -24,7 +24,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->processor = new LedgerDiffProcessor();
     }
 
-    /** @test */
+    #[Test]
     public function it_finds_comparison_target_diff_correctly()
     {
         // テストデータの準備
@@ -67,7 +67,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertEquals($diff2->id, $comparisonTarget->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_null_if_no_comparison_target_diff_found()
     {
         $ledgerDefine = LedgerDefine::factory()->create();
@@ -90,7 +90,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertNull($comparisonTarget);
     }
 
-    /** @test */
+    #[Test]
     public function it_prepares_content_diff_with_changes()
     {
         // テストデータの準備
@@ -127,7 +127,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertEquals('old_value', $result['contentChanges'][0]['old_value']); // Column 0 changed
     }
 
-    /** @test */
+    #[Test]
     public function it_prepares_content_diff_with_no_changes()
     {
         $columnDefinesForTest = [
@@ -159,7 +159,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertFalse($result['contentChanges'][1]['changed']);
     }
 
-    /** @test */
+    #[Test]
     public function it_prepares_content_diff_with_added_column()
     {
         $columnDefinesForTest = [
@@ -191,7 +191,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertTrue($result['contentChanges'][1]['changed']); // New column (Column 1) is changed
     }
 
-    /** @test */
+    #[Test]
     public function it_prepares_content_diff_with_removed_column()
     {
         $columnDefinesForTest = [
@@ -222,7 +222,7 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertTrue($result['contentChanges'][1]['changed']); // Removed column (Column 1) is changed
     }
 
-    /** @test */
+    #[Test]
     public function it_prepares_content_diff_with_attached_files()
     {
         // テストデータの準備
