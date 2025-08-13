@@ -111,6 +111,34 @@
     3.  **結果0件での一覧ページリダイレクト**
     4.  **`mode=list` での一覧ページ強制リダイレクト**
 
+### ステップ 5: キーワードハイライト機能の実装
+
+*   **目的:** キーワード検索で詳細画面にリダイレクトする際に、キーワードを着色する。通常検索のリスト画面から詳細画面に入る場合と、リンクから詳細画面に入る場合の両方に適用する。
+*   **機能要件:**
+    1.  詳細画面への遷移時に、検索キーワードを `highlight` というURLクエリパラメータとして渡す。
+    2.  詳細画面で `highlight` パラメータを受け取り、ビューに渡す。
+    3.  詳細画面のコンテンツ内で、渡されたキーワードをサーバーサイド（`ColumnHtmlService`）でハイライト表示する。
+*   **実装計画:**
+    1.  **ハイライトキーワードの伝達方法の統一:**
+        *   `app/Http/Controllers/LedgerLookupController.php`: `handle` メソッド内で `ledger.show` および `ledger.index` へのリダイレクト時に、`highlight` パラメータを追加する。
+        *   `app/Livewire/Ledger/Show.php`: `mount()` メソッドで URL から `highlight` パラメータを受け取り、`searchContext` に設定する。`render()` メソッドで `LedgerContentProcessor` を呼び出す際に、`searchContext` の `highlights` を渡す。
+        *   `resources/views/livewire/ledger/records-table.blade.php`: 詳細画面へのリンクに `highlight` パラメータを追加する。
+    2.  **`ColumnHtmlService` へのキーワード伝達とハイライト処理:**
+        *   `app/Services/Ledger/LedgerContentProcessor.php`: `processContentForDisplay()` メソッドのシグネチャに `$highlights` パラメータを追加し、`ColumnHtmlService::show()` を呼び出す際に `$highlights` を渡す。
+        *   `app/Services/Ledger/ColumnHtmlService.php`: `show()` メソッドの引数に `$highlights` を追加し、`show()` メソッド内で `setHighlightKeywords()` を呼び出すように変更する。`setHighlightKeywords()` メソッドの可視性を `private` に変更する。
+        *   `resources/views/components/ledger/table-row.blade.php`: `ColumnHtml::setHighlightKeywords($keywords)` の呼び出しを削除し、`ColumnHtml::show()` の呼び出しに `$keywords` を追加する。
+*   **JavaScript実装とのトレードオフ:**
+    *   **サーバーサイドハイライトのメリット:**
+        *   リスト画面と詳細画面でハイライトのロジックを統一できる。
+        *   JavaScript でのハイライト実装が不要になる。
+    *   **サーバーサイドハイライトのデメリット:**
+        *   サーバーサイドで HTML を生成する際にハイライト処理を行うため、HTML の構造を直接操作することになる。これにより、HTML の属性値などが意図せず変換されるリスクが残る（`AutoLinkService` で同様の問題が発生し、`DOMDocument` を導入して解決した経緯がある）。
+        *   JavaScript でのハイライトに比べて、より動的な表現（例: ユーザーがハイライトの色を変更する、リアルタイムハイライトなど）が難しい。
+        *   クライアントサイドでの処理が減る一方で、サーバーサイドの負荷が増加する可能性がある。
+*   **テスト:**
+    *   この機能は主にバックエンドの表示ロジックの変更であり、既存のユニットテストでカバーされる範囲が広い。
+    *   ただし、手動での動作確認（自動リンクからの遷移、一覧画面からの遷移の両方でキーワードがハイライトされること）は必須とする。
+
 ## 5. 最終的な成果
 
-本計画で定義されたすべての実装とテストは完了しました。自動採番カラムなどから生成されたリンクをクリックすると、専用のコントローラーが検索結果に応じてユーザーを最適なページ（詳細ページまたはキーワードが入力された一覧ページ）へ振り分ける機能が実現されました。これにより、当初の目的であったユーザー体験の向上が達成されました。
+未完了
