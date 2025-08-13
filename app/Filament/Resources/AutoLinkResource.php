@@ -30,6 +30,21 @@ class AutoLinkResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-link';
 
+    public static bool $shouldRegisterNavigation = false;
+    public static function getLabel(): string
+    {
+        return __('ledger.settings.auto_link');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('ledger.settings.auto_link');
+    }
+
+    public static function getPluralLabel(): string
+    {
+        return __('ledger.settings.auto_link');
+    }
     public static function form(Form $form): Form
     {
         return $form
