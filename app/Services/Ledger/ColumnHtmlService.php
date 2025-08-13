@@ -192,17 +192,20 @@ class ColumnHtmlService
             return $html;
         }
 
-        // Use a regular expression to match HTML tags and text nodes
-        $pattern = '/<([^>]+)>|([^<>]+)/';
+        // HTMLタグとテキストノードを正確に区別する正規表現
+        // <[^>]*> は任意のHTMLタグにマッチ
+        // | はOR条件
+        // ([^<]*) は < 以外の文字の連続（テキストノード）にマッチ
+        $pattern = '/(<[^>]*>)|([^<]*)/';
         $result = preg_replace_callback($pattern, function ($matches) {
-            if (!empty($matches[1])) { // HTML tag
-                return $matches[0];
-            } else { // Text node
+            if (!empty($matches[1])) { // HTMLタグにマッチした場合
+                return $matches[0]; // タグはそのまま返す
+            } else { // テキストノードにマッチした場合
                 $text = $matches[2];
                 foreach ($this->keywords as $keyword) {
-                    $text = preg_replace('/' . ($keyword) . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
+                    // キーワードをハイライト
+                    $text = preg_replace('/' . preg_quote($keyword, '/') . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
                 }
-
                 return $text;
             }
         }, $html);

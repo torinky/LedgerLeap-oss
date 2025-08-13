@@ -96,7 +96,8 @@ it('renders textarea with markdown and applies auto links', function () {
 
     $markdownInput = "**Hello** `World`! See ticket #123.";
     $htmlFromMarkdown = "<p><strong>Hello</strong> <code>World</code>! See ticket #123.</p>";
-    $finalHtml = '<p><strong>Hello</strong> <code>World</code>! See ticket <a href="/tickets/123">#123</a>.</p>';
+    $linkedHtml = '<p><strong>Hello</strong> <code>World</code>! See ticket <a href="/tickets/123">#123</a>.</p>';
+    $finalHtml = '<div class="prose max-w-none">' . $linkedHtml . '</div>';
 
     // 2. Mocks
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
@@ -107,7 +108,7 @@ it('renders textarea with markdown and applies auto links', function () {
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')
         ->with($htmlFromMarkdown, $columnDefine, null)
-        ->andReturn($finalHtml);
+        ->andReturn($linkedHtml);
 
     // 3. Execution
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
