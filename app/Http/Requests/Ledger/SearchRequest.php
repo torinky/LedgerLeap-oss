@@ -104,7 +104,10 @@ class SearchRequest extends FormRequest
             return [LedgerDefine::find($ledgerDefineId)->folder_id];
         }
 
-        $result = $this->input('f') ?? $this->input('folderId') ?? $this->route('folderId') ?? [1];
+        $result = $this->input('f') ?? $this->input('folderId') ?? $this->route('folderId');
+        if (is_null($result)) { // null の場合は空配列を返す
+            return [];
+        }
         if (is_string($result)) {
             $result = [$result];
         }

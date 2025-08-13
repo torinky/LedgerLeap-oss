@@ -32,6 +32,7 @@
     *   `mode` パラメータが `list` の場合は、常に一覧ページへリダイレクトする。
     *   上記以外で、検索結果が**ちょうど1件**だった場合は、その台帳の詳細ページへリダイレクトする。
     *   検索結果が**0件または2件以上**だった場合は、一覧ページへリダイレクトする。
+4.  **グローバル検索:** URLに検索キーワード (`q=...`) が含まれており、かつフォルダや台帳定義が指定されていない場合、**システムに存在する全ての台帳を対象に検索を実行**する。
 
 ## 3. 実装計画と結果
 
@@ -55,7 +56,7 @@
 
 *   **目的:** 自動リンクからの検索リクエストを専門に処理する、新しいエンドポイントを作成する。
 *   **タスクと成果物:**
-    1.  **コントローラーの作成:** `app/Http/Controllers/LedgerLookupController.php` を作成し、`handle(Request $request, string $query)` メソッドに、受け取ったクエリで台帳を検索し、結果件数と `mode` パラメータに応じて適切なルート (`ledger.show` または `ledgers.index`) へリダイレクトするロジックを実装しました。
+    1.  **コントローラーの作成:** `app/Http/Controllers/LedgerLookupController.php` を作成し、`handle(Request $request, string $query)` メソッドに、受け取ったクエリで台帳を検索し、結果件数と `mode` パラメータに応じて適切なルート (`ledger.show` または `ledger.index`) へリダイレクトするロジックを実装しました。
     2.  **ルート定義の追加 (`routes/web.php`):** `/l/{query}` というURLでリクエストを受け付け、作成した `LedgerLookupController@handle` を呼び出す `ledger.lookup` という名前のルートを定義しました。
 
 ### ステップ 2: `AutoLinkService` のURL生成ロジック修正 (完了)
@@ -67,6 +68,39 @@
 
 *   **目的:** 自動リンク作成機能のテンプレートを修正し、新しい検索ルートを使用するように更新する。
 *   **タスクと成果物:** `app/Filament/Resources/AutoLinkResource.php` ファイル内の `spec_id` テンプレートの `url_template` を、`/ledgers?query=$1` から `/l/$1` に変更しました。
+
+### ステップ 4: グローバル検索への対応
+
+*   **目的:** URLに直接検索キーワードが指定された場合に、フォルダや台帳定義の選択状態に依存せず、全件を対象とした検索を実行する。
+*   **対象ファイル:** `app/Livewire/Ledger/RecordsTable.php`
+*   **タスク:**
+    1.  `render()` メソッドを修正する。
+    2.  メソッドの冒頭で、`$this->search` プロパティに値があり、かつ `$this->selectedFolderIds` と `$this->selectedLedgerDefineIds` が空である場合を「グローバル検索」と判定する。
+    3.  グローバル検索の場合、検索対象となる台帳定義IDのリスト (`$searchTargetLedgerDefineIds`) を、全台帳定義のIDリストで初期化する。
+    4.  通常（フォルダ等が選択されている）の場合は、従来通り選択されたIDのみを対象とする。
+
+*   **調査と修正:**
+    *   **問題の特定:**
+        *   当初、`RecordsTable.php` の `render()` メソッドにおける `isGlobalSearch` の判定が期待通りに `true` にならない問題が報告された。
+        *   詳細な調査の結果、この問題は `app/Http/Requests/Ledger/SearchRequest.php` の `folderId()` メソッドの挙動に起因することが判明した。
+        *   `SearchRequest::folderId()` は、URLパラメータ (`f` や `folderId`) やルートパラメータにフォルダIDが指定されていない場合、デフォルトで `[1]` (ルートフォルダのID) を返していた。
+        *   これにより、`RecordsTable.php` の `mount()` メソッドで `$this->selectedFolderIds` が `[1]` に初期化され、`empty($this->selectedFolderIds)` が `false` となり、`isGlobalSearch` の条件が満たされなかった。
+    *   **解決策 (SearchRequest.php の修正):**
+        *   `app/Http/Requests/Ledger/SearchRequest.php` の `folderId()` メソッドを修正し、URLパラメータやルートパラメータにフォルダIDが指定されていない場合に、`[1]` ではなく空配列 (`[]`) を返すように変更した。
+        *   これにより、`RecordsTable.php` の `mount()` メソッドで `$this->selectedFolderIds` が正しく空配列に初期化されるようになり、`isGlobalSearch` の判定が期待通りに動作するようになった。
+    *   **テストと追加の修正:**
+        *   `SearchRequest.php` の修正後、関連するユニットテスト (`tests/Feature/Livewire/Ledger/RecordsTableQueryTest.php`) を実行したところ、以下の問題が発生した。
+            *   **Livewire 内部エラー (`Trying to access array offset on null`):**
+                *   原因は、`Livewire::test()` の引数に `['ledgerDefine' => $this->ledgerDefine]` を渡していたことと、その後の `->set()` メソッドによるプロパティ設定が Livewire の状態管理と競合していたため。
+                *   **修正1:** `Livewire::test(RecordsTable::class, ['ledgerDefine' => $this->ledgerDefine])` を `Livewire::test(RecordsTable::class)` に変更し、`mount()` メソッドの引数解決を Livewire に任せるようにした。
+                *   **修正2:** `->set()` メソッドによるプロパティ設定を削除し、必要なパラメータ (`f`, `l`, `cf`) をすべて `Livewire::withQueryParams()` で渡すように変更した。これにより、コンポーネントの初期化時にすべてのプロパティが正しくバインドされるようになった。
+            *   **権限エラー (`403 Forbidden`):**
+                *   `RecordsTable.php` の `render()` メソッドで `LedgerDefine` の `view` 権限をチェックしている (`$this->authorize('view', LedgerDefine::class);`) ため、テストユーザーに権限が付与されていなかった。
+                *   **修正3:** `tests/Feature/Livewire/Ledger/RecordsTableQueryTest.php` の `setUp()` メソッドに、テストユーザーに `'view_ledger_defines'` 権限を付与するコード (`Permission::findOrCreate('view_ledger_defines'); $this->user->givePermissionTo('view_ledger_defines');`) を追加した。
+            *   **リダイレクトアサーションの不一致:**
+                *   `it_redirects_to_show_page_on_unique_match()` テストがリダイレクトを期待していたが、`RecordsTable` コンポーネントの責務は検索結果の表示であり、リダイレクトは `LedgerLookupController` の責務であるため、テストの意図が不適切だった。
+                *   **修正4:** `assertRedirect` を `assertOk()` と `assertSee()` に変更し、検索結果が正しく表示されていることを確認するように修正した。
+    *   **結果:** 上記すべての修正により、`tests/Feature/Livewire/Ledger/RecordsTableQueryTest.php` のすべてのテストがパスし、ステップ4の要件が満たされたことを確認した。
 
 ## 4. テストによる品質保証 (完了)
 

@@ -62,7 +62,7 @@ class Ledger extends Model
     {
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
-            return;
+            return $query;
         }
         //        dd($freeWord);
         //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);

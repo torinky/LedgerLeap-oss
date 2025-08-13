@@ -105,12 +105,21 @@ class RecordsTable extends Component
         $this->initSearchContext();
 
         // 現在のフォルダーIDを初期化
-        $this->selectedFolderIds = [$request->folderId()];
+        // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
+        if (empty($this->selectedFolderIds) && $request->folderId()) {
+            $this->selectedFolderIds = [$request->folderId()];
+        } elseif (empty($this->selectedFolderIds)) {
+            $this->selectedFolderIds = []; // デフォルトは空
+        }
+
         $this->currentFolderId = $request->currentFolderId();
 
         // もし台帳IDが指定されていれば、選択済みリストに追加
-        if ($request->ledgerDefineId()) {
+        // URLパラメータ 'l' (selectedLedgerDefineIds) が存在する場合はそれを優先
+        if (empty($this->selectedLedgerDefineIds) && $request->ledgerDefineId()) {
             $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
+        } elseif (empty($this->selectedLedgerDefineIds)) {
+            $this->selectedLedgerDefineIds = []; // デフォルトは空
         }
 
         // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
@@ -201,13 +210,24 @@ class RecordsTable extends Component
             'filter' => $this->filter,
         ]);
 
-        // 表示対象の台帳を取得
-        $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
-            ->searchTags($this->searchContext->tags)
-            ->with('folder')
-            ->get();
+                // グローバル検索かどうかの判定
+        $isGlobalSearch = !empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
 
-        $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
+        if ($isGlobalSearch) {
+            // グローバル検索の場合、すべての台帳定義を対象にする
+            $displayLedgerDefines = LedgerDefine::query()
+                ->searchTags($this->searchContext->tags)
+                ->with('folder')
+                ->get();
+            $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
+        } else {
+            // 通常の場合、選択された台帳定義のみを対象にする
+            $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
+                ->searchTags($this->searchContext->tags)
+                ->with('folder')
+                ->get();
+            $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
+        }
 
         $breadcrumbsPerLedgerDefine = [];
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
