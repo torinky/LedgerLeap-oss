@@ -13,6 +13,9 @@
     //themes: all;
 } ;
 
+// @tailwindcss/typography プラグインの有効化
+@plugin '@tailwindcss/typography';
+
 @source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
 
 // FilePondのインポートが必要な場合はコメント解除

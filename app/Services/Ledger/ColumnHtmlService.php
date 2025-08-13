@@ -92,10 +92,13 @@ class ColumnHtmlService
             $html =  '<span class="' . self::SELECT_BADGE_CLASS_NAME . '">' .e($this->initialValue). '</span>';
         } elseif ($type === 'textarea') {
             // 1. MarkdownをHTMLに変換
-            $html = $this->markdownRenderer->toHtml((string) $this->initialValue);
+            $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
 
             // 2. 自動リンクを適用
-            $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record);
+            $linkedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+
+            // 3. スタイルを適用するためのクラスでラップする
+            $html = '<div class="prose max-w-none">' . $linkedHtml . '</div>';
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $html = $this->initialValue .' '. $unit;
