@@ -111,33 +111,62 @@
     3.  **結果0件での一覧ページリダイレクト**
     4.  **`mode=list` での一覧ページ強制リダイレクト**
 
-### ステップ 5: キーワードハイライト機能の実装
+### ステップ 5: HTMLコンテンツの安全な動的置換機能の実装（ハイライトと自動リンク）
 
-*   **目的:** キーワード検索で詳細画面にリダイレクトする際に、キーワードを着色する。通常検索のリスト画面から詳細画面に入る場合と、リンクから詳細画面に入る場合の両方に適用する。
-*   **機能要件:**
-    1.  詳細画面への遷移時に、検索キーワードを `highlight` というURLクエリパラメータとして渡す。
-    2.  詳細画面で `highlight` パラメータを受け取り、ビューに渡す。
-    3.  詳細画面のコンテンツ内で、渡されたキーワードをサーバーサイド（`ColumnHtmlService`）でハイライト表示する。
-*   **実装計画:**
-    1.  **ハイライトキーワードの伝達方法の統一:**
-        *   `app/Http/Controllers/LedgerLookupController.php`: `handle` メソッド内で `ledger.show` および `ledger.index` へのリダイレクト時に、`highlight` パラメータを追加する。
-        *   `app/Livewire/Ledger/Show.php`: `mount()` メソッドで URL から `highlight` パラメータを受け取り、`searchContext` に設定する。`render()` メソッドで `LedgerContentProcessor` を呼び出す際に、`searchContext` の `highlights` を渡す。
-        *   `resources/views/livewire/ledger/records-table.blade.php`: 詳細画面へのリンクに `highlight` パラメータを追加する。
-    2.  **`ColumnHtmlService` へのキーワード伝達とハイライト処理:**
-        *   `app/Services/Ledger/LedgerContentProcessor.php`: `processContentForDisplay()` メソッドのシグネチャに `$highlights` パラメータを追加し、`ColumnHtmlService::show()` を呼び出す際に `$highlights` を渡す。
-        *   `app/Services/Ledger/ColumnHtmlService.php`: `show()` メソッドの引数に `$highlights` を追加し、`show()` メソッド内で `setHighlightKeywords()` を呼び出すように変更する。`setHighlightKeywords()` メソッドの可視性を `private` に変更する。
-        *   `resources/views/components/ledger/table-row.blade.php`: `ColumnHtml::setHighlightKeywords($keywords)` の呼び出しを削除し、`ColumnHtml::show()` の呼び出しに `$keywords` を追加する。
-*   **JavaScript実装とのトレードオフ:**
-    *   **サーバーサイドハイライトのメリット:**
-        *   リスト画面と詳細画面でハイライトのロジックを統一できる。
-        *   JavaScript でのハイライト実装が不要になる。
-    *   **サーバーサイドハイライトのデメリット:**
-        *   サーバーサイドで HTML を生成する際にハイライト処理を行うため、HTML の構造を直接操作することになる。これにより、HTML の属性値などが意図せず変換されるリスクが残る（`AutoLinkService` で同様の問題が発生し、`DOMDocument` を導入して解決した経緯がある）。
-        *   JavaScript でのハイライトに比べて、より動的な表現（例: ユーザーがハイライトの色を変更する、リアルタイムハイライトなど）が難しい。
-        *   クライアントサイドでの処理が減る一方で、サーバーサイドの負荷が増加する可能性がある。
-*   **テスト:**
-    *   この機能は主にバックエンドの表示ロジックの変更であり、既存のユニットテストでカバーされる範囲が広い。
-    *   ただし、手動での動作確認（自動リンクからの遷移、一覧画面からの遷移の両方でキーワードがハイライトされること）は必須とする。
+#### 目的
+キーワードハイライト機能の実装と、既存の自動リンク機能(`AutoLinkService`)のリファクタリングを同時に行い、HTMLコンテンツを安全に操作するための統一的で堅牢な基盤を構築する。
+
+#### 実装方針の決定
+当初はキーワードハイライトを単純な文字列置換で実装することを検討したが、その後の調査と議論により、以下の結論に至った。
+
+1.  **HTML構造の破壊リスク:** 単純な置換処理は、カラム内に含まれるHTMLタグ（リッチテキストの装飾や他の自動リンク）を破壊し、表示崩れを引き起こす高いリスクがある。
+2.  **`AutoLinkService`の現状:** 既存の`AutoLinkService`も、一部の処理（`auto_number`型）で同様のリスクを抱えており、実装の一貫性が取れていない。
+3.  **堅牢性の優先:** パフォーマンスへの影響は軽微である一方、機能の信頼性向上というメリットは非常に大きい。
+
+以上の理由から、機能の堅牢性と将来の保守性を最優先し、以下の統一的な方針を採用する。
+
+- **方針:** **PHP標準の`DOMDocument`を利用した、再利用可能なHTML操作サービスを新たに作成する。キーワードハイライトと自動リンクの両機能が、この共通サービスを利用してHTMLを安全に操作するように実装・リファクタリングを行う。**
+
+#### 詳細実装計画
+
+##### タスク1: 再利用可能なHTML操作サービス `HtmlProcessorService` の作成
+
+1.  **サービスクラスの作成:** `app/Services/Util/HtmlProcessorService.php` を新規作成する。
+2.  **コア機能の実装:** このサービスに、以下の機能を持つpublicメソッドを実装する。
+    -   **入力:** HTMLフラグメント（文字列）、テキストノードを操作するためのコールバック関数。
+    -   **処理:**
+        1.  `DOMDocument`を使い、受け取ったHTMLフラグメントを安全にパースする（`LIBXML_HTML_NOIMPLIED`等のオプション利用）。
+        2.  `DOMXPath`で全てのテキストノードを抽出する。
+        3.  各テキストノードに対し、引数で受け取ったコールバック関数を実行する。コールバック関数は、テキストノードを新しいDOMノード（`mark`タグや`a`タグなど）に置換する役割を担う。
+    -   **出力:** 処理後のDOMから、余分なスケルトンタグを取り除いた安全なHTMLフラグメント（文字列）を返す。
+
+##### タスク2: キーワードハイライト機能の実装
+
+1.  **キーワードのURL伝達:** (計画に変更なし)
+    -   `LedgerLookupController`, `records-table.blade.php`, `Livewire/Show.php` を修正し、`highlight`パラメータを画面間で引き回す。
+2.  **`ColumnHtmlService`でのハイライト処理の実行:**
+    -   **役割:** `ColumnHtmlService` は、**台帳の詳細画面**で各カラムの値を最終的なHTMLとして表示する責務を担っています。
+    -   **修正内容:** このサービスが、タスク1で作成した `HtmlProcessorService` を呼び出してハイライト処理を実行します。これにより、**詳細画面に表示されるカラムの値にハイライトが適用されます。**
+    -   **具体的な実装:**
+        -   `ColumnHtmlService` が `HtmlProcessorService` をインジェクト（DI）するように変更します。
+        -   `show()` メソッド内で `highlight` キーワードが存在する場合、`HtmlProcessorService` を呼び出します。
+        -   キーワードを `<mark>` タグで囲む処理をコールバック関数として `HtmlProcessorService` に渡し、ハイライト処理を実現します。
+
+##### タスク3: `AutoLinkService`のリファクタリング
+
+1.  **`AutoLinkService`の修正:**
+    -   `AutoLinkService`も`HtmlProcessorService`をインジェクトするように変更する。
+    -   `convert()`メソッド内のロジックを全面的に書き換える。
+    -   既存の`DOMDocument`を使った複雑な処理と、`auto_number`型の安全でない処理をすべて削除する。
+    -   代わりに、`HtmlProcessorService`を呼び出し、自動リンクのパターンに一致したテキストを`<a>`タグに置換する処理をコールバック関数として渡す。
+    -   これにより、`AutoLinkService`の責務は「どのリンク定義を適用するか」の判断に集中し、複雑なHTML操作は共通サービスに一任される。
+
+#### テスト
+- **キーワードハイライト:**
+    - 自動リンクや一覧画面からの遷移で、キーワードが正しくハイライトされること。
+    - ハイライト処理によって、既存のHTML（リンクなど）の表示が崩れないこと。
+- **自動リンク（リグレッションテスト）:**
+    - リファクタリング後も、`auto_number`型およびカスタム定義の自動リンクが、すべての条件下で以前と全く同じように機能すること。
 
 ## 5. 最終的な成果
 
