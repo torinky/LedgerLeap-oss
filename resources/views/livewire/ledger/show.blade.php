@@ -82,7 +82,7 @@
                                             @else
                                                 {!! ColumnHtml::setAttachmentCollection($currentLedgerAttachments->keyBy('hashedbasename'))
                                                               ->setAttachmentContents($ledgerRecord->content_attached[$columnId] ?? [])
-                                                              ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord) !!}
+                                                              ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord, $highlight) !!}
                                             @endif
                                         </td>
                                         @if($showChanges)
