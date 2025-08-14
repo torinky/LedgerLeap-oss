@@ -22,7 +22,7 @@ class Show extends Component
 
     public bool $canView = false;
     public Ledger $ledgerRecord;
-    protected $ledgerDefineRecord; // Changed to protected
+    
     public bool $canUpdate = false;
 
     // --- 差分表示用 ---
@@ -64,11 +64,11 @@ class Show extends Component
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
 
-        $this->ledgerDefineRecord = $this->ledgerRecord->define;
-        $this->ledgerDefineRecord->refresh(); // Ensure column_define is loaded
+        // $this->ledgerDefineRecord = $this->ledgerRecord->define;
+        // $this->ledgerDefineRecord->refresh(); // Ensure column_define is loaded
 
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
-        $this->prepareContentDiff();
+        $this->prepareContentDiff(); // ここで ledgerDefineRecord を引数として渡すように変更
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
@@ -76,9 +76,9 @@ class Show extends Component
             $this->displayLevel = 1;
         }
 
-        $this->filteredColumns = $this->calculateFilteredColumns();
+        $this->filteredColumns = $this->calculateFilteredColumns(); // ここで ledgerDefineRecord を引数として渡すように変更
 
-        $allGroups = collect($this->ledgerDefineRecord->column_define)
+        $allGroups = collect($this->ledgerRecord->define->column_define) // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             ->pluck('group')
             ->filter()
             ->unique()
@@ -89,7 +89,7 @@ class Show extends Component
         }
         $this->collapsedStates[__('ledger.form.group_default')] = false;
 
-        foreach ($this->ledgerDefineRecord->column_define as $column) {
+        foreach ($this->ledgerRecord->define->column_define as $column) { // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             $columnObject = is_array($column) ? new \App\Models\ColumnDefine($column) : $column;
             if ($columnObject->required) {
                 $groupName = $columnObject->group ?? __('ledger.form.group_default');
@@ -119,11 +119,11 @@ class Show extends Component
 
     protected function calculateFilteredColumns(): array
     {
-        if (empty($this->ledgerDefineRecord) || empty($this->ledgerDefineRecord->column_define)) {
+        if (empty($this->ledgerRecord->define) || empty($this->ledgerRecord->define->column_define)) { // この行を追加
             return [];
         }
 
-        return collect($this->ledgerDefineRecord->column_define)
+        return collect($this->ledgerRecord->define->column_define) // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             ->filter(function ($column) {
                 $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
                 return $columnDisplayLevel <= $this->displayLevel;
@@ -168,7 +168,7 @@ class Show extends Component
         $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
         $diffResult = $this->ledgerDiffProcessor->prepareContentDiff(
             $this->ledgerRecord,
-            $this->ledgerDefineRecord,
+            $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             $this->comparisonTargetDiff
         );
         $this->contentChanges = $diffResult['contentChanges'];
@@ -226,7 +226,7 @@ class Show extends Component
 
         $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
             $this->ledgerRecord,
-            $this->ledgerDefineRecord,
+            $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             $this->highlight
         );
 
@@ -234,7 +234,7 @@ class Show extends Component
             'groupedColumns' => $groupedColumns,
             'filteredColumns' => $this->filteredColumns,
             'displayColumns' => $this->displayColumns,
-            'ledgerDefineRecord' => $this->ledgerDefineRecord,
+            'ledgerDefineRecord' => $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
         ])->layout('layouts.app');
     }
 }
