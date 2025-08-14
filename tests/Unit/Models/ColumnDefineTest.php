@@ -1,12 +1,13 @@
 <?php
 
-namespace Tests\Unit\Models;
+namespace tests\Unit\Models;
 
 use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\InputTypeFactory;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
-use Tests\TestCase;
+use tests\TestCase;
 
 class ColumnDefineTest extends TestCase
 {
@@ -48,12 +49,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 値による初期化のテスト
      *
      * ColumnDefineのインスタンスを生成するための引数を指定し、期待通りの値がセットされているかテスト
      */
+#[Test]
     public function test_value_initialization(): void
     {
         // 値による初期化のテスト
@@ -76,13 +75,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
      *
-     * 列の種類を変更するテスト
-     *
-     * 列の種類を変更するメソッドのテスト
      * 'text'→'textarea'、'textarea'→'chk'、無効な列の種類を設定しようとする場合をテスト
      */
+    #[Test]
     public function test_set_type(): void
     {
         // 列の種類を変更するテスト
@@ -102,12 +98,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 列の種類のラベルを取得するテスト
      *
      * ColumnDefine::typeLabels()で取得できるラベルに期待する値があるかテスト
      */
+    #[Test]
     public function test_type_labels(): void
     {
         // 列の種類のラベルを取得するテスト
@@ -124,12 +118,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * setOptions()に空の配列を渡すと、$optionsが空の配列になるかテスト
      *
      * setOptions()に空の配列を渡すと、$optionsが空の配列になることをテスト
      */
+    #[Test]
     public function test_handles_empty_options_array()
     {
         // Arrange
@@ -143,12 +135,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'files'タイプの列の値を文字列に変換するテスト
      *
      * 'files'タイプの列に配列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_files_type()
     {
         // Arrange
@@ -163,12 +153,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'chk'タイプの列の値を文字列に変換するテスト
      *
      * 'chk'タイプの列に配列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_chk_type()
     {
         // Arrange
@@ -183,12 +171,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'YMD'タイプの列の値を文字列に変換するテスト
      *
      * 'YMD'タイプの列に日付文字列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_ymd_type()
     {
         // Arrange
@@ -203,13 +189,11 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'number'タイプの列の値を文字列に変換するテスト
      *
      * 'number'タイプの列に数値を設定し、convertColumnValue2Text()を実行することで、
      * 期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_number_type()
     {
         // Arrange
@@ -224,12 +208,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'text'タイプの列の値を文字列に変換するテスト
      *
      * 'text'タイプの列に文字列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_text_type()
     {
         // Arrange
@@ -244,12 +226,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'textarea'タイプの列の値を文字列に変換するテスト
      *
      * 'textarea'タイプの列に複数行テキストを設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_text_area_type()
     {
         // Arrange
@@ -264,13 +244,11 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'select'タイプの列の値を文字列に変換するテスト
      *
      * 'select'タイプの列に選択肢を設定し、convertColumnValue2Text()を実行することで、
      * 選択された値が文字列に変換されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_select_type()
     {
         // Arrange
@@ -289,13 +267,11 @@ class ColumnDefineTest extends TestCase
     // Type validation happens at instantiation/setType via InputTypeFactory.
 
     /**
-     * @test
-     *
-     * 'textarea'タイプの列の値を複数行文字列に変換するテスト
      *
      * 'textarea'タイプの列に複数行テキストを設定し、convertColumnValue2Text()を実行することで、
      * 期待する文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_text_area_type_with_multiple_lines()
     {
         // Arrange
@@ -310,12 +286,10 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * setOptions()に空の配列を渡すと、$optionsが空の配列になるかテスト
      *
      * setOptions()に空の配列を渡すと、$optionsが空の配列になることをテスト
      */
+    #[Test]
     public function test_set_options_with_empty_array()
     {
         // Arrange
@@ -330,13 +304,11 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * required/uniqueフラグのON/OFFをテスト
      *
      * required/uniqueフラグをON/OFFすることで、ColumnDefineのプロパティが
      * 正しく更新されるかテスト
      */
+    #[Test]
     public function test_set_required_and_unique_flags()
     {
         // Create a new instance of ColumnDefine
@@ -360,13 +332,11 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     * @test
-     *
-     * 'chk'タイプの列の値に重複する値がある場合の列の値を文字列に変換するテスト
      *
      * 'chk'タイプの列に重複する値がある場合、convertColumnValue2Text()を実行することで、
      * そのままの文字列が生成されるかテスト
      */
+    #[Test]
     public function test_column_type_conversion_for_chk_type_with_duplicate_options()
     {
         // Arrange
