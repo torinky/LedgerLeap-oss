@@ -103,8 +103,9 @@ class ColumnHtmlService
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $html = $this->initialValue .' '. $unit;
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
-        }else{
-            $html = $this->initialValue;
+        } else {
+            // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         }
 
         return new HtmlString($this->highlightKeywords($html) ?? '');
