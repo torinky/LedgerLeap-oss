@@ -123,7 +123,7 @@ class LedgerDefine extends Model
         return $sortedContentArray->values()->toArray();
     }
 
-    public function hasPermissionTo($permission): bool
+    public function hasPermissionTo($permission, ?string $guardName): bool
     {
         return $this->roles->flatMap->permissions->contains('name', $permission);
     }

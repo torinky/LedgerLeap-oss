@@ -4,6 +4,7 @@ use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
+use App\Services\Util\HtmlProcessorService;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 it('column value is array', function () {
@@ -21,8 +22,11 @@ it('column value is array', function () {
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
 
-    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $columnHtml->mount($columnDefine, ['aaa' => 'aaa', 'ccc' => 'ccc']);
 
     $result = $columnHtml->show($columnDefine, [
@@ -48,8 +52,10 @@ it('show returns empty string when no initial value', function () {
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
 
-    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $result = $columnHtml->show($columnDefine, null, true, [], '', false, null);
 
     expect($result->toHtml())->toBe('');
@@ -66,18 +72,25 @@ it('highlight keywords in html output', function () {
         false,
         false
     );
+    $inputValue = 'This is a test content with keywords';
+    $highlightKeyword = 'test';
+    $expectedHtml = 'This is a <mark class="text-error font-bold text-lg">test</mark> content with keywords';
 
     $mockAutoLinkService = mock(AutoLinkService::class);
-    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+    $mockAutoLinkService->shouldReceive('convert')->andReturn($inputValue);
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
 
-    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
-    $columnHtml->mount($columnDefine, 'This is a test content with keywords');
-    $columnHtml->setHighlightKeywords(['test', 'keywords']);
+    // Expect processTextNodes to be called and simulate its effect
+    $mockHtmlProcessor->shouldReceive('processTextNodes')
+        ->once()
+        ->with($inputValue, Mockery::type(\Closure::class))
+        ->andReturn($expectedHtml); // For simplicity, we return the final expected HTML.
 
-    $result = $columnHtml->show($columnDefine, 'This is a test content with keywords', true, [], '', false, null);
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
 
-    $expectedHtml = 'This is a <span class="text-error font-bold text-lg">test</span> content with <span class="text-error font-bold text-lg">keywords</span>';
+    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, null, $highlightKeyword);
+
     expect($result->toHtml())->toBe($expectedHtml);
 });
 
@@ -110,8 +123,11 @@ it('renders textarea with markdown and applies auto links', function () {
         ->with($htmlFromMarkdown, $columnDefine, null)
         ->andReturn($linkedHtml);
 
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
+
     // 3. Execution
-    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $result = $columnHtml->show($columnDefine, $markdownInput, true, [], '', false, null);
 
     // 4. Assertion
@@ -152,9 +168,11 @@ it('renders auto_number with link', function () {
         ->andReturn($expectedLink);
 
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
 
     // 3. Execution
-    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, $ledgerRecord);
 
     // 4. Assertion

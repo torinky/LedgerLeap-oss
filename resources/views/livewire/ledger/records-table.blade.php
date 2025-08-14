@@ -207,7 +207,7 @@
                                 @foreach($ledgerDefineAndRecords as $ledgerRecordValues)
                                     <x-ledger.table-row
                                         :ledgerRecord="$ledgerRecordValues"
-                                        :keywords="$highlights"
+                                        :highlightKeyword="$search"
                                         :canUpdate="$canUpdate"
                                         :canView="$canView"
                                         :allAttachments="$allAttachments"

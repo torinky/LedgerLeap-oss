@@ -24,14 +24,17 @@ class LedgerLookupController extends Controller
 
         $results = Ledger::query()->searchContext($searchContext)->get();
 
+        // Force list mode
         if ($request->input('mode') === 'list') {
-            return redirect()->route('ledger.index', ['q' => $query, 'l' => [], 'f' => []]);
+            return redirect()->route('ledger.index', ['q' => $query, 'highlight' => $query, 'l' => [], 'f' => []]);
         }
 
+        // Unique match, redirect to show page
         if ($results->count() === 1) {
-            return redirect()->route('ledger.show', ['ledgerId' => $results->first()->id]);
+            return redirect()->route('ledger.show', ['ledgerId' => $results->first()->id, 'highlight' => $query]);
         }
 
-        return redirect()->route('ledger.index', ['q' => $query, 'l' => [], 'f' => []]);
+        // 0 or multiple matches, redirect to index page
+        return redirect()->route('ledger.index', ['q' => $query, 'highlight' => $query, 'l' => [], 'f' => []]);
     }
 }

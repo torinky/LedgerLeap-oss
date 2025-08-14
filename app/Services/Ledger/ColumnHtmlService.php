@@ -3,6 +3,7 @@
 namespace App\Services\Ledger;
 
 use App\Models\ColumnDefine;
+use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
@@ -17,6 +18,7 @@ class ColumnHtmlService
 {
     private AutoLinkService $autoLinkService;
     private MarkdownRenderer $markdownRenderer;
+    private HtmlProcessorService $htmlProcessorService;
 
     private $attrs = [];
 
@@ -39,19 +41,20 @@ class ColumnHtmlService
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
-    //    private string $orderNameBase;
-    //    private string $idNameBase;
-    private array $keywords = [];
-
     /**
      * @var array|mixed
      */
     private array $attachmentContents;
 
-    public function __construct(AutoLinkService $autoLinkService, MarkdownRenderer $markdownRenderer)
+    public function __construct(
+        AutoLinkService $autoLinkService,
+        MarkdownRenderer $markdownRenderer,
+        HtmlProcessorService $htmlProcessorService
+    )
     {
         $this->autoLinkService = $autoLinkService;
         $this->markdownRenderer = $markdownRenderer;
+        $this->htmlProcessorService = $htmlProcessorService;
     }
 
     /**
@@ -64,9 +67,10 @@ class ColumnHtmlService
      * @param string $idPrefix id属性のプレフィックス
      * @param bool $asCreate 新規作成モードかどうか
      * @param Ledger|null $record 現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
+     * @param string|null $highlight ハイライトするキーワード
      * @return HtmlString 生成されたHTML文字列
      */
-    public function show(object|array $columnDefineData, $initialValue, $canView = true, $attrs = [], $idPrefix = '', $asCreate = false, ?Ledger $record = null): HtmlString
+    public function show(object|array $columnDefineData, $initialValue, bool $canView = true, array $attrs = [], string $idPrefix = '', bool $asCreate = false, ?Ledger $record = null, ?string $highlight = null): HtmlString
     {
         if (!$canView) {
             return new HtmlString('');
@@ -78,7 +82,6 @@ class ColumnHtmlService
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
-
 
         $type = $this->getColumnDefineProperty('type');
         $html = '';
@@ -95,10 +98,8 @@ class ColumnHtmlService
             $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
 
             // 2. 自動リンクを適用
-            $linkedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+            $html = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
 
-            // 3. スタイルを適用するためのクラスでラップする
-            $html = '<div class="prose max-w-none">' . $linkedHtml . '</div>';
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $html = $this->initialValue .' '. $unit;
@@ -108,20 +109,42 @@ class ColumnHtmlService
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         }
 
-        return new HtmlString($this->highlightKeywords($html) ?? '');
+        // ハイライト処理
+        if ($highlight) {
+            $html = $this->htmlProcessorService->processTextNodes(
+                $html,
+                function (\DOMText $textNode, \DOMDocument $dom) use ($highlight) {
+                    $fragment = $dom->createDocumentFragment();
+                    $parts = preg_split('/(' . preg_quote($highlight, '/') . ')/i', $textNode->nodeValue, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+                    foreach ($parts as $part) {
+                        if (strcasecmp($part, $highlight) === 0) {
+                            $mark = $dom->createElement('mark');
+                            $mark->setAttribute('class', self::HIGHLIGHT_CLASS_NAME);
+                            $mark->appendChild($dom->createTextNode($part));
+                            $fragment->appendChild($mark);
+                        } else {
+                            $fragment->appendChild($dom->createTextNode($part));
+                        }
+                    }
+
+                    if ($fragment->hasChildNodes()) {
+                        $textNode->parentNode->replaceChild($fragment, $textNode);
+                    }
+                }
+            );
+        }
+
+        // 最終的なHTMLをラップ
+        if ($type === 'textarea') {
+            $html = '<div class="prose max-w-none">' . $html . '</div>';
+        }
+
+        return new HtmlString($html ?? '');
     }
 
     /**
      * 配列値をHTMLとしてレンダリングする
-     *
-     * @param string $type カラムのタイプ（例: chk, files, select など）
-     * @param array $values カラムの値（配列形式）
-     * @param array $options 選択肢のラベルなどのオプション配列
-     * @return string レンダリングされたHTML文字列
-     *
-     * chk型の場合はチェックされた項目のみラベル表示。
-     * files型以外の配列は値をバッジで表示。
-     * files型で値が空の場合は空文字を返す。
      */
     private function renderArrayValue($type, $values, $options): string
     {
@@ -139,30 +162,19 @@ class ColumnHtmlService
                 : '';
         }
 
-        // files以外で配列だがchkでもない場合（selectのmultiple等）
         if ($type !== 'files') {
             $displayValues = array_filter($values);
             return '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayValues)) . '</span>';
         }
 
-        // filesで値が空の場合
         return empty($values) ? '' : '';
     }
 
-    /**
-     * @param object|array $columnDefineData
-     * @param mixed $initialValue
-     * @param array $attrs
-     * @param bool $asCreate
-     * @param string $idPrefix
-     * @return void
-     */
     public function mount(object|array $columnDefineData, $initialValue, array $attrs = [], bool $asCreate = false, string $idPrefix = ''): void
     {
         $this->attrs = $attrs;
-        $this->columnDefineData = $columnDefineData; // 配列またはオブジェクトをそのまま保持
-
-        $id = $this->getColumnDefineProperty('id'); // ヘルパー経由で取得
+        $this->columnDefineData = $columnDefineData;
+        $id = $this->getColumnDefineProperty('id');
         $this->nameBase = 'content[' . $id . ']';
         $this->valueNameBase = $this->nameBase;
         $this->initialValue = $initialValue;
@@ -170,9 +182,6 @@ class ColumnHtmlService
         $this->id = $idPrefix . $this->valueNameBase;
     }
 
-    /**
-     * カラム定義データからプロパティを取得するヘルパー
-     */
     private function getColumnDefineProperty(string $key, $default = null)
     {
         if (is_object($this->columnDefineData) && isset($this->columnDefineData->{$key})) {
@@ -184,56 +193,9 @@ class ColumnHtmlService
         return $default;
     }
 
-    /**
-     * @return string
-     */
-    private function highlightKeywords($html)
-    {
-        if (empty($this->keywords)) {
-            return $html;
-        }
-
-        // HTMLタグとテキストノードを正確に区別する正規表現
-        // <[^>]*> は任意のHTMLタグにマッチ
-        // | はOR条件
-        // ([^<]*) は < 以外の文字の連続（テキストノード）にマッチ
-        $pattern = '/(<[^>]*>)|([^<]*)/';
-        $result = preg_replace_callback($pattern, function ($matches) {
-            if (!empty($matches[1])) { // HTMLタグにマッチした場合
-                return $matches[0]; // タグはそのまま返す
-            } else { // テキストノードにマッチした場合
-                $text = $matches[2];
-                foreach ($this->keywords as $keyword) {
-                    // キーワードをハイライト
-                    $text = preg_replace('/' . preg_quote($keyword, '/') . '/ui', '<span class="' . self::HIGHLIGHT_CLASS_NAME . '">$0</span>', $text);
-                }
-                return $text;
-            }
-        }, $html);
-
-        return $result;
-    }
-
-    /**
-     * @return $this
-     */
-    public function setHighlightKeywords($keywords)
-    {
-        if (empty($keywords)) {
-            return $this;
-        }
-        if (is_string($keywords)) {
-            $keywords = explode(',', $keywords);
-        }
-        $this->keywords = $keywords;
-
-        return $this;
-    }
-
     public function setAttachmentCollection(Collection $attachments): static
     {
         $this->attachments = $attachments;
-
         return $this;
     }
 
@@ -241,12 +203,8 @@ class ColumnHtmlService
     {
         if (empty($contents)) {
             $contents = [];
-        } else {
-
-//            dd($contents);
         }
         $this->attachmentContents = $contents;
-
         return $this;
     }
 
@@ -258,19 +216,16 @@ class ColumnHtmlService
             'doc', 'docx' => 'fa-solid fa-file-word',
             'xls', 'xlsx' => 'fa-solid fa-file-excel',
             'ppt', 'pptx' => 'fa-solid fa-file-powerpoint',
-            'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz' => 'fa-solid fa-file-archive', // Added more archive types
-            'txt', 'log', 'md', 'csv' => 'fa-solid fa-file-lines', // Added more text types
-            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff' => 'fa-solid fa-file-image', // Added more image types
-            'mp3', 'wav', 'ogg', 'flac' => 'fa-solid fa-file-audio', // Audio
-            'mp4', 'avi', 'mov', 'wmv', 'flv' => 'fa-solid fa-file-video', // Video
-            'html', 'htm', 'xml', 'json', 'js', 'ts', 'php', 'py', 'java', 'c', 'cpp', 'h', 'hpp' => 'fa-solid fa-file-code', // Code/Web
+            'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz' => 'fa-solid fa-file-archive',
+            'txt', 'log', 'md', 'csv' => 'fa-solid fa-file-lines',
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff' => 'fa-solid fa-file-image',
+            'mp3', 'wav', 'ogg', 'flac' => 'fa-solid fa-file-audio',
+            'mp4', 'avi', 'mov', 'wmv', 'flv' => 'fa-solid fa-file-video',
+            'html', 'htm', 'xml', 'json', 'js', 'ts', 'php', 'py', 'java', 'c', 'cpp', 'h', 'hpp' => 'fa-solid fa-file-code',
             default => 'fa-solid fa-file',
         };
     }
 
-    /**
-     * @return string
-     */
     public function getFileHtml(): string
     {
         $html = '';
@@ -284,7 +239,6 @@ class ColumnHtmlService
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
             $attachment = $this->attachments->get($hashedFilename);
 
-            // 添付ファイル情報が見つからない場合はスキップ
             if (!$attachment) {
                 continue;
             }
@@ -292,7 +246,6 @@ class ColumnHtmlService
             $statusIconHtml = '';
             $retryIconHtml = '';
 
-            // Check if $attachment->status is an instance of AttachedFileStatus enum
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
                 $statusIconHtml = <<<HTML
     <div class="tooltip tooltip-bottom" data-tip="{$attachment->status->tooltip()}">
@@ -300,11 +253,9 @@ class ColumnHtmlService
     </div>
 HTML;
 
-                // Add retry icon if status is FAILED
                 if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
                     $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED ||
                     $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
-                    // 翻訳キーからテキストを取得
                     $retryTooltipText = __('ledger.uploadedFile.retry');
                     $retryIconHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
@@ -314,10 +265,7 @@ HTML;
 HTML;
                 }
 
-                // サムネイル生成失敗時に再ディスパッチ
                 if ($attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
-                    // ここでは簡易的に、THUMBNAIL_FAILEDであれば再試行とみなす
-                    // より厳密な試行回数チェックはジョブ側で行う
                     \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachment->id));
                     Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: ' . $attachment->id);
                 }
@@ -326,41 +274,25 @@ HTML;
             $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
 
-            // メインのダウンロードURL (OCR処理後のファイルまたはオリジナルファイル)
             $mainDownloadUrl = route('file.download', ['attachedFile' => $attachment->id]);
-            // サムネイルURL
-            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id,
-                'thumbnail' => 'true']);
-
-            // ダウンロードリンクの出し分けに必要なURLを事前に定義
-            $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id,
-                'original' => true]);
-            $optimizedPdfDownloadUrl = route('file.download',
-                ['attachedFile' => $attachment->id]
-            ); // OCR処理後のPDF
+            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+            $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id, 'original' => true]);
+            $optimizedPdfDownloadUrl = route('file.download',['attachedFile' => $attachment->id]);
 
             $auxiliaryLinksHtml = '';
 
-            // ダウンロードリンクの出し分けロジック
             if (str_starts_with($attachment->original_mime_type, 'image/')) {
-                // オリジナルが画像の場合：メインはオリジナル画像、補助はOCR後PDF
-                $mainDownloadUrl = $originalDownloadUrl; // Main link is original image
-                // 翻訳キーからツールチップのテキストを取得
+                $mainDownloadUrl = $originalDownloadUrl;
                 $downloadPdfTooltip = __('ledger.uploadedFile.download_pdf_with_text');
-
                 $auxiliaryLinksHtml = <<<HTML
      <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-square btn-ghost tooltip" 
  data-tip="{$downloadPdfTooltip}">
          <i class="fa-solid fa-file-pdf w-4 h-4"></i>
      </a>
 HTML;
-            } elseif ($attachment->original_mime_type === 'application/pdf'
-                && $attachment->optimized) {
-                // オリジナルがPDFで最適化済みの場合：メインはOCR後PDF、補助はオリジナルPDF
-                $mainDownloadUrl = $optimizedPdfDownloadUrl; // Main link is OCR'd PDF
-
+            } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment->optimized) {
+                $mainDownloadUrl = $optimizedPdfDownloadUrl;
                 $downloadPdfTooltip=__('ledger.uploadedFile.download_original_pdf');
-
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
      <a href="{$originalDownloadUrl}" target="_blank" 
@@ -372,54 +304,35 @@ HTML;
 HTML;
             }
 
-/*            Log::info('$thumbnailUrl:' . $thumbnailUrl . '$auxiliaryLinksHtml:' .
-                $auxiliaryLinksHtml); // Debug output
-*/
-
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-            if (!empty($this->attachmentContents)) {
-
-//                dd($this->attachmentContents, $hashedFilename);
-            }
             if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
                 $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
-                // HTMLタグを除去
                 $plainTextContent = strip_tags($rawContent);
-                // 改行をスペースに置換してdata-tip属性の安全性を確保
                 $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
-                // 長さを制限し、HTML特殊文字をエスケープ
                 $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
                 if(!empty($content)) {
                     $contentHtmlStart = <<<HTML
  <div class="tooltip" data-tip="{$content}">
  HTML;
-
                     $contentHtmlEnd = "</div>";
                 }
             }
 
-            // 画像ファイルでサムネイルが存在する場合
-            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk(
-                    'public')->exists($thumbnailStoragePath = AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
-                Log::info('Thumbnail exists at: ' . $thumbnailStoragePath);
+            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
                 $thumbnails[] = <<<HTML
 <div class="indicator"> 
 <span class="indicator-item">
     {$statusIconHtml}
     {$auxiliaryLinksHtml}
 </span>
-         
 {$contentHtmlStart}
-
-<!--     <div class="flex flex-col items-center mx-1 my-1">-->
          <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
  $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
-<!--     </div>-->
- {$contentHtmlEnd}
+{$contentHtmlEnd}
 </div>
 HTML;
-            } else { // 画像ファイルだがサムネイルがない場合、または画像以外のファイルの場合
+            } else {
                 if (str_starts_with($attachment->original_mime_type, 'image/')) {
                     Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)));
                 }

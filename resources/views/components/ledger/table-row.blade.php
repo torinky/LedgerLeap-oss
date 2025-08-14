@@ -1,6 +1,6 @@
 @props([
     'ledgerRecord'=>null,
-    'keywords'=>[],
+    'highlightKeyword'=>null,
     'canUpdate'=>false,
     'canView'=>false,
     'allAttachments' => [],
@@ -32,7 +32,7 @@
         <div class="tooltip tooltip-right"
              data-tip="{{__('ledger.show_details')}}"
         >
-            <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id]) }}"
+            <a href="{{ route('ledger.show', ['ledgerId'=>$ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
                class="btn btn-outline btn-info btn-sm my-1 btn-square opacity-70 hover:opacity-100"
                target="ledgerShow_{{$ledgerRecord->define->id}}}}">
                 <i class="fas fa-table-list"></i>
@@ -48,10 +48,9 @@
         @elseif (empty($ledgerRecord->content[$columnDefine->id]))
             <x-ledger.empty-message/>
         @else
-            {{ ColumnHtml::setHighlightKeywords($keywords)
-                         ->setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
+            {{ ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
                          ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord) }}
+                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword) }}
         @endif
         </td>
     @endforeach

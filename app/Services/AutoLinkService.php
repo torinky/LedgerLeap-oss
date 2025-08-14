@@ -7,11 +7,13 @@ use App\Models\Ledger;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
+use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
+
 class AutoLinkService
 {
-    public function __construct()
+    public function __construct(private HtmlProcessorService $htmlProcessorService)
     {
     }
 
@@ -25,103 +27,104 @@ class AutoLinkService
      */
     public function convert(string $text, ?ColumnDefine $column = null, $context = null): string
     {
-        // 0. 入力が空の場合はそのまま返す
         if (empty($text)) {
             return '';
         }
 
-        // 1. auto_number カラムの特別処理
-        if ($column && $column->getType() === 'auto_number') {
-            $url = route('ledger.lookup', ['query' => $text]);
-            $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
-            $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
+        return $this->htmlProcessorService->processTextNodes(
+            $text,
+            function (\DOMText $textNode, \DOMDocument $dom) use ($column, $context) {
+                $originalText = $textNode->nodeValue;
 
-            $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+                // auto_number カラムの特別処理
+                if ($column && $column->getType() === 'auto_number') {
+                    $linkHtml = $this->createAutoNumberLink($originalText);
+                    $this->replaceTextNodeWithHtml($textNode, $linkHtml, $dom);
+                    return; // auto_numberは他のカスタムリンクと重複させない
+                }
 
-            return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($text) . '</a></div>';
-        }
+                // カスタム定義によるリンク変換
+                $autoLinks = $this->getAutoLinksForContext($context);
+                if ($autoLinks->isEmpty()) {
+                    return;
+                }
 
-        // 2. カスタム定義によるリンク変換
-        $autoLinks = $this->getAutoLinksForContext($context);
-
-        if ($autoLinks->isEmpty()) {
-            // 適用するリンク定義がない場合は、そのまま返す
-            return $text;
-        }
-
-        $htmlishText = $text;
-
-        // DOMDocumentを使用してHTMLを安全に処理
-        $dom = new \DOMDocument();
-        // HTML5タグを正しく解釈させ、エラー出力を抑制
-        libxml_use_internal_errors(true);
-        // UTF-8を明示的に指定し、HTMLエンティティが文字化けするのを防ぐ
-        $dom->loadHTML('<?xml encoding="UTF-8">' . $htmlishText, LIBXML_NOBLANKS);
-        libxml_clear_errors();
-
-        $xpath = new \DOMXPath($dom);
-        // テキストノードのみを検索対象とする (scriptやstyleタグ内は除外)
-        $textNodes = $xpath->query('//text()[not(ancestor::script) and not(ancestor::style)]');
-
-        foreach ($textNodes as $textNode) {
-            $originalText = $textNode->nodeValue;
-            $convertedText = $originalText;
-
-            foreach ($autoLinks as $autoLink) {
-                // パターンに 'u' (UTF-8) フラグを追加して、マルチバイト文字に正しく対応
-                $pattern = $autoLink->pattern . (str_contains($autoLink->pattern, 'u') ? '' : 'u');
-
-                $convertedText = preg_replace_callback(
-                    $pattern,
-                    function ($matches) use ($autoLink) {
-                        $url = $autoLink->url_template;
-                        for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
-                            $url = str_replace('$'. $i, urlencode($matches[$i]), $url);
-                        }
-                        $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-                        $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
-                        $tooltip = $autoLink->label; // AutoLinkのラベルを直接使用
-
-                        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
-                        // DaisyUIのツールチップに対応するため、divでラップ
-                        $result = '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($matches[0]) . '</a></div>';
-                        return $result;
-                    },
-                    $convertedText
-                );
+                $this->applyCustomLinks($textNode, $autoLinks, $dom);
             }
-
-            // テキストが変更された場合、ノードを置換
-            if ($originalText !== $convertedText) {
-                $fragment = $dom->createDocumentFragment();
-                // @でエラーを抑制しつつ、HTML文字列をフラグメントに読み込ませる
-                @$fragment->appendXML($convertedText);
-                $textNode->parentNode->replaceChild($fragment, $textNode);
-            }
-        }
-
-        // bodyタグ内のコンテンツを返す
-        $body = $dom->getElementsByTagName('body')->item(0);
-        $innerHtml = '';
-        if ($body) {
-            foreach ($body->childNodes as $child) {
-                $innerHtml .= $dom->saveHTML($child);
-            }
-        }
-
-        // 余分な空白や改行を除去
-        $innerHtml = trim($innerHtml);
-        $innerHtml = preg_replace('/>\s+</', '><', $innerHtml); // タグ間の空白を除去
-
-        return $innerHtml;
+        );
     }
 
-    /**
-     * コンテキストに応じたAutoLink定義を取得する（キャッシュ利用）
-     *
-     * @param mixed $context
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
+    private function createAutoNumberLink(string $text): string
+    {
+        $url = route('ledger.lookup', ['query' => $text]);
+        $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
+        $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
+        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+
+        return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($text) . '</a></div>';
+    }
+
+    private function applyCustomLinks(\DOMText $textNode, $autoLinks, \DOMDocument $dom): void
+    {
+        $currentNode = $textNode;
+
+        foreach ($autoLinks as $autoLink) {
+            $pattern = $autoLink->pattern . (str_contains($autoLink->pattern, 'u') ? '' : 'u');
+            $text = $currentNode->nodeValue;
+
+            $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+            if (count($parts) <= 1) {
+                continue;
+            }
+
+            $fragment = $dom->createDocumentFragment();
+            $matches = [];
+            preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
+            $matchIndex = 0;
+
+            foreach ($parts as $part) {
+                if ($matchIndex < count($matches) && $part === $matches[$matchIndex][0]) {
+                    $linkHtml = $this->createCustomLink($autoLink, $matches[$matchIndex]);
+                    $linkFragment = $dom->createDocumentFragment();
+                    @$linkFragment->appendXML($linkHtml);
+                    $fragment->appendChild($linkFragment);
+                    $matchIndex++;
+                } else {
+                    $fragment->appendChild($dom->createTextNode($part));
+                }
+            }
+
+            if ($fragment->hasChildNodes()) {
+                $currentNode->parentNode->replaceChild($fragment, $currentNode);
+                // The current node is replaced, so we can't continue operating on it.
+                // For simplicity, we stop after the first matching autolink rule.
+                // To handle multiple rules, a more complex node traversal would be needed.
+                break;
+            }
+        }
+    }
+
+    private function createCustomLink(AutoLink $autoLink, array $matches): string
+    {
+        $url = $autoLink->url_template;
+        for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
+            $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+        }
+        $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
+        $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
+        $tooltip = $autoLink->label;
+        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+
+        return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($matches[0]) . '</a></div>';
+    }
+
+    private function replaceTextNodeWithHtml(\DOMText $textNode, string $html, \DOMDocument $dom): void
+    {
+        $fragment = $dom->createDocumentFragment();
+        @$fragment->appendXML($html);
+        $textNode->parentNode->replaceChild($fragment, $textNode);
+    }
+
     private function getAutoLinksForContext($context)
     {
         $cacheKey = $this->getCacheKeyForContext($context);
@@ -130,7 +133,7 @@ class AutoLinkService
 
             if ($context) {
                 $query->where(function ($q) use ($context) {
-                    $q->whereDoesntHave('scopes'); // グローバルな定義
+                    $q->whereDoesntHave('scopes');
 
                     $folder = null;
                     if ($context instanceof Folder) {
@@ -144,8 +147,7 @@ class AutoLinkService
                     if ($folder) {
                         $folderIds = $folder->descendantsAndSelf($folder)->pluck('id');
                         $q->orWhereHas('scopes', function ($subQuery) use ($folderIds) {
-                            $subQuery->where('scopeable_type', (new Folder)->getMorphClass())
-                                ->whereIn('scopeable_id', $folderIds);
+                            $subQuery->where('scopeable_type', (new Folder)->getMorphClass())->whereIn('scopeable_id', $folderIds);
                         });
                     }
                 });
@@ -155,29 +157,19 @@ class AutoLinkService
         });
     }
 
-    /**
-     * コンテキストに応じたキャッシュキーを生成する
-     *
-     * @param mixed $context
-     * @return string
-     */
     protected function getCacheKeyForContext($context): string
     {
         if ($context instanceof Folder) {
             return 'auto_links_folder_' . $context->id;
         }
-
         if ($context instanceof LedgerDefine) {
             return 'auto_links_ledger_define_' . $context->id;
         }
-
         if ($context instanceof Ledger) {
-            // Ledgerの場合は、それが属するFolderのIDに基づいてキーを生成する
             if ($context->define && $context->define->folder) {
                 return 'auto_links_folder_' . $context->define->folder->id;
             }
         }
-
         return 'auto_links_global';
     }
 }

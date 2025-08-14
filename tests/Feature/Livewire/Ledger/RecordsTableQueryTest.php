@@ -24,7 +24,10 @@ class RecordsTableQueryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
+        // Use a unique email for each test to avoid constraint violations
+        $this->user = User::factory()->create([
+            'email' => 'test.' . \Illuminate\Support\Str::random(10) . '@example.com',
+        ]);
         // The component expects a root folder with id=1 to exist.
         Folder::factory()->create(['id' => 1, 'parent_id' => null]);
         $this->folder = Folder::factory()->create(['parent_id' => 1]);

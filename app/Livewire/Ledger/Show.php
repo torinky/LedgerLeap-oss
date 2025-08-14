@@ -22,7 +22,7 @@ class Show extends Component
 
     public bool $canView = false;
     public Ledger $ledgerRecord;
-    public $ledgerDefineRecord;
+    protected $ledgerDefineRecord; // Changed to protected
     public bool $canUpdate = false;
 
     // --- 差分表示用 ---
@@ -40,6 +40,8 @@ class Show extends Component
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
 
+    public ?string $highlight = null;
+
     public array $collapsedStates = [];
     public array $filteredColumns = [];
     public array $displayColumns = [];
@@ -52,6 +54,8 @@ class Show extends Component
 
     public function mount(int $ledgerId): void
     {
+        $this->highlight = request()->query('highlight');
+
         $this->ledgerRecord = Ledger::with([
             'define',
             'modifier:id,name',
@@ -61,6 +65,8 @@ class Show extends Component
         ])->findOrFail($ledgerId);
 
         $this->ledgerDefineRecord = $this->ledgerRecord->define;
+        $this->ledgerDefineRecord->refresh(); // Ensure column_define is loaded
+
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
         $this->prepareContentDiff();
 
@@ -220,13 +226,15 @@ class Show extends Component
 
         $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
             $this->ledgerRecord,
-            $this->ledgerDefineRecord
+            $this->ledgerDefineRecord,
+            $this->highlight
         );
 
         return view('livewire.ledger.show', [
             'groupedColumns' => $groupedColumns,
             'filteredColumns' => $this->filteredColumns,
             'displayColumns' => $this->displayColumns,
+            'ledgerDefineRecord' => $this->ledgerDefineRecord,
         ])->layout('layouts.app');
     }
 }
