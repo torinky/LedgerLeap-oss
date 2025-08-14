@@ -117,3 +117,46 @@ it('renders textarea with markdown and applies auto links', function () {
     // 4. Assertion
     expect($result->toHtml())->toBe($finalHtml);
 });
+
+it('renders auto_number with link', function () {
+    // 1. Setup
+    $columnDefine = new ColumnDefine([
+        'id' => 1,
+        'name' => 'Spec ID',
+        'type' => 'auto_number',
+        'order' => 1,
+        'options' => [],
+        'required' => false,
+        'unique' => true,
+        'sortBy' => false,
+        'hint' => '',
+        'file' => [],
+        'display_level' => 3,
+        'group' => null,
+    ]);
+
+    $inputValue = 'SPEC-001';
+    $expectedLink = '<a href="/ledgers?query=SPEC-001">SPEC-001</a>'; // Simplified for clarity
+
+    $ledgerRecord = new Ledger();
+
+    // 2. Mocks
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->once()
+        ->with(
+            htmlspecialchars($inputValue, ENT_QUOTES, 'UTF-8'),
+            $columnDefine,
+            $ledgerRecord
+        )
+        ->andReturn($expectedLink);
+
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+
+    // 3. Execution
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer);
+    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, $ledgerRecord);
+
+    // 4. Assertion
+    expect($result->toHtml())->toBe($expectedLink);
+});
