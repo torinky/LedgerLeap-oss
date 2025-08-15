@@ -9,6 +9,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Models\AutoLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -568,5 +569,51 @@ class ShowTest extends TestCase
         // 無効な displayLevel を設定した場合、変更されないことを確認
         $component->call('setDisplayLevel', 99);
         $component->assertSet('displayLevel', 3); // 3のまま
+    }
+
+    #[Test]
+    public function it_highlights_keywords_in_detail_view()
+    {
+        $this->actingAs($this->user);
+
+        // 台帳データの準備
+        $keyword = '詳細キーワード';
+        $contentWithKeyword = ['text_column' => 'これは' . $keyword . 'を含むテキストです。'];
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledger->define->id,
+            'content' => $contentWithKeyword,
+        ]);
+
+        // Livewireコンポーネントのテスト
+        Livewire::withQueryParams(['highlight' => $keyword])
+            ->test(Show::class, ['ledgerId' => $ledger->id])
+            ->assertOk()
+            ->assertSeeHtml('<mark class="text-error font-bold text-lg">' . $keyword . '</mark>');
+    }
+
+    #[Test]
+    public function it_displays_auto_links_in_detail_view()
+    {
+        $this->actingAs($this->user);
+
+        // 自動リンク定義の準備
+        AutoLink::factory()->create([
+            'label' => 'Test AutoLink Detail',
+            'pattern' => 'DOC-(\\d{3})',
+            'url_template' => '/l/DOC-$1',
+            'is_enabled' => true,
+        ]);
+
+        // 台帳データの準備
+        $autoLinkText = 'これはDOC-001を含むテキストです。';
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledger->define->id,
+            'content' => ['text_column' => $autoLinkText],
+        ]);
+
+        // Livewireコンポーネントのテスト
+        $component = Livewire::test(Show::class, ['ledgerId' => $ledger->id]);
+        $component->assertOk()
+            ->assertSeeHtml('<a href="/l/DOC-001" class="link link-primary">DOC-001</a>');
     }
 }

@@ -1,17 +1,18 @@
 <?php
 
-namespace Tests\Feature\Livewire\Ledger;
+namespace tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\RecordsTable;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\AutoLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
-use Tests\TestCase;
+use tests\TestCase;
 
 class RecordsTableQueryTest extends TestCase
 {
@@ -31,11 +32,20 @@ class RecordsTableQueryTest extends TestCase
         // The component expects a root folder with id=1 to exist.
         Folder::factory()->create(['id' => 1, 'parent_id' => null]);
         $this->folder = Folder::factory()->create(['parent_id' => 1]);
-        $this->ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 'text_column', 'name' => 'テキストカラム', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                // Add other column definitions as needed for other tests
+            ],
+        ]);
         $this->actingAs($this->user);
         // Add permission for the user to view LedgerDefines
         Permission::findOrCreate('view_ledger_defines');
         $this->user->givePermissionTo('view_ledger_defines');
+        // Add permission for the user to view Ledgers
+        Permission::findOrCreate('ledgerView');
+        $this->user->givePermissionTo('ledgerView');
     }
 
     #[Test]
@@ -112,5 +122,58 @@ class RecordsTableQueryTest extends TestCase
             ->test(RecordsTable::class)
             ->assertOk()
             ->assertSee('unique-id-for-list');
+    }
+
+    #[Test]
+    public function it_highlights_keywords_in_list_view()
+    {
+        // テストデータの準備
+        $keyword = 'テストキーワード';
+        $contentWithKeyword = ['text_column' => 'これは' . $keyword . 'を含むテキストです。'];
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $contentWithKeyword,
+        ]);
+
+        // Livewireコンポーネントのテスト
+        Livewire::withQueryParams([
+            'q' => $keyword,
+            'f' => [$this->folder->id],
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->folder->id
+        ])
+            ->test(RecordsTable::class)
+            ->assertOk()
+            ->assertSeeHtml('<mark class="text-error font-bold text-lg">' . $keyword . '</mark>');
+    }
+
+    #[Test]
+    public function it_displays_auto_links_in_list_view()
+    {
+        // 自動リンク定義の準備
+        AutoLink::factory()->create([
+            'label' => 'Test AutoLink',
+            'pattern' => 'SPEC-(\\d{3})',
+            'url_template' => '/l/SPEC-$1',
+            'is_enabled' => true,
+        ]);
+
+        // 台帳データの準備
+        $autoLinkText = 'これはSPEC-007を含むテキストです。';
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['text_column' => $autoLinkText],
+        ]);
+
+        // Livewireコンポーネントのテスト
+        $component = Livewire::withQueryParams([
+            'q' => 'SPEC-007',
+            'f' => [$this->folder->id],
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->folder->id
+        ])->test(RecordsTable::class);
+        $component->assertOk()
+            ->assertSeeHtml('href="/l/SPEC-007"')
+            ->assertSee('SPEC-007');
     }
 }

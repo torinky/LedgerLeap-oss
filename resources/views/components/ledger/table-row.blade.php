@@ -48,9 +48,9 @@
         @elseif (empty($ledgerRecord->content[$columnDefine->id]))
             <x-ledger.empty-message/>
         @else
-            {{ ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
+            {!! ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
                          ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword) }}
+                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword) !!}
         @endif
         </td>
     @endforeach
