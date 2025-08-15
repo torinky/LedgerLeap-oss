@@ -51,7 +51,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
+
+if (app()->environment('testing')) {
+    Route::get('/test/ledger-diff-viewer/{ledger}', function (\App\Models\Ledger $ledger) {
+        return view('testing.ledger-diff-viewer-test', ['ledger' => $ledger]);
+    })->name('testing.ledger-diff-viewer');
+}
+
 
 Route::middleware('auth')->group(function () {
 
