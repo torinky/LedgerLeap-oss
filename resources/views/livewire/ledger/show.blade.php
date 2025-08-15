@@ -38,6 +38,7 @@
                     </x-slot:menu>
 
                     {{-- 差分表示トグルをここに再挿入 --}}
+
                     @if($hasChangedColumns)
                         <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" class="m-3"/>
                     @endif
@@ -67,7 +68,7 @@
                                         $columnId = data_get($columnDefine, 'id');
                                         $change = $contentChanges[$columnId] ?? null; // このカラムの変更データを取得
                                     @endphp
-                                    <tr class="{{ $change && $change['changed'] && $hasChangedColumns ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
+                                    <tr class=" {{ $change && $change['changed'] && $hasChangedColumns ? 'bg-warning/10 ' : '' }} hover:bg-base-300">
                                         <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
                                             {{ data_get($columnDefine, 'name') }}
                                             @if($change && $change['changed'] && $hasChangedColumns)
@@ -109,6 +110,18 @@
                         </div>
                     </div>
                     @endforeach
+
+
+                    {{-- 新しい LedgerDiffViewer コンポーネント --}}
+                    <livewire:ledger.ledger-diff-viewer
+                        :ledgerRecord="$ledgerRecord"
+                        :canView="$canView"
+                        :currentLedgerAttachments="$currentLedgerAttachments"
+                        :highlight="$highlight"
+                        {{-- :collapsedStates="$collapsedStates" --}} {{-- 削除 --}}
+                        :displayLevel="$displayLevel"
+                        wire:key="diff-viewer-{{ $ledgerRecord->id }}"
+                    />
 
                     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
                         <i class="fa-solid fa-user mr-2"></i>{{$ledgerRecord->modifier->name}}

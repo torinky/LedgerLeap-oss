@@ -107,6 +107,8 @@ class Show extends Component
     public function updatedDisplayLevel(int $level): void
     {
         $this->filteredColumns = $this->calculateFilteredColumns();
+        // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
+        $this->dispatch('displayLevelUpdated', displayLevel: $level);
     }
 
     public function setDisplayLevel(int $level): void
@@ -114,6 +116,8 @@ class Show extends Component
         if (in_array($level, [1, 2, 3])) {
             $this->displayLevel = $level;
             $this->filteredColumns = $this->calculateFilteredColumns();
+            // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
+            $this->dispatch('displayLevelUpdated', displayLevel: $level);
         }
     }
 
@@ -161,7 +165,16 @@ class Show extends Component
             $this->collapsedStates[$groupName] = false;
         }
         $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
+
+        // LedgerDiffViewer に collapsedStates の変更を通知するイベントを発火 (削除)
+        // $this->dispatch('collapsedStatesUpdated', collapsedStates: $this->collapsedStates);
     }
+
+    // #[On('toggleGroupFromDiffViewer')] (削除)
+    // public function toggleGroupFromDiffViewer(string $groupName): void
+    // {
+    //     $this->toggleGroup($groupName);
+    // }
 
     protected function prepareContentDiff(): void
     {

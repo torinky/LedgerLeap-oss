@@ -187,9 +187,7 @@ Livewireのフィーチャーテストは、コンポーネントの内部状態
 
 ### Step 3: `LedgerDiffViewer` コンポーネントの分離
 
-1.  `app/Livewire/Ledger/LedgerDiffViewer.php` を作成する。
-2.  差分表示関連のロジックを移動し、`LedgerDiffProcessor` サービスを利用するように実装する。
-3.  UIを `ledger-diff-viewer.blade.php` に切り出し、`Show.php` のビューに `<livewire:ledger.ledger-diff-viewer ...>` を組み込む。遅延ロード (`lazy`) の適用を検討する。
+詳細計画: [2025-08-15_ledger_show_refactoring_step3_plan.md](./2025-08-15_ledger_show_refactoring_step3_plan.md)
 
 ### Step 4: `Show` 親コンポーネントのクリーンアップ
 
