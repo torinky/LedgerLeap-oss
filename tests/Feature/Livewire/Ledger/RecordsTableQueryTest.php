@@ -153,7 +153,7 @@ class RecordsTableQueryTest extends TestCase
         // 自動リンク定義の準備
         AutoLink::factory()->create([
             'label' => 'Test AutoLink',
-            'pattern' => 'SPEC-(\\d{3})',
+            'pattern' => '/SPEC-(\\d{3})/',
             'url_template' => '/l/SPEC-$1',
             'is_enabled' => true,
         ]);

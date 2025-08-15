@@ -599,7 +599,7 @@ class ShowTest extends TestCase
         // 自動リンク定義の準備
         AutoLink::factory()->create([
             'label' => 'Test AutoLink Detail',
-            'pattern' => 'DOC-(\\d{3})',
+            'pattern' => '/DOC-(\\d{3})/',
             'url_template' => '/l/DOC-$1',
             'is_enabled' => true,
         ]);
