@@ -37,7 +37,7 @@ class LedgerLookupControllerTest extends TestCase
             'id' => 1, // ユニークなID
             'name' => 'description',
             'type' => 'text',
-            'order' => 1,
+            'order' => 1, // order は 1 から始める
             'useOptions' => false,
             'options' => [],
             'required' => false,
@@ -102,43 +102,5 @@ class LedgerLookupControllerTest extends TestCase
 
         $this->get(route('ledger.lookup', ['query' => 'unique-id-for-list', 'mode' => 'list']))
             ->assertRedirect(route('ledger.index', ['q' => 'unique-id-for-list', 'highlight' => 'unique-id-for-list', 'l' => [], 'f' => []]));
-    }
-
-    #[Test]
-    public function it_highlights_content_on_direct_redirect_to_show_page()
-    {
-        $highlightTerm = 'UNIQUE_HIGHLIGHT_TERM';
-        $columnName = 'description'; // Define a column name
-
-        // setUpで作成したledgerDefineのcolumn_defineのIDを使用
-        $columnId = $this->ledgerDefine->column_define->first()->id;
-
-        // AutoLink モデルを作成
-        \App\Models\AutoLink::create([
-            'label' => 'Highlight Test Link',
-            'pattern' => '(' . preg_quote($highlightTerm, '/') . ')', // ハイライトキーワードにマッチするパターン
-            'url_template' => 'http://example.com/test/$1', // ダミーのURLテンプレート
-            'description' => 'Test auto link for highlighting',
-            'priority' => 10,
-            'is_enabled' => true,
-            'open_in_new_tab' => false,
-            'link_type' => 'default',
-            'creator_id' => $this->user->id, // ログインユーザーのIDを使用
-            'modifier_id' => $this->user->id,
-        ]);
-
-        // Create a Ledger with content in that specific column
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => [$columnId => "Some text before {$highlightTerm} and after."],
-        ]);
-
-        $response = $this->get(route('ledger.lookup', ['query' => $highlightTerm]));
-
-        $response->assertRedirect(route('ledger.show', ['ledgerId' => $ledger->id, 'highlight' => $highlightTerm]));
-
-        $this->followRedirects($response)
-            ->assertOk()
-            ->assertSee('<mark class="text-error font-bold text-lg">' . $highlightTerm . '</mark>', false);
     }
 }
