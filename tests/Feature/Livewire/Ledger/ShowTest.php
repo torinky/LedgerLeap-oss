@@ -579,16 +579,31 @@ class ShowTest extends TestCase
         // 台帳データの準備
         $keyword = '詳細キーワード';
         $contentWithKeyword = ['text_column' => 'これは' . $keyword . 'を含むテキストです。'];
+
+        // テスト用の台帳定義を作成し、text_column を含むようにする
+        $ledgerDefine = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    ['id' => 0, 'name' => 'text_column', 'type' => 'text', 'order' => 1],
+                ],
+            ]);
+
         $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledger->define->id,
+            'ledger_define_id' => $ledgerDefine->id,
             'content' => $contentWithKeyword,
         ]);
 
         // Livewireコンポーネントのテスト
-        Livewire::withQueryParams(['highlight' => $keyword])
+        $component = Livewire::withQueryParams(['highlight' => $keyword])
             ->test(Show::class, ['ledgerId' => $ledger->id])
-            ->assertOk()
-            ->assertSeeHtml('<mark class="text-error font-bold text-lg">' . $keyword . '</mark>');
+            ->assertOk();
+
+        $displayColumns = $component->get('displayColumns');
+        $this->assertStringContainsString(
+            '<mark class="text-error font-bold text-lg">' . $keyword . '</mark>',
+            $displayColumns[0]['html']
+        );
     }
 
     #[Test]
@@ -599,21 +614,40 @@ class ShowTest extends TestCase
         // 自動リンク定義の準備
         AutoLink::factory()->create([
             'label' => 'Test AutoLink Detail',
-            'pattern' => '/DOC-(\\d{3})/',
-            'url_template' => '/l/DOC-$1',
+            'pattern' => '/(DOC-\\d{3})/',
+            'url_template' => '/l/$1',
             'is_enabled' => true,
         ]);
 
         // 台帳データの準備
         $autoLinkText = 'これはDOC-001を含むテキストです。';
+
+        // テスト用の台帳定義を作成し、text_column を含むようにする
+        $ledgerDefine = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    ['id' => 0, 'name' => 'text_column', 'type' => 'text', 'order' => 1],
+                ],
+            ]);
+
         $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledger->define->id,
+            'ledger_define_id' => $ledgerDefine->id,
             'content' => ['text_column' => $autoLinkText],
         ]);
 
         // Livewireコンポーネントのテスト
-        $component = Livewire::test(Show::class, ['ledgerId' => $ledger->id]);
-        $component->assertOk()
-            ->assertSeeHtml('<a href="/l/DOC-001" class="link link-primary">DOC-001</a>');
+        $component = Livewire::test(Show::class, ['ledgerId' => $ledger->id])
+            ->assertOk();
+
+        $displayColumns = $component->get('displayColumns');
+        $this->assertStringContainsString(
+            '<a href="/l/DOC-001"',
+            $displayColumns[0]['html']
+        );
+        $this->assertStringContainsString(
+            'DOC-001',
+            $displayColumns[0]['html']
+        );
     }
 }

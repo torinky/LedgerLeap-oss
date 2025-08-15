@@ -46,6 +46,9 @@ class RecordsTableQueryTest extends TestCase
         // Add permission for the user to view Ledgers
         Permission::findOrCreate('ledgerView');
         $this->user->givePermissionTo('ledgerView');
+        // Add permission for the user to view AutoLinks (追加)
+        Permission::findOrCreate('view_auto_links');
+        $this->user->givePermissionTo('view_auto_links');
     }
 
     #[Test]
@@ -153,8 +156,8 @@ class RecordsTableQueryTest extends TestCase
         // 自動リンク定義の準備
         AutoLink::factory()->create([
             'label' => 'Test AutoLink',
-            'pattern' => '/SPEC-(\\d{3})/',
-            'url_template' => '/l/SPEC-$1',
+            'pattern' => '/(SPEC-\\d{3})/',
+            'url_template' => '/l/$1',
             'is_enabled' => true,
         ]);
 
