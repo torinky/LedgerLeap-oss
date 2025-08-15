@@ -54,13 +54,6 @@ class LedgerDiffViewer extends Component
         $this->updateGroupedColumns();
     }
 
-    // collapsedStates は LedgerDiffViewer 自身で管理するため、このメソッドは不要になる
-    // #[On('collapsedStatesUpdated')]
-    // public function updateCollapsedStatesFromParent(array $collapsedStates): void
-    // {
-    //     $this->collapsedStates = $collapsedStates;
-    // }
-
     // グループの開閉を LedgerDiffViewer 自身で管理するメソッド
     public function toggleGroup(string $groupName): void
     {
@@ -147,5 +140,11 @@ class LedgerDiffViewer extends Component
     public function render()
     {
         return view('livewire.ledger.ledger-diff-viewer');
+    }
+
+    // placeholder メソッドを追加
+    public function placeholder(): string
+    {
+        return '<div>Loading diff viewer...</div>';
     }
 }
