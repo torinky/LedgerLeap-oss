@@ -4,9 +4,9 @@ namespace App\Livewire\Ledger;
 
 use App\Models\AttachedFile;
 use App\Models\Ledger;
-use App\Models\LedgerDiff;
+
 use App\Services\Ledger\LedgerContentProcessor;
-use App\Services\Ledger\LedgerDiffProcessor;
+
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
@@ -60,8 +60,7 @@ class Show extends Component
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
 
-        // $this->ledgerDefineRecord = $this->ledgerRecord->define;
-        // $this->ledgerDefineRecord->refresh(); // Ensure column_define is loaded
+        
 
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
         
@@ -162,15 +161,10 @@ class Show extends Component
         }
         $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
 
-        // LedgerDiffViewer に collapsedStates の変更を通知するイベントを発火 (削除)
-        // $this->dispatch('collapsedStatesUpdated', collapsedStates: $this->collapsedStates);
+        
     }
 
-    // #[On('toggleGroupFromDiffViewer')] (削除)
-    // public function toggleGroupFromDiffViewer(string $groupName): void
-    // {
-    //     $this->toggleGroup($groupName);
-    // }
+    
 
     
 
