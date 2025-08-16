@@ -33,12 +33,12 @@ class LedgerDiffViewer extends Component
     public function boot(LedgerDiffProcessor $ledgerDiffProcessor): void
     {
         $this->ledgerDiffProcessor = $ledgerDiffProcessor;
+        $this->updateGroupedColumns(); // groupedColumns の初期化を boot に移動
     }
 
     public function mount(): void
     {
         $this->prepareContentDiff();
-        $this->updateGroupedColumns(); // groupedColumns の初期化
     }
 
     // displayLevel の変更を検知して groupedColumns を更新する

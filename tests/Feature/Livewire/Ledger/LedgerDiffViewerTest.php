@@ -75,15 +75,13 @@ class LedgerDiffViewerTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
 
-        // displayLevel=1 (デフォルト) でアクセス
-        $this->get(route('testing.ledger-diff-viewer', ['ledger' => $ledger->id]))
-            ->assertStatus(200)
+        // Test with displayLevel = 1
+        Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger, 'displayLevel' => 1])
             ->assertSee('Column Level 1')
             ->assertDontSee('Column Level 2');
 
-        // displayLevel=2 でアクセス
-        $this->get(route('testing.ledger-diff-viewer', ['ledger' => $ledger->id, 'dl' => 2]))
-            ->assertStatus(200)
+        // Test with displayLevel = 2
+        Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger, 'displayLevel' => 2])
             ->assertSee('Column Level 1')
             ->assertSee('Column Level 2');
     }
