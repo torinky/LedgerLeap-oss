@@ -29,6 +29,10 @@ class LedgerDiffViewerTest extends TestCase
         $this->mock(ColumnHtmlService::class, function (Mockery\MockInterface $mock) {
             $mock->shouldReceive('show')
                 ->andReturnUsing(function ($columnDefineData, $initialValue, $canView, $attrs, $idPrefix, $asCreate, $record, $highlight) {
+                    // initialValue が配列の場合の処理を追加
+                    if (is_array($initialValue)) {
+                        $initialValue = json_encode($initialValue);
+                    }
                     // initialValue をそのまま返す
                     return new \Illuminate\Support\HtmlString(htmlspecialchars((string) $initialValue, ENT_QUOTES, 'UTF-8'));
                 });

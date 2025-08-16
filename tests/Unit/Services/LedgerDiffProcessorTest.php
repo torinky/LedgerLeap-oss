@@ -135,7 +135,7 @@ class LedgerDiffProcessorTest extends TestCase
         $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
         // For debugging
-        dump(array_keys($result['contentChanges']));
+//        dump(array_keys($result['contentChanges']));
 
         $this->assertTrue($result['hasChangedColumns']);
         $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);

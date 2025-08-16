@@ -7,6 +7,7 @@ use App\Models\ColumnDefine;
 use App\Models\User; // Required by LedgerDefineFactory
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LedgerDefineWithColumnDefinesTest extends TestCase
@@ -132,9 +133,9 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
     }
 
     /**
-     * @test
      * Test the custom PhoneNumberType for extensibility.
      */
+    #[Test]
     public function test_custom_phone_number_type_extensibility()
     {
         // 1. Create a ColumnDefine instance with the new 'phone' type

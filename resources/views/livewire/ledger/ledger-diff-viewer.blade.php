@@ -57,7 +57,7 @@
                                         <span>{{ $columnDefine->name }}</span>
                                         @if($hasChangedColumns && $status !== 'unchanged')
                                             <div class="tooltip tooltip-right ml-1 cursor-pointer" data-tip="{{ __('ledger.changed') }}">
-                                                <x-mary-icon name="o-pencil-square" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                                <x-mary-icon name="o-pencil-square" class="w-5 h-5 text-error-content/50" />
                                             </div>
                                         @endif
                                         </div>
