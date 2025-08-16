@@ -247,6 +247,25 @@ class ColumnDefine
         return $this->inputType;
     }
 
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'type' => $this->type,
+            'order' => $this->order,
+            'useOptions' => $this->useOptions,
+            'options' => $this->options,
+            'required' => $this->required,
+            'unique' => $this->unique,
+            'sortBy' => $this->sortBy,
+            'hint' => $this->hint,
+            'file' => $this->file,
+            'display_level' => $this->display_level,
+            'group' => $this->group,
+        ];
+    }
+
     public static function normalizeArrayOrCollection( $columnDefinesSource): array
     {
         $result = [];

@@ -181,7 +181,6 @@ class Show extends Component
         $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
         $diffResult = $this->ledgerDiffProcessor->prepareContentDiff(
             $this->ledgerRecord,
-            $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
             $this->comparisonTargetDiff
         );
         $this->contentChanges = $diffResult['contentChanges'];

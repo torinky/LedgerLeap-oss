@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerDiffProcessor;
@@ -23,9 +24,10 @@ class LedgerDiffViewer extends Component
     // Show.php から渡されるプロパティ
     public bool $canView = false;
     public ?EloquentCollection $currentLedgerAttachments = null;
+    public ?EloquentCollection $oldAttachments = null;
     public ?string $highlight = null;
     public array $collapsedStates = []; // グループの開閉状態 (LedgerDiffViewer 自身で管理)
-    public ?Collection $groupedColumns = null; // 表示用のグループ化されたカラム (Illuminate\Support\Collection)
+    public ?array $groupedColumns = null; // 表示用のグループ化されたカラム (多次元配列)
     public int $displayLevel = 1;
 
     protected LedgerDiffProcessor $ledgerDiffProcessor;
@@ -122,7 +124,10 @@ class LedgerDiffViewer extends Component
                     return $firstColumn['order'] ?? PHP_INT_MAX;
                 }
                 return $groupName;
-            });
+            })
+            // Livewireが扱えるように、Collectionを多次元配列に変換する
+            ->map(fn(Collection $group) => $group->all())
+            ->all();
     }
 
     protected function prepareContentDiff(): void
@@ -130,11 +135,34 @@ class LedgerDiffViewer extends Component
         $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
         $diffResult = $this->ledgerDiffProcessor->prepareContentDiff(
             $this->ledgerRecord,
-            $this->ledgerRecord->define,
             $this->comparisonTargetDiff
         );
         $this->contentChanges = $diffResult['contentChanges'];
         $this->hasChangedColumns = $diffResult['hasChangedColumns'];
+
+        // 差分表示に必要な添付ファイル情報を事前にロードしてプロパティに保持
+        if ($this->comparisonTargetDiff) {
+            $oldFileHashes = [];
+            if (!empty($this->comparisonTargetDiff->content)) {
+                foreach ($this->comparisonTargetDiff->content as $contentItem) {
+                    if (is_array($contentItem)) {
+                        array_push($oldFileHashes, ...array_keys($contentItem));
+                    }
+                }
+            }
+            $oldFileHashes = array_unique($oldFileHashes);
+
+            if (!empty($oldFileHashes)) {
+                $this->oldAttachments = AttachedFile::where('ledger_id', $this->comparisonTargetDiff->ledger_id)
+                    ->whereIn('hashedbasename', $oldFileHashes)
+                    ->get()
+                    ->keyBy('hashedbasename');
+            } else {
+                $this->oldAttachments = new EloquentCollection();
+            }
+        } else {
+            $this->oldAttachments = new EloquentCollection();
+        }
     }
 
     public function render()
