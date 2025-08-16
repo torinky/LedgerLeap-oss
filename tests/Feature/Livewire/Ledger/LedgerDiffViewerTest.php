@@ -140,4 +140,49 @@ class LedgerDiffViewerTest extends TestCase
         // Old Value も表示されないため、assertSee は使用しない
         // __('ledger.diff.deleted') も表示されないため、assertSeeHtml は使用しない
     }
+
+    #[Test]
+    public function it_displays_version_numbers_correctly(): void
+    {
+        // 1. Setup V1 data
+        $v1ColumnDefines = [
+            $this->makeColumnDefine(1, 'Column 1', 'text', 1),
+        ];
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $v1ColumnDefines]);
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
+            'content' => ['Value 1'],
+            'version' => 1, // Ledger のバージョン
+        ]);
+        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'column_define' => $v1ColumnDefines,
+            'content' => ['Old Value 1'],
+            'version' => 0, // 古いDiffのバージョン
+        ]);
+        $ledger->latest_diff_id = $oldDiff->id; // latest_diff_id を設定
+        $ledger->save();
+
+        // 2. Setup V2 data (update content, increment ledger version)
+        $ledger->update([
+            'content' => ['New Value 1'],
+            'version' => 2, // Ledger の新しいバージョン
+        ]);
+        $newDiff = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'column_define' => $v1ColumnDefines,
+            'content' => ['New Value 1'],
+            'version' => 1, // 新しいDiffのバージョン
+        ]);
+        $ledger->latest_diff_id = $newDiff->id; // latest_diff_id を更新
+        $ledger->save();
+
+
+        // 3. Render component and assert
+        $component = Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger])
+            ->set('showChanges', true); // 差分表示を有効にする
+
+        // 現在のバージョンと過去のバージョンが表示されることを確認
+        $component->assertSeeHtml(__('ledger.diff.current_version') . ' Version. 2'); // Ledger の最新バージョン
+        $component->assertSeeHtml(__('ledger.diff.past_version') . ' Version. 0');   // oldDiff のバージョン
+    }
 }

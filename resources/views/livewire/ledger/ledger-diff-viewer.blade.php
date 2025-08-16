@@ -27,6 +27,23 @@
                 </div>
                 <div class="collapse-content">
                     <table class="table table-zebra table-compact table-hover table-fixed w-full">
+                        <thead>
+                            <tr>
+                                <th class="w-1/3 lg:w-1/4 break-words align-top pt-2"></th>
+                                @if($showChanges)
+                                    <th class="w-1/3 lg:w-3/8 break-words align-top pt-2 text-center">
+                                        {{ __('ledger.diff.current_version') }} Version. {{ $currentVersion }}
+                                    </th>
+                                    <th class="w-1/3 lg:w-3/8 break-words align-top pt-2 text-center">
+                                        {{ __('ledger.diff.past_version') }} Version. {{ $pastVersion ?? '-' }}
+                                    </th>
+                                @else
+                                    <th class="break-words align-top pt-2 text-center" colspan="2">
+                                        {{ __('ledger.diff.current_version') }} Version. {{ $currentVersion }}
+                                    </th>
+                                @endif
+                            </tr>
+                        </thead>
                         <tbody>
                         @foreach($columnsInGroup as $columnInGroup)
                             @php

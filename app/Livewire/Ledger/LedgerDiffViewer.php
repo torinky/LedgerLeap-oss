@@ -171,7 +171,13 @@ class LedgerDiffViewer extends Component
 
     public function render()
     {
-        return view('livewire.ledger.ledger-diff-viewer');
+        $currentVersion = $this->ledgerRecord->version;
+        $pastVersion = $this->comparisonTargetDiff ? $this->comparisonTargetDiff->version : null;
+
+        return view('livewire.ledger.ledger-diff-viewer', [
+            'currentVersion' => $currentVersion,
+            'pastVersion' => $pastVersion,
+        ]);
     }
 
     // placeholder メソッドを追加

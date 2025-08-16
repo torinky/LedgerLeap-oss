@@ -1025,5 +1025,7 @@
         'new_value' => '変更後',
         'not_exist' => '(項目なし)',
         'deleted' => '(削除済み)',
+        'current_version' => '現状',
+        'past_version' => '過去',
     ],
 ];
