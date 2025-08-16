@@ -25,14 +25,10 @@ class Show extends Component
     
     public bool $canUpdate = false;
 
-    // --- 差分表示用 ---
-    public ?LedgerDiff $comparisonTargetDiff = null;
-    public array $contentChanges = [];
-    public bool $hasChangedColumns = false;
-    public bool $showChanges = false;
+    
 
     protected LedgerContentProcessor $ledgerContentProcessor;
-    protected LedgerDiffProcessor $ledgerDiffProcessor;
+    
 
     public ?Collection $currentLedgerAttachments = null;
     public string $selectedTab = 'details';
@@ -46,10 +42,10 @@ class Show extends Component
     public array $filteredColumns = [];
     public array $displayColumns = [];
 
-    public function boot(LedgerContentProcessor $ledgerContentProcessor, LedgerDiffProcessor $ledgerDiffProcessor): void
+    public function boot(LedgerContentProcessor $ledgerContentProcessor): void
     {
         $this->ledgerContentProcessor = $ledgerContentProcessor;
-        $this->ledgerDiffProcessor = $ledgerDiffProcessor;
+        
     }
 
     public function mount(int $ledgerId): void
@@ -68,7 +64,7 @@ class Show extends Component
         // $this->ledgerDefineRecord->refresh(); // Ensure column_define is loaded
 
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
-        $this->prepareContentDiff(); // ここで ledgerDefineRecord を引数として渡すように変更
+        
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
@@ -176,16 +172,7 @@ class Show extends Component
     //     $this->toggleGroup($groupName);
     // }
 
-    protected function prepareContentDiff(): void
-    {
-        $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
-        $diffResult = $this->ledgerDiffProcessor->prepareContentDiff(
-            $this->ledgerRecord,
-            $this->comparisonTargetDiff
-        );
-        $this->contentChanges = $diffResult['contentChanges'];
-        $this->hasChangedColumns = $diffResult['hasChangedColumns'];
-    }
+    
 
     public function retryProcessing(int $attachedFileId): void
     {

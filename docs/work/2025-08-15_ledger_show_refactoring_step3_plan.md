@@ -97,11 +97,51 @@ Step 3.1 の作業中に、既に Step 3.2 の「UIの分離」と「`Show.blade
 2.  **既存テストの実行:**
     *   `vendor/bin/sail pest tests/Feature/Livewire/Ledger/ShowTest.php` を実行し、既存のフィーチャーテストがパスすることを確認します。これにより、`Show.php` からのロジックとUIの分離が既存機能に影響を与えていないことを検証します。
 
+**--- 実施結果と課題、解決策 (2025-08-17) ---**
+
+本ステップでは、`LedgerDiffViewer` コンポーネントの機能が正しく動作することを保証するためのテストを実装し、既存の `Show.php` のテストがリファクタリングによる影響を受けていないことを確認しました。
+
+1.  **新規テストの作成:**
+    *   `tests/Feature/Livewire/Ledger/LedgerDiffViewerTest.php` を新規作成し、以下のテストケースを実装しました。
+        *   `component_mounts_and_renders_grouped_columns_correctly()`: コンポーネントがマウントされ、グループ化されたカラムが正しくレンダリングされることを確認。
+        *   `it_filters_columns_by_display_level()`: 表示レベルによるカラムのフィルタリングが正しく行われることを確認。
+        *   `it_correctly_displays_diffs_including_deleted_columns()`: 削除されたカラムを含む差分が正しく表示されることを確認。このテストは、`LedgerDiffProcessor` サービスが内部的に呼び出され、差分計算ロジックが正しく機能していることを間接的に検証しています。
+    *   これらのテストはすべてパスしました。
+
+2.  **既存テストの実行と修正:**
+    *   `vendor/bin/sail pest tests/Feature/Livewire/Ledger/ShowTest.php` を実行したところ、当初 `it_prepares_content_diff_correctly()` と `it_finds_comparison_target_diff_correctly()` の2つのテストケースが失敗しました。
+    *   **原因:** これらのテストケースは、`Show.php` コンポーネントが差分計算ロジックを保持していることを前提としていましたが、このロジックはリファクタリングによって `LedgerDiffViewer` コンポーネントに完全に移管されたため、`Show.php` には存在しなくなっていました。
+    *   **解決策:**
+        *   `ShowTest.php` から、移管済みのロジックに関するテストケース (`it_prepares_content_diff_correctly`, `it_finds_comparison_target_diff_correctly`) を削除しました。これらの機能は `LedgerDiffViewerTest.php` で網羅されていることを確認済みです。
+        *   `Show.php` の `boot` メソッド内に残っていた、削除済みの `LedgerDiffProcessor` プロパティへの代入行 (`$this->ledgerDiffProcessor = $ledgerDiffProcessor;`) を削除しました。
+    *   これらの修正後、`ShowTest.php` のすべてのテストがパスすることを確認しました。
+
+**--- 実施結果と課題、解決策 (2025-08-17) 終了 ---**
+
 ### Step 3.4: `Show` 親コンポーネントのクリーンアップ
 
 1.  **プロパティとメソッドの削除:**
     *   `app/Livewire/Ledger/Show.php` から、`LedgerDiffViewer` コンポーネントに移動した差分表示関連のプロパティ（`comparisonTargetDiff`, `contentChanges`, `hasChangedColumns`, `showChanges`）とメソッド（`prepareContentDiff()`）を完全に削除します。
     *   `boot` メソッドから `LedgerDiffProcessor` の依存性注入を削除します。
+
+**--- 実施結果と課題、解決策 (2025-08-17) ---**
+
+本ステップでは、`Show.php` コンポーネントから、`LedgerDiffViewer` に移管された差分表示関連のコードを完全に削除し、親コンポーネントの責務をさらに明確化しました。
+
+1.  **プロパティの削除:**
+    *   `app/Livewire/Ledger/Show.php` から、以下のプロパティを完全に削除しました。
+        *   `public ?LedgerDiff $comparisonTargetDiff = null;`
+        *   `public array $contentChanges = [];`
+        *   `public bool $hasChangedColumns = false;`
+        *   `public bool $showChanges = false;`
+2.  **メソッドの削除:**
+    *   `app/Livewire/Ledger/Show.php` から、`protected function prepareContentDiff(): void` メソッドを完全に削除しました。
+3.  **依存性注入の削除:**
+    *   `app/Livewire/Ledger/Show.php` の `boot` メソッドの引数から `LedgerDiffProcessor $ledgerDiffProcessor` を削除しました。
+    *   `protected LedgerDiffProcessor $ledgerDiffProcessor;` のプロパティ宣言も削除しました。
+    *   `mount()` メソッド内に残っていた `prepareContentDiff()` の呼び出しも削除しました。
+
+**--- 実施結果と課題、解決策 (2025-08-17) 終了 ---**
 
 ## 3. 期待される成果物
 

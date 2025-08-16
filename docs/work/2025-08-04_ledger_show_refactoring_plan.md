@@ -185,7 +185,7 @@ Livewireのフィーチャーテストは、コンポーネントの内部状態
 *   **関連ドキュメント:**
     *   [Step 2 詳細計画・実績](./2025-08-11_ledger_show_refactoring_step2_plan.md)
 
-### Step 3: `LedgerDiffViewer` コンポーネントの分離
+### ✅ Step 3: `LedgerDiffViewer` コンポーネントの分離 (完了)
 
 詳細計画: [2025-08-15_ledger_show_refactoring_step3_plan.md](./2025-08-15_ledger_show_refactoring_step3_plan.md)
 
