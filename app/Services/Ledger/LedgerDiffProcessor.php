@@ -40,6 +40,7 @@ class LedgerDiffProcessor
     {
         $currentContent = $ledgerRecord->content ?? [];
         $currentColumnDefines = collect($ledgerRecord->define->column_define ?? [])->keyBy('id');
+        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
         if (!$comparisonTargetDiff) {
             // 比較対象がない場合は、現在の内容のみを整形して返す
@@ -66,8 +67,10 @@ class LedgerDiffProcessor
         // 比較対象がある場合
         $oldContent = $comparisonTargetDiff->content ?? [];
         $oldColumnDefines = collect($comparisonTargetDiff->column_define ?? [])->keyBy('id');
+        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - oldColumnDefines:', $oldColumnDefines->toArray());
 
         $allColumnIds = $currentColumnDefines->keys()->merge($oldColumnDefines->keys())->unique()->values();
+        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - allColumnIds:', $allColumnIds->toArray());
 
         $currentSortedIds = $currentColumnDefines->sortBy('id')->pluck('id')->values();
         $oldSortedIds = $oldColumnDefines->sortBy('id')->pluck('id')->values();

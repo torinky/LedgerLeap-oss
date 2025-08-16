@@ -24,10 +24,10 @@ beforeEach(function () {
     Permission::create(['name' => 'viewAny']);
 
     // ユーザーの作成
-    $this->adminUser = User::factory()->create();
+    $this->adminUser = User::factory()->create(['email' => fake()->unique()->safeEmail()]);
     $this->adminUser->givePermissionTo('viewAny');
 
-    $this->generalUser = User::factory()->create();
+    $this->generalUser = User::factory()->create(['email' => fake()->unique()->safeEmail()]);
 
     // テストデータの階層構造を作成
     $this->folderA = Folder::factory()->create(['title' => 'Folder A']);

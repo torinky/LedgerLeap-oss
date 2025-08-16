@@ -17,10 +17,12 @@
                  @if(!($collapsedStates[$groupName] ?? false)) open @endif >
                 <div class="collapse-title text-xl font-medium" wire:click.prevent="toggleGroup('{{ $groupName }}')">
                     <h3 class="text-lg font-bold flex items-center">
-                        {{ $groupName }}
                         @if(collect($columnsInGroup)->contains(fn($col) => (is_array($col) ? ($col['required'] ?? false) : ($col->required ?? false))))
-                            <span class="ml-2 text-error text-sm">{{ __('ledger.form.required_group_indicator') }}</span>
+                            <div class="tooltip tooltip-right mr-2" data-tip="{{ __('ledger.form.required_group_indicator') }}">
+                                <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error" />
+                            </div>
                         @endif
+                            {{ $groupName }}
                     </h3>
                 </div>
                 <div class="collapse-content">
@@ -46,10 +48,19 @@
                             @endphp
                             <tr class="{{ $rowClass }}">
                                 <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
-                                    {{ $columnDefine->name }}
-                                    @if($hasChangedColumns && $status !== 'unchanged')
-                                        <span class="badge badge-xs badge-warning ml-1">{{ __('ledger.changed') }}</span>
-                                    @endif
+                                    <div class="flex items-center">
+                                        @if($columnDefine->required)
+                                            <div class="tooltip tooltip-top" data-tip="{{ __('ledger.column.required') }}">
+                                                <x-mary-icon name="o-check-circle" class="w-5 h-5 text-error mr-1" />
+                                            </div>
+                                        @endif
+                                        <span>{{ $columnDefine->name }}</span>
+                                        @if($hasChangedColumns && $status !== 'unchanged')
+                                            <div class="tooltip tooltip-right ml-1 cursor-pointer" data-tip="{{ __('ledger.changed') }}">
+                                                <x-mary-icon name="o-pencil-square" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                            </div>
+                                        @endif
+                                        </div>
                                 </th>
 
                                 @if($showChanges)
@@ -65,7 +76,7 @@
                                     <td class="w-1/3 lg:w-3/8 break-words align-top pt-2">
                                         {{-- Old Value --}}
                                         @if($status === 'added')
-                                            <div class="p-2 italic text-gray-400">({{ __('ledger.diff.not_exist') }})</div>
+                                            <div class="p-2 italic text-gray-400">{{ __('ledger.diff.not_exist') }}</div>
                                         @else
                                             {!! ColumnHtml::show($columnDefine, $oldValue, $canView, [], '', false, $ledgerRecord, $highlight, $oldAttachments) !!}
                                         @endif

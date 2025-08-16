@@ -429,7 +429,7 @@
             'group_name' => 'グループ名',
             'number' => '数値',
             'phone' => '電話番号',
-            'required_group_indicator' => '（必須項目あり）',
+            'required_group_indicator' => '必須項目あり',
             'select' => '1つを選択',
             'text' => '1行テキスト',
             'textarea' => '複数行テキスト',

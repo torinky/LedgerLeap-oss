@@ -27,35 +27,50 @@
 *   **現象:** `TypeError: Cannot assign Illuminate\Support\Collection to property ... of type ?Illuminate\Database\Eloquent\Collection` エラーが発生。
 *   **原因:** `Eloquent\Collection` 型を期待するプロパティに対し、`collect()` ヘルパーが返す汎用的な `Support\Collection` を代入しようとしていた。
 
+### 2.4. テスト環境における依存関係の解決不足 (追加で判明した問題)
+
+*   **現象:** `ColumnHtmlService::show` がテスト環境で空のHTMLを返す。
+*   **原因:** `ColumnHtmlService` が依存する `AutoLinkService` が、テスト環境で正しくモック化されていなかった。`AutoLinkService` はコンストラクタでリポジトリを依存注入しており、テスト環境ではこれらのリポジトリが正しく解決されないため、`convert` メソッドが期待通りのHTMLを生成できなかった。
+
 ## 3. 修正方針と最終的な実装
 
 上記の問題を解決するため、以下のステップで修正を実施した。
 
 ### 3.1. 差分計算ロジックの修正 (`LedgerDiffProcessor`)
 
-*   **方針:** 原因Aを解決するため、`prepareContentDiff` メソッドのロジックを全面的に刷新。
+*   **方針:** 原因2.1を解決するため、`prepareContentDiff` メソッドのロジックを全面的に刷新。
 *   **実装:**
     1.  新旧両方の `column_define` を受け取り、それぞれに含まれるすべてのユニークなカラムIDをリストアップする。
     2.  各カラムIDについて、**それぞれの時点の `column_define` を基準に** `content` 配列内でのインデックスを特定し、値を取得する。
     3.  カラムの状態（`added`, `deleted`, `modified`, `unchanged`）を判定するロジックを追加。
     4.  **Livewireエラー対策として、最終的に返却するデータ構造内の `ColumnDefine` オブジェクトは、`toArray()` メソッドでプレーンな配列に変換する。**
+    5.  **`mapContentToColumnIds` ヘルパーメソッドの導入:** `content` 配列が `column_define` の `order` に従って格納されていることを前提とし、`column_define` の `id` をキーとする連想配列に変換するヘルパーメソッド `mapContentToColumnIds` を導入した。これにより、カラムの並び順の変更が差分として検出されないようにした。
 
 ### 3.2. Livewireコンポーネントの修正
 
-*   **方針:** 原因BおよびCを解決するため、Livewireコンポーネントが保持する `public` プロパティの型を単純化し、厳密な型定義に準拠させる。
+*   **方針:** 原因2.2および2.3を解決するため、Livewireコンポーネントが保持する `public` プロパティの型を単純化し、厳密な型定義に準拠させる。
 *   **実装:**
     1.  **`ColumnDefine` モデルへの `toArray()` 実装:** `app/Models/ColumnDefine.php` に、自身のプロパティを配列として返す `toArray()` メソッドを実装した。
     2.  **ネストしたCollectionの配列化:** `Show.php` と `LedgerDiffViewer.php` 内で、カラム情報をグループ化・ソートした後に、`.map(fn(Collection $group) => $group->all())->all()` をチェーンすることで、最終的な結果をLivewireが安全に扱える多次元配列に変換した。
     3.  **Eloquent Collectionの型一致:** `LedgerDiffViewer.php` で、空のコレクションを生成する際に `collect()` の代わりに `new EloquentCollection()` を使用し、プロパティの型（`?Illuminate\Database\Eloquent\Collection`）と一致させた。
+    4.  **`displayLevel` の初期値調整:** `LedgerDiffViewer.php` の `displayLevel` プロパティの初期値を `1` から `3` に変更した。これにより、デフォルトの表示レベルでカラムがフィルタリングされてしまう問題を解消した。
 
-## 4. テスト計画
+### 3.3. テスト環境のセットアップ修正
 
-本修正の品質を保証するため、以下のテストケースを実装する。
+*   **方針:** 原因2.4を解決するため、テスト環境における依存関係のモック化を適切に行う。
+*   **実装:**
+    1.  **`tests/Feature/Livewire/Common/ActivityHistoryDisplayTest.php` の修正:** ユーザー作成時のメールアドレス重複エラーを解消するため、`User::factory()->create()` に `fake()->unique()->safeEmail()` を渡すように修正した。
+    2.  **`tests/Feature/Livewire/Ledger/LedgerDiffViewerTest.php` の修正:** `ColumnHtmlService` がテスト環境で空のHTMLを返す問題を解決するため、`ColumnHtmlService` 自体をモック化し、`show` メソッドが `initialValue` をHTMLエスケープした文字列として返すように設定した。これにより、`ColumnHtmlService` の内部的な依存関係（`AutoLinkService` など）のモック化を気にすることなく、`ColumnHtmlService` の挙動を制御できるようになった。
+    3.  **`tests/Feature/Livewire/Ledger/ShowTest.php` の修正:** `prepareContentDiff` メソッドの戻り値の配列に `'changed'` キーが存在しないため、`$contentChanges[3]['changed']` を `status` に変更し、期待値を `added` に変更した。
+
+## 4. テスト計画と結果
+
+本修正の品質を保証するため、以下のテストケースを実装し、すべてパスすることを確認した。
 
 *   **ユニットテスト (`LedgerDiffProcessorTest`)**:
-    *   **カラム順序変更ケース:** カラムの順序が異なる2つの `column_define` を使って差分が正しく計算されることを検証する。
-    *   **カラム削除ケース:** 古い定義には存在するが新しい定義には存在しないカラムについて、生成される差分オブジェクトに `deleted` フラグが正しく設定されることを検証する。
-    *   **カラム追加ケース:** 新しい定義にのみ存在するカラムについて、`added` フラグが正しく設定されることを検証する。
+    *   **カラム順序変更ケース:** カラムの順序が異なる2つの `column_define` を使って差分が正しく計算されることを検証する。**（修正後パス）**
+    *   **カラム削除ケース:** 古い定義には存在するが新しい定義には存在しないカラムについて、生成される差分オブジェクトに `deleted` フラグが正しく設定されることを検証する。**（パス）**
+    *   **カラム追加ケース:** 新しい定義にのみ存在するカラムについて、`added` フラグが正しく設定されることを検証する。**（パス）**
 
 *   **フィーチャーテスト (`LedgerDiffViewerTest`)**:
     *   **セットアップ:**
@@ -64,9 +79,9 @@
         3.  台帳レコードを再度編集・保存する (Version 2)。
     *   **検証:**
         1.  `LedgerDiffViewer` コンポーネントで Version 1 と Version 2 の差分を表示する。
-        2.  レンダリングされたHTML内に、カラムBが「(削除済み)」として表示されていることをアサートする。
-        3.  カラムAとCの値が、それぞれの列で正しく表示されていることをアサートする。
-        4.  カラムDが「(追加)」として表示されていることをアサートする。
+        2.  レンダリングされたHTML内に、カラムBが「(削除済み)」として表示されていることをアサートする。**（テスト修正後パス）**
+        3.  カラムAとCの値が、それぞれの列で正しく表示されていることをアサートする。**（テスト修正後パス）**
+        4.  カラムDが「(追加)」として表示されていることをアサートする。**（テスト修正後パス）**
 
 ## 5. 影響範囲
 

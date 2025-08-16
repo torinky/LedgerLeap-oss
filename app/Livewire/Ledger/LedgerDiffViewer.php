@@ -28,7 +28,7 @@ class LedgerDiffViewer extends Component
     public ?string $highlight = null;
     public array $collapsedStates = []; // グループの開閉状態 (LedgerDiffViewer 自身で管理)
     public ?array $groupedColumns = null; // 表示用のグループ化されたカラム (多次元配列)
-    public int $displayLevel = 1;
+    public int $displayLevel = 3;
 
     protected LedgerDiffProcessor $ledgerDiffProcessor;
 
@@ -89,11 +89,13 @@ class LedgerDiffViewer extends Component
             }
         }
 
-        $this->groupedColumns = collect($this->ledgerRecord->define->column_define)
+        $filteredColumns = collect($this->ledgerRecord->define->column_define)
             ->filter(function ($column) {
                 $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
                 return $columnDisplayLevel <= $this->displayLevel;
-            })
+            });
+
+        $grouped = $filteredColumns
             ->map(function ($column) {
                 if (is_array($column)) {
                     return $column;
@@ -117,7 +119,9 @@ class LedgerDiffViewer extends Component
             ->groupBy(function ($column) {
                 $group = $column['group'] ?? '';
                 return $group === '' ? __('ledger.form.group_default') : $group;
-            })
+            });
+
+        $this->groupedColumns = $grouped
             ->sortBy(function ($columns, $groupName) {
                 if ($columns->isNotEmpty()) {
                     $firstColumn = $columns->first();

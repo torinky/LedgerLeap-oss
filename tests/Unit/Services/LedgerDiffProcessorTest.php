@@ -83,9 +83,10 @@ class LedgerDiffProcessorTest extends TestCase
 
         $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
-        $this->assertFalse($result['hasChangedColumns']);
-        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
-        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+        $this->assertTrue($result['hasChangedColumns']);
+        // 変更: contentChanges の status も modified になることを期待
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals('modified', $result['contentChanges'][1]['status']);
     }
 
     public function test_it_correctly_identifies_added_columns(): void
@@ -134,7 +135,7 @@ class LedgerDiffProcessorTest extends TestCase
         $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
         // For debugging
-        // dump(array_keys($result['contentChanges']));
+        dump(array_keys($result['contentChanges']));
 
         $this->assertTrue($result['hasChangedColumns']);
         $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);

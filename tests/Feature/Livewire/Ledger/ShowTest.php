@@ -290,12 +290,12 @@ class ShowTest extends TestCase
         $this->assertEquals(456, $contentChanges[1]['current_value']);
 
         // 'Select Column' が変更されていないことを確認
-        $this->assertFalse($contentChanges[2]['changed']);
+        $this->assertEquals('unchanged', $contentChanges[2]['status']);
         $this->assertEquals('Option A', $contentChanges[2]['old_value']);
         $this->assertEquals('Option A', $contentChanges[2]['current_value']);
 
         // 'New Column' が追加されたことを確認 (old_value が null)
-        $this->assertTrue($contentChanges[3]['changed']);
+        $this->assertEquals('added', $contentChanges[3]['status']);
         $this->assertNull($contentChanges[3]['old_value']);
         $this->assertEquals('New Value', $contentChanges[3]['current_value']);
     }
