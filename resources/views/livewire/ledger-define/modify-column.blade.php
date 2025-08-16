@@ -36,7 +36,7 @@
                                              wire:key="collapse-{{ $column['id'] }}"
                                              x-on:mouseenter="updateBackground('{{ $column['id'] }}')"
                                              x-on:focusin="updateBackground('{{ $column['id'] }}')"
-                                             >
+                            >
                                 <x-slot name="heading">
                                     <h3 class="text-lg font-semibold">
                                         {{ $column['id'] }}: {{ $column['name'] }}
@@ -61,10 +61,10 @@
                                                     }, array_keys($columnInputTypes), array_values($columnInputTypes));
                                                 @endphp
                                                 <x-mary-select label="{{__('ledger.column.type')}}"
-                                                                icon="o-chevron-up-down"
-                                                                wire:model.live="columns.{{$index}}.type"
-                                                                wire:key="type-{{$column['id']}}" :options="$typeOptions"
-                                                                class="input-accent" required/>
+                                                               icon="o-chevron-up-down"
+                                                               wire:model.live="columns.{{$index}}.type"
+                                                               wire:key="type-{{$column['id']}}" :options="$typeOptions"
+                                                               class="input-accent" required/>
 
                                                 @php
                                                     $displayLevelOptions = array_map(function($value, $name) {
@@ -74,14 +74,26 @@
                                                 <x-mary-select label="{{__('ledger.form.display_level')}}"
                                                                icon="o-list-bullet"
                                                                wire:model.live="columns.{{$index}}.display_level"
-                                                               wire:key="display-level-{{$column['id']}}" :options="$displayLevelOptions"
+                                                               wire:key="display-level-{{$column['id']}}"
+                                                               :options="$displayLevelOptions"
                                                                class="input-accent" required/>
 
-                                                <x-mary-input label="{{__('ledger.form.group_name')}}"
-                                                              placeholder="{{__('ledger.form.group_name')}}"
-                                                              icon="o-folder"
-                                                              wire:model.live="columns.{{$index}}.group"
-                                                              wire:key="group-{{$column['id']}}" class="input-accent"/>
+                                                <x-mary-choices label="{{__('ledger.form.group_name')}}"
+                                                                placeholder="{{__('ledger.form.group_name')}}"
+                                                                icon="o-folder"
+                                                                wire:model.live="columns.{{$index}}.group"
+                                                                wire:key="group-{{$column['id']}}"
+                                                                livewire-search="search"
+                                                                clearable
+                                                                single
+                                                                searchable
+                                                                search-function="searchGroups"
+                                                                debounce="500ms"
+                                                                allow-create
+                                                                :options="$groupNames"
+                                                                option-value="id"
+                                                                option-label="name"
+                                                                class="input-accent"/>
 
                                                 <hr/>
                                                 <x-mary-checkbox label="{{__('ledger.column.required')}}"
@@ -146,10 +158,11 @@
                                                                       wire:key="digits-{{$column['id']}}"
                                                                       type="number" min="1"
                                                                       hint="{{__('ledger.column.auto_number.digits_hint')}}"/>
-                                                        <x-mary-input label="{{__('ledger.column.auto_number.revision')}}"
-                                                                      wire:model.live="columns.{{$index}}.options.revision"
-                                                                      wire:key="revision-{{$column['id']}}"
-                                                                      hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
+                                                        <x-mary-input
+                                                                label="{{__('ledger.column.auto_number.revision')}}"
+                                                                wire:model.live="columns.{{$index}}.options.revision"
+                                                                wire:key="revision-{{$column['id']}}"
+                                                                hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
                                                     @elseif($column['type'] === 'number')
                                                         <div class="grid grid-cols-2 gap-4">
                                                             {{--                                                        @dd($columns[$index])--}}
@@ -175,7 +188,7 @@
                                                         </div>
                                                     @else
 
-                                                    <x-mary-tags label="{{__('ledger.options')}}"
+                                                        <x-mary-tags label="{{__('ledger.options')}}"
                                                                      wire:model.live="columns.{{$index}}.options"
                                                                      wire:key="options-{{$column['id']}}" icon="o-tag"
                                                                      hint="Hit enter to create a new tag"/>
@@ -230,28 +243,28 @@
             </ul>
         @endif
 
-        </form>
-        <div class="mt-6 flex justify-between items-center">
-            <button type="button" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm">
-                <i class="fa-solid fa-plus-circle mr-1"></i>
-                {{__('ledger.column.add')}}
-            </button>
-            @if($isDirty)
-                <x-mary-button label="{{__('actions.save')}}"
-                               type="button"
-                               wire:click="save"
-                               icon="o-pencil-square"
-                               class="btn-primary"
-                               spinner="save"
-                />
-            @else
-                <x-mary-button label="{{__('actions.save')}}"
-                               type="button"
-                               wire:click="save"
-                               icon="o-pencil-square"
-                               class="btn-primary"
-                               disabled
-                />
-            @endif
-        </div>
+    </form>
+    <div class="mt-6 flex justify-between items-center">
+        <button type="button" wire:click="addColumn" class="btn btn-outline btn-secondary btn-sm">
+            <i class="fa-solid fa-plus-circle mr-1"></i>
+            {{__('ledger.column.add')}}
+        </button>
+        @if($isDirty)
+            <x-mary-button label="{{__('actions.save')}}"
+                           type="button"
+                           wire:click="save"
+                           icon="o-pencil-square"
+                           class="btn-primary"
+                           spinner="save"
+            />
+        @else
+            <x-mary-button label="{{__('actions.save')}}"
+                           type="button"
+                           wire:click="save"
+                           icon="o-pencil-square"
+                           class="btn-primary"
+                           disabled
+            />
+        @endif
+    </div>
 </div>

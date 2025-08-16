@@ -10,13 +10,13 @@ use App\Models\ColumnTypes\NumberType;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Mary\Traits\Toast;
-use RuntimeException;
 
 class ModifyColumn extends Component
 {
@@ -31,6 +31,8 @@ class ModifyColumn extends Component
 
     public bool $isDirty = false; // フォームが変更されたかどうかを追跡
 
+    public array $groupNames = [];
+
     public function mount(Request $request): void
     {
         if ($request->isMethod('POST')) {
@@ -43,20 +45,20 @@ class ModifyColumn extends Component
         // Ensure $this->columns is initialized as an array of associative arrays.
         $this->columns = collect($this->ledgerDefineRecord->column_define)->map(function ($columnDefineObject) {
             // ColumnDefineオブジェクトのプロパティを連想配列に変換
-            return [
+            $column = [
                 'id' => $columnDefineObject->id,
                 'name' => $columnDefineObject->name,
                 'type' => $columnDefineObject->type,
                 'order' => $columnDefineObject->order,
                 'useOptions' => $columnDefineObject->useOptions,
-                'options' => (array)$columnDefineObject->options,
+//                'options' => (array)$columnDefineObject->options,
                 'required' => (bool)$columnDefineObject->required,
                 'unique' => (bool)$columnDefineObject->unique,
                 'sortBy' => (bool)$columnDefineObject->sortBy,
                 'hint' => (string)$columnDefineObject->hint,
                 'file' => (array)$columnDefineObject->file,
-                'display_level' => $columnDefineObject->display_level, // 追加
-                'group' => $columnDefineObject->group,             // 追加
+                'display_level' => $columnDefineObject->display_level,
+                'group' => $columnDefineObject->group,
                 'is_collapsed' => false, // 初期状態で折りたたむ
                 'options' => array_merge(
                     (array)$columnDefineObject->options,
@@ -73,7 +75,10 @@ class ModifyColumn extends Component
                     ] : []
                 ),
             ];
+            return $column;
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
+
+        $this->searchGroups();
 
         // サムネイル生成とアップロード済みファイル用の初期化
         foreach ($this->columns as $index => $column) {
@@ -94,6 +99,37 @@ class ModifyColumn extends Component
         ]);
     }
 
+    public function searchGroups(string $value = ''): void
+    {
+//        Log::info('search method called', ['value' => $value]);
+
+        $allGroups = LedgerDefine::all()
+            ->flatMap(fn($ledgerDefine) => collect($ledgerDefine->column_define)->pluck('group'))
+            ->filter() // null や空文字列を除外
+            ->unique() // 重複を除外
+            ->values() // キーをリセット
+            ->map(fn($group) => ['id' => $group, 'name' => $group]) // MaryUI choices の形式に変換
+            ->toArray();
+
+//        Log::info('search: allGroups', ['allGroups' => $allGroups]);
+
+        if (empty($value)) {
+//            Log::info('search: returning allGroups (empty value)');
+            $this->groupNames = $allGroups; // 検索クエリがない場合は全グループを返す
+            return;
+        }
+
+//        Log::info('search: filteredGroups', ['filteredGroups' => $filteredGroups]);
+
+        // ユーザーが入力した値が既存のグループにない場合、それを新しい選択肢として追加
+        if (!collect($this->groupNames)->contains('name', $value)) {
+            array_unshift($this->groupNames, ['id' => $value, 'name' => $value]); // 先頭に追加
+//            Log::info('search: added new value', ['newValue' => $value]);
+        }
+
+//        Log::info('search: final return', ['finalGroups' => $filteredGroups]);
+    }
+
     /**
      * @param array $columnOrder
      * @return void
@@ -106,8 +142,8 @@ class ModifyColumn extends Component
 
         $newOrderedColumns = [];
         foreach ($orderedItems as $item) {
-            $id = (int) $item['value'];
-            $order = (int) $item['order'];
+            $id = (int)$item['value'];
+            $order = (int)$item['order'];
 
             if ($columnsById->has($id)) {
                 $column = $columnsById->get($id);
@@ -121,7 +157,7 @@ class ModifyColumn extends Component
             return $a['order'] <=> $b['order'];
         });
 
-        $this->isDirty=true;
+        $this->isDirty = true;
         $this->columns = $newOrderedColumns;
     }
 
@@ -148,10 +184,10 @@ class ModifyColumn extends Component
         // $key will be in the format "0.type", "1.type", etc.
         // We need to extract the numeric index.
         $parts = explode('.', $key);
-        $columnIndex = (int) $parts[0];
+        $columnIndex = (int)$parts[0];
+        $propertyName = $parts[1];
 
-        // Ensure the column exists and the changed property is 'type'
-        if (isset($this->columns[$columnIndex]) && $parts[1] === 'type') {
+        if (isset($this->columns[$columnIndex]) && $propertyName === 'type') {
             // Determine if the new type has options
             $hasOptions = InputTypeFactory::make(['type' => $value])->hasOptions();
 
@@ -163,7 +199,7 @@ class ModifyColumn extends Component
                 $this->columns[$columnIndex]['options'] = [];
             }
             $this->isDirty = true; // フォームが変更された
-        } elseif (isset($this->columns[$columnIndex]) && $parts[1] === 'is_collapsed') {
+        } elseif (isset($this->columns[$columnIndex]) && $propertyName === 'is_collapsed') {
             // is_collapsed の変更をAlpine.jsに通知
             $this->dispatch('toggle-collapse', ['is_collapsed' => $value])->self();
         } else {
@@ -188,7 +224,7 @@ class ModifyColumn extends Component
 
         if ($column['type'] === 'number') {
             $rules["columns.{$index}.options.min"] = 'required|numeric';
-            $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+            $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.' . $index . '.options.min'];
             $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
                 $min = $column['options']['min'] ?? null;
                 $max = $column['options']['max'] ?? null;
@@ -212,8 +248,15 @@ class ModifyColumn extends Component
             $this->storeFile($this->columns[$index]['id']);
         }
 
+        // group プロパティが配列の場合に文字列に変換
+        $saveForColumns = $this->columns;
+        foreach ($saveForColumns as $key => $saveColumn) {
+            if (is_array($saveColumn['group'])) {
+                $saveForColumns[$key]['group'] = $saveColumn['group']['name'] ?? null;
+            }
+        }
         // Update the main ledgerDefineRecord's column_define with the current state of $this->columns
-        $this->ledgerDefineRecord->column_define = collect($this->columns)->toArray();
+        $this->ledgerDefineRecord->column_define = collect($saveForColumns)->toArray();
 
 
         $this->ledgerDefineRecord->modifier_id = auth()->id();
@@ -256,6 +299,10 @@ class ModifyColumn extends Component
 
         // Before saving, ensure all columns are simple associative arrays.
         $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
+            // group プロパティが配列の場合に文字列に変換
+            if (is_array($column['group'])) {
+                $column['group'] = $column['group']['name'] ?? null;
+            }
             // Just return the array, as it should already be in the correct format.
             return $column;
         })->toArray();
@@ -286,7 +333,7 @@ class ModifyColumn extends Component
         foreach ($this->columns as $index => $column) {
             if ($column['type'] === 'number') {
                 $rules["columns.{$index}.options.min"] = 'required|numeric';
-                $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+                $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.' . $index . '.options.min'];
                 $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
                     $min = $column['options']['min'] ?? null;
                     $max = $column['options']['max'] ?? null;
@@ -319,7 +366,7 @@ class ModifyColumn extends Component
             $filePath = $file->storeAs('column_files', $fileName, 'public');
 
             // サムネイル作成 (必要であれば)
-             $this->createThumbnail($filePath);
+            $this->createThumbnail($filePath);
 
             // $this->columns 配列内の該当カラムの 'file' プロパティを更新
             foreach ($this->columns as $index => &$column) {
