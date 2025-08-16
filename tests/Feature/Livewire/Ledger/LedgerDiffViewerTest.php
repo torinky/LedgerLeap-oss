@@ -85,4 +85,39 @@ class LedgerDiffViewerTest extends TestCase
             ->assertSee('Column Level 1')
             ->assertSee('Column Level 2');
     }
+
+    #[Test]
+    public function it_correctly_displays_diffs_including_deleted_columns(): void
+    {
+        // 1. Setup V1 data
+        $v1ColumnDefines = [
+            $this->makeColumnDefine(1, 'Unchanged Column', 'text', 1),
+            $this->makeColumnDefine(2, 'Column to be Deleted', 'text', 2),
+        ];
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $v1ColumnDefines]);
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
+            'content' => ['Same Value', 'Old Value']
+        ]);
+        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'column_define' => $v1ColumnDefines,
+            'content' => ['Same Value', 'Old Value'],
+        ]);
+
+        // 2. Setup V2 data (delete column 2)
+        $v2ColumnDefines = [
+            $this->makeColumnDefine(1, 'Unchanged Column', 'text', 1),
+        ];
+        $ledger->define->update(['column_define' => $v2ColumnDefines]);
+        $ledger->update(['content' => ['Same Value']]);
+
+        // 3. Render component and assert
+        Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger])
+            ->set('showChanges', true)
+            ->assertSee('Unchanged Column')
+            ->assertSee('Column to be Deleted')
+            ->assertSee('Same Value')
+            ->assertSee('Old Value')
+            ->assertSeeHtml('('.__('ledger.diff.deleted').')');
+    }
 }

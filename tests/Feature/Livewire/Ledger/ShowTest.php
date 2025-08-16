@@ -280,12 +280,12 @@ class ShowTest extends TestCase
         $contentChanges = $component->get('contentChanges');
 
         // 'Text Column' が変更されたことを確認
-        $this->assertTrue($contentChanges[0]['changed']);
+        $this->assertEquals('modified', $contentChanges[0]['status']);
         $this->assertEquals('Original Text', $contentChanges[0]['old_value']);
         $this->assertEquals('Updated Text', $contentChanges[0]['current_value']);
 
         // 'Number Column' が変更されたことを確認
-        $this->assertTrue($contentChanges[1]['changed']);
+        $this->assertEquals('modified', $contentChanges[1]['status']);
         $this->assertEquals(123, $contentChanges[1]['old_value']);
         $this->assertEquals(456, $contentChanges[1]['current_value']);
 
