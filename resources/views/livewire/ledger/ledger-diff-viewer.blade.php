@@ -12,6 +12,7 @@
     @endif
 
     @if($displayData)
+{{--        @dd($displayData)--}}
         @foreach($displayData as $group)
             <div wire:key="group-{{ $group['group_name'] }}-{{ $loop->index }}" class="collapse collapse-plus bg-base-200 mb-4"
                  @if(!($collapsedStates[$group['group_name']] ?? false)) open @endif >
@@ -78,15 +79,27 @@
                                 @if($showChanges)
                                     {{-- Diff View --}}
                                     <td class="w-1/3 lg:w-3/8 break-words pt-2 align-top">
-                                        {!! $column['current_value_html'] !!}
+                                        @if($column['status']=='empty')
+                                            <x-ledger.empty-message/>
+                                        @else
+                                            {!! $column['current_value_html'] !!}
+                                        @endif
                                     </td>
                                     <td class="w-1/3 lg:w-3/8 break-words pt-2 align-top">
-                                        {!! $column['old_value_html'] !!}
+                                        @if(empty($column['old_value_html']))
+                                            <x-ledger.empty-message/>
+                                        @else
+                                            {!! $column['old_value_html'] !!}
+                                        @endif
                                     </td>
                                 @else
                                     {{-- Normal View --}}
                                     <td class="break-words align-top pt-2" colspan="2">
-                                        {!! $column['current_value_html'] !!}
+                                        @if($column['status']=='empty')
+                                            <x-ledger.empty-message/>
+                                        @else
+                                            {!! $column['current_value_html'] !!}
+                                        @endif
                                     </td>
                                 @endif
                             </tr>

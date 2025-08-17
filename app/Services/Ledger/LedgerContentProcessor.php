@@ -94,7 +94,7 @@ class LedgerContentProcessor
                 $oldValueHtml = '';
                 if ($change['status'] === 'added') {
                     $oldValueHtml = '<div class="flex w-full justify-center items-center text-success-content/50"><x-mary-icon name="o-cube" label="' . __('ledger.diff.not_exist') . '" class="w-5 h-5" /></div>';
-                } elseif ($change['status'] !== 'unchanged' && $change['status'] !== 'deleted') {
+                } else {
                     // 過去バージョンの表示では、過去のcontent_attachedは存在しないため、
                     // allAttachments（全バージョンの添付ファイル）のみを渡して解決させる
                     $oldValueHtml = (string) $this->columnHtmlService

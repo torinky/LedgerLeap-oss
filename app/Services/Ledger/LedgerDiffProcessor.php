@@ -40,7 +40,7 @@ class LedgerDiffProcessor
     {
         $currentContent = $ledgerRecord->content ?? [];
         $currentColumnDefines = collect($ledgerRecord->define->column_define ?? [])->keyBy('id');
-        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
+//        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
         if (!$comparisonTargetDiff) {
             // 比較対象がない場合は、現在の内容のみを整形して返す
@@ -50,11 +50,16 @@ class LedgerDiffProcessor
                 $contentIndex = $sortedIds->search($colDef->id);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
+                $status = 'added';
+                if (empty($value)) {
+                    $status = 'empty';
+                }
+
                 return [
                     'column_define' => $colDef->toArray(),
                     'current_value' => $value,
                     'old_value' => null,
-                    'status' => 'unchanged',
+                    'status' => $status,
                 ];
             })->all();
 
@@ -99,6 +104,9 @@ class LedgerDiffProcessor
             }
 
             $status = 'unchanged';
+            if (empty($currentValue)) {
+                $status = 'empty';
+            }
             if (!$oldColDef) {
                 $status = 'added';
             } elseif (!$currentColDef) {
@@ -107,7 +115,7 @@ class LedgerDiffProcessor
                 $status = 'modified';
             }
 
-            if ($status !== 'unchanged') {
+            if ($status !== 'unchanged' && $status !== 'empty') {
                 $hasChangedColumns = true;
             }
 
