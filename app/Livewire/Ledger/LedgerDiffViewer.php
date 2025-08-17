@@ -2,12 +2,11 @@
 
 namespace App\Livewire\Ledger;
 
-use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -17,152 +16,99 @@ class LedgerDiffViewer extends Component
 
     // --- 差分表示用プロパティ ---
     public ?LedgerDiff $comparisonTargetDiff = null;
-    public array $contentChanges = [];
     public bool $hasChangedColumns = false;
     public bool $showChanges = false;
 
     // Show.php から渡されるプロパティ
     public bool $canView = false;
-
-    public $allAttachments;
-
+    public ?EloquentCollection $allAttachments = null;
     public ?string $highlight = null;
-    public array $collapsedStates = []; // グループの開閉状態 (LedgerDiffViewer 自身で管理)
-    public ?array $groupedColumns = null; // 表示用のグループ化されたカラム (多次元配列)
     public int $displayLevel = 3;
 
-    protected LedgerDiffProcessor $ledgerDiffProcessor;
+    // 表示データ
+    public array $displayData = [];
 
-    public function boot(LedgerDiffProcessor $ledgerDiffProcessor): void
-    {
+    // グループの開閉状態
+    public array $collapsedStates = [];
+
+    protected LedgerContentProcessor $ledgerContentProcessor;
+    protected LedgerDiffProcessor $ledgerDiffProcessor; // comparisonTargetDiff の取得にのみ使用
+
+    public function boot(
+        LedgerContentProcessor $ledgerContentProcessor,
+        LedgerDiffProcessor $ledgerDiffProcessor
+    ): void {
+        $this->ledgerContentProcessor = $ledgerContentProcessor;
         $this->ledgerDiffProcessor = $ledgerDiffProcessor;
-        $this->updateGroupedColumns(); // groupedColumns の初期化を boot に移動
     }
 
     public function mount(): void
     {
-        $this->prepareContentDiff();
+        // 差分比較対象と添付ファイルコレクションを準備
+        $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
+        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
+
+        // グループの開閉状態を初期化
+        $this->initializeCollapsedStates();
     }
 
-    // displayLevel の変更を検知して groupedColumns を更新する
-    public function updatedDisplayLevel(int $level): void
-    {
-        $this->updateGroupedColumns();
-    }
-
+    // 親コンポーネントから displayLevel が更新されたときに呼ばれる
     #[On('displayLevelUpdated')]
     public function updateDisplayLevelFromParent(int $displayLevel): void
     {
         $this->displayLevel = $displayLevel;
-        $this->updateGroupedColumns();
+        // render() が自動的に再実行され、新しい displayLevel でデータが再計算される
     }
 
-    // グループの開閉を LedgerDiffViewer 自身で管理するメソッド
+    // グループの開閉状態をトグルする
     public function toggleGroup(string $groupName): void
     {
-        if (!isset($this->collapsedStates[$groupName])) {
-            $this->collapsedStates[$groupName] = false;
+        if (isset($this->collapsedStates[$groupName])) {
+            $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
         }
-        $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
     }
 
-    protected function updateGroupedColumns(): void
+    // グループの開閉状態を初期化する
+    protected function initializeCollapsedStates(): void
     {
-        // collapsedStates の初期化ロジックをここに移動
-        if (empty($this->collapsedStates)) { // 初回のみ初期化
+        if (empty($this->collapsedStates)) {
             $allGroups = collect($this->ledgerRecord->define->column_define)
                 ->pluck('group')
                 ->filter()
                 ->unique()
-                ->toArray();
+                ->push(__('ledger.form.group_default')) // デフォルトグループを追加
+                ->unique();
 
             foreach ($allGroups as $groupName) {
                 $this->collapsedStates[$groupName] = false;
             }
-            $this->collapsedStates[__('ledger.form.group_default')] = false;
 
+            // 必須項目を含むグループはデフォルトで開く
             foreach ($this->ledgerRecord->define->column_define as $column) {
                 $columnObject = is_array($column) ? new \App\Models\ColumnDefine($column) : $column;
                 if ($columnObject->required) {
                     $groupName = $columnObject->group ?? __('ledger.form.group_default');
-                    $this->collapsedStates[$groupName] = false;
+                    $this->collapsedStates[$groupName] = false; // falseは「開いている」状態
                 }
             }
         }
-
-        $filteredColumns = collect($this->ledgerRecord->define->column_define)
-            ->filter(function ($column) {
-                $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
-                return $columnDisplayLevel <= $this->displayLevel;
-            });
-
-        $grouped = $filteredColumns
-            ->map(function ($column) {
-                if (is_array($column)) {
-                    return $column;
-                }
-                return [
-                    'id' => $column->id ?? null,
-                    'name' => $column->name ?? null,
-                    'type' => $column->type ?? null,
-                    'order' => $column->order ?? null,
-                    'useOptions' => $column->useOptions ?? false,
-                    'options' => $column->options ?? [],
-                    'required' => $column->required ?? false,
-                    'unique' => $column->unique ?? false,
-                    'sortBy' => $column->sortBy ?? false,
-                    'hint' => $column->hint ?? '',
-                    'file' => $column->file ?? [],
-                    'display_level' => $column->display_level ?? 3,
-                    'group' => $column->group ?? '',
-                ];
-            })
-            ->groupBy(function ($column) {
-                $group = $column['group'] ?? '';
-                return $group === '' ? __('ledger.form.group_default') : $group;
-            });
-
-        $this->groupedColumns = $grouped
-            ->sortBy(function ($columns, $groupName) {
-                if ($columns->isNotEmpty()) {
-                    $firstColumn = $columns->first();
-                    return $firstColumn['order'] ?? PHP_INT_MAX;
-                }
-                return $groupName;
-            })
-            // Livewireが扱えるように、Collectionを多次元配列に変換する
-            ->map(fn(Collection $group) => $group->all())
-            ->all();
-    }
-
-    protected function prepareContentDiff(): void
-    {
-        $this->comparisonTargetDiff = $this->ledgerDiffProcessor->findComparisonTargetDiff($this->ledgerRecord);
-        $diffResult = $this->ledgerDiffProcessor->prepareContentDiff(
-            $this->ledgerRecord,
-            $this->comparisonTargetDiff
-        );
-        $this->contentChanges = $diffResult['contentChanges'];
-        $this->hasChangedColumns = $diffResult['hasChangedColumns'];
-
-        // 差分表示に必要な添付ファイル情報を事前にロードしてプロパティに保持
-        if ($this->comparisonTargetDiff) {
-            $oldFileHashes = [];
-            if (!empty($this->comparisonTargetDiff->content)) {
-                foreach ($this->comparisonTargetDiff->content as $contentItem) {
-                    if (is_array($contentItem)) {
-                        array_push($oldFileHashes, ...array_keys($contentItem));
-                    }
-                }
-            }
-            $oldFileHashes = array_unique($oldFileHashes);
-        }
-        //古い履歴のファイルもまとめて取得
-        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
     }
 
     public function render()
     {
+        // LedgerContentProcessor を呼び出して表示データを取得
+        $result = $this->ledgerContentProcessor->processContentForDisplay(
+            $this->ledgerRecord,
+            $this->comparisonTargetDiff,
+            $this->displayLevel,
+            $this->allAttachments,
+            $this->highlight
+        );
+
+        $this->displayData = $result['displayData'];
+        $this->hasChangedColumns = $result['hasChangedColumns'];
+
+        // ビューに渡すバージョン情報
         $currentVersion = $this->ledgerRecord->version;
         $pastVersion = $this->comparisonTargetDiff ? $this->comparisonTargetDiff->version : null;
 
@@ -172,7 +118,6 @@ class LedgerDiffViewer extends Component
         ]);
     }
 
-    // placeholder メソッドを追加
     public function placeholder(): string
     {
         return '<div>Loading diff viewer...</div>';

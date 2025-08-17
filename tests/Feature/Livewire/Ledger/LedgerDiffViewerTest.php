@@ -2,22 +2,24 @@
 
 namespace tests\Feature\Livewire\Ledger;
 
+use App\Livewire\Ledger\LedgerDiffViewer;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use App\Services\Ledger\LedgerContentProcessor;
+use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use tests\TestCase;
-use App\Services\AutoLinkService;
-use App\Services\Ledger\ColumnHtmlService; // ColumnHtmlService を追加
-use Mockery;
 
 class LedgerDiffViewerTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+    private Ledger $ledger;
 
     protected function setUp(): void
     {
@@ -25,164 +27,130 @@ class LedgerDiffViewerTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        // ColumnHtmlService をモック化
-        $this->mock(ColumnHtmlService::class, function (Mockery\MockInterface $mock) {
-            $mock->shouldReceive('show')
-                ->andReturnUsing(function ($columnDefineData, $initialValue, $canView, $attrs, $idPrefix, $asCreate, $record, $highlight) {
-                    // initialValue が配列の場合の処理を追加
-                    if (is_array($initialValue)) {
-                        $initialValue = json_encode($initialValue);
-                    }
-                    // initialValue をそのまま返す
-                    return new \Illuminate\Support\HtmlString(htmlspecialchars((string) $initialValue, ENT_QUOTES, 'UTF-8'));
-                });
+        $ledgerDefine = LedgerDefine::factory()->create();
+        $this->ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
+    }
+
+    #[Test]
+    public function it_renders_correctly_with_data_from_processor(): void
+    {
+        // 1. LedgerContentProcessor のモックを作成
+        $mock = $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            // processContentForDisplay が呼び出された際に返すダミーデータを定義
+            $dummyDisplayData = [
+                [
+                    'group_name' => 'Test Group',
+                    'is_required_group' => true,
+                    'columns' => [
+                        [
+                            'id' => 'col1',
+                            'name' => 'Test Column',
+                            'hint' => 'A hint',
+                            'is_required' => true,
+                            'status' => 'modified',
+                            'current_value_html' => '<div>Current Value</div>',
+                            'old_value_html' => '<div>Old Value</div>',
+                        ]
+                    ]
+                ]
+            ];
+
+            $mock->shouldReceive('processContentForDisplay')
+                ->once()
+                ->andReturn([
+                    'displayData' => $dummyDisplayData,
+                    'hasChangedColumns' => true,
+                ]);
         });
-    }
 
-    private function makeColumnDefine(int $id, string $name, string $type, int $order, array $attributes = []): array
-    {
-        return array_merge([
-            'id' => $id,
-            'name' => $name,
-            'type' => $type,
-            'order' => $order,
-            'options' => [],
-            'required' => false,
-            'unique' => false,
-            'sortBy' => false,
-            'hint' => '',
-            'file' => [],
-            'display_level' => 3,
-            'group' => null,
-        ], $attributes);
+        // 2. Livewire コンポーネントをテスト
+        Livewire::test(LedgerDiffViewer::class, ['ledgerRecord' => $this->ledger])
+            ->assertOk()
+            ->assertSet('hasChangedColumns', true)
+            ->assertSee('Test Group')
+            ->assertSee('Test Column')
+            ->assertSeeHtml('<div>Current Value</div>');
     }
 
     #[Test]
-    public function component_mounts_and_renders_grouped_columns_correctly(): void
+    public function it_calls_processor_with_updated_display_level(): void
     {
-        // 1. 複数のカラム定義を持つLedgerDefineを作成
-        $columnDefines = [
-            $this->makeColumnDefine(1, 'Column 1', 'text', 1, ['display_level' => 1, 'group' => 'Group A']),
-            $this->makeColumnDefine(2, 'Column 2', 'text', 2, ['display_level' => 1, 'group' => 'Group B']),
-        ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
+        // 1. LedgerContentProcessor のモックを作成し、呼び出しを期待する設定を行う
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            // 最初に displayLevel=1 で呼び出されることを期待
+            $mock->shouldReceive('processContentForDisplay')
+                ->once()
+                ->with(Mockery::any(), Mockery::any(), 1, Mockery::any(), Mockery::any())
+                ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
 
-        // 2. Ledgerを作成
-        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
+            // 次に displayLevel=2 で呼び出されることを期待
+            $mock->shouldReceive('processContentForDisplay')
+                ->once()
+                ->with(Mockery::any(), Mockery::any(), 2, Mockery::any(), Mockery::any())
+                ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
+        });
 
-        // 3. HTTPリクエストでコンポーネントをレンダリング
-        $response = $this->get(route('testing.ledger-diff-viewer', ['ledger' => $ledger->id]));
-
-        // 4. アサーション
-        $response->assertStatus(200);
-        $response->assertSee('Group A');
-        $response->assertSee('Group B');
-        // カラム名は表示ロジックに依存するため、より具体的なHTML構造を待つか、より緩いアサーションにする
-        // ここではグループ名の表示でテストをパスさせることを主眼に置く
+        // 2. Livewire コンポーネントをテスト
+        Livewire::test(LedgerDiffViewer::class, ['ledgerRecord' => $this->ledger, 'displayLevel' => 1])
+            ->dispatch('displayLevelUpdated', displayLevel: 2) // イベントを発行
+            ->assertSet('displayLevel', 2);
     }
 
     #[Test]
-    public function it_filters_columns_by_display_level(): void
+    public function it_hides_diff_view_by_default(): void
     {
-        $columnDefines = [
-            $this->makeColumnDefine(1, 'Column Level 1', 'text', 1, ['display_level' => 1]),
-            $this->makeColumnDefine(2, 'Column Level 2', 'text', 2, ['display_level' => 2]),
-        ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
-        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
+        // 1. プロセッサのモック
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            $mock->shouldReceive('processContentForDisplay')->andReturn([
+                'displayData' => [],
+                'hasChangedColumns' => true,
+            ]);
+        });
 
-        // Test with displayLevel = 1
-        Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger, 'displayLevel' => 1])
-            ->assertSee('Column Level 1')
-            ->assertDontSee('Column Level 2');
-
-        // Test with displayLevel = 2
-        Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger, 'displayLevel' => 2])
-            ->assertSee('Column Level 1')
-            ->assertSee('Column Level 2');
+        // 2. Livewire コンポーネントをテスト (showChanges はデフォルトで false)
+        Livewire::test(LedgerDiffViewer::class, ['ledgerRecord' => $this->ledger])
+            ->assertSet('showChanges', false)
+            ->assertDontSeeHtml('Version.');
     }
 
     #[Test]
-    public function it_correctly_displays_diffs_including_deleted_columns(): void
+    public function it_shows_diff_view_when_show_changes_is_true(): void
     {
-        // 1. Setup V1 data
-        $v1ColumnDefines = [
-            $this->makeColumnDefine(1, 'Unchanged Column', 'text', 1),
-            $this->makeColumnDefine(2, 'Column to be Deleted', 'text', 2),
-        ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $v1ColumnDefines]);
-        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
-            'content' => ['Same Value', 'Old Value']
-        ]);
-        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+        // 1. プロセッサのモック
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            $mock->shouldReceive('processContentForDisplay')->andReturn([
+                'displayData' => [],
+                'hasChangedColumns' => true,
+            ]);
+        });
+
+        // 2. データベースの状態を正確にセットアップ
+        // 現在の台帳 (version 2)
+        $ledger = Ledger::factory()->create(['version' => 2]);
+
+        // 最新の差分 (version 2)
+        $currentDiff = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
-            'column_define' => $v1ColumnDefines,
-            'content' => ['Same Value', 'Old Value'],
+            'version' => 2,
         ]);
 
-        // 2. Setup V2 data (delete column 2)
-        $v2ColumnDefines = [
-            $this->makeColumnDefine(1, 'Unchanged Column', 'text', 1),
-        ];
-        $ledger->define->update(['column_define' => $v2ColumnDefines]);
-        $ledger->update(['content' => ['Same Value']]);
-
-        // 3. Render component and assert
-        $component = Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger])
-            ->set('showChanges', true);
-
-        // Unchanged Column が表示されることを確認
-        $component->assertSee('Unchanged Column');
-        // Same Value が表示されることを確認
-        $component->assertSee('Same Value');
-
-        // 削除されたカラムは表示されないため、assertSee は使用しない
-        // Old Value も表示されないため、assertSee は使用しない
-        // __('ledger.diff.deleted') も表示されないため、assertSeeHtml は使用しない
-    }
-
-    #[Test]
-    public function it_displays_version_numbers_correctly(): void
-    {
-        // 1. Setup V1 data
-        $v1ColumnDefines = [
-            $this->makeColumnDefine(1, 'Column 1', 'text', 1),
-        ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $v1ColumnDefines]);
-        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
-            'content' => ['Value 1'],
-            'version' => 1, // Ledger のバージョン
-        ]);
-        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+        // 比較対象となるべき過去の差分 (version 1)
+        \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
-            'column_define' => $v1ColumnDefines,
-            'content' => ['Old Value 1'],
-            'version' => 0, // 古いDiffのバージョン
+            'version' => 1,
         ]);
-        $ledger->latest_diff_id = $oldDiff->id; // latest_diff_id を設定
+
+        // 台帳に最新の差分IDをセット
+        $ledger->latest_diff_id = $currentDiff->id;
         $ledger->save();
+        $ledger->refresh();
 
-        // 2. Setup V2 data (update content, increment ledger version)
-        $ledger->update([
-            'content' => ['New Value 1'],
-            'version' => 2, // Ledger の新しいバージョン
-        ]);
-        $newDiff = \App\Models\LedgerDiff::factory()->create([
-            'ledger_id' => $ledger->id,
-            'column_define' => $v1ColumnDefines,
-            'content' => ['New Value 1'],
-            'version' => 1, // 新しいDiffのバージョン
-        ]);
-        $ledger->latest_diff_id = $newDiff->id; // latest_diff_id を更新
-        $ledger->save();
-
-
-        // 3. Render component and assert
-        $component = Livewire::test('ledger.ledger-diff-viewer', ['ledgerRecord' => $ledger])
-            ->set('showChanges', true); // 差分表示を有効にする
-
-        // 現在のバージョンと過去のバージョンが表示されることを確認
-        $component->assertSeeHtml(__('ledger.diff.current_version') . ' Version. 2'); // Ledger の最新バージョン
-        $component->assertSeeHtml(__('ledger.diff.past_version') . ' Version. 0');   // oldDiff のバージョン
+        // 3. showChanges を true で初期化してコンポーネントをテスト
+        Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'showChanges' => true,
+        ])
+            ->assertSet('showChanges', true)
+            ->assertSeeHtml('Version. 1'); // 過去のバージョン(1)が表示されることを確認
     }
 }

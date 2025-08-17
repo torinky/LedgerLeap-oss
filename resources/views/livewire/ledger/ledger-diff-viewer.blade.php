@@ -11,19 +11,19 @@
         </div>
     @endif
 
-    @if($groupedColumns)
-        @foreach($groupedColumns as $groupName => $columnsInGroup)
-            <div wire:key="group-{{ $groupName }}-{{ $loop->index }}" class="collapse collapse-plus bg-base-200 mb-4"
-                 @if(!($collapsedStates[$groupName] ?? false)) open @endif >
-                <div class="collapse-title text-xl font-medium" wire:click.prevent="toggleGroup('{{ $groupName }}')">
+    @if($displayData)
+        @foreach($displayData as $group)
+            <div wire:key="group-{{ $group['group_name'] }}-{{ $loop->index }}" class="collapse collapse-plus bg-base-200 mb-4"
+                 @if(!($collapsedStates[$group['group_name']] ?? false)) open @endif >
+                <div class="collapse-title text-xl font-medium" wire:click.prevent="toggleGroup('{{ $group['group_name'] }}')">
                     <h3 class="text-lg font-bold flex items-center">
-                        @if(collect($columnsInGroup)->contains(fn($col) => (is_array($col) ? ($col['required'] ?? false) : ($col->required ?? false))))
+                        @if($group['is_required_group'])
                             <div class="tooltip tooltip-right mr-2"
                                  data-tip="{{ __('ledger.form.required_group_indicator') }}">
                                 <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error"/>
                             </div>
                         @endif
-                        {{ $groupName }}
+                        {{ $group['group_name'] }}
                     </h3>
                 </div>
                 <div class="collapse-content">
@@ -46,35 +46,26 @@
                         </tr>
                         </thead>
                         <tbody>
-                        @foreach($columnsInGroup as $columnInGroup)
+                        @foreach($group['columns'] as $column)
                             @php
-                                $columnId = data_get($columnInGroup, 'id');
-                                $change = $contentChanges[$columnId] ?? null;
-                                if (!$change) continue;
-
-                                $columnDefine = new \App\Models\ColumnDefine((object)$change['column_define']);
-                                $status = $change['status'];
-                                $currentValue = $change['current_value'];
-                                $oldValue = $change['old_value'];
-
                                 $rowClass = 'hover:bg-base-300';
                                 if ($showChanges) {
-                                    if ($status === 'modified') $rowClass .= ' bg-warning/20 text-warning-content';
-                                    if ($status === 'added') $rowClass .= ' bg-success/20 text-success-content';
-                                    if ($status === 'deleted') $rowClass .= ' bg-error/20 text-error-content';
+                                    if ($column['status'] === 'modified') $rowClass .= ' bg-warning/20 text-warning-content';
+                                    if ($column['status'] === 'added') $rowClass .= ' bg-success/20 text-success-content';
+                                    if ($column['status'] === 'deleted') $rowClass .= ' bg-error/20 text-error-content';
                                 }
                             @endphp
-                            <tr class="{{ $rowClass }}">
+                            <tr class="{{ $rowClass }}" wire:key="column-{{ $column['id'] }}">
                                 <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
                                     <div class="flex items-center">
-                                        @if($columnDefine->required)
+                                        @if($column['is_required'])
                                             <div class="tooltip tooltip-top"
                                                  data-tip="{{ __('ledger.column.required') }}">
                                                 <x-mary-icon name="o-check-circle" class="w-5 h-5 text-error mr-1"/>
                                             </div>
                                         @endif
-                                        <span>{{ $columnDefine->name }}</span>
-                                        @if($hasChangedColumns && $status !== 'unchanged')
+                                        <span>{{ $column['name'] }}</span>
+                                        @if($hasChangedColumns && $column['status'] !== 'unchanged')
                                             <div class="tooltip tooltip-right ml-1 cursor-pointer"
                                                  data-tip="{{ __('ledger.changed') }}">
                                                 <x-mary-icon name="o-pencil-square"
@@ -86,38 +77,16 @@
 
                                 @if($showChanges)
                                     {{-- Diff View --}}
-                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 @if($status === 'deleted') align-middle @else align-top @endif">
-                                        {{-- New Value --}}
-                                        @if($status === 'deleted')
-                                            <div class="flex w-full justify-center">
-                                                <x-mary-icon name="o-trash" label="{{ __('ledger.diff.deleted') }}"
-                                                             class="w-5 h-5 text-success-content/50"/>
-                                            </div>
-                                        @else
-                                            {!! ColumnHtml::setAttachmentCollection($allAttachments)
-                                                ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                                                ->show($columnDefine, $currentValue, $canView, [], '', false, $ledgerRecord, $highlight) !!}
-                                        @endif
+                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 align-top">
+                                        {!! $column['current_value_html'] !!}
                                     </td>
-                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 @if($status !== 'added') align-middle @else align-top @endif">
-                                        {{-- Old Value --}}
-                                        @if($status === 'added')
-                                            <div class="flex w-full justify-center">
-                                                <x-mary-icon name="o-cube" label="{{ __('ledger.diff.not_exist') }}"
-                                                             class="w-5 h-5 text-success-content/50"/>
-                                            </div>
-                                        @else
-                                            {!! ColumnHtml::setAttachmentCollection($allAttachments)
-                                                ->show($columnDefine, $oldValue, $canView, [], '', false, $ledgerRecord, $highlight) !!}
-                                        @endif
+                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 align-top">
+                                        {!! $column['old_value_html'] !!}
                                     </td>
                                 @else
                                     {{-- Normal View --}}
                                     <td class="break-words align-top pt-2" colspan="2">
-
-                                        {!! ColumnHtml::setAttachmentCollection($allAttachments)
-                                            ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                                            ->show($columnDefine, $currentValue, $canView, [], '', false, $ledgerRecord, $highlight) !!}
+                                        {!! $column['current_value_html'] !!}
                                     </td>
                                 @endif
                             </tr>

@@ -5,8 +5,6 @@ namespace App\Livewire\Ledger;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 
-use App\Services\Ledger\LedgerContentProcessor;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
@@ -22,13 +20,8 @@ class Show extends Component
 
     public bool $canView = false;
     public Ledger $ledgerRecord;
-    
+
     public bool $canUpdate = false;
-
-    
-
-    protected LedgerContentProcessor $ledgerContentProcessor;
-    
 
     public ?Collection $currentLedgerAttachments = null;
     public string $selectedTab = 'details';
@@ -37,16 +30,6 @@ class Show extends Component
     public int $displayLevel = 1;
 
     public ?string $highlight = null;
-
-    public array $collapsedStates = [];
-    public array $filteredColumns = [];
-    public array $displayColumns = [];
-
-    public function boot(LedgerContentProcessor $ledgerContentProcessor): void
-    {
-        $this->ledgerContentProcessor = $ledgerContentProcessor;
-        
-    }
 
     public function mount(int $ledgerId): void
     {
@@ -60,36 +43,12 @@ class Show extends Component
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
 
-        
-
         $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
-        
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
         if (!in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
-        }
-
-        $this->filteredColumns = $this->calculateFilteredColumns(); // ここで ledgerDefineRecord を引数として渡すように変更
-
-        $allGroups = collect($this->ledgerRecord->define->column_define) // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
-            ->pluck('group')
-            ->filter()
-            ->unique()
-            ->toArray();
-
-        foreach ($allGroups as $groupName) {
-            $this->collapsedStates[$groupName] = false;
-        }
-        $this->collapsedStates[__('ledger.form.group_default')] = false;
-
-        foreach ($this->ledgerRecord->define->column_define as $column) { // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
-            $columnObject = is_array($column) ? new \App\Models\ColumnDefine($column) : $column;
-            if ($columnObject->required) {
-                $groupName = $columnObject->group ?? __('ledger.form.group_default');
-                $this->collapsedStates[$groupName] = false;
-            }
         }
     }
 
@@ -101,7 +60,6 @@ class Show extends Component
 
     public function updatedDisplayLevel(int $level): void
     {
-        $this->filteredColumns = $this->calculateFilteredColumns();
         // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
         $this->dispatch('displayLevelUpdated', displayLevel: $level);
     }
@@ -110,63 +68,10 @@ class Show extends Component
     {
         if (in_array($level, [1, 2, 3])) {
             $this->displayLevel = $level;
-            $this->filteredColumns = $this->calculateFilteredColumns();
             // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
             $this->dispatch('displayLevelUpdated', displayLevel: $level);
         }
     }
-
-    protected function calculateFilteredColumns(): array
-    {
-        if (empty($this->ledgerRecord->define) || empty($this->ledgerRecord->define->column_define)) { // この行を追加
-            return [];
-        }
-
-        return collect($this->ledgerRecord->define->column_define) // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
-            ->filter(function ($column) {
-                $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
-                return $columnDisplayLevel <= $this->displayLevel;
-            })
-            ->sortBy(function($column) {
-                return is_array($column) ? $column['order'] : $column->order;
-            })
-            ->map(function ($column) {
-                // ColumnDefine オブジェクトまたは配列から必要なプロパティを抽出して新しい配列を作成
-                $columnArray = is_array($column) ? $column : (
-                    method_exists($column, 'toArray') ? $column->toArray() : (array) $column
-                );
-                return [
-                    'id' => $columnArray['id'] ?? null,
-                    'name' => $columnArray['name'] ?? null,
-                    'type' => $columnArray['type'] ?? null,
-                    'order' => $columnArray['order'] ?? null,
-                    'useOptions' => $columnArray['useOptions'] ?? false,
-                    'options' => $columnArray['options'] ?? [],
-                    'required' => $columnArray['required'] ?? false,
-                    'unique' => $columnArray['unique'] ?? false,
-                    'sortBy' => $columnArray['sortBy'] ?? false,
-                    'hint' => $columnArray['hint'] ?? '',
-                    'file' => $columnArray['file'] ?? [],
-                    'display_level' => $columnArray['display_level'] ?? 3,
-                    'group' => $columnArray['group'] ?? '',
-                ];
-            })
-            ->all();
-    }
-
-    public function toggleGroup(string $groupName): void
-    {
-        if (!isset($this->collapsedStates[$groupName])) {
-            $this->collapsedStates[$groupName] = false;
-        }
-        $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
-
-        
-    }
-
-    
-
-    
 
     public function retryProcessing(int $attachedFileId): void
     {
@@ -204,30 +109,8 @@ class Show extends Component
 
     public function render()
     {
-        $groupedColumns = collect($this->filteredColumns)
-            ->groupBy(function ($column) {
-                $group = is_array($column) ? ($column['group'] ?? '') : ($column->group ?? '');
-                return $group === '' ? __('ledger.form.group_default') : $group;
-            })
-            ->sortBy(function ($columns, $groupName) {
-                if ($columns->isNotEmpty()) {
-                    $firstColumn = $columns->first();
-                    return is_array($firstColumn) ? ($firstColumn['order'] ?? PHP_INT_MAX) : ($firstColumn->order ?? PHP_INT_MAX);
-                }
-                return $groupName;
-            });
-
-        $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
-            $this->ledgerRecord,
-            $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
-            $this->highlight
-        );
-
         return view('livewire.ledger.show', [
-            'groupedColumns' => $groupedColumns,
-            'filteredColumns' => $this->filteredColumns,
-            'displayColumns' => $this->displayColumns,
-            'ledgerDefineRecord' => $this->ledgerRecord->define, // $this->ledgerDefineRecord を $this->ledgerRecord->define に変更
+            'ledgerDefineRecord' => $this->ledgerRecord->define,
         ])->layout('layouts.app');
     }
 }
