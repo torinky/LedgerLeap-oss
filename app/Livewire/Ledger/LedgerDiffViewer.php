@@ -23,8 +23,9 @@ class LedgerDiffViewer extends Component
 
     // Show.php から渡されるプロパティ
     public bool $canView = false;
-    public ?EloquentCollection $currentLedgerAttachments = null;
-    public ?EloquentCollection $oldAttachments = null;
+
+    public $allAttachments;
+
     public ?string $highlight = null;
     public array $collapsedStates = []; // グループの開閉状態 (LedgerDiffViewer 自身で管理)
     public ?array $groupedColumns = null; // 表示用のグループ化されたカラム (多次元配列)
@@ -155,18 +156,9 @@ class LedgerDiffViewer extends Component
                 }
             }
             $oldFileHashes = array_unique($oldFileHashes);
-
-            if (!empty($oldFileHashes)) {
-                $this->oldAttachments = AttachedFile::where('ledger_id', $this->comparisonTargetDiff->ledger_id)
-                    ->whereIn('hashedbasename', $oldFileHashes)
-                    ->get()
-                    ->keyBy('hashedbasename');
-            } else {
-                $this->oldAttachments = new EloquentCollection();
-            }
-        } else {
-            $this->oldAttachments = new EloquentCollection();
         }
+        //古い履歴のファイルもまとめて取得
+        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
     }
 
     public function render()
