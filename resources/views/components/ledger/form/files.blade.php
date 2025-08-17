@@ -53,6 +53,7 @@
                 pond = FilePond.create($refs[`content_${columnId}`]);
 
                 pond.setOptions({
+                    allowPaste: true,
                     allowMultiple: {{ $attributes->has('multiple') ? 'true' : 'false' }},
                     allowImagePreview: true,
                     imagePreviewMaxHeight: {{ $attributes->get('imagePreviewMaxHeight', '256') }},

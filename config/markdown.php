@@ -74,7 +74,14 @@ return [
      */
     'extensions' => [
         League\CommonMark\Extension\Table\TableExtension::class,
-        League\CommonMark\Extension\Strikethrough\StrikethroughExtension::class
+        League\CommonMark\Extension\Strikethrough\StrikethroughExtension::class,
+        League\CommonMark\Extension\TaskList\TaskListExtension::class,
+        League\CommonMark\Extension\Autolink\AutolinkExtension::class,
+        League\CommonMark\Extension\ExternalLink\ExternalLinkExtension::class,
+        League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension::class,
+        League\CommonMark\Extension\Footnote\FootnoteExtension::class,
+        League\CommonMark\Extension\Attributes\AttributesExtension::class,
+        League\CommonMark\Extension\DescriptionList\DescriptionListExtension::class
     ],
 
     /*
