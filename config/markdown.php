@@ -73,7 +73,8 @@ return [
      * More info: https://commonmark.thephpleague.com/2.4/extensions/overview/
      */
     'extensions' => [
-        League\CommonMark\Extension\Table\TableExtension::class
+        League\CommonMark\Extension\Table\TableExtension::class,
+        League\CommonMark\Extension\Strikethrough\StrikethroughExtension::class
     ],
 
     /*
