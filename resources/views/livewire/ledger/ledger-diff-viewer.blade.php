@@ -82,18 +82,22 @@
 
                                 @if($showChanges)
                                     {{-- Diff View --}}
-                                    <td class="w-1/3 lg:w-3/8 break-words align-top pt-2">
+                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 @if($status === 'deleted') align-middle @else align-top @endif">
                                         {{-- New Value --}}
                                         @if($status === 'deleted')
-                                            <div class="p-2 italic text-gray-400 line-through">({{ __('ledger.diff.deleted') }})</div>
+                                            <div class="flex w-full justify-center">
+                                                <x-mary-icon name="o-trash" label="{{ __('ledger.diff.deleted') }}" class="w-5 h-5 text-success-content/50"/>
+                                            </div>
                                         @else
                                             {!! ColumnHtml::show($columnDefine, $currentValue, $canView, [], '', false, $ledgerRecord, $highlight, $currentLedgerAttachments) !!}
                                         @endif
                                     </td>
-                                    <td class="w-1/3 lg:w-3/8 break-words align-top pt-2">
+                                    <td class="w-1/3 lg:w-3/8 break-words pt-2 @if($status !== 'added') align-middle @else align-top @endif">
                                         {{-- Old Value --}}
                                         @if($status === 'added')
-                                            <div class="p-2 italic text-gray-400">{{ __('ledger.diff.not_exist') }}</div>
+                                            <div class="flex w-full justify-center">
+                                                <x-mary-icon name="o-cube" label="{{ __('ledger.diff.not_exist') }}" class="w-5 h-5 text-success-content/50"/>
+                                            </div>
                                         @else
                                             {!! ColumnHtml::show($columnDefine, $oldValue, $canView, [], '', false, $ledgerRecord, $highlight, $oldAttachments) !!}
                                         @endif

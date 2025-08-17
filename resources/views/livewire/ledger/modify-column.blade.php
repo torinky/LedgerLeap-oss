@@ -50,10 +50,12 @@
                              @if(!($collapsedStates[$groupName] ?? true)) open @endif> {{-- falseの時にopen --}}
                             <div class="collapse-title text-xl font-medium" wire:click="toggleGroup('{{ $groupName }}')">
                                 <h3 class="text-lg font-bold flex items-center">
-                                    {{ $groupName }}
                                     @if(collect($columnsInGroup)->contains(fn($col) => $col->required))
-                                        <span class="ml-2 text-error text-sm">{{ __('ledger.form.required_group_indicator') }}</span>
+                                        <div class="tooltip tooltip-right mr-2" data-tip="{{ __('ledger.form.required_group_indicator') }}">
+                                            <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error" />
+                                        </div>
                                     @endif
+                                        {{ $groupName }}
                                 </h3>
                             </div>
                             <div class="collapse-content">
