@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Traits;
+namespace tests\Unit\Traits;
 
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;

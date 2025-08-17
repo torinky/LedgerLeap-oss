@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Services;
+namespace tests\Unit\Services;
 
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
