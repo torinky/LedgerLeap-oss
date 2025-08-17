@@ -260,7 +260,7 @@ HTML;
                     $retryIconHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
-    wire:click="retryProcessing({$attachment->id})"></i>
+    onclick="Livewire.dispatch('retryProcessingEvent', { attachedFileId: {$attachment->id} })"></i>
 </div>
 HTML;
                 }
@@ -324,6 +324,7 @@ HTML;
 <div class="indicator"> 
 <span class="indicator-item">
     {$statusIconHtml}
+ {$retryIconHtml}
     {$auxiliaryLinksHtml}
 </span>
 {$contentHtmlStart}

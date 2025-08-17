@@ -73,6 +73,7 @@ class Show extends Component
         }
     }
 
+    #[On('retryProcessingEvent')]
     public function retryProcessing(int $attachedFileId): void
     {
         try {
