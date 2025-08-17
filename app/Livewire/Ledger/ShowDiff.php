@@ -29,7 +29,7 @@ class ShowDiff extends Component
     public int $offset = 0; // スライダーの位置 (0が最新)
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
-    public ?\Illuminate\Support\Collection $allAttachments = null;
+    public ?\Illuminate\Database\Eloquent\Collection $allAttachments = null;
     public array $displayColumns = []; // 追加
 
     protected LedgerContentProcessor $ledgerContentProcessor; // 追加
@@ -84,7 +84,7 @@ class ShowDiff extends Component
                 ->whereIn('hashedbasename', $fileHashedBasenames)
                 ->get());
         } else {
-            $this->ledgerRecord->setRelation('attachedFiles', collect());
+            $this->ledgerRecord->setRelation('attachedFiles', new \Illuminate\Database\Eloquent\Collection()); // 空のEloquentCollectionをセット
         }
     }
 
@@ -145,18 +145,21 @@ class ShowDiff extends Component
         $this->ledgerRecord->modifier = $this->currentDiffRecord->modifier;
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
 
-        // LedgerContentProcessor を使用して displayColumns を生成
-        $this->displayColumns = $this->ledgerContentProcessor->processContentForDisplay(
-            $this->ledgerRecord,
-            $this->ledgerDefineRecord
-        );
-
         // Diff の content に基づいて添付ファイル情報を再構築
-        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
+        $this->allAttachments = $this->ledgerRecord->attachedFiles;
         $this->attachmentIdMap = $this->ledgerRecord->attachedFiles
             ->pluck('id', 'hashedbasename')
             ->toArray();
 
+        // LedgerContentProcessor を使用して displayColumns を生成
+        $result = $this->ledgerContentProcessor->processContentForDisplay(
+            $this->ledgerRecord,
+            null, // 履歴表示では差分比較はしない
+            3,    // 全ての項目を表示
+            $this->allAttachments,
+            null  // ハイライトなし
+        );
+        $this->displayColumns = $result['displayData'];
     }
 
     // スライダー操作時の処理を修正
