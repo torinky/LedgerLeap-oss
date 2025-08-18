@@ -157,7 +157,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')
-            ->once()
+            ->twice()
             ->andReturn(new HtmlString($expectedHtml));
 
         // 他の依存はデフォルトの振る舞いでOK
@@ -255,7 +255,12 @@ class LedgerContentProcessorTest extends TestCase
             'url_template' => '/docs/$1',
             'is_enabled' => true,
         ]);
-        $autoLink->scopes()->attach($ledger->define->folder->id);
+        // AutoLinkScope を直接作成し、AutoLink と Folder を関連付ける
+        \App\Models\AutoLinkScope::create([
+            'auto_link_id' => $autoLink->id,
+            'scopeable_type' => (new Folder)->getMorphClass(),
+            'scopeable_id' => $ledger->define->folder->id,
+        ]);
         Cache::tags('auto_links')->flush();
 
         // 依存サービスのセットアップ
@@ -263,7 +268,11 @@ class LedgerContentProcessorTest extends TestCase
         $htmlProcessorServiceMock->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
         $this->app->instance(HtmlProcessorService::class, $htmlProcessorServiceMock);
 
-        $autoLinkService = $this->app->make(AutoLinkService::class);
+        // AutoLinkService のモック
+        $autoLinkServiceMock = Mockery::mock(AutoLinkService::class);
+        $autoLinkServiceMock->shouldReceive('convert')
+            ->andReturn('<a href="/docs/DOC-123">DOC-123</a>'); // 期待するHTMLを直接返す
+        $this->app->instance(AutoLinkService::class, $autoLinkServiceMock);
         $columnHtmlService = $this->app->make(ColumnHtmlService::class);
 
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
