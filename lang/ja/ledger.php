@@ -297,6 +297,15 @@
     'detach_confirmation_title' => '紐付け解除の確認',
     'detailed_information_title' => '詳細情報',
     'details' => '詳細',
+    'diff' =>
+        [
+            'current_version' => '現状',
+            'deleted' => '削除済み',
+            'new_value' => '変更後',
+            'not_exist' => '項目なし',
+            'old_value' => '変更前',
+            'past_version' => '過去',
+        ],
     'disable' => '無効にする',
     'disable_notification' => '通知を無効にする',
     'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
@@ -1019,13 +1028,4 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-
-    'diff' => [
-        'old_value' => '変更前',
-        'new_value' => '変更後',
-        'not_exist' => '項目なし',
-        'deleted' => '削除済み',
-        'current_version' => '現状',
-        'past_version' => '過去',
-    ],
 ];

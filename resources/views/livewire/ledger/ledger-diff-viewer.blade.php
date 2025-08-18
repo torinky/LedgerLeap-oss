@@ -12,11 +12,13 @@
     @endif
 
     @if($displayData)
-{{--        @dd($displayData)--}}
+        {{--        @dd($displayData)--}}
         @foreach($displayData as $group)
-            <div wire:key="group-{{ $group['group_name'] }}-{{ $loop->index }}" class="collapse collapse-plus bg-base-200 mb-4"
+            <div wire:key="group-{{ $group['group_name'] }}-{{ $loop->index }}"
+                 class="collapse collapse-plus bg-base-200 mb-4"
                  @if(!($collapsedStates[$group['group_name']] ?? false)) open @endif >
-                <div class="collapse-title text-xl font-medium" wire:click.prevent="toggleGroup('{{ $group['group_name'] }}')">
+                <div class="collapse-title text-xl font-medium"
+                     wire:click.prevent="toggleGroup('{{ $group['group_name'] }}')">
                     <h3 class="text-lg font-bold flex items-center">
                         @if($group['is_required_group'])
                             <div class="tooltip tooltip-right mr-2"
@@ -50,11 +52,11 @@
                         @foreach($group['columns'] as $column)
                             @php
                                 $rowClass = 'hover:bg-base-300';
-                                if ($showChanges) {
+//                                if ($showChanges) {
                                     if ($column['status'] === 'modified') $rowClass .= ' bg-warning/20 text-warning-content';
                                     if ($column['status'] === 'added') $rowClass .= ' bg-success/20 text-success-content';
                                     if ($column['status'] === 'deleted') $rowClass .= ' bg-error/20 text-error-content';
-                                }
+//                                }
                             @endphp
                             <tr class="{{ $rowClass }}" wire:key="column-{{ $column['id'] }}">
                                 <th class="w-1/3 lg:w-1/4 break-words align-top pt-2">
