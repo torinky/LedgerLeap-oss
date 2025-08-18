@@ -116,14 +116,6 @@ class LedgerDiffViewerTest extends TestCase
     #[Test]
     public function it_shows_diff_view_when_show_changes_is_true(): void
     {
-        // 1. プロセッサのモック
-        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
-            $mock->shouldReceive('processContentForDisplay')->andReturn([
-                'displayData' => [],
-                'hasChangedColumns' => true,
-            ]);
-        });
-
         // 2. データベースの状態を正確にセットアップ
         // 現在の台帳 (version 2)
         $ledger = Ledger::factory()->create(['version' => 2]);
@@ -135,7 +127,7 @@ class LedgerDiffViewerTest extends TestCase
         ]);
 
         // 比較対象となるべき過去の差分 (version 1)
-        \App\Models\LedgerDiff::factory()->create([
+        $pastDiff = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
         ]);
@@ -145,12 +137,43 @@ class LedgerDiffViewerTest extends TestCase
         $ledger->save();
         $ledger->refresh();
 
+        // LedgerDiffProcessor のモック
+        $this->mock(LedgerDiffProcessor::class, function (Mockery\MockInterface $mock) use ($pastDiff) {
+            $mock->shouldReceive('findComparisonTargetDiff')
+                ->once()
+                ->andReturn($pastDiff); // version 1 のDiffを返すようにモック
+        });
+
+        // LedgerContentProcessor のモック
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            $mock->shouldReceive('processContentForDisplay')->andReturn([
+                'displayData' => [
+                    [
+                        'group_name' => 'Test Group',
+                        'is_required_group' => false,
+                        'columns' => [
+                            [
+                                'id' => 'col1',
+                                'name' => 'Test Column',
+                                'hint' => 'A hint',
+                                'is_required' => false,
+                                'status' => 'unchanged',
+                                'current_value_html' => '<div>Current Value</div>',
+                                'old_value_html' => '<div>Old Value</div>',
+                            ]
+                        ]
+                    ]
+                ],
+                'hasChangedColumns' => true,
+            ]);
+        });
+
         // 3. showChanges を true で初期化してコンポーネントをテスト
         Livewire::test(LedgerDiffViewer::class, [
             'ledgerRecord' => $ledger,
             'showChanges' => true,
         ])
             ->assertSet('showChanges', true)
-            ->assertSeeHtml('Version. 1'); // 過去のバージョン(1)が表示されることを確認
+            ->assertSeeHtml('過去 Version. 1'); // 過去のバージョン(1)が表示されることを確認
     }
 }
