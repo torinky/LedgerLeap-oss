@@ -116,53 +116,33 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 ## 開発環境構築 (Laravel Sail)
 
 LedgerLeap の開発環境は **Laravel Sail (Docker)** を使用して簡単に構築できます。
+セットアッププロセス全体は、単一のスクリプトで自動化されています。
 
-1. **必須要件**: Docker Desktop がインストールされていること。
-2. **リポジトリのクローン**:
-   ```bash
-   git clone [リポジトリURL] ledgerleap
-   cd ledgerleap
-   ```
-3. **`.env` ファイルの準備**:
-   ```bash
-   cp .env.example .env
-   ```
-   `.env` ファイル内のデータベース接続情報 (`DB_HOST`, `DB_PORT` など) や `APP_URL` を、必要に応じて Sail
-   の設定に合わせて確認・調整してください (通常はデフォルトで動作します)。
-4. **Sail の起動と依存関係インストール**:
-   ```bash
-   ./vendor/bin/sail up -d # コンテナをバックグラウンドで起動
-   ./vendor/bin/sail composer install # PHP依存関係をインストール
-   ./vendor/bin/sail npm install # Node.js依存関係をインストール
-   ./vendor/bin/sail npm run build # フロントエンドアセットをビルド
-   ```
-   初回起動時はイメージのビルドに時間がかかります。`docker-compose.yml` には以下のサービスが含まれています:
-    * `laravel`: アプリケーション本体 (PHP-FPM)
-    * `queue`: Laravel Queue Worker (Redisを利用)
-    * `scheduler`: Laravel Scheduler (Redisを利用)
-    * `mysql`: Mroonga 付き MySQL データベース
-    * `redis`: キャッシュ、セッション、キュー用 (デフォルトで有効)
-    * `tika`: Apache Tika サーバー (ファイル内容抽出用)
-    * `ocrmypdf`: OCR処理用サーバー
-    * `mailpit`: 開発用メールサーバー
-    * `meilisearch`: (現状利用されていない可能性あり)
-    * `selenium`: (ブラウザテスト用)
-5. **アプリケーションキーの生成**:
-   ```bash
-   ./vendor/bin/sail artisan key:generate
-   ```
-6. **データベースマイグレーションとシーディング**:
-   ```bash
-   ./vendor/bin/sail artisan migrate:fresh --seed # DBを初期化し、初期データを投入
-   ```
-7. **アクセス**: ブラウザで `.env` の `APP_URL` (デフォルト: http://localhost) にアクセスします。
+### 必須要件
 
-**その他の Sail コマンド例**:
+-   [Docker Desktop](https://www.docker.com/products/docker-desktop/) がインストールされ、実行中であること。
 
-* コンテナ停止: `./vendor/bin/sail stop`
-* Artisan コマンド実行: `./vendor/bin/sail artisan [コマンド]`
-* Tinker 実行: `./vendor/bin/sail tinker`
-* テスト実行: `./vendor/bin/sail test` または `./vendor/bin/sail pest`
+### インストール手順
+
+1.  リポジトリをクローンします。
+    ```bash
+    git clone [リポジトリURL] ledgerleap
+    cd ledgerleap
+    ```
+2.  セットアップスクリプトを実行します。これにより、Dockerコンテナのビルド、全ての依存関係（Composer & NPM）のインストール、必要なデータベースマイグレーションの実行が行われます。
+    ```bash
+    ./bin/setup.sh
+    ```
+3.  スクリプトの完了後、アプリケーションが利用可能になります。
+    -   **アプリケーションURL:** [http://localhost](http://localhost)
+    -   **Mailpit (開発用メールサーバー):** [http://localhost:8025](http://localhost:8025)
+
+### その他の Sail コマンド例
+
+*   コンテナ停止: `./vendor/bin/sail stop`
+*   Artisan コマンド実行: `./vendor/bin/sail artisan [コマンド]`
+*   Tinker 実行: `./vendor/bin/sail tinker`
+*   テスト実行: `./vendor/bin/sail test` または `./vendor/bin/sail pest`
 
 ---
 

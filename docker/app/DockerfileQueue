@@ -1,7 +1,8 @@
-FROM sail-8.4/app
+FROM ubuntu:24.04
 
 # Build 引数を再宣言
 ARG DOCKER_GROUP_ID=999
+ARG WWWGROUP # Add this line
 
 # Docker CLI のインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,7 +18,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y docker-ce-cli \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Create the 'sail' user before adding it to groups
+RUN groupadd --force -g $WWWGROUP sail && \
+    useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail
+
 # GID に対応する既存グループ名を取得し、sail ユーザーを追加
+
 RUN if getent group "${DOCKER_GROUP_ID}" >/dev/null 2>&1; then \
       GROUP_NAME=$(getent group "${DOCKER_GROUP_ID}" | cut -d: -f1) && \
       usermod -aG "${GROUP_NAME}" sail; \
