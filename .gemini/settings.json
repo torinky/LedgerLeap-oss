@@ -2,6 +2,13 @@
   "theme": "Default",
   "checkpointing": true,
   "mcpServers": {
+    "sail-laravel-boost": {
+      "command": "./vendor/bin/sail",
+      "args": [
+        "artisan",
+        "boost:mcp"
+      ]
+    },
     "serena": {
       "command": "/opt/homebrew/bin/uv",
       "args": [

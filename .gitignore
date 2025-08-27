@@ -77,3 +77,4 @@ gen
 !/database/wordnet_data/wnjpn.db
 /.env.development
 /.env.production
+/storage/
