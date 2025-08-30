@@ -5,6 +5,7 @@ namespace tests\Unit\Services;
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\Tenant; // 追加
 use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\UserService;
@@ -13,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use tests\TestCase;
 
+
 class WorkflowServiceTest extends TestCase
 {
     use RefreshDatabase;
@@ -20,10 +22,18 @@ class WorkflowServiceTest extends TestCase
     private WorkflowService $workflowService;
 
     private User $user;
+    private string $tenantId; // テナントIDをプロパティに追加
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // テナントを作成し、そのIDを取得
+        $tenant = \App\Models\Tenant::factory()->create();
+        $this->tenantId = $tenant->id;
+
+        // テストで共通して使用するユーザーを作成
+        $this->user = User::factory()->create();
 
         // NotificationService のモックを作成し、processActivityLog の呼び出しを許容する
         $notificationServiceMock = $this->mock(NotificationService::class);
@@ -34,9 +44,6 @@ class WorkflowServiceTest extends TestCase
             $notificationServiceMock,
             $this->mock(UserService::class)
         );
-
-        // テストで共通して使用するユーザーを作成
-        $this->user = User::factory()->create();
     }
 
     /**
@@ -48,7 +55,11 @@ class WorkflowServiceTest extends TestCase
      */
     private function partialMockLedger(?bool $canProceed, ?bool $canBeFinally): Ledger|MockInterface
     {
-        return $this->partialMock(Ledger::class, function (MockInterface $mock) use ($canProceed, $canBeFinally) {
+        // Ledgerのインスタンスを直接作成し、tenant_idを設定
+        $ledger = Ledger::factory()->make(['tenant_id' => $this->tenantId]);
+
+        // そのインスタンスを部分モック化
+        $mock = $this->partialMock(get_class($ledger), function (MockInterface $mock) use ($canProceed, $canBeFinally) {
             if ($canProceed !== null) {
                 $mock->shouldReceive('canProceedToApprovalStep')->andReturn($canProceed);
             }
@@ -56,6 +67,13 @@ class WorkflowServiceTest extends TestCase
                 $mock->shouldReceive('canBeFinallyApproved')->andReturn($canBeFinally);
             }
         });
+
+        // モックオブジェクトのプロパティを元のインスタンスからコピー
+        foreach ($ledger->getAttributes() as $key => $value) {
+            $mock->{$key} = $value;
+        }
+
+        return $mock;
     }
 
     //<editor-fold desc="canRequestApproval Tests">
@@ -64,7 +82,7 @@ class WorkflowServiceTest extends TestCase
     {
         $ledger = $this->partialMockLedger(true, null);
         $ledger->status = WorkflowStatus::PENDING_INSPECTION;
-        $ledger->latestDiff = LedgerDiff::factory()->make(['inspector_id' => $this->user->id]);
+        $ledger->latestDiff = LedgerDiff::factory()->make(['tenant_id' => $this->tenantId, 'inspector_id' => $this->user->id]);
 
         $this->assertTrue($this->workflowService->canRequestApproval($this->user, $ledger));
     }
@@ -73,7 +91,7 @@ class WorkflowServiceTest extends TestCase
     {
         $ledger = $this->partialMockLedger(false, null);
         $ledger->status = WorkflowStatus::PENDING_INSPECTION;
-        $ledger->latestDiff = LedgerDiff::factory()->make(['inspector_id' => $this->user->id]);
+        $ledger->latestDiff = LedgerDiff::factory()->make(['tenant_id' => $this->tenantId, 'inspector_id' => $this->user->id]);
 
         $this->assertFalse($this->workflowService->canRequestApproval($this->user, $ledger));
     }
@@ -82,7 +100,7 @@ class WorkflowServiceTest extends TestCase
     {
         $ledger = $this->partialMockLedger(true, null);
         $ledger->status = WorkflowStatus::PENDING_INSPECTION;
-        $ledger->latestDiff = LedgerDiff::factory()->make(['inspector_id' => User::factory()->create()->id]);
+        $ledger->latestDiff = LedgerDiff::factory()->make(['tenant_id' => $this->tenantId, 'inspector_id' => User::factory()->create()->id]);
 
         $this->assertFalse($this->workflowService->canRequestApproval($this->user, $ledger));
     }
@@ -91,7 +109,7 @@ class WorkflowServiceTest extends TestCase
     {
         $ledger = $this->partialMockLedger(true, null);
         $ledger->status = WorkflowStatus::DRAFT; // Not PENDING_INSPECTION
-        $ledger->latestDiff = LedgerDiff::factory()->make(['inspector_id' => $this->user->id]);
+        $ledger->latestDiff = LedgerDiff::factory()->make(['tenant_id' => $this->tenantId, 'inspector_id' => $this->user->id]);
 
         // The logic checks for PENDING_INSPECTION or PENDING_APPROVAL
         $this->assertFalse($this->workflowService->canRequestApproval($this->user, $ledger));

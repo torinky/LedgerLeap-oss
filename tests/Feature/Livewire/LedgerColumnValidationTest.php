@@ -9,12 +9,11 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use tests\TestCase;
+use tests\TestCase; // TestCase を継承
 
 class LedgerColumnValidationTest extends TestCase
 {
     use RefreshDatabase;
-
 
     protected function setUp(): void
     {
@@ -24,7 +23,7 @@ class LedgerColumnValidationTest extends TestCase
         $this->actingAs($user);
     }
 
-    #[Test]
+    /** @test */ // PHPUnit のアノテーション
     public function create_column_fails_validation_if_unique_column_is_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -60,7 +59,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasErrors(['content.1' => '指定のUnique Textは既に使用されています。']);
     }
 
-    #[Test]
+    /** @test */ // PHPUnit のアノテーション
     public function create_column_passes_validation_if_unique_column_is_not_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -96,7 +95,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasNoErrors('content.1');
     }
 
-    #[Test]
+    /** @test */ // PHPUnit のアノテーション
     public function number_column_validation_works_correctly()
     {
         // 準備: このテスト専用の「number」型カラムを持つ台帳定義を作成
@@ -153,5 +152,56 @@ class LedgerColumnValidationTest extends TestCase
             ->set('content.0', 'not a number')
             ->call('saveDirectly')
             ->assertHasErrors(['content.0' => 'numeric']);
+    }
+
+    /** @test */ // PHPUnit のアノテーション
+    public function create_column_passes_validation_across_tenants()
+    {
+        // テナント1を作成
+        $tenant1 = \App\Models\Tenant::factory()->create();
+        // テナント2を作成
+        $tenant2 = \App\Models\Tenant::factory()->create();
+
+        // テナント1で台帳定義を作成
+        $ledgerDefine1 = $tenant1->run(function () {
+            return LedgerDefine::factory()->create([
+                'column_define' => [
+                    new ColumnDefine([
+                        'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
+                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    ]),
+                ],
+            ]);
+        });
+
+        // テナント2で台帳定義を作成 (同じ内容だが別テナント)
+        $ledgerDefine2 = $tenant2->run(function () {
+            return LedgerDefine::factory()->create([
+                'column_define' => [
+                    new ColumnDefine([
+                        'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
+                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    ]),
+                ],
+            ]);
+        });
+
+        // テナント1で既存データを作成
+        $tenant1->run(function () use ($ledgerDefine1) {
+            $content = [0 => 'SHARED_UNIQUE_VALUE'];
+            $normalizedContent = $ledgerDefine1->normalizeByColumnDefine($content);
+            Ledger::factory()->create([
+                'ledger_define_id' => $ledgerDefine1->id,
+                'content' => $normalizedContent,
+            ]);
+        });
+
+        // テナント2に切り替えて、テナント1と同じユニーク値で台帳を作成しようとする
+        $tenant2->run(function () use ($ledgerDefine2) {
+            Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine2->id])
+                ->set('content.0', 'SHARED_UNIQUE_VALUE') // テナント1と同じ値をセット
+                ->call('saveDirectly')
+                ->assertHasNoErrors('content.0'); // エラーが発生しないことを確認
+        });
     }
 }
