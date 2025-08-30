@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire\Ledger;
+namespace Tests\Feature\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\Show;
@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
-use tests\TestCase;
+use Tests\TestCase;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Jobs\Ledger\GenerateThumbnail;
 

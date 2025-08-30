@@ -13,7 +13,7 @@ class LedgerLookupController extends Controller
     public function handle(Request $request, string $query)
     {
         if (empty($query)) {
-            return redirect()->route('ledger.index');
+            return redirect()->route('ledger.index', ['tenant' => tenant()->id]);
         }
 
         // Create a search context to find the ledger
@@ -26,15 +26,15 @@ class LedgerLookupController extends Controller
 
         // Force list mode
         if ($request->input('mode') === 'list') {
-            return redirect()->route('ledger.index', ['q' => $query, 'highlight' => $query, 'l' => [], 'f' => []]);
+            return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
         }
 
         // Unique match, redirect to show page
         if ($results->count() === 1) {
-            return redirect()->route('ledger.show', ['ledgerId' => $results->first()->id, 'highlight' => $query]);
+            return redirect()->route('ledger.show', ['tenant' => tenant()->id, 'ledgerId' => $results->first()->id, 'highlight' => $query]);
         }
 
         // 0 or multiple matches, redirect to index page
-        return redirect()->route('ledger.index', ['q' => $query, 'highlight' => $query, 'l' => [], 'f' => []]);
+        return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
     }
 }

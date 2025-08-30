@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\User;
+use App\Models\Tenant;
+use App\Providers\RouteServiceProvider;
+use App\Enums\LoginLandingPage;
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
@@ -9,15 +12,32 @@ test('login screen can be rendered', function () {
 });
 
 test('users can authenticate using the login screen', function () {
-    $user = User::factory()->create();
+    $tenant = Tenant::create();
 
-    $response = $this->post('/login', [
-        'email' => $user->email,
+    // シナリオ1: login_landing_page がデフォルト (my-portal) の場合
+    $userMyPortal = User::factory()->create();
+    $tenant->users()->attach($userMyPortal);
+
+    $responseMyPortal = $this->post('/login', [
+        'email' => $userMyPortal->email,
         'password' => 'password',
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('my-portal', absolute: false));
+    $responseMyPortal->assertRedirect('/' . $tenant->getTenantKey() . '/my-portal');
+    $this->post('/logout'); // ログアウトして次のシナリオに備える
+
+    // シナリオ2: login_landing_page が Ledgers の場合
+    $userLedgers = User::factory()->create(['login_landing_page' => \App\Enums\LoginLandingPage::Ledgers]);
+    $tenant->users()->attach($userLedgers);
+
+    $responseLedgers = $this->post('/login', [
+        'email' => $userLedgers->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $responseLedgers->assertRedirect('/' . $tenant->getTenantKey() . '/ledger');
 });
 
 test('users can not authenticate with invalid password', function () {

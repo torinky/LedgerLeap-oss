@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire\Ledger;
+namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\RecordsTable;
 use App\Models\Folder;
@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
-use tests\TestCase;
+use Tests\TestCase;
 
 class RecordsTableQueryTest extends TestCase
 {

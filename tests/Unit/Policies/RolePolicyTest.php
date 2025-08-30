@@ -1,12 +1,12 @@
 <?php
 
-namespace tests\Unit\Policies;
+namespace Tests\Unit\Policies;
 
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use tests\TestCase;
+use Tests\TestCase;
 
 class RolePolicyTest extends TestCase
 {

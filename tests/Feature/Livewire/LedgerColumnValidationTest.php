@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire;
+namespace Tests\Feature\Livewire;
 
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
@@ -9,7 +9,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use tests\TestCase; // TestCase を継承
+use Tests\TestCase; // TestCase を継承
 
 class LedgerColumnValidationTest extends TestCase
 {

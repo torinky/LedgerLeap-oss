@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Models\Tenant;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -29,7 +30,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $user = $request->user(); // ログインしたユーザーを取得
+                // ユーザーが所属するテナントを初期化
+        // ユーザーが複数のテナントに所属する可能性があるため、ここでは最初のテナントを取得
+        $tenant = $user->tenants()->first();
+        if ($tenant) {
+            tenancy()->initialize($tenant);
+        }
 
         // デフォルトのリダイレクト先ルート名を設定
         $landingPageRouteName = 'my-portal'; // マイポータルのルート名
@@ -41,7 +47,7 @@ class AuthenticatedSessionController extends Controller
 
         // intended() はログイン前にアクセスしようとしたページがあればそちらを優先
         // なければ、決定したランディングページのルートへリダイレクト
-        return redirect()->intended(route($landingPageRouteName));
+        return redirect()->intended(route($landingPageRouteName, ['tenant' => tenant()->id]));
 
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Traits;
+namespace Tests\Unit\Traits;
 
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
@@ -10,36 +10,11 @@ use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Livewire\Component;
-use tests\TestCase;
+use Tests\TestCase;
 use App\Traits\WorkflowActions; // テスト対象のトレイト
 use Mary\Traits\Toast; // 追加
 
-// ダミーのLivewireコンポーネント
-class DummyWorkflowComponentForTraitTest extends Component
-{
-    use WorkflowActions, Toast; // Toast を追加
 
-    public Ledger $ledgerRecord;
-
-    public function mount(Ledger $ledgerRecord)
-    {
-        $this->ledgerRecord = $ledgerRecord;
-    }
-
-    public function boot(WorkflowService $workflowService): void
-    {
-        $this->bootWorkflowActions($workflowService);
-    }
-
-    public function render()
-    {
-        return <<<'blade'
-            <div>
-                <!-- Dummy content for rendering -->
-            </div>
-        blade;
-    }
-}
 
 class WorkflowActionsTest extends TestCase
 {

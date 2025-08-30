@@ -1,10 +1,10 @@
 <?php
 
-namespace tests\Unit\Casts;
+namespace Tests\Unit\Casts;
 
 use App\Casts\AsJson;
 use stdClass;
-use tests\TestCase;
+use Tests\TestCase;
 
 class AsJsonTest extends TestCase
 {

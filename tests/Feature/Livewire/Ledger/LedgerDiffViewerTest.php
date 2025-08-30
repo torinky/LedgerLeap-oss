@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire\Ledger;
+namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\LedgerDiffViewer;
 use App\Models\Ledger;
@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
-use tests\TestCase;
+use Tests\TestCase;
 
 class LedgerDiffViewerTest extends TestCase
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Policies;
+namespace Tests\Unit\Policies;
 
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -9,7 +9,7 @@ use App\Policies\LedgerDefinePolicy;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use tests\TestCase;
+use Tests\TestCase;
 
 class LedgerDefinePolicyTest extends TestCase
 {
@@ -607,7 +607,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerForceDelete($user, $ledgerDefine));
     }
 
-    protected function tearDown(): void
+    public function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();

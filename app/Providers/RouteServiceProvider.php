@@ -7,6 +7,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -33,8 +34,21 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
-            Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class])
+            Route::middleware('web')
                 ->group(base_path('routes/web.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/auth.php'));
+
+            // Central domains routes
+            Route::middleware('web')
+                ->group(base_path('routes/central.php'));
+
+            // Tenant routes
+            Route::middleware([
+                'web',
+                \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class,
+            ])->group(base_path('routes/tenant.php'));
         });
     }
 }

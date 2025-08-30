@@ -11,11 +11,13 @@ use App\Modules\ImageUpload\LocalImageManager;
 use App\Observers\AutoLinkObserver;
 use App\Observers\FolderObserver;
 use App\Observers\LedgerDiffObserver;
+use Stancl\Tenancy\Database\Models\Domain;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 //use App\Modules\ImageUpload\CloudinaryImageManager;
 
@@ -71,5 +73,10 @@ class AppServiceProvider extends ServiceProvider
     {
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
+
+        // Domain モデルが作成される際にUUIDを自動生成
+        Domain::creating(function (Domain $domain) {
+            $domain->id = $domain->id ?? (string) Str::uuid();
+        });
     }
 }

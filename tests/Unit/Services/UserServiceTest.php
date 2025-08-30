@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Services;
+namespace Tests\Unit\Services;
 
 use App\Models\Folder;
 use App\Models\Organization;
@@ -14,7 +14,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Collection;
 use Mockery;
 use Spatie\Permission\PermissionRegistrar;
-use tests\TestCase;
+use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
@@ -29,7 +29,7 @@ class UserServiceTest extends TestCase
         app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    protected function tearDown(): void
+    public function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();

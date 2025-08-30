@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Services;
+namespace Tests\Unit\Services;
 
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
@@ -12,7 +12,7 @@ use App\Services\UserService;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
-use tests\TestCase;
+use Tests\TestCase;
 
 
 class WorkflowServiceTest extends TestCase

@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Models;
+namespace Tests\Unit\Models;
 
 use App\Enums\AttachedFileStatus;
 use App\Jobs\Ledger\GenerateThumbnail;

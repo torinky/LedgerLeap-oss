@@ -83,3 +83,5 @@ gen
 .DS_Store
 public/css/
 public/js/
+/database/wordnet_data/wnjpn.db
+/database/tansi/tansi_v110.db

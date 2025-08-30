@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire\Common;
+namespace Tests\Feature\Livewire\Common;
 
 
 use App\Livewire\Common\ActivityHistoryDisplay;
@@ -13,9 +13,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 
-use function Pest\Laravel\actingAs;
 
-class ActivityHistoryDisplayTest extends \tests\TestCase
+
+class ActivityHistoryDisplayTest extends \Tests\TestCase
 {
     use RefreshDatabase;
 
@@ -31,10 +31,10 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
         Permission::create(['name' => 'viewAny']);
 
         // ユーザーの作成
-        $this->adminUser = User::factory()->create(['email' => fake()->unique()->safeEmail()]);
+        $this->adminUser = User::factory()->create(['email' => 'admin_' . uniqid() . '@example.com']);
         $this->adminUser->givePermissionTo('viewAny');
 
-        $this->generalUser = User::factory()->create(['email' => fake()->unique()->safeEmail()]);
+        $this->generalUser = User::factory()->create(['email' => 'general_' . uniqid() . '@example.com']);
 
         // テストデータの階層構造を作成
         $this->folderA = Folder::factory()->create(['title' => 'Folder A']);
@@ -54,7 +54,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function shows_permission_error_for_user_without_permission()
     {
-        actingAs($this->generalUser);
+        $this->actingAs($this->generalUser);
 
         Livewire::test(ActivityHistoryDisplay::class)
             ->assertViewIs('livewire.common.activity-history-display-no-permission');
@@ -63,7 +63,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function renders_successfully_for_user_with_permission()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class)
             ->assertViewIs('livewire.common.activity-history-display')
@@ -73,7 +73,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function displays_all_explicitly_created_activities_in_global_mode()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         $component = Livewire::test(ActivityHistoryDisplay::class);
         $allIds = $component->instance()->getActivitiesQuery()->pluck('id');
@@ -88,7 +88,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function shows_activities_for_a_folder_and_its_descendants()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Folder',
@@ -107,7 +107,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function shows_activities_for_a_ledger_define_and_its_records()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'LedgerDefine',
@@ -116,8 +116,8 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
             $ids = $activities->pluck('id');
             $this->assertContains($this->activityC->id, $ids);
             $this->assertContains($this->activityD->id, $ids);
-            $this->assertNotContains($this->activityA->id, 'ids');
-            $this->assertNotContains($this->activityB->id, 'ids');
+            $this->assertNotContains($this->activityA->id, $ids);
+            $this->assertNotContains($this->activityB->id, $ids);
             return true;
         });
     }
@@ -125,7 +125,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function shows_activities_for_a_ledger_with_related_resources()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Ledger',
@@ -143,7 +143,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function shows_activities_for_a_ledger_without_related_resources()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Ledger',
@@ -161,7 +161,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function filters_activities_by_causer()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class)
             ->set('filterByUserId', $this->generalUser->id)
@@ -175,7 +175,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function filters_activities_by_event()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class)
             ->set('filterByEvent', 'created')
@@ -190,7 +190,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function filters_activities_by_date_range()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         $futureActivity = activity()->causedBy($this->adminUser)->performedOn($this->folderA)
             ->createdAt(now()->addDay())
@@ -209,7 +209,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function resets_filters()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         $component = Livewire::test(ActivityHistoryDisplay::class)
             ->set('filterByUserId', $this->generalUser->id)
@@ -225,7 +225,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function hides_columns_as_specified()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::test(ActivityHistoryDisplay::class, ['hiddenColumns' => ['subject']])
             ->assertViewHas('headers', function ($headers) {
@@ -237,7 +237,7 @@ class ActivityHistoryDisplayTest extends \tests\TestCase
     /** @test */
     public function resets_page_when_filter_is_updated()
     {
-        actingAs($this->adminUser);
+        $this->actingAs($this->adminUser);
 
         Livewire::withQueryParams(['page' => 2])
             ->test(ActivityHistoryDisplay::class)

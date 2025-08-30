@@ -1,12 +1,12 @@
 <?php
 
-namespace tests\Unit\Casts;
+namespace Tests\Unit\Casts;
 
 use App\Casts\AsColumnDefinesArrayJson;
 use App\Models\ColumnDefine;
 use Illuminate\Support\Facades\Log;
 use stdClass;
-use tests\TestCase;
+use Tests\TestCase;
 
 class AsColumnDefinesArrayJsonTest extends TestCase
 {

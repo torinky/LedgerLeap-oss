@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Models;
+namespace Tests\Unit\Models;
 
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -9,7 +9,7 @@ use App\Models\LedgerDiff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
-use tests\TestCase;
+use Tests\TestCase;
 
 class LedgerTest extends TestCase
 {

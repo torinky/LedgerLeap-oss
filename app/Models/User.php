@@ -17,6 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -214,6 +215,19 @@ class User extends Authenticatable implements FilamentUser
 
         // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
         return Lang::has($key) ? trans($key) : "ユーザーが{$eventName}されました";
+    }
+
+    /**
+     * グローバル通知をさせるためにルートフォルダーを返す
+     *
+     * @return Folder
+     */
+    /**
+     * ユーザーが所属するテナントへの多対多リレーションシップを定義します。
+     */
+    public function tenants()
+    {
+        return $this->belongsToMany(Tenant::class, 'tenant_user', 'user_id', 'tenant_id');
     }
 
     /**
