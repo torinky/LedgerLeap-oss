@@ -33,7 +33,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
-            Route::middleware('web')
+            Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class])
                 ->group(base_path('routes/web.php'));
         });
     }

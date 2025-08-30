@@ -68,7 +68,10 @@
     1.  `app/Providers/TenancyServiceProvider.php` を開き、`boot()` メソッドに追加した動的プレフィックス設定ロジック（`TenancyInitialized` と `TenancyEnded` イベントリスナ）を全て削除する。
 *   **検証方法:**
     *   `vendor/bin/sail up -d` で環境を起動後、`curl http://localhost/` が正常なレスポンスを返すことを確認する。
+        *   **結果:** `/ledger` へのリダイレクトを確認。正常。
     *   `curl http://localhost/dummy-tenant/` のように、存在しないテナントパスへのアクセスが、Laravelの404ページを返すことを確認する。
+        *   **結果:** Laravelの404ページ（「見つかりません」）を確認。正常。
+    *   **完了:** ステップ1の検証が完了し、環境がクリーンな状態であることを確認済み。
 
 ### ステップ2: `stancl/tenancy`の基本設定の確認
 
@@ -79,6 +82,8 @@
     3.  `app/Providers/RouteServiceProvider.php` を開き、`map()` メソッド内でテナント用ルート（`web.php`）にのみ `InitializeTenancyByPath::class` ミドルウェアが適用される設定になっていることを再確認する。
 *   **検証方法:**
     *   `vendor/bin/sail artisan about` を実行し、設定が意図通り反映されているか確認する。特にエラーが出なければOK。
+        *   **結果:** `config/tenancy.php` の `DatabaseTenancyBootstrapper` がコメントアウトされていることを確認。`app/Providers/RouteServiceProvider.php` に `InitializeTenancyByPath::class` ミドルウェアを追加済み。`artisan about` コマンドでエラーがないことを確認。
+    *   **完了:** ステップ2の検証が完了し、`stancl/tenancy` の基本設定がシングルDBモードで正しく動作するように設定されていることを確認済み。
 
 ### ステップ3: マイグレーション修正とモデル対応
 
