@@ -13,6 +13,8 @@ return new class extends Migration {
      */
     public function up()
     {
+        Schema::disableForeignKeyConstraints(); // 外部キー制約を一時的に無効化
+
         Schema::create('ledger_diffs', function (Blueprint $table) {
             $table->engine = 'Mroonga';
             $table->id();
@@ -42,6 +44,8 @@ return new class extends Migration {
         // JSONカラム content は後から追加
         DB::statement('ALTER TABLE ledger_diffs ADD COLUMN content longtext COMMENT \'flags "COLUMN_VECTOR"\'');
         DB::statement('ALTER TABLE ledger_diffs ADD FULLTEXT index (content) COMMENT \'tokenizer "TokenBigramSplitSymbolAlphaDigit", index_flags "WITH_SECTION|WITH_POSITION"\'');
+
+        Schema::enableForeignKeyConstraints(); // 外部キー制約を有効化
     }
 
     /**

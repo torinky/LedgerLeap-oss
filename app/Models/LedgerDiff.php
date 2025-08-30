@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class LedgerDiff extends Model
 {
-    use HasFactory;
+    use HasFactory, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'content' => AsColumnArrayJson::class,

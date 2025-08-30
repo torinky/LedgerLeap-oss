@@ -116,6 +116,8 @@
 *   **検証方法:**
     *   `vendor/bin/sail artisan migrate:fresh --seed` がエラーなく完了すること。
     *   データベースクライアントで各テーブルのスキーマを確認し、`tenant_id` カラムとUUIDの主キーが正しく設定されていることを確認する。
+        *   **結果:** `vendor/bin/sail artisan migrate:fresh --seed` が正常に完了しました。全ての対象テーブル (`ledgers`, `ledger_defines`, `folders`, `ledger_diffs`, `attached_files`, `tags`, `role_folder_permissions`, `activity_log`) に `tenant_id` カラムが正しく追加されていることを確認しました。Mroongaテーブル (`ledgers`, `ledger_diffs`, `activity_log`) 以外では `tenants` テーブルへの外部キー制約も正しく設定されています。UUID化はまだです。
+    *   **完了:** ステップ3の検証が完了し、`tenant_id` 方式の基盤が構築されました。
 
 ### ステップ4: ビジネスロジックの適応
 

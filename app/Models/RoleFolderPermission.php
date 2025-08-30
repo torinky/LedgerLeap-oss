@@ -12,7 +12,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class RoleFolderPermission extends Pivot
 {
-    use LogsActivity;
+    use LogsActivity, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $table = 'role_folder_permissions';
 

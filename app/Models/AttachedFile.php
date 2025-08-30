@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Bus;
 
 class AttachedFile extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
         'filename', 'hashedbasename', 'ledger_define_id',

@@ -78,3 +78,8 @@ gen
 /.env.development
 /.env.production
 /storage/
+
+# Added by Gemini
+.DS_Store
+public/css/
+public/js/

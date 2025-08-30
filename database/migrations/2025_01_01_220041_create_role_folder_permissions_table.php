@@ -11,6 +11,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints(); // 外部キー制約を一時的に無効化
+
         Schema::create('role_folder_permissions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('role_id')->constrained('roles')->cascadeOnDelete();
@@ -27,7 +29,10 @@ return new class extends Migration {
             $table->unique(['role_id', 'folder_id', 'notification_type_id', 'permission'], 'unique_role_folder_notification_permission');
 
             $table->timestamps();
-        });    }
+        });
+
+        Schema::enableForeignKeyConstraints(); // 外部キー制約を有効化
+    }
 
     /**
      * Reverse the migrations.
