@@ -25,6 +25,32 @@ class SetupTenant extends Command
      */
     public function handle()
     {
-        //
+        $tenantId = $this->argument('tenant_id');
+
+        // テナントの存在チェック
+        if (\App\Models\Tenant::find($tenantId)) {
+            $this->error("Tenant with ID '{$tenantId}' already exists.");
+            return 1;
+        }
+
+        $this->info("Creating tenant: {$tenantId}");
+
+        // テナント作成
+        try {
+            $tenant = \App\Models\Tenant::create(['id' => $tenantId]);
+
+            // ドメインの紐付け
+            $domain = $tenantId . '.localhost';
+            $tenant->domains()->create(['domain' => $domain]);
+
+            $this->info("Tenant '{$tenantId}' created successfully.");
+            $this->info("Domain '{$domain}' has been linked.");
+
+        } catch (\Exception $e) {
+            $this->error("An error occurred: " . $e->getMessage());
+            return 1;
+        }
+
+        return 0;
     }
 }

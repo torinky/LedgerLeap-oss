@@ -23,11 +23,13 @@
 
 ### ステップ1: Artisanコマンドの雛形作成
 
-*   **目的:** `make:command` を使用して、コマンドの基本的なファイル構造を作成する。
+*   **目的:** `make:command` を使用して、基本的なファイル構造を作成する。
 *   **タスク:**
     1.  `vendor/bin/sail artisan make:command SetupTenant` を実行する。
 *   **検証方法:**
     *   `app/Console/Commands/SetupTenant.php` ファイルが作成されていることを確認する。
+        *   **結果:** `INFO  Console command [app/Console/Commands/SetupTenant.php] created successfully.` が表示され、ファイルが作成されたことを確認済み。
+    *   **完了:** ステップ1は完了しました。
 
 ### ステップ2: コマンドのシグネチャと説明の定義
 
@@ -38,6 +40,8 @@
     3.  `$description` プロパティを `Create a new tenant and run all necessary setup processes` に変更する。
 *   **検証方法:**
     *   `vendor/bin/sail artisan app:setup-tenant --help` を実行し、設定した引数と説明が表示されることを確認する。
+        *   **結果:** `Description:` と `Arguments:` に設定通りの内容が表示されることを確認済み。
+    *   **完了:** ステップ2は完了しました。
 
 ### ステップ3: テナント作成とドメイン紐付け処理の実装
 
@@ -48,6 +52,8 @@
     3.  既にテナントやドメインが存在する場合のエラーハンドリングを追加する。
 *   **検証方法:**
     *   コマンドをテスト実行し、`tenants` テーブルと `domains` テーブルにレコードが正しく作成されることを確認する。
+        *   **結果:** `vendor/bin/sail artisan app:setup-tenant test-tenant test@example.com` を実行し、`tenants` と `domains` テーブルにレコードが作成されたことを確認済み。
+    *   **完了:** ステップ3は完了しました。
 
 ### ステップ4: DBマイグレーションとシーディング処理の実装
 
