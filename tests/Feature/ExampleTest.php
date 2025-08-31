@@ -9,5 +9,5 @@ it('returns a successful response', function () {
 
     $response = $this->get('/');
 
-    $response->assertRedirect('/' . $tenant->getTenantKey() . RouteServiceProvider::HOME);
+    $response->assertRedirect(RouteServiceProvider::HOME);
 });

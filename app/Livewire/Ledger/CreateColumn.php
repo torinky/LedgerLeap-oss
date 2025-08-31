@@ -30,6 +30,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use App\Helpers\AttachedFilePathHelper;
 use Mary\Traits\Toast;
+use PHPUnit\Event\Code\Throwable;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
@@ -341,7 +342,18 @@ class CreateColumn extends Component
             DB::commit(); // トランザクション確定
 
             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
-            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+            // --- ここから修正: tenant を安全に付与し、なければリダイレクトをスキップ ---
+            $tenant = request()->route('tenant');
+            $redirectUrl = null;
+            if (!empty($tenant)) {
+                $redirectUrl = route('ledger.show', [
+                    'tenant'   => $tenant,
+                    'ledgerId' => $this->ledgerId,
+                ]);
+            }
+            $this->success($message, redirectTo: $redirectUrl);
+            // --- 修正ここまで ---
+//            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
         } catch (Throwable $e) { // Throwable をキャッチ
             DB::rollBack(); // エラー時ロールバック
             Log::error('Direct save failed: ' . $e->getMessage());

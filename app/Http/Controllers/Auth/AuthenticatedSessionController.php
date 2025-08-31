@@ -30,7 +30,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-                // ユーザーが所属するテナントを初期化
+        // 認証済みユーザーを取得
+        $user = $request->user();
+        if (!$user) {
+            // 異常系フォールバック（念のため）
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('login');
+        }
+
+        // ユーザーが所属するテナントを初期化
         // ユーザーが複数のテナントに所属する可能性があるため、ここでは最初のテナントを取得
         $tenant = $user->tenants()->first();
         if ($tenant) {
@@ -47,8 +57,11 @@ class AuthenticatedSessionController extends Controller
 
         // intended() はログイン前にアクセスしようとしたページがあればそちらを優先
         // なければ、決定したランディングページのルートへリダイレクト
-        return redirect()->intended(route($landingPageRouteName, ['tenant' => tenant()->id]));
-
+        // テナントが無い場合はテナントパラメータを渡さない
+        if ($tenant) {
+            return redirect()->intended(route($landingPageRouteName, ['tenant' => $tenant->id]));
+        }
+        return redirect()->intended(route($landingPageRouteName));
     }
 
     /**

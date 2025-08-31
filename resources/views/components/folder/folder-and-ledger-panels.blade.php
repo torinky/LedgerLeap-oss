@@ -50,7 +50,7 @@
             <div class="ledgerTitle text-base mt-2 mb-2 break-all">{{$ledgerDefineRecord->title}}
 
                 @if($ledgerDefineRecord->ledgers()->count()==0)
-                    <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
+                    <a href="{{ route('ledger.create', ['tenant' => tenant('id'), 'ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
                        class="btn btn-xs btn-neutral tooltip items-center pt-1"
                        target="ledgerCreate_{{$ledgerDefineRecord->id}}}}"
                        data-tip="{{__('ledger.create')}}"

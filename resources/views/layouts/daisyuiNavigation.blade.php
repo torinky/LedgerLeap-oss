@@ -16,7 +16,7 @@
                     {{-- マイポータル (アプリ名/ロゴで代用するため、ここでは不要かも) --}}
                     {{-- <li><x-daisyui-nav-link :href="route('my-portal')" :active="request()->routeIs('my-portal')"><i class="fas fa-home w-4 mr-2"></i>{{ __('ledger.navigation.my_portal') }}</x-daisyui-nav-link></li> --}}
                     <li>
-                        <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.index')">
+                        <x-daisyui-nav-link :href="route('ledger.index', ['tenant' => tenant('id')])" :active="request()->routeIs('ledger.index')">
                             <i class="fas fa-book-open-reader w-4 mr-2"></i>{{ __('ledger.navigation.ledgers') }}
                         </x-daisyui-nav-link>
                     </li>
@@ -25,7 +25,7 @@
             </div>
 
             {{-- アプリロゴ/名称 (マイポータルへのリンク) --}}
-            <a href="{{ route('my-portal') }}"
+            <a href="{{ route('my-portal', ['tenant' => tenant('id')]) }}"
                {{--               class="btn btn-ghost normal-case text-xl tooltip tooltip-bottom"--}}
                data-tip="{{ __('ledger.navigation.go_to_my_portal') }}"
                     @class(['btn btn-ghost tooltip tooltip-bottom text-xl', 'btn-active' => request()->routeIs('my-portal')]) {{-- アクティブ状態をクラスで表現 --}}
@@ -36,7 +36,7 @@
             {{-- 主要メニュー (lg以上でアイコンのみ表示) --}}
             <div class="hidden lg:flex items-center ml-4 space-x-1"> {{-- space-x を調整 --}}
                 {{-- 台帳リンク (アイコン + ツールチップ) --}}
-                <a href="{{ route('ledger.index') }}"
+                <a href="{{ route('ledger.index', ['tenant' => tenant('id')]) }}"
                    @class(['btn btn-ghost btn-square tooltip tooltip-bottom', 'btn-active' => request()->routeIs('ledger.index')]) {{-- アクティブ状態をクラスで表現 --}}
                    data-tip="{{ __('ledger.navigation.ledgers') }}"
                 >
@@ -84,7 +84,7 @@
                         </x-daisyui-nav-link>
                     </li>
                     <li>
-                        <x-daisyui-nav-link :href="route('notifications.settings')"
+                        <x-daisyui-nav-link :href="route('notifications.settings', ['tenant' => tenant('id')])"
                                             :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
                             <i class="fas fa-bell w-4 mr-2"></i> {{ __('ledger.navigation.notification_settings') }}
                         </x-daisyui-nav-link>

@@ -31,5 +31,74 @@ Route::group([
     // ledger
     Route::get('/ledger/{ledgerId}', LedgerShowController::class)->name('ledger.show')
         ->where('ledgerId', '[0-9]+');
-    Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
+    Route::get('/ledger', [LedgerIndexController::class, 'index'])->name('ledger.index');
+
+    //ledgerDefine
+    Route::get('/ledgerDefine', [LedgerDefineIndexController::class, 'index'])->name('ledgerDefine.index');
+    Route::get('/ledgerDefine/folder/{folderId}', [LedgerDefineIndexController::class, 'index'])
+        ->name('ledgerDefinesByFolderId')
+        ->where('folderId', '[0-9]+');
+    Route::get('/ledgerDefine/create', [LedgerDefineCreateController::class, 'create'])
+        ->name('ledgerDefine.create');
+    Route::get('/ledgerDefine/create/folder/{folderId}', [LedgerDefineCreateController::class, 'create'])
+        ->name('ledgerDefine.createWithFolderId')
+        ->where('folderId', '[0-9]+');
+    Route::post('/ledgerDefine/create', [LedgerDefineCreateController::class, 'store'])->name('ledgerDefine.store');
+    Route::get('/ledgerDefine/edit/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'edit'])
+        ->name('ledgerDefine.edit')
+        ->where('ledgerDefineId', '[0-9]+');
+    Route::put('/ledgerDefine/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'update'])
+        ->name('ledgerDefine.update')
+        ->where('ledgerDefineId', '[0-9]+');
+    Route::delete('/ledgerDefine/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'delete'])
+        ->name('ledgerDefine.delete')
+        ->where('ledgerDefineId', '[0-9]+');
+
+    //    ledger (残りのルート)
+    Route::get('/ledger/define/{ledgerDefineId}', [LedgerIndexController::class, 'index'])->name('ledgerByDefineId')
+        ->where('ledgerDefineId', '[0-9]+');
+    Route::get('/ledger/folder/{folderId}', [LedgerIndexController::class, 'index'])->name('ledgersByFolderId')
+        ->where('folderId', '[0-9]+');
+    Route::get('/ledger/create/{ledgerDefineId}', \App\Livewire\Ledger\CreateColumn::class)->name('ledger.create')
+        ->where('ledgerDefineId', '[0-g]+');
+    
+    Route::get('/ledger/edit/{ledgerId}', \App\Livewire\Ledger\ModifyColumn::class)->name('ledger.edit')
+        ->where('ledgerId', '[0-9]+');
+    Route::get('/ledger/import/{ledgerDefineId}', [\App\Http\Controllers\Ledger\ImportController::class, 'showUploadForm'])->name('ledger.import.show')
+        ->where('ledgerDefineId', '[0-9]+');
+    Route::post('/ledger/import', [\App\Http\Controllers\Ledger\ImportController::class, 'importExcelCSV'])->name('ledger.import');
+    Route::put('/ledger/{ledgerId}', [\App\Http\Controllers\Ledger\UpdateController::class, 'update'])->name('ledger.update')
+        ->where('ledgerId', '[0-9]+');
+    Route::delete('/ledgers/{ledger}', [\App\Http\Controllers\Ledger\UpdateController::class, 'destroy'])->name('ledger.destroy');
+
+    //    ledgerDiff
+    Route::get('/ledgerDiff/{ledgerId}/{diffId?}', [LedgerDiffShowController::class, 'show']) // ShowController を使う場合
+    ->name('ledgerDiff.show')
+        ->where('ledgerId', '[0-9]+')
+        ->where('diffId', '[0-9]+'); // diffId も数字のみ
+
+    //folder
+    Route::get('/folders/create/{parentId?}', \App\Livewire\Folder\FolderForm::class)->name('folder.create');
+    Route::get('/folders/{folder}/edit', \App\Livewire\Folder\FolderForm::class)->name('folder.edit');
+
+    Route::get('/synonyms/{word}', [\App\Http\Controllers\SynonymController::class, 'search']);
+
+    // --- 通知関連ルート ---
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/settings', \App\Livewire\Notifications\Settings::class)->name('notifications.settings');
+    Route::redirect('/activity-log', '/notifications?tab=activity', 301)->name('activity-log');
+
+    // --- ワークフロー関連ルート ---
+    Route::redirect('/workflow/pending', '/notifications?tab=tasks', 301)->name('workflow.pending');
+
+    Route::get('/my-portal', \App\Livewire\MyPortal::class)->name('my-portal');
+
+    Route::get('/test-activity', function () {
+        return view('test-activity');
+    })->middleware(['auth', 'verified'])->name('test-activity');
+
+    // Attachment Download Route
+    Route::get('/files/{attachedFile}/download', [\App\Http\Controllers\AttachedFileDownloadController::class, 'download'])
+        ->name('file.download')
+        ->where('attachedFile', '[0-9]+');
 });

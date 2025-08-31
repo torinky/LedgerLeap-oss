@@ -145,6 +145,7 @@
     *   `vendor/bin/sail test tests/Feature/Livewire/LedgerColumnValidationTest.php` の `create column passes validation across tenants` テストが**失敗**しています。
     *   Auth関連のテストや `LedgerLookupControllerTest` など、他のFeatureテストも**多数失敗**しています。これらの失敗は主に `stancl/tenancy` のミドルウェアがルートパラメータからテナントIDを取得できないことに起因しています。
     *   **未完了:** ステップ4の検証はまだ完了していません。
+    *   **詳細な分析と修正戦略:** テスト失敗の根本原因と修正戦略については、[マルチテナント環境におけるテスト失敗の分析と修正戦略](/docs/work/2025-08-31_multi-tenant-test-fix-strategy.md) に詳細を記載しています。
 
 ### ステップ5: テナント管理コマンドの整備
 

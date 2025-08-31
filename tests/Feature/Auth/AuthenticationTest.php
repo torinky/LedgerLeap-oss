@@ -13,6 +13,7 @@ test('login screen can be rendered', function () {
 
 test('users can authenticate using the login screen', function () {
     $tenant = Tenant::create();
+    tenancy()->initialize($tenant);
 
     // シナリオ1: login_landing_page がデフォルト (my-portal) の場合
     $userMyPortal = User::factory()->create();
@@ -41,6 +42,8 @@ test('users can authenticate using the login screen', function () {
 });
 
 test('users can not authenticate with invalid password', function () {
+    $tenant = Tenant::create();
+    tenancy()->initialize($tenant);
     $user = User::factory()->create();
 
     $this->post('/login', [
@@ -52,6 +55,8 @@ test('users can not authenticate with invalid password', function () {
 });
 
 test('users can logout', function () {
+    $tenant = Tenant::create();
+    tenancy()->initialize($tenant);
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post('/logout');

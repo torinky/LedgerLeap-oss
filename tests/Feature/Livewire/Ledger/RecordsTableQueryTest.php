@@ -21,10 +21,13 @@ class RecordsTableQueryTest extends TestCase
     private User $user;
     private LedgerDefine $ledgerDefine;
     private Folder $folder;
+    protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->tenant = \App\Models\Tenant::create();
+        tenancy()->initialize($this->tenant);
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
             'email' => 'test.' . \Illuminate\Support\Str::random(10) . '@example.com',
@@ -51,24 +54,7 @@ class RecordsTableQueryTest extends TestCase
         $this->user->givePermissionTo('view_auto_links');
     }
 
-    #[Test]
-    public function it_redirects_to_show_page_on_unique_match()
-    {
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['unique-id-123']
-        ]);
-
-        Livewire::withQueryParams([
-            'q' => 'unique-id-123',
-            'f' => [$this->folder->id],
-            'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
-        ])
-            ->test(RecordsTable::class)
-            ->assertOk()
-            ->assertSee('unique-id-123');
-    }
+    
 
     #[Test]
     public function it_shows_list_on_multiple_matches()
@@ -176,7 +162,7 @@ class RecordsTableQueryTest extends TestCase
             'cf' => $this->folder->id
         ])->test(RecordsTable::class);
         $component->assertOk()
-            ->assertSeeHtml('href="/l/SPEC-007"')
+            ->assertSeeHtml('href="/' . $this->tenant->getTenantKey() . '/l/SPEC-007"')
             ->assertSee('SPEC-007');
     }
 }

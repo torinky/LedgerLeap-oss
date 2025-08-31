@@ -15,9 +15,13 @@ class LedgerColumnValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected \App\Models\Tenant $tenant;
+
     protected function setUp(): void
     {
         parent::setUp();
+        $this->tenant = \App\Models\Tenant::factory()->create();
+        tenancy()->initialize($this->tenant);
         // ユーザーを作成し、すべてのテストで認証済み状態にする
         $user = User::factory()->create();
         $this->actingAs($user);

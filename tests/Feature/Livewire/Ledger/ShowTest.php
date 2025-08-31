@@ -10,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\AutoLink;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -32,12 +33,15 @@ class ShowTest extends TestCase
     private Ledger $ledger;
     private Role $inspectorRole;
     private Role $approverRole;
-    private Folder $folder; // ADDED
+    private Folder $folder;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->tenant = Tenant::factory()->create();
+        tenancy()->initialize($this->tenant);
 
         // ユーザーを作成
         $this->user = User::factory()->create();
@@ -181,7 +185,7 @@ class ShowTest extends TestCase
         Bus::fake();
 
         $attachedFile = AttachedFile::factory()->for($this->ledger)->create([
-            'status' => \App\Enums\AttachedFileStatus::PROCESSING_FAILED,
+            'status' => \App\Enums\AttachedFileStatus::TIKA_FAILED,
         ]);
 
         $this->actingAs($this->user);
