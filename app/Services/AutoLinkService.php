@@ -110,6 +110,15 @@ class AutoLinkService
         for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
             $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
         }
+
+        // URLが / で始まり、 // で始まらない（プロトコル相対URLではない）場合にテナントIDを付与
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+            // テナントが初期化されている場合のみ、IDを取得して付与する
+            if (tenancy()->initialized) {
+                $url = '/' . tenant()->getTenantKey() . $url;
+            }
+        }
+
         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
         $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
         $tooltip = $autoLink->label;

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Common;
 
+use PHPUnit\Framework\Attributes\Test;
+
 
 use App\Livewire\Common\ActivityHistoryDisplay;
 use App\Models\CustomActivity;
@@ -51,7 +53,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         $this->activityE = activity()->causedBy($this->adminUser)->performedOn($this->folderE)->log('created');
     }
 
-    /** @test */
+    #[Test]
     public function shows_permission_error_for_user_without_permission()
     {
         $this->actingAs($this->generalUser);
@@ -60,7 +62,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             ->assertViewIs('livewire.common.activity-history-display-no-permission');
     }
 
-    /** @test */
+    #[Test]
     public function renders_successfully_for_user_with_permission()
     {
         $this->actingAs($this->adminUser);
@@ -70,7 +72,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             ->assertOk();
     }
 
-    /** @test */
+    #[Test]
     public function displays_all_explicitly_created_activities_in_global_mode()
     {
         $this->actingAs($this->adminUser);
@@ -85,7 +87,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         $this->assertContains($this->activityE->id, $allIds);
     }
 
-    /** @test */
+    #[Test]
     public function shows_activities_for_a_folder_and_its_descendants()
     {
         $this->actingAs($this->adminUser);
@@ -104,7 +106,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function shows_activities_for_a_ledger_define_and_its_records()
     {
         $this->actingAs($this->adminUser);
@@ -122,7 +124,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function shows_activities_for_a_ledger_with_related_resources()
     {
         $this->actingAs($this->adminUser);
@@ -140,7 +142,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function shows_activities_for_a_ledger_without_related_resources()
     {
         $this->actingAs($this->adminUser);
@@ -158,7 +160,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function filters_activities_by_causer()
     {
         $this->actingAs($this->adminUser);
@@ -172,7 +174,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function filters_activities_by_event()
     {
         $this->actingAs($this->adminUser);
@@ -187,7 +189,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function filters_activities_by_date_range()
     {
         $this->actingAs($this->adminUser);
@@ -206,7 +208,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function resets_filters()
     {
         $this->actingAs($this->adminUser);
@@ -222,7 +224,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
         $this->assertContains($this->activityB->id, $allIds);
     }
 
-    /** @test */
+    #[Test]
     public function hides_columns_as_specified()
     {
         $this->actingAs($this->adminUser);
@@ -234,7 +236,7 @@ class ActivityHistoryDisplayTest extends \Tests\TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function resets_page_when_filter_is_updated()
     {
         $this->actingAs($this->adminUser);

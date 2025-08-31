@@ -129,23 +129,12 @@
     2.  **リレーションの再確認:** `BelongsToTenant` トレイトを適用したモデル間のリレーションシップが、意図通りにテナントスコープ内で動作するか、テストコードで再検証する。
 *   **検証方法:**
     *   修正箇所のユニットテストを作成し、`vendor/bin/sail test` を実行してパスすることを確認する。
-*   **進捗:**
-    *   `app/Rules/UniqueColumnValue.php` の `Rule::unique` バリデーションに `->where('tenant_id', tenant('id'))` を追加しました。
-    *   `tests/Feature/Livewire/LedgerColumnValidationTest.php` に、テナント間のユニーク性を検証するテストケース `create_column_passes_validation_across_tenants()` を追加しました。
-    *   テスト環境のセットアップとデバッグに多くの時間を費やしました。
-        *   `phpunit.xml` のテストスイート設定を修正し、`tests/Feature` 内のサブディレクトリを探索するようにしました。
-        *   `tests/Pest.php` の `in()` メソッドの設定を修正しました。
-        *   テストデータベース `ledgerleap_test` を作成し、マイグレーションを実行しました。
-        *   `.env.testing` ファイルを作成し、DB接続情報と `APP_KEY` を追加しました。
-        *   WordNetデータベースファイル `wnjpn.db` を結合・展開しました。
-        *   `tests/Feature/Livewire/Common/ActivityHistoryDisplayTest.php` をPHPUnit形式に変換しました。
-        *   `tests/Unit/Services/WorkflowServiceTest.php` の `setUp()` メソッドを修正し、`App\Models\Tenant` モデルのファクトリ呼び出しと `partialMockLedger` ヘルパーメソッドのロジックを修正しました。
-        *   `App\Models\Tenant.php` モデルファイルと `database/factories/TenantFactory.php` ファクトリファイルを作成しました。
-    *   `vendor/bin/sail test tests/Unit/Services/WorkflowServiceTest.php` は**正常に完了**しました。
-    *   `vendor/bin/sail test tests/Feature/Livewire/LedgerColumnValidationTest.php` の `create column passes validation across tenants` テストが**失敗**しています。
-    *   Auth関連のテストや `LedgerLookupControllerTest` など、他のFeatureテストも**多数失敗**しています。これらの失敗は主に `stancl/tenancy` のミドルウェアがルートパラメータからテナントIDを取得できないことに起因しています。
-    *   **未完了:** ステップ4の検証はまだ完了していません。
-    *   **詳細な分析と修正戦略:** テスト失敗の根本原因と修正戦略については、[マルチテナント環境におけるテスト失敗の分析と修正戦略](/docs/work/2025-08-31_multi-tenant-test-fix-strategy.md) に詳細を記載しています。
+*   **進捗と教訓:**
+    *   `Rule::unique` の修正後、テストを実行したところ、当初は多数のテストが失敗しました。
+    *   マルチテナント環境に起因する複数の複雑な問題を解決し、`vendor/bin/sail test` ですべてのテストがパスすることを確認しました。
+    *   一連のデバッグ作業と解決策の詳細は、後続の保守性を高めるための技術的知見として、以下の関連ドキュメントにまとめています。
+        *   **関連資料:** [マルチテナント環境におけるテスト失敗の分析と修正戦略](/docs/work/2025-08-31_multi-tenant-test-fix-strategy.md)
+    *   **完了:** ステップ4の検証はすべて完了しました。
 
 ### ステップ5: テナント管理コマンドの整備
 

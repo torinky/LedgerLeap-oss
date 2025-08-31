@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire;
 
+use PHPUnit\Framework\Attributes\Test;
+
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
@@ -27,7 +29,7 @@ class LedgerColumnValidationTest extends TestCase
         $this->actingAs($user);
     }
 
-    /** @test */ // PHPUnit のアノテーション
+    #[Test]
     public function create_column_fails_validation_if_unique_column_is_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -63,7 +65,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasErrors(['content.1' => '指定のUnique Textは既に使用されています。']);
     }
 
-    /** @test */ // PHPUnit のアノテーション
+    #[Test]
     public function create_column_passes_validation_if_unique_column_is_not_duplicated()
     {
         // 準備: このテスト専用の「unique」カラムを持つ台帳定義を作成
@@ -99,7 +101,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasNoErrors('content.1');
     }
 
-    /** @test */ // PHPUnit のアノテーション
+    #[Test]
     public function number_column_validation_works_correctly()
     {
         // 準備: このテスト専用の「number」型カラムを持つ台帳定義を作成
@@ -158,7 +160,7 @@ class LedgerColumnValidationTest extends TestCase
             ->assertHasErrors(['content.0' => 'numeric']);
     }
 
-    /** @test */ // PHPUnit のアノテーション
+    #[Test]
     public function create_column_passes_validation_across_tenants()
     {
         // テナント1を作成
