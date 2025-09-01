@@ -74,6 +74,39 @@ class SetupTenant extends Command
             activity()->enableLogging();
             $this->info("Seeding completed.");
 
+            $this->info('Setting up initial data for the tenant...');
+
+            // 1. 管理者ユーザーの検索 (中央DBのコンテキストで実行)
+            $this->info("Processing admin user: {$adminEmail}");
+            $user = tenancy()->central(function () use ($adminEmail) {
+                return \App\Models\User::where('email', $adminEmail)->first();
+            });
+
+            if (!$user) {
+                $this->error("Admin user with email '{$adminEmail}' not found in the central database. The tenant was created, but no admin was assigned.");
+                return 1; // テナントは作成されたが、管理者がいない状態で終了
+            }
+
+            // 2. ルートフォルダの作成 (テナントのコンテキストで実行)
+            $tenant->run(function () use ($user) {
+                $this->info('Creating root folder...');
+                \App\Models\Folder::create([
+                    'title' => '/',
+                    'creator_id' => $user->id,
+                    'modifier_id' => $user->id,
+                ]);
+            });
+
+            // 3. テナントにユーザーを紐付け
+            $this->info("Attaching admin user to tenant...");
+            $tenant->users()->syncWithoutDetaching([$user->id]);
+
+            // 4. ユーザーにSuper Adminロールを付与 (これは中央の model_has_roles に書き込む)
+            $this->info("Assigning 'Super Admin' role to user...");
+            $user->assignRole('Super Admin');
+
+            $this->info('Admin user setup completed.');
+
         } catch (Exception $e) {
             $this->error("An error occurred: " . $e->getMessage());
             // ロールバック処理
