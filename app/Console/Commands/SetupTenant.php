@@ -2,7 +2,11 @@
 
 namespace App\Console\Commands;
 
+use Stancl\Tenancy\Database\Models\Domain;
+use App\Models\Tenant;
+use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 
 class SetupTenant extends Command
 {
@@ -22,35 +26,66 @@ class SetupTenant extends Command
 
     /**
      * Execute the console command.
+     * @throws Exception
      */
-    public function handle()
+    public function handle(): int
     {
         $tenantId = $this->argument('tenant_id');
+        $adminEmail = $this->argument('admin_email');
+        $domain = $tenantId . '.localhost';
 
-        // テナントの存在チェック
-        if (\App\Models\Tenant::find($tenantId)) {
+        // 1. テナントIDの存在チェック
+        if (Tenant::find($tenantId)) {
             $this->error("Tenant with ID '{$tenantId}' already exists.");
             return 1;
         }
 
-        $this->info("Creating tenant: {$tenantId}");
-
-        // テナント作成
-        try {
-            $tenant = \App\Models\Tenant::create(['id' => $tenantId]);
-
-            // ドメインの紐付け
-            $domain = $tenantId . '.localhost';
-            $tenant->domains()->create(['domain' => $domain]);
-
-            $this->info("Tenant '{$tenantId}' created successfully.");
-            $this->info("Domain '{$domain}' has been linked.");
-
-        } catch (\Exception $e) {
-            $this->error("An error occurred: " . $e->getMessage());
+        // 2. ドメインの存在チェック
+        if (Domain::where('domain', $domain)->exists()) {
+            $this->error("Domain '{$domain}' already exists.");
             return 1;
         }
 
-        return 0;
+        $this->info("Creating tenant: {$tenantId}");
+        $tenant = null; // for rollback
+
+        try {
+            // 3. テナントの作成とドメインの紐付け
+            $tenant = Tenant::create(['id' => $tenantId]);
+            $tenant->domains()->create(['domain' => $domain]);
+            $this->info("Tenant '{$tenantId}' and domain '{$domain}' created successfully.");
+
+            // 4. このテナントのコンテキストで後続処理を実行
+            tenancy()->initialize($tenant);
+            $this->info("Tenancy initialized for '{$tenantId}'.");
+
+            // 5. マイグレーションとシーディングの実行
+            $this->info("Running migrations...");
+            Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id], '--force' => true]);
+            $this->info("Migrations completed.");
+
+            $this->info("Running seeding...");
+            activity()->disableLogging();
+            Artisan::call('tenants:seed', [
+                '--tenants' => [$tenant->id],
+                '--class' => 'DatabaseSeeder',
+                '--force' => true
+            ]);
+            activity()->enableLogging();
+            $this->info("Seeding completed.");
+
+        } catch (Exception $e) {
+            $this->error("An error occurred: " . $e->getMessage());
+            // ロールバック処理
+            if ($tenant) {
+                $tenant->delete();
+                $this->warn("Tenant '{$tenantId}' has been rolled back.");
+            }
+            return 1;
+        }
+
+        $this->info("All setup processes for tenant '{$tenantId}' completed successfully.");
+
+        return Command::SUCCESS;
     }
 }
