@@ -28,10 +28,10 @@ class TenantSwitcher extends Component
 
                 // メンバーであるテナントについてのみフォルダ階層を取得
                 if ($tenant->is_member) {
-                    tenancy()->run($tenant, function () use ($tenant) {
+                    $tenant->run(function () use ($tenant) {
                         // ユーザーが閲覧可能なルートフォルダを取得
                         // 現状は全フォルダを取得するが、将来的には権限を考慮する必要がある
-                        $tenant->folders_tree = Folder::tree()->get()->toTree();
+                        $tenant->folders_tree = Folder::get()->toTree();
                     });
                 }
                 return $tenant;

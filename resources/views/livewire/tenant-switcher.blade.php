@@ -14,10 +14,7 @@
                             <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name }}</a>
                         </summary>
                         <ul>
-                            @foreach($tenant->folders_tree as $folder)
-                                {{-- TODO: Recursive component for deeper levels --}}
-                                <li><a href="{{ route('ledgersByFolderId', ['tenant' => $tenant->id, 'folderId' => $folder->id]) }}" wire:navigate>{{ $folder->title }}</a></li>
-                            @endforeach
+                            @include('livewire.tenant-switcher-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant])
                         </ul>
                     </details>
                 @else

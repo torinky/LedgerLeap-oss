@@ -13,7 +13,7 @@
                 <x-mary-button label="{{ __('ledger.edit_profile_title') }}" icon="o-user"
                                link="{{ route('profile.edit') }}" class="btn-ghost"/>
                 <x-mary-button label="{{ __('ledger.edit_notifications_settings_title') }}" icon="o-bell"
-                               link="{{ route('notifications.settings') }}" class="btn-ghost"/>
+                               link="{{ route('notifications.settings', ['tenant' => tenant()?->id]) }}" class="btn-ghost"/>
             </x-slot:actions>
         </x-mary-header>
     </x-slot>
@@ -22,7 +22,7 @@
     <div class="columns-1 gap-4 space-y-4 mx-8 lg:columns-2 lg:gap-8 lg:space-y-8 3xl:columns-3 items-center">
 
         {{-- ★承認待ちタスク カード (追加) ★ --}}
-        <a href="{{ route('workflow.pending') }}" _target="LedgerLeap_PendingList"
+        <a href="{{ route('workflow.pending', ['tenant' => tenant()?->id]) }}" _target="LedgerLeap_PendingList"
            class="card bg-warning text-warning-content shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out {{ $pendingTaskCount > 0 ? '' : 'opacity-50' }}">
             <div class="card-body flex-row items-center justify-between p-4">
                 <div>

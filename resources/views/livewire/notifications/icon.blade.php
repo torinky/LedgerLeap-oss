@@ -7,7 +7,7 @@
                'btn-info' => ($pendingTaskCount > 0),
                'btn-active' => request()->routeIs('notifications.index')
            ])
-           href="{{ route('notifications.index') }}"
+               <a href="{{ route('notifications.index', ['tenant' => tenant()?->id]) }}" class="btn btn-ghost btn-circle">
            _target="LedgerLeap_PendingList"
 
            wire:poll.600s="refreshCounts"
