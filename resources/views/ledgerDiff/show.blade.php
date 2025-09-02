@@ -10,7 +10,7 @@
 
     <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
         {{--
-                <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                <a href="{{ route('ledger.edit', ['tenant' => tenant()?->id, 'ledgerId'=>$ledgerRecord->id]) }}"
                    class="btn btn-outline btn-primary btn-wide"
                 ><i class="fa-solid fa-pencil mr-2"></i>{{__('edit')}}</a>
         --}}

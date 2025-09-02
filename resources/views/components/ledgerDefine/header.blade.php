@@ -74,7 +74,7 @@
             @endif
         <div class="w-6"></div>
             @if($canManage)
-                <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+                <a href="{{ route('ledgerDefine.edit', ['tenant' => tenant()?->id, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
                    class="btn btn-outline btn-primary btn-sm relative inline-flex"
                    target="ledgerDefineEdit_{{$ledgerDefine->id}}}}">
                     <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}

@@ -173,7 +173,7 @@
 
                     @endcan
 
-                    <a href="{{ route('ledgersByFolderId',$currentFolderId)}}"
+                    <a href="{{ route('ledgersByFolderId',['tenant' => tenant()?->id, 'folderId' => $currentFolderId])}}"
                        class="btn btn-outline btn-info btn-sm ml-10"
                        target="ledgersByFolderId">
                         <i class="fa-solid fa-arrow-circle-right mr-1"></i>

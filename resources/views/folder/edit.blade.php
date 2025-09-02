@@ -89,7 +89,7 @@
                     <p class="py-4">{{__('ledger.folder.will_remove_message')}}</p>
                     <div class="modal-action">
                         <div class="btnContainer">
-                            <form method="POST" action="{{route('folder.delete',$currentFolderRecord->id)}}">
+                            <form method="POST" action="{{route('folder.delete',['tenant' => tenant()?->id, 'folder' => $currentFolderRecord->id])}}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-error"

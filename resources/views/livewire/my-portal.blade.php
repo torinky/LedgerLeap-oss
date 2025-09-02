@@ -128,7 +128,7 @@
                         <span class="text-xs {{ $iconColor }}">{{ $permissionText }}</span>
                     </div>
                     <x-mary-button label="{{ __('ledger.go_to_folder_button') }}"
-                                   link="{{ route('ledgersByFolderId', ['folderId' => $folder->id]) }}"
+                                   link="{{ route('ledgersByFolderId', ['tenant' => tenant()?->id, 'folderId' => $folder->id]) }}"
                                    class="btn-primary btn-sm"
                                    icon="o-arrow-right-circle"/>
                 </div>

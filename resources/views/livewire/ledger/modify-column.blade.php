@@ -224,7 +224,7 @@
                         <p class="py-4">{{__('ledger.remove_message')}}</p>
                         <div class="modal-action">
                             <div class="btnContainer">
-                                <form method="POST" action="{{route('ledger.destroy',$ledgerRecord)}}">
+                                <form method="POST" action="{{route('ledger.destroy',['tenant' => tenant()?->id, 'ledger' => $ledgerRecord])}}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-error space-x-2"
