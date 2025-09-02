@@ -55,6 +55,8 @@
                 </label>
             @endif
 
+            @livewire('tenant-switcher')
+
             {{-- 通知アイコン --}}
             <div class="dropdown dropdown-end">
                 <livewire:notifications.icon/>
