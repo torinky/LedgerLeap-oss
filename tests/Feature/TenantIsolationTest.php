@@ -106,7 +106,15 @@ class TenantIsolationTest extends TestCase
         });
     }
 
-    #[Test]
+    /**
+     * @Test
+     * @see \Tests\Feature\TenantIsolationTest::validation_prevents_creating_relations_across_tenants
+     * このテストは、台帳作成時に他テナントのフォルダIDを指定できてしまう脆弱性を検証する目的だったが、
+     * アプリケーションの設計上、その操作自体が不可能であることが判明したため不要となった。
+     * 経緯はドキュメントに記録済み。
+     * @see /docs/work/2025-09-04_tenant-isolation-test-plan.md#55-validation_prevents_creating_relations_across_tenants-に関する補足
+     */
+    /*
     public function validation_prevents_creating_relations_across_tenants(): void
     {
         $this->actingAs($this->adminUser);
@@ -115,6 +123,7 @@ class TenantIsolationTest extends TestCase
             $this->assertTrue(true); // Dummy assertion as this test's premise was wrong.
         });
     }
+    */
 
     #[Test]
     public function user_belonging_to_multiple_tenants_can_switch_context_and_operate_correctly(): void
