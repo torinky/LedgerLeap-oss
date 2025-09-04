@@ -101,10 +101,13 @@ class GenerateThumbnail implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("[GenerateThumbnail] Job failed for AttachedFile ID: {$this->attachedFileId}. Max attempts reached or unhandled exception. Error: {$exception->getMessage()}", ['exception' => $exception]);
+        Log::error(
+            "[GenerateThumbnail] Failed to generate thumbnail for AttachedFile ID: {$this->attachedFileId}. Max attempts reached or unhandled exception. Error: {$exception->getMessage()}",
+            ['exception' => $exception]
+        );
         $attachedFile = AttachedFile::find($this->attachedFileId);
         if ($attachedFile) {
-            $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED]);
+            $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED->value]);
         }
     }
 }

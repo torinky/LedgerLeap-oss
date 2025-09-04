@@ -31,11 +31,10 @@ return [
      * To configure their behavior, see the config keys below.
      */
     'bootstrappers' => [
-        // Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
+        Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\CacheTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
-        Stancl\Tenancy\Bootstrappers\RouteBootstrapper::class,
         // Stancl\Tenancy\Bootstrappers\RedisTenancyBootstrapper::class, // Note: phpredis is needed
     ],
 
@@ -116,7 +115,6 @@ return [
          * See https://tenancyforlaravel.com/docs/v3/tenancy-bootstrappers/#filesystem-tenancy-boostrapper
          */
         'root_override' => [
-            // Disks whose roots should be overridden after storage_path() is suffixed.
             'local' => '%storage_path%/app/',
             'public' => '%storage_path%/app/public/',
         ],
@@ -167,8 +165,8 @@ return [
      * understand which ones you want to enable.
      */
     'features' => [
-        // Stancl\Tenancy\Features\UserImpersonation::class,
-        // Stancl\Tenancy\Features\TelescopeTags::class,
+        // Stancl\\Tenancy\\Features\\UserImpersonation::class,
+        // Stancl\\Tenancy\\Features\\TelescopeTags::class,
         Stancl\Tenancy\Features\UniversalRoutes::class,
         // Stancl\Tenancy\Features\TenantConfig::class, // https://tenancyforlaravel.com/docs/v3/features/tenant-config
         // Stancl\Tenancy\Features\CrossDomainRedirect::class, // https://tenancyforlaravel.com/docs/v3/features/cross-domain-redirect

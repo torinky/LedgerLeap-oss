@@ -53,7 +53,7 @@ class AdminPanelProvider extends PanelProvider
 //            ->navigation(false)
             ->navigationItems([
                 NavigationItem::make(__('ledger.go_home'))
-                    ->url(fn() => route('ledger.index'))
+                    ->url(fn() => route('ledger.index', ['tenant' => tenant()?->id]))
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->activeIcon('heroicon-s-arrow-uturn-left')
                     ->sort(2),

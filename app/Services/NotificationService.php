@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\Role;
@@ -161,10 +162,17 @@ class NotificationService
             'activity_id' => $activity->id,
         ]);
         // subject (変更されたモデル) からフォルダーを特定し、その子孫フォルダーも取得
-        if (method_exists($subject, 'folder') && $subject->folder()) {
-            // フォルダが存在する場合の処理
-            $folder = $subject->folder()->first();
+        if ($subject instanceof Ledger) {
+            $folder = $subject->define->folder;
+        } elseif ($subject instanceof LedgerDefine) {
+            $folder = $subject->folder;
+        } elseif ($subject instanceof Folder) {
+            $folder = $subject;
         } else {
+            $folder = null;
+        }
+
+        if (!$folder) {
             \Log::info('Folder not found for subject: ' . get_class($subject));
             return collect();
         }

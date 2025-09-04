@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\LedgerLookupController;
-use App\Http\Controllers\Ledger\IndexController as LedgerIndexController; // 追加
-use App\Http\Controllers\Ledger\ShowController as LedgerShowController; // 追加
+use App\Http\Controllers\Ledger\IndexController as LedgerIndexController;
+use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
+use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
+use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateController;
+use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
+use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use Illuminate\Support\Facades\Route;
-use Stancl\Tenancy\Middleware\InitializeTenancyByPath; // 変更
-use Stancl\Tenancy\Middleware\ScopeTenancyByTenantId; // 追加
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +34,7 @@ Route::group([
     // ledger
     Route::get('/ledger/{ledgerId}', LedgerShowController::class)->name('ledger.show')
         ->where('ledgerId', '[0-9]+');
-    Route::get('/ledger', [LedgerIndexController::class, 'index'])->name('ledger.index');
+    Route::get('/ledger', \App\Livewire\Ledger\RecordsTable::class)->name('ledger.index');
 
     //ledgerDefine
     Route::get('/ledgerDefine', [LedgerDefineIndexController::class, 'index'])->name('ledgerDefine.index');
@@ -55,8 +58,8 @@ Route::group([
         ->where('ledgerDefineId', '[0-9]+');
 
     //    ledger (残りのルート)
-    Route::get('/ledger/define/{ledgerDefineId}', [LedgerIndexController::class, 'index'])->name('ledgerByDefineId')
-        ->where('ledgerDefineId', '[0-9]+');
+    Route::get('/ledger/define/{defineId}', \App\Livewire\Ledger\RecordsTable::class)->name('ledgerByDefineId')
+        ->where('defineId', '[0-9]+');
     Route::get('/ledger/folder/{folderId}', [LedgerIndexController::class, 'index'])->name('ledgersByFolderId')
         ->where('folderId', '[0-9]+');
     Route::get('/ledger/create/{ledgerDefineId}', \App\Livewire\Ledger\CreateColumn::class)->name('ledger.create')

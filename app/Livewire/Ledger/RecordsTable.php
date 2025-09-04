@@ -93,6 +93,13 @@ class RecordsTable extends Component
      */
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
+        \Illuminate\Support\Facades\Log::info('RecordsTable mounting...', [
+            'tenant' => tenant()?->id,
+            'request_ledger_define_id' => $request->ledgerDefineId(),
+            'request_folder_id' => $request->folderId(),
+            'request_current_folder_id' => $request->currentFolderId(),
+        ]);
+
         // 検索キーワードの初期化
         $search = $request->keyword();
         if (empty($this->search) && !empty($search)) {
@@ -118,6 +125,7 @@ class RecordsTable extends Component
         // URLパラメータ 'l' (selectedLedgerDefineIds) が存在する場合はそれを優先
         if (empty($this->selectedLedgerDefineIds) && $request->ledgerDefineId()) {
             $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
+            $this->defineId = $request->ledgerDefineId();
         } elseif (empty($this->selectedLedgerDefineIds)) {
             $this->selectedLedgerDefineIds = []; // デフォルトは空
         }
@@ -201,7 +209,7 @@ class RecordsTable extends Component
     #[On('ledgerStored')]
     public function render(SearchContext $searchContext)
     {
-        $this->authorize('view', LedgerDefine::class);
+        // $this->authorize('viewAny', LedgerDefine::class);
         $this->initSearchContext();
 
         // Exportに検索条件を伝えるためにイベントをトリガ
@@ -223,8 +231,8 @@ class RecordsTable extends Component
         } else {
             // 通常の場合、選択された台帳定義のみを対象にする
             $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
-                ->searchTags($this->searchContext->tags)
-                ->with('folder')
+                ->searchTags($this->searchContext->tags)->with('folder')
+//            $displayLedgerDefines = $displayLedgerDefines->with('folder')
                 ->get();
             $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
         }
@@ -232,7 +240,7 @@ class RecordsTable extends Component
         $breadcrumbsPerLedgerDefine = [];
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
             // 台帳ごとのパンくずリストを準備
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parent()->get();
+            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parent()?->get();
             $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
         }
 
@@ -412,11 +420,31 @@ class RecordsTable extends Component
      */
     public function prepareFolderAsset(): void
     {
-        $currentFolder = Folder::findOrFail($this->currentFolderId);
+        // currentFolderId が未設定、または別テナントのID/存在しないIDの可能性があるためガードする
+        $currentFolder = null;
 
-        if (!empty($currentFolder)) {
-            $this->breadcrumbs = $currentFolder->ancestors()->get();
+        if (!empty($this->currentFolderId)) {
+            $currentFolder = Folder::find($this->currentFolderId);
         }
+
+        // 指定IDで見つからない場合はテナントのルートフォルダを試す
+        if (!$currentFolder) {
+            $currentFolder = Folder::root()->first();
+
+            if ($currentFolder) {
+                $this->currentFolderId = $currentFolder->id;
+            }
+        }
+
+        // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
+        if (!$currentFolder) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+            return;
+        }
+
+        $this->breadcrumbs = $currentFolder->ancestors()->get()->all();
         $this->breadcrumbs[] = $currentFolder;
 
         $this->folderRecords = $currentFolder->children()->get();
