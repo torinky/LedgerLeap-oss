@@ -60,7 +60,7 @@ Route::group([
     //    ledger (残りのルート)
     Route::get('/ledger/define/{defineId}', \App\Livewire\Ledger\RecordsTable::class)->name('ledgerByDefineId')
         ->where('defineId', '[0-9]+');
-    Route::get('/ledger/folder/{folderId}', [LedgerIndexController::class, 'index'])->name('ledgersByFolderId')
+    Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
         ->where('folderId', '[0-9]+');
     Route::get('/ledger/create/{ledgerDefineId}', \App\Livewire\Ledger\CreateColumn::class)->name('ledger.create')
         ->where('ledgerDefineId', '[0-g]+');

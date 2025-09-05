@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\GlobalMyPortalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,5 +14,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::redirect('/', '/ledger'); // サーバールートにアクセスされたときにledgerにリダイレクト
+Route::redirect('/', '/login'); // サーバールートにアクセスされたときにloginにリダイレクト
+
+Route::middleware('auth')->group(function () {
+    Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
+});
 

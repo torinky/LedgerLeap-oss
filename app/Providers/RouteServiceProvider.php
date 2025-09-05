@@ -18,7 +18,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/ledger';
+    public const HOME = '/my-portal';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
