@@ -6,19 +6,20 @@
     </label>
     <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[10] p-2 shadow bg-base-100 rounded-box w-64 max-h-96 overflow-y-auto">
         <li class="menu-title"><span>{{ __('ledger.navigation.my_tenants') }}</span></li>
+{{--        @dd($tenants)--}}
         @foreach($tenants->where('is_member', true) as $tenant)
             <li>
                 @if($tenant->folders_tree->isNotEmpty())
                     <details>
                         <summary>
-                            <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name }}</a>
+                            <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->id }}</a>
                         </summary>
                         <ul>
                             @include('livewire.tenant-switcher-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant])
                         </ul>
                     </details>
                 @else
-                    <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name }}</a>
+                    <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->id }}</a>
                 @endif
             </li>
         @endforeach
@@ -29,7 +30,7 @@
         @foreach($tenants->where('is_member', false) as $tenant)
             <li class="disabled">
                 <a class="flex justify-between">
-                    <span>{{ $tenant->name }}</span>
+                    <span>{{ $tenant->id }}</span>
                     <x-mary-icon name="o-lock-closed" class="w-4 h-4" />
                 </a>
             </li>

@@ -83,6 +83,8 @@ class RecordsTable extends Component
     public ?int $modalResourceId = null;
     public ?string $modalResourceType = null;
 
+    public ?string $currentTenantId = null;
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -93,8 +95,10 @@ class RecordsTable extends Component
      */
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
+        $this->currentTenantId = tenant()?->id;
+
         \Illuminate\Support\Facades\Log::info('RecordsTable mounting...', [
-            'tenant' => tenant()?->id,
+            'tenant' => $this->currentTenantId,
             'request_ledger_define_id' => $request->ledgerDefineId(),
             'request_folder_id' => $request->folderId(),
             'request_current_folder_id' => $request->currentFolderId(),

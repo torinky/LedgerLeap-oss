@@ -45,7 +45,7 @@
 
     <div class="flex flex-row  space-x-2 place-items-center">
         @if($canCreate)
-            <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+            <a href="{{ route('ledger.create', ['tenant' => tenant()?->id, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
                class="btn btn-neutral relative inline-flex w-48 "
                target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
                 {{__('ledger.create')}}

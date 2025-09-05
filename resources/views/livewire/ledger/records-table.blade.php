@@ -212,6 +212,7 @@
                                         :canView="$canView"
                                         :allAttachments="$allAttachments"
                                         :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                        :currentTenantId="$currentTenantId"
                                     />
                                 @endforeach
                                 </tbody>

@@ -21,7 +21,7 @@
 
         @if($currentFolderRecord)
                 <div class="flex w-full justify-center">
-                <form action="{{ route('folder.update',$currentFolderRecord->id)}}" method="post">
+                <form action="{{ route('folder.update',['tenant' => tenant()?->id, 'folder' => $currentFolderRecord->id])}}" method="post">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="id" value="{{ $currentFolderRecord->id }}">

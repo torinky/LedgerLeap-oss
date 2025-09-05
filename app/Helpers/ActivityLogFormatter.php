@@ -378,6 +378,16 @@ class ActivityLogFormatter
     public static function getSubjectDetailLink(CustomActivity|array $activity): ?string
     {
         $subject = ($activity instanceof CustomActivity) ? $activity->subject : null;
+
+        // Add logging to inspect the subject
+/*        if ($subject) {
+            \Illuminate\Support\Facades\Log::info('getSubjectDetailLink called.', [
+                'subject_type' => get_class($subject),
+                'subject_id' => $subject->id ?? 'null',
+                'subject_attributes' => $subject->getAttributes() ?? [],
+            ]);
+        }*/
+//        $subject = ($activity instanceof CustomActivity) ? $activity->subject : null;
         $subjectType = ($activity instanceof CustomActivity) ? $activity->subject_type : ($activity['subject_type'] ?? null);
         $subjectId = ($activity instanceof CustomActivity) ? $activity->subject_id : ($activity['subject_id'] ?? null);
 
@@ -407,7 +417,7 @@ class ActivityLogFormatter
             return route('ledgerByDefineId', $subject);
         }
         if ($subject instanceof Folder) {
-            return route('ledgersByFolderId', $subject);
+            return route('ledgersByFolderId', ['tenant' => tenant()?->id, 'folderId' => $subject->id]);
         }
         // 以下、Filament 管理画面へのリンクは一般ユーザー向けではないため null を返す
         if ($subject instanceof User || $subject instanceof Role || $subject instanceof Organization || $subject instanceof Permission || $subject instanceof RoleFolderPermission) {

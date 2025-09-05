@@ -104,7 +104,7 @@
                         <div class="modal-action">
                             <div class="btnContainer">
                                 <form method="POST"
-                                      action="{{route('ledgerDefine.delete',$ledgerDefineRecord->id)}}">
+                                      action="{{route('ledgerDefine.delete',['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id])}}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-error"
