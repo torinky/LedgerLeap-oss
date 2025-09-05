@@ -52,30 +52,12 @@ class DashboardLinksWidget extends Widget
                 'title' => __('ledger.settings.access_control'),
                 'icon' => 'heroicon-o-shield-check',
                 'links' => [
-                    [
-                        'title' => __('ledger.settings.roles'),
-                        'icon' => 'heroicon-o-user-group',
-                        'url' => route('filament.admin.resources.roles.index'),
-                        'color' => 'info',
-                    ],
-                    [
-                        'title' => __('ledger.settings.permissions'),
-                        'icon' => 'heroicon-o-key',
-                        'url' => route('filament.admin.resources.permissions.index'),
-                        'color' => 'secondary',
-                    ],
                 ],
             ],
             [
                 'title' => __('ledger.settings.contents'),
                 'icon' => 'heroicon-o-cog-6-tooth',
                 'links' => [
-                    [
-                        'title' => __('ledger.settings.framework'),
-                        'icon' => 'heroicon-o-clipboard-document-list',
-                        'url' => route('ledgerDefine.index'),
-                        'color' => 'primary',
-                    ],
                     [
                         'title' => __('ledger.technical_term'),
                         'icon' => 'heroicon-o-academic-cap',

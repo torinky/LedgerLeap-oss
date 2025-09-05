@@ -53,7 +53,17 @@ class AdminPanelProvider extends PanelProvider
 //            ->navigation(false)
             ->navigationItems([
                 NavigationItem::make(__('ledger.go_home'))
-                    ->url(fn() => route('ledger.index', ['tenant' => tenant()?->id]))
+                    ->url(function () {
+                        $tenantId = tenant()?->id;
+                        if (!$tenantId) {
+                            // Attempt to get tenant ID from the current URL if not resolved by tenancy
+                            $segments = request()->segments();
+                            if (isset($segments[0]) && !empty($segments[0])) {
+                                $tenantId = $segments[0];
+                            }
+                        }
+                        return route('ledger.index', ['tenant' => $tenantId]);
+                    })
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->activeIcon('heroicon-s-arrow-uturn-left')
                     ->sort(2),
