@@ -35,8 +35,8 @@ class TenantIsolationTest extends TestCase
         $this->adminUser = User::factory()->create(['email' => 'admin@example.com', 'password' => bcrypt('password')]);
         Notification::fake();
 
-        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant1', 'admin_email' => 'admin@example.com']);
-        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant2', 'admin_email' => 'admin@example.com']);
+        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant1', 'name' => 'Tenant 1', 'admin_email' => 'admin@example.com']);
+        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant2', 'name' => 'Tenant 2', 'admin_email' => 'admin@example.com']);
 
         $this->tenant1 = \App\Models\Tenant::find('tenant1');
         $this->tenant2 = \App\Models\Tenant::find('tenant2');
