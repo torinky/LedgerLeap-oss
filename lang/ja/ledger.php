@@ -1031,5 +1031,6 @@
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
     "tenant_name" => "テナント名",
+    "tenant" => "テナント",
     "tenant_id" => "テナントID",
 ];

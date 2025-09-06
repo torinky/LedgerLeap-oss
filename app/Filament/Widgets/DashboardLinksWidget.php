@@ -59,6 +59,12 @@ class DashboardLinksWidget extends Widget
                 'icon' => 'heroicon-o-cog-6-tooth',
                 'links' => [
                     [
+                        'title' => __('ledger.tenant'),
+                        'icon' => 'heroicon-o-building-office',
+                        'url' => route('filament.admin.resources.tenants.index'),
+                        'color' => 'success',
+                    ],
+                    [
                         'title' => __('ledger.technical_term'),
                         'icon' => 'heroicon-o-academic-cap',
                         'url' => route('filament.admin.resources.synonym.technical-term-groups.index'),
