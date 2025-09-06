@@ -52,6 +52,18 @@ class DashboardLinksWidget extends Widget
                 'title' => __('ledger.settings.access_control'),
                 'icon' => 'heroicon-o-shield-check',
                 'links' => [
+                    [
+                        'title' => __('ledger.role'),
+                        'icon' => 'heroicon-o-user-group',
+                        'url' => route('filament.admin.resources.roles.index'),
+                        'color' => 'info',
+                    ],
+                    [
+                        'title' => __('ledger.permission'),
+                        'icon' => 'heroicon-o-key',
+                        'url' => route('filament.admin.resources.permissions.index'),
+                        'color' => 'info',
+                    ],
                 ],
             ],
             [

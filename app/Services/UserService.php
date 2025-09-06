@@ -503,5 +503,40 @@ class UserService
             ->values();
     }
 
+    /**
+     * ユーザーが役割を通じてアクセス可能なテナントのコレクションを取得する
+     *
+     * @param User $user
+     * @return Collection<\App\Models\Tenant>
+     */
+    public function getAccessibleTenantsForUser(User $user): Collection
+    {
+        return tenancy()->central(function () use ($user) {
+            $userRoles = $this->getAllUniqueRolesForUser($user);
+            if ($userRoles->isEmpty()) {
+                return collect();
+            }
+
+            $accessibleFolderIds = RoleFolderPermission::whereIn('role_id', $userRoles->pluck('id'))
+                ->whereIn('permission', FolderPermissionType::accessPermissionValues()) // 閲覧可能な権限すべて
+                ->distinct()
+                ->pluck('folder_id');
+
+            if ($accessibleFolderIds->isEmpty()) {
+                return collect();
+            }
+
+            $tenantIds = Folder::whereIn('id', $accessibleFolderIds)
+                ->distinct('tenant_id')
+                ->pluck('tenant_id');
+
+            if ($tenantIds->isEmpty()) {
+                return collect();
+            }
+
+            return \App\Models\Tenant::whereIn('id', $tenantIds)->get();
+        });
+    }
+
 
 }

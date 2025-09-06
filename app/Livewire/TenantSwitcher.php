@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Folder;
 use App\Models\Tenant;
+use App\Services\UserService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -11,7 +12,14 @@ use Livewire\Component;
 class TenantSwitcher extends Component
 {
     public Collection $tenants;
-    public ?Tenant $currentTenant;
+    public ?\App\Models\Tenant $currentTenant;
+
+    protected UserService $userService;
+
+    public function boot(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
 
     public function mount(): void
     {
@@ -20,10 +28,10 @@ class TenantSwitcher extends Component
         // Tenancy::central() を使って、中央のコンテキストでテナント情報を取得
         tenancy()->central(function () {
             $allTenants = Tenant::all();
-            $userTenantIds = Auth::user()->tenants->pluck('id')->toArray();
+            $accessibleTenantIds = $this->userService->getAccessibleTenantsForUser(Auth::user())->pluck('id')->toArray();
 
-            $this->tenants = $allTenants->map(function ($tenant) use ($userTenantIds) {
-                $tenant->is_member = in_array($tenant->id, $userTenantIds);
+            $this->tenants = $allTenants->map(function ($tenant) use ($accessibleTenantIds) {
+                $tenant->is_member = in_array($tenant->id, $accessibleTenantIds);
                 $tenant->folders_tree = collect(); // デフォルトは空のコレクション
 
                 // メンバーであるテナントについてのみフォルダ階層を取得

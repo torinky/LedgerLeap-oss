@@ -13,10 +13,11 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Role extends SpatieRole
 {
-    use LogsActivity, Notifiable;
+    use LogsActivity, Notifiable, HasFactory;
 
     protected $fillable = [
         'name', 'guard_name',

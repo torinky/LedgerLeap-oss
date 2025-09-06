@@ -7,6 +7,8 @@ use App\Models\Folder;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Enums\FolderPermissionType;
+use App\Models\RoleFolderPermission;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -15,13 +17,9 @@ class TenantSwitcherTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User $user;
-
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
-        $this->withoutVite(); // このテストクラス全体でViteを無効化
     }
 
     #[Test]
@@ -35,9 +33,22 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function component_is_visible_to_authenticated_users(): void
     {
-        $tenant = Tenant::create(['id' => 'test-tenant']);
-        $this->actingAs($this->user);
+        $tenant = \App\Models\Tenant::create(['id' => 'test-tenant']);
+        $user = \App\Models\User::factory()->create();
+        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user->assignRole($role);
 
+        $tenant->run(function () use ($role, $user) {
+            $parentFolder = \App\Models\Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $parentFolder->id,
+                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'modifier_id' => $user->id,
+            ]);
+        });
+
+        $this->actingAs($user);
         tenancy()->initialize($tenant);
 
         $this->get(route('my-portal', ['tenant' => $tenant->id]))
@@ -48,13 +59,35 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function it_shows_all_tenants_and_distinguishes_membership(): void
     {
-        $tenantA = Tenant::create(['id' => 'tenant-a']);
-        $tenantB = Tenant::create(['id' => 'tenant-b']);
-        $tenantC = Tenant::create(['id' => 'tenant-c']);
+        $user = \App\Models\User::factory()->create();
+        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user->assignRole($role);
 
-        $this->user->tenants()->attach([$tenantA->id, $tenantB->id]);
+        $tenantA = \App\Models\Tenant::create(['id' => 'tenant-a']);
+        $tenantB = \App\Models\Tenant::create(['id' => 'tenant-b']);
+        $tenantC = \App\Models\Tenant::create(['id' => 'tenant-c']);
 
-        $this->actingAs($this->user);
+        // tenantAとtenantBにアクセス権を付与
+        $tenantA->run(function () use ($role, $user) {
+            $folderA = \App\Models\Folder::factory()->create(['title' => 'Folder A', 'parent_id' => null]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $folderA->id,
+                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'modifier_id' => $user->id,
+            ]);
+        });
+        $tenantB->run(function () use ($role, $user) {
+            $folderB = \App\Models\Folder::factory()->create(['title' => 'Folder B', 'parent_id' => null]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $folderB->id,
+                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'modifier_id' => $user->id,
+            ]);
+        });
+
+        $this->actingAs($user);
         tenancy()->initialize($tenantA);
 
         Livewire::test(TenantSwitcher::class)
@@ -68,30 +101,54 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function it_shows_folder_hierarchy_for_member_tenants(): void
     {
-        $tenant = Tenant::create(['id' => 'member-tenant']);
-        $this->user->tenants()->attach($tenant);
+        $user = \App\Models\User::factory()->create();
+        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user->assignRole($role);
 
-        $this->actingAs($this->user);
+        $tenant = \App\Models\Tenant::create(['id' => 'member-tenant']);
+
+        $tenant->run(function () use ($role, $user) {
+            $parentFolder = \App\Models\Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
+            $childFolder = \App\Models\Folder::factory()->create(['title' => 'Child Folder', 'parent_id' => $parentFolder->id]);
+
+            RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $parentFolder->id,
+                'permission' => FolderPermissionType::READ->value,
+                'modifier_id' => $user->id,
+            ]);
+        });
+
+        $this->actingAs($user);
         tenancy()->initialize($tenant);
 
-        $parentFolder = Folder::create(['title' => 'Parent Folder', 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
-        $childFolder = Folder::create(['title' => 'Child Folder', 'parent_id' => $parentFolder->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
-
         Livewire::test(TenantSwitcher::class)
-            ->assertSee($parentFolder->title)
-            ->assertSee($childFolder->title);
+            ->assertSee('Parent Folder')
+            ->assertSee('Child Folder');
     }
 
     #[Test]
     public function links_are_generated_correctly(): void
     {
-        $tenant = Tenant::create(['id' => 'link-tenant']);
-        $this->user->tenants()->attach($tenant);
+        $user = \App\Models\User::factory()->create();
+        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user->assignRole($role);
 
-        $this->actingAs($this->user);
+        $tenant = \App\Models\Tenant::create(['id' => 'link-tenant']);
+
+        $folder = null; // Initialize $folder outside the closure
+        $tenant->run(function () use ($role, $user, & $folder) {
+            $folder = \App\Models\Folder::factory()->create(['title' => 'Test Folder', 'parent_id' => null]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $folder->id,
+                'permission' => FolderPermissionType::READ->value,
+                'modifier_id' => $user->id,
+            ]);
+        });
+
+        $this->actingAs($user);
         tenancy()->initialize($tenant);
-
-        $folder = Folder::create(['title' => 'Test Folder', 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
 
         Livewire::test(TenantSwitcher::class)
             ->assertSee(route('my-portal', ['tenant' => $tenant->id]))
