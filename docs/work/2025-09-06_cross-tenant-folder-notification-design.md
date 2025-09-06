@@ -138,3 +138,49 @@
 本機能の実装において、以下のファイルが変更される予定である。
 
 *   `app/Filament/Resources/RoleResource/RelationManagers/NotificationSettingsRelationManager.php`
+
+## 6. 実装の経緯と技術的判断
+
+本機能の実装にあたり、当初の設計では解決できない技術的な問題が発生したため、その経緯と最終的な実装方針を以下に記録する。
+
+### 6.1. 当初設計と発生した問題
+
+当初、`table()` メソッドのカラム定義やグループ化において、`folder.tenant.name` のように、リレーションを深くネストしてプロパティにアクセスする設計を立てた。
+
+しかし、この実装では以下の問題が発生した。
+
+1.  **カラムとグループ化の不具合:** テナント名でのカラム表示とグループ化が期待通りに機能しなかった。
+2.  **致命的なエラーの発生:** グループヘッダーのラベルを動的にテナント名で表示するため、`groups()` の `label()` にクロージャ（無名関数）を渡したところ、`Target [Illuminate\Database\Eloquent\Model] is not instantiable.` や `An attempt was made to evaluate a closure for [Filament\Tables\Grouping\Group], but [$record] was unresolvable.` といった、LaravelのDIコンテナに起因するエラーが頻発し、画面描画自体が失敗した。
+
+### 6.2. 原因調査と比較分析
+
+エラーログを分析すると共に、類似機能であり正常に動作している `FolderPermissionRelationManager` の実装と比較した。
+
+その結果、以下の決定的な違いが判明した。
+
+*   **成功している実装 (`FolderPermission...`):**
+    *   グループヘッダーのラベル (`label()`) には、`__('ledger.tenant')` のような**静的な文字列**を指定している。
+    *   テナント名は、カラム (`columns()`) 内で `formatStateUsing` を使い、各レコードのモデルインスタンスから動的に取得・表示している。
+
+*   **失敗した実装 (`NotificationSettings...`):**
+    *   グループヘッダーのラベル自体を動的に生成しようと、`label()` にクロージャを渡していた。
+
+このことから、失敗の根本原因は「**Filamentのグループ化機能が、特定のコンテキストで `label()` クロージャの依存性解決を正しく処理できないこと**」にあると断定した。
+
+### 6.3. 最終的な実装方針と技術的根拠
+
+上記調査結果に基づき、`FolderPermissionRelationManager` で採用されている、より安定的で堅牢な実装方法に方針を転換した。これは、Filamentでリレーション先の値を扱う際の**ベストプラクティス**と言える。
+
+*   **グループ化 (`groups()`):**
+    *   キーには、`folder.tenant.id` のようにリレーション先の**実在するDBカラム**を指定する。
+    *   `label()` には、動的なクロージャではなく、静的な文字列を指定する。
+
+*   **カラム表示 (`columns()`):**
+    *   キーには、グループ化と同様に `folder.tenant.id` のような**実在するDBカラム**を指定する。
+    *   `formatStateUsing` を使い、クロージャの引数として渡されるモデルインスタンス (`$record`) から、`$record->folder?->tenant?->name` のようにリレーションを辿り、実際に表示したい値（アクセサを含む）を取得して返す。
+
+この方法により、Filamentの内部的な挙動に依存することなく、確実な表示とグループ化を実現した。
+
+### 6.4. 追加要件への対応
+
+最終確認段階で、「フォルダ名でもグループ化したい」という追加要件が提示された。これについては、`groups()` 配列に `\Filament\Tables\Grouping\Group::make('folder.title')` を追加することで対応した。`folder.title` は直接リレーション先のカラムであるため、問題なく機能した。

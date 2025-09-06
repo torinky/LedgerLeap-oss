@@ -38,6 +38,7 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
@@ -98,7 +99,6 @@ class NotificationSettingsRelationManager extends RelationManager
     {
         return $table
             ->heading(__('ledger.folder.notification'))
-            // ->recordTitleAttribute(...) // 不要
             ->query(function (EloquentBuilder $query) {
                 $query->setModel(new RoleFolderPermission());
 
@@ -106,63 +106,45 @@ class NotificationSettingsRelationManager extends RelationManager
                 $query->whereIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
 
                 // ★ 必要なリレーションを Eager Loading
-                $query->with(['folder:id,title', 'notificationType:id,name']);
+                $query->with(['folder:id,title,tenant_id', 'notificationType:id,name', 'folder.tenant']);
 
                 return $query;
             })
-            ->defaultGroup('folder.title') // Folder タイトルでグループ化
             ->groups([
-                \Filament\Tables\Grouping\Group::make('folder.title')
+                Group::make('folder.tenant.id')
+                    ->label(__('ledger.tenant'))
+                    ->collapsible(),
+                Group::make('folder.title')
                     ->label(__('ledger.folder.title'))
-                    ->collapsible(), // 折りたたみ可能に
+                    ->collapsible(),
             ])
             ->columns([
-                // ★ Folder のタイトルを表示 (リレーション経由)
+                TextColumn::make('folder.tenant.id')
+                    ->label(__('ledger.tenant'))
+                    ->formatStateUsing(fn (Model $record): string => $record->folder?->tenant?->name ?: ($record->folder?->tenant?->id ?? '-')),
+
                 TextColumn::make('folder.title')
                     ->label(__('ledger.folder.title'))
-//                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
-                    ->sortable()
-                , // 基本的なソートを有効化 (Joinなし)
+                    ->sortable(),
 
-                // ★ 通知タイプの表示 (リレーション経由)
                 TextColumn::make('notificationType.name')
                     ->label(__('ledger.notification_type'))
-                    ->formatStateUsing(function (?string $state) { // $state は notificationType.name
+                    ->formatStateUsing(function (?string $state) {
                         if ($state) {
                             $labelKey = 'ledger.notification_types.' . $state;
-                            // 翻訳が存在するか確認し、存在すれば翻訳、なければ元の名前を使用
                             return trans()->has($labelKey) ? __($labelKey) : $state;
                         }
                         return __('N/A');
                     })
-//                    ->searchable(isIndividual: true, isGlobal: true) // 個別検索とグローバル検索を有効化
-                    ->sortable(), // 基本的なソートを有効化 (Joinなし)
+                    ->sortable(),
 
-                // ★ 通知 ON/OFF の表示 (RoleFolderPermission の permission 属性を直接使用)
-                /*                IconColumn::make('permission')
-                                    ->label(__('ledger.notify'))
-                                    ->boolean()
-                                    ->trueIcon('heroicon-o-check-badge')
-                                    ->falseIcon('heroicon-o-x-mark')
-                                    ->trueColor('success')
-                                    ->falseColor('danger')
-                                    // Enum キャストがあればこれだけで動作するはず
-                                    ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),*/
-
-                // --- 通知 ON/OFF を ToggleColumn に変更 ---
-                ToggleColumn::make('permission_toggle') // <<<--- ToggleColumn に変更
-                ->label(__('ledger.notify'))
-                    // ON / OFF に対応する Enum ケースを定義
+                ToggleColumn::make('permission_toggle')
+                    ->label(__('ledger.notify'))
                     ->onColor('success')
                     ->offColor('danger')
                     ->onIcon('heroicon-o-check-badge')
                     ->offIcon('heroicon-o-x-mark')
-                    // ここで状態を boolean (ONかどうか) に変換する必要はないはず
-                    // ToggleColumn は通常 boolean カラムに使うが、
-                    // カスタムロジックで Enum を扱えるか試す価値あり
-                    // もし Enum でうまく動かなければ、 boolean の仮想カラムを作るなど工夫が必要
-                    ->updateStateUsing(function (RoleFolderPermission $record, $state): void { // <<<--- 更新ロジック
-                        // $state にはトグル後の状態 (true / false) が入る
+                    ->updateStateUsing(function (RoleFolderPermission $record, $state): void {
                         $newPermission = $state ? FolderPermissionType::NOTIFY_ON : FolderPermissionType::NOTIFY_OFF;
                         try {
                             $record->update([
@@ -179,16 +161,36 @@ class NotificationSettingsRelationManager extends RelationManager
                                 ->title(__('ledger.notification.updated_error'))
                                 ->danger()
                                 ->send();
-                            // 状態を元に戻す (オプション)
-                            $this->refresh(); // テーブル再描画で元の状態に戻ることを期待
+                            $this->refresh();
                         }
                     })
-                    // <<<--- 初期状態の設定 (重要)
-                    // ToggleColumn は内部的に boolean を期待するため、Enum から boolean への変換が必要
                     ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),
-
             ])
             ->filters([
+                Filter::make('tenant_id')
+                    ->form([
+                        Select::make('value')
+                            ->label(__('ledger.tenant'))
+                            ->options(
+                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
+                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                                        return [$tenant->id => $tenant->name ?: $tenant->id];
+                                    });
+                                })
+                            )
+                            ->searchable()
+                            ->preload(),
+                    ])
+                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
+                        if (blank($data['value'])) {
+                            return $query;
+                        }
+                        return $query->whereHas('folder', function (EloquentBuilder $query) use ($data) {
+                            $query->where('tenant_id', $data['value']);
+                        });
+                    })
+                    ->label(__('ledger.tenant')),
+
                 Filter::make('folder_id')
                     ->form([
                         Select::make('value')
@@ -233,10 +235,32 @@ class NotificationSettingsRelationManager extends RelationManager
                 // ★ CreateAction の代わりにカスタム Action を使用
                 Action::make('create') // アクション名を 'create' に設定
                 ->label(__('ledger.new_relation_attach'))
-                    ->form([ // フォーム定義をここに移動
+                    ->form([
+                        Select::make('tenant_id')
+                            ->label(__('ledger.tenant'))
+                            ->options(
+                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
+                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                                        return [$tenant->id => $tenant->name ?: $tenant->id];
+                                    });
+                                })
+                            )
+                            ->live()
+                            ->afterStateUpdated(function (callable $set) {
+                                $set('folder_id', null);
+                            })
+                            ->required(),
+
                         SelectTree::make('folder_id')
                             ->label(__('ledger.folder.title'))
-                            ->relationship(relationship: 'folder', titleAttribute: 'title', parentAttribute: 'parent_id', modifyQueryUsing: fn(EloquentBuilder $query) => $query->orderBy('_lft'))
+                            ->relationship(relationship: 'folder', titleAttribute: 'display_title', parentAttribute: 'parent_id',
+                                modifyQueryUsing: fn(EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                    $selectedTenantId = $get('tenant_id');
+                                    if ($selectedTenantId) {
+                                        $query->where('tenant_id', $selectedTenantId);
+                                    }
+                                    return $query->with('tenant')->orderBy('_lft');
+                                }))
                             ->required()
                             ->searchable()
                             ->enableBranchNode()

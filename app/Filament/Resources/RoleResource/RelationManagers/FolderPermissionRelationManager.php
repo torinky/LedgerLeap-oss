@@ -29,6 +29,7 @@ use Filament\Tables\Actions\EditAction;
 // ★ EditAction を使用
 use Filament\Tables\Columns\TextColumn;
 
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
@@ -120,9 +121,14 @@ class FolderPermissionRelationManager extends RelationManager
             })
             // ★ Grouping を追加してフォルダごとに権限を表示 (推奨)
             ->groups([
-                \Filament\Tables\Grouping\Group::make('folder.tenant.id') // Group by tenant ID (physical column)
+                Group::make('folder.tenant.id') // Group by tenant ID (physical column)
                     ->label(__('ledger.tenant'))
                     ->collapsible(), // 折りたたみ可能に
+
+                Group::make('folder.title')
+                    ->label(__('ledger.folder.title'))
+                    ->collapsible(),
+
             ])
             ->columns([
                 // ★ Folder タイトルはグループヘッダーで表示されるため、カラムとしては不要になる場合がある
