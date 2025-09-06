@@ -40,6 +40,15 @@ class Folder extends Model
         return $this->title;
     }
 
+    public function getDisplayTitleAttribute(): string
+    {
+        $tenantIdentifier = $this->tenant->name ?? $this->tenant->id;
+        if ($tenantIdentifier) {
+            return $this->title . ' (' . $tenantIdentifier . ')';
+        }
+        return $this->title;
+    }
+
     protected $guard_name = ['web', 'api'];
 
     /**
