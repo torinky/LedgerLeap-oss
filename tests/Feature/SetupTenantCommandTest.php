@@ -36,16 +36,21 @@ class SetupTenantCommandTest extends TestCase
     public function test_setup_tenant_command_successfully_creates_tenant_and_assigns_admin(): void
     {
         $tenantId = 'test-feature-tenant';
+        $tenantName = 'Test Feature Tenant';
         $adminEmail = 'super_admin@ll.com';
 
         // コマンドを実行
         $this->artisan('app:setup-tenant', [
             'tenant_id' => $tenantId,
+            'name' => $tenantName,
             'admin_email' => $adminEmail,
         ])->assertExitCode(0); // コマンドが成功したことをアサート
 
-        // テナントが作成されたことを確認
-        $this->assertDatabaseHas('tenants', ['id' => $tenantId]);
+        // テナントが作成され、プロパティとして名前が保存されていることを確認
+        $tenant = Tenant::find($tenantId);
+        $this->assertNotNull($tenant);
+        $this->assertEquals($tenantName, $tenant->name);
+
         $this->assertDatabaseHas('domains', ['tenant_id' => $tenantId, 'domain' => "{$tenantId}.localhost"]);
 
         // ユーザーとテナントの紐付けを確認
@@ -81,6 +86,7 @@ class SetupTenantCommandTest extends TestCase
         // コマンドを実行 (重複)
         $this->artisan('app:setup-tenant', [
             'tenant_id' => $tenantId,
+            'name' => 'Existing Tenant',
             'admin_email' => $adminEmail,
         ])
             ->assertExitCode(1) // コマンドが失敗したことをアサート
@@ -96,6 +102,7 @@ class SetupTenantCommandTest extends TestCase
         // コマンドを実行
         $this->artisan('app:setup-tenant', [
             'tenant_id' => $tenantId,
+            'name' => 'New Tenant',
             'admin_email' => $adminEmail,
         ])
             ->assertExitCode(1) // コマンドが失敗したことをアサート

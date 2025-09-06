@@ -226,7 +226,7 @@
 ### ステップ10: テナント管理機能の実装
 
 *   **目的:** 管理者が中央管理画面から各テナントの情報を確認し、設定画面へシームレスに遷移できるUIを構築する。
-*   **状況:** <span style="color: red;">未着手</span>
+*   **状況:** <span style="color: green;">完了</span>
 *   **タスク:**
     1.  **`TenantResource`の作成:** `php artisan make:filament-resource Tenant --generate` を実行し、テナントを管理するためのFilamentリソースを作成する。
     2.  **テナント一覧の実装:** `TenantResource`のテーブルに、テナントのID、名前などの基本情報を表示する。

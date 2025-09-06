@@ -15,7 +15,7 @@ class SetupTenant extends Command
      *
      * @var string
      */
-    protected $signature = 'app:setup-tenant {tenant_id : The ID of the tenant} {admin_email : The email of the admin user}';
+    protected $signature = 'app:setup-tenant {tenant_id : The ID of the tenant} {name : The name of the tenant} {admin_email : The email of the admin user}';
 
     /**
      * The console command description.
@@ -31,6 +31,7 @@ class SetupTenant extends Command
     public function handle(): int
     {
         $tenantId = $this->argument('tenant_id');
+        $name = $this->argument('name');
         $adminEmail = $this->argument('admin_email');
         $domain = $tenantId . '.localhost';
 
@@ -46,12 +47,15 @@ class SetupTenant extends Command
             return 1;
         }
 
-        $this->info("Creating tenant: {$tenantId}");
+        $this->info("Creating tenant: {$tenantId} ({$name})");
         $tenant = null; // for rollback
 
         try {
             // 3. テナントの作成とドメインの紐付け
-            $tenant = Tenant::create(['id' => $tenantId]);
+            $tenant = Tenant::create(['id' => $tenantId]); // まずIDだけで作成
+            $tenant->name = $name; // プロパティとして代入
+            $tenant->save(); // 保存
+
             $tenant->domains()->create(['domain' => $domain]);
             $this->info("Tenant '{$tenantId}' and domain '{$domain}' created successfully.");
 
@@ -118,6 +122,7 @@ class SetupTenant extends Command
         }
 
         $this->info("All setup processes for tenant '{$tenantId}' completed successfully.");
+        $this->info("Tenant data: " . json_encode($tenant->data));
 
         return Command::SUCCESS;
     }
