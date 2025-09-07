@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Observers\RoleFolderPermissionObserver;
+use App\Observers\UserObserver;
 use App\Observers\UserPermissionsObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -20,9 +21,10 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $observers = [
-        User::class => [UserPermissionsObserver::class],
+        User::class => [UserPermissionsObserver::class, UserObserver::class],
         Role::class => [UserPermissionsObserver::class],
         Organization::class => [UserPermissionsObserver::class],
+        RoleFolderPermission::class => [RoleFolderPermissionObserver::class],
     ];
 
     /**
@@ -41,8 +43,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        RoleFolderPermission::observe(RoleFolderPermissionObserver::class);
-
+        //
     }
 
     /**

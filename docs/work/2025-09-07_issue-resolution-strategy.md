@@ -47,7 +47,9 @@
 
 ### 5.1. アーキテクチャの検討
 
-当初、`tenant_user` テーブルを使用せずにユーザーの所属テナントを管理する方法として、以下の2つのアプローチが検討された。
+当初、`tenant_user` テーブルは維持しつつ、その内容を権限変更に応じて自動で同期するアプローチ（詳細は[ユーザー・テナント所属自動同期機能の再検討](./2025-09-07_user-tenant-sync-reconsideration.md)を参照）も検討されましたが、その後の議論で`tenant_user`テーブル自体を利用しない、より抜本的なアプローチを検討することになりました。
+
+具体的には、以下の2つのアプローチが比較検討されました。
 
 *   **A案: `role_tenant` 新設案:**
     *   Web検索結果に基づくアプローチ。
@@ -94,6 +96,10 @@
     2.  `getAccessibleTenants(User $user)` メソッドを実装する。このメソッドは、ユーザーのロールから `role_folder_permissions` -> `folders` -> `tenants` を辿り、重複のないテナントリストを返す。
     3.  上記の結果を、ユーザーIDをキーとしてキャッシュするロジック（`Cache::remember`）を実装する。
 *   **確認事項:** サービスが正しいテナントリストを返すことを確認するためのユニットテストを作成する。
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Services/TenantAccessService.php` に、ユーザーのロールから `role_folder_permissions` を辿ってアクセス可能なテナントリストを動的に生成し、キャッシュするロジックを実装した。
+    *   ユニットテスト `tests/Unit/Services/TenantAccessServiceTest.php` を作成し、サービスが期待通りに動作することを確認済み。
 
 ### ステップ3: キャッシュ無効化 `Observer` の実装
 *   **目的:** 権限情報が変更された際に、`TenantAccessService` のキャッシュを自動的にクリアし、情報の鮮度を保つ。
@@ -102,6 +108,38 @@
     2.  `RoleFolderPermissionObserver` を作成し、権限が変更された際に、影響を受ける全ユーザーのキャッシュをクリアする処理を追加する。
     3.  `FolderObserver` を作成または修正し、フォルダが削除されたり、テナントIDが変更されたりした場合に、関連するキャッシュをクリアする処理を追加する。
 *   **確認事項:** 関連モデルの変更時に、キャッシュが正しくクリアされることを確認するテストを作成する。
+*   **状況:** <span style="color: green;">進行中</span>
+
+#### ステップ3.1: `UserObserver` の実装
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Observers/UserObserver.php` に、ユーザーの更新・削除時にキャッシュをクリアするロジックを実装した。
+    *   ユニットテスト `tests/Unit/Observers/UserObserverTest.php` を作成し、Observerが期待通りに動作することを確認済み。
+*   **想定と異なった点と解決策:**
+    *   **`EventServiceProvider` の登録ミス:** `UserObserver` の `use` 文の追加漏れや、`$observers` プロパティへの登録方法の誤りにより、`ParseError` や `InvalidArgumentException` が多発した。`write_file` によるファイル全体の上書きで確実に修正した。
+
+#### ステップ3.2: `RoleFolderPermissionObserver` の実装
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Observers/RoleFolderPermissionObserver.php` に、権限の作成・更新・削除時にキャッシュをクリアするロジックを実装した。
+    *   ユニットテスト `tests/Unit/Observers/RoleFolderPermissionObserverTest.php` を作成し、Observerが期待通りに動作することを確認済み。
+*   **想定と異なった点と解決策:**
+    *   **`make:observer` コマンドのエラー:** `AppServiceProvider` での事前登録が原因で、Observerファイル作成時にエラーが発生した。一時的に登録を解除してファイルを作成し、その後登録を戻すことで解決した。
+    *   **`modifier_id` 欠落エラー:** テストコードで `role_folder_permissions` に直接 `insert` する際に `modifier_id` が欠落していた。テストコードを修正し、`modifier_id` を含めることで解決した。
+    *   **`ValueError` (Enum):** `permission` カラムにEnumの不正な値（整数 `1`）を渡した。テストコードを修正し、`FolderPermissionType::READ` を使うことで解決した。
+    *   **`ParseError` (テストファイル):** テストコード修正時の `replace` 失敗による構文エラー。`write_file` によるファイル全体の上書きで確実に修正した。
+    *   **`InvalidCountException` (Observer起動せず):** `RoleFolderPermission::create()` してもObserverが起動しない問題。`EventServiceProvider` の登録方法を `$observers` プロパティに統一することで解決した。
+    *   **`InvalidCountException` (Mockery 捕捉せず):** Observerは動いているのにテストが失敗する問題。`TenantAccessService` がシングルトンとして登録されていなかったため、テストでスパイしたインスタンスがObserverに渡っていなかった。`AppServiceProvider` でシングルトン登録し、テストの `setUp` でモックを束縛することで解決した。
+    *   **`InvalidCountException` (二重呼び出し):** `deleted` イベントで `clearCache` が2回呼ばれる問題。`LogsActivity` トレイトが原因で二重呼び出しが発生していた。`RoleFolderPermissionObserver` の `deleted` メソッドから `clearCache` の呼び出しを削除することで解決した。
+    *   **`RoleFolderPermission` モデルの `delete()` 問題:** `Pivot` から `Model` への継承変更後も `delete()` が `TypeError` を起こした。`RoleFolderPermission` モデルの `delete()` メソッドをオーバーライドし、複合主キーで削除するロジックを記述することで解決した。
+
+##### 3.2.1. 既存キャッシュ処理の移管と他のテストへの影響
+
+*   RoleFolderPermission モデルの booted()メソッド内にあったキャッシュクリアロジックは、削除されたのではなく、RoleFolderPermissionObserverに処理を一本化しました。Observer内で、既存の WritableFolderRepository のキャッシュクリアと、今回実装した TenantAccessService のキャッシュクリアの両方が実行されるようにしています。これにより、キャッシュクリア機能が失われることはありません。
+  
+*   また、RoleFolderPermission モデルの継承元変更（Pivot から Model へ）や複合主キー対応は、このモデルを直接操作するテストや、関連するリレーションを介して操作するテストに影響を与える可能性があります。
+  
+*   担保: 計画のステップ3.3完了後、プロジェクト全体のテストスイートを実行し、すべてのテストがパスすることを確認することで、これらの変更が既存機能に影響を与えていないことを担保します。
 
 ### ステップ4: テナント作成処理の修正
 *   **目的:** 新規テナント作成時に、初期ロールに対してアクセス権を自動で付与し、「空のテナント」問題を防ぐ。
@@ -114,6 +152,19 @@
 *   **目的:** `TenantSwitcher` など、テナントリストを必要とするUIコンポーネントが、新しい `TenantAccessService` を利用するように修正する。
 *   **作業:** `app/Livewire/TenantSwitcher.php` などを修正し、`Auth::user()->tenants` のような古いロジックを `TenantAccessService::getAccessibleTenants(Auth::user())` の呼び出しに置き換える。
 *   **確認事項:** UIに、権限に基づいて動的に生成された正しいテナントリストが表示されることを、手動テストおよび自動テストで確認する。
+
+### ステップ6: `tenant_user` テーブルの廃止と関連コードのクリーンアップ
+*   **目的:** `tenant_user` テーブルを完全に廃止し、それに依存する全てのコードとテストを削除または修正する。
+*   **作業:**
+    1.  `tenant_user` テーブルを削除するマイグレーションを作成する。
+    2.  `User` モデルから `tenants()` リレーション（`BelongsToMany`）を削除する。
+    3.  `Tenant` モデルから `users()` リレーション（`BelongsToMany`）を削除する。
+    4.  `tenant_user` テーブルを参照している全てのコード（コントローラ、Livewireコンポーネント、テスト、サービス、UIなど）を検索し、削除または `TenantAccessService` の呼び出しに置き換える。
+    5.  `tenant_user` テーブルに関連するテスト（もしあれば）を削除または修正する。
+*   **確認事項:**
+    *   `php artisan migrate:fresh --seed` がエラーなく完了すること。
+    *   アプリケーションが `tenant_user` テーブルに依存していないことを確認する。
+    *   既存のテストがすべてパスすること。
 
 ## 7. 関連ドキュメント
 *   **[新マルチテナント実装計画書 (最終版)](./2025-08-30_new-multi-tenant-implementation-plan-final.md)**

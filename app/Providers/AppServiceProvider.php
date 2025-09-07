@@ -11,6 +11,7 @@ use App\Modules\ImageUpload\LocalImageManager;
 use App\Observers\AutoLinkObserver;
 use App\Observers\FolderObserver;
 use App\Observers\LedgerDiffObserver;
+use App\Services\TenantAccessService;
 use Stancl\Tenancy\Database\Models\Domain;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
@@ -46,6 +47,12 @@ class AppServiceProvider extends ServiceProvider
                 } else {*/
         $this->app->bind(ImageManagerInterface::class, LocalImageManager::class);
         $this->app->register(IdeHelperServiceProvider::class);
+
+        // TenantAccessServiceをシングルトンとして登録
+        $this->app->singleton(TenantAccessService::class, function ($app) {
+            return new TenantAccessService();
+        });
+
         //        }
 
         $this->setCustomResolverForMySql();
@@ -62,7 +69,7 @@ class AppServiceProvider extends ServiceProvider
     private function setCustomResolverForMySql()
     {
         Connection::resolverFor('mysql', function ($connection, $database, $prefix, $config) {
-            return new MysqlConnection($connection, $database, $prefix, $config);
+            return new MySqlConnection($connection, $database, $prefix, $config);
         });
     }
 
@@ -73,6 +80,8 @@ class AppServiceProvider extends ServiceProvider
     {
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
+        LedgerDiff::observe(LedgerDiffObserver::class);
+        
 
         // Domain モデルが作成される際にUUIDを自動生成
         Domain::creating(function (Domain $domain) {
