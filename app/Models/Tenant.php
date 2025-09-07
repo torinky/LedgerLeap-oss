@@ -23,8 +23,4 @@ class Tenant extends BaseTenant
         return $this->belongsToMany(User::class, 'tenant_user', 'tenant_id', 'user_id');
     }
 
-    public function getNameAttribute(): string
-    {
-        return (string) ($this->data['name'] ?? '');
-    }
 }

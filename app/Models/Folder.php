@@ -42,8 +42,8 @@ class Folder extends Model
 
     public function getDisplayTitleAttribute(): string
     {
-        $tenantIdentifier = $this->tenant->name ?? $this->tenant->id;
-        if ($tenantIdentifier) {
+        if ($this->tenant) {
+            $tenantIdentifier = $this->tenant->name ?? $this->tenant->id;
             return $this->title . ' (' . $tenantIdentifier . ')';
         }
         return $this->title;

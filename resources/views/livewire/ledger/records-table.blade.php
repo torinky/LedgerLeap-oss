@@ -190,6 +190,7 @@
                             :ledgerDefineId="$ledgerDefineId"
                             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
                             :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                            :currentTenantId="$currentTenantId"
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">

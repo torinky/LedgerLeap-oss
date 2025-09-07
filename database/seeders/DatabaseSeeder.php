@@ -7,6 +7,7 @@ use App\Models\LedgerDefine;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,11 +16,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // このシーダーはテナントDBに対して実行されることを想定
-
-        // テナントDBの初期データを投入
+        // 中央DBの初期データを投入
         $this->call([
-            FolderSeeder::class,
             UsersSeeder::class,
             OrganizationSeeder::class,
             RolesAndPermissionsSeeder::class,
@@ -27,12 +25,18 @@ class DatabaseSeeder extends Seeder
             NotificationTypeSeeder::class,
         ]);
 
-        // ファクトリで作成されるユーザーもテナントに紐づく
-        $users = User::factory(10)->create();
+        // テナントコンテキストが存在する場合のみ、テナントDBの初期データを投入
+        if (tenancy()->tenant) {
+            $this->call([
+                FolderSeeder::class,
+            ]);
 
-        $ledgerDefines = LedgerDefine::factory(50)->recycle($users)->create();
-        Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
-        $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+            // ファクトリで作成されるユーザーもテナントに紐づく
+            $users = User::factory(10)->create();
+
+            $ledgerDefines = LedgerDefine::factory(50)->recycle($users)->create();
+            Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
+            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+        }
     }
 }
-

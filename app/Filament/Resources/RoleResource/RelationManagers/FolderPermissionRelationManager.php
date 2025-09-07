@@ -134,7 +134,7 @@ class FolderPermissionRelationManager extends RelationManager
                 // ★ Folder タイトルはグループヘッダーで表示されるため、カラムとしては不要になる場合がある
                 TextColumn::make('folder.tenant.id') // Use ID as the base for the column
                     ->label(__('ledger.tenant'))
-                    ->formatStateUsing(fn (string $state, Model $record): string => $record->folder->tenant->name ?: $record->folder->tenant->id), // Explicitly get name or ID
+                    ->formatStateUsing(fn (Model $record): string => $record->folder?->tenant?->name ?: ($record->folder?->tenant?->id ?? '-')), // Explicitly get name or ID
                 TextColumn::make('folder.title'),
                 TextColumn::make('permission')
                     ->label(__('permission.title'))

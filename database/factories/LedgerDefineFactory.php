@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -81,10 +82,12 @@ class LedgerDefineFactory extends Factory
 
 ", $markdownText);
 
+        $folder = \App\Models\Folder::inRandomOrder()->first();
+
         return [
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
-            'folder_id' => random_int(1, 10),
+            'folder_id' => $folder ? $folder->id : null,
             'create_description' => $markdownText,
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),

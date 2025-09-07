@@ -48,7 +48,7 @@ class LedgerDefinePolicy
                 return true;
             }
             // さらに、フォルダが閲覧可能かどうかも確認
-            if ($this->userService->isReadableFolderForUser($user, $ledgerDefine->folder)) {
+            if ($ledgerDefine->folder && $this->userService->isReadableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
             }
         }
@@ -84,7 +84,7 @@ class LedgerDefinePolicy
         // ユーザーが所属する組織の権限も含めて、台帳定義の更新権限があるか確認
         if ($this->userService->hasPermission($user, ['manage_ledger_defines', 'update_ledger_defines'])) {
             // さらに、対象のフォルダが管理可能かどうかも確認
-            if ($this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
+            if ($ledgerDefine->folder && $this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
             }
         }
@@ -102,7 +102,7 @@ class LedgerDefinePolicy
         // ユーザーが所属する組織の権限も含めて、台帳定義の削除権限があるか確認
         if ($this->userService->hasPermission($user, 'delete_ledger_defines')) {
             // さらに、対象のフォルダが管理可能かどうかも確認
-            if ($this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
+            if ($ledgerDefine->folder && $this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
             }
         }
@@ -120,7 +120,7 @@ class LedgerDefinePolicy
         // ユーザーが所属する組織の権限も含めて、台帳定義の復元権限があるか確認
         if ($this->userService->hasPermission($user, 'restore_ledger_defines')) {
             // さらに、対象のフォルダが管理可能かどうかも確認
-            if ($this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
+            if ($ledgerDefine->folder && $this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
             }
         }
@@ -138,7 +138,7 @@ class LedgerDefinePolicy
         // ユーザーが所属する組織の権限も含めて、台帳定義の完全削除権限があるか確認
         if ($this->userService->hasPermission($user, 'force_delete_ledger_defines')) {
             // さらに、対象のフォルダが管理可能かどうかも確認
-            if ($this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
+            if ($ledgerDefine->folder && $this->userService->isWritableFolderForUser($user, $ledgerDefine->folder)) {
                 return true;
             }
         }

@@ -244,8 +244,13 @@ class RecordsTable extends Component
         $breadcrumbsPerLedgerDefine = [];
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
             // 台帳ごとのパンくずリストを準備
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parent()?->get();
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
+            if ($displayLedgerDefine->folder) {
+                $ancestors = $displayLedgerDefine->folder->ancestors()->get();
+                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $ancestors->push($displayLedgerDefine->folder)->all();
+            } else {
+                // フォルダが存在しない場合のフォールバック処理
+                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = [];
+            }
         }
 
         // 表示対象の台帳に紐づく仕訳データを取得

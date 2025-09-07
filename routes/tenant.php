@@ -26,6 +26,7 @@ Route::group([
     'middleware' => [
         'web',
         InitializeTenancyByPath::class,
+        'auth', // ここを追加
     ],
 ], function () {
     // Auto-link lookup
@@ -34,7 +35,7 @@ Route::group([
     // ledger
     Route::get('/ledger/{ledgerId}', LedgerShowController::class)->name('ledger.show')
         ->where('ledgerId', '[0-9]+');
-    Route::get('/ledger', \App\Livewire\Ledger\RecordsTable::class)->name('ledger.index');
+    Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
 
     //ledgerDefine
     Route::get('/ledgerDefine', [LedgerDefineIndexController::class, 'index'])->name('ledgerDefine.index');

@@ -10,7 +10,7 @@
 ])
 <ul class="tree">
     @foreach($folders as $folder)
-        <li class="{{$folder->id==1 ? 'root':''}}">
+        <li class="{{$folder->isRoot() ? 'root':''}}">
             {{--
                         <a wire:click="changeCurrentFolder({{$folder->id}})"
                            @class([
@@ -35,7 +35,7 @@
                     data-tip="{{ in_array($folder->id, $manageableFolderIds) ? __('ledger.folder.manageable') : (in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable')  : __('ledger.no_view_permissions'))) }}"
                 >
 
-                @if($folder->id==1)
+                @if($folder->isRoot())
                     <i class="fas fa-home text-primary"></i> Top
                 @else
                         @php
@@ -66,6 +66,7 @@
                     {{ $folder->title }}
                 @endif
                 </span>
+                
                 @if($folder->ledgerDefines->count()>0)
                     <span class="badge badge-info text-base-100"><i class="fas fa-book mr-2"></i> {{ $folder->ledgerDefines->count() }}</span>
                 @else

@@ -12,14 +12,14 @@
                 @if($tenant->folders_tree->isNotEmpty())
                     <details>
                         <summary>
-                            <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->id }}</a>
+                            <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name ?? $tenant->id }}</a>
                         </summary>
                         <ul>
                             @include('livewire.tenant-switcher-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant])
                         </ul>
                     </details>
                 @else
-                    <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->id }}</a>
+                    <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name ?? $tenant->id }}</a>
                 @endif
             </li>
         @endforeach
@@ -30,7 +30,7 @@
         @foreach($tenants->where('is_member', false) as $tenant)
             <li class="disabled">
                 <a class="flex justify-between">
-                    <span>{{ $tenant->id }}</span>
+                    <span>{{ $tenant->name ?? $tenant->id }}</span>
                     <x-mary-icon name="o-lock-closed" class="w-4 h-4" />
                 </a>
             </li>

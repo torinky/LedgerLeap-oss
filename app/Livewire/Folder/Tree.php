@@ -25,9 +25,10 @@ class Tree extends Component
 
     public function mount(SearchRequest $request, WritableFolderRepository $writableFolderRepository)
     {
+        \Log::info('Current tenant ID in Folder/Tree mount: ' . (tenant('id') ?? 'null')); // デバッグ用
         $this->currentFolderId = $request->currentFolderId();
         $this->selectedFolderIds = $request->folderId();
-        $this->folders = Folder::whereIsRoot()->get();
+        $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();
 
         $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(auth()->user());
         $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
