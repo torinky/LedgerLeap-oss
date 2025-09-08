@@ -225,10 +225,7 @@ class User extends Authenticatable implements FilamentUser
     /**
      * ユーザーが所属するテナントへの多対多リレーションシップを定義します。
      */
-    public function tenants()
-    {
-        return $this->belongsToMany(Tenant::class, 'tenant_user', 'user_id', 'tenant_id');
-    }
+    
 
     /**
      * グローバル通知をさせるためにルートフォルダーを返す

@@ -86,7 +86,6 @@ class CreateTenant extends CreateRecord
                     }
                 });
 
-                $tenant->users()->syncWithoutDetaching([$user->id]);
                 $user->assignRole('Super Admin');
             });
 

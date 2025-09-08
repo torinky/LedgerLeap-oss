@@ -17,7 +17,18 @@ test('users can authenticate using the login screen', function () {
 
     // シナリオ1: login_landing_page がデフォルト (my-portal) の場合
     $userMyPortal = User::factory()->create();
-    $tenant->users()->attach($userMyPortal);
+    $roleMyPortal = \Spatie\Permission\Models\Role::create(['name' => 'test-role-portal']);
+    $userMyPortal->assignRole($roleMyPortal);
+    $tenant->run(function () use ($roleMyPortal, $userMyPortal) {
+        $folder = \App\Models\Folder::create(['title' => '/', 'creator_id' => $userMyPortal->id, 'modifier_id' => $userMyPortal->id]);
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $roleMyPortal->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'creator_id' => $userMyPortal->id,
+            'modifier_id' => $userMyPortal->id,
+        ]);
+    });
 
     $responseMyPortal = $this->post('/login', [
         'email' => $userMyPortal->email,
@@ -30,7 +41,18 @@ test('users can authenticate using the login screen', function () {
 
     // シナリオ2: login_landing_page が Ledgers の場合
     $userLedgers = User::factory()->create(['login_landing_page' => \App\Enums\LoginLandingPage::Ledgers]);
-    $tenant->users()->attach($userLedgers);
+    $roleLedgers = \Spatie\Permission\Models\Role::create(['name' => 'test-role-ledgers']);
+    $userLedgers->assignRole($roleLedgers);
+    $tenant->run(function () use ($roleLedgers, $userLedgers) {
+        $folder = \App\Models\Folder::where('title', '/')->first() ?? \App\Models\Folder::create(['title' => '/', 'creator_id' => $userLedgers->id, 'modifier_id' => $userLedgers->id]);
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $roleLedgers->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'creator_id' => $userLedgers->id,
+            'modifier_id' => $userLedgers->id,
+        ]);
+    });
 
     $responseLedgers = $this->post('/login', [
         'email' => $userLedgers->email,

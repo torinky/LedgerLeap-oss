@@ -7,6 +7,7 @@ use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Stancl\Tenancy\Facades\Tenancy;
 
@@ -43,7 +44,7 @@ class FolderTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function descendant_ledger_defines_count_respects_tenant_scope()
     {
         // テナントAに切り替えてテスト
@@ -67,7 +68,7 @@ class FolderTest extends TestCase
         $this->assertNull(tenant()); // 中央コンテキストであることを確認
     }
 
-    /** @test */
+    #[Test]
     public function test_folder_has_correct_ledger_defines_in_tenant_scope()
     {
         // テナントAに切り替えてテスト

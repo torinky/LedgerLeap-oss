@@ -49,7 +49,7 @@ class RoleFolderPermissionObserverTest extends TestCase
         ]);
 
         // 評価 (Assert)
-        $this->serviceMock->shouldHaveReceived('clearCache')->with(Mockery::any())->once();
+        $this->serviceMock->shouldHaveReceived('clearAllCache')->once();
     }
 
     #[Test]
@@ -73,6 +73,6 @@ class RoleFolderPermissionObserverTest extends TestCase
         $permission->delete();
 
         // 評価 (Assert)
-        $this->serviceMock->shouldHaveReceived('clearCache')->with(Mockery::any())->once();
+        $this->serviceMock->shouldHaveReceived('clearAllCache')->once();
     }
 }

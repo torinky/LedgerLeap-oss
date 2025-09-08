@@ -53,11 +53,8 @@ class SetupTenantCommandTest extends TestCase
 
         $this->assertDatabaseHas('domains', ['tenant_id' => $tenantId, 'domain' => "{$tenantId}.localhost"]);
 
-        // ユーザーとテナントの紐付けを確認
-        $user = User::where('email', $adminEmail)->first();
-        $this->assertDatabaseHas('tenant_user', ['tenant_id' => $tenantId, 'user_id' => $user->id]);
-
         // ロール付与を確認
+        $user = User::where('email', $adminEmail)->first();
         $superAdminRole = Role::where('name', 'Super Admin')->first();
         $this->assertDatabaseHas('model_has_roles', [
             'role_id' => $superAdminRole->id,

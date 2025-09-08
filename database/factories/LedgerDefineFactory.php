@@ -82,18 +82,13 @@ class LedgerDefineFactory extends Factory
 
 ", $markdownText);
 
-        $folder = \App\Models\Folder::inRandomOrder()->first();
-
         return [
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
-            'folder_id' => $folder ? $folder->id : null,
+            'folder_id' => Folder::factory(),
             'create_description' => $markdownText,
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),
-            //            'folder_id' => Folder::factory(),
-            //            'creator_id' => 1,
-            //            'modifier_id' => 1,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
         ];

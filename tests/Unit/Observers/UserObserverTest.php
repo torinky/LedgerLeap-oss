@@ -34,7 +34,7 @@ class UserObserverTest extends TestCase
         $user->save();
 
         // 評価 (Assert)
-        $this->serviceMock->shouldHaveReceived('clearCache')->with($user)->once();
+        $this->serviceMock->shouldHaveReceived('clearUserCache')->with($user)->once();
     }
 
     #[Test]
@@ -48,6 +48,6 @@ class UserObserverTest extends TestCase
         $user->delete();
 
         // 評価 (Assert)
-        $this->serviceMock->shouldHaveReceived('clearCache')->with($user)->once();
+        $this->serviceMock->shouldHaveReceived('clearUserCache')->with($user)->once();
     }
 }

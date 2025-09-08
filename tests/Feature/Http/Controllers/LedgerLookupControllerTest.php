@@ -60,8 +60,17 @@ class LedgerLookupControllerTest extends TestCase
         // Acting as admin user for all tests in this class
         $this->actingAs($this->adminUser);
 
-        // TenancyInitialization トレイトがテナントを初期化した後に実行
-        $this->tenant->users()->attach($this->adminUser);
+        // Grant folder permission to the admin role
+        $this->tenant->run(function () use ($adminRole) {
+            $folder = Folder::create(['title' => '/', 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $adminRole->id,
+                'folder_id' => $folder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'creator_id' => $this->adminUser->id,
+                'modifier_id' => $this->adminUser->id,
+            ]);
+        });
 
         // Ledger Definition
         $this->ledgerDefine = LedgerDefine::factory()->create([

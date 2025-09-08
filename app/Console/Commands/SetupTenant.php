@@ -116,11 +116,7 @@ class SetupTenant extends Command
                 }
             });
 
-            // 3. テナントにユーザーを紐付け
-            $this->info("Attaching admin user to tenant...");
-            $tenant->users()->syncWithoutDetaching([$user->id]);
-
-            // 4. ユーザーにSuper Adminロールを付与 (これは中央の model_has_roles に書き込む)
+            // ユーザーにSuper Adminロールを付与 (これは中央の model_has_roles に書き込む)
             $this->info("Assigning 'Super Admin' role to user...");
             $user->assignRole('Super Admin');
 

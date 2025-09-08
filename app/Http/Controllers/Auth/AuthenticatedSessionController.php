@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\LoginLandingPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\TenantAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use App\Models\Tenant;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -24,7 +24,7 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, TenantAccessService $tenantAccessService): RedirectResponse
     {
         $request->authenticate();
 
@@ -40,9 +40,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('login');
         }
 
-        // ユーザーが所属するテナントを初期化
-        // ユーザーが複数のテナントに所属する可能性があるため、ここでは最初のテナントを取得
-        $tenant = $user->tenants()->first();
+        // ユーザーがアクセス可能な最初のテナントを取得
+        $tenant = $tenantAccessService->getAccessibleTenants($user)->first();
         if ($tenant) {
             tenancy()->initialize($tenant);
         }
@@ -53,7 +52,6 @@ class AuthenticatedSessionController extends Controller
         if ($user->login_landing_page === LoginLandingPage::Ledgers) {
             $landingPageRouteName = 'ledger.index'; // 台帳/フォルダ一覧画面のルート名
         }
-//        return redirect()->route($landingPageRouteName); // intended() を使わない形
 
         // intended() はログイン前にアクセスしようとしたページがあればそちらを優先
         // なければ、決定したランディングページのルートへリダイレクト

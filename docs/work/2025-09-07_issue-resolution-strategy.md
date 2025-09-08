@@ -165,17 +165,30 @@
     *   関連するフィーチャーテスト `tests/Feature/Livewire/TenantSwitcherTest.php` が、修正後もすべてパスすることを確認済み。
 
 ### ステップ6: `tenant_user` テーブルの廃止と関連コードのクリーンアップ
-*   **目的:** `tenant_user` テーブルを完全に廃止し、それに依存する全てのコードとテストを削除または修正する。
-*   **作業:**
-    1.  `tenant_user` テーブルを削除するマイグレーションを作成する。
-    2.  `User` モデルから `tenants()` リレーション（`BelongsToMany`）を削除する。
-    3.  `Tenant` モデルから `users()` リレーション（`BelongsToMany`）を削除する。
-    4.  `tenant_user` テーブルを参照している全てのコード（コントローラ、Livewireコンポーネント、テスト、サービス、UIなど）を検索し、削除または `TenantAccessService` の呼び出しに置き換える。
-    5.  `tenant_user` テーブルに関連するテスト（もしあれば）を削除または修正する。
+*   **目的:** `tenant_user` テーブルとそれに依存するリレーション (`User::tenants()`, `Tenant::users()`) を完全に廃止し、ユーザーのテナントへのアクセス権は `TenantAccessService` を通じて動的に決定されるアーキテクチャに統一する。
+*   **状況:** <span style="color: blue;">計画済み</span>
+*   **影響範囲と作業計画:**
+    *   **影響範囲の特定:** `tenant_user` テーブル、および `User::tenants()` と `Tenant::users()` リレーションは、以下のファイルで参照されていることが確認された。
+        *   モデル: `app/Models/User.php`, `app/Models/Tenant.php`
+        *   コントローラー: `app/Http/Controllers/GlobalMyPortalController.php`, `app/Http/Controllers/Auth/AuthenticatedSessionController.php`
+        *   コマンド: `app/Console/Commands/SetupTenant.php`
+        *   Filamentページ: `app/Filament/Resources/TenantResource/Pages/CreateTenant.php`
+        *   テスト: `tests/Feature/SetupTenantCommandTest.php`, `tests/Feature/Auth/AuthenticationTest.php`, `tests/Feature/Http/Controllers/LedgerLookupControllerTest.php`
+        *   マイグレーション: `database/migrations/2025_08_30_000000_create_tenant_user_table.php`, `database/migrations/2020_05_15_000010_create_tenant_user_impersonation_tokens_table.php`
+
+    *   **作業計画:**
+        1.  **リレーションの削除:** `User`モデルと`Tenant`モデルから、それぞれ`tenants()`と`users()`リレーションを削除する。
+        2.  **リレーション利用箇所の修正:**
+            *   `GlobalMyPortalController` と `AuthenticatedSessionController` で、`$user->tenants` へのアクセスを `app(TenantAccessService::class)->getAccessibleTenants($user)` の呼び出しに置き換える。
+            *   `SetupTenant` コマンドと `CreateTenant` ページから、`$tenant->users()->syncWithoutDetaching(...)` の呼び出しを削除する。
+        3.  **テストコードの修正:** `tenant_user` テーブルへのアサーション (`assertDatabaseHas`) や、リレーションへの操作 (`attach`) を、ロールとフォルダ権限の付与によって代替するロジックに修正する。
+        4.  **データベースマイグレーション:**
+            *   `database/migrations/2025_08_30_000000_create_tenant_user_table.php` ファイルを削除する。
+            *   `database/migrations/2020_05_15_000010_create_tenant_user_impersonation_tokens_table.php` を調査し、不要であれば削除する。
 *   **確認事項:**
     *   `php artisan migrate:fresh --seed` がエラーなく完了すること。
     *   アプリケーションが `tenant_user` テーブルに依存していないことを確認する。
-    *   既存のテストがすべてパスすること。
+    *   `vendor/bin/sail test` を実行し、既存のテストがすべてパスすること。
 
 ## 7. 関連ドキュメント
 *   **[新マルチテナント実装計画書 (最終版)](./2025-08-30_new-multi-tenant-implementation-plan-final.md)**

@@ -76,7 +76,8 @@ class LedgerPolicyTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
         $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);

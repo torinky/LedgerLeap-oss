@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TenantAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
@@ -12,10 +13,10 @@ class GlobalMyPortalController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function index(Request $request): RedirectResponse|View
+    public function index(Request $request, TenantAccessService $tenantAccessService): RedirectResponse|View
     {
         $user = $request->user();
-        $tenants = $user->tenants;
+        $tenants = $tenantAccessService->getAccessibleTenants($user);
 
         // 所属テナントが1つの場合は、そのテナントのマイポータルへ自動リダイレクト
         if ($tenants->count() === 1) {

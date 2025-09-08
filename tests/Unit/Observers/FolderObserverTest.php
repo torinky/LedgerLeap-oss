@@ -8,6 +8,7 @@ use App\Services\TenantAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class FolderObserverTest extends TestCase
@@ -25,7 +26,7 @@ class FolderObserverTest extends TestCase
         $this->app->instance(TenantAccessService::class, $this->tenantAccessServiceMock);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_clear_cache_when_folder_is_created(): void
     {
         // arrange
@@ -37,7 +38,7 @@ class FolderObserverTest extends TestCase
         // assert - Mockeryが検証
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_clear_cache_when_unrelated_field_is_updated(): void
     {
         // arrange
@@ -51,7 +52,7 @@ class FolderObserverTest extends TestCase
         // assert - Mockeryが検証
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_cache_when_parent_id_is_changed(): void
     {
         // arrange
@@ -68,7 +69,7 @@ class FolderObserverTest extends TestCase
         // assert - Mockeryが検証
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_cache_when_tenant_id_is_changed(): void
     {
         // arrange
@@ -85,7 +86,7 @@ class FolderObserverTest extends TestCase
         // assert - Mockeryが検証
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_cache_when_folder_is_deleted(): void
     {
         // arrange

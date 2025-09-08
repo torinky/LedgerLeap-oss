@@ -9,5 +9,5 @@ it('returns a successful response', function () {
 
     $response = $this->get('/');
 
-    $response->assertRedirect(RouteServiceProvider::HOME);
+    $response->assertRedirect('/login');
 });

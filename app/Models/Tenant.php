@@ -18,9 +18,6 @@ class Tenant extends BaseTenant
      */
 
 
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'tenant_user', 'tenant_id', 'user_id');
-    }
+    
 
 }
