@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Folder;
 use App\Models\Tenant;
-use App\Services\UserService;
+use App\Services\TenantAccessService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -14,21 +14,14 @@ class TenantSwitcher extends Component
     public Collection $tenants;
     public ?\App\Models\Tenant $currentTenant;
 
-    protected UserService $userService;
-
-    public function boot(UserService $userService)
-    {
-        $this->userService = $userService;
-    }
-
-    public function mount(): void
+    public function mount(TenantAccessService $tenantAccessService): void
     {
         $this->currentTenant = tenant();
 
         // Tenancy::central() を使って、中央のコンテキストでテナント情報を取得
-        tenancy()->central(function () {
+        tenancy()->central(function () use ($tenantAccessService) {
             $allTenants = Tenant::all();
-            $accessibleTenantIds = $this->userService->getAccessibleTenantsForUser(Auth::user())->pluck('id')->toArray();
+            $accessibleTenantIds = $tenantAccessService->getAccessibleTenants(Auth::user())->pluck('id')->toArray();
 
             $this->tenants = $allTenants->map(function ($tenant) use ($accessibleTenantIds) {
                 $tenant->is_member = in_array($tenant->id, $accessibleTenantIds);

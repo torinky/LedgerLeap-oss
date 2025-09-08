@@ -158,8 +158,11 @@
 
 ### ステップ5: 既存UIへの統合
 *   **目的:** `TenantSwitcher` など、テナントリストを必要とするUIコンポーネントが、新しい `TenantAccessService` を利用するように修正する。
-*   **作業:** `app/Livewire/TenantSwitcher.php` などを修正し、`Auth::user()->tenants` のような古いロジックを `TenantAccessService::getAccessibleTenants(Auth::user())` の呼び出しに置き換える。
-*   **確認事項:** UIに、権限に基づいて動的に生成された正しいテナントリストが表示されることを、手動テストおよび自動テストで確認する。
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Livewire/TenantSwitcher.php` を修正し、テナントリストの取得ロジックを、`UserService` への依存から `TenantAccessService` を直接利用する形にリファクタリングした。
+    *   これにより、`TenantAccessService` に実装されたキャッシュ機構の恩恵を受けられるようになり、パフォーマンスが向上した。
+    *   関連するフィーチャーテスト `tests/Feature/Livewire/TenantSwitcherTest.php` が、修正後もすべてパスすることを確認済み。
 
 ### ステップ6: `tenant_user` テーブルの廃止と関連コードのクリーンアップ
 *   **目的:** `tenant_user` テーブルを完全に廃止し、それに依存する全てのコードとテストを削除または修正する。
