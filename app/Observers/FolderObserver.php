@@ -3,18 +3,22 @@
 namespace App\Observers;
 
 use App\Models\Folder;
-use Illuminate\Support\Facades\Cache;
+use App\Services\TenantAccessService;
 
 class FolderObserver
 {
+    public function __construct(protected TenantAccessService $tenantAccessService)
+    {
+    }
+
     /**
      * Handle the Folder "saved" event.
      */
     public function saved(Folder $folder): void
     {
-        // 親IDが変更された場合のみキャッシュをクリア
-        if ($folder->wasChanged('parent_id')) {
-            Cache::tags('auto_links')->flush();
+        // 親IDまたはテナントIDが変更された場合、全ユーザーのテナントアクセスキャッシュをクリア
+        if ($folder->wasChanged('parent_id') || $folder->wasChanged('tenant_id')) {
+            $this->tenantAccessService->clearAllCache();
         }
     }
 
@@ -23,6 +27,6 @@ class FolderObserver
      */
     public function deleted(Folder $folder): void
     {
-        Cache::tags('auto_links')->flush();
+        $this->tenantAccessService->clearAllCache();
     }
 }

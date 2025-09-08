@@ -22,7 +22,8 @@ class TenantAccessService
         $cacheKey = $this->getCacheKey($user);
         $cacheDuration = now()->addHours(24);
 
-        return Cache::remember($cacheKey, $cacheDuration, function () use ($user) {
+        // キャッシュタグを利用して、関連キャッシュをまとめて削除できるようにする
+        return Cache::tags(['tenant_access'])->remember($cacheKey, $cacheDuration, function () use ($user) {
             // ユーザーが持つロールと、各ロールが権限を持つフォルダ（と、そのフォルダが属するテナント）をEager Loadする
             $roles = $user->roles()->with('folderPermissions.tenant')->get();
 
@@ -37,14 +38,24 @@ class TenantAccessService
     }
 
     /**
-     * ユーザーのテナントリストキャッシュをクリアします。
+     * 特定のユーザーのテナントリストキャッシュをクリアします。
      *
      * @param User $user
      * @return void
      */
-    public function clearCache(User $user): void
+    public function clearUserCache(User $user): void
     {
         Cache::forget($this->getCacheKey($user));
+    }
+
+    /**
+     * 全てのテナントアクセス関連キャッシュをクリアします。
+     *
+     * @return void
+     */
+    public function clearAllCache(): void
+    {
+        Cache::tags(['tenant_access'])->flush();
     }
 
     /**
