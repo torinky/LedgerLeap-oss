@@ -65,12 +65,25 @@ class CreateTenant extends CreateRecord
                     throw new Exception("Admin user with email '{$adminEmail}' not found.");
                 }
 
-                $tenant->run(function () use ($user) {
-                    \App\Models\Folder::create([
+                $rootFolder = $tenant->run(function () use ($user) {
+                    return \App\Models\Folder::create([
                         'title' => '/',
                         'creator_id' => $user->id,
                         'modifier_id' => $user->id,
                     ]);
+                });
+
+                tenancy()->central(function () use ($rootFolder, $user) {
+                    $superAdminRole = \Spatie\Permission\Models\Role::findByName('Super Admin');
+                    if ($superAdminRole) {
+                        \App\Models\RoleFolderPermission::create([
+                            'role_id' => $superAdminRole->id,
+                            'folder_id' => $rootFolder->id,
+                            'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                            'creator_id' => $user->id,
+                            'modifier_id' => $user->id,
+                        ]);
+                    }
                 });
 
                 $tenant->users()->syncWithoutDetaching([$user->id]);

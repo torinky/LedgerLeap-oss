@@ -66,11 +66,18 @@ class SetupTenantCommandTest extends TestCase
         ]);
 
         // ルートフォルダが作成されたことをテナントDBで確認
-        tenancy()->find($tenantId)->run(function () use ($user) {
+        tenancy()->find($tenantId)->run(function () use ($user, $superAdminRole) {
             $rootFolder = Folder::where('title', '/')->first();
             $this->assertNotNull($rootFolder);
             $this->assertEquals($user->id, $rootFolder->creator_id);
             $this->assertEquals($user->id, $rootFolder->modifier_id);
+
+            // ルートフォルダとSuper Adminロールの権限紐付けを確認
+            $this->assertDatabaseHas('role_folder_permissions', [
+                'role_id' => $superAdminRole->id,
+                'folder_id' => $rootFolder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN->value,
+            ]);
         });
     }
 

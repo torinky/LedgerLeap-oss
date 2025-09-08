@@ -108,7 +108,7 @@
     2.  `RoleFolderPermissionObserver` を作成し、権限が変更された際に、影響を受ける全ユーザーのキャッシュをクリアする処理を追加する。
     3.  `FolderObserver` を作成または修正し、フォルダが削除されたり、テナントIDが変更されたりした場合に、関連するキャッシュをクリアする処理を追加する。
 *   **確認事項:** 関連モデルの変更時に、キャッシュが正しくクリアされることを確認するテストを作成する。
-*   **状況:** <span style="color: green;">進行中</span>
+*   **状況:** <span style="color: green;">完了</span>
 
 #### ステップ3.1: `UserObserver` の実装
 *   **状況:** <span style="color: green;">完了</span>
@@ -133,6 +133,13 @@
     *   **`InvalidCountException` (二重呼び出し):** `deleted` イベントで `clearCache` が2回呼ばれる問題。`LogsActivity` トレイトが原因で二重呼び出しが発生していた。`RoleFolderPermissionObserver` の `deleted` メソッドから `clearCache` の呼び出しを削除することで解決した。
     *   **`RoleFolderPermission` モデルの `delete()` 問題:** `Pivot` から `Model` への継承変更後も `delete()` が `TypeError` を起こした。`RoleFolderPermission` モデルの `delete()` メソッドをオーバーライドし、複合主キーで削除するロジックを記述することで解決した。
 
+#### ステップ3.3: `FolderObserver` の実装
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Observers/FolderObserver.php` に、フォルダの `parent_id` または `tenant_id` が変更された場合、あるいはフォルダが削除された場合に、関連する全ユーザーのテナントアクセスキャッシュをクリアするロジックを実装した。
+    *   `app/Services/TenantAccessService.php` にキャッシュタグ機能を追加し、関連キャッシュを一括で効率的にクリアできるように改修した。
+    *   ユニットテスト `tests/Unit/Observers/FolderObserverTest.php` を作成し、Observerが期待通りに動作することを確認済み。
+
 ##### 3.2.1. 既存キャッシュ処理の移管と他のテストへの影響
 
 *   RoleFolderPermission モデルの booted()メソッド内にあったキャッシュクリアロジックは、削除されたのではなく、RoleFolderPermissionObserverに処理を一本化しました。Observer内で、既存の WritableFolderRepository のキャッシュクリアと、今回実装した TenantAccessService のキャッシュクリアの両方が実行されるようにしています。これにより、キャッシュクリア機能が失われることはありません。
@@ -143,10 +150,11 @@
 
 ### ステップ4: テナント作成処理の修正
 *   **目的:** 新規テナント作成時に、初期ロールに対してアクセス権を自動で付与し、「空のテナント」問題を防ぐ。
-*   **作業:** テナント作成ロジック（Artisanコマンドやサービスクラス）に、以下の処理を追加する。
-    1.  テナント作成と同時に、そのテナントのルートとなるフォルダを自動生成する。
-    2.  テナント作成時に指定された初期ロールに対し、上記で生成したルートフォルダへの権限を `role_folder_permissions` に登録する。
-*   **確認事項:** テナント作成後、指定したロールを持つユーザーが、即座にそのテナントにアクセスできる（テナントリストに表示される）ことを確認する。
+*   **状況:** <span style="color: green;">完了</span>
+*   **結果と証拠:**
+    *   `app/Console/Commands/SetupTenant.php` と `app/Filament/Resources/TenantResource/Pages/CreateTenant.php` の両方で、テナント作成時にデフォルトのルートフォルダを自動生成し、そのテナントの管理者（`Super Admin`ロールを持つユーザー）にフォルダへの `ADMIN` 権限を自動的に付与するロジックを実装した。
+    *   `tests/Feature/SetupTenantCommandTest.php` に、権限が正しく付与されることを検証するアサーションを追加し、テストが成功することを確認済み。
+    *   実装の過程で、`TenantAccessService` のメソッド名変更（`clearCache` -> `clearUserCache`）に伴い、`UserObserver` と `RoleFolderPermissionObserver` で古いメソッド名を呼び出していたことが原因でテストが失敗した。これを修正し、テストスイート全体が正常にパスすることを確認した。
 
 ### ステップ5: 既存UIへの統合
 *   **目的:** `TenantSwitcher` など、テナントリストを必要とするUIコンポーネントが、新しい `TenantAccessService` を利用するように修正する。

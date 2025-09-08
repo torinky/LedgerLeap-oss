@@ -47,7 +47,7 @@ class RoleFolderPermissionObserver
 
             foreach ($users as $user) {
                 $this->writableFolderRepository->clearAllCache($user);
-                $this->tenantAccessService->clearCache($user);
+                $this->tenantAccessService->clearUserCache($user);
             }
         }
     }

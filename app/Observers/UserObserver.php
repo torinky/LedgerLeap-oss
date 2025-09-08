@@ -24,7 +24,7 @@ class UserObserver
     {
         // ユーザーのロール割り当て変更など、テナントへのアクセス権に影響する可能性のある
         // 更新が行われた際に、キャッシュをクリアする。
-        $this->tenantAccessService->clearCache($user);
+        $this->tenantAccessService->clearUserCache($user);
     }
 
     /**
@@ -35,6 +35,6 @@ class UserObserver
      */
     public function deleted(User $user): void
     {
-        $this->tenantAccessService->clearCache($user);
+        $this->tenantAccessService->clearUserCache($user);
     }
 }

@@ -91,14 +91,29 @@ class SetupTenant extends Command
                 return 1; // テナントは作成されたが、管理者がいない状態で終了
             }
 
-            // 2. ルートフォルダの作成 (テナントのコンテキストで実行)
-            $tenant->run(function () use ($user) {
+            // 2. ルートフォルダの作成と権限付与 (テナントのコンテキストで実行)
+            $rootFolder = $tenant->run(function () use ($user) {
                 $this->info('Creating root folder...');
-                \App\Models\Folder::create([
+                return \App\Models\Folder::create([
                     'title' => '/',
                     'creator_id' => $user->id,
                     'modifier_id' => $user->id,
                 ]);
+            });
+
+            // 中央DBのコンテキストに戻ってロールを取得し、権限を付与
+            tenancy()->central(function () use ($rootFolder, $user) {
+                $this->info("Granting Super Admin access to the root folder...");
+                $superAdminRole = \Spatie\Permission\Models\Role::findByName('Super Admin');
+                if ($superAdminRole) {
+                    \App\Models\RoleFolderPermission::create([
+                        'role_id' => $superAdminRole->id,
+                        'folder_id' => $rootFolder->id,
+                        'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                        'creator_id' => $user->id,
+                        'modifier_id' => $user->id,
+                    ]);
+                }
             });
 
             // 3. テナントにユーザーを紐付け
