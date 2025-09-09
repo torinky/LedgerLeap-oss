@@ -59,14 +59,14 @@ Route::group([
         ->where('ledgerDefineId', '[0-9]+');
 
     //    ledger (残りのルート)
-    Route::get('/ledger/define/{defineId}', \App\Livewire\Ledger\RecordsTable::class)->name('ledgerByDefineId')
+    Route::get('/ledger/define/{defineId}', [LedgerIndexController::class, 'indexByDefine'])->name('ledgerByDefineId')
         ->where('defineId', '[0-9]+');
     Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
         ->where('folderId', '[0-9]+');
-    Route::get('/ledger/create/{ledgerDefineId}', \App\Livewire\Ledger\CreateColumn::class)->name('ledger.create')
-        ->where('ledgerDefineId', '[0-g]+');
+    Route::get('/ledger/create/{ledgerDefineId}', [\App\Http\Controllers\Ledger\CreateController::class, 'create'])->name('ledger.create')
+        ->where('ledgerDefineId', '[0-9]+');
     
-    Route::get('/ledger/edit/{ledgerId}', \App\Livewire\Ledger\ModifyColumn::class)->name('ledger.edit')
+    Route::get('/ledger/edit/{ledgerId}', [\App\Http\Controllers\Ledger\UpdateController::class, 'edit'])->name('ledger.edit')
         ->where('ledgerId', '[0-9]+');
     Route::get('/ledger/import/{ledgerDefineId}', [\App\Http\Controllers\Ledger\ImportController::class, 'showUploadForm'])->name('ledger.import.show')
         ->where('ledgerDefineId', '[0-9]+');

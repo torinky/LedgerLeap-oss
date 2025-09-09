@@ -17,6 +17,20 @@ class RoleFolderPermission extends Model
 
     protected $table = 'role_folder_permissions';
 
+    /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * Indicates if the model's ID is auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = true;
+
     protected $fillable = [
         'role_id',
         'folder_id',
@@ -24,9 +38,6 @@ class RoleFolderPermission extends Model
         'modifier_id',
         'notification_type_id',
     ];
-
-    protected $primaryKey = ['role_id', 'folder_id'];
-    public $incrementing = false;
 
     protected $casts = [
         'permission' => FolderPermissionType::class,
@@ -94,25 +105,5 @@ class RoleFolderPermission extends Model
 
         // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
         return Lang::has($key) ? trans($key) : "フォルダー権限またはフォルダー通知が{$eventName}されました";
-    }
-
-    public function delete()
-    {
-        // deletingイベントを手動で発火
-        if ($this->fireModelEvent('deleting') === false) {
-            return false;
-        }
-
-        // 複合主キーを使ってレコードを削除
-        $deleted = static::where('role_id', $this->role_id)
-                         ->where('folder_id', $this->folder_id)
-                         ->delete();
-
-        // deletedイベントを手動で発火
-        if ($deleted) {
-            $this->fireModelEvent('deleted', false);
-        }
-
-        return $deleted;
     }
 }

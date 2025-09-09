@@ -54,7 +54,7 @@ class LedgerDefineFactory extends Factory
                     $this->faker->boolean(),
                     $this->faker->boolean(),
                     $this->faker->boolean()
-                );*/
+                )*/;
         // Correctly get type identifiers once before the loop
         $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
 
@@ -77,15 +77,12 @@ class LedgerDefineFactory extends Factory
 
 
         $markdownText = $this->faker->paragraph();
-        $markdownText = str_replace("
-", "
-
-", $markdownText);
+        $markdownText = str_replace("\n", "\n\n", $markdownText);
 
         return [
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
-            'folder_id' => Folder::factory(),
+            
             'create_description' => $markdownText,
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),

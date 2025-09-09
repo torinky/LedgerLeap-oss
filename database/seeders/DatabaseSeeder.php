@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tag;
@@ -34,7 +35,22 @@ class DatabaseSeeder extends Seeder
             // ファクトリで作成されるユーザーもテナントに紐づく
             $users = User::factory(10)->create();
 
-            $ledgerDefines = LedgerDefine::factory(50)->recycle($users)->create();
+            // 作成されたすべてのフォルダを取得
+            $folders = Folder::all();
+            $ledgerDefines = collect();
+
+            // フォルダが存在する場合のみLedgerDefineを作成
+            if ($folders->isNotEmpty()) {
+                $ledgerDefines = LedgerDefine::factory(50)
+                    ->recycle($users)
+                    ->make() // DBにはまだ保存しない
+                    ->each(function ($ledgerDefine) use ($folders) {
+                        // ランダムなフォルダを割り当て
+                        $ledgerDefine->folder_id = $folders->random()->id;
+                        $ledgerDefine->save(); // ここでDBに保存
+                    });
+            }
+
             Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
             $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
         }

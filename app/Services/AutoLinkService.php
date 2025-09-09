@@ -56,7 +56,16 @@ class AutoLinkService
 
     private function createAutoNumberLink(string $text): string
     {
-        $url = route('ledger.lookup', ['query' => $text]);
+        // tenantが初期化されているか確認
+        if (!tenancy()->initialized) {
+            // テナントが特定できない場合は、リンク化せずに元のテキストを返す
+            return e($text);
+        }
+
+        $url = route('ledger.lookup', [
+            'tenant' => tenancy()->tenant->getTenantKey(), // <<<--- ()を削除して修正
+            'query' => $text
+        ]);
         $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
         $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");

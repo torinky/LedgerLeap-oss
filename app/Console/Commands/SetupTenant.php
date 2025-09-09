@@ -91,21 +91,26 @@ class SetupTenant extends Command
                 return 1; // テナントは作成されたが、管理者がいない状態で終了
             }
 
-            // 2. ルートフォルダの作成と権限付与 (テナントのコンテキストで実行)
-            $rootFolder = $tenant->run(function () use ($user) {
-                $this->info('Creating root folder...');
-                return \App\Models\Folder::create([
-                    'title' => '/',
-                    'creator_id' => $user->id,
-                    'modifier_id' => $user->id,
-                ]);
+            // 2. ルートフォルダの取得と権限付与
+            $rootFolder = $tenant->run(function () {
+                $this->info('Finding root folder...');
+                // NodeTraitのwhereIsRoot()メソッドでルートフォルダを取得
+                return \App\Models\Folder::whereIsRoot()->first();
             });
 
-            // 中央DBのコンテキストに戻ってロールを取得し、権限を付与
-            tenancy()->central(function () use ($rootFolder, $user) {
-                $this->info("Granting Super Admin access to the root folder...");
-                $superAdminRole = \Spatie\Permission\Models\Role::findByName('Super Admin');
-                if ($superAdminRole) {
+            if (!$rootFolder) {
+                throw new Exception('Root folder not found after seeding.');
+            }
+
+            // Super Admin ロールは中央DBから取得
+            $superAdminRole = tenancy()->central(function () {
+                return \Spatie\Permission\Models\Role::findByName('Super Admin');
+            });
+
+            if ($superAdminRole) {
+                // RoleFolderPermission の作成はテナントのコンテキストで行う
+                $tenant->run(function () use ($rootFolder, $user, $superAdminRole) {
+                    $this->info("Granting Super Admin access to the root folder...");
                     \App\Models\RoleFolderPermission::create([
                         'role_id' => $superAdminRole->id,
                         'folder_id' => $rootFolder->id,
@@ -113,8 +118,8 @@ class SetupTenant extends Command
                         'creator_id' => $user->id,
                         'modifier_id' => $user->id,
                     ]);
-                }
-            });
+                });
+            }
 
             // ユーザーにSuper Adminロールを付与 (これは中央の model_has_roles に書き込む)
             $this->info("Assigning 'Super Admin' role to user...");
