@@ -833,6 +833,9 @@
             'top' => '一番上のフレームで開く',
         ],
     'technical_term' => '技術用語',
+    'tenant' => 'テナント',
+    'tenant_id' => 'テナントID',
+    'tenant_name' => 'テナント名',
     'title' => '台帳名',
     'translate' => '翻訳する',
     'translate_it' => '翻訳してください',
@@ -1030,7 +1033,4 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-    "tenant_name" => "テナント名",
-    "tenant" => "テナント",
-    "tenant_id" => "テナントID",
 ];

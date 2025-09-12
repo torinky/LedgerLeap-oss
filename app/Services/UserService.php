@@ -362,6 +362,10 @@ class UserService
 
         // 対象フォルダとその祖先フォルダのIDリストを取得
         $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
+        if (!$folderIds) {
+            // フォールバック（少なくとも自身）
+            $folderIds = [$folder->id];
+        }
 
         // キャッシュキー (ユーザーID、フォルダIDリストのハッシュ、要求権限で作成)
 //        $folderIdsHash = md5(implode(',', $folderIds));

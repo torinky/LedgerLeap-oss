@@ -33,6 +33,8 @@ class ModifyColumn extends CreateColumn
     public array $attachmentIdMap = []; // 添付ファイルのIDマップ
     public array $filePondInitialFiles = []; // FilePond初期化用
 
+    public $tenantId='';
+
     public function mount(int $ledgerId): void
     {
 
@@ -68,6 +70,7 @@ class ModifyColumn extends CreateColumn
         }
         $this->initBackgroundImages();
         $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
+        $this->tenantId=tenant('id');
     }
 
     public function render(): View
