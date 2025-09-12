@@ -80,7 +80,6 @@ class LedgerDefineFactory extends Factory
         $markdownText = str_replace("\n", "\n\n", $markdownText);
 
         return [
-            'folder_id' => Folder::factory(),
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
             

@@ -20,6 +20,9 @@ class ShowController extends Controller
     {
         $ledgerId = (int)$request->route('ledgerId');
         $ledger = Ledger::with(['define'])->findOrFail($ledgerId);
+
+        $this->authorize('view', $ledger);
+
         $ledgerDefineRecord = null;
         if (!empty($ledger)) {
             $ledgerDefineRecord = $ledger->define;

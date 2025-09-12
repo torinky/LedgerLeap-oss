@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services\Ledger;
 
-use App\Models\AttachedFile;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
@@ -18,14 +18,17 @@ class LedgerDiffProcessorTest extends TestCase
     private LedgerDiffProcessor $processor;
     private LedgerDefine $ledgerDefine;
     private Ledger $ledger;
+    private Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->processor = new LedgerDiffProcessor();
+        $this->folder = Folder::factory()->create();
 
         // テストの基本となる台帳定義と台帳レコードを作成
         $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
             'column_define' => [
                 ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
                 ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2],
@@ -46,6 +49,7 @@ class LedgerDiffProcessorTest extends TestCase
         // Diff 1 (内容変更あり)
         $diff1 = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['Value 1', 'Value 2'], // 初期値と異なる
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -53,6 +57,7 @@ class LedgerDiffProcessorTest extends TestCase
         // Diff 2 (内容変更あり)
         $diff2 = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['Value 1', 'Changed Value 2'],
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -60,6 +65,7 @@ class LedgerDiffProcessorTest extends TestCase
         // Diff 3 (現在の内容と同じ)
         $diff3 = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['Value 1', 'Final Value 2'],
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -81,6 +87,7 @@ class LedgerDiffProcessorTest extends TestCase
     {
         $diff1 = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $this->ledger->content,
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -113,6 +120,7 @@ class LedgerDiffProcessorTest extends TestCase
     {
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $this->ledger->content,
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -130,6 +138,7 @@ class LedgerDiffProcessorTest extends TestCase
     {
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['Old Value 1', 'Value 2'],
             'column_define' => $this->ledgerDefine->column_define,
         ]);
@@ -154,6 +163,7 @@ class LedgerDiffProcessorTest extends TestCase
         $oldColumnDefine = [['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]];
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'column_define' => $oldColumnDefine,
             'content' => ['Value 1'],
         ]);
@@ -175,6 +185,7 @@ class LedgerDiffProcessorTest extends TestCase
         // V1: カラム0と1 (oldDiff)
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'column_define' => $this->ledgerDefine->column_define,
             'content' => ['Value 1', 'Value 2'],
         ]);
@@ -200,6 +211,7 @@ class LedgerDiffProcessorTest extends TestCase
     {
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
             'column_define' => $this->ledgerDefine->column_define, // order: 1, 2
             'content' => ['Value 1', 'Value 2'],
         ]);
@@ -227,6 +239,7 @@ class LedgerDiffProcessorTest extends TestCase
     public function it_identifies_changes_in_file_attachments(): void
     {
         $fileColumnDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
             'column_define' => [['id' => 0, 'name' => 'File Column', 'type' => 'files', 'order' => 1]],
         ]);
         $fileLedger = Ledger::factory()->create([
@@ -236,6 +249,7 @@ class LedgerDiffProcessorTest extends TestCase
 
         $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $fileLedger->id,
+            'ledger_define_id' => $fileColumnDefine->id,
             'column_define' => $fileColumnDefine->column_define,
             'content' => [0 => ['old_file_hash' => 'old_file.pdf']],
         ]);

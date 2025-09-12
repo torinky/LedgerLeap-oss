@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\AttachedFileStatus;
 use App\Models\AttachedFile;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
@@ -22,8 +23,8 @@ class AttachedFileFactory extends Factory
      */
     public function definition(): array
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
-        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
+        $ledgerDefine = LedgerDefine::factory()->for(Folder::factory())->create();
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
         $user = User::factory()->create();
 
         $filename = $this->faker->word() . '.pdf';
