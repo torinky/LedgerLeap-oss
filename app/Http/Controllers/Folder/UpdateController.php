@@ -19,6 +19,8 @@ class UpdateController extends Controller
 
         $currentFolderRecord = Folder::where('id', $initialFolderId)->firstOrFail();
 
+        $this->authorize('update', $currentFolderRecord);
+
         return View::make('folder.edit', compact('currentFolderRecord', 'folderRecords', 'initialFolderId'));
 
     }

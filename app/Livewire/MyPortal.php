@@ -9,12 +9,8 @@ use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
-
-// Collection を use
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-
-// View を use
 use Livewire\Component;
 use Log;
 
@@ -111,7 +107,8 @@ class MyPortal extends Component
             // 翻訳キーを生成 (例: 'ledger.role_label.admin' や 'ledger.role_label.メンバー')
             $translationKey = 'ledger.role_label.' . $roleKey;
             // 翻訳が存在すれば翻訳を、なければキー自体を使う
-            $roleName = trans()->has($translationKey) ? __($translationKey) : $roleKey;
+            $translation = trans()->has($translationKey) ? __($translationKey) : $roleKey;
+            $roleName = $translation;
             // $roleName = __('ledger.role_label.' . ($representativeRole->label ?? $representativeRole->name)); // labelを優先する場合
         } else {
             $roleName = __('ledger.no_specific_role'); // ロールがない場合の代替テキスト
@@ -164,8 +161,8 @@ class MyPortal extends Component
     protected function prepareAssignedFolders(): void
     {
         // 権限のあるフォルダIDを取得 (Repository を使用)
-        $this->writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($this->user);
-        $this->manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($this->user);
+        $this->writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($this->user)->toArray();
+        $this->manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($this->user)->toArray();
 
         // 書き込みまたは管理権限のあるフォルダIDを結合
         $targetFolderIds = array_unique(array_merge($this->writableFolderIds, $this->manageableFolderIds));
@@ -207,7 +204,7 @@ class MyPortal extends Component
 
         // 読み取り可能な全フォルダIDを取得 (書き込み・管理可能も含むはず)
         // 既存のリポジトリメソッドを使用
-        $this->readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($this->user);
+        $this->readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($this->user)->toArray();
         // $this->writableFolderIds と $this->manageableFolderIds は prepareAssignedFolders で既に取得済み
     }
 

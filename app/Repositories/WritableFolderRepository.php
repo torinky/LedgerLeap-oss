@@ -4,8 +4,10 @@ namespace App\Repositories;
 
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class WritableFolderRepository
@@ -70,7 +72,33 @@ class WritableFolderRepository
 
     public function getManageableFolderIds(User $user, ?Folder $folder = null): array
     {
-        return $this->getAccessibleFolderIds($user, FolderPermissionType::ADMIN, $folder);
+        // スーパー管理者は常に全てのフォルダを管理可能
+/*        if ($user->hasRole('Super Admin')) {
+            return Folder::all()->pluck('id');
+        }*/
+
+        $cacheKey = "user_{$user->id}_manageable_folder_ids";
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user) {
+            $manageableFolderIds = collect();
+            $userRoles = $user->roles->pluck('id');
+
+            // ユーザーのロールが持つフォルダ権限から、管理可能なフォルダを特定
+            $roleFolderPermissions = RoleFolderPermission::whereIn('role_id', $userRoles)
+                ->where('permission', FolderPermissionType::ADMIN)
+                ->get();
+
+            foreach ($roleFolderPermissions as $roleFolderPermission) {
+                $folder = Folder::find($roleFolderPermission->folder_id);
+                if ($folder) {
+                    $manageableFolderIds->push($folder->id);
+                    // 子孫フォルダも管理可能とみなす
+                    $manageableFolderIds = $manageableFolderIds->merge($folder->descendants->pluck('id'));
+                }
+            }
+
+            return $manageableFolderIds->unique()->toArray();
+        });
     }
 
     public function refreshFolderCache(User $user, string $permission): void

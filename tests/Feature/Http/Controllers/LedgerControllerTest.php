@@ -117,6 +117,29 @@ class LedgerControllerTest extends TestCase
             ->assertNotFound();
     }
 
+    // --- Test Index Action ---
+
+    public function test_admin_can_view_ledger_list()
+    {
+        $this->actingAs($this->adminUser)
+            ->get(tenant_route('ledger.index'))
+            ->assertOk();
+    }
+
+    public function test_writer_can_view_ledger_list()
+    {
+        $this->actingAs($this->writerUser)
+            ->get(tenant_route('ledger.index'))
+            ->assertOk();
+    }
+
+    public function test_viewer_can_view_ledger_list()
+    {
+        $this->actingAs($this->viewerUser)
+            ->get(tenant_route('ledger.index'))
+            ->assertOk();
+    }
+
     // --- Test Create Action ---
 
     public function test_admin_can_access_create_page()

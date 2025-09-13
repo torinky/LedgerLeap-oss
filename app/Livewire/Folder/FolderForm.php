@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use Illuminate\Support\Facades\Log;
 
 // Log を use
 
@@ -65,32 +64,45 @@ class FolderForm extends Component
     // mountメソッドの引数を削除
     public function mount(): void
     {
-        $this->availableParentFolders = collect();
-        $this->availableRoles = collect();
-
+        // Livewireによるプロパティバインディングの後に、folderプロパティがセットされていることを確認
+        // ただし、新規作成時はLivewireがnew Folder()をセットするため、existsはfalse
         if (!isset($this->folder) || !$this->folder instanceof Folder) {
             $this->folder = new Folder();
         }
 
+        // isCreating フラグを先に設定
+        $this->isCreating = !$this->folder->exists;
+
+        // 認可チェック
+        if ($this->isCreating) { // 新規作成モード
+            $canCreate = auth()->user()->can('create', Folder::class);
+            if (!$canCreate) {
+                abort(403, __('auth.unauthorized'));
+            }
+        } else { // 編集モード
+            $canUpdate = auth()->user()->can('update', $this->folder);
+            if (!$canUpdate) {
+                abort(403, __('auth.unauthorized'));
+            }
+        }
+
+        $this->availableParentFolders = collect();
+        $this->availableRoles = collect();
+
         if ($this->folder->exists) {
-            // 編集モード: $this->folder はLivewireによって既にロードされている
+            // 編集モードの初期化
             $this->title = $this->folder->title;
-            // $this->parentId プロパティを、ロードされたフォルダの実際の親IDで更新
             $this->parentId = $this->folder->parent_id;
             $this->selectedInspectorRoleIds = $this->folder->requiredInspectorRoles()->pluck('roles.id')->toArray();
             $this->selectedApproverRoleIds = $this->folder->requiredApproverRoles()->pluck('roles.id')->toArray();
-            $this->isCreating = false;
         } else {
-            // 新規作成モード: $this->folder は new Folder() インスタンス
-            // $this->parentId プロパティはLivewireによってルートパラメータからセットされている (または null)
-            // もし $this->parentId が null (例: /folders/create で親IDなし) の場合、フォールバックを適用
-            if (is_null($this->parentId) && Folder::count() > 0) { // 最初のフォルダでない場合のみ
+            // 新規作成モードの初期化
+            if (is_null($this->parentId) && Folder::count() > 0) {
                 $this->parentId = Folder::whereIsRoot()->first()?->id;
             }
-            $this->title = ''; // 新規作成時はタイトルを空に
+            $this->title = '';
             $this->selectedInspectorRoleIds = [];
             $this->selectedApproverRoleIds = [];
-            $this->isCreating = true;
         }
 
         $this->loadAvailableParents();

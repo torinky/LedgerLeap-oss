@@ -67,7 +67,6 @@ class LedgerLookupControllerTest extends TestCase
                 'role_id' => $adminRole->id,
                 'folder_id' => $folder->id,
                 'permission' => \App\Enums\FolderPermissionType::ADMIN,
-                'creator_id' => $this->adminUser->id,
                 'modifier_id' => $this->adminUser->id,
             ]);
         });

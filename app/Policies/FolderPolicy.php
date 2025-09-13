@@ -52,23 +52,8 @@ class FolderPolicy
      */
     public function create(User $user, $folder = null)
     {
-        if (empty($folder)) {
-            $folder = Folder::root();
-        }
-
         // ユーザーがフォルダの作成権限を持っているかどうかをチェック
-        $result = $this->userService->hasPermission($user, 'create_folders')
-            && $this->userService->isManageableFolderForUser($user, $folder);
-
-        // 管理可能なフォルダーを一つでも持っていれば作成可能
-        if(!$result) {
-            $writableFolders = $this->writableFolderRepository->getManageableFolderIds($user);
-            if (!empty($writableFolders)) {
-                $result = true;
-            }
-        }
-        return $result;
-
+        return $this->userService->hasPermission($user, 'create_folders');
     }
 
     /**

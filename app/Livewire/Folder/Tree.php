@@ -5,13 +5,13 @@ namespace App\Livewire\Folder;
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Tree extends Component
 {
-    public Collection $folders;
+    public \Illuminate\Database\Eloquent\Collection $folders;
 
     public int $currentFolderId;
 

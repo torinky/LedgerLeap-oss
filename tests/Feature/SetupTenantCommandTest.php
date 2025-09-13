@@ -18,18 +18,11 @@ class SetupTenantCommandTest extends TestCase
     {
         parent::setUp();
 
-        // テストに必要なロールとユーザーを作成
-        // RolesAndPermissionsSeeder を実行すると Super Admin ロールが作成される
-        Artisan::call('db:seed', ['--class' => 'Database\Seeders\RolesAndPermissionsSeeder']);
-
-        // super_admin@ll.com ユーザーを作成
-        User::updateOrCreate(
-            ['email' => 'super_admin@ll.com'],
-            [
-                'name' => 'super_admin',
-                'password' => bcrypt('password'), // 適当なパスワード
-            ]
-        );
+        // テスト用のユーザーを作成
+        User::query()->delete(); // 既存のユーザーを全て削除
+        $user = User::factory()->create(['email' => 'super_admin@ll.com']);
+        $superAdminRole = Role::findOrCreate('Super Admin');
+        $user->assignRole($superAdminRole);
     }
 
     #[test]

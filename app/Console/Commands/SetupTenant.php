@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Illuminate\Support\Facades\Log;
 use Stancl\Tenancy\Database\Models\Domain;
 use App\Models\Tenant;
 use Exception;
@@ -92,9 +93,10 @@ class SetupTenant extends Command
             }
 
             // 2. ルートフォルダの取得と権限付与
-            $rootFolder = $tenant->run(function () {
+            $rootFolder = $tenant->run(function () use ($user) {
                 $this->info('Finding root folder...');
                 // NodeTraitのwhereIsRoot()メソッドでルートフォルダを取得
+                Log::info('Setting creator_id to: ' . $user->id);
                 return \App\Models\Folder::whereIsRoot()->first();
             });
 
@@ -115,7 +117,6 @@ class SetupTenant extends Command
                         'role_id' => $superAdminRole->id,
                         'folder_id' => $rootFolder->id,
                         'permission' => \App\Enums\FolderPermissionType::ADMIN,
-                        'creator_id' => $user->id,
                         'modifier_id' => $user->id,
                     ]);
                 });
