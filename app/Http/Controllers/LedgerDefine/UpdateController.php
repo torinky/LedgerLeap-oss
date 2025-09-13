@@ -18,6 +18,8 @@ class UpdateController extends Controller
 
         $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();
 
+        $this->authorize('update', $ledgerDefineRecord);
+
         $rootFolder = Folder::root()->get();
         $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
         $folderRecords = $rootFolder->merge($folderRecords);

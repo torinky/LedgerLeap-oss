@@ -76,6 +76,14 @@ class RecordsTable extends Component
     {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
 
+        // currentFolder が見つからない場合は、空の状態で初期化して処理を終了する
+        if (is_null($currentFolder)) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+            return;
+        }
+
         if (!empty($currentFolder)) {
             $this->breadcrumbs = $currentFolder->parent()->get();
         }

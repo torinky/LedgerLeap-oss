@@ -542,5 +542,44 @@ class UserService
         });
     }
 
+    /**
+     * ユーザーがアクセス可能なルートフォルダのIDを取得する
+     * アクセス可能なフォルダがない場合は null を返す
+     *
+     * @param User $user
+     * @return int|null
+     */
+    public function getAccessibleRootFolderIdForUser(User $user): ?int
+    {
+        // Super Admin は常にルートフォルダ (ID=1) にアクセス可能と仮定
+        if ($user->hasRole('Super Admin')) {
+            return 1; // または Folder::root()->first()->id; // 実際のルートフォルダIDを取得するロジック
+        }
+
+        // ユーザーがアクセス可能なフォルダを全て取得
+        $accessibleFolderIds = RoleFolderPermission::whereIn('role_id', $this->getAllUniqueRolesForUser($user)->pluck('id'))
+            ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+            ->distinct()
+            ->pluck('folder_id');
+
+        if ($accessibleFolderIds->isEmpty()) {
+            return null; // アクセス可能なフォルダがない
+        }
+
+        // アクセス可能なフォルダの中から、親フォルダを持たない（ルート）フォルダを探す
+        $rootFolder = Folder::whereIn('id', $accessibleFolderIds)
+            ->whereNull('parent_id')
+            ->first();
+
+        if ($rootFolder) {
+            return $rootFolder->id;
+        }
+
+        // ルートフォルダが見つからない場合、アクセス可能なフォルダの中で最も浅い階層のフォルダを探す
+        // ただし、これは「ルート」とは限らないため、注意が必要
+        $firstAccessibleFolder = Folder::whereIn('id', $accessibleFolderIds)->orderBy('id')->first();
+        return $firstAccessibleFolder ? $firstAccessibleFolder->id : null;
+    }
+
 
 }
