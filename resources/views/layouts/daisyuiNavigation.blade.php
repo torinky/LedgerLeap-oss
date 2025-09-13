@@ -62,14 +62,30 @@
             <div class="dropdown dropdown-end">
                 <livewire:notifications.icon/>
             </div>
-            {{-- 設定画面 (Filament) へのリンク (UserService で判定) --}}
+            {{-- 設定ドロップダウンメニュー --}}
             @inject('userService', 'App\Services\UserService') {{-- UserService を注入 --}}
             @if($userService->canUserAccessSettings(Auth::user()))
-                <a href="{{ route('filament.admin.pages.dashboard') }}"
-                   class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                   data-tip="{{ __('ledger.navigation.settings') }}">
-                    <i class="fas fa-sliders"></i>
-                </a>
+                <x-mary-dropdown>
+                    <x-slot:trigger>
+                        <x-mary-button icon="o-cog-6-tooth" class="btn-ghost btn-sm btn-circle tooltip tooltip-bottom"
+                                       data-tip="{{ __('ledger.navigation.settings') }}"
+                        />
+                    </x-slot:trigger>
+
+                    @if(tenant())
+                        <li class="menu-title"><span>{{ __('ledger.tenant_settings') }}</span></li>
+                        <x-mary-menu-item :title="__('ledger.ledger_define')" icon="o-document-plus" :link="route('ledgerDefine.index', ['tenant' => tenant()->id])" />
+                        <x-mary-menu-item :title="__('ledger.folder.title')" icon="o-folder" :link="route('filament.admin.resources.folders.index', ['tenant' => tenant()->id])" />
+                        <hr class="my-1" />
+                        <x-mary-menu-item :title="__('ledger.central_settings')" icon="o-arrow-top-right-on-square" :link="route('filament.admin.pages.dashboard', ['tenant' => tenant()->id])" />
+                    @elseif(request()->routeIs('filament.admin.*'))
+                        <li class="menu-title"><span>{{ __('ledger.central_settings') }}</span></li>
+                        <x-mary-menu-item :title="__('ledger.settings.tenant_management')" icon="o-building-office-2" :link="\App\Filament\Resources\TenantResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.user_management')" icon="o-users" :link="\App\Filament\Resources\UserResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.role_permission_management')" icon="o-shield-check" :link="\App\Filament\Resources\RoleResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.auto_link_management')" icon="o-link" :link="\App\Filament\Resources\AutoLinkResource::getUrl('index')" />
+                    @endif
+                </x-mary-dropdown>
             @endif
 
             {{-- ユーザー名メニュー --}}

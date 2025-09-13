@@ -203,11 +203,18 @@ class FolderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])
             ->with(['children', 'roles', 'ancestors.roles']);
+
+        // URLクエリから 'tenant' パラメータを取得
+        if ($tenantId = request()->query('tenant')) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
     }
 
     public static function canViewAny(): bool

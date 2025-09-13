@@ -1,17 +1,16 @@
 <div>
     <div class="indicator mr-4">
-        <a tabindex="4"
-        @class([
-            'btn  btn-square btn=sm',
-            'btn-ghost'=>($pendingTaskCount==0),
-            'btn-info' => ($pendingTaskCount > 0),
-            'btn-active' => request()->routeIs('notifications.index')
-        ])
         @if (tenant())
             <a href="{{ route('notifications.index', ['tenant' => tenant()->id]) }}"
-               class="btn btn-ghost btn-circle"
                _target="LedgerLeap_PendingList"
                wire:poll.600s="refreshCounts"
+               tabindex="4"
+                    @class([
+                        'btn  btn-circle btn-sm',
+                        'btn-ghost'=>($pendingTaskCount==0),
+                        'btn-info' => ($pendingTaskCount > 0),
+                        'btn-active' => request()->routeIs('notifications.index')
+                    ])
             >
 
                 <span class="indicator-item indicator-top indicator-end flex gap-1"> {{-- バッジを右上に配置 --}}

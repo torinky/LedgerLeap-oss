@@ -2,11 +2,14 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
 
 class DashboardLinksWidget extends Widget
 {
     protected static string $view = 'filament.widgets.dashboard-links-widget';
+
+    public ?string $from_tenant = null;
 
     protected int|string|array $columnSpan = [
         'sm' => 2,
@@ -14,6 +17,27 @@ class DashboardLinksWidget extends Widget
         'lg' => 4,
         'xl' => 6,
     ];
+
+    protected function onTenantContext(): void
+    {
+        if ($this->from_tenant && !session()->has('tenant_context_notified_' . $this->from_tenant)) {
+            $tenant = \App\Models\Tenant::find($this->from_tenant);
+            if ($tenant) {
+                Notification::make()
+                    ->title(__('ledger.tenant_context_notification_title'))
+                    ->body(__('ledger.tenant_context_notification_body', ['name' => $tenant->name ?: $tenant->id]))
+                    ->info()
+                    ->send();
+                session()->put('tenant_context_notified_' . $this->from_tenant, true);
+            }
+        }
+    }
+
+    public function mount(): void
+    {
+        $this->from_tenant=session('filament_from_tenant_id');
+        $this->onTenantContext();
+    }
 
     public static function canView(): bool
     {
@@ -29,7 +53,41 @@ class DashboardLinksWidget extends Widget
 
     protected function getGroups(): array
     {
-        return [
+        $groups = [];
+
+        // URLから遷移元テナントIDを取得
+        $fromTenantId = $this->from_tenant;
+
+        // テナントIDが存在する場合、テナント固有の設定グループを配列の先頭に追加
+        if ($fromTenantId && $tenant = \App\Models\Tenant::find($fromTenantId)) {
+            $groups[] = [
+                'title' => __('ledger.current_tenant') . ': ' . ($tenant->name ?: $tenant->id),
+                'icon' => 'heroicon-o-identification',
+                'links' => [
+                    [
+                        'title' => __('ledger.ledger_define'),
+                        'icon' => 'heroicon-o-document-text',
+                        'url' => route('ledgerDefine.index', ['tenant' => $fromTenantId]),
+                        'color' => 'primary',
+                    ],
+                    [
+                        'title' => __('ledger.settings.folder'),
+                        'icon' => 'heroicon-o-folder',
+                        'url' => route('filament.admin.resources.folders.index', ['tenant' => $fromTenantId]),
+                        'color' => 'primary',
+                    ],
+                    [
+                        'title' => __('ledger.navigation.back_to_tenant'),
+                        'icon' => 'heroicon-o-arrow-uturn-left',
+                        'url' => route('my-portal', ['tenant' => $fromTenantId]),
+                        'color' => 'secondary',
+                    ],
+                ],
+            ];
+        }
+
+        // 既存の中央管理設定グループ
+        $centralGroups = [
             [
                 'title' => __('ledger.settings.user_management'),
                 'icon' => 'heroicon-o-users',
@@ -82,12 +140,12 @@ class DashboardLinksWidget extends Widget
                         'url' => route('filament.admin.resources.synonym.technical-term-groups.index'),
                         'color' => 'success',
                     ],
-                    [
+/*                    [
                         'title' => __('ledger.settings.folder'),
                         'icon' => 'heroicon-o-folder',
                         'url' => route('filament.admin.resources.folders.index'),
                         'color' => 'success',
-                    ],
+                    ],*/
                     [
                         'title' => __('ledger.tags'),
                         'icon' => 'heroicon-o-tag',
@@ -103,5 +161,7 @@ class DashboardLinksWidget extends Widget
                 ],
             ],
         ];
+
+        return array_merge($groups, $centralGroups);
     }
 }

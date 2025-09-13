@@ -24,6 +24,15 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
+        if ($fromTenantId = request()->query('tenant')) {
+            if (!empty($fromTenantId)) {
+                session(['filament_from_tenant_id' => $fromTenantId]);
+            }
+        }
+        $fromTenantId = session('filament_from_tenant_id');
+//        dd($fromTenantId);
+
         return $panel
             ->default()
             ->id('admin')
@@ -52,26 +61,19 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
 //            ->navigation(false)
             ->navigationItems([
-                NavigationItem::make(__('ledger.go_home'))
-                    ->url(function () {
-                        $tenantId = tenant()?->id;
-                        if (!$tenantId) {
-                            // Attempt to get tenant ID from the current URL if not resolved by tenancy
-                            $segments = request()->segments();
-                            if (isset($segments[0]) && !empty($segments[0])) {
-                                $tenantId = $segments[0];
-                            }
-                        }
-                        return route('ledger.index', ['tenant' => $tenantId]);
+                NavigationItem::make(__('ledger.navigation.back_to_tenant'))
+                    ->url(function ()use($fromTenantId) {
+
+                        return $fromTenantId ? route('my-portal', ['tenant' => $fromTenantId]) : '#';
                     })
                     ->icon('heroicon-o-arrow-uturn-left')
-                    ->activeIcon('heroicon-s-arrow-uturn-left')
+                    ->visible(!empty( $fromTenantId))
                     ->sort(2),
                 NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')
                     ->activeIcon('heroicon-s-adjustments-vertical')
                     ->isActiveWhen(fn(): bool => request()->routeIs('filament.admin.pages.dashboard'))
-                    ->url(fn(): string => Dashboard::getUrl())
+                    ->url(fn(): string => Dashboard::getUrl().'?tenant='.$fromTenantId)
                     ->sort(1),
             ])
             ->navigationGroups([])
