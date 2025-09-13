@@ -127,7 +127,7 @@ class SetupTenantCommandTest extends TestCase
         tenancy()->find($tenantId)->run(function () {
             // 1. フォルダ構造の検証
             $totalFolders = \App\Models\Folder::count();
-            $this->assertEquals(12, $totalFolders, 'FolderSeeder should create exactly 12 folders.');
+                        $this->assertEquals(12, $totalFolders, 'FolderSeeder should create exactly 12 folders.');
 
             $rootFolder = \App\Models\Folder::whereIsRoot()->first();
             $this->assertNotNull($rootFolder, 'A root folder should exist.');

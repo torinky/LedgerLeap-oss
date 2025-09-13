@@ -14,6 +14,7 @@ use Tests\TestCase;
 class NumberingServiceTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected NumberingService $numberingService;
     protected Folder $folder;

@@ -12,11 +12,8 @@ use Illuminate\Support\Facades\Cache;
 
 class WritableFolderRepository
 {
-    private UserService $userService;
-
     public function __construct()
     {
-        $this->userService = new UserService($this);
     }
 
     /**
@@ -28,14 +25,16 @@ class WritableFolderRepository
      */
     public function getAccessibleFolderIds(User $user, FolderPermissionType $permission, ?Folder $folder = null): array
     {
+        $userService = app(UserService::class); // ここで解決
+
         $cacheKey = $this->getCacheKey($user, $permission->value, $folder);
 
         return Cache::remember(
             $cacheKey,
             config("cache.{$permission->value}able_folders_ttl", 60),
-            function () use ($user, $permission, $folder) {
+            function () use ($user, $permission, $folder, $userService) { // $userService を use に追加
                 //                $userRoles = $user->getAllRoles();
-                $userRoles = $this->userService->getAllUniqueRolesForUser($user);
+                $userRoles = $userService->getAllUniqueRolesForUser($user); // $this->userService を $userService に変更
 
                 $allAccessibleFolderIds = $userRoles->flatMap(function ($role) use ($permission) {
                     return $role->accessibleFolders($permission)->get()->flatMap(function ($folder) {
@@ -46,8 +45,8 @@ class WritableFolderRepository
                 if (!is_null($folder)) {
                     $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
                     $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
+                    $allAccessibleFolderIds->add($folder->id); // ここを修正
                 }
-                $allAccessibleFolderIds->add($folder);
 
                 return $allAccessibleFolderIds->toArray();
             }

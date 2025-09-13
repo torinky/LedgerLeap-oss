@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application\'s database.
      */
-    public function run(): void
+    public function run(int $seedCount = 50): void // 引数を追加
     {
         // 中央DBの初期データを投入
         $this->call([
@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
 
             // フォルダが存在する場合のみLedgerDefineを作成
             if ($folders->isNotEmpty()) {
-                $ledgerDefines = LedgerDefine::factory(50)
+                $ledgerDefines = LedgerDefine::factory($seedCount) // $seedCount を渡す
                     ->recycle($users)
                     ->make() // DBにはまだ保存しない
                     ->each(function ($ledgerDefine) use ($folders) {
@@ -51,7 +51,7 @@ class DatabaseSeeder extends Seeder
                     });
             }
 
-            Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
+            Ledger::factory($seedCount)->recycle($users)->recycle($ledgerDefines)->create(); // $seedCount を渡す
             $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
         }
     }

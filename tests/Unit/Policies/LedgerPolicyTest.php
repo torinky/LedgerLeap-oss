@@ -16,6 +16,7 @@ use Tests\TestCase;
 class LedgerPolicyTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     public function test_view_any_returns_true_for_user_with_view_ledgers_permission()
     {

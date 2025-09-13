@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\Test;
 class LedgerDiffProcessorTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     private LedgerDiffProcessor $processor;
     private LedgerDefine $ledgerDefine;

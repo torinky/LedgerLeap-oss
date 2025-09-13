@@ -16,6 +16,7 @@ use Illuminate\Contracts\Translation\Translator;
 class UniqueAutoNumberTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected LedgerDefine $ledgerDefine;
     protected ColumnDefine $columnDefine;

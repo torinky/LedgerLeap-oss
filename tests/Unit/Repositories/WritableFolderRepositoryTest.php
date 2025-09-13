@@ -39,7 +39,7 @@ class WritableFolderRepositoryTest extends TestCase
         $repository = new WritableFolderRepository;
         $writableFolderIds = $repository->getWritableFolderIds($user);
 
-        $this->assertCount(3, $writableFolderIds);
+        $this->assertCount(2, $writableFolderIds);
         $this->assertContains($folder1->id, $writableFolderIds);
         $this->assertContains($folder2->id, $writableFolderIds);
         $this->assertNotContains($folder3->id, $writableFolderIds);

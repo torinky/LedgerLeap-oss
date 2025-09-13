@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Livewire\Common;
 
+use Tests\TestCase;
+
 use PHPUnit\Framework\Attributes\Test;
 
 
@@ -17,9 +19,10 @@ use Spatie\Permission\Models\Permission;
 
 
 
-class ActivityHistoryDisplayTest extends \Tests\TestCase
+class ActivityHistoryDisplayTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected function setUp(): void
     {

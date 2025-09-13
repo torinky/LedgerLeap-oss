@@ -13,6 +13,7 @@ use Tests\TestCase;
 class LedgerDefineWithColumnDefinesTest extends TestCase
 {
     use RefreshDatabase; // Ensures a clean database for each test
+    protected bool $tenancy = true;
 
     /**
      * Test LedgerDefine creation, serialization, and deserialization of ColumnDefine objects.

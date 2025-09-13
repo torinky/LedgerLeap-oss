@@ -86,8 +86,10 @@ class LedgerDefineFactory extends Factory
             'create_description' => $markdownText,
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),
+            'folder_id' => Folder::count() > 0 ? Folder::all()->random()->id : Folder::factory()->create()->id,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
+            'tenant_id' => tenant()->id,
         ];
     }
 }

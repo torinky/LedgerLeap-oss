@@ -161,8 +161,8 @@ class MyPortal extends Component
     protected function prepareAssignedFolders(): void
     {
         // 権限のあるフォルダIDを取得 (Repository を使用)
-        $this->writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($this->user)->toArray();
-        $this->manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($this->user)->toArray();
+        $this->writableFolderIds = $this->writableFolderRepository->getWritableFolderIds($this->user);
+        $this->manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($this->user);
 
         // 書き込みまたは管理権限のあるフォルダIDを結合
         $targetFolderIds = array_unique(array_merge($this->writableFolderIds, $this->manageableFolderIds));
@@ -204,7 +204,7 @@ class MyPortal extends Component
 
         // 読み取り可能な全フォルダIDを取得 (書き込み・管理可能も含むはず)
         // 既存のリポジトリメソッドを使用
-        $this->readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($this->user)->toArray();
+        $this->readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($this->user);
         // $this->writableFolderIds と $this->manageableFolderIds は prepareAssignedFolders で既に取得済み
     }
 

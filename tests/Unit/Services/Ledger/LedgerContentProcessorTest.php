@@ -22,6 +22,7 @@ use Tests\TestCase;
 class LedgerContentProcessorTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected Folder $folder;
 
@@ -306,7 +307,7 @@ class LedgerContentProcessorTest extends TestCase
     #[Test]
     public function it_applies_auto_links_directly_without_context(): void
     {
-        // 1. Arrange
+// 1. Arrange
         AutoLink::factory()->create([
             'pattern' => '/(DOC-\d{3})/',
             'url_template' => '/docs/$1',
@@ -321,6 +322,6 @@ class LedgerContentProcessorTest extends TestCase
         $html = $service->convert($text);
 
         // 3. Assert
-        $this->assertStringContainsString('<a href="/docs/DOC-123"', $html);
+        $this->assertStringContainsString('<a href="/test_tenant_id/docs/DOC-123"', $html);
     }
 }

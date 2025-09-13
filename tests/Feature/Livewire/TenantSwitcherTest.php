@@ -16,6 +16,7 @@ use Tests\TestCase;
 class TenantSwitcherTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected function setUp(): void
     {

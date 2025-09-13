@@ -18,6 +18,7 @@ use Tests\TestCase;
 class WorkflowServiceTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     private WorkflowService $workflowService;
     private User $user;

@@ -1033,4 +1033,6 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'delete_confirm'=>'削除する',
+    'continue_editing'=>'編集を続ける',
 ];
