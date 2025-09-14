@@ -2,7 +2,7 @@
 
 **日付:** 2025年9月14日
 **作成者:** Gemini
-**ステータス:** 計画中
+**ステータス:** 完了
 **関連ドキュメント:** [マルチテナント実装課題の解決戦略](./2025-09-07_issue-resolution-strategy.md)
 
 ## 1. 概要
@@ -127,73 +127,41 @@
     *   **迅速なアクセス:** 検索機能などを組み合わせることで、目的の項目へ非常に迅速にアクセスできる可能性がある。
     *   **直感的な操作性:** 新しいUIに慣れる必要はあるが、一度慣れれば直感的に操作できる。
 
-## 5. 推奨案と具体的な実装計画
+## 5. 実装結果と考察
 
-上記の検討結果を踏まえ、**A案: MaryUIの `<x-mary-dropdown>` と `<x-mary-menu-item>` を活用する**ことを推奨します。
+### 5.1. 実装の完了
+本計画書に記載された「ナビゲーションUIの問題」に対する改善は完了しました。当初の計画とは異なるアプローチを採用しましたが、ユーザーの要望を満たす形で機能が実装されました。
 
-**推奨理由:**
+### 5.2. 試行錯誤の経緯と最終的な実装内容
 
-*   UIの一貫性を保ちつつ、既存の課題を効率的に解決できるため、ユーザー体験の向上と開発効率の両立が期待できます。
-*   既にプロジェクトでMaryUIの利用実績があり、学習コストが低いことから、最もリスクが少なく、迅速な実装が可能です。
-*   ペルソナとユーザーシナリオで重視される「直感的な操作性」「迅速なアクセス」「視認性」をバランス良く満たすことができます。
+1.  **MaryUIの `<x-mary-dropdown>` と `<x-mary-menu-item>` を活用するA案の試行と断念:**
+    *   **試行:** UIの一貫性を重視し、MaryUIのコンポーネントを使った横展開ドロップダウンメニューの実装を試みました。
+    *   **問題発生:** サブメニューが期待通りに展開されない問題に直面しました。
+    *   **原因調査:** `vendor/robsontenorio/mary/src/View/Components/MenuItem.php` のソースコードを調査した結果、`x-mary-menu-item`コンポーネント自体が `x-slot:submenu`を直接サポートしていないことが判明しました。MaryUIのドキュメントの例で示されるサブメニューのネストは、`x-mary-menu`コンポーネントの内部で `x-mary-menu-item` をネストすることで実現されるものでした。
+    *   **解決策の試み:** `x-mary-menu` をネストする修正を試みましたが、それでもサブメニューの展開が機能しませんでした。
+    *   **断念:**　MaryUIのコンポーネントの内部的な挙動やLivewireとの連携における詳細な問題特定が困難であったため、このアプローチは一旦破棄する判断をしました。
+    *   **教訓:**　コンポーネントライブラリの内部実装を深く理解することの重要性、および問題解決が困難な場合は代替案への切り替えの判断の重要性を再認識しました。
 
-### 5.1. 実装ステップ
+2.  **DaisyUIの `<details>` タグと `<ul>`/`<li>` を活用するB案への移行と最終採用:**
+    *   **移行理由:** MaryUIでの問題解決が困難であったため、表示の確実性を最優先し、DaisyUIの `<details>` タグと `<ul>`/`<li>`を使ったアコーディオン形式のメニューに移行しました。この形式は、以前のダミーメニューのテストで表示されることが確認済みであり、実装の確実性が高いためです。
+    *   **実装内容:**
+        *   **基本構造:** `resources/views/livewire/tenant-switcher.blade.php` をDaisyUIの `dropdown` クラスと `ul class="menu"`を使用した構造に再構築しました。テナントごとに `<details>` タグを使用してアコーディオン形式のサブメニューを実装しています。
+        *   **フォルダツリーの再帰表示:** `resources/views/livewire/tenant-switcher-daisyui-folder-tree.blade.php`を新規作成し、DaisyUIの `<li>` と `<a>`、そして `<details>` を使用してフォルダ階層を再帰的に表示するようにしました。
+        *   **幅の自動調整:** メニューの幅が固定されていたため横スクロールが発生する問題に対し、`resources/views/livewire/tenant-switcher.blade.blade.php` の `ul` タグから `w-64` クラスを削除し、`min-w-max`を適用することでコンテンツに合わせて幅が広がるようにしました。これにより、横スクロールの問題は解消されました。
+        *   **縦方向の拡張:** メニューの縦方向の高さが `max-h-96`で制限されていたため、このクラスを削除することで、メニューがコンテンツの高さに合わせて縦方向に自由に伸びるようにしました。
+        *   **アクティブ表示:** 現在表示しているフォルダを視覚的に強調するため、`resources/views/livewire/tenant-switcher-daisyui-folder-tree.blade.php` の `<a>` タグに、現在のフォルダIDと一致する場合に `bg-neutral/20` クラスを適用するようにしました。
+        *   **LocalStorageによる開閉状態の維持:** ページリロード時にアコーディオンの開閉状態が初期化される問題に対し、Alpine.jsとLocalStorageを組み合わせて状態を永続化する実装を行いました。各 `<details>` タグに `x-data` と `@toggle` を追加し、開閉状態をLocalStorageに保存・復元するようにしました。
+        *   **権限がないフォルダの表示に関する最終的な判断:**
+            *   当初、「権限がないフォルダも表示し、アクセスできないことを示す」という要件があり、`is_accessible` フラグを付与するロジックを `app/Livewire/TenantSwitcher.php` に実装する計画がありました。
+            *   しかし、別の箇所の不具合が根本的な原因であることが判明し、テナント切り替えメニューの対応が一旦完了とされたため、この `is_accessible` フラグを付与するロジックは最終的な実装には適用されませんでした。
+            *   結果として、現在のメニューでは、ユーザーがアクセスできないフォルダは表示されません。この判断は、今後の開発者が混乱しないよう、ここに明確に記録します。
 
-1.  **`app/Livewire/TenantSwitcher.php` の変更:**
-    *   `mount` メソッドで取得する `folders_tree` のデータ構造は、MaryUIのメニューコンポーネントに直接渡せる形式（例: ネストされた配列）に整形する必要があるかもしれません。あるいは、Blade側で整形ロジックを記述することも可能です。
-    *   **検討:** `folders_tree` の取得ロジックは現状維持し、Blade側でMaryUIのメニュー構造に合うように変換する方が、Livewireコンポーネントの責務をシンプルに保てると考えられます。
+### 5.3. 最終的なUI/UX設計の評価
+本実装により、ユーザーがテナントやフォルダをより直感的かつ効率的に選択できるメニューが実現されました。アコーディオン形式ではありますが、幅と高さの制約が解消され、開閉状態も維持されるため、視認性と操作性が向上しました。
 
-2.  **`resources/views/livewire/tenant-switcher.blade.php` の再構築:**
-    *   現在の `dropdown` と `menu` の構造を、`x-mary-dropdown` と `x-mary-menu-item` を使った多階層メニューに置き換えます。
-    *   テナントごとにドロップダウンメニューを生成し、その中にフォルダの階層をネストされた `x-mary-menu-item` で表示します。
-    *   **具体的な構造イメージ:**
-        ```blade
-        <x-mary-dropdown>
-            <x-slot:trigger>
-                <!-- 現在のテナント名とアイコンを表示するボタン -->
-            </x-slot:trigger>
+### 5.4. 今後の展望
+本機能は、ユーザーのナビゲーション体験を向上させる上で重要な役割を果たします。将来的には、ユーザーからのフィードバックや、MaryUIの改善状況に応じて、横展開のドロップダウンメニュー形式への再検討も視野に入れることができます。
 
-            <!-- アクセス可能なテナントのリスト -->
-            @foreach($tenants->where('is_member', true) as $tenant)
-                <x-mary-menu-item :title="$tenant->name ?? $tenant->id" :link="route('my-portal', ['tenant' => $tenant->id])" wire:navigate>
-                    @if($tenant->folders_tree->isNotEmpty())
-                        <x-slot:submenu>
-                            <!-- フォルダ階層を再帰的に表示 -->
-                            @include('livewire.tenant-switcher-mary-menu-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant])
-                        </x-slot:submenu>
-                    @endif
-                </x-mary-menu-item>
-            @endforeach
-
-            <!-- その他のテナント (アクセス不可) -->
-            <div class="divider my-1"></div>
-            <li class="menu-title"><span>{{ __('ledger.navigation.other_tenants') }}</span></li>
-            @foreach($tenants->where('is_member', false) as $tenant)
-                <x-mary-menu-item :title="$tenant->name ?? $tenant->id" icon="o-lock-closed" disabled />
-            @endforeach
-        </x-mary-dropdown>
-        ```
-
-3.  **`resources/views/livewire/tenant-switcher-folder-tree.blade.php` の改修:**
-    *   新しいBladeビュー `resources/views/livewire/tenant-switcher-mary-menu-folder-tree.blade.php` を作成し、MaryUIの `<x-mary-menu-item>` を使ってフォルダ階層を再帰的に表示するように改修します。
-    *   **具体的な構造イメージ (`tenant-switcher-mary-menu-folder-tree.blade.php`):**
-        ```blade
-        @foreach ($folders as $folder)
-            <x-mary-menu-item :title="$folder->title" :link="route('ledgersByFolderId', ['tenant' => $tenant->id, 'folderId' => $folder->id])" wire:navigate>
-                @if ($folder->children->isNotEmpty())
-                    <x-slot:submenu>
-                        @include('livewire.tenant-switcher-mary-menu-folder-tree', ['folders' => $folder->children, 'tenant' => $tenant])
-                    </x-slot:submenu>
-                @endif
-            </x-mary-menu-item>
-        @endforeach
-        ```
-
-### 5.2. 考慮すべき事項
-
-*   **パフォーマンス:** 非常に多数のテナントや深いフォルダ階層が存在する場合、全てのメニュー項目を一度にレンダリングするとパフォーマンスに影響が出る可能性があります。必要に応じて、Livewireの遅延ロード機能や、メニューの開閉時にのみ子要素をロードするなどの最適化を検討する必要があります。
-*   **UX:** 多階層ドロップダウンメニューの操作性（開閉、ホバー/クリック）を考慮し、ユーザーが直感的に使えるように設計する必要があります。MaryUIのデフォルトの挙動を確認し、必要であればAlpine.jsなどで微調整を加えることも検討します。
-*   **翻訳キー:** 新たに追加される可能性のあるUI要素のテキストについては、適切な翻訳キー (`lang/**/ledger.php`) を定義する必要があります。
 
 ## 6. 関連ドキュメント
 

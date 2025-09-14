@@ -4,18 +4,23 @@
         <span class="hidden sm:inline">{{ $currentTenant?->name ?? 'No Tenant' }}</span>
         <x-mary-icon name="o-chevron-down" class="w-4 h-4 ml-1" />
     </label>
-    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[10] p-2 shadow bg-base-100 rounded-box w-64 max-h-96 overflow-y-auto">
+    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[10] p-2 shadow bg-base-100 rounded-box min-w-max overflow-y-auto">
         <li class="menu-title"><span>{{ __('ledger.navigation.my_tenants') }}</span></li>
-{{--        @dd($tenants)--}}
         @foreach($tenants->where('is_member', true) as $tenant)
             <li>
-                @if($tenant->folders_tree->isNotEmpty())
-                    <details>
+                @if(!empty($tenant->folders_tree))
+                    <details
+                        x-data="{ open: localStorage.getItem('details-{{ $tenant->id }}') === 'true' }"
+                        @toggle="localStorage.setItem('details-{{ $tenant->id }}', $el.open)"
+                        x-bind:open="open"
+                    >
                         <summary>
                             <a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ $tenant->name ?? $tenant->id }}</a>
                         </summary>
                         <ul>
-                            @include('livewire.tenant-switcher-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant])
+                            <li><a href="{{ route('my-portal', ['tenant' => $tenant->id]) }}" wire:navigate>{{ __('ledger.navigation.go_to_my_portal') }}</a></li>
+                            <div class="divider my-1"></div>
+                            @include('livewire.tenant-switcher-daisyui-folder-tree', ['folders' => $tenant->folders_tree, 'tenant' => $tenant, 'currentFolderId' => $currentFolderId])
                         </ul>
                     </details>
                 @else
