@@ -22,7 +22,7 @@ class Dashboard extends \Filament\Pages\Dashboard
     public function getWidgets(): array
     {
         return [
-            \App\Filament\Widgets\DashboardLinksWidget::make(['from_tenant' => $this->fromTenant]),
+            \App\Filament\Widgets\DashboardLinksWidget::class,
         ];
     }
 

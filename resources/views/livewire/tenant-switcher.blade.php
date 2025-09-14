@@ -8,7 +8,7 @@
         <li class="menu-title"><span>{{ __('ledger.navigation.my_tenants') }}</span></li>
         @foreach($tenants->where('is_member', true) as $tenant)
             <li>
-                @if(!empty($tenant->folders_tree))
+                @if($showFolders && !empty($tenant->folders_tree))
                     <details
                         x-data="{ open: localStorage.getItem('details-{{ $tenant->id }}') === 'true' }"
                         @toggle="localStorage.setItem('details-{{ $tenant->id }}', $el.open)"

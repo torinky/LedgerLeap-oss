@@ -163,6 +163,52 @@
 本機能は、ユーザーのナビゲーション体験を向上させる上で重要な役割を果たします。将来的には、ユーザーからのフィードバックや、MaryUIの改善状況に応じて、横展開のドロップダウンメニュー形式への再検討も視野に入れることができます。
 
 
-## 6. 関連ドキュメント
+## 6. Filament管理パネルへのテナント切り替えメニュー追加の検討
+
+### 6.1. 課題
+
+Filamentの管理パネルの「設定」画面内に、テナントを切り替えるメニューを追加する。ただし、既存の`TenantSwitcher`コンポーネントが持つフォルダ階層表示機能は不要とする。
+
+### 6.2. 検討アプローチ
+
+FilamentのナビゲーションアイテムとしてLivewireコンポーネントを直接埋め込むことはできないため、以下の方法で実装を検討する。
+
+1.  **カスタムビューの作成:** `resources/views/filament/navigation/tenant-switcher-nav-item.blade.php` のようなBladeファイルを作成し、その中で `TenantSwitcher` Livewireコンポーネントを呼び出す。
+2.  **`TenantSwitcher`コンポーネントの改修:** フォルダ階層の表示/非表示を制御するためのプロパティ（例: `showFolders`）を `TenantSwitcher` に追加し、このプロパティの値に基づいてフォルダ階層の取得・表示ロジックを制御する。
+3.  **`AdminPanelProvider.php`の修正:** `AdminPanelProvider.php` の `navigationItems` に、上記で作成したカスタムビューをレンダリングする `NavigationItem` を追加する。
+
+### 6.3. 実装計画
+
+1.  **`app/Livewire/TenantSwitcher.php`の修正:** 
+    *   `public bool $showFolders = true;` プロパティを追加する。
+    *   `initializeTenantsMenu` メソッド内で、`$this->showFolders` が `false` の場合は `folders_tree` の取得ロジックをスキップするように変更する。
+2.  **`resources/views/livewire/tenant-switcher.blade.php`の修正:** 
+    *   `$showFolders` プロパティの値に基づいて、フォルダ階層を表示する部分を条件分岐で囲む。
+3.  **カスタムビューの作成:** 
+    *   `resources/views/filament/navigation/tenant-switcher-nav-item.blade.php` を作成し、以下の内容を記述する。
+        ```blade
+        <x-filament::dropdown>
+            <x-slot name="trigger">
+                <x-filament::button
+                    icon="heroicon-o-building-office-2"
+                    outlined
+                    size="sm"
+                >
+                    {{ \App\Models\Tenant::find(tenant()->id)?->name ?? 'No Tenant' }}
+                </x-filament::button>
+            </x-slot>
+        
+            {{ livewire('tenant-switcher', ['showFolders' => false]) }}
+        </x-filament::dropdown>
+        ```
+4.  **`app/Providers/Filament/AdminPanelProvider.php`の修正:** 
+    *   `navigationItems` に、上記カスタムビューをレンダリングする `NavigationItem` を追加する。
+        ```php
+        NavigationItem::make('Tenant Switcher')
+            ->view('filament.navigation.tenant-switcher-nav-item')
+            ->sort(0), // 適切なソート順を設定
+        ```
+
+## 7. 関連ドキュメント
 
 *   [マルチテナント実装課題の解決戦略](./2025-09-07_issue-resolution-strategy.md)

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-class TenantSwitcher extends Component
+class TenantSwitcherFilament extends Component
 {
     public Collection $tenants;
     public ?\App\Models\Tenant $currentTenant;
@@ -38,7 +38,10 @@ class TenantSwitcher extends Component
 
     public function render()
     {
-        return view('livewire.tenant-switcher');
+        return view('livewire.tenant-switcher-filament', [
+            'tenants' => $this->tenants,
+            'currentTenant' => $this->currentTenant,
+        ]);
     }
 
     /**

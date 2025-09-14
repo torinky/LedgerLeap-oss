@@ -19,6 +19,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\Support\Facades\Blade;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -27,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
         // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
         if ($fromTenantId = request()->query('tenant')) {
             if (!empty($fromTenantId)) {
-                session(['filament_from_tenant_id' => $fromTenantId]);
+                session()->put('filament_from_tenant_id', $fromTenantId);
             }
         }
         $fromTenantId = session('filament_from_tenant_id');
@@ -120,6 +121,9 @@ class AdminPanelProvider extends PanelProvider
 //            ->theme(asset('css/filament/admin/theme.css'))
 
 //            ->viteTheme('resources/css/filament/admin/theme.css')
-            ;
+            ->renderHook(
+                'panels::global-search.after',
+                fn (): string => Blade::render('<livewire:tenant-switcher-filament :show-folders="false" />'),
+            );
     }
 }
