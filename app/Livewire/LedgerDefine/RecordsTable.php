@@ -27,6 +27,8 @@ class RecordsTable extends Component
 
     public $currentFolderId;
 
+    public $tenantId; // ここを追加
+
     private $ledgerDefineRecords;
 
     /**
@@ -36,7 +38,7 @@ class RecordsTable extends Component
     {
         $this->currentFolderId = $request->folderId();
         $this->prepareFolderAsset();
-
+        $this->tenantId = tenant()?->id;
     }
 
     /**
