@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Tenant;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
 
@@ -21,7 +22,7 @@ class DashboardLinksWidget extends Widget
     protected function onTenantContext(): void
     {
         if ($this->from_tenant && !session()->has('tenant_context_notified_' . $this->from_tenant)) {
-            $tenant = \App\Models\Tenant::find($this->from_tenant);
+            $tenant = Tenant::find($this->from_tenant);
             if ($tenant) {
                 Notification::make()
                     ->title(__('ledger.tenant_context_notification_title'))
@@ -59,7 +60,7 @@ class DashboardLinksWidget extends Widget
         $fromTenantId = $this->from_tenant;
 
         // テナントIDが存在する場合、テナント固有の設定グループを配列の先頭に追加
-        if ($fromTenantId && $tenant = \App\Models\Tenant::find($fromTenantId)) {
+        if ($fromTenantId && $tenant = Tenant::find($fromTenantId)) {
             $groups[] = [
                 'title' => __('ledger.current_tenant') . ': ' . ($tenant->name ?: $tenant->id),
                 'icon' => 'heroicon-o-identification',

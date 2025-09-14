@@ -21,10 +21,21 @@ class TenantSwitcherFilament extends Component
 
     public function mount(TenantAccessService $tenantAccessService): void
     {
-        $this->currentTenant = tenant();
+        $this->updateCurrentTenant();
+
         $this->currentFolderId = request()->route('folderId');
         $this->initializeTenantsMenu($tenantAccessService);
 
+    }
+
+    #[On('tenancy.initialized')]
+    public function updateCurrentTenant(): void
+    {
+        $this->currentTenant = tenant();
+        if(!$this->currentTenant){
+            $currentTenantId = session()->get('filament_from_tenant_id');
+            $this->currentTenant = Tenant::find($currentTenantId);
+        }
     }
 
     #[On('currentFolderChangedByMain'), On('currentFolderChangedByTree')]
@@ -38,7 +49,7 @@ class TenantSwitcherFilament extends Component
 
     public function render()
     {
-        return view('livewire.tenant-switcher-filament', [
+        return view('filament.navigation.tenant-switcher', [
             'tenants' => $this->tenants,
             'currentTenant' => $this->currentTenant,
         ]);

@@ -32,7 +32,6 @@ class AdminPanelProvider extends PanelProvider
             }
         }
         $fromTenantId = session('filament_from_tenant_id');
-//        dd($fromTenantId);
 
         return $panel
             ->default()
@@ -63,12 +62,12 @@ class AdminPanelProvider extends PanelProvider
 //            ->navigation(false)
             ->navigationItems([
                 NavigationItem::make(__('ledger.navigation.back_to_tenant'))
-                    ->url(function ()use($fromTenantId) {
-
+                    ->url(function () {
+                        $fromTenantId = session('filament_from_tenant_id');
                         return $fromTenantId ? route('my-portal', ['tenant' => $fromTenantId]) : '#';
                     })
                     ->icon('heroicon-o-arrow-uturn-left')
-                    ->visible(!empty( $fromTenantId))
+//                    ->visible(!empty(session('filament_from_tenant_id')))
                     ->sort(2),
                 NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')

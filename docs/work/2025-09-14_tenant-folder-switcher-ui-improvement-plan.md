@@ -169,45 +169,51 @@
 
 Filamentの管理パネルの「設定」画面内に、テナントを切り替えるメニューを追加する。ただし、既存の`TenantSwitcher`コンポーネントが持つフォルダ階層表示機能は不要とする。
 
-### 6.2. 検討アプローチ
+### 6.2. 試行錯誤の経緯と解決策
 
-FilamentのナビゲーションアイテムとしてLivewireコンポーネントを直接埋め込むことはできないため、以下の方法で実装を検討する。
+当初、FilamentのナビゲーションアイテムとしてLivewireコンポーネントを直接埋め込むことを試みたが、いくつかの課題に直面した。
 
-1.  **カスタムビューの作成:** `resources/views/filament/navigation/tenant-switcher-nav-item.blade.php` のようなBladeファイルを作成し、その中で `TenantSwitcher` Livewireコンポーネントを呼び出す。
-2.  **`TenantSwitcher`コンポーネントの改修:** フォルダ階層の表示/非表示を制御するためのプロパティ（例: `showFolders`）を `TenantSwitcher` に追加し、このプロパティの値に基づいてフォルダ階層の取得・表示ロジックを制御する。
-3.  **`AdminPanelProvider.php`の修正:** `AdminPanelProvider.php` の `navigationItems` に、上記で作成したカスタムビューをレンダリングする `NavigationItem` を追加する。
+1.  **`Filament\Navigation\NavigationItem::view()` メソッドの不在:**
+    *   `NavigationItem` クラスには `view()` メソッドが存在せず、カスタムビューを直接レンダリングする標準的な方法がなかった。
+    *   **解決策:** Filamentの `Panel::renderHook()` メソッドを使用し、トップナビゲーションの適切な位置にカスタムビューを挿入するアプローチを採用した。
 
-### 6.3. 実装計画
+2.  **LivewireコンポーネントのCSS崩れ:**
+    *   `renderHook()` で `livewire('tenant-switcher', ...)` を直接レンダリングした際、`TenantSwitcher` が依存するDaisyUIのCSSがFilamentの管理パネルに読み込まれていないため、表示が崩れる問題が発生した。
+    *   **解決策:** `TenantSwitcher` コンポーネントのビュー (`resources/views/livewire/tenant-switcher-filament.blade.php` を新規作成) を、DaisyUIのクラスではなくFilamentのコンポーネント (`x-filament::dropdown`, `x-filament::button`, `x-filament::dropdown.list`, `x-filament::dropdown.list.item` など) を使用して再構築した。これにより、Filamentのスタイルが適用され、表示の整合性が保たれた。
 
-1.  **`app/Livewire/TenantSwitcher.php`の修正:** 
-    *   `public bool $showFolders = true;` プロパティを追加する。
-    *   `initializeTenantsMenu` メソッド内で、`$this->showFolders` が `false` の場合は `folders_tree` の取得ロジックをスキップするように変更する。
-2.  **`resources/views/livewire/tenant-switcher.blade.php`の修正:** 
-    *   `$showFolders` プロパティの値に基づいて、フォルダ階層を表示する部分を条件分岐で囲む。
-3.  **カスタムビューの作成:** 
-    *   `resources/views/filament/navigation/tenant-switcher-nav-item.blade.php` を作成し、以下の内容を記述する。
-        ```blade
-        <x-filament::dropdown>
-            <x-slot name="trigger">
-                <x-filament::button
-                    icon="heroicon-o-building-office-2"
-                    outlined
-                    size="sm"
-                >
-                    {{ \App\Models\Tenant::find(tenant()->id)?->name ?? 'No Tenant' }}
-                </x-filament::button>
-            </x-slot>
-        
-            {{ livewire('tenant-switcher', ['showFolders' => false]) }}
-        </x-filament::dropdown>
-        ```
-4.  **`app/Providers/Filament/AdminPanelProvider.php`の修正:** 
-    *   `navigationItems` に、上記カスタムビューをレンダリングする `NavigationItem` を追加する。
-        ```php
-        NavigationItem::make('Tenant Switcher')
-            ->view('filament.navigation.tenant-switcher-nav-item')
-            ->sort(0), // 適切なソート順を設定
-        ```
+3.  **テナントコンテキストの維持と `tenant()` ヘルパーの挙動:**
+    *   Filamentの管理パネルは中央ドメインで動作するため、`TenantSwitcherFilament` コンポーネント内で `tenant()` ヘルパーが常に現在のテナントコンテキストを返さない問題が発生した。これにより、テナントを切り替えてもボタンのラベルが更新されない、または `No Tenant` のままになる事象が確認された。
+    *   **解決策:**
+        *   `app/Livewire/TenantSwitcherFilament.php` の `mount()` メソッドで `updateCurrentTenant()` を呼び出すように変更した。
+        *   `updateCurrentTenant()` メソッド内で、`tenant()` ヘルパーが `null` を返す場合（中央ドメインなど）に、セッションに保存されたテナントID (`filament_from_tenant_id`) を使用してテナント情報を復旧するロジックを追加した。これにより、Filamentの管理パネルでテナントコンテキストが正しく扱われるようになった。
+        *   `AdminPanelProvider.php` におけるセッションへのテナントID (`filament_from_tenant_id`) の保存方法に誤りがあったため、`session()->put()` を使用するように修正した。
+
+4.  **ボタンの表示崩れと操作性:**
+    *   カスタムボタン (`<button class="shrink-0">`) の幅が狭く、ラベルがアイコンの下に表示される問題や、クリックしてもプルダウンがすぐに閉じてしまい選択できない問題が発生した。
+    *   **解決策:** `button` タグを `x-filament::button` に置き換え、`x-filament::dropdown` に `teleport` 属性を追加した。これにより、Filamentの標準的なボタンのスタイルが適用され、プルダウンの操作性も改善された。
+
+### 6.3. 最終的な実装内容
+
+上記の試行錯誤を経て、以下の変更が適用された。
+
+1.  **`app/Livewire/TenantSwitcherFilament.php` の新規作成と修正:**
+    *   `app/Livewire/TenantSwitcher.php` をベースに `TenantSwitcherFilament.php` を作成。
+    *   `mount()` メソッドで `updateCurrentTenant()` を呼び出すように変更。
+    *   `updateCurrentTenant()` メソッドで、`tenant()` が `null` の場合にセッションからテナントIDを復旧するロジックを追加。
+    *   `render()` メソッドで `resources/views/filament/navigation/tenant-switcher.blade.php` を返すように変更。
+
+2.  **`resources/views/filament/navigation/tenant-switcher.blade.php` の新規作成:**
+    *   Filamentのコンポーネント (`x-filament::dropdown`, `x-filament::button`, `x-filament::dropdown.list`, `x-filament::dropdown.list.item` など) を使用してテナント切り替えメニューのビューを作成。
+    *   遷移先を `route('filament.admin.pages.dashboard', ['tenant' => $tenant->id])` に設定。
+
+3.  **`app/Providers/Filament/AdminPanelProvider.php` の修正:**
+    *   `use Illuminate\Support\Facades\Blade;` を追加。
+    *   `panel()` メソッド内で `renderHook('panels::global-search.after', ...)` を使用し、`livewire('tenant-switcher-filament', ['showFolders' => false])` を呼び出すように変更。
+    *   セッションへのテナントIDの保存方法を `session()->put()` に修正。
+
+### 6.4. 結論
+
+これらの変更により、Filamentの管理パネルのダッシュボードにテナント切り替えボタンが適切に表示され、テナントを切り替えると、そのテナントのFilament管理パネルのダッシュボードに遷移し、ボタンのラベルも正しく更新されるようになった。これにより、ユーザーは中央管理パネルからテナントをシームレスに切り替え、それぞれのテナントの設定画面にアクセスできるようになった。
 
 ## 7. 関連ドキュメント
 
