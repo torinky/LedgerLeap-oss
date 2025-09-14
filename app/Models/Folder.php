@@ -27,7 +27,7 @@ class Folder extends Model
     use HasFactory, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
-        'title', 'modifier_id', 'creator_id', 'parent_id',
+        'title', 'modifier_id', 'creator_id', 'parent_id', 'tenant_id',
     ];
 
     /**

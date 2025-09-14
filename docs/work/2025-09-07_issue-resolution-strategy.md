@@ -199,5 +199,24 @@
     *   アプリケーションが `tenant_user` テーブルに依存していないことを確認する。
     *   `vendor/bin/sail test` を実行し、既存のテストがすべてパスすること。
 
+### ステップ7: フォルダ新規作成・編集時のテナントID設定問題の解決
+
+*   **目的:** `Folder` モデルに `tenant_id` が正しく設定されるようにし、データ分離の整合性を確保する。
+*   **状況:** <span style="color: blue;">計画中</span>
+*   **作業計画:**
+    1.  **Filamentでのフォルダ作成時の `tenant_id` 自動設定:**
+        *   `app/Filament/Resources/FolderResource.php` の `form()` メソッドに隠しフィールド `Forms\Components\Hidden::make('tenant_id')` を追加し、`default(fn() => tenant()->id)` を設定する。
+        *   **確認事項:** Filamentでフォルダを作成し、DBで `tenant_id` が正しく設定されていることを確認する。
+    2.  **Filamentでのフォルダ編集時の `tenant_id` 変更不可化:**
+        *   `app/Filament/Resources/FolderResource.php` の `form()` メソッドで、`tenant_id` フィールドを `disabledOn('edit')` に設定する。
+        *   **確認事項:** Filamentで既存フォルダを編集し、`tenant_id` が変更できないことを確認する。
+    3.  **スクラッチの編集ビューでのフォルダ作成・編集時の `tenant_id` 設定:**
+        *   スクラッチで実装されているフォルダの作成・編集ビューを特定する。
+        *   該当するコントローラ/Livewireコンポーネントで、フォルダ保存時に `tenant_id` を明示的に設定するロジックを追加する。
+        *   **確認事項:** スクラッチのビューでフォルダを作成・編集し、`tenant_id` が正しく設定/維持されていることを確認する。
+    4.  **既存のテストの確認と追加:**
+        *   既存の `Folder` モデルや `FolderResource` に関連するテストが、今回の変更で影響を受けないか確認する。
+        *   `tenant_id` の設定に関する新しいフィーチャーテストを追加する。
+
 ## 7. 関連ドキュメント
 *   **[新マルチテナント実装計画書 (最終版)](./2025-08-30_new-multi-tenant-implementation-plan-final.md)**
