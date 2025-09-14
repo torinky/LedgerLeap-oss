@@ -83,7 +83,8 @@ class FolderResource extends Resource
                                 $set('parent_id', null); // Clear parent folder selection when tenant changes
                             })
                             ->required() // tenant_idを必須にする
-                            ->disabledOn('edit'), // 編集時は無効化
+                            ->disabledOn('edit') // 編集時は無効化
+                            ->default(fn() => session('filament_from_tenant_id')),
                         Forms\Components\Hidden::make('creator_id')
                             ->default(fn() => auth()->id())
                             ->disabledOn('edit'), // 作成時のみ記録

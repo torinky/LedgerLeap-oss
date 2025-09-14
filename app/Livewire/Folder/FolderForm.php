@@ -9,9 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Illuminate\Support\Facades\Log;
 use Mary\Traits\Toast;
-
-// Log を use
 
 class FolderForm extends Component
 {
@@ -33,6 +32,8 @@ class FolderForm extends Component
     // --- 状態管理用フラグ ---
     public bool $formDisabled = false; // 削除後にフォームを無効化するため
     public bool $justSaved = false; // 保存直後かどうかのフラグ
+
+    public string $tenantId = '';
 
     protected function rules(): array
     {
@@ -107,6 +108,7 @@ class FolderForm extends Component
 
         $this->loadAvailableParents();
         $this->loadAvailableRoles();
+        $this->tenantId = tenant()?->id;
     }
 
     protected function loadAvailableParents(): void
@@ -157,12 +159,30 @@ class FolderForm extends Component
         DB::beginTransaction();
         try {
             // 1. フォルダの基本情報を設定
+            if (!$this->isCreating) {
+                // 更新時は、Livewireのプロパティのデシリアライズ問題を避けるため、
+                // DBから最新のモデルを取得し直してからプロパティをセットする
+                $this->folder = Folder::find($this->folder->id);
+            }
             $this->folder->title = $this->title;
             $this->folder->modifier_id = Auth::id();
             $isNewRecordBeforeSave = $this->isCreating; // 保存前の状態を保持
             if ($this->isCreating) {
                 $this->folder->creator_id = Auth::id();
+                // tenant() が null でないことを確認してから tenant_id を設定
+//                if (tenancy()->tenant) { // Stancl\Tenancy のヘルパー関数 tenancy() を使用
+                if ($this->tenantId) {
+//                    $this->folder->tenant_id = tenancy()->tenant->id;
+                    $this->folder->tenant_id = $this->tenantId;
+                } else {
+                    // テナントコンテキストがない場合の処理 (エラーログ、またはデフォルト値の設定など)
+                    Log::warning('Attempted to create folder without tenant context.');
+                    // 必要に応じてエラーをスローするか、処理を中断する
+                    $this->error(__('messages.error.no_tenant_context'));
+                    return;
+                }
             }
+//            dd($this->folder);
 
             // 2. フォルダの保存 (NestedSetの操作)
             if ($this->isCreating) {
@@ -246,17 +266,17 @@ class FolderForm extends Component
                 //    ここでは編集モードに移行する。
                 $this->isCreating = false;
                 // $this->folder は保存されたインスタンスになっている
-                $this->mount(); // 再マウントしてフォーム値を更新
+//                 $this->mount(); // 再マウントしてフォーム値を更新
             } else {
                 // 更新後は現在の編集状態を維持
                 $this->folder->refresh();
-                $this->mount();
+//                 $this->mount();
             }
             $this->justSaved = true; // 保存直後フラグを立てる
             $this->dispatch('folderSavedAndRefreshList', folderId: $this->folder->id); // 親ウィンドウのリスト更新用イベント
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            // DB::rollBack();
             Log::error("Folder save failed: " . $e->getMessage(), [
                 'folder_title' => $this->title,
                 'parent_id' => $this->parentId,
@@ -326,6 +346,7 @@ class FolderForm extends Component
             $this->confirmingFolderDeletion = false;
         }
     }
+
     /**
      * フォームを初期状態にリセットする (続けて新規作成用)
      */
