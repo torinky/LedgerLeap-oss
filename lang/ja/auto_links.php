@@ -22,6 +22,7 @@ return [
         'preview_text' => 'プレビューテキスト',
         'preview_output' => 'プレビュー出力',
         'folders' => '適用フォルダ',
+        "link_to_tenant" => "リンク先テナント",
     ],
     'templates' => [
         'redmine_ticket' => 'Redmineチケット',
@@ -31,6 +32,7 @@ return [
     ],
     'placeholders' => [
         'folders' => '適用するフォルダを選択してください',
+        "link_to_tenant" => "リンク先のテナントを選択"
     ],
     'helps' => [
         'url_template' => '正規表現のキャプチャグループを $1, $2 などの形式で埋め込めます。',

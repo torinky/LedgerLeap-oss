@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AutoLinkResource\Pages;
 use App\Models\AutoLink;
+use App\Models\Tenant;
 use App\Rules\ValidAutoLinkPattern;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms\Components\Placeholder;
@@ -22,7 +23,9 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class AutoLinkResource extends Resource
 {
@@ -85,25 +88,34 @@ class AutoLinkResource extends Resource
                         ->required()
                         ->live(onBlur: true)
                         ->helperText(__('auto_links.helps.url_template')),
+                    Select::make('tenant_id')
+                        ->label(__('auto_links.fields.link_to_tenant'))
+                        ->relationship('tenant', 'id')
+                        ->searchable()
+                        ->placeholder(__('auto_links.placeholders.link_to_tenant'))
+                        ->live()
+                        ->visible(fn (Get $get) => Str::startsWith($get('url_template'), '/l/')),
                     Section::make(__('auto_links.sections.scope'))
                         ->description(__('auto_links.helps.scope_description'))
                         ->schema([
                             SelectTree::make('folders')
                                 ->label(__('auto_links.fields.folders'))
                                 ->relationship(
-                                    relationship: 'folders', // リレーション名
-                                    titleAttribute: 'title', // 表示するカラム名
-                                    parentAttribute: 'parent_id', // 親を識別するカラム名
+                                    relationship: 'folders',
+                                    titleAttribute: 'name_with_tenant',
+                                    parentAttribute: 'parent_id',
                                     modifyQueryUsing: fn (Builder $query) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query) {
-                                        return $query->orderBy('_lft');
+                                        return $query->join('tenants', 'folders.tenant_id', '=', 'tenants.id')
+                                            ->select('folders.*', DB::raw("CASE WHEN folders.parent_id IS NULL THEN CONCAT('【', tenants.id, '】 ', folders.title) ELSE folders.title END AS name_with_tenant"))
+                                            ->orderBy('tenants.id')
+                                            ->orderBy('folders._lft');
                                     })
                                 )
-                                ->enableBranchNode() // 親ノード（フォルダ）も選択可能にする
+                                ->enableBranchNode()
                                 ->defaultOpenLevel(1)
-                                ->multiple() // 複数のフォルダを選択可能にする
+                                ->multiple()
                                 ->searchable()
                                 ->placeholder(__('auto_links.placeholders.folders')),
-                            // 必要に応じて、台帳定義を適用範囲にするコンポーネントもここに追加
                         ])
                         ->collapsible(),
                 ])->columnSpan(2),
@@ -135,11 +147,7 @@ class AutoLinkResource extends Resource
                         )
                         ->allowHtml()
                         ->default('default')
-                        ->live() // リアルタイム更新を有効にする
-                        ->afterStateUpdated(function ( $get,  $set) {
-                            // プレビューを更新するために、ダミーの値をセットするなどしてフォームを再描画させる
-                            // または、Placeholderのcontent()がgetState()を直接参照するようにする
-                        }),
+                        ->live(), // リアルタイム更新を有効にする
 
                     Placeholder::make('icon_preview')
                         ->label(__('auto_links.fields.icon_preview')) // 新しい翻訳キー
@@ -177,10 +185,11 @@ class AutoLinkResource extends Resource
                         ->live(),
                     Placeholder::make('preview_output')
                         ->label(__('auto_links.fields.preview_output'))
-                        ->content(function (Get $get) { // Use content() and return HtmlString
+                        ->content(function (Get $get) {
                             $pattern = $get('pattern');
                             $template = $get('url_template');
                             $text = $get('preview_text');
+                            $tenantId = $get('tenant_id');
 
                             if (empty($pattern) || empty($text) || empty($template)) {
                                 return '';
@@ -199,14 +208,23 @@ class AutoLinkResource extends Resource
                             $openInNewTab = $get('open_in_new_tab');
                             $target = $openInNewTab ? ' target="_blank"' : '';
 
-                            $replacedHtml = preg_replace_callback($pattern, function ($match) use ($template, $target) {
+                            $replacedHtml = preg_replace_callback($pattern, function ($match) use ($template, $target, $tenantId) {
                                 $url = $template;
                                 foreach ($match as $key => $value) {
-                                    // URLエンコードしてから置換
                                     $url = str_replace('$' . $key, urlencode($value), $url);
                                 }
-                                return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';
-                            }, $text);
+
+                                if ($tenantId && Str::startsWith($url, '/l/')) {
+                                    $tenant = Tenant::find($tenantId);
+                                    if ($tenant && $tenant->domains->isNotEmpty()) {
+                                         $domain = $tenant->domains->first()->domain;
+                                         $url = 'https://' . $domain . $url;
+                                     }
+                                 }
+
+                                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';
+                             }, $text);
+
 
                             $tableHtml = '<table class="w-full mt-4 text-sm text-left text-gray-500 dark:text-gray-400"><tbody>';
                             foreach ($matches as $matchIndex => $match) {
@@ -217,7 +235,6 @@ class AutoLinkResource extends Resource
                             }
                             $tableHtml .= '</tbody></table>';
                             
-                            // Add HTML source view
                             $sourceHtml = '<div class="mt-4"><h4 class="font-bold">'.__('auto_links.labels.generated_html').':</h4><pre class="p-2 mt-2 text-sm text-gray-500 bg-gray-100 rounded-md dark:bg-gray-900 dark:text-gray-400 overflow-x-auto"><code>' . e($replacedHtml) . '</code></pre></div>';
 
                             return new HtmlString($replacedHtml . $tableHtml . $sourceHtml);

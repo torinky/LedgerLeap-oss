@@ -1047,4 +1047,8 @@
     "messages.error.parent_folder_not_found" => "親フォルダが見つかりませんでした。",
     "messages.error.invalid_parent_folder_selection" => "無効な親フォルダが選択されました。",
     "messages.error.no_tenant_context" => "テナントコンテキストが設定されていません。",
+    'tenant_creation_successful'=>'テナントの初期設定が完了しました',
+    'tenant_creation_failed'=>'テナントの初期設定に失敗しました',
+    'admin_email'=>'管理者のメール'
+
 ];

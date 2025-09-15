@@ -56,11 +56,6 @@ class AutoLinkService
 
     private function createAutoNumberLink(string $text): string
     {
-        // tenancy を使わないので、tenant が初期化されているかどうかのチェックは不要
-        // $url = route('ledger.lookup', [
-        //     'tenant' => tenancy()->tenant->getTenantKey(),
-        //     'query' => $text
-        // ]);
         // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
         $url = route('ledger.lookup', ['query' => $text]);
 
@@ -118,12 +113,11 @@ class AutoLinkService
             $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
         }
 
-        // 「仕様書ID」テンプレートのテナント対応
-        if ($autoLink->link_type === 'spec_id' && str_starts_with($url, '/l/')) {
-            // 現在のテナントのドメインを取得し、URLに付与
-            // tenancy() ヘルパーを使用
-            if (tenancy()->initialized && tenancy()->tenant && tenancy()->tenant->domains->isNotEmpty()) {
-                $domain = tenancy()->tenant->domains->first()->domain;
+        // リンク先テナントが指定されている場合のURL書き換え
+        if ($autoLink->tenant_id && str_starts_with($url, '/l/')) {
+            $tenant = $autoLink->tenant; // tenantリレーションをロード
+            if ($tenant && $tenant->domains->isNotEmpty()) {
+                $domain = $tenant->domains->first()->domain;
                 $url = 'https://' . $domain . $url;
             }
         }
@@ -171,7 +165,7 @@ class AutoLinkService
                 });
             }
 
-            return $query->orderBy('priority', 'asc')->get();
+            return $query->with('tenant')->orderBy('priority', 'asc')->get();
         });
     }
 
