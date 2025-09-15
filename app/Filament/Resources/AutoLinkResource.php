@@ -65,8 +65,7 @@ class AutoLinkResource extends Resource
                         ->afterStateUpdated(function (Set $set, ?string $state) {
                             match ($state) {
                                 'redmine_ticket' => $set('pattern', '/#(\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
-                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\
-/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
+                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\\\\n/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
                                 'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
                                 'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/l/$1'),
                                 default => null,
@@ -90,11 +89,13 @@ class AutoLinkResource extends Resource
                         ->helperText(__('auto_links.helps.url_template')),
                     Select::make('tenant_id')
                         ->label(__('auto_links.fields.link_to_tenant'))
-                        ->relationship('tenant', 'id')
+                        ->options(fn() => Tenant::all()->mapWithKeys(function ($tenant) {
+                            return [$tenant->id => $tenant->name ?? $tenant->id];
+                        }))
                         ->searchable()
                         ->placeholder(__('auto_links.placeholders.link_to_tenant'))
                         ->live()
-                        ->visible(fn (Get $get) => Str::startsWith($get('url_template'), '/l/')),
+                        ->visible(fn (Get $get) => Str::startsWith($get('url_template'), '/l/')), 
                     Section::make(__('auto_links.sections.scope'))
                         ->description(__('auto_links.helps.scope_description'))
                         ->schema([
@@ -102,13 +103,10 @@ class AutoLinkResource extends Resource
                                 ->label(__('auto_links.fields.folders'))
                                 ->relationship(
                                     relationship: 'folders',
-                                    titleAttribute: 'name_with_tenant',
+                                    titleAttribute: 'display_name',
                                     parentAttribute: 'parent_id',
                                     modifyQueryUsing: fn (Builder $query) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query) {
-                                        return $query->join('tenants', 'folders.tenant_id', '=', 'tenants.id')
-                                            ->select('folders.*', DB::raw("CASE WHEN folders.parent_id IS NULL THEN CONCAT('【', tenants.id, '】 ', folders.title) ELSE folders.title END AS name_with_tenant"))
-                                            ->orderBy('tenants.id')
-                                            ->orderBy('folders._lft');
+                                        return $query->with('tenant');
                                     })
                                 )
                                 ->enableBranchNode()
@@ -130,7 +128,7 @@ class AutoLinkResource extends Resource
                         ->default(true),
                     Toggle::make('open_in_new_tab')
                         ->label(__('auto_links.fields.open_in_new_tab'))
-                        ->live() // Add live to update preview
+                        ->live() 
                         ->default(true),
 
                     Select::make('link_type')
@@ -147,12 +145,12 @@ class AutoLinkResource extends Resource
                         )
                         ->allowHtml()
                         ->default('default')
-                        ->live(), // リアルタイム更新を有効にする
+                        ->live(), 
 
                     Placeholder::make('icon_preview')
-                        ->label(__('auto_links.fields.icon_preview')) // 新しい翻訳キー
+                        ->label(__('auto_links.fields.icon_preview'))
                         ->content(function (Get $get) {
-                            $linkType = $get('link_type') ?? 'default'; // デフォルト値を考慮
+                            $linkType = $get('link_type') ?? 'default';
                             $iconName = config('ledgerleap.auto_links.link_types.'.$linkType.'.icon', 'o-link');
                             $labelKey = config('ledgerleap.auto_links.link_types.'.$linkType.'.label_key', 'auto_links.link_types.default');
                             $label = __($labelKey);
@@ -164,7 +162,7 @@ class AutoLinkResource extends Resource
                                 </div>
                             HTML));
                         })
-                        ->columnSpanFull(), // 全幅を使用
+                        ->columnSpanFull(),
 
                     Placeholder::make('created_at')
                         ->label(__('auto_links.fields.created_at'))
@@ -216,10 +214,12 @@ class AutoLinkResource extends Resource
 
                                 if ($tenantId && Str::startsWith($url, '/l/')) {
                                     $tenant = Tenant::find($tenantId);
-                                    if ($tenant && $tenant->domains->isNotEmpty()) {
-                                         $domain = $tenant->domains->first()->domain;
-                                         $url = 'https://' . $domain . $url;
-                                     }
+                                    if ($tenant) {
+                                        $path = ltrim($url, '/');
+                                        tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
+                                            $url = tenant_url($path);
+                                        });
+                                    }
                                  }
 
                                  return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';

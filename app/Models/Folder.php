@@ -49,6 +49,16 @@ class Folder extends Model
         return $this->title;
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->parent_id === null && $this->tenant) {
+            // dataカラムからnameを取得
+            $tenantName = $this->tenant->name ?? $this->tenant->id;
+            return '【' . $tenantName . '】 ' . $this->title;
+        }
+        return $this->title;
+    }
+
     protected $guard_name = ['web', 'api'];
 
     /**
