@@ -1,4 +1,4 @@
-# 自動リンク機能 マルチテナント対応計画 (ハイブリッドアプローチ)
+# 自動リンク機能 マルチテナント対応計画
 
 **日付:** 2025年9月15日
 **作成者:** Gemini
@@ -11,16 +11,16 @@
 
 ## 1. 概要
 
-本計画は、LedgerLeapの自動リンク機能（AutoLink）をマルチテナント環境に対応させるための詳細な実装計画である。現在のAutoLink機能はシステム全体で共通のルールが適用されるグローバルな性質を持つが、テナント固有のニーズに対応するため、**テナント固有のルール**と**全テナント共通のグローバルルール**を共存させる**ハイブリッドアプローチ**を採用する。
+本計画は、LedgerLeapの自動リンク機能（AutoLink）をマルチテナント環境に対応させるための詳細な実装計画である。`AutoLink` 定義は常に特定のテナントに紐づくものとし、システム全体で共通のグローバルルールは導入しない。
 
-これにより、管理者はテナントごとにカスタマイズされた自動リンクルールを設定できると同時に、システム全体で適用される共通ルールも維持できるようになる。
+これにより、管理者はテナントごとにカスタマイズされた自動リンクルールを設定できるようになる。
 
 ## 2. 目的
 
 *   `AutoLink` 定義にテナントスコープを導入し、テナント固有の自動リンクルールを可能にする。
-*   既存のグローバルな自動リンクルールとの共存を実現し、両者を優先度に基づいて適用する。
+*   `AutoLink` 定義は常に特定のテナントに紐づくものとし、グローバルな自動リンクルールは導入しない。
 *   `AutoLinkService` が現在のテナントコンテキストを考慮し、適切な自動リンクを適用するように改修する。
-*   Filament管理画面からテナント固有およびグローバルな `AutoLink` 定義を管理できるようにする。
+*   Filament管理画面からテナント固有の `AutoLink` 定義を管理できるようにする。
 
 ## 3. ユーザーシナリオと機能要件
 
@@ -28,22 +28,23 @@
 
 *   **シナリオ1: テナント固有のルール設定 (管理者)**
     *   佐藤さんは、特定のテナントAにのみ適用される「A社製品コード（例: `A-PROD-XXX`）」の自動リンクルールを設定したい。他のテナントにはこのルールは適用されない。
-*   **シナリオ2: グローバル共通ルールの維持 (管理者)**
-    *   佐藤さんは、全テナントで共通して参照される「社内規定文書番号（例: `REG-YYY`）」の自動リンクルールを引き続き管理したい。このルールはどのテナントのユーザーにも適用される。
-*   **シナリオ3: 優先度に基づく自動リンク適用 (実務担当者)**
-    *   田中さんは、自身のテナントの台帳を閲覧している。表示されるテキストに、テナント固有のルールとグローバルルールの両方にマッチする文字列が含まれている場合、優先度設定に基づいて適切なリンクが適用されることを期待する。
+*   **シナリオ2: 優先度に基づく自動リンク適用 (実務担当者)**
+    *   田中さんは、自身のテナントの台帳を閲覧している。表示されるテキストに、テナント固有のルールにマッチする文字列が含まれている場合、優先度設定に基づいて適切なリンクが適用されることを期待する。
 
 ### 3.2. 機能要件
 
 1.  **`auto_links` テーブルの拡張:**
-    *   `tenant_id` カラムを `nullable` で追加する。
+    *   `tenant_id` カラムを `NOT NULL` で追加する。
 2.  **`AutoLink` モデルの対応:**
-    *   `BelongsToTenant` トレイトを適用し、`tenant_id` が `null` のレコードも扱えるようにカスタマイズする。
+    *   `BelongsToTenant` トレイトを適用する。`tenant_id` が `null` のレコードを扱うためのカスタマイズは不要。
 3.  **`AutoLinkService` の改修:**
-    *   現在のテナントの `AutoLink` 定義と、`tenant_id` が `null` のグローバル `AutoLink` 定義の両方を取得する。
+    *   現在のテナントの `AutoLink` 定義のみを取得する。グローバル `AutoLink` 定義の取得ロジックは不要。
     *   取得した定義を `priority` に基づいてソートし、適用する。
+    *   キャッシュキーの生成ロジックを、テナントIDのみを考慮するように調整する。
 4.  **Filament管理画面の改修:**
     *   `AutoLink` 定義の作成・編集フォームに `tenant_id` を選択するフィールドを追加する。
+    *   **リスト表示では全てのテナントの設定を俯瞰で見られるようにする。**
+    *   **編集UIでは、他のテナントにフォーカスしていてもテナントを別のテナントに変更できるようにする。**
     *   一覧画面で `tenant_id` を表示し、フィルタリング・ソート可能にする。
     *   中央管理者は全ての `AutoLink` 定義を管理でき、テナント管理者は自身のテナントの `AutoLink` 定義のみを管理できるようにする。
 
@@ -73,12 +74,10 @@
 
 *   **目的:** `auto_links` テーブルに `tenant_id` カラムを追加し、テナントスコープの基盤を構築する。
 *   **タスク:**
-    1.  **マイグレーションファイルの作成:**
-        `php artisan make:migration add_tenant_id_to_auto_links_table --table=auto_links` を実行し、マイグレーションファイルを生成する。
-    2.  **マイグレーションロジックの記述:**
-        生成されたマイグレーションファイルに、`tenant_id` カラムを追加するロジックを記述する。
+    1.  **マイグレーションファイルの修正:**
+        `database/migrations/2025_07_28_105234_create_auto_links_table.php` を修正し、`tenant_id` カラムを `NOT NULL` で追加するロジックを記述する。
         ```php
-        // database/migrations/xxxx_xx_xx_add_tenant_id_to_auto_links_table.php
+        // database/migrations/2025_07_28_105234_create_auto_links_table.php
         use Illuminate\Database\Migrations\Migration;
         use Illuminate\Database\Schema\Blueprint;
         use Illuminate\Support\Facades\Schema;
@@ -87,92 +86,75 @@
         {
             public function up(): void
             {
-                Schema::table('auto_links', function (Blueprint $table) {
-                    $table->string('tenant_id')->nullable()->after('id');
-                    $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
+                Schema::create('auto_links', function (Blueprint $table) {
+                    $table->id();
+                    $table->string('tenant_id'); // NOT NULL に変更
+                    $table->string('label');
+                    $table->string('pattern');
+                    $table->string('url_template');
+                    $table->text('description')->nullable();
+                    $table->integer('priority')->default(0);
+                    $table->boolean('is_enabled')->default(true);
+                    $table->boolean('open_in_new_tab')->default(true);
+                    $table->string('link_type')->nullable();
+                    $table->unsignedBigInteger('creator_id')->nullable();
+                    $table->unsignedBigInteger('modifier_id')->nullable();
+                    $table->timestamps();
+
+                    $table->foreign('tenant_id')->references('id')->on('tenants')->onUpdate('cascade')->onDelete('cascade');
+                    $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
+                    $table->foreign('modifier_id')->references('id')->on('users')->onDelete('set null');
                 });
             }
 
             public function down(): void
             {
-                Schema::table('auto_links', function (Blueprint $table) {
-                    $table->dropForeign(['tenant_id']);
-                    $table->dropColumn('tenant_id');
-                });
+                Schema::dropIfExists('auto_links');
             }
         };
         ```
-    3.  **マイグレーションの実行:**
-        `vendor/bin/sail artisan migrate` を実行し、データベーススキーマを更新する。
+    2.  **マイグレーションの実行:**
+        `vendor/bin/sail artisan migrate:fresh --seed` を実行し、データベーススキーマを更新する。
 *   **検証方法:**
-    *   データベースクライアントで `auto_links` テーブルのスキーマを確認し、`tenant_id` カラムが `nullable` で追加されていること、および外部キー制約が設定されていることを確認する。
-*   **完了の定義:** `auto_links` テーブルに `tenant_id` カラムが追加され、マイグレーションが成功すること。
+    *   データベースクライアントで `auto_links` テーブルのスキーマを確認し、`tenant_id` カラムが `NOT NULL` で追加されていること、および外部キー制約が設定されていることを確認する。
+*   **完了の定義:** `auto_links` テーブルに `tenant_id` カラムが `NOT NULL` で追加され、マイグレーションが成功すること。
 
-### ステップ2: `AutoLink` モデルの `BelongsToTenant` 対応とスコープ調整
+### ステップ2: `AutoLink` モデルの `BelongsToTenant` 対応
 
-*   **目的:** `AutoLink` モデルがテナントスコープに対応し、グローバルルール（`tenant_id` が `null`）も扱えるようにする。
+*   **目的:** `AutoLink` モデルがテナントスコープに対応する。
 *   **タスク:**
     1.  **`BelongsToTenant` トレイトの適用:**
-        `app/Models/AutoLink.php` に `use Stancl\Tenancy\Database\Concerns\BelongsToTenant;` を追加する。
-    2.  **グローバルスコープの調整:**
-        `BelongsToTenant` トレイトがデフォルトで適用するグローバルスコープを調整し、`tenant_id` が `null` のレコードを除外しないようにする。
-        ```php
-        // app/Models/AutoLink.php
-        use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
-        use Stancl\Tenancy\Database\TenantScope; // 追加
-        use Illuminate\Database\Eloquent\Builder; // 追加
-
-        class AutoLink extends Model
-        {
-            use BelongsToTenant; // このトレイトは自動的にグローバルスコープを適用する
-
-            // BelongsToTenant が適用するグローバルスコープをオーバーライドし、
-            // tenant_id が null のレコードも取得できるようにする
-            protected static function booted(): void
-            {
-                static::addGlobalScope(new TenantScope()); // デフォルトのスコープを再適用
-
-                // tenant_id が null のレコードも取得できるように、デフォルトのスコープを調整
-                static::addGlobalScope('withoutTenantId', function (Builder $builder) {
-                    $builder->orWhereNull('tenant_id');
-                });
-            }
-
-            // tenant_id が null のレコードのみを取得するスコープ
-            public function scopeGlobal(Builder $query): Builder
-            {
-                return $query->withoutGlobalScope('withoutTenantId')->whereNull('tenant_id');
-            }
-        }
-        ```
+        `app/Models/AutoLink.php` に `use Stancl\Tenancy\Database\Concerns\BelongsToTenant;` を追加し、`use BelongsToTenant;` をトレイトリストに追加する。
+    2.  **グローバルスコープの調整の削除:**
+        `booted()` メソッド内の `static::addGlobalScope('withoutTenantId', ...)` と `scopeGlobal()` メソッドは削除する。`tenant_id` が `NOT NULL` のため、これらの調整は不要。
     3.  **`AutoLinkObserver` の修正:**
         `AutoLinkObserver` が `AutoLink` モデルの変更を検知し、キャッシュをクリアするロジックが、テナントスコープの変更後も正しく動作することを確認する。
 *   **検証方法:**
-    *   `php artisan tinker` を使用し、テナントコンテキストを初期化した場合としない場合で `AutoLink::all()` や `AutoLink::global()->get()` を実行し、期待通りのレコードが取得できることを確認する。
-*   **完了の定義:** `AutoLink` モデルがテナントスコープに対応し、グローバルルールも正しく取得できること。
+    *   `php artisan tinker` を使用し、テナントコンテキストを初期化した場合としない場合で `AutoLink::all()` を実行し、現在のテナントのレコードのみが取得できることを確認する。
+*   **完了の定義:** `AutoLink` モデルがテナントスコープに対応し、現在のテナントのレコードのみが正しく取得できること。
 
 ### ステップ3: `AutoLinkService` の改修
 
-*   **目的:** 現在のテナントの `AutoLink` 定義と、グローバル `AutoLink` 定義の両方を取得し、優先度に基づいて適用するロジックを実装する。
+*   **目的:** 現在のテナントの `AutoLink` 定義のみを取得し、優先度に基づいて適用するロジックを実装する。
 *   **タスク:**
     1.  **`getAutoLinksForContext()` メソッドの修正:**
         *   現在のテナントコンテキストで `AutoLink` 定義を取得する。
-        *   `tenancy()->central(function () { ... });` を使用して、中央コンテキストで `AutoLink::global()->get()` を呼び出し、グローバル `AutoLink` 定義を取得する。
-        *   両方のコレクションを結合し、`priority` カラムでソートする。
-        *   キャッシュキーの生成ロジックを、テナントIDとグローバル設定を考慮するように調整する。
+        *   グローバル `AutoLink` 定義を取得するロジック（`tenancy()->central(function () { ... });` の部分）は削除する。
+        *   取得した定義を `priority` カラムでソートする。
+        *   キャッシュキーの生成ロジックを、テナントIDのみを考慮するように調整する。
 *   **検証方法:**
-    *   ユニットテストを作成し、テナント固有のルールとグローバルルールが正しく結合され、優先度に基づいて適用されることを確認する。
-*   **完了の定義:** `AutoLinkService` がハイブリッドな自動リンク適用ロジックを実装し、ユニットテストが成功すること。
+    *   ユニットテストを作成し、現在のテナントのルールのみが正しく取得され、優先度に基づいて適用されることを確認する。
+*   **完了の定義:** `AutoLinkService` がテナント固有の自動リンク適用ロジックを実装し、ユニットテストが成功すること。
 
 ### ステップ4: Filament `AutoLinkResource` の改修
 
-*   **目的:** 管理者が `AutoLink` 定義をテナント固有またはグローバルとして作成・管理できるようにする。
+*   **目的:** 管理者が `AutoLink` 定義をテナント固有として作成・管理できるようにする。
 *   **タスク:**
     1.  **フォームへの `tenant_id` フィールド追加:**
         *   `app/Filament/Resources/AutoLinkResource.php` の `form()` メソッドに `Select::make('tenant_id')` を追加する。
-        *   オプションとして、全てのテナントと「グローバル」オプション（`null` 値）を表示する。
+        *   オプションとして、全てのテナントを表示する。
         *   `default(tenant()?->id)` とし、現在のテナントコンテキストを初期値とする。
-        *   中央管理者の場合は、全てのテナントと「グローバル」を選択できるようにする。テナント管理者の場合は、自身のテナントと「グローバル」のみを選択できるようにする。
+        *   中央管理者の場合は、全てのテナントを選択できるようにする。テナント管理者の場合は、自身のテナントのみを選択できるようにする。
     2.  **一覧画面への `tenant_id` カラム表示:**
         *   `table()` メソッドに `TextColumn::make('tenant.name')` を追加し、`tenant_id` に基づくテナント名を表示する。
         *   `tenant_id` でフィルタリング・ソート可能にする。
@@ -180,23 +162,21 @@
         *   `getEloquentQuery()` メソッドを修正し、中央管理者の場合は全ての `AutoLink` 定義を表示し、テナント管理者の場合は自身のテナントの `AutoLink` 定義のみを表示するようにする。
 *   **検証方法:**
     *   Filament管理画面で `AutoLink` 定義の作成・編集・一覧表示を行い、期待通りの挙動となることを確認する。
-*   **完了の定義:** Filament管理画面がハイブリッドな `AutoLink` 定義の管理に対応すること。
+*   **完了の定義:** Filament管理画面がテナント固有の `AutoLink` 定義の管理に対応すること。
 
 ## 5. テスト計画
 
 本機能の品質を保証するため、以下のテストを実施する。
 
 *   **ユニットテスト:**
-    *   `AutoLink` モデルのスコープ（`global()`）が正しく機能すること。
-    *   `AutoLinkService` の `getAutoLinksForContext()` メソッドが、テナント固有ルールとグローバルルールを正しく結合し、優先度に基づいてソートすること。
+    *   `AutoLinkService` の `getAutoLinksForContext()` メソッドが、現在のテナントのルールのみを正しく取得し、優先度に基づいてソートすること。
 *   **フィーチャーテスト:**
-    *   テナントコンテキストで、テナント固有ルールとグローバルルールが正しく適用されること。
-    *   中央コンテキストで、グローバルルールが正しく適用されること。
-    *   Filament管理画面で、テナント固有ルールとグローバルルールが正しく作成・編集・表示されること。
+    *   テナントコンテキストで、テナント固有ルールが正しく適用されること。
+    *   Filament管理画面で、テナント固有ルールが正しく作成・編集・表示されること。
 
 ## 6. 完了の定義
 
-*   `auto_links` テーブルに `tenant_id` カラムが追加され、`AutoLink` モデルがハイブリッドなテナントスコープに対応すること。
-*   `AutoLinkService` がテナント固有ルールとグローバルルールを適切に適用すること。
-*   Filament管理画面からハイブリッドな `AutoLink` 定義を管理できること。
+*   `auto_links` テーブルに `tenant_id` カラムが `NOT NULL` で追加され、`AutoLink` モデルがテナントスコープに対応すること。
+*   `AutoLinkService` がテナント固有ルールを適切に適用すること。
+*   Filament管理画面からテナント固有の `AutoLink` 定義を管理できること。
 *   上記機能を検証する全てのテストが成功すること。
