@@ -115,10 +115,12 @@ class AutoLinkService
 
         // リンク先テナントが指定されている場合のURL書き換え
         if ($autoLink->tenant_id && str_starts_with($url, '/l/')) {
-            $tenant = $autoLink->tenant; // tenantリレーションをロード
-            if ($tenant && $tenant->domains->isNotEmpty()) {
-                $domain = $tenant->domains->first()->domain;
-                $url = 'https://' . $domain . $url;
+            $tenant = $autoLink->tenant;
+            if ($tenant) {
+                $path = ltrim($url, '/');
+                tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
+                    $url = tenant_url($path);
+                });
             }
         }
 

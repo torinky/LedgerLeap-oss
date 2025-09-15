@@ -64,10 +64,11 @@ class AutoLinkResource extends Resource
                         ->live()
                         ->afterStateUpdated(function (Set $set, ?string $state) {
                             match ($state) {
-                                'redmine_ticket' => $set('pattern', '/#(\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
-                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\\\\n/!(\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
+                                'redmine_ticket' => $set('pattern', '/#(\\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
+                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\
+/!(\\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
                                 'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
-                                'spec_id' => $set('pattern', '/([A-Z]{4}-\d{3})/') && $set('url_template', '/l/$1'),
+                                'spec_id' => $set('pattern', '/([A-Z]{4}-\\d{3})/') && $set('url_template', '/l/$1'),
                                 default => null,
                             };
                         }),
@@ -217,7 +218,7 @@ class AutoLinkResource extends Resource
                                     if ($tenant) {
                                         $path = ltrim($url, '/');
                                         tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
-                                            $url = tenant_url($path);
+                                            $url = url($path);
                                         });
                                     }
                                  }

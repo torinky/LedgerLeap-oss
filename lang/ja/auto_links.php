@@ -28,7 +28,7 @@ return [
         'redmine_ticket' => 'Redmineチケット',
         'gitlab_mr' => 'GitLabマージリクエスト',
         'jira_ticket' => 'Jiraチケット',
-        'spec_id' => '仕様書ID',
+        'spec_id' => 'LedgerLeapのレコード',
     ],
     'placeholders' => [
         'folders' => '適用するフォルダを選択してください',
