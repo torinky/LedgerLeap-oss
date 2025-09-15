@@ -56,19 +56,18 @@ class AutoLinkResource extends Resource
                     Select::make('template')
                         ->label(__('auto_links.fields.template'))
                         ->options([
+                            'spec_id' => __('auto_links.templates.spec_id'),
                             'redmine_ticket' => __('auto_links.templates.redmine_ticket'),
                             'gitlab_mr' => __('auto_links.templates.gitlab_mr'),
                             'jira_ticket' => __('auto_links.templates.jira_ticket'),
-                            'spec_id' => __('auto_links.templates.spec_id'),
                         ])
                         ->live()
                         ->afterStateUpdated(function (Set $set, ?string $state) {
                             match ($state) {
-                                'redmine_ticket' => $set('pattern', '/#(\\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
-                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\
-/!(\\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
-                                'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
                                 'spec_id' => $set('pattern', '/([A-Z]{4}-\\d{3})/') && $set('url_template', '/l/$1'),
+                                'redmine_ticket' => $set('pattern', '/#(\\d+)/') && $set('url_template', 'https://your-redmine/issues/$1'),
+                                'gitlab_mr' => $set('pattern', '/(?:merge_requests|mr)s?\\n/!(\\d+)/') && $set('url_template', 'https://your-gitlab/project/-/merge_requests/$1'),
+                                'jira_ticket' => $set('pattern', '/([A-Z]+-\d+)/') && $set('url_template', 'https://your-jira/browse/$1'),
                                 default => null,
                             };
                         }),
@@ -214,6 +213,7 @@ class AutoLinkResource extends Resource
                                 }
 
                                 if ($tenantId && Str::startsWith($url, '/l/')) {
+/*
                                     $tenant = Tenant::find($tenantId);
                                     if ($tenant) {
                                         $path = ltrim($url, '/');
@@ -221,6 +221,9 @@ class AutoLinkResource extends Resource
                                             $url = url($path);
                                         });
                                     }
+*/
+                                    $path = ltrim($url, '/');
+                                    $url = url($tenantId.'/'.$path);
                                  }
 
                                  return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';
