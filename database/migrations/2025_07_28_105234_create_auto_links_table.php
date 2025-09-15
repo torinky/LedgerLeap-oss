@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('auto_links', function (Blueprint $table) {
             $table->id();
-            $table->string('tenant_id')->nullable(); // カラム定義
             $table->string('label');
             $table->string('pattern');
             $table->string('url_template');
@@ -27,7 +26,6 @@ return new class extends Migration
             $table->timestamps();
 
             // 外部キー制約をまとめて定義
-            $table->foreign('tenant_id')->references('id')->on('tenants')->onUpdate('cascade')->onDelete('cascade'); // 追加
             $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
             $table->foreign('modifier_id')->references('id')->on('users')->onDelete('set null');
         });

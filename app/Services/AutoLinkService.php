@@ -56,16 +56,14 @@ class AutoLinkService
 
     private function createAutoNumberLink(string $text): string
     {
-        // tenantが初期化されているか確認
-        if (!tenancy()->initialized) {
-            // テナントが特定できない場合は、リンク化せずに元のテキストを返す
-            return e($text);
-        }
+        // tenancy を使わないので、tenant が初期化されているかどうかのチェックは不要
+        // $url = route('ledger.lookup', [
+        //     'tenant' => tenancy()->tenant->getTenantKey(),
+        //     'query' => $text
+        // ]);
+        // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
+        $url = route('ledger.lookup', ['query' => $text]);
 
-        $url = route('ledger.lookup', [
-            'tenant' => tenancy()->tenant->getTenantKey(), // <<<--- ()を削除して修正
-            'query' => $text
-        ]);
         $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
         $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
@@ -120,11 +118,13 @@ class AutoLinkService
             $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
         }
 
-        // URLが / で始まり、 // で始まらない（プロトコル相対URLではない）場合にテナントIDを付与
-        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
-            // テナントが初期化されている場合のみ、IDを取得して付与する
-            if (tenancy()->initialized) {
-                $url = '/' . tenant()->getTenantKey() . $url;
+        // 「仕様書ID」テンプレートのテナント対応
+        if ($autoLink->link_type === 'spec_id' && str_starts_with($url, '/l/')) {
+            // 現在のテナントのドメインを取得し、URLに付与
+            // tenancy() ヘルパーを使用
+            if (tenancy()->initialized && tenancy()->tenant && tenancy()->tenant->domains->isNotEmpty()) {
+                $domain = tenancy()->tenant->domains->first()->domain;
+                $url = 'https://' . $domain . $url;
             }
         }
 

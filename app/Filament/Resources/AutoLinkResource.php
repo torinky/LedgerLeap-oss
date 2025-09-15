@@ -93,7 +93,10 @@ class AutoLinkResource extends Resource
                                 ->relationship(
                                     relationship: 'folders', // リレーション名
                                     titleAttribute: 'title', // 表示するカラム名
-                                    parentAttribute: 'parent_id' // 親を識別するカラム名
+                                    parentAttribute: 'parent_id', // 親を識別するカラム名
+                                    modifyQueryUsing: fn (Builder $query) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query) {
+                                        return $query->orderBy('_lft');
+                                    })
                                 )
                                 ->enableBranchNode() // 親ノード（フォルダ）も選択可能にする
                                 ->defaultOpenLevel(1)

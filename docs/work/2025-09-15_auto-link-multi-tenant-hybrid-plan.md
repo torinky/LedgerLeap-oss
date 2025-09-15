@@ -80,74 +80,7 @@
 
 ## 5. 詳細な実装計画
 
-### ステップ0: ロールバックと `tenant_id` カラムの削除
-
-*   **目的:** これまでの `tenant_id` 関連の変更を元に戻し、`auto_links` テーブルから `tenant_id` カラムを削除する。
-*   **タスク:**
-    1.  **データベースのロールバック:**
-        `vendor/bin/sail artisan migrate:rollback` を実行し、`auto_links` テーブルのマイグレーションをロールバックする。
-        もし `tenant_id` カラムが削除されない場合は、`vendor/bin/sail artisan migrate:fresh --seed` を実行してデータベースを完全にリフレッシュする。
-    2.  **`tenant_id` カラム削除のマイグレーション作成:**
-        `php artisan make:migration remove_tenant_id_from_auto_links_table --table=auto_links` を実行し、マイグレーションファイルを生成する。
-        生成されたマイグレーションファイルに、`tenant_id` カラムを削除するロジックを記述する。
-        ```php
-        // database/migrations/xxxx_xx_xx_remove_tenant_id_from_auto_links_table.php
-        use Illuminate\Database\Migrations\Migration;
-        use Illuminate\Database\Schema\Blueprint;
-        use Illuminate\Support\Facades\Schema;
-
-        return new class extends Migration
-        {
-            public function up(): void
-            {
-                Schema::table(\'auto_links\', function (Blueprint $table) {
-                    $table->dropForeign([\'tenant_id\']);
-                    $table->dropColumn(\'tenant_id\');
-                });
-            }
-
-            public function down(): void
-            {
-                // ロールバック時に tenant_id を再追加する場合はここに記述
-                // ただし、この計画では tenant_id は不要なので、通常は空で良い
-            }
-        };
-        ```
-    3.  **マイグレーションの実行:**
-        `vendor/bin/sail artisan migrate` を実行し、データベーススキーマを更新する。
-*   **検証方法:**
-    *   データベースクライアントで `auto_links` テーブルのスキーマを確認し、`tenant_id` カラムが削除されていることを確認する。
-*   **完了の定義:** `auto_links` テーブルから `tenant_id` カラムが削除され、マイグレーションが成功すること。
-
-### ステップ1: `AutoLink` モデルの修正
-
-*   **目的:** `AutoLink` モデルをテナントスコープの対象外とし、`tenant_id` 関連のロジックを削除する。
-*   **タスク:**
-    1.  **`BelongsToTenant` トレイトの削除:**
-        `app/Models/AutoLink.php` から `use Stancl\Tenancy\Database\Concerns\BelongsToTenant;` と `use BelongsToTenant;` を削除する。
-    2.  **`booted()` メソッドの修正:**
-        `parent::booted();` を削除し、`creating` イベントリスナー内の `tenant_id` 設定ロジックを削除する。
-    3.  **`$fillable` から `tenant_id` の削除:**
-        `app/Models/AutoLink.php` の `$fillable` プロパティから `'tenant_id'` を削除する。
-    4.  **`tenant()` リレーションシップの維持:**
-        `app/Models/AutoLink.php` の `tenant()` リレーションシップは維持する（Filamentでの表示のため）。
-*   **検証方法:**
-    *   `php artisan tinker` を使用し、`AutoLink::all()` が全てのテナントのレコードを取得することを確認する。
-*   **完了の定義:** `AutoLink` モデルがテナントスコープの対象外となり、`tenant_id` 関連のロジックが削除されること。
-
-### ステップ2: `AutoLinkObserver` の修正
-
-*   **目的:** `AutoLinkObserver` から `stancl/tenancy` 関連のコードを削除し、グローバルなキャッシュクリアに戻す。
-*   **タスク:**
-    1.  **`stancl/tenancy` 関連の `use` ステートメントの削除:**
-        `app/Observers/AutoLinkObserver.php` から `use Stancl\Tenancy\Facades\Tenancy;` と `use Stancl\Tenancy\Database\Models\Tenant;` を削除する。
-    2.  **キャッシュクリアロジックの修正:**
-        `saved()` と `deleted()` メソッド内の `Tenant::run()` を使用したロジックを削除し、`Cache::tags('auto_links')->flush();` に戻す。
-*   **検証方法:**
-    *   `AutoLink` の作成・更新・削除時に、ログにエラーが出ないこと、およびキャッシュが正しくクリアされることを確認する。
-*   **完了の定義:** `AutoLinkObserver` が `stancl/tenancy` に依存せず、グローバルなキャッシュクリアを行うこと。
-
-### ステップ3: `AutoLinkService` の改修
+### ステップ1: `AutoLinkService` の改修
 
 *   **目的:** `AutoLink` 定義をテナントスコープなしで取得し、テンプレート内容と生成リンクをテナント対応させる。
 *   **タスク:**
@@ -162,20 +95,15 @@
     *   `AutoLinkService` を使用してリンクが生成される際に、「仕様書ID」テンプレートが現在のテナントのドメインを含むURLを生成することを確認する。
 *   **完了の定義:** `AutoLinkService` がテナントスコープなしで `AutoLink` を取得し、テンプレート内容と生成リンクをテナント対応させること。
 
-### ステップ4: `AutoLinkResource` の改修
+### ステップ2: `AutoLinkResource` の改修
 
 *   **目的:** Filament管理画面で `AutoLink` 定義をグローバルに管理し、適用範囲をテナントのフォルダで制御できるようにする。
 *   **タスク:**
-    1.  **`form()` メソッドの修正:**
-        *   `tenant_id` フィールドを削除する。
+    1. **`form()` メソッドの修正:**
         *   `folders` フィールドで、`Stancl\Tenancy\Facades\Tenancy::central(function () { ... })` を使用して全てのテナントのフォルダを横断的に選択できるようにする。
-    2.  **`table()` メソッドの修正:**
-        *   `tenant.name` カラムを削除する。
-    3.  **`getEloquentQuery()` の修正:**
+    2. **`getEloquentQuery()` の修正:**
         *   `stancl/tenancy` のスコープロジックを削除し、全ての `AutoLink` を取得するようにする。
-    4.  **`mutateFormDataBeforeCreate()` の削除:**
-        `mutateFormDataBeforeCreate()` メソッドを削除する。
-    5.  **リンク生成補助機能の追加:**
+    3. **リンク生成補助機能の追加:**
         *   Filamentのフォームに、テナントを選択するUIを追加する。
         *   選択されたテナントに基づいて、リンクの途中までを生成する機能を提供する。
         *   テナントに関係ないリンク（例: 外部URL）は、手動入力できるようにする。
@@ -183,17 +111,6 @@
     *   Filament管理画面で `AutoLink` 定義の作成・編集・一覧表示を行い、期待通りの挙動となることを確認する。
 *   **完了の定義:** Filament管理画面が新しい仕様に対応すること。
 
-### ステップ5: `User` モデルと `UserService` の修正
-
-*   **目的:** `isCentralAdmin()` メソッドを削除し、関連するコードを元に戻す。
-*   **タスク:**
-    1.  **`app/Models/User.php` の修正:**
-        `isCentralAdmin()` メソッドを削除する。
-    2.  **`app/Services/UserService.php` の修正:**
-        `isCentralAdmin()` メソッドを削除する。
-*   **検証方法:**
-    *   `isCentralAdmin()` を使用していた箇所でエラーが発生しないことを確認する。
-*   **完了の定義:** `isCentralAdmin()` メソッドが削除され、関連するコードが元に戻されること。
 
 ## 6. テスト計画 (再定義)
 
@@ -210,9 +127,6 @@
 
 ## 7. 完了の定義 (再定義)
 
-*   `auto_links` テーブルから `tenant_id` カラムが削除されること。
-*   `AutoLink` モデルがテナントスコープの対象外となり、`tenant_id` 関連のロジックが削除されること。
 *   `AutoLinkService` がテナントスコープなしで `AutoLink` を取得し、テンプレート内容と生成リンクをテナント対応させること。
 *   Filament管理画面が新しい仕様に対応すること。
-*   `isCentralAdmin()` メソッドが削除され、関連するコードが元に戻されること。
 *   上記機能を検証する全てのテストが成功すること。
