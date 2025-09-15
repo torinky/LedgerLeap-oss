@@ -57,7 +57,8 @@ class AutoLinkService
     private function createAutoNumberLink(string $text): string
     {
         // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
-        $url = route('ledger.lookup', ['query' => $text]);
+        // グローバルルートなので、テナントに依存しないURLを生成
+        $url = url('/ledgers/lookup/' . urlencode($text)); // 修正
 
         $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
         $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);

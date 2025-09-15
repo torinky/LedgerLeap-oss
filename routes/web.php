@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GlobalMyPortalController;
+use App\Http\Controllers\LedgerLookupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,8 @@ use App\Http\Controllers\GlobalMyPortalController;
 Route::redirect('/', '/login'); // サーバールートにアクセスされたときにloginにリダイレクト
 
 Route::middleware('auth')->group(function () {
+    Route::get('/ledgers/lookup/{query}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.lookup');
+
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
 });
 
