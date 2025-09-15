@@ -1,8 +1,8 @@
-# 自動リンク機能 マルチテナント対応計画
+# 自動リンク機能 マルチテナント対応計画 (再検討版)
 
 **日付:** 2025年9月15日
 **作成者:** Gemini
-**ステータス:** 計画中
+**ステータス:** 計画中 (再検討中)
 **関連ドキュメント:**
 *   [マルチテナント実装課題の解決戦略](./2025-09-07_issue-resolution-strategy.md)
 *   [新マルチテナント実装計画書 (最終版)](./2025-08-30_new-multi-tenant-implementation-plan-final.md)
@@ -11,44 +11,54 @@
 
 ## 1. 概要
 
-本計画は、LedgerLeapの自動リンク機能（AutoLink）をマルチテナント環境に対応させるための詳細な実装計画である。`AutoLink` 定義は常に特定のテナントに紐づくものとし、システム全体で共通のグローバルルールは導入しない。
+本計画は、LedgerLeapの自動リンク機能（AutoLink）をマルチテナント環境に対応させるための詳細な実装計画である。
+`AutoLink` 定義はシステム全体で共通の**グローバルなルール**として管理される。`tenant_id` カラムは `auto_links` テーブルから削除され、`AutoLink` モデルは `stancl/tenancy` のテナントスコープの対象外とする。
 
-これにより、管理者はテナントごとにカスタマイズされた自動リンクルールを設定できるようになる。
+しかし、`AutoLink` のテンプレート内容（特に「仕様書ID」テンプレート）や生成されるリンクは、**現在のテナントのコンテキスト**に基づいて動的に調整される。また、`AutoLink` の適用範囲は、**テナントに紐づくフォルダ**を複数選択することで制御可能とする。
+
+これにより、管理者はシステム共通の自動リンクルールを設定しつつ、その適用をテナントやフォルダの単位で柔軟に調整できるようになる。
 
 ## 2. 目的
 
-*   `AutoLink` 定義にテナントスコープを導入し、テナント固有の自動リンクルールを可能にする。
-*   `AutoLink` 定義は常に特定のテナントに紐づくものとし、グローバルな自動リンクルールは導入しない。
-*   `AutoLinkService` が現在のテナントコンテキストを考慮し、適切な自動リンクを適用するように改修する。
-*   Filament管理画面からテナント固有の `AutoLink` 定義を管理できるようにする。
+*   `auto_links` テーブルから `tenant_id` カラムを削除し、`AutoLink` 定義をグローバルなものとする。
+*   `AutoLink` モデルを `stancl/tenancy` のテナントスコープの対象外とする。
+*   「仕様書ID」テンプレート (`url_template: /l/$1`) の生成リンクを、現在のテナントのドメインに基づいて動的に生成するように改修する。
+*   `AutoLink` の適用範囲として、全てのテナントのフォルダを横断的に選択・設定できるようにする。
+*   Filament管理画面に、リンク生成を補助するUI（テナント選択、リンク途中生成）を追加する。
 
 ## 3. ユーザーシナリオと機能要件
 
-### 3.1. ユーザーシナリオ
+### 3.1. ユーザーシナリオ (変更なし)
 
 *   **シナリオ1: テナント固有のルール設定 (管理者)**
     *   佐藤さんは、特定のテナントAにのみ適用される「A社製品コード（例: `A-PROD-XXX`）」の自動リンクルールを設定したい。他のテナントにはこのルールは適用されない。
 *   **シナリオ2: 優先度に基づく自動リンク適用 (実務担当者)**
     *   田中さんは、自身のテナントの台帳を閲覧している。表示されるテキストに、テナント固有のルールにマッチする文字列が含まれている場合、優先度設定に基づいて適切なリンクが適用されることを期待する。
 
-### 3.2. 機能要件
+### 3.2. 機能要件 (再定義)
 
-1.  **`auto_links` テーブルの拡張:**
-    *   `tenant_id` カラムを `NOT NULL` で追加する。
-2.  **`AutoLink` モデルの対応:**
-    *   `BelongsToTenant` トレイトを適用する。`tenant_id` が `null` のレコードを扱うためのカスタマイズは不要。
+1.  **`auto_links` テーブルの修正:**
+    *   `tenant_id` カラムを削除する。
+2.  **`AutoLink` モデルの修正:**
+    *   `BelongsToTenant` トレイトの使用を停止する。
+    *   `tenant()` リレーションシップは維持し、`App\Models\Tenant` に紐づける（Filamentでの表示のため）。
+    *   `$fillable` から `tenant_id` を削除する。
 3.  **`AutoLinkService` の改修:**
-    *   現在のテナントの `AutoLink` 定義のみを取得する。グローバル `AutoLink` 定義の取得ロジックは不要。
-    *   取得した定義を `priority` に基づいてソートし、適用する。
-    *   キャッシュキーの生成ロジックを、テナントIDのみを考慮するように調整する。
+    *   `getAutoLinksForContext()` メソッドは、`AutoLink` モデルがテナントスコープの対象外となるため、全ての `AutoLink` 定義を取得する。
+    *   `getCacheKeyForContext()` メソッドは、テナントIDを考慮しないグローバルなキャッシュキーを生成する。
+    *   **`createCustomLink()` メソッド内で、`url_template` が `/l/$1` の場合に、現在のテナントのドメインを付与するロジックを追加する。**
 4.  **Filament管理画面の改修:**
-    *   `AutoLink` 定義の作成・編集フォームに `tenant_id` を選択するフィールドを追加する。
-    *   **リスト表示では全てのテナントの設定を俯瞰で見られるようにする。**
-    *   **編集UIでは、他のテナントにフォーカスしていてもテナントを別のテナントに変更できるようにする。**
-    *   一覧画面で `tenant_id` を表示し、フィルタリング・ソート可能にする。
-    *   中央管理者は全ての `AutoLink` 定義を管理でき、テナント管理者は自身のテナントの `AutoLink` 定義のみを管理できるようにする。
+    *   `AutoLink` 定義の作成・編集フォームから `tenant_id` フィールドを削除する。
+    *   一覧画面から `tenant_id` カラムを削除する。
+    *   `getEloquentQuery()` メソッドは、全ての `AutoLink` を取得するようにする。
+    *   `mutateFormDataBeforeCreate()` メソッドを削除する。
+    *   **`form()` メソッドの `folders` フィールドで、全てのテナントのフォルダを横断的に選択できるようにする（`Stancl\Tenancy\Facades\Tenancy::central` を使用）。**
+    *   **リンク生成補助機能の追加:**
+        *   Filamentのフォームに、テナントを選択するUIを追加する。
+        *   選択されたテナントに基づいて、リンクの途中までを生成する機能を提供する。
+        *   テナントに関係ないリンク（例: 外部URL）は、手動入力できるようにする。
 
-## 4. ユーザー体験に関する検討（2025年9月15日追記）
+## 4. ユーザー体験に関する検討 (変更なし)
 
 本機能の実装後、ユーザーより「ロール管理画面でのテナント連携をよりシームレスにできないか」というフィードバックがあった。これは、具体的なイメージがあるわけではなく、既存のフォルダ単位での適用範囲調整機能や、ロール管理におけるテナントごとのフォルダ権限割り当て機能との類似性を高めることで、ユーザーの操作時の「違和感」を減らし、目的が直感的にわかるUIにしたいという意図である。
 
@@ -70,14 +80,18 @@
 
 ## 5. 詳細な実装計画
 
-### ステップ1: `auto_links` テーブルの `tenant_id` 対応
+### ステップ0: ロールバックと `tenant_id` カラムの削除
 
-*   **目的:** `auto_links` テーブルに `tenant_id` カラムを追加し、テナントスコープの基盤を構築する。
+*   **目的:** これまでの `tenant_id` 関連の変更を元に戻し、`auto_links` テーブルから `tenant_id` カラムを削除する。
 *   **タスク:**
-    1.  **マイグレーションファイルの修正:**
-        `database/migrations/2025_07_28_105234_create_auto_links_table.php` を修正し、`tenant_id` カラムを `NOT NULL` で追加するロジックを記述する。
+    1.  **データベースのロールバック:**
+        `vendor/bin/sail artisan migrate:rollback` を実行し、`auto_links` テーブルのマイグレーションをロールバックする。
+        もし `tenant_id` カラムが削除されない場合は、`vendor/bin/sail artisan migrate:fresh --seed` を実行してデータベースを完全にリフレッシュする。
+    2.  **`tenant_id` カラム削除のマイグレーション作成:**
+        `php artisan make:migration remove_tenant_id_from_auto_links_table --table=auto_links` を実行し、マイグレーションファイルを生成する。
+        生成されたマイグレーションファイルに、`tenant_id` カラムを削除するロジックを記述する。
         ```php
-        // database/migrations/2025_07_28_105234_create_auto_links_table.php
+        // database/migrations/xxxx_xx_xx_remove_tenant_id_from_auto_links_table.php
         use Illuminate\Database\Migrations\Migration;
         use Illuminate\Database\Schema\Blueprint;
         use Illuminate\Support\Facades\Schema;
@@ -86,97 +100,119 @@
         {
             public function up(): void
             {
-                Schema::create('auto_links', function (Blueprint $table) {
-                    $table->id();
-                    $table->string('tenant_id'); // NOT NULL に変更
-                    $table->string('label');
-                    $table->string('pattern');
-                    $table->string('url_template');
-                    $table->text('description')->nullable();
-                    $table->integer('priority')->default(0);
-                    $table->boolean('is_enabled')->default(true);
-                    $table->boolean('open_in_new_tab')->default(true);
-                    $table->string('link_type')->nullable();
-                    $table->unsignedBigInteger('creator_id')->nullable();
-                    $table->unsignedBigInteger('modifier_id')->nullable();
-                    $table->timestamps();
-
-                    $table->foreign('tenant_id')->references('id')->on('tenants')->onUpdate('cascade')->onDelete('cascade');
-                    $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
-                    $table->foreign('modifier_id')->references('id')->on('users')->onDelete('set null');
+                Schema::table(\'auto_links\', function (Blueprint $table) {
+                    $table->dropForeign([\'tenant_id\']);
+                    $table->dropColumn(\'tenant_id\');
                 });
             }
 
             public function down(): void
             {
-                Schema::dropIfExists('auto_links');
+                // ロールバック時に tenant_id を再追加する場合はここに記述
+                // ただし、この計画では tenant_id は不要なので、通常は空で良い
             }
         };
         ```
-    2.  **マイグレーションの実行:**
-        `vendor/bin/sail artisan migrate:fresh --seed` を実行し、データベーススキーマを更新する。
+    3.  **マイグレーションの実行:**
+        `vendor/bin/sail artisan migrate` を実行し、データベーススキーマを更新する。
 *   **検証方法:**
-    *   データベースクライアントで `auto_links` テーブルのスキーマを確認し、`tenant_id` カラムが `NOT NULL` で追加されていること、および外部キー制約が設定されていることを確認する。
-*   **完了の定義:** `auto_links` テーブルに `tenant_id` カラムが `NOT NULL` で追加され、マイグレーションが成功すること。
+    *   データベースクライアントで `auto_links` テーブルのスキーマを確認し、`tenant_id` カラムが削除されていることを確認する。
+*   **完了の定義:** `auto_links` テーブルから `tenant_id` カラムが削除され、マイグレーションが成功すること。
 
-### ステップ2: `AutoLink` モデルの `BelongsToTenant` 対応
+### ステップ1: `AutoLink` モデルの修正
 
-*   **目的:** `AutoLink` モデルがテナントスコープに対応する。
+*   **目的:** `AutoLink` モデルをテナントスコープの対象外とし、`tenant_id` 関連のロジックを削除する。
 *   **タスク:**
-    1.  **`BelongsToTenant` トレイトの適用:**
-        `app/Models/AutoLink.php` に `use Stancl\Tenancy\Database\Concerns\BelongsToTenant;` を追加し、`use BelongsToTenant;` をトレイトリストに追加する。
-    2.  **グローバルスコープの調整の削除:**
-        `booted()` メソッド内の `static::addGlobalScope('withoutTenantId', ...)` と `scopeGlobal()` メソッドは削除する。`tenant_id` が `NOT NULL` のため、これらの調整は不要。
-    3.  **`AutoLinkObserver` の修正:**
-        `AutoLinkObserver` が `AutoLink` モデルの変更を検知し、キャッシュをクリアするロジックが、テナントスコープの変更後も正しく動作することを確認する。
+    1.  **`BelongsToTenant` トレイトの削除:**
+        `app/Models/AutoLink.php` から `use Stancl\Tenancy\Database\Concerns\BelongsToTenant;` と `use BelongsToTenant;` を削除する。
+    2.  **`booted()` メソッドの修正:**
+        `parent::booted();` を削除し、`creating` イベントリスナー内の `tenant_id` 設定ロジックを削除する。
+    3.  **`$fillable` から `tenant_id` の削除:**
+        `app/Models/AutoLink.php` の `$fillable` プロパティから `'tenant_id'` を削除する。
+    4.  **`tenant()` リレーションシップの維持:**
+        `app/Models/AutoLink.php` の `tenant()` リレーションシップは維持する（Filamentでの表示のため）。
 *   **検証方法:**
-    *   `php artisan tinker` を使用し、テナントコンテキストを初期化した場合としない場合で `AutoLink::all()` を実行し、現在のテナントのレコードのみが取得できることを確認する。
-*   **完了の定義:** `AutoLink` モデルがテナントスコープに対応し、現在のテナントのレコードのみが正しく取得できること。
+    *   `php artisan tinker` を使用し、`AutoLink::all()` が全てのテナントのレコードを取得することを確認する。
+*   **完了の定義:** `AutoLink` モデルがテナントスコープの対象外となり、`tenant_id` 関連のロジックが削除されること。
+
+### ステップ2: `AutoLinkObserver` の修正
+
+*   **目的:** `AutoLinkObserver` から `stancl/tenancy` 関連のコードを削除し、グローバルなキャッシュクリアに戻す。
+*   **タスク:**
+    1.  **`stancl/tenancy` 関連の `use` ステートメントの削除:**
+        `app/Observers/AutoLinkObserver.php` から `use Stancl\Tenancy\Facades\Tenancy;` と `use Stancl\Tenancy\Database\Models\Tenant;` を削除する。
+    2.  **キャッシュクリアロジックの修正:**
+        `saved()` と `deleted()` メソッド内の `Tenant::run()` を使用したロジックを削除し、`Cache::tags('auto_links')->flush();` に戻す。
+*   **検証方法:**
+    *   `AutoLink` の作成・更新・削除時に、ログにエラーが出ないこと、およびキャッシュが正しくクリアされることを確認する。
+*   **完了の定義:** `AutoLinkObserver` が `stancl/tenancy` に依存せず、グローバルなキャッシュクリアを行うこと。
 
 ### ステップ3: `AutoLinkService` の改修
 
-*   **目的:** 現在のテナントの `AutoLink` 定義のみを取得し、優先度に基づいて適用するロジックを実装する。
+*   **目的:** `AutoLink` 定義をテナントスコープなしで取得し、テンプレート内容と生成リンクをテナント対応させる。
 *   **タスク:**
-    1.  **`getAutoLinksForContext()` メソッドの修正:**
-        *   現在のテナントコンテキストで `AutoLink` 定義を取得する。
-        *   グローバル `AutoLink` 定義を取得するロジック（`tenancy()->central(function () { ... });` の部分）は削除する。
-        *   取得した定義を `priority` カラムでソートする。
-        *   キャッシュキーの生成ロジックを、テナントIDのみを考慮するように調整する。
+    1.  **`getAutoLinksForContext()` の修正:**
+        `AutoLink::where('is_enabled', true)->get()` のように、テナントスコープなしで全ての `AutoLink` を取得する。
+    2.  **`getCacheKeyForContext()` の修正:**
+        テナントIDを考慮しないグローバルなキャッシュキーを生成する。
+    3.  **`createCustomLink()` での「仕様書ID」テンプレートのテナント対応:**
+        `createCustomLink()` メソッド内で、`url_template` が `/l/$1` の場合に、現在のテナントのドメインを付与するロジックを追加する。
+        *   現在のテナントのドメインは `tenancy()->tenant->domains->first()->domain` などで取得できるはず。
 *   **検証方法:**
-    *   ユニットテストを作成し、現在のテナントのルールのみが正しく取得され、優先度に基づいて適用されることを確認する。
-*   **完了の定義:** `AutoLinkService` がテナント固有の自動リンク適用ロジックを実装し、ユニットテストが成功すること。
+    *   `AutoLinkService` を使用してリンクが生成される際に、「仕様書ID」テンプレートが現在のテナントのドメインを含むURLを生成することを確認する。
+*   **完了の定義:** `AutoLinkService` がテナントスコープなしで `AutoLink` を取得し、テンプレート内容と生成リンクをテナント対応させること。
 
-### ステップ4: Filament `AutoLinkResource` の改修
+### ステップ4: `AutoLinkResource` の改修
 
-*   **目的:** 管理者が `AutoLink` 定義をテナント固有として作成・管理できるようにする。
+*   **目的:** Filament管理画面で `AutoLink` 定義をグローバルに管理し、適用範囲をテナントのフォルダで制御できるようにする。
 *   **タスク:**
-    1.  **フォームへの `tenant_id` フィールド追加:**
-        *   `app/Filament/Resources/AutoLinkResource.php` の `form()` メソッドに `Select::make('tenant_id')` を追加する。
-        *   オプションとして、全てのテナントを表示する。
-        *   `default(tenant()?->id)` とし、現在のテナントコンテキストを初期値とする。
-        *   中央管理者の場合は、全てのテナントを選択できるようにする。テナント管理者の場合は、自身のテナントのみを選択できるようにする。
-    2.  **一覧画面への `tenant_id` カラム表示:**
-        *   `table()` メソッドに `TextColumn::make('tenant.name')` を追加し、`tenant_id` に基づくテナント名を表示する。
-        *   `tenant_id` でフィルタリング・ソート可能にする。
-    3.  **クエリの調整:**
-        *   `getEloquentQuery()` メソッドを修正し、中央管理者の場合は全ての `AutoLink` 定義を表示し、テナント管理者の場合は自身のテナントの `AutoLink` 定義のみを表示するようにする。
+    1.  **`form()` メソッドの修正:**
+        *   `tenant_id` フィールドを削除する。
+        *   `folders` フィールドで、`Stancl\Tenancy\Facades\Tenancy::central(function () { ... })` を使用して全てのテナントのフォルダを横断的に選択できるようにする。
+    2.  **`table()` メソッドの修正:**
+        *   `tenant.name` カラムを削除する。
+    3.  **`getEloquentQuery()` の修正:**
+        *   `stancl/tenancy` のスコープロジックを削除し、全ての `AutoLink` を取得するようにする。
+    4.  **`mutateFormDataBeforeCreate()` の削除:**
+        `mutateFormDataBeforeCreate()` メソッドを削除する。
+    5.  **リンク生成補助機能の追加:**
+        *   Filamentのフォームに、テナントを選択するUIを追加する。
+        *   選択されたテナントに基づいて、リンクの途中までを生成する機能を提供する。
+        *   テナントに関係ないリンク（例: 外部URL）は、手動入力できるようにする。
 *   **検証方法:**
     *   Filament管理画面で `AutoLink` 定義の作成・編集・一覧表示を行い、期待通りの挙動となることを確認する。
-*   **完了の定義:** Filament管理画面がテナント固有の `AutoLink` 定義の管理に対応すること。
+*   **完了の定義:** Filament管理画面が新しい仕様に対応すること。
 
-## 5. テスト計画
+### ステップ5: `User` モデルと `UserService` の修正
+
+*   **目的:** `isCentralAdmin()` メソッドを削除し、関連するコードを元に戻す。
+*   **タスク:**
+    1.  **`app/Models/User.php` の修正:**
+        `isCentralAdmin()` メソッドを削除する。
+    2.  **`app/Services/UserService.php` の修正:**
+        `isCentralAdmin()` メソッドを削除する。
+*   **検証方法:**
+    *   `isCentralAdmin()` を使用していた箇所でエラーが発生しないことを確認する。
+*   **完了の定義:** `isCentralAdmin()` メソッドが削除され、関連するコードが元に戻されること。
+
+## 6. テスト計画 (再定義)
 
 本機能の品質を保証するため、以下のテストを実施する。
 
 *   **ユニットテスト:**
-    *   `AutoLinkService` の `getAutoLinksForContext()` メソッドが、現在のテナントのルールのみを正しく取得し、優先度に基づいてソートすること。
+    *   `AutoLinkService` の `getAutoLinksForContext()` メソッドが、テナントスコープなしで全ての `AutoLink` を正しく取得し、優先度に基づいてソートすること。
+    *   `AutoLinkService` の `createCustomLink()` メソッドが、「仕様書ID」テンプレートに対して現在のテナントのドメインを含むURLを生成すること。
 *   **フィーチャーテスト:**
-    *   テナントコンテキストで、テナント固有ルールが正しく適用されること。
-    *   Filament管理画面で、テナント固有ルールが正しく作成・編集・表示されること。
+    *   `AutoLink` の作成・更新・削除時に、キャッシュが正しくクリアされること。
+    *   Filament管理画面で `AutoLink` 定義の作成・編集・一覧表示が正しく行えること。
+    *   `AutoLink` の適用範囲が、選択されたテナントのフォルダで正しく制御されること。
+    *   リンク生成補助機能が正しく動作すること。
 
-## 6. 完了の定義
+## 7. 完了の定義 (再定義)
 
-*   `auto_links` テーブルに `tenant_id` カラムが `NOT NULL` で追加され、`AutoLink` モデルがテナントスコープに対応すること。
-*   `AutoLinkService` がテナント固有ルールを適切に適用すること。
-*   Filament管理画面からテナント固有の `AutoLink` 定義を管理できること。
+*   `auto_links` テーブルから `tenant_id` カラムが削除されること。
+*   `AutoLink` モデルがテナントスコープの対象外となり、`tenant_id` 関連のロジックが削除されること。
+*   `AutoLinkService` がテナントスコープなしで `AutoLink` を取得し、テンプレート内容と生成リンクをテナント対応させること。
+*   Filament管理画面が新しい仕様に対応すること。
+*   `isCentralAdmin()` メソッドが削除され、関連するコードが元に戻されること。
 *   上記機能を検証する全てのテストが成功すること。
