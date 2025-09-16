@@ -18,7 +18,7 @@ use App\Http\Controllers\LedgerLookupController;
 Route::redirect('/', '/login'); // サーバールートにアクセスされたときにloginにリダイレクト
 
 Route::middleware('auth')->group(function () {
-    Route::get('/ledgers/lookup/{query}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.lookup');
+    Route::get('/ledgers/lookup/{query?}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.lookup');
 
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
 });

@@ -164,6 +164,7 @@
         ],
     'add' => '追加する',
     'admin' => '管理',
+    'admin_email' => '管理者のメール',
     'after_change' => '変更後',
     'after_change_colon' => '変更後:',
     'agree' => '同意する',
@@ -551,6 +552,16 @@
     'mark_all_as_read' => 'すべて既読にする',
     'mark_as_read' => '既読にする',
     'message' => 'お知らせ',
+    'messages' =>
+        [
+            'error' =>
+                [
+                    'invalid_parent_folder_selection' => '無効な親フォルダが選択されました。',
+                    'no_tenant_context' => 'テナントコンテキストが設定されていません。',
+                    'parent_folder_not_found' => '親フォルダが見つかりませんでした。',
+                    'save_failed' => '保存に失敗しました',
+                ],
+        ],
     'modifier' =>
         [
             'name' => '最終変更者',
@@ -842,6 +853,8 @@
     'tenant' => 'テナント',
     'tenant_context_notification_body' => 'テナント「:name」のコンテキストで中央管理画面を表示しています。',
     'tenant_context_notification_title' => '管理画面のコンテキスト表示',
+    'tenant_creation_failed' => 'テナントの初期設定に失敗しました',
+    'tenant_creation_successful' => 'テナントの初期設定が完了しました',
     'tenant_id' => 'テナントID',
     'tenant_name' => 'テナント名',
     'tenant_settings' => 'テナント設定',
@@ -1042,13 +1055,4 @@
         ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-
-    "messages.error.save_failed" => "保存に失敗しました",
-    "messages.error.parent_folder_not_found" => "親フォルダが見つかりませんでした。",
-    "messages.error.invalid_parent_folder_selection" => "無効な親フォルダが選択されました。",
-    "messages.error.no_tenant_context" => "テナントコンテキストが設定されていません。",
-    'tenant_creation_successful'=>'テナントの初期設定が完了しました',
-    'tenant_creation_failed'=>'テナントの初期設定に失敗しました',
-    'admin_email'=>'管理者のメール'
-
 ];

@@ -39,10 +39,10 @@ class LedgerLookupController extends Controller
         return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
     }
 
-    public function searchAllTenants(string $query)
+    public function searchAllTenants(string $query = null)
     {
         if (empty($query)) {
-            return redirect()->route('global.my-portal'); // 検索クエリがない場合はグローバルなマイポータルにリダイレクト
+            return redirect()->route('global.my-portal');
         }
 
         $allResults = collect();
@@ -50,41 +50,33 @@ class LedgerLookupController extends Controller
 
         foreach ($tenants as $tenant) {
             $tenant->run(function () use ($query, &$allResults, $tenant) {
-                // handle メソッド内の検索ロジックを流用
-                $synonymServiceConfig = new SynonymServiceConfig(['useSynonym' => true, 'useTechnicalTerm' => true]);
-                $synonymService = new SynonymService($synonymServiceConfig);
-                $searchContext = new SearchContext($synonymService);
-                $searchContext->setSearch($query);
+                // 全文検索を実行
+                $ledgers = \App\Models\Ledger::query()->search($query)->with('define')->get();
 
-                // LedgerDefine の title で検索
-                $ledgerDefines = \App\Models\LedgerDefine::query()
-                    ->where('title', 'LIKE', '%' . $query . '%')
-                    ->get();
-
-                foreach ($ledgerDefines as $ledgerDefine) {
-                    // 関連する Ledger を取得
-                    $ledgers = $ledgerDefine->ledgers;
-                    foreach ($ledgers as $ledger) {
-                        $allResults->push([
-                            'tenant_id' => $tenant->id, // 現在のテナントID
-                            'tenant_name' => $tenant->name, // 現在のテナント名
-                            'ledger_id' => $ledger->id,
-                            'ledger_title' => $ledgerDefine->title, // LedgerDefine の title を使用
-                            'url' => tenant_route($tenant->id, 'ledger.show', ['ledgerId' => $ledger->id, 'highlight' => $query]),
-                        ]);
+                foreach ($ledgers as $ledger) {
+                    // defineリレーションがロードされているか確認
+                    if ($ledger->define) {
+                        // content 配列内にクエリと完全一致する値があるか再検証
+                        $contentValues = is_array($ledger->content) ? array_values($ledger->content) : [];
+                        if (in_array($query, $contentValues, true)) {
+                            $allResults->push([
+                                'tenant_id' => $tenant->id,
+                                'tenant_name' => $tenant->name,
+                                'ledger_id' => $ledger->id,
+                                'ledger_title' => $ledger->define->title,
+                                'url' => tenant_route($tenant->id, 'ledger.show', ['tenant' => $tenant->id, 'ledgerId' => $ledger->id, 'highlight' => $query]),
+                            ]);
+                        }
                     }
                 }
             });
         }
 
         if ($allResults->count() === 1) {
-            // 1件のみ見つかった場合は、その台帳のURLにリダイレクト
             return redirect($allResults->first()['url']);
         } elseif ($allResults->count() > 1) {
-            // 複数件見つかった場合は、結果一覧ビューを表示 (タスク3で作成)
             return view('ledger.lookup.results', ['results' => $allResults, 'query' => $query]);
         } else {
-            // 0件の場合は、見つかりませんでしたビューを表示 (タスク3で作成)
             return view('ledger.lookup.no-results', ['query' => $query]);
         }
     }
