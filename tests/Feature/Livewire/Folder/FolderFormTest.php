@@ -81,8 +81,7 @@ class FolderFormTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
-        Livewire::test(FolderForm::class)
-            ->set('folder', $existingFolder)
+        Livewire::test(FolderForm::class, ['folder' => $existingFolder])
             ->set('title', 'Updated Title')
             ->call('save');
 

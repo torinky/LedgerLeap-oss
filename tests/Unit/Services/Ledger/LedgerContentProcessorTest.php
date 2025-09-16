@@ -322,6 +322,6 @@ class LedgerContentProcessorTest extends TestCase
         $html = $service->convert($text);
 
         // 3. Assert
-        $this->assertStringContainsString('<a href="/test_tenant_id/docs/DOC-123"', $html);
+        $this->assertStringContainsString('<a href="/docs/DOC-123"', $html);
     }
 }

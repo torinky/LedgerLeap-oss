@@ -99,9 +99,6 @@ class AutoLinkService
 
             if ($fragment->hasChildNodes()) {
                 $currentNode->parentNode->replaceChild($fragment, $currentNode);
-                // The current node is replaced, so we can't continue operating on it.
-                // For simplicity, we stop after the first matching autolink rule.
-                // To handle multiple rules, a more complex node traversal would be needed.
                 break;
             }
         }
@@ -114,14 +111,13 @@ class AutoLinkService
             $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
         }
 
-        // リンク先テナントが指定されている場合のURL書き換え
+        // リンク先テナントが指定されている場合のみ、完全なURLに書き換える
         if ($autoLink->tenant_id && str_starts_with($url, '/l/')) {
             $tenant = $autoLink->tenant;
-            if ($tenant) {
+            if ($tenant && $domain = $tenant->domains->first()?->domain) {
                 $path = ltrim($url, '/');
-                tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
-                    $url = tenant_url($path);
-                });
+                $protocol = parse_url(config('app.url'), PHP_URL_SCHEME) ?? 'http';
+                $url = $protocol . '://' . $domain . '/' . $path;
             }
         }
 

@@ -162,7 +162,7 @@ class RecordsTableQueryTest extends TestCase
             'cf' => $this->folder->id
         ])->test(RecordsTable::class);
         $component->assertOk()
-            ->assertSeeHtml('href="/' . $this->tenant->getTenantKey() . '/l/SPEC-007"')
+            ->assertSeeHtml('href="/l/SPEC-007"')
             ->assertSee('SPEC-007');
     }
 }

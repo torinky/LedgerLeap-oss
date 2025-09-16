@@ -19,6 +19,7 @@ Route::redirect('/', '/login'); // サーバールートにアクセスされた
 
 Route::middleware('auth')->group(function () {
     Route::get('/ledgers/lookup/{query?}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.lookup');
+    Route::get('/l/{query}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.shortcut_lookup');
 
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
 });
