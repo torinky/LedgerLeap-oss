@@ -20,6 +20,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
@@ -251,6 +252,12 @@ class AutoLinkResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('tenant.name')
+                    ->label(__('auto_links.fields.link_to_tenant'))
+                    ->searchable()
+                    ->sortable()
+                    ->default(__('auto_links.labels.global_link'))
+                    ->badge(),
                 TextColumn::make('label')
                     ->label(__('auto_links.fields.label'))
                     ->searchable()
@@ -286,7 +293,10 @@ class AutoLinkResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('tenant_id')
+                    ->label(__('auto_links.fields.link_to_tenant'))
+                    ->options(fn () => Tenant::all()->pluck('name', 'id')->all())
+                    ->searchable(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

@@ -68,6 +68,10 @@ class AdminPanelProvider extends PanelProvider
                     })
                     ->icon('heroicon-o-arrow-uturn-left')
 //                    ->visible(!empty(session('filament_from_tenant_id')))
+                    ->visible(function () {
+                        $fromTenantId = session('filament_from_tenant_id');
+                        return !empty($fromTenantId);
+                    })
                     ->sort(2),
                 NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')
