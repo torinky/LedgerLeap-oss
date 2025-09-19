@@ -70,6 +70,7 @@
         :selectedFolderIds="$selectedFolderIds"
         :ledgerDefineRecords="$ledgerDefineRecords"
         :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+        :currentTenantId="$currentTenantId"
     />
 
 

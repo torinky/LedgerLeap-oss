@@ -347,6 +347,7 @@ class RecordsTable extends Component
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
             'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
+            'currentTenantId' => $this->currentTenantId,
         ]);
     }
 
