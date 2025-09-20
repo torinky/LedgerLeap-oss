@@ -20,6 +20,8 @@ class ColumnHtmlService
     private MarkdownRenderer $markdownRenderer;
     private HtmlProcessorService $htmlProcessorService;
 
+    private ?string $tenantId = null;
+
     private $attrs = [];
 
     private $columnDefine;
@@ -68,9 +70,10 @@ class ColumnHtmlService
      * @param bool $asCreate 新規作成モードかどうか
      * @param Ledger|null $record 現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
      * @param string|null $highlight ハイライトするキーワード
+     * @param string|null $tenantId
      * @return HtmlString 生成されたHTML文字列
      */
-    public function show(object|array $columnDefineData, $initialValue, bool $canView = true, array $attrs = [], string $idPrefix = '', bool $asCreate = false, ?Ledger $record = null, ?string $highlight = null): HtmlString
+    public function show(object|array $columnDefineData, $initialValue, bool $canView = true, array $attrs = [], string $idPrefix = '', bool $asCreate = false, ?Ledger $record = null, ?string $highlight = null, ?string $tenantId = null): HtmlString
     {
         if (!$canView) {
             return new HtmlString('');
@@ -82,6 +85,7 @@ class ColumnHtmlService
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
+        $this->tenantId = $tenantId;
 
         $type = $this->getColumnDefineProperty('type');
         $html = '';
@@ -274,10 +278,18 @@ HTML;
             $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
 
-            $mainDownloadUrl = route('file.download', ['attachedFile' => $attachment->id]);
-            $thumbnailUrl = route('file.download', ['attachedFile' => $attachment->id, 'thumbnail' => 'true']);
-            $originalDownloadUrl = route('file.download', ['attachedFile' => $attachment->id, 'original' => true]);
-            $optimizedPdfDownloadUrl = route('file.download',['attachedFile' => $attachment->id]);
+            if (!$this->tenantId) {
+                Log::error('Tenant ID is not provided to ColumnHtmlService.');
+                $mainDownloadUrl = '#';
+                $thumbnailUrl = '#';
+                $originalDownloadUrl = '#';
+                $optimizedPdfDownloadUrl = '#';
+            } else {
+                $mainDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
+                $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+                $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
+                $optimizedPdfDownloadUrl = route('file.download',['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
+            }
 
             $auxiliaryLinksHtml = '';
 
