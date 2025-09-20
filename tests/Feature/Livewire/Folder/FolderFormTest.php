@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -53,7 +54,7 @@ class FolderFormTest extends TestCase
         $this->actingAs($this->user);
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_a_new_folder_with_the_correct_tenant_id(): void
     {
         Livewire::test(FolderForm::class)
@@ -69,7 +70,7 @@ class FolderFormTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_an_existing_folder(): void
     {
         // テスト用の既存フォルダを作成

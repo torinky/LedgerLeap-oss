@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\CreateColumn;
+use App\Livewire\Ledger\ModifyColumn;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
@@ -13,15 +14,16 @@ use Tests\TestCase;
 use App\Models\Folder;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\ColumnDefine; // ColumnDefine をインポート
+use App\Models\ColumnDefine;
 
-class CreateColumnTest extends TestCase
+class ModifyColumnTenancyTest extends TestCase
 {
     use RefreshDatabase;
 
     protected Tenant $tenant;
     protected User $user;
     protected LedgerDefine $ledgerDefine;
+    protected Ledger $ledger;
 
     protected function setUp(): void
     {
@@ -35,23 +37,18 @@ class CreateColumnTest extends TestCase
         // ユーザーを作成
         $this->user = User::factory()->create();
 
-        // 台帳作成に必要な権限を作成し、ユーザーに付与
-        Permission::findOrCreate('create_ledgers', 'web');
-        $role = Role::findOrCreate('test-creator-role', 'web');
-        $role->givePermissionTo('create_ledgers');
+        // 権限を作成し、ユーザーに付与
+        Permission::findOrCreate('edit_ledgers', 'web');
+        $role = Role::findOrCreate('test-editor-role', 'web');
+        $role->givePermissionTo('edit_ledgers');
         $this->user->assignRole($role);
 
         // ユーザーを認証
         $this->actingAs($this->user);
-    }
 
-    #[Test]
-    public function it_creates_ledger_with_correct_tenant_id()
-    {
-        // 1. テストデータの準備
+        // テストデータの準備
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
 
-        // ColumnDefineオブジェクトを作成
         $columnDefine = new ColumnDefine((object)[
             'id' => 1,
             'name' => 'Test Column',
@@ -68,24 +65,33 @@ class CreateColumnTest extends TestCase
             'folder_id' => $folder->id,
             'tenant_id' => $this->tenant->id,
             'workflow_enabled' => false,
-            'column_define' => [$columnDefine], // ColumnDefineオブジェクトの配列を渡す
+            'column_define' => [$columnDefine],
         ]);
 
-        // 2. Livewireコンポーネントのテスト
-        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
-            ->set('content', [1 => 'Test Value'])
-            ->call('saveDirectly')
-            ->assertHasNoErrors();
-
-        // 3. アサーション
-        $this->assertDatabaseHas('ledgers', [
+        $this->ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'tenant_id' => $this->tenant->id,
+            'content' => ['Initial Value'],
+        ]);
+    }
+
+    #[Test]
+    public function it_maintains_tenancy_context_on_update_action()
+    {
+        // Livewireコンポーネントのテスト
+        Livewire::test(ModifyColumn::class, ['ledgerId' => $this->ledger->id])
+            ->set('content.1', 'Updated Value')
+            ->call('saveDraft') // saveDraftメソッドを呼び出して更新をシミュレート
+            ->assertHasNoErrors();
+
+        // アサーション
+        $this->assertDatabaseHas('ledgers', [
+            'id' => $this->ledger->id,
+            'tenant_id' => $this->tenant->id, // テナントIDが維持されていることを確認
         ]);
 
-        // contentの内容も検証
-        $ledger = \App\Models\Ledger::first();
-        $this->assertNotNull($ledger);
-        $this->assertEquals('Test Value', $ledger->content[0]);
+        // contentの内容が更新されていることを確認
+        $updatedLedger = $this->ledger->fresh();
+        $this->assertEquals('Updated Value', $updatedLedger->content[1]);
     }
 }

@@ -15,12 +15,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Process;
+use Stancl\Tenancy\Contracts\TenantAware;
 
 // ★ use を変更
 //use Symfony\Component\Process\Process;
 use App\Helpers\AttachedFilePathHelper;
 
-class OcrAndOptimizeFile implements ShouldQueue
+class OcrAndOptimizeFile implements ShouldQueue, TenantAware
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 

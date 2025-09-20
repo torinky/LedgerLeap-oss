@@ -30,7 +30,7 @@ class RecordsTable extends Component
 
     public $currentFolderId;
 
-    public $tenantId; // ここを追加
+//    public $tenantId; // ここを追加
 
     private $ledgerDefineRecords;
 

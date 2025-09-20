@@ -16,7 +16,7 @@ class WorkflowActionButtons extends Component
 
     public Ledger $ledgerRecord;
 
-    public function boot(WorkflowService $workflowService):
+    public function boot(WorkflowService $workflowService)
     {
         $this->bootWorkflowActions($workflowService);
     }

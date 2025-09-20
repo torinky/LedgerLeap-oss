@@ -1,7 +1,7 @@
 <div>
     <div class="indicator mr-4">
         @if (tenant())
-            <a href="{{ route('notifications.index', ['tenant' => $this->tenantId]) }}"
+            <a href="{{ route('notifications.index', ['tenant' => $tenantId]) }}"
                _target="LedgerLeap_PendingList"
                wire:poll.600s="refreshCounts"
                tabindex="4"

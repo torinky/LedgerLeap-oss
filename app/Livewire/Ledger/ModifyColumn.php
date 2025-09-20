@@ -33,7 +33,7 @@ class ModifyColumn extends CreateColumn
     public array $attachmentIdMap = []; // 添付ファイルのIDマップ
     public array $filePondInitialFiles = []; // FilePond初期化用
 
-    public $tenantId='';
+//    public $tenantId='';
 
     public function mount(int $ledgerId): void
     {

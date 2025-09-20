@@ -19,6 +19,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
+use Stancl\Tenancy\Middleware\InitializeTenancyByRequestData;
 
 //use App\Modules\ImageUpload\CloudinaryImageManager;
 
@@ -81,11 +83,22 @@ class AppServiceProvider extends ServiceProvider
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);
-        
+
 
         // Domain モデルが作成される際にUUIDを自動生成
         Domain::creating(function (Domain $domain) {
             $domain->id = $domain->id ?? (string) Str::uuid();
+        });
+
+/*        Livewire::listen('component.hydrate', function ($component) {
+            dd($component);
+            if (tenancy()->initialized) {
+                $component->snapshot['memo']['tenant_id'] = tenant('id');
+            }
+        });*/
+
+        $this->app->bind(InitializeTenancyByRequestData::class, function () {
+            return new InitializeTenancyByRequestData(header: null, queryParameter: 'snapshot.memo.tenant_id');
         });
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Stancl\Tenancy\Tenancy;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,7 +41,7 @@ class InitializesTenantContextTest extends TestCase
         \Mockery::close();
     }
 
-    /** @test */
+    #[Test]
     public function it_initializes_tenant_context_if_not_initialized(): void
     {
         // テナントが存在しないことを確認
@@ -67,7 +68,7 @@ class InitializesTenantContextTest extends TestCase
         $tenant->delete();
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_reinitialize_tenant_context_if_already_initialized(): void
     {
         // 既にテナントが初期化されている状態にする
@@ -92,7 +93,7 @@ class InitializesTenantContextTest extends TestCase
         $tenant->delete();
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_error_if_tenant_id_not_found_in_route(): void
     {
         $this->assertFalse(tenancy()->tenant !== null);
@@ -111,7 +112,7 @@ class InitializesTenantContextTest extends TestCase
         $this->assertFalse(tenancy()->tenant !== null);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_error_if_tenant_not_found_for_given_id(): void
     {
         $this->assertFalse(tenancy()->tenant !== null);

@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Traits;
 
-use Livewire\Component;
 use Stancl\Tenancy\Tenancy;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
@@ -10,22 +9,28 @@ use Illuminate\Support\Facades\Request; // Request ファサードを追加
 
 trait InitializesTenantContext
 {
+    public $tenantId;
     public function initializeTenantContext(Tenancy $tenancy): void
     {
-        if (!$tenancy->initialized) {
-            $tenantId = Request::route('tenant'); // URLからテナントIDを取得
-            if ($tenantId) {
-                $tenant = Tenant::where('id', $tenantId)->first();
-                if ($tenant) {
-                    $tenancy->initialize($tenant);
-                    Log::info('Tenant re-initialized via InitializesTenantContext trait', ['tenant_id' => $tenantId]);
-                } else {
-                    Log::error('Tenant not found for ID from route in InitializesTenantContext trait', ['tenant_id' => $tenantId]);
-                    // エラーハンドリングは呼び出し元で行うか、ここでToastなどを表示
-                }
+        // 1. tenantIdがまだセットされていない場合（主に初回リクエスト時）、ルートから取得を試みる
+        //    後続のLivewireリクエストでは、このプロパティに値が保持されているため、再取得は行われない。
+        if (is_null($this->tenantId)) {
+            $route = Request::route();
+            if ($route) {
+                // originalParameters() はルートモデルバインディング前の生のパラメータを返すため、
+                // ライフサイクルの早い段階でも安定して値を取得できる。
+                $this->tenantId = $route->originalParameters()['tenant'] ?? null;
+            }
+        }
+
+        // 2. tenantIdが取得できていて、かつテナンシーが初期化されていない場合に初期化する
+        if ($this->tenantId && !$tenancy->initialized) {
+            $tenant = Tenant::find($this->tenantId); // find() を使う方が簡潔
+            if ($tenant) {
+                $tenancy->initialize($tenant);
+                Log::info('Tenant re-initialized via InitializesTenantContext trait', ['tenant_id' => $this->tenantId]);
             } else {
-                Log::error('Tenant ID not found in route for InitializesTenantContext trait');
-                // エラーハンドリング
+                Log::error('Tenant not found for ID from property in InitializesTenantContext trait', ['tenant_id' => $this->tenantId]);
             }
         }
     }

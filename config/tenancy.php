@@ -24,6 +24,11 @@ return [
         'localhost',
     ],
 
+/*    'identification_middleware' => [
+        Stancl\Tenancy\Middleware\InitializeTenancyByPath::class,
+        Stancl\Tenancy\Middleware\InitializeTenancyByRequestData::class,
+    ],*/
+
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
