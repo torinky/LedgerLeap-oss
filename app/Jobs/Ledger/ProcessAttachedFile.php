@@ -20,9 +20,12 @@ use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
 use App\Helpers\AttachedFilePathHelper;
 
-class ProcessAttachedFile implements ShouldQueue
+use Stancl	enancy\Contracts\TenantAware;
+use Stancl\Tenancy\Concerns\HasATenant;
+
+class ProcessAttachedFile implements ShouldQueue, TenantAware
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels, HasATenant;
 
     public AttachedFile $attachedFile;
 

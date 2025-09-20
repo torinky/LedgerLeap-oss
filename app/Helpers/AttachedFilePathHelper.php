@@ -16,7 +16,13 @@ class AttachedFilePathHelper
      */
     public static function getAttachmentPath(int $ledgerDefineId, string $hashedBasename): string
     {
-        $directory = 'Ledger/Attachments/' . $ledgerDefineId;
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
+            // 例: Log::error('Tenant ID not found while generating attachment path.');
+            // return 'default/path/' ...
+        }
+        $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId;
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す
@@ -32,7 +38,13 @@ class AttachedFilePathHelper
      */
     public static function getOriginalAttachmentPath(int $ledgerDefineId, string $hashedBasename): string
     {
-        $directory = 'Ledger/Attachments/' . $ledgerDefineId . '/Originals';
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
+            // 例: Log::error('Tenant ID not found while generating attachment path.');
+            // return 'default/path/' ...
+        }
+        $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す
@@ -61,7 +73,13 @@ class AttachedFilePathHelper
      */
     public static function getThumbnailStoragePath(string $hashedBasename): string
     {
-        $directory = 'Ledger/thumbs';
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
+            // 例: Log::error('Tenant ID not found while generating attachment path.');
+            // return 'default/path/' ...
+        }
+        $directory = 'tenants/' . $tenantId . '/Ledger/thumbs';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す

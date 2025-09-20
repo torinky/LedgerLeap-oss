@@ -21,9 +21,12 @@ use Stancl\Tenancy\Contracts\TenantAware;
 //use Symfony\Component\Process\Process;
 use App\Helpers\AttachedFilePathHelper;
 
+use Stancl\Tenancy\Contracts\TenantAware;
+use Stancl\Tenancy\Concerns\HasATenant;
+
 class OcrAndOptimizeFile implements ShouldQueue, TenantAware
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, HasATenant;
 
     protected AttachedFile $attachedFile;
 
