@@ -17,10 +17,11 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class PendingList extends Component
 {
-    use Toast, WithPagination;
+    use Toast, WithPagination, InitializesTenantContext;
 
     #[Locked] // selectedTaskId はURL等から不正に変更されたくない場合 Locked を付ける
     public $selectedTaskId = null;

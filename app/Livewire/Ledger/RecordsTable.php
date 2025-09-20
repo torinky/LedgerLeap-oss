@@ -20,10 +20,11 @@ use Livewire\WithPagination;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Illuminate\Support\Collection;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
-    use withPagination;
+    use withPagination, InitializesTenantContext;
 
     public $perPage = 100;
 
@@ -96,13 +97,6 @@ class RecordsTable extends Component
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
         $this->currentTenantId = tenant()?->id;
-
-        \Illuminate\Support\Facades\Log::info('RecordsTable mounting...', [
-            'tenant' => $this->currentTenantId,
-            'request_ledger_define_id' => $request->ledgerDefineId(),
-            'request_folder_id' => $request->folderId(),
-            'request_current_folder_id' => $request->currentFolderId(),
-        ]);
 
         // 検索キーワードの初期化
         $search = $request->keyword();

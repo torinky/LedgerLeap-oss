@@ -11,10 +11,11 @@ use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Illuminate\Support\Facades\Log;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class FolderForm extends Component
 {
-    use Toast;
+    use Toast, InitializesTenantContext;
 
     public Folder $folder; // Livewireがルートモデルバインディング (編集時) または new Folder() (作成時) をセット
     public ?int $parentId = null; // Livewireがルートパラメータ {parentId?} (作成時) をセット

@@ -9,11 +9,34 @@ use App\Models\Tenant; // 追加
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication;
+    // use CreatesApplication; // これを削除
 
     protected bool $tenancy = false;
 
     protected Tenant $tenant;
+
+    /**
+     * Creates the application.
+     *
+     * @return \Illuminate\Foundation\Application
+     */
+    public function createApplication()
+    {
+        $app = require __DIR__.'/../bootstrap/app.php';
+
+        // Laravel 10+ の新しいブートストラップ方法
+        $app->bootstrapWith([
+            \Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class,
+            \Illuminate\Foundation\Bootstrap\LoadConfiguration::class,
+            \Illuminate\Foundation\Bootstrap\HandleExceptions::class,
+            \Illuminate\Foundation\Bootstrap\RegisterFacades::class,
+            \Illuminate\Foundation\Bootstrap\SetRequestForConsole::class,
+            \Illuminate\Foundation\Bootstrap\RegisterProviders::class,
+            \Illuminate\Foundation\Bootstrap\BootProviders::class,
+        ]);
+
+        return $app;
+    }
 
     protected function setUp(): void
     {

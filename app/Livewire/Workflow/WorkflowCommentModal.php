@@ -8,10 +8,11 @@ use App\Livewire\Ledger\Show;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class WorkflowCommentModal extends Component
 {
-    use Toast;
+    use Toast, InitializesTenantContext;
 
     public bool $showCommentModal = false;
     public string $modalTitle = '';

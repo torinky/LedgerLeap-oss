@@ -31,13 +31,14 @@ use Livewire\WithFileUploads;
 use App\Helpers\AttachedFilePathHelper;
 use Mary\Traits\Toast;
 use PHPUnit\Event\Code\Throwable;
+use App\Livewire\Traits\InitializesTenantContext; // 追加
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
  */
 class CreateColumn extends Component
 {
-    use Toast, WithFileUploads;
+    use Toast, WithFileUploads, InitializesTenantContext; // 追加
 
     public array $content = []; // 初期値を空配列に
 
@@ -275,7 +276,6 @@ class CreateColumn extends Component
         }
         // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
         // if ($this->ledgerRecord?->isLocked()) { ... }
-
         // バリデーション
         $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();

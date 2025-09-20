@@ -14,6 +14,8 @@ class UpdateController extends Controller
 {
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
+
+
         $ledgerId = (int)$request->route('ledgerId');
 
         $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();

@@ -8,9 +8,12 @@ use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Tree extends Component
 {
+    use InitializesTenantContext;
+
     public \Illuminate\Database\Eloquent\Collection $folders;
 
     public int $currentFolderId;
@@ -25,7 +28,6 @@ class Tree extends Component
 
     public function mount(SearchRequest $request, WritableFolderRepository $writableFolderRepository)
     {
-        \Log::info('Current tenant ID in Folder/Tree mount: ' . (tenant('id') ?? 'null')); // デバッグ用
         $this->currentFolderId = $request->currentFolderId();
         $this->selectedFolderIds = $request->folderId();
         $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();

@@ -7,9 +7,12 @@ use App\Http\Requests\Folder\StoreRequest;
 use App\Models\Folder;
 use Illuminate\Support\Collection;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Create extends Component
 {
+    use InitializesTenantContext;
+
     public $folderRecords;
     public $parentFolderId;
     public Collection $folderIdNameMap;

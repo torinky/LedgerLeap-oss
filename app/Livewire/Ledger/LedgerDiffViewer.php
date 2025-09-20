@@ -9,9 +9,12 @@ use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class LedgerDiffViewer extends Component
 {
+    use InitializesTenantContext;
+
     public Ledger $ledgerRecord;
 
     // --- 差分表示用プロパティ ---

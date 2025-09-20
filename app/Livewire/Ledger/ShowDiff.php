@@ -13,9 +13,11 @@ use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Storage;
 use App\Services\Ledger\LedgerContentProcessor; // 追加
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class ShowDiff extends Component
 {
+    use InitializesTenantContext;
 
     // ledgerRecord は表示する Diff の内容を入れるように変更
     public ?LedgerDiff $currentDiffRecord = null; // 表示中の Diff

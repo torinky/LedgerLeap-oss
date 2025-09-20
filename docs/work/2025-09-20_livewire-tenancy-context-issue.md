@@ -145,6 +145,90 @@ class CreateColumn extends Component
 *   `UPDATE ledgers SET tenant_id = 'tenanta' WHERE id = 102;` を実行し、既存の不整合レコードを修正します。
 *   `UpdateController.php` と `CreateColumn.php` に挿入したデバッグコードを削除し、元の状態に戻します。
 
-## 4. 今後の進め方
+## 4. 解決策の実施と進捗
 
-上記ドキュメントの内容についてご確認いただき、合意形成後、具体的な改修作業に進みます。
+### 4.1 カスタムトレイト `InitializesTenantContext` の作成 [完了]
+
+`app/Livewire/Traits/InitializesTenantContext.php` は実装済みであったが、`stancl/tenancy` v3.9 とのAPI互換性の問題がログから発見された。`tenancy()->initialized()` メソッド呼び出しを `tenancy()->initialized` プロパティアクセスに修正し、問題を解決した。
+
+### 4.2 `CreateColumn.php` の修正 [完了]
+
+`app/Livewire/Ledger/CreateColumn.php` には、既に `InitializesTenantContext` トレイトが適用済みであることを確認した。
+
+### 4.3 プロジェクト内の他のLivewireコンポーネントへの適用 [未着手]
+
+`CreateColumn.php` 以外にもテナントコンテキストを必要とするコンポーネントがないか、調査と適用が必要。
+
+### 4.4 必要なテストの追加 [中断→方針転換]
+
+*   **`InitializesTenantContext` トレイトのユニットテスト:**
+    *   `tests/Unit/Livewire/Traits/InitializesTenantContextTest.php` が存在したが、Livewireのテスト環境の複雑性に起因する様々なエラー（`BadMethodCallException`, `RootTagMissingFromViewException` 等）により、安定したテストの実行が困難であった。
+    *   ユニットテストによる検証を中断し、より信頼性の高いフィーチャーテストに方針を転換する。
+*   **`CreateColumn.php` のフィーチャーテスト:**
+    *   次のステップとして、このフィーチャーテストを作成する。
+
+### 4.5 既存レコードの修正とデバッグコードの削除 [未着手]
+
+すべての改修とテストが完了した後に実施する。
+
+## 5. 調査・対応ログ (2025-09-20)
+
+1.  **現状把握:**
+    *   `app/Livewire` 配下のコンポーネントをリストアップし、影響範囲の特定に着手。
+    *   解決策として提案されていた `InitializesTenantContext` トレイトと、その適用先である `CreateColumn.php` が既に実装済みであることを確認。
+2.  **エラー原因の特定:**
+    *   `storage/logs/laravel-2025-09-20.log` を確認し、`BadMethodCallException: Method Stancl\Tenancy\Tenancy::initialized does not exist.` を発見。
+    *   `composer.json` から `stancl/tenancy` のバージョンが `^3.9` であることを特定し、APIのバージョン差異がエラーの根本原因であると断定。
+3.  **トレイトの修正:**
+    *   Web検索により `stancl/tenancy` v3.9 では `initialized` プロパティを使用することを確認。
+    *   `InitializesTenantContext.php` 内の `!$tenancy->initialized()` を `!$tenancy->initialized` に修正。
+4.  **ユニットテストの試行:**
+    *   `tests/Unit/Livewire/Traits/InitializesTenantContextTest.php` を発見し、テストを実行。
+    *   `Request` ファサードのモックに起因する `BadMethodCallException` が発生。
+    *   `URL` ファサードへの変更、`Request` オブジェクトの直接生成など、複数のアプローチでテストコードを修正したが、`RootTagMissingFromViewException` や `InvalidCountException` など、Livewireのテスト環境に起因する新たな問題が次々と発生。
+5.  **方針転換の決定:**
+    *   ユニットテストの安定化は困難と判断。より実践的で信頼性の高いフィーチャーテストに切り替える方針をユーザーと合意した。
+
+## 6. 次のステップ
+
+1.  **`InitializesTenantContext` トレイトの適用:**
+    *   以下のテナントコンテキストを必要とするLivewireコンポーネントに `use InitializesTenantContext;` を追加する。
+        *   `app/Livewire/Ledger/ModifyColumn.php`
+        *   `app/Livewire/Ledger/Show.php`
+        *   `app/Livewire/Ledger/RecordsTable.php`
+        *   `app/Livewire/Ledger/Import.php`
+        *   `app/Livewire/Ledger/WorkflowActionButtons.php`
+        *   `app/Livewire/Ledger/WorkflowHistoryList.php`
+        *   `app/Livewire/Ledger/WorkflowStatusCard.php`
+        *   `app/Livewire/LedgerDefine/Create.php`
+        *   `app/Livewire/LedgerDefine/Edit.php`
+        *   `app/Livewire/LedgerDefine/ModifyColumn.php`
+        *   `app/Livewire/LedgerDefine/Preview.php`
+        *   `app/Livewire/Folder/FolderForm.php`
+        *   `app/Livewire/Folder/Tag.php`
+        *   `app/Livewire/Workflow/PendingList.php`
+        *   `app/Livewire/Workflow/OtherRelatedTasksList.php`
+        *   `app/Livewire/Workflow/WorkflowCommentModal.php`
+        *   `app/Livelive/Common/ActivityHistoryDisplay.php`
+        *   `app/Livewire/Common/PermissionDisplay.php`
+        *   `app/Livewire/Notifications/Icon.php`
+        *   `app/Livewire/Notifications/NotificationList.php`
+        *   `app/Livewire/Notifications/Settings.php`
+        *   `app/Livewire/MyPortal.php`
+
+2.  **ビューファイルの堅牢化:**
+    *   ビューファイル内で `route()` ヘルパーを使用している箇所において、テナントIDの受け渡し方を `tenant()?->id` ヘルパーに統一し、コンポーネントのプロパティへの依存を減らす。
+    *   対象ファイル:
+        *   `resources/views/components/ledger/table-row.blade.php`
+        *   `resources/views/components/folder/folder-and-ledger-panels.blade.php`
+        *   `resources/views/components/ledgerDefine/header.blade.php`
+        *   `resources/views/livewire/ledger/modify-column.blade.php`
+        *   `resources/views/livewire/ledger-define/records-table.blade.php`
+        *   `resources/views/livewire/notifications/icon.blade.php`
+
+3.  **フィーチャーテストの作成:**
+    *   `CreateColumn.php` が、テナントコンテキストで正しく `Ledger` レコードを作成し、`tenant_id` が適切に設定されることを検証するフィーチャーテストを作成する。
+
+4.  **最終作業:**
+    *   全ての改修とテストが完了した後、`UPDATE ledgers SET tenant_id = 'tenanta' WHERE id = 102;` を実行し、不整合データを修正する。
+    *   調査のために追加したデバッグコードがあれば、全て削除する。

@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Import extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, InitializesTenantContext;
 
     public $ledgerDefine;
 

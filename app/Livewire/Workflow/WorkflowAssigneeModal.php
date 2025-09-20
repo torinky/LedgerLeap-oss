@@ -6,10 +6,13 @@ namespace App\Livewire\Workflow;
 // use Livewire\Component; // 標準的な Livewire Component として作成する場合
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 // 標準的な Livewire Component として作成する場合
 class WorkflowAssigneeModal extends Component
 {
+    use InitializesTenantContext;
+
     public bool $showModal = false; // モーダル表示状態
 
     // 親から渡されるパラメータ

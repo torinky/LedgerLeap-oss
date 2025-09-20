@@ -70,7 +70,7 @@ class ModifyColumn extends CreateColumn
         }
         $this->initBackgroundImages();
         $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
-        $this->tenantId=tenant('id');
+
     }
 
     public function render(): View

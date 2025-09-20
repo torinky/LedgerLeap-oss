@@ -13,10 +13,11 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Show extends Component
 {
-    use AuthorizesRequests, Toast;
+    use AuthorizesRequests, Toast, InitializesTenantContext;
 
     public bool $canView = false;
     public Ledger $ledgerRecord;

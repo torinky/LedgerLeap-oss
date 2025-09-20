@@ -10,9 +10,12 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
+    use InitializesTenantContext;
+
     public $orderBy = 'title';
 
     public $orderAsc = true;
@@ -38,7 +41,6 @@ class RecordsTable extends Component
     {
         $this->currentFolderId = $request->folderId();
         $this->prepareFolderAsset();
-        $this->tenantId = tenant()?->id;
     }
 
     /**

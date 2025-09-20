@@ -10,9 +10,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class TenantSwitcherFilament extends Component
 {
+    use InitializesTenantContext;
+
     public Collection $tenants;
     public ?\App\Models\Tenant $currentTenant;
     public ?int $currentFolderId = null;
