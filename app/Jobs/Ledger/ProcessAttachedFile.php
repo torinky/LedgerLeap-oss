@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\GenerateThumbnail; // ★ 追加
 
 class ProcessAttachedFile implements ShouldQueue
 {
@@ -171,8 +172,7 @@ class ProcessAttachedFile implements ShouldQueue
                 }
 
             } catch (Exception $e) {
-                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '
-Stack trace: ' . $e->getTraceAsString());
+                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '\nStack trace: ' . $e->getTraceAsString());
                 $mimeType = $this->attachedFile->mime;
                 if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
@@ -214,6 +214,13 @@ Stack trace: ' . $e->getTraceAsString());
         }); // ★ トランザクション終了
 
         $this->attachedFile->save();
+
+        // ★ サムネイル生成対象か判定し、ジョブをディスパッチ
+        $mime = $this->attachedFile->mime;
+        if (str_starts_with($mime, 'image/') || $mime === 'application/pdf') {
+            GenerateThumbnail::dispatch($this->attachedFile->id);
+        }
+
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));
         Log::info('ProcessAttachedFile job finished for file: ' . $this->attachedFile->id
             . ', status: ' . $this->attachedFile->status->value);

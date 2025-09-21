@@ -19,6 +19,19 @@
 *   **成果:**
     添付ファイルが台帳定義IDごとにディレクトリ分けして保存されるようになり、テナントごとの物理的なファイル分離の基礎が確立された。
 
+## 3. 課題2: キュー処理のエラーと無限ループ (解決済み)
+
+*   **問題点:**
+    ファイルパスの修正後、ファイルのテキスト抽出やOCR処理を担うキューが正常に動作していないことが判明した。
+    1.  **キューワーカーの停止:** 開発環境で `queue` コンテナが停止しており、ジョブが全く処理されていなかった。
+    2.  **無限ループ:** `ProcessAttachedFile` ジョブが、OCR処理済みのファイル（`optimized` フラグが `true`）を再度OCRジョブに送ってしまい、処理が無限に繰り返されるバグが存在した。
+
+*   **解決策:**
+    1.  `./vendor/bin/sail up -d queue` コマンドでキューワーカーを起動し、ジョブ処理を再開させた。
+    2.  `ProcessAttachedFile` ジョブのロジックを修正し、OCRジョブをディスパッチする前に、対象ファイルの `optimized` フラグが `true` でないことを確認する条件分岐を追加した。
+
+*   **成果:**
+    キューシステムが正常に稼働し、ファイルの非同期処理が意図通りに完了するようになった。無限ループが解消され、システムの安定性が向上した。
 
 ## 4. 課題3: Livewire編集画面のURL生成エラーとUIデグレード (一部解決・課題残存)
 
@@ -45,11 +58,12 @@
     *   これは、「課題1」で実施したファイルパス分離の対応が、サムネイルには適用されていないことが原因。
 
 *   **原因分析:**
-    *   サムネイル生成は `app/Jobs/Ledger/GenerateThumbnail.php` ジョブが担当。
-    *   このジョブが呼び出す `app/Helpers/AttachedFilePathHelper::getThumbnailStoragePath()` メソッドが、パス生成ロジックに `ledger_define_id` を含めていない。
+    *   調査の結果、サムネイル生成は `app/Jobs/Ledger/GenerateThumbnail.php` ジョブが担う設計であるものの、**現状どこからも初回生成の呼び出しが行われていない**ことが判明。
+    *   サムネイルのパスを生成する `app/Helpers/AttachedFilePathHelper::getThumbnailStoragePath()` メソッドが、パス生成ロジックに `ledger_define_id` を含めていない。
 
 *   **リスク:**
-    *   異なる台帳定義間でファイル名が重複した場合、サムネイルが上書きされる。
+    *   現状ではサムネイルが一切生成されない。
+    *   仮に生成されたとしても、異なる台帳定義間でファイル名が重複した場合、サムネイルが上書きされる。
     *   添付ファイル本体とサムネイルの保存ルールに一貫性がなく、管理が煩雑化する。
 
 ## 6. 今後の具体的な解決策（ネクストアクション）
@@ -67,42 +81,80 @@
 3.  **具体的な修正内容:**
     *   メソッド内で `route('file.download', ...)` を呼び出している箇所を全て探し、パラメータ配列に `'tenant' => $this->tenantId` を追加する。
 
-    ```php
-    // app/Livewire/Ledger/ModifyColumn.php の prepareFilePondInitialFiles() 内
-
-    // 修正前（例）
-    'source' => route('file.download', ['attachedFile' => $attachmentId]),
-    'poster' => route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]),
-
-    // 修正後（例）
-    'source' => route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId]),
-    'poster' => route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId, 'thumbnail' => true]),
-    ```
-
 4.  **検証方法:**
     *   **自動テスト:** `vendor/bin/sail test tests/Feature/Livewire/Ledger/ModifyColumnTest.php` を実行し、`it_correctly_prepares_initial_files_for_filepond` を含む全てのテストがパスすることを確認する。
     *   **手動テスト:** 台帳編集画面を開き、既存の添付ファイルのサムネイルが正しく表示され、ダウンロードリンクが正常に機能することをブラウザで確認する。
 
-### 6.2. 課題4 (サムネイルパス) の解決策
+### 6.2. 課題4 (サムネイルパス) の解決策と実施ログ
 
-1.  **対象ファイルの特定:**
-    *   `app/Helpers/AttachedFilePathHelper.php`
-    *   `app/Jobs/Ledger/GenerateThumbnail.php`
-    *   `GenerateThumbnail` ジョブをディスパッチしている箇所（特定が必要）
+#### 6.2.1. 調査と方針決定の経緯
 
-2.  **具体的な修正内容:**
-    1.  **`AttachedFilePathHelper::getThumbnailStoragePath()` を修正:**
-        *   引数に `int $ledgerDefineId` を追加する。
-        *   パス生成ロジックを、添付ファイル本体と整合性が取れるよう `tenants/{tenant_id}/Ledger/Attachments/{ledger_define_id}/thumbs` のような構造に変更する。
-    2.  **`GenerateThumbnail` ジョブを修正:**
-        *   コンストラクタで `ledger_define_id` を受け取れるようにする。
-        *   `getThumbnailStoragePath()` を呼び出す際に `ledger_define_id` を渡すようにする。
-    3.  **`GenerateThumbnail` ジョブのディスパッチ箇所を特定し、修正:**
-        *   プロジェクト全体を検索し、`GenerateThumbnail::dispatch()` を呼び出している箇所を探す。
-        *   特定した箇所で、`ledger_define_id` をジョブに渡すように修正する。
+本課題の解決にあたり、いくつかの重要な技術的判断と調査を行った。後続の保守開発者のために、その経緯をここに記録する。
 
-3.  **検証方法:**
-    *   **自動テスト:** 関連するテストを作成または修正し、パスすることを確認する。
-    *   **手動テスト:** 複数の異なる台帳定義にファイルを添付し、それぞれのサムネイルが正しいディレクトリ (`storage/app/public/tenants/{tenant_id}/Ledger/Attachments/{ledger_define_id}/thumbs/`) に作成されることを確認する。
+##### (1) サムネイル生成タイミングの特定
 
-上記修正を行うことで、今回のセッションで発覚した一連の問題はすべて解決される見込みです。
+当初、サムネイル生成ジョブ `GenerateThumbnail` の呼び出し箇所がコードベース上に見当たらず、「初回生成ロジックが存在しない」と仮説を立てた。しかし、ユーザーからの「表示時に生成していたはず」との指摘を受け `AttachedFileDownloadController` を再調査した結果、以下の事実が判明した。
+
+*   **既存のロジック:** コントローラーには、サムネイルが存在せず、かつファイルのステータスが `THUMBNAIL_FAILED` の場合に限り、`GenerateThumbnail` ジョブを**再ディスパッチ**する「再試行」ロジックが存在した。
+*   **欠落していたロジック:** 一方で、サムネイルの「初回生成」を担う仕組みは実装されていなかった。
+
+この調査結果に基づき、以下の役割分担で実装する最終方針を固めた。
+
+*   **初回生成 (今回実装):** `ProcessAttachedFile` ジョブが、ファイルの初期処理完了後に責任を持って実行する。
+*   **再試行 (既存ロジック活用):** `AttachedFileDownloadController` が、初回生成に失敗したファイルの表示リクエスト時に再試行をトリガーする。
+
+##### (2) テナントIDの受け渡し方法に関する検討
+
+`getThumbnailStoragePath` ヘルパーや `GenerateThumbnail` ジョブにテナントIDをどう渡すかについて検討した。
+
+*   **当初案:** ジョブのコンストラクタ等で明示的に `tenant_id` を引数として渡す。
+*   **最終方針:** アプリケーション全体の設計思想に合わせ、`stancl/tenancy` が提供する `tenant()` ヘルパーをメソッド内部で呼び出して取得する。これは、キューワーカーがジョブ実行時に自動でテナントコンテキストを復元することを前提とした、クリーンな実装である。
+
+##### (3) フォールバック処理に関する検討
+
+テナントIDが取得できない場合のフォールバック処理として、「`public` 直下の古いパスを探しに行く」という案が提示された。しかし、以下の設計上の懸念から、この案は見送ることとした。
+
+*   **論理的破綻:** テナントIDが不明な状況では、サムネイルの保存先だけでなく、**元画像のパスも特定できない**ため、サムネイル生成自体が不可能である。
+*   **責務の曖-昧化:** パス生成ヘルパーがファイルの探索まで行うことになり、責務が曖昧になる。
+*   **根本解決の先送り:** 本来、古いパスのファイルはデータマイグレーションによって新しいパス構造に統一すべきであり、フォールバック処理はその場しのぎの対策となり、技術的負債を生む。
+
+以上の検討を経て、テナントIDが取得できない場合はエラーログを出力して安全に処理を中断する、という現行の思想を維持することで合意した。
+
+#### 6.2.2. 実施した修正内容
+
+上記方針に基づき、以下の修正を実施した。
+
+##### ステップ1: `AttachedFilePathHelper` の改修
+
+サムネイルの保存パスを、添付ファイル本体のディレクトリ構造に合わせるため、`app/Helpers/AttachedFilePathHelper.php` を修正。
+
+*   `getThumbnailStoragePath()` メソッドのシグネチャを `public static function getThumbnailStoragePath(int $ledgerDefineId, string $hashedBasename): string` に変更。
+*   メソッド内部のパス生成ロジックを、`tenants/{tenant_id}/Ledger/Attachments/{ledger_define_id}/thumbs` という構造に変更した。
+
+##### ステップ2: `GenerateThumbnail` ジョブの改修
+
+`app/Jobs/Ledger/GenerateThumbnail.php` を修正し、ステップ1で変更したヘルパーを正しく呼び出せるようにした。
+
+*   当初、ジョブのコンストラクタで `ledger_define_id` を別途受け取る案を検討したが、`AttachedFile` モデル自体が `ledger_define_id` をプロパティとして持つことをDBスキーマから確認したため、コンストラクタの変更は不要と判断。
+*   `handle()` メソッド内で `getThumbnailStoragePath` を呼び出す際に、第一引数として `$attachedFile->ledger_define_id` を渡すように修正した。
+
+##### ステップ3: サムネイル生成ジョブのディスパッチ処理の追加
+
+`app/Jobs/Ledger/ProcessAttachedFile.php` を修正し、サムネイルの初回生成をトリガーするようにした。
+
+*   `handle()` メソッドの最後に、添付ファイルのMIMEタイプが画像またはPDFであるかを確認する条件分岐を追加。
+*   条件に一致する場合、`GenerateThumbnail::dispatch($this->attachedFile->id)` を実行し、サムネイル生成ジョブをキューに投入するようにした。
+
+##### ステップ4: `AttachedFileDownloadController` の修正
+
+`app/Http/Controllers/AttachedFileDownloadController.php` を修正し、修正後のサムネイルパスを参照するようにした。
+
+*   `download()` メソッド内で `getThumbnailStoragePath()` を呼び出している2箇所を、`$attachedFile->ledger_define_id` を引数に追加して呼び出すように修正した。
+
+#### 6.2.3. 今後の作業
+
+*   **ステップ5: 検証:**
+    *   自動テストの作成・実行。
+    *   手動での動作確認。
+*   **ステップ6: 関連ドキュメントの修正:**
+    *   `docs/work/2025-07-19_refactor-attached-file-path.md` の更新。
