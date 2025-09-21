@@ -11,12 +11,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Maatwebsite\Excel\Facades\Excel;
 
-use Stancl\Tenancy\Contracts\TenantAware;
-use Stancl\Tenancy\Concerns\HasATenant;
-
-class ExportJob implements ShouldQueue, TenantAware
+class ExportJob implements ShouldQueue
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels, HasATenant;
+    use Exportable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Ledger定義のID

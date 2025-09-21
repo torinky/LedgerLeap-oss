@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
-use Stancl\Tenancy\Contracts\TenantAware;
-use Stancl\Tenancy\Concerns\HasATenant;
-
-class AttachedFileOcrJob implements ShouldQueue, TenantAware
+class AttachedFileOcrJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, HasATenant;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private int $attachedFileId;
 

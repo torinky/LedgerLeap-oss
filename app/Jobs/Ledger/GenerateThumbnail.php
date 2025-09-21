@@ -16,12 +16,9 @@ use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Throwable;
 
-use Stancl\Tenancy\Contracts\TenantAware;
-use Stancl\Tenancy\Concerns\HasATenant;
-
-class GenerateThumbnail implements ShouldQueue, TenantAware
+class GenerateThumbnail implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, HasATenant;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $attachedFileId;
 

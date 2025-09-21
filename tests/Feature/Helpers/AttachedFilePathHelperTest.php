@@ -5,6 +5,7 @@ namespace Tests\Feature\Helpers;
 use App\Helpers\AttachedFilePathHelper;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -63,5 +64,22 @@ class AttachedFilePathHelperTest extends TestCase
 
         $this->assertEquals($expectedPath, $path);
         Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/thumbs');
+    }
+
+    /** @test */
+    public function it_logs_error_when_tenant_is_not_initialized()
+    {
+        // テナントを初期化しない
+        // tenancy()->initialize($tenant);
+
+        Log::spy();
+
+        $path = AttachedFilePathHelper::getAttachmentPath(1, 'test.jpg');
+
+        // パスがnullまたは空であることを確認（実装による）
+        $this->assertEmpty($path);
+
+        // エラーログが記録されたことを確認
+        Log::shouldHaveReceived('error')->once()->with('Tenant ID not found while generating attachment path.');
     }
 }

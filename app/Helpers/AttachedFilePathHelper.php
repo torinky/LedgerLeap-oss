@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class AttachedFilePathHelper
 {
@@ -18,9 +19,8 @@ class AttachedFilePathHelper
     {
         $tenantId = tenant('id');
         if (!$tenantId) {
-            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
-            // 例: Log::error('Tenant ID not found while generating attachment path.');
-            // return 'default/path/' ...
+            Log::error('Tenant ID not found while generating attachment path.');
+            return '';
         }
         $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId;
         // ディレクトリが存在しない場合は作成
@@ -40,9 +40,8 @@ class AttachedFilePathHelper
     {
         $tenantId = tenant('id');
         if (!$tenantId) {
-            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
-            // 例: Log::error('Tenant ID not found while generating attachment path.');
-            // return 'default/path/' ...
+            Log::error('Tenant ID not found while generating original attachment path.');
+            return '';
         }
         $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals';
         // ディレクトリが存在しない場合は作成
@@ -75,9 +74,8 @@ class AttachedFilePathHelper
     {
         $tenantId = tenant('id');
         if (!$tenantId) {
-            // テナントが特定できない場合のエラーハンドリングまたはデフォルトパス
-            // 例: Log::error('Tenant ID not found while generating attachment path.');
-            // return 'default/path/' ...
+            Log::error('Tenant ID not found while generating thumbnail path.');
+            return '';
         }
         $directory = 'tenants/' . $tenantId . '/Ledger/thumbs';
         // ディレクトリが存在しない場合は作成

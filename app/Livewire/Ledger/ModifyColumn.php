@@ -17,9 +17,11 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use App\Helpers\AttachedFilePathHelper;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class ModifyColumn extends CreateColumn
 {
+    use InitializesTenantContext;
     public array $deletedContent = [];
 
 
@@ -431,11 +433,11 @@ class ModifyColumn extends CreateColumn
 
                     if ($fileExists) {
 //                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
-                        $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+                        $posterUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId, 'thumbnail' => true]);
                     }
 
                     $fileObject = [
-                        'source' => route('file.download', ['attachedFile' => $attachmentId]), // FilePondが直接ロードするURL
+                        'source' => route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId]), // FilePondが直接ロードするURL
                         'options' => [
                             'type' => 'local',
                             'file' => [
