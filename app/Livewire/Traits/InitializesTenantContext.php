@@ -20,6 +20,7 @@ trait InitializesTenantContext
                 // originalParameters() はルートモデルバインディング前の生のパラメータを返すため、
                 // ライフサイクルの早い段階でも安定して値を取得できる。
                 $this->tenantId = $route->originalParameters()['tenant'] ?? null;
+                Log::info('InitializesTenantContext: tenantId from route parameters: ' . ($this->tenantId ?? 'null')); // 追加
             }
         }
 
@@ -33,6 +34,8 @@ trait InitializesTenantContext
                 Log::error('Tenant not found for ID from property in InitializesTenantContext trait', ['tenant_id' => $this->tenantId]);
             }
         }
+        Log::info('InitializesTenantContext: Final tenantId in trait: ' . ($this->tenantId ?? 'null')); // 追加
+        Log::info('InitializesTenantContext: Tenancy initialized status: ' . ($tenancy->initialized ? 'true' : 'false')); // 追加
     }
 
     // Livewire の boot メソッドで呼び出す

@@ -85,7 +85,7 @@
     *   **自動テスト:** `vendor/bin/sail test tests/Feature/Livewire/Ledger/ModifyColumnTest.php` を実行し、`it_correctly_prepares_initial_files_for_filepond` を含む全てのテストがパスすることを確認する。
     *   **手動テスト:** 台帳編集画面を開き、既存の添付ファイルのサムネイルが正しく表示され、ダウンロードリンクが正常に機能することをブラウザで確認する。
 
-### 6.2. 課題4 (サムネイルパス) の解決策と実施ログ
+### 6.2. 課題4 (サムネイルパス) の解決策と最終方針
 
 #### 6.2.1. 調査と方針決定の経緯
 
@@ -98,63 +98,105 @@
 *   **既存のロジック:** コントローラーには、サムネイルが存在せず、かつファイルのステータスが `THUMBNAIL_FAILED` の場合に限り、`GenerateThumbnail` ジョブを**再ディスパッチ**する「再試行」ロジックが存在した。
 *   **欠落していたロジック:** 一方で、サムネイルの「初回生成」を担う仕組みは実装されていなかった。
 
-この調査結果に基づき、以下の役割分担で実装する最終方針を固めた。
+この調査結果に基づき、**初回生成は `ProcessAttachedFile` ジョブが担う**という方針を決定した。
 
-*   **初回生成 (今回実装):** `ProcessAttachedFile` ジョブが、ファイルの初期処理完了後に責任を持って実行する。
-*   **再試行 (既存ロジック活用):** `AttachedFileDownloadController` が、初回生成に失敗したファイルの表示リクエスト時に再試行をトリガーする。
+##### (2) パス生成戦略の模索と最終方針の決定
 
-##### (2) テナントIDの受け渡し方法に関する検討
+サムネイルのパス構造をどう決定するかについて、複数の案を検討した。
 
-`getThumbnailStoragePath` ヘルパーや `GenerateThumbnail` ジョブにテナントIDをどう渡すかについて検討した。
+1.  **ディレクトリ分離案:** 添付ファイル本体と同様に `.../Attachments/{ledger_define_id}/thumbs/` に保存する案。最も構造がクリーンだが、`ColumnHtmlService` など呼び出し側の修正が必要となる点が懸念された。
+2.  **ファイル名ハッシュ化案:** ファイル名の衝突を避けるため、関連情報からユニークなハッシュを生成する案。DBスキーマ変更など、複雑性が増すため見送られた。
+3.  **`hashedbasename` 流用案（最終方針）:** ユーザーからの「添付ファイル名は既に `hashedbasename` として一意になっているはず」という本質的な指摘を採用。`hashedbasename` をサムネイル名として流用し、テナント直下の `.../thumbs/` ディレクトリに保存する方針を最終決定した。
 
-*   **当初案:** ジョブのコンストラクタ等で明示的に `tenant_id` を引数として渡す。
-*   **最終方針:** アプリケーション全体の設計思想に合わせ、`stancl/tenancy` が提供する `tenant()` ヘルパーをメソッド内部で呼び出して取得する。これは、キューワーカーがジョブ実行時に自動でテナントコンテキストを復元することを前提とした、クリーンな実装である。
+この最終方針は、`ColumnHtmlService` の修正が不要になるという大きなメリットがあり、かつファイル衝突も防げるため、最もシンプルでバランスの取れた解決策であると判断した。
 
-##### (3) フォールバック処理に関する検討
+#### 6.2.2. 最終的な修正計画
 
-テナントIDが取得できない場合のフォールバック処理として、「`public` 直下の古いパスを探しに行く」という案が提示された。しかし、以下の設計上の懸念から、この案は見送ることとした。
+上記方針に基づき、以下の作業を実施する。
 
-*   **論理的破綻:** テナントIDが不明な状況では、サムネイルの保存先だけでなく、**元画像のパスも特定できない**ため、サムネイル生成自体が不可能である。
-*   **責務の曖-昧化:** パス生成ヘルパーがファイルの探索まで行うことになり、責務が曖昧になる。
-*   **根本解決の先送り:** 本来、古いパスのファイルはデータマイグレーションによって新しいパス構造に統一すべきであり、フォールバック処理はその場しのぎの対策となり、技術的負債を生む。
+##### ステップ1: `AttachedFilePathHelper` の修正
 
-以上の検討を経て、テナントIDが取得できない場合はエラーログを出力して安全に処理を中断する、という現行の思想を維持することで合意した。
+*   **対象:** `app/Helpers/AttachedFilePathHelper.php`
+*   **内容:** `getThumbnailStoragePath` メソッドのロジックを、テナント直下のサムネイル専用ディレクトリ (`tenants/{tenant_id}/Ledger/thumbs/`) に、引数の `hashedbasename` を使ってパスを生成するように修正する。（一度 `ledger_define_id` を追加した修正を元に戻す）
 
-#### 6.2.2. 実施した修正内容
+##### ステップ2: 関連コードの修正
 
-上記方針に基づき、以下の修正を実施した。
+`ledger_define_id` を渡すように変更した、以下のファイルの関連箇所をすべて元の形に戻す。
+*   `app/Jobs/Ledger/GenerateThumbnail.php`
+*   `app/Http/Controllers/AttachedFileDownloadController.php`
 
-##### ステップ1: `AttachedFilePathHelper` の改修
+##### ステップ3: `ProcessAttachedFile` の修正
 
-サムネイルの保存パスを、添付ファイル本体のディレクトリ構造に合わせるため、`app/Helpers/AttachedFilePathHelper.php` を修正。
+*   **対象:** `app/Jobs/Ledger/ProcessAttachedFile.php`
+*   **内容:** `GenerateThumbnail` ジョブをディスパッチする処理を追加する。`ledger_define_id` は不要なため、`dispatch($this->attachedFile->id)` の形で呼び出す。
 
-*   `getThumbnailStoragePath()` メソッドのシグネチャを `public static function getThumbnailStoragePath(int $ledgerDefineId, string $hashedBasename): string` に変更。
-*   メソッド内部のパス生成ロジックを、`tenants/{tenant_id}/Ledger/Attachments/{ledger_define_id}/thumbs` という構造に変更した。
+##### ステップ4: テストコードの修正
 
-##### ステップ2: `GenerateThumbnail` ジョブの改修
+同様に、`ledger_define_id` を渡すように変更したテストコードをすべて元の形に戻す。
+*   `tests/Feature/Helpers/AttachedFilePathHelperTest.php`
+*   `tests/Unit/Jobs/GenerateThumbnailTest.php`
 
-`app/Jobs/Ledger/GenerateThumbnail.php` を修正し、ステップ1で変更したヘルパーを正しく呼び出せるようにした。
+##### ステップ5: 検証
 
-*   当初、ジョブのコンストラクタで `ledger_define_id` を別途受け取る案を検討したが、`AttachedFile` モデル自体が `ledger_define_id` をプロパティとして持つことをDBスキーマから確認したため、コンストラクタの変更は不要と判断。
-*   `handle()` メソッド内で `getThumbnailStoragePath` を呼び出す際に、第一引数として `$attachedFile->ledger_define_id` を渡すように修正した。
+*   修正したテストがすべてパスすることを確認する。
+*   手動で画像を添付し、`storage/tenants/{tenant_id}/Ledger/thumbs/` 配下にサムネイルが正しく生成・表示されることを確認する。
 
-##### ステップ3: サムネイル生成ジョブのディスパッチ処理の追加
+##### ステップ6: 関連ドキュメントの修正
 
-`app/Jobs/Ledger/ProcessAttachedFile.php` を修正し、サムネイルの初回生成をトリガーするようにした。
+*   今回の仕様変更に伴い、影響を受ける可能性のあるドキュメントを更新する。対象は `@docs` ディレクトリ配下の、添付ファイルのパス仕様やファイル処理フローに関する記載を含むすべてのドキュメントとする。
 
-*   `handle()` メソッドの最後に、添付ファイルのMIMEタイプが画像またはPDFであるかを確認する条件分岐を追加。
-*   条件に一致する場合、`GenerateThumbnail::dispatch($this->attachedFile->id)` を実行し、サムネイル生成ジョブをキューに投入するようにした。
+# 7. 課題5: OCRジョブの実行環境における問題の特定と解決
 
-##### ステップ4: `AttachedFileDownloadController` の修正
+当初のファイルパス修正後、OCR処理を担う `OcrAndOptimizeFile` ジョブがキュー内で失敗し続けるという問題が新たに発生した。この問題の解決過程で、Dockerのビルドプロセス、コンテナの実行環境、ロギング、さらにはテスト手法に至るまで、複数の根深い問題が明らかになった。
 
-`app/Http/Controllers/AttachedFileDownloadController.php` を修正し、修正後のサムネイルパスを参照するようにした。
+### 7.1. 問題点
 
-*   `download()` メソッド内で `getThumbnailStoragePath()` を呼び出している2箇所を、`$attachedFile->ledger_define_id` を引数に追加して呼び出すように修正した。
+*   **現象:** `OcrAndOptimizeFile` ジョブがキューで処理されると、`ocr_failed` ステータスで失敗する。
+*   **不可解なログの欠落:** ジョブの `catch` ブロックにはエラーログを記録する処理があるにもかかわらず、`storage/logs/queue.log` や `laravel.log` に一切のエラーが出力されず、デバッグが極めて困難な状況に陥っていた。
 
-#### 6.2.3. 今後の作業
+### 7.2. 原因分析と解決の経緯
 
-*   **ステップ5: 検証:**
-    *   自動テストの作成・実行。
-    *   手動での動作確認。
-*   **ステップ6: 関連ドキュメントの修正:**
-    *   `docs/work/2025-07-19_refactor-attached-file-path.md` の更新。
+#### (1) `docker exec` コマンドの失敗
+
+最初の仮説は、ジョブが `docker exec` を使って `ocrmypdf` コンテナを呼び出す処理に失敗しているというものだった。
+
+*   **調査:** `queue` コンテナ内で `which docker` を実行したところ、`docker` コマンドが存在しないことが判明。
+*   **原因:** `docker-compose.yml` を調査した結果、`laravel`, `queue`, `scheduler` の3つのサービスがすべて同じイメージ名 `sail-8.4/app` を共有していた。これにより、後からビルドされた `laravel` や `scheduler` のイメージ（Docker CLIを含まない）が、Docker CLIをインストールするように設定された `queue` サービスのイメージを上書きしてしまい、結果として `queue` コンテナにDocker CLIがインストールされない、というビルドプロセスの根本的な欠陥が特定された。
+*   **対策:**
+    *   `docker-compose.yml` を修正し、`queue` サービスの `image` 名をユニークな `sail-8.4/app-queue` に変更。
+    *   `docker/app/DockerfileQueue` がPHPのベース環境を含んでいなかったため、`vendor/laravel/sail/runtimes/8.4/Dockerfile` をベースに、Docker CLIをインストールする処理を追加する形で全面的に書き換えた。
+    *   `sail build --no-cache` で全イメージを再ビルドし、問題を解決した。
+
+#### (2) ログが一切出力されない問題
+
+`docker exec` が利用可能になっても、ジョブは失敗し続け、依然としてログは出力されなかった。
+
+*   **調査:**
+    1.  `docker-compose.yml` の `queue` サービスに `LOG_CHANNEL: 'queue'` が設定されており、`config/logging.php` の `queue` チャネルが `storage/logs/queue.log` を指していることを確認。設定は正しかった。
+    2.  `vendor/bin/sail exec laravel ls -ld storage/logs` を実行し、`storage/logs` ディレクトリのパーミッションを確認したところ、所有者が `root:root` になっていた。
+*   **原因:** `queue` コンテナ内のプロセスは `sail` ユーザーで実行されているため、`root` が所有する `storage/logs` ディレクトリへの書き込み権限がなく、ログファイルを作成できずにサイレントフェイルしていた。
+*   **対策:**
+    *   **一時的対応:** `vendor/bin/sail exec laravel chown -R sail:sail storage/logs` を実行し、ディレクトリの所有者を `sail` ユーザーに変更することで、ログが出力されることを確認した。
+    *   **恒久対応:** この問題の再発を防ぐため、`docker/app/start-container` スクリプトを修正。コンテナ起動時に `chown -R $WWWUSER:$WWWGROUP /var/www/html/storage/logs` が実行されるように処理を追加した。これにより、ホスト側のファイルパーミッションに依らず、コンテナは常にログディレクトリへの書き込み権限を確保できるようになった。
+
+#### (3) `ocrmypdf` の `InputFileError`
+
+ログが出力されるようになると、今度は `ocrmypdf` 自体が `InputFileError` を返していることが判明した。
+
+*   **原因:** これは、テスト実行時にTinkerスクリプトで生成していたダミーのPDFファイルが、`ocrmypdf` が処理できない不正な形式だったためである。
+*   **恒久対策としてのテストコード実装:** この問題を根本的に解決し、今後のリグレッションを防ぐため、Tinkerスクリプトによる手動テストではなく、恒久的な自動テストを実装する方針に切り替えた。
+
+### 7.3. 解決策: OCRジョブのフィーチャーテスト実装
+
+`OcrAndOptimizeFile` ジョブの複雑なロジックを堅牢にテストするため、`tests/Feature/Ledger/OcrAndOptimizeFileJobTest.php` を新規に作成した。
+
+*   **テスト戦略:**
+    *   **外部プロセスのモック化:** `Process::fake()` を使用して、`docker exec` の外部コマンド呼び出しをモック化した。これにより、Dockerデーモンが利用できないテスト環境でも、ジョブの内部ロジックを完全にテストできるようになった。
+    *   **成功・失敗シナリオの網羅:** OCR処理が成功した場合と失敗した場合の両方のシナリオをテストする2つのテストケース (`it_successfully_processes_a_pdf_file_and_updates_status`, `it_handles_ocr_failure_and_updates_status`) を実装した。
+    *   **ファイルシステムのシミュレーション:** `Storage::fake('public')` を使用してファイル操作をシミュレート。特に、成功ケースのテストでは、`Process::fake()` のクロージャ内で、`ocrmypdf` が出力するはずのファイルを擬似的に生成する処理を追加した。これにより、ジョブ内の `Storage::size()` 呼び出しが失敗する問題を回避し、より現実に近い形でのテストを実現した。
+
+*   **成果:**
+    *   一連のインフラ（Docker環境、パーミッション）の問題が修正された。
+    *   `OcrAndOptimizeFile` ジョブの振る舞いを保証する、安定的かつ再現性の高い自動テストが整備された。
+    *   これにより、今後の改修時に意図しない不具合（リグレッション）が発生することを防ぐセーフティネットが構築された。
+

@@ -79,7 +79,12 @@ class ModifyColumnTest extends TestCase
         ]);
 
         // 実行 (Act) & 検証 (Assert)
-        $livewireTest = Livewire::test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+        tenancy()->initialize($this->tenant); // 追加
+        $livewireTest = Livewire::actingAs($this->user)
+            ->withRouteParameters(['tenant' => $this->tenant->id]) // テナントIDをルートパラメータとして渡す
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id); // 追加
 
         // 1. トレイトによってtenantIdが正しくセットされているか確認
         $livewireTest->assertSet('tenantId', $this->tenant->id);

@@ -264,7 +264,7 @@ HTML;
                     $retryIconHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
-    onclick="Livewire.dispatch('retryProcessingEvent', { attachedFileId: {$attachment->id} })"></i>
+    wire:click="retryProcessing({$attachment->id})"></i>
 </div>
 HTML;
                 }

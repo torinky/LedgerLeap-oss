@@ -33,7 +33,7 @@ services:
       args:
         WWWGROUP: '${WWWGROUP}'
         DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}'
-    image: sail-8.4/app
+    image: sail-8.4/app-queue
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'

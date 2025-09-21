@@ -43,6 +43,7 @@ class AttachedFilePathHelper
             Log::error('Tenant ID not found while generating original attachment path.');
             return '';
         }
+        Log::info('getOriginalAttachmentPath: Tenant ID obtained: ' . $tenantId); // 追加
         $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
@@ -70,14 +71,14 @@ class AttachedFilePathHelper
      * @param string $hashedBasename ハッシュ化されたファイル名（拡張子含む）
      * @return string
      */
-    public static function getThumbnailStoragePath(int $ledgerDefineId, string $hashedBasename): string
+    public static function getThumbnailStoragePath(string $hashedBasename): string
     {
         $tenantId = tenant('id');
         if (!$tenantId) {
-            Log::error('Tenant ID not found while generating thumbnail storage path.');
+            Log::error('Tenant ID not found while generating thumbnail path.');
             return '';
         }
-        $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId . '/thumbs';
+        $directory = 'tenants/' . $tenantId . '/Ledger/thumbs';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す

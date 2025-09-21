@@ -40,6 +40,9 @@ class ProcessAttachedFile implements ShouldQueue
      */
     public function handle(): void
     {
+        // ここでテナントを初期化
+        tenancy()->initialize($this->attachedFile->tenant_id);
+
         Log::info('ProcessAttachedFile: ID: ' . $this->attachedFile->id . ', Status: ' . $this->attachedFile->status->value);
         // Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
@@ -66,7 +69,8 @@ class ProcessAttachedFile implements ShouldQueue
                 $this->attachedFile->update($updateData);
                 $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
                 // Log::info('Original file moved to: ' . $newOriginalPath);
-            } catch (\Exception $e) {
+            } catch (
+Exception $e) {
                 Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
                 $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
                 return;
@@ -214,11 +218,14 @@ class ProcessAttachedFile implements ShouldQueue
         }); // ★ トランザクション終了
 
         $this->attachedFile->save();
+        Log::info('ProcessAttachedFile: attachedFile saved successfully.');
 
         // ★ サムネイル生成対象か判定し、ジョブをディスパッチ
         $mime = $this->attachedFile->mime;
-        if (str_starts_with($mime, 'image/') || $mime === 'application/pdf') {
+        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: ' . $mime);
+        if (str_starts_with($mime, 'image/')) {
             GenerateThumbnail::dispatch($this->attachedFile->id);
+            Log::info('[ProcessAttachedFile] Dispatched GenerateThumbnail job for AttachedFile ID: ' . $this->attachedFile->id);
         }
 
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));

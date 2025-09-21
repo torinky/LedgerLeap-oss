@@ -9,15 +9,12 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Process\Exceptions\ProcessFailedException;
 
-// ★ use を変更
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Process;
-use Stancl\Tenancy\Contracts\TenantAware;
 
-// ★ use を変更
 //use Symfony\Component\Process\Process;
 use App\Helpers\AttachedFilePathHelper;
 
@@ -40,6 +37,8 @@ class OcrAndOptimizeFile implements ShouldQueue
      */
     public function handle(): void
     {
+        tenancy()->initialize($this->attachedFile->tenant_id);
+
         // Log::info('OcrAndOptimizeFile job started for file: ' . $this->attachedFile->id);
 
         // 1. status を OCR_PROCESSING に更新
@@ -124,10 +123,10 @@ class OcrAndOptimizeFile implements ShouldQueue
             'jpn',
             '--image-dpi',
             '300',
+            '--skip-text',
             $containerOriginalFilePath,
             $containerOutputFilePath,
         ];
-
 
         try {
             // ★ Process ファサードを使ってコマンドを実行

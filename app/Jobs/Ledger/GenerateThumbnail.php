@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
+use Stancl\Tenancy\Facades\Tenancy;
 use Throwable;
 
 class GenerateThumbnail implements ShouldQueue
@@ -38,18 +39,25 @@ class GenerateThumbnail implements ShouldQueue
      */
     public function handle(ImageManager $imageManager): void
     {
-        Log::info("[GenerateThumbnail] Job started for AttachedFile ID: {$this->attachedFileId}");
-
-        $attachedFile = AttachedFile::find($this->attachedFileId);
+        $attachedFile = tenancy()->central(function () {
+            return AttachedFile::find($this->attachedFileId);
+        });
 
         if (!$attachedFile) {
             Log::warning("[GenerateThumbnail] AttachedFile not found for ID: {$this->attachedFileId}. Aborting job.");
             return;
         }
 
+        // ここでテナントを初期化
+        tenancy()->initialize($attachedFile->tenant_id);
+
+        $tenantId = tenancy()?->tenant->id ?? 'No Tenant';
+        Log::info("[GenerateThumbnail] Current Tenant ID: {$tenantId}");
+        Log::info("[GenerateThumbnail] Job started for AttachedFile ID: {$this->attachedFileId}");
+
         // ▼▼▼ ソースファイルのパスではなく、コンテンツを取得するように変更 ▼▼▼
         $sourcePathForLog = $attachedFile->path; // ログ出力用にパスを保持
-        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->ledger_define_id, $attachedFile->hashedbasename);
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
 
         // サムネイルが既に存在する場合はスキップ
         if (Storage::disk('public')->exists($thumbnailPath)) {
