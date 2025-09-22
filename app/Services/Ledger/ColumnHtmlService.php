@@ -73,7 +73,17 @@ class ColumnHtmlService
      * @param string|null $tenantId
      * @return HtmlString 生成されたHTML文字列
      */
-    public function show(object|array $columnDefineData, $initialValue, bool $canView = true, array $attrs = [], string $idPrefix = '', bool $asCreate = false, ?Ledger $record = null, ?string $highlight = null, ?string $tenantId = null): HtmlString
+    public function show(
+        object|array $columnDefineData,
+        $initialValue,
+        bool $canView = true,
+        array $attrs = [],
+        string $idPrefix = '',
+        bool $asCreate = false,
+        ?Ledger $record = null,
+        ?string $highlight = null,
+        ?string $tenantId = null
+    ): HtmlString
     {
         if (!$canView) {
             return new HtmlString('');
@@ -85,7 +95,7 @@ class ColumnHtmlService
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
-        $this->tenantId = $tenantId;
+        $this->tenantId = $tenantId ?? $record?->define?->tenant_id ?? null;
 
         $type = $this->getColumnDefineProperty('type');
         $html = '';
@@ -347,7 +357,7 @@ HTML;
 HTML;
             } else {
                 if (str_starts_with($attachment->original_mime_type, 'image/')) {
-                    Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)));
+                    Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId));
                 }
                 $files[] = <<<HTML
  {$contentHtmlStart}

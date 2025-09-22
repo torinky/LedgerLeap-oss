@@ -351,9 +351,9 @@ class CreateColumn extends Component
                     'ledgerId' => $this->ledgerId,
                 ]);
             }
-            $this->success($message, redirectTo: $redirectUrl);
+//            $this->success($message, redirectTo: $redirectUrl);
             // --- 修正ここまで ---
-//            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+            $this->success($message, redirectTo: route('ledger.show', ['tenant' => $this->tenantId,'ledgerId' => $this->ledgerId]));
         } catch (Throwable $e) { // Throwable をキャッチ
             DB::rollBack(); // エラー時ロールバック
             Log::error('Direct save failed: ' . $e->getMessage());

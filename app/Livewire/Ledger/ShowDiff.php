@@ -148,7 +148,7 @@ class ShowDiff extends Component
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
 
         // Diff の content に基づいて添付ファイル情報を再構築
-        $this->allAttachments = $this->ledgerRecord->attachedFiles;
+        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
         $this->attachmentIdMap = $this->ledgerRecord->attachedFiles
             ->pluck('id', 'hashedbasename')
             ->toArray();

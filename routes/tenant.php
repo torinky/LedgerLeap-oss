@@ -76,7 +76,7 @@ Route::group([
     Route::delete('/ledgers/{ledger}', [\App\Http\Controllers\Ledger\UpdateController::class, 'destroy'])->name('ledger.destroy');
 
     //    ledgerDiff
-    Route::get('/ledgerDiff/{ledgerId}/{diffId?}', [LedgerDiffShowController::class, 'show']) // ShowController を使う場合
+    Route::get('/ledgerDiff/{ledgerId}/{diffId?}', LedgerDiffShowController::class) // ShowController を使う場合
     ->name('ledgerDiff.show')
         ->where('ledgerId', '[0-9]+')
         ->where('diffId', '[0-9]+'); // diffId も数字のみ
