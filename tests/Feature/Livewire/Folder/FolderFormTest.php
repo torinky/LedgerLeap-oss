@@ -43,12 +43,13 @@ class FolderFormTest extends TestCase
         $this->user->assignRole($role);
 
         // ルートフォルダを作成
-        $this->rootFolder = Folder::create([
+        $this->rootFolder = Folder::make([
             'title' => 'Root Folder',
             'tenant_id' => $this->tenant->id,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->rootFolder->saveAsRoot();
 
         // ユーザーを認証
         $this->actingAs($this->user);
@@ -60,6 +61,7 @@ class FolderFormTest extends TestCase
         Livewire::test(FolderForm::class)
             ->set('parentId', $this->rootFolder->id)
             ->set('title', 'New Sub Folder')
+            ->set('tenantId', $this->tenant->id)
             ->call('save');
 
         // データベースにフォルダが作成されたことを確認
@@ -73,6 +75,8 @@ class FolderFormTest extends TestCase
     #[Test]
     public function it_updates_an_existing_folder(): void
     {
+
+
         // テスト用の既存フォルダを作成
         $existingFolder = Folder::create([
             'title' => 'Original Title',
@@ -84,13 +88,12 @@ class FolderFormTest extends TestCase
 
         Livewire::test(FolderForm::class, ['folder' => $existingFolder])
             ->set('title', 'Updated Title')
+            ->set('tenantId', $this->tenant->id)
             ->call('save');
 
         // データベースのフォルダが更新されたことを確認
-        $this->assertDatabaseHas('folders', [
-            'id' => $existingFolder->id,
-            'title' => 'Updated Title',
-            'tenant_id' => $this->tenant->id, // tenant_idが変更されていないことを確認
-        ]);
+        $existingFolder->refresh();
+        $this->assertEquals('Updated Title', $existingFolder->title);
+        $this->assertEquals($this->tenant->id, $existingFolder->tenant_id);
     }
 }

@@ -34,7 +34,6 @@ class FolderForm extends Component
     public bool $formDisabled = false; // 削除後にフォームを無効化するため
     public bool $justSaved = false; // 保存直後かどうかのフラグ
 
-//    public string $tenantId = '';
 
     protected function rules(): array
     {
@@ -86,6 +85,7 @@ class FolderForm extends Component
             if (!$canUpdate) {
                 abort(403, __('auth.unauthorized'));
             }
+            $this->tenantId = $this->folder->tenant_id;
         }
 
         $this->availableParentFolders = collect();

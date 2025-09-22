@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class ModifyColumnTest extends TestCase
@@ -54,7 +55,7 @@ class ModifyColumnTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_correctly_prepares_initial_files_for_filepond()
     {
         // ストレージをフェイク
@@ -123,7 +124,7 @@ class ModifyColumnTest extends TestCase
         $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'The file poster URL is incorrect.');
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_multiple_column_types_correctly()
     {
         // ストレージをフェイク
@@ -198,7 +199,7 @@ class ModifyColumnTest extends TestCase
         $this->assertEquals($expectedSourceUrl, $fileData['source']);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_sparse_column_ids_correctly()
     {
         // ストレージをフェイク

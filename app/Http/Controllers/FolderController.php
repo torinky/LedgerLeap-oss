@@ -26,7 +26,7 @@ class FolderController extends Controller
      */
     public function create()
     {
-        //
+        $this->authorize('create', Folder::class);
     }
 
     /**
@@ -56,7 +56,7 @@ class FolderController extends Controller
      */
     public function edit(Folder $folder)
     {
-        //
+        $this->authorize('update', $folder);
     }
 
     /**

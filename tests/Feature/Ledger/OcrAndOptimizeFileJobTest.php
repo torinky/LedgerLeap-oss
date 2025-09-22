@@ -15,6 +15,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class OcrAndOptimizeFileJobTest extends TestCase
@@ -32,7 +33,7 @@ class OcrAndOptimizeFileJobTest extends TestCase
         $this->user = User::factory()->create();
     }
 
-    /** @test */
+    #[Test]
     public function it_successfully_processes_a_pdf_file_and_updates_status()
     {
         // Arrange: Prepare the test environment and data
@@ -102,8 +103,8 @@ class OcrAndOptimizeFileJobTest extends TestCase
         $this->assertEquals($path, $attachedFile->path);
         Storage::disk('public')->assertExists($attachedFile->path);
     }
-    
-    /** @test */
+
+    #[Test]
     public function it_handles_ocr_failure_and_updates_status()
     {
         // Arrange

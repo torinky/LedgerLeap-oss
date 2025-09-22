@@ -7,13 +7,14 @@ use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class AttachedFilePathHelperTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function getAttachmentPath_generates_tenant_specific_path()
     {
         Storage::fake('public');
@@ -31,7 +32,7 @@ class AttachedFilePathHelperTest extends TestCase
         Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId);
     }
 
-    /** @test */
+    #[Test]
     public function getOriginalAttachmentPath_generates_tenant_specific_path()
     {
         Storage::fake('public');
@@ -49,7 +50,7 @@ class AttachedFilePathHelperTest extends TestCase
         Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals');
     }
 
-    /** @test */
+    #[Test]
     public function getThumbnailStoragePath_generates_tenant_specific_path()
     {
         Storage::fake('public');
@@ -66,7 +67,7 @@ class AttachedFilePathHelperTest extends TestCase
         Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/thumbs');
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_error_when_tenant_is_not_initialized()
     {
         // テナントを初期化しない

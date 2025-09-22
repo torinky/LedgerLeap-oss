@@ -52,7 +52,7 @@ class CreateColumnTest extends TestCase
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
 
         // ColumnDefineオブジェクトを作成
-        $columnDefine = new ColumnDefine((object)[
+        $columnDefineArray = [
             'id' => 1,
             'name' => 'Test Column',
             'type' => 'text',
@@ -62,18 +62,19 @@ class CreateColumnTest extends TestCase
             'options' => [],
             'group' => 'Group 1',
             'file' => null,
-        ]);
+        ];
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $folder->id,
             'tenant_id' => $this->tenant->id,
             'workflow_enabled' => false,
-            'column_define' => [$columnDefine], // ColumnDefineオブジェクトの配列を渡す
+            'column_define' => [$columnDefineArray], // 連想配列の配列を渡す
         ]);
 
         // 2. Livewireコンポーネントのテスト
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
             ->set('content', [1 => 'Test Value'])
+            ->set('tenantId', $this->tenant->id)
             ->call('saveDirectly')
             ->assertHasNoErrors();
 
