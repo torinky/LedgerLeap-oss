@@ -154,7 +154,7 @@ it('renders auto_number with link', function () {
     $inputValue = 'SPEC-001';
     $expectedLink = '<a href="/ledgers?query=SPEC-001">SPEC-001</a>'; // Simplified for clarity
 
-    $ledgerRecord = new Ledger();
+    // $ledgerRecord = new Ledger(); // ← リレーションに触れてしまう可能性があるため使わない
 
     // 2. Mocks
     $mockAutoLinkService = mock(AutoLinkService::class);
@@ -163,7 +163,7 @@ it('renders auto_number with link', function () {
         ->with(
             htmlspecialchars($inputValue, ENT_QUOTES, 'UTF-8'),
             $columnDefine,
-            $ledgerRecord
+            null // ← record を null に変更
         )
         ->andReturn($expectedLink);
 
@@ -173,7 +173,10 @@ it('renders auto_number with link', function () {
 
     // 3. Execution
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
-    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, $ledgerRecord);
+
+    // tenantId を明示して record->define 参照を回避
+    $tenantId = 'test_tenant_id';
+    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, null, null, $tenantId);
 
     // 4. Assertion
     expect($result->toHtml())->toBe($expectedLink);

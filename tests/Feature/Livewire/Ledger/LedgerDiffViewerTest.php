@@ -15,6 +15,16 @@ use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use App\Models\Folder;
+use App\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\RoleFolderPermission;
+use App\Enums\FolderPermissionType;
+use App\Services\UserService;
+use App\Models\ColumnDefine;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
+use App\Models\AttachedFile;
 
 class LedgerDiffViewerTest extends TestCase
 {
@@ -23,6 +33,11 @@ class LedgerDiffViewerTest extends TestCase
     private User $user;
     private Ledger $ledger;
     protected Tenant $tenant;
+    private User $inspector;
+    private User $approver;
+    private Role $inspectorRole;
+    private Role $approverRole;
+    private Folder $folder;
 
     protected function setUp(): void
     {
@@ -34,7 +49,47 @@ class LedgerDiffViewerTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $ledgerDefine = LedgerDefine::factory()->create(['tenant_id' => $this->tenant->id]);
+        // ロールを作成 (ShowTestからコピー)
+        $this->inspectorRole = Role::create(['name' => 'inspector']);
+        $this->approverRole = Role::create(['name' => 'approver']);
+        $this->inspector = User::factory()->create(); // ShowTestではinspectorとapproverも作成していた
+        $this->approver = User::factory()->create();
+        $this->inspector->assignRole($this->inspectorRole);
+        $this->approver->assignRole($this->approverRole);
+
+        // 'view_ledgers' パーミッションを作成し、$this->user に付与 (ShowTestからコピー)
+        $viewLedgersPermission = Permission::firstOrCreate(['name' => 'view_ledgers']);
+        $this->user->givePermissionTo($viewLedgersPermission);
+
+        // テスト用のロールを作成し、$this->user に割り当てる (ShowTestからコピー)
+        $testReaderRole = Role::firstOrCreate(['name' => 'test_reader_role']);
+        $this->user->assignRole($testReaderRole);
+
+        // フォルダと台帳定義を作成 (ShowTestからコピー)
+        $this->folder = Folder::factory()
+            ->withRequiredRoles(
+                inspectors: [$this->inspectorRole],
+                approvers: [$this->approverRole]
+            )
+            ->create();
+
+        // RoleFolderPermission を作成し、テスト用のロールとフォルダ、READ権限を関連付ける (ShowTestからコピー)
+        RoleFolderPermission::create([
+            'role_id' => $testReaderRole->id,
+            'folder_id' => $this->folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // ユーザーのパーミッションキャッシュをクリア (ShowTestからコピー)
+        $userService = $this->app->make(UserService::class);
+        $userService->clearUserPermissionsCache($this->user);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            // ShowTestではfolderに紐付けていたので、ここも修正
+            'folder_id' => $this->folder->id,
+        ]);
         $this->ledger = Ledger::factory()
             ->for($ledgerDefine, 'define')
             ->for($this->user, 'creator')
@@ -135,6 +190,7 @@ class LedgerDiffViewerTest extends TestCase
                 ['id' => 1, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
             ],
             'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
         ]);
 
         // 2. version 1 の Ledger と LedgerDiff を作成
@@ -185,5 +241,77 @@ class LedgerDiffViewerTest extends TestCase
             ->set('hasChangedColumns', true) // ->set() を使ってプロパティを有効化
             ->set('showChanges', true) // ->set() を使ってプロパティを有効化
             ->assertSeeHtml('Version. 1'); // 比較対象の version 1 が表示されることを確認
+    }
+
+    #[Test]
+    public function it_displays_attached_files_correctly_in_diff_viewer()
+    {
+        Bus::fake(); // ジョブがディスパッチされないようにモック
+
+        Storage::fake('public');
+
+        // 添付ファイルを持つLedgerDefineを作成
+        $ledgerDefineWithFiles = LedgerDefine::factory()->for($this->folder)->create([
+            'workflow_enabled' => false,
+            'column_define' => [
+                new ColumnDefine(1, 'File Column', 'files', 1, [], false, false, 1),
+            ],
+        ]);
+
+        // 添付ファイルを持つLedgerレコードを作成
+        $ledgerWithFiles = Ledger::factory()
+            ->for($ledgerDefineWithFiles, 'define')
+            ->for($this->user, 'creator')
+            ->create(['tenant_id' => $this->tenant->id]);
+
+        // ダミーの添付ファイルを作成し、ストレージに配置
+        $file = \Illuminate\Http\UploadedFile::fake()->image('test_document.pdf', 100, 100);
+        $attachedFile = AttachedFile::factory()->for($ledgerWithFiles)->create([
+            'ledger_define_id' => $ledgerDefineWithFiles->id,
+            'filename' => $file->getClientOriginalName(),
+            'mime' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'hashedbasename' => 'test_hashed_basename.pdf',
+            'original_mime_type' => 'image/jpeg',
+        ]);
+        Storage::disk('public')->putFileAs(
+            'tenants/' . $this->tenant->id . '/Ledger/Attachments/' . $ledgerDefineWithFiles->id . '/',
+            $file,
+            $attachedFile->hashedbasename
+        );
+        Storage::disk('public')->put(
+            'tenants/' . $this->tenant->id . '/Ledger/thumbs/' . $attachedFile->hashedbasename,
+            'dummy_thumbnail_content'
+        );
+
+        // Ledgerのcontentに添付ファイルIDを設定
+        $ledgerWithFiles->content = [
+            1 => [ // ColumnDefineのIDと合わせる
+                $attachedFile->hashedbasename => $attachedFile->filename,
+            ],
+        ];
+        $ledgerWithFiles->save();
+
+        // Livewireコンポーネントをテスト
+        $this->actingAs($this->user);
+        $livewire = Livewire::test(LedgerDiffViewer::class, [ // ★ここを変更
+            'ledgerRecord' => $ledgerWithFiles, // ★ここを変更
+            'displayLevel' => 3, // ★ここを変更
+            'highlight' => null, // ★ここを追加
+            'canView' => true,
+        ]);
+
+        $this->assertNotEmpty($livewire->instance()->allAttachments);
+        $this->assertArrayHasKey('test_hashed_basename.pdf', $livewire->instance()->allAttachments);
+        $this->assertEquals($attachedFile->id, $livewire->instance()->allAttachments->get('test_hashed_basename.pdf')->id);
+
+        // HTMLに期待されるURLの断片が含まれていることをアサート
+        $livewire->assertSee("files/", false);
+        $livewire->assertSee("/download", false);
+        $livewire->assertSee((string)$attachedFile->id, false);
+        $livewire->assertSee("thumbnail=true", false);
+
+        // ファイル名も表示されていることを確認
+        $livewire->assertSee($attachedFile->filename);
     }
 }

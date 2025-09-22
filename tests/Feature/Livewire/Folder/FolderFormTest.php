@@ -8,6 +8,9 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Enums\FolderPermissionType;
+use App\Models\RoleFolderPermission;
+use App\Services\UserService;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -75,18 +78,30 @@ class FolderFormTest extends TestCase
     #[Test]
     public function it_updates_an_existing_folder(): void
     {
-
-
         // テスト用の既存フォルダを作成
-        $existingFolder = Folder::create([
+        $existingFolder = Folder::make([
             'title' => 'Original Title',
-            'parent_id' => $this->rootFolder->id,
             'tenant_id' => $this->tenant->id,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $existingFolder->appendToNode($this->rootFolder)->save();
 
-        Livewire::test(FolderForm::class, ['folder' => $existingFolder])
+        // ★ ここから追加
+        // ユーザーがこのフォルダを更新できるように権限を設定
+        RoleFolderPermission::create([
+            'role_id' => $this->user->roles->first()->id,
+            'folder_id' => $existingFolder->id,
+            'permission' => FolderPermissionType::WRITE->value,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // 権限キャッシュをクリア
+        $userService = $this->app->make(UserService::class);
+        $userService->clearUserPermissionsCache($this->user);
+        // ★ ここまで追加
+
+        Livewire::test(FolderForm::class, ['folderId' => $existingFolder->id])
             ->set('title', 'Updated Title')
             ->set('tenantId', $this->tenant->id)
             ->call('save');

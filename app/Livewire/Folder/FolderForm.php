@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Mary\Traits\Toast;
 use App\Livewire\Traits\InitializesTenantContext;
 
@@ -17,7 +18,9 @@ class FolderForm extends Component
 {
     use Toast, InitializesTenantContext;
 
-    public Folder $folder; // Livewireがルートモデルバインディング (編集時) または new Folder() (作成時) をセット
+    #[Locked]
+    public ?Folder $folder = null; // Livewireがルートモデルバインディング (編集時) または new Folder() (作成時) をセット
+    public ?int $folderId = null;
     public ?int $parentId = null; // Livewireがルートパラメータ {parentId?} (作成時) をセット
     public string $title = '';
 
@@ -43,7 +46,7 @@ class FolderForm extends Component
                 Rule::requiredIf(fn() => $this->isCreating && Folder::count() > 0), // 最初のフォルダ作成時は親不要
                 'nullable',
                 'integer',
-                Rule::exists('folders', 'id')->whereNot('id', $this->folder->id ?? 0)
+                Rule::exists('folders', 'id')->whereNot('id', $this->folderId ?? 0)
             ],
             'selectedInspectorRoleIds' => ['array'],
             'selectedInspectorRoleIds.*' => ['integer', 'exists:roles,id'],
@@ -65,6 +68,10 @@ class FolderForm extends Component
     // mountメソッドの引数を削除
     public function mount(): void
     {
+        if ($this->folderId) {
+            $this->folder = Folder::find($this->folderId);
+        }
+
         // Livewireによるプロパティバインディングの後に、folderプロパティがセットされていることを確認
         // ただし、新規作成時はLivewireがnew Folder()をセットするため、existsはfalse
         if (!isset($this->folder) || !$this->folder instanceof Folder) {
@@ -92,6 +99,7 @@ class FolderForm extends Component
         $this->availableRoles = collect();
 
         if ($this->folder->exists) {
+            $this->folderId = $this->folder->id; // ★ 追加
             // 編集モードの初期化
             $this->title = $this->folder->title;
             $this->parentId = $this->folder->parent_id;
@@ -163,7 +171,7 @@ class FolderForm extends Component
             if (!$this->isCreating) {
                 // 更新時は、Livewireのプロパティのデシリアライズ問題を避けるため、
                 // DBから最新のモデルを取得し直してからプロパティをセットする
-                $this->folder = Folder::find($this->folder->id);
+                $this->folder = Folder::find($this->folderId);
             }
             $this->folder->title = $this->title;
             $this->folder->modifier_id = Auth::id();

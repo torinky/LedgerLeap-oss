@@ -28,7 +28,7 @@ class CreateColumnTest extends TestCase
         parent::setUp();
 
         // テナントとドメインを作成し、テナンシーを初期化
-        $this->tenant = Tenant::create(['id' => 'test-tenant']);
+        $this->tenant = Tenant::create();
         $this->tenant->domains()->create(['domain' => 'test.localhost']);
         tenancy()->initialize($this->tenant);
 
@@ -43,7 +43,22 @@ class CreateColumnTest extends TestCase
 
         // ユーザーを認証
         $this->actingAs($this->user);
+
+        // ★ Spatieの権限キャッシュをクリア
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
+
+    // ★ tearDownメソッドを追加
+    protected function tearDown(): void
+    {
+        // テナントコンテキストを終了
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+
+        parent::tearDown();
+    }
+
 
     #[Test]
     public function it_creates_ledger_with_correct_tenant_id()

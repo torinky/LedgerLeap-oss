@@ -27,6 +27,19 @@ class LedgerColumnValidationTest extends TestCase
         // ユーザーを作成し、すべてのテストで認証済み状態にする
         $user = User::factory()->create();
         $this->actingAs($user);
+
+        // Spatieの権限キャッシュをクリア
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    protected function tearDown(): void
+    {
+        // テナントコンテキストを終了
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+
+        parent::tearDown();
     }
 
     #[Test]
@@ -96,6 +109,7 @@ class LedgerColumnValidationTest extends TestCase
 
         // 実行 & 確認
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id])
+            ->set('tenantId', $this->tenant->id) // ★ 追加
             ->set('content.1', 'NEW_UNIQUE_VALUE') // 新しいユニークな値をセット
             ->call('saveDirectly')
             ->assertHasNoErrors('content.1');
@@ -131,6 +145,7 @@ class LedgerColumnValidationTest extends TestCase
 
         // --- 成功ケース ---
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $numberLedgerDefine->id])
+            ->set('tenantId', $this->tenant->id)
             ->set('content.0', 15.5)
             ->call('saveDirectly')
             ->assertHasNoErrors();
@@ -203,8 +218,9 @@ class LedgerColumnValidationTest extends TestCase
         });
 
         // テナント2に切り替えて、テナント1と同じユニーク値で台帳を作成しようとする
-        $tenant2->run(function () use ($ledgerDefine2) {
+        $tenant2->run(function () use ($ledgerDefine2, $tenant2) {
             Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine2->id])
+                ->set('tenantId', $tenant2->id)
                 ->set('content.0', 'SHARED_UNIQUE_VALUE') // テナント1と同じ値をセット
                 ->call('saveDirectly')
                 ->assertHasNoErrors('content.0'); // エラーが発生しないことを確認

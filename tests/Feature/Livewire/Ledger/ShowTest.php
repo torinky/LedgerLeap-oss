@@ -16,12 +16,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\RoleFolderPermission;
+use App\Enums\FolderPermissionType;
+use App\Services\UserService;
 use Tests\TestCase;
-use App\Jobs\Ledger\ProcessAttachedFile;
-use App\Jobs\Ledger\GenerateThumbnail;
 
 class ShowTest extends TestCase
 {
@@ -54,6 +57,14 @@ class ShowTest extends TestCase
         $this->inspector->assignRole($this->inspectorRole);
         $this->approver->assignRole($this->approverRole);
 
+        // 'view_ledgers' パーミッションを作成し、$this->user に付与
+        $viewLedgersPermission = Permission::firstOrCreate(['name' => 'view_ledgers']);
+        $this->user->givePermissionTo($viewLedgersPermission);
+
+        // テスト用のロールを作成し、$this->user に割り当てる
+        $testReaderRole = Role::firstOrCreate(['name' => 'test_reader_role']);
+        $this->user->assignRole($testReaderRole);
+
         // フォルダと台帳定義を作成
         $this->folder = Folder::factory()
             ->withRequiredRoles(
@@ -61,6 +72,18 @@ class ShowTest extends TestCase
                 approvers: [$this->approverRole]
             )
             ->create();
+
+        // RoleFolderPermission を作成し、テスト用のロールとフォルダ、READ権限を関連付ける
+        RoleFolderPermission::create([
+            'role_id' => $testReaderRole->id,
+            'folder_id' => $this->folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // ユーザーのパーミッションキャッシュをクリア
+        $userService = $this->app->make(UserService::class);
+        $userService->clearUserPermissionsCache($this->user);
 
         $ledgerDefine = LedgerDefine::factory()
             ->for($this->folder)
@@ -146,7 +169,7 @@ class ShowTest extends TestCase
 
         // Livewire の assertDontSeeHtml が部分文字列マッチングで誤動作する可能性があるため、PHPUnit の assertStringNotContainsString を直接使用
         // Livewire の assertDontSee が wire:snapshot の影響を受けるため、HTML から wire:snapshot を削除してアサート
-        $cleanedHtml = preg_replace('/wire:snapshot="[^"]*"/s', '', $component->html());
+        $cleanedHtml = preg_replace('/wire:snapshot=\"[^\"]*\"/s', '', $component->html());
         $this->assertStringNotContainsString(
             __('ledger.workflow.request_approval_short'),
             $cleanedHtml);
@@ -175,9 +198,6 @@ class ShowTest extends TestCase
             ->assertDontSeeHtml('<button[^>]*>' . __('ledger.workflow.approve') . '</button>')
             ->assertDontSee(__('ledger.workflow.return_to_draft_short'));
     }
-
-    
-    
 
     #[Test]
     public function it_retries_attached_file_processing()
@@ -219,5 +239,5 @@ class ShowTest extends TestCase
         $component->assertHasErrors(); // エラーが発生することを確認
     }
 
-    
+
 }
