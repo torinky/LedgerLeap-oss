@@ -25,14 +25,6 @@ class AttachedFile extends Model
         'status' => AttachedFileStatus::class,
     ];
 
-    protected static function booted(): void
-    {
-        static::created(function (AttachedFile $attachedFile) {
-            // サムネイル生成ジョブをディスパッチ
-            Bus::dispatch(new GenerateThumbnail($attachedFile->id));
-        });
-    }
-
     public function getOriginalFilenameAttribute(): ?string
     {
         if ($this->ledger && $this->ledger->content) {
