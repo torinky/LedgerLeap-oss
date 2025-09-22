@@ -1,5 +1,4 @@
 <?php
-use App\Models\Folder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRequest extends FormRequest
@@ -11,8 +10,6 @@ class UpdateRequest extends FormRequest
      */
     public function authorize()
     {
-        $folderId = $this->route('folder'); // ルートパラメータからfolder IDを取得
-        $folder = Folder::findOrFail($folderId); // Folderモデルを取得
-        return true;
+//        return true;
     }
 }

@@ -22,6 +22,7 @@ use App\Livewire\Traits\InitializesTenantContext;
 class ModifyColumn extends CreateColumn
 {
     use InitializesTenantContext;
+
     public array $deletedContent = [];
 
 
@@ -44,6 +45,7 @@ class ModifyColumn extends CreateColumn
         if ($this->ledgerId) {
             // edit
             $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);
+            $this->tenantId = $this->ledgerRecord->define->tenant_id;
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
             if (!empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
@@ -460,6 +462,7 @@ class ModifyColumn extends CreateColumn
             $this->filePondInitialFiles[$columnId] = $filesForColumn;
         }
     }
+
     /**
      * FilePond で既存ファイルが削除されたときにフロントエンドから呼び出される
      *
