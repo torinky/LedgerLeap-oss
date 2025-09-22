@@ -130,7 +130,7 @@ Exception $e) {
             $filePath = Storage::disk('public')->path($this->attachedFile->path);
 
             try {
-                $tikaClient = Client::make('tika', 9998);
+                $tikaClient = app(Client::class);
                 $tikaClient->setTimeout(300);
 
                 // Tikaでテキスト抽出を試行
@@ -171,8 +171,17 @@ Exception $e) {
                 }
 
                 // メタデータも更新 (extractedMetaがオブジェクトの場合のみ)
-                if (is_object($extractedMeta) && !empty($extractedMeta->mime)) {
-                    $this->attachedFile->mime = $extractedMeta->mime;
+                $mime = null;
+                if (is_object($extractedMeta)) {
+                    if (method_exists($extractedMeta, 'get')) {
+                        $mime = $extractedMeta->get('mime');
+                    } elseif (isset($extractedMeta->mime)) {
+                        $mime = $extractedMeta->mime;
+                    }
+                }
+
+                if (!empty($mime)) {
+                    $this->attachedFile->mime = $mime;
                 }
 
             } catch (Exception $e) {

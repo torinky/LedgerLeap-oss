@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
             return new TenantAccessService();
         });
 
+        $this->app->singleton(\Vaites\ApacheTika\Client::class, function ($app) {
+            return \Vaites\ApacheTika\Client::make('tika', 9998);
+        });
+
         //        }
 
         $this->setCustomResolverForMySql();

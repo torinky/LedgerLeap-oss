@@ -39,6 +39,22 @@ class ProcessAttachedFileTest extends TestCase
         $attachedFile->update(['path' => $path]);
         Storage::disk('public')->put($path, 'dummy_content');
 
+        // Tikaクライアントをモック
+        $tikaClientMock = $this->mock(\Vaites\ApacheTika\Client::class, function ($mock) {
+            $mock->shouldReceive('getText')->andReturn('');
+
+            // MetadataInterfaceのモックを作成
+            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class, \IteratorAggregate::class);
+            $metadataMock->shouldReceive('get')->with('mime')->andReturn('image/jpeg');
+            // is_object() と foreach で使われるため、IteratorAggregate を実装する必要がある
+            $metadataMock->shouldReceive('getIterator')->andReturn(new \ArrayIterator(['mime' => 'image/jpeg']));
+
+            $mock->shouldReceive('getMetadata')->andReturn($metadataMock);
+            $mock->shouldReceive('setTimeout');
+        });
+        $this->app->instance(\Vaites\ApacheTika\Client::class, $tikaClientMock);
+
+
         // Act
         $job = new ProcessAttachedFile($attachedFile);
         $job->handle();
