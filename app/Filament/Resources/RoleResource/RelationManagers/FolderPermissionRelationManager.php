@@ -88,7 +88,7 @@ class FolderPermissionRelationManager extends RelationManager
                 ->label(__('permission.access_permissions'))
                 ->options(FolderPermissionType::asAccessSelectArray()) // アクセス権限のみ
                 ->live()
-                ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, ?array $state) {
+                ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, $state) {
                     $newState = $this->applyPermissionHierarchy($state ?? []);
                     $component->state($newState);
                 })
