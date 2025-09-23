@@ -205,6 +205,13 @@ class RecordsTable extends Component
      * @return Application|Factory|View
      */
     #[On('ledgerStored')]
+    #[On('permissions-changed')]
+    public function refresh()
+    {
+        $this->prepareFolderAsset();
+    }
+
+    #[On('ledgerStored')]
     public function render(SearchContext $searchContext)
     {
         // $this->authorize('viewAny', LedgerDefine::class);
@@ -343,6 +350,13 @@ class RecordsTable extends Component
             'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
             'currentTenantId' => $this->currentTenantId,
         ]);
+    }
+
+    #[On('permissions-changed')]
+    public function refreshDueToPermissionChange()
+    {
+        // このメソッドが存在し、イベントをリッスンするだけで、
+        // Livewireがコンポーネントを再レンダリングし、render()が自動的に呼び出される
     }
 
     /**

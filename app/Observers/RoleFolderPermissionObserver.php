@@ -6,8 +6,6 @@ use App\Models\RoleFolderPermission;
 use App\Repositories\WritableFolderRepository;
 use App\Services\TenantAccessService;
 use App\Services\UserService;
-use Illuminate\Support\Facades\Log;
-use Spatie\Permission\PermissionRegistrar;
 
 class RoleFolderPermissionObserver
 {
@@ -25,21 +23,16 @@ class RoleFolderPermissionObserver
     public function created(RoleFolderPermission $roleFolderPermission): void
     {
         $this->tenantAccessService->clearAllCache();
-        $this->userService->clearFolderPermissionCache();
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function updated(RoleFolderPermission $roleFolderPermission): void
     {
         $this->tenantAccessService->clearAllCache();
-        $this->userService->clearFolderPermissionCache();
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function deleted(RoleFolderPermission $roleFolderPermission): void
     {
-        $this->tenantAccessService->clearAllCache();
-        $this->userService->clearFolderPermissionCache();
-        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        // LogsActivityトレイトがdeletedイベントを処理する際にキャッシュクリアが二重に発生するため、ここでは呼び出さない
+        // $this->tenantAccessService->clearAllCache();
     }
 }

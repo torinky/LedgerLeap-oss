@@ -30,6 +30,18 @@ class TenantSwitcher extends Component
 
     }
 
+    #[On('permissions-changed')]
+    public function refreshTenants(TenantAccessService $tenantAccessService)
+    {
+        $this->initializeTenantsMenu($tenantAccessService);
+    }
+
+    #[On('permissions-changed')]
+    public function refresh(TenantAccessService $tenantAccessService)
+    {
+        $this->initializeTenantsMenu($tenantAccessService);
+    }
+
     #[On('currentFolderChangedByMain'), On('currentFolderChangedByTree')]
     public function changeCurrentFolder($newFolderId, $newSelectedFolderIds, TenantAccessService $tenantAccessService)
     {

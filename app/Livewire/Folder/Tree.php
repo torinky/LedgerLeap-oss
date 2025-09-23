@@ -32,6 +32,17 @@ class Tree extends Component
         $this->selectedFolderIds = $request->folderId();
         $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();
 
+        $this->initializePermissions($writableFolderRepository);
+    }
+
+    #[On('permissions-changed')]
+    public function refreshPermissions(WritableFolderRepository $writableFolderRepository)
+    {
+        $this->initializePermissions($writableFolderRepository);
+    }
+
+    private function initializePermissions(WritableFolderRepository $writableFolderRepository): void
+    {
         $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(auth()->user());
         $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
         $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());

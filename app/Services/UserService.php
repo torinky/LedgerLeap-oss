@@ -197,6 +197,7 @@ class UserService
     public function clearUserPermissionsCache(User $user): void
     {
         Cache::forget("user:{$user->id}:all_permissions");
+        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**
