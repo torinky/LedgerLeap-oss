@@ -51,14 +51,14 @@ class UpdateController extends Controller
     {
         // 権限チェック
 //        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
-        if (auth()->user()->cannot('destroy', $ledger)) {
+        if (auth()->user()->cannot('delete', $ledger)) {
             abort(403, __('ledger.not_allow_destroy'));
         }
 
         $ledger->delete();
 
-        session()->flash('status', __('ledger.remove_success'));
-        return View::make('ledger.message', ['windowTitle' => 'ledger']);
+        return redirect()->route('ledger.index', ['tenant' => tenant()])
+            ->with('success', __('ledger.remove_success'));
     }
 
 }

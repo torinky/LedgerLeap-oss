@@ -176,12 +176,10 @@ class User extends Authenticatable implements FilamentUser
      */
     public function removeRole($role)
     {
-        $this->spatieRemoveRole(...$role);
+        $this->spatieRemoveRole($role);
 
         app(WritableFolderRepository::class)->clearAllCache($this);
         app(UserService::class)->clearUserPermissionsCache($this);
-
-        return $this;
     }
 
     /**
