@@ -15,8 +15,8 @@
 
 @endphp
 
-@if($isDemo)
-    <div class="datepicker">
+    @if($isDemo)
+    <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
         <x-mary-input
             label="{{$columnDefine->name}}"
             id="content[{{$columnDefine->id}}]"
@@ -51,7 +51,7 @@
     </div>
 @else
     @if($columnDefine->required)
-        <div class="datepicker">
+        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"
@@ -87,7 +87,7 @@
             </x-mary-input>
         </div>
     @else
-        <div class="datepicker">
+        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"

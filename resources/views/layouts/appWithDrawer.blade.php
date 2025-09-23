@@ -51,5 +51,13 @@
     @vite(['resources/js/app.js'])
     @stack('scripts')
     @livewireScripts
+<script>
+    // 別タブからの更新指令を監視し、一覧リストを更新する
+    window.addEventListener('storage', function (e) {
+        if (e.key === 'ledger_list_needs_refresh') {
+            window.Livewire.dispatch('ledgerStored');
+        }
+    });
+</script>
 </body>
 </html>

@@ -247,6 +247,7 @@ class ModifyColumn extends CreateColumn
 
             $this->addAttachedFileRecordIfNecessary(); // 必要なら実行
             $this->success(__('ledger.workflow.returned_to_draft_message'));
+            $this->js("if (window.opener && !window.opener.closed) { window.opener.Livewire.dispatch('ledgerStored'); }");
             $this->confirmingEdit = false;
             $this->editReason = null;
 
@@ -301,6 +302,7 @@ class ModifyColumn extends CreateColumn
             $this->ledgerRecord = $result['ledger']; // 更新されたレコードを反映
             $this->addAttachedFileRecordIfNecessary();
             $this->success(__('ledger.draft_saved'));
+            $this->js("if (window.opener && !window.opener.closed) { window.opener.Livewire.dispatch('ledgerStored'); }");
         } catch (\Exception $e) {
             Log::error('Draft save failed (modify): ' . $e->getMessage());
             $this->error(__('messages.error.generic'));

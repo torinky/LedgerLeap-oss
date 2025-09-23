@@ -342,22 +342,19 @@ class CreateColumn extends Component
             DB::commit(); // トランザクション確定
 
             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
-            // --- ここから修正: tenant を安全に付与し、なければリダイレクトをスキップ ---
-            $tenant = request()->route('tenant');
-            $redirectUrl = null;
-            if (!empty($tenant)) {
-                $redirectUrl = route('ledger.show', [
-                    'tenant'   => $tenant,
-                    'ledgerId' => $this->ledgerId,
-                ]);
-            }
-//            $this->success($message, redirectTo: $redirectUrl);
-            // --- 修正ここまで ---
-            $this->success($message, redirectTo: route('ledger.show', ['tenant' => $this->tenantId,'ledgerId' => $this->ledgerId]));
+            $this->success(
+                $message,
+                redirectTo: route('ledger.show', ['tenant' => $this->tenantId, 'ledgerId' => $this->ledgerId, 'refresh' => 'true'])
+            );
+
+            
         } catch (Throwable $e) { // Throwable をキャッチ
             DB::rollBack(); // エラー時ロールバック
             Log::error('Direct save failed: ' . $e->getMessage());
-            $this->error(__('messages.error.generic'));
+
+            // エラーメッセージをセッションに保存してトーストで表示させる
+            $this->error( __('messages.error.generic'));
+            return;
         }
     }
 
