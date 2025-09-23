@@ -71,4 +71,23 @@ class AuthServiceProvider extends ServiceProvider
             return new WritableFolderRepository;
         });
     }
+
+    /**
+     * Register the request rebind handler.
+     *
+     * @return void
+     */
+    protected function registerRequestRebindHandler()
+    {
+        if (app()->runningUnitTests()) {
+            // テスト中は setUserResolver を呼び出さない
+            return;
+        }
+
+        $this->app->rebinding('request', function ($app, $request) {
+            $request->setUserResolver(function ($guard = null) use ($app) {
+                return call_user_func($app['auth']->userResolver(), $guard);
+            });
+        });
+    }
 }

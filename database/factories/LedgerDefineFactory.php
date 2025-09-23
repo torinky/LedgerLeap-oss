@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -53,7 +54,7 @@ class LedgerDefineFactory extends Factory
                     $this->faker->boolean(),
                     $this->faker->boolean(),
                     $this->faker->boolean()
-                );*/
+                )*/;
         // Correctly get type identifiers once before the loop
         $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
 
@@ -76,23 +77,19 @@ class LedgerDefineFactory extends Factory
 
 
         $markdownText = $this->faker->paragraph();
-        $markdownText = str_replace("
-", "
-
-", $markdownText);
+        $markdownText = str_replace("\n", "\n\n", $markdownText);
 
         return [
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
-            'folder_id' => random_int(1, 10),
+            
             'create_description' => $markdownText,
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),
-            //            'folder_id' => Folder::factory(),
-            //            'creator_id' => 1,
-            //            'modifier_id' => 1,
+            'folder_id' => Folder::count() > 0 ? Folder::all()->random()->id : Folder::factory()->create()->id,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
+            'tenant_id' => tenant()->id,
         ];
     }
 }

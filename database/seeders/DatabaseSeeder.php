@@ -2,54 +2,57 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Seed the application\'s database.
      */
-    public function run(): void
+    public function run(int $seedCount = 50): void // 引数を追加
     {
-        // \App\Models\User::factory(10)->create();
-
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
-
-        /*        $this->call([
-                    UsersSeeder::class,
-                    LedgerDefineSeeder::class,
-                    LedgersSeeder::class,
-                    FolderSeeder::class,
-                    TagSeeder::class,
-                ]);*/
-
-        $users = User::factory(10)->create();
+        // 中央DBの初期データを投入
         $this->call([
             UsersSeeder::class,
             OrganizationSeeder::class,
-            FolderSeeder::class,
             RolesAndPermissionsSeeder::class,
-            AllUsersRoleSeeder::class,       // All Users ロール
+            AllUsersRoleSeeder::class,
             NotificationTypeSeeder::class,
         ]);
 
+        // テナントコンテキストが存在する場合のみ、テナントDBの初期データを投入
+        if (tenancy()->tenant) {
+            $this->call([
+                FolderSeeder::class,
+            ]);
 
-        $ledgerDefines = LedgerDefine::factory(50)->recycle($users)
-//            ->hasTag(random_int(0,5))
-            ->create();
+            // ファクトリで作成されるユーザーもテナントに紐づく
+            $users = User::factory(10)->create();
 
-        Ledger::factory(1000)->recycle($users)->recycle($ledgerDefines)->create();
+            // 作成されたすべてのフォルダを取得
+            $folders = Folder::all();
+            $ledgerDefines = collect();
 
-        $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+            // フォルダが存在する場合のみLedgerDefineを作成
+            if ($folders->isNotEmpty()) {
+                $ledgerDefines = LedgerDefine::factory($seedCount) // $seedCount を渡す
+                    ->recycle($users)
+                    ->make() // DBにはまだ保存しない
+                    ->each(function ($ledgerDefine) use ($folders) {
+                        // ランダムなフォルダを割り当て
+                        $ledgerDefine->folder_id = $folders->random()->id;
+                        $ledgerDefine->save(); // ここでDBに保存
+                    });
+            }
 
-
+            Ledger::factory($seedCount)->recycle($users)->recycle($ledgerDefines)->create(); // $seedCount を渡す
+            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+        }
     }
 }

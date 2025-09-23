@@ -33,4 +33,11 @@
         <livewire:ledger.show :ledgerId="$ledger->id"/>
     </div>
 
+    <script>
+        (function() {
+            @if (session('refresh_opener'))
+                localStorage.setItem('ledger_list_needs_refresh', Date.now());
+            @endif
+        })();
+    </script>
 </x-app-layout>

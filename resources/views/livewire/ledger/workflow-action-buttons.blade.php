@@ -8,7 +8,7 @@
             {{-- 編集ボタン --}}
             @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
             @if($canUpdate && !$ledgerRecord->isLocked())
-                <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                <a href="{{ route('ledger.edit', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
                    class="join-item btn btn-primary btn-wide"
                 ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
             @else
@@ -68,7 +68,7 @@
         {{-- 変更履歴ボタン --}}
         @if($ledgerRecord->ledgerDiff()->where(DB::raw('content'), '!=', '')->count() > 0)
             {{-- 変更履歴がある場合のみ --}}
-            <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
+            <a href="{{ route('ledgerDiff.show', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
                class="btn btn-outline btn-info btn-wide"
             ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.view_history')}}
                 @if($ledgerRecord->version-1>0)

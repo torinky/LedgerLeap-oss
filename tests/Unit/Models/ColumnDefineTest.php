@@ -1,13 +1,13 @@
 <?php
 
-namespace tests\Unit\Models;
+namespace Tests\Unit\Models;
 
 use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\InputTypeFactory;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
-use tests\TestCase;
+use Tests\TestCase;
 
 class ColumnDefineTest extends TestCase
 {

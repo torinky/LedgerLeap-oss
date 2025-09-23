@@ -6,6 +6,7 @@ use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
+use App\Models\Tenant; // ★ 追加
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
 use Mockery;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Throwable;
 
@@ -25,6 +27,9 @@ class GenerateThumbnailTest extends TestCase
         parent::setUp();
         Storage::fake('public');
         Bus::fake();
+        // ★ 追加
+        $tenant = Tenant::factory()->create();
+        tenancy()->initialize($tenant);
     }
 
     #[Test]
@@ -58,6 +63,7 @@ class GenerateThumbnailTest extends TestCase
         $job->handle($this->app->make(ImageManager::class));
 
         // --- Assert ---
+        // ★ 修正
         $expectedThumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
         Storage::disk('public')->assertExists($expectedThumbnailPath);
 

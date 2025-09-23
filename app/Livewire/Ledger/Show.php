@@ -13,10 +13,11 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Show extends Component
 {
-    use AuthorizesRequests, Toast;
+    use AuthorizesRequests, Toast, InitializesTenantContext;
 
     public bool $canView = false;
     public Ledger $ledgerRecord;
@@ -28,6 +29,9 @@ class Show extends Component
 
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
+
+    #[Url(as: 'refresh')]
+    public bool $refresh = false;
 
     public ?string $highlight = null;
 
@@ -49,6 +53,10 @@ class Show extends Component
 
         if (!in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
+        }
+
+        if ($this->refresh) {
+            $this->js("localStorage.setItem('ledger_list_needs_refresh', Date.now());");
         }
     }
 

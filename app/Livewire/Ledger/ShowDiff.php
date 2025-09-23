@@ -13,9 +13,11 @@ use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Storage;
 use App\Services\Ledger\LedgerContentProcessor; // 追加
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class ShowDiff extends Component
 {
+    use InitializesTenantContext;
 
     // ledgerRecord は表示する Diff の内容を入れるように変更
     public ?LedgerDiff $currentDiffRecord = null; // 表示中の Diff
@@ -146,7 +148,7 @@ class ShowDiff extends Component
         $this->ledgerRecord->updated_at = $this->currentDiffRecord->updated_at;
 
         // Diff の content に基づいて添付ファイル情報を再構築
-        $this->allAttachments = $this->ledgerRecord->attachedFiles;
+        $this->allAttachments = $this->ledgerRecord->attachedFiles->keyBy('hashedbasename');
         $this->attachmentIdMap = $this->ledgerRecord->attachedFiles
             ->pluck('id', 'hashedbasename')
             ->toArray();

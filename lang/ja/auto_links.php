@@ -22,15 +22,17 @@ return [
         'preview_text' => 'プレビューテキスト',
         'preview_output' => 'プレビュー出力',
         'folders' => '適用フォルダ',
+        "link_to_tenant" => "リンク先テナント",
     ],
     'templates' => [
         'redmine_ticket' => 'Redmineチケット',
         'gitlab_mr' => 'GitLabマージリクエスト',
         'jira_ticket' => 'Jiraチケット',
-        'spec_id' => '仕様書ID',
+        'spec_id' => 'LedgerLeapのレコード',
     ],
     'placeholders' => [
         'folders' => '適用するフォルダを選択してください',
+        "link_to_tenant" => "リンク先のテナントを選択"
     ],
     'helps' => [
         'url_template' => '正規表現のキャプチャグループを $1, $2 などの形式で埋め込めます。',
@@ -43,6 +45,7 @@ return [
     ],
     'labels' => [
         'generated_html' => '生成されたHTML',
+        'global_link'=>'共通リンク',
     ],
     'tooltip_prefix' => '自動リンク: ',
     'tooltip_auto_number' => '台帳内検索: :value',

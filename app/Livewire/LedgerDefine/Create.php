@@ -7,10 +7,11 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Create extends Component
 {
-    use Toast;
+    use Toast, InitializesTenantContext;
 
     public $ledgerDefineRecord;
 

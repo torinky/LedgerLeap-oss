@@ -10,10 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Edit extends Component
 {
-    use Toast;
+    use Toast, InitializesTenantContext;
 
     public $ledgerDefineRecord;
 

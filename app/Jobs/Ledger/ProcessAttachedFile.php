@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\GenerateThumbnail; // ★ 追加
 
 class ProcessAttachedFile implements ShouldQueue
 {
@@ -39,6 +40,9 @@ class ProcessAttachedFile implements ShouldQueue
      */
     public function handle(): void
     {
+        // ここでテナントを初期化
+        tenancy()->initialize($this->attachedFile->tenant_id);
+
         Log::info('ProcessAttachedFile: ID: ' . $this->attachedFile->id . ', Status: ' . $this->attachedFile->status->value);
         // Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
@@ -65,7 +69,8 @@ class ProcessAttachedFile implements ShouldQueue
                 $this->attachedFile->update($updateData);
                 $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
                 // Log::info('Original file moved to: ' . $newOriginalPath);
-            } catch (\Exception $e) {
+            } catch (
+Exception $e) {
                 Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
                 $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
                 return;
@@ -125,7 +130,7 @@ class ProcessAttachedFile implements ShouldQueue
             $filePath = Storage::disk('public')->path($this->attachedFile->path);
 
             try {
-                $tikaClient = Client::make('tika', 9998);
+                $tikaClient = app(Client::class);
                 $tikaClient->setTimeout(300);
 
                 // Tikaでテキスト抽出を試行
@@ -166,13 +171,21 @@ class ProcessAttachedFile implements ShouldQueue
                 }
 
                 // メタデータも更新 (extractedMetaがオブジェクトの場合のみ)
-                if (is_object($extractedMeta) && !empty($extractedMeta->mime)) {
-                    $this->attachedFile->mime = $extractedMeta->mime;
+                $mime = null;
+                if (is_object($extractedMeta)) {
+                    if (method_exists($extractedMeta, 'get')) {
+                        $mime = $extractedMeta->get('mime');
+                    } elseif (isset($extractedMeta->mime)) {
+                        $mime = $extractedMeta->mime;
+                    }
+                }
+
+                if (!empty($mime)) {
+                    $this->attachedFile->mime = $mime;
                 }
 
             } catch (Exception $e) {
-                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '
-Stack trace: ' . $e->getTraceAsString());
+                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '\nStack trace: ' . $e->getTraceAsString());
                 $mimeType = $this->attachedFile->mime;
                 if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
@@ -214,6 +227,16 @@ Stack trace: ' . $e->getTraceAsString());
         }); // ★ トランザクション終了
 
         $this->attachedFile->save();
+        Log::info('ProcessAttachedFile: attachedFile saved successfully.');
+
+        // ★ サムネイル生成対象か判定し、ジョブをディスパッチ
+        $mime = $this->attachedFile->mime;
+        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: ' . $mime);
+        if (str_starts_with($mime, 'image/')) {
+            GenerateThumbnail::dispatch($this->attachedFile->id);
+            Log::info('[ProcessAttachedFile] Dispatched GenerateThumbnail job for AttachedFile ID: ' . $this->attachedFile->id);
+        }
+
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));
         Log::info('ProcessAttachedFile job finished for file: ' . $this->attachedFile->id
             . ', status: ' . $this->attachedFile->status->value);

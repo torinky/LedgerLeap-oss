@@ -21,7 +21,7 @@
 
         @if($currentFolderRecord)
                 <div class="flex w-full justify-center">
-                <form action="{{ route('folder.update',$currentFolderRecord->id)}}" method="post">
+                <form action="{{ route('folder.update',['tenant' => tenant()?->id, 'folder' => $currentFolderRecord->id])}}" method="post">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="id" value="{{ $currentFolderRecord->id }}">
@@ -89,7 +89,7 @@
                     <p class="py-4">{{__('ledger.folder.will_remove_message')}}</p>
                     <div class="modal-action">
                         <div class="btnContainer">
-                            <form method="POST" action="{{route('folder.delete',$currentFolderRecord->id)}}">
+                            <form method="POST" action="{{route('folder.delete',['tenant' => tenant()?->id, 'folder' => $currentFolderRecord->id])}}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-error"

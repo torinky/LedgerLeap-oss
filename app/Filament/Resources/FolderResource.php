@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Routing\Route as RouteAlias;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder; // 追加
 
 class FolderResource extends Resource
 {
@@ -68,27 +69,44 @@ class FolderResource extends Resource
                             ->label(__('ledger.folder.title'))
                             ->required()
                             ->maxLength(255),
+                        Forms\Components\Select::make('tenant_id')
+                            ->label(__('ledger.tenant'))
+                            ->options(
+                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
+                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                                        return [$tenant->id => $tenant->name ?: $tenant->id];
+                                    });
+                                })
+                            )
+                            ->live()
+                            ->afterStateUpdated(function (callable $set) {
+                                $set('parent_id', null); // Clear parent folder selection when tenant changes
+                            })
+                            ->required() // tenant_idを必須にする
+                            ->disabledOn('edit') // 編集時は無効化
+                            ->default(fn() => session('filament_from_tenant_id')),
+                        Forms\Components\Hidden::make('creator_id')
+                            ->default(fn() => auth()->id())
+                            ->disabledOn('edit'), // 作成時のみ記録
+                        Forms\Components\Hidden::make('modifier_id')
+                            ->default(fn() => auth()->id()), // 常に現在のユーザーを設定
                         SelectTree::make('parent_id')
                             ->label(__('ledger.folder.parent'))
-                            ->relationship('parent', 'title', 'parent_id')
-                            // ->withCount() // 必要に応じて
+                            ->relationship(
+                                'parent', // name
+                                'title', // titleAttribute
+                                'parent_id', // parentAttribute
+                                modifyQueryUsing: fn(EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                    $selectedTenantId = $get('tenant_id');
+                                    if ($selectedTenantId) {
+                                        $query->where('tenant_id', $selectedTenantId);
+                                    }
+                                    return $query->orderBy('_lft');
+                                })
+                            )
                             ->enableBranchNode()
-                            ->defaultOpenLevel(1), // 必要に応じて調整
-                        Forms\Components\Select::make('creator_id')
-                            ->label(__('ledger.creator.name'))
-                            ->relationship('creator', 'name')
-                            ->searchable()
-                            ->required()
-                            ->default(fn() => auth()->id())
-                            ->disabledOn('edit'), // 編集時は無効化
-                        Forms\Components\Select::make('modifier_id')
-                            ->label(__('ledger.modifier.name'))
-                            ->relationship('modifier', 'name')
-                            ->searchable()
-                            ->required()
-                            ->dehydrated(true) // 常に送信する
-                            ->visible(fn() => auth()->check()) // ログインユーザーのみ表示
-                        ,
+                            ->defaultOpenLevel(1)
+                            ->searchable(), // 親フォルダの検索を可能にする
                     ])->columns(2),
 
                 Section::make(__('ledger.workflow.required_roles_setting'))
@@ -203,11 +221,18 @@ class FolderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])
             ->with(['children', 'roles', 'ancestors.roles']);
+
+        // URLクエリから 'tenant' パラメータを取得
+        if ($tenantId = request()->query('tenant')) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
     }
 
     public static function canViewAny(): bool

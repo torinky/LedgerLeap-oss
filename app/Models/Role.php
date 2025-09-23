@@ -13,10 +13,11 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Role extends SpatieRole
 {
-    use LogsActivity, Notifiable;
+    use LogsActivity, Notifiable, HasFactory;
 
     protected $fillable = [
         'name', 'guard_name',
@@ -118,6 +119,7 @@ class Role extends SpatieRole
     {
         if (empty($permission)) {
             return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+                ->using(RoleFolderPermission::class)
                 ->withPivot('permission')
                 ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
                 ->select('folders.*')
@@ -125,6 +127,7 @@ class Role extends SpatieRole
         }
 
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+            ->using(RoleFolderPermission::class)
             ->withPivot('permission')
             ->wherePivot('permission', $permission->value)
             ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])

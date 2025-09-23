@@ -3,6 +3,7 @@
     'canView' => false,
     'allAttachments' => collect(),
     'filteredColumns' => null, // ★ 追加
+    'highlight' => '',
 ])
 
 <div class="container mx-auto">
@@ -32,7 +33,7 @@
                                 @else
                                     {!! ColumnHtml::setAttachmentCollection($allAttachments->keyBy('hashedbasename'))
                                         ->setAttachmentContents($ledgerRecord->content_attached[$columnId] ?? [])
-                                        ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord) !!}
+                                        ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord, $highlight = null) !!}
                                 @endif
                             </td>
                         </tr>

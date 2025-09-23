@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class AttachedFilePathHelper
 {
@@ -16,7 +17,12 @@ class AttachedFilePathHelper
      */
     public static function getAttachmentPath(int $ledgerDefineId, string $hashedBasename): string
     {
-        $directory = 'Ledger/Attachments/' . $ledgerDefineId;
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            Log::error('Tenant ID not found while generating attachment path.');
+            return '';
+        }
+        $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId;
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す
@@ -32,7 +38,13 @@ class AttachedFilePathHelper
      */
     public static function getOriginalAttachmentPath(int $ledgerDefineId, string $hashedBasename): string
     {
-        $directory = 'Ledger/Attachments/' . $ledgerDefineId . '/Originals';
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            Log::error('Tenant ID not found while generating original attachment path.');
+            return '';
+        }
+        Log::info('getOriginalAttachmentPath: Tenant ID obtained: ' . $tenantId); // 追加
+        $directory = 'tenants/' . $tenantId . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す
@@ -61,7 +73,12 @@ class AttachedFilePathHelper
      */
     public static function getThumbnailStoragePath(string $hashedBasename): string
     {
-        $directory = 'Ledger/thumbs';
+        $tenantId = tenant('id');
+        if (!$tenantId) {
+            Log::error('Tenant ID not found while generating thumbnail path.');
+            return '';
+        }
+        $directory = 'tenants/' . $tenantId . '/Ledger/thumbs';
         // ディレクトリが存在しない場合は作成
         Storage::disk('public')->makeDirectory($directory);
         // publicディスク内の相対パスを返す

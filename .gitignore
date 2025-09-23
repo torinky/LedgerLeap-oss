@@ -77,3 +77,11 @@ gen
 !/database/wordnet_data/wnjpn.db
 /.env.development
 /.env.production
+/storage/
+
+# Added by Gemini
+.DS_Store
+public/css/
+public/js/
+/database/wordnet_data/wnjpn.db
+/database/tansi/tansi_v110.db

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\LoginLandingPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\TenantAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,13 +24,27 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, TenantAccessService $tenantAccessService): RedirectResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
 
-        $user = $request->user(); // ログインしたユーザーを取得
+        // 認証済みユーザーを取得
+        $user = $request->user();
+        if (!$user) {
+            // 異常系フォールバック（念のため）
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('login');
+        }
+
+        // ユーザーがアクセス可能な最初のテナントを取得
+        $tenant = $tenantAccessService->getAccessibleTenants($user)->first();
+        if ($tenant) {
+            tenancy()->initialize($tenant);
+        }
 
         // デフォルトのリダイレクト先ルート名を設定
         $landingPageRouteName = 'my-portal'; // マイポータルのルート名
@@ -37,12 +52,14 @@ class AuthenticatedSessionController extends Controller
         if ($user->login_landing_page === LoginLandingPage::Ledgers) {
             $landingPageRouteName = 'ledger.index'; // 台帳/フォルダ一覧画面のルート名
         }
-//        return redirect()->route($landingPageRouteName); // intended() を使わない形
 
         // intended() はログイン前にアクセスしようとしたページがあればそちらを優先
         // なければ、決定したランディングページのルートへリダイレクト
+        // テナントが無い場合はテナントパラメータを渡さない
+        if ($tenant) {
+            return redirect()->intended(route($landingPageRouteName, ['tenant' => $tenant->id]));
+        }
         return redirect()->intended(route($landingPageRouteName));
-
     }
 
     /**

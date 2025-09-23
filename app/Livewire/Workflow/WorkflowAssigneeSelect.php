@@ -16,9 +16,12 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Modelable;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class WorkflowAssigneeSelect extends Component
 {
+    use InitializesTenantContext;
+
     #[Locked]
     public int $ledgerDefineId;
 

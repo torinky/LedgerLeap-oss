@@ -1,18 +1,30 @@
 <?php
 
-namespace tests\Feature\Livewire\Ledger;
+namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\LedgerDiffViewer;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
-use tests\TestCase;
+use Tests\TestCase;
+use App\Models\Folder;
+use App\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\RoleFolderPermission;
+use App\Enums\FolderPermissionType;
+use App\Services\UserService;
+use App\Models\ColumnDefine;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
+use App\Models\AttachedFile;
 
 class LedgerDiffViewerTest extends TestCase
 {
@@ -20,15 +32,68 @@ class LedgerDiffViewerTest extends TestCase
 
     private User $user;
     private Ledger $ledger;
+    protected Tenant $tenant;
+    private User $inspector;
+    private User $approver;
+    private Role $inspectorRole;
+    private Role $approverRole;
+    private Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->tenant = Tenant::factory()->create();
+        tenancy()->initialize($this->tenant);
+
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $ledgerDefine = LedgerDefine::factory()->create();
-        $this->ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
+        // ロールを作成 (ShowTestからコピー)
+        $this->inspectorRole = Role::create(['name' => 'inspector']);
+        $this->approverRole = Role::create(['name' => 'approver']);
+        $this->inspector = User::factory()->create(); // ShowTestではinspectorとapproverも作成していた
+        $this->approver = User::factory()->create();
+        $this->inspector->assignRole($this->inspectorRole);
+        $this->approver->assignRole($this->approverRole);
+
+        // 'view_ledgers' パーミッションを作成し、$this->user に付与 (ShowTestからコピー)
+        $viewLedgersPermission = Permission::firstOrCreate(['name' => 'view_ledgers']);
+        $this->user->givePermissionTo($viewLedgersPermission);
+
+        // テスト用のロールを作成し、$this->user に割り当てる (ShowTestからコピー)
+        $testReaderRole = Role::firstOrCreate(['name' => 'test_reader_role']);
+        $this->user->assignRole($testReaderRole);
+
+        // フォルダと台帳定義を作成 (ShowTestからコピー)
+        $this->folder = Folder::factory()
+            ->withRequiredRoles(
+                inspectors: [$this->inspectorRole],
+                approvers: [$this->approverRole]
+            )
+            ->create();
+
+        // RoleFolderPermission を作成し、テスト用のロールとフォルダ、READ権限を関連付ける (ShowTestからコピー)
+        RoleFolderPermission::create([
+            'role_id' => $testReaderRole->id,
+            'folder_id' => $this->folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // ユーザーのパーミッションキャッシュをクリア (ShowTestからコピー)
+        $userService = $this->app->make(UserService::class);
+        $userService->clearUserPermissionsCache($this->user);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            // ShowTestではfolderに紐付けていたので、ここも修正
+            'folder_id' => $this->folder->id,
+        ]);
+        $this->ledger = Ledger::factory()
+            ->for($ledgerDefine, 'define')
+            ->for($this->user, 'creator')
+            ->create(['tenant_id' => $this->tenant->id]);
     }
 
     #[Test]
@@ -116,64 +181,137 @@ class LedgerDiffViewerTest extends TestCase
     #[Test]
     public function it_shows_diff_view_when_show_changes_is_true(): void
     {
-        // 2. データベースの状態を正確にセットアップ
-        // 現在の台帳 (version 2)
-        $ledger = Ledger::factory()->create(['version' => 2]);
+        // このテストでは、プロセッサが実際に動作して差分を検出し、
+        // ビューが正しくレンダリングされることを確認するため、モックは使用しない。
 
-        // 最新の差分 (version 2)
-        $currentDiff = \App\Models\LedgerDiff::factory()->create([
-            'ledger_id' => $ledger->id,
-            'version' => 2,
+        // 1. データベースの状態を正確にセットアップ
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'column_define' => [
+                ['id' => 1, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
+            ],
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
         ]);
 
-        // 比較対象となるべき過去の差分 (version 1)
-        $pastDiff = \App\Models\LedgerDiff::factory()->create([
+        // 2. version 1 の Ledger と LedgerDiff を作成
+        $ledger = Ledger::factory()
+            ->for($ledgerDefine, 'define')
+            ->for($this->user, 'creator')
+            ->create([
+                'version' => 1,
+                'content' => ['old value'],
+                'tenant_id' => $this->tenant->id,
+            ]);
+
+        $diffV1 = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
+            'content' => ['old value'],
+            'column_define' => $ledgerDefine->column_define,
+            'tenant_id' => $this->tenant->id,
         ]);
-
-        // 台帳に最新の差分IDをセット
-        $ledger->latest_diff_id = $currentDiff->id;
+        $ledger->latest_diff_id = $diffV1->id;
         $ledger->save();
+
+        // 3. Ledger を更新して version 2 にする
+        $ledger->version = 2;
+        $ledger->content = ['current value'];
+        
+        // 4. version 2 の LedgerDiff を作成
+        $diffV2 = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'version' => 2,
+            'content' => ['current value'],
+            'column_define' => $ledgerDefine->column_define,
+            'tenant_id' => $this->tenant->id,
+        ]);
+        $ledger->latest_diff_id = $diffV2->id;
+        $ledger->save();
+        
+        // 5. 最終状態をDBから読み込んでコンポーネントに渡す
         $ledger->refresh();
 
-        // LedgerDiffProcessor のモック
-        $this->mock(LedgerDiffProcessor::class, function (Mockery\MockInterface $mock) use ($pastDiff) {
-            $mock->shouldReceive('findComparisonTargetDiff')
-                ->once()
-                ->andReturn($pastDiff); // version 1 のDiffを返すようにモック
-        });
-
-        // LedgerContentProcessor のモック
-        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
-            $mock->shouldReceive('processContentForDisplay')->andReturn([
-                'displayData' => [
-                    [
-                        'group_name' => 'Test Group',
-                        'is_required_group' => false,
-                        'columns' => [
-                            [
-                                'id' => 'col1',
-                                'name' => 'Test Column',
-                                'hint' => 'A hint',
-                                'is_required' => false,
-                                'status' => 'unchanged',
-                                'current_value_html' => '<div>Current Value</div>',
-                                'old_value_html' => '<div>Old Value</div>',
-                            ]
-                        ]
-                    ]
-                ],
-                'hasChangedColumns' => true,
-            ]);
-        });
-
-        // 3. showChanges を true で初期化してコンポーネントをテスト
+        // 6. Livewire コンポーネントをテスト
         Livewire::test(LedgerDiffViewer::class, [
-            'ledgerRecord' => $ledger,
+            'ledgerRecord' => $ledger, // version 2 の Ledger
+            'canView' => true,
+            'hasChangedColumns' => true,
             'showChanges' => true,
         ])
-            ->assertSet('showChanges', true)
-            ->assertSeeHtml('過去 Version. 1'); // 過去のバージョン(1)が表示されることを確認
+            ->set('hasChangedColumns', true) // ->set() を使ってプロパティを有効化
+            ->set('showChanges', true) // ->set() を使ってプロパティを有効化
+            ->assertSeeHtml('Version. 1'); // 比較対象の version 1 が表示されることを確認
+    }
+
+    #[Test]
+    public function it_displays_attached_files_correctly_in_diff_viewer()
+    {
+        Bus::fake(); // ジョブがディスパッチされないようにモック
+
+        Storage::fake('public');
+
+        // 添付ファイルを持つLedgerDefineを作成
+        $ledgerDefineWithFiles = LedgerDefine::factory()->for($this->folder)->create([
+            'workflow_enabled' => false,
+            'column_define' => [
+                new ColumnDefine(1, 'File Column', 'files', 1, [], false, false, 1),
+            ],
+        ]);
+
+        // 添付ファイルを持つLedgerレコードを作成
+        $ledgerWithFiles = Ledger::factory()
+            ->for($ledgerDefineWithFiles, 'define')
+            ->for($this->user, 'creator')
+            ->create(['tenant_id' => $this->tenant->id]);
+
+        // ダミーの添付ファイルを作成し、ストレージに配置
+        $file = \Illuminate\Http\UploadedFile::fake()->image('test_document.pdf', 100, 100);
+        $attachedFile = AttachedFile::factory()->for($ledgerWithFiles)->create([
+            'ledger_define_id' => $ledgerDefineWithFiles->id,
+            'filename' => $file->getClientOriginalName(),
+            'mime' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'hashedbasename' => 'test_hashed_basename.pdf',
+            'original_mime_type' => 'image/jpeg',
+        ]);
+        Storage::disk('public')->putFileAs(
+            'tenants/' . $this->tenant->id . '/Ledger/Attachments/' . $ledgerDefineWithFiles->id . '/',
+            $file,
+            $attachedFile->hashedbasename
+        );
+        Storage::disk('public')->put(
+            'tenants/' . $this->tenant->id . '/Ledger/thumbs/' . $attachedFile->hashedbasename,
+            'dummy_thumbnail_content'
+        );
+
+        // Ledgerのcontentに添付ファイルIDを設定
+        $ledgerWithFiles->content = [
+            1 => [ // ColumnDefineのIDと合わせる
+                $attachedFile->hashedbasename => $attachedFile->filename,
+            ],
+        ];
+        $ledgerWithFiles->save();
+
+        // Livewireコンポーネントをテスト
+        $this->actingAs($this->user);
+        $livewire = Livewire::test(LedgerDiffViewer::class, [ // ★ここを変更
+            'ledgerRecord' => $ledgerWithFiles, // ★ここを変更
+            'displayLevel' => 3, // ★ここを変更
+            'highlight' => null, // ★ここを追加
+            'canView' => true,
+        ]);
+
+        $this->assertNotEmpty($livewire->instance()->allAttachments);
+        $this->assertArrayHasKey('test_hashed_basename.pdf', $livewire->instance()->allAttachments);
+        $this->assertEquals($attachedFile->id, $livewire->instance()->allAttachments->get('test_hashed_basename.pdf')->id);
+
+        // HTMLに期待されるURLの断片が含まれていることをアサート
+        $livewire->assertSee("files/", false);
+        $livewire->assertSee("/download", false);
+        $livewire->assertSee((string)$attachedFile->id, false);
+        $livewire->assertSee("thumbnail=true", false);
+
+        // ファイル名も表示されていることを確認
+        $livewire->assertSee($attachedFile->filename);
     }
 }

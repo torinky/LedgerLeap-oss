@@ -1,8 +1,7 @@
 <?php
+use Illuminate\Foundation\Http\FormRequest;
 
-namespace App\Http\Requests\Folder;
-
-class UpdateRequest extends StoreRequest
+class UpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -11,18 +10,6 @@ class UpdateRequest extends StoreRequest
      */
     public function authorize()
     {
-        return true;
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, mixed>
-     */
-    public function rules()
-    {
-        return [
-            //
-        ];
+//        return true;
     }
 }

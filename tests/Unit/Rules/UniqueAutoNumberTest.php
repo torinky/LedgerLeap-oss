@@ -3,6 +3,7 @@
 namespace Tests\Unit\Rules;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
@@ -15,6 +16,7 @@ use Illuminate\Contracts\Translation\Translator;
 class UniqueAutoNumberTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     protected LedgerDefine $ledgerDefine;
     protected ColumnDefine $columnDefine;
@@ -30,7 +32,9 @@ class UniqueAutoNumberTest extends TestCase
         });
         $this->app->instance('translator', $translatorMock);
 
-        $this->ledgerDefine = LedgerDefine::factory()->create();
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => Folder::factory(),
+        ]);
         $this->columnDefine = new ColumnDefine(
             0,
             '資料番号',

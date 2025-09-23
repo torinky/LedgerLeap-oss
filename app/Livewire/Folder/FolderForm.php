@@ -9,16 +9,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
-use Mary\Traits\Toast;
 use Illuminate\Support\Facades\Log;
-
-// Log を use
+use Livewire\Attributes\Locked;
+use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class FolderForm extends Component
 {
-    use Toast;
+    use Toast, InitializesTenantContext;
 
-    public Folder $folder; // Livewireがルートモデルバインディング (編集時) または new Folder() (作成時) をセット
+    #[Locked]
+    public ?Folder $folder = null; // Livewireがルートモデルバインディング (編集時) または new Folder() (作成時) をセット
+    public ?int $folderId = null;
     public ?int $parentId = null; // Livewireがルートパラメータ {parentId?} (作成時) をセット
     public string $title = '';
 
@@ -35,6 +37,7 @@ class FolderForm extends Component
     public bool $formDisabled = false; // 削除後にフォームを無効化するため
     public bool $justSaved = false; // 保存直後かどうかのフラグ
 
+
     protected function rules(): array
     {
         return [
@@ -43,7 +46,7 @@ class FolderForm extends Component
                 Rule::requiredIf(fn() => $this->isCreating && Folder::count() > 0), // 最初のフォルダ作成時は親不要
                 'nullable',
                 'integer',
-                Rule::exists('folders', 'id')->whereNot('id', $this->folder->id ?? 0)
+                Rule::exists('folders', 'id')->whereNot('id', $this->folderId ?? 0)
             ],
             'selectedInspectorRoleIds' => ['array'],
             'selectedInspectorRoleIds.*' => ['integer', 'exists:roles,id'],
@@ -65,36 +68,56 @@ class FolderForm extends Component
     // mountメソッドの引数を削除
     public function mount(): void
     {
-        $this->availableParentFolders = collect();
-        $this->availableRoles = collect();
+        if ($this->folderId) {
+            $this->folder = Folder::find($this->folderId);
+        }
 
+        // Livewireによるプロパティバインディングの後に、folderプロパティがセットされていることを確認
+        // ただし、新規作成時はLivewireがnew Folder()をセットするため、existsはfalse
         if (!isset($this->folder) || !$this->folder instanceof Folder) {
             $this->folder = new Folder();
         }
 
+        // isCreating フラグを先に設定
+        $this->isCreating = !$this->folder->exists;
+
+        // 認可チェック
+        if ($this->isCreating) { // 新規作成モード
+            $canCreate = auth()->user()->can('create', Folder::class);
+            if (!$canCreate) {
+                abort(403, __('auth.unauthorized'));
+            }
+        } else { // 編集モード
+            $canUpdate = auth()->user()->can('update', $this->folder);
+            if (!$canUpdate) {
+                abort(403, __('auth.unauthorized'));
+            }
+            $this->tenantId = $this->folder->tenant_id;
+        }
+
+        $this->availableParentFolders = collect();
+        $this->availableRoles = collect();
+
         if ($this->folder->exists) {
-            // 編集モード: $this->folder はLivewireによって既にロードされている
+            $this->folderId = $this->folder->id; // ★ 追加
+            // 編集モードの初期化
             $this->title = $this->folder->title;
-            // $this->parentId プロパティを、ロードされたフォルダの実際の親IDで更新
             $this->parentId = $this->folder->parent_id;
             $this->selectedInspectorRoleIds = $this->folder->requiredInspectorRoles()->pluck('roles.id')->toArray();
             $this->selectedApproverRoleIds = $this->folder->requiredApproverRoles()->pluck('roles.id')->toArray();
-            $this->isCreating = false;
         } else {
-            // 新規作成モード: $this->folder は new Folder() インスタンス
-            // $this->parentId プロパティはLivewireによってルートパラメータからセットされている (または null)
-            // もし $this->parentId が null (例: /folders/create で親IDなし) の場合、フォールバックを適用
-            if (is_null($this->parentId) && Folder::count() > 0) { // 最初のフォルダでない場合のみ
+            // 新規作成モードの初期化
+            if (is_null($this->parentId) && Folder::count() > 0) {
                 $this->parentId = Folder::whereIsRoot()->first()?->id;
             }
-            $this->title = ''; // 新規作成時はタイトルを空に
+            $this->title = '';
             $this->selectedInspectorRoleIds = [];
             $this->selectedApproverRoleIds = [];
-            $this->isCreating = true;
         }
 
         $this->loadAvailableParents();
         $this->loadAvailableRoles();
+//        $this->tenantId = tenant()?->id;
     }
 
     protected function loadAvailableParents(): void
@@ -145,12 +168,30 @@ class FolderForm extends Component
         DB::beginTransaction();
         try {
             // 1. フォルダの基本情報を設定
+            if (!$this->isCreating) {
+                // 更新時は、Livewireのプロパティのデシリアライズ問題を避けるため、
+                // DBから最新のモデルを取得し直してからプロパティをセットする
+                $this->folder = Folder::find($this->folderId);
+            }
             $this->folder->title = $this->title;
             $this->folder->modifier_id = Auth::id();
             $isNewRecordBeforeSave = $this->isCreating; // 保存前の状態を保持
             if ($this->isCreating) {
                 $this->folder->creator_id = Auth::id();
+                // tenant() が null でないことを確認してから tenant_id を設定
+//                if (tenancy()->tenant) { // Stancl\Tenancy のヘルパー関数 tenancy() を使用
+                if ($this->tenantId) {
+//                    $this->folder->tenant_id = tenancy()->tenant->id;
+                    $this->folder->tenant_id = $this->tenantId;
+                } else {
+                    // テナントコンテキストがない場合の処理 (エラーログ、またはデフォルト値の設定など)
+                    Log::warning('Attempted to create folder without tenant context.');
+                    // 必要に応じてエラーをスローするか、処理を中断する
+                    $this->error(__('messages.error.no_tenant_context'));
+                    return;
+                }
             }
+//            dd($this->folder);
 
             // 2. フォルダの保存 (NestedSetの操作)
             if ($this->isCreating) {
@@ -234,17 +275,17 @@ class FolderForm extends Component
                 //    ここでは編集モードに移行する。
                 $this->isCreating = false;
                 // $this->folder は保存されたインスタンスになっている
-                $this->mount(); // 再マウントしてフォーム値を更新
+//                 $this->mount(); // 再マウントしてフォーム値を更新
             } else {
                 // 更新後は現在の編集状態を維持
                 $this->folder->refresh();
-                $this->mount();
+//                 $this->mount();
             }
             $this->justSaved = true; // 保存直後フラグを立てる
             $this->dispatch('folderSavedAndRefreshList', folderId: $this->folder->id); // 親ウィンドウのリスト更新用イベント
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            // DB::rollBack();
             Log::error("Folder save failed: " . $e->getMessage(), [
                 'folder_title' => $this->title,
                 'parent_id' => $this->parentId,
@@ -314,6 +355,7 @@ class FolderForm extends Component
             $this->confirmingFolderDeletion = false;
         }
     }
+
     /**
      * フォームを初期状態にリセットする (続けて新規作成用)
      */

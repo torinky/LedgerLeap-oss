@@ -1,6 +1,8 @@
 <?php
 
-namespace tests\Feature\Livewire;
+namespace Tests\Feature\Livewire;
+
+use PHPUnit\Framework\Attributes\Test;
 
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
@@ -9,19 +11,35 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use tests\TestCase;
+use Tests\TestCase; // TestCase を継承
 
 class LedgerColumnValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->tenant = \App\Models\Tenant::factory()->create();
+        tenancy()->initialize($this->tenant);
         // ユーザーを作成し、すべてのテストで認証済み状態にする
         $user = User::factory()->create();
         $this->actingAs($user);
+
+        // Spatieの権限キャッシュをクリア
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    protected function tearDown(): void
+    {
+        // テナントコンテキストを終了
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+
+        parent::tearDown();
     }
 
     #[Test]
@@ -91,6 +109,7 @@ class LedgerColumnValidationTest extends TestCase
 
         // 実行 & 確認
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id])
+            ->set('tenantId', $this->tenant->id) // ★ 追加
             ->set('content.1', 'NEW_UNIQUE_VALUE') // 新しいユニークな値をセット
             ->call('saveDirectly')
             ->assertHasNoErrors('content.1');
@@ -126,6 +145,7 @@ class LedgerColumnValidationTest extends TestCase
 
         // --- 成功ケース ---
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $numberLedgerDefine->id])
+            ->set('tenantId', $this->tenant->id)
             ->set('content.0', 15.5)
             ->call('saveDirectly')
             ->assertHasNoErrors();
@@ -153,5 +173,57 @@ class LedgerColumnValidationTest extends TestCase
             ->set('content.0', 'not a number')
             ->call('saveDirectly')
             ->assertHasErrors(['content.0' => 'numeric']);
+    }
+
+    #[Test]
+    public function create_column_passes_validation_across_tenants()
+    {
+        // テナント1を作成
+        $tenant1 = \App\Models\Tenant::factory()->create();
+        // テナント2を作成
+        $tenant2 = \App\Models\Tenant::factory()->create();
+
+        // テナント1で台帳定義を作成
+        $ledgerDefine1 = $tenant1->run(function () {
+            return LedgerDefine::factory()->create([
+                'column_define' => [
+                    new ColumnDefine([
+                        'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
+                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    ]),
+                ],
+            ]);
+        });
+
+        // テナント2で台帳定義を作成 (同じ内容だが別テナント)
+        $ledgerDefine2 = $tenant2->run(function () {
+            return LedgerDefine::factory()->create([
+                'column_define' => [
+                    new ColumnDefine([
+                        'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
+                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    ]),
+                ],
+            ]);
+        });
+
+        // テナント1で既存データを作成
+        $tenant1->run(function () use ($ledgerDefine1) {
+            $content = [0 => 'SHARED_UNIQUE_VALUE'];
+            $normalizedContent = $ledgerDefine1->normalizeByColumnDefine($content);
+            Ledger::factory()->create([
+                'ledger_define_id' => $ledgerDefine1->id,
+                'content' => $normalizedContent,
+            ]);
+        });
+
+        // テナント2に切り替えて、テナント1と同じユニーク値で台帳を作成しようとする
+        $tenant2->run(function () use ($ledgerDefine2, $tenant2) {
+            Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine2->id])
+                ->set('tenantId', $tenant2->id)
+                ->set('content.0', 'SHARED_UNIQUE_VALUE') // テナント1と同じ値をセット
+                ->call('saveDirectly')
+                ->assertHasNoErrors('content.0'); // エラーが発生しないことを確認
+        });
     }
 }

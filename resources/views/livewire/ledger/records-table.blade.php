@@ -70,6 +70,7 @@
         :selectedFolderIds="$selectedFolderIds"
         :ledgerDefineRecords="$ledgerDefineRecords"
         :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+        :currentTenantId="$currentTenantId"
     />
 
 
@@ -190,6 +191,7 @@
                             :ledgerDefineId="$ledgerDefineId"
                             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
                             :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                            :currentTenantId="$currentTenantId"
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">
@@ -212,6 +214,7 @@
                                         :canView="$canView"
                                         :allAttachments="$allAttachments"
                                         :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                        :currentTenantId="$currentTenantId"
                                     />
                                 @endforeach
                                 </tbody>

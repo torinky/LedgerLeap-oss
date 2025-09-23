@@ -47,9 +47,9 @@ if ($abortReasons) {
 |
 */
 
-pest()->extend(tests\TestCase::class)
+pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', 'Feature/Livewire');
 
 /*
 |--------------------------------------------------------------------------

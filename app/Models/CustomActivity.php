@@ -7,6 +7,7 @@ use Spatie\Activitylog\Models\Activity ;
 
 class CustomActivity extends Activity
 {
+    use \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
     protected static function booted()
     {
         static::created(function (CustomActivity $activity) {

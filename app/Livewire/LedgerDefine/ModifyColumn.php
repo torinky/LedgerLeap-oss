@@ -17,10 +17,11 @@ use Intervention\Image\Facades\Image;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Mary\Traits\Toast;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class ModifyColumn extends Component
 {
-    use Toast, WithFileUploads;
+    use Toast, WithFileUploads, InitializesTenantContext;
 
     #[Locked]
     public LedgerDefine $ledgerDefineRecord;

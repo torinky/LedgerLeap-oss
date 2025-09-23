@@ -5,9 +5,12 @@ namespace App\Livewire\LedgerDefine;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Tags extends Component
 {
+    use InitializesTenantContext;
+
     public $ledgerDefineId;
 
     public $tags = [];

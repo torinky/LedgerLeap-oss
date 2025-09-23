@@ -12,6 +12,20 @@ class Dashboard extends \Filament\Pages\Dashboard
 {
     public static bool $shouldRegisterNavigation = false;
 
+    public ?string $fromTenant = null;
+
+    public function mount(): void
+    {
+        $this->fromTenant = request()->query('from_tenant');
+    }
+
+    public function getWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\DashboardLinksWidget::class,
+        ];
+    }
+
     //    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     //    protected static string $view = 'filament.pages.dashboard';
@@ -21,7 +35,7 @@ class Dashboard extends \Filament\Pages\Dashboard
         return static::$title ?? __('ledger.setting');
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
 /*            Action::make('updateModel')

@@ -17,9 +17,12 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use App\Helpers\AttachedFilePathHelper;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class ModifyColumn extends CreateColumn
 {
+    use InitializesTenantContext;
+
     public array $deletedContent = [];
 
 
@@ -33,6 +36,8 @@ class ModifyColumn extends CreateColumn
     public array $attachmentIdMap = []; // 添付ファイルのIDマップ
     public array $filePondInitialFiles = []; // FilePond初期化用
 
+//    public $tenantId='';
+
     public function mount(int $ledgerId): void
     {
 
@@ -40,6 +45,7 @@ class ModifyColumn extends CreateColumn
         if ($this->ledgerId) {
             // edit
             $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);
+            $this->tenantId = $this->ledgerRecord->define->tenant_id;
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
             if (!empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
@@ -68,6 +74,7 @@ class ModifyColumn extends CreateColumn
         }
         $this->initBackgroundImages();
         $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
+
     }
 
     public function render(): View
@@ -240,6 +247,7 @@ class ModifyColumn extends CreateColumn
 
             $this->addAttachedFileRecordIfNecessary(); // 必要なら実行
             $this->success(__('ledger.workflow.returned_to_draft_message'));
+            $this->js("if (window.opener && !window.opener.closed) { window.opener.Livewire.dispatch('ledgerStored'); }");
             $this->confirmingEdit = false;
             $this->editReason = null;
 
@@ -294,6 +302,7 @@ class ModifyColumn extends CreateColumn
             $this->ledgerRecord = $result['ledger']; // 更新されたレコードを反映
             $this->addAttachedFileRecordIfNecessary();
             $this->success(__('ledger.draft_saved'));
+            $this->js("if (window.opener && !window.opener.closed) { window.opener.Livewire.dispatch('ledgerStored'); }");
         } catch (\Exception $e) {
             Log::error('Draft save failed (modify): ' . $e->getMessage());
             $this->error(__('messages.error.generic'));
@@ -428,11 +437,11 @@ class ModifyColumn extends CreateColumn
 
                     if ($fileExists) {
 //                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
-                        $posterUrl = route('file.download', ['attachedFile' => $attachmentId, 'thumbnail' => true]);
+                        $posterUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId, 'thumbnail' => true]);
                     }
 
                     $fileObject = [
-                        'source' => route('file.download', ['attachedFile' => $attachmentId]), // FilePondが直接ロードするURL
+                        'source' => route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId]), // FilePondが直接ロードするURL
                         'options' => [
                             'type' => 'local',
                             'file' => [
@@ -455,6 +464,7 @@ class ModifyColumn extends CreateColumn
             $this->filePondInitialFiles[$columnId] = $filesForColumn;
         }
     }
+
     /**
      * FilePond で既存ファイルが削除されたときにフロントエンドから呼び出される
      *

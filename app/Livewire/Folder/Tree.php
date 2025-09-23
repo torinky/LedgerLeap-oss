@@ -5,13 +5,16 @@ namespace App\Livewire\Folder;
 use App\Http\Requests\Ledger\SearchRequest;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class Tree extends Component
 {
-    public Collection $folders;
+    use InitializesTenantContext;
+
+    public \Illuminate\Database\Eloquent\Collection $folders;
 
     public int $currentFolderId;
 
@@ -27,8 +30,19 @@ class Tree extends Component
     {
         $this->currentFolderId = $request->currentFolderId();
         $this->selectedFolderIds = $request->folderId();
-        $this->folders = Folder::whereIsRoot()->get();
+        $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();
 
+        $this->initializePermissions($writableFolderRepository);
+    }
+
+    #[On('permissions-changed')]
+    public function refreshPermissions(WritableFolderRepository $writableFolderRepository)
+    {
+        $this->initializePermissions($writableFolderRepository);
+    }
+
+    private function initializePermissions(WritableFolderRepository $writableFolderRepository): void
+    {
         $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(auth()->user());
         $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
         $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());

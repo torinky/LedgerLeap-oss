@@ -18,7 +18,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  */
 class LedgerDefine extends Model
 {
-    use HasFactory, HasModelRoles, LogsActivity, SoftDeletes;
+    use HasFactory, HasModelRoles, LogsActivity, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,

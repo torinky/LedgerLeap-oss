@@ -22,7 +22,7 @@
                         <div class="indicator">
                             @if($canUpdateFolder)
                                 <a
-                                    href="{{ route('folder.edit', $folderRecord) }}"
+                                    href="{{ route('folder.edit', ['tenant' => $this->tenantId, 'folder' => $folderRecord]) }}"
                                     class="btn btn-ghost tooltip flex items-center"
                                     data-tip="{{__('ledger.folder.edit')}}"
                                     target="folderEdit_{{$folderRecord->id}}}}"
@@ -72,7 +72,7 @@
                     @if($canUpdateLedgerDefine)
                         data-tip="{{__('ledger.edit')}}"
                     {{--                    wire:click="changeCurrentLedgerDefine({{$ledgerDefineRecord->id}})"--}}
-                    href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
+                    href="{{ route('ledgerDefine.edit', ['tenant' => $this->tenantId, 'ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
                     class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100
                        {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
                     @else
@@ -118,7 +118,7 @@
                 <div class="card-actions place-items-center">
 
                     @can('create',$currentFolder)
-                        <a href="{{ route('folder.create',$currentFolderId)}}"
+                        <a href="{{ route('folder.create',['tenant' => $this->tenantId, 'parentId' => $currentFolderId])}}"
                            class="btn btn-primary btn-lg mx-3"
                            target="folderCreate">
                             <span class="fa-layers fa-fw mr-2">
@@ -145,7 +145,7 @@
                     @endcan
 
                     @can('create', [LedgerDefine::class,$currentFolder])
-                        <a href="{{ route('ledgerDefine.createWithFolderId',$currentFolderId)}}"
+                        <a href="{{ route('ledgerDefine.createWithFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
                            class="btn btn-primary btn-lg mx-3"
                            target="ledgerDefineCreate"
                         >
@@ -173,7 +173,7 @@
 
                     @endcan
 
-                    <a href="{{ route('ledgersByFolderId',$currentFolderId)}}"
+                    <a href="{{ route('ledgersByFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
                        class="btn btn-outline btn-info btn-sm ml-10"
                        target="ledgersByFolderId">
                         <i class="fa-solid fa-arrow-circle-right mr-1"></i>

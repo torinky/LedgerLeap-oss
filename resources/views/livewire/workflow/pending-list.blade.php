@@ -136,7 +136,7 @@
                 @endif
                 <x-mary-button data-tip="{{ __('ledger.view_details') }}" icon="o-eye"
                                class="btn-square btn-ghost tooltip"
-                               link="{{ route('ledger.show', ['ledgerId' => $ledger->id]) }}"/>
+                               link="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $ledger->id]) }}"/>
 
             </div>
             {{-- 戻し理由入力モーダル (修正: task->id ではなく ledger->id を使う？ $selectedTaskId で制御) --}}

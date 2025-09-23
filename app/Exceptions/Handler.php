@@ -26,5 +26,13 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        $this->renderable(function (\Stancl\Tenancy\Exceptions\RouteIsMissingTenantParameterException $e, $request) {
+            // HTMLレスポンスを期待するリクエストの場合のみリダイレクト
+            if (! $request->expectsJson()) {
+                return redirect()->route('login')
+                    ->with('info', __('messages.login_again_for_tenant'));
+            }
+        });
     }
 }

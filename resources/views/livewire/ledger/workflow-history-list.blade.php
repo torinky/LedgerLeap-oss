@@ -54,7 +54,7 @@
 
             @scope('cell_actions', $diff)
             @if ($diff->content)
-                <a href="{{ route('ledgerDiff.show', ['ledgerId' => $diff->ledger_id, 'diffId' => $diff->id]) }}"
+                <a href="{{ route('ledgerDiff.show', ['tenant' => tenant()?->id, 'ledgerId' => $diff->ledger_id, 'diffId' => $diff->id]) }}"
                    class="btn btn-square tooltip"
                    target="_blank"
                    data-tip="{{ __('ledger.view_content_at_this_point') }}">

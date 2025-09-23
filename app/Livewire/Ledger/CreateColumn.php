@@ -30,13 +30,15 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use App\Helpers\AttachedFilePathHelper;
 use Mary\Traits\Toast;
+use PHPUnit\Event\Code\Throwable;
+use App\Livewire\Traits\InitializesTenantContext; // 追加
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
  */
 class CreateColumn extends Component
 {
-    use Toast, WithFileUploads;
+    use Toast, WithFileUploads, InitializesTenantContext; // 追加
 
     public array $content = []; // 初期値を空配列に
 
@@ -274,7 +276,6 @@ class CreateColumn extends Component
         }
         // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
         // if ($this->ledgerRecord?->isLocked()) { ... }
-
         // バリデーション
         $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
@@ -341,11 +342,19 @@ class CreateColumn extends Component
             DB::commit(); // トランザクション確定
 
             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加はトランザクションの外でも良いかも？
-            $this->success($message, redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId]));
+            $this->success(
+                $message,
+                redirectTo: route('ledger.show', ['tenant' => $this->tenantId, 'ledgerId' => $this->ledgerId, 'refresh' => 'true'])
+            );
+
+            
         } catch (Throwable $e) { // Throwable をキャッチ
             DB::rollBack(); // エラー時ロールバック
             Log::error('Direct save failed: ' . $e->getMessage());
-            $this->error(__('messages.error.generic'));
+
+            // エラーメッセージをセッションに保存してトーストで表示させる
+            $this->error( __('messages.error.generic'));
+            return;
         }
     }
 

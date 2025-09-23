@@ -13,7 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExportJob implements ShouldQueue
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Exportable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Ledger定義のID

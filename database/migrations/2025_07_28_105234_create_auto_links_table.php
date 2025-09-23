@@ -21,10 +21,13 @@ return new class extends Migration
             $table->boolean('is_enabled')->default(true);
             $table->boolean('open_in_new_tab')->default(true);
             $table->string('link_type')->nullable();
+            $table->string('tenant_id')->nullable()->index();
             $table->unsignedBigInteger('creator_id')->nullable();
             $table->unsignedBigInteger('modifier_id')->nullable();
             $table->timestamps();
 
+            // 外部キー制約をまとめて定義
+            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('set null');
             $table->foreign('creator_id')->references('id')->on('users')->onDelete('set null');
             $table->foreign('modifier_id')->references('id')->on('users')->onDelete('set null');
         });
@@ -35,12 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('auto_links', function (Blueprint $table) {
-            $table->dropForeign(['creator_id']);
-            $table->dropForeign(['modifier_id']);
-            $table->dropColumn(['creator_id', 'modifier_id']);
-        });
-
         Schema::dropIfExists('auto_links');
     }
 };

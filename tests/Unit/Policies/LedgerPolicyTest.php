@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Policies;
+namespace Tests\Unit\Policies;
 
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -11,11 +11,12 @@ use App\Policies\LedgerPolicy;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use tests\TestCase;
+use Tests\TestCase;
 
 class LedgerPolicyTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
 
     public function test_view_any_returns_true_for_user_with_view_ledgers_permission()
     {
@@ -76,7 +77,8 @@ class LedgerPolicyTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
         $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);
@@ -198,7 +200,7 @@ class LedgerPolicyTest extends TestCase
         $this->assertFalse($policy->delete($user, $ledger));
     }
 
-    protected function tearDown(): void
+    public function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();

@@ -12,7 +12,9 @@ return new class extends Migration {
      */
     public function up()
     {
-        Schema::create('folders', function (Blueprint $table) {
+        Schema::disableForeignKeyConstraints(); // 外部キー制約を一時的に無効化
+
+                Schema::create('folders', function (Blueprint $table) {
             $table->id();
             $table->string('title')->index();
             $table->unsignedInteger('creator_id')->index();
@@ -22,6 +24,8 @@ return new class extends Migration {
             $table->softDeletes();
             $table->nestedSet();
         });
+
+        Schema::enableForeignKeyConstraints(); // 外部キー制約を有効化
     }
 
     /**

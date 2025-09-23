@@ -9,12 +9,15 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 /**
  * Ledgerのエクスポートを管理するLivewireコンポーネント
  */
 class Export extends Component
 {
+    use InitializesTenantContext;
+
     public $batchId;
 
     public $exporting = false;

@@ -22,6 +22,7 @@ class AutoLink extends Model
         'is_enabled',
         'open_in_new_tab',
         'link_type',
+        'tenant_id',
         'creator_id',
         'modifier_id',
     ];
@@ -58,6 +59,7 @@ class AutoLink extends Model
                 'priority',
                 'is_enabled',
                 'open_in_new_tab',
+                'tenant_id',
             ])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn(string $eventName) => "自動リンク「{$this->label}」を{$this->getEventDescription($eventName)}しました");
@@ -97,5 +99,10 @@ class AutoLink extends Model
     public function modifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'modifier_id');
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

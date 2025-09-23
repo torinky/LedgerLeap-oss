@@ -10,9 +10,12 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
+    use InitializesTenantContext;
+
     public $orderBy = 'title';
 
     public $orderAsc = true;
@@ -27,6 +30,8 @@ class RecordsTable extends Component
 
     public $currentFolderId;
 
+//    public $tenantId; // ここを追加
+
     private $ledgerDefineRecords;
 
     /**
@@ -36,7 +41,6 @@ class RecordsTable extends Component
     {
         $this->currentFolderId = $request->folderId();
         $this->prepareFolderAsset();
-
     }
 
     /**
@@ -75,6 +79,14 @@ class RecordsTable extends Component
     public function prepareFolderAsset(): void
     {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
+
+        // currentFolder が見つからない場合は、空の状態で初期化して処理を終了する
+        if (is_null($currentFolder)) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+            return;
+        }
 
         if (!empty($currentFolder)) {
             $this->breadcrumbs = $currentFolder->parent()->get();

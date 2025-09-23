@@ -24,10 +24,10 @@ use Studio15\FilamentTree\Concerns\InteractsWithTree;
 
 class Folder extends Model
 {
-    use HasFactory, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree;
+    use HasFactory, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
-        'title', 'modifier_id', 'creator_id', 'parent_id',
+        'title', 'modifier_id', 'creator_id', 'parent_id', 'tenant_id',
     ];
 
     /**
@@ -37,6 +37,25 @@ class Folder extends Model
      */
     public function getNameAttribute(): string
     {
+        return $this->title;
+    }
+
+    public function getDisplayTitleAttribute(): string
+    {
+        if ($this->tenant) {
+            $tenantIdentifier = $this->tenant->name ?? $this->tenant->id;
+            return $this->title . ' (' . $tenantIdentifier . ')';
+        }
+        return $this->title;
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->parent_id === null && $this->tenant) {
+            // dataカラムからnameを取得
+            $tenantName = $this->tenant->name ?? $this->tenant->id;
+            return '【' . $tenantName . '】 ' . $this->title;
+        }
         return $this->title;
     }
 

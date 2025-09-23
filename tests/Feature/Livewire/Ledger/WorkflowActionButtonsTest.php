@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Feature\Livewire\Ledger;
+namespace Tests\Feature\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\WorkflowActionButtons;
@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use tests\TestCase;
+use Tests\TestCase;
 
 class WorkflowActionButtonsTest extends TestCase
 {

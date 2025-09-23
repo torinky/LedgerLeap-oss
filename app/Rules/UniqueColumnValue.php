@@ -94,7 +94,7 @@ class UniqueColumnValue implements ValidationRule
      */
     public function toLaravelUniqueRule(): Unique
     {
-        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")
+        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")->where('tenant_id', tenant('id'))
             ->where('ledger_define_id', $this->ledgerDefineId);
 
         if (!is_null($this->ignoreLedgerId)) {

@@ -2,46 +2,37 @@
 
 namespace App\Observers;
 
-use App\Enums\FolderPermissionType;
 use App\Models\RoleFolderPermission;
 use App\Repositories\WritableFolderRepository;
+use App\Services\TenantAccessService;
+use App\Services\UserService;
 
 class RoleFolderPermissionObserver
 {
-    protected $writableFolderRepository;
+    protected WritableFolderRepository $writableFolderRepository;
+    protected TenantAccessService $tenantAccessService;
+    protected UserService $userService;
 
-    public function __construct(WritableFolderRepository $writableFolderRepository)
+    public function __construct(WritableFolderRepository $writableFolderRepository, TenantAccessService $tenantAccessService, UserService $userService)
     {
         $this->writableFolderRepository = $writableFolderRepository;
+        $this->tenantAccessService = $tenantAccessService;
+        $this->userService = $userService;
     }
 
-    public function created(RoleFolderPermission $roleFolderPermission)
+    public function created(RoleFolderPermission $roleFolderPermission): void
     {
-        $this->clearCache($roleFolderPermission);
+        $this->tenantAccessService->clearAllCache();
     }
 
-    protected function clearCache(RoleFolderPermission $roleFolderPermission)
+    public function updated(RoleFolderPermission $roleFolderPermission): void
     {
-        // ロールがnullでない場合にのみ処理を続行
-        if ($roleFolderPermission->role) {
-            // ロールに関連付けられたユーザーを取得
-            $users = $roleFolderPermission->role->users;
-
-            // 各ユーザーのキャッシュをクリア
-            $repository = app(WritableFolderRepository::class);
-            foreach ($users as $user) {
-                $repository->clearAllCache($user);
-            }
-        }
+        $this->tenantAccessService->clearAllCache();
     }
 
-    public function updated(RoleFolderPermission $roleFolderPermission)
+    public function deleted(RoleFolderPermission $roleFolderPermission): void
     {
-        $this->clearCache($roleFolderPermission);
-    }
-
-    public function deleted(RoleFolderPermission $roleFolderPermission)
-    {
-        $this->clearCache($roleFolderPermission);
+        // LogsActivityトレイトがdeletedイベントを処理する際にキャッシュクリアが二重に発生するため、ここでは呼び出さない
+        // $this->tenantAccessService->clearAllCache();
     }
 }

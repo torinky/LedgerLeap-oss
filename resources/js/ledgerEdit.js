@@ -36,11 +36,7 @@ window.FilePond = FilePond
 window.flatpickr = flatpickr
 window.flatpickr.localize(flatpickr.l10ns.ja);
 
-window.flatpickr(".datepicker", {
-    locale: Japanese,
-    showMonths: 3,
-    wrap: true,
-});
+
 
 window.EasyMDE = EasyMDE;
 

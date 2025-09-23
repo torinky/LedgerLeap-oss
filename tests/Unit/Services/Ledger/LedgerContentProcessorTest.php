@@ -22,6 +22,15 @@ use Tests\TestCase;
 class LedgerContentProcessorTest extends TestCase
 {
     use RefreshDatabase;
+    protected bool $tenancy = true;
+
+    protected Folder $folder;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->folder = Folder::factory()->create();
+    }
 
     private function makeColumnDefine(int $id, string $name, int $displayLevel, string $group = 'Group'): array
     {
@@ -64,7 +73,7 @@ class LedgerContentProcessorTest extends TestCase
             $this->makeColumnDefine(3, 'Col 3', 2, 'Group B'),
             $this->makeColumnDefine(4, 'Col 4', 3, 'Group B'),
         ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'content' => [1 => 'A1', 2 => 'A2', 3 => 'B3', 4 => 'B4']
         ]);
@@ -125,7 +134,7 @@ class LedgerContentProcessorTest extends TestCase
             $this->makeColumnDefine(3, 'Deleted', 1),
             $this->makeColumnDefine(4, 'Added', 1),
         ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
         $diff = LedgerDiff::factory()->for($ledger)->create(); // 比較対象のDiff（内容はモックで上書きされる）
 
@@ -172,7 +181,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnDefines = [
             $this->makeColumnDefine(1, 'Attachment', 1, 'Files'),
         ];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'content' => [1 => [$fileHash => $fileName]],
             'content_attached' => [1 => [$fileHash => ['name' => $fileName, 'path' => '...']]]
@@ -225,7 +234,7 @@ class LedgerContentProcessorTest extends TestCase
 
         // テストデータ
         $columnDefines = [$this->makeColumnDefine(1, 'Text', 1)];
-        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
+        $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'content' => [1 => "Some text to {$keyword} here."]
         ]);
@@ -242,7 +251,7 @@ class LedgerContentProcessorTest extends TestCase
     public function it_applies_auto_links_in_html(): void
     {
         // 1. Arrange
-        $folder = Folder::factory()->create();
+        $folder = $this->folder;
         $columnDefines = [$this->makeColumnDefine(1, 'Text', 1)];
         $ledgerDefine = LedgerDefine::factory()->for($folder)->create(['column_define' => $columnDefines]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
@@ -298,7 +307,7 @@ class LedgerContentProcessorTest extends TestCase
     #[Test]
     public function it_applies_auto_links_directly_without_context(): void
     {
-        // 1. Arrange
+// 1. Arrange
         AutoLink::factory()->create([
             'pattern' => '/(DOC-\d{3})/',
             'url_template' => '/docs/$1',

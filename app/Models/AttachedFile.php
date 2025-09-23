@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Bus;
 
 class AttachedFile extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
         'filename', 'hashedbasename', 'ledger_define_id',
@@ -24,14 +24,6 @@ class AttachedFile extends Model
         'optimized' => 'boolean',
         'status' => AttachedFileStatus::class,
     ];
-
-    protected static function booted(): void
-    {
-        static::created(function (AttachedFile $attachedFile) {
-            // サムネイル生成ジョブをディスパッチ
-            Bus::dispatch(new GenerateThumbnail($attachedFile->id));
-        });
-    }
 
     public function getOriginalFilenameAttribute(): ?string
     {

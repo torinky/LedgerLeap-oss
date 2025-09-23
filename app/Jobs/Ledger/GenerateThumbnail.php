@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
+use Stancl\Tenancy\Facades\Tenancy;
 use Throwable;
 
 class GenerateThumbnail implements ShouldQueue
@@ -38,14 +39,21 @@ class GenerateThumbnail implements ShouldQueue
      */
     public function handle(ImageManager $imageManager): void
     {
-        Log::info("[GenerateThumbnail] Job started for AttachedFile ID: {$this->attachedFileId}");
-
-        $attachedFile = AttachedFile::find($this->attachedFileId);
+        $attachedFile = tenancy()->central(function () {
+            return AttachedFile::find($this->attachedFileId);
+        });
 
         if (!$attachedFile) {
             Log::warning("[GenerateThumbnail] AttachedFile not found for ID: {$this->attachedFileId}. Aborting job.");
             return;
         }
+
+        // ここでテナントを初期化
+        tenancy()->initialize($attachedFile->tenant_id);
+
+        $tenantId = tenancy()?->tenant->id ?? 'No Tenant';
+        Log::info("[GenerateThumbnail] Current Tenant ID: {$tenantId}");
+        Log::info("[GenerateThumbnail] Job started for AttachedFile ID: {$this->attachedFileId}");
 
         // ▼▼▼ ソースファイルのパスではなく、コンテンツを取得するように変更 ▼▼▼
         $sourcePathForLog = $attachedFile->path; // ログ出力用にパスを保持
@@ -101,10 +109,13 @@ class GenerateThumbnail implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("[GenerateThumbnail] Job failed for AttachedFile ID: {$this->attachedFileId}. Max attempts reached or unhandled exception. Error: {$exception->getMessage()}", ['exception' => $exception]);
+        Log::error(
+            "[GenerateThumbnail] Failed to generate thumbnail for AttachedFile ID: {$this->attachedFileId}. Max attempts reached or unhandled exception. Error: {$exception->getMessage()}",
+            ['exception' => $exception]
+        );
         $attachedFile = AttachedFile::find($this->attachedFileId);
         if ($attachedFile) {
-            $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED]);
+            $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED->value]);
         }
     }
 }

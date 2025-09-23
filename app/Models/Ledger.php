@@ -27,7 +27,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  */
 class Ledger extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'content' => AsColumnArrayJson::class,

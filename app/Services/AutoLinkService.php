@@ -56,7 +56,10 @@ class AutoLinkService
 
     private function createAutoNumberLink(string $text): string
     {
-        $url = route('ledger.lookup', ['query' => $text]);
+        // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
+        // グローバルルートなので、テナントに依存しないURLを生成
+        $url = url('/ledgers/lookup/' . urlencode($text)); // 修正
+
         $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
         $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
@@ -96,9 +99,6 @@ class AutoLinkService
 
             if ($fragment->hasChildNodes()) {
                 $currentNode->parentNode->replaceChild($fragment, $currentNode);
-                // The current node is replaced, so we can't continue operating on it.
-                // For simplicity, we stop after the first matching autolink rule.
-                // To handle multiple rules, a more complex node traversal would be needed.
                 break;
             }
         }
@@ -110,6 +110,17 @@ class AutoLinkService
         for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
             $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
         }
+
+        // リンク先テナントが指定されている場合のみ、完全なURLに書き換える
+        if ($autoLink->tenant_id && str_starts_with($url, '/l/')) {
+            $tenant = $autoLink->tenant;
+            if ($tenant && $domain = $tenant->domains->first()?->domain) {
+                $path = ltrim($url, '/');
+                $protocol = parse_url(config('app.url'), PHP_URL_SCHEME) ?? 'http';
+                $url = $protocol . '://' . $domain . '/' . $path;
+            }
+        }
+
         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
         $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
         $tooltip = $autoLink->label;
@@ -153,7 +164,7 @@ class AutoLinkService
                 });
             }
 
-            return $query->orderBy('priority', 'asc')->get();
+            return $query->with('tenant')->orderBy('priority', 'asc')->get();
         });
     }
 

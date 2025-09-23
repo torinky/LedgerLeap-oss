@@ -8,6 +8,7 @@
     'filter'=>[],
     'ledgerDefineId'=>null,
     'ledgerDefineRecordsKeyById'=>[],
+    'currentTenantId' => null,
 ])
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
@@ -45,7 +46,7 @@
 
     <div class="flex flex-row  space-x-2 place-items-center">
         @if($canCreate)
-            <a href="{{ route('ledger.create', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+            <a href="{{ route('ledger.create', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
                class="btn btn-neutral relative inline-flex w-48 "
                target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
                 {{__('ledger.create')}}
@@ -74,7 +75,7 @@
             @endif
         <div class="w-6"></div>
             @if($canManage)
-                <a href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefine->id]) }}"
+                <a href="{{ route('ledgerDefine.edit', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
                    class="btn btn-outline btn-primary btn-sm relative inline-flex"
                    target="ledgerDefineEdit_{{$ledgerDefine->id}}}}">
                     <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}

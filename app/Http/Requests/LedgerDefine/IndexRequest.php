@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\LedgerDefine;
 
+use App\Services\UserService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class IndexRequest extends FormRequest
@@ -30,6 +31,24 @@ class IndexRequest extends FormRequest
 
     public function folderId()
     {
-        return $this->input('folderId') ?? $this->route('folderId') ?? 1;
+        // リクエストまたはルートにfolderIdがあればそれを使用
+        $folderId = $this->input('folderId') ?? $this->route('folderId');
+
+        if ($folderId) {
+            return $folderId;
+        }
+
+        // なければ、ユーザーがアクセス可能なルートフォルダのIDをデフォルトとする
+        $user = auth()->user();
+        if ($user) {
+            $rootFolderId = app(UserService::class)->getAccessibleRootFolderIdForUser($user);
+            if ($rootFolderId) {
+                return $rootFolderId;
+            }
+        }
+
+        // ユーザーがログインしていない、またはアクセス可能なルートフォルダがない場合は、
+        // アプリケーションのルートフォルダのID (1) をフォールバックとして使用
+        return 1;
     }
 }

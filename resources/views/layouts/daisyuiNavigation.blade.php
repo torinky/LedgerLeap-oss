@@ -13,35 +13,36 @@
                 {{-- ドロップダウンメニューの内容 --}}
                 <ul tabindex="0"
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                    {{-- マイポータル (アプリ名/ロゴで代用するため、ここでは不要かも) --}}
-                    {{-- <li><x-daisyui-nav-link :href="route('my-portal')" :active="request()->routeIs('my-portal')"><i class="fas fa-home w-4 mr-2"></i>{{ __('ledger.navigation.my_portal') }}</x-daisyui-nav-link></li> --}}
+                    @if (tenant())
                     <li>
-                        <x-daisyui-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.index')">
+                        <x-daisyui-nav-link :href="route('ledger.index', ['tenant' => tenant()->id])" :active="request()->routeIs('ledger.index')">
                             <i class="fas fa-book-open-reader w-4 mr-2"></i>{{ __('ledger.navigation.ledgers') }}
                         </x-daisyui-nav-link>
                     </li>
+                    @endif
                     {{-- 他にメニューがあればここに追加 --}}
                 </ul>
             </div>
 
             {{-- アプリロゴ/名称 (マイポータルへのリンク) --}}
-            <a href="{{ route('my-portal') }}"
-               {{--               class="btn btn-ghost normal-case text-xl tooltip tooltip-bottom"--}}
+            <a href="{{ tenant() ? route('my-portal', ['tenant' => tenant()->id]) : route('global.my-portal') }}"
                data-tip="{{ __('ledger.navigation.go_to_my_portal') }}"
-                    @class(['btn btn-ghost tooltip tooltip-bottom text-xl', 'btn-active' => request()->routeIs('my-portal')]) {{-- アクティブ状態をクラスで表現 --}}
+                    @class(['btn btn-ghost tooltip tooltip-bottom text-xl', 'btn-active' => request()->routeIs('my-portal') || request()->routeIs('global.my-portal')])
             >
                 {{ config('app.name', 'Laravel') }}
             </a>
 
             {{-- 主要メニュー (lg以上でアイコンのみ表示) --}}
             <div class="hidden lg:flex items-center ml-4 space-x-1"> {{-- space-x を調整 --}}
+                @if (tenant())
                 {{-- 台帳リンク (アイコン + ツールチップ) --}}
-                <a href="{{ route('ledger.index') }}"
+                <a href="{{ route('ledger.index', ['tenant' => tenant()->id]) }}"
                    @class(['btn btn-ghost btn-square tooltip tooltip-bottom', 'btn-active' => request()->routeIs('ledger.index')]) {{-- アクティブ状態をクラスで表現 --}}
                    data-tip="{{ __('ledger.navigation.ledgers') }}"
                 >
                     <i class="fas fa-book-open-reader"></i>
                 </a>
+                @endif
                 {{-- 他にアイコンメニューがあればここに追加 --}}
             </div>
         </div>
@@ -55,18 +56,36 @@
                 </label>
             @endif
 
+            @livewire('tenant-switcher')
+
             {{-- 通知アイコン --}}
             <div class="dropdown dropdown-end">
                 <livewire:notifications.icon/>
             </div>
-            {{-- 設定画面 (Filament) へのリンク (UserService で判定) --}}
+            {{-- 設定ドロップダウンメニュー --}}
             @inject('userService', 'App\Services\UserService') {{-- UserService を注入 --}}
             @if($userService->canUserAccessSettings(Auth::user()))
-                <a href="{{ route('filament.admin.pages.dashboard') }}"
-                   class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                   data-tip="{{ __('ledger.navigation.settings') }}">
-                    <i class="fas fa-sliders"></i>
-                </a>
+                <x-mary-dropdown>
+                    <x-slot:trigger>
+                        <x-mary-button icon="o-cog-6-tooth" class="btn-ghost btn-sm btn-circle tooltip tooltip-bottom"
+                                       data-tip="{{ __('ledger.navigation.settings') }}"
+                        />
+                    </x-slot:trigger>
+
+                    @if(tenant())
+                        <li class="menu-title"><span>{{ __('ledger.tenant_settings') }}</span></li>
+                        <x-mary-menu-item :title="__('ledger.ledger_define')" icon="o-document-plus" :link="route('ledgerDefine.index', ['tenant' => tenant()->id])" />
+                        <x-mary-menu-item :title="__('ledger.folder.title')" icon="o-folder" :link="route('filament.admin.resources.folders.index', ['tenant' => tenant()->id])" />
+                        <hr class="my-1" />
+                        <x-mary-menu-item :title="__('ledger.central_settings')" icon="o-arrow-top-right-on-square" :link="route('filament.admin.pages.dashboard', ['tenant' => tenant()->id])" />
+                    @elseif(request()->routeIs('filament.admin.*'))
+                        <li class="menu-title"><span>{{ __('ledger.central_settings') }}</span></li>
+                        <x-mary-menu-item :title="__('ledger.settings.tenant_management')" icon="o-building-office-2" :link="\App\Filament\Resources\TenantResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.user_management')" icon="o-users" :link="\App\Filament\Resources\UserResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.role_permission_management')" icon="o-shield-check" :link="\App\Filament\Resources\RoleResource::getUrl('index')" />
+                        <x-mary-menu-item :title="__('ledger.settings.auto_link_management')" icon="o-link" :link="\App\Filament\Resources\AutoLinkResource::getUrl('index')" />
+                    @endif
+                </x-mary-dropdown>
             @endif
 
             {{-- ユーザー名メニュー --}}
@@ -83,12 +102,14 @@
                             <i class="fas fa-user-edit w-4 mr-2"></i> {{ __('ledger.navigation.profile') }}
                         </x-daisyui-nav-link>
                     </li>
+                    @if (tenant())
                     <li>
-                        <x-daisyui-nav-link :href="route('notifications.settings')"
+                        <x-daisyui-nav-link :href="route('notifications.settings', ['tenant' => tenant()->id])"
                                             :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
                             <i class="fas fa-bell w-4 mr-2"></i> {{ __('ledger.navigation.notification_settings') }}
                         </x-daisyui-nav-link>
                     </li>
+                    @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <li>
