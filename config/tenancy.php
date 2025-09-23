@@ -205,4 +205,18 @@ return [
         '--class' => 'DatabaseSeeder', // root seeder class
         // '--force' => true, // This needs to be true to seed tenant databases in production
     ],
+
+    /**
+     * A list of models that should be exempt from tenancy scoping.
+     *
+     * You can use this list to fully ignore tenancy scoping for some models.
+     * This is useful when you have models that are shared across all tenants.
+     */
+    'central_models' => [
+        \App\Models\RoleFolderPermission::class,
+        \App\Models\Role::class,
+        \App\Models\Permission::class,
+        \App\Models\User::class,
+        \App\Models\Organization::class,
+    ],
 ];

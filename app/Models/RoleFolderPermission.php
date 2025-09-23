@@ -7,14 +7,14 @@ use App\Repositories\WritableFolderRepository;
 use App\Services\TenantAccessService;
 use App\Services\UserService;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-class RoleFolderPermission extends Model
+class RoleFolderPermission extends Pivot
 {
     use LogsActivity;
 

@@ -11,7 +11,9 @@ export default {
         './resources/views/**/*.blade.php',
         './app/Filament/**/*.php',
         './resources/views/filament/**/*.blade.php',
-        './vendor/filament/**/*.blade.php'
+        './vendor/filament/**/*.blade.php',
+        './vendor/robsontenorio/mary/src/View/Components/**/*.php',
+        './vendor/robsontenorio/mary/resources/views/**/*.blade.php',
     ],
 
     theme: {

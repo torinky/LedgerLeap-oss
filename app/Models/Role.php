@@ -119,6 +119,7 @@ class Role extends SpatieRole
     {
         if (empty($permission)) {
             return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+                ->using(RoleFolderPermission::class)
                 ->withPivot('permission')
                 ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
                 ->select('folders.*')
@@ -126,6 +127,7 @@ class Role extends SpatieRole
         }
 
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+            ->using(RoleFolderPermission::class)
             ->withPivot('permission')
             ->wherePivot('permission', $permission->value)
             ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])

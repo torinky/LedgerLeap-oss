@@ -17,6 +17,7 @@
 
 </head>
 <body class="font-sans antialiased {{$attributes->get('class')}}">
+    <x-mary-toast />
 
     <div class="fixed w-full z-10 top-0">
         @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])
@@ -47,7 +48,8 @@
             </ul>
         </div>
     </div>
-    @livewireScripts
+    @vite(['resources/js/app.js'])
     @stack('scripts')
+    @livewireScripts
 </body>
 </html>

@@ -17,6 +17,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Illuminate\Support\Collection;
@@ -24,7 +25,7 @@ use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
-    use withPagination, InitializesTenantContext;
+    use withPagination, InitializesTenantContext,Toast;
 
     public $perPage = 100;
 
@@ -96,6 +97,10 @@ class RecordsTable extends Component
      */
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
+        if (session()->has('success')) {
+            $this->success(session('success'));
+        }
+
         $this->currentTenantId = tenant()?->id;
 
         // 検索キーワードの初期化
