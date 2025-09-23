@@ -424,9 +424,9 @@ class FolderPermissionRelationManager extends RelationManager
     /**
      * 選択された権限に、包含関係に基づいて下位の権限を追加するヘルパーメソッド
      */
-    protected function applyPermissionHierarchy(array $selectedPermissions): array
+    protected function applyPermissionHierarchy($selectedPermissions): array
     {
-        $finalPermissions = $selectedPermissions;
+        $finalPermissions = is_array($selectedPermissions) ? $selectedPermissions : [];
 //        $finalPermissionsEnums = [];
         foreach ($selectedPermissions as $permissionKey => $permissionValue) {
             if ($permissionValue instanceof FolderPermissionType) {

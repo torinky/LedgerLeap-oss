@@ -53,13 +53,6 @@ return new class extends Migration
             }
         });
 
-        Schema::table('role_folder_permissions', function (Blueprint $table) {
-            if (!Schema::hasColumn('role_folder_permissions', 'tenant_id')) {
-                $table->string('tenant_id')->after('id')->nullable();
-                $table->foreign('tenant_id')->references('id')->on('tenants')->onUpdate('cascade')->onDelete('cascade');
-            }
-        });
-
         Schema::table('activity_log', function (Blueprint $table) {
             if (!Schema::hasColumn('activity_log', 'tenant_id')) {
                 $table->string('tenant_id')->after('log_name')->nullable();
@@ -110,13 +103,6 @@ return new class extends Migration
 
         Schema::table('tags', function (Blueprint $table) {
             if (Schema::hasColumn('tags', 'tenant_id')) {
-                $table->dropForeign(['tenant_id']);
-                $table->dropColumn('tenant_id');
-            }
-        });
-
-        Schema::table('role_folder_permissions', function (Blueprint $table) {
-            if (Schema::hasColumn('role_folder_permissions', 'tenant_id')) {
                 $table->dropForeign(['tenant_id']);
                 $table->dropColumn('tenant_id');
             }

@@ -349,44 +349,49 @@ class UserService
      */
     public function hasFolderPermission(User $user, Folder $folder, FolderPermissionType $requiredPermission): bool
     {
-        // スーパー管理者は常に true
-//        if ($user->hasRole('Super Admin')) {
-//            return true;
-//        }
-
-        // ユーザーが持つ全ロールIDを取得
-        $roleIds = $this->getAllUniqueRolesForUser($user)->pluck('id')->toArray();
-        if (empty($roleIds)) {
+        $tenantId = $folder->tenant_id;
+        if (!$tenantId) {
             return false;
         }
 
-        // 対象フォルダとその祖先フォルダのIDリストを取得
         $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
         if (!$folderIds) {
-            // フォールバック（少なくとも自身）
             $folderIds = [$folder->id];
         }
 
-        // キャッシュキー (ユーザーID、フォルダIDリストのハッシュ、要求権限で作成)
-//        $folderIdsHash = md5(implode(',', $folderIds));
-//        $cacheKey = "user:{$user->id}:folders:{$folderIdsHash}:perm:{$requiredPermission->value}";
-//        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($roleIds, $folderIds, $requiredPermission) {
+        $folderIdsHash = md5(implode(',', $folderIds));
+        $cacheKey = "tenant:{$tenantId}:user:{$user->id}:folders:{$folderIdsHash}:perm:{$requiredPermission->value}";
 
-            // DB から該当ロールとフォルダ/祖先フォルダに紐づく権限を取得
-            $permissions = RoleFolderPermission::whereIn('role_id', $roleIds)
-                ->whereIn('folder_id', $folderIds)
-                ->whereIn('permission', FolderPermissionType::accessPermissionValues()) // アクセス権限のみ対象
-                ->pluck('permission'); // permission カラムの値 (Enum) の Collection を取得
+        return Cache::tags(['folder_permissions'])->remember($cacheKey, now()->addMinutes(10), function () use ($user, $folderIds, $requiredPermission, $tenantId) {
+            $roleIds = $this->getAllUniqueRolesForUser($user)->pluck('id')->toArray();
+            if (empty($roleIds)) {
+                return false;
+            }
 
-            // 取得した権限の中に、要求された権限 or それより上位の権限が含まれているかチェック
+            // EloquentのJOINを使い、foldersテーブルのtenant_idで絞り込む
+            $permissions = RoleFolderPermission::query()
+                ->join('folders', 'role_folder_permissions.folder_id', '=', 'folders.id')
+                ->where('folders.tenant_id', $tenantId)
+                ->whereIn('role_folder_permissions.role_id', $roleIds)
+                ->whereIn('role_folder_permissions.folder_id', $folderIds)
+                ->whereIn('role_folder_permissions.permission', FolderPermissionType::accessPermissionValues())
+                ->pluck('role_folder_permissions.permission');
+
             foreach ($permissions as $grantedPermission) {
-                // $grantedPermission は FolderPermissionType Enum インスタンス
                 if ($grantedPermission->includes($requiredPermission)) {
-                    return true; // 包含関係を満たす権限が見つかった
+                    return true;
                 }
             }
-            return false; // 条件を満たす権限が見つからなかった
-//        }); // Cache::remember の閉じ括弧
+            return false;
+        });
+    }
+
+    /**
+     * フォルダ権限に関連するすべてのキャッシュをクリアする
+     */
+    public function clearFolderPermissionCache(): void
+    {
+        Cache::tags(['folder_permissions'])->flush();
     }
 
 

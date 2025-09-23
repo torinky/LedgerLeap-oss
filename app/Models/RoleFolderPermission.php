@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 
 class RoleFolderPermission extends Model
 {
-    use LogsActivity, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
+    use LogsActivity;
 
     protected $table = 'role_folder_permissions';
 
