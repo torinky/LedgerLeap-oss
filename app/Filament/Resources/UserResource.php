@@ -214,6 +214,7 @@ class UserResource extends Resource
     {
         return [
             RelationManagers\OrganizationRelationManager::class,
+            RelationManagers\TokensRelationManager::class,
         ];
     }
 
