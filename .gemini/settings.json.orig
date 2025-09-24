@@ -1,7 +1,6 @@
 {
-  "general": {
-    "checkpointing": true
-  },
+  "theme": "Default",
+  "checkpointing": true,
   "mcpServers": {
     "sail-laravel-boost": {
       "command": "./vendor/bin/sail",
@@ -28,11 +27,8 @@
       ],
       "env": {
         "SERENA_ROOT": "${SERENA_ROOT}",
-        "PROJECT_ROOT": "${PROJECT_ROOT}"
+        "PROJECT_ROOT":"${PROJECT_ROOT}"
       }
     }
-  },
-  "ui": {
-    "theme": "Default"
   }
 }
