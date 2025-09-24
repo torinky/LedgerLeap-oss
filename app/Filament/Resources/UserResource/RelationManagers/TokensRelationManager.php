@@ -15,6 +15,11 @@ class TokensRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    public static function getTitle(\Illuminate\Database\Eloquent\Model $ownerRecord, string $pageClass): string
+    {
+        return __('admin.api_token_manager_title');
+    }
+
     public function table(Table $table): Table
     {
         return $table
