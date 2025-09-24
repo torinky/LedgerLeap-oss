@@ -121,6 +121,61 @@ class Ledger extends Model
 
     }
 
+    public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
+    {
+        // キーワード検索
+        if (!empty($params['q'])) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$params['q']])
+                    ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$params['q']]);
+            });
+        }
+
+        // 除外キーワード検索 (全文検索のNOT演算子を利用)
+        if (!empty($params['exclude_q'])) {
+            $excludeKeywords = '-' . implode(' -', explode(' ', $params['exclude_q']));
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
+                    ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+            });
+        }
+
+        // 台帳定義IDでの絞り込み
+        if (!empty($params['ledger_define_id'])) {
+            $query->where('ledger_define_id', $params['ledger_define_id']);
+        }
+
+        // フォルダIDでの絞り込み (再帰的)
+        if (!empty($params['folder_id'])) {
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
+                $q->whereIn('id', $folderIds);
+            });
+        }
+
+        // タグでの絞り込み (AND条件)
+        if (!empty($params['tags'])) {
+            $tagNames = array_filter(explode(',', $params['tags']));
+            if (!empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+
+        // 除外タグでの絞り込み
+        if (!empty($params['exclude_tags'])) {
+            $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
+            if (!empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+
+        return $query;
+    }
+
     /**
      * LedgerDefine モデルへのリレーションを定義します。
      */

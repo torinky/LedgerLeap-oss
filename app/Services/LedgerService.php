@@ -28,4 +28,24 @@ class LedgerService
         return $result;
 
     }
+
+    public function searchLedgersForApi(array $params)
+    {
+        $query = \App\Models\Ledger::query()->apiSearch($params);
+
+        if (($params['mode'] ?? 'search') === 'count') {
+            return ['total' => $query->count()];
+        }
+
+        $total = $query->count(); // ページネーション前に総件数を取得
+        $limit = $params['limit'] ?? 10;
+        $offset = $params['offset'] ?? 0;
+
+        $ledgers = $query->offset($offset)->limit($limit)->get();
+
+        return [
+            'ledgers' => $ledgers,
+            'total' => $total,
+        ];
+    }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\FontAwesomeIconController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -34,4 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/icons/{style}/{icon}', [FontAwesomeIconController::class, 'serveIcon'])
         ->whereIn('style', ['solid', 'regular', 'brands'])
         ->name('api.fontawesome.icon');
+
+    // Ledger Search API
+    Route::get('/v1/search', [SearchController::class, 'search'])->name('api.v1.search');
 });
