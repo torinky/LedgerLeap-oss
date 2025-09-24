@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\LedgerDefineController;
 use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\FontAwesomeIconController;
 use Illuminate\Http\Request;
@@ -38,4 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ledger Search API
     Route::get('/v1/search', [SearchController::class, 'search'])->name('api.v1.search');
+
+    // Ledger Defines API
+    Route::get('/v1/ledger-defines', [LedgerDefineController::class, 'index'])->name('api.v1.ledger-defines.index');
 });
