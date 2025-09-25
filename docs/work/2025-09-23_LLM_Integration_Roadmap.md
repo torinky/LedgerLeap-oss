@@ -136,6 +136,19 @@
 - **確認できること:** API経由で送信したデータで、新しい台帳レコードが正しく作成されること。
 - **詳細仕様:** [API技術仕様書](./2025-09-24_LLM_Phase1_API_Specification.md#34-台帳作成api-ステップ14)を参照。
 
+#### ステップ1.5: OpenAPIドキュメント生成機能の実装
+
+- **ステータス:** 計画中
+- **実施概要:**
+    - `darkaonline/l5-swagger` を導入し、APIコントローラにOpenAPIアノテーションを追記する。
+    - `php artisan l5-swagger:generate` コマンドにより、`storage/api-docs/api-docs.json` にドキュメントが生成されるように設定する。
+    - 生成されたドキュメントをSwagger UIで確認できるエンドポイント (`/api/documentation`) を有効化する。
+- **目的:** 外部のLLMアプリケーション（MCP）がLedgerLeapのAPIをツールとして利用できるよう、OpenAPI仕様に準拠したドキュメントをプログラムで生成可能にする。
+- **確認できること:**
+    - `php artisan l5-swagger:generate` コマンドを実行すると、既存のAPI仕様に準拠したOpenAPIドキュメント（JSON形式）が生成されること。
+    - `/api/documentation` にアクセスすると、Swagger UIでAPIの仕様をインタラクティブに確認・試行できること。
+- **詳細仕様:** [API技術仕様書](./2025-09-24_LLM_Phase1_API_Specification.md#35-openapiドキュメント生成-ステップ15)を参照。
+
 ## 4. フェーズ2: API活用による高度な機能実現シナリオ (将来展望)
 
 ### 4.1. はじめに
