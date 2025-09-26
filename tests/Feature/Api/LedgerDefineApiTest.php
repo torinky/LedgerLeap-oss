@@ -12,7 +12,9 @@ use function Pest\Laravel\getJson;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    config(['tenancy.central_domains' => ['127.0.0.1']]);
     $tenant = Tenant::create();
+    $tenant->domains()->create(['domain' => 'localhost']);
     Tenancy::initialize($tenant);
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->user = User::factory()->create();

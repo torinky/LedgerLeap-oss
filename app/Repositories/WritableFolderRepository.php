@@ -29,27 +29,39 @@ class WritableFolderRepository
 
         $cacheKey = $this->getCacheKey($user, $permission->value, $folder);
 
+        $closure = function () use ($user, $permission, $folder, $userService) { // $userService を use に追加
+            //                $userRoles = $user->getAllRoles();
+            $userRoles = $userService->getAllUniqueRolesForUser($user); // $this->userService を $userService に変更
+
+            $allAccessibleFolderIds = $userRoles->flatMap(function ($role) use ($permission) {
+                // まず、そのロールが持つすべてのフォルダ権限を取得する
+                return $role->folderPermissions()->get()->filter(function ($folder) use ($permission) {
+                    // pivot (RoleFolderPermission) の permission を FolderPermissionType にキャスト
+                    $pivotPermission = $folder->pivot->permission;
+                    // 権限が要求された権限を包含しているかチェック
+                    return $pivotPermission->includes($permission);
+                })->flatMap(function ($folder) {
+                    return $folder->descendantsAndSelf($folder->id);
+                })->pluck('id');
+            })->unique();
+
+            if (!is_null($folder)) {
+                $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
+                $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
+                $allAccessibleFolderIds->add($folder->id); // ここを修正
+            }
+
+            return $allAccessibleFolderIds->toArray();
+        };
+
+        if (app()->runningUnitTests()) {
+            return $closure();
+        }
+
         return Cache::remember(
             $cacheKey,
             config("cache.{$permission->value}able_folders_ttl", 60),
-            function () use ($user, $permission, $folder, $userService) { // $userService を use に追加
-                //                $userRoles = $user->getAllRoles();
-                $userRoles = $userService->getAllUniqueRolesForUser($user); // $this->userService を $userService に変更
-
-                $allAccessibleFolderIds = $userRoles->flatMap(function ($role) use ($permission) {
-                    return $role->accessibleFolders($permission)->get()->flatMap(function ($folder) {
-                        return $folder->descendantsAndSelf($folder->id);
-                    })->pluck('id');
-                })->unique();
-
-                if (!is_null($folder)) {
-                    $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
-                    $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
-                    $allAccessibleFolderIds->add($folder->id); // ここを修正
-                }
-
-                return $allAccessibleFolderIds->toArray();
-            }
+            $closure
         );
     }
 
