@@ -57,7 +57,7 @@ class LedgerController extends Controller
         $ledger = $this->ledgerService->createLedger($request->validated());
 
         // レスポンスの返却
-        return (new LedgerResource($ledger))
+        return (new LedgerResource($ledger->load(['define', 'define.folder', 'define.folder.ancestors', 'define.tags'])))
             ->response()
             ->setStatusCode(201);
     }

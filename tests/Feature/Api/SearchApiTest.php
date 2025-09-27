@@ -73,10 +73,15 @@ class SearchApiTest extends TestCase
             $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->readFolder->id]);
             $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->privateFolder->id]);
 
-            // 台帳を作成 (正しい ledger_define_id を指定)
-            $this->writeLedger = Ledger::factory()->create(['ledger_define_id' => $writeLedgerDefine->id, 'content' => ['title' => 'Ledger in Writable Folder']]);
-            $this->readLedger = Ledger::factory()->create(['ledger_define_id' => $readLedgerDefine->id, 'content' => ['title' => 'Ledger in Readable Folder']]);
-            $this->privateLedger = Ledger::factory()->create(['ledger_define_id' => $privateLedgerDefine->id, 'content' => ['title' => 'Ledger in Private Folder']]);
+            // 台帳を作成 (正しい ledger_define_id と content 形式を指定)
+            $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
+            $this->writeLedger = Ledger::factory()->create(['ledger_define_id' => $writeLedgerDefine->id, 'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder']]);
+
+            $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
+            $this->readLedger = Ledger::factory()->create(['ledger_define_id' => $readLedgerDefine->id, 'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder']]);
+
+            $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
+            $this->privateLedger = Ledger::factory()->create(['ledger_define_id' => $privateLedgerDefine->id, 'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder']]);
 
             // タグを作成
             Tag::factory()->create(['name' => 'ProjectA', 'ledger_define_id' => $writeLedgerDefine->id]);
@@ -268,5 +273,50 @@ class SearchApiTest extends TestCase
         // 1件目とIDが違うことを確認（順序は不定なので、単純なID比較はしない）
         $firstId = $this->actingAs($this->adminUser, 'sanctum')->getJson('/api/v1/search?q=Ledger&limit=1')->json('data.0.id');
         $this->assertNotEquals($firstId, $response->json('data.0.id'));
+    }
+
+    public function test_search_api_returns_correct_structure()
+    {
+        $response = $this->actingAs($this->adminUser, 'sanctum')->getJson('/api/v1/search?limit=1');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'define' => [
+                            'id',
+                            'name',
+                            'description',
+                        ],
+                        'content',
+                        'folder' => [
+                            'id',
+                            'name',
+                            'path',
+                        ],
+                        'tags' => [
+                            '*' => [
+                                'id',
+                                'name',
+                            ],
+                        ],
+                        'updated_at',
+                    ],
+                ],
+                'meta' => [
+                    'total',
+                    'limit',
+                    'offset',
+                ],
+            ]);
+
+        // contentがキーバリュー形式（連想配列）であることを確認
+        $responseData = $response->json('data.0');
+        if (!empty($responseData['content'])) {
+            $this->assertIsArray($responseData['content']);
+            // キーが数値でないことを確認（文字列キーのはず）
+            $this->assertFalse(is_int(array_key_first($responseData['content'])));
+        }
     }
 }

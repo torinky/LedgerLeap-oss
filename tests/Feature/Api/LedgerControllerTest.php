@@ -88,10 +88,11 @@ class LedgerControllerTest extends TestCase
         // viewerUserはwriteFolderへの書き込み権限を持たない
         $this->actingAs($this->viewerUser, 'sanctum');
 
+        $columnId = $this->ledgerDefine->column_define[0]->id;
         $data = [
             'ledger_define_id' => $this->ledgerDefine->id,
             'folder_id' => $this->writeFolder->id,
-            'content' => ['0' => 'Test Content'],
+            'content' => [$columnId => 'Test Content'],
         ];
 
         $response = $this->postJson(route('api.v1.ledgers.store'), $data);
@@ -104,10 +105,14 @@ class LedgerControllerTest extends TestCase
     {
         $this->actingAs($this->writerUser, 'sanctum');
 
+        // 実際のカラムIDを取得してテストデータを作成
+        $columnId1 = $this->ledgerDefine->column_define[0]->id;
+        $columnId2 = $this->ledgerDefine->column_define[1]->id;
+
         $data = [
             'ledger_define_id' => $this->ledgerDefine->id,
             'folder_id' => $this->writeFolder->id,
-            'content' => ['0' => 'Test Content', '1' => 'Another Content'],
+            'content' => [$columnId1 => 'Test Content', $columnId2 => 'Another Content'],
             'tags' => ['new-tag', 'another-tag'],
         ];
 
@@ -117,10 +122,34 @@ class LedgerControllerTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'id',
+                    'define' => [
+                        'id',
+                        'name',
+                        'description',
+                    ],
                     'content',
-                    'define',
-                ]
+                    'folder' => [
+                        'id',
+                        'name',
+                        'path',
+                    ],
+                    'tags' => [
+                        '*' => [
+                            'id',
+                            'name',
+                        ],
+                    ],
+                    'updated_at',
+                ],
             ]);
+
+        // contentがキーバリュー形式（連想配列）であることを確認
+        $responseData = $response->json('data');
+        if (!empty($responseData['content'])) {
+            $this->assertIsArray($responseData['content']);
+            // キーが数値でないことを確認（文字列キーのはず）
+            $this->assertFalse(is_int(array_key_first($responseData['content'])));
+        }
 
         $this->assertDatabaseHas('ledgers', [
             'ledger_define_id' => $this->ledgerDefine->id,

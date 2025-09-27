@@ -61,7 +61,7 @@ class LedgerService
         $offset = $params['offset'] ?? 0;
 
         // Eager Loading を追加
-        $ledgers = $query->with(['define.folder', 'define.tags'])
+        $ledgers = $query->with(['define', 'define.folder', 'define.folder.ancestors', 'define.tags'])
             ->offset($offset)->limit($limit)->get();
 
         return [
