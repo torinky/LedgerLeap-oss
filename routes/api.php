@@ -42,4 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ledger Defines API
     Route::get('/v1/ledger-defines', [LedgerDefineController::class, 'index'])->name('api.v1.ledger-defines.index');
+
+    // Ledger Create API
+    Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])->name('api.v1.ledgers.store');
 });

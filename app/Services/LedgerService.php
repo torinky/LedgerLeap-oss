@@ -69,4 +69,32 @@ class LedgerService
             'total' => $total,
         ];
     }
+
+    public function createLedger(array $data): Ledger
+    {
+        return \DB::transaction(function () use ($data) {
+            $ledgerDefine = \App\Models\LedgerDefine::findOrFail($data['ledger_define_id']);
+
+            $ledger = Ledger::create([
+                'ledger_define_id' => $ledgerDefine->id,
+                'content' => $data['content'],
+                'creator_id' => auth()->id(),
+                'modifier_id' => auth()->id(),
+            ]);
+
+            if (!empty($data['tags'])) {
+                foreach ($data['tags'] as $tagName) {
+                    \App\Models\Tag::firstOrCreate([
+                        'name' => $tagName,
+                        'ledger_define_id' => $ledgerDefine->id,
+                        'folder_id' => $ledgerDefine->folder_id,
+                        'creator_id' => auth()->id(), // creator_id を追加
+                        'modifier_id' => auth()->id(), // modifier_id も追加
+                    ]);
+                }
+            }
+
+            return $ledger->load('define');
+        });
+    }
 }

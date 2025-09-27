@@ -132,8 +132,16 @@
 
 ### 3.4. 台帳作成API (ステップ1.4)
 
-- **エンドポイント:** `POST /api/v1/ledgers`
+- **ステータス:** 計画中
 - **目的:** 外部アプリケーションからの指示に基づき、プログラム経由で新しい台帳レコードを作成する。
+- **エンドポイント:** `POST /api/v1/ledgers`
+- **関連コンポーネント:**
+    - `App\Http\Controllers\Api\V1\LedgerController`
+    - `App\Http\Requests\Api\V1\StoreLedgerRequest`
+    - `App\Services\LedgerService`
+    - `App\Policies\FolderPolicy`
+    - `App\Models\Ledger`, `App\Models\Tag`
+    - `App\Http\Resources\LedgerResource`
 - **リクエストボディ:**
     ```json
     {
@@ -157,7 +165,7 @@
         - 必須項目（`ledger_define_id`, `folder_id`, `content`）を指定して、台帳が正しく作成されること（ステータスコード `201 Created`）。
         - タグも同時に指定して作成できること。
         - バリデーションエラー（必須項目不足、`content` のデータ型不一致など）が発生した場合、`422 Unprocessable Entity` とエラー詳細が返されること。
-        - 存在しない `ledger_define_id` や `folder_id` を指定した場合、`404 Not Found` が返されること。
+        - 存在しない `ledger_define_id` や `folder_id` を指定した場合、`422 Unprocessable Entity` が返されること。
         - ユーザーが書き込み権限を持たない `folder_id` を指定した場合、`403 Forbidden` が返されること。
 
 ### 3.5. OpenAPIドキュメント生成 (ステップ1.5)
