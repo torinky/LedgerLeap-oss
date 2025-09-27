@@ -123,14 +123,22 @@
             </div>
 
             {{-- テーマ切り替え --}}
-            <div>
-                <label class="swap swap-rotate btn btn-sm btn-ghost btn-square tooltip tooltip-bottom"
-                       data-tip="{{ __('ledger.navigation.toggle_theme') }}"> {{-- ツールチップ追加 --}}
-                    <input id="theme-toggle" type="checkbox" style="display: none"/>
-                    <i class="swap-on fas fa-sun"></i>
-                    <i class="swap-off fas fa-moon"></i>
-                </label>
-            </div>
+            <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle" x-data="{
+                currentTheme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'coffee' : 'nord')
+            }">
+                {{-- この隠しチェックボックスが状態を制御します --}}
+                <input type="checkbox"
+                       @change.prevent="
+                            let newTheme = (currentTheme === 'nord' ? 'coffee' : 'nord');
+                            localStorage.setItem('theme', newTheme);
+                            document.documentElement.setAttribute('data-theme', newTheme);
+                            currentTheme = newTheme;
+                       "
+                       :checked="currentTheme === 'coffee'"
+                       />
+                <i class="swap-on fas fa-sun"></i>
+                <i class="swap-off fas fa-moon"></i>
+            </label>
         </div>
     </div>
 </nav>

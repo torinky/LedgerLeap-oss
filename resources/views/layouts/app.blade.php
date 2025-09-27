@@ -1,11 +1,32 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? $attributes->get('title') ?? 'page'}} | {{ config('app.name', 'Laravel')}}</title>
+    <title>{{ $title ?? $attributes->get('title') ?? 'page'}} | {{ config('app.name', 'Laravel') }}</title>
+
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC.
+        // This script reads the theme from localStorage and applies it.
+        // It also respects the OS preference for dark mode on the first visit.
+        (function() {
+            const theme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (theme) {
+                // If a theme is stored in localStorage, use it.
+                document.documentElement.setAttribute('data-theme', theme);
+            } else if (prefersDark) {
+                // If no theme is stored and OS is dark mode, use 'coffee'.
+                document.documentElement.setAttribute('data-theme', 'coffee');
+            } else {
+                // Otherwise (no theme stored, OS is light mode), use 'nord'.
+                document.documentElement.setAttribute('data-theme', 'nord');
+            }
+        })();
+    </script>
     <!-- Fonts -->
     {{--        <link rel="preconnect" href="https://fonts.bunny.net">--}}
     {{--        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />--}}
@@ -14,19 +35,7 @@
     @vite(['resources/sass/app.scss'])
     @stack('stylesheets')
 
-    <script>
-        // It's best to inline this in `head` to avoid FOUC (flash of unstyled content) when changing pages or themes
-        if (
-            localStorage.getItem('color-theme') === 'dark' ||
-            (!('color-theme' in localStorage) &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ) {
-            document.documentElement.dataset.theme = 'dark';
-        } else {
-            document.documentElement.dataset.theme = 'light';
-        }
-        console.log(document.documentElement.dataset.theme);
-    </script>
+
 </head>
 <body class="font-sans antialiased {{$attributes->get('class') ?? 'bg-base-200'}}">
 <x-mary-toast/>
