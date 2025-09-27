@@ -115,13 +115,13 @@
 
 #### ステップ1.4: 台帳作成APIの実装
 
-- **ステータス:** 計画中
+- **ステータス:** 完了 (2025-09-27)
 - **実施概要:**
-    - `routes/api.php` に `POST /api/v1/ledgers` エンドポイントを定義する。
-    - `StoreLedgerRequest` FormRequestを作成し、技術仕様書に沿ったリクエストボディのバリデーションを実装する。
-    - `LedgerController` に `store` メソッドを実装し、リクエストされた `folder_id` に対する書き込み権限を認可する。
-    - `LedgerService` に `createLedger` メソッドを実装し、台帳と関連タグの永続化処理を行う。
-    - 上記を網羅するFeatureテストを作成する。
+    - `routes/api.php` に `POST /api/v1/ledgers` エンドポイントを定義した。
+    - `StoreLedgerRequest` FormRequestを作成し、技術仕様書に沿ったリクエストボディのバリデーションを実装した。
+    - `LedgerController` に `store` メソッドを実装し、リクエストされた `folder_id` に対する書き込み権限を認可するようにした。
+    - `LedgerService` に `createLedger` メソッドを実装し、台帳と関連タグの永続化処理を実装した。
+    - 上記を網羅するFeatureテストを作成し、正常系・異常系（バリデーションエラー、権限エラー）の動作を保証した。
 - **目的:** 外部のLLMアプリケーションとの対話の結果、新しい台帳レコードをLedgerLeapにプログラム経由で登録できるようにする。
 - **エンドポイント:** `POST /api/v1/ledgers`
 - **リクエストボディ (例):**
