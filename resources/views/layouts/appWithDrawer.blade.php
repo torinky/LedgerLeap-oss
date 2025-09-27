@@ -11,8 +11,7 @@
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
 
     <!-- Styles  Scripts -->
-    @livewireStyles
-    @vite(['resources/sass/app.scss','resources/js/app.js'])
+    @vite(['resources/sass/app.scss'])
     @stack('stylesheets')
 
 </head>
@@ -50,7 +49,6 @@
     </div>
     @vite(['resources/js/app.js'])
     @stack('scripts')
-    @livewireScripts
 <script>
     // 別タブからの更新指令を監視し、一覧リストを更新する
     window.addEventListener('storage', function (e) {

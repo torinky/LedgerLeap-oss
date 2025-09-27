@@ -55,8 +55,8 @@ export default {
     ],
 
     daisyui: {
-        themes: ["light", "dark"], // アプリケーションで使用するテーマを指定
-        darkTheme: "dark", // ダークモード時のデフォルトテーマ
+        themes: ["light", "dark", "dim", "nord"], // アプリケーションで使用するテーマを指定
+        darkTheme: "dim", // ダークモード時のデフォルトテーマ
     },
 
 };
