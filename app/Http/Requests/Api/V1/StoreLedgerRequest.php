@@ -15,8 +15,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *     @OA\Property(
  *         property="content",
  *         type="object",
- *         description="An object where keys are column definition IDs and values are the content.",
- *         example={"1": "New meeting minutes", "2": "2025-09-27", "3": "Regular"}
+ *         description="An object where keys are column definition IDs and values are the content."
  *     ),
  *     @OA\Property(
  *         property="tags",

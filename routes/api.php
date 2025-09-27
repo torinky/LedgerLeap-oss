@@ -46,3 +46,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ledger Create API
     Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])->name('api.v1.ledgers.store');
 });
+
+Route::get('/openapi.json', function () {
+    $path = storage_path('api-docs/api-docs.json');
+
+    if (!file_exists($path)) {
+        abort(404, 'API documentation file not found.');
+    }
+
+    return response()->file($path, ['Content-Type' => 'application/json']);
+})->name('api.openapi');
+
