@@ -37,11 +37,8 @@ class LedgerService
 
     }
 
-    public function searchLedgersForApi(array $params)
+    public function searchLedgersForApi(\App\Models\User $user, array $params)
     {
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-
         // ユーザーが読み取り可能なフォルダIDのリストを取得
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
 

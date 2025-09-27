@@ -8,6 +8,7 @@ use App\Services\LedgerService;
 use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Sanctum\PersonalAccessToken; // 追加
 
 class SearchLedgersTool extends Tool
 {
@@ -18,29 +19,41 @@ class SearchLedgersTool extends Tool
         Search for ledgers based on various criteria.
 MARKDOWN;
 
+    protected LedgerService $ledgerService;
+
+    public function __construct(LedgerService $ledgerService)
+    {
+        $this->ledgerService = $ledgerService;
+    }
+
     /**
      * Handle the tool request.
      */
     public function handle(Request $request): Response
     {
-        $user = Auth::user();
-        if (! $user) {
-            return Response::error('Unauthorized', 401);
+        $token = getenv('MCP_AUTH_TOKEN'); // 環境変数からトークンを取得
+
+        if (! $token) {
+            return Response::error('Authentication token not provided.', 401);
         }
+
+        // トークンからユーザーを検索
+        $accessToken = PersonalAccessToken::findToken($token);
+
+        if (! $accessToken || ! $accessToken->tokenable) {
+            return Response::error('Invalid authentication token.', 401);
+        }
+
+        $user = $accessToken->tokenable; // トークンに紐づくユーザー
+
+        // 認証済みユーザーとして設定（ArtisanコンテキストでAuth::user()が機能しない場合のため）
+        Auth::setUser($user); // 必要であればコメント解除
 
         $parameters = $request->toArray();
 
         $results = $this->ledgerService->searchLedgersForApi(
-            user: $user,
-            q: $parameters['q'] ?? null,
-            tags: isset($parameters['tags']) ? explode(',', $parameters['tags']) : null,
-            folderId: $parameters['folder_id'] ?? null,
-            ledgerDefineId: $parameters['ledger_define_id'] ?? null,
-            excludeQ: $parameters['exclude_q'] ?? null,
-            excludeTags: isset($parameters['exclude_tags']) ? explode(',', $parameters['exclude_tags']) : null,
-            mode: $parameters['mode'] ?? 'search',
-            limit: $parameters['limit'] ?? null,
-            offset: $parameters['offset'] ?? null,
+            user: $user, // 認証済みユーザーを直接渡す
+            params: $parameters,
         );
 
         return Response::json($results);

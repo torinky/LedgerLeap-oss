@@ -154,6 +154,8 @@
 
 #### 4.2.3. 確認手順2: 各ツールの実行テスト
 
+**注意:** 以下のプロンプト例は、`gemini` CLIが内部的にツールを呼び出す際の形式を示しています。ユーザーは直接これらのコマンドを入力するのではなく、自然言語で指示を出すことで`gemini` CLIが適切なツールを呼び出します。
+
 以下のプロンプト例を`gemini` CLIに入力し、各ツールが意図通りに動作することを確認する。
 
 -   **台帳検索 (SearchLedgersTool):**
@@ -270,11 +272,118 @@ MCPサーバーが起動し、ツールが認識された後、`search_ledgers_t
 - **作業:** `LedgerLeapServer.php` の `$tools` 配列に `GetLedgerDefinesTool::class` に加えて `SearchLedgersTool::class` を追加する。
 - **現状:** `LedgerLeapServer.php` の変更を適用する。ユーザーに `gemini` CLIの再起動を依頼し、結果を待つ。
 
-#### 5.5.4. ステップ4: `SearchLedgersTool.php` の構文エラー修正と再確認
 
--   **問題:** `gemini` CLIの再起動後も `@ledgerleap-api` が `Disconnected (0 tools cached)` と表示され、MCPサーバーが正常に起動しない問題が継続。
--   **調査:** アプリケーションログ (`storage/logs/laravel-2025-09-27.log`) を確認したところ、`app/Mcp/Tools/SearchLedgersTool.php` の55行目で `syntax error, unexpected token "public", expecting end of file` という構文エラーが発生していることを特定。これは `handle` メソッドの閉じ括弧が二重になっていたため。
--   **対応:** `SearchLedgersTool.php` の余分な閉じ括弧を削除し、構文エラーを修正した。
--   **再確認:** `app/Mcp/Servers/LedgerLeapServer.php` の `$tools` プロパティには、既に `SearchLedgersTool::class` が追加されていることを確認。
--   **現状:** 構文エラーは修正されたが、`gemini` CLIのキャッシュなどの影響で、まだ `Disconnected` と表示されている可能性がある。再度 `gemini` CLIを再起動し、MCPサーバーが正常に起動するかを確認する必要がある。
+### 5.6. `Unauthorized` エラーの調査と解決
 
+MCPサーバーが起動し、ツールが認識された後、`search_ledgers_tool`を実行した際に、`Unauthorized` エラーが発生した。
+
+#### 5.6.1. 問題の特定
+
+-   `app/Mcp/Tools/SearchLedgersTool.php` の `handle` メソッド内で、`Auth::user()` が `null` を返した場合に `Unauthorized` エラーが返されることが判明。
+-   これは、`gemini` CLI から MCP ツールが呼び出された際に、認証済みのユーザー情報が取得できていないことが原因と推測された。
+
+#### 5.6.2. 調査と検討
+
+-   `laravel/mcp` のドキュメントを確認し、認証方法として Laravel Passport を使用した OAuth 2.1 と、Laravel Sanctum を使用したトークンベース認証があることを確認。
+-   現在のプロジェクトでは Laravel Sanctum が使用されているため、Sanctum を利用したトークンベース認証を検討。
+-   Sanctum を使用する場合、MCP クライアントが `Authorization: Bearer <token>` ヘッダーを提供する必要があることが判明。
+-   `routes/ai.php` を確認したが、`Mcp::local` を使用しており、`auth:sanctum` ミドルウェアは適用されていなかった。
+-   `mcp:start` コマンドのヘルプを確認したが、認証トークンを直接渡すためのオプションは存在しなかった。
+-   `gemini` CLI の `mcpServers` 設定で HTTP ヘッダーを直接設定するオプションがないため、環境変数による認証を試す方針を決定。
+
+#### 5.6.3. 解決策
+
+1.  **認証トークンの提供:** ユーザーから認証トークン `4|n3zUiWyjPt1nNxiZZyT4PRwukNvaMjZQw2k1z2e865246fde` を提供してもらった。
+2.  **`.gemini/settings.json` の更新:** `ledgerleap-api` の設定に `env` プロパティを追加し、`MCP_AUTH_TOKEN` 環境変数に提供されたトークンを設定した。
+    ```json
+    "ledgerleap-api": {
+      "command": "./vendor/bin/sail",
+      "args": [
+        "artisan",
+        "mcp:start",
+        "ledgerleap:mcp"
+      ],
+      "env": {
+        "MCP_AUTH_TOKEN": "4|n3zUiWyjPt1nNxiZZyT4PRwukNvaMjZQw2k1z2e865246fde"
+      }
+    }
+    ```
+3.  **`app/Mcp/Tools/SearchLedgersTool.php` の修正:**
+    -   `PersonalAccessToken` モデルを `use` に追加。
+    -   `handle` メソッド内で `getenv('MCP_AUTH_TOKEN')` を使用して環境変数からトークンを取得。
+    -   取得したトークンを使って `PersonalAccessToken::findToken($token)` でアクセストークンを検索。
+    -   アクセストークンが見つかった場合、`$accessToken->tokenable` でユーザーを取得し、`ledgerService->searchLedgersForApi` メソッドに直接渡すように修正。
+    -   トークンが存在しない、または無効な場合は `Unauthorized` エラーを返すように変更。
+
+これらの変更により、`gemini` CLI から MCP サーバーへの認証情報が正しく渡され、ツール内で認証済みユーザーが利用できるようになることを期待する。
+
+### 5.7. `Unknown named parameter $q` エラーの発生と解決
+
+MCPサーバーが起動し、`search_ledgers_tool` を実行した際に、`Unknown named parameter $q` エラーが発生した。
+
+#### 5.7.1. 問題の特定
+
+-   `app/Mcp/Tools/SearchLedgersTool.php` の `handle` メソッド内で、`$this->ledgerService->searchLedgersForApi` を名前付き引数で呼び出していた。
+-   `app/Services/LedgerService.php` の `searchLedgersForApi` メソッドが、単一の配列パラメータ `array $params` を期待するように定義されていた。
+-   これにより、`SearchLedgersTool.php` から渡された名前付き引数が `LedgerService.php` 側で正しく認識されず、`Unknown named parameter $q` エラーが発生した。
+
+#### 5.7.2. 解決策
+
+1.  **`app/Mcp/Tools/SearchLedgersTool.php` の修正:**
+    -   `handle` メソッド内で `$this->ledgerService->searchLedgersForApi` を呼び出す際、名前付き引数ではなく、`user: $user, params: $parameters` の形式で `$user` と `$parameters` 配列を直接渡すように変更した。
+2.  **`app/Services/LedgerService.php` の修正:**
+    -   `searchLedgersForApi` メソッドの定義を `public function searchLedgersForApi(\\\App\\\Models\\\User $user, array $params)` に変更し、`User` モデルとパラメータ配列を受け取るようにした。
+    -   `searchLedgersForApi` メソッド内で `auth()->user()` を使用していた箇所を、引数で受け取った `$user` を使用するように修正した。
+
+これらの修正により、`SearchLedgersTool` から `LedgerService` への呼び出しと、`LedgerService` 内でのユーザー情報の利用が正しく行われるようになり、`Unknown named parameter $q` エラーは解消された。
+
+### 5.8. 検索ツールの動作確認
+MCPサーバーが正常に起動し、ツールが認識された後、`SearchLedgersTool` を使用して台帳の検索を実行しました。
+
+**実行コマンド:**
+`@ledgerleap-api SearchLedgers q: \"テストです\"`
+
+**結果:**
+「テストです」というキーワードで台帳を検索した結果、以下の1件の台帳が見つかりました。この台帳はルートフォルダ (`/`) に存在します。
+
+```json
+{
+    \"ledgers\": [
+        {
+            \"id\": 112,
+            \"tenant_id\": \"tenantc\",
+            \"ledger_define_id\": 15,
+            \"creator_id\": 1,
+            \"modifier_id\": 1,
+            \"status\": \"none\",
+            \"latest_diff_id\": 24,
+            \"version\": 2,
+            \"created_at\": \"2025-09-27T07:09:22.000000Z\",
+            \"updated_at\": \"2025-09-27T10:59:50.000000Z\",
+            \"content\": [
+                {
+                    \"dolorem\": true,
+                    \"ducimus\": true
+                },
+                {
+                    \"aut\": true
+                },
+                \"テストです\",
+                \"\",
+                {
+                    \"ut\": true,
+                    \"necessitatibus\": true,
+                    \"ratione\": true
+                },
+                [],
+                \"\",
+                \"テストです2\"
+            ],
+            \"content_attached\": [],
+
+        ・・・　省略　・・・
+        
+    ],\
+    \"total\": 1
+}
+```
