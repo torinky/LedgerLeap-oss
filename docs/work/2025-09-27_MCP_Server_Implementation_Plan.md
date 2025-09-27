@@ -229,24 +229,52 @@
 
 - **結論:** `mcp:inspector`がサーバーを認識できたこと、および`CreateLedgerTool`の`schema()`メソッドの修正によってツールクラス自体のエラーが解消されたことから、`mcp:start`が即時終了する真の原因は、初期の`TypeError`であったと特定された。修正後も問題が継続しているように見えたのは、`gemini` CLI側のキャッシュや環境要因によるものであり、最終的に`gemini` CLIの再起動と環境のリフレッシュによって、3つのツールすべてが正常に認識され、MCPサーバーが起動するに至った。現在の`SearchLedgersTool.php`と`CreateLedgerTool.php`のコードは問題なく動作している。
 
-### 5.4. 切り分け調査の進捗 (2025-09-27)
+### 5.4. `Laravel\Mcp\Request::arguments()` エラーの発生と解決
+
+MCPサーバーが起動し、ツールが認識された後、`search_ledgers_tool`を実行した際に、`Call to undefined method Laravel\Mcp\Request::arguments()` というエラーが発生した。
+
+#### 5.4.1. 問題の原因
+
+- `laravel/mcp` パッケージの `Tool` インターフェースを実装するクラスの `handle` メソッドのシグネチャが変更されており、`handle(array $parameters)` ではなく `handle(Laravel\Mcp\Request $request)` を受け取るようになっていた。
+- ツールクラスの `handle` メソッド内で、`Laravel\Mcp\Request` のインスタンスに対して存在しない `arguments()` メソッドを呼び出そうとしていた。
+- 引数へのアクセスは、`$request->toArray()` や `$request->get('key')` を使用する必要があった。
+
+#### 5.4.2. 解決策
+
+- `SearchLedgersTool.php`、`CreateLedgerTool.php`、`GetLedgerDefinesTool.php` の3つのツールクラスすべてにおいて、`handle` メソッドのシグネチャを `public function handle(Request $request): Response` に変更した。
+- 各ツールクラスの先頭に `use Laravel\Mcp\Request;` を追加した。
+- `handle` メソッド内で引数にアクセスする際は、`$request->toArray()` を使用するように変更した。
+
+**補足:** この修正作業中に、既に3つのツールクラスすべてが上記の修正が適用された状態であることが判明した。これは、ユーザーが意識しない形で修正が適用されていたか、あるいは以前の修正が反映された結果であると推測される。
+
+---
+
+### 5.5. 切り分け調査の進捗 (2025-09-27)
 
 前項の結論に基づき、クラッシュの原因となっているツールを特定するため、以下の切り分け調査を開始した。
 
-#### 5.4.1. ステップ1: 全ツールの無効化
+#### 5.5.1. ステップ1: 全ツールの無効化
 
 - **作業:** `app/Mcp/Servers/LedgerLeapServer.php` の `$tools` プロパティを空の配列 `[]` に変更。
 - **結果:** `gemini` CLIを再起動したところ、`@ledgerleap-api` が **`Ready (0 tools)`** として正常に起動した。
 - **考察:** この結果から、サーバーの起動プロセスや `gemini` との基本的な接続設定は正しく、問題の原因が `$tools` 配列に登録されていたツールクラスのいずれかの初期化処理にあることが確定した。
 
-#### 5.4.2. ステップ2: `GetLedgerDefinesTool` の単独有効化
+#### 5.5.2. ステップ2: `GetLedgerDefinesTool` の単独有効化
 
 - **作業:** `$tools` 配列に `GetLedgerDefinesTool::class` のみを追加。このツールは引数を取らないため、スキーマ定義関連の問題が発生する可能性が最も低いと判断した。
 - **結果:** `gemini` CLIを再起動したところ、`@ledgerleap-api` が **`Ready (1 tool)`** として正常に起動した。`GetLedgerDefinesTool` がツールとして認識されていることを確認。
 - **考察:** このツール自体には問題がないことが確認できた。クラッシュの原因は残りの `SearchLedgersTool` または `CreateLedgerTool` にある可能性が高い。
 
-#### 5.4.3. ステップ3: `SearchLedgersTool` の追加有効化
+#### 5.5.3. ステップ3: `SearchLedgersTool` の追加有効化
 
 - **作業:** `LedgerLeapServer.php` の `$tools` 配列に `GetLedgerDefinesTool::class` に加えて `SearchLedgersTool::class` を追加する。
 - **現状:** `LedgerLeapServer.php` の変更を適用する。ユーザーに `gemini` CLIの再起動を依頼し、結果を待つ。
+
+#### 5.5.4. ステップ4: `SearchLedgersTool.php` の構文エラー修正と再確認
+
+-   **問題:** `gemini` CLIの再起動後も `@ledgerleap-api` が `Disconnected (0 tools cached)` と表示され、MCPサーバーが正常に起動しない問題が継続。
+-   **調査:** アプリケーションログ (`storage/logs/laravel-2025-09-27.log`) を確認したところ、`app/Mcp/Tools/SearchLedgersTool.php` の55行目で `syntax error, unexpected token "public", expecting end of file` という構文エラーが発生していることを特定。これは `handle` メソッドの閉じ括弧が二重になっていたため。
+-   **対応:** `SearchLedgersTool.php` の余分な閉じ括弧を削除し、構文エラーを修正した。
+-   **再確認:** `app/Mcp/Servers/LedgerLeapServer.php` の `$tools` プロパティには、既に `SearchLedgersTool::class` が追加されていることを確認。
+-   **現状:** 構文エラーは修正されたが、`gemini` CLIのキャッシュなどの影響で、まだ `Disconnected` と表示されている可能性がある。再度 `gemini` CLIを再起動し、MCPサーバーが正常に起動するかを確認する必要がある。
 

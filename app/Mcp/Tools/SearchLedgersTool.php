@@ -2,9 +2,10 @@
 
 namespace App\Mcp\Tools;
 
+use Illuminate\Support\Facades\Auth;
+use Laravel\Mcp\Request;
 use App\Services\LedgerService;
 use Illuminate\JsonSchema\JsonSchema;
-use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
@@ -15,27 +16,36 @@ class SearchLedgersTool extends Tool
      */
     protected string $description = <<<'MARKDOWN'
         Search for ledgers based on various criteria.
-    MARKDOWN;
+MARKDOWN;
 
     /**
      * Handle the tool request.
      */
-    public function handle(Request $request, LedgerService $ledgerService): Response
+    public function handle(Request $request): Response
     {
-        $result = $ledgerService->searchLedgersForApi(
-            $request->arguments('q'),
-            $request->arguments('tags'),
-            $request->arguments('folder_id'),
-            $request->arguments('ledger_define_id'),
-            $request->arguments('exclude_q'),
-            $request->arguments('exclude_tags'),
-            $request->arguments('mode', 'search'),
-            $request->arguments('limit', 10),
-            $request->arguments('offset', 0)
+        $user = Auth::user();
+        if (! $user) {
+            return Response::error('Unauthorized', 401);
+        }
+
+        $parameters = $request->toArray();
+
+        $results = $this->ledgerService->searchLedgersForApi(
+            user: $user,
+            q: $parameters['q'] ?? null,
+            tags: isset($parameters['tags']) ? explode(',', $parameters['tags']) : null,
+            folderId: $parameters['folder_id'] ?? null,
+            ledgerDefineId: $parameters['ledger_define_id'] ?? null,
+            excludeQ: $parameters['exclude_q'] ?? null,
+            excludeTags: isset($parameters['exclude_tags']) ? explode(',', $parameters['exclude_tags']) : null,
+            mode: $parameters['mode'] ?? 'search',
+            limit: $parameters['limit'] ?? null,
+            offset: $parameters['offset'] ?? null,
         );
 
-        return Response::text(json_encode($result, JSON_PRETTY_PRINT));
+        return Response::json($results);
     }
+
 
     /**
      * Get the tool's input schema.
