@@ -28,62 +28,66 @@
 
 ---
 
-### 3.1. 調査フェーズ：Laravel APIをMCPサーバー化する既存アプローチの特定
+### 3.1. 調査フェーズ：公式パッケージ `laravel/mcp` の発見と方針転換
 
-`laravel-boost`の`artisan boost:mcp`コマンドの存在は、LaravelコミュニティにAPIをMCPサーバー化するための共通のアプローチやパッケージが存在する可能性を示唆している。そのため、`laravel-boost`の独自実装をリバースエンジニアリングする前に、まず既存の解決策を調査する。
+`laravel-boost`の`artisan boost:mcp`コマンドの存在から、LaravelコミュニティにAPIをMCPサーバー化するための共通のアプローチが存在する可能性を想定し、既存の解決策を調査した。
 
-#### 3.1.1. 調査項目1: 既存のMCPサーバー化パッケージの調査 (最優先)
+#### 3.1.1. 調査結果：`laravel/mcp` パッケージの特定
 
--   **目的:** LedgerLeap APIをMCPサーバーとして公開するための、再利用可能な既存パッケージを発見し、実装コストを最小化する。
--   **調査計画:**
-    1.  Packagist, GitHub, Google等で「laravel mcp server」「laravel gemini tool」「artisan mcp」といったキーワードで検索し、関連するパッケージやライブラリをリストアップする。
-    2.  `laravel/mcp` や `laravel/boost` パッケージが、他のプロジェクトでも汎用的に利用できるスタンドアロンなコンポーネントとして提供されているか、その依存関係とドキュメントを確認する。
-    3.  もし再利用可能なパッケージが見つかった場合、その導入方法、設定、ツール定義の方法（OpenAPI仕様を自動で読み込む機能の有無など）を評価し、LedgerLeapへの適用可否を判断する。
+-   **結論:** 調査の結果、Laravel公式から **`laravel/mcp`** という、まさに今回の目的（LaravelアプリケーションをMCPサーバー化する）に合致するパッケージが提供されていることが判明した。
+-   **機能概要:**
+    -   AIクライアント（Gemini CLIなど）がLaravelアプリケーションと対話するための標準的なプロトコルを提供する。
+    -   アプリケーションの機能を「ツール」としてAIに公開する仕組みを持つ。
+    -   通信方法はStdio（標準入出力）をサポートしており、`artisan`コマンドとしてローカルサーバーを起動する機能も備わっている。
+-   **`laravel-boost`との関連:** `laravel/mcp`のドキュメントには「ローカルサーバーは、Laravel BoostのようなローカルAIアシスタント統合の構築に最適」との記述があり、`laravel-boost`自体がこのパッケージを利用して実装されている可能性が極めて高い。
 
-#### 3.1.2. 調査項目2: `laravel-boost`のリバースエンジニアリング (フォールバックプラン)
+#### 3.1.2. 方針転換：リバースエンジニアリングから公式パッケージ活用へ
 
-調査項目1で再利用可能なパッケージが見つからなかった場合に限り、`laravel-boost`の実装を直接分析する。
-
--   **エントリーポイントの特定と起動シーケンスの解明:**
-    -   `artisan boost:mcp`コマンドの`handle`メソッドを読み解き、サーバーの初期化、メインループ、終了処理のシーケンスを理解する。
-    -   責務を分担しているクラス群の構造を把握する。
-
--   **通信プロトコルの解明:**
-    -   標準入出力を介したJSONメッセージの正確なスキーマ（`id`, `method`, `params`など）を特定する。
-    -   特に、ツール定義の要求/応答、ツール実行の要求/応答のメッセージ形式を解明する。
-
--   **ツール定義の動的生成・公開方法の解明:**
-    -   `laravel-boost`がArtisanコマンド等を、`gemini` CLIが解釈可能な`function_declarations`形式に動的に変換しているロジックを解明する。
+-   当初の計画にあった「`laravel-boost`のリバースエンジニアリング」は、公式パッケージの発見により**不要と判断**する。
+-   今後の実装は、**`laravel/mcp` パッケージを導入し、その機能を利用してMCPサーバーを構築する**方針へと転換する。これにより、より効率的かつ標準に準拠した実装が見込める。
 
 ---
 
-### 3.2. 実装フェーズ：調査結果を元に、LedgerLeapにMCPサーバー機能を実装する
+### 3.2. 実装フェーズ：`laravel/mcp` を利用したMCPサーバー機能の実装
 
-調査で得られた知見に基づき、LedgerLeapに同様の機能を実装する。
+`laravel/mcp`パッケージの導入と公式ドキュメントの精査結果を踏まえ、実装計画を以下のように再定義する。
 
-#### 3.2.1. ステップ1: `artisan ledgerleap:mcp` コマンドの作成
+#### 3.2.1. ステップ1: `laravel/mcp` パッケージのインストール
 
--   `php artisan make:command LedgerLeapMcpServer`を実行し、MCPサーバーの土台となるArtisanコマンドを作成する。
+-   `composer require laravel/mcp` を実行し、パッケージをプロジェクトに導入する。
+-   `php artisan vendor:publish --tag=ai-routes` を実行し、MCPサーバーの定義ファイル `routes/ai.php` を公開する。
 
-#### 3.2.2. ステップ2: 通信メインループの実装
+#### 3.2.2. ステップ2: MCPサーバーの定義とArtisanコマンドの作成
 
--   コマンドの`handle`メソッド内に、`laravel-boost`を参考に、標準入力からのJSONリクエストを待ち受ける無限ループを実装する。
--   受信したJSONをパースし、リクエストの種類（ツール定義要求 or ツール実行要求）を判別するディスパッチロジックを実装する。
+-   `php artisan make:mcp-server LedgerLeapServer` を実行し、MCPサーバーの定義クラス (`app/Mcp/Servers/LedgerLeapServer.php`) を作成する。
+-   `routes/ai.php` に、作成した`LedgerLeapServer`をローカルサーバー（Artisanコマンド）として登録する。このとき、コマンド名を `ledgerleap:mcp` に設定する。
 
-#### 3.2.3. ステップ3: ツール定義（OpenAPI仕様）の提供ロジックの実装
+#### 3.2.3. ステップ3: 各APIエンドポイントに対応するMCPツールの作成
 
--   `gemini` CLIからツール定義を要求された際に、`storage/api-docs/api-docs.json`の内容を読み込む。
--   読み込んだOpenAPI仕様を、調査フェーズで解明したプロトコル形式（`function_declarations`の配列など）に変換する。
--   変換したツール定義をJSONとして標準出力に書き出し、`gemini` CLIに応答する。
+公式ドキュメントを精査した結果、`laravel/mcp`にはOpenAPI仕様を自動的に解釈してツールを生成する機能は存在しないことが判明した。そのため、**各APIエンドポイントに対応するMCPツールを個別に作成する**方針へと変更する。
 
-#### 3.2.4. ステップ4: ツール実行（API呼び出し）ロジックの実装
+1.  **検索ツール (`SearchLedgersTool`) の作成:**
+    -   `php artisan make:mcp-tool SearchLedgersTool` を実行。
+    -   `SearchLedgersTool`クラスで、`search` APIが受け取るパラメータ（`q`, `tags`, `folder_id`等）を`JsonSchema`を用いて定義し、バリデーションルールを設定する。
+    -   `handle`メソッド内で、DIコンテナ経由で`LedgerService`をインジェクトし、受け取った引数を渡して`searchLedgersForApi()`メソッドを呼び出す。
+    -   `LedgerService`からの戻り値を、`Laravel\Mcp\Response`オブジェクトでラップして返す。
 
--   `gemini` CLIからツール実行リクエスト（例: `search_ledgers`）を受け取る。
--   リクエストされた関数名とパラメータを解析する。
--   関数名に対応する`LedgerService`のメソッド（例: `searchLedgersForApi`）を、DIコンテナ経由で解決し、パラメータを渡して直接呼び出す。
--   サービスの実行結果（成功または例外）を、調査フェーズで解明したプロトコル形式のJSONに変換し、標準出力に書き出して`gemini` CLIに応答する。
+2.  **台帳定義リスト取得ツール (`GetLedgerDefinesTool`) の作成:**
+    -   `php artisan make:mcp-tool GetLedgerDefinesTool` を実行。
+    -   このツールは引数を取らないため、スキーマ定義は不要。
+    -   `handle`メソッド内で、`LedgerDefine`モデルを直接、または`LedgerDefineService`（もし存在すれば）経由で全件取得する。
+    -   取得した結果を`Response`オブジェクトでラップして返す。
 
-#### 3.2.5. ステップ5: `.gemini/settings.json`への登録とテスト
+3.  **台帳作成ツール (`CreateLedgerTool`) の作成:**
+    -   `php artisan make:mcp-tool CreateLedgerTool` を実行。
+    -   `createLedger` APIが受け取るリクエストボディ（`ledger_define_id`, `folder_id`, `content`, `tags`）の構造を`JsonSchema`で厳密に定義する。
+    -   `handle`メソッド内で、`LedgerService`の`createLedger()`メソッドを呼び出す。この際、認証ユーザーの情報を取得し、`created_by`として渡す必要がある。MCPリクエストのコンテキストから認証ユーザーを取得する方法をドキュメントで確認し、実装する。
+    -   作成されたリソース情報を`Response`オブジェクトでラップして返す。
+
+4.  **作成したツールを`LedgerLeapServer`に登録:**
+    -   `app/Mcp/Servers/LedgerLeapServer.php`の`$tools`プロパティに、上記で作成した3つのツールクラスを登録する。
+
+#### 3.2.4. ステップ4: `.gemini/settings.json`への登録とテスト
 
 -   `.gemini/settings.json`に、`laravel-boost`の設定を参考に、`ledgerleap-api`エントリを追加する。
     ```json
@@ -96,4 +100,5 @@
     }
     ```
 -   `gemini` CLIを再起動し、プロンプトで`@ledgerleap-api`が利用可能になっていることを確認する。
--   「`@ledgerleap-api 台帳を検索して`」のようなプロンプトを入力し、LedgerLeap APIがツールとして正しく呼び出され、結果が返ってくるか、一連の動作をテストする。
+-   「`@ledgerleap-api qをキーワードに台帳を検索して`」のようなプロンプトを入力し、`SearchLedgersTool`が正しく呼び出され、結果が返ってくるか、一連の動作をテストする。
+-   同様に、台帳定義の取得、台帳の作成についても、自然言語での指示によって対応するツールが正しく実行されることを確認する。
