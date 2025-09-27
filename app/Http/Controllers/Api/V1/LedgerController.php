@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreLedgerRequest;
-use App\Http\Resources\LedgerResource;
+use App\Http\Resources\Api\V1\LedgerResource;
 use App\Models\Folder;
 use App\Services\LedgerService;
 use App\Services\UserService;
@@ -21,6 +21,28 @@ class LedgerController extends Controller
         $this->userService = $userService;
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/v1/ledgers",
+     *     summary="Create a new ledger",
+     *     description="Creates a new ledger record based on a ledger definition.",
+     *     tags={"Ledgers"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Ledger object that needs to be added to the store",
+     *         @OA\JsonContent(ref="#/components/schemas/StoreLedgerRequest")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Successfully created",
+     *         @OA\JsonContent(ref="#/components/schemas/LedgerResource")
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Forbidden"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function store(StoreLedgerRequest $request)
     {
         // フォルダの存在確認と取得
