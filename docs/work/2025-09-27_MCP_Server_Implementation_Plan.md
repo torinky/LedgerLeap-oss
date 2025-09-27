@@ -239,7 +239,7 @@ MCPサーバーが起動し、ツールが認識された後、`search_ledgers_t
 
 - `laravel/mcp` パッケージの `Tool` インターフェースを実装するクラスの `handle` メソッドのシグネチャが変更されており、`handle(array $parameters)` ではなく `handle(Laravel\Mcp\Request $request)` を受け取るようになっていた。
 - ツールクラスの `handle` メソッド内で、`Laravel\Mcp\Request` のインスタンスに対して存在しない `arguments()` メソッドを呼び出そうとしていた。
-- 引数へのアクセスは、`$request->toArray()` や `$request->get('key')` を使用する必要があった。
+- 引数へのアクセスは、`$request->toArray()` や `$request->get(\'key\')` を使用する必要があった。
 
 #### 5.4.2. 解決策
 
@@ -332,7 +332,7 @@ MCPサーバーが起動し、`search_ledgers_tool` を実行した際に、`Unk
 1.  **`app/Mcp/Tools/SearchLedgersTool.php` の修正:**
     -   `handle` メソッド内で `$this->ledgerService->searchLedgersForApi` を呼び出す際、名前付き引数ではなく、`user: $user, params: $parameters` の形式で `$user` と `$parameters` 配列を直接渡すように変更した。
 2.  **`app/Services/LedgerService.php` の修正:**
-    -   `searchLedgersForApi` メソッドの定義を `public function searchLedgersForApi(\\\App\\\Models\\\User $user, array $params)` に変更し、`User` モデルとパラメータ配列を受け取るようにした。
+    -   `searchLedgersForApi` メソッドの定義を `public function searchLedgersForApi(\\App\\Models\\User $user, array $params)` に変更し、`User` モデルとパラメータ配列を受け取るようにした。
     -   `searchLedgersForApi` メソッド内で `auth()->user()` を使用していた箇所を、引数で受け取った `$user` を使用するように修正した。
 
 これらの修正により、`SearchLedgersTool` から `LedgerService` への呼び出しと、`LedgerService` 内でのユーザー情報の利用が正しく行われるようになり、`Unknown named parameter $q` エラーは解消された。
@@ -341,49 +341,82 @@ MCPサーバーが起動し、`search_ledgers_tool` を実行した際に、`Unk
 MCPサーバーが正常に起動し、ツールが認識された後、`SearchLedgersTool` を使用して台帳の検索を実行しました。
 
 **実行コマンド:**
-`@ledgerleap-api SearchLedgers q: \"テストです\"`
+`@ledgerleap-api SearchLedgers q: "テストです"`
 
 **結果:**
 「テストです」というキーワードで台帳を検索した結果、以下の1件の台帳が見つかりました。この台帳はルートフォルダ (`/`) に存在します。
 
 ```json
 {
-    \"ledgers\": [
+    "ledgers": [
         {
-            \"id\": 112,
-            \"tenant_id\": \"tenantc\",
-            \"ledger_define_id\": 15,
-            \"creator_id\": 1,
-            \"modifier_id\": 1,
-            \"status\": \"none\",
-            \"latest_diff_id\": 24,
-            \"version\": 2,
-            \"created_at\": \"2025-09-27T07:09:22.000000Z\",
-            \"updated_at\": \"2025-09-27T10:59:50.000000Z\",
-            \"content\": [
+            "id": 112,
+            "tenant_id": "tenantc",
+            "ledger_define_id": 15,
+            "creator_id": 1,
+            "modifier_id": 1,
+            "status": "none",
+            "latest_diff_id": 24,
+            "version": 2,
+            "created_at": "2025-09-27T07:09:22.000000Z",
+            "updated_at": "2025-09-27T10:59:50.000000Z",
+            "content": [
                 {
-                    \"dolorem\": true,
-                    \"ducimus\": true
+                    "dolorem": true,
+                    "ducimus": true
                 },
                 {
-                    \"aut\": true
+                    "aut": true
                 },
-                \"テストです\",
-                \"\",
+                "テストです",
+                "",
                 {
-                    \"ut\": true,
-                    \"necessitatibus\": true,
-                    \"ratione\": true
+                    "ut": true,
+                    "necessitatibus": true,
+                    "ratione": true
                 },
                 [],
-                \"\",
-                \"テストです2\"
+                "",
+                "テストです2"
             ],
-            \"content_attached\": [],
+            "content_attached": [],
 
         ・・・　省略　・・・
         
-    ],\
-    \"total\": 1
+    ],
+    "total": 1
 }
 ```
+
+---
+
+## 6. 今後の展望：`@docs` ペルソナ・ユースケースに合わせたプロンプトと出力の最適化
+
+MCPサーバーの実装と基本的なツールの動作確認が完了したため、次のステップとして、`gemini` CLIが`@docs`のペルソナとユースケースに適した出力を生成できるよう、プロンプトとMCPツールの連携を最適化する計画を立てます。
+
+### 6.1. 作業計画
+
+1.  **`@docs` のペルソナとユースケースの明確化:**
+    *   誰が（例：新しい開発者、既存の開発者、プロジェクトマネージャー）、どのような目的で（例：プロジェクトの概要把握、特定機能の実装詳細確認、技術スタックの確認）、どのような情報を必要としているのかを詳細に記述します。
+    *   これにより、どのような出力形式が最適か、どのような情報が必要かを明確にします。
+
+2.  **出力形式の検討:**
+    *   明確化されたペルソナとユースケースに基づいて、MCPツールがどのような形式で情報を返すべきかを検討します。
+    *   現在のJSON形式のままで良いのか、Markdown形式、あるいはより人間が読みやすい要約形式が良いのかなどを検討します。
+
+3.  **MCPツールの改修または新規作成計画:**
+    *   上記の出力形式を実現するために、既存のMCPツールを改修するか、新しいMCPツールを作成するかを検討します。
+    *   改修の場合は、`handle` メソッド内で取得したデータを整形するロジックを追加します。
+    *   新規作成の場合は、複数の情報源からデータを集約して整形して返すツールを設計します。
+
+4.  **プロンプトの設計:**
+    *   LLMがMCPツールを適切に呼び出し、期待する出力を得るためのプロンプトを設計します。
+    *   プロンプトには、ペルソナ、ユースケース、期待する出力形式などを明示的に含めることで、LLMの応答精度を高めます。
+
+5.  **テストと評価:**
+    *   改修または新規作成したMCPツールと、設計したプロンプトを組み合わせてテストし、期待する出力が得られるか評価します。
+    *   必要に応じて、MCPツールやプロンプトを調整します。
+
+### 6.2. 関連ドキュメント
+
+*   **[MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md):** 本計画に基づき、各ペルソナのニーズに合わせた具体的な質問応答例と設計方針をまとめたドキュメント。
