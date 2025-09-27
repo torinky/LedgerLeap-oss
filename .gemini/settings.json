@@ -10,6 +10,14 @@
         "boost:mcp"
       ]
     },
+    "ledgerleap-api": {
+      "command": "./vendor/bin/sail",
+      "args": [
+        "artisan",
+        "mcp:start",
+        "ledgerleap:mcp"
+      ]
+    },
     "serena": {
       "command": "/opt/homebrew/bin/uv",
       "args": [

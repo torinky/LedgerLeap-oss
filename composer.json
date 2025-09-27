@@ -22,6 +22,7 @@
     "intervention/image": "^2.7",
     "kalnoy/nestedset": "^6.0",
     "laravel/framework": "^12.0",
+    "laravel/mcp": "^0.2.1",
     "laravel/sanctum": "^4",
     "laravel/tinker": "^2.8",
     "livewire/livewire": "^3.6",
