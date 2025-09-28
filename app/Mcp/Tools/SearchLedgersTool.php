@@ -51,7 +51,6 @@ MARKDOWN;
         // 認証済みユーザーとして設定（ArtisanコンテキストでAuth::user()が機能しない場合のため）
         Auth::setUser($user);
         $parameters = $request->toArray();
-        Log::info('SearchLedgersTool: Received parameters', ['parameters' => $parameters]);
         $format = $parameters['format'] ?? 'raw';
 
         // created_from と created_to を結合して created_between を作成
@@ -65,7 +64,6 @@ MARKDOWN;
             user: $user, // 認証済みユーザーを直接渡す
             params: $parameters,
         );
-        Log::info('SearchLedgersTool: Results from LedgerService', ['results' => $results]);
 
         if ($format === 'summary') {
             $ledgers = collect($results['ledgers'])->map(function ($ledger) {

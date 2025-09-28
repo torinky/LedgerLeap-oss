@@ -14,7 +14,7 @@ class McpServerTest extends TestCase
         // mcp:start コマンドをテスト
         // このコマンドはデーモンとして動作するため、実際に起動して出力を確認する
         // ただし、テスト環境で長時間実行することは避ける
-        $this->artisan('mcp:start', ['server' => 'ledgerleap:mcp', '--timeout' => 1])
+        $this->artisan('mcp:start', ['handle' => 'ledgerleap:mcp'])
             ->assertExitCode(0);
 
         // ここではコマンドがエラーなく起動できることのみを確認

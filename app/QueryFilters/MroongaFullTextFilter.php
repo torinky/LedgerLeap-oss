@@ -10,19 +10,26 @@ use Illuminate\Support\Facades\DB; // この行を追加
 
 class MroongaFullTextFilter implements Filter
 {
-    public function __construct(array $columns)
+    public function __construct(protected array $columns)
     {
-        Log::info('MroongaFullTextFilter: __construct called', ['columns' => $columns]); // この行を追加
-        $this->columns = $columns;
     }
+
     public function __invoke(Builder $query, $value, string $property)
     {
-        Log::info('MroongaFullTextFilter: __invoke called', ['columns' => $this->columns, 'value' => $value]);
 
-        $query->where(function (Builder $q) use ($value) {
-            $escapedValue = addslashes($value); // 値をエスケープ
-            $q->whereRaw("match(`content`) against (mroonga_escape('{$escapedValue}') IN BOOLEAN MODE)");
-            $q->orWhereRaw("match(`content_attached`) against (mroonga_escape('{$escapedValue}') IN BOOLEAN MODE)");
-        });
+        // ユーザー入力をスペースで分割し、各単語の前に+を付けてAND検索文字列を生成
+        $keywords = preg_split('/[\s,]+/', $value, -1, PREG_SPLIT_NO_EMPTY);
+        $searchString = '';
+        if ($keywords) {
+            $searchString = '+' . implode(' +', $keywords);
+        }
+
+        if (empty($searchString)) {
+            return;
+        }
+
+        // カンマ区切りでカラムを結合
+        $columns = implode(', ', array_map(fn($col) => "`{$col}`", $this->columns));
+        $query->whereRaw("match({$columns}) against (? IN BOOLEAN MODE)", [$searchString]);
     }
 }

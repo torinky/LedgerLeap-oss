@@ -7,15 +7,16 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\Skip; // 追加
 
 class LedgerControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     protected bool $tenancy = true;
 
@@ -23,18 +24,21 @@ class LedgerControllerTest extends TestCase
     private User $viewerUser;
     private Folder $writeFolder;
     private LedgerDefine $ledgerDefine;
+    protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        config(['tenancy.central_domains' => ['127.0.0.1']]);
+        // テナントを作成
+        $this->tenant = \App\Models\Tenant::create(['id' => 'test_tenant']);
         $this->tenant->domains()->create(['domain' => 'localhost']);
+        tenancy()->initialize($this->tenant);
 
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         // 権限とロールを定義
-        Permission::findOrCreate('view_ledgers', 'web'); // LedgerPolicyで利用
+        Permission::findOrCreate('view_ledgers', 'web');
         $writerRole = Role::findOrCreate('writer', 'web')->givePermissionTo(['view_ledgers']);
         $viewerRole = Role::findOrCreate('viewer', 'web')->givePermissionTo(['view_ledgers']);
 
@@ -42,10 +46,8 @@ class LedgerControllerTest extends TestCase
         $this->writerUser = User::factory()->create()->assignRole($writerRole);
         $this->viewerUser = User::factory()->create()->assignRole($viewerRole);
 
-        $this->tenant->run(function () {
-            // フォルダを作成
-            $this->writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
-        });
+        // フォルダを作成
+        $this->writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
 
         // フォルダ権限を割り当て
         RoleFolderPermission::create([
@@ -56,10 +58,8 @@ class LedgerControllerTest extends TestCase
             'modifier_id' => $this->writerUser->id
         ]);
 
-        $this->tenant->run(function () {
-            // 台帳定義を作成
-            $this->ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->writeFolder->id]);
-        });
+        // 台帳定義を作成
+        $this->ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->writeFolder->id]);
 
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
@@ -163,118 +163,141 @@ class LedgerControllerTest extends TestCase
     #[Test]
     public function it_can_filter_ledgers_by_creator_id()
     {
-        $this->actingAs($this->writerUser, 'sanctum');
+        $this->tenant->run(function () {
+            $this->actingAs($this->writerUser, 'sanctum');
 
-        // 別のユーザーを作成
-        $anotherUser = User::factory()->create();
+            // 別のユーザーを作成
+            $anotherUser = User::factory()->create();
 
-        // writerUserが作成した台帳
-        $ledgerByWriter = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $this->writerUser->id,
-            'content' => ['field1' => 'Writer Content'],
-        ]);
+            // 正しいカラムIDを取得
+            $columnId = $this->ledgerDefine->column_define[0]->id;
 
-        // anotherUserが作成した台帳
-        $ledgerByAnother = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $anotherUser->id,
-            'content' => ['field1' => 'Another User Content'],
-        ]);
+            // writerUserが作成した台帳
+            $ledgerByWriter = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $this->writerUser->id,
+                'content' => [$columnId => 'Writer Content'],
+            ]);
 
-        // writerUserでフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $this->writerUser->id]]));
+            // anotherUserが作成した台帳
+            $ledgerByAnother = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $anotherUser->id,
+                'content' => [$columnId => 'Another User Content'],
+            ]);
 
-        $response->assertOk()
-            ->assertJsonCount(1, 'ledgers')
-            ->assertJsonFragment(['id' => $ledgerByWriter->id]);
+            // writerUserでフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $this->writerUser->id]]));
 
-        // anotherUserでフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $anotherUser->id]]));
+            $response->assertOk()
+                ->assertJsonCount(1, 'ledgers')
+                ->assertJsonFragment(['id' => $ledgerByWriter->id]);
 
-        $response->assertOk()
-            ->assertJsonCount(1, 'ledgers')
-            ->assertJsonFragment(['id' => $ledgerByAnother->id]);
+            // anotherUserでフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $anotherUser->id]]));
+
+            $response->assertOk()
+                ->assertJsonCount(1, 'ledgers')
+                ->assertJsonFragment(['id' => $ledgerByAnother->id]);
+        });
     }
 
     #[Test]
     public function it_can_filter_ledgers_by_created_between()
     {
-        $this->actingAs($this->writerUser, 'sanctum');
+        $this->tenant->run(function () {
+            $this->actingAs($this->writerUser, 'sanctum');
 
-        // テスト用の台帳を作成
-        // 昨日の台帳
-        $yesterdayLedger = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $this->writerUser->id,
-            'created_at' => now()->subDay(),
-            'content' => ['field1' => 'Yesterday Content'],
-        ]);
+            // テスト用の台帳を作成 - 正しいカラムIDを使用
+            $columnId = $this->ledgerDefine->column_define[0]->id;
+            $yesterdayLedger = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $this->writerUser->id,
+                'created_at' => '2025-09-27 10:00:00',
+                'content' => [$columnId => 'Yesterday Content'],
+            ]);
+            $todayLedger = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $this->writerUser->id,
+                'created_at' => '2025-09-28 10:00:00',
+                'content' => [$columnId => 'Today Content'],
+            ]);
 
-        // 今日の台帳
-        $todayLedger = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $this->writerUser->id,
-            'created_at' => now(),
-            'content' => ['field1' => 'Today Content'],
-        ]);
+            // 昨日から今日までの期間でフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', [
+                'filter' => ['created_between' => '2025-09-27,2025-09-28']
+            ]));
 
-        // 昨日から今日までの期間でフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', [
-            'filter' => [
-                'created_between' => now()->subDay()->format('Y-m-d') . ',' . now()->format('Y-m-d'),
-            ]
-        ]));
+            $response->assertOk()
+                ->assertJsonCount(2, 'ledgers');
+            
+            // レスポンスに両方のledgerが含まれることを確認
+            $responseData = $response->json();
+            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
+            $this->assertContains($yesterdayLedger->id, $responseIds);
+            $this->assertContains($todayLedger->id, $responseIds);
 
-        $response->assertOk()
-            ->assertJsonCount(2, 'ledgers') // yesterdayLedger と todayLedger
-            ->assertJsonFragment(['id' => $yesterdayLedger->id])
-            ->assertJsonFragment(['id' => $todayLedger->id]);
+            // 今日のみでフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', [
+                'filter' => ['created_between' => '2025-09-28,2025-09-28']
+            ]));
 
-        // 今日のみでフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', [
-            'filter' => [
-                'created_between' => now()->format('Y-m-d') . ',' . now()->format('Y-m-d'),
-            ]
-        ]));
-
-        $response->assertOk()
-            ->assertJsonCount(1, 'ledgers')
-            ->assertJsonFragment(['id' => $todayLedger->id])
-            ->assertJsonMissing(['id' => $yesterdayLedger->id]);
+            $response->assertOk()
+                ->assertJsonCount(1, 'ledgers');
+                
+            // レスポンスに今日のledgerのみが含まれ、昨日のは含まれないことを確認
+            $responseData = $response->json();
+            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
+            $this->assertContains($todayLedger->id, $responseIds);
+            $this->assertNotContains($yesterdayLedger->id, $responseIds);
+        });
     }
 
     #[Test]
     public function it_can_filter_ledgers_by_q()
     {
-        $this->actingAs($this->writerUser, 'sanctum');
+        $this->tenant->run(function () {
+            $this->actingAs($this->writerUser, 'sanctum');
 
-        // テスト用の台帳を作成
-        $ledger1 = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $this->writerUser->id,
-            'content' => ['field1' => 'apple content'],
-        ]);
-        $ledger2 = \App\Models\Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'creator_id' => $this->writerUser->id,
-            'content' => ['field1' => 'banana content'],
-        ]);
+            // テスト用の台帳を作成 - 正しいカラムIDを使用
+            $columnId = $this->ledgerDefine->column_define[0]->id;
+            $ledger1 = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $this->writerUser->id,
+                'content' => [$columnId => 'apple content'],
+            ]);
+            $ledger2 = \App\Models\Ledger::factory()->create([
+                'ledger_define_id' => $this->ledgerDefine->id,
+                'creator_id' => $this->writerUser->id,
+                'content' => [$columnId => 'banana content'],
+            ]);
+            
+            // Mroongaのインデックス更新を待機
+            sleep(1);
 
-        // 'apple' でフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'apple']]));
+            // 'apple' でフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'apple']]));
 
-        $response->assertOk()
-            ->assertJsonCount(1, 'ledgers')
-            ->assertJsonFragment(['id' => $ledger1->id])
-            ->assertJsonMissing(['id' => $ledger2->id]);
+            $response->assertOk()
+                ->assertJsonCount(1, 'ledgers');
+                
+            // レスポンスにappleのledgerが含まれ、bananaは含まれないことを確認
+            $responseData = $response->json();
+            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
+            $this->assertContains($ledger1->id, $responseIds);
+            $this->assertNotContains($ledger2->id, $responseIds);
 
-        // 'banana' でフィルタリング
-        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'banana']]));
+            // 'banana' でフィルタリング
+            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'banana']]));
 
-        $response->assertOk()
-            ->assertJsonCount(1, 'ledgers')
-            ->assertJsonFragment(['id' => $ledger2->id])
-            ->assertJsonMissing(['id' => $ledger1->id]);
+            $response->assertOk()
+                ->assertJsonCount(1, 'ledgers');
+                
+            // レスポンスにbananaのledgerが含まれ、appleは含まれないことを確認
+            $responseData = $response->json();
+            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
+            $this->assertContains($ledger2->id, $responseIds);
+            $this->assertNotContains($ledger1->id, $responseIds);
+        });
     }
 }

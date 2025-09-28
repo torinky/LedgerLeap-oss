@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -60,22 +61,28 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
-        Log::info('Ledger: scopeSearch called', ['freeWord' => $freeWord]);
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
             return $query;
         }
-        //        dd($freeWord);
-        //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        $query->where(function (EloquentBuilder $q) use ($freeWord) {
-            Log::info('Ledger: Mroonga search query', ['freeWord' => $freeWord, 'sql' => $q->toSql(), 'bindings' => $q->getBindings()]);
-            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
-                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
+
+        $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($keywords)) {
+            return $query;
+        }
+
+        // 単一キーワードの場合は `+` を、複数キーワードの場合は `+"..."` を使用
+        if (count($keywords) > 1) {
+            $searchString = '+"' . implode(' ', $keywords) . '"';
+        } else {
+            $searchString = '+' . $keywords[0];
+        }
+
+        // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
+        $query->where(function (EloquentBuilder $q) use ($searchString) {
+            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
+                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
         });
-
-        //        dd($query->toSql(), $query->getBindings());
-
     }
 
     /**
@@ -115,7 +122,7 @@ class Ledger extends Model
             // Mroongaの列番号は1始まり
             $mroongaColumnCount = $column + 1;
             //            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-            $query->where(function (Builder $q) use ($mroongaColumnCount, $filterStr) {
+            $query->where(function ($q) use ($mroongaColumnCount, $filterStr) {
                 $q->whereRaw("match(`content`) against ('*W".$mroongaColumnCount.' +"'.$filterStr."\"' IN BOOLEAN MODE)")
                     ->orWhereRaw("match(`content_attached`) against ('*W".$mroongaColumnCount.' +'.$filterStr."' IN BOOLEAN MODE)");
             });
@@ -125,8 +132,14 @@ class Ledger extends Model
 
     public function scopeCreatedBetween(EloquentBuilder $query, $value)
     {
-        // $value は 'YYYY-MM-DD,YYYY-MM-DD' の形式を想定
-        $dates = explode(',', $value);
+        // $value が配列の場合と文字列の場合の両方に対応
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            // $value は 'YYYY-MM-DD,YYYY-MM-DD' の形式を想定
+            $dates = explode(',', $value);
+        }
+
         $startDate = $dates[0] ?? null;
         $endDate = $dates[1] ?? null;
 

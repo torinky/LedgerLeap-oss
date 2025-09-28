@@ -9,14 +9,14 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class SearchApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     protected bool $tenancy = true;
 

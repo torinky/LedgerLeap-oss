@@ -32,6 +32,12 @@ class SearchRequest extends FormRequest
             'mode' => ['nullable', 'string', Rule::in(['search', 'count'])],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
             'offset' => ['nullable', 'integer', 'min:0'],
+            // フィルタパラメータの追加
+            'filter.creator_id' => ['nullable', 'integer', 'exists:users,id'],
+            'filter.created_from' => ['nullable', 'date'],
+            'filter.created_to' => ['nullable', 'date', 'after_or_equal:filter.created_from'],
+            'filter.created_between' => ['nullable', 'string'],
+            'filter.q' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

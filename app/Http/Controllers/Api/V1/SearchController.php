@@ -46,7 +46,7 @@ class SearchController extends Controller
     {
         $validatedParams = $request->validated();
 
-        $result = $ledgerService->searchLedgersForApi($validatedParams);
+        $result = $ledgerService->searchLedgersForApi($request->user(), $validatedParams);
 
         if (($validatedParams['mode'] ?? 'search') === 'count') {
             return response()->json([

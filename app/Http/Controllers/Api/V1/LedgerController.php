@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\SearchRequest;
 use App\Http\Requests\Api\V1\StoreLedgerRequest;
 use App\Http\Resources\Api\V1\LedgerResource;
 use App\Models\Folder;
 use App\Services\LedgerService;
 use App\Services\UserService;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LedgerController extends Controller
 {
@@ -21,11 +22,31 @@ class LedgerController extends Controller
         $this->userService = $userService;
     }
 
-    public function index(Request $request)
+    public function index(SearchRequest $request)
     {
+        $validated = $request->validated();
+        
+        // 'filter' パラメータがある場合は、フラット化して処理
+        if (isset($validated['filter'])) {
+            foreach ($validated['filter'] as $key => $value) {
+                $validated[$key] = $value;
+            }
+            unset($validated['filter']);
+        }
+        
+        // 'created_between' の特別処理
+        if (isset($validated['created_between'])) {
+            $dates = explode(',', $validated['created_between']);
+            if (count($dates) === 2) {
+                $validated['created_from'] = trim($dates[0]);
+                $validated['created_to'] = trim($dates[1]);
+            }
+            unset($validated['created_between']);
+        }
+
         $results = $this->ledgerService->searchLedgersForApi(
             user: $request->user(),
-            params: $request->all()
+            params: $validated
         );
 
         return response()->json([
