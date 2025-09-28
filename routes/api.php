@@ -45,6 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ledger Create API
     Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])->name('api.v1.ledgers.store');
+
+    // Ledger Index API
+    Route::get('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'index'])->name('api.v1.ledgers.index');
 });
 
 Route::get('/openapi.json', function () {

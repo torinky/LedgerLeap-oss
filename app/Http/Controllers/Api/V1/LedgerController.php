@@ -21,6 +21,19 @@ class LedgerController extends Controller
         $this->userService = $userService;
     }
 
+    public function index(Request $request)
+    {
+        $results = $this->ledgerService->searchLedgersForApi(
+            user: $request->user(),
+            params: $request->all()
+        );
+
+        return response()->json([
+            'ledgers' => LedgerResource::collection($results['ledgers']),
+            'total' => $results['total'],
+        ]);
+    }
+
     /**
      * @OA\Post(
      *     path="/api/v1/ledgers",

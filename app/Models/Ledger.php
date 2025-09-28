@@ -60,6 +60,7 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
+        Log::info('Ledger: scopeSearch called', ['freeWord' => $freeWord]);
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
             return $query;
@@ -68,6 +69,7 @@ class Ledger extends Model
         //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
         //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
         $query->where(function (EloquentBuilder $q) use ($freeWord) {
+            Log::info('Ledger: Mroonga search query', ['freeWord' => $freeWord, 'sql' => $q->toSql(), 'bindings' => $q->getBindings()]);
             $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
                 ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
         });
@@ -119,6 +121,24 @@ class Ledger extends Model
             });
         }
 
+    }
+
+    public function scopeCreatedBetween(EloquentBuilder $query, $value)
+    {
+        // $value は 'YYYY-MM-DD,YYYY-MM-DD' の形式を想定
+        $dates = explode(',', $value);
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        return $query;
     }
 
     public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)

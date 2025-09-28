@@ -159,4 +159,122 @@ class LedgerControllerTest extends TestCase
         $this->assertDatabaseHas('tags', ['name' => 'new-tag', 'ledger_define_id' => $this->ledgerDefine->id]);
         $this->assertDatabaseHas('tags', ['name' => 'another-tag', 'ledger_define_id' => $this->ledgerDefine->id]);
     }
+
+    #[Test]
+    public function it_can_filter_ledgers_by_creator_id()
+    {
+        $this->actingAs($this->writerUser, 'sanctum');
+
+        // 別のユーザーを作成
+        $anotherUser = User::factory()->create();
+
+        // writerUserが作成した台帳
+        $ledgerByWriter = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->writerUser->id,
+            'content' => ['field1' => 'Writer Content'],
+        ]);
+
+        // anotherUserが作成した台帳
+        $ledgerByAnother = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $anotherUser->id,
+            'content' => ['field1' => 'Another User Content'],
+        ]);
+
+        // writerUserでフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $this->writerUser->id]]));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'ledgers')
+            ->assertJsonFragment(['id' => $ledgerByWriter->id]);
+
+        // anotherUserでフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $anotherUser->id]]));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'ledgers')
+            ->assertJsonFragment(['id' => $ledgerByAnother->id]);
+    }
+
+    #[Test]
+    public function it_can_filter_ledgers_by_created_between()
+    {
+        $this->actingAs($this->writerUser, 'sanctum');
+
+        // テスト用の台帳を作成
+        // 昨日の台帳
+        $yesterdayLedger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->writerUser->id,
+            'created_at' => now()->subDay(),
+            'content' => ['field1' => 'Yesterday Content'],
+        ]);
+
+        // 今日の台帳
+        $todayLedger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->writerUser->id,
+            'created_at' => now(),
+            'content' => ['field1' => 'Today Content'],
+        ]);
+
+        // 昨日から今日までの期間でフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', [
+            'filter' => [
+                'created_between' => now()->subDay()->format('Y-m-d') . ',' . now()->format('Y-m-d'),
+            ]
+        ]));
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'ledgers') // yesterdayLedger と todayLedger
+            ->assertJsonFragment(['id' => $yesterdayLedger->id])
+            ->assertJsonFragment(['id' => $todayLedger->id]);
+
+        // 今日のみでフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', [
+            'filter' => [
+                'created_between' => now()->format('Y-m-d') . ',' . now()->format('Y-m-d'),
+            ]
+        ]));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'ledgers')
+            ->assertJsonFragment(['id' => $todayLedger->id])
+            ->assertJsonMissing(['id' => $yesterdayLedger->id]);
+    }
+
+    #[Test]
+    public function it_can_filter_ledgers_by_q()
+    {
+        $this->actingAs($this->writerUser, 'sanctum');
+
+        // テスト用の台帳を作成
+        $ledger1 = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->writerUser->id,
+            'content' => ['field1' => 'apple content'],
+        ]);
+        $ledger2 = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->writerUser->id,
+            'content' => ['field1' => 'banana content'],
+        ]);
+
+        // 'apple' でフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'apple']]));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'ledgers')
+            ->assertJsonFragment(['id' => $ledger1->id])
+            ->assertJsonMissing(['id' => $ledger2->id]);
+
+        // 'banana' でフィルタリング
+        $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'banana']]));
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'ledgers')
+            ->assertJsonFragment(['id' => $ledger2->id])
+            ->assertJsonMissing(['id' => $ledger1->id]);
+    }
 }
