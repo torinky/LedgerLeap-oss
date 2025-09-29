@@ -141,6 +141,8 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 
 *   [コーディング規約](/docs/development/coding_standards.md)
 *   [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md)
+*   [MCP アーキテクチャと動作フロー](/docs/development/MCP_Architecture_and_Flow.md) - LLM統合のための技術詳解
+*   [MCP プロンプトガイドライン](/docs/development/MCP_Prompt_Guidelines.md) - LLM対話の最適化ガイド
 
 ---
 
@@ -218,6 +220,8 @@ LedgerLeap の開発環境は **Laravel Sail (Docker)** を使用して簡単に
     * 他のシステムとの連携機能を検討しています。
 * **テストコードの拡充**:
     * より多くの機能をテストできるように拡充します。
+* **LLM統合の完全化**:
+    * [MCP包括的実装計画](./work/2025-09-29_Comprehensive_MCP_Implementation_Plan.md) に基づく、AI統合業務管理プラットフォームへの発展。
 
 ## ディレクトリ構成
 

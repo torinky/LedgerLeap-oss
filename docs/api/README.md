@@ -1,7 +1,20 @@
 # LedgerLeap API仕様概要
 
+**関連ドキュメント:**
+- [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
+- [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
+
 ## 概要説明
 LedgerLeap APIは、外部アプリケーションやフロントエンドフレームワークとの連携を可能にするために提供されるHTTPベースのインターフェースです。このAPIを利用することで、台帳データの操作、フォルダ情報の取得、ファイルのアップロードなど、LedgerLeapの主要な機能をプログラム経由で利用できます。
+
+## LLM統合 (MCP) について
+
+LedgerLeap APIは、MCP (Model Context Protocol) を通じてLLMクライアント（ChatGPT、Claude等）からも利用可能です。自然言語での台帳操作や検索が可能で、以下のような対話が実現されています：
+
+**ユーザー:** 「昨日私が作成した日報を見せて」  
+**システム:** 適切な検索パラメータでAPI呼び出し → 視覚的に整理された結果を表示
+
+詳細な技術情報については、[MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md)を参照してください。
 
 ## 認証
 

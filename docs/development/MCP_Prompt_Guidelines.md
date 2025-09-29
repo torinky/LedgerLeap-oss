@@ -2,10 +2,16 @@
 
 **作成日:** 2025年1月19日
 **対象:** LedgerLeap MCPサーバーを使用するLLM
+**関連ドキュメント:**
+- [MCP アーキテクチャと動作フロー](./MCP_Architecture_and_Flow.md) - 技術的な動作メカニズムの詳細
+- [API仕様概要](../api/README.md) - REST API仕様
+- [MCP応答最適化計画](../work/2025-09-28_MCP_Response_Optimization_Plan.md) - 実装計画
 
 ## 概要
 
 LedgerLeapシステムのMCPサーバーを効率的に活用するためのプロンプトガイドラインです。
+
+> **📖 技術的な背景:** MCPプロトコルの詳細な動作メカニズムや`instructions`プロパティの技術的な役割については、[MCP アーキテクチャと動作フロー](./MCP_Architecture_and_Flow.md)を参照してください。
 
 ## 基本指針
 
