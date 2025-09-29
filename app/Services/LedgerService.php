@@ -47,82 +47,63 @@ class LedgerService
         // ユーザーが読み取り可能なフォルダIDのリストを取得
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
 
-        $query = Ledger::query();
-
-        // 権限チェック: ユーザーが読み取り可能なフォルダに属する台帳のみを対象とする
-        $query->whereHas('define.folder', function (Builder $q) use ($readableFolderIds) {
-            $q->whereIn('id', $readableFolderIds);
-        });
-
-        // 'q' (キーワード) フィルタ
-        if (!empty($params['q'])) {
-            $query->search($params['q']);
-        }
-
-        // 'exclude_q' (除外キーワード) フィルタ
-        if (!empty($params['exclude_q'])) {
-            $excludeKeywords = '-' . implode(' -', explode(' ', $params['exclude_q']));
-            $query->where(function (Builder $q) use ($excludeKeywords) {
-                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
-                  ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+        // spatie/laravel-query-builder を使用してクエリを構築
+        $query = QueryBuilder::for(Ledger::class)
+            ->allowedFilters([
+                // 完全一致フィルタ
+                AllowedFilter::exact('creator_id'),
+                AllowedFilter::exact('ledger_define_id'),
+                
+                // スコープベースフィルタ
+                AllowedFilter::scope('created_between'),
+                AllowedFilter::scope('updated_between'),
+                AllowedFilter::scope('folder_hierarchy', 'folder_id'),
+                AllowedFilter::scope('with_tags', 'tags'),
+                AllowedFilter::scope('without_tags', 'exclude_tags'),
+                
+                // カスタムコールバックフィルタ
+                AllowedFilter::callback('q', function ($query, $value) {
+                    $query->search($value);
+                }),
+                AllowedFilter::callback('exclude_q', function ($query, $value) {
+                    $excludeKeywords = '-' . implode(' -', explode(' ', $value));
+                    $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
+                        $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
+                          ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+                    });
+                }),
+            ])
+            ->allowedSorts(['created_at', 'updated_at', 'id'])
+            ->defaultSort('-created_at') // デフォルトは作成日時の降順
+            ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
+                $q->whereIn('id', $readableFolderIds);
             });
-        }
 
-        // 'ledger_define_id' フィルタ
-        if (!empty($params['ledger_define_id'])) {
-            $query->where('ledger_define_id', $params['ledger_define_id']);
-        }
-
-        // 'folder_id' フィルタ (再帰的)
-        if (!empty($params['folder_id'])) {
-            $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
-            $query->whereHas('define.folder', function (Builder $q) use ($folderIds) {
-                $q->whereIn('id', $folderIds);
-            });
-        }
-
-        // 'tags' フィルタ (AND条件)
-        if (!empty($params['tags'])) {
-            $tagNames = array_filter(explode(',', $params['tags']));
-            if (!empty($tagNames)) {
-                $query->whereHas('define.tags', function (Builder $q) use ($tagNames) {
-                    $q->whereIn('name', $tagNames);
-                }, '=', count($tagNames));
-            }
-        }
-
-        // 'exclude_tags' フィルタ
-        if (!empty($params['exclude_tags'])) {
-            $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
-            if (!empty($excludeTagNames)) {
-                $query->whereDoesntHave('define.tags', function (Builder $q) use ($excludeTagNames) {
-                    $q->whereIn('name', $excludeTagNames);
-                });
-            }
-        }
-
-        // 'creator_id' フィルタ
-        if (!empty($params['creator_id'])) {
-            $query->where('creator_id', $params['creator_id']);
-        }
-
-        // 'created_between' フィルタ
+        // 手動で created_from/created_to を created_between に変換
         if (!empty($params['created_from']) && !empty($params['created_to'])) {
-            $fromDate = $params['created_from'] . ' 00:00:00';
-            $toDate = $params['created_to'] . ' 23:59:59';
-            
-            $query->whereBetween('created_at', [$fromDate, $toDate]);
+            $params['created_between'] = $params['created_from'] . ',' . $params['created_to'];
         }
 
+        // パフォーマンス最適化: countクエリを分離
+        $countQuery = clone $query;
+        $total = $countQuery->count();
+        
         // ページネーション
         $limit = $params['limit'] ?? 10;
         $offset = $params['offset'] ?? 0;
-
-        $total = $query->count();
+        
+        // 結果取得
         $ledgers = $query->offset($offset)->limit($limit)->get();
 
-        // Eager Loading を追加
-        $ledgers->load(['define', 'define.folder', 'define.folder.ancestors', 'define.tags']);
+        // Eager Loading を追加（N+1問題回避）
+        $ledgers->load([
+            'define', 
+            'define.folder', 
+            'define.folder.ancestors', 
+            'define.tags',
+            'creator:id,name', 
+            'modifier:id,name'
+        ]);
 
         return [
             'ledgers' => $ledgers,

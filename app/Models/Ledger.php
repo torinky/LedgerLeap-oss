@@ -154,6 +154,84 @@ class Ledger extends Model
         return $query;
     }
 
+    /**
+     * 更新日時範囲での絞り込みスコープ  
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeUpdatedBetween(EloquentBuilder $query, $value)
+    {
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            $dates = explode(',', $value);
+        }
+
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('updated_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('updated_at', '<=', $endDate);
+        }
+
+        return $query;
+    }
+
+    /**
+     * フォルダIDでの階層的絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeFolderHierarchy(EloquentBuilder $query, $folderId)
+    {
+        if (!empty($folderId)) {
+            $folderIds = Folder::descendantsAndSelf($folderId)->pluck('id');
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($folderIds) {
+                $q->whereIn('id', $folderIds);
+            });
+        }
+        
+        return $query;
+    }
+
+    /**
+     * タグでの絞り込みスコープ (AND条件)
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeWithTags(EloquentBuilder $query, $tags)
+    {
+        if (!empty($tags)) {
+            $tagNames = is_string($tags) ? array_filter(explode(',', $tags)) : $tags;
+            if (!empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+        
+        return $query;
+    }
+
+    /**
+     * 除外タグでの絞り込みスコープ
+     * spatie/laravel-query-builder 用  
+     */
+    public function scopeWithoutTags(EloquentBuilder $query, $excludeTags)
+    {
+        if (!empty($excludeTags)) {
+            $excludeTagNames = is_string($excludeTags) ? array_filter(explode(',', $excludeTags)) : $excludeTags;
+            if (!empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+        
+        return $query;
+    }
+
     public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
     {
         // キーワード検索
