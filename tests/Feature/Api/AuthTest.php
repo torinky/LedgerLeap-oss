@@ -2,41 +2,43 @@
 
 use App\Models\User;
 use App\Models\Tenant;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Stancl\Tenancy\Facades\Tenancy;
 use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
 
-// `RefreshDatabase` は Pest.php でグローバルに適用されているため、ここでは不要
+// グローバルテナントでテナント初期化のコストを削減
+$globalTenant = null;
 
-beforeEach(function () {
-    // テナントとドメインを作成
-    $tenant = Tenant::create();
-    $tenant->domains()->create(['domain' => 'localhost']);
-    Tenancy::initialize($tenant);
+beforeEach(function () use (&$globalTenant) {
+    // 既存のテナントを再利用して初期化時間を短縮
+    if ($globalTenant === null) {
+        $globalTenant = Tenant::firstOrCreate(
+            ['id' => 'auth-test-tenant'],
+            ['id' => 'auth-test-tenant']
+        );
+        
+        // ドメインも再利用
+        if (!$globalTenant->domains()->where('domain', 'localhost')->exists()) {
+            $globalTenant->domains()->create(['domain' => 'localhost']);
+        }
+    }
+    
+    Tenancy::initialize($globalTenant);
 });
 
 test('unauthenticated user cannot access protected user route', function () {
-    // /api/user ルートに認証なしでアクセス
-    getJson('/api/user')
-        ->assertStatus(401);
+    getJson('/api/user')->assertStatus(401);
 });
 
 test('unauthenticated user cannot access protected search route', function () {
-    // /api/v1/search ルートに認証なしでアクセス
-    getJson('/api/v1/search')
-        ->assertStatus(401);
+    getJson('/api/v1/search')->assertStatus(401);
 });
 
 test('user can authenticate and get user info', function () {
-    // テスト用のユーザーを作成
     $user = User::factory()->create();
 
-    // actingAs ヘルパーで認証済みユーザーとしてAPIリクエストを送信
-    $response = $this->actingAs($user, 'sanctum')->getJson('/api/user');
-
-    // レスポンスの検証
-    $response->assertStatus(200)
+    $this->actingAs($user, 'sanctum')
+        ->getJson('/api/user')
+        ->assertStatus(200)
         ->assertJson([
             'id' => $user->id,
             'name' => $user->name,
@@ -45,30 +47,16 @@ test('user can authenticate and get user info', function () {
 });
 
 test('user can create api tokens and use them', function () {
-    // テスト用のユーザーを作成
     $user = User::factory()->create();
-
-    // APIトークンを作成
     $token = $user->createToken('test-token')->plainTextToken;
 
-    // 作成したトークンを使ってAPIにアクセス
-    $response = getJson('/api/user', [
+    getJson('/api/user', [
         'Authorization' => 'Bearer ' . $token,
-    ]);
-
-    // レスポンスの検証
-    $response->assertStatus(200)
-        ->assertJson([
-            'id' => $user->id,
-        ]);
+    ])->assertStatus(200)->assertJson(['id' => $user->id]);
 });
 
 test('invalid token is rejected', function () {
-    // 不正なトークンでAPIにアクセス
-    $response = getJson('/api/user', [
+    getJson('/api/user', [
         'Authorization' => 'Bearer invalid-token',
-    ]);
-
-    // レスポンスの検証
-    $response->assertStatus(401);
+    ])->assertStatus(401);
 });

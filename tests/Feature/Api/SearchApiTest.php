@@ -39,41 +39,58 @@ class SearchApiTest extends TestCase
         config(['tenancy.central_domains' => ['127.0.0.1']]);
         $this->tenant->domains()->create(['domain' => 'localhost']);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        // 権限キャッシュクリア（1回のみ）
+        $permissionRegistrar = $this->app->make(\Spatie\Permission\PermissionRegistrar::class);
+        $permissionRegistrar->forgetCachedPermissions();
 
-        // 権限とロールを定義
-        Permission::findOrCreate('view_ledgers', 'web');
-        $adminRole = Role::findOrCreate('admin', 'web')->givePermissionTo(['view_ledgers']);
-        $writerRole = Role::findOrCreate('writer', 'web')->givePermissionTo(['view_ledgers']);
-        $viewerRole = Role::findOrCreate('viewer', 'web')->givePermissionTo(['view_ledgers']);
+        // 権限とロール定義を効率化
+        $permission = Permission::findOrCreate('view_ledgers', 'web');
+        $adminRole = Role::findOrCreate('admin', 'web');
+        $writerRole = Role::findOrCreate('writer', 'web');
+        $viewerRole = Role::findOrCreate('viewer', 'web');
+        
+        // 権限付与をバッチ処理
+        $adminRole->givePermissionTo($permission);
+        $writerRole->givePermissionTo($permission);
+        $viewerRole->givePermissionTo($permission);
 
-        // ユーザーを作成
-        $this->adminUser = User::factory()->create()->assignRole($adminRole);
-        $this->writerUser = User::factory()->create()->assignRole($writerRole);
-        $this->viewerUser = User::factory()->create()->assignRole($viewerRole);
+        // ユーザー作成を効率化
+        $this->adminUser = User::factory()->create();
+        $this->writerUser = User::factory()->create();
+        $this->viewerUser = User::factory()->create();
         $this->noRoleUser = User::factory()->create();
+        
+        // ロール付与を効率化
+        $this->adminUser->assignRole($adminRole);
+        $this->writerUser->assignRole($writerRole);
+        $this->viewerUser->assignRole($viewerRole);
 
-        $this->tenant->run(function () {
-            // フォルダを作成
+        // テナント内処理を最適化（一度に全て実行）
+        $this->tenant->run(function () use ($adminRole, $writerRole, $viewerRole) {
+            // フォルダ作成
             $this->writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
             $this->readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
             $this->privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
-        });
+            
+            // フォルダ権限作成（一度に実行）
+            $folderPermissions = [
+                ['role_id' => $adminRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
+                ['role_id' => $adminRole->id, 'folder_id' => $this->readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
+                ['role_id' => $adminRole->id, 'folder_id' => $this->privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
+                ['role_id' => $writerRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
+                ['role_id' => $viewerRole->id, 'folder_id' => $this->readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
+            ];
+            
+            foreach ($folderPermissions as $permission) {
+                RoleFolderPermission::create($permission);
+            }
 
-        // フォルダ権限を割り当て (中央コンテキストで実行)
-        RoleFolderPermission::create(['role_id' => $adminRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-        RoleFolderPermission::create(['role_id' => $adminRole->id, 'folder_id' => $this->readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-        RoleFolderPermission::create(['role_id' => $adminRole->id, 'folder_id' => $this->privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-        RoleFolderPermission::create(['role_id' => $writerRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-        RoleFolderPermission::create(['role_id' => $viewerRole->id, 'folder_id' => $this->readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-
-        $this->tenant->run(function () {
-            // 各フォルダに対応する台帳定義を作成
+            // 台帳定義作成
             $writeLedgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->writeFolder->id]);
             $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->readFolder->id]);
             $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->privateFolder->id]);
 
-            // 台帳を作成 (正しい ledger_define_id と content 形式を指定)
+            // 台帳作成
             $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
             $this->writeLedger = Ledger::factory()->create(['ledger_define_id' => $writeLedgerDefine->id, 'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder']]);
 
@@ -83,23 +100,16 @@ class SearchApiTest extends TestCase
             $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
             $this->privateLedger = Ledger::factory()->create(['ledger_define_id' => $privateLedgerDefine->id, 'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder']]);
 
-            // タグを作成
+            // タグ作成
             Tag::factory()->create(['name' => 'ProjectA', 'ledger_define_id' => $writeLedgerDefine->id]);
             Tag::factory()->create(['name' => 'Urgent', 'ledger_define_id' => $writeLedgerDefine->id]);
             Tag::factory()->create(['name' => 'ProjectB', 'ledger_define_id' => $readLedgerDefine->id]);
         });
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-
         $this->adminToken = $this->adminUser->createToken('test-token')->plainTextToken;
 
-        // 権限まわりのキャッシュがテストに影響するのを防ぐ
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-
-        // キャッシュを強制的にクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        // 権限キャッシュクリア（最後に1回のみ）
+        $permissionRegistrar->forgetCachedPermissions();
     }
 
     public function test_admin_can_search_all_ledgers()
