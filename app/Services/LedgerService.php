@@ -47,6 +47,39 @@ class LedgerService
         // ユーザーが読み取り可能なフォルダIDのリストを取得
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
 
+        // QueryBuilderが期待する形式にパラメータを変換
+        $queryParams = [];
+        if (isset($params['creator_id'])) {
+            $queryParams['filter']['creator_id'] = $params['creator_id'];
+        }
+        if (isset($params['ledger_define_id'])) {
+            $queryParams['filter']['ledger_define_id'] = $params['ledger_define_id'];
+        }
+        if (isset($params['tags'])) {
+            $queryParams['filter']['with_tags'] = $params['tags'];
+        }
+        if (isset($params['exclude_tags'])) {
+            $queryParams['filter']['without_tags'] = $params['exclude_tags'];
+        }
+        if (isset($params['folder_id'])) {
+            $queryParams['filter']['folder_hierarchy'] = $params['folder_id'];
+        }
+        if (isset($params['q'])) {
+            $queryParams['filter']['q'] = $params['q'];
+        }
+        if (isset($params['exclude_q'])) {
+            $queryParams['filter']['exclude_q'] = $params['exclude_q'];
+        }
+        
+        // 手動で created_from/created_to を created_between に変換
+        if (!empty($params['created_from']) && !empty($params['created_to'])) {
+            $queryParams['filter']['created_between'] = $params['created_from'] . ',' . $params['created_to'];
+        }
+
+        // 一時的にリクエストを作成してQueryBuilderが使用できるように
+        $request = new Request($queryParams);
+        app()->instance('request', $request);
+
         // spatie/laravel-query-builder を使用してクエリを構築
         $query = QueryBuilder::for(Ledger::class)
             ->allowedFilters([
@@ -57,19 +90,27 @@ class LedgerService
                 // スコープベースフィルタ
                 AllowedFilter::scope('created_between'),
                 AllowedFilter::scope('updated_between'),
-                AllowedFilter::scope('folder_hierarchy', 'folder_id'),
-                AllowedFilter::scope('with_tags', 'tags'),
-                AllowedFilter::scope('without_tags', 'exclude_tags'),
+                AllowedFilter::callback('with_tags', function ($query, $value) {
+                    // カンマ区切り文字列または配列を処理
+                    $tagNames = is_string($value) ? array_filter(explode(',', $value)) : $value;
+                    if (!empty($tagNames)) {
+                        $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                            $q->whereIn('name', $tagNames);
+                        }, '=', count($tagNames));
+                    }
+                }),
+                AllowedFilter::scope('without_tags'),
+                AllowedFilter::scope('folder_hierarchy'),
                 
                 // カスタムコールバックフィルタ
                 AllowedFilter::callback('q', function ($query, $value) {
                     $query->search($value);
                 }),
                 AllowedFilter::callback('exclude_q', function ($query, $value) {
-                    $excludeKeywords = '-' . implode(' -', explode(' ', $value));
-                    $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
-                        $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
-                          ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+                    // 除外キーワードを含まない結果のみを返すように修正
+                    $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($value) {
+                        $q->whereRaw('not match(`content`) against (? IN BOOLEAN MODE)', [$value])
+                          ->whereRaw('not match(`content_attached`) against (? IN BOOLEAN MODE)', [$value]);
                     });
                 }),
             ])
@@ -78,11 +119,6 @@ class LedgerService
             ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
                 $q->whereIn('id', $readableFolderIds);
             });
-
-        // 手動で created_from/created_to を created_between に変換
-        if (!empty($params['created_from']) && !empty($params['created_to'])) {
-            $params['created_between'] = $params['created_from'] . ',' . $params['created_to'];
-        }
 
         // パフォーマンス最適化: countクエリを分離
         $countQuery = clone $query;

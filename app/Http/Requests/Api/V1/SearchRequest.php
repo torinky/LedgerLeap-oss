@@ -27,11 +27,15 @@ class SearchRequest extends FormRequest
             'tags' => ['nullable', 'string', 'max:255'],
             'folder_id' => ['nullable', 'integer', 'exists:folders,id'],
             'ledger_define_id' => ['nullable', 'integer', 'exists:ledger_defines,id'],
+            'creator_id' => ['nullable', 'integer', 'exists:users,id'], // 追加
             'exclude_q' => ['nullable', 'string', 'max:255'],
             'exclude_tags' => ['nullable', 'string', 'max:255'],
             'mode' => ['nullable', 'string', Rule::in(['search', 'count'])],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
             'offset' => ['nullable', 'integer', 'min:0'],
+            // 日付フィルタの追加
+            'created_from' => ['nullable', 'date'],
+            'created_to' => ['nullable', 'date', 'after_or_equal:created_from'],
             // フィルタパラメータの追加
             'filter.creator_id' => ['nullable', 'integer', 'exists:users,id'],
             'filter.created_from' => ['nullable', 'date'],

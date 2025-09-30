@@ -30,36 +30,27 @@ class LedgerFactory extends Factory
         }
 
         return [
-            //            'ledger_define_id' => $this->faker->numberBetween(1, 10),
             'ledger_define_id' => LedgerDefine::factory(),
             'content' => [
-                [$this->faker->realText(10), $this->faker->realText(10), $this->faker->realText(10)],
-                [$this->faker->realText(10) => $this->faker->realText(10), $this->faker->realText(10) => $this->faker->realText(10)],
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
-                $this->faker->realText(10),
+                $this->faker->word(),
+                $this->faker->sentence(3),
             ],
-            //            'creator_id' => 1,
             'creator_id' => User::factory(),
-            //            'modifier_id' => 1,
             'modifier_id' => User::factory(),
         ];
+    }
+
+    /**
+     * テスト用の軽量バージョン
+     */
+    public function minimal()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'content' => [
+                    'test_field' => $this->faker->word(),
+                ],
+            ];
+        });
     }
 }

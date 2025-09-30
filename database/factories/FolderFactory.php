@@ -11,7 +11,7 @@ class FolderFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => $this->faker->realText(10),
+            'title' => $this->faker->word(), // realText(10) から word() に変更
             'modifier_id' => User::factory(),
             'creator_id' => User::factory(),
         ];

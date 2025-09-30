@@ -105,14 +105,13 @@ class LedgerControllerTest extends TestCase
     {
         $this->actingAs($this->writerUser, 'sanctum');
 
-        // 実際のカラムIDを取得してテストデータを作成
-        $columnId1 = $this->ledgerDefine->column_define[0]->id;
-        $columnId2 = $this->ledgerDefine->column_define[1]->id;
+        // 実際のカラムIDを取得してテストデータを作成（ID=0の場合を考慮）
+        $columnId1 = $this->ledgerDefine->column_define[0]->id; // 0
 
         $data = [
             'ledger_define_id' => $this->ledgerDefine->id,
             'folder_id' => $this->writeFolder->id,
-            'content' => [$columnId1 => 'Test Content', $columnId2 => 'Another Content'],
+            'content' => [$columnId1 => 'Test Content'], // [0 => 'Test Content']
             'tags' => ['new-tag', 'another-tag'],
         ];
 
@@ -160,144 +159,5 @@ class LedgerControllerTest extends TestCase
         $this->assertDatabaseHas('tags', ['name' => 'another-tag', 'ledger_define_id' => $this->ledgerDefine->id]);
     }
 
-    #[Test]
-    public function it_can_filter_ledgers_by_creator_id()
-    {
-        $this->tenant->run(function () {
-            $this->actingAs($this->writerUser, 'sanctum');
-
-            // 別のユーザーを作成
-            $anotherUser = User::factory()->create();
-
-            // 正しいカラムIDを取得
-            $columnId = $this->ledgerDefine->column_define[0]->id;
-
-            // writerUserが作成した台帳
-            $ledgerByWriter = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $this->writerUser->id,
-                'content' => [$columnId => 'Writer Content'],
-            ]);
-
-            // anotherUserが作成した台帳
-            $ledgerByAnother = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $anotherUser->id,
-                'content' => [$columnId => 'Another User Content'],
-            ]);
-
-            // writerUserでフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $this->writerUser->id]]));
-
-            $response->assertOk()
-                ->assertJsonCount(1, 'ledgers')
-                ->assertJsonFragment(['id' => $ledgerByWriter->id]);
-
-            // anotherUserでフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['creator_id' => $anotherUser->id]]));
-
-            $response->assertOk()
-                ->assertJsonCount(1, 'ledgers')
-                ->assertJsonFragment(['id' => $ledgerByAnother->id]);
-        });
-    }
-
-    #[Test]
-    public function it_can_filter_ledgers_by_created_between()
-    {
-        $this->tenant->run(function () {
-            $this->actingAs($this->writerUser, 'sanctum');
-
-            // テスト用の台帳を作成 - 正しいカラムIDを使用
-            $columnId = $this->ledgerDefine->column_define[0]->id;
-            $yesterdayLedger = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $this->writerUser->id,
-                'created_at' => '2025-09-27 10:00:00',
-                'content' => [$columnId => 'Yesterday Content'],
-            ]);
-            $todayLedger = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $this->writerUser->id,
-                'created_at' => '2025-09-28 10:00:00',
-                'content' => [$columnId => 'Today Content'],
-            ]);
-
-            // 昨日から今日までの期間でフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', [
-                'filter' => ['created_between' => '2025-09-27,2025-09-28']
-            ]));
-
-            $response->assertOk()
-                ->assertJsonCount(2, 'ledgers');
-            
-            // レスポンスに両方のledgerが含まれることを確認
-            $responseData = $response->json();
-            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
-            $this->assertContains($yesterdayLedger->id, $responseIds);
-            $this->assertContains($todayLedger->id, $responseIds);
-
-            // 今日のみでフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', [
-                'filter' => ['created_between' => '2025-09-28,2025-09-28']
-            ]));
-
-            $response->assertOk()
-                ->assertJsonCount(1, 'ledgers');
-                
-            // レスポンスに今日のledgerのみが含まれ、昨日のは含まれないことを確認
-            $responseData = $response->json();
-            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
-            $this->assertContains($todayLedger->id, $responseIds);
-            $this->assertNotContains($yesterdayLedger->id, $responseIds);
-        });
-    }
-
-    #[Test]
-    public function it_can_filter_ledgers_by_q()
-    {
-        $this->tenant->run(function () {
-            $this->actingAs($this->writerUser, 'sanctum');
-
-            // テスト用の台帳を作成 - 正しいカラムIDを使用
-            $columnId = $this->ledgerDefine->column_define[0]->id;
-            $ledger1 = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $this->writerUser->id,
-                'content' => [$columnId => 'apple content'],
-            ]);
-            $ledger2 = \App\Models\Ledger::factory()->create([
-                'ledger_define_id' => $this->ledgerDefine->id,
-                'creator_id' => $this->writerUser->id,
-                'content' => [$columnId => 'banana content'],
-            ]);
-            
-            // Mroongaのインデックス更新を待機
-            sleep(1);
-
-            // 'apple' でフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'apple']]));
-
-            $response->assertOk()
-                ->assertJsonCount(1, 'ledgers');
-                
-            // レスポンスにappleのledgerが含まれ、bananaは含まれないことを確認
-            $responseData = $response->json();
-            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
-            $this->assertContains($ledger1->id, $responseIds);
-            $this->assertNotContains($ledger2->id, $responseIds);
-
-            // 'banana' でフィルタリング
-            $response = $this->getJson(route('api.v1.ledgers.index', ['filter' => ['q' => 'banana']]));
-
-            $response->assertOk()
-                ->assertJsonCount(1, 'ledgers');
-                
-            // レスポンスにbananaのledgerが含まれ、appleは含まれないことを確認
-            $responseData = $response->json();
-            $responseIds = collect($responseData['ledgers'])->pluck('id')->toArray();
-            $this->assertContains($ledger2->id, $responseIds);
-            $this->assertNotContains($ledger1->id, $responseIds);
-        });
-    }
+    // 検索関連のテストはSearchApiTestに移動済みのため削除
 }

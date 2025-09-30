@@ -62,6 +62,7 @@
 | 🔴 超高 | アクティビティ監査 | システム監査・異常検出不可 |
 | 🟡 高 | 統計・レポート | データ分析・意思決定支援不足 |
 | 🟡 高 | 高度検索フィルタ | ステータス・期間検索の制限 |
+| 🟡 高 | 添付ファイル連携 | 添付ファイルのバージョン比較や内容確認ができない |
 | 🟢 中 | マイポータル統合 | 個人ダッシュボード情報不足 |
 
 ---
@@ -798,7 +799,91 @@ public function schema(JsonSchema $schema): array
 
 ---
 
-## Phase 5: 統合・最適化段階
+## Phase 5: 添付ファイル・差分連携機能
+**期間:** 1週間 / **担当:** 1名
+**目標:** ユースケース「添付ファイルのバージョン比較」「テキストインデックスの確認」の実現
+
+### Step 5.1: 添付ファイル・差分関連API開発
+
+#### 📋 作業内容
+1. **LedgerDiffController の作成**
+   ```php
+   // app/Http/Controllers/Api/V1/LedgerDiffController.php
+   class LedgerDiffController extends Controller
+   {
+       public function index(Request $request, int $ledgerId)
+       {
+           // 特定台帳の差分リストを取得
+       }
+   }
+   ```
+2. **AttachedFileController の作成**
+   ```php
+   // app/Http/Controllers/Api/V1/AttachedFileController.php
+   class AttachedFileController extends Controller
+   {
+       public function show(Request $request, int $attachmentId)
+       {
+           // 添付ファイルの詳細情報（抽出テキスト含む）を取得
+       }
+
+       public function content(Request $request, int $attachmentId)
+       {
+           // 添付ファイルのバイナリコンテンツを取得
+       }
+   }
+   ```
+3. **API Routes の追加**
+   ```php
+   // routes/api.php に追加
+   Route::group(['prefix' => 'v1', 'middleware' => 'auth:sanctum'], function () {
+       Route::get('ledgers/{ledger}/diffs', [LedgerDiffController::class, 'index']);
+       Route::get('attachments/{attachment}', [AttachedFileController::class, 'show']);
+       Route::get('attachments/{attachment}/content', [AttachedFileController::class, 'content']);
+   });
+   ```
+
+#### ✅ 完了基準
+- [ ] 全ての添付ファイル・差分関連APIエンドポイントの実装
+- [ ] OpenAPI仕様書への追加
+- [ ] ユニットテスト・統合テストの通過
+
+### Step 5.2: 添付ファイル・差分MCPツール実装
+
+#### 📋 作業内容
+1. **GetLedgerDiffsTool の作成**
+   - `handle` メソッドで `/api/v1/ledgers/{ledger}/diffs` を呼び出す。
+   - `ledger_id` を必須パラメータとする。
+2. **GetAttachmentDetailsTool の作成**
+   - `handle` メソッドで `/api/v1/attachments/{attachment}` を呼び出す。
+   - `attachment_id` を必須パラメータとする。
+3. **ReadAttachmentTool の作成**
+   - `handle` メソッドで `/api/v1/attachments/{attachment}/content` を呼び出す。
+   - `attachment_id` を必須パラメータとする。
+
+#### ✅ 完了基準
+- [ ] 3つの添付ファイル・差分MCPツール実装
+- [ ] LedgerLeapServer への登録完了
+- [ ] MCPプロンプトガイドラインの更新
+
+### Step 5.3: 添付ファイル・差分連携テスト
+
+#### 📋 作業内容
+1. **エンドツーエンドテスト実装**
+   - 複数のバージョンを持つ台帳を作成し、`GetLedgerDiffsTool` で差分が取得できることを確認。
+   - `GetAttachmentDetailsTool` で添付ファイルの詳細（特に抽出テキスト）が取得できることを確認。
+   - `ReadAttachmentTool` でファイルコンテンツが取得できることを確認。
+2. **実際のLLM対話テスト**
+   - 「契約書Aの最新版と一つ前の版で、どこが変わったか教えて。」
+   - 「台帳ID: 123 の添付ファイル `invoice.pdf` の抽出テキストを見せて。」
+
+#### ✅ 完了基準
+- [ ] 全ての連携テストの通過
+- [ ] 実際のLLM対話での期待通りの動作確認
+
+---
+
+## Phase 6: 統合・最適化段階
 **期間:** 3-5日 / **担当:** 全員  
 **目標:** システム全体の統合とUX最適化
 
@@ -899,8 +984,8 @@ public function schema(JsonSchema $schema): array
 ## 📊 実装完了時の達成目標
 
 ### 機能目標
-- [ ] **15種類以上のMCPツール**実装
-- [ ] **全ペルソナ・ユースケース**への対応
+- [ ] **18種類以上のMCPツール**実装
+- [ ] **全18シナリオ**への対応
 - [ ] **エンドツーエンド業務フロー**のAI統合
 
 ### 品質目標
@@ -929,7 +1014,8 @@ After: "業務全体を自然言語で操作できる完全統合プラットフ
 | **Phase 2** | 1週間 | 1名 | 監査機能実装完了 | ⏳ 待機中 |
 | **Phase 3** | 1週間 | 1名 | 統計機能実装完了 | ⏳ 待機中 |
 | **Phase 4** | 3-5日 | 1名 | 検索機能完全化 | ⏳ 待機中 |
-| **Phase 5** | 3-5日 | 全員 | 統合・最適化完了 | ⏳ 待機中 |
+| **Phase 5** | 1週間 | 1名 | 添付ファイル連携完了 | ⏳ 待機中 |
+| **Phase 6** | 3-5日 | 全員 | 統合・最適化完了 | ⏳ 待機中 |
 
 **総実装期間: 4-6週間**  
 **必要リソース: 2名のフルタイム開発者**  
