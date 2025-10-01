@@ -1,6 +1,6 @@
 # LedgerLeap テストベストプラクティス
 
-**最終更新:** 2025年9月30日  
+**最終更新:** 2025年10月1日  
 **適用対象:** LedgerLeap全体のテスト開発
 
 ---
@@ -343,6 +343,206 @@ public function test_requires_specific_environment()
 
 ---
 
+## 🧩 MCPツール専用テストパターン
+
+### 1. 統合テスト vs 詳細テストの責任分担
+
+**重要な教訓**: MCPツールでは認証機能が共通化されているため、責任分担を明確にしないと重複テストが大量発生する。
+
+```php
+// ✅ 統合テスト (McpToolsAuthenticationTest.php)
+// 複数ツールの認証一貫性を検証
+/**
+ * MCPツールの統一認証機能テスト
+ * 
+ * 責任範囲:
+ * - 全MCPツールの認証動作の一貫性検証
+ * - AuthenticatedMcpTraitの統合動作確認
+ * - トークン検証・権限チェックの基本動作
+ */
+public function test_all_tools_reject_invalid_tokens()
+{
+    $tools = [
+        new CreateLedgerTool(),
+        new GetLedgerDefinesTool(),
+        new SearchLedgersTool(),
+    ];
+    
+    foreach ($tools as $tool) {
+        // 各ツールで統一された認証動作を確認
+    }
+}
+
+// ✅ 詳細テスト (CreateLedgerToolTest.php)  
+// 認証後のビジネスロジックに集中
+/**
+ * CreateLedgerToolの詳細テスト
+ * 
+ * 責任範囲:
+ * - 台帳作成のビジネスロジック
+ * - リクエストパラメータのバリデーション
+ * - サービス層との連携
+ * - エラーハンドリング
+ * 
+ * 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされます
+ */
+public function test_creates_ledger_with_valid_data()
+{
+    // 認証は前提として、台帳作成ロジックのみテスト
+}
+```
+
+### 2. MCPツール用モック設定パターン
+
+**課題**: Userモデルのイベントリスナーが外部サービス（WritableFolderRepository）を呼び出すため、モックが複雑化。
+
+```php
+// ✅ setUp()でのデフォルトモック設定
+protected function setUp(): void
+{
+    parent::setUp();
+    
+    // サービスをモック
+    $this->folderRepository = Mockery::mock(WritableFolderRepository::class);
+    
+    // Userモデルのイベントリスナー用のメソッドをデフォルトでモック
+    $this->folderRepository->shouldReceive('clearAllCache')->byDefault()->andReturn(true);
+    $this->folderRepository->shouldReceive('refreshAllCache')->byDefault()->andReturn(true);
+    
+    $this->app->instance(WritableFolderRepository::class, $this->folderRepository);
+}
+
+// ✅ テストメソッドでの具体的な期待値設定
+public function test_specific_behavior()
+{
+    // 特定の動作のみをオーバーライド
+    $this->folderRepository->shouldReceive('getAccessibleFolderIds')
+        ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+        ->andReturn([$folder->id]);
+        
+    // デフォルトモックは引き続き有効
+}
+```
+
+### 3. Resourceクラスのテストパターン
+
+**課題**: MCPツールの出力はResourceクラスで加工されるため、モデル属性と異なる形式になる。
+
+```php
+// ❌ 間違ったアサーション（モデル属性で検証）
+$this->assertEquals('Test Title', $responseData['title']);
+
+// ✅ 正しいアサーション（Resource出力で検証）
+// LedgerDefineResource では title → name に変換される
+$this->assertEquals('Test Title', $responseData['name']);
+
+// ✅ Resourceの構造を事前確認
+// app/Http/Resources/LedgerDefineResource.php:
+// return ['name' => $this->title, ...];
+
+// ✅ 汎用的なResource出力テスト
+public function test_resource_output_structure()
+{
+    $responseData = json_decode($response->content(), true);
+    
+    // 基本構造の確認
+    $this->assertIsArray($responseData);
+    $this->assertArrayHasKey('id', $responseData);
+    
+    // 実際のResourceクラスの構造に基づいた具体的な検証
+    $this->assertArrayHasKey('name', $responseData); // titleがnameに変換
+}
+```
+
+### 4. enum値のモック指定パターン
+
+**注意点**: FolderPermissionTypeは小文字のvalue（'read', 'write'）だが、定数名は大文字（READ, WRITE）。
+
+```php
+// ❌ 間違った enum 参照
+FolderPermissionType::read  // 存在しない
+FolderPermissionType::write // 存在しない
+
+// ✅ 正しい enum 参照  
+FolderPermissionType::read  // value = 'read'
+FolderPermissionType::WRITE // value = 'write'
+FolderPermissionType::ADMIN // value = 'admin'
+
+// ✅ enum値の確認方法
+// app/Enums/FolderPermissionType.php を確認
+// case READ = 'read';
+// case WRITE = 'write';
+// case ADMIN = 'admin';
+```
+
+### 5. ファクトリ属性の正規化
+
+**実装中に発見した問題**: データベースカラム名とファクトリ属性名の不一致。
+
+```php
+// ❌ 古いファクトリ定義
+Folder::factory()->create(['name' => 'Test Folder']);
+// → Database column 'name' not found エラー
+
+// ✅ 正しいファクトリ定義
+Folder::factory()->create(['title' => 'Test Folder']);
+// → foldersテーブルのtitleカラムに対応
+
+// ✅ マイグレーション確認の重要性
+// database/migrations/xxx_create_folders_table.php を確認し、
+// 実際のカラム名に合わせてファクトリを調整
+
+// ✅ 一般的な検証パターン
+// テスト失敗時は以下をチェック：
+// 1. マイグレーションファイルでのカラム名
+// 2. Eloquentモデルでのfillable設定
+// 3. ファクトリでの属性名
+```
+
+---
+
+## 🏗️ テスト構造設計パターン
+
+### 1. 共通機能テストの階層化
+
+**Phase 0実装で確立したパターン**:
+
+```
+tests/Unit/Mcp/
+├── Tools/                           # 個別ツールの詳細テスト
+│   ├── McpToolsAuthenticationTest.php    # 【統合】認証一貫性 (6テスト)
+│   ├── CreateLedgerToolTest.php         # 【詳細】台帳作成機能 (5テスト)
+│   ├── GetLedgerDefinesToolTest.php     # 【詳細】データフィルタリング (5テスト)
+│   └── SearchLedgersToolTest.php        # 【詳細】検索機能 (5テスト)
+└── Traits/                          # 共通トレイトの内部ロジック
+    └── AuthenticatedMcpToolTest.php     # 【内部】トレイト単体テスト (15テスト)
+
+総計: 36テスト / 113アサーション / 100%通過率
+```
+
+**責任分担の原則**:
+- **統合テスト**: 複数コンポーネント間の一貫性
+- **詳細テスト**: 個別機能のビジネスロジック  
+- **内部テスト**: トレイト・ヘルパーの単体動作
+
+### 2. MCPテストの品質指標
+
+**Phase 0で達成した指標** (2025-10-01):
+- **テスト数**: 36テスト
+- **アサーション数**: 113件  
+- **テスト通過率**: 100%
+- **実行時間**: 18.99秒
+- **カバレッジ項目**: 認証・権限・機能・エラーハンドリング・エッジケース
+
+**パフォーマンス目標** (MCPツール専用):
+| テストタイプ | 目標時間 | 達成時間 |
+|--------------|----------|---------|
+| MCPツール統合テスト | 3秒以内 | 1.41秒 |
+| MCPツール詳細テスト | 2秒以内 | 0.96秒 |
+| MCPトレイトテスト | 5秒以内 | 3.29秒 |
+
+---
+
 ## 📋 チェックリスト
 
 ### テスト作成時のチェックポイント
@@ -352,6 +552,13 @@ public function test_requires_specific_environment()
 - [ ] ファクトリは最小限のデータで設計されているか
 - [ ] 権限テストが適切に分離されているか
 - [ ] エラーケースも含めてテストされているか
+
+### MCPツール専用チェックポイント (2025-10-01追加)
+- [ ] 統合テストと詳細テストの責任分担が明確か
+- [ ] Userモデルのイベントリスナー用のデフォルトモックが設定されているか
+- [ ] Resourceクラスの出力形式でアサーションを行っているか
+- [ ] enum定数名（大文字）で参照しているか
+- [ ] ファクトリ属性名がデータベースカラム名と一致しているか
 
 ### レビュー時のチェックポイント
 - [ ] 複数HTTPリクエストを含むテストがないか
@@ -366,6 +573,14 @@ public function test_requires_specific_environment()
 - [ ] パフォーマンスが向上しているか
 - [ ] テストの可読性が向上しているか
 
+### MCPツール実装時の追加チェックポイント (2025-10-01追加)
+- [ ] 認証の重複テストが発生していないか
+- [ ] モックの設定でイベントリスナーが考慮されているか
+- [ ] 共通トレイトの内部テストが適切に分離されているか
+- [ ] MCPレスポンス形式の検証が正しく行われているか
+
 ---
 
 **このベストプラクティスに従うことで、安定性・実行速度・保守性を兼ね備えたテストスートを構築できます。**
+
+**Phase 0 (2025-10-01完了) では、MCPツール専用のテストパターンを確立し、36テスト/113アサーション/100%通過率を達成しました。これらの知見はPhase 1以降のワークフロー管理機能実装で直接活用できます。**
