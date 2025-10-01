@@ -19,6 +19,13 @@ use Tests\TestCase;
 
 /**
  * MCPツールの統一認証機能テスト
+ * 
+ * 責任範囲:
+ * - 全MCPツールの認証動作の一貫性検証
+ * - AuthenticatedMcpTraitの統合動作確認
+ * - トークン検証・権限チェックの基本動作
+ * 
+ * 注意: 各ツール固有の詳細機能は個別のテストクラスで実施
  */
 class McpToolsAuthenticationTest extends TestCase
 {

@@ -47,13 +47,11 @@ class CreateLedgerTool extends Tool
         }
 
         try {
-            $ledger = $ledgerService->createLedger(
-                $request->get('ledger_define_id'),
-                $folderId,
-                json_decode($request->get('content'), true),
-                $request->get('tags', []),
-                $user
-            );
+            $ledger = $ledgerService->createLedger([
+                'ledger_define_id' => $request->get('ledger_define_id'),
+                'content' => json_decode($request->get('content'), true),
+                'tags' => $request->get('tags', []),
+            ]);
 
             $resource = new LedgerResource($ledger);
 
