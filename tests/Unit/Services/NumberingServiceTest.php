@@ -14,15 +14,17 @@ use Tests\TestCase;
 class NumberingServiceTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     protected NumberingService $numberingService;
+
     protected Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->numberingService = new NumberingService();
+        $this->numberingService = new NumberingService;
         $this->folder = Folder::factory()->create();
     }
 

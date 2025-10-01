@@ -10,6 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     schema="LedgerResource",
  *     type="object",
  *     title="Ledger Resource",
+ *
  *     @OA\Property(property="id", type="integer", description="Ledger ID", example=1),
  *     @OA\Property(
  *         property="define",
@@ -31,8 +32,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(
  *         property="tags",
  *         type="array",
+ *
  *         @OA\Items(
  *             type="object",
+ *
  *             @OA\Property(property="id", type="integer", example=1),
  *             @OA\Property(property="name", type="string", example="tag1")
  *         )
@@ -49,7 +52,7 @@ class LedgerResource extends JsonResource
         $folderPath = null;
         if ($folder && $folder->relationLoaded('ancestors')) {
             $path = $folder->ancestors->pluck('name')->push($folder->name)->implode('/');
-            $folderPath = '/' . $path;
+            $folderPath = '/'.$path;
         }
 
         $parsedContent = [];
@@ -57,7 +60,7 @@ class LedgerResource extends JsonResource
             $columns = $this->define->column_define->keyBy('id');
             if (is_array($this->content)) {
                 foreach ($this->content as $columnId => $value) {
-                    $columnName = $columns->get($columnId)->name ?? 'unknown_column_' . $columnId;
+                    $columnName = $columns->get($columnId)->name ?? 'unknown_column_'.$columnId;
                     $parsedContent[$columnName] = $value;
                 }
             }
@@ -71,7 +74,7 @@ class LedgerResource extends JsonResource
                 'description' => $this->define->create_description,
             ],
             'content' => $parsedContent,
-            'content_attached' => $this->when(!empty($this->content_attached), $this->content_attached),
+            'content_attached' => $this->when(! empty($this->content_attached), $this->content_attached),
             'folder' => $folder ? [
                 'id' => $folder->id,
                 'name' => $folder->name,

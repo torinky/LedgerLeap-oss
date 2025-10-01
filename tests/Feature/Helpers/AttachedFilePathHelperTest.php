@@ -15,7 +15,7 @@ class AttachedFilePathHelperTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function getAttachmentPath_generates_tenant_specific_path()
+    public function get_attachment_path_generates_tenant_specific_path()
     {
         Storage::fake('public');
         $tenant = Tenant::factory()->create();
@@ -26,14 +26,14 @@ class AttachedFilePathHelperTest extends TestCase
 
         $path = AttachedFilePathHelper::getAttachmentPath($ledgerDefineId, $hashedBasename);
 
-        $expectedPath = 'tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId . '/' . $hashedBasename;
+        $expectedPath = 'tenants/'.$tenant->id.'/Ledger/Attachments/'.$ledgerDefineId.'/'.$hashedBasename;
 
         $this->assertEquals($expectedPath, $path);
-        Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId);
+        Storage::disk('public')->assertExists('tenants/'.$tenant->id.'/Ledger/Attachments/'.$ledgerDefineId);
     }
 
     #[Test]
-    public function getOriginalAttachmentPath_generates_tenant_specific_path()
+    public function get_original_attachment_path_generates_tenant_specific_path()
     {
         Storage::fake('public');
         $tenant = Tenant::factory()->create();
@@ -44,14 +44,14 @@ class AttachedFilePathHelperTest extends TestCase
 
         $path = AttachedFilePathHelper::getOriginalAttachmentPath($ledgerDefineId, $hashedBasename);
 
-        $expectedPath = 'tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals/' . $hashedBasename;
+        $expectedPath = 'tenants/'.$tenant->id.'/Ledger/Attachments/'.$ledgerDefineId.'/Originals/'.$hashedBasename;
 
         $this->assertEquals($expectedPath, $path);
-        Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/Attachments/' . $ledgerDefineId . '/Originals');
+        Storage::disk('public')->assertExists('tenants/'.$tenant->id.'/Ledger/Attachments/'.$ledgerDefineId.'/Originals');
     }
 
     #[Test]
-    public function getThumbnailStoragePath_generates_tenant_specific_path()
+    public function get_thumbnail_storage_path_generates_tenant_specific_path()
     {
         Storage::fake('public');
         $tenant = Tenant::factory()->create();
@@ -61,10 +61,10 @@ class AttachedFilePathHelperTest extends TestCase
 
         $path = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
 
-        $expectedPath = 'tenants/' . $tenant->id . '/Ledger/thumbs/' . $hashedBasename;
+        $expectedPath = 'tenants/'.$tenant->id.'/Ledger/thumbs/'.$hashedBasename;
 
         $this->assertEquals($expectedPath, $path);
-        Storage::disk('public')->assertExists('tenants/' . $tenant->id . '/Ledger/thumbs');
+        Storage::disk('public')->assertExists('tenants/'.$tenant->id.'/Ledger/thumbs');
     }
 
     #[Test]

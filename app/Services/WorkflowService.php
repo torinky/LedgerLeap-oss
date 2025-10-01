@@ -171,10 +171,10 @@ class WorkflowService
      * 点検依頼を処理する
      * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param int $ledgerId 台帳レコードID
-     * @param int $requesterId 点検依頼を行った User ID
-     * @param int $inspectorId 次の担当者 User ID
-     * @param string|null $comments 点検コメント (任意)
+     * @param  int  $ledgerId  台帳レコードID
+     * @param  int  $requesterId  点検依頼を行った User ID
+     * @param  int  $inspectorId  次の担当者 User ID
+     * @param  string|null  $comments  点検コメント (任意)
      * @return Ledger 更新後の Ledger
      *
      * @throws Throwable

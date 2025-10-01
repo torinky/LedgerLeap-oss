@@ -21,6 +21,7 @@ class ChildrenRelationManager extends RelationManager
     {
         return __('ledger.folder.containing');
     }
+
     public static function getModelLabel(): string
     {
         return __('ledger.folders');
@@ -89,7 +90,7 @@ class ChildrenRelationManager extends RelationManager
                     })
                     ->modalWidth('3xl'),
                 Tables\Actions\CreateAction::make()
-                ->icon('heroicon-o-plus'),
+                    ->icon('heroicon-o-plus'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()

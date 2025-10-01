@@ -2,16 +2,16 @@
 
 namespace Tests\Unit\Services\Ledger;
 
+use App\Models\AutoLink;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
 use App\Services\Util\HtmlProcessorService;
-use App\Services\AutoLinkService;
-use App\Models\AutoLink;
-use App\Models\Folder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
@@ -22,6 +22,7 @@ use Tests\TestCase;
 class LedgerContentProcessorTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     protected Folder $folder;
@@ -36,7 +37,7 @@ class LedgerContentProcessorTest extends TestCase
     {
         return [
             'id' => $id, 'name' => $name, 'type' => 'text', 'order' => $id,
-            'display_level' => $displayLevel, 'group' => $group, 'required' => false, 'hint' => ''
+            'display_level' => $displayLevel, 'group' => $group, 'required' => false, 'hint' => '',
         ];
     }
 
@@ -47,7 +48,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
-        $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn($def, $val) => new HtmlString(strval($val)));
+        $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
         $ledgerDiffProcessorMock->shouldReceive('prepareContentDiff')
@@ -61,6 +62,7 @@ class LedgerContentProcessorTest extends TestCase
                         'old_value' => $value,
                     ];
                 }
+
                 return ['contentChanges' => $changes, 'hasChangedColumns' => false];
             });
 
@@ -75,11 +77,11 @@ class LedgerContentProcessorTest extends TestCase
         ];
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
-            'content' => [1 => 'A1', 2 => 'A2', 3 => 'B3', 4 => 'B4']
+            'content' => [1 => 'A1', 2 => 'A2', 3 => 'B3', 4 => 'B4'],
         ]);
 
         // 2. Act: サービスを実行 (displayLevel = 2)
-        $result = $processor->processContentForDisplay($ledger, null, 2, new \Illuminate\Database\Eloquent\Collection());
+        $result = $processor->processContentForDisplay($ledger, null, 2, new \Illuminate\Database\Eloquent\Collection);
         $displayData = $result['displayData'];
 
         // 3. Assert: 結果を検証
@@ -109,7 +111,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
-        $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn($def, $val) => new HtmlString(strval($val)));
+        $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         // ★このテストの核心：LedgerDiffProcessorが返す値をコントロールする★
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
@@ -122,7 +124,7 @@ class LedgerContentProcessorTest extends TestCase
         $ledgerDiffProcessorMock->shouldReceive('prepareContentDiff')
             ->andReturn([
                 'contentChanges' => $mockContentChanges,
-                'hasChangedColumns' => true
+                'hasChangedColumns' => true,
             ]);
 
         $processor = new LedgerContentProcessor($columnHtmlServiceMock, $ledgerDiffProcessorMock);
@@ -139,7 +141,7 @@ class LedgerContentProcessorTest extends TestCase
         $diff = LedgerDiff::factory()->for($ledger)->create(); // 比較対象のDiff（内容はモックで上書きされる）
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, $diff, 3, new \Illuminate\Database\Eloquent\Collection());
+        $result = $processor->processContentForDisplay($ledger, $diff, 3, new \Illuminate\Database\Eloquent\Collection);
         $columns = $result['displayData'][0]['columns'];
 
         // 3. Assert
@@ -172,7 +174,7 @@ class LedgerContentProcessorTest extends TestCase
         // 他の依存はデフォルトの振る舞いでOK
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
         $ledgerDiffProcessorMock->shouldReceive('prepareContentDiff')->andReturn(['contentChanges' => [
-            1 => ['status' => 'unchanged', 'current_value' => [$fileHash => $fileName], 'old_value' => null]
+            1 => ['status' => 'unchanged', 'current_value' => [$fileHash => $fileName], 'old_value' => null],
         ], 'hasChangedColumns' => false]);
 
         $processor = new LedgerContentProcessor($columnHtmlServiceMock, $ledgerDiffProcessorMock);
@@ -184,7 +186,7 @@ class LedgerContentProcessorTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'content' => [1 => [$fileHash => $fileName]],
-            'content_attached' => [1 => [$fileHash => ['name' => $fileName, 'path' => '...']]]
+            'content_attached' => [1 => [$fileHash => ['name' => $fileName, 'path' => '...']]],
         ]);
 
         // 添付ファイルレコードを作成
@@ -206,8 +208,8 @@ class LedgerContentProcessorTest extends TestCase
         $keyword = 'highlight';
 
         // AutoLinkServiceはモック化し、ハイライト機能への影響をなくす
-                $autoLinkServiceMock = Mockery::mock(AutoLinkService::class);
-        $autoLinkServiceMock->shouldReceive('convert')->andReturnUsing(fn($html, $def, $rec) => $html);
+        $autoLinkServiceMock = Mockery::mock(AutoLinkService::class);
+        $autoLinkServiceMock->shouldReceive('convert')->andReturnUsing(fn ($html, $def, $rec) => $html);
         $this->app->instance(AutoLinkService::class, $autoLinkServiceMock);
 
         // HtmlProcessorService をモック化し、ハイライト処理をシミュレート
@@ -227,6 +229,7 @@ class LedgerContentProcessorTest extends TestCase
                 $value = $ledger->content[$column->id] ?? null;
                 $changes[$column->id] = ['status' => 'unchanged', 'current_value' => $value, 'old_value' => $value];
             }
+
             return ['contentChanges' => $changes, 'hasChangedColumns' => false];
         });
 
@@ -236,11 +239,11 @@ class LedgerContentProcessorTest extends TestCase
         $columnDefines = [$this->makeColumnDefine(1, 'Text', 1)];
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines, 'folder_id' => $this->folder->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
-            'content' => [1 => "Some text to {$keyword} here."]
+            'content' => [1 => "Some text to {$keyword} here."],
         ]);
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection(), $keyword);
+        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection, $keyword);
         $html = $result['displayData'][0]['columns'][0]['current_value_html'];
 
         // 3. Assert
@@ -255,7 +258,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnDefines = [$this->makeColumnDefine(1, 'Text', 1)];
         $ledgerDefine = LedgerDefine::factory()->for($folder)->create(['column_define' => $columnDefines]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
-            'content' => [1 => "Please see DOC-123 for details."]
+            'content' => [1 => 'Please see DOC-123 for details.'],
         ]);
 
         // ★台帳が属するフォルダにスコープを限定したAutoLinkルールを作成★
@@ -274,7 +277,7 @@ class LedgerContentProcessorTest extends TestCase
 
         // 依存サービスのセットアップ
         $htmlProcessorServiceMock = Mockery::mock(HtmlProcessorService::class);
-        $htmlProcessorServiceMock->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
+        $htmlProcessorServiceMock->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
         $this->app->instance(HtmlProcessorService::class, $htmlProcessorServiceMock);
 
         // AutoLinkService のモック
@@ -291,13 +294,14 @@ class LedgerContentProcessorTest extends TestCase
                 $value = $ledger->content[$column->id] ?? null;
                 $changes[$column->id] = ['status' => 'unchanged', 'current_value' => $value, 'old_value' => $value];
             }
+
             return ['contentChanges' => $changes, 'hasChangedColumns' => false];
         });
 
         $processor = new LedgerContentProcessor($columnHtmlService, $ledgerDiffProcessorMock);
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection());
+        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection);
         $html = $result['displayData'][0]['columns'][0]['current_value_html'];
 
         // 3. Assert
@@ -307,7 +311,7 @@ class LedgerContentProcessorTest extends TestCase
     #[Test]
     public function it_applies_auto_links_directly_without_context(): void
     {
-// 1. Arrange
+        // 1. Arrange
         AutoLink::factory()->create([
             'pattern' => '/(DOC-\d{3})/',
             'url_template' => '/docs/$1',
@@ -316,7 +320,7 @@ class LedgerContentProcessorTest extends TestCase
         Cache::tags('auto_links')->flush();
 
         $service = $this->app->make(AutoLinkService::class);
-        $text = "Please see DOC-123 for details.";
+        $text = 'Please see DOC-123 for details.';
 
         // 2. Act: コンテキストなしでサービスを直接呼び出す
         $html = $service->convert($text);

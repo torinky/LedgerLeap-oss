@@ -91,7 +91,6 @@ return [
 
         'view_activity_logs' => 'アクティビティログの閲覧',
 
-
         // --- アクセス権限 ---
         'read' => '閲覧',
         'write' => '書き込み',
@@ -107,7 +106,7 @@ return [
         'receive_workflow_summary_email' => 'ワークフロー集約メール受信',
         'receive_workflow_action_email' => 'ワークフロー個別メール受信',
 
-        'manage_auto_links'=>'自動リンクの管理'
+        'manage_auto_links' => '自動リンクの管理',
     ],
     // --- FolderRelationManager 用 ---
     'folder_permissions' => 'フォルダーアクセス権限',
@@ -125,14 +124,14 @@ return [
     'detach_folder_modal_description' => 'このフォルダーに対する全てのアクセス権限をこのロールから解除しますか？',
     'detach_folder_permissions_success' => 'フォルダー権限を解除しました',
     'attach_folder_permissions_success' => '権限を一括付与しました',
-    'edit_folder_permission_modal_heading'=>":folder の権限を変更します",
-    'access_permissions' => "アクセス権限",
-    'edit_permission' => "権限の編集",
-    'detach_folder_permissions_modal_heading'=>':folder の権限を解除します',
-    'detach_folder_permissions_modal_description'=>'このフォルダーに対する全てのアクセス権限をこのロールから解除しますか？',
+    'edit_folder_permission_modal_heading' => ':folder の権限を変更します',
+    'access_permissions' => 'アクセス権限',
+    'edit_permission' => '権限の編集',
+    'detach_folder_permissions_modal_heading' => ':folder の権限を解除します',
+    'detach_folder_permissions_modal_description' => 'このフォルダーに対する全てのアクセス権限をこのロールから解除しますか？',
     // ActivityLogFormatter などで使われる可能性のある汎用権限メッセージ
     'view_any_activity' => '全ての活動ログを閲覧',
     'view_activity_logs' => '活動ログを閲覧',
-    'permissions'=>'権限',
-    'no_specific_permissions'=>'権限なし',
+    'permissions' => '権限',
+    'no_specific_permissions' => '権限なし',
 ];

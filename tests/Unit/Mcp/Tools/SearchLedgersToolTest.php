@@ -11,16 +11,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class SearchLedgersToolTest extends TestCase
 {
     use RefreshDatabase;
 
     protected LedgerService $ledgerService;
+
     protected SearchLedgersTool $tool;
+
     protected User $user;
+
     protected PersonalAccessToken $accessToken;
 
     protected function setUp(): void
@@ -44,7 +47,7 @@ class SearchLedgersToolTest extends TestCase
         $this->tool = new SearchLedgersTool($this->ledgerService);
 
         // MCP_AUTH_TOKEN 環境変数を設定
-        putenv('MCP_AUTH_TOKEN=' . $newAccessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN='.$newAccessToken->plainTextToken);
 
         // Laravel\Mcp\Responseの構造を確認するためのdd
         // dd($this->tool->handle(new Request([])));

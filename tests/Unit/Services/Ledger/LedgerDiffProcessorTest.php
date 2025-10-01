@@ -8,23 +8,27 @@ use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class LedgerDiffProcessorTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     private LedgerDiffProcessor $processor;
+
     private LedgerDefine $ledgerDefine;
+
     private Ledger $ledger;
+
     private Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->processor = new LedgerDiffProcessor();
+        $this->processor = new LedgerDiffProcessor;
         $this->folder = Folder::factory()->create();
 
         // テストの基本となる台帳定義と台帳レコードを作成

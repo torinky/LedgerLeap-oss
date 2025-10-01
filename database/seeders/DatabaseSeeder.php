@@ -8,7 +8,6 @@ use App\Models\LedgerDefine;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Stancl\Tenancy\Facades\Tenancy;
 
 class DatabaseSeeder extends Seeder
 {

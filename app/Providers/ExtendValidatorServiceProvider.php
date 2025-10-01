@@ -29,14 +29,14 @@ class ExtendValidatorServiceProvider extends ServiceProvider
             // $parameters[0] にオプションの配列が渡される想定です
             $allowedOptions = $parameters[0] ?? [];
 
-            if (!is_array($value)) {
+            if (! is_array($value)) {
                 return false;
             }
 
             $value = array_filter($value);
 
             foreach ($value as $item) {
-                if (!in_array($item, $allowedOptions)) {
+                if (! in_array($item, $allowedOptions)) {
                     return false;
                 }
             }

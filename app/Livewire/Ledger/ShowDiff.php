@@ -2,18 +2,13 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use Illuminate\Contracts\View\View;
+use App\Services\Ledger\LedgerContentProcessor;
+use Illuminate\Contracts\View\View; // 追加
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
-use App\Enums\AttachedFileStatus;
-use App\Helpers\AttachedFilePathHelper;
-use App\Models\AttachedFile;
-use Illuminate\Support\Facades\Storage;
-use App\Services\Ledger\LedgerContentProcessor; // 追加
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class ShowDiff extends Component
 {
@@ -21,17 +16,21 @@ class ShowDiff extends Component
 
     // ledgerRecord は表示する Diff の内容を入れるように変更
     public ?LedgerDiff $currentDiffRecord = null; // 表示中の Diff
+
     public $ledgerDefineRecord; // Define は必要
 
     public $ledgerRecord;
 
     public $ledgerId;
+
     public $targetDiffId = null; // URL から受け取る diffId
 
     public int $offset = 0; // スライダーの位置 (0が最新)
+
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
     public ?\Illuminate\Database\Eloquent\Collection $allAttachments = null;
+
     public array $displayColumns = []; // 追加
 
     protected LedgerContentProcessor $ledgerContentProcessor; // 追加
@@ -80,13 +79,13 @@ class ShowDiff extends Component
             }
         }
 
-        if (!empty($fileHashedBasenames)) {
+        if (! empty($fileHashedBasenames)) {
             $this->ledgerRecord->setRelation('attachedFiles', \App\Models\AttachedFile::where('ledger_id', $this->currentDiffRecord->ledger_id)
                 ->where('ledger_define_id', $this->currentDiffRecord->ledger_define_id)
                 ->whereIn('hashedbasename', $fileHashedBasenames)
                 ->get());
         } else {
-            $this->ledgerRecord->setRelation('attachedFiles', new \Illuminate\Database\Eloquent\Collection()); // 空のEloquentCollectionをセット
+            $this->ledgerRecord->setRelation('attachedFiles', new \Illuminate\Database\Eloquent\Collection); // 空のEloquentCollectionをセット
         }
     }
 
@@ -94,7 +93,7 @@ class ShowDiff extends Component
     protected function loadDiffRecord(): void
     {
         $query = LedgerDiff::with(['modifier:id,name', 'inspector:id,name', 'approver:id,name']) // 関連ユーザー情報取得
-        ->where('ledger_id', $this->ledgerId);
+            ->where('ledger_id', $this->ledgerId);
 
         if ($this->targetDiffId) {
             // diffId 指定がある場合
@@ -108,7 +107,7 @@ class ShowDiff extends Component
         } else {
             // diffId 指定がない場合 (オフセットで指定 or 最新)
             $this->currentDiffRecord = $query->latest('id') // 最新から数える
-            ->skip($this->offset)
+                ->skip($this->offset)
                 ->firstOrFail();
             $this->targetDiffId = $this->currentDiffRecord->id; // 表示中の Diff ID を更新
 
@@ -184,5 +183,4 @@ class ShowDiff extends Component
         return view('livewire.ledger.show-diff')
             ->layout('layouts.app'); // レイアウト指定
     }
-
 }

@@ -74,7 +74,7 @@ class LedgerDefine extends Model
 
         return $query->whereHas('tag', function ($query) use ($keywords) {
             foreach ($keywords as $keyword) {
-                $query->where('name', 'LIKE', '%' . $keyword . '%');
+                $query->where('name', 'LIKE', '%'.$keyword.'%');
             }
         });
     }
@@ -109,7 +109,7 @@ class LedgerDefine extends Model
 
         // 欠番を埋める
         for ($i = 0; $i <= $maxId; $i++) {
-            if (!$contentCollection->has($i)) {
+            if (! $contentCollection->has($i)) {
                 if ($columnDefineKeyById->has($i)) {
                     $contentCollection[$i] = $columnDefineKeyById[$i]->type === 'chk' ? [] : '';
                 }
@@ -138,7 +138,7 @@ class LedgerDefine extends Model
             ->useLogName('ledger_define')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**

@@ -26,11 +26,12 @@ class InputTypeFactory
         $typeIdentifier = $columnDefineArray['type'] ?? 'text';
         $options = $columnDefineArray['options'] ?? [];
 
-        if (!isset(self::$typeMap[$typeIdentifier])) {
+        if (! isset(self::$typeMap[$typeIdentifier])) {
             throw new InvalidArgumentException("Invalid input type: {$typeIdentifier}");
         }
 
         $className = self::$typeMap[$typeIdentifier];
+
         return new $className($options);
     }
 
@@ -38,8 +39,9 @@ class InputTypeFactory
     {
         $types = [];
         foreach (self::$typeMap as $identifier => $className) {
-            $types[$identifier] = new $className();
+            $types[$identifier] = new $className;
         }
+
         return $types;
     }
 

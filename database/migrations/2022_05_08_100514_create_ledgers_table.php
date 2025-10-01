@@ -5,7 +5,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -19,7 +20,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('ledger_define_id')->index();
             $table->index(['id', 'ledger_define_id']);  // 複合インデックスを設定
             //            外部キー制約を使う場合はストレージエンジンを揃えないとsqlエラーになる
-//            $table->foreignId('user_id')->constrained('users');
+            //            $table->foreignId('user_id')->constrained('users');
             $table->unsignedInteger('creator_id')->index();
             $table->unsignedInteger('modifier_id')->index();
 
@@ -29,7 +30,7 @@ return new class extends Migration {
 
             $table->timestamps();
         });
-//        DB::statement('ALTER TABLE ledgers COMMENT = \'engine "InnoDB"\'');
+        //        DB::statement('ALTER TABLE ledgers COMMENT = \'engine "InnoDB"\'');
         DB::statement('ALTER TABLE ledgers ADD COLUMN content longtext COMMENT \'flags "COLUMN_VECTOR"\'');
         DB::statement('ALTER TABLE ledgers ADD COLUMN content_attached longtext COMMENT \'flags "COLUMN_VECTOR"\'');
         DB::statement('ALTER TABLE ledgers ADD FULLTEXT index (content) COMMENT \'tokenizer "TokenBigramSplitSymbolAlphaDigit", index_flags "WITH_SECTION|WITH_POSITION"\'');
@@ -52,7 +53,7 @@ return new class extends Migration {
                                        WHERE TABLE_NAME = 'ledgers' 
                                        AND COLUMN_NAME = 'latest_diff_id' 
                                        AND TABLE_SCHEMA = DATABASE()");
-                if (!empty($foreignKeys)) {
+                if (! empty($foreignKeys)) {
                     $table->dropForeign(['latest_diff_id']);
                 }
             }

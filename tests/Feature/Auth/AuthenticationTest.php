@@ -1,9 +1,7 @@
 <?php
 
-use App\Models\User;
 use App\Models\Tenant;
-use App\Providers\RouteServiceProvider;
-use App\Enums\LoginLandingPage;
+use App\Models\User;
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
@@ -36,7 +34,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $responseMyPortal->assertRedirect('/' . $tenant->getTenantKey() . '/my-portal');
+    $responseMyPortal->assertRedirect('/'.$tenant->getTenantKey().'/my-portal');
     $this->post('/logout'); // ログアウトして次のシナリオに備える
 
     // シナリオ2: login_landing_page が Ledgers の場合
@@ -60,7 +58,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $responseLedgers->assertRedirect('/' . $tenant->getTenantKey() . '/ledger');
+    $responseLedgers->assertRedirect('/'.$tenant->getTenantKey().'/ledger');
 });
 
 test('users can not authenticate with invalid password', function () {

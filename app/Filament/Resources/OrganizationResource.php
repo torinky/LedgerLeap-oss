@@ -7,13 +7,10 @@ use App\Filament\Resources\OrganizationResource\RelationManagers;
 use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Facades\Filament;
-use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -21,8 +18,6 @@ use Illuminate\Support\Facades\Route;
 
 class OrganizationResource extends Resource
 {
-    
-
     protected static ?string $model = Organization::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
@@ -41,13 +36,12 @@ class OrganizationResource extends Resource
     {
         return __('ledger.organization');
     }
+
     // グローバル検索の結果に表示するタイトルとして'name'カラムを使用
     protected static ?string $recordTitleAttribute = 'name';
 
     /**
      * ナビゲーションメニューにこのリソースを表示しないようにします。
-     *
-     * @return bool
      */
     public static function shouldRegisterNavigation(): bool
     {
@@ -100,13 +94,12 @@ class OrganizationResource extends Resource
                         if ($record === null) {
                             return []; // 新規作成時は何も非表示にしない
                         }
+
                         // 自分自身と、その配下にあるすべての子孫組織のIDを返す
                         return $record->descendantsAndSelf($record->id)->pluck('id')->toArray();
                     }),
             ]);
     }
-
-
 
     public static function getRelations(): array
     {

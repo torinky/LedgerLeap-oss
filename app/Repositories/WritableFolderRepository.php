@@ -7,21 +7,18 @@ use App\Models\Folder;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class WritableFolderRepository
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * ユーザーが指定された権限でアクセス可能なフォルダのIDを、指定されたフォルダの子孫も含めて取得する
      * フォルダが指定されていない場合は、ユーザーがアクセス可能なすべてのフォルダIDを子孫フォルダも含めて取得する
      *
-     * @param FolderPermissionType $permission 'read', 'write', 'manageable' など
-     * @param Folder|null $folder 制限をかけたいフォルダ
+     * @param  FolderPermissionType  $permission  'read', 'write', 'manageable' など
+     * @param  Folder|null  $folder  制限をかけたいフォルダ
      */
     public function getAccessibleFolderIds(User $user, FolderPermissionType $permission, ?Folder $folder = null): array
     {
@@ -38,6 +35,7 @@ class WritableFolderRepository
                 return $role->folderPermissions()->get()->filter(function ($folder) use ($permission) {
                     // pivot (RoleFolderPermission) の permission を FolderPermissionType にキャスト
                     $pivotPermission = $folder->pivot->permission;
+
                     // 権限が要求された権限を包含しているかチェック
                     return $pivotPermission->includes($permission);
                 })->flatMap(function ($folder) {
@@ -45,7 +43,7 @@ class WritableFolderRepository
                 })->pluck('id');
             })->unique();
 
-            if (!is_null($folder)) {
+            if (! is_null($folder)) {
                 $descendantIds = $folder->descendantsAndSelf($folder->id)->pluck('id')->toArray();
                 $allAccessibleFolderIds = $allAccessibleFolderIds->intersect($descendantIds);
                 $allAccessibleFolderIds->add($folder->id); // ここを修正
@@ -84,9 +82,9 @@ class WritableFolderRepository
     public function getManageableFolderIds(User $user, ?Folder $folder = null): array
     {
         // スーパー管理者は常に全てのフォルダを管理可能
-/*        if ($user->hasRole('Super Admin')) {
-            return Folder::all()->pluck('id');
-        }*/
+        /*        if ($user->hasRole('Super Admin')) {
+                    return Folder::all()->pluck('id');
+                }*/
 
         $cacheKey = "user_{$user->id}_manageable_folder_ids";
 
@@ -137,7 +135,7 @@ class WritableFolderRepository
     {
         $cacheKey = "user_{$user->id}_{$permission}_folders";
         if ($folder) {
-            $cacheKey .= '_under_' . $folder->id;
+            $cacheKey .= '_under_'.$folder->id;
         }
 
         return $cacheKey;

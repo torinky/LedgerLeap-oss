@@ -17,7 +17,6 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -155,7 +154,7 @@ class User extends Authenticatable implements FilamentUser
      * SpatieのassignRoleメソッドをオーバーライドして、
      * ロール割り当て後にWritableFolderRepositoryのキャッシュをクリアする
      *
-     * @param mixed ...$roles
+     * @param  mixed  ...$roles
      * @return $this
      */
     public function assignRole(...$roles): static
@@ -171,7 +170,7 @@ class User extends Authenticatable implements FilamentUser
     /**
      * ユーザーからロールを削除し、関連するキャッシュをクリアする
      *
-     * @param mixed ...$roles
+     * @param  mixed  ...$roles
      * @return $this
      */
     public function removeRole($role)
@@ -190,7 +189,7 @@ class User extends Authenticatable implements FilamentUser
         return LogOptions::defaults()
             ->logFillable()
             ->useLogName('user')
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**
@@ -223,7 +222,6 @@ class User extends Authenticatable implements FilamentUser
     /**
      * ユーザーが所属するテナントへの多対多リレーションシップを定義します。
      */
-    
 
     /**
      * グローバル通知をさせるためにルートフォルダーを返す

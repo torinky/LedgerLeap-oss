@@ -18,7 +18,7 @@ class FolderSeeder extends Seeder
         // テナントに最初のユーザーが存在するか確認し、なければ作成する
         // このユーザーはフォルダの作成者・更新者として使用される
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $user = User::factory()->create();
         }
         $userId = $user->id;

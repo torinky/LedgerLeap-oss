@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\TenantAccessService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class GlobalMyPortalController extends Controller
@@ -21,6 +20,7 @@ class GlobalMyPortalController extends Controller
         // 所属テナントが1つの場合は、そのテナントのマイポータルへ自動リダイレクト
         if ($tenants->count() === 1) {
             $tenant = $tenants->first();
+
             return redirect()->route('my-portal', ['tenant' => $tenant->id]);
         }
 

@@ -44,7 +44,7 @@ class AsColumnArrayJsonTest extends TestCase
 
         // Logにアラートが記録されていることを確認します。
         $spy = Log::spy();
-        $spy->shouldNotHaveReceived('alert', ['JSON decoding error: ' . $invalidJson]);
+        $spy->shouldNotHaveReceived('alert', ['JSON decoding error: '.$invalidJson]);
 
     }
 }

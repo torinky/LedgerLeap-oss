@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -10,19 +11,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Edit extends Component
 {
-    use Toast, InitializesTenantContext;
+    use InitializesTenantContext, Toast;
 
     public $ledgerDefineRecord;
 
     public $folderRecords = [];
 
     public $createDescription;
+
     public $detailDescription;
+
     public $listDescription;
+
     public $folderIdNameMap = [];
 
     public $title;
@@ -38,7 +41,6 @@ class Edit extends Component
         return view('livewire.ledger-define.edit');
     }
 
-
     /**
      * リクエストに基づいてコンポーネントの状態を初期化します。
      *
@@ -46,7 +48,7 @@ class Edit extends Component
      * コンポーネントのさまざまなプロパティを設定します。また、階層的なフォルダデータを処理し、
      * フォルダIDとそれに対応する名前や選択状態のマップを構築します。
      *
-     * @param \Illuminate\Http\Request $request 入力やルートデータを含むリクエスト。
+     * @param  \Illuminate\Http\Request  $request  入力やルートデータを含むリクエスト。
      */
     public function mount(request $request)
     {
@@ -55,7 +57,7 @@ class Edit extends Component
         }
 
         $ledgerDefine = new LedgerDefine;
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrNew();
 
@@ -64,16 +66,16 @@ class Edit extends Component
         $this->createDescription = $this->ledgerDefineRecord->create_description;
         $this->listDescription = $this->ledgerDefineRecord->list_description;
         $this->detailDescription = $this->ledgerDefineRecord->detail_description;
-        $this->workflow_enabled = (bool)$this->ledgerDefineRecord->workflow_enabled;
+        $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
 
         $this->folderRecords = [];
         $nodes = $this->folderRecords = Folder::get()->toTree();
         $traverse = function ($categories, $prefix = '-') use (&$traverse) {
             foreach ($categories as $category) {
-                $category->title = $prefix . ' ' . $category->title;
+                $category->title = $prefix.' '.$category->title;
                 $this->folderRecords[] = $category;
 
-                $traverse($category->children, $prefix . '-');
+                $traverse($category->children, $prefix.'-');
             }
         };
 
@@ -96,7 +98,7 @@ class Edit extends Component
     public function store(): void
     {
         // --- ステップ5: ワークフロー設定変更時の処理 ---
-        $originalWorkflowEnabled = (bool)$this->ledgerDefineRecord->getOriginal('workflow_enabled');
+        $originalWorkflowEnabled = (bool) $this->ledgerDefineRecord->getOriginal('workflow_enabled');
         $newWorkflowEnabled = $this->workflow_enabled;
 
         // 有効 -> 無効 に変更された場合の処理
@@ -106,20 +108,20 @@ class Edit extends Component
             try {
                 $count = Ledger::where('ledger_define_id', $this->ledgerDefineRecord->id)
                     ->whereIn('status', [
-//                        WorkflowStatus::DRAFT,
+                        //                        WorkflowStatus::DRAFT,
                         WorkflowStatus::PENDING_INSPECTION,
-                        WorkflowStatus::PENDING_APPROVAL
+                        WorkflowStatus::PENDING_APPROVAL,
                     ])
                     ->update([
                         'status' => WorkflowStatus::NONE,
-//                        'inspector_id' => null, // 担当者等もクリア
-//                        'approver_id' => null,
-//                        'requested_at' => null,
-//                        'inspected_at' => null,
-//                        'approved_at' => null,
-//                        'returned_at' => null,
-//                        'comments' => null,
-                        'modifier_id' => auth()->id() // 操作者を記録
+                        //                        'inspector_id' => null, // 担当者等もクリア
+                        //                        'approver_id' => null,
+                        //                        'requested_at' => null,
+                        //                        'inspected_at' => null,
+                        //                        'approved_at' => null,
+                        //                        'returned_at' => null,
+                        //                        'comments' => null,
+                        'modifier_id' => auth()->id(), // 操作者を記録
                     ]);
                 if ($count > 0) {
                     $this->info(__('ledger.define.workflow_disabled_and_reset', ['count' => $count])); // メッセージ表示
@@ -127,9 +129,10 @@ class Edit extends Component
                     // event(new WorkflowDisabledEvent($this->ledgerDefineRecord));
                 }
             } catch (\Exception $e) {
-                Log::error("Failed to reset workflow status for LedgerDefine ID: {$this->ledgerDefineRecord->id}. Error: " . $e->getMessage());
+                Log::error("Failed to reset workflow status for LedgerDefine ID: {$this->ledgerDefineRecord->id}. Error: ".$e->getMessage());
                 // エラー処理 (トースト表示など)
                 $this->error(__('messages.error.generic'));
+
                 return; // 保存処理を中断
             }
         }

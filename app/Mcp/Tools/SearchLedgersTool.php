@@ -2,18 +2,18 @@
 
 namespace App\Mcp\Tools;
 
-use Illuminate\Support\Facades\Auth;
-use Laravel\Mcp\Request;
+use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Services\LedgerService;
+use Carbon\Carbon;
 use Illuminate\JsonSchema\JsonSchema;
+use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
-use Laravel\Sanctum\PersonalAccessToken;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log; // 追加
 
 class SearchLedgersTool extends Tool
 {
+    use AuthenticatedMcpTool;
+
     /**
      * The tool's description.
      */
@@ -33,37 +33,30 @@ MARKDOWN;
      */
     public function handle(Request $request): Response
     {
-        $token = getenv('MCP_AUTH_TOKEN'); // 環境変数からトークンを取得
-
-        if (! $token) {
-            return Response::error('Authentication token not provided.', 401);
+        // 認証チェック
+        $user = $this->authenticateOrError();
+        if ($user instanceof Response) {
+            return $user; // エラーレスポンスをそのまま返す
         }
 
-        // トークンからユーザーを検索
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (! $accessToken || ! $accessToken->tokenable) {
-            return Response::error('Invalid authentication token.', 401);
-        }
-
-        $user = $accessToken->tokenable; // トークンに紐づくユーザー
-
-        // 認証済みユーザーとして設定（ArtisanコンテキストでAuth::user()が機能しない場合のため）
-        Auth::setUser($user);
         $parameters = $request->toArray();
         $format = $parameters['format'] ?? 'raw';
 
         // created_from と created_to を結合して created_between を作成
         if (isset($parameters['created_from']) && isset($parameters['created_to'])) {
-            $parameters['created_between'] = $parameters['created_from'] . ',' . $parameters['created_to'];
+            $parameters['created_between'] = $parameters['created_from'].','.$parameters['created_to'];
             unset($parameters['created_from']);
             unset($parameters['created_to']);
         }
 
-        $results = $this->ledgerService->searchLedgersForApi(
-            user: $user, // 認証済みユーザーを直接渡す
-            params: $parameters,
-        );
+        try {
+            $results = $this->ledgerService->searchLedgersForApi(
+                user: $user, // 認証済みユーザーを直接渡す
+                params: $parameters,
+            );
+        } catch (\Exception $e) {
+            return Response::error("Search failed: {$e->getMessage()}");
+        }
 
         if ($format === 'summary') {
             $ledgers = collect($results['ledgers'])->map(function ($ledger) {
@@ -87,6 +80,7 @@ MARKDOWN;
                     'ステータス' => $statusDisplay,
                     '更新日時' => $updatedAtFormatted,
                 ];
+
                 return $ledger;
             });
 
@@ -104,7 +98,6 @@ MARKDOWN;
 
         return Response::json($results);
     }
-
 
     /**
      * Get the tool's input schema.

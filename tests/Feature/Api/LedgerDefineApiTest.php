@@ -45,12 +45,12 @@ test('ledger defines endpoint returns correct structure and data', function () {
                             'name',
                             'type',
                             'options',
-                        ]
+                        ],
                     ],
-                ]
-            ]
+                ],
+            ],
         ])
         ->assertJsonFragment([
-            'name' => 'Test Define 1'
+            'name' => 'Test Define 1',
         ]);
 });

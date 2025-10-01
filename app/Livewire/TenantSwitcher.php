@@ -2,24 +2,27 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Tenant;
 use App\Services\TenantAccessService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class TenantSwitcher extends Component
 {
     use InitializesTenantContext;
 
     public Collection $tenants;
+
     public ?\App\Models\Tenant $currentTenant;
+
     public ?int $currentFolderId = null;
+
     public $selectedFolderIds;
+
     public bool $showFolders = true;
 
     public function mount(TenantAccessService $tenantAccessService): void
@@ -50,19 +53,14 @@ class TenantSwitcher extends Component
         $this->initializeTenantsMenu($tenantAccessService);
     }
 
-
     public function render()
     {
         return view('livewire.tenant-switcher');
     }
 
-    /**
-     * @param TenantAccessService $tenantAccessService
-     * @return void
-     */
     public function initializeTenantsMenu(TenantAccessService $tenantAccessService): void
     {
-// Tenancy::central() を使って、中央のコンテキストでテナント情報を取得
+        // Tenancy::central() を使って、中央のコンテキストでテナント情報を取得
         tenancy()->central(function () use ($tenantAccessService) {
             $allTenants = Tenant::all();
             $accessibleTenantIds = $tenantAccessService->getAccessibleTenants(Auth::user())->pluck('id')->toArray();
@@ -76,6 +74,7 @@ class TenantSwitcher extends Component
                         $tenant->folders_tree = Folder::get()->toTree()->toArray();
                     });
                 }
+
                 return $tenant;
             });
         });

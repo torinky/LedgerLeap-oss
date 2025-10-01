@@ -2,11 +2,6 @@
 
 namespace Tests\Feature\Livewire\Common;
 
-use Tests\TestCase;
-
-use PHPUnit\Framework\Attributes\Test;
-
-
 use App\Livewire\Common\ActivityHistoryDisplay;
 use App\Models\CustomActivity;
 use App\Models\Folder;
@@ -15,13 +10,14 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
-
-
+use Tests\TestCase;
 
 class ActivityHistoryDisplayTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     protected function setUp(): void
@@ -36,10 +32,10 @@ class ActivityHistoryDisplayTest extends TestCase
         Permission::create(['name' => 'viewAny']);
 
         // ユーザーの作成
-        $this->adminUser = User::factory()->create(['email' => 'admin_' . uniqid() . '@example.com']);
+        $this->adminUser = User::factory()->create(['email' => 'admin_'.uniqid().'@example.com']);
         $this->adminUser->givePermissionTo('viewAny');
 
-        $this->generalUser = User::factory()->create(['email' => 'general_' . uniqid() . '@example.com']);
+        $this->generalUser = User::factory()->create(['email' => 'general_'.uniqid().'@example.com']);
 
         // テストデータの階層構造を作成
         $this->folderA = Folder::factory()->create(['title' => 'Folder A']);
@@ -97,7 +93,7 @@ class ActivityHistoryDisplayTest extends TestCase
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Folder',
-            'resourceId' => $this->folderA->id
+            'resourceId' => $this->folderA->id,
         ])->assertViewHas('activities', function ($activities) {
             $ids = $activities->pluck('id');
             $this->assertContains($this->activityA->id, $ids);
@@ -105,6 +101,7 @@ class ActivityHistoryDisplayTest extends TestCase
             $this->assertContains($this->activityC->id, $ids);
             $this->assertContains($this->activityD->id, $ids);
             $this->assertNotContains($this->activityE->id, $ids);
+
             return true;
         });
     }
@@ -116,13 +113,14 @@ class ActivityHistoryDisplayTest extends TestCase
 
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'LedgerDefine',
-            'resourceId' => $this->defineC->id
+            'resourceId' => $this->defineC->id,
         ])->assertViewHas('activities', function ($activities) {
             $ids = $activities->pluck('id');
             $this->assertContains($this->activityC->id, $ids);
             $this->assertContains($this->activityD->id, $ids);
             $this->assertNotContains($this->activityA->id, $ids);
             $this->assertNotContains($this->activityB->id, $ids);
+
             return true;
         });
     }
@@ -135,12 +133,13 @@ class ActivityHistoryDisplayTest extends TestCase
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Ledger',
             'resourceId' => $this->ledgerD->id,
-            'includeRelatedResources' => true
+            'includeRelatedResources' => true,
         ])->assertViewHas('activities', function ($activities) {
             $ids = $activities->pluck('id');
             $this->assertContains($this->activityD->id, $ids);
             $this->assertContains($this->activityC->id, $ids);
             $this->assertContains($this->activityB->id, $ids);
+
             return true;
         });
     }
@@ -153,12 +152,13 @@ class ActivityHistoryDisplayTest extends TestCase
         Livewire::test(ActivityHistoryDisplay::class, [
             'resourceType' => 'Ledger',
             'resourceId' => $this->ledgerD->id,
-            'includeRelatedResources' => false
+            'includeRelatedResources' => false,
         ])->assertViewHas('activities', function ($activities) {
             $ids = $activities->pluck('id');
             $this->assertContains($this->activityD->id, $ids);
             $this->assertNotContains($this->activityC->id, $ids);
             $this->assertNotContains($this->activityB->id, $ids);
+
             return true;
         });
     }
@@ -172,7 +172,8 @@ class ActivityHistoryDisplayTest extends TestCase
             ->set('filterByUserId', $this->generalUser->id)
             ->assertViewHas('activities', function ($activities) {
                 // generalUserによるログは2件のはず
-                $this->assertTrue($activities->every(fn($act) => $act->causer_id === $this->generalUser->id));
+                $this->assertTrue($activities->every(fn ($act) => $act->causer_id === $this->generalUser->id));
+
                 return true;
             });
     }
@@ -186,8 +187,9 @@ class ActivityHistoryDisplayTest extends TestCase
             ->set('filterByEvent', 'created')
             ->assertViewHas('activities', function ($activities) {
                 // createdイベントを持つログのみが表示される
-                $this->assertTrue($activities->every(fn($act) => $act->event === 'created'));
+                $this->assertTrue($activities->every(fn ($act) => $act->event === 'created'));
                 $this->assertNotContains($this->activityB->id, $activities->pluck('id')); // updated event
+
                 return true;
             });
     }
@@ -207,6 +209,7 @@ class ActivityHistoryDisplayTest extends TestCase
             ->assertViewHas('activities', function ($activities) use ($futureActivity) {
                 $this->assertContains($futureActivity->id, $activities->pluck('id'));
                 $this->assertCount(1, $activities);
+
                 return true;
             });
     }
@@ -235,7 +238,8 @@ class ActivityHistoryDisplayTest extends TestCase
         Livewire::test(ActivityHistoryDisplay::class, ['hiddenColumns' => ['subject']])
             ->assertViewHas('headers', function ($headers) {
                 $keys = collect($headers)->pluck('key');
-                return !$keys->contains('subject');
+
+                return ! $keys->contains('subject');
             });
     }
 

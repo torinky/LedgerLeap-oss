@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Support\Facades\Log;
-use Stancl\Tenancy\Database\Models\Domain;
 use App\Models\Tenant;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
+use Stancl\Tenancy\Database\Models\Domain;
 
 class SetupTenant extends Command
 {
@@ -27,6 +27,7 @@ class SetupTenant extends Command
 
     /**
      * Execute the console command.
+     *
      * @throws Exception
      */
     public function handle(): int
@@ -34,17 +35,19 @@ class SetupTenant extends Command
         $tenantId = $this->argument('tenant_id');
         $name = $this->argument('name');
         $adminEmail = $this->argument('admin_email');
-        $domain = $tenantId . '.localhost';
+        $domain = $tenantId.'.localhost';
 
         // 1. テナントIDの存在チェック
         if (Tenant::find($tenantId)) {
             $this->error("Tenant with ID '{$tenantId}' already exists.");
+
             return 1;
         }
 
         // 2. ドメインの存在チェック
         if (Domain::where('domain', $domain)->exists()) {
             $this->error("Domain '{$domain}' already exists.");
+
             return 1;
         }
 
@@ -65,19 +68,19 @@ class SetupTenant extends Command
             $this->info("Tenancy initialized for '{$tenantId}'.");
 
             // 5. マイグレーションとシーディングの実行
-            $this->info("Running migrations...");
+            $this->info('Running migrations...');
             Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id], '--force' => true]);
-            $this->info("Migrations completed.");
+            $this->info('Migrations completed.');
 
-            $this->info("Running seeding...");
+            $this->info('Running seeding...');
             activity()->disableLogging();
             Artisan::call('tenants:seed', [
                 '--tenants' => [$tenant->id],
                 '--class' => 'DatabaseSeeder',
-                '--force' => true
+                '--force' => true,
             ]);
             activity()->enableLogging();
-            $this->info("Seeding completed.");
+            $this->info('Seeding completed.');
 
             $this->info('Setting up initial data for the tenant...');
 
@@ -87,8 +90,9 @@ class SetupTenant extends Command
                 return \App\Models\User::where('email', $adminEmail)->first();
             });
 
-            if (!$user) {
+            if (! $user) {
                 $this->error("Admin user with email '{$adminEmail}' not found in the central database. The tenant was created, but no admin was assigned.");
+
                 return 1; // テナントは作成されたが、管理者がいない状態で終了
             }
 
@@ -96,11 +100,12 @@ class SetupTenant extends Command
             $rootFolder = $tenant->run(function () use ($user) {
                 $this->info('Finding root folder...');
                 // NodeTraitのwhereIsRoot()メソッドでルートフォルダを取得
-                Log::info('Setting creator_id to: ' . $user->id);
+                Log::info('Setting creator_id to: '.$user->id);
+
                 return \App\Models\Folder::whereIsRoot()->first();
             });
 
-            if (!$rootFolder) {
+            if (! $rootFolder) {
                 throw new Exception('Root folder not found after seeding.');
             }
 
@@ -112,7 +117,7 @@ class SetupTenant extends Command
             if ($superAdminRole) {
                 // RoleFolderPermission の作成はテナントのコンテキストで行う
                 $tenant->run(function () use ($rootFolder, $user, $superAdminRole) {
-                    $this->info("Granting Super Admin access to the root folder...");
+                    $this->info('Granting Super Admin access to the root folder...');
                     \App\Models\RoleFolderPermission::create([
                         'role_id' => $superAdminRole->id,
                         'folder_id' => $rootFolder->id,
@@ -129,17 +134,18 @@ class SetupTenant extends Command
             $this->info('Admin user setup completed.');
 
         } catch (Exception $e) {
-            $this->error("An error occurred: " . $e->getMessage());
+            $this->error('An error occurred: '.$e->getMessage());
             // ロールバック処理
             if ($tenant) {
                 $tenant->delete();
                 $this->warn("Tenant '{$tenantId}' has been rolled back.");
             }
+
             return 1;
         }
 
         $this->info("All setup processes for tenant '{$tenantId}' completed successfully.");
-        $this->info("Tenant data: " . json_encode($tenant->data));
+        $this->info('Tenant data: '.json_encode($tenant->data));
 
         return Command::SUCCESS;
     }

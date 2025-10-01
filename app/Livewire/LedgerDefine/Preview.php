@@ -16,12 +16,12 @@ class Preview extends Component
 
     public $backgroundImages = [];
 
-    public $descriptionGroup = "createDescription";
+    public $descriptionGroup = 'createDescription';
 
     public function mount(request $request)
     {
         $ledgerDefine = new LedgerDefine;
-        $this->ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $this->ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
         $this->initBackgroundImages();
@@ -33,6 +33,7 @@ class Preview extends Component
     {
         $this->descriptionGroup = $name;
     }
+
     #[On('ledgerDefineRecordStored')]
     public function redraw()
     {
@@ -45,9 +46,9 @@ class Preview extends Component
 
     public function render()
     {
-/*        Log::debug('LedgerDefine Preview: create_description', ['content' => $this->ledgerDefineRecord->create_description]);
-        Log::debug('LedgerDefine Preview: list_description', ['content' => $this->ledgerDefineRecord->list_description]);
-        Log::debug('LedgerDefine Preview: detail_description', ['content' => $this->ledgerDefineRecord->detail_description]);*/
+        /*        Log::debug('LedgerDefine Preview: create_description', ['content' => $this->ledgerDefineRecord->create_description]);
+                Log::debug('LedgerDefine Preview: list_description', ['content' => $this->ledgerDefineRecord->list_description]);
+                Log::debug('LedgerDefine Preview: detail_description', ['content' => $this->ledgerDefineRecord->detail_description]);*/
 
         return view('livewire.ledger-define.preview');
     }
@@ -68,7 +69,7 @@ class Preview extends Component
                     return null;
                 }
 
-                return asset('storage/' . $value['path']);
+                return asset('storage/'.$value['path']);
             })->toArray();
     }
 }

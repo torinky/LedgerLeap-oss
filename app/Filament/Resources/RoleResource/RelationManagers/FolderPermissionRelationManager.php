@@ -1,13 +1,16 @@
 <?php
 
 // ★ Namespace を適切に変更
+
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\RoleFolderPermission;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Exception;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -17,17 +20,15 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-use Exception;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Facades\Log;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\Select;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 // ★ クラス名を変更
 class FolderPermissionRelationManager extends RelationManager
@@ -81,7 +82,7 @@ class FolderPermissionRelationManager extends RelationManager
                         $component->state($newState);
                     })
                     ->columns(2)
-                    ->bulkToggleable()
+                    ->bulkToggleable(),
                 // ->required() // 権限なしを許容する場合
             ]);
     }
@@ -93,7 +94,7 @@ class FolderPermissionRelationManager extends RelationManager
             // ★ クエリでアクセス権限レコードのみをフィルタリング
             ->query(function (EloquentBuilder $query) {
                 // ★ setModel() を復活させ、モデルクラスを明示的に指定
-                $query->setModel(new RoleFolderPermission());
+                $query->setModel(new RoleFolderPermission);
 
                 // ★ 現在のロール（親レコード）を取得
                 $role = $this->getOwnerRecord();
@@ -105,12 +106,13 @@ class FolderPermissionRelationManager extends RelationManager
                 // Folder リレーションを Eager Loading
                 $query->with(['folder:id,title']);
                 $query->with(['folder.tenant']);
+
                 return $query;
             })
             // ★ Grouping を追加してフォルダごとに権限を表示 (推奨)
             ->groups([
                 Group::make('folder.tenant.id') // Group by tenant ID (physical column)
-                ->label(__('ledger.tenant'))
+                    ->label(__('ledger.tenant'))
                     ->collapsible(), // 折りたたみ可能に
 
                 Group::make('folder.title')
@@ -121,14 +123,14 @@ class FolderPermissionRelationManager extends RelationManager
             ->columns([
                 // ★ Folder タイトルはグループヘッダーで表示されるため、カラムとしては不要になる場合がある
                 TextColumn::make('folder.tenant.id') // Use ID as the base for the column
-                ->label(__('ledger.tenant'))
-                    ->formatStateUsing(fn(Model $record): string => $record->folder?->tenant?->name ?: ($record->folder?->tenant?->id ?? '-')), // Explicitly get name or ID
+                    ->label(__('ledger.tenant'))
+                    ->formatStateUsing(fn (Model $record): string => $record->folder?->tenant?->name ?: ($record->folder?->tenant?->id ?? '-')), // Explicitly get name or ID
                 TextColumn::make('folder.title'),
                 TextColumn::make('permission')
                     ->label(__('permission.title'))
                     ->badge()
-                    ->color(fn(?FolderPermissionType $state): string => $state?->getColor() ?? 'gray')
-                    ->formatStateUsing(fn(?FolderPermissionType $state): string => $state?->getLabel() ?? '-')
+                    ->color(fn (?FolderPermissionType $state): string => $state?->getColor() ?? 'gray')
+                    ->formatStateUsing(fn (?FolderPermissionType $state): string => $state?->getLabel() ?? '-')
 //                    ->searchable() // permission の value で検索
                     ->sortable(),
             ])
@@ -151,6 +153,7 @@ class FolderPermissionRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereHas('folder', function (EloquentBuilder $query) use ($data) {
                             $query->where('tenant_id', $data['value']);
                         });
@@ -169,6 +172,7 @@ class FolderPermissionRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereIn('folder_id', $data['value']);
                     })
                     ->label(__('ledger.folder.title')),
@@ -184,6 +188,7 @@ class FolderPermissionRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereIn('permission', $data['value']);
                     })
                     ->label(__('permission.title')),
@@ -213,11 +218,12 @@ class FolderPermissionRelationManager extends RelationManager
                         SelectTree::make('folder_id')
                             ->label(__('ledger.folder.title'))
                             ->relationship(relationship: 'folder', titleAttribute: 'display_title', parentAttribute: 'parent_id',
-                                modifyQueryUsing: fn(EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
                                     $selectedTenantId = $get('tenant_id');
                                     if ($selectedTenantId) {
                                         $query->where('tenant_id', $selectedTenantId);
                                     }
+
                                     return $query->with('tenant')->orderBy('_lft');
                                 }))
                             ->required()
@@ -225,7 +231,7 @@ class FolderPermissionRelationManager extends RelationManager
                             ->enableBranchNode()
                             ->defaultOpenLevel(1),
                         CheckboxList::make('permissions') // 権限は複数選択
-                        ->label(__('permission.access_permissions'))
+                            ->label(__('permission.access_permissions'))
                             ->options(FolderPermissionType::asAccessSelectArray())
                             ->live()
                             ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, $state) {
@@ -233,7 +239,7 @@ class FolderPermissionRelationManager extends RelationManager
                                 $component->state($newState);
                             })
                             ->columns(2)
-                            ->bulkToggleable()
+                            ->bulkToggleable(),
                         // ->required()
                     ])
                     ->action(
@@ -266,7 +272,7 @@ class FolderPermissionRelationManager extends RelationManager
                                             'updated_at' => $now,
                                         ];
                                     }
-                                    if (!empty($recordsToInsert)) {
+                                    if (! empty($recordsToInsert)) {
                                         RoleFolderPermission::insert($recordsToInsert);
                                     }
                                 });
@@ -282,139 +288,140 @@ class FolderPermissionRelationManager extends RelationManager
                                     ->body($e->getMessage())
                                     ->danger()
                                     ->send();
-                            Log::error('Failed to create folder permissions: ' . $e->getMessage(), ['data' => $data, 'exception' => $e]);
-                        }
-                        Artisan::call('cache:clear');
-                        $this->dispatch('permissions-changed');
-                    }),
+                                Log::error('Failed to create folder permissions: '.$e->getMessage(), ['data' => $data, 'exception' => $e]);
+                            }
+                            Artisan::call('cache:clear');
+                            $this->dispatch('permissions-changed');
+                        }),
             ])
             ->actions([
                 // ★ 編集アクション: モーダルで権限チェックボックスを表示
                 EditAction::make()
-                    ->label(__('permission.edit_permission'))
-                    ->modalHeading(fn(RoleFolderPermission $record) => __('permission.edit_folder_permission_modal_heading', ['folder' => $record->folder?->title]))
-                    // ★ mountUsing で現在の権限をフォームにロード
-                    ->mountUsing(function (Form $form, RoleFolderPermission $record) {
-                        // 同じフォルダの他の権限レコードも取得する必要がある
-                        $role = $this->getOwnerRecord();
-                        $currentPermissions = RoleFolderPermission::where('role_id', $role->id)
-                            ->where('folder_id', $record->folder_id) // record から folder_id を取得
-                            ->whereIn('permission', FolderPermissionType::accessPermissionValues())
-                            ->pluck('permission')
-                            ->all(); // semicolon
-                        $form->fill(['permissions' => $currentPermissions]);
-                    })
-                    // ★ form() メソッドで定義したフォームスキーマを使用
-                    ->form(fn(Form $form) => $this->form($form))
-                    // ★ using で保存処理 (Create と同様)
-                    ->using(function (Model $record, array $data): Model { // $record は RoleFolderPermission
-                        $role = $this->getOwnerRecord();
+                        ->label(__('permission.edit_permission'))
+                        ->modalHeading(fn (RoleFolderPermission $record) => __('permission.edit_folder_permission_modal_heading', ['folder' => $record->folder?->title]))
+                        // ★ mountUsing で現在の権限をフォームにロード
+                        ->mountUsing(function (Form $form, RoleFolderPermission $record) {
+                            // 同じフォルダの他の権限レコードも取得する必要がある
+                            $role = $this->getOwnerRecord();
+                            $currentPermissions = RoleFolderPermission::where('role_id', $role->id)
+                                ->where('folder_id', $record->folder_id) // record から folder_id を取得
+                                ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+                                ->pluck('permission')
+                                ->all(); // semicolon
+                            $form->fill(['permissions' => $currentPermissions]);
+                        })
+                        // ★ form() メソッドで定義したフォームスキーマを使用
+                        ->form(fn (Form $form) => $this->form($form))
+                        // ★ using で保存処理 (Create と同様)
+                        ->using(function (Model $record, array $data): Model { // $record は RoleFolderPermission
+                            $role = $this->getOwnerRecord();
 
-                        $folderId = $record->folder_id; // record から folder_id を取得
-                        $newPermissions = $this->applyPermissionHierarchy($data['permissions'] ?? []);
-                        $modifierId = auth()->id();
-                        $now = now();
+                            $folderId = $record->folder_id; // record から folder_id を取得
+                            $newPermissions = $this->applyPermissionHierarchy($data['permissions'] ?? []);
+                            $modifierId = auth()->id();
+                            $now = now();
 
-                        try {
-                            DB::transaction(function () use ($role, $folderId, $newPermissions, $modifierId, $now) {
-                                // 既存のアクセス権限を削除
-                                RoleFolderPermission::where('role_id', $role->id)
-                                    ->where('folder_id', $folderId)
-                                    ->whereIn('permission', FolderPermissionType::accessPermissionValues())
-                                    ->delete();
-                                // 新しい権限を登録
-                                $recordsToInsert = [];
-                                foreach ($newPermissions as $permissionValue) {
-                                    $recordsToInsert[] = [
-                                        'role_id' => $role->id,
-                                        'folder_id' => $folderId,
-                                        'permission' => $permissionValue,
-                                        'modifier_id' => $modifierId,
-                                        'created_at' => $now,
-                                        'updated_at' => $now,
-                                    ];
-                                }
-                                if (!empty($recordsToInsert)) {
-                                    RoleFolderPermission::insert($recordsToInsert);
-                                }
-                            });
-                            Notification::make()
-                                ->title(__('permission.update_folder_permissions_success'))
-                                ->success()
-                                ->send();
+                            try {
+                                DB::transaction(function () use ($role, $folderId, $newPermissions, $modifierId, $now) {
+                                    // 既存のアクセス権限を削除
+                                    RoleFolderPermission::where('role_id', $role->id)
+                                        ->where('folder_id', $folderId)
+                                        ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+                                        ->delete();
+                                    // 新しい権限を登録
+                                    $recordsToInsert = [];
+                                    foreach ($newPermissions as $permissionValue) {
+                                        $recordsToInsert[] = [
+                                            'role_id' => $role->id,
+                                            'folder_id' => $folderId,
+                                            'permission' => $permissionValue,
+                                            'modifier_id' => $modifierId,
+                                            'created_at' => $now,
+                                            'updated_at' => $now,
+                                        ];
+                                    }
+                                    if (! empty($recordsToInsert)) {
+                                        RoleFolderPermission::insert($recordsToInsert);
+                                    }
+                                });
+                                Notification::make()
+                                    ->title(__('permission.update_folder_permissions_success'))
+                                    ->success()
+                                    ->send();
 
-                        } catch (Exception $e) {
-                            Notification::make()
-                                ->title(__('permission.error'))
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                            Log::error('Failed to update folder permissions: ' . $e->getMessage(), ['record_id' => $record->id, 'data' => $data, 'exception' => $e]);
-                            // エラーを再スローするかどうか
-                        }
-                        // 変更されたレコードを返す必要がある場合がある
-                        // ただし、複数のレコードが変更されている
-                        $this->dispatch('permissions-changed');
-                        Artisan::call('cache:clear');
-                        return $record; // 一旦元のレコードを返す
-                    }),
+                            } catch (Exception $e) {
+                                Notification::make()
+                                    ->title(__('permission.error'))
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                                Log::error('Failed to update folder permissions: '.$e->getMessage(), ['record_id' => $record->id, 'data' => $data, 'exception' => $e]);
+                                // エラーを再スローするかどうか
+                            }
+                            // 変更されたレコードを返す必要がある場合がある
+                            // ただし、複数のレコードが変更されている
+                            $this->dispatch('permissions-changed');
+                            Artisan::call('cache:clear');
+
+                            return $record; // 一旦元のレコードを返す
+                        }),
                 // ★ 削除アクション: 特定の権限レコードを削除
                 DeleteAction::make()
-                    ->successNotificationTitle(__('permission.delete_folder_permission_success'))
-                    ->failureNotificationTitle(__('permission.delete_folder_permission_failed'))
-                    ->using(function (DeleteAction $action, Model $record) {
-                        try {
-                            $record->delete();
-                            // 成功通知
-                        } catch (Exception $e) {
-                            Log::error('Failed to delete folder permission: ' . $e->getMessage(), ['record_id' => $record->id, 'exception' => $e]);
-                            $action->failure();
-                        }
-                        Artisan::call('cache:clear');
-                        $this->dispatch('permissions-changed');
-                    }),
-                // ★ 全権限解除アクション (フォルダ単位)
-                Action::make('detach_folder_permissions')
-                    ->label(__('permission.detach_folder_permissions'))
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading(fn(RoleFolderPermission $record) => __('permission.detach_folder_permissions_modal_heading', ['folder' => $record->folder?->title]))
-                    ->modalDescription(__('permission.detach_folder_permissions_modal_description'))
-                    ->action(function (RoleFolderPermission $record) {
-                        $role = $this->getOwnerRecord();
-                        RoleFolderPermission::where('role_id', $role->id)
-                            ->where('folder_id', $record->folder_id) // record から folder_id
-                            ->whereIn('permission', FolderPermissionType::accessPermissionValues())
-                            ->delete();
-                        Notification::make()
-                            ->title(__('permission.detach_folder_permissions_success'))
-                            ->success()
-                            ->send();
-                        Artisan::call('cache:clear');
-                        $this->dispatch('permissions-changed');
-                    }),
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    // ★ 一括削除アクション (選択された権限レコードを削除)
-                    DeleteBulkAction::make()
-                        ->successNotificationTitle(__('permission.bulk_delete_folder_permissions_success'))
-                        ->failureNotificationTitle(__('permission.bulk_delete_folder_permissions_failed'))
-                        ->using(function (DeleteBulkAction $action, EloquentCollection $records) {
+                        ->successNotificationTitle(__('permission.delete_folder_permission_success'))
+                        ->failureNotificationTitle(__('permission.delete_folder_permission_failed'))
+                        ->using(function (DeleteAction $action, Model $record) {
                             try {
-                                $records->each->delete();
+                                $record->delete();
                                 // 成功通知
                             } catch (Exception $e) {
-                                Log::error('Failed to bulk delete folder permissions: ' . $e->getMessage(), [
-                                    'record_ids' => $records->pluck('id')->toArray(),
-                                    'exception' => $e,
-                                ]);
+                                Log::error('Failed to delete folder permission: '.$e->getMessage(), ['record_id' => $record->id, 'exception' => $e]);
                                 $action->failure();
                             }
                             Artisan::call('cache:clear');
                             $this->dispatch('permissions-changed');
                         }),
+                // ★ 全権限解除アクション (フォルダ単位)
+                Action::make('detach_folder_permissions')
+                        ->label(__('permission.detach_folder_permissions'))
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading(fn (RoleFolderPermission $record) => __('permission.detach_folder_permissions_modal_heading', ['folder' => $record->folder?->title]))
+                        ->modalDescription(__('permission.detach_folder_permissions_modal_description'))
+                        ->action(function (RoleFolderPermission $record) {
+                            $role = $this->getOwnerRecord();
+                            RoleFolderPermission::where('role_id', $role->id)
+                                ->where('folder_id', $record->folder_id) // record から folder_id
+                                ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+                                ->delete();
+                            Notification::make()
+                                ->title(__('permission.detach_folder_permissions_success'))
+                                ->success()
+                                ->send();
+                            Artisan::call('cache:clear');
+                            $this->dispatch('permissions-changed');
+                        }),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                        // ★ 一括削除アクション (選択された権限レコードを削除)
+                        DeleteBulkAction::make()
+                            ->successNotificationTitle(__('permission.bulk_delete_folder_permissions_success'))
+                            ->failureNotificationTitle(__('permission.bulk_delete_folder_permissions_failed'))
+                            ->using(function (DeleteBulkAction $action, EloquentCollection $records) {
+                                try {
+                                    $records->each->delete();
+                                    // 成功通知
+                                } catch (Exception $e) {
+                                    Log::error('Failed to bulk delete folder permissions: '.$e->getMessage(), [
+                                        'record_ids' => $records->pluck('id')->toArray(),
+                                        'exception' => $e,
+                                    ]);
+                                    $action->failure();
+                                }
+                                Artisan::call('cache:clear');
+                                $this->dispatch('permissions-changed');
+                            }),
                 ]),
             ]);
     }
@@ -424,11 +431,11 @@ class FolderPermissionRelationManager extends RelationManager
      */
     protected function applyPermissionHierarchy($selectedPermissions): array
     {
-        if (!is_array($selectedPermissions)) {
+        if (! is_array($selectedPermissions)) {
             return [];
         }
         $finalPermissions = $selectedPermissions;
-//        $finalPermissionsEnums = [];
+        //        $finalPermissionsEnums = [];
         foreach ($selectedPermissions as $permissionKey => $permissionValue) {
             if ($permissionValue instanceof FolderPermissionType) {
                 $permissionEnum = $permissionValue;
@@ -437,18 +444,20 @@ class FolderPermissionRelationManager extends RelationManager
             } else {
                 $permissionEnum = FolderPermissionType::tryFrom($permissionValue);
             }
-//            $finalPermissionsEnums[$permissionValue] = $permissionEnum;
+            //            $finalPermissionsEnums[$permissionValue] = $permissionEnum;
 
             if ($permissionEnum && isset(FolderPermissionType::HIERARCHY[$permissionValue])) {
                 $finalPermissions = array_merge($finalPermissions, FolderPermissionType::HIERARCHY[$permissionValue]);
             }
         }
-//        return $finalPermissionsEnums;
+        //        return $finalPermissionsEnums;
         // Filter out notification types just in case
         $accessOnlyPermissions = array_filter($finalPermissions, function ($p) {
             $enum = FolderPermissionType::tryFrom($p);
+
             return $enum && $enum->isAccessType();
         });
+
         return array_unique($accessOnlyPermissions);
     }
 }

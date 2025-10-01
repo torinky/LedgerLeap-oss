@@ -2,22 +2,23 @@
 
 namespace App\Services\Ledger;
 
+use App\Helpers\AttachedFilePathHelper;
 use App\Models\ColumnDefine;
+use App\Models\Ledger;
+use App\Services\AutoLinkService;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
-use Illuminate\Support\Collection;
-use App\Helpers\AttachedFilePathHelper;
-
-use App\Services\AutoLinkService;
-use App\Models\Ledger;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class ColumnHtmlService
 {
     private AutoLinkService $autoLinkService;
+
     private MarkdownRenderer $markdownRenderer;
+
     private HtmlProcessorService $htmlProcessorService;
 
     private ?string $tenantId = null;
@@ -37,8 +38,11 @@ class ColumnHtmlService
     private $id = '';
 
     private $nameBase = '';
+
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
+
     public const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
+
     public const SELECT_BADGE_CLASS_NAME = 'badge badge-neutral badge-outline py-4 mx-1 my-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
@@ -52,8 +56,7 @@ class ColumnHtmlService
         AutoLinkService $autoLinkService,
         MarkdownRenderer $markdownRenderer,
         HtmlProcessorService $htmlProcessorService
-    )
-    {
+    ) {
         $this->autoLinkService = $autoLinkService;
         $this->markdownRenderer = $markdownRenderer;
         $this->htmlProcessorService = $htmlProcessorService;
@@ -62,15 +65,14 @@ class ColumnHtmlService
     /**
      * カラム定義データをもとに値をHTMLとして表示する
      *
-     * @param object|array $columnDefineData ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
-     * @param mixed $initialValue 初期値（カラムの値）
-     * @param bool $canView 閲覧権限があるかどうか（falseの場合は空文字を返す）
-     * @param array $attrs 追加属性（HTML属性など）
-     * @param string $idPrefix id属性のプレフィックス
-     * @param bool $asCreate 新規作成モードかどうか
-     * @param Ledger|null $record 現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
-     * @param string|null $highlight ハイライトするキーワード
-     * @param string|null $tenantId
+     * @param  object|array  $columnDefineData  ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
+     * @param  mixed  $initialValue  初期値（カラムの値）
+     * @param  bool  $canView  閲覧権限があるかどうか（falseの場合は空文字を返す）
+     * @param  array  $attrs  追加属性（HTML属性など）
+     * @param  string  $idPrefix  id属性のプレフィックス
+     * @param  bool  $asCreate  新規作成モードかどうか
+     * @param  Ledger|null  $record  現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
+     * @param  string|null  $highlight  ハイライトするキーワード
      * @return HtmlString 生成されたHTML文字列
      */
     public function show(
@@ -83,9 +85,8 @@ class ColumnHtmlService
         ?Ledger $record = null,
         ?string $highlight = null,
         ?string $tenantId = null
-    ): HtmlString
-    {
-        if (!$canView) {
+    ): HtmlString {
+        if (! $canView) {
             return new HtmlString('');
         }
 
@@ -106,7 +107,7 @@ class ColumnHtmlService
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
         } elseif ($type === 'select') {
-            $html =  '<span class="' . self::SELECT_BADGE_CLASS_NAME . '">' .e($this->initialValue). '</span>';
+            $html = '<span class="'.self::SELECT_BADGE_CLASS_NAME.'">'.e($this->initialValue).'</span>';
         } elseif ($type === 'textarea') {
             // 1. MarkdownをHTMLに変換
             $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
@@ -116,7 +117,7 @@ class ColumnHtmlService
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
-            $html = $this->initialValue .' '. $unit;
+            $html = $this->initialValue.' '.$unit;
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
@@ -129,7 +130,7 @@ class ColumnHtmlService
                 $html,
                 function (\DOMText $textNode, \DOMDocument $dom) use ($highlight) {
                     $fragment = $dom->createDocumentFragment();
-                    $parts = preg_split('/(' . preg_quote($highlight, '/') . ')/i', $textNode->nodeValue, -1, PREG_SPLIT_DELIM_CAPTURE);
+                    $parts = preg_split('/('.preg_quote($highlight, '/').')/i', $textNode->nodeValue, -1, PREG_SPLIT_DELIM_CAPTURE);
 
                     foreach ($parts as $part) {
                         if (strcasecmp($part, $highlight) === 0) {
@@ -151,7 +152,7 @@ class ColumnHtmlService
 
         // 最終的なHTMLをラップ
         if ($type === 'textarea') {
-            $html = '<div class="prose max-w-none">' . $html . '</div>';
+            $html = '<div class="prose max-w-none">'.$html.'</div>';
         }
 
         return new HtmlString($html ?? '');
@@ -162,7 +163,7 @@ class ColumnHtmlService
      */
     private function renderArrayValue($type, $values, $options): string
     {
-        if ($type === 'chk' && !empty($options)) {
+        if ($type === 'chk' && ! empty($options)) {
             $displayLabels = [];
             foreach ($values as $key => $value) {
                 if ($value === true && isset($options[$key])) {
@@ -171,14 +172,16 @@ class ColumnHtmlService
                     $displayLabels[] = $key;
                 }
             }
-            return !empty($displayLabels)
-                ? '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayLabels)) . '</span>'
+
+            return ! empty($displayLabels)
+                ? '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayLabels)).'</span>'
                 : '';
         }
 
         if ($type !== 'files') {
             $displayValues = array_filter($values);
-            return '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayValues)) . '</span>';
+
+            return '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayValues)).'</span>';
         }
 
         return empty($values) ? '' : '';
@@ -189,11 +192,11 @@ class ColumnHtmlService
         $this->attrs = $attrs;
         $this->columnDefineData = $columnDefineData;
         $id = $this->getColumnDefineProperty('id');
-        $this->nameBase = 'content[' . $id . ']';
+        $this->nameBase = 'content['.$id.']';
         $this->valueNameBase = $this->nameBase;
         $this->initialValue = $initialValue;
         $this->asCreate = $asCreate;
-        $this->id = $idPrefix . $this->valueNameBase;
+        $this->id = $idPrefix.$this->valueNameBase;
     }
 
     private function getColumnDefineProperty(string $key, $default = null)
@@ -204,12 +207,14 @@ class ColumnHtmlService
         if (is_array($this->columnDefineData) && isset($this->columnDefineData[$key])) {
             return $this->columnDefineData[$key];
         }
+
         return $default;
     }
 
     public function setAttachmentCollection(Collection $attachments): static
     {
         $this->attachments = $attachments;
+
         return $this;
     }
 
@@ -219,12 +224,14 @@ class ColumnHtmlService
             $contents = [];
         }
         $this->attachmentContents = $contents;
+
         return $this;
     }
 
     private function getFileIconClass(string $filename): string
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
+
         return match (strtolower($extension)) {
             'pdf' => 'fa-solid fa-file-pdf',
             'doc', 'docx' => 'fa-solid fa-file-word',
@@ -243,7 +250,7 @@ class ColumnHtmlService
     public function getFileHtml(): string
     {
         $html = '';
-        if (!is_array($this->initialValue) || !isset($this->attachments)) {
+        if (! is_array($this->initialValue) || ! isset($this->attachments)) {
             return $html;
         }
 
@@ -253,7 +260,7 @@ class ColumnHtmlService
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
             $attachment = $this->attachments->get($hashedFilename);
 
-            if (!$attachment) {
+            if (! $attachment) {
                 continue;
             }
 
@@ -281,14 +288,14 @@ HTML;
 
                 if ($attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
                     \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachment->id));
-                    Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: ' . $attachment->id);
+                    Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: '.$attachment->id);
                 }
             }
 
             $hit = isset($attachment->hit) && $attachment->hit == true;
             $hitClass = $hit ? 'badge-error' : 'badge-accent';
 
-            if (!$this->tenantId) {
+            if (! $this->tenantId) {
                 Log::error('Tenant ID is not provided to ColumnHtmlService.');
                 $mainDownloadUrl = '#';
                 $thumbnailUrl = '#';
@@ -298,7 +305,7 @@ HTML;
                 $mainDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
                 $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
-                $optimizedPdfDownloadUrl = route('file.download',['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
+                $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
             }
 
             $auxiliaryLinksHtml = '';
@@ -314,7 +321,7 @@ HTML;
 HTML;
             } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment->optimized) {
                 $mainDownloadUrl = $optimizedPdfDownloadUrl;
-                $downloadPdfTooltip=__('ledger.uploadedFile.download_original_pdf');
+                $downloadPdfTooltip = __('ledger.uploadedFile.download_original_pdf');
                 $auxiliaryLinksHtml = <<<HTML
  <div class="flex items-center text-xs text-gray-500 mt-1">
      <a href="{$originalDownloadUrl}" target="_blank" 
@@ -328,16 +335,16 @@ HTML;
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-            if (!empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
+            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
                 $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
                 $plainTextContent = strip_tags($rawContent);
                 $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
                 $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
-                if(!empty($content)) {
+                if (! empty($content)) {
                     $contentHtmlStart = <<<HTML
  <div class="tooltip" data-tip="{$content}">
  HTML;
-                    $contentHtmlEnd = "</div>";
+                    $contentHtmlEnd = '</div>';
                 }
             }
 
@@ -357,7 +364,7 @@ HTML;
 HTML;
             } else {
                 if (str_starts_with($attachment->original_mime_type, 'image/')) {
-                    Log::warning('Thumbnail not found for image file: ' . $hashedFilename . ' at expected path: ' . AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId));
+                    Log::warning('Thumbnail not found for image file: '.$hashedFilename.' at expected path: '.AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId));
                 }
                 $files[] = <<<HTML
  {$contentHtmlStart}
@@ -381,9 +388,9 @@ HTML;
         }
 
         $html .= '<div class="flex flex-wrap items-center gap-4">'
-            . implode('', $thumbnails)
-            . implode('', $files)
-            . '</div>';
+            .implode('', $thumbnails)
+            .implode('', $files)
+            .'</div>';
 
         return $html;
     }

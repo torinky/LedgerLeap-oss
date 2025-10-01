@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
 use App\Http\Resources\Api\V1\LedgerDefineResource;
 use App\Models\LedgerDefine;
 
@@ -17,14 +15,18 @@ class LedgerDefineController extends Controller
      *     description="Returns a list of all available ledger definitions that can be used to create new ledgers.",
      *     tags={"Ledger Defines"},
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
      *             type="object",
+     *
      *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/LedgerDefineResource"))
      *         )
      *     ),
+     *
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
      */

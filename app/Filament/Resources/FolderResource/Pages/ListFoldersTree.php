@@ -122,7 +122,7 @@ class ListFoldersTree extends TreePage
         return [
             // 詳細な編集は、既存の編集ページに遷移させます
             Actions\EditAction::make()
-                ->url(fn(Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
+                ->url(fn (Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
             Actions\DeleteAction::make(),
             // TrashedFilterがないため、これらのアクションは期待通りに機能しない可能性があります
             Actions\ForceDeleteAction::make(),

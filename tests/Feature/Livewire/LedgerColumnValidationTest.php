@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Livewire;
 
-use PHPUnit\Framework\Attributes\Test;
-
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
@@ -11,6 +9,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase; // TestCase を継承
 
 class LedgerColumnValidationTest extends TestCase
@@ -131,7 +130,7 @@ class LedgerColumnValidationTest extends TestCase
                         'min' => 10,
                         'max' => 20,
                         'step' => 0.5,
-                        'unit' => '℃'
+                        'unit' => '℃',
                     ],
                     'required' => true,
                     // 不足していたキーを追加

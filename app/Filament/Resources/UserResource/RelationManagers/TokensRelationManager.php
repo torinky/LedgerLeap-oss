@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -47,7 +46,7 @@ class TokensRelationManager extends RelationManager
 
                         Notification::make()
                             ->title(__('admin.api_token_created'))
-                            ->body(__('admin.api_token_body') . $token->plainTextToken)
+                            ->body(__('admin.api_token_body').$token->plainTextToken)
                             ->success()
                             ->persistent()
                             ->send();

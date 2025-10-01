@@ -13,9 +13,6 @@ class TenantAccessService
      * ユーザーのロールに紐づくフォルダ権限をすべて確認し、
      * 関連するテナントを重複なく返します。
      * 結果は24時間キャッシュされます。
-     *
-     * @param User $user
-     * @return Collection
      */
     public function getAccessibleTenants(User $user): Collection
     {
@@ -39,9 +36,6 @@ class TenantAccessService
 
     /**
      * 特定のユーザーのテナントリストキャッシュをクリアします。
-     *
-     * @param User $user
-     * @return void
      */
     public function clearUserCache(User $user): void
     {
@@ -50,8 +44,6 @@ class TenantAccessService
 
     /**
      * 全てのテナントアクセス関連キャッシュをクリアします。
-     *
-     * @return void
      */
     public function clearAllCache(): void
     {
@@ -60,9 +52,6 @@ class TenantAccessService
 
     /**
      * キャッシュキーを生成します。
-     *
-     * @param User $user
-     * @return string
      */
     protected function getCacheKey(User $user): string
     {

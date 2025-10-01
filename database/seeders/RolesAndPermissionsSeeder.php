@@ -184,7 +184,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $user = User::where('email', 'super_admin@ll.com')->first();
         if ($user) {
             $superAdminRole = Role::where('name', 'Super Admin')->first();
-            if ($superAdminRole && !$user->hasRole($superAdminRole)) {
+            if ($superAdminRole && ! $user->hasRole($superAdminRole)) {
                 $user->assignRole($superAdminRole);
             }
         }

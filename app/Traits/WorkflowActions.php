@@ -2,28 +2,40 @@
 
 namespace App\Traits;
 
+use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
-use App\Enums\WorkflowStatus;
 
 trait WorkflowActions
 {
     // --- Workflow Action 用 ---
     public bool $approvalRequestModal = false;
+
     public bool $returnToDraftModal = false;
+
     public ?int $selectedApproverId = null;
+
     public bool $showAssigneeModalForNext = false;
+
     public string $nextAssigneeRoleType = 'approver';
+
     public array $approverOptions = [];
+
     public string $returnComment = '';
+
     public bool $showCommentModal = false;
+
     public string $actionTypeForModal = '';
+
     public string $commentForModal = '';
+
     public bool $showAssigneeModal = false;
+
     protected string $assigneeModalRoleType = 'approver';
+
     protected WorkflowService $workflowService;
 
     public function bootWorkflowActions(WorkflowService $workflowService): void
@@ -37,13 +49,13 @@ trait WorkflowActions
     public function openApproverSelectModal(): void // <<<--- メソッド名変更
     {
         // 権限チェック (自分が点検者か？) - Service 側でも行う
-        if (!$this->canRequestApproval()) {
+        if (! $this->canRequestApproval()) {
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.unauthorized'), type: 'error');
             } else {
                 $this->error(__('messages.error.unauthorized')); // Or custom message
             }
-            Log::error('Approval request failed: ' . Auth::id() . ' is not the inspector of ledger ' . $this->ledgerRecord->id);
+            Log::error('Approval request failed: '.Auth::id().' is not the inspector of ledger '.$this->ledgerRecord->id);
 
             return;
         }
@@ -76,7 +88,7 @@ trait WorkflowActions
             return;
         }
 
-        if ($roleType !== 'approver' || !$this->canRequestApproval()) {
+        if ($roleType !== 'approver' || ! $this->canRequestApproval()) {
             // このコンポーネントからの承認者選択以外は無視、または権限がない場合は処理しない
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.unauthorized'), type: 'error');
@@ -99,7 +111,7 @@ trait WorkflowActions
         // 実績ベースで取得 (CreateColumn と同じロジック)
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerRecord->define->id, 'approver', 1);
 
-        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
     /**
@@ -108,7 +120,7 @@ trait WorkflowActions
     public function openReturnToDraftModal(): void
     {
         // 権限チェック (自分が担当者か？)
-        if (!$this->canReturnToDraft()) {
+        if (! $this->canReturnToDraft()) {
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.unauthorized'), type: 'error');
             } else {
@@ -128,7 +140,7 @@ trait WorkflowActions
      */
     public function loadApproverOptions(): void
     {
-        if (!$this->ledgerRecord->define) {
+        if (! $this->ledgerRecord->define) {
             return;
         }
 
@@ -136,7 +148,7 @@ trait WorkflowActions
         // 推奨ユーザー
         if ($this->ledgerRecord->define->recommendedApprover) {
             $approver = $this->ledgerRecord->define->recommendedApprover;
-            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
+            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name.' ('.__('ledger.workflow.recommended_user').')'];
             $this->selectedApproverId = $approver->id;
         }
         // 推奨ロール
@@ -146,7 +158,7 @@ trait WorkflowActions
         // その他ユーザー
         $allUsers = User::orderBy('name')->get();
         foreach ($allUsers as $user) {
-            if (!isset($options[$user->id])) {
+            if (! isset($options[$user->id])) {
                 $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
             }
         }
@@ -155,7 +167,7 @@ trait WorkflowActions
 
     public function approveTask(): void
     {
-        if (!$this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
+        if (! $this->canApprove()) { // ここで canBeFinallyApproved() が呼ばれる
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.unauthorized_or_conditions_not_met'), type: 'error');
             } else {
@@ -184,8 +196,8 @@ trait WorkflowActions
             roleType: 'approver',
             ledgerId: $this->ledgerRecord->id,
             initialUserId: $initialNextApproverId,
-        // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
-        // targetEvent: 'next-approver-selected-for-show'
+            // どの親コンポーネントのどのイベントをリッスンするか識別子を追加 (任意)
+            // targetEvent: 'next-approver-selected-for-show'
         );
     }
 
@@ -215,7 +227,7 @@ trait WorkflowActions
             // $this->loadWorkflowHistory(); // Show.php で loadWorkflowHistory を呼び出すため、ここでは不要
             $this->dispatch('workflowUpdated'); // 親コンポーネントに通知
         } catch (\Exception $e) {
-            Log::error('Finalizing approval with next assignee failed: ' . $e->getMessage());
+            Log::error('Finalizing approval with next assignee failed: '.$e->getMessage());
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.generic'), type: 'error');
             } else {
@@ -234,7 +246,7 @@ trait WorkflowActions
         $excludeIds = [$this->ledgerRecord->latestDiff?->approver_id, Auth::id()];
         $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerRecord->define->id, 'approver', 5, '', $excludeIds);
 
-        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
     /**
@@ -242,7 +254,7 @@ trait WorkflowActions
      */
     public function returnTaskToDraft(): void
     {
-        if (!$this->canReturnToDraft()) {
+        if (! $this->canReturnToDraft()) {
             $this->error(__('messages.error.unauthorized'));
 
             return;
@@ -263,7 +275,7 @@ trait WorkflowActions
             }
             $this->dispatch('workflowUpdated'); // 親コンポーネントに通知
         } catch (\Exception $e) {
-            Log::error('Return to draft failed: ' . $e->getMessage());
+            Log::error('Return to draft failed: '.$e->getMessage());
             if (app()->runningUnitTests()) {
                 $this->dispatch('test-mary-toast-error', message: __('messages.error.generic'), type: 'error');
             } else {
@@ -417,14 +429,17 @@ trait WorkflowActions
             // 既に目的のステータスに遷移している場合は、処理をスキップ
             if ($actionType === 'request_approval_with_comment' && $this->ledgerRecord->status === WorkflowStatus::PENDING_APPROVAL) {
                 Log::debug("Skipping duplicate request_approval_with_comment for Ledger ID: {$ledgerId}. Already PENDING_APPROVAL.");
+
                 return;
             }
             if ($actionType === 'approve' && $this->ledgerRecord->status === WorkflowStatus::APPROVED) {
                 Log::debug("Skipping duplicate approve for Ledger ID: {$ledgerId}. Already APPROVED.");
+
                 return;
             }
             if ($actionType === 'return_to_draft' && $this->ledgerRecord->status === WorkflowStatus::DRAFT) {
                 Log::debug("Skipping duplicate return_to_draft for Ledger ID: {$ledgerId}. Already DRAFT.");
+
                 return;
             }
 

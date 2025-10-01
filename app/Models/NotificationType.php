@@ -27,7 +27,7 @@ class NotificationType extends Model
      */
     public function folder()
     {
-        if (!$this->folder_relation) {
+        if (! $this->folder_relation) {
             return null;
         }
 
@@ -38,7 +38,7 @@ class NotificationType extends Model
     /**
      * Check if this notification type is for the given model.
      *
-     * @param mixed $model
+     * @param  mixed  $model
      */
     public function isForModel($model): bool
     {

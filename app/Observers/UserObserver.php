@@ -7,18 +7,10 @@ use App\Services\TenantAccessService;
 
 class UserObserver
 {
-    /**
-     * @param TenantAccessService $tenantAccessService
-     */
-    public function __construct(protected TenantAccessService $tenantAccessService)
-    {
-    }
+    public function __construct(protected TenantAccessService $tenantAccessService) {}
 
     /**
      * Handle the User "updated" event.
-     *
-     * @param  \App\Models\User  $user
-     * @return void
      */
     public function updated(User $user): void
     {
@@ -29,9 +21,6 @@ class UserObserver
 
     /**
      * Handle the User "deleted" event.
-     *
-     * @param  \App\Models\User  $user
-     * @return void
      */
     public function deleted(User $user): void
     {

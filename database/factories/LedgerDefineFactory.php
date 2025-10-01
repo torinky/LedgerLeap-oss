@@ -23,7 +23,7 @@ class LedgerDefineFactory extends Factory
     public function definition()
     {
         $this->faker = \Faker\Factory::create('en_US');
-        
+
         // デフォルトは最小限のカラム定義
         $columnDefine = [];
         $columnDefine[] = new ColumnDefine(
@@ -93,7 +93,7 @@ class LedgerDefineFactory extends Factory
                     $this->faker->boolean(),
                     $this->faker->boolean(),
                     $this->faker->word(),
-                    ['name' => $this->faker->word() . '.png', 'path' => $this->faker->word() . '.png']
+                    ['name' => $this->faker->word().'.png', 'path' => $this->faker->word().'.png']
                 );
 
                 $columnDefine[] = $tempColumnDefine;

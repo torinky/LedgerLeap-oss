@@ -3,7 +3,6 @@
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager;
 use App\Models\User;
-use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -41,10 +40,10 @@ it('can create a token', function () {
         'ownerRecord' => $this->user,
         'pageClass' => EditUser::class,
     ])
-    ->callTableAction('create', data: [
-        'name' => 'test-token',
-    ])
-    ->assertNotified(__('admin.api_token_created'));
+        ->callTableAction('create', data: [
+            'name' => 'test-token',
+        ])
+        ->assertNotified(__('admin.api_token_created'));
 
     // データベースにトークンが正しく保存されたか確認
     assertDatabaseHas('personal_access_tokens', [
@@ -62,7 +61,7 @@ it('can list tokens', function () {
         'ownerRecord' => $this->user,
         'pageClass' => EditUser::class,
     ])
-    ->assertCanSeeTableRecords(new Collection([$token]));
+        ->assertCanSeeTableRecords(new Collection([$token]));
 });
 
 it('can delete a token', function () {
@@ -73,7 +72,7 @@ it('can delete a token', function () {
         'ownerRecord' => $this->user,
         'pageClass' => EditUser::class,
     ])
-    ->callTableAction('delete', $token);
+        ->callTableAction('delete', $token);
 
     // データベースからトークンが削除されたか確認
     assertDatabaseMissing('personal_access_tokens', [

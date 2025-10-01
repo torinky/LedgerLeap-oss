@@ -38,7 +38,7 @@ class Dashboard extends \Filament\Pages\Dashboard
     protected function getHeaderActions(): array
     {
         return [
-/*            Action::make('updateModel')
+            /*            Action::make('updateModel')
                 ->label(__('ledger.folder.fix'))
                 ->action('fixFolderTree')
                 ->icon('heroicon-o-wrench')
@@ -58,7 +58,7 @@ class Dashboard extends \Filament\Pages\Dashboard
         } catch (Exception $e) {
             Notification::make()
                 ->title(__('ledger.error'))
-                ->body(__('ledger.action_error') . ': ' . $e->getMessage())
+                ->body(__('ledger.action_error').': '.$e->getMessage())
                 ->danger()
                 ->send();
         }

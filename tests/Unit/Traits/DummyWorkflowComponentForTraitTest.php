@@ -4,14 +4,14 @@ namespace Tests\Unit\Traits;
 
 use App\Models\Ledger;
 use App\Services\WorkflowService;
-use Livewire\Component;
 use App\Traits\WorkflowActions;
+use Livewire\Component;
 use Mary\Traits\Toast;
 
 // ダミーのLivewireコンポーネント
 class DummyWorkflowComponentForTraitTest extends Component
 {
-    use WorkflowActions, Toast;
+    use Toast, WorkflowActions;
 
     public Ledger $ledgerRecord;
 

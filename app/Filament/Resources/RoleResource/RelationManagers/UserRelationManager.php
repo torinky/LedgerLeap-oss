@@ -17,6 +17,7 @@ class UserRelationManager extends RelationManager
     {
         return __('ledger.user');
     }
+
     public static function getModelLabel(): string
     {
         return __('ledger.user');
@@ -50,7 +51,7 @@ class UserRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('name'),
                 Tables\Columns\TextColumn::make('email'),
                 Tables\Columns\TextColumn::make('organizations') // カラム名をリレーション名に変更
-                ->label(__('ledger.organizations.title'))
+                    ->label(__('ledger.organizations.title'))
                     ->badge() // 配列の各要素をバッジとして表示
                     ->getStateUsing(function ($record) { // $record は User モデルのインスタンス
                         // ユーザーが所属する各組織の full_name アクセサを呼び出して取得
@@ -62,7 +63,7 @@ class UserRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\AttachAction::make()
-                    ->form(fn(Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (Tables\Actions\AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple() // 複数ユーザーを選択可能にする
                             ->searchable(), // ユーザーを検索可能にする

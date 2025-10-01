@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use App\Helpers\AttachedFilePathHelper;
+use Illuminate\Support\Facades\Storage;
 
 class AttachedFileDownloadController extends Controller
 {
@@ -46,7 +46,7 @@ class AttachedFileDownloadController extends Controller
             $filePath = $attachedFile->path;
             Log::info('[DownloadController@download] Attachment file path from helper: '.$filePath);
             if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
-                $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME) . '.pdf';
+                $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME).'.pdf';
             }
         }
         Log::info('[DownloadController@download] Determined file path and name.', ['path' => $filePath, 'serve_as' => $fileNameToServe]);
@@ -57,9 +57,10 @@ class AttachedFileDownloadController extends Controller
             if (Storage::disk('public')->exists($thumbnailPath)) {
                 Log::info('[DownloadController@download] Returning actual thumbnail response with inline disposition.');
                 $mimeType = Storage::disk('public')->mimeType($thumbnailPath);
+
                 return response()->file(Storage::disk('public')->path($thumbnailPath), [
                     'Content-Type' => $mimeType,
-                    'Content-Disposition' => 'inline; filename="' . $fileNameToServe . '"'
+                    'Content-Disposition' => 'inline; filename="'.$fileNameToServe.'"',
                 ]);
             } else {
                 Log::info('[DownloadController@download] Thumbnail not found, checking status for re-dispatch.');
@@ -69,7 +70,7 @@ class AttachedFileDownloadController extends Controller
                     // ここでは簡易的に、AttachedFileのstatusがTHUMBNAIL_FAILEDであれば再試行とみなす
                     // より厳密な試行回数チェックはジョブ側で行う
                     \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
-                    Log::info('[DownloadController@download] Re-dispatched GenerateThumbnail job for ID: ' . $attachedFile->id);
+                    Log::info('[DownloadController@download] Re-dispatched GenerateThumbnail job for ID: '.$attachedFile->id);
                 }
                 // 既存のフォールバックロジック（FontAwesomeアイコンへのリダイレクト）
                 $displayMimeType = $attachedFile->mime;
@@ -112,7 +113,7 @@ class AttachedFileDownloadController extends Controller
         }
 
         // 3. ファイルの物理的な存在を確認
-        if (!Storage::disk('public')->exists($filePath)) {
+        if (! Storage::disk('public')->exists($filePath)) {
             Log::error('[DownloadController@download] File not found in public disk.', ['path' => $filePath]);
             abort(404, 'File Not Found');
         }
@@ -138,7 +139,7 @@ class AttachedFileDownloadController extends Controller
 
         return response()->file(Storage::disk('public')->path($filePath), [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => $disposition . '; filename="' . $fileNameToServe . '"'
+            'Content-Disposition' => $disposition.'; filename="'.$fileNameToServe.'"',
         ]);
     }
 }

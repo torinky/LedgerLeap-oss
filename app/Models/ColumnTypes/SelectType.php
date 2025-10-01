@@ -2,7 +2,6 @@
 
 namespace App\Models\ColumnTypes;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class SelectType implements InputType

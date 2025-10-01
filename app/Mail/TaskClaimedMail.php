@@ -16,17 +16,27 @@ class TaskClaimedMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public Ledger $ledger;
+
     public User $claimer; // 引き継ぎ操作を行ったユーザー
+
     public ?User $originalAssignee; // 元の担当者 (null の場合あり)
+
     public User $newAssignee; // 新しい担当者 (claimer と同じ場合あり)
+
     public ?string $comment;
+
     public string $recipientType; // 'new_assignee', 'original_assignee', 'applicant'
 
     public string $subjectLine;
+
     public string $greeting;
+
     public string $line1;
+
     public ?string $line2 = null;
+
     public string $actionText;
+
     public string $actionUrl;
 
     /**
@@ -81,7 +91,7 @@ class TaskClaimedMail extends Mailable implements ShouldQueue
         }
 
         if ($this->comment) {
-            $this->line2 = __('ledger.mail.body.line2.task_claimed_comment_prefix') . ' ' . $this->comment;
+            $this->line2 = __('ledger.mail.body.line2.task_claimed_comment_prefix').' '.$this->comment;
         }
     }
 

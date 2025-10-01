@@ -85,6 +85,7 @@ enum FolderPermissionType: string
         foreach (self::accessPermissions() as $permission) {
             $options[$permission->value] = $permission->getLabel(); // getLabel() を使う
         }
+
         return $options;
         // または以下のように mapWithKeys でも可
         // return collect(self::accessPermissions())
@@ -98,6 +99,7 @@ enum FolderPermissionType: string
         if ($this === $permissionType) {
             return true;
         }
+
         return in_array($permissionType->value, self::HIERARCHY[$this->value] ?? [], true);
     }
 
@@ -117,7 +119,7 @@ enum FolderPermissionType: string
     public function getLabel(): string
     {
         // 翻訳キー名を permission.name.* に統一 (推奨)
-        return __('permission.name.' . $this->value);
+        return __('permission.name.'.$this->value);
         // または既存の ledger.permissions.* を使う場合
         // return __('ledger.permissions.' . $this->value);
     }

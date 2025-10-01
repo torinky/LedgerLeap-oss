@@ -6,7 +6,6 @@ use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\InputTypeFactory;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
-use RuntimeException;
 use Tests\TestCase;
 
 class ColumnDefineTest extends TestCase
@@ -14,7 +13,7 @@ class ColumnDefineTest extends TestCase
     public function test_object_initialization(): void
     {
         // テスト用のオブジェクトを作成
-        $data = (object)[
+        $data = (object) [
             'id' => 1,
             'name' => 'column1',
             'type' => 'text',
@@ -49,10 +48,9 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * ColumnDefineのインスタンスを生成するための引数を指定し、期待通りの値がセットされているかテスト
      */
-#[Test]
+    #[Test]
     public function test_value_initialization(): void
     {
         // 値による初期化のテスト
@@ -75,7 +73,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'text'→'textarea'、'textarea'→'chk'、無効な列の種類を設定しようとする場合をテスト
      */
     #[Test]
@@ -98,7 +95,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * ColumnDefine::typeLabels()で取得できるラベルに期待する値があるかテスト
      */
     #[Test]
@@ -118,7 +114,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * setOptions()に空の配列を渡すと、$optionsが空の配列になることをテスト
      */
     #[Test]
@@ -135,7 +130,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'files'タイプの列に配列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
     #[Test]
@@ -153,7 +147,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'chk'タイプの列に配列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
     #[Test]
@@ -171,7 +164,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'YMD'タイプの列に日付文字列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
     #[Test]
@@ -189,7 +181,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'number'タイプの列に数値を設定し、convertColumnValue2Text()を実行することで、
      * 期待する文字列が生成されるかテスト
      */
@@ -204,11 +195,10 @@ class ColumnDefineTest extends TestCase
         $convertedValue = $column->convertColumnValue2Text($numberValue);
 
         // Assert
-        $this->assertEquals('12345', (string)$convertedValue);
+        $this->assertEquals('12345', (string) $convertedValue);
     }
 
     /**
-     *
      * 'text'タイプの列に文字列を設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
     #[Test]
@@ -226,7 +216,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'textarea'タイプの列に複数行テキストを設定し、convertColumnValue2Text()を実行することで、期待する文字列が生成されるかテスト
      */
     #[Test]
@@ -244,7 +233,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'select'タイプの列に選択肢を設定し、convertColumnValue2Text()を実行することで、
      * 選択された値が文字列に変換されるかテスト
      */
@@ -267,7 +255,6 @@ class ColumnDefineTest extends TestCase
     // Type validation happens at instantiation/setType via InputTypeFactory.
 
     /**
-     *
      * 'textarea'タイプの列に複数行テキストを設定し、convertColumnValue2Text()を実行することで、
      * 期待する文字列が生成されるかテスト
      */
@@ -286,7 +273,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * setOptions()に空の配列を渡すと、$optionsが空の配列になることをテスト
      */
     #[Test]
@@ -304,7 +290,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * required/uniqueフラグをON/OFFすることで、ColumnDefineのプロパティが
      * 正しく更新されるかテスト
      */
@@ -332,7 +317,6 @@ class ColumnDefineTest extends TestCase
     }
 
     /**
-     *
      * 'chk'タイプの列に重複する値がある場合、convertColumnValue2Text()を実行することで、
      * そのままの文字列が生成されるかテスト
      */
@@ -434,8 +418,8 @@ class ColumnDefineTest extends TestCase
         $column = new ColumnDefine(1, 'test_files', 'files');
         $jsonValue = '[{"name":"file1.jpg","path":"path/to/file1.jpg"},{"name":"file2.png","path":"path/to/file2.png"}]';
         $expectedArray = [
-            ["name" => "file1.jpg", "path" => "path/to/file1.jpg"],
-            ["name" => "file2.png", "path" => "path/to/file2.png"]
+            ['name' => 'file1.jpg', 'path' => 'path/to/file1.jpg'],
+            ['name' => 'file2.png', 'path' => 'path/to/file2.png'],
         ];
         $restoredValue = $column->restoreColumnValueFromText($jsonValue);
         $this->assertEquals($expectedArray, $restoredValue);
@@ -446,7 +430,7 @@ class ColumnDefineTest extends TestCase
         $this->assertNull($restoredInvalid);
 
         // Test already array (should pass through)
-        $arrayValue = [["name" => "file3.txt"]];
+        $arrayValue = [['name' => 'file3.txt']];
         $restoredArray = $column->restoreColumnValueFromText($arrayValue);
         $this->assertEquals($arrayValue, $restoredArray);
     }
@@ -464,7 +448,7 @@ class ColumnDefineTest extends TestCase
     #[Test]
     public function test_column_define_initializes_with_default_display_level_and_group()
     {
-        $data = (object)[
+        $data = (object) [
             'id' => 1,
             'name' => 'Test Column',
             'type' => 'text',
@@ -486,7 +470,7 @@ class ColumnDefineTest extends TestCase
     #[Test]
     public function test_column_define_initializes_with_specified_display_level_and_group()
     {
-        $data = (object)[
+        $data = (object) [
             'id' => 2,
             'name' => 'Another Column',
             'type' => 'number',
@@ -525,7 +509,7 @@ class ColumnDefineTest extends TestCase
         ];
 
         // Test with object conversion
-        $columnObject = new ColumnDefine((object)$oldData);
+        $columnObject = new ColumnDefine((object) $oldData);
         $this->assertEquals(3, $columnObject->display_level);
         $this->assertNull($columnObject->group);
 

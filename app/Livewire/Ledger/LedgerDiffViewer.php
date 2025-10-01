@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerContentProcessor;
@@ -9,7 +10,6 @@ use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class LedgerDiffViewer extends Component
 {
@@ -19,13 +19,18 @@ class LedgerDiffViewer extends Component
 
     // --- 差分表示用プロパティ ---
     public ?LedgerDiff $comparisonTargetDiff = null;
+
     public bool $hasChangedColumns = false;
+
     public bool $showChanges = false;
 
     // Show.php から渡されるプロパティ
     public bool $canView = false;
+
     public ?EloquentCollection $allAttachments = null;
+
     public ?string $highlight = null;
+
     public int $displayLevel = 3;
 
     // 表示データ
@@ -35,6 +40,7 @@ class LedgerDiffViewer extends Component
     public array $collapsedStates = [];
 
     protected LedgerContentProcessor $ledgerContentProcessor;
+
     protected LedgerDiffProcessor $ledgerDiffProcessor; // comparisonTargetDiff の取得にのみ使用
 
     public function boot(
@@ -67,7 +73,7 @@ class LedgerDiffViewer extends Component
     public function toggleGroup(string $groupName): void
     {
         if (isset($this->collapsedStates[$groupName])) {
-            $this->collapsedStates[$groupName] = !$this->collapsedStates[$groupName];
+            $this->collapsedStates[$groupName] = ! $this->collapsedStates[$groupName];
         }
     }
 

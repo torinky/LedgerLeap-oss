@@ -24,7 +24,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -35,6 +34,7 @@ class AutoLinkResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-link';
 
     public static bool $shouldRegisterNavigation = false;
+
     public static function getLabel(): string
     {
         return __('ledger.settings.auto_link');
@@ -49,6 +49,7 @@ class AutoLinkResource extends Resource
     {
         return __('ledger.settings.auto_link');
     }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -82,7 +83,7 @@ class AutoLinkResource extends Resource
                         ->label(__('auto_links.fields.pattern'))
                         ->required()
                         ->live(onBlur: true)
-                        ->rule(new ValidAutoLinkPattern()),
+                        ->rule(new ValidAutoLinkPattern),
                     TextInput::make('url_template')
                         ->label(__('auto_links.fields.url_template'))
                         ->required()
@@ -90,13 +91,13 @@ class AutoLinkResource extends Resource
                         ->helperText(__('auto_links.helps.url_template')),
                     Select::make('tenant_id')
                         ->label(__('auto_links.fields.link_to_tenant'))
-                        ->options(fn() => Tenant::all()->mapWithKeys(function ($tenant) {
+                        ->options(fn () => Tenant::all()->mapWithKeys(function ($tenant) {
                             return [$tenant->id => $tenant->name ?? $tenant->id];
                         }))
                         ->searchable()
                         ->placeholder(__('auto_links.placeholders.link_to_tenant'))
                         ->live()
-                        ->visible(fn (Get $get) => Str::startsWith($get('url_template'), '/l/')), 
+                        ->visible(fn (Get $get) => Str::startsWith($get('url_template'), '/l/')),
                     Section::make(__('auto_links.sections.scope'))
                         ->description(__('auto_links.helps.scope_description'))
                         ->schema([
@@ -129,7 +130,7 @@ class AutoLinkResource extends Resource
                         ->default(true),
                     Toggle::make('open_in_new_tab')
                         ->label(__('auto_links.fields.open_in_new_tab'))
-                        ->live() 
+                        ->live()
                         ->default(true),
 
                     Select::make('link_type')
@@ -140,13 +141,14 @@ class AutoLinkResource extends Resource
                                 ->mapWithKeys(function ($type, $key) {
                                     $label = __($type['label_key']);
                                     $icon = $type['icon'];
+
                                     return [$key => Blade::render("<x-mary-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
                                 })
                                 ->all()
                         )
                         ->allowHtml()
                         ->default('default')
-                        ->live(), 
+                        ->live(),
 
                     Placeholder::make('icon_preview')
                         ->label(__('auto_links.fields.icon_preview'))
@@ -201,48 +203,47 @@ class AutoLinkResource extends Resource
                             preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
 
                             if (empty($matches)) {
-                                return new HtmlString(e($text) . '<p class="text-sm text-gray-500 mt-2">' . __('auto_links.validations.no_matches') . '</p>');
+                                return new HtmlString(e($text).'<p class="text-sm text-gray-500 mt-2">'.__('auto_links.validations.no_matches').'</p>');
                             }
-                            
+
                             $openInNewTab = $get('open_in_new_tab');
                             $target = $openInNewTab ? ' target="_blank"' : '';
 
                             $replacedHtml = preg_replace_callback($pattern, function ($match) use ($template, $target, $tenantId) {
                                 $url = $template;
                                 foreach ($match as $key => $value) {
-                                    $url = str_replace('$' . $key, urlencode($value), $url);
+                                    $url = str_replace('$'.$key, urlencode($value), $url);
                                 }
 
                                 if ($tenantId && Str::startsWith($url, '/l/')) {
-/*
-                                    $tenant = Tenant::find($tenantId);
-                                    if ($tenant) {
-                                        $path = ltrim($url, '/');
-                                        tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
-                                            $url = url($path);
-                                        });
-                                    }
-*/
+                                    /*
+                                                                        $tenant = Tenant::find($tenantId);
+                                                                        if ($tenant) {
+                                                                            $path = ltrim($url, '/');
+                                                                            tenancy()->runForMultiple([$tenant->id], function () use (&$url, $path) {
+                                                                                $url = url($path);
+                                                                            });
+                                                                        }
+                                    */
                                     $path = ltrim($url, '/');
                                     $url = url($tenantId.'/'.$path);
-                                 }
+                                }
 
-                                 return '<a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . e($match[0]) . '</a>';
-                             }, $text);
-
+                                return '<a href="'.e($url).'"'.$target.' class="font-bold text-primary-500 hover:underline">'.e($match[0]).'</a>';
+                            }, $text);
 
                             $tableHtml = '<table class="w-full mt-4 text-sm text-left text-gray-500 dark:text-gray-400"><tbody>';
                             foreach ($matches as $matchIndex => $match) {
-                                $tableHtml .= '<tr class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"><th colspan="2" class="px-6 py-2 font-medium text-gray-900 dark:text-white">Match ' . ($matchIndex + 1) . '</th></tr>';
+                                $tableHtml .= '<tr class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"><th colspan="2" class="px-6 py-2 font-medium text-gray-900 dark:text-white">Match '.($matchIndex + 1).'</th></tr>';
                                 foreach ($match as $groupIndex => $groupValue) {
-                                    $tableHtml .= '<tr class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"><th class="px-6 py-2 font-medium text-gray-900 dark:text-white">$' . e($groupIndex) . '</th><td class="px-6 py-2">' . e($groupValue) . '</td></tr>';
+                                    $tableHtml .= '<tr class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"><th class="px-6 py-2 font-medium text-gray-900 dark:text-white">$'.e($groupIndex).'</th><td class="px-6 py-2">'.e($groupValue).'</td></tr>';
                                 }
                             }
                             $tableHtml .= '</tbody></table>';
-                            
-                            $sourceHtml = '<div class="mt-4"><h4 class="font-bold">'.__('auto_links.labels.generated_html').':</h4><pre class="p-2 mt-2 text-sm text-gray-500 bg-gray-100 rounded-md dark:bg-gray-900 dark:text-gray-400 overflow-x-auto"><code>' . e($replacedHtml) . '</code></pre></div>';
 
-                            return new HtmlString($replacedHtml . $tableHtml . $sourceHtml);
+                            $sourceHtml = '<div class="mt-4"><h4 class="font-bold">'.__('auto_links.labels.generated_html').':</h4><pre class="p-2 mt-2 text-sm text-gray-500 bg-gray-100 rounded-md dark:bg-gray-900 dark:text-gray-400 overflow-x-auto"><code>'.e($replacedHtml).'</code></pre></div>';
+
+                            return new HtmlString($replacedHtml.$tableHtml.$sourceHtml);
                         }),
                 ])->columnSpan(2),
             ])->columns(3);
@@ -304,10 +305,10 @@ class AutoLinkResource extends Resource
                     ->beforeReplicaSaved(function (AutoLink $replica) {
                         $originalLabel = $replica->label;
                         $copyCount = 1;
-                        while (AutoLink::where('label', $originalLabel . ' (' . $copyCount . ')')->exists()) {
+                        while (AutoLink::where('label', $originalLabel.' ('.$copyCount.')')->exists()) {
                             $copyCount++;
                         }
-                        $replica->label = $originalLabel . ' (' . $copyCount . ')';
+                        $replica->label = $originalLabel.' ('.$copyCount.')';
                     }),
                 Tables\Actions\DeleteAction::make(),
             ])

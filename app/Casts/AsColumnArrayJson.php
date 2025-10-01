@@ -12,10 +12,10 @@ class AsColumnArrayJson extends AsJson
     /**
      * モデルの属性から値を取得します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
      * @return mixed|null
      */
     public function get($model, $key, $value, $attributes): mixed
@@ -34,7 +34,7 @@ class AsColumnArrayJson extends AsJson
             return []; // または、空文字列読み取り時の望ましい動作に応じて null を返す
         }
         // すでに null であるか、文字列でない場合は、JSON デコード試行前にそのまま返します。
-        if ($content === null || !is_string($content)) {
+        if ($content === null || ! is_string($content)) {
             // Log::info('AsColumnArrayJson: Content is null or not a string, returning as is.');
             return $content;
         }
@@ -47,7 +47,8 @@ class AsColumnArrayJson extends AsJson
             // Log::info('AsColumnArrayJson: Decoded content: ' . Str::limit(json_encode($decodedContent), 500));
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
-            Log::alert('AsColumnArrayJson: JSON decode error: ' . $e->getMessage() . ' for value: ' . Str::limit($content, 500));
+            Log::alert('AsColumnArrayJson: JSON decode error: '.$e->getMessage().' for value: '.Str::limit($content, 500));
+
             return null; // または空配列 [] を返す？
         }
 
@@ -63,6 +64,7 @@ class AsColumnArrayJson extends AsJson
                     $processedContent[$index] = $this->getContent($item);
                 }
             }
+
             // Log::info('AsColumnArrayJson: Processed content: ' . Str::limit(json_encode($processedContent), 500));
             return $processedContent;
         }
@@ -73,8 +75,8 @@ class AsColumnArrayJson extends AsJson
     }
 
     /**
-     * @param mixed $item
      * @return mixed|string
+     *
      * @noinspection UnserializeExploitsInspection
      */
     public function getContent(mixed $item): mixed
@@ -88,30 +90,32 @@ class AsColumnArrayJson extends AsJson
             return null; // または望ましい動作に応じて ''
         }
 
-        if (is_string($item) && Str::startsWith($item, "___serialized___")) {
+        if (is_string($item) && Str::startsWith($item, '___serialized___')) {
             $temp = substr($item, 16);
             // Log::info('AsColumnArrayJson: getContent: Attempting to unserialize: ' . Str::limit($temp, 500));
             // unserialize のエラーハンドリングを追加します。
             $unserialized = @unserialize($temp);
             if ($unserialized === false && $temp !== serialize(false)) {
-                Log::warning('AsColumnArrayJson: getContent: Failed to unserialize value: ' . Str::limit($temp, 500));
+                Log::warning('AsColumnArrayJson: getContent: Failed to unserialize value: '.Str::limit($temp, 500));
+
                 return $item; // 失敗時には元のシリアライズされた文字列を返す？ それとも null？
             }
+
             // Log::info('AsColumnArrayJson: getContent: Successfully unserialized: ' . Str::limit(json_encode($unserialized), 500));
             return $unserialized;
         }
+
         return $item;
     }
-
 
     /**
      * モデルの属性に値を設定します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
-     * @return array
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
+     *
      * @throws JsonException
      */
     public function set($model, $key, $value, $attributes): array
@@ -162,16 +166,16 @@ class AsColumnArrayJson extends AsJson
         // 上記の `elseif ($content === null)` チェックは、代わりに '' が必要な場合にこれを防ぎます。
 
         $jsonString = json_encode(
-        // (処理された可能性のある) content をエンコードします。
+            // (処理された可能性のある) content をエンコードします。
             $content,
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
         );
+
         // Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
         return [$key => $jsonString];
     }
 
     /**
-     * @param mixed $item
      * @return mixed|string
      */
     public function setContent(mixed $item): mixed
@@ -187,7 +191,7 @@ class AsColumnArrayJson extends AsJson
         // メイン配列内の配列/オブジェクトに対するシリアライズロジックを保持します。
         if (is_array($item) || is_object($item)) {
             // Mroongaの仕様でjson2階層目以降は第1階層に展開されて保存されてしまうため、serializeする
-            return "___serialized___" . serialize($item);
+            return '___serialized___'.serialize($item);
         }
 
         // 他の型 (文字列、数値、ブール値) はそのまま返します。

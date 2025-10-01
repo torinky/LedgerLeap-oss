@@ -53,7 +53,7 @@ enum WorkflowStatus: string
             self::DRAFT,
             self::PENDING_INSPECTION,
             self::PENDING_APPROVAL,
-            self::APPROVED // 承認済みもワークフローの結果
+            self::APPROVED, // 承認済みもワークフローの結果
         ]);
     }
 
@@ -62,7 +62,7 @@ enum WorkflowStatus: string
     {
         return in_array($this, [
             self::PENDING_INSPECTION,
-            self::PENDING_APPROVAL
+            self::PENDING_APPROVAL,
         ]);
     }
 }

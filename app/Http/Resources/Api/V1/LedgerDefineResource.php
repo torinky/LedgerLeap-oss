@@ -10,6 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     schema="LedgerDefineResource",
  *     type="object",
  *     title="Ledger Define Resource",
+ *
  *     @OA\Property(property="id", type="integer", description="Ledger Define ID", example=1),
  *     @OA\Property(property="name", type="string", description="Name of the ledger definition", example="Meeting Minutes"),
  *     @OA\Property(property="description", type="string", description="Description of the ledger definition", example="Record meeting minutes."),
@@ -17,8 +18,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *         property="columns",
  *         type="array",
  *         description="Columns of the ledger definition",
+ *
  *         @OA\Items(
  *             type="object",
+ *
  *             @OA\Property(property="id", type="integer", description="Column ID", example=1),
  *             @OA\Property(property="name", type="string", description="Column name", example="Meeting Name"),
  *             @OA\Property(property="type", type="string", description="Column type (e.g., text, date, select)", example="text"),

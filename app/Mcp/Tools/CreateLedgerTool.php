@@ -3,7 +3,8 @@
 namespace App\Mcp\Tools;
 
 use App\Http\Resources\LedgerResource;
-use App\Models\User;
+use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Models\Folder;
 use App\Services\LedgerService;
 use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -12,6 +13,8 @@ use Laravel\Mcp\Server\Tool;
 
 class CreateLedgerTool extends Tool
 {
+    use AuthenticatedMcpTool;
+
     /**
      * The tool's description.
      */
@@ -24,23 +27,40 @@ class CreateLedgerTool extends Tool
      */
     public function handle(Request $request, LedgerService $ledgerService): Response
     {
-        // As a provisional measure, the creator is the first user of the tenant.
-        $creator = User::first();
-        if (!$creator) {
-            return Response::error('No users found to assign as creator.');
+        // 認証チェック
+        $user = $this->authenticateOrError();
+        if ($user instanceof Response) {
+            return $user; // エラーレスポンスをそのまま返す
         }
 
-        $ledger = $ledgerService->createLedger(
-            $request->arguments('ledger_define_id'),
-            $request->arguments('folder_id'),
-            json_decode($request->arguments('content'), true),
-            $request->arguments('tags', []),
-            $creator
-        );
+        // フォルダの存在チェック
+        $folderId = $request->get('folder_id');
+        $folder = Folder::find($folderId);
+        if (! $folder) {
+            return Response::error("Folder not found: {$folderId}");
+        }
 
-        $resource = new LedgerResource($ledger);
+        // フォルダに対する書き込み権限チェック
+        $permissionCheck = $this->checkFolderPermissionOrError($user, $folder, 'WRITE');
+        if ($permissionCheck instanceof Response) {
+            return $permissionCheck; // 権限エラーレスポンスをそのまま返す
+        }
 
-        return Response::text($resource->toJson(JSON_PRETTY_PRINT));
+        try {
+            $ledger = $ledgerService->createLedger(
+                $request->get('ledger_define_id'),
+                $folderId,
+                json_decode($request->get('content'), true),
+                $request->get('tags', []),
+                $user
+            );
+
+            $resource = new LedgerResource($ledger);
+
+            return Response::text($resource->toJson(JSON_PRETTY_PRINT));
+        } catch (\Exception $e) {
+            return Response::error("Failed to create ledger: {$e->getMessage()}");
+        }
     }
 
     /**

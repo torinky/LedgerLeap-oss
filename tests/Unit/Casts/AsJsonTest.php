@@ -37,7 +37,7 @@ class AsJsonTest extends TestCase
         $model->attributes = $invalidJson;
 
         // モデルの属性を取得し、キャストされたデータがnullであることを確認します。
-        $decodedData = (new AsJson)->get($model, 'attributes', null, (array)$model);
+        $decodedData = (new AsJson)->get($model, 'attributes', null, (array) $model);
         $this->assertNull($decodedData);
     }
 }

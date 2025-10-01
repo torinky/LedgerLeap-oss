@@ -2,10 +2,8 @@
 
 namespace Tests;
 
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Route;
-use App\Models\Tenant; // 追加
+use App\Models\Tenant;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase; // 追加
 
 abstract class TestCase extends BaseTestCase
 {
@@ -71,7 +69,6 @@ abstract class TestCase extends BaseTestCase
         // $this->withServerVariables(['HTTP_HOST' => $this->tenant->domains()->first()->domain]); // 削除
     }
 
-
     protected function tearDown(): void
     {
         // テスト後にテナントとそのデータベースをクリーンアップ (デバッグのため一時的にコメントアウト)
@@ -88,5 +85,4 @@ abstract class TestCase extends BaseTestCase
 
         parent::tearDown();
     }
-
 }

@@ -6,18 +6,15 @@ use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase;
-use Illuminate\Support\Facades\DB; // 追加
+use Tests\TestCase; // 追加
 
 class LedgerLookupControllerTest extends TestCase
 {
-
     private User $adminUser;
 
     private LedgerDefine $ledgerDefine;
@@ -29,8 +26,6 @@ class LedgerLookupControllerTest extends TestCase
         parent::setUp();
 
         DB::table('ledgers')->truncate(); // 追加
-
-        
 
         // Permissions
         $permissions = [
@@ -96,8 +91,8 @@ class LedgerLookupControllerTest extends TestCase
             'content' => [$columnId => 'unique-id-123'], // ColumnDefineのIDをキーとして使用
         ]);
 
-                    $this->get('/' . $this->tenant->id . '/l/unique-id-123')
-            ->assertRedirect('/' . $this->tenant->id . '/ledger/' . $ledger->id . '?highlight=unique-id-123');
+        $this->get('/'.$this->tenant->id.'/l/unique-id-123')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id.'?highlight=unique-id-123');
     }
 
     #[Test]
@@ -113,15 +108,15 @@ class LedgerLookupControllerTest extends TestCase
             'content' => [$columnId => 'common-term'],
         ]);
 
-        $this->get('/' . $this->tenant->id . '/l/common-term')
-            ->assertRedirect('/' . $this->tenant->id . '/ledger?q=common-term&highlight=common-term&l=&f=');
+        $this->get('/'.$this->tenant->id.'/l/common-term')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term&highlight=common-term&l=&f=');
     }
 
     #[Test]
     public function it_redirects_to_index_on_zero_matches()
     {
-        $this->get('/' . $this->tenant->id . '/l/non-existent')
-            ->assertRedirect('/' . $this->tenant->id . '/ledger?q=non-existent&highlight=non-existent&l=&f=');
+        $this->get('/'.$this->tenant->id.'/l/non-existent')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent&highlight=non-existent&l=&f=');
     }
 
     #[Test]
@@ -133,7 +128,7 @@ class LedgerLookupControllerTest extends TestCase
             'content' => [$columnId => 'unique-id-for-list'],
         ]);
 
-        $this->get('/' . $this->tenant->id . '/l/unique-id-for-list?mode=list')
-            ->assertRedirect('/' . $this->tenant->id . '/ledger?q=unique-id-for-list&highlight=unique-id-for-list&l=&f=');
+        $this->get('/'.$this->tenant->id.'/l/unique-id-for-list?mode=list')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list&highlight=unique-id-for-list&l=&f=');
     }
 }

@@ -18,9 +18,13 @@ class FolderControllerTest extends TestCase
     protected bool $tenancy = true;
 
     private User $adminUser;
+
     private User $writerUser;
+
     private User $viewerUser;
+
     private Folder $writableFolder;
+
     private Folder $readableFolder;
 
     protected function setUp(): void

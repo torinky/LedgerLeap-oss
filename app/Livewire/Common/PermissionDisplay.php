@@ -7,38 +7,44 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Organization;
-
 // 追加
 use App\Models\Role;
 use App\Models\User;
 use App\Services\PermissionService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 
 class PermissionDisplay extends Component
 {
     use WithPagination;
 
     public int $resourceId;
+
     public string $resourceType; // 'Ledger', 'LedgerDefine', 'Folder'
-//    public string $paginationTheme = 'mary';
+    //    public string $paginationTheme = 'mary';
 
     // アクセス可能なユーザーリストの検索/フィルタリング
     public ?string $searchUserQuery = null;
+
     public ?int $filterRoleId = null; // 未使用だが定義は残す
+
     public ?string $filterPermissionType = null; // 未使用だが定義は残す
 
     // ★★★ フィルタリング用プロパティ ★★★
     public ?int $filterByRoleId = null;
+
     public ?int $filterByOrganizationId = null;
+
     public ?string $filterByPermissionValue = '';
 
     // ★★★ フィルタ選択肢用プロパティ ★★★
     public Collection $roleOptions;
+
     public Collection $organizationOptions;
+
     public array $permissionOptions; // Enumから生成するためarray
 
     protected PermissionService $permissionService;
@@ -73,7 +79,6 @@ class PermissionDisplay extends Component
         }, $this->permissionOptions, array_keys($this->permissionOptions));
 
     }
-
 
     /**
      * ロールを検索する
@@ -120,6 +125,7 @@ class PermissionDisplay extends Component
 
     /**
      * アクセス可能なロールと権限のリストを取得
+     *
      * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
     /*    public function getAccessRolesProperty(): Collection
@@ -128,6 +134,7 @@ class PermissionDisplay extends Component
         }*/
     /**
      * アクセス可能なロールと権限のリストを取得 (フィルタ適用)
+     *
      * @return Collection<object{...}>
      */
     public function getAccessRolesProperty(): Collection
@@ -139,7 +146,7 @@ class PermissionDisplay extends Component
         }
         if ($this->filterByPermissionValue) {
             $allRoles = $allRoles->filter(function ($item) {
-                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
+                return $item->permissions->contains(fn (FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
             });
         }
 
@@ -148,6 +155,7 @@ class PermissionDisplay extends Component
 
     /**
      * アクセス可能な組織と権限のリストを取得
+     *
      * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
     /*    public function getAccessOrganizationsProperty(): Collection
@@ -156,6 +164,7 @@ class PermissionDisplay extends Component
         }*/
     /**
      * アクセス可能な組織と権限のリストを取得 (フィルタ適用)
+     *
      * @return Collection<object{...}>
      */
     public function getAccessOrganizationsProperty(): Collection
@@ -167,7 +176,7 @@ class PermissionDisplay extends Component
         }
         if ($this->filterByPermissionValue) {
             $allOrganizations = $allOrganizations->filter(function ($item) {
-                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
+                return $item->permissions->contains(fn (FolderPermissionType $p) => $p->value === $this->filterByPermissionValue);
             });
         }
         if ($this->filterByRoleId) {
@@ -179,9 +188,9 @@ class PermissionDisplay extends Component
         return $allOrganizations;
     }
 
-
     /**
      * アクセス可能なユーザーのリストを取得 (フィルタ適用)
+     *
      * @return LengthAwarePaginator<User>
      */
     #[Computed]
@@ -200,7 +209,6 @@ class PermissionDisplay extends Component
 
     /**
      * ログインユーザーの最高権限を取得
-     * @return FolderPermissionType|null
      */
     public function getCurrentUserHighestPermissionProperty(): ?FolderPermissionType
     {
@@ -216,7 +224,7 @@ class PermissionDisplay extends Component
     {
         // 権限表示の前提として、最低限の閲覧権限（例: view_folder や view_ledger_define, view_ledger）があるべき
         // ここではシンプルにログインしているか、または特別な全体権限を持っているかを見る
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return view('livewire.common.permission-display-no-permission');
         }
 
@@ -253,6 +261,4 @@ class PermissionDisplay extends Component
         $this->reset(['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue', 'searchUserQuery']);
         $this->resetPage();
     }
-
-
 }

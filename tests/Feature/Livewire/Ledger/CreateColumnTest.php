@@ -3,24 +3,26 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\CreateColumn;
+use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\LedgerDefine;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-use App\Models\Folder;
-use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\ColumnDefine; // ColumnDefine をインポート
+use Tests\TestCase; // ColumnDefine をインポート
 
 class CreateColumnTest extends TestCase
 {
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -58,7 +60,6 @@ class CreateColumnTest extends TestCase
 
         parent::tearDown();
     }
-
 
     #[Test]
     public function it_creates_ledger_with_correct_tenant_id()

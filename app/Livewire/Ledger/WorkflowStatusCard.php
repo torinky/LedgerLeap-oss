@@ -40,6 +40,7 @@ class WorkflowStatusCard extends Component
         if ($this->ledgerRecord->define->workflow_enabled && $this->ledgerRecord->define?->folder) {
             return $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
+
         return [];
     }
 

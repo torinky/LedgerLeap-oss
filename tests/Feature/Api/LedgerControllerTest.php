@@ -8,11 +8,12 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\Attributes\Skip; // 追加
+
+// 追加
 
 class LedgerControllerTest extends TestCase
 {
@@ -21,9 +22,13 @@ class LedgerControllerTest extends TestCase
     protected bool $tenancy = true;
 
     private User $writerUser;
+
     private User $viewerUser;
+
     private Folder $writeFolder;
+
     private LedgerDefine $ledgerDefine;
+
     protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
@@ -55,7 +60,7 @@ class LedgerControllerTest extends TestCase
             'folder_id' => $this->writeFolder->id,
             'permission' => FolderPermissionType::WRITE,
             'creator_id' => $this->writerUser->id,
-            'modifier_id' => $this->writerUser->id
+            'modifier_id' => $this->writerUser->id,
         ]);
 
         // 台帳定義を作成
@@ -144,7 +149,7 @@ class LedgerControllerTest extends TestCase
 
         // contentがキーバリュー形式（連想配列）であることを確認
         $responseData = $response->json('data');
-        if (!empty($responseData['content'])) {
+        if (! empty($responseData['content'])) {
             $this->assertIsArray($responseData['content']);
             // キーが数値でないことを確認（文字列キーのはず）
             $this->assertFalse(is_int(array_key_first($responseData['content'])));

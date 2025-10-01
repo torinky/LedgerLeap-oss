@@ -2,19 +2,21 @@
 
 namespace App\Livewire\Folder;
 
-use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Folder\StoreRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Create extends Component
 {
     use InitializesTenantContext;
 
     public $folderRecords;
+
     public $parentFolderId;
+
     public Collection $folderIdNameMap;
 
     public mixed $title;
@@ -28,9 +30,9 @@ class Create extends Component
     {
         // 認可チェックを追加
         $canCreate = auth()->user()->can('create', Folder::class);
-        Log::info('Livewire/Folder/Create mount: User ID: ' . auth()->id() . ', Can create folder: ' . ($canCreate ? 'true' : 'false'));
+        Log::info('Livewire/Folder/Create mount: User ID: '.auth()->id().', Can create folder: '.($canCreate ? 'true' : 'false'));
 
-        if (!$canCreate) {
+        if (! $canCreate) {
             abort(403, __('auth.unauthorized')); // 権限がない場合は403を返す
         }
 
@@ -40,10 +42,10 @@ class Create extends Component
         $nodes = $this->folderRecords = Folder::get()->toTree();
         $traverse = function ($categories, $prefix = '-') use (&$traverse) {
             foreach ($categories as $category) {
-                $category->title = $prefix . ' ' . $category->title;
+                $category->title = $prefix.' '.$category->title;
                 $this->folderRecords[] = $category;
 
-                $traverse($category->children, $prefix . '-');
+                $traverse($category->children, $prefix.'-');
             }
         };
 
@@ -66,7 +68,6 @@ class Create extends Component
     public function store()
     {
         $parentFolderRecord = Folder::findOrFail($this->parentFolderId);
-
 
         $folderRecord = $parentFolderRecord->children()->create([
             'title' => $this->title,

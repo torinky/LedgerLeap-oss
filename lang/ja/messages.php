@@ -1,4 +1,5 @@
 <?php
+
 return [
     'error' => [
         'generic' => '予期せぬエラーが発生しました。',

@@ -31,6 +31,7 @@ class CheckboxType implements InputType
         if ($this->shouldConvertToJson()) {
             return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
+
         return (string) $value;
     }
 
@@ -39,6 +40,7 @@ class CheckboxType implements InputType
         if ($this->shouldConvertToJson()) {
             return json_decode($value, true);
         }
+
         return $value;
     }
 

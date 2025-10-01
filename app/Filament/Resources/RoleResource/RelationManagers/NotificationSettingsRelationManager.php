@@ -3,58 +3,45 @@
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
-
 // ★ DeleteNotification アクションの修正が必要になる可能性
 // use App\Filament\Tables\Actions\DeleteNotification;
 use App\Models\Folder;
 use App\Models\NotificationType;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
-
 // ★ 使用するモデル
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Exception;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Toggle;
-
 // ★ Toggle を使う方がシンプル
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Actions\Action;
-
 // ★ カスタムアクション用に Action を使う
 // use Filament\Tables\Actions\AttachAction; // ★ AttachAction は使わない
-use Filament\Tables\Actions\BulkActionGroup;
-
-//use Filament\Tables\Actions\CreateAction;
+use Filament\Resources\RelationManagers\RelationManager;
+// use Filament\Tables\Actions\CreateAction;
 
 // ★ CreateAction を使う
-use Filament\Tables\Actions\DeleteAction;
-
+use Filament\Tables\Actions\Action;
 // ★ 標準の DeleteAction を使う
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\Select;
-use Exception;
-
 // ★ 例外処理用
-use Filament\Notifications\Actions\Action as NotificationAction;
 
 // ★ 通知内のアクション用 (オプション)
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-
+use Illuminate\Support\Facades\DB;
 // ★ BulkAction用
 use Illuminate\Support\Facades\Log;
 
@@ -74,9 +61,9 @@ class NotificationSettingsRelationManager extends RelationManager
         // Eager Loading されていることを期待
         $folderTitle = $record->folder?->title ?? __('Unknown Folder');
         $notificationTypeName = $record->notificationType?->name ?? __('Unknown Type');
-        $translatedTypeName = __('ledger.notification_types.' . $notificationTypeName, [], $notificationTypeName); // 翻訳、なければ元の名前
+        $translatedTypeName = __('ledger.notification_types.'.$notificationTypeName, [], $notificationTypeName); // 翻訳、なければ元の名前
 
-        return $folderTitle . ' - ' . $translatedTypeName;
+        return $folderTitle.' - '.$translatedTypeName;
     }
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
@@ -100,7 +87,7 @@ class NotificationSettingsRelationManager extends RelationManager
         return $table
             ->heading(__('ledger.folder.notification'))
             ->query(function (EloquentBuilder $query) {
-                $query->setModel(new RoleFolderPermission());
+                $query->setModel(new RoleFolderPermission);
 
                 // ★ 通知関連の権限のみをフィルタリング
                 $query->whereIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF]);
@@ -131,9 +118,11 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->label(__('ledger.notification_type'))
                     ->formatStateUsing(function (?string $state) {
                         if ($state) {
-                            $labelKey = 'ledger.notification_types.' . $state;
+                            $labelKey = 'ledger.notification_types.'.$state;
+
                             return trans()->has($labelKey) ? __($labelKey) : $state;
                         }
+
                         return __('N/A');
                     })
                     ->sortable(),
@@ -156,7 +145,7 @@ class NotificationSettingsRelationManager extends RelationManager
                                 ->success()
                                 ->send();
                         } catch (Exception $e) {
-                            Log::error('Failed to update notification setting via toggle: ' . $e->getMessage(), ['record_id' => $record->id]);
+                            Log::error('Failed to update notification setting via toggle: '.$e->getMessage(), ['record_id' => $record->id]);
                             Notification::make()
                                 ->title(__('ledger.notification.updated_error'))
                                 ->danger()
@@ -164,7 +153,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             $this->refresh();
                         }
                     })
-                    ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),
+                    ->getStateUsing(fn (RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),
             ])
             ->filters([
                 Filter::make('tenant_id')
@@ -185,6 +174,7 @@ class NotificationSettingsRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereHas('folder', function (EloquentBuilder $query) use ($data) {
                             $query->where('tenant_id', $data['value']);
                         });
@@ -204,6 +194,7 @@ class NotificationSettingsRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereIn('folder_id', $data['value']);
                     })
                     ->label(__('ledger.folder.title')),
@@ -215,7 +206,8 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->options(function () {
                                 // 日本語のラベルでオプションを生成
                                 return NotificationType::all()->mapWithKeys(function ($type) {
-                                    $label = __('ledger.notification_types.' . $type->name, [], $type->name);
+                                    $label = __('ledger.notification_types.'.$type->name, [], $type->name);
+
                                     return [$type->id => $label];
                                 })->all();
                             })
@@ -226,6 +218,7 @@ class NotificationSettingsRelationManager extends RelationManager
                         if (blank($data['value'])) {
                             return $query;
                         }
+
                         return $query->whereIn('notification_type_id', $data['value']);
                     })
                     ->label(__('ledger.notification_type')),
@@ -234,7 +227,7 @@ class NotificationSettingsRelationManager extends RelationManager
             ->headerActions([
                 // ★ CreateAction の代わりにカスタム Action を使用
                 Action::make('create') // アクション名を 'create' に設定
-                ->label(__('ledger.new_relation_attach'))
+                    ->label(__('ledger.new_relation_attach'))
                     ->form([
                         Select::make('tenant_id')
                             ->label(__('ledger.tenant'))
@@ -254,11 +247,12 @@ class NotificationSettingsRelationManager extends RelationManager
                         SelectTree::make('folder_id')
                             ->label(__('ledger.folder.title'))
                             ->relationship(relationship: 'folder', titleAttribute: 'display_title', parentAttribute: 'parent_id',
-                                modifyQueryUsing: fn(EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
                                     $selectedTenantId = $get('tenant_id');
                                     if ($selectedTenantId) {
                                         $query->where('tenant_id', $selectedTenantId);
                                     }
+
                                     return $query->with('tenant')->orderBy('_lft');
                                 }))
                             ->required()
@@ -269,7 +263,8 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->label(__('ledger.notification_type'))
                             ->options(function () {
                                 return NotificationType::all()->mapWithKeys(function ($notificationType) {
-                                    $labelKey = 'ledger.notification_types.' . $notificationType->name;
+                                    $labelKey = 'ledger.notification_types.'.$notificationType->name;
+
                                     return [$notificationType->id => trans()->has($labelKey) ? __($labelKey) : $notificationType->name];
                                 })->toArray();
                             })
@@ -321,7 +316,7 @@ class NotificationSettingsRelationManager extends RelationManager
                                 ->send();
 
                             // ★ エラーログ
-                            Log::error('Failed to create notification settings: ' . $e->getMessage(), [
+                            Log::error('Failed to create notification settings: '.$e->getMessage(), [
                                 'role_id' => $role->id,
                                 'folder_id' => $folderId,
                                 'notification_type_ids' => $notificationTypeIds,
@@ -329,7 +324,6 @@ class NotificationSettingsRelationManager extends RelationManager
                             ]);
                         }
                     }),
-
 
             ])
             ->actions([
@@ -406,7 +400,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             // 成功通知は ->successNotificationTitle で設定済み
                         } catch (Exception $e) {
                             // ★ エラーログ
-                            Log::error('Failed to delete notification setting: ' . $e->getMessage(), [
+                            Log::error('Failed to delete notification setting: '.$e->getMessage(), [
                                 'record_id' => $record->id,
                                 'exception' => $e,
                             ]);
@@ -441,14 +435,14 @@ class NotificationSettingsRelationManager extends RelationManager
                                 // 成功通知は ->successNotificationTitle で設定済み
                             } catch (Exception $e) {
                                 // ★ エラーログ
-                                Log::error('Failed to bulk delete notification settings: ' . $e->getMessage(), [
+                                Log::error('Failed to bulk delete notification settings: '.$e->getMessage(), [
                                     'record_ids' => $records->pluck('id')->toArray(),
                                     'exception' => $e,
                                 ]);
                                 // 失敗通知は ->failureNotificationTitle で設定済み
                                 $action->failure(); // これで失敗通知が表示される
                             }
-                        }),]),
+                        }), ]),
             ]);
     }
 

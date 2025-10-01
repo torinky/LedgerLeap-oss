@@ -15,13 +15,21 @@ class LedgerLookupControllerTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant1;
+
     protected Tenant $tenant2;
+
     protected Ledger $ledger1;
+
     protected Ledger $ledger2;
+
     protected Ledger $ledger3;
+
     protected User $user;
+
     protected LedgerDefine $define1;
+
     protected LedgerDefine $define2;
+
     protected LedgerDefine $define3;
 
     protected function setUp(): void

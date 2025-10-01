@@ -35,7 +35,7 @@ class AuthServiceProvider extends ServiceProvider
         Folder::class => FolderPolicy::class,
         Permission::class => PermissionPolicy::class,
         Role::class => RolePolicy::class,
-        CustomActivity::class =>CustomActivityPolicy::class,
+        CustomActivity::class => CustomActivityPolicy::class,
         AutoLink::class => AutoLinkPolicy::class,
 
     ];

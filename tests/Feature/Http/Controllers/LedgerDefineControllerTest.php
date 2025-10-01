@@ -19,11 +19,17 @@ class LedgerDefineControllerTest extends TestCase
     protected bool $tenancy = true;
 
     private User $adminUser;
+
     private User $writerUser;
+
     private User $viewerUser;
+
     private LedgerDefine $ledgerDefineInWritableFolder;
+
     private LedgerDefine $ledgerDefineInReadableFolder;
+
     private Folder $writableFolder;
+
     private Folder $readableFolder;
 
     protected function setUp(): void
@@ -84,7 +90,6 @@ class LedgerDefineControllerTest extends TestCase
             ->get($this->tenantRoute('ledgerDefine.index'))
             ->assertOk();
     }
-
 
     // --- Test Edit Action (ledgerDefine.edit) ---
 

@@ -1,8 +1,9 @@
 <?php
 
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Stancl\Tenancy\Facades\Tenancy;
+
 use function Pest\Laravel\getJson;
 
 // グローバルテナントでテナント初期化のコストを削減
@@ -15,13 +16,13 @@ beforeEach(function () use (&$globalTenant) {
             ['id' => 'auth-test-tenant'],
             ['id' => 'auth-test-tenant']
         );
-        
+
         // ドメインも再利用
-        if (!$globalTenant->domains()->where('domain', 'localhost')->exists()) {
+        if (! $globalTenant->domains()->where('domain', 'localhost')->exists()) {
             $globalTenant->domains()->create(['domain' => 'localhost']);
         }
     }
-    
+
     Tenancy::initialize($globalTenant);
 });
 
@@ -51,7 +52,7 @@ test('user can create api tokens and use them', function () {
     $token = $user->createToken('test-token')->plainTextToken;
 
     getJson('/api/user', [
-        'Authorization' => 'Bearer ' . $token,
+        'Authorization' => 'Bearer '.$token,
     ])->assertStatus(200)->assertJson(['id' => $user->id]);
 });
 

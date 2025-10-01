@@ -20,12 +20,19 @@ class LedgerControllerTest extends TestCase
     protected bool $tenancy = true;
 
     private User $adminUser;
+
     private User $writerUser;
+
     private User $viewerUser;
+
     private LedgerDefine $ledgerDefine;
+
     private Folder $writeFolder;
+
     private Folder $readFolder;
+
     private Ledger $writeLedger;
+
     private Ledger $readLedger;
 
     protected function setUp(): void

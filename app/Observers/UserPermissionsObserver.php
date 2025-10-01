@@ -19,7 +19,6 @@ class UserPermissionsObserver
     /**
      * Handle the User "deleted" event.
      *
-     * @param User $user
      * @return void
      */
     public function deleted(User $user)
@@ -30,7 +29,6 @@ class UserPermissionsObserver
     /**
      * Clear the permissions cache for the given user.
      *
-     * @param User $user
      * @return void
      */
     protected function clearPermissionsCache(User $user)
@@ -41,7 +39,6 @@ class UserPermissionsObserver
     /**
      * Handle the Role "updated" event.
      *
-     * @param Role $role
      * @return void
      */
     public function roleUpdated(Role $role)
@@ -52,7 +49,6 @@ class UserPermissionsObserver
     /**
      * Clear the permissions cache for users associated with the given role.
      *
-     * @param Role $role
      * @return void
      */
     protected function clearPermissionsCacheForRole(Role $role)
@@ -65,7 +61,6 @@ class UserPermissionsObserver
     /**
      * Handle the Role "deleted" event.
      *
-     * @param Role $role
      * @return void
      */
     public function roleDeleted(Role $role)
@@ -76,7 +71,6 @@ class UserPermissionsObserver
     /**
      * Handle the Organization "updated" event.
      *
-     * @param Organization $organization
      * @return void
      */
     public function organizationUpdated(Organization $organization)
@@ -87,7 +81,6 @@ class UserPermissionsObserver
     /**
      * Clear the permissions cache for users associated with the given organization.
      *
-     * @param Organization $organization
      * @return void
      */
     protected function clearPermissionsCacheForOrganization(Organization $organization)
@@ -100,7 +93,6 @@ class UserPermissionsObserver
     /**
      * Handle the Organization "deleted" event.
      *
-     * @param Organization $organization
      * @return void
      */
     public function organizationDeleted(Organization $organization)

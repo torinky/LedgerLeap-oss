@@ -3,26 +3,29 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\ModifyColumn;
+use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-use App\Models\Folder;
-use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\ColumnDefine;
+use Tests\TestCase;
 
 class ModifyColumnTenancyTest extends TestCase
 {
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
+
     protected Ledger $ledger;
 
     protected function setUp(): void
@@ -49,7 +52,7 @@ class ModifyColumnTenancyTest extends TestCase
         // テストデータの準備
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
 
-        $columnDefine = new ColumnDefine((object)[
+        $columnDefine = new ColumnDefine((object) [
             'id' => 1,
             'name' => 'Test Column',
             'type' => 'text',

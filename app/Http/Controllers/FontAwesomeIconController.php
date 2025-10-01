@@ -10,19 +10,15 @@ class FontAwesomeIconController extends Controller
 {
     /**
      * 指定されたスタイルとアイコン名のSVGファイルを配信する
-     *
-     * @param string $style
-     * @param string $icon
-     * @return BinaryFileResponse
      */
     public function serveIcon(string $style, string $icon): BinaryFileResponse
     {
-        $path = base_path('node_modules/@fortawesome/fontawesome-free/svgs/' . $style . '/' . $icon . '.svg');
+        $path = base_path('node_modules/@fortawesome/fontawesome-free/svgs/'.$style.'/'.$icon.'.svg');
 
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             // アイコンが見つからない場合はデフォルトのファイルアイコンを返す
             $defaultPath = base_path('node_modules/@fortawesome/fontawesome-free/svgs/solid/file.svg');
-            if (!File::exists($defaultPath)) {
+            if (! File::exists($defaultPath)) {
                 abort(404, 'Icon not found');
             }
             $path = $defaultPath;
@@ -36,9 +32,6 @@ class FontAwesomeIconController extends Controller
 
     /**
      * MIMEタイプに基づいて適切なアイコンを配信する
-     *
-     * @param Request $request
-     * @return BinaryFileResponse
      */
     public function serveIconByMime(Request $request): BinaryFileResponse
     {
@@ -53,13 +46,10 @@ class FontAwesomeIconController extends Controller
 
     /**
      * MIMEタイプからFont Awesomeのアイコン名を決定するヘルパーメソッド
-     *
-     * @param string|null $mimeType
-     * @return string
      */
     private function getIconNameForMimeType(?string $mimeType): string
     {
-        if (!$mimeType) {
+        if (! $mimeType) {
             return 'file';
         }
 

@@ -12,7 +12,8 @@ class PermissionServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(PermissionRegistrar::class, function ($app) {
-            return new class($app) extends PermissionRegistrar {
+            return new class($app) extends PermissionRegistrar
+            {
                 protected function getPermissionsClass()
                 {
                     return Permission::class;

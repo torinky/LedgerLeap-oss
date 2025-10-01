@@ -39,7 +39,7 @@ class LedgerLookupController extends Controller
         return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
     }
 
-    public function searchAllTenants(string $query = null)
+    public function searchAllTenants(?string $query = null)
     {
         if (empty($query)) {
             return redirect()->route('global.my-portal');

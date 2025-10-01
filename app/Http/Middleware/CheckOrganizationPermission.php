@@ -12,14 +12,14 @@ class CheckOrganizationPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response('Unauthorized.', 401);
         }
 
         // 現在のリクエストに関連する組織を取得
         $organization = $this->getCurrentOrganization($request);
 
-        if (!$organization) {
+        if (! $organization) {
             return response('Organization not found.', 404);
         }
 

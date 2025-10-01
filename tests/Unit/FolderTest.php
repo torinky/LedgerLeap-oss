@@ -8,8 +8,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
 use Stancl\Tenancy\Facades\Tenancy;
+use Tests\TestCase;
 
 class FolderTest extends TestCase
 {

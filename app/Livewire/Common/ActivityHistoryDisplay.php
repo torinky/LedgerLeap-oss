@@ -7,10 +7,6 @@ use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Organization;
-use App\Models\Permission;
-use App\Models\Role;
-use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Carbon;
@@ -26,51 +22,61 @@ class ActivityHistoryDisplay extends Component
 
     // リソースタイプとIDが指定されない場合、全件表示モードとなる
     public ?int $resourceId = null;
+
     public ?string $resourceType = null; // 'Ledger', 'LedgerDefine', 'Folder'
+
     public bool $includeRelatedResources = false; // レコードのアクティビティ表示時に、親の台帳定義とフォルダのアクティビティも含めるか
-//    public string $paginationTheme = 'app';
+    //    public string $paginationTheme = 'app';
 
     // ★★★ 非表示にするカラムのキーを格納する配列 ★★★
     public array $hiddenColumns = [];
 
     // フィルタリング用プロパティ
     public ?string $filterCauserName = null;
+
     public ?string $filterEventType = null;
+
     public ?string $filterStartDate = null;
+
     public ?string $filterEndDate = null;
+
     public ?string $searchQuery = null;
+
     public ?int $filterByUserId = null;
+
     public ?string $filterByEvent = ''; // 初期値を空文字列に
 
     // ★★★ 新規追加: フィルタ選択肢用プロパティ ★★★
     public Collection $userOptions;
+
     public Collection $eventOptions;
+
     public Collection $descriptionOptions;
 
     // DaisyUI Theme Colors for Changes Display
     private const TEXT_COLOR_SUCCESS = 'text-success';         // For added items, success states, etc.
+
     private const TEXT_COLOR_ERROR = 'text-error';           // For removed items, error states, etc.
+
     private const TEXT_COLOR_INFO = 'text-info';             // For general changes, informational content
+
     private const TEXT_COLOR_NEUTRAL = 'text-neutral-content'; // For neutral or less emphasized information
+
     private const TEXT_STYLE_MUTED = 'text-base-content/70'; // For muted text (e.g., null values)
-    private const TEXT_STYLE_ITALIC_MUTED = 'italic ' . self::TEXT_STYLE_MUTED; // For italic muted text
+
+    private const TEXT_STYLE_ITALIC_MUTED = 'italic '.self::TEXT_STYLE_MUTED; // For italic muted text
+
     public ?string $filterByDescription = '';
 
     /**
      * コンポーネントの初期化
-     *
-     * @param int|null $resourceId
-     * @param string|null $resourceType
-     * @param bool $includeRelatedResources
-     * @return void
      */
     public function mount(
-        ?int    $resourceId = null,
+        ?int $resourceId = null,
         ?string $resourceType = null,
-        bool    $includeRelatedResources = false,
-        array   $hiddenColumns = []
-    ): void
-    {
+        bool $includeRelatedResources = false,
+        array $hiddenColumns = []
+    ): void {
         $this->resourceId = $resourceId;
         $this->resourceType = $resourceType;
         $this->includeRelatedResources = $includeRelatedResources;
@@ -82,8 +88,6 @@ class ActivityHistoryDisplay extends Component
 
     /**
      * ソート機能 (MVPでは非実装だが定義しておく)
-     * @param string $field
-     * @return void
      */
     public function sortBy(string $field): void
     {
@@ -107,7 +111,7 @@ class ActivityHistoryDisplay extends Component
             switch ($this->resourceType) {
                 case 'Folder':
                     $folder = Folder::find($this->resourceId);
-                    if (!$folder) {
+                    if (! $folder) {
                         return $query->whereRaw('0=1');
                     }
                     $folderIds = $folder->descendantsAndSelf($this->resourceId)->pluck('id');
@@ -181,7 +185,7 @@ class ActivityHistoryDisplay extends Component
             $query->where('event', $this->filterByEvent);
         }
         if ($this->filterByDescription) {
-            $query->where('description', 'like', '%' . $this->filterByDescription . '%');
+            $query->where('description', 'like', '%'.$this->filterByDescription.'%');
         }
         if ($this->filterStartDate) {
             $query->where('created_at', '>=', Carbon::parse($this->filterStartDate)->startOfDay());
@@ -220,7 +224,7 @@ class ActivityHistoryDisplay extends Component
     public function render()
     {
         // ログ閲覧権限チェック
-        if (!auth()->check() || !auth()->user()->can('viewAny', CustomActivity::class)) {
+        if (! auth()->check() || ! auth()->user()->can('viewAny', CustomActivity::class)) {
             return view('livewire.common.activity-history-display-no-permission');
         }
 
@@ -248,8 +252,6 @@ class ActivityHistoryDisplay extends Component
 
     /**
      * 表示するヘッダーのリストを生成する
-     *
-     * @return array
      */
     protected function getVisibleHeaders(): array
     {
@@ -263,14 +265,12 @@ class ActivityHistoryDisplay extends Component
         ];
 
         return array_filter($allHeaders, function ($header) {
-            return !in_array($header['key'], $this->hiddenColumns);
+            return ! in_array($header['key'], $this->hiddenColumns);
         });
     }
 
     /**
      * `x-mary-choices` 用の検索
-     *
-     * @return void
      */
     public function userSearch(string $value = ''): void
     {

@@ -5,7 +5,6 @@ namespace Tests\Feature\Livewire\Ledger;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
-use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
@@ -22,7 +21,9 @@ class ModifyColumnTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -37,7 +38,7 @@ class ModifyColumnTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         // ファイルカラムを持つ台帳定義を作成
-        $fileColumn = new ColumnDefine((object)[
+        $fileColumn = new ColumnDefine((object) [
             'id' => 0, // 1から0に変更
             'name' => 'Attachment',
             'type' => 'files',
@@ -135,13 +136,13 @@ class ModifyColumnTest extends TestCase
         $multiColumnDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine((object)[
+                new ColumnDefine((object) [
                     'id' => 0,
                     'name' => 'TextField',
                     'type' => 'text',
                     'order' => 1,
                 ]),
-                new ColumnDefine((object)[
+                new ColumnDefine((object) [
                     'id' => 1,
                     'name' => 'AttachmentField',
                     'type' => 'files',
@@ -210,14 +211,14 @@ class ModifyColumnTest extends TestCase
         $sparseColumnDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine((object)[
+                new ColumnDefine((object) [
                     'id' => 0,
                     'name' => 'TextField',
                     'type' => 'text',
                     'order' => 1,
                 ]),
                 // ID 1 は意図的に欠番
-                new ColumnDefine((object)[
+                new ColumnDefine((object) [
                     'id' => 2,
                     'name' => 'AttachmentField',
                     'type' => 'files',

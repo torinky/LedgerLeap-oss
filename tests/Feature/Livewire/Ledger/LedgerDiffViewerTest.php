@@ -2,41 +2,46 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\LedgerDiffViewer;
+use App\Models\AttachedFile;
+use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\LedgerContentProcessor;
-use App\Services\Ledger\LedgerDiffProcessor;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-use App\Models\Folder;
-use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\RoleFolderPermission;
-use App\Enums\FolderPermissionType;
-use App\Services\UserService;
-use App\Models\ColumnDefine;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Storage;
-use App\Models\AttachedFile;
+use Tests\TestCase;
 
 class LedgerDiffViewerTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+
     private Ledger $ledger;
+
     protected Tenant $tenant;
+
     private User $inspector;
+
     private User $approver;
+
     private Role $inspectorRole;
+
     private Role $approverRole;
+
     private Folder $folder;
 
     protected function setUp(): void
@@ -115,9 +120,9 @@ class LedgerDiffViewerTest extends TestCase
                             'status' => 'modified',
                             'current_value_html' => '<div>Current Value</div>',
                             'old_value_html' => '<div>Old Value</div>',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ];
 
             $mock->shouldReceive('processContentForDisplay')
@@ -216,7 +221,7 @@ class LedgerDiffViewerTest extends TestCase
         // 3. Ledger を更新して version 2 にする
         $ledger->version = 2;
         $ledger->content = ['current value'];
-        
+
         // 4. version 2 の LedgerDiff を作成
         $diffV2 = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
@@ -227,7 +232,7 @@ class LedgerDiffViewerTest extends TestCase
         ]);
         $ledger->latest_diff_id = $diffV2->id;
         $ledger->save();
-        
+
         // 5. 最終状態をDBから読み込んでコンポーネントに渡す
         $ledger->refresh();
 
@@ -275,12 +280,12 @@ class LedgerDiffViewerTest extends TestCase
             'original_mime_type' => 'image/jpeg',
         ]);
         Storage::disk('public')->putFileAs(
-            'tenants/' . $this->tenant->id . '/Ledger/Attachments/' . $ledgerDefineWithFiles->id . '/',
+            'tenants/'.$this->tenant->id.'/Ledger/Attachments/'.$ledgerDefineWithFiles->id.'/',
             $file,
             $attachedFile->hashedbasename
         );
         Storage::disk('public')->put(
-            'tenants/' . $this->tenant->id . '/Ledger/thumbs/' . $attachedFile->hashedbasename,
+            'tenants/'.$this->tenant->id.'/Ledger/thumbs/'.$attachedFile->hashedbasename,
             'dummy_thumbnail_content'
         );
 
@@ -306,10 +311,10 @@ class LedgerDiffViewerTest extends TestCase
         $this->assertEquals($attachedFile->id, $livewire->instance()->allAttachments->get('test_hashed_basename.pdf')->id);
 
         // HTMLに期待されるURLの断片が含まれていることをアサート
-        $livewire->assertSee("files/", false);
-        $livewire->assertSee("/download", false);
-        $livewire->assertSee((string)$attachedFile->id, false);
-        $livewire->assertSee("thumbnail=true", false);
+        $livewire->assertSee('files/', false);
+        $livewire->assertSee('/download', false);
+        $livewire->assertSee((string) $attachedFile->id, false);
+        $livewire->assertSee('thumbnail=true', false);
 
         // ファイル名も表示されていることを確認
         $livewire->assertSee($attachedFile->filename);

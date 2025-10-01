@@ -14,8 +14,8 @@ class RequiredCheckbox implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-//        dd($value,count($value),count(array_filter($value,'strlen')));
-        if (count(array_filter($value,'strlen'))==0) {
+        //        dd($value,count($value),count(array_filter($value,'strlen')));
+        if (count(array_filter($value, 'strlen')) == 0) {
             $fail('validation.required')->translate();
         }
     }

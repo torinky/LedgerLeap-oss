@@ -16,7 +16,9 @@ class LedgerTest extends TestCase
     use RefreshDatabase;
 
     private Ledger $ledger;
+
     private Role $inspectorRole;
+
     private Role $approverRole;
 
     protected function setUp(): void

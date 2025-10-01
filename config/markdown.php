@@ -47,7 +47,6 @@ return [
      */
     'cache_store' => null,
 
-
     /*
      * When cache_store is enabled, this value will be used to determine
      * how long the cache will be valid. If you set this to `null` the
@@ -81,7 +80,7 @@ return [
         League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension::class,
         League\CommonMark\Extension\Footnote\FootnoteExtension::class,
         League\CommonMark\Extension\Attributes\AttributesExtension::class,
-        League\CommonMark\Extension\DescriptionList\DescriptionListExtension::class
+        League\CommonMark\Extension\DescriptionList\DescriptionListExtension::class,
     ],
 
     /*

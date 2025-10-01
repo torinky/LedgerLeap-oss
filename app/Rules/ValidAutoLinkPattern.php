@@ -17,6 +17,7 @@ class ValidAutoLinkPattern implements ValidationRule
         // 正規表現の構文チェック
         if (@preg_match($value, '') === false) {
             $fail('The :attribute must be a valid regular expression.');
+
             return;
         }
 

@@ -14,7 +14,7 @@ class UpdateController extends Controller
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
         $ledgerDefine = new LedgerDefine;
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();
 
@@ -43,7 +43,7 @@ class UpdateController extends Controller
 
     public function delete(request $request)
     {
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $ledgerDefine = LedgerDefine::find($ledgerDefineId);
 

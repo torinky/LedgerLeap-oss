@@ -14,6 +14,7 @@ class FolderPolicy
     use HandlesAuthorization;
 
     protected $userService;
+
     private WritableFolderRepository $writableFolderRepository;
 
     public function __construct(UserService $userService, WritableFolderRepository $writableFolderRepository)

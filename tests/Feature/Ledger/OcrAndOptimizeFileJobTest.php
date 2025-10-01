@@ -23,6 +23,7 @@ class OcrAndOptimizeFileJobTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
 
     protected function setUp(): void
@@ -42,9 +43,9 @@ class OcrAndOptimizeFileJobTest extends TestCase
 
         // 1. Prepare the file in storage
         $fixturePath = base_path('tests/fixtures/files/test.pdf');
-        $this->assertFileExists($fixturePath, "Test fixture file is missing.");
+        $this->assertFileExists($fixturePath, 'Test fixture file is missing.');
         $uploadedFile = new UploadedFile($fixturePath, 'test.pdf', 'application/pdf', null, true);
-        
+
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->for($folder)->create();
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
@@ -98,7 +99,7 @@ class OcrAndOptimizeFileJobTest extends TestCase
         // Assert original file was moved
         $this->assertNotNull($attachedFile->original_file_path);
         Storage::disk('public')->assertExists($attachedFile->original_file_path);
-        
+
         // Assert new file was created (path should be the same, but content is new)
         $this->assertEquals($path, $attachedFile->path);
         Storage::disk('public')->assertExists($attachedFile->path);

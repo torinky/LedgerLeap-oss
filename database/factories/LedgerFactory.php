@@ -19,13 +19,13 @@ class LedgerFactory extends Factory
      */
     public function definition()
     {
-        if (!Storage::exists('public/Ledger/Attachments')) {
+        if (! Storage::exists('public/Ledger/Attachments')) {
             Storage::makeDirectory('public/Ledger/Attachments');
         }
-        if (!Storage::exists('public/Ledger/thumbs')) {
+        if (! Storage::exists('public/Ledger/thumbs')) {
             Storage::makeDirectory('public/Ledger/thumbs');
         }
-        if (!Storage::exists('filepond')) {
+        if (! Storage::exists('filepond')) {
             Storage::makeDirectory('filepond');
         }
 

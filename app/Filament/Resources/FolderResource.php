@@ -6,7 +6,6 @@ use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -16,11 +15,11 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Routing\Route as RouteAlias;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder; // 追加
+use Illuminate\Support\Facades\Route; // 追加
 
 class FolderResource extends Resource
 {
@@ -84,23 +83,24 @@ class FolderResource extends Resource
                             })
                             ->required() // tenant_idを必須にする
                             ->disabledOn('edit') // 編集時は無効化
-                            ->default(fn() => session('filament_from_tenant_id')),
+                            ->default(fn () => session('filament_from_tenant_id')),
                         Forms\Components\Hidden::make('creator_id')
-                            ->default(fn() => auth()->id())
+                            ->default(fn () => auth()->id())
                             ->disabledOn('edit'), // 作成時のみ記録
                         Forms\Components\Hidden::make('modifier_id')
-                            ->default(fn() => auth()->id()), // 常に現在のユーザーを設定
+                            ->default(fn () => auth()->id()), // 常に現在のユーザーを設定
                         SelectTree::make('parent_id')
                             ->label(__('ledger.folder.parent'))
                             ->relationship(
                                 'parent', // name
                                 'title', // titleAttribute
                                 'parent_id', // parentAttribute
-                                modifyQueryUsing: fn(EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
                                     $selectedTenantId = $get('tenant_id');
                                     if ($selectedTenantId) {
                                         $query->where('tenant_id', $selectedTenantId);
                                     }
+
                                     return $query->orderBy('_lft');
                                 })
                             )
@@ -113,7 +113,7 @@ class FolderResource extends Resource
                     ->description(__('ledger.workflow.required_roles_setting_helper'))
                     ->schema([
                         Select::make('requiredInspectorRoles') // リレーション名に合わせる
-                        ->label(__('ledger.workflow.required_inspector_roles'))
+                            ->label(__('ledger.workflow.required_inspector_roles'))
                             ->relationship('requiredInspectorRoles', 'name') // リレーション名と表示カラム
                             ->multiple()
                             ->preload()
@@ -122,7 +122,7 @@ class FolderResource extends Resource
                             ->helperText(__('ledger.workflow.required_inspector_roles_helper'))
                             ->saveRelationshipsUsing(static function (Model $record, $state) { // $state は選択されたロールIDの配列
                                 if (is_array($state)) {
-                                    $syncData = collect($state)->mapWithKeys(fn($roleId) => [$roleId => ['type' => 'inspector']])->all();
+                                    $syncData = collect($state)->mapWithKeys(fn ($roleId) => [$roleId => ['type' => 'inspector']])->all();
                                     // attachではなくsyncを使うのが一般的。既存の関連は解除され、新しいものだけが残る。
                                     // もし既存の関連を維持しつつ追加したい場合は、ロジックを調整する必要がある。
                                     $record->requiredInspectorRoles()->sync($syncData);
@@ -130,10 +130,9 @@ class FolderResource extends Resource
                                     // 何も選択されなかった場合は空でsync（全ての関連を解除）
                                     $record->requiredInspectorRoles()->sync([]);
                                 }
-                            })
-                        ,
+                            }),
                         Select::make('requiredApproverRoles') // リレーション名に合わせる
-                        ->label(__('ledger.workflow.required_approver_roles'))
+                            ->label(__('ledger.workflow.required_approver_roles'))
                             ->relationship('requiredApproverRoles', 'name')
                             ->multiple()
                             ->preload()
@@ -142,13 +141,12 @@ class FolderResource extends Resource
                             ->helperText(__('ledger.workflow.required_approver_roles_helper'))
                             ->saveRelationshipsUsing(static function (Model $record, $state) {
                                 if (is_array($state)) {
-                                    $syncData = collect($state)->mapWithKeys(fn($roleId) => [$roleId => ['type' => 'approver']])->all();
+                                    $syncData = collect($state)->mapWithKeys(fn ($roleId) => [$roleId => ['type' => 'approver']])->all();
                                     $record->requiredApproverRoles()->sync($syncData);
                                 } else {
                                     $record->requiredApproverRoles()->sync([]);
                                 }
-                            })
-                        ,
+                            }),
                     ])->columns(2),
 
                 // Forms\Components\Hidden::make('lft'), // NodeTrait が自動で処理するはず
@@ -183,9 +181,9 @@ class FolderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\RestoreAction::make()->visible(fn($record) => $record->trashed()),
+                Tables\Actions\RestoreAction::make()->visible(fn ($record) => $record->trashed()),
                 Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make()->visible(fn($record) => $record->trashed()),
+                Tables\Actions\ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -213,7 +211,7 @@ class FolderResource extends Resource
             'index' => Pages\ListFolders::route('/'),
             'tree' => new PageRegistration(
                 Pages\ListFoldersTree::class,
-                fn(): RouteAlias => Route::get('/tree', Pages\ListFoldersTree::class)),
+                fn (): RouteAlias => Route::get('/tree', Pages\ListFoldersTree::class)),
             'create' => Pages\CreateFolder::route('/create'),
             'edit' => Pages\EditFolder::route('/{record}/edit'),
         ];

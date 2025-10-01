@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Lang;
-use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -73,9 +72,9 @@ class Ledger extends Model
 
         // 単一キーワードの場合は `+` を、複数キーワードの場合は `+"..."` を使用
         if (count($keywords) > 1) {
-            $searchString = '+"' . implode(' ', $keywords) . '"';
+            $searchString = '+"'.implode(' ', $keywords).'"';
         } else {
-            $searchString = '+' . $keywords[0];
+            $searchString = '+'.$keywords[0];
         }
 
         // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
@@ -155,7 +154,7 @@ class Ledger extends Model
     }
 
     /**
-     * 更新日時範囲での絞り込みスコープ  
+     * 更新日時範囲での絞り込みスコープ
      * spatie/laravel-query-builder 用
      */
     public function scopeUpdatedBetween(EloquentBuilder $query, $value)
@@ -186,13 +185,13 @@ class Ledger extends Model
      */
     public function scopeFolderHierarchy(EloquentBuilder $query, $folderId)
     {
-        if (!empty($folderId)) {
+        if (! empty($folderId)) {
             $folderIds = Folder::descendantsAndSelf($folderId)->pluck('id');
             $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($folderIds) {
                 $q->whereIn('id', $folderIds);
             });
         }
-        
+
         return $query;
     }
 
@@ -202,40 +201,40 @@ class Ledger extends Model
      */
     public function scopeWithTags(EloquentBuilder $query, $tags)
     {
-        if (!empty($tags)) {
+        if (! empty($tags)) {
             $tagNames = is_string($tags) ? array_filter(explode(',', $tags)) : $tags;
-            if (!empty($tagNames)) {
+            if (! empty($tagNames)) {
                 $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
                     $q->whereIn('name', $tagNames);
                 }, '=', count($tagNames));
             }
         }
-        
+
         return $query;
     }
 
     /**
      * 除外タグでの絞り込みスコープ
-     * spatie/laravel-query-builder 用  
+     * spatie/laravel-query-builder 用
      */
     public function scopeWithoutTags(EloquentBuilder $query, $excludeTags)
     {
-        if (!empty($excludeTags)) {
+        if (! empty($excludeTags)) {
             $excludeTagNames = is_string($excludeTags) ? array_filter(explode(',', $excludeTags)) : $excludeTags;
-            if (!empty($excludeTagNames)) {
+            if (! empty($excludeTagNames)) {
                 $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
                     $q->whereIn('name', $excludeTagNames);
                 });
             }
         }
-        
+
         return $query;
     }
 
     public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
     {
         // キーワード検索
-        if (!empty($params['q'])) {
+        if (! empty($params['q'])) {
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
                 $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$params['q']])
                     ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$params['q']]);
@@ -243,8 +242,8 @@ class Ledger extends Model
         }
 
         // 除外キーワード検索 (全文検索のNOT演算子を利用)
-        if (!empty($params['exclude_q'])) {
-            $excludeKeywords = '-' . implode(' -', explode(' ', $params['exclude_q']));
+        if (! empty($params['exclude_q'])) {
+            $excludeKeywords = '-'.implode(' -', explode(' ', $params['exclude_q']));
             $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
                 $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
                     ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
@@ -252,12 +251,12 @@ class Ledger extends Model
         }
 
         // 台帳定義IDでの絞り込み
-        if (!empty($params['ledger_define_id'])) {
+        if (! empty($params['ledger_define_id'])) {
             $query->where('ledger_define_id', $params['ledger_define_id']);
         }
 
         // フォルダIDでの絞り込み (再帰的)
-        if (!empty($params['folder_id'])) {
+        if (! empty($params['folder_id'])) {
             $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
                 $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
                 $q->whereIn('id', $folderIds);
@@ -265,9 +264,9 @@ class Ledger extends Model
         }
 
         // タグでの絞り込み (AND条件)
-        if (!empty($params['tags'])) {
+        if (! empty($params['tags'])) {
             $tagNames = array_filter(explode(',', $params['tags']));
-            if (!empty($tagNames)) {
+            if (! empty($tagNames)) {
                 $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
                     $q->whereIn('name', $tagNames);
                 }, '=', count($tagNames));
@@ -275,9 +274,9 @@ class Ledger extends Model
         }
 
         // 除外タグでの絞り込み
-        if (!empty($params['exclude_tags'])) {
+        if (! empty($params['exclude_tags'])) {
             $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
-            if (!empty($excludeTagNames)) {
+            if (! empty($excludeTagNames)) {
                 $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
                     $q->whereIn('name', $excludeTagNames);
                 });

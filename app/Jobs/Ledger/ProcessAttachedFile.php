@@ -3,6 +3,7 @@
 namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use Exception;
@@ -12,14 +13,13 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
-
 // ★ DBファサードをインポート
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
-use App\Helpers\AttachedFilePathHelper;
-use App\Jobs\Ledger\GenerateThumbnail; // ★ 追加
+
+// ★ 追加
 
 class ProcessAttachedFile implements ShouldQueue
 {
@@ -43,7 +43,7 @@ class ProcessAttachedFile implements ShouldQueue
         // ここでテナントを初期化
         tenancy()->initialize($this->attachedFile->tenant_id);
 
-        Log::info('ProcessAttachedFile: ID: ' . $this->attachedFile->id . ', Status: ' . $this->attachedFile->status->value);
+        Log::info('ProcessAttachedFile: ID: '.$this->attachedFile->id.', Status: '.$this->attachedFile->status->value);
         // Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
         // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
@@ -54,9 +54,10 @@ class ProcessAttachedFile implements ShouldQueue
         // original_file_path が設定されていない場合のみ、ファイルをOriginalsに移動
         if (empty($this->attachedFile->original_file_path)) {
             try {
-                if (!Storage::disk('public')->exists($currentFilePath)) {
-                    Log::error('Original file not found for moving in ProcessAttachedFile: ' . $currentFilePath);
+                if (! Storage::disk('public')->exists($currentFilePath)) {
+                    Log::error('Original file not found for moving in ProcessAttachedFile: '.$currentFilePath);
                     $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
+
                     return;
                 }
 
@@ -70,16 +71,17 @@ class ProcessAttachedFile implements ShouldQueue
                 $this->attachedFile->refresh(); // モデルをリロードして最新の状態を反映
                 // Log::info('Original file moved to: ' . $newOriginalPath);
             } catch (
-Exception $e) {
-                Log::error('Failed to move original file in ProcessAttachedFile: ' . $e->getMessage());
-                $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
-                return;
-            }
+                Exception $e) {
+                    Log::error('Failed to move original file in ProcessAttachedFile: '.$e->getMessage());
+                    $this->attachedFile->update(['status' => AttachedFileStatus::TIKA_FAILED->value]);
+
+                    return;
+                }
         } else {
             // original_file_path が設定されている場合、ファイルは既にOriginalsにあるか、
             // OCR処理後のファイルがAttachmentsにあるはずなので、移動は不要。
             // ここでは何もしない。
-            Log::info('File already processed or moved, skipping initial move in ProcessAttachedFile for file: ' . $this->attachedFile->id);
+            Log::info('File already processed or moved, skipping initial move in ProcessAttachedFile for file: '.$this->attachedFile->id);
         }
 
         // 2. status を INITIAL_PROCESSING に更新
@@ -89,8 +91,8 @@ Exception $e) {
         DB::transaction(function () {
             $ledger = Ledger::where('id', $this->attachedFile->ledger_id)->lockForUpdate()->firstOrFail();
             $ledger->refresh(); // Ensure the latest data is loaded from the database
-            Log::info('ProcessAttachedFile: Inside transaction. Ledger ID: ' . $ledger->id);
-//            Log::info('ProcessAttachedFile: Initial ledger->content_attached (from DB): ' . json_encode($ledger->content_attached));
+            Log::info('ProcessAttachedFile: Inside transaction. Ledger ID: '.$ledger->id);
+            //            Log::info('ProcessAttachedFile: Initial ledger->content_attached (from DB): ' . json_encode($ledger->content_attached));
 
             // 1. Get the current content_attached from the ledger. This will be a numerically indexed array.
             $existingContentAttached = $ledger->content_attached ?? [];
@@ -101,7 +103,7 @@ Exception $e) {
             $columnDefines = $ledger->define->column_define;
             $maxColumnId = $columnDefines->max('id');
 
-            //columnIdで存在しないカラムも踏まえて準備しておく
+            // columnIdで存在しないカラムも踏まえて準備しておく
             for ($i = 0; $maxColumnId > $i; $i++) {
                 $workingContentAttached[$i] = [];
             }
@@ -111,21 +113,21 @@ Exception $e) {
                 // Map the numerically indexed existing content back to column_id keys
                 // 既存のコンテンツが配列であることを保証
                 $contentForColumn = $existingContentAttached[$columnId] ?? [];
-                if (!is_array($contentForColumn)) {
+                if (! is_array($contentForColumn)) {
                     $contentForColumn = [];
                 }
                 $workingContentAttached[$columnId] = $contentForColumn;
             }
-//             Log::info('ProcessAttachedFile: Working content_attached (associative array by column_id): ' . json_encode($workingContentAttached));
+            //             Log::info('ProcessAttachedFile: Working content_attached (associative array by column_id): ' . json_encode($workingContentAttached));
 
             // 3. Update the specific column_id's content.
             $currentColumnContent = $workingContentAttached[$this->attachedFile->column_id] ?? [];
             // 既存のコンテンツが配列であることを保証
-            if (!is_array($currentColumnContent)) {
+            if (! is_array($currentColumnContent)) {
                 $currentColumnContent = [];
             }
             $result = $currentColumnContent[$this->attachedFile->hashedbasename] ?? ['meta' => ['content' => '']];
-            Log::info('ProcessAttachedFile: Current result for file (before Tika processing): ' . json_encode($result));
+            Log::info('ProcessAttachedFile: Current result for file (before Tika processing): '.json_encode($result));
 
             $filePath = Storage::disk('public')->path($this->attachedFile->path);
 
@@ -148,25 +150,25 @@ Exception $e) {
                     }
                 }
 
-                if (!empty($extractedText)) {
+                if (! empty($extractedText)) {
                     // テキスト抽出成功時
                     $result['meta']['content'] = $extractedText;
                     $this->attachedFile->contain_content = true;
                     $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
-                    Log::info('Tika text extraction successful for file: ' . $this->attachedFile->id);
+                    Log::info('Tika text extraction successful for file: '.$this->attachedFile->id);
                 } else {
                     // テキスト抽出失敗時
                     $mimeType = $this->attachedFile->mime;
-                    if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
+                    if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && ! $this->attachedFile->optimized) {
                         // OCR対象の場合 (PDF/画像) かつまだ最適化されていない場合: PENDING_OCR に更新し、OcrAndOptimizeFile ジョブをディスパッチ
                         $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
                         OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
-                        Log::info('Dispatched OcrAndOptimizeFile for file: ' . $this->attachedFile->id);
+                        Log::info('Dispatched OcrAndOptimizeFile for file: '.$this->attachedFile->id);
                     } else {
                         // OCR対象外の場合 (ZIP, etc.) または既に最適化されている場合: COMPLETED に更新して処理を正常終了
                         // optimized が true の場合、OCR処理は完了しているため、Tikaがテキストを抽出できなくてもCOMPLETEDとする
                         $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
-                        Log::info('File is not OCR-eligible or already optimized, marking as completed: ' . $this->attachedFile->id);
+                        Log::info('File is not OCR-eligible or already optimized, marking as completed: '.$this->attachedFile->id);
                     }
                 }
 
@@ -180,22 +182,22 @@ Exception $e) {
                     }
                 }
 
-                if (!empty($mime)) {
+                if (! empty($mime)) {
                     $this->attachedFile->mime = $mime;
                 }
 
             } catch (Exception $e) {
-                Log::error('Tika service error for file ' . $this->attachedFile->id . ': ' . $e->getMessage() . '\nStack trace: ' . $e->getTraceAsString());
+                Log::error('Tika service error for file '.$this->attachedFile->id.': '.$e->getMessage().'\nStack trace: '.$e->getTraceAsString());
                 $mimeType = $this->attachedFile->mime;
-                if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && !$this->attachedFile->optimized) {
+                if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && ! $this->attachedFile->optimized) {
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
                     OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
-                    Log::info('Dispatched OcrAndOptimizeFile after Tika error for file: ' . $this->attachedFile->id);
+                    Log::info('Dispatched OcrAndOptimizeFile after Tika error for file: '.$this->attachedFile->id);
                 } else {
                     // OCR対象外の場合、または既に最適化されている場合 (TikaがOCR済みPDFからテキスト抽出できなかったケース)
                     // Tikaエラーが発生したが、OCR処理は完了している（optimized=true）場合はCOMPLETEDとする
                     $this->attachedFile->status = $this->attachedFile->optimized ? AttachedFileStatus::COMPLETED->value : AttachedFileStatus::TIKA_FAILED->value;
-                    Log::info('File is not OCR-eligible or already optimized after Tika error, marking as completed/failed: ' . $this->attachedFile->id);
+                    Log::info('File is not OCR-eligible or already optimized after Tika error, marking as completed/failed: '.$this->attachedFile->id);
                 }
             }
 
@@ -205,8 +207,8 @@ Exception $e) {
             // Log::info('ProcessAttachedFile: Updated workingContentAttached for current file: ' . json_encode($workingContentAttached));
 
             // Mroongaの要件に合わせて、数値インデックスの配列に戻す
-//             $finalContentAttached = array_values($workingContentAttached);
-//             Log::info('ProcessAttachedFile: Final content_attached before save (numerically indexed): ' . json_encode($finalContentAttached));
+            //             $finalContentAttached = array_values($workingContentAttached);
+            //             Log::info('ProcessAttachedFile: Final content_attached before save (numerically indexed): ' . json_encode($finalContentAttached));
 
             $ledger->content_attached = $workingContentAttached;
 
@@ -220,7 +222,7 @@ Exception $e) {
                     }
                 });
             }
-            Log::info('ProcessAttachedFile: Ledger->content_attached before save (content truncated): ' . json_encode($loggableContent));
+            Log::info('ProcessAttachedFile: Ledger->content_attached before save (content truncated): '.json_encode($loggableContent));
 
             $ledger->save();
 
@@ -231,14 +233,14 @@ Exception $e) {
 
         // ★ サムネイル生成対象か判定し、ジョブをディスパッチ
         $mime = $this->attachedFile->mime;
-        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: ' . $mime);
+        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: '.$mime);
         if (str_starts_with($mime, 'image/')) {
             GenerateThumbnail::dispatch($this->attachedFile->id);
-            Log::info('[ProcessAttachedFile] Dispatched GenerateThumbnail job for AttachedFile ID: ' . $this->attachedFile->id);
+            Log::info('[ProcessAttachedFile] Dispatched GenerateThumbnail job for AttachedFile ID: '.$this->attachedFile->id);
         }
 
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));
-        Log::info('ProcessAttachedFile job finished for file: ' . $this->attachedFile->id
-            . ', status: ' . $this->attachedFile->status->value);
+        Log::info('ProcessAttachedFile job finished for file: '.$this->attachedFile->id
+            .', status: '.$this->attachedFile->status->value);
     }
 }

@@ -98,7 +98,7 @@ class SearchRequest extends FormRequest
         //        dd($this->route('folderId'));
         $ledgerDefineId = $this->ledgerDefineId();
 
-        if (!is_null($ledgerDefineId)) {
+        if (! is_null($ledgerDefineId)) {
             $this->isFolderRequest = true;
 
             return [LedgerDefine::find($ledgerDefineId)->folder_id];
@@ -126,7 +126,7 @@ class SearchRequest extends FormRequest
     public function ledgerDefineId()
     {
         $ledgerDefineId = $this->input('defineId') ?? $this->route('ledgerDefineId') ?? null;
-        if (!is_null($ledgerDefineId)) {
+        if (! is_null($ledgerDefineId)) {
             $this->isLedgerDefineRequest = true;
 
             return $ledgerDefineId;
@@ -138,7 +138,7 @@ class SearchRequest extends FormRequest
     public function filter()
     {
         $filter = $this->query('filter');
-        if (!is_array($filter)) {
+        if (! is_array($filter)) {
             return [];
         }
 

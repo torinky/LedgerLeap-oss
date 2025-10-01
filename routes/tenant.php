@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\LedgerLookupController;
 use App\Http\Controllers\Ledger\IndexController as LedgerIndexController;
 use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
-use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
 use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateController;
+use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
 use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
+use App\Http\Controllers\LedgerLookupController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
@@ -37,7 +37,7 @@ Route::group([
         ->where('ledgerId', '[0-9]+');
     Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
 
-    //ledgerDefine
+    // ledgerDefine
     Route::get('/ledgerDefine', [LedgerDefineIndexController::class, 'index'])->name('ledgerDefine.index');
     Route::get('/ledgerDefine/folder/{folderId}', [LedgerDefineIndexController::class, 'index'])
         ->name('ledgerDefinesByFolderId')
@@ -65,7 +65,7 @@ Route::group([
         ->where('folderId', '[0-9]+');
     Route::get('/ledger/create/{ledgerDefineId}', [\App\Http\Controllers\Ledger\CreateController::class, 'create'])->name('ledger.create')
         ->where('ledgerDefineId', '[0-9]+');
-    
+
     Route::get('/ledger/edit/{ledgerId}', [\App\Http\Controllers\Ledger\UpdateController::class, 'edit'])->name('ledger.edit')
         ->where('ledgerId', '[0-9]+');
     Route::get('/ledger/import/{ledgerDefineId}', [\App\Http\Controllers\Ledger\ImportController::class, 'showUploadForm'])->name('ledger.import.show')
@@ -77,11 +77,11 @@ Route::group([
 
     //    ledgerDiff
     Route::get('/ledgerDiff/{ledgerId}/{diffId?}', LedgerDiffShowController::class) // ShowController を使う場合
-    ->name('ledgerDiff.show')
+        ->name('ledgerDiff.show')
         ->where('ledgerId', '[0-9]+')
         ->where('diffId', '[0-9]+'); // diffId も数字のみ
 
-    //folder
+    // folder
     Route::get('/folders/create/{parentId?}', \App\Livewire\Folder\FolderForm::class)->name('folder.create');
     Route::get('/folders/{folder}/edit', \App\Livewire\Folder\FolderForm::class)->name('folder.edit');
 

@@ -13,19 +13,25 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class TenantIsolationTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $adminUser;
+
     private $tenant1;
+
     private $tenant2;
+
     private $tenant1LedgerDefine;
+
     private $tenant1Ledger;
+
     private $tenant2LedgerDefine;
+
     private $tenant2Ledger;
 
     protected function setUp(): void
@@ -67,6 +73,7 @@ class TenantIsolationTest extends TestCase
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
                     $this->assertEquals($this->tenant2Ledger->id, $ledgers->first()->id);
+
                     return true;
                 });
         });
@@ -108,6 +115,7 @@ class TenantIsolationTest extends TestCase
 
     /**
      * @Test
+     *
      * @see \Tests\Feature\TenantIsolationTest::validation_prevents_creating_relations_across_tenants
      * このテストは、台帳作成時に他テナントのフォルダIDを指定できてしまう脆弱性を検証する目的だったが、
      * アプリケーションの設計上、その操作自体が不可能であることが判明したため不要となった。
@@ -137,6 +145,7 @@ class TenantIsolationTest extends TestCase
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
                     $this->assertEquals($this->tenant1Ledger->id, $ledgers->first()->id);
+
                     return true;
                 });
         });
@@ -148,6 +157,7 @@ class TenantIsolationTest extends TestCase
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
                     $this->assertEquals($this->tenant2Ledger->id, $ledgers->first()->id);
+
                     return true;
                 });
         });

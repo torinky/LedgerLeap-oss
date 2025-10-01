@@ -7,9 +7,7 @@ use App\Services\TenantAccessService;
 
 class FolderObserver
 {
-    public function __construct(protected TenantAccessService $tenantAccessService)
-    {
-    }
+    public function __construct(protected TenantAccessService $tenantAccessService) {}
 
     /**
      * Handle the Folder "saved" event.

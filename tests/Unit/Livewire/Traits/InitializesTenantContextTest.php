@@ -4,12 +4,12 @@ namespace Tests\Unit\Livewire\Traits;
 
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Tenant;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 // テスト用のダミーLivewireコンポーネント
 class TestComponent extends \Livewire\Component

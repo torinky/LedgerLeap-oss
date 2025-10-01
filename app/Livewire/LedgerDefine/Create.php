@@ -3,15 +3,15 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Create extends Component
 {
-    use Toast, InitializesTenantContext;
+    use InitializesTenantContext, Toast;
 
     public $ledgerDefineRecord;
 
@@ -22,7 +22,6 @@ class Create extends Component
     public $title;
 
     public $parentFolderId;
-
 
     public function render()
     {
@@ -43,10 +42,10 @@ class Create extends Component
         $nodes = $this->folderRecords = Folder::get()->toTree();
         $traverse = function ($categories, $prefix = '-') use (&$traverse) {
             foreach ($categories as $category) {
-                $category->title = $prefix . ' ' . $category->title;
+                $category->title = $prefix.' '.$category->title;
                 $this->folderRecords[] = $category;
 
-                $traverse($category->children, $prefix . '-');
+                $traverse($category->children, $prefix.'-');
             }
         };
 
@@ -76,7 +75,7 @@ class Create extends Component
         $this->ledgerDefineRecord->column_define = [];
         $this->ledgerDefineRecord->save();
 
-//        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $this->ledgerDefineRecord->id, 'fromCreate' => true]);
+        //        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $this->ledgerDefineRecord->id, 'fromCreate' => true]);
         // イベントを発行
         //        $this->dispatch('ledgerDefineRecordStored');
         $this->success(__('ledger.has_been_created'),

@@ -5,7 +5,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -24,7 +25,7 @@ return new class extends Migration {
             $table->enum('permission', $permissionValues);
 
             $table->unsignedBigInteger('notification_type_id')->nullable();
-            $table->foreign('notification_type_id')->references('id')->on('notification_types')->nullOnDelete(); //追記:nullableなのでnullOnDelete
+            $table->foreign('notification_type_id')->references('id')->on('notification_types')->nullOnDelete(); // 追記:nullableなのでnullOnDelete
 
             $table->unique(['role_id', 'folder_id', 'notification_type_id', 'permission'], 'unique_role_folder_notification_permission');
 

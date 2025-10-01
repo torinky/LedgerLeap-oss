@@ -10,7 +10,7 @@ use Illuminate\Http\UploadedFile;
 interface ImageManagerInterface
 {
     /**
-     * @param File|UploadedFile|string $file
+     * @param  File|UploadedFile|string  $file
      */
     public function save($file): string;
 

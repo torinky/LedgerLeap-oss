@@ -30,14 +30,16 @@ class DateType implements InputType
     {
         // Logic from ColumnDefine::convertColumnValue2Text for 'YMD'
         if (is_numeric($value)) {
-            return date('Y-m-d', (int)$value);
+            return date('Y-m-d', (int) $value);
         } elseif (is_string($value)) {
             $time = strtotime($value);
             if ($time === false) {
-                return (string)$value; // Or handle error
+                return (string) $value; // Or handle error
             }
+
             return date('Y-m-d', $time);
         }
+
         return (string) $value;
     }
 
@@ -52,8 +54,9 @@ class DateType implements InputType
             // Consider how to handle invalid date strings.
             // For now, returning the original string or null might be options.
             // The old code would likely have resulted in an error or unexpected behavior later.
-            return null; 
+            return null;
         }
+
         // The original code stored dates as timestamps if the column name was 'date_type_column'
         // This seems overly specific and potentially problematic.
         // For now, let's assume we always store the 'Y-m-d' string or a timestamp.

@@ -12,10 +12,12 @@ use Illuminate\Routing\Controller as BaseController;
  *      title="LedgerLeap API",
  *      description="LedgerLeap API for LLM integration"
  * )
+ *
  * @OA\Server(
  *      url=L5_SWAGGER_CONST_HOST,
  *      description="LedgerLeap API Server"
  * )
+ *
  * @OA\SecurityScheme(
  *      securityScheme="sanctum",
  *      type="http",

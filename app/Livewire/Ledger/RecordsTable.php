@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -20,12 +21,10 @@ use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
-use Illuminate\Support\Collection;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
-    use withPagination, InitializesTenantContext,Toast;
+    use InitializesTenantContext, Toast,withPagination;
 
     public $perPage = 100;
 
@@ -80,9 +79,13 @@ class RecordsTable extends Component
     private $synonymServiceConfig;
 
     public bool $showPermissionModal = false;
+
     public bool $showActivityModal = false;
+
     public ?string $modalTitle = null;
+
     public ?int $modalResourceId = null;
+
     public ?string $modalResourceType = null;
 
     public ?string $currentTenantId = null;
@@ -105,7 +108,7 @@ class RecordsTable extends Component
 
         // 検索キーワードの初期化
         $search = $request->keyword();
-        if (empty($this->search) && !empty($search)) {
+        if (empty($this->search) && ! empty($search)) {
             $this->search = $search;
         } elseif (empty($this->search)) {
             $this->search = session()->get('search', '');
@@ -135,7 +138,7 @@ class RecordsTable extends Component
 
         // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
         // そうでない場合、または不正な値の場合はデフォルトの1を使用
-        if (!in_array($this->displayLevel, [1, 2, 3])) {
+        if (! in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
         }
 
@@ -153,7 +156,7 @@ class RecordsTable extends Component
      */
     protected function initSearchContext()
     {
-        if (!$this->synonymServiceConfig) {
+        if (! $this->synonymServiceConfig) {
             $this->synonymServiceConfig = new SynonymServiceConfig([
                 'useSynonym' => $this->useSynonym,
                 'useTechnicalTerm' => $this->useTechnicalTerm,
@@ -175,7 +178,7 @@ class RecordsTable extends Component
     /**
      * 列のソートを行う
      *
-     * @param string $columnName
+     * @param  string  $columnName
      * @return void
      */
     public function sort($columnName)
@@ -183,7 +186,7 @@ class RecordsTable extends Component
         $this->orderBy = $columnName;
 
         // 現在のソート順をトグル
-        $this->orderAsc = !$this->orderAsc;
+        $this->orderAsc = ! $this->orderAsc;
 
         $this->initSearchContext();
         $this->render($this->searchContext);
@@ -191,13 +194,10 @@ class RecordsTable extends Component
 
     /**
      * 表示レベルを設定する
-     *
-     * @param int $level
-     * @return void
      */
     public function setDisplayLevel(int $level): void
     {
-        if (!in_array($level, [1, 2, 3])) {
+        if (! in_array($level, [1, 2, 3])) {
             // 不正なレベルが指定された場合は何もしないか、エラーをログに記録
             return;
         }
@@ -228,8 +228,8 @@ class RecordsTable extends Component
             'filter' => $this->filter,
         ]);
 
-                // グローバル検索かどうかの判定
-        $isGlobalSearch = !empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
+        // グローバル検索かどうかの判定
+        $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
 
         if ($isGlobalSearch) {
             // グローバル検索の場合、すべての台帳定義を対象にする
@@ -331,12 +331,12 @@ class RecordsTable extends Component
         $currentFolder = Folder::find($this->currentFolderId);
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
 
-
         // Filter column_define for each ledgerDefine based on displayLevel
         $filteredColumnDefines = $ledgerDefineRecords->map(function ($ledgerDefine) {
             return collect($ledgerDefine->column_define)
                 ->filter(function ($column) {
                     $columnDisplayLevel = $column->display_level ?? 3;
+
                     return $columnDisplayLevel <= $this->displayLevel;
                 })
                 ->sortBy('order');
@@ -367,7 +367,7 @@ class RecordsTable extends Component
     /**
      * 選択する台帳を1つにする
      *
-     * @param int $defineId
+     * @param  int  $defineId
      * @return void
      */
     #[On('focusLedgerDefine')]
@@ -380,7 +380,7 @@ class RecordsTable extends Component
     /**
      * 現在のフォルダーを変更する
      *
-     * @param int $newFolderId
+     * @param  int  $newFolderId
      * @return void
      */
     public function changeCurrentFolder($newFolderId)
@@ -389,7 +389,7 @@ class RecordsTable extends Component
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
         } else {
-            if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
+            if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
                 $this->selectedFolderIds = [];
             } else {
                 $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
@@ -423,7 +423,7 @@ class RecordsTable extends Component
     /**
      * 台帳を開閉する（コメントアウト済みのコード）
      *
-     * @param int $targetLedgerDefineId
+     * @param  int  $targetLedgerDefineId
      */
     /*
     public function toggleLedgerDefineOpen($targetLedgerDefineId)
@@ -446,12 +446,12 @@ class RecordsTable extends Component
         // currentFolderId が未設定、または別テナントのID/存在しないIDの可能性があるためガードする
         $currentFolder = null;
 
-        if (!empty($this->currentFolderId)) {
+        if (! empty($this->currentFolderId)) {
             $currentFolder = Folder::find($this->currentFolderId);
         }
 
         // 指定IDで見つからない場合はテナントのルートフォルダを試す
-        if (!$currentFolder) {
+        if (! $currentFolder) {
             $currentFolder = Folder::root()->first();
 
             if ($currentFolder) {
@@ -460,10 +460,11 @@ class RecordsTable extends Component
         }
 
         // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
-        if (!$currentFolder) {
+        if (! $currentFolder) {
             $this->breadcrumbs = [];
             $this->folderRecords = collect();
             $this->ledgerDefineRecords = collect();
+
             return;
         }
 
@@ -477,7 +478,7 @@ class RecordsTable extends Component
     /**
      * フォルダの選択状態をトグルする
      *
-     * @param int $folderId
+     * @param  int  $folderId
      * @return void
      */
     public function toggleFolderId($folderId)
@@ -505,7 +506,7 @@ class RecordsTable extends Component
     /**
      * 台帳の選択状態をトグルする
      *
-     * @param int $ledgerDefineId
+     * @param  int  $ledgerDefineId
      * @return void
      */
     public function toggleLedgerDefineId($ledgerDefineId)
@@ -545,7 +546,7 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.access_and_permissions.title');
+        $this->modalTitle = $title.' '.__('ledger.access_and_permissions.title');
         $this->showPermissionModal = true;
     }
 
@@ -553,7 +554,7 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.activity.title');
+        $this->modalTitle = $title.' '.__('ledger.activity.title');
         $this->showActivityModal = true;
     }
 
@@ -561,8 +562,9 @@ class RecordsTable extends Component
     {
         $attachedFile = AttachedFile::find($attachedFileId);
 
-        if (!$attachedFile) {
+        if (! $attachedFile) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.file_not_found'));
+
             return;
         }
 

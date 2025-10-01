@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
+use App\Models\LedgerDefine;
 use App\Models\User; // Required by LedgerDefineFactory
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -13,12 +13,12 @@ use Tests\TestCase;
 class LedgerDefineWithColumnDefinesTest extends TestCase
 {
     use RefreshDatabase; // Ensures a clean database for each test
+
     protected bool $tenancy = true;
 
     /**
      * Test LedgerDefine creation, serialization, and deserialization of ColumnDefine objects.
      */
-
     #[Test]
     public function test_ledger_define_with_various_column_types_serialization_and_deserialization()
     {
@@ -44,7 +44,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
             // Find the original column define for comparison using the ID as the key.
             $originalColumn = $originalColumnDefines->get($columnDefine->id);
-            
+
             $this->assertNotNull($originalColumn, "Original column with ID {$columnDefine->id} not found for comparison.");
 
             $this->assertEquals($originalColumn->id, $columnDefine->id);
@@ -99,7 +99,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             $this->assertInstanceOf(ColumnDefine::class, $column);
             $type = $column->getType();
 
-            if (!isset($testData[$type])) {
+            if (! isset($testData[$type])) {
                 $this->fail("Test data for type '{$type}' not defined.");
             }
 
@@ -108,26 +108,24 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
                 // but restoreFromString returns a timestamp which is then used as originalData here.
                 $dataToConvert = $originalData;
                 if ($type === 'YMD' && is_numeric($originalData)) {
-                     // Convert timestamp back to 'Y-m-d' string for convertColumnValue2Text
+                    // Convert timestamp back to 'Y-m-d' string for convertColumnValue2Text
                     $dataToConvert = date('Y-m-d', $originalData);
-                }  elseif ($type === 'YMD' && $originalData === 'invalid-date-string') {
+                } elseif ($type === 'YMD' && $originalData === 'invalid-date-string') {
                     // DateType::convertToText will try strtotime, then return original string if invalid
                     // DateType::restoreFromString will return null for 'invalid-date-string'
                     // So, the round trip for 'invalid-date-string' will be 'invalid-date-string' -> null
                     // We need to adjust the assertion for this specific case.
                 }
 
-
                 $textValue = $column->convertColumnValue2Text($dataToConvert);
                 $restoredData = $column->restoreColumnValueFromText($textValue);
 
                 if ($type === 'YMD' && $originalData === 'invalid-date-string') {
-                    $this->assertNull($restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
+                    $this->assertNull($restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 } elseif ($type === 'number' && $originalData === 'not-a-number-string') {
-                     $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
-                }
-                else {
-                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
+                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
+                } else {
+                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 }
             }
         }

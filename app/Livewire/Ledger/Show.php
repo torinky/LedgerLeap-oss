@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
-
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
@@ -13,18 +13,19 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Show extends Component
 {
-    use AuthorizesRequests, Toast, InitializesTenantContext;
+    use AuthorizesRequests, InitializesTenantContext, Toast;
 
     public bool $canView = false;
+
     public Ledger $ledgerRecord;
 
     public bool $canUpdate = false;
 
     public ?Collection $currentLedgerAttachments = null;
+
     public string $selectedTab = 'details';
 
     #[Url(as: 'dl')]
@@ -51,7 +52,7 @@ class Show extends Component
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
-        if (!in_array($this->displayLevel, [1, 2, 3])) {
+        if (! in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
         }
 
@@ -89,7 +90,7 @@ class Show extends Component
             $attachedFile->retryProcessing();
             $this->success(__('file.status.retry_success'));
         } catch (\Exception $e) {
-            Log::error("AttachedFile retryProcessing failed for ID: {$attachedFileId}. Error: " . $e->getMessage());
+            Log::error("AttachedFile retryProcessing failed for ID: {$attachedFileId}. Error: ".$e->getMessage());
             $this->addError('retryProcessing', __('file.status.retry_failed'));
         }
         $this->mount($this->ledgerRecord->id);

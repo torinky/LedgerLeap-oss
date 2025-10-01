@@ -20,8 +20,6 @@ class FolderFactory extends Factory
     /**
      * Indicate that the folder has required roles.
      *
-     * @param  array  $inspectors
-     * @param  array  $approvers
      * @return \Illuminate\Database\Eloquent\Factories\Factory
      */
     public function withRequiredRoles(array $inspectors = [], array $approvers = [])

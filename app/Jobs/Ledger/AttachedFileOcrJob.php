@@ -29,8 +29,9 @@ class AttachedFileOcrJob implements ShouldQueue
     {
         $attachedFile = AttachedFile::find($this->attachedFileId);
 
-        if (!$attachedFile) {
+        if (! $attachedFile) {
             Log::warning("AttachedFile not found for OCR job: {$this->attachedFileId}");
+
             return;
         }
 
@@ -39,19 +40,20 @@ class AttachedFileOcrJob implements ShouldQueue
             Log::info("Skipping OCR for non-PDF file: {$attachedFile->id} ({$attachedFile->mime})");
             $attachedFile->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value; // OCR不要なのでステータスを更新
             $attachedFile->save();
+
             return;
         }
 
         $attachedFile->status = AttachedFileStatus::OCR_PROCESSING->value;
         $attachedFile->save();
 
-        $inputPath = Storage::path('public/' . $attachedFile->path);
-        $outputPath = Storage::path('public/Ledger/OCR/' . basename($attachedFile->path)); // OCR後のファイルを別の場所に保存
+        $inputPath = Storage::path('public/'.$attachedFile->path);
+        $outputPath = Storage::path('public/Ledger/OCR/'.basename($attachedFile->path)); // OCR後のファイルを別の場所に保存
 
         // ocrmypdf コマンドの実行
         // Docker コンテナ内でのパスは /data/public/Ledger/Attachments/hashedfilename.ext となる
-        $dockerInputPath = '/data/public/' . $attachedFile->path;
-        $dockerOutputPath = '/data/public/Ledger/OCR/' . basename($attachedFile->path);
+        $dockerInputPath = '/data/public/'.$attachedFile->path;
+        $dockerOutputPath = '/data/public/Ledger/OCR/'.basename($attachedFile->path);
 
         // ocrmypdf コマンドの構築
         // --force-ocr: 既存のテキストレイヤーがあってもOCRを強制
@@ -73,15 +75,15 @@ class AttachedFileOcrJob implements ShouldQueue
         try {
             $process->run();
 
-            if (!$process->isSuccessful()) {
-                throw new Exception("OCR failed: " . $process->getErrorOutput());
+            if (! $process->isSuccessful()) {
+                throw new Exception('OCR failed: '.$process->getErrorOutput());
             }
 
             Log::info("OCR successful for file ID: {$attachedFile->id}");
 
             // OCR 後のファイルを元のパスに上書きするか、新しいパスを保存するか検討
             // 今回は新しいパスに保存し、AttachedFile の path を更新する
-            $attachedFile->path = 'Ledger/OCR/' . basename($attachedFile->path);
+            $attachedFile->path = 'Ledger/OCR/'.basename($attachedFile->path);
             $attachedFile->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value; // OCR後、再度Tikaで抽出されることを想定
             $attachedFile->save();
 

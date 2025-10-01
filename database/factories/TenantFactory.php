@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class TenantFactory extends Factory
 {
@@ -23,6 +22,7 @@ class TenantFactory extends Factory
     public function definition()
     {
         $faker = \Faker\Factory::create('en_US');
+
         return [
             'id' => $faker->unique()->word(),
             'data' => [],

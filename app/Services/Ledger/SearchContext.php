@@ -54,8 +54,8 @@ class SearchContext
     /**
      * コンストラクタ
      *
-     * @param string $search 検索文字列
-     * @param array $filter フィルター条件
+     * @param  string  $search  検索文字列
+     * @param  array  $filter  フィルター条件
      */
     public function __construct(SynonymService $synonymService)
     {
@@ -65,7 +65,7 @@ class SearchContext
     /**
      * 検索文字列を設定する
      *
-     * @param string $search 検索文字列
+     * @param  string  $search  検索文字列
      */
     public function setSearch($search)
     {
@@ -76,7 +76,7 @@ class SearchContext
     /**
      * 検索キーワードを設定する
      *
-     * @param array $keywords 検索キーワード
+     * @param  array  $keywords  検索キーワード
      */
     public function setKeywords(array $keywords)
     {
@@ -87,7 +87,7 @@ class SearchContext
     /**
      * ハイライト用の語句を設定する
      *
-     * @param array $highlights ハイライト用の語句
+     * @param  array  $highlights  ハイライト用の語句
      */
     public function setHighlights(array $highlights)
     {
@@ -97,7 +97,7 @@ class SearchContext
     /**
      * フィルター条件を設定する
      *
-     * @param array $filter フィルター条件
+     * @param  array  $filter  フィルター条件
      */
     public function setFilter(array $filter)
     {
@@ -125,7 +125,7 @@ class SearchContext
     /**
      * 検索文字列から検索キーワードとタグを抽出する
      *
-     * @param string $search 検索文字列
+     * @param  string  $search  検索文字列
      * @return array 検索キーワードとタグの配列
      */
     private function extractKeywordsAndTags($search)
@@ -157,7 +157,7 @@ class SearchContext
     /**
      * 検索キーワードから類義語を取得する
      *
-     * @param array $keywords 検索キーワード
+     * @param  array  $keywords  検索キーワード
      * @return array 類義語の配列
      */
     private function findSynonyms($keywords)
@@ -174,9 +174,9 @@ class SearchContext
     /**
      * 検索キーワード、類義語、フィルター条件からハイライト用の語句を生成する
      *
-     * @param array $keywords 検索キーワード
-     * @param array $synonyms 類義語
-     * @param array $filter フィルター条件
+     * @param  array  $keywords  検索キーワード
+     * @param  array  $synonyms  類義語
+     * @param  array  $filter  フィルター条件
      * @return array ハイライト用の語句の配列
      */
     private function generateHighlights($keywords, $synonyms, $filter)
@@ -192,7 +192,7 @@ class SearchContext
     /**
      * 類義語の配列を平坦化する
      *
-     * @param array $synonyms 類義語の配列
+     * @param  array  $synonyms  類義語の配列
      * @return array 平坦化された類義語の配列
      */
     public function flattenSynonyms($synonyms)
@@ -224,9 +224,9 @@ class SearchContext
     /**
      * 配列または値を結合または追加する
      *
-     * @param mixed $synonym 結合または追加する値
-     * @param array $result 結合または追加する配列
-     * @param array $synonyms $synonymが配列の場合に結合する配列
+     * @param  mixed  $synonym  結合または追加する値
+     * @param  array  $result  結合または追加する配列
+     * @param  array  $synonyms  $synonymが配列の場合に結合する配列
      * @return array 結合または追加された配列
      */
     public function getArr(mixed $synonym, mixed $result, $synonyms): mixed

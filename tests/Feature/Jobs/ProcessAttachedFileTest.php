@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Jobs;
 
-use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper; // ★ 追加
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Jobs\Ledger\ProcessAttachedFile;
@@ -53,7 +52,6 @@ class ProcessAttachedFileTest extends TestCase
             $mock->shouldReceive('setTimeout');
         });
         $this->app->instance(\Vaites\ApacheTika\Client::class, $tikaClientMock);
-
 
         // Act
         $job = new ProcessAttachedFile($attachedFile);

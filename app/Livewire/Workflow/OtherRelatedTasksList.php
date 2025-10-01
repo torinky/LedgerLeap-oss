@@ -6,40 +6,41 @@ use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Folder;
 use App\Models\Ledger;
-use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\UserService;
 use App\Services\WorkflowService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Livewire\Component;
-use Livewire\WithPagination;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-
 // Eloquent Collection
-use Illuminate\Support\Collection as BaseCollection;
-
+use Livewire\Component;
 // Support Collection
-use Illuminate\Database\Eloquent\Builder;
+use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 class OtherRelatedTasksList extends Component
 {
-    use WithPagination, Toast;
+    use Toast, WithPagination;
 
     public int $perPage = 10;
+
     public string $sortField = 'ledger_updated_at'; // ソート対象を明確に
+
     public string $sortDirection = 'desc';
 
     // 統合されたタスクリスト (整形済みデータの Collection)
     public BaseCollection $tasksData; // Eloquent Collection ではなく Support Collection
 
     protected UserService $userService;
+
     protected WorkflowService $workflowService;
 
     // 引き継ぎ関連のプロパティとメソッドは後ほど
     public bool $showClaimCommentModal = false;
+
     public ?array $claimingTaskData = null; // 整形済みタスクデータを保持
+
     public string $claimComment = '';
 
     public $claimingTask;
@@ -58,8 +59,9 @@ class OtherRelatedTasksList extends Component
     public function loadTasks(): void
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             $this->tasksData = collect();
+
             return;
         }
 
@@ -78,24 +80,23 @@ class OtherRelatedTasksList extends Component
             ->values();
     }
 
-
     /**
      * タスクデータをビュー表示用に整形する
      */
     private function formatTaskData(Ledger $ledger, string $taskType): array
     {
         $progressDetails = [];
-//        dd($ledger,$ledger->define?->workflow_enabled,$ledger->define?->folder);
+        //        dd($ledger,$ledger->define?->workflow_enabled,$ledger->define?->folder);
         if ($ledger->define?->workflow_enabled && $ledger->define?->folder) {
             $progress = $ledger->getRequiredRolesProgressDetails();
             $progressDetails = [
                 'inspection_completed' => $progress['inspection']['completed_count'],
-//                'inspection_roles_count' => $progress['inspection']['pending_roles']->count(),
+                //                'inspection_roles_count' => $progress['inspection']['pending_roles']->count(),
                 'inspection_total' => $progress['inspection']['total_count'],
                 'inspection_all_completed' => $progress['inspection']['is_all_completed'],
                 'inspection_pending_roles_names' => $progress['inspection']['pending_roles']->pluck('name'),
                 'inspection_completed_roles_names' => $progress['inspection']['completed_roles']->pluck('name'),
-//                'pending_approval_roles_count' => $progress['approval']['pending_roles']->count(),
+                //                'pending_approval_roles_count' => $progress['approval']['pending_roles']->count(),
                 'approval_completed' => $progress['approval']['completed_count'],
                 'approval_total' => $progress['approval']['total_count'],
                 'total_approval_roles_count' => $progress['approval']['total_count'],
@@ -118,31 +119,41 @@ class OtherRelatedTasksList extends Component
             'ledger_created_at' => $ledger->created_at,
             'task_type' => $taskType,
             'is_locked' => $ledger->isLocked(),
-            'required_roles_progress_summary' => !empty($progressDetails) ? $progressDetails : null,
+            'required_roles_progress_summary' => ! empty($progressDetails) ? $progressDetails : null,
         ];
     }
+
     /**
      * ユーザーが特定のタスクを引き継ぎ可能か判定する
      */
     protected function canUserClaimTask(Ledger $ledger, User $user): bool
     {
-        if (!$ledger->status->isWorkflowPending()) return false; // 進行中でないと不可
-        if ($ledger->creator_id === $user->id) return false; // 申請者は引き継げない
-        if ($ledger->latestDiff?->inspector_id === $user->id || $ledger->latestDiff?->approver_id === $user->id) return false; // 担当者は引き継げない
+        if (! $ledger->status->isWorkflowPending()) {
+            return false;
+        } // 進行中でないと不可
+        if ($ledger->creator_id === $user->id) {
+            return false;
+        } // 申請者は引き継げない
+        if ($ledger->latestDiff?->inspector_id === $user->id || $ledger->latestDiff?->approver_id === $user->id) {
+            return false;
+        } // 担当者は引き継げない
 
         // ユーザーがそのタスクのフォルダに対して点検または承認権限を持っているか
         $requiredPermission = ($ledger->status === WorkflowStatus::PENDING_INSPECTION) ? FolderPermissionType::INSPECT : FolderPermissionType::APPROVE;
+
         return $ledger->define?->folder && $this->userService->hasFolderPermission($user, $ledger->define->folder, $requiredPermission);
     }
-
 
     public function sortBy($field): void
     {
         // ソート対象のフィールドを調整 (例: 'ledger_updated_at')
         $actualSortField = $field;
-        if ($field === 'updated_at_formatted') $actualSortField = 'ledger_updated_at';
-        if ($field === 'age') $actualSortField = 'ledger_created_at';
-
+        if ($field === 'updated_at_formatted') {
+            $actualSortField = 'ledger_updated_at';
+        }
+        if ($field === 'age') {
+            $actualSortField = 'ledger_created_at';
+        }
 
         if ($this->sortField === $actualSortField) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
@@ -156,19 +167,19 @@ class OtherRelatedTasksList extends Component
     public function render()
     {
         // --- ここからログ出力追加 ---
-/*
-        Log::debug('OtherRelatedTasksList Rendering Start');
-        Log::debug('Current Page from getPage(): ' . $this->getPage());
-        Log::debug('Total items in tasksData: ' . $this->tasksData->count());
-        Log::debug('Items per page: ' . $this->perPage);
+        /*
+                Log::debug('OtherRelatedTasksList Rendering Start');
+                Log::debug('Current Page from getPage(): ' . $this->getPage());
+                Log::debug('Total items in tasksData: ' . $this->tasksData->count());
+                Log::debug('Items per page: ' . $this->perPage);
 
-        $itemsForCurrentPage = $this->tasksData->forPage($this->getPage(), $this->perPage);
-        Log::debug('Number of items for current page: ' . $itemsForCurrentPage->count());
+                $itemsForCurrentPage = $this->tasksData->forPage($this->getPage(), $this->perPage);
+                Log::debug('Number of items for current page: ' . $itemsForCurrentPage->count());
 
-        if ($this->tasksData->count() > 0 && $itemsForCurrentPage->isEmpty() && $this->getPage() > 1) {
-            Log::warning('Attempting to access a page that has no items, but tasksData is not empty. This might indicate an issue with page number or tasksData content.');
-        }
-*/
+                if ($this->tasksData->count() > 0 && $itemsForCurrentPage->isEmpty() && $this->getPage() > 1) {
+                    Log::warning('Attempting to access a page that has no items, but tasksData is not empty. This might indicate an issue with page number or tasksData content.');
+                }
+        */
 
         $paginatedTasks = new \Illuminate\Pagination\LengthAwarePaginator(
             $this->tasksData->forPage($this->getPage(), $this->perPage),
@@ -200,17 +211,17 @@ class OtherRelatedTasksList extends Component
             })
             ->withNeededRelations()
             ->get()
-            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_inspection'));
+            ->map(fn (Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_inspection'));
         $results = $results->concat($pendingInspectionByOthers);
 
         // A-2: 自分が申請または点検し、承認待ちだが、承認者が自分ではない
         $pendingApprovalByOthers = Ledger::where('status', WorkflowStatus::PENDING_APPROVAL)
             ->where(function (Builder $query) use ($userId) {
                 $query->where('creator_id', $userId) // 自分が直接承認依頼
-                ->orWhereHas('latestDiff', function (Builder $diffQuery) use ($userId) {
-                    // 自分が点検完了して承認待ちにした
-                    $diffQuery->where('inspector_id', $userId);
-                });
+                    ->orWhereHas('latestDiff', function (Builder $diffQuery) use ($userId) {
+                        // 自分が点検完了して承認待ちにした
+                        $diffQuery->where('inspector_id', $userId);
+                    });
             })
             ->whereHas('latestDiff', function (Builder $query) use ($userId) {
                 $query->where('approver_id', '!=', $userId)
@@ -218,7 +229,7 @@ class OtherRelatedTasksList extends Component
             })
             ->withNeededRelations()
             ->get()
-            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_approval'));
+            ->map(fn (Ledger $ledger) => $this->formatTaskData($ledger, 'my_submission_pending_approval'));
         $results = $results->concat($pendingApprovalByOthers);
 
         return $results;
@@ -230,15 +241,15 @@ class OtherRelatedTasksList extends Component
     private function fetchClaimableTasks(User $user): BaseCollection
     {
         return $this->userService->getClaimableTasks($user)
-            ->map(fn(Ledger $ledger) => $this->formatTaskData($ledger, 'claimable'));
+            ->map(fn (Ledger $ledger) => $this->formatTaskData($ledger, 'claimable'));
     }
 
     public function openClaimTaskCommentModal(int $ledgerId): void
     {
         // tasksData から対象のタスクデータを取得
-//        $this->loadTasks();
+        //        $this->loadTasks();
         $this->claimingTaskData = $this->tasksData->firstWhere('ledger_id', $ledgerId);
-//        dd($ledgerId,$this->claimingTaskData,$this->tasksData);
+        //        dd($ledgerId,$this->claimingTaskData,$this->tasksData);
         if ($this->claimingTaskData) {
             $this->claimComment = '';
             $this->showClaimCommentModal = true;
@@ -252,9 +263,10 @@ class OtherRelatedTasksList extends Component
      */
     public function claimTaskWithComment(): void
     {
-        if (!$this->claimingTaskData || !isset($this->claimingTaskData['ledger_id'])) {
+        if (! $this->claimingTaskData || ! isset($this->claimingTaskData['ledger_id'])) {
             $this->error(__('ledger.workflow.no_task_to_claim'));
             $this->showClaimCommentModal = false;
+
             return;
         }
 
@@ -265,9 +277,10 @@ class OtherRelatedTasksList extends Component
         $claimer = Auth::user(); // 現在のログインユーザーが引き継ぎ者
         $ledger = Ledger::find($ledgerId);
 
-        if (!$ledger || !$claimer) {
+        if (! $ledger || ! $claimer) {
             $this->error(__('ledger.errors.cannot_execute_action'));
             $this->showClaimCommentModal = false;
+
             return;
         }
 
@@ -283,14 +296,13 @@ class OtherRelatedTasksList extends Component
             $this->success(__('ledger.workflow.task_claimed_successfully'));
 
         } catch (\Exception $e) {
-            Log::error("Task claim failed for Ledger ID {$ledgerId} from OtherRelatedTasksList: " . $e->getMessage(), [
+            Log::error("Task claim failed for Ledger ID {$ledgerId} from OtherRelatedTasksList: ".$e->getMessage(), [
                 'claimer_id' => $claimer->id,
                 'comment' => $this->claimComment,
-                'exception' => $e
+                'exception' => $e,
             ]);
             $this->error(__('ledger.error'), $e->getMessage());
             $this->showClaimCommentModal = false;
         }
     }
-
 }

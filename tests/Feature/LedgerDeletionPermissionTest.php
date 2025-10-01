@@ -9,10 +9,10 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
-use PHPUnit\Framework\Attributes\Test;
 
 class LedgerDeletionPermissionTest extends TestCase
 {
@@ -21,8 +21,11 @@ class LedgerDeletionPermissionTest extends TestCase
     protected bool $tenancy = true;
 
     private User $adminUser;
+
     private Role $adminRole;
+
     private Ledger $ledgerInAdminFolder;
+
     private Folder $adminFolder;
 
     protected function setUp(): void
@@ -106,6 +109,7 @@ class LedgerDeletionPermissionTest extends TestCase
         $anotherLedger = $anotherTenant->run(function () {
             $folder = Folder::factory()->create();
             $define = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
             return Ledger::factory()->create(['ledger_define_id' => $define->id]);
         });
 

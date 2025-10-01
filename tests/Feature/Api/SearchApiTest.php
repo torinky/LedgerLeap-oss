@@ -21,14 +21,23 @@ class SearchApiTest extends TestCase
     protected bool $tenancy = true;
 
     private User $adminUser;
+
     private User $writerUser;
+
     private User $viewerUser;
+
     private User $noRoleUser;
+
     private Folder $writeFolder;
+
     private Folder $readFolder;
+
     private Folder $privateFolder;
+
     private Ledger $writeLedger;
+
     private Ledger $readLedger;
+
     private Ledger $privateLedger;
 
     protected function setUp(): void
@@ -48,7 +57,7 @@ class SearchApiTest extends TestCase
         $adminRole = Role::findOrCreate('admin', 'web');
         $writerRole = Role::findOrCreate('writer', 'web');
         $viewerRole = Role::findOrCreate('viewer', 'web');
-        
+
         // 権限付与
         $adminRole->givePermissionTo($permission);
         $writerRole->givePermissionTo($permission);
@@ -59,7 +68,7 @@ class SearchApiTest extends TestCase
         $this->writerUser = User::factory()->create(['name' => 'Writer User']);
         $this->viewerUser = User::factory()->create(['name' => 'Viewer User']);
         $this->noRoleUser = User::factory()->create(['name' => 'No Role User']);
-        
+
         // ロール付与
         $this->adminUser->assignRole($adminRole);
         $this->writerUser->assignRole($writerRole);
@@ -71,7 +80,7 @@ class SearchApiTest extends TestCase
             $this->writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
             $this->readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
             $this->privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
-            
+
             // フォルダ権限作成（最小限）
             $folderPermissions = [
                 ['role_id' => $adminRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
@@ -80,7 +89,7 @@ class SearchApiTest extends TestCase
                 ['role_id' => $writerRole->id, 'folder_id' => $this->writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
                 ['role_id' => $viewerRole->id, 'folder_id' => $this->readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id],
             ];
-            
+
             foreach ($folderPermissions as $permission) {
                 RoleFolderPermission::create($permission);
             }
@@ -93,37 +102,37 @@ class SearchApiTest extends TestCase
             // 台帳作成（最小限のコンテンツ）
             $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id; // これは0
             $this->writeLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $writeLedgerDefine->id, 
-                'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'] // [0 => 'value']
+                'ledger_define_id' => $writeLedgerDefine->id,
+                'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'], // [0 => 'value']
             ]);
 
             $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
             $this->readLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $readLedgerDefine->id, 
-                'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder']
+                'ledger_define_id' => $readLedgerDefine->id,
+                'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder'],
             ]);
 
             $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
             $this->privateLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $privateLedgerDefine->id, 
-                'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder']
+                'ledger_define_id' => $privateLedgerDefine->id,
+                'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder'],
             ]);
 
             // タグ作成（最小限）
             Tag::factory()->create([
-                'name' => 'ProjectA', 
+                'name' => 'ProjectA',
                 'ledger_define_id' => $writeLedgerDefine->id,
-                'folder_id' => $this->writeFolder->id
+                'folder_id' => $this->writeFolder->id,
             ]);
             Tag::factory()->create([
-                'name' => 'Urgent', 
+                'name' => 'Urgent',
                 'ledger_define_id' => $writeLedgerDefine->id,
-                'folder_id' => $this->writeFolder->id
+                'folder_id' => $this->writeFolder->id,
             ]);
             Tag::factory()->create([
-                'name' => 'ProjectB', 
+                'name' => 'ProjectB',
                 'ledger_define_id' => $readLedgerDefine->id,
-                'folder_id' => $this->readFolder->id
+                'folder_id' => $this->readFolder->id,
             ]);
         });
 
@@ -174,7 +183,7 @@ class SearchApiTest extends TestCase
     {
         // writerはwriteFolderの権限を持つ
         $this->actingAs($this->writerUser, 'sanctum')
-            ->getJson('/api/v1/search?folder_id=' . $this->writeFolder->id)
+            ->getJson('/api/v1/search?folder_id='.$this->writeFolder->id)
             ->assertStatus(200)
             ->assertJsonCount(1, 'data');
     }
@@ -183,7 +192,7 @@ class SearchApiTest extends TestCase
     {
         // writerはreadFolderの権限を持たない
         $this->actingAs($this->writerUser, 'sanctum')
-            ->getJson('/api/v1/search?folder_id=' . $this->readFolder->id)
+            ->getJson('/api/v1/search?folder_id='.$this->readFolder->id)
             ->assertStatus(200)
             ->assertJsonCount(0, 'data');
     }
@@ -259,7 +268,7 @@ class SearchApiTest extends TestCase
     {
         // writeLedger の ledger_define_id で検索
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/search?ledger_define_id=' . $this->writeLedger->ledger_define_id)
+            ->getJson('/api/v1/search?ledger_define_id='.$this->writeLedger->ledger_define_id)
             ->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $this->writeLedger->id);
@@ -269,7 +278,7 @@ class SearchApiTest extends TestCase
     {
         // readLedger の ledger_define_id で検索
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/search?ledger_define_id=' . $this->readLedger->ledger_define_id)
+            ->getJson('/api/v1/search?ledger_define_id='.$this->readLedger->ledger_define_id)
             ->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $this->readLedger->id);
@@ -306,7 +315,7 @@ class SearchApiTest extends TestCase
 
         // creator_idでフィルタリング
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/search?creator_id=' . $this->adminUser->id)
+            ->getJson('/api/v1/search?creator_id='.$this->adminUser->id)
             ->assertStatus(200)
             ->assertJsonCount(3, 'data'); // adminが作成した3つすべて
 
@@ -318,16 +327,16 @@ class SearchApiTest extends TestCase
         $this->tenant->run(function () {
             $writeLedgerDefine = LedgerDefine::where('folder_id', $this->writeFolder->id)->first();
             $columnId = $writeLedgerDefine->column_define[0]->id;
-            
+
             $writerLedger = Ledger::factory()->minimal()->create([
                 'ledger_define_id' => $writeLedgerDefine->id,
                 'creator_id' => $this->writerUser->id,
-                'content' => [$columnId => 'Writer Created Ledger']
+                'content' => [$columnId => 'Writer Created Ledger'],
             ]);
 
             // writerUserが作成したもののみ検索
             $this->actingAs($this->adminUser, 'sanctum')
-                ->getJson('/api/v1/search?creator_id=' . $this->writerUser->id)
+                ->getJson('/api/v1/search?creator_id='.$this->writerUser->id)
                 ->assertStatus(200)
                 ->assertJsonCount(1, 'data')
                 ->assertJsonFragment(['id' => $writerLedger->id]);
@@ -339,9 +348,9 @@ class SearchApiTest extends TestCase
         // 特定の日付範囲でフィルタリング
         $response = $this->actingAs($this->adminUser, 'sanctum')
             ->getJson('/api/v1/search?created_from=2025-09-29&created_to=2025-09-30');
-        
+
         $response->assertStatus(200);
-        
+
         // データが存在することを確認（正確な件数は実行時期によって変わるため、>= 0で確認）
         $this->assertGreaterThanOrEqual(0, count($response->json('data', [])));
     }
@@ -355,7 +364,7 @@ class SearchApiTest extends TestCase
             ->assertJson([
                 'meta' => [
                     'total' => 3,
-                ]
+                ],
             ])
             ->assertJsonMissingPath('data');
     }
@@ -423,7 +432,7 @@ class SearchApiTest extends TestCase
 
         // contentがキーバリュー形式（連想配列）であることを確認
         $responseData = $response->json('data.0');
-        if (!empty($responseData['content'])) {
+        if (! empty($responseData['content'])) {
             $this->assertIsArray($responseData['content']);
             // キーが数値でないことを確認（文字列キーのはず）
             $this->assertFalse(is_int(array_key_first($responseData['content'])));

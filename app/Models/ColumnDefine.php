@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Models\ColumnTypes\InputType;
 use App\Models\ColumnTypes\InputTypeFactory;
-use RuntimeException; // Keep for potential other runtime exceptions, though type validation is now in factory
+
+// Keep for potential other runtime exceptions, though type validation is now in factory
 
 class ColumnDefine
 {
     // プロパティの定義
-        public int $id;                 // ID
+    public int $id;                 // ID
 
     public $name;               // 列名
 
@@ -40,7 +41,7 @@ class ColumnDefine
     /**
      * コンストラクタ
      *
-     * @param object|array $inObject
+     * @param  object|array  $inObject
      *
      * 引数の数に応じてオブジェクトによる初期化か値による初期化かを振り分ける
      */
@@ -58,15 +59,15 @@ class ColumnDefine
     /**
      * オブジェクトによる初期化
      *
-     * @param object $inObject
+     * @param  object  $inObject
      * @return void
      */
     public function constructByObject($inObject)
     {
-        $this->id = (int)$inObject->id;
+        $this->id = (int) $inObject->id;
         $this->setName($inObject->name);
         $this->setOrder($inObject->order);
-        $this->setOptions((array)($inObject->options ?? []));
+        $this->setOptions((array) ($inObject->options ?? []));
         $this->setRequired($inObject->required ?? false);
         $this->setUnique($inObject->unique ?? false);
         $this->setSortBy($inObject->sortBy ?? false);
@@ -74,7 +75,7 @@ class ColumnDefine
         $this->setFile($inObject->file ?? []);
 
         // 新しいプロパティの初期化
-        $this->display_level = (int)($inObject->display_level ?? 3); // デフォルト値は3
+        $this->display_level = (int) ($inObject->display_level ?? 3); // デフォルト値は3
         $this->group = $inObject->group ?? null; // デフォルト値はnull
 
         $this->initializeType((array) $inObject);
@@ -86,19 +87,18 @@ class ColumnDefine
      * @return void
      */
     public function constructByArgs(
-        int    $id,
+        int $id,
         string $name = '',
         string $typeIdentifier = 'text',
-        int    $order = 1,
+        int $order = 1,
         array $options = [],
         bool $required = false,
         bool $unique = false,
-        bool   $sortBy = false,
+        bool $sortBy = false,
         string $hint = '',
         array $file = []
-    )
-    {
-        $this->id = (int)$id;
+    ) {
+        $this->id = (int) $id;
         $this->setName($name);
         $this->setOrder($order);
         $this->setOptions($options);
@@ -117,7 +117,7 @@ class ColumnDefine
 
     /**
      * Initializes the input type strategy object.
-     * @param array $columnDefineArray
+     *
      * @throws \InvalidArgumentException
      */
     private function initializeType(array $columnDefineArray): void
@@ -155,13 +155,14 @@ class ColumnDefine
         foreach ($allTypes as $typeInstance) {
             $labels[$typeInstance->getName()] = $typeInstance->getLabel();
         }
+
         return $labels;
     }
 
     /**
      * カラム値を適切な形式に変換する
      *
-     * @param mixed $columnValue
+     * @param  mixed  $columnValue
      * @return mixed
      */
     public function convertColumnValue2Text($columnValue)
@@ -172,7 +173,7 @@ class ColumnDefine
     /**
      * カラム値を適切な形式に戻す
      *
-     * @param string $convertedValue
+     * @param  string  $convertedValue
      * @return mixed
      */
     public function restoreColumnValueFromText($convertedValue)
@@ -181,7 +182,7 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $name
+     * @param  mixed  $name
      */
     public function setName($name): void
     {
@@ -189,15 +190,15 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $options
+     * @param  mixed  $options
      */
     public function setOptions($options): void
     {
-        $this->options = (array)$options;
+        $this->options = (array) $options;
     }
 
     /**
-     * @param mixed $required
+     * @param  mixed  $required
      */
     public function setRequired($required): void
     {
@@ -205,7 +206,7 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $unique
+     * @param  mixed  $unique
      */
     public function setUnique($unique): void
     {
@@ -213,7 +214,7 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $sortBy
+     * @param  mixed  $sortBy
      */
     public function setSortBy($sortBy): void
     {
@@ -221,7 +222,7 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $hint
+     * @param  mixed  $hint
      */
     public function setHint($hint): void
     {
@@ -229,7 +230,7 @@ class ColumnDefine
     }
 
     /**
-     * @param mixed $file
+     * @param  mixed  $file
      */
     public function setFile($file): void
     {
@@ -266,7 +267,7 @@ class ColumnDefine
         ];
     }
 
-    public static function normalizeArrayOrCollection( $columnDefinesSource): array
+    public static function normalizeArrayOrCollection($columnDefinesSource): array
     {
         $result = [];
         foreach ($columnDefinesSource as $colDef) {
@@ -293,7 +294,7 @@ class ColumnDefine
                 $result[$colDef['id']] = $colDef;
             }
         }
+
         return $result;
     }
-
 }

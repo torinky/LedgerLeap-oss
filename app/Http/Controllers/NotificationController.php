@@ -20,7 +20,7 @@ class NotificationController extends Controller
 
         // URL クエリパラメータからアクティブなタブを取得 (デフォルトは 'notifications')
         $activeTab = $request->query('tab', 'notifications');
-        //デフォルトで未処理タスクがあれば 'tasks' に切り替える
+        // デフォルトで未処理タスクがあれば 'tasks' に切り替える
         if ($activeTab == 'notifications' && $initialTaskCount > 0) {
             $activeTab = 'tasks';
         }
@@ -29,7 +29,7 @@ class NotificationController extends Controller
         return view('notifications.index', [
             'initialNotificationCount' => $initialNotificationCount,
             'initialTaskCount' => $initialTaskCount,
-            'activeTab' => $activeTab
+            'activeTab' => $activeTab,
         ]);
     }
 

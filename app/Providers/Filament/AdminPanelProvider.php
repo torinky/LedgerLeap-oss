@@ -18,8 +18,8 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -27,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
     {
         // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
         if ($fromTenantId = request()->query('tenant')) {
-            if (!empty($fromTenantId)) {
+            if (! empty($fromTenantId)) {
                 session()->put('filament_from_tenant_id', $fromTenantId);
             }
         }
@@ -64,20 +64,22 @@ class AdminPanelProvider extends PanelProvider
                 NavigationItem::make(__('ledger.navigation.back_to_tenant'))
                     ->url(function () {
                         $fromTenantId = session('filament_from_tenant_id');
+
                         return $fromTenantId ? route('my-portal', ['tenant' => $fromTenantId]) : '#';
                     })
                     ->icon('heroicon-o-arrow-uturn-left')
 //                    ->visible(!empty(session('filament_from_tenant_id')))
                     ->visible(function () {
                         $fromTenantId = session('filament_from_tenant_id');
-                        return !empty($fromTenantId);
+
+                        return ! empty($fromTenantId);
                     })
                     ->sort(2),
                 NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')
                     ->activeIcon('heroicon-s-adjustments-vertical')
-                    ->isActiveWhen(fn(): bool => request()->routeIs('filament.admin.pages.dashboard'))
-                    ->url(fn(): string => Dashboard::getUrl().'?tenant='.$fromTenantId)
+                    ->isActiveWhen(fn (): bool => request()->routeIs('filament.admin.pages.dashboard'))
+                    ->url(fn (): string => Dashboard::getUrl().'?tenant='.$fromTenantId)
                     ->sort(1),
             ])
             ->navigationGroups([])
