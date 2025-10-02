@@ -4,6 +4,7 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use Laravel\Mcp\Server;
 
@@ -49,6 +50,7 @@ class LedgerLeapServer extends Server
         GetLedgerDefinesTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
+        GetPendingApprovalsTool::class,
     ];
 
     /**

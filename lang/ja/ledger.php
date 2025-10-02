@@ -988,6 +988,43 @@ return [
         'view_content_at_this_point' => 'この時点の内容を見る',
         'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
     ],
+    'period' => [
+        'today' => '本日',
+        'this_week' => '今週',
+        'this_month' => '今月',
+        'this_year' => '今年',
+        'period' => '期間',
+    ],
+    'time' => [
+        'today' => '今日',
+        'one_day' => '1日',
+        'days' => ':count日',
+    ],
+    'statistics' => [
+        'ledger_count_with_period' => '台帳総数: :count件 (:period)',
+        'activity_count' => 'アクティビティログ: :count件',
+    ],
+    'error' => [
+        'occurred_with_message' => 'エラーが発生しました: :message',
+        'approval_processing_failed' => '承認処理に失敗しました',
+    ],
+    'priority' => [
+        'overdue' => '期限超過',
+        'urgent' => '緊急',
+        'high' => '高',
+        'medium' => '中',
+        'low' => '低',
+        'label' => '優先度',
+    ],
+    'sort' => [
+        'high_to_low' => '高い順',
+        'low_to_high' => '低い順',
+    ],
+    'title_unknown' => 'タイトル不明',
+    'unassigned' => '未割当',
+    'unknown' => '不明',
+    'total' => '合計',
+    'processing_completed_with_action' => '処理が完了しました: :action',
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
 ];

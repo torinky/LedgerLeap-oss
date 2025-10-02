@@ -4,6 +4,7 @@ namespace Tests\Unit\Mcp\Tools;
 
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -171,6 +172,7 @@ class McpToolsAuthenticationTest extends TestCase
             new SearchLedgersTool(Mockery::mock(LedgerService::class)),
             new CreateLedgerTool(),
             new GetLedgerDefinesTool(),
+            new GetPendingApprovalsTool(),
         ];
 
         foreach ($tools as $tool) {
@@ -180,6 +182,8 @@ class McpToolsAuthenticationTest extends TestCase
                 $response = $tool->handle($request, Mockery::mock(LedgerService::class));
             } elseif ($tool instanceof GetLedgerDefinesTool) {
                 $response = $tool->handle($request, Mockery::mock(WritableFolderRepository::class));
+            } elseif ($tool instanceof GetPendingApprovalsTool) {
+                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
             } else {
                 $response = $tool->handle($request);
             }
