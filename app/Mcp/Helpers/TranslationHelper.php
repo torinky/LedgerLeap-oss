@@ -36,7 +36,7 @@ class TranslationHelper
             'assignee' => trans('ledger.workflow.inspector'),
             'deadline' => trans('ledger.deadline'),
             'age' => trans('ledger.workflow.age'),
-            'priority' => trans('ledger.priority'),
+            'priority' => trans('ledger.priority.label'),
         ];
     }
 

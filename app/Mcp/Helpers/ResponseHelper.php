@@ -120,6 +120,7 @@ class ResponseHelper
                 'deadline' => $task['deadline'] ?? null,
                 'age' => TranslationHelper::formatAgeDays($ageDays),
                 'age_days' => $ageDays,
+                'priority' => $task['priority'] ?? trans('ledger.priority.low'),
                 'type' => $type,
                 'id' => $task['id'] ?? null,
             ];

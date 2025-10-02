@@ -8,6 +8,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Models\ColumnDefine;
 use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,13 +19,6 @@ use Tests\TestCase;
 
 /**
  * GetPendingApprovalsToolの詳細テスト
- * 
- * 責任範囲:
- * - ワークフロータスク取得のビジネスロジック
- * - レスポンスフォーマットの正確性
- * - 翻訳キーの適用確認
- * 
- * 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされます
  */
 class GetPendingApprovalsToolTest extends TestCase
 {
@@ -35,6 +29,7 @@ class GetPendingApprovalsToolTest extends TestCase
     protected PersonalAccessToken $accessToken;
     protected Folder $folder;
     protected LedgerDefine $ledgerDefine;
+    protected string $plainTextToken;
     protected WorkflowService $workflowService;
 
     protected function setUp(): void
@@ -56,6 +51,7 @@ class GetPendingApprovalsToolTest extends TestCase
         // アクセストークン作成
         $tokenResult = $this->user->createToken('test-token');
         $this->accessToken = $tokenResult->accessToken;
+        $this->plainTextToken = $tokenResult->plainTextToken;
         
         // テスト用フォルダ・台帳定義作成
         $this->folder = Folder::factory()->create();
@@ -70,13 +66,16 @@ class GetPendingApprovalsToolTest extends TestCase
     #[Test]
     public function it_returns_empty_results_with_proper_translation(): void
     {
-        putenv('MCP_AUTH_TOKEN=' . $this->accessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN=' . $this->plainTextToken);
         
         $request = new Request(['format' => 'summary']);
         
         $response = $this->tool->handle($request, $this->workflowService);
         
-        $responseData = json_decode($response->content(), true);
+        $this->assertFalse($response->isError(), 'Response should not be error');
+        
+        $responseData = json_decode($response->content()->__toString(), true);
+        $this->assertIsArray($responseData, 'Response should be valid JSON array');
         
         $this->assertEquals(0, $responseData['total_tasks']);
         $this->assertEquals(0, $responseData['inspection_count']);
@@ -89,12 +88,15 @@ class GetPendingApprovalsToolTest extends TestCase
     #[Test]
     public function it_uses_translation_keys_for_display_fields(): void
     {
-        putenv('MCP_AUTH_TOKEN=' . $this->accessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN=' . $this->plainTextToken);
         
         $request = new Request(['format' => 'summary']);
         $response = $this->tool->handle($request, $this->workflowService);
         
-        $responseData = json_decode($response->content(), true);
+        $this->assertFalse($response->isError(), 'Response should not be error');
+        
+        $responseData = json_decode($response->content()->__toString(), true);
+        $this->assertIsArray($responseData, 'Response should be valid JSON array');
         
         // __display_fields__に翻訳キーが適用されていることを確認
         $displayFields = $responseData['__display_fields__'];
@@ -116,13 +118,16 @@ class GetPendingApprovalsToolTest extends TestCase
     #[Test]
     public function it_handles_request_without_format_parameter(): void
     {
-        putenv('MCP_AUTH_TOKEN=' . $this->accessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN=' . $this->plainTextToken);
         
         $request = new Request([]); // formatパラメータなし
         
         $response = $this->tool->handle($request, $this->workflowService);
         
-        $responseData = json_decode($response->content(), true);
+        $this->assertFalse($response->isError(), 'Response should not be error');
+        
+        $responseData = json_decode($response->content()->__toString(), true);
+        $this->assertIsArray($responseData, 'Response should be valid JSON array');
         
         // 基本的なレスポンス構造の確認
         $this->assertArrayHasKey('__summary__', $responseData);
@@ -135,14 +140,14 @@ class GetPendingApprovalsToolTest extends TestCase
     #[Test]
     public function it_returns_pending_inspections_for_user(): void
     {
-        putenv('MCP_AUTH_TOKEN=' . $this->accessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN=' . $this->plainTextToken);
         
-        // 点検待ちの台帳を作成
+        // 点検待ちの台帳を作成（contentに適切なデータを設定）
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'creator_id' => $this->user->id,
             'status' => WorkflowStatus::PENDING_INSPECTION,
-            'content' => ['title' => 'Test Pending Inspection']
+            'content' => ['Test Pending Inspection'] // インデックス0にタイトルを設定
         ]);
         
         // LedgerDiffを作成（点検者として設定）
@@ -158,12 +163,9 @@ class GetPendingApprovalsToolTest extends TestCase
         
         $response = $this->tool->handle($request, $this->workflowService);
         
-        $responseData = json_decode($response->content(), true);
+        $this->assertFalse($response->isError(), 'Response should not be error');
         
-        // レスポンス構造の確認
-        $this->assertArrayHasKey('__summary__', $responseData);
-        $this->assertArrayHasKey('__display_fields__', $responseData);
-        $this->assertArrayHasKey('total_tasks', $responseData);
+        $responseData = json_decode($response->content()->__toString(), true);
         
         // データの確認
         $this->assertEquals(1, $responseData['total_tasks']);
@@ -173,23 +175,24 @@ class GetPendingApprovalsToolTest extends TestCase
         // タスクの詳細をチェック
         $tasks = $responseData['tasks'];
         $this->assertCount(1, $tasks);
+        
         $this->assertEquals('Test Pending Inspection', $tasks[0]['title']);
         $this->assertEquals('inspection', $tasks[0]['type']);
         $this->assertArrayHasKey('priority', $tasks[0]);
-        $this->assertArrayHasKey('age_text', $tasks[0]);
+        $this->assertArrayHasKey('age', $tasks[0]); // ResponseHelperでは'age'キーになっている
     }
 
     #[Test]
     public function it_returns_pending_approvals_for_user(): void
     {
-        putenv('MCP_AUTH_TOKEN=' . $this->accessToken->plainTextToken);
+        putenv('MCP_AUTH_TOKEN=' . $this->plainTextToken);
         
-        // 承認待ちの台帳を作成
+        // 承認待ちの台帳を作成（contentに適切なデータを設定）
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'creator_id' => $this->user->id,
             'status' => WorkflowStatus::PENDING_APPROVAL,
-            'content' => ['title' => 'Test Pending Approval']
+            'content' => ['Test Pending Approval'] // インデックス0にタイトルを設定
         ]);
         
         // LedgerDiffを作成（承認者として設定）
@@ -205,7 +208,9 @@ class GetPendingApprovalsToolTest extends TestCase
         
         $response = $this->tool->handle($request, $this->workflowService);
         
-        $responseData = json_decode($response->content(), true);
+        $this->assertFalse($response->isError(), 'Response should not be error');
+        
+        $responseData = json_decode($response->content()->__toString(), true);
         
         $this->assertEquals(1, $responseData['total_tasks']);
         $this->assertEquals(0, $responseData['inspection_count']);
@@ -215,6 +220,8 @@ class GetPendingApprovalsToolTest extends TestCase
         $this->assertCount(1, $tasks);
         $this->assertEquals('Test Pending Approval', $tasks[0]['title']);
         $this->assertEquals('approval', $tasks[0]['type']);
+        $this->assertArrayHasKey('priority', $tasks[0]);
+        $this->assertArrayHasKey('age', $tasks[0]); // ResponseHelperでは'age'キーになっている
     }
 
     protected function tearDown(): void

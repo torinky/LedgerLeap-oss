@@ -76,14 +76,13 @@ MARKDOWN;
         string $sortBy, 
         string $sortDirection
     ): array {
-        // 点検待ちタスクの取得
+        // 既存のWorkflowTaskRepositoryのロジックを参考に実装
         $inspectionQuery = Ledger::where('status', WorkflowStatus::PENDING_INSPECTION)
             ->whereHas('latestDiff', function ($query) use ($user) {
                 $query->where('inspector_id', $user->id);
             })
             ->with(['define', 'creator', 'latestDiff', 'define.folder']);
 
-        // 承認待ちタスクの取得  
         $approvalQuery = Ledger::where('status', WorkflowStatus::PENDING_APPROVAL)
             ->whereHas('latestDiff', function ($query) use ($user) {
                 $query->where('approver_id', $user->id);
@@ -95,10 +94,14 @@ MARKDOWN;
         $this->applySorting($approvalQuery, $sortBy, $sortDirection);
 
         $inspectionTasks = $inspectionQuery->limit($limit)->get()
-            ->map([$this, 'formatTaskForResponse'])->toArray();
+            ->map(function ($ledger) {
+                return $this->formatTaskForResponse($ledger, 'inspection');
+            })->toArray();
             
         $approvalTasks = $approvalQuery->limit($limit)->get()
-            ->map([$this, 'formatTaskForResponse'])->toArray();
+            ->map(function ($ledger) {
+                return $this->formatTaskForResponse($ledger, 'approval');
+            })->toArray();
 
         return [
             'inspections' => $inspectionTasks,
@@ -137,14 +140,17 @@ MARKDOWN;
     /**
      * タスクをレスポンス用にフォーマット
      */
-    public function formatTaskForResponse(Ledger $ledger): array
+    public function formatTaskForResponse(Ledger $ledger, string $type): array
     {
         $ageDays = $ledger->created_at->diffInDays(now());
-        $title = $ledger->content['title'] ?? $ledger->define->title ?? trans('ledger.title_unknown');
+        
+        // タイトルの取得: contentから適切なカラムの値を抽出
+        $title = $this->extractTitleFromContent($ledger);
         
         return [
             'id' => $ledger->id,
             'title' => $title,
+            'type' => $type,
             'status' => $ledger->status->value,
             'status_label' => TranslationHelper::translateWorkflowStatus($ledger->status->value),
             'assignee_name' => $this->getAssigneeName($ledger),
@@ -154,10 +160,83 @@ MARKDOWN;
             'updated_at' => $ledger->updated_at->toISOString(),
             'age_days' => $ageDays,
             'age_text' => TranslationHelper::formatAgeDays($ageDays),
-            'deadline' => $ledger->content['deadline'] ?? null,
+            'deadline' => $this->getDeadlineFromContent($ledger),
             'priority' => $this->calculatePriority($ledger),
-            'workflow_type' => $ledger->status === WorkflowStatus::PENDING_INSPECTION ? 'inspection' : 'approval',
         ];
+    }
+
+    /**
+     * Ledgerのcontentからタイトルを抽出
+     */
+    private function extractTitleFromContent(Ledger $ledger): string
+    {
+        // LedgerDefineのタイトルをフォールバック値として設定
+        $fallbackTitle = $ledger->define?->title ?? trans('ledger.title_unknown');
+        
+        // column_defineが存在しない場合はフォールバック値を返す
+        if (!$ledger->define || !$ledger->define->column_define) {
+            return $fallbackTitle;
+        }
+        
+        // contentが空の場合もフォールバック値を返す
+        if (empty($ledger->content) || !is_array($ledger->content)) {
+            return $fallbackTitle;
+        }
+        
+        // 最初のカラムの値を取得（通常はタイトルや名前）
+        $firstColumn = collect($ledger->define->column_define)->first();
+        if ($firstColumn && isset($ledger->content[$firstColumn->id])) {
+            $titleValue = $ledger->content[$firstColumn->id];
+            // 空でない値があれば使用
+            if (!empty($titleValue) && is_string($titleValue)) {
+                return $titleValue;
+            }
+        }
+        
+        // 他のカラムからタイトル的なものを探す（name, title, 件名などの名前のカラム）
+        foreach ($ledger->define->column_define as $columnDefine) {
+            if (isset($ledger->content[$columnDefine->id])) {
+                $columnName = strtolower($columnDefine->name ?? '');
+                $titleLikeNames = ['title', 'name', '件名', '名前', 'タイトル', '表題'];
+                
+                foreach ($titleLikeNames as $titleLikeName) {
+                    if (str_contains($columnName, strtolower($titleLikeName))) {
+                        $titleValue = $ledger->content[$columnDefine->id];
+                        if (!empty($titleValue) && is_string($titleValue)) {
+                            return $titleValue;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $fallbackTitle;
+    }
+
+    /**
+     * Ledgerのcontentから期限を抽出
+     */
+    private function getDeadlineFromContent(Ledger $ledger): ?string
+    {
+        if (!$ledger->define || !$ledger->define->column_define || empty($ledger->content)) {
+            return null;
+        }
+        
+        // 期限らしいカラムを探す
+        foreach ($ledger->define->column_define as $columnDefine) {
+            if (isset($ledger->content[$columnDefine->id])) {
+                $columnName = strtolower($columnDefine->name ?? '');
+                $deadlineNames = ['deadline', '期限', '締切', '期日', 'due'];
+                
+                foreach ($deadlineNames as $deadlineName) {
+                    if (str_contains($columnName, strtolower($deadlineName))) {
+                        return $ledger->content[$columnDefine->id];
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
 
     /**
@@ -186,17 +265,22 @@ MARKDOWN;
     {
         $ageDays = $ledger->created_at->diffInDays(now());
         
-        // 期限がある場合
-        if (isset($ledger->content['deadline'])) {
-            $deadline = \Carbon\Carbon::parse($ledger->content['deadline']);
-            $daysUntilDeadline = now()->diffInDays($deadline, false);
-            
-            if ($daysUntilDeadline < 0) {
-                return trans('ledger.priority.overdue');
-            } elseif ($daysUntilDeadline <= 1) {
-                return trans('ledger.priority.urgent');
-            } elseif ($daysUntilDeadline <= 3) {
-                return trans('ledger.priority.high');
+        // 期限がある場合（新しいgetDeadlineFromContentメソッドを使用）
+        $deadline = $this->getDeadlineFromContent($ledger);
+        if ($deadline) {
+            try {
+                $deadlineDate = \Carbon\Carbon::parse($deadline);
+                $daysUntilDeadline = now()->diffInDays($deadlineDate, false);
+                
+                if ($daysUntilDeadline < 0) {
+                    return trans('ledger.priority.overdue');
+                } elseif ($daysUntilDeadline <= 1) {
+                    return trans('ledger.priority.urgent');
+                } elseif ($daysUntilDeadline <= 3) {
+                    return trans('ledger.priority.high');
+                }
+            } catch (\Exception $e) {
+                // 日付パースに失敗した場合は滞留時間による判定にフォールバック
             }
         }
         
