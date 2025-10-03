@@ -14,6 +14,27 @@
 ## 📚 完了済み計画
 
 ### ✅ **基盤実装完了**
+- **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)** - **提案中** 🟡
+  - **目標**: 添付ファイル（PDF/画像）の内容を活用したインテリジェント検索
+  - **主要機能**:
+    - SearchLedgersTool の添付ファイル対応（`include_attachments`パラメータ）
+    - 新規 GetAttachedFilesTool（抽出テキスト確認）
+    - 新規 SearchByAttachedFileContentTool（ファイル内容特化検索）
+    - OCR/Tika抽出テキストの活用
+  - **ユースケース**: 請求書検索、契約書変更確認、文書管理、ストレージ最適化
+  - **工数**: Phase 1: 6時間, Phase 2: 8時間, Phase 3: 10時間
+  - **関連**: content_attached フィールドとAttachedFileモデルの完全活用
+
+- **[SearchLedgersTool レスポンス仕様変更](./2025-10-03_MCP_SearchLedgersTool_Response_Refactoring_Plan.md)** - **改訂版承認済み** ✅
+  - **目標**: 柔軟な情報量制御とLLM最適化
+  - **主要機能**: 
+    - 4つのレスポンスモード（raw, summary, summary+preview, detailed）
+    - `include_content` パラメータでカスタムフィールド制御
+    - 英語固定キー + 翻訳済み値の設計
+    - 段階的情報取得ワークフローのサポート
+  - **工数**: 8.5時間（1-2日）
+  - **関連**: [MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md) も更新済み
+
 - **[MCP応答最適化計画](./2025-09-28_MCP_Response_Optimization_Plan.md)** - **完了済み** ✅
   - **成果**: 基本的なMCPツール実装、プロンプトチューニング完了
   - **実装内容**: SearchLedgersTool, CreateLedgerTool, GetLedgerDefinesTool

@@ -18,7 +18,10 @@ class SearchLedgersTool extends Tool
      * The tool's description.
      */
     protected string $description = <<<'MARKDOWN'
-        Search for ledgers based on various criteria.
+        Search for ledgers based on various criteria. 
+        The 'format' parameter determines the response structure.
+        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta).
+        - 'raw': Returns only the normalized data (ledgers, meta, total) for machine processing.
 MARKDOWN;
 
     protected LedgerService $ledgerService;
@@ -40,7 +43,6 @@ MARKDOWN;
         }
 
         $parameters = $request->toArray();
-        $format = $parameters['format'] ?? 'raw';
 
         // created_from と created_to を結合して created_between を作成
         if (isset($parameters['created_from']) && isset($parameters['created_to'])) {
@@ -58,44 +60,47 @@ MARKDOWN;
             return Response::error("Search failed: {$e->getMessage()}");
         }
 
-        if ($format === 'summary') {
-            $ledgers = collect($results['ledgers'])->map(function ($ledger) {
-                // ステータスを人間可読な文字列に変換
-                $statusDisplay = match ($ledger->status->value) {
-                    'none' => '下書き',
-                    'in_progress' => '処理中',
-                    'pending_inspection' => '点検待ち',
-                    'pending_approval' => '承認待ち',
-                    'approved' => '承認済み',
-                    'rejected' => '却下',
-                    default => $ledger->status->value,
-                };
+        // summary フォーマットの場合、表示用の加工を行う
+        if (($parameters['format'] ?? 'summary') === 'summary') {
+            $ledgers = collect($results['ledgers'])->map(function ($ledger) use ($results) {
+                $meta = $results['meta'];
+                $ledger = (object) $ledger; // 配列をオブジェクトに変換
 
-                // 日付をフォーマット
+                // ステータス
+                $statusDisplay = __('ledger.workflow.status.'.($ledger->status->value ?? $ledger->status), [], 'ja');
+
+                // 日付
                 $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
 
+                // フォルダパス
+                $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
+                $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
+                    ? $meta['folders'][$define['folder_id']]['path']
+                    : __('common.root_folder', [], 'ja');
+
                 // __display_fields__ を追加
-                $ledger['__display_fields__'] = [
-                    '件名' => $ledger->define->title ?? '不明',
-                    'ステータス' => $statusDisplay,
-                    '更新日時' => $updatedAtFormatted,
+                $ledger->__display_fields__ = [
+                    __('ledger.field.title', [], 'ja') => $define['name'] ?? __('common.unknown', [], 'ja'),
+                    __('ledger.field.folder', [], 'ja') => $folderPath,
+                    __('ledger.field.creator', [], 'ja') => $meta['users'][$ledger->creator_id]['name'] ?? __('common.unknown', [], 'ja'),
+                    __('ledger.field.status', [], 'ja') => $statusDisplay,
+                    __('ledger.field.updated_at', [], 'ja') => $updatedAtFormatted,
                 ];
 
                 return $ledger;
             });
 
-            $summary = "台帳が{$results['total']}件見つかりました。";
-            if ($results['total'] > 0) {
-                $summary = "あなたが作成した台帳は{$results['total']}件です。";
-            }
+            $summary = trans_choice('messages.found_ledgers', $results['total'], [], 'ja');
 
             return Response::json([
                 'ledgers' => $ledgers,
                 'total' => $results['total'],
+                'meta' => $results['meta'], // meta情報も返す
                 '__summary__' => $summary,
             ]);
         }
 
+        // rawフォーマットの場合
         return Response::json($results);
     }
 
@@ -119,7 +124,7 @@ MARKDOWN;
             'creator_id' => $schema->integer('The ID of the user who created the ledger.'),
             'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD).'),
             'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD).'),
-            'format' => $schema->string('The format of the response.')->enum(['raw', 'summary'])->default('raw'),
+            'format' => $schema->string('The format of the response.')->enum(['raw', 'summary'])->default('summary'),
         ];
     }
 }

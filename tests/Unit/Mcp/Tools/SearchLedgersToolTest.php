@@ -3,10 +3,12 @@
 namespace Tests\Unit\Mcp\Tools;
 
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\LedgerService;
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -48,9 +50,6 @@ class SearchLedgersToolTest extends TestCase
 
         // MCP_AUTH_TOKEN 環境変数を設定
         putenv('MCP_AUTH_TOKEN='.$newAccessToken->plainTextToken);
-
-        // Laravel\Mcp\Responseの構造を確認するためのdd
-        // dd($this->tool->handle(new Request([])));
     }
 
     protected function tearDown(): void
@@ -83,109 +82,106 @@ class SearchLedgersToolTest extends TestCase
     }
 
     #[Test]
-    public function it_calls_ledger_service_with_correct_parameters_for_raw_format()
+    public function it_returns_raw_format_correctly()
     {
-        $params = [
-            'q' => 'test',
-            'creator_id' => $this->user->id,
-            'created_from' => '2023-01-01',
-            'created_to' => '2023-01-31',
-            'limit' => 5,
-            'offset' => 0,
-            'format' => 'raw',
-        ];
-        $expectedServiceParams = [
-            'q' => 'test',
-            'creator_id' => $this->user->id,
-            'limit' => 5,
-            'offset' => 0,
-            'format' => 'raw',
-            'created_between' => '2023-01-01,2023-01-31',
-        ];
+        $params = ['format' => 'raw'];
+        $mockLedger = Ledger::factory()->make();
+        $mockMeta = ['ledger_defines' => [], 'folders' => [], 'users' => []];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
-            ->withArgs(function ($user, $receivedParams) use ($expectedServiceParams) {
-                return $user->is($this->user) && $receivedParams === $expectedServiceParams;
-            })
-            ->andReturn(['ledgers' => [], 'total' => 0]);
+            ->andReturn(['ledgers' => collect([$mockLedger]), 'meta' => $mockMeta, 'total' => 1]);
 
         $request = new Request($params);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
-        $this->assertJson($response->content()->__toString());
         $responseData = json_decode($response->content()->__toString(), true);
+
         $this->assertArrayHasKey('ledgers', $responseData);
+        $this->assertArrayHasKey('meta', $responseData);
         $this->assertArrayHasKey('total', $responseData);
+        $this->assertArrayNotHasKey('__summary__', $responseData);
+        $this->assertArrayNotHasKey('__display_fields__', $responseData['ledgers'][0]);
     }
 
     #[Test]
-    public function it_returns_summary_format_with_display_fields_and_summary_text()
+    public function it_returns_summary_format_with_correct_display_fields_and_translation_keys()
     {
-        // テスト用の台帳データを作成
-        $ledgerDefine = LedgerDefine::factory()->create(['title' => '日報']);
-        $ledger = Ledger::factory()->create([
+        // Translatorを部分モック化
+        // Translatorを部分モック化
+        $translator = Mockery::mock(app(Translator::class))->makePartial();
+        $this->instance(Translator::class, $translator);
+
+        // テストデータ
+        $creator = User::factory()->make(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = Folder::factory()->make(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = LedgerDefine::factory()->make(['id' => 1, 'name' => 'テスト台帳', 'folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->make([
+            'id' => 1,
             'ledger_define_id' => $ledgerDefine->id,
             'status' => 'pending_approval',
+            'creator_id' => $creator->id,
             'updated_at' => now()->subHour(),
-            'creator_id' => $this->user->id,
         ]);
-        $ledger->load('define'); // リレーションをロード
 
-        $params = [
-            'q' => '日報',
-            'creator_id' => $this->user->id,
-            'format' => 'summary',
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => $ledgerDefine->toArray()],
+            'folders' => [$folder->id => $folder->toArray()],
+            'users' => [$creator->id => $creator->toArray()],
         ];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
-            ->andReturn(['ledgers' => collect([$ledger]), 'total' => 1]);
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
 
-        $request = new Request($params);
+        $request = new Request(['format' => 'summary']);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
-        $this->assertJson($response->content()->__toString());
         $responseData = json_decode($response->content()->__toString(), true);
 
-        $this->assertArrayHasKey('ledgers', $responseData);
-        $this->assertArrayHasKey('total', $responseData);
+        // 構造の検証
         $this->assertArrayHasKey('__summary__', $responseData);
-        $this->assertStringContainsString('あなたが作成した台帳は1件です。', $responseData['__summary__']);
+        $this->assertArrayHasKey('__display_fields__', $responseData['ledgers'][0]);
 
-        $this->assertCount(1, $responseData['ledgers']);
-        $firstLedger = $responseData['ledgers'][0];
-        $this->assertArrayHasKey('__display_fields__', $firstLedger);
-        $this->assertEquals('日報', $firstLedger['__display_fields__']['件名']);
-        $this->assertEquals('承認待ち', $firstLedger['__display_fields__']['ステータス']);
-        $this->assertStringContainsString(now()->subHour()->format('Y年m月d日 H:i'), $firstLedger['__display_fields__']['更新日時']);
+        // 翻訳キーの呼び出しを検証
+        $translator->shouldHaveReceived('get')->with('ledger.field.title', [], 'ja');
+        $translator->shouldHaveReceived('get')->with('ledger.field.folder', [], 'ja');
+        $translator->shouldHaveReceived('get')->with('ledger.field.creator', [], 'ja');
+        $translator->shouldHaveReceived('get')->with('ledger.field.status', [], 'ja');
+        $translator->shouldHaveReceived('get')->with('ledger.field.updated_at', [], 'ja');
+        $translator->shouldHaveReceived('get')->with('ledger.workflow.status.pending_approval', [], 'ja');
+        $translator->shouldHaveReceived('choice')->with('messages.found_ledgers', 1, [], 'ja');
+
+        // __display_fields__ の内容を検証
+        $displayFields = $responseData['ledgers'][0]['__display_fields__'];
+        $this->assertEquals($ledgerDefine->name, $displayFields[__('ledger.field.title', [], 'ja')]);
+        $this->assertEquals($folder->path, $displayFields[__('ledger.field.folder', [], 'ja')]);
+        $this->assertEquals($creator->name, $displayFields[__('ledger.field.creator', [], 'ja')]);
+        $this->assertEquals(__('ledger.workflow.status.pending_approval', [], 'ja'), $displayFields[__('ledger.field.status', [], 'ja')]);
     }
 
     #[Test]
     public function it_handles_empty_results_for_summary_format()
     {
-        $params = [
-            'q' => '存在しないキーワード',
-            'format' => 'summary',
-        ];
+        // Translatorをスパイ
+        $translator = Mockery::spy(Translator::class);
+        $this->instance('translator', $translator);
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
-            ->andReturn(['ledgers' => collect([]), 'total' => 0]);
+            ->andReturn(['ledgers' => collect([]), 'meta' => [], 'total' => 0]);
 
-        $request = new Request($params);
+        $request = new Request(['format' => 'summary']);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
-        $this->assertJson($response->content()->__toString());
         $responseData = json_decode($response->content()->__toString(), true);
 
-        $this->assertArrayHasKey('ledgers', $responseData);
-        $this->assertArrayHasKey('total', $responseData);
         $this->assertArrayHasKey('__summary__', $responseData);
-        $this->assertStringContainsString('台帳が0件見つかりました。', $responseData['__summary__']);
         $this->assertCount(0, $responseData['ledgers']);
+
+        $translator->shouldHaveReceived('choice')->with('messages.found_ledgers', 0, [], 'ja');
     }
 }

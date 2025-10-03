@@ -529,6 +529,63 @@ tests/Unit/Mcp/ (36テスト/113 assertions)
 
 ---
 
+### 2025-10-04: ドキュメント更新 - ワークフローステータスの翻訳対応 ✅
+**実施内容**: MCPレスポンスにおけるワークフローステータス仕様の明確化
+
+**変更内容**:
+1. **設計方針の追加** (`2025-10-03_MCP_SearchLedgersTool_Response_Refactoring_Plan.md`)
+   - ワークフローステータスの扱い方を新セクション（1.3）として追加
+   - 機械処理用と表示用の2つのフィールド設計を明文化
+
+2. **レスポンス仕様の統一**:
+   - **`status` フィールド**: Enum値（小文字スネークケース）例: `"pending_approval"`
+   - **`__display_fields__.workflow_status`**: 翻訳済み文字列 例: `"承認待ち"`
+   - 全4つのモード（raw, summary, summary+preview, detailed）で統一
+
+3. **実装ガイダンスの更新**:
+   - `getStatusDisplay()` メソッドに `WorkflowStatus::label()` の活用を明記
+   - 翻訳キー形式の統一: `ledger.workflow.status.{value}`（小文字スネークケース）
+   - 既存の翻訳ファイル構造を確認・文書化
+
+**技術的な意義**:
+- **一貫性**: 全MCPツールで統一されたステータス返却形式
+- **多言語対応**: Enum値と翻訳の分離により、将来の多言語対応が容易
+- **機械処理性**: LLMがステータスでフィルタリング・集計可能
+- **可読性**: ユーザー表示には翻訳済み文字列を使用
+
+**関連ファイル**:
+- `app/Enums/WorkflowStatus.php`: 既存のEnum定義を活用
+- `lang/ja/ledger.php`: 既存の翻訳キーを確認（`workflow.status.*`）
+- ドキュメント: 全レスポンス例を更新（10箇所以上）
+
+**実装ノート**:
+```php
+// WorkflowStatus Enumの値
+case NONE = 'none';
+case DRAFT = 'draft';
+case PENDING_INSPECTION = 'pending_inspection';
+case PENDING_APPROVAL = 'pending_approval';
+case APPROVED = 'approved';
+
+// label()メソッドで翻訳取得
+$status->label(); // "承認待ち" を返す
+
+// レスポンス構造
+{
+  "status": "pending_approval",        // 機械処理用
+  "__display_fields__": {
+    "workflow_status": "承認待ち"      // 表示用
+  }
+}
+```
+
+**次のステップ**:
+- SearchLedgersTool実装時に本仕様を適用
+- 他のMCPツール（GetWorkflowHistoryTool等）でも同様の設計を採用
+- OpenAPI仕様書にステータス値のenum定義を追加
+
+---
+
 ### 2025-10-01: Step 0.3 完了 ✅
 **実装内容**: テストカバレッジ完全化
 - 包括的テストスイート作成 (36テスト/113 assertions) ✅
