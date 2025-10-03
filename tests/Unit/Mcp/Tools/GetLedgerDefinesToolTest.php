@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\Mcp\Tools;
 
-use App\Http\Resources\LedgerDefineResource;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -16,13 +15,13 @@ use Tests\TestCase;
 
 /**
  * GetLedgerDefinesToolの詳細テスト
- * 
+ *
  * 責任範囲:
  * - 台帳定義のフィルタリング機能
  * - 複数フォルダアクセス権限の処理
  * - レスポンス形式の検証
  * - エッジケースの処理
- * 
+ *
  * 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされます
  */
 class GetLedgerDefinesToolTest extends TestCase
@@ -57,14 +56,14 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $accessibleFolder = Folder::factory()->create(['title' => 'Accessible Folder']);
         $inaccessibleFolder = Folder::factory()->create(['title' => 'Inaccessible Folder']);
-        
+
         $accessibleLedgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $accessibleFolder->id,
-            'title' => 'Accessible Define'
+            'title' => 'Accessible Define',
         ]);
         $inaccessibleLedgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $inaccessibleFolder->id,
-            'title' => 'Inaccessible Define'
+            'title' => 'Inaccessible Define',
         ]);
 
         // ユーザーはaccessibleFolderのみアクセス可能
@@ -75,7 +74,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -104,7 +103,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -124,7 +123,7 @@ class GetLedgerDefinesToolTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $folder->id,
             'title' => 'Test Define',
-            'create_description' => 'Test Description'
+            'create_description' => 'Test Description',
         ]);
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
@@ -134,7 +133,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -144,7 +143,7 @@ class GetLedgerDefinesToolTest extends TestCase
         // レスポンスがLedgerDefineResourceの形式であることを確認
         $responseData = json_decode($response->content(), true);
         $this->assertCount(1, $responseData);
-        
+
         $ledgerDefineData = $responseData[0];
         $this->assertArrayHasKey('id', $ledgerDefineData);
         $this->assertArrayHasKey('name', $ledgerDefineData); // Resourceでは'name'フィールド
@@ -160,18 +159,18 @@ class GetLedgerDefinesToolTest extends TestCase
         $folder1 = Folder::factory()->create(['title' => 'Folder 1']);
         $folder2 = Folder::factory()->create(['title' => 'Folder 2']);
         $folder3 = Folder::factory()->create(['title' => 'Folder 3']);
-        
+
         $ledgerDefine1 = LedgerDefine::factory()->create([
             'folder_id' => $folder1->id,
-            'title' => 'Define 1'
+            'title' => 'Define 1',
         ]);
         $ledgerDefine2 = LedgerDefine::factory()->create([
             'folder_id' => $folder2->id,
-            'title' => 'Define 2'
+            'title' => 'Define 2',
         ]);
         $ledgerDefine3 = LedgerDefine::factory()->create([
             'folder_id' => $folder3->id,
-            'title' => 'Define 3'
+            'title' => 'Define 3',
         ]);
 
         // ユーザーはfolder1とfolder3にアクセス可能
@@ -182,7 +181,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -191,7 +190,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $responseData = json_decode($response->content(), true);
         $this->assertCount(2, $responseData);
-        
+
         $returnedIds = array_column($responseData, 'id');
         $this->assertContains($ledgerDefine1->id, $returnedIds);
         $this->assertContains($ledgerDefine3->id, $returnedIds);
@@ -213,7 +212,7 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -223,7 +222,7 @@ class GetLedgerDefinesToolTest extends TestCase
         // JSONが整形されていることを確認（改行とインデントが含まれる）
         $content = $response->content();
         $this->assertStringContainsString("\n", $content);
-        $this->assertStringContainsString("    ", $content); // インデント
+        $this->assertStringContainsString('    ', $content); // インデント
     }
 
     protected function tearDown(): void

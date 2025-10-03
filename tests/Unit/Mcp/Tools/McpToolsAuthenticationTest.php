@@ -2,7 +2,9 @@
 
 namespace Tests\Unit\Mcp\Tools;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\CreateLedgerTool;
+use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -11,7 +13,6 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use App\Enums\FolderPermissionType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Mockery;
@@ -20,12 +21,12 @@ use Tests\TestCase;
 
 /**
  * MCPツールの統一認証機能テスト
- * 
+ *
  * 責任範囲:
  * - 全MCPツールの認証動作の一貫性検証
  * - AuthenticatedMcpTraitの統合動作確認
  * - トークン検証・権限チェックの基本動作
- * 
+ *
  * 注意: 各ツール固有の詳細機能は個別のテストクラスで実施
  */
 class McpToolsAuthenticationTest extends TestCase
@@ -90,7 +91,7 @@ class McpToolsAuthenticationTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $ledgerService = Mockery::mock(LedgerService::class);
-        $tool = new CreateLedgerTool();
+        $tool = new CreateLedgerTool;
         $request = new Request([
             'ledger_define_id' => 1,
             'folder_id' => 1,
@@ -119,7 +120,7 @@ class McpToolsAuthenticationTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new CreateLedgerTool();
+        $tool = new CreateLedgerTool;
         $request = new Request([
             'ledger_define_id' => 1,
             'folder_id' => $folder->id,
@@ -150,7 +151,7 @@ class McpToolsAuthenticationTest extends TestCase
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
 
-        $tool = new GetLedgerDefinesTool();
+        $tool = new GetLedgerDefinesTool;
         $request = new Request([]);
 
         $response = $tool->handle($request, $mockRepository);
@@ -170,9 +171,10 @@ class McpToolsAuthenticationTest extends TestCase
 
         $tools = [
             new SearchLedgersTool(Mockery::mock(LedgerService::class)),
-            new CreateLedgerTool(),
-            new GetLedgerDefinesTool(),
-            new GetPendingApprovalsTool(),
+            new CreateLedgerTool,
+            new GetLedgerDefinesTool,
+            new GetPendingApprovalsTool,
+            new ExecuteApprovalTool,
         ];
 
         foreach ($tools as $tool) {
@@ -183,6 +185,8 @@ class McpToolsAuthenticationTest extends TestCase
             } elseif ($tool instanceof GetLedgerDefinesTool) {
                 $response = $tool->handle($request, Mockery::mock(WritableFolderRepository::class));
             } elseif ($tool instanceof GetPendingApprovalsTool) {
+                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
+            } elseif ($tool instanceof ExecuteApprovalTool) {
                 $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
             } else {
                 $response = $tool->handle($request);

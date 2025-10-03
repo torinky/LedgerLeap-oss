@@ -3,6 +3,7 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Tools\CreateLedgerTool;
+use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -51,6 +52,7 @@ class LedgerLeapServer extends Server
         SearchLedgersTool::class,
         CreateLedgerTool::class,
         GetPendingApprovalsTool::class,
+        ExecuteApprovalTool::class,
     ];
 
     /**

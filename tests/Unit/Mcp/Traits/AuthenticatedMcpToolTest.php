@@ -2,21 +2,19 @@
 
 namespace Tests\Unit\Mcp\Traits;
 
-use App\Enums\FolderPermissionType;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Folder;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Response;
-use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
  * AuthenticatedMcpTraitの詳細テスト
- * 
+ *
  * 注意: このテストクラスは共通トレイトの内部ロジックをテストします。
  * 実際のMCPツールの統合テストはMcpToolsAuthenticationTest.phpで実施されます。
  */

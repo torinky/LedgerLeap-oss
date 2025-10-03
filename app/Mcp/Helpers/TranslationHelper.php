@@ -4,7 +4,7 @@ namespace App\Mcp\Helpers;
 
 /**
  * MCPレスポンス用翻訳統合ヘルパー
- * 
+ *
  * 既存のLedgerLeap翻訳キーを活用して、
  * 自然な日本語MCPレスポンスを生成します。
  */
@@ -21,7 +21,7 @@ class TranslationHelper
 
         return trans('ledger.workflow.summary_notification_message', [
             'inspection_count' => $inspectionCount,
-            'approval_count' => $approvalCount
+            'approval_count' => $approvalCount,
         ]);
     }
 
@@ -59,7 +59,7 @@ class TranslationHelper
      */
     public static function statisticsSummary(int $totalCount, string $period = 'month'): string
     {
-        $periodText = match($period) {
+        $periodText = match ($period) {
             'day' => trans('ledger.period.today'),
             'week' => trans('ledger.period.this_week'),
             'month' => trans('ledger.period.this_month'),
@@ -69,7 +69,7 @@ class TranslationHelper
 
         return trans('ledger.statistics.ledger_count_with_period', [
             'count' => $totalCount,
-            'period' => $periodText
+            'period' => $periodText,
         ]);
     }
 
@@ -78,7 +78,7 @@ class TranslationHelper
      */
     public static function translateWorkflowStatus(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'DRAFT' => trans('ledger.workflow.status.draft'),
             'PENDING_INSPECTION' => trans('ledger.workflow.status.pending_inspection'),
             'PENDING_APPROVAL' => trans('ledger.workflow.status.pending_approval'),
@@ -126,7 +126,7 @@ class TranslationHelper
             'type' => 'error',
             'code' => $code,
             'message' => $message,
-            '__summary__' => trans('ledger.error.occurred_with_message', ['message' => $message])
+            '__summary__' => trans('ledger.error.occurred_with_message', ['message' => $message]),
         ];
     }
 
@@ -138,7 +138,7 @@ class TranslationHelper
         return array_merge([
             'type' => 'success',
             'message' => $message,
-            '__summary__' => $message
+            '__summary__' => $message,
         ], $data);
     }
 }

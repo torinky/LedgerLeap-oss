@@ -987,6 +987,13 @@ return [
         'tooltip_conditions_not_met_inspection' => '必須点検ロールの処理が完了していません。',
         'view_content_at_this_point' => 'この時点の内容を見る',
         'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
+        'error' => [
+            'cannot_approve' => '承認できません',
+            'cannot_return_to_draft' => '作成中に戻すことができません',
+            'invalid_status_for_approve' => '承認できるステータスではありません',
+            'unauthorized_as_approver' => '承認者として認証されていません',
+            'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です',
+        ],
     ],
     'period' => [
         'today' => '本日',
@@ -1007,6 +1014,9 @@ return [
     'error' => [
         'occurred_with_message' => 'エラーが発生しました: :message',
         'approval_processing_failed' => '承認処理に失敗しました',
+        'ledger_id_required' => '台帳IDが必要です',
+        'invalid_action' => '無効なアクションです',
+        'operation_failed' => '操作に失敗しました',
     ],
     'priority' => [
         'overdue' => '期限超過',

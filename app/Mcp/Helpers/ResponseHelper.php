@@ -6,7 +6,7 @@ use Carbon\Carbon;
 
 /**
  * MCPレスポンス構築ヘルパー
- * 
+ *
  * 標準的なMCPレスポンス形式を生成し、
  * 既存の翻訳キーを活用した自然な日本語表示を提供します。
  */
@@ -38,7 +38,7 @@ class ResponseHelper
                     'tasks' => array_merge(
                         self::formatWorkflowTasks($inspectionTasks, 'inspection'),
                         self::formatWorkflowTasks($approvalTasks, 'approval')
-                    )
+                    ),
                 ]
             );
         }
@@ -94,8 +94,8 @@ class ResponseHelper
             [
                 'period' => trans('ledger.period.period'),
                 'total' => trans('ledger.total'),
-                'status' => trans('ledger.workflow.status.label') . '別',
-                'creator' => trans('ledger.creator.name') . '別',
+                'status' => trans('ledger.workflow.status.label').'別',
+                'creator' => trans('ledger.creator.name').'別',
             ],
             [
                 'statistics' => $stats,
@@ -110,9 +110,9 @@ class ResponseHelper
     private static function formatWorkflowTasks(array $tasks, string $type): array
     {
         return array_map(function ($task) use ($type) {
-            $ageDays = isset($task['created_at']) ? 
+            $ageDays = isset($task['created_at']) ?
                 Carbon::parse($task['created_at'])->diffInDays(now()) : 0;
-            
+
             return [
                 'title' => $task['title'] ?? trans('ledger.title_unknown'),
                 'status' => TranslationHelper::translateWorkflowStatus($task['status'] ?? ''),
@@ -150,11 +150,11 @@ class ResponseHelper
         ?string $newStatus = null,
         ?string $nextAssignee = null
     ): array {
-        if (!$success) {
+        if (! $success) {
             return TranslationHelper::buildErrorResponse(trans('ledger.error.approval_processing_failed'));
         }
 
-        $actionText = match($action) {
+        $actionText = match ($action) {
             'approve' => trans('ledger.workflow.approved_message'),
             'reject' => trans('ledger.workflow.returned_to_draft_message'),
             'return_to_draft' => trans('ledger.workflow.returned_to_draft_message'),
@@ -162,11 +162,11 @@ class ResponseHelper
         };
 
         $response = TranslationHelper::buildSuccessResponse($actionText);
-        
+
         if ($newStatus) {
             $response['new_status'] = TranslationHelper::translateWorkflowStatus($newStatus);
         }
-        
+
         if ($nextAssignee) {
             $response['next_assignee'] = $nextAssignee;
         }

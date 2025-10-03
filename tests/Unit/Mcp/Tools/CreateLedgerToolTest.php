@@ -6,8 +6,8 @@ use App\Mcp\Tools\CreateLedgerTool;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use App\Services\LedgerService;
 use App\Repositories\WritableFolderRepository;
+use App\Services\LedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -17,13 +17,13 @@ use Tests\TestCase;
 
 /**
  * CreateLedgerToolの詳細テスト
- * 
+ *
  * 責任範囲:
  * - 台帳作成のビジネスロジック
  * - リクエストパラメータのバリデーション
  * - サービス層との連携
  * - エラーハンドリング
- * 
+ *
  * 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされます
  */
 class CreateLedgerToolTest extends TestCase
@@ -56,16 +56,16 @@ class CreateLedgerToolTest extends TestCase
         // サービスをモック
         $this->ledgerService = Mockery::mock(LedgerService::class);
         $this->folderRepository = Mockery::mock(WritableFolderRepository::class);
-        
+
         // Userモデルのイベントリスナー用のメソッドをデフォルトでモック
         $this->folderRepository->shouldReceive('clearAllCache')->byDefault()->andReturn(true);
         $this->folderRepository->shouldReceive('refreshAllCache')->byDefault()->andReturn(true);
-        
+
         $this->app->instance(LedgerService::class, $this->ledgerService);
         $this->app->instance(WritableFolderRepository::class, $this->folderRepository);
 
         // CreateLedgerTool をインスタンス化
-        $this->tool = new CreateLedgerTool();
+        $this->tool = new CreateLedgerTool;
 
         // MCP_AUTH_TOKEN 環境変数を設定
         putenv('MCP_AUTH_TOKEN='.$newAccessToken->plainTextToken);
@@ -101,7 +101,7 @@ class CreateLedgerToolTest extends TestCase
     {
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        
+
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
             ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
@@ -128,14 +128,14 @@ class CreateLedgerToolTest extends TestCase
             'ledger_define_id' => $ledgerDefine->id,
             'folder_id' => $folder->id,
             'content' => '{"title": "Test Ledger", "amount": 1000}',
-            'tags' => ['test', 'automation']
+            'tags' => ['test', 'automation'],
         ]);
 
         $response = $this->tool->handle($request, $this->ledgerService);
 
         $this->assertFalse($response->isError());
         $this->assertJson($response->content());
-        
+
         $responseData = json_decode($response->content(), true);
         // LedgerResourceの構造に基づいてアサーション
         $this->assertIsArray($responseData);
@@ -148,7 +148,7 @@ class CreateLedgerToolTest extends TestCase
     {
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        
+
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
             ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
@@ -174,7 +174,7 @@ class CreateLedgerToolTest extends TestCase
             'ledger_define_id' => $ledgerDefine->id,
             'folder_id' => $folder->id,
             'content' => '{"title": "Test"}',
-            'tags' => []
+            'tags' => [],
         ]);
 
         $response = $this->tool->handle($request, $this->ledgerService);
