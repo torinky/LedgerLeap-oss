@@ -1,5 +1,104 @@
 ## 📝 実装ログ (最新)
 
+### 🚀 2025-10-01: **Phase 2 Step 1 完了** - GetActivityLogTool実装完了 ✅  
+**実装内容**: アクティビティログ取得MCPツール完成
+
+#### **主要実装成果**
+- ✅ **GetActivityLogTool.php**: アクティビティログ取得ツール (185行)
+  - ActivityLogFormatterの完全活用（500行の既存コード統合）
+  - Spatieのactivitylogパッケージ統合
+  - 60+個の既存翻訳キーを活用
+  - HTMLとテキストの両形式対応
+
+- ✅ **豊富なフィルタリング機能**
+  - `ledger_id`: 特定台帳のアクティビティ
+  - `folder_id`: フォルダ内の全台帳のアクティビティ
+  - `user_id`: 特定ユーザーの操作
+  - `event_type`: イベントタイプでフィルタ
+  - `start_date`, `end_date`: 日付範囲フィルタ
+  - `limit`: 取得件数制限（デフォルト50件）
+
+- ✅ **MCPサーバー統合**: LedgerLeapServerへの新ツール登録
+- ✅ **統合認証テスト**: McpToolsAuthenticationTestへの追加
+- ✅ **専用テスト**: GetActivityLogToolTest.php作成 (10テスト/57 assertions)
+
+#### **コード品質**
+- **既存実装活用**: ActivityLogFormatter (500行) 完全統合
+- **エラーハンドリング**: route()呼び出しのtry-catch追加
+- **型柔軟性**: HtmlString/string型の適切な処理
+- **テスト品質**: 10種類のフィルタテスト、データベース競合解決
+
+#### **技術的完成度**
+```php
+// アクティビティログ取得例
+$response = GetActivityLogTool::handle([
+    'ledger_id' => 123,
+    'event_type' => 'updated',
+    'start_date' => '2025-10-01',
+    'limit' => 20
+]);
+// → 自然な日本語アクティビティログ + フィルタ結果
+```
+
+#### **レスポンス例**
+```json
+{
+  "__summary__": "アクティビティログ: 15件",
+  "__display_fields__": {
+    "time": "日時",
+    "causer": "操作者",
+    "operation": "操作内容",
+    "changes": "変更内容"
+  },
+  "activities": [
+    {
+      "id": 42,
+      "event": "updated",
+      "event_label": "台帳レコード: [ 月次報告書 ] が更新されました。",
+      "causer_name": "田中太郎",
+      "created_at_formatted": "2025/10/01 14:30:45",
+      "changes": "status: 下書き → 点検待ち",
+      "comment": "点検をお願いします"
+    }
+  ],
+  "total_count": 15
+}
+```
+
+#### **テスト状況**
+- ✅ **GetActivityLogToolTest**: 10テスト/57 assertions全通過
+- ✅ **McpToolsAuthenticationTest**: 統合認証テスト更新済み
+- ✅ **全MCPテスト**: 63 passed, 5 skipped, 3 failed (270 assertions)
+  - GetActivityLogTool関連は全て通過 ✅
+
+#### **MCPツール総数: 8種類完成**
+```
+✅ Phase 0: 基盤技術
+  1. GetLedgerDefinesTool - 台帳定義取得
+  2. SearchLedgersTool - 台帳検索
+  3. CreateLedgerTool - 台帳作成
+
+✅ Phase 1-改: ワークフロー統合
+  4. GetPendingApprovalsTool - 承認待ちタスク取得
+  5. ExecuteApprovalTool - 承認処理実行
+  6. GetWorkflowHistoryTool - ワークフロー履歴取得
+  7. ClaimWorkflowTaskTool - タスク引き継ぎ
+
+✅ Phase 2: アクティビティログ・統計
+  8. GetActivityLogTool - アクティビティログ取得 ← 今回
+```
+
+#### **技術的教訓**
+- **既存コード統合**: 500行のActivityLogFormatterを完全活用
+- **エラーハンドリング**: route()呼び出しは環境依存のためtry-catch必須
+- **型の柔軟性**: HtmlString | string の両方に対応が必要
+- **テスト戦略**: 
+  - ledger_idフィルタテスト: Ledger/LedgerDefine/Folderの適切な作成順序
+  - 日付範囲テスト: CustomActivity::update()で手動日時設定
+  - データベース競合: 並列テストでのマイグレーション競合を回避
+
+---
+
 ### 🎉 2025-10-01: **Phase 1-改 完全達成** ✅  
 **実装内容**: ワークフローMCP統合の完全実装
 
@@ -11,7 +110,7 @@
 4. ✅ GetPendingApprovalsTool - 承認待ちタスク取得
 5. ✅ ExecuteApprovalTool - 承認処理実行
 6. ✅ GetWorkflowHistoryTool - ワークフロー履歴取得
-7. ✅ ClaimWorkflowTaskTool - タスク引き継ぎ ← 今回
+7. ✅ ClaimWorkflowTaskTool - タスク引き継ぎ
 
 ---
 

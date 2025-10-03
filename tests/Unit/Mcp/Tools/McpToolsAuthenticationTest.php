@@ -6,6 +6,7 @@ use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
+use App\Mcp\Tools\GetActivityLogTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
@@ -179,6 +180,7 @@ class McpToolsAuthenticationTest extends TestCase
             new ExecuteApprovalTool,
             new GetWorkflowHistoryTool,
             new ClaimWorkflowTaskTool,
+            new GetActivityLogTool,
         ];
 
         foreach ($tools as $tool) {

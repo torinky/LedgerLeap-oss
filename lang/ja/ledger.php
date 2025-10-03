@@ -1040,4 +1040,12 @@ return [
     'processing_completed_with_action' => '処理が完了しました: :action',
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+
+    'field' => [
+        'title' => '台帳',
+        'folder' => 'フォルダ',
+        'creator' => '作成者',
+        'status' => 'ステータス',
+        'updated_at' => '更新日時',
+    ],
 ];
