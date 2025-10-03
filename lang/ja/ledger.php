@@ -994,6 +994,7 @@ return [
             'unauthorized_as_approver' => '承認者として認証されていません',
             'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です',
         ],
+        'history_count_message' => ':ledger_titleのワークフロー履歴が:count件あります',
     ],
     'period' => [
         'today' => '本日',
@@ -1015,6 +1016,7 @@ return [
         'occurred_with_message' => 'エラーが発生しました: :message',
         'approval_processing_failed' => '承認処理に失敗しました',
         'ledger_id_required' => '台帳IDが必要です',
+        'ledger_not_found' => '台帳が見つかりません',
         'invalid_action' => '無効なアクションです',
         'operation_failed' => '操作に失敗しました',
     ],

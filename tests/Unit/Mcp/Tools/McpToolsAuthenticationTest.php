@@ -7,6 +7,7 @@ use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -175,6 +176,7 @@ class McpToolsAuthenticationTest extends TestCase
             new GetLedgerDefinesTool,
             new GetPendingApprovalsTool,
             new ExecuteApprovalTool,
+            new GetWorkflowHistoryTool,
         ];
 
         foreach ($tools as $tool) {

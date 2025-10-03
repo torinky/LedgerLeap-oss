@@ -6,6 +6,7 @@ use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use Laravel\Mcp\Server;
 
@@ -53,6 +54,7 @@ class LedgerLeapServer extends Server
         CreateLedgerTool::class,
         GetPendingApprovalsTool::class,
         ExecuteApprovalTool::class,
+        GetWorkflowHistoryTool::class,
     ];
 
     /**

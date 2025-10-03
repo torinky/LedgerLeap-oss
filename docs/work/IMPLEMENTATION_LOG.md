@@ -1,5 +1,97 @@
 ## 📝 実装ログ (最新)
 
+### 🚀 2025-10-01: **Phase 1-改 Step 4 完了** - GetWorkflowHistoryTool実装完了 ✅  
+**実装内容**: ワークフロー履歴取得MCPツール完成
+
+#### **主要実装成果**
+- ✅ **GetWorkflowHistoryTool.php**: ワークフロー履歴取得ツール (240行)
+  - LedgerDiffモデルの完全統合
+  - 履歴のフォーマット化と翻訳キー活用
+  - フォルダ権限チェック統合
+  - limit パラメータ対応（デフォルト50件）
+  - format パラメータ対応 ('raw', 'summary')
+  - 自然な日本語履歴表示
+
+- ✅ **2個の新規翻訳キー追加** (lang/ja/ledger.php)
+  - `error.ledger_not_found`: 台帳が見つかりません
+  - `workflow.history_count_message`: ワークフロー履歴カウント
+
+- ✅ **MCPサーバー統合**: LedgerLeapServerへの新ツール登録
+- ✅ **統合認証テスト**: McpToolsAuthenticationTestへの追加
+- ✅ **専用テスト**: GetWorkflowHistoryToolTest.php作成 (7テスト/33 assertions)
+
+#### **コード品質**
+- **既存実装活用**: WorkflowHistoryListコンポーネントのロジック参照
+- **データ構造理解**: LedgerDiffのリレーション完全活用
+- **詳細情報構築**: ステータスに応じた担当者・コメント表示
+- **テスト品質**: Mockeryによる権限制御の完全モック化
+
+#### **技術的完成度**
+```php
+// 履歴取得例
+$response = GetWorkflowHistoryTool::handle([
+    'ledger_id' => 123,
+    'format' => 'summary',
+    'limit' => 10
+]);
+// → 履歴一覧 + サマリー + フィールド定義
+```
+
+#### **レスポンス例**
+```json
+{
+  "__summary__": "テスト台帳のワークフロー履歴が3件あります",
+  "__display_fields__": {
+    "created_at_formatted": "日時",
+    "modifier_name": "操作者",
+    "status_label": "アクション/ステータス",
+    "detail": "詳細"
+  },
+  "history": [
+    {
+      "id": 3,
+      "version": 1,
+      "created_at_formatted": "2025/10/01 12:30:45",
+      "modifier_name": "田中太郎",
+      "status_label": "承認済み",
+      "detail": "承認者: 佐藤花子 / コメント: 承認しました",
+      "comments": "承認しました"
+    }
+  ],
+  "total_count": 3,
+  "ledger": {
+    "id": 123,
+    "title": "テスト台帳",
+    "status": "APPROVED",
+    "current_version": 1
+  }
+}
+```
+
+#### **テスト状況**
+- ✅ **GetWorkflowHistoryToolTest**: 7テスト/33 assertions全通過
+- ✅ **McpToolsAuthenticationTest**: 統合認証テスト更新済み
+- ✅ **全MCPテスト**: 52 passed, 2 skipped (215 assertions) ✅
+
+#### **Phase 1-改 進捗状況**
+```
+✅ Step 1: 翻訳キー統合ヘルパー実装完了
+✅ Step 2: GetPendingApprovalsTool実装完了
+✅ Step 3: ExecuteApprovalTool実装完了
+✅ Step 4: GetWorkflowHistoryTool実装完了 ← 今回
+⏳ Step 5: AssignWorkflowTool実装 (次のステップ、オプショナル)
+```
+
+#### **技術的教訓**
+- **Mockery活用**: WritableFolderRepositoryの完全モック化が必要
+  - `getReadableFolderIds`, `getAccessibleFolderIds`
+  - `clearAllCache`, `refreshAllCache` (Userモデルのイベント対応)
+- **LedgerDiffリレーション**: modifier, inspector, approver の eager loading
+- **ステータス判定**: WorkflowStatusのvalueによる条件分岐
+- **テストデータ**: LedgerDiff::factory()の活用
+
+---
+
 ### 🚀 2025-10-01: **Phase 1-改 Step 3 完了** - ExecuteApprovalTool実装完了 ✅  
 **実装内容**: ワークフロー承認処理実行MCPツール完成
 
