@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
@@ -55,6 +56,7 @@ class LedgerLeapServer extends Server
         GetPendingApprovalsTool::class,
         ExecuteApprovalTool::class,
         GetWorkflowHistoryTool::class,
+        ClaimWorkflowTaskTool::class,
     ];
 
     /**

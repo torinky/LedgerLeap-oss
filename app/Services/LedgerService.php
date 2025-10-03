@@ -139,8 +139,43 @@ class LedgerService
             'modifier:id,name',
         ]);
 
+        // メタデータを構築
+        $ledgerDefines = $ledgers->pluck('define')->filter()->unique('id');
+        $creators = $ledgers->pluck('creator')->filter()->unique('id');
+        $modifiers = $ledgers->pluck('modifier')->filter()->unique('id');
+        $users = $creators->union($modifiers)->keyBy('id');
+
+        // フォルダ情報を収集
+        $folders = collect();
+        $ledgerDefines->each(function ($define) use (&$folders) {
+            if ($define && $define->folder) {
+                // フォルダ自身とその祖先をコレクションに追加
+                $folders->push($define->folder);
+                if ($define->folder->relationLoaded('ancestors')) {
+                    $folders = $folders->merge($define->folder->ancestors);
+                }
+            }
+        });
+        $uniqueFolders = $folders->unique('id');
+
+        // 各フォルダのフルパスを構築
+        $uniqueFolders->each(function ($folder) {
+            // ancestorsリレーションは親方向（子→親）のリストなので、逆順にしてからつなげる
+            if ($folder->relationLoaded('ancestors')) {
+                $path = $folder->ancestors->reverse()->pluck('name')->push($folder->name)->implode('/');
+                $folder->setAttribute('path', '/'.$path); // ルートからのパスとしてスラッシュを追加
+            }
+        });
+
+        $meta = [
+            'ledger_defines' => $ledgerDefines->keyBy('id'),
+            'folders' => $uniqueFolders->keyBy('id'),
+            'users' => $users,
+        ];
+
         return [
             'ledgers' => $ledgers,
+            'meta' => $meta,
             'total' => $total,
         ];
     }

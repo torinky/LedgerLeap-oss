@@ -3,6 +3,7 @@
 namespace Tests\Unit\Mcp\Tools;
 
 use App\Enums\FolderPermissionType;
+use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
@@ -177,6 +178,7 @@ class McpToolsAuthenticationTest extends TestCase
             new GetPendingApprovalsTool,
             new ExecuteApprovalTool,
             new GetWorkflowHistoryTool,
+            new ClaimWorkflowTaskTool,
         ];
 
         foreach ($tools as $tool) {
@@ -189,6 +191,8 @@ class McpToolsAuthenticationTest extends TestCase
             } elseif ($tool instanceof GetPendingApprovalsTool) {
                 $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
             } elseif ($tool instanceof ExecuteApprovalTool) {
+                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
+            } elseif ($tool instanceof ClaimWorkflowTaskTool) {
                 $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
             } else {
                 $response = $tool->handle($request);
