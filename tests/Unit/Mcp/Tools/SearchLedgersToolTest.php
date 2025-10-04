@@ -81,7 +81,12 @@ class SearchLedgersToolTest extends TestCase
     public function it_returns_raw_format_correctly()
     {
         $params = ['format' => 'raw'];
-        $mockLedger = Ledger::factory()->make();
+        // make()を使う場合、tenant_idは不要（DBに保存しないため）
+        // factoryのデフォルト値生成をスキップするために、必要な属性のみ指定
+        $mockLedger = new Ledger([
+            'id' => 1,
+            'status' => 'draft',
+        ]);
         $mockMeta = ['ledger_defines' => [], 'folders' => [], 'users' => []];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
@@ -106,12 +111,13 @@ class SearchLedgersToolTest extends TestCase
         // テストデータ
         $creator = User::factory()->make(['id' => $this->user->id, 'name' => 'テストユーザー']);
         $folder = Folder::factory()->make(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
-        $ledgerDefine = LedgerDefine::factory()->make(['id' => 1, 'name' => 'テスト台帳', 'folder_id' => $folder->id]);
+        $ledgerDefine = LedgerDefine::factory()->make(['id' => 1, 'name' => 'テスト台帳', 'folder_id' => $folder->id, 'tenant_id' => $this->getTenant()->id]);
         $ledger = Ledger::factory()->make([
             'id' => 1,
             'ledger_define_id' => $ledgerDefine->id,
             'status' => 'pending_approval',
             'creator_id' => $creator->id,
+            'tenant_id' => $this->getTenant()->id,
             'updated_at' => now()->subHour(),
         ]);
 
@@ -174,18 +180,21 @@ class SearchLedgersToolTest extends TestCase
     #[Test]
     public function it_returns_summary_format_without_content()
     {
-        $creator = User::factory()->make(['id' => $this->user->id, 'name' => 'テストユーザー']);
-        $folder = Folder::factory()->make(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
-        $ledgerDefine = LedgerDefine::factory()->make([
+        // テストデータを配列で直接作成（factory()->make()のテナント問題を回避）
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+
+        $ledgerDefine = new LedgerDefine([
             'id' => 1,
-            'name' => 'テスト台帳',
+            'title' => 'テスト台帳',
             'folder_id' => $folder->id,
-            'column_define' => [
-                ['id' => 0, 'name' => 'title', 'type' => 'text', 'order' => 0],
-                ['id' => 1, 'name' => 'description', 'type' => 'textarea', 'order' => 1],
-            ],
         ]);
-        $ledger = Ledger::factory()->make([
+        $ledgerDefine->column_define = [
+            new \App\Models\ColumnDefine(['id' => 0, 'name' => 'title', 'type' => 'text', 'order' => 0]),
+            new \App\Models\ColumnDefine(['id' => 1, 'name' => 'description', 'type' => 'textarea', 'order' => 1]),
+        ];
+
+        $ledger = new Ledger([
             'id' => 1,
             'ledger_define_id' => $ledgerDefine->id,
             'status' => 'pending_approval',
@@ -195,9 +204,9 @@ class SearchLedgersToolTest extends TestCase
         ]);
 
         $mockMeta = [
-            'ledger_defines' => [$ledgerDefine->id => $ledgerDefine->toArray()],
-            'folders' => [$folder->id => $folder->toArray()],
-            'users' => [$creator->id => $creator->toArray()],
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id, 'column_define' => [['id' => 0, 'name' => 'title'], ['id' => 1, 'name' => 'description']]]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
         ];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
@@ -220,10 +229,16 @@ class SearchLedgersToolTest extends TestCase
     #[Test]
     public function it_uses_english_keys_in_display_fields()
     {
-        $creator = User::factory()->make(['id' => $this->user->id, 'name' => 'テストユーザー']);
-        $folder = Folder::factory()->make(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
-        $ledgerDefine = LedgerDefine::factory()->make(['id' => 1, 'name' => 'テスト台帳', 'folder_id' => $folder->id]);
-        $ledger = Ledger::factory()->make([
+        // テストデータを配列で直接作成（factory()->make()のテナント問題を回避）
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $ledger = new Ledger([
             'id' => 1,
             'ledger_define_id' => $ledgerDefine->id,
             'status' => 'approved',
@@ -232,9 +247,9 @@ class SearchLedgersToolTest extends TestCase
         ]);
 
         $mockMeta = [
-            'ledger_defines' => [$ledgerDefine->id => $ledgerDefine->toArray()],
-            'folders' => [$folder->id => $folder->toArray()],
-            'users' => [$creator->id => $creator->toArray()],
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
         ];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')

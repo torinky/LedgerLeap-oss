@@ -343,42 +343,59 @@ Duration: 129.60s
 - ✅ WorkflowServiceモックパターン確立
 - ✅ スキップテスト実装方法確立
 
-## 🚀 今後の展望
+## 🚀 Phase 2.5への展望
 
-### Phase 3 の可能性
+### RefreshDatabaseWithTenant の成功
 
-**対象テスト:**
-1. GetWorkflowHistoryToolTest - 最適化可能性あり
-2. GetActivityLogToolTest - Spatieのactivitylog使用、実DB必須
+Phase 2の過程で、**RefreshDatabaseWithTenant**トレイトを開発し、テナント機能を持つテストの大幅な高速化に成功しました。
 
-**最適化アプローチ:**
-1. 完全モック化できる部分を特定
-2. RefreshDatabaseOnceの適用検討
-3. 実行時間のさらなる短縮
+**成果:**
+```
+SearchLedgersToolTest:
+- Before: 8-9秒
+- After:  2秒
+- 改善率: 78%削減 ⚡
 
-**期待効果:**
-- GetWorkflowHistoryToolTest: 約60秒 → 15秒（推定）
-- 全MCPテスト: 約130秒 → 100秒以下
+Phase 1テスト4ファイル:
+- Before: 40秒
+- After:  9秒
+- 改善率: 77%削減 ⚡⚡⚡
+```
 
-### 長期的な改善
+**詳細:** `docs/work/2025-10-04_RefreshDatabaseWithTenant_Success_Report.md`
 
-**技術的負債の解消:**
-- テナント機能のモック化検討
-- テストデータベースの最適化
-- 並列テスト実行の検討
+### 残りの最適化機会
 
-**品質向上:**
-- 統合テストの追加
-- E2Eテストの検討
-- パフォーマンステストの追加
+**GetPendingApprovalsToolTest (5テスト):**
+- RefreshDatabaseWithTenantへの移行
+- 期待改善: 約70%削減
 
-## 📚 関連ドキュメント
+**Phase 2テスト:**
+1. ClaimWorkflowTaskToolTest - RefreshDatabaseWithTenant適用検討
+2. ExecuteApprovalToolTest - RefreshDatabaseWithTenant適用検討
+3. GetWorkflowHistoryToolTest - 最適化検討
+4. GetActivityLogToolTest - Spatieのactivitylog使用、実DB必須
 
-- `docs/work/2025-10-04_MCP_Test_Optimization_Plan.md` - 全体計画
-- `docs/work/2025-10-04_MCP_Test_Phase1_Completion_Report.md` - Phase 1完了報告
-- `tests/Traits/RefreshDatabaseOnce.php` - カスタムトレイト実装
+### 期待される効果（Phase 2.5 + Phase 3）
+
+**Phase 2.5完了時:**
+- 全Phase 1テスト: 約8秒
+- Phase 2テスト: 約15秒（最適化後）
+- 合計: 約23秒
+
+**Phase 1+2+2.5完了時の総合効果:**
+- 全MCPテスト実行時間: 約25秒
+- テストカバレッジ: 98%以上維持
+- スキップテスト: 0件
+- 開発体験: 大幅向上 🎉
 
 ---
+
+**次のアクション (Phase 2.5):**
+1. GetPendingApprovalsToolTest のRefreshDatabaseWithTenant移行
+2. 全Phase 1テストの完全最適化
+3. Phase 2テストへのRefreshDatabaseWithTenant適用検討
+4. 全MCPテストの総合パフォーマンス計測
 
 **承認者:** ___________  
 **承認日:** 2025年10月4日
@@ -387,5 +404,6 @@ Duration: 129.60s
 - スキップテスト再実装: 5件 ✅
 - ツールバグ修正: 1件 ✅
 - RefreshDatabaseOnce作成: ✅
+- RefreshDatabaseWithTenant作成: ✅ **大成功！**
 - 現実的な戦略確立: ✅
 

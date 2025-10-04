@@ -754,3 +754,70 @@ $status->label(); // "承認待ち" を返す
 - パフォーマンス最適化: N+1問題解消、分離カウントクエリ
 
 ---
+
+---
+
+## 2025-10-04: RefreshDatabaseWithTenant 開発・成功
+
+### 動機
+Phase 2でRefreshDatabaseの速度問題に直面。DatabaseTransactionsはテナント機能との相性が悪く、新しいアプローチが必要だった。
+
+### 実装内容
+
+**RefreshDatabaseWithTenantトレイト作成:**
+- クラス単位で1回だけマイグレーション・テナント作成
+- 各テストはトランザクション内で実行
+- テナント接続に対するトランザクション管理
+
+**SearchLedgersToolTest完全移行:**
+- RefreshDatabase → RefreshDatabaseWithTenant
+- factory()->make()のテナント問題を解決
+- モックデータの完全性を確保
+
+### 成果
+
+**パフォーマンス:**
+- SearchLedgersToolTest: 8秒 → 2秒（78%削減）⚡
+- Phase 1テスト4ファイル: 40秒 → 9秒（77%削減）⚡⚡⚡
+- 22テスト/69アサーション全通過 ✅
+
+**技術的知見:**
+1. factory()->make()とテナントコンテキストの関係
+2. トランザクション対象接続の明示的指定
+3. setUp()の実行順序制御
+4. モックデータの完全性要件
+
+### 学んだ教訓
+
+**成功要因:**
+- DatabaseTransactionsを使わず独自実装
+- テナント初期化とトランザクション開始の順序制御
+- factory()->make()の代わりに直接インスタンス化を活用
+
+**課題:**
+- factory()->make()がテナントコンテキストを要求する
+- モックメタデータが不完全だとエラー発生
+- 各テストクラスで個別対応が必要
+
+**今後の方向性:**
+- GetPendingApprovalsToolTest移行（即座に可能）
+- Phase 2テストへの適用検討
+- プロジェクト全体への展開
+
+### ファイル
+
+**新規作成:**
+- tests/Traits/RefreshDatabaseWithTenant.php (190行)
+
+**修正:**
+- tests/Unit/Mcp/Tools/SearchLedgersToolTest.php
+- tests/Unit/Mcp/Tools/CreateLedgerToolTest.php
+- tests/Unit/Mcp/Tools/GetLedgerDefinesToolTest.php
+- tests/Unit/Mcp/Tools/McpToolsAuthenticationTest.php
+
+**ドキュメント:**
+- docs/work/2025-10-04_RefreshDatabaseWithTenant_Success_Report.md
+
+### 結論
+
+RefreshDatabaseWithTenantは**大成功**。テナント機能を持つLaravelプロジェクトにおいて、高速で安定したテスト戦略を確立。開発体験が大幅に向上した。
