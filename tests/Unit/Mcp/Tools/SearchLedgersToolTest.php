@@ -8,16 +8,16 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class SearchLedgersToolTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected LedgerService $ledgerService;
 
@@ -31,10 +31,7 @@ class SearchLedgersToolTest extends TestCase
     {
         parent::setUp();
 
-        // テナントを作成し、初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
-
+        // テナントは既に初期化されている（RefreshDatabaseWithTenantが処理済み）
         // ユーザーとトークンを作成
         $this->user = User::factory()->create();
         $newAccessToken = $this->user->createToken('test-token');

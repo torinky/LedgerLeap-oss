@@ -16,11 +16,11 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * MCPツールの統一認証機能テスト
@@ -34,7 +34,7 @@ use Tests\TestCase;
  */
 class McpToolsAuthenticationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected User $user;
 
