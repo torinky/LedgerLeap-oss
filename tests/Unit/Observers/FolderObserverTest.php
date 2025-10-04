@@ -98,7 +98,7 @@ class FolderObserverTest extends TestCase
     {
         // arrange
         $folder = Folder::factory()->create();
-        
+
         // Folderモデルをパーシャルモックして、wasChanged()の動作を制御
         $folderMock = \Mockery::mock($folder)->makePartial();
         $folderMock->shouldReceive('wasChanged')
