@@ -7,8 +7,11 @@ use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
+use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
@@ -182,6 +185,9 @@ class McpToolsAuthenticationTest extends TestCase
             new GetWorkflowHistoryTool,
             new ClaimWorkflowTaskTool,
             new GetActivityLogTool,
+            new GetLedgerStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
+            new GetUserActivityStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
+            new GetFolderStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
         ];
 
         foreach ($tools as $tool) {
