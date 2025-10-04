@@ -13,7 +13,14 @@
 
 ## 📝 更新履歴
 
-### 2025-10-04更新
+### 2025-10-04更新 (17:00)
+- ✅ **Phase 5 Task 5.1 完了**: SearchLedgersTool への添付ファイル情報追加
+  - 実装時間: 2.5時間（見積もり2-3時間）
+  - 新機能: attachments配列、formatFileSize()、AsColumnArrayJson対応
+  - テスト: 3件追加、全75テスト/396 assertions通過
+  - コミット: `3140e63`
+
+### 2025-10-04更新 (14:00)
 - ✅ Phase 0-2, 4の完了状況を反映（8種類のMCPツール実装完了）
 - ✅ 実装済みツール一覧とテスト結果を追加（72テスト/371 assertions）
 - ✅ 残タスクと優先順位を明確化
@@ -1094,14 +1101,17 @@ After: "業務全体を自然言語で操作できる完全統合プラットフ
 
 ### 🔄 **現在進行中のタスク**
 
-#### **Phase 5: 添付ファイル連携** 📋 計画策定完了
+#### **Phase 5: 添付ファイル連携** ✅ **Task 5.1 完了 (2025-10-04)**
 - **ドキュメント**: `2025-10-04_MCP_AttachedFiles_Integration_Plan.md`
-- **スコープ**: 
-  - SearchLedgersTool への content_attached 情報追加
-  - 添付ファイルメタデータの表示（名前、サイズ、MIMEタイプ）
-  - OCR/Tika抽出テキストの活用
-  - 新ツール GetAttachedFileContentTool の検討
-- **状態**: 実装着手待ち
+- **完了内容**: 
+  - ✅ **Task 5.1**: SearchLedgersTool への content_attached 情報追加完了
+    - `formatAttachments()` メソッド実装
+    - `formatFileSize()` ヘルパー関数追加
+    - AsColumnArrayJson キャスト対応（object → array変換）
+    - テスト3件追加（全75テスト/396 assertions通過）
+    - コミット: `3140e63` (2025-10-04)
+- **残タスク**: 
+  - 🔄 **Task 5.2**: GetAttachedFileContentTool 実装検討（必要性を評価中）
 
 ---
 
