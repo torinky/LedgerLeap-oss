@@ -16,7 +16,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -34,7 +34,7 @@ use Tests\TestCase;
  */
 class McpToolsAuthenticationTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     protected User $user;
 

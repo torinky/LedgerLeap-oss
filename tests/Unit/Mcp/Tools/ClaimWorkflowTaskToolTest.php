@@ -103,12 +103,79 @@ class ClaimWorkflowTaskToolTest extends TestCase
 
     public function test_claims_inspection_task_successfully(): void
     {
-        $this->markTestSkipped('ワークフロー統合テストは複雑なため、統合テストで実装');
+        // 実際の台帳を作成（点検待ちステータス）
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->originalAssignee->id,
+            'status' => WorkflowStatus::PENDING_INSPECTION,
+        ]);
+
+        // WorkflowServiceをモック
+        $mockWorkflowService = \Mockery::mock(WorkflowService::class);
+
+        // claimTask呼び出しのモック（台帳を返す）
+        $mockWorkflowService->shouldReceive('claimTask')
+            ->once()
+            ->with(\Mockery::on(function ($arg) use ($ledger) {
+                return $arg instanceof Ledger && $arg->id === $ledger->id;
+            }), \Mockery::on(function ($arg) {
+                return $arg instanceof User && $arg->id === $this->user->id;
+            }), \Mockery::type('string'))
+            ->andReturn($ledger);
+
+        $response = $this->tool->handle(
+            new \Laravel\Mcp\Request([
+                'ledger_id' => $ledger->id,
+                'comments' => 'テスト引き継ぎ',
+            ]),
+            $mockWorkflowService
+        );
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content(), true);
+
+        $this->assertEquals('success', $responseData['type']);
+        $this->assertArrayHasKey('__summary__', $responseData);
+        $this->assertArrayHasKey('ledger', $responseData);
+        $this->assertStringContainsString($this->user->name, $responseData['__summary__']);
     }
 
     public function test_claims_approval_task_successfully(): void
     {
-        $this->markTestSkipped('ワークフロー統合テストは複雑なため、統合テストで実装');
+        // 実際の台帳を作成（承認待ちステータス）
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->originalAssignee->id,
+            'status' => WorkflowStatus::PENDING_APPROVAL,
+        ]);
+
+        // WorkflowServiceをモック
+        $mockWorkflowService = \Mockery::mock(WorkflowService::class);
+
+        $mockWorkflowService->shouldReceive('claimTask')
+            ->once()
+            ->with(\Mockery::on(function ($arg) use ($ledger) {
+                return $arg instanceof Ledger && $arg->id === $ledger->id;
+            }), \Mockery::on(function ($arg) {
+                return $arg instanceof User && $arg->id === $this->user->id;
+            }), \Mockery::type('string'))
+            ->andReturn($ledger);
+
+        $response = $this->tool->handle(
+            new \Laravel\Mcp\Request([
+                'ledger_id' => $ledger->id,
+                'comments' => '承認タスク引き継ぎ',
+            ]),
+            $mockWorkflowService
+        );
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content(), true);
+
+        $this->assertEquals('success', $responseData['type']);
+        $this->assertArrayHasKey('__summary__', $responseData);
+        $this->assertArrayHasKey('ledger', $responseData);
+        $this->assertEquals($ledger->id, $responseData['ledger']['id']);
     }
 
     public function test_handles_service_exceptions(): void
@@ -139,6 +206,41 @@ class ClaimWorkflowTaskToolTest extends TestCase
 
     public function test_response_includes_proper_fields(): void
     {
-        $this->markTestSkipped('ワークフロー統合テストは複雑なため、統合テストで実装');
+        // 実際の台帳を作成
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->originalAssignee->id,
+            'status' => WorkflowStatus::PENDING_INSPECTION,
+        ]);
+
+        // WorkflowServiceをモック
+        $mockWorkflowService = \Mockery::mock(WorkflowService::class);
+
+        $mockWorkflowService->shouldReceive('claimTask')
+            ->once()
+            ->andReturn($ledger);
+
+        $response = $this->tool->handle(
+            new \Laravel\Mcp\Request([
+                'ledger_id' => $ledger->id,
+                'comments' => 'フィールド確認テスト',
+            ]),
+            $mockWorkflowService
+        );
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content(), true);
+
+        // 必須フィールドの存在確認
+        $this->assertArrayHasKey('type', $responseData);
+        $this->assertArrayHasKey('message', $responseData);
+        $this->assertArrayHasKey('__summary__', $responseData);
+        $this->assertArrayHasKey('ledger', $responseData);
+        $this->assertArrayHasKey('claimed_at', $responseData);
+        $this->assertArrayHasKey('comments', $responseData);
+
+        // レスポンス値の検証
+        $this->assertEquals('success', $responseData['type']);
+        $this->assertEquals('フィールド確認テスト', $responseData['comments']);
     }
 }

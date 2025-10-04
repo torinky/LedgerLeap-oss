@@ -8,7 +8,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
@@ -28,7 +28,7 @@ use Tests\TestCase;
  */
 class CreateLedgerToolTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     protected CreateLedgerTool $tool;
 

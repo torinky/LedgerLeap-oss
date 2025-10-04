@@ -8,7 +8,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 class SearchLedgersToolTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     protected LedgerService $ledgerService;
 

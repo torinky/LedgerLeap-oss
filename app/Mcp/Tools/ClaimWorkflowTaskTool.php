@@ -48,7 +48,7 @@ MARKDOWN;
                 $updatedLedger = $workflowService->claimTask($ledger, $user, $comments);
 
                 // 成功レスポンス構築
-                $response = $this->buildClaimSuccessResponse($updatedLedger, $user);
+                $response = $this->buildClaimSuccessResponse($updatedLedger, $user, $comments);
 
                 return Response::json($response);
 
@@ -66,7 +66,7 @@ MARKDOWN;
     /**
      * 引き継ぎ成功レスポンスの構築
      */
-    private function buildClaimSuccessResponse(Ledger $ledger, User $claimer): array
+    private function buildClaimSuccessResponse(Ledger $ledger, User $claimer, ?string $comments): array
     {
         $latestDiff = $ledger->latestDiff;
         $status = $ledger->status->value;
