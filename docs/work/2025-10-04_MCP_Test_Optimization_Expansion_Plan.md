@@ -588,11 +588,40 @@ protected function setUp(): void
 ```
 Phase 2（完了）: 9/9ファイル ✅ 100% - コード検証済み
 Phase 3.1（完了）: 10/10ファイル ✅ 100% - 2025/10/04完了
+Feature/Api/SearchApiTest（完了）: ✅ Mroonga全文検索対応 - 90%以上削減！
 Phase 3.2（計画中）: 0/9ファイル ⏳ 0%
 Phase 3.3（計画中）: 0/4ファイル ⏳ 0%
 
-全体進捗: 19/32ファイル（59%完了）
+全体進捗: 20/33ファイル（61%完了）
 ```
+
+### Feature/Api/SearchApiTest最適化完了（2025/10/04）
+
+**✅ 重要な成果: DatabaseMigrations → RefreshDatabaseWithTenant移行成功！**
+
+Mroonga全文検索を使用するテストでも、RefreshDatabaseWithTenantが適用可能であることを実証しました。
+
+**実行結果:**
+```
+Tests:    24 passed, 1 skipped (79 assertions)
+Duration: 18.64秒
+
+改善前: タイムアウト（180秒以上）
+改善後: 18.64秒
+削減率: 90%以上削減 ⚡⚡⚡
+```
+
+**実装のポイント:**
+1. **createSharedData()パターン**: 全テストで共有するデータをクラス単位で作成
+2. **staticプロパティ**: `$this->adminUser` → `self::$adminUser` でクラス全体で共有
+3. **Mroonga対応**: クラス単位のマイグレーションで全文検索インデックスも正常動作
+4. **テストデータ分離**: 一時データは`try-finally`で明示的削除
+5. **共有テナントドメイン**: 初回チェックで重複作成回避
+
+**技術的発見:**
+- ❌ 誤解: Mroonga全文検索は`DatabaseMigrations`必須
+- ✅ 真実: クラス単位マイグレーション+共有データで全文検索も動作！
+- この知見により、他のMroonga使用テストも最適化可能に
 
 ### Phase 3.1 完了詳細（2025/10/04）
 
