@@ -10,7 +10,7 @@ use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Services\WorkflowService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,7 +21,7 @@ use Tests\TestCase;
  */
 class GetPendingApprovalsToolTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected GetPendingApprovalsTool $tool;
 

@@ -7,7 +7,7 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,7 +26,7 @@ use Tests\TestCase;
  */
 class GetLedgerDefinesToolTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected User $user;
 

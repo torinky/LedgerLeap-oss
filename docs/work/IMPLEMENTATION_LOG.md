@@ -1,5 +1,129 @@
 ## 📝 実装ログ (最新)
 
+### 🚀 2025-10-04: **SearchLedgersTool レスポンス仕様改善完了** ✅  
+**実装内容**: SearchLedgersTool のレスポンス仕様を改善し、柔軟な情報量制御を実現
+
+#### **主要実装成果**
+- ✅ **柔軟な情報量制御**: `format`パラメータで `raw` / `summary` を選択可能
+- ✅ **content表示制御**: `include_content`パラメータ（デフォルト: `true`）
+- ✅ **プレビュー機能**: `content_preview_length`パラメータ（デフォルト: 200文字）
+- ✅ **英語キー固定**: `__display_fields__`のキーを英語に統一
+  - `title`, `folder`, `creator`, `workflow_status`, `updated_at`
+- ✅ **ワークフローステータス二重表現**:
+  - 機械処理用: `status`（Enum値: `pending_approval`）
+  - 表示用: `__display_fields__.workflow_status`（翻訳済み: "承認待ち"）
+
+#### **パフォーマンス大幅改善**
+```
+テスト実行時間: 9.6秒 → 2.3秒（約75%削減！⚡）
+変更内容: RefreshDatabase → DatabaseTransactions
+理由: LedgerServiceを完全モック化しているためDBマイグレーションは不要
+```
+
+#### **実装ファイル**
+- `app/Mcp/Tools/SearchLedgersTool.php`: 191行
+  - `generateContentPreview()`メソッド追加（ColumnDefineオブジェクト/配列対応）
+  - 英語キー固定の`__display_fields__`生成
+  - `format`パラメータによる分岐処理
+- `tests/Unit/Mcp/Tools/SearchLedgersToolTest.php`: 268行
+  - 6テスト/33 assertions（全通過）
+  - DatabaseTransactions使用による高速化
+
+#### **レスポンス形式**
+
+**モード1: `format=raw`** （機械処理向け）
+```json
+{
+  "ledgers": [...],
+  "meta": {...},
+  "total": 15
+}
+```
+
+**モード2: `format=summary` + `include_content=true`**（デフォルト）
+```json
+{
+  "ledgers": [
+    {
+      "id": 101,
+      "status": "pending_approval",  // 機械処理用
+      "content": {...},               // 完全なcontent
+      "__display_fields__": {
+        "title": "営業日報",
+        "folder": "/営業部",
+        "creator": "佐藤",
+        "workflow_status": "承認待ち",  // 表示用
+        "updated_at": "2025年10月04日 14:30"
+      }
+    }
+  ],
+  "total": 15,
+  "meta": {...},
+  "__summary__": "台帳が15件見つかりました。"
+}
+```
+
+**モード3: `format=summary` + `include_content=false`**（一覧表示向け）
+```json
+{
+  "__display_fields__": {
+    "title": "営業日報",
+    "content_preview": "訪問先: A社 / 商談内容: 新製品XYZの紹介..."
+  }
+}
+```
+
+#### **テスト結果**
+```
+✅ it returns unauthorized if token is missing          0.52s
+✅ it returns unauthorized if token is invalid          0.18s
+✅ it returns raw format correctly                      0.45s
+✅ it handles empty results for summary format          0.19s
+✅ it returns summary format without content            0.43s
+✅ it uses english keys in display fields               0.41s
+
+Tests:    6 passed (33 assertions)
+Duration: 2.28s ⚡
+```
+
+#### **技術的成果**
+- **既存翻訳活用**: 新規翻訳キー追加なし（全て既存活用）
+  - `ledger.workflow.status.*`
+  - `common.unknown`, `common.root_folder`
+  - `messages.found_ledgers`
+- **データ構造対応**: `ColumnDefine`オブジェクトと配列の両方に対応
+- **後方互換性**: デフォルト値で既存動作を完全維持
+- **ドキュメント準拠**: `2025-10-03_MCP_SearchLedgersTool_Response_Refactoring_Plan.md` に完全準拠
+
+#### **実装パターン**
+```php
+// ColumnDefineオブジェクト/配列の両対応
+if ($column instanceof \App\Models\ColumnDefine) {
+    $columnId = $column->id;
+    $columnName = $column->name;
+} else {
+    $columnId = $column['id'] ?? null;
+    $columnName = $column['name'] ?? null;
+}
+
+// 英語キー固定の__display_fields__
+$displayFields = [
+    'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
+    'folder' => $folderPath,
+    'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
+    'workflow_status' => $statusDisplay,  // 翻訳済み
+    'updated_at' => $updatedAtFormatted,
+];
+```
+
+#### **教訓・ベストプラクティス**
+1. **テスト最適化**: モックを使うテストでは`DatabaseTransactions`を使用（75%高速化）
+2. **柔軟なデータ構造**: オブジェクト/配列の両方に対応することで堅牢性向上
+3. **英語キー固定**: LLMとの連携において、キーは英語固定が望ましい
+4. **ステータス二重表現**: 機械処理用と表示用を分離することでLLMの利便性向上
+
+---
+
 ### 🚀 2025-10-01: **Phase 2 Step 1 完了** - GetActivityLogTool実装完了 ✅  
 **実装内容**: アクティビティログ取得MCPツール完成
 

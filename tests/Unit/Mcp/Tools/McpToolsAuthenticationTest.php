@@ -16,7 +16,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -34,7 +34,7 @@ use Tests\TestCase;
  */
 class McpToolsAuthenticationTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected User $user;
 
@@ -78,7 +78,11 @@ class McpToolsAuthenticationTest extends TestCase
         $ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
             ->with(Mockery::type(User::class), Mockery::any())
-            ->andReturn(['ledgers' => [], 'total' => 0]);
+            ->andReturn([
+                'ledgers' => [],
+                'total' => 0,
+                'meta' => ['ledger_defines' => [], 'folders' => [], 'users' => []],
+            ]);
 
         $tool = new SearchLedgersTool($ledgerService);
         $request = new Request([]);
