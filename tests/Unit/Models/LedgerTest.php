@@ -7,13 +7,14 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private Ledger $ledger;
 
@@ -24,10 +25,11 @@ class LedgerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $user = User::factory()->create();
-        $this->inspectorRole = Role::create(['name' => 'inspector']);
-        $this->approverRole = Role::create(['name' => 'approver']);
+        $this->inspectorRole = Role::firstOrCreate(['name' => 'inspector']);
+        $this->approverRole = Role::firstOrCreate(['name' => 'approver']);
 
         $folder = Folder::factory()
             ->withRequiredRoles(
@@ -46,7 +48,7 @@ class LedgerTest extends TestCase
     }
 
     #[Test]
-    public function canBeFinallyApproved_returns_false_when_nothing_is_completed()
+    public function can_be_finally_approved_returns_false_when_nothing_is_completed()
     {
         $this->ledger->latestDiff->update([
             'completed_inspector_role_ids' => [],
@@ -59,7 +61,7 @@ class LedgerTest extends TestCase
     }
 
     #[Test]
-    public function canBeFinallyApproved_returns_true_when_only_inspection_is_completed()
+    public function can_be_finally_approved_returns_true_when_only_inspection_is_completed()
     {
         $this->ledger->latestDiff->update([
             'completed_inspector_role_ids' => [$this->inspectorRole->id],
@@ -72,7 +74,7 @@ class LedgerTest extends TestCase
     }
 
     #[Test]
-    public function canBeFinallyApproved_returns_false_when_all_roles_are_completed()
+    public function can_be_finally_approved_returns_false_when_all_roles_are_completed()
     {
         $this->ledger->latestDiff->update([
             'completed_inspector_role_ids' => [$this->inspectorRole->id],

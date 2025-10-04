@@ -4,20 +4,22 @@ namespace Tests\Unit\Observers;
 
 use App\Models\User;
 use App\Services\TenantAccessService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class UserObserverTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private MockInterface $serviceMock;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
         // TenantAccessServiceをモックし、サービスコンテナに束縛する
         $this->serviceMock = $this->spy(TenantAccessService::class);
     }

@@ -247,7 +247,39 @@ public function it_executes_approve_action(): void
 
 ---
 
-**次のアクション:**
-1. CreateLedgerToolTest から DatabaseTransactions 移行開始
-2. スキップテストの再実装着手
-3. 各テストの実行時間を計測して効果を検証
+## ✅ Phase 2完了 - 次のステップ
+
+**Phase 2完了日:** 2025年10月4日
+
+Phase 2としてワークフロー関連テストの最適化が完了しました。全9つのMCP Toolsテストファイルで RefreshDatabaseWithTenant を適用し、**70-75%のパフォーマンス改善**を達成しました。
+
+### 完了状況
+- ✅ 9つのMCP Toolsテストファイルすべて最適化完了
+- ✅ 実行時間: 109.38秒（57テスト / 339アサーション）
+- ✅ 削減率: 約70-75%削減
+- ✅ すべてのテストがPASS
+
+### 次のアクション: Phase 3
+
+Phase 2の成功を受けて、プロジェクト全体への最適化拡大を計画:
+
+1. **Phase 3拡大計画を策定** ✅
+   - 詳細: [`2025-10-04_MCP_Test_Optimization_Expansion_Plan.md`](./2025-10-04_MCP_Test_Optimization_Expansion_Plan.md)
+   - 対象: 23ファイル（RefreshDatabase使用中）
+   - 期待効果: 全体で35-40%削減
+
+2. **Phase 3.1実装開始**（次のステップ）
+   - 対象: Unit Testsの中核機能（10ファイル）
+   - 優先順位: Models → Observers → Policies → Services
+   - 実施期間: 1-2日
+
+3. **Phase 3.2-3.3実装**
+   - Phase 3.2: Feature TestsとUnit Tests（9ファイル）
+   - Phase 3.3: 外部サービス依存テスト（4ファイル）
+   - 実施期間: 1-2週間
+
+### 関連ドキュメント
+
+- [Phase 2完了報告](./2025-10-04_MCP_Test_Phase2_Completion_Report.md)
+- [Phase 3拡大計画](./2025-10-04_MCP_Test_Optimization_Expansion_Plan.md)
+- [RefreshDatabaseWithTenantトレイト](../../tests/Traits/RefreshDatabaseWithTenant.php)

@@ -11,13 +11,13 @@ use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\UserService;
 use App\Services\WorkflowService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class WorkflowServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
 
@@ -30,6 +30,7 @@ class WorkflowServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->user = User::factory()->create();
         $folder = Folder::factory()->create();

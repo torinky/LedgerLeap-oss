@@ -9,20 +9,22 @@ use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantAccessService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class RoleFolderPermissionObserverTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private MockInterface $serviceMock;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
         // TenantAccessServiceをモックし、サービスコンテナに束縛する
         $this->serviceMock = $this->spy(TenantAccessService::class);
         app()->instance(TenantAccessService::class, $this->serviceMock);
@@ -33,7 +35,7 @@ class RoleFolderPermissionObserverTest extends TestCase
     {
         // 準備 (Arrange)
         $user = User::factory()->create();
-        $role = Role::create(['name' => 'editor']);
+        $role = Role::firstOrCreate(['name' => 'editor']);
         $user->assignRole($role);
         $tenant = Tenant::factory()->create();
         $folder = Folder::factory()->for($tenant)->create();
@@ -56,7 +58,7 @@ class RoleFolderPermissionObserverTest extends TestCase
     {
         // 準備 (Arrange)
         $user = User::factory()->create();
-        $role = Role::create(['name' => 'editor']);
+        $role = Role::firstOrCreate(['name' => 'editor']);
         $user->assignRole($role);
         $tenant = Tenant::factory()->create();
         $folder = Folder::factory()->for($tenant)->create();

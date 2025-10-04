@@ -7,15 +7,21 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Policies\LedgerDefinePolicy;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerDefinePolicyTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+    }
 
     public function test_view_any_returns_true_for_user_with_view_ledger_defines_permission()
     {
