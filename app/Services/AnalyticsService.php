@@ -5,14 +5,14 @@ namespace App\Services;
 use App\Models\CustomActivity;
 use App\Models\Ledger;
 use App\Models\User;
-use App\Repositories\WritableFolderRepositoryInterface;
+use App\Repositories\WritableFolderRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsService
 {
     public function __construct(
-        private WritableFolderRepositoryInterface $folderRepository
+        private WritableFolderRepository $folderRepository
     ) {}
 
     /**

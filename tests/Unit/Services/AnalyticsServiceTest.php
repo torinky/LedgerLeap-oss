@@ -8,7 +8,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use App\Repositories\WritableFolderRepositoryInterface;
+use App\Repositories\WritableFolderRepository;
 use App\Services\AnalyticsService;
 use Carbon\Carbon;
 use Mockery;
@@ -41,7 +41,7 @@ class AnalyticsServiceTest extends TestCase
         ]);
 
         // WritableFolderRepositoryをモック
-        $folderRepository = Mockery::mock(WritableFolderRepositoryInterface::class);
+        $folderRepository = Mockery::mock(WritableFolderRepository::class);
         $folderRepository->shouldReceive('getWritableFolders')
             ->with($this->user)
             ->andReturn(collect([$this->folder]));
@@ -99,7 +99,7 @@ class AnalyticsServiceTest extends TestCase
     public function it_returns_empty_stats_when_no_accessible_folders()
     {
         // アクセス可能なフォルダがない場合のモックを作成
-        $folderRepository = Mockery::mock(WritableFolderRepositoryInterface::class);
+        $folderRepository = Mockery::mock(WritableFolderRepository::class);
         $folderRepository->shouldReceive('getWritableFolders')
             ->with($this->user)
             ->andReturn(collect([]));
