@@ -278,4 +278,181 @@ class SearchLedgersToolTest extends TestCase
         $this->assertArrayNotHasKey('作成者', $displayFields);
         $this->assertArrayNotHasKey('ステータス', $displayFields);
     }
+
+    #[Test]
+    public function it_includes_attachment_info_in_summary_format()
+    {
+        // テストデータを作成
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        // 添付ファイル情報を含む台帳
+        // 実際のAsColumnArrayJsonキャストはobjectを返すため、ここでもobjectで作成
+        $contentAttachedObj = new \stdClass;
+        $contentAttachedObj->{'1'} = [
+            'abc123hash' => [
+                'name' => '請求書.pdf',
+                'size' => 524288,  // 512 KB
+                'mime' => 'application/pdf',
+                'path' => 'attachments/1/abc123hash.pdf',
+            ],
+            'def456hash' => [
+                'name' => '契約書.docx',
+                'size' => 1048576,  // 1 MB
+                'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'path' => 'attachments/1/def456hash.docx',
+            ],
+        ];
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テストコンテンツ'],
+            'updated_at' => now(),
+        ]);
+        // content_attachedを直接プロパティとして設定（AsColumnArrayJsonの動作を模擬）
+        $ledger->content_attached = $contentAttachedObj;
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        // attachments キーが含まれることを確認
+        $this->assertArrayHasKey('attachments', $responseData['ledgers'][0]);
+        $attachments = $responseData['ledgers'][0]['attachments'];
+
+        // 2つの添付ファイルがあることを確認
+        $this->assertCount(2, $attachments);
+
+        // 最初の添付ファイルの内容を確認
+        $this->assertEquals('請求書.pdf', $attachments[0]['name']);
+        $this->assertEquals(524288, $attachments[0]['size']);
+        $this->assertEquals('512 KB', $attachments[0]['size_formatted']);
+        $this->assertEquals('application/pdf', $attachments[0]['mime']);
+        $this->assertEquals(1, $attachments[0]['column_id']);
+        $this->assertEquals('abc123hash', $attachments[0]['hash']);
+
+        // 2番目の添付ファイルの内容を確認
+        $this->assertEquals('契約書.docx', $attachments[1]['name']);
+        $this->assertEquals(1048576, $attachments[1]['size']);
+        $this->assertEquals('1 MB', $attachments[1]['size_formatted']);
+        $this->assertStringContainsString('wordprocessing', $attachments[1]['mime']);
+        $this->assertEquals(1, $attachments[1]['column_id']);
+        $this->assertEquals('def456hash', $attachments[1]['hash']);
+    }
+
+    #[Test]
+    public function it_handles_ledgers_without_attachments()
+    {
+        // 添付ファイルなしの台帳
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テストコンテンツ'],
+            'content_attached' => [],  // 空の配列
+            'updated_at' => now(),
+        ]);
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        // attachmentsキーが存在しないことを確認
+        $this->assertArrayNotHasKey('attachments', $responseData['ledgers'][0]);
+    }
+
+    #[Test]
+    public function it_formats_file_sizes_correctly()
+    {
+        // 様々なサイズの添付ファイルをテスト
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        // AsColumnArrayJsonの動作を模擬（objectとして作成）
+        $contentAttachedObj = new \stdClass;
+        $contentAttachedObj->{'1'} = [
+            'small' => ['name' => 'small.txt', 'size' => 512, 'mime' => 'text/plain'],
+            'medium' => ['name' => 'medium.pdf', 'size' => 2097152, 'mime' => 'application/pdf'],  // 2 MB
+            'large' => ['name' => 'large.zip', 'size' => 5368709120, 'mime' => 'application/zip'],  // 5 GB
+        ];
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'updated_at' => now(),
+        ]);
+        $ledger->content_attached = $contentAttachedObj;
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        $attachments = $responseData['ledgers'][0]['attachments'];
+        $this->assertCount(3, $attachments);
+
+        // サイズフォーマットの確認
+        $this->assertEquals('512 B', $attachments[0]['size_formatted']);
+        $this->assertEquals('2 MB', $attachments[1]['size_formatted']);
+        $this->assertEquals('5 GB', $attachments[2]['size_formatted']);
+    }
 }

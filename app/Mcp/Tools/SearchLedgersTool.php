@@ -109,6 +109,14 @@ MARKDOWN;
             // __display_fields__をセット
             $ledger->__display_fields__ = $displayFields;
 
+            // 添付ファイル情報の追加
+            if (! empty($ledger->content_attached)) {
+                // content_attachedをJSON経由で配列に変換（AsColumnArrayJsonがobjectを返すため）
+                // これにより数値キーが正しく保持される
+                $contentAttached = json_decode(json_encode($ledger->content_attached), true);
+                $ledger->attachments = $this->formatAttachments($contentAttached);
+            }
+
             return $ledger;
         });
 
@@ -166,6 +174,72 @@ MARKDOWN;
         }
 
         return implode(' / ', $preview);
+    }
+
+    /**
+     * Format content_attached data into a user-friendly structure.
+     *
+     * @param  array  $contentAttached  The content_attached array from the ledger
+     * @return array Array of attachment information
+     */
+    private function formatAttachments(array $contentAttached): array
+    {
+        $attachments = [];
+
+        foreach ($contentAttached as $columnId => $files) {
+            // 空の配列はスキップ
+            if (empty($files) || ! is_array($files)) {
+                continue;
+            }
+
+            // filesを配列に変換（オブジェクトの場合に対応）
+            if (is_object($files)) {
+                $files = (array) $files;
+            }
+
+            foreach ($files as $hash => $fileInfo) {
+                // fileInfoが配列であることを確認
+                if (! is_array($fileInfo)) {
+                    if (is_object($fileInfo)) {
+                        $fileInfo = (array) $fileInfo;
+                    } else {
+                        continue;
+                    }
+                }
+
+                $attachments[] = [
+                    'name' => $fileInfo['name'] ?? trans('common.unknown', [], 'ja'),
+                    'size' => $fileInfo['size'] ?? 0,
+                    'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
+                    'mime' => $fileInfo['mime'] ?? 'application/octet-stream',
+                    'column_id' => $columnId,
+                    'hash' => $hash,
+                ];
+            }
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * Format file size in human-readable format.
+     *
+     * @param  int  $bytes  File size in bytes
+     * @return string Formatted file size
+     */
+    private function formatFileSize(int $bytes): string
+    {
+        if ($bytes === 0) {
+            return '0 B';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $exp = floor(log($bytes) / log(1024));
+        $exp = min($exp, count($units) - 1);
+
+        $size = $bytes / pow(1024, $exp);
+
+        return round($size, 2).' '.$units[$exp];
     }
 
     public function schema(JsonSchema $schema): array
