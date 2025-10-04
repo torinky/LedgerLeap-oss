@@ -31,9 +31,6 @@ MARKDOWN;
         $this->ledgerService = $ledgerService;
     }
 
-    /**
-     * Handle the tool request.
-     */
     public function handle(Request $request): Response
     {
         // 認証チェック
@@ -60,55 +57,117 @@ MARKDOWN;
             return Response::error("Search failed: {$e->getMessage()}");
         }
 
-        // summary フォーマットの場合、表示用の加工を行う
-        if (($parameters['format'] ?? 'summary') === 'summary') {
-            $ledgers = collect($results['ledgers'])->map(function ($ledger) use ($results) {
-                $meta = $results['meta'];
-                $ledger = (object) $ledger; // 配列をオブジェクトに変換
+        $format = $parameters['format'] ?? 'summary';
 
-                // ステータス
-                $statusDisplay = __('ledger.workflow.status.'.($ledger->status->value ?? $ledger->status), [], 'ja');
-
-                // 日付
-                $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
-
-                // フォルダパス
-                $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
-                $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
-                    ? $meta['folders'][$define['folder_id']]['path']
-                    : __('common.root_folder', [], 'ja');
-
-                // __display_fields__ を追加
-                $ledger->__display_fields__ = [
-                    __('ledger.field.title', [], 'ja') => $define['name'] ?? __('common.unknown', [], 'ja'),
-                    __('ledger.field.folder', [], 'ja') => $folderPath,
-                    __('ledger.field.creator', [], 'ja') => $meta['users'][$ledger->creator_id]['name'] ?? __('common.unknown', [], 'ja'),
-                    __('ledger.field.status', [], 'ja') => $statusDisplay,
-                    __('ledger.field.updated_at', [], 'ja') => $updatedAtFormatted,
-                ];
-
-                return $ledger;
-            });
-
-            $summary = trans_choice('messages.found_ledgers', $results['total'], [], 'ja');
-
-            return Response::json([
-                'ledgers' => $ledgers,
-                'total' => $results['total'],
-                'meta' => $results['meta'], // meta情報も返す
-                '__summary__' => $summary,
-            ]);
+        // rawフォーマットの場合は加工せずに返す
+        if ($format === 'raw') {
+            return Response::json($results);
         }
 
-        // rawフォーマットの場合
-        return Response::json($results);
+        // summary フォーマットの場合、表示用の加工を行う
+        $includeContent = $parameters['include_content'] ?? true;
+        $contentPreviewLength = $parameters['content_preview_length'] ?? 200;
+
+        $ledgers = collect($results['ledgers'])->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
+            $meta = $results['meta'];
+            $ledger = (object) $ledger; // 配列をオブジェクトに変換
+
+            // 台帳定義とフォルダ情報を取得
+            $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
+
+            // フォルダパスの取得
+            $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
+                ? $meta['folders'][$define['folder_id']]['path']
+                : trans('common.root_folder', [], 'ja');
+
+            // ステータスの翻訳
+            $statusValue = is_object($ledger->status) ? $ledger->status->value : $ledger->status;
+            $statusDisplay = trans('ledger.workflow.status.'.$statusValue, [], 'ja');
+
+            // 日付のフォーマット
+            $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
+
+            // __display_fields__ を構築（キーは英語固定）
+            $displayFields = [
+                'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
+                'folder' => $folderPath,
+                'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
+                'workflow_status' => $statusDisplay,
+                'updated_at' => $updatedAtFormatted,
+            ];
+
+            // contentの処理
+            if (! $includeContent) {
+                // プレビューを生成
+                $displayFields['content_preview'] = $this->generateContentPreview(
+                    $ledger->content ?? [],
+                    $define['column_define'] ?? [],
+                    $contentPreviewLength
+                );
+            }
+
+            // __display_fields__をセット
+            $ledger->__display_fields__ = $displayFields;
+
+            return $ledger;
+        });
+
+        $summary = trans_choice('messages.found_ledgers', $results['total'], ['count' => $results['total']], 'ja');
+
+        return Response::json([
+            'ledgers' => $ledgers,
+            'total' => $results['total'],
+            'meta' => $results['meta'], // meta情報も返す
+            '__summary__' => $summary,
+        ]);
     }
 
-    /**
-     * Get the tool's input schema.
-     *
-     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
-     */
+    private function generateContentPreview(array $content, array $columnDefine, int $maxLength = 200): string
+    {
+        $preview = [];
+        $totalLength = 0;
+
+        foreach ($columnDefine as $column) {
+            if ($totalLength >= $maxLength) {
+                break;
+            }
+
+            // ColumnDefineオブジェクトまたは配列に対応
+            if ($column instanceof \App\Models\ColumnDefine) {
+                $columnId = $column->id;
+                $columnName = $column->name;
+            } else {
+                $columnId = $column['id'] ?? null;
+                $columnName = $column['name'] ?? null;
+            }
+
+            if ($columnId === null || ! isset($content[$columnId])) {
+                continue;
+            }
+
+            $value = $content[$columnId];
+
+            // 値が空の場合はスキップ
+            if (empty($value)) {
+                continue;
+            }
+
+            // 値を文字列に変換
+            if (is_array($value)) {
+                $value = implode(', ', $value);
+            } else {
+                $value = (string) $value;
+            }
+
+            $remainingLength = $maxLength - $totalLength;
+            $truncated = mb_substr($value, 0, $remainingLength);
+            $preview[] = ($columnName ?? 'フィールド'.$columnId).': '.$truncated;
+            $totalLength += mb_strlen($truncated);
+        }
+
+        return implode(' / ', $preview);
+    }
+
     public function schema(JsonSchema $schema): array
     {
         return [
@@ -125,6 +184,8 @@ MARKDOWN;
             'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD).'),
             'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD).'),
             'format' => $schema->string('The format of the response.')->enum(['raw', 'summary'])->default('summary'),
+            'include_content' => $schema->boolean('Whether to include full content in summary format. If false, only a preview is included.')->default(true),
+            'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false.')->default(200),
         ];
     }
 }
