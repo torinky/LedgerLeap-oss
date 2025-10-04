@@ -6,22 +6,23 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 
-uses(RefreshDatabase::class); // RefreshDatabase トレイトを使用
+uses(RefreshDatabase::class);
 
 // テストのセットアップ
 // 各テストの実行前に、管理者ユーザーと一般ユーザーを作成し、管理者としてログインする
 beforeEach(function () {
-    // データベースシーダーを実行してロールと権限を作成
-    $this->seed();
+    // Seederを使わず、必要なロールだけ作成（高速化）
+    $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']);
 
     // 管理者ユーザーを作成してログイン
     $this->admin = User::factory()->create();
-    $this->admin->assignRole('Super Admin'); // 正しいロール名を指定
+    $this->admin->assignRole($superAdminRole);
     actingAs($this->admin);
 
     // テスト対象の一般ユーザーを作成

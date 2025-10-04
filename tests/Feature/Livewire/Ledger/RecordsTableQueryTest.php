@@ -8,15 +8,15 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class RecordsTableQueryTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private User $user;
 
@@ -29,15 +29,20 @@ class RecordsTableQueryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tenant = \App\Models\Tenant::create();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
         tenancy()->initialize($this->tenant);
+
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
             'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
         ]);
-        // The component expects a root folder with id=1 to exist.
-        Folder::factory()->create(['id' => 1, 'parent_id' => null]);
-        $this->folder = Folder::factory()->create(['parent_id' => 1]);
+
+        // The component expects a root folder to exist - use factory without fixed ID
+        $rootFolder = Folder::factory()->create(['parent_id' => null]);
+        $this->folder = Folder::factory()->create(['parent_id' => $rootFolder->id]);
+
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,
             'column_define' => [
@@ -45,16 +50,39 @@ class RecordsTableQueryTest extends TestCase
                 // Add other column definitions as needed for other tests
             ],
         ]);
+
         $this->actingAs($this->user);
+
         // Add permission for the user to view LedgerDefines
-        Permission::findOrCreate('view_ledger_defines');
+        Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
         $this->user->givePermissionTo('view_ledger_defines');
+
         // Add permission for the user to view Ledgers
-        Permission::findOrCreate('ledgerView');
+        Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
         $this->user->givePermissionTo('ledgerView');
+
         // Add permission for the user to view AutoLinks (追加)
-        Permission::findOrCreate('view_auto_links');
+        Permission::firstOrCreate(['name' => 'view_auto_links', 'guard_name' => 'web']);
         $this->user->givePermissionTo('view_auto_links');
+    }
+
+    protected function getTablesToTruncate(): array
+    {
+        return [
+            'folders',
+            'ledgers',
+            'ledger_defines',
+            'auto_links',
+            'personal_access_tokens',
+        ];
+    }
+
+    protected function tearDown(): void
+    {
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+        parent::tearDown();
     }
 
     #[Test]
