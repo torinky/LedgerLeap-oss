@@ -30,6 +30,7 @@ class SearchLedgersToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         // テナントは既に初期化されている（RefreshDatabaseWithTenantが処理済み）
         // ユーザーとトークンを作成

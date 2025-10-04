@@ -40,18 +40,14 @@ class GetPendingApprovalsToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        // テナント作成・初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        // テナントは既にRefreshDatabaseWithTenantで初期化済み
 
         $this->tool = new GetPendingApprovalsTool;
 
-        // テスト用ユーザー作成
-        $this->user = User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // テスト用ユーザー作成（各テストで一意のメールアドレス）
+        $this->user = User::factory()->create();
 
         // アクセストークン作成
         $tokenResult = $this->user->createToken('test-token');
@@ -63,6 +59,7 @@ class GetPendingApprovalsToolTest extends TestCase
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'title' => 'Test Ledger Define',
             'folder_id' => $this->folder->id,
+            'tenant_id' => tenant()->id,  // テナントは既に初期化済み
         ]);
 
         $this->workflowService = $this->mock(WorkflowService::class);

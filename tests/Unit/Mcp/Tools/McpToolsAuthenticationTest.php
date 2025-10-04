@@ -43,10 +43,7 @@ class McpToolsAuthenticationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // テナント作成・初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        $this->setUpRefreshDatabaseWithTenant();
 
         // ユーザー作成とトークン生成
         $this->user = User::factory()->create();

@@ -43,10 +43,7 @@ class CreateLedgerToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // テナントを作成し、初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        $this->setUpRefreshDatabaseWithTenant();
 
         // ユーザーとトークンを作成
         $this->user = User::factory()->create();

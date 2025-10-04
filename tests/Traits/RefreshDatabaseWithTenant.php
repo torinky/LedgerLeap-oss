@@ -3,6 +3,7 @@
 namespace Tests\Traits;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\DB;
 
 /**
  * RefreshDatabaseWithTenant トレイト
@@ -37,6 +38,11 @@ trait RefreshDatabaseWithTenant
     protected static $sharedTenant = null;
 
     /**
+     * トランケート可能なテーブルのキャッシュ
+     */
+    protected static ?array $truncatableTablesCache = null;
+
+    /**
      * テストクラスの最初の実行前に1回だけ初期化
      */
     public static function setUpBeforeClass(): void
@@ -46,29 +52,43 @@ trait RefreshDatabaseWithTenant
         // クラスごとにフラグをリセット
         static::$databaseInitialized = false;
         static::$sharedTenant = null;
+        static::$truncatableTablesCache = null;
     }
 
     /**
-     * 各テストの前処理
+     * RefreshDatabaseWithTenant の初期化処理
+     *
+     * テストクラスのsetUp()から明示的に呼び出す必要があります：
+     *
+     * protected function setUp(): void
+     * {
+     *     parent::setUp();
+     *     $this->setUpRefreshDatabaseWithTenant();
+     *     // ... 残りのセットアップ
+     * }
      */
-    protected function setUp(): void
+    protected function setUpRefreshDatabaseWithTenant(): void
     {
-        parent::setUp();
-
         // このクラスで最初のテストの場合のみマイグレーション実行
         if (! static::$databaseInitialized) {
             $this->refreshDatabase();
             $this->createSharedTenant();
-            static::$databaseInitialized = true;
-        }
 
-        // テナントを初期化
-        if (static::$sharedTenant) {
+            // テナントを初期化してからテナントデータベースをマイグレーション
             tenancy()->initialize(static::$sharedTenant);
-        }
+            $this->migrateTenantDatabase();
 
-        // トランザクション開始（テナント初期化後）
-        $this->beginDatabaseTransaction();
+            // 共有データ（ユーザーなど）を作成
+            $this->createSharedData();
+
+            static::$databaseInitialized = true;
+        } else {
+            // 2回目以降のテストではトランケートしてクリーンアップ
+            if (static::$sharedTenant) {
+                tenancy()->initialize(static::$sharedTenant);
+                $this->truncateTenantTables();
+            }
+        }
     }
 
     /**
@@ -82,6 +102,8 @@ trait RefreshDatabaseWithTenant
 
     /**
      * データベースのリフレッシュ（最初の1回のみ実行）
+     *
+     * セントラルデータベース（tenants テーブル等）をリフレッシュ
      */
     protected function refreshDatabase(): void
     {
@@ -89,6 +111,20 @@ trait RefreshDatabaseWithTenant
             '--drop-views' => $this->shouldDropViews(),
             '--drop-types' => $this->shouldDropTypes(),
             '--seed' => $this->shouldSeed(),
+        ]);
+
+        $this->app[Kernel::class]->setArtisan(null);
+    }
+
+    /**
+     * テナントデータベースのマイグレーション（最初の1回のみ実行）
+     *
+     * テナント初期化後に実行される
+     */
+    protected function migrateTenantDatabase(): void
+    {
+        $this->artisan('tenants:migrate', [
+            '--tenants' => [static::$sharedTenant->id],
         ]);
 
         $this->app[Kernel::class]->setArtisan(null);
@@ -111,16 +147,29 @@ trait RefreshDatabaseWithTenant
         $database = $this->app->make('db');
 
         foreach ($this->connectionsToTransact() as $name) {
-            $connection = $database->connection($name);
-            $dispatcher = $connection->getEventDispatcher();
+            try {
+                $connection = $database->connection($name);
+                $dispatcher = $connection->getEventDispatcher();
 
-            $connection->unsetEventDispatcher();
-            $connection->beginTransaction();
-            $connection->setEventDispatcher($dispatcher);
+                $connection->unsetEventDispatcher();
+                $connection->beginTransaction();
+                $connection->setEventDispatcher($dispatcher);
+            } catch (\InvalidArgumentException $e) {
+                // テナント接続が設定されていない場合はスキップ
+                if ($name === 'tenant') {
+                    continue;
+                }
+                throw $e;
+            }
         }
 
         $this->beforeApplicationDestroyed(function () use ($database) {
             foreach ($this->connectionsToTransact() as $name) {
+                // テナント接続の場合、テナントが初期化されているか確認
+                if ($name === 'tenant' && ! tenancy()->initialized) {
+                    continue;
+                }
+
                 $connection = $database->connection($name);
                 $dispatcher = $connection->getEventDispatcher();
 
@@ -138,6 +187,73 @@ trait RefreshDatabaseWithTenant
     protected function getTenant()
     {
         return static::$sharedTenant;
+    }
+
+    /**
+     * テナントテーブルをトランケートしてクリーンアップ
+     *
+     * 各テストの前に呼ばれ、前のテストのデータをクリーンアップします。
+     * 共有データ（ユーザーなど）は保持されます。
+     */
+    protected function truncateTenantTables(): void
+    {
+        $connection = DB::connection('mysql');
+
+        // 外部キー制約を一時的に無効化してトランケート
+        $connection->statement('SET FOREIGN_KEY_CHECKS=0');
+
+        // トランケート可能なテーブルを取得（初回のみチェック）
+        if (static::$truncatableTablesCache === null) {
+            $tablesToCheck = $this->getTablesToTruncate();
+            static::$truncatableTablesCache = [];
+
+            foreach ($tablesToCheck as $table) {
+                if ($connection->getSchemaBuilder()->hasTable($table)) {
+                    static::$truncatableTablesCache[] = $table;
+                }
+            }
+        }
+
+        // キャッシュされたテーブルをトランケート
+        foreach (static::$truncatableTablesCache as $table) {
+            $connection->table($table)->truncate();
+        }
+
+        $connection->statement('SET FOREIGN_KEY_CHECKS=1');
+    }
+
+    /**
+     * トランケート対象のテーブル一覧を取得
+     *
+     * テストクラスでオーバーライドまたはプロパティで指定できます。
+     * デフォルトでは最小限のテーブルのみトランケートします。
+     *
+     * @return array<string>
+     */
+    protected function getTablesToTruncate(): array
+    {
+        // テストクラスでプロパティが定義されている場合はそれを使用
+        if (property_exists($this, 'tablesToTruncate')) {
+            return $this->tablesToTruncate;
+        }
+
+        // デフォルトでは最小限のテーブルのみトランケート
+        // モックを多用するテストではほとんど不要
+        return [
+            'personal_access_tokens', // トークンはクリーンアップ
+        ];
+    }
+
+    /**
+     * 共有データ（各テストで共通して使用するデータ）を作成
+     *
+     * テストクラスでオーバーライドして、共有データを作成できます。
+     * デフォルトでは何も作成しません。
+     */
+    protected function createSharedData(): void
+    {
+        // テストクラスで必要に応じてオーバーライド
+        // 例: テスト用ユーザーを作成して static::$sharedUser に保存
     }
 
     /**
