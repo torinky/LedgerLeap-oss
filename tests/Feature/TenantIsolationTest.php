@@ -9,70 +9,135 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class TenantIsolationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
-    private User $adminUser;
+    private static User $adminUser;
 
-    private $tenant1;
+    private static $tenant1;
 
-    private $tenant2;
+    private static $tenant2;
 
-    private $tenant1LedgerDefine;
+    private static $tenant1LedgerDefine;
 
-    private $tenant1Ledger;
+    private static $tenant1Ledger;
 
-    private $tenant2LedgerDefine;
+    private static $tenant2LedgerDefine;
 
-    private $tenant2Ledger;
+    private static $tenant2Ledger;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        $this->adminUser = User::factory()->create(['email' => 'admin@example.com', 'password' => bcrypt('password')]);
         Notification::fake();
-
-        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant1', 'name' => 'Tenant 1', 'admin_email' => 'admin@example.com']);
-        Artisan::call('app:setup-tenant', ['tenant_id' => 'tenant2', 'name' => 'Tenant 2', 'admin_email' => 'admin@example.com']);
-
-        $this->tenant1 = \App\Models\Tenant::find('tenant1');
-        $this->tenant2 = \App\Models\Tenant::find('tenant2');
-
-        $this->tenant1->run(function () {
-            $folder = Folder::where('title', '/')->first();
-            $this->tenant1LedgerDefine = LedgerDefine::factory()->create(['title' => 'Tenant 1 Definition', 'folder_id' => $folder->id]);
-            $this->tenant1Ledger = Ledger::factory()->create(['ledger_define_id' => $this->tenant1LedgerDefine->id, 'content' => ['col1' => 'tenant1-data']]);
-        });
-
-        $this->tenant2->run(function () {
-            $folder = Folder::where('title', '/')->first();
-            $this->tenant2LedgerDefine = LedgerDefine::factory()->create(['title' => 'Tenant 2 Definition', 'folder_id' => $folder->id]);
-            $this->tenant2Ledger = Ledger::factory()->create(['ledger_define_id' => $this->tenant2LedgerDefine->id, 'content' => ['col1' => 'tenant2-data']]);
-        });
-
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    /**
+     * クラス全体で共有するテストデータを作成
+     * 2つの独立したテナントを作成し、それぞれにデータを設定
+     */
+    protected function createSharedData(): void
+    {
+        // Admin userを作成
+        self::$adminUser = User::factory()->create(['email' => 'admin@example.com', 'password' => bcrypt('password')]);
+
+        // Super Adminロールを作成して付与
+        $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']);
+        self::$adminUser->assignRole($superAdminRole);
+
+        // Tenant 1を作成（共有テナントとは別の独立したテナント）
+        self::$tenant1 = \App\Models\Tenant::create(['id' => 'tenant1']);
+        self::$tenant1->domains()->create(['domain' => 'tenant1.localhost']);
+
+        // Tenant 2を作成
+        self::$tenant2 = \App\Models\Tenant::create(['id' => 'tenant2']);
+        self::$tenant2->domains()->create(['domain' => 'tenant2.localhost']);
+
+        // Tenant 1のデータを作成
+        self::$tenant1->run(function () use ($superAdminRole) {
+            // テナント1のマイグレーション実行
+            \Artisan::call('tenants:migrate', ['--tenants' => ['tenant1']]);
+
+            // ルートフォルダを作成
+            $folder = Folder::create([
+                'title' => '/',
+                'creator_id' => self::$adminUser->id,
+                'modifier_id' => self::$adminUser->id,
+            ]);
+
+            // フォルダ権限を作成
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $superAdminRole->id,
+                'folder_id' => $folder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'creator_id' => self::$adminUser->id,
+                'modifier_id' => self::$adminUser->id,
+            ]);
+
+            self::$tenant1LedgerDefine = LedgerDefine::factory()->create([
+                'title' => 'Tenant 1 Definition',
+                'folder_id' => $folder->id,
+            ]);
+            self::$tenant1Ledger = Ledger::factory()->create([
+                'ledger_define_id' => self::$tenant1LedgerDefine->id,
+                'content' => [0 => 'tenant1-data'],
+            ]);
+        });
+
+        // Tenant 2のデータを作成
+        self::$tenant2->run(function () use ($superAdminRole) {
+            // テナント2のマイグレーション実行
+            \Artisan::call('tenants:migrate', ['--tenants' => ['tenant2']]);
+
+            // ルートフォルダを作成
+            $folder = Folder::create([
+                'title' => '/',
+                'creator_id' => self::$adminUser->id,
+                'modifier_id' => self::$adminUser->id,
+            ]);
+
+            // フォルダ権限を作成
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $superAdminRole->id,
+                'folder_id' => $folder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'creator_id' => self::$adminUser->id,
+                'modifier_id' => self::$adminUser->id,
+            ]);
+
+            self::$tenant2LedgerDefine = LedgerDefine::factory()->create([
+                'title' => 'Tenant 2 Definition',
+                'folder_id' => $folder->id,
+            ]);
+            self::$tenant2Ledger = Ledger::factory()->create([
+                'ledger_define_id' => self::$tenant2LedgerDefine->id,
+                'content' => [0 => 'tenant2-data'],
+            ]);
+        });
     }
 
     #[Test]
     public function user_in_one_tenant_cannot_see_data_from_another_tenant(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
-        $this->tenant2->run(function () {
+        self::$tenant2->run(function () {
             Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [$this->tenant2LedgerDefine->id])
+                ->set('selectedLedgerDefineIds', [self::$tenant2LedgerDefine->id])
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
-                    $this->assertEquals($this->tenant2Ledger->id, $ledgers->first()->id);
+                    $this->assertEquals(self::$tenant2Ledger->id, $ledgers->first()->id);
 
                     return true;
                 });
@@ -82,10 +147,10 @@ class TenantIsolationTest extends TestCase
     #[Test]
     public function user_cannot_access_another_tenants_resource_via_direct_url(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
-        $response = $this->tenant2->run(function () {
-            return $this->get(route('ledger.show', ['tenant' => 'tenant2', 'ledgerId' => $this->tenant1Ledger->id]));
+        $response = self::$tenant2->run(function () {
+            return $this->get(route('ledger.show', ['tenant' => 'tenant2', 'ledgerId' => self::$tenant1Ledger->id]));
         });
 
         $response->assertNotFound();
@@ -94,22 +159,22 @@ class TenantIsolationTest extends TestCase
     #[Test]
     public function user_cannot_update_data_in_another_tenant(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
-        $this->tenant2->run(function () {
+        self::$tenant2->run(function () {
             $this->expectException(ModelNotFoundException::class);
-            Livewire::test(ModifyColumn::class, ['ledgerId' => $this->tenant1Ledger->id]);
+            Livewire::test(ModifyColumn::class, ['ledgerId' => self::$tenant1Ledger->id]);
         });
     }
 
     #[Test]
     public function user_cannot_delete_data_in_another_tenant(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
-        $this->tenant2->run(function () {
+        self::$tenant2->run(function () {
             $this->expectException(ModelNotFoundException::class);
-            Livewire::test(ModifyColumn::class, ['ledgerId' => $this->tenant1Ledger->id]);
+            Livewire::test(ModifyColumn::class, ['ledgerId' => self::$tenant1Ledger->id]);
         });
     }
 
@@ -125,9 +190,9 @@ class TenantIsolationTest extends TestCase
     /*
     public function validation_prevents_creating_relations_across_tenants(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
-        $this->tenant1->run(function () {
+        self::$tenant1->run(function () {
             $this->assertTrue(true); // Dummy assertion as this test's premise was wrong.
         });
     }
@@ -136,27 +201,27 @@ class TenantIsolationTest extends TestCase
     #[Test]
     public function user_belonging_to_multiple_tenants_can_switch_context_and_operate_correctly(): void
     {
-        $this->actingAs($this->adminUser);
+        $this->actingAs(self::$adminUser);
 
         // Context: tenant1
-        $this->tenant1->run(function () {
+        self::$tenant1->run(function () {
             Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [$this->tenant1LedgerDefine->id])
+                ->set('selectedLedgerDefineIds', [self::$tenant1LedgerDefine->id])
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
-                    $this->assertEquals($this->tenant1Ledger->id, $ledgers->first()->id);
+                    $this->assertEquals(self::$tenant1Ledger->id, $ledgers->first()->id);
 
                     return true;
                 });
         });
 
         // Context: tenant2
-        $this->tenant2->run(function () {
+        self::$tenant2->run(function () {
             Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [$this->tenant2LedgerDefine->id])
+                ->set('selectedLedgerDefineIds', [self::$tenant2LedgerDefine->id])
                 ->assertViewHas('ledgerRecords', function ($ledgers) {
                     $this->assertCount(1, $ledgers);
-                    $this->assertEquals($this->tenant2Ledger->id, $ledgers->first()->id);
+                    $this->assertEquals(self::$tenant2Ledger->id, $ledgers->first()->id);
 
                     return true;
                 });

@@ -589,11 +589,43 @@ protected function setUp(): void
 Phase 2（完了）: 9/9ファイル ✅ 100% - コード検証済み
 Phase 3.1（完了）: 10/10ファイル ✅ 100% - 2025/10/04完了
 Feature/Api/SearchApiTest（完了）: ✅ Mroonga全文検索対応 - 90%以上削減！
+Feature/TenantIsolationTest（完了）: ✅ 2テナント分離テスト - Seeder不要に
 Phase 3.2（計画中）: 0/9ファイル ⏳ 0%
 Phase 3.3（計画中）: 0/4ファイル ⏳ 0%
 
-全体進捗: 20/33ファイル（61%完了）
+全体進捗: 21/33ファイル（64%完了）
 ```
+
+### Feature/TenantIsolationTest最適化完了（2025/10/04）
+
+**✅ Seeder問題を回避してテスト最適化成功！**
+
+元々`app:setup-tenant`コマンドを使用していましたが、Seederにバグがあるため、テストで直接テナントとデータを作成する方法に変更しました。
+
+**実行結果:**
+```
+Tests:    5 passed (12 assertions)
+Duration: 11.08秒
+
+改善前: 推定50秒以上（app:setup-tenant コマンド × 2回）
+改善後: 11.08秒
+削減率: 約75%以上削減 ⚡
+```
+
+**実装のポイント:**
+1. **createSharedData()**: tenant1とtenant2を独立して作成
+2. **手動マイグレーション**: `Artisan::call('tenants:migrate')`で各テナントを初期化
+3. **最小限のデータ**: Seederを使わず、テストに必要なデータのみ作成
+4. **独立性**: 2つの完全に独立したテナントでデータ分離をテスト
+
+**技術的発見:**
+- Seederの`Tag::factory()`が`ledger_define_id`をNULLで作成するバグを回避
+- テストではSeederを使わず、必要なデータを直接作成する方がシンプルで信頼性が高い
+- `tenants:migrate`コマンドで特定テナントのみマイグレーション可能
+
+**未対応:**
+- `SetupTenantCommandTest`: Seederのバグにより失敗（別タスクで修正が必要）
+- `TenantFallbackTest`: 既にPASS（問題なし）
 
 ### Feature/Api/SearchApiTest最適化完了（2025/10/04）
 
