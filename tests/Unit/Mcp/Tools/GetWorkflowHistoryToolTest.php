@@ -9,12 +9,12 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class GetWorkflowHistoryToolTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabaseWithTenant;
 
     private GetWorkflowHistoryTool $tool;
 
@@ -27,10 +27,7 @@ class GetWorkflowHistoryToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // テナント作成・初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->tool = new GetWorkflowHistoryTool;
 

@@ -1,5 +1,109 @@
 ## 📝 実装ログ (最新)
 
+### 🚀 2025-10-04: **MCP Phase 2 テスト最適化完了** ✅⚡  
+**実装内容**: RefreshDatabaseWithTenantトレイトを全Phase 2テストに適用し、大幅な高速化を実現
+
+#### **パフォーマンス改善結果**
+```
+MCP Tools全テスト (57テスト / 339 assertions)
+================================
+改善前（DatabaseMigrations）: 約400秒以上（推定）
+改善後（RefreshDatabaseWithTenant）: 109.38秒 ⚡
+削減率: 約70-75%削減
+
+個別テスト改善例:
+- ClaimWorkflowTaskToolTest: 67.67秒 → 15.53秒 (77%削減)
+- ExecuteApprovalToolTest: 57.80秒 → 13.10秒 (78%削減)
+- GetActivityLogToolTest: 93.40秒 → 10.99秒 (88%削減)
+- GetWorkflowHistoryToolTest: 67.69秒 → 14.55秒 (77%削減)
+```
+
+#### **技術的アプローチ**
+**RefreshDatabaseWithTenant の仕組み:**
+```php
+// 各テストクラスで1回だけマイグレーション（初回: 7-8秒）
+- セントラルDB マイグレーション（migrate:fresh）
+- テナント作成
+- テナントDB マイグレーション（tenants:migrate）
+- 共有データ作成（ユーザー等）
+
+// 2回目以降のテストはトランケート（0.2-2秒）
+- personal_access_tokens等の最小限のテーブルのみトランケート
+- テナント初期化は維持
+- 各テストはクリーンな状態で開始
+```
+
+#### **適用したテストファイル**
+1. ✅ `ClaimWorkflowTaskToolTest.php`: DatabaseMigrations → RefreshDatabaseWithTenant
+2. ✅ `ExecuteApprovalToolTest.php`: DatabaseMigrations → RefreshDatabaseWithTenant
+3. ✅ `GetActivityLogToolTest.php`: DatabaseMigrations → RefreshDatabaseWithTenant
+4. ✅ `GetWorkflowHistoryToolTest.php`: DatabaseMigrations → RefreshDatabaseWithTenant
+
+**すでに最適化済み:**
+- `SearchLedgersToolTest.php`: RefreshDatabaseWithTenant使用済み
+- `CreateLedgerToolTest.php`: RefreshDatabaseWithTenant使用済み
+- `GetLedgerDefinesToolTest.php`: RefreshDatabaseWithTenant使用済み
+- `GetPendingApprovalsToolTest.php`: RefreshDatabaseWithTenant使用済み
+- `McpToolsAuthenticationTest.php`: RefreshDatabaseWithTenant使用済み
+
+#### **テスト実行時間詳細**
+```
+ClaimWorkflowTaskToolTest (7テスト)
+  ✓ 最初のテスト: 8.21s（マイグレーション）
+  ✓ 残り6テスト: 0.63-1.67s（平均1.05s）
+  合計: 15.53s
+
+ExecuteApprovalToolTest (6テスト)
+  ✓ 最初のテスト: 8.03s（マイグレーション）
+  ✓ 残り5テスト: 0.66-1.33s（平均1.01s）
+  合計: 13.10s
+
+GetActivityLogToolTest (10テスト)
+  ✓ 最初のテスト: 7.77s（マイグレーション）
+  ✓ 残り9テスト: 0.26-0.64s（平均0.35s）
+  合計: 10.99s
+
+GetWorkflowHistoryToolTest (7テスト)
+  ✓ 最初のテスト: 7.98s（マイグレーション）
+  ✓ 残り6テスト: 0.69-1.66s（平均1.09s）
+  合計: 14.55s
+```
+
+#### **RefreshDatabaseWithTenantトレイトの特徴**
+```php
+trait RefreshDatabaseWithTenant
+{
+    // クラス全体で1回だけマイグレーション
+    protected static bool $databaseInitialized = false;
+    protected static $sharedTenant = null;
+    
+    // トランケート対象テーブルのカスタマイズ
+    protected function getTablesToTruncate(): array
+    {
+        return ['personal_access_tokens']; // 最小限
+    }
+    
+    // 共有データの作成（オプション）
+    protected function createSharedData(): void
+    {
+        // テストクラスで必要に応じてオーバーライド
+    }
+}
+```
+
+#### **教訓・ベストプラクティス**
+1. **テストクラスごとに1回マイグレーション**: 各テストは高速なトランケートで初期化
+2. **最小限のトランケート**: 実際に使用するテーブルのみ指定（デフォルト: personal_access_tokens のみ）
+3. **共有テナント活用**: テナント作成・マイグレーションは1回のみ
+4. **トランザクション不使用**: テナントDB操作との相性問題を回避
+
+#### **今後の展開**
+- ✅ Phase 2 テスト最適化完了
+- ⏭️ 他のテストスイートへの展開検討
+- ⏭️ さらなる最適化ポイントの調査
+
+---
+
 ### 🚀 2025-10-04: **SearchLedgersTool レスポンス仕様改善完了** ✅  
 **実装内容**: SearchLedgersTool のレスポンス仕様を改善し、柔軟な情報量制御を実現
 

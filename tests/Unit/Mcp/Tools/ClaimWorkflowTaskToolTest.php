@@ -9,12 +9,12 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\WorkflowService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class ClaimWorkflowTaskToolTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabaseWithTenant;
 
     private ClaimWorkflowTaskTool $tool;
 
@@ -31,10 +31,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // テナント作成・初期化
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->workflowService = app(WorkflowService::class);
         $this->tool = new ClaimWorkflowTaskTool;
