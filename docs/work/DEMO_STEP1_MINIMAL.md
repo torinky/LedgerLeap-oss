@@ -676,7 +676,7 @@ Claude/ChatGPTとMCP接続して:
 - [x] データが正しく投入されている
 - [x] 基本的な検索が動作する（ledger_define_idフィルター）
 - [x] content表示の修正完了
-- [ ] キーワード検索のタイムアウト問題を解決
+- [x] キーワード検索のタイムアウト問題を解決（2025-10-04）
 - [ ] SearchLedgersToolが動作する（MCP経由）
 - [ ] LLMとの対話が成立する
 
@@ -688,10 +688,12 @@ Claude/ChatGPTとMCP接続して:
   - 誤り: 台帳レコードに状態を表すタグを付与
   - 正解: 台帳定義にプロジェクト横断タグ、状態はカラムで管理
   - 効果: 横断検索が可能に、状態管理が明確化
-- ⚠️ キーワード検索（`?q=A商事`）がタイムアウト
-  - Mroonga自体は機能している（tinkerで確認済み）
-  - API経由の検索で問題が発生
-  - 要調査: QueryBuilderのフィルター実装
+- ✅ キーワード検索（`?q=A商事`）のタイムアウト問題を解決（2025-10-04）
+  - 原因: JSON形成時に存在しないenum()メソッドを呼び出していた
+  - 具体的には `$ledger->status->value` の処理で、statusがEnum型でない場合にエラー
+  - 修正: `is_object($ledger->status) ? $ledger->status->value : $ledger->status` に変更
+  - コミット: 9753b2c "feat: enhance SearchLedgersTool with content preview and improved field mappings"
+  - 効果: APIレスポンスが正常に返るようになり、タイムアウトが解消
 - ✅ テナント作成・マイグレーション成功
 - ✅ API認証成功
 - ✅ `ledger_define_id`フィルターは正常動作（7件取得確認）
