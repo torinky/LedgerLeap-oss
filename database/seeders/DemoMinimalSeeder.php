@@ -25,6 +25,7 @@ use Illuminate\Database\Seeder;
  */
 class DemoMinimalSeeder extends Seeder
 {
+    private $tenant;
     private User $demoUser;
     private User $adminUser;
     private Role $demoRole;
@@ -39,22 +40,25 @@ class DemoMinimalSeeder extends Seeder
     {
         $this->command->info('🚀 Starting Demo Minimal Seeder...');
 
-        $this->command->info('📋 Step 1/6: Creating users and roles...');
+        $this->command->info('🏢 Step 0/7: Creating and initializing tenant...');
+        $this->createAndInitializeTenant();
+
+        $this->command->info('📋 Step 1/7: Creating users and roles...');
         $this->createUsersAndRoles();
 
-        $this->command->info('📁 Step 2/6: Creating folder structure...');
+        $this->command->info('📁 Step 2/7: Creating folder structure...');
         $this->createFolders();
 
-        $this->command->info('🔐 Step 3/6: Setting up permissions...');
+        $this->command->info('🔐 Step 3/7: Setting up permissions...');
         $this->setupPermissions();
 
-        $this->command->info('📝 Step 4/6: Creating ledger define...');
+        $this->command->info('📝 Step 4/7: Creating ledger define...');
         $this->createSalesDailyDefine();
 
-        $this->command->info('🏷️  Step 5/6: Creating tags...');
+        $this->command->info('🏷️  Step 5/7: Creating tags...');
         $this->createTags();
 
-        $this->command->info('📊 Step 6/6: Creating demo ledgers...');
+        $this->command->info('📊 Step 6/7: Creating demo ledgers...');
         $this->createDemoLedgers();
 
         $this->command->info('✅ Demo data created successfully!');
@@ -63,6 +67,39 @@ class DemoMinimalSeeder extends Seeder
         $this->command->info('   Demo User:  demo@example.com  / demo1234');
         $this->command->info('   Admin User: admin@example.com / demo1234');
         $this->command->info('');
+        $this->command->info('🏢 Tenant Info:');
+        $this->command->info('   Tenant ID: ' . $this->tenant->id);
+        $this->command->info('');
+    }
+
+    private function createAndInitializeTenant(): void
+    {
+        // テナントを作成または取得
+        $this->tenant = \App\Models\Tenant::firstOrCreate(
+            ['id' => 'demo-tenant'],
+            ['name' => 'Demo Tenant']
+        );
+
+        $this->command->info('   ✓ Tenant created or found: ' . $this->tenant->id);
+
+        // テナントを初期化（これ以降のモデル操作はこのテナントコンテキストで実行される）
+        tenancy()->initialize($this->tenant);
+
+        $this->command->info('   ✓ Tenant initialized: ' . $this->tenant->id);
+
+        // テナントデータベースをマイグレーション（まだマイグレーションされていない場合）
+        $connection = \DB::connection('mysql');
+        $tablesExist = $connection->getSchemaBuilder()->hasTable('folders');
+
+        if (! $tablesExist) {
+            $this->command->info('   ⚙️  Running tenant migrations...');
+            \Artisan::call('tenants:migrate', [
+                '--tenants' => [$this->tenant->id],
+            ]);
+            $this->command->info('   ✓ Tenant migrations completed');
+        } else {
+            $this->command->info('   ✓ Tenant database already migrated');
+        }
     }
 
     private function createUsersAndRoles(): void
