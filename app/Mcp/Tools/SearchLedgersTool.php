@@ -39,13 +39,23 @@ class SearchLedgersTool extends Tool
         - 'exclude_tags': Exclude results with these tags
         - 'creator_id': Filter by creator user ID
         - 'created_from' / 'created_to': Date range filter (YYYY-MM-DD)
+        - 'mode': 'search' (default) returns full data, 'count' returns only the number of matching ledgers (faster)
         - 'limit' / 'offset': Pagination
+        - 'include_content': Set to false to get metadata only (useful for quick browsing)
+        - 'content_preview_length': Characters to preview from long text fields (default: 200)
 
         **Strategic Usage (戦略的利用法):**
         This tool is not just for single searches; it can be combined with other tools to answer more complex questions.
 
         - **Leveraging Metadata (メタデータの活用):**
-          When a search is successful, the `meta` field in the response is automatically populated with complete information about related entities, such as the users (creators, modifiers) associated with the returned ledgers. When trying to identify a person in charge, the most efficient method is to first find the relevant ledger with this tool and then check the `meta` field.
+          When a search is successful, the `meta` field in the response is automatically populated with complete information about related entities:
+          - meta.users: Full user information for creators and modifiers (including id, name)
+          - meta.folders: Folder information with paths
+          - meta.ledger_defines: Ledger definition details
+          
+          **Best Practice for Identifying Responsible Persons:**
+          To find who is in charge of something, search for the relevant ledger first, then check meta.users using the creator_id.
+          Example: "Who is in charge of Company A?" → search_ledgers(q='Company A') → Check ledger.creator_id in meta.users
 
         - **Iterative Information Discovery Workflow (段階的な情報特定ワークフロー):**
           If an initial, broad keyword search (e.g., `q="Company A"`) yields no results, follow these steps:
@@ -53,6 +63,41 @@ class SearchLedgersTool extends Tool
           2. From the activity log, identify a **clue** that can uniquely identify the target ledger (e.g., a unique phrase from the content, a specific tag).
           3. Use that **clue** as the `q` parameter in a new search with this tool.
           4. This targeted search will allow you to retrieve both the ledger data and the responsible user's information from the `meta` field in a single call.
+
+        **Common Search Patterns (よく使う検索パターン):**
+        
+        1. Find all records for a specific company:
+           search_ledgers(q='株式会社A商事', limit=50)
+        
+        2. Get this week's activity records:
+           search_ledgers(created_from='2025-10-01', created_to='2025-10-07')
+        
+        3. Find important pending items:
+           search_ledgers(tags='重要', exclude_tags='完了,見送り')
+        
+        4. Check a user's activity history:
+           search_ledgers(creator_id=3, limit=20)
+        
+        5. Search within a specific folder:
+           search_ledgers(folder_id=18, q='トラブル')
+        
+        6. Quick count without loading data:
+           search_ledgers(mode='count', tags='重要')
+        
+        7. Get metadata only for quick browsing:
+           search_ledgers(q='商談', include_content=false, limit=100)
+
+        **Japanese Keyword Handling (日本語キーワードの扱い):**
+        - Exact match: q='"株式会社A商事"' (use quotes)
+        - Partial match: q='A商事' (no quotes)
+        - Multiple keywords (AND): q='商事 提案' (space-separated)
+        - Note: Mroonga uses morphological analysis, so searches are word-based
+
+        **Performance Tips (パフォーマンスのヒント):**
+        - Broad searches without filters may be slow with large datasets
+        - Use 'ledger_define_id' or 'folder_id' to narrow down the search scope
+        - Use date ranges (created_from/created_to) to limit results
+        - Use mode='count' when you only need to check if matching records exist
 
         **Workflow Example (ワークフロー例):**
         1. User asks: "Who is in charge of Project X?"
@@ -283,21 +328,21 @@ MARKDOWN;
     public function schema(JsonSchema $schema): array
     {
         return [
-            'q' => $schema->string('Full-text search keyword. Supports Japanese and multi-byte characters (e.g., "株式会社", "営業日報").'),
-            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition). Supports Japanese (e.g., "重要,新規").'),
-            'folder_id' => $schema->integer('The folder ID to recursively search within.'),
-            'ledger_define_id' => $schema->integer('The ledger definition ID to filter by.'),
-            'exclude_q' => $schema->string('Keywords to exclude from the results. Supports Japanese.'),
-            'exclude_tags' => $schema->string('Comma-separated tag names to exclude. Supports Japanese.'),
-            'mode' => $schema->string('The search mode.')->enum(['search', 'count'])->default('search'),
-            'limit' => $schema->integer('The maximum number of items to return.'),
-            'offset' => $schema->integer('The number of items to skip for pagination.'),
-            'creator_id' => $schema->integer('The ID of the user who created the ledger.'),
-            'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD).'),
-            'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD).'),
-            'format' => $schema->string('The format of the response.')->enum(['raw', 'summary'])->default('summary'),
-            'include_content' => $schema->boolean('Whether to include full content in summary format. If false, only a preview is included.')->default(true),
-            'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false.')->default(200),
+            'q' => $schema->string('Full-text search keyword. Supports Japanese and multi-byte characters. Examples: "株式会社A商事", "営業日報", "検索機能". Use quotes for exact match: "株式会社A商事". Space-separated for AND: "商事 提案".'),
+            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition). Supports Japanese. Example: "重要,新規" will find ledgers with BOTH tags.'),
+            'folder_id' => $schema->integer('The folder ID to recursively search within. Useful for limiting search scope to a specific department or project folder.'),
+            'ledger_define_id' => $schema->integer('The ledger definition ID to filter by. Use this to search only within a specific type of ledger (e.g., only sales reports).'),
+            'exclude_q' => $schema->string('Keywords to exclude from the results. Supports Japanese. Example: "見送り" will exclude ledgers containing this word.'),
+            'exclude_tags' => $schema->string('Comma-separated tag names to exclude. Supports Japanese. Example: "完了,見送り" will exclude ledgers with these tags.'),
+            'mode' => $schema->string('The search mode. "search" (default) returns full ledger data. "count" returns only the total number of matching ledgers (much faster for existence checks or statistics).')->enum(['search', 'count'])->default('search'),
+            'limit' => $schema->integer('The maximum number of items to return. Use smaller values (10-20) for quick checks, larger values (50-100) for comprehensive searches.'),
+            'offset' => $schema->integer('The number of items to skip for pagination. Use with limit to implement pagination (e.g., offset=20, limit=20 for page 2).'),
+            'creator_id' => $schema->integer('The ID of the user who created the ledger. Use this to find all work by a specific person. You can get user IDs from meta.users in previous search results.'),
+            'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-01" for records from October 1st onwards.'),
+            'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-07" for records up to October 7th. Use with created_from for date range filtering.'),
+            'format' => $schema->string('The format of the response. "summary" (default) includes display-friendly fields like __display_fields__ and __summary__ with translations. "raw" returns only the normalized data without formatting (faster, use for machine processing).')->enum(['raw', 'summary'])->default('summary'),
+            'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to false for quick browsing of many ledgers (only metadata and preview shown). Default: true.')->default(true),
+            'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false. Default: 200 characters. Increase for longer previews, decrease for quicker overview.')->default(200),
         ];
     }
 }

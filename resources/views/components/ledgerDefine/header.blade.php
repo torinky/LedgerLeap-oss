@@ -39,7 +39,7 @@
     </div>
 </div>
 <div class="prose text-xs leading-relaxed w-full max-w-none px-4">
-    {!! app(App\Services\AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description), null, $ledgerDefine) !!}
+    {!! app(App\Services\AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), null, $ledgerDefine) !!}
 </div>
 
 <div class="grid justify-items-end mx-4">
