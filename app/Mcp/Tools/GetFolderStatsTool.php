@@ -130,4 +130,18 @@ MARKDOWN;
 
         return implode(', ', $lines);
     }
+
+    /**
+     * Get the tool's input schema.
+     *
+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
+     */
+    public function schema(\Illuminate\JsonSchema\JsonSchema $schema): array
+    {
+        return [
+            'format' => $schema->enum(['summary', 'raw'])
+                ->description('Response format: summary (human-readable) or raw (machine-processing)')
+                ->default('summary'),
+        ];
+    }
 }

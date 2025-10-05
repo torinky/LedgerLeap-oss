@@ -6,8 +6,11 @@ use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
+use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use Laravel\Mcp\Server;
@@ -42,6 +45,20 @@ class LedgerLeapServer extends Server
         2. Set format="summary" for better formatted responses
         3. Include creator_id filter when the user refers to "my" or "私の" documents
         
+        For statistics and analytics queries:
+        1. Use GetLedgerStats for ledger creation statistics by period (today, this_week, this_month, etc.)
+        2. Use GetUserActivityStats for user activity analysis and peak hours
+        3. Use GetFolderStats for folder-level statistics and recent activity
+        4. All stats tools support format="summary" for human-readable responses
+        
+        Period options available:
+        - today, yesterday
+        - this_week, last_week
+        - this_month, last_month
+        - this_quarter, last_quarter
+        - this_year, last_year
+        - last_7_days, last_30_days, last_90_days
+        
         Always provide context-aware, helpful responses in Japanese when interacting with Japanese users.
     MARKDOWN;
 
@@ -59,6 +76,9 @@ class LedgerLeapServer extends Server
         GetWorkflowHistoryTool::class,
         ClaimWorkflowTaskTool::class,
         GetActivityLogTool::class,
+        GetLedgerStatsTool::class,
+        GetUserActivityStatsTool::class,
+        GetFolderStatsTool::class,
     ];
 
     /**
