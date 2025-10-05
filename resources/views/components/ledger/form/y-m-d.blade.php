@@ -13,15 +13,23 @@
         $mark='<i class="fas fa-check-circle text-accent"></i>';
     }
 
+    // Get default date from DateType if available and field is empty
+    $defaultDate = '';
+    if (empty($this->content[$columnDefine->id] ?? null)) {
+        $inputType = $columnDefine->getInputType();
+        if (method_exists($inputType, 'getDefaultDate')) {
+            $defaultDate = $inputType->getDefaultDate();
+        }
+    }
 @endphp
 
     @if($isDemo)
-    <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
+    <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
         <x-mary-input
             label="{{$columnDefine->name}}"
             id="content[{{$columnDefine->id}}]"
             name="content[{{$columnDefine->id}}]"
-            value="{{$this->content[$columnDefine->id] ?? ''}}"
+            value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
             icon="{{$icon}}"
             class="{{$class}}"
             required="{{$columnDefine->required}}"
@@ -51,13 +59,13 @@
     </div>
 @else
     @if($columnDefine->required)
-        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
+        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"
                 id="content[{{$columnDefine->id}}]"
                 name="content[{{$columnDefine->id}}]"
-                value="{{$this->content[$columnDefine->id] ?? ''}}"
+                value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
                 icon="{{$icon}}"
                 class="{{$class}}"
                 required="{{$columnDefine->required}}"
@@ -87,13 +95,13 @@
             </x-mary-input>
         </div>
     @else
-        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true })" class="datepicker">
+        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"
                 id="content[{{$columnDefine->id}}]"
                 name="content[{{$columnDefine->id}}]"
-                value="{{$this->content[$columnDefine->id] ?? ''}}"
+                value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
                 icon="{{$icon}}"
                 class="{{$class}}"
                 {{--                required="{{$columnDefine->required}}"--}}

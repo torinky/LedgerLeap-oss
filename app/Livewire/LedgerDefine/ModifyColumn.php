@@ -6,6 +6,7 @@ use App\Enums\WorkflowStatus;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\AutoNumberType;
+use App\Models\ColumnTypes\DateType;
 use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\ColumnTypes\NumberType;
 use App\Models\Ledger;
@@ -72,6 +73,9 @@ class ModifyColumn extends Component
                         'prefix' => $columnDefineObject->getInputType()->prefix,
                         'digits' => $columnDefineObject->getInputType()->digits,
                         'revision' => $columnDefineObject->getInputType()->revision,
+                    ] : [],
+                    $columnDefineObject->getInputType() instanceof DateType ? [
+                        'default_offset' => $columnDefineObject->getInputType()->default_offset,
                     ] : []
                 ),
             ];
@@ -246,6 +250,8 @@ class ModifyColumn extends Component
             $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
             $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
             $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
+        } elseif ($column['type'] === 'YMD') {
+            $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
         }
 
         $this->validate($rules);
@@ -359,6 +365,8 @@ class ModifyColumn extends Component
                 $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
                 $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
                 $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
+            } elseif ($column['type'] === 'YMD') {
+                $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
             }
         }
 

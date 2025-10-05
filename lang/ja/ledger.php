@@ -206,6 +206,10 @@ return [
             'revision' => '版記号',
             'revision_hint' => '例: A, NC (連番の後に付く文字列)',
         ],
+        'date' => [
+            'default_offset' => 'デフォルト日付オフセット',
+            'default_offset_hint' => '入力時のデフォルト日付 (例: 0d=今日, 1d=明日, -1w=1週間前, 1M=1ヶ月後, 1y=1年後)',
+        ],
         'bg_file' => '背景画像',
         'delete_file' => 'ファイルを削除',
         'delete_file_message' => '「:name」の背景画像を削除します。この操作は元に戻せません。',

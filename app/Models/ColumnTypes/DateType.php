@@ -14,6 +14,18 @@ class DateType implements InputType
         }
     }
 
+    /**
+     * Magic getter for property access (supports snake_case)
+     */
+    public function __get($name)
+    {
+        if ($name === 'default_offset') {
+            return $this->defaultOffset;
+        }
+
+        return null;
+    }
+
     public function getName(): string
     {
         return 'YMD';
@@ -26,8 +38,8 @@ class DateType implements InputType
 
     public function hasOptions(): bool
     {
-        // Based on old $useOptionsTypes, 'YMD' does not use options.
-        return false;
+        // DateType now uses options for default_offset configuration
+        return true;
     }
 
     public function shouldConvertToJson(): bool
@@ -38,7 +50,7 @@ class DateType implements InputType
 
     /**
      * デフォルト日付を計算
-     * 
+     *
      * @return string|null Y-m-d形式の日付、またはnull
      */
     public function getDefaultDate(): ?string
@@ -52,16 +64,16 @@ class DateType implements InputType
 
     /**
      * オフセット文字列から日付を計算
-     * 
+     *
      * 形式: "1d" (1日後), "2M" (2ヶ月後), "-1w" (1週間前), "0d" (今日)
-     * 
-     * @param string $offset オフセット文字列
+     *
+     * @param  string  $offset  オフセット文字列
      * @return string|null Y-m-d形式の日付
      */
     private function calculateDateFromOffset(string $offset): ?string
     {
         // オフセット形式: 数値 + 単位 (d=日, w=週, M=月, y=年)
-        if (!preg_match('/^([+-]?\d+)([dwMy])$/', $offset, $matches)) {
+        if (! preg_match('/^([+-]?\d+)([dwMy])$/', $offset, $matches)) {
             return null;
         }
 
@@ -69,8 +81,8 @@ class DateType implements InputType
         $unit = $matches[2];
 
         try {
-            $date = new \DateTime();
-            
+            $date = new \DateTime;
+
             switch ($unit) {
                 case 'd': // 日
                     $date->modify("{$amount} days");
