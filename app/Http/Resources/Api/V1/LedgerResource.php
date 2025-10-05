@@ -56,7 +56,8 @@ class LedgerResource extends JsonResource
         }
 
         $parsedContent = [];
-        if ($this->define && $this->define->relationLoaded('column_define')) {
+        // column_defineは属性なので、defineがロードされていれば利用可能
+        if ($this->define && $this->define->column_define) {
             $columns = $this->define->column_define->keyBy('id');
             if (is_array($this->content)) {
                 foreach ($this->content as $columnId => $value) {

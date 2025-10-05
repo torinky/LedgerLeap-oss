@@ -60,13 +60,19 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
+        \Log::info('[MCP Search Debug] scopeSearch called with freeWord: ' . $freeWord);
+        
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
+            \Log::info('[MCP Search Debug] scopeSearch: freeWord is empty after trim, returning original query');
             return $query;
         }
 
         $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
+        \Log::info('[MCP Search Debug] scopeSearch: extracted keywords: ' . json_encode($keywords, JSON_UNESCAPED_UNICODE));
+        
         if (empty($keywords)) {
+            \Log::info('[MCP Search Debug] scopeSearch: no keywords found, returning original query');
             return $query;
         }
 
@@ -76,12 +82,16 @@ class Ledger extends Model
         } else {
             $searchString = '+'.$keywords[0];
         }
+        \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: ' . $searchString);
 
         // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
         $query->where(function (EloquentBuilder $q) use ($searchString) {
+            \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
             $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
                 ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
         });
+        
+        \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
     }
 
     /**

@@ -227,8 +227,9 @@ MARKDOWN;
             'period' => $schema->string()
                 ->description('Period for statistics: today, yesterday, this_week, last_week, this_month, last_month, this_quarter, last_quarter, this_year, last_year, last_7_days, last_30_days, last_90_days')
                 ->default('this_week'),
-            'format' => $schema->enum(['summary', 'raw'])
+            'format' => $schema->string()
                 ->description('Response format: summary (human-readable) or raw (machine-processing)')
+                ->enum(['summary', 'raw'])
                 ->default('summary'),
         ];
     }

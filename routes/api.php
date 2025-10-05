@@ -36,8 +36,9 @@ Route::middleware('auth:sanctum')->group(function () {
         ->whereIn('style', ['solid', 'regular', 'brands'])
         ->name('api.fontawesome.icon');
 
-    // Ledger Search API
+    // Ledger Search API (GET for simple queries, POST for complex/Japanese queries)
     Route::get('/v1/search', [SearchController::class, 'search'])->name('api.v1.search');
+    Route::post('/v1/search', [SearchController::class, 'search'])->name('api.v1.search.post');
 
     // Ledger Defines API
     Route::get('/v1/ledger-defines', [LedgerDefineController::class, 'index'])->name('api.v1.ledger-defines.index');

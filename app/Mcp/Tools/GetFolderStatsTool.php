@@ -139,8 +139,9 @@ MARKDOWN;
     public function schema(\Illuminate\JsonSchema\JsonSchema $schema): array
     {
         return [
-            'format' => $schema->enum(['summary', 'raw'])
+            'format' => $schema->string()
                 ->description('Response format: summary (human-readable) or raw (machine-processing)')
+                ->enum(['summary', 'raw'])
                 ->default('summary'),
         ];
     }

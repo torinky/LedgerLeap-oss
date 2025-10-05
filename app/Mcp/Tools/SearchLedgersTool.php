@@ -19,9 +19,27 @@ class SearchLedgersTool extends Tool
      */
     protected string $description = <<<'MARKDOWN'
         Search for ledgers based on various criteria. 
-        The 'format' parameter determines the response structure.
-        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta).
-        - 'raw': Returns only the normalized data (ledgers, meta, total) for machine processing.
+        
+        **Important for Japanese/Multi-byte Keywords:**
+        - The 'q', 'tags', 'exclude_q', and 'exclude_tags' parameters support Japanese and other multi-byte characters
+        - When using these parameters, ensure they are properly passed as-is (the MCP protocol handles encoding automatically)
+        - Examples of valid Japanese keywords: "株式会社", "営業日報", "重要案件"
+        
+        **Response Format:**
+        The 'format' parameter determines the response structure:
+        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta)
+        - 'raw': Returns only the normalized data (ledgers, meta, total) for machine processing
+        
+        **Search Parameters:**
+        - 'q': Full-text search keyword (supports Japanese)
+        - 'tags': Comma-separated tag names (AND condition, supports Japanese)
+        - 'folder_id': Search within specific folder (recursive)
+        - 'ledger_define_id': Filter by ledger type
+        - 'exclude_q': Exclude results containing these keywords
+        - 'exclude_tags': Exclude results with these tags
+        - 'creator_id': Filter by creator user ID
+        - 'created_from' / 'created_to': Date range filter (YYYY-MM-DD)
+        - 'limit' / 'offset': Pagination
 MARKDOWN;
 
     protected LedgerService $ledgerService;
@@ -245,12 +263,12 @@ MARKDOWN;
     public function schema(JsonSchema $schema): array
     {
         return [
-            'q' => $schema->string('The search keyword for full-text search.'),
-            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition).'),
+            'q' => $schema->string('Full-text search keyword. Supports Japanese and multi-byte characters (e.g., "株式会社", "営業日報").'),
+            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition). Supports Japanese (e.g., "重要,新規").'),
             'folder_id' => $schema->integer('The folder ID to recursively search within.'),
             'ledger_define_id' => $schema->integer('The ledger definition ID to filter by.'),
-            'exclude_q' => $schema->string('Keywords to exclude from the results.'),
-            'exclude_tags' => $schema->string('Comma-separated tag names to exclude.'),
+            'exclude_q' => $schema->string('Keywords to exclude from the results. Supports Japanese.'),
+            'exclude_tags' => $schema->string('Comma-separated tag names to exclude. Supports Japanese.'),
             'mode' => $schema->string('The search mode.')->enum(['search', 'count'])->default('search'),
             'limit' => $schema->integer('The maximum number of items to return.'),
             'offset' => $schema->integer('The number of items to skip for pagination.'),
