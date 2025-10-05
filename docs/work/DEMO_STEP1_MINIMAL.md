@@ -681,6 +681,15 @@ Claude/ChatGPTとMCP接続して:
 - [ ] LLMとの対話が成立する
 
 ### 発見した課題と解決
+
+- ✅ テナントID未設定問題を解決（2025-10-05）
+  - 問題: DemoMinimalSeederでtenant_idがNULLになっていた
+  - 原因: テナント作成・初期化を行っていなかった
+  - 解決: Step 0でテナント作成と初期化を追加
+    - テナントID 'demo-tenant' を作成
+    - tenancy()->initialize() でテナントコンテキスト設定
+  - 効果: 全モデルにtenant_id='demo-tenant'が設定される
+  - コミット: dcb0d86 "fix(seeder): add tenant creation and initialization"
 - ✅ API応答の`content`が空 → `LedgerResource.php`を修正して解決
   - `relationLoaded('column_define')`チェックを削除
   - `column_define`は属性なのでdefinがロードされていれば利用可能
