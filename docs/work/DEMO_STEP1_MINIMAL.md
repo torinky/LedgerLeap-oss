@@ -431,6 +431,38 @@
 
 ---
 
+## 🔧 MCP認証設定
+
+### MCP_AUTH_TOKEN の設定
+
+LLMからMCPツールにアクセスするためには、認証トークンが必要です。
+
+```bash
+# 1. デモトークンを生成
+./vendor/bin/sail artisan demo:generate-mcp-token
+
+# 2. 表示されたトークンを.envに設定（自動的に設定される場合もあります）
+# MCP_AUTH_TOKEN="1|choSRerWOWp3FBHK256c1QEDrcjPbLdiHmcxaDCdcf626617"
+
+# 3. トークンを環境変数として設定（MCPサーバー起動時に使用）
+export MCP_AUTH_TOKEN="1|choSRerWOWp3FBHK256c1QEDrcjPbLdiHmcxaDCdcf626617"
+```
+
+### 認証エラー時の対応
+
+認証エラーが発生した場合、エラーメッセージに原因と解決方法が表示されます:
+
+- **トークン未設定**: `MCP_AUTH_TOKEN environment variable is not set`
+  - 解決: .envファイルにMCP_AUTH_TOKENを設定
+
+- **トークン無効**: `The provided token is invalid or has been revoked`
+  - 解決: `php artisan demo:generate-mcp-token`で新しいトークンを生成
+
+- **権限不足**: `The token does not have MCP access permissions`
+  - 解決: mcp:*権限を持つトークンを生成
+
+---
+
 ## 🔧 実装手順
 
 ### Step 1-1: 既存Seederの確認（15分）
