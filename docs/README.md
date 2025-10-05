@@ -141,6 +141,9 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 
 *   [コーディング規約](/docs/development/coding_standards.md)
 *   [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md)
+*   [テストのベストプラクティス](/docs/development/Testing-Best-Practices.md)
+*   [ユーティリティコマンド](/docs/development/utility-commands.md)
+*   [デモ環境構築ガイド](/docs/development/demo-environment-setup.md) - サンプルデータ付きデモ環境の構築
 *   [MCP アーキテクチャと動作フロー](/docs/development/MCP_Architecture_and_Flow.md) - LLM統合のための技術詳解
 *   [MCP プロンプトガイドライン](/docs/development/MCP_Prompt_Guidelines.md) - LLM対話の最適化ガイド
 
@@ -150,7 +153,16 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 
 LedgerLeap の開発環境は **Laravel Sail (Docker)** を使用して簡単に構築できます。
 セットアッププロセス全体は、単一のスクリプトで自動化されています。
-詳細なコマンドやテナント作成方法については、[ユーティリティコマンド一覧](/docs/development/utility-commands.md)を参照してください。
+
+### クイックスタート
+
+基本的な開発環境のセットアップ方法については、以下を参照してください:
+- [ユーティリティコマンド一覧](/docs/development/utility-commands.md)
+
+### デモ環境のセットアップ
+
+LLMとの対話テストや機能デモのための環境構築については、以下の詳細ガイドを参照してください:
+- **[デモ環境構築ガイド](/docs/development/demo-environment-setup.md)** - サンプルデータ付きデモ環境の構築手順
 
 ### 必須要件
 
