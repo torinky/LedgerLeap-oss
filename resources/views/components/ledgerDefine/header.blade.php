@@ -39,7 +39,18 @@
     </div>
 </div>
 <div class="prose text-xs leading-relaxed w-full max-w-none px-4">
-    {!! app(App\Services\AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), null, $ledgerDefine) !!}
+    @php
+        $descriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), 
+            null, 
+            $ledgerDefine
+        );
+    @endphp
+    
+    <x-expandable-content 
+        :content="$descriptionHtml"
+        max-height="4.5rem"
+    />
 </div>
 
 <div class="grid justify-items-end mx-4">

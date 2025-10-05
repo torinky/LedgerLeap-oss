@@ -59,6 +59,7 @@ class ModifyColumn extends CreateColumn
             }
             $this->initColumns(); // カラム初期化 (必須マーク色など)
             $this->initRequireColumns();
+            $this->initializeDateDefaults(); // 日付カラムのデフォルト値初期化
             $this->updateProgress();
             //            $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
 
@@ -481,5 +482,31 @@ class ModifyColumn extends CreateColumn
 
         // 3. ラベルの色を更新
         $this->updateContentStatusLabel($column, true); // trueで強制更新
+    }
+
+    /**
+     * 日付カラムのデフォルト値を初期化する
+     */
+    protected function initializeDateDefaults(): void
+    {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type !== 'YMD') {
+                continue;
+            }
+
+            $columnId = $column->id;
+            $existingValue = $this->content[$columnId] ?? null;
+            $inputType = $column->getInputType();
+
+            // DateTypeのgetDefaultDateメソッドを使用
+            if (method_exists($inputType, 'getDefaultDate')) {
+                $defaultDate = $inputType->getDefaultDate($existingValue);
+
+                // デフォルト値が計算され、既存値がない場合のみ設定
+                if ($defaultDate !== null && empty($existingValue)) {
+                    $this->content[$columnId] = $defaultDate;
+                }
+            }
+        }
     }
 }

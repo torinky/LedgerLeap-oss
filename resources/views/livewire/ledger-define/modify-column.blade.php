@@ -169,6 +169,10 @@
                                                                       wire:key="default-offset-{{$column['id']}}"
                                                                       placeholder="0d"
                                                                       hint="{{__('ledger.column.date.default_offset_hint')}}"/>
+                                                        <x-mary-checkbox label="{{__('ledger.column.date.overwrite_existing')}}"
+                                                                         wire:model.live="columns.{{$index}}.options.overwrite_existing"
+                                                                         wire:key="overwrite-existing-{{$column['id']}}"
+                                                                         hint="{{__('ledger.column.date.overwrite_existing_hint')}}"/>
                                                     @elseif($column['type'] === 'number')
                                                         <div class="grid grid-cols-2 gap-4">
                                                             {{--                                                        @dd($columns[$index])--}}

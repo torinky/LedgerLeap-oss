@@ -113,6 +113,7 @@ class CreateColumn extends Component
         $this->initColumns(); // メソッド名を変更
         $this->initBackgroundImages();
         $this->initRequireColumns();
+        $this->initializeDateDefaults(); // 日付カラムのデフォルト値初期化
         $this->updateProgress(); // 初期進捗を計算
         $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
         $this->initializeGroups();
@@ -910,6 +911,32 @@ class CreateColumn extends Component
             $this->updateContentStatusLabel($column, true);
             // プログレスバーも更新します
             $this->updateProgress();
+        }
+    }
+
+    /**
+     * 日付カラムのデフォルト値を初期化する
+     */
+    protected function initializeDateDefaults(): void
+    {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type !== 'YMD') {
+                continue;
+            }
+
+            $columnId = $column->id;
+            $existingValue = $this->content[$columnId] ?? null;
+            $inputType = $column->getInputType();
+
+            // DateTypeのgetDefaultDateメソッドを使用
+            if (method_exists($inputType, 'getDefaultDate')) {
+                $defaultDate = $inputType->getDefaultDate($existingValue);
+
+                // デフォルト値が計算され、既存値がない場合のみ設定
+                if ($defaultDate !== null && empty($existingValue)) {
+                    $this->content[$columnId] = $defaultDate;
+                }
+            }
         }
     }
 }

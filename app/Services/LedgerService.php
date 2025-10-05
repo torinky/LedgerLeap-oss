@@ -43,15 +43,15 @@ class LedgerService
     public function searchLedgersForApi(\App\Models\User $user, array $params)
     {
         \Log::info('[MCP Search Debug] === Start searchLedgersForApi ===');
-        \Log::info('[MCP Search Debug] User ID: ' . $user->id);
-        \Log::info('[MCP Search Debug] Input params: ' . json_encode($params, JSON_UNESCAPED_UNICODE));
+        \Log::info('[MCP Search Debug] User ID: '.$user->id);
+        \Log::info('[MCP Search Debug] Input params: '.json_encode($params, JSON_UNESCAPED_UNICODE));
 
         // ユーザーが読み取り可能なフォルダIDのリストを取得
         $startTime = microtime(true);
         $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
         $folderIdsTime = microtime(true) - $startTime;
-        \Log::info('[MCP Search Debug] Readable folder IDs: ' . json_encode($readableFolderIds));
-        \Log::info('[MCP Search Debug] Time to get folder IDs: ' . round($folderIdsTime * 1000, 2) . 'ms');
+        \Log::info('[MCP Search Debug] Readable folder IDs: '.json_encode($readableFolderIds));
+        \Log::info('[MCP Search Debug] Time to get folder IDs: '.round($folderIdsTime * 1000, 2).'ms');
 
         // QueryBuilderが期待する形式にパラメータを変換
         $queryParams = [];
@@ -82,7 +82,7 @@ class LedgerService
             $queryParams['filter']['created_between'] = $params['created_from'].','.$params['created_to'];
         }
 
-        \Log::info('[MCP Search Debug] Transformed query params: ' . json_encode($queryParams, JSON_UNESCAPED_UNICODE));
+        \Log::info('[MCP Search Debug] Transformed query params: '.json_encode($queryParams, JSON_UNESCAPED_UNICODE));
 
         // 一時的にリクエストを作成してQueryBuilderが使用できるように
         $request = new Request($queryParams);
@@ -102,7 +102,7 @@ class LedgerService
                 AllowedFilter::scope('created_between'),
                 AllowedFilter::scope('updated_between'),
                 AllowedFilter::callback('with_tags', function ($query, $value) {
-                    \Log::info('[MCP Search Debug] Applying with_tags filter: ' . json_encode($value));
+                    \Log::info('[MCP Search Debug] Applying with_tags filter: '.json_encode($value));
                     // カンマ区切り文字列または配列を処理
                     $tagNames = is_string($value) ? array_filter(explode(',', $value)) : $value;
                     if (! empty($tagNames)) {
@@ -116,14 +116,14 @@ class LedgerService
 
                 // カスタムコールバックフィルタ
                 AllowedFilter::callback('q', function ($query, $value) {
-                    \Log::info('[MCP Search Debug] Applying full-text search filter with keyword: ' . $value);
+                    \Log::info('[MCP Search Debug] Applying full-text search filter with keyword: '.$value);
                     $searchStartTime = microtime(true);
                     $query->search($value);
                     $searchTime = microtime(true) - $searchStartTime;
-                    \Log::info('[MCP Search Debug] Search scope applied in: ' . round($searchTime * 1000, 2) . 'ms');
+                    \Log::info('[MCP Search Debug] Search scope applied in: '.round($searchTime * 1000, 2).'ms');
                 }),
                 AllowedFilter::callback('exclude_q', function ($query, $value) {
-                    \Log::info('[MCP Search Debug] Applying exclude_q filter: ' . $value);
+                    \Log::info('[MCP Search Debug] Applying exclude_q filter: '.$value);
                     // 除外キーワードを含まない結果のみを返すように修正
                     $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($value) {
                         $q->whereRaw('not match(`content`) against (? IN BOOLEAN MODE)', [$value])
@@ -138,7 +138,7 @@ class LedgerService
             });
 
         $buildTime = microtime(true) - $buildStartTime;
-        \Log::info('[MCP Search Debug] QueryBuilder built in: ' . round($buildTime * 1000, 2) . 'ms');
+        \Log::info('[MCP Search Debug] QueryBuilder built in: '.round($buildTime * 1000, 2).'ms');
 
         // パフォーマンス最適化: countクエリを分離
         \Log::info('[MCP Search Debug] Executing count query...');
@@ -146,19 +146,19 @@ class LedgerService
         $countQuery = clone $query;
         $total = $countQuery->count();
         $countTime = microtime(true) - $countStartTime;
-        \Log::info('[MCP Search Debug] Count query result: ' . $total . ' (took ' . round($countTime * 1000, 2) . 'ms)');
+        \Log::info('[MCP Search Debug] Count query result: '.$total.' (took '.round($countTime * 1000, 2).'ms)');
 
         // ページネーション
         $limit = $params['limit'] ?? 10;
         $offset = $params['offset'] ?? 0;
-        \Log::info('[MCP Search Debug] Applying pagination: limit=' . $limit . ', offset=' . $offset);
+        \Log::info('[MCP Search Debug] Applying pagination: limit='.$limit.', offset='.$offset);
 
         // 結果取得
         \Log::info('[MCP Search Debug] Executing main query...');
         $mainQueryStartTime = microtime(true);
         $ledgers = $query->offset($offset)->limit($limit)->get();
         $mainQueryTime = microtime(true) - $mainQueryStartTime;
-        \Log::info('[MCP Search Debug] Main query result: ' . $ledgers->count() . ' items (took ' . round($mainQueryTime * 1000, 2) . 'ms)');
+        \Log::info('[MCP Search Debug] Main query result: '.$ledgers->count().' items (took '.round($mainQueryTime * 1000, 2).'ms)');
 
         // Eager Loading を追加（N+1問題回避）
         \Log::info('[MCP Search Debug] Loading relationships...');
@@ -172,7 +172,7 @@ class LedgerService
             'modifier:id,name',
         ]);
         $eagerLoadTime = microtime(true) - $eagerLoadStartTime;
-        \Log::info('[MCP Search Debug] Relationships loaded in: ' . round($eagerLoadTime * 1000, 2) . 'ms');
+        \Log::info('[MCP Search Debug] Relationships loaded in: '.round($eagerLoadTime * 1000, 2).'ms');
 
         // メタデータを構築
         \Log::info('[MCP Search Debug] Building metadata...');
@@ -210,7 +210,7 @@ class LedgerService
             'users' => $users,
         ];
         $metaTime = microtime(true) - $metaStartTime;
-        \Log::info('[MCP Search Debug] Metadata built in: ' . round($metaTime * 1000, 2) . 'ms');
+        \Log::info('[MCP Search Debug] Metadata built in: '.round($metaTime * 1000, 2).'ms');
 
         \Log::info('[MCP Search Debug] === End searchLedgersForApi (Success) ===');
 

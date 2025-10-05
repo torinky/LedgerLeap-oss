@@ -6,11 +6,18 @@ class DateType implements InputType
 {
     private ?string $defaultOffset = null;
 
+    private bool $overwriteExisting = false;
+
     public function __construct($options = [])
     {
-        // optionsがarrayの場合、default_offsetを取得
-        if (is_array($options) && isset($options['default_offset'])) {
-            $this->defaultOffset = $options['default_offset'];
+        // optionsがarrayの場合、default_offset と overwrite_existing を取得
+        if (is_array($options)) {
+            if (isset($options['default_offset'])) {
+                $this->defaultOffset = $options['default_offset'];
+            }
+            if (isset($options['overwrite_existing'])) {
+                $this->overwriteExisting = (bool) $options['overwrite_existing'];
+            }
         }
     }
 
@@ -21,6 +28,9 @@ class DateType implements InputType
     {
         if ($name === 'default_offset') {
             return $this->defaultOffset;
+        }
+        if ($name === 'overwrite_existing') {
+            return $this->overwriteExisting;
         }
 
         return null;
@@ -51,12 +61,19 @@ class DateType implements InputType
     /**
      * デフォルト日付を計算
      *
+     * @param  mixed  $existingValue  既存の値（再編集の場合）
      * @return string|null Y-m-d形式の日付、またはnull
      */
-    public function getDefaultDate(): ?string
+    public function getDefaultDate($existingValue = null): ?string
     {
+        // オフセットが空欄の場合はnullを返す
         if (empty($this->defaultOffset)) {
             return null;
+        }
+
+        // 既存値があり、上書き設定がfalseの場合は既存値を優先
+        if (! empty($existingValue) && ! $this->overwriteExisting) {
+            return null; // 既存値を変更しない
         }
 
         return $this->calculateDateFromOffset($this->defaultOffset);

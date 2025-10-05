@@ -13,28 +13,38 @@
         $mark='<i class="fas fa-check-circle text-accent"></i>';
     }
 
-    // Get default date from DateType if available and field is empty
-    $defaultDate = '';
-    if (empty($this->content[$columnDefine->id] ?? null)) {
-        $inputType = $columnDefine->getInputType();
-        if (method_exists($inputType, 'getDefaultDate')) {
-            $defaultDate = $inputType->getDefaultDate();
-        }
-    }
+    // 最終的な値: Livewireの$this->contentから取得
+    $finalValue = $this->content[$columnDefine->id] ?? '';
 @endphp
 
     @if($isDemo)
-    <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
+    <div x-data="{ 
+        dateValue: '{{ $finalValue }}',
+        initFlatpickr() {
+            const fp = flatpickr(this.$refs.datepicker, { 
+                locale: 'ja', 
+                showMonths: 3, 
+                wrap: true,
+                defaultDate: this.dateValue || null,
+                onChange: (selectedDates, dateStr) => {
+                    this.dateValue = dateStr;
+                }
+            });
+            // 初期値をフィールドに設定
+            if (this.dateValue) {
+                fp.setDate(this.dateValue, true);
+            }
+        }
+    }" x-init="initFlatpickr()" x-ref="datepicker" class="datepicker">
         <x-mary-input
             label="{{$columnDefine->name}}"
             id="content[{{$columnDefine->id}}]"
             name="content[{{$columnDefine->id}}]"
-            value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
+            x-model="dateValue"
             icon="{{$icon}}"
             class="{{$class}}"
             required="{{$columnDefine->required}}"
             hint="{{$columnDefine->hint}}"
-            {{--        clearable--}}
             data-input
             x-on:focus="
         const opacityBlock = event.target.closest('.opacity-control-block');
@@ -59,18 +69,30 @@
     </div>
 @else
     @if($columnDefine->required)
-        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
+        <div x-data="{ 
+            dateValue: @entangle('content.' . $columnDefine->id),
+            initFlatpickr() {
+                flatpickr(this.$refs.datepicker, { 
+                    locale: 'ja', 
+                    showMonths: 3, 
+                    wrap: true,
+                    defaultDate: this.dateValue || null,
+                    onChange: (selectedDates, dateStr) => {
+                        this.dateValue = dateStr;
+                    }
+                });
+            }
+        }" x-init="initFlatpickr()" x-ref="datepicker" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"
                 id="content[{{$columnDefine->id}}]"
                 name="content[{{$columnDefine->id}}]"
-                value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
+                x-model="dateValue"
                 icon="{{$icon}}"
                 class="{{$class}}"
                 required="{{$columnDefine->required}}"
                 hint="{{$columnDefine->hint}}"
-                {{--        clearable--}}
                 data-input
                 x-on:focus="
             const opacityBlock = event.target.closest('.opacity-control-block');
@@ -95,18 +117,29 @@
             </x-mary-input>
         </div>
     @else
-        <div x-init="flatpickr($el, { locale: 'ja', showMonths: 3, wrap: true, defaultDate: '{{ $defaultDate }}' })" class="datepicker">
+        <div x-data="{ 
+            dateValue: @entangle('content.' . $columnDefine->id),
+            initFlatpickr() {
+                flatpickr(this.$refs.datepicker, { 
+                    locale: 'ja', 
+                    showMonths: 3, 
+                    wrap: true,
+                    defaultDate: this.dateValue || null,
+                    onChange: (selectedDates, dateStr) => {
+                        this.dateValue = dateStr;
+                    }
+                });
+            }
+        }" x-init="initFlatpickr()" x-ref="datepicker" class="datepicker">
             <x-mary-input
                 wire:model.live="content.{{$columnDefine->id}}"
                 label="{{$columnDefine->name}}"
                 id="content[{{$columnDefine->id}}]"
                 name="content[{{$columnDefine->id}}]"
-                value="{{$this->content[$columnDefine->id] ?? $defaultDate}}"
+                x-model="dateValue"
                 icon="{{$icon}}"
                 class="{{$class}}"
-                {{--                required="{{$columnDefine->required}}"--}}
                 hint="{{$columnDefine->hint}}"
-                {{--        clearable--}}
                 data-input
                 x-on:focus="
         const opacityBlock = event.target.closest('.opacity-control-block');

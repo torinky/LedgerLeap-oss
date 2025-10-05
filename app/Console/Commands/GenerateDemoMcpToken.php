@@ -27,9 +27,10 @@ class GenerateDemoMcpToken extends Command
     {
         $demoUser = \App\Models\User::where('email', 'demo@example.com')->first();
 
-        if (!$demoUser) {
+        if (! $demoUser) {
             $this->error('Demo user (demo@example.com) not found!');
             $this->info('Please run: php artisan db:seed --class=DemoMinimalSeeder');
+
             return 1;
         }
 
@@ -45,11 +46,11 @@ class GenerateDemoMcpToken extends Command
         $this->info('');
         $this->info('✅ MCP Token generated successfully!');
         $this->info('');
-        $this->info('User: ' . $demoUser->name . ' (' . $demoUser->email . ')');
-        $this->info('Token: ' . $token->plainTextToken);
+        $this->info('User: '.$demoUser->name.' ('.$demoUser->email.')');
+        $this->info('Token: '.$token->plainTextToken);
         $this->info('');
         $this->info('Add this to your .env file:');
-        $this->line('MCP_AUTH_TOKEN=' . $token->plainTextToken);
+        $this->line('MCP_AUTH_TOKEN='.$token->plainTextToken);
         $this->info('');
 
         return 0;

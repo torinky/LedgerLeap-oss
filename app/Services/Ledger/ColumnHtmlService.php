@@ -113,7 +113,10 @@ class ColumnHtmlService
             $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
 
             // 2. 自動リンクを適用
-            $html = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+            $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+
+            // 3. 展開可能なコンテンツ用のマーカーを追加
+            $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';

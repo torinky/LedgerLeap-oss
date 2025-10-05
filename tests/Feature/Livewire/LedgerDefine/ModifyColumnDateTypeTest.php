@@ -236,4 +236,55 @@ class ModifyColumnDateTypeTest extends TestCase
         $this->assertEquals('Updated Date Field', $column->name);
         $this->assertEquals('3d', $column->options['default_offset'] ?? null);
     }
+
+    public function test_can_save_date_column_with_overwrite_existing_option(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new \App\Models\ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Date Field',
+                    'type' => 'YMD',
+                    'order' => 1,
+                    'options' => [
+                        'default_offset' => '1d',
+                        'overwrite_existing' => true,
+                    ],
+                ]),
+            ],
+        ]);
+
+        $ledgerDefine->refresh();
+        $column = $ledgerDefine->column_define[0];
+        $this->assertEquals('1d', $column->options['default_offset'] ?? null);
+        $this->assertTrue($column->options['overwrite_existing'] ?? false);
+
+        // Verify DateType can read it
+        $inputType = $column->getInputType();
+        $this->assertTrue($inputType->overwrite_existing);
+    }
+
+    public function test_date_column_overwrite_existing_defaults_to_false(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new \App\Models\ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Date Field',
+                    'type' => 'YMD',
+                    'order' => 1,
+                    'options' => ['default_offset' => '1d'],
+                ]),
+            ],
+        ]);
+
+        $ledgerDefine->refresh();
+        $column = $ledgerDefine->column_define[0];
+        $inputType = $column->getInputType();
+
+        // デフォルトはfalse
+        $this->assertFalse($inputType->overwrite_existing);
+    }
 }

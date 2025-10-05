@@ -81,7 +81,7 @@ class ColumnDefineTest extends TestCase
             1, // display_level
             '基本情報' // group
         );
-        
+
         $this->assertEquals(3, $column->id);
         $this->assertEquals('column3', $column->name);
         $this->assertEquals(1, $column->display_level);
@@ -433,11 +433,11 @@ class ColumnDefineTest extends TestCase
     {
         // default_offsetをoptionsで指定
         $column = new ColumnDefine(1, 'test_ymd', 'YMD', 1, ['default_offset' => '0d']);
-        
+
         // DateTypeインスタンスにdefault_offsetが渡されることを確認
         $dateType = $column->getInputType();
         $this->assertInstanceOf(\App\Models\ColumnTypes\DateType::class, $dateType);
-        
+
         // デフォルト日付が取得できることを確認
         $defaultDate = $dateType->getDefaultDate();
         $this->assertNotNull($defaultDate);

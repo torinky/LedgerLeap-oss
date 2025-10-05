@@ -117,4 +117,58 @@ class DateTypeTest extends TestCase
 
         $this->assertNull($dateType->getDefaultDate());
     }
+
+    #[Test]
+    public function test_date_type_respects_existing_value_without_overwrite()
+    {
+        $dateType = new DateType([
+            'default_offset' => '1d',
+            'overwrite_existing' => false,
+        ]);
+
+        // 既存値がある場合、デフォルト日付は返さない
+        $existingValue = '2025-01-01';
+        $this->assertNull($dateType->getDefaultDate($existingValue));
+    }
+
+    #[Test]
+    public function test_date_type_overwrites_existing_value_when_enabled()
+    {
+        $dateType = new DateType([
+            'default_offset' => '0d',
+            'overwrite_existing' => true,
+        ]);
+
+        // 既存値があってもデフォルト日付を返す
+        $existingValue = '2025-01-01';
+        $expectedDate = date('Y-m-d');
+        $this->assertEquals($expectedDate, $dateType->getDefaultDate($existingValue));
+    }
+
+    #[Test]
+    public function test_date_type_returns_default_when_no_existing_value()
+    {
+        $dateType = new DateType([
+            'default_offset' => '2d',
+            'overwrite_existing' => false,
+        ]);
+
+        // 既存値がない場合、デフォルト日付を返す
+        $expectedDate = date('Y-m-d', strtotime('+2 days'));
+        $this->assertEquals($expectedDate, $dateType->getDefaultDate(null));
+        $this->assertEquals($expectedDate, $dateType->getDefaultDate(''));
+    }
+
+    #[Test]
+    public function test_date_type_with_empty_offset_returns_null_regardless_of_existing_value()
+    {
+        $dateType = new DateType([
+            'default_offset' => '',
+            'overwrite_existing' => true,
+        ]);
+
+        // オフセットが空欄の場合は常にnull
+        $this->assertNull($dateType->getDefaultDate());
+        $this->assertNull($dateType->getDefaultDate('2025-01-01'));
+    }
 }

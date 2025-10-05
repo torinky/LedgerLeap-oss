@@ -109,7 +109,7 @@ it('renders textarea with markdown and applies auto links', function () {
     $markdownInput = '**Hello** `World`! See ticket #123.';
     $htmlFromMarkdown = '<p><strong>Hello</strong> <code>World</code>! See ticket #123.</p>';
     $linkedHtml = '<p><strong>Hello</strong> <code>World</code>! See ticket <a href="/tickets/123">#123</a>.</p>';
-    $finalHtml = '<div class="prose max-w-none">'.$linkedHtml.'</div>';
+    $finalHtml = '<div class="prose max-w-none"><div class="expandable-textarea-content">'.$linkedHtml.'</div></div>';
 
     // 2. Mocks
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
@@ -179,4 +179,45 @@ it('renders auto_number with link', function () {
 
     // 4. Assertion
     expect($result->toHtml())->toBe($expectedLink);
+});
+
+it('renders textarea with expandable content component', function () {
+    // 1. Setup
+    $columnDefine = new ColumnDefine(
+        1,
+        'test_textarea',
+        'textarea',
+        1,
+        [],
+        false,
+        false,
+        false
+    );
+
+    $markdownInput = 'This is a long text that should be wrapped in an expandable component.';
+    $htmlFromMarkdown = '<p>This is a long text that should be wrapped in an expandable component.</p>';
+    $linkedHtml = '<p>This is a long text that should be wrapped in an expandable component.</p>';
+
+    // 2. Mocks
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->with($markdownInput)
+        ->andReturn($htmlFromMarkdown);
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->with($htmlFromMarkdown, $columnDefine, null)
+        ->andReturn($linkedHtml);
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
+
+    // 3. Execution
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $result = $columnHtml->show($columnDefine, $markdownInput, true, [], '', false, null);
+
+    // 4. Assertion - expandable-textarea-contentマーカーが含まれていることを確認
+    expect($result->toHtml())
+        ->toContain('expandable-textarea-content')
+        ->toContain($linkedHtml);
 });

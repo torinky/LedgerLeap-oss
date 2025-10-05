@@ -15,7 +15,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * Demo Minimal Seeder
- * 
+ *
  * LLMとの対話デモ用の最小限のデータセット
  * - ユーザー: 2名
  * - フォルダ: 3個（ルート、デモ用フォルダ、日報）
@@ -26,14 +26,23 @@ use Illuminate\Database\Seeder;
 class DemoMinimalSeeder extends Seeder
 {
     private $tenant;
+
     private User $demoUser;
+
     private User $adminUser;
+
     private Role $demoRole;
+
     private Role $adminRole;
+
     private Folder $rootFolder;
+
     private Folder $demoFolder;
+
     private Folder $dailyFolder;
+
     private LedgerDefine $salesDailyDefine;
+
     private array $tags = [];
 
     public function run(): void
@@ -68,7 +77,7 @@ class DemoMinimalSeeder extends Seeder
         $this->command->info('   Admin User: admin@example.com / demo1234');
         $this->command->info('');
         $this->command->info('🏢 Tenant Info:');
-        $this->command->info('   Tenant ID: ' . $this->tenant->id);
+        $this->command->info('   Tenant ID: '.$this->tenant->id);
         $this->command->info('');
     }
 
@@ -80,12 +89,12 @@ class DemoMinimalSeeder extends Seeder
             ['name' => 'Demo Tenant']
         );
 
-        $this->command->info('   ✓ Tenant created or found: ' . $this->tenant->id);
+        $this->command->info('   ✓ Tenant created or found: '.$this->tenant->id);
 
         // テナントを初期化（これ以降のモデル操作はこのテナントコンテキストで実行される）
         tenancy()->initialize($this->tenant);
 
-        $this->command->info('   ✓ Tenant initialized: ' . $this->tenant->id);
+        $this->command->info('   ✓ Tenant initialized: '.$this->tenant->id);
 
         // テナントデータベースをマイグレーション（まだマイグレーションされていない場合）
         $connection = \DB::connection('mysql');
@@ -206,24 +215,24 @@ class DemoMinimalSeeder extends Seeder
         $columns = [
             // 基本情報グループ - 常に表示（display_level: 1）
             new ColumnDefine(
-                0, '日付', 'YMD', 0, 
+                0, '日付', 'YMD', 0,
                 ['default_offset' => '0d'], // 今日をデフォルト
-                true, false, false, '訪問日', [], 
+                true, false, false, '訪問日', [],
                 1, // display_level: 1 (常に表示)
                 '基本情報' // group
             ),
             new ColumnDefine(
-                1, '顧客名', 'text', 1, [], 
-                true, false, false, '', [], 
+                1, '顧客名', 'text', 1, [],
+                true, false, false, '', [],
                 1, '基本情報'
             ),
             new ColumnDefine(
-                2, '訪問目的', 'text', 2, [], 
-                false, false, false, '', [], 
+                2, '訪問目的', 'text', 2, [],
+                false, false, false, '', [],
                 2, // display_level: 2 (概要表示)
                 '基本情報'
             ),
-            
+
             // 商談情報グループ
             new ColumnDefine(
                 3, '商談ステータス', 'select', 3, [
@@ -235,37 +244,37 @@ class DemoMinimalSeeder extends Seeder
                     '契約済み',
                     '見送り',
                     '再提案予定',
-                ], 
-                true, false, false, '', [], 
+                ],
+                true, false, false, '', [],
                 1, // 常に表示
                 '商談情報'
             ),
-            
+
             new ColumnDefine(
                 4, '優先度', 'select', 4, [
-                    '高', '中', '低'
-                ], 
-                true, false, false, '', [], 
+                    '高', '中', '低',
+                ],
+                true, false, false, '', [],
                 1, // 常に表示
                 '商談情報'
             ),
-            
+
             // 詳細情報グループ
             new ColumnDefine(
-                5, '商談内容', 'textarea', 5, [], 
-                true, false, false, '', [], 
+                5, '商談内容', 'textarea', 5, [],
+                true, false, false, '', [],
                 2, // 概要表示
                 '詳細情報'
             ),
             new ColumnDefine(
-                6, '成果・所感', 'textarea', 6, [], 
-                false, false, false, '', [], 
+                6, '成果・所感', 'textarea', 6, [],
+                false, false, false, '', [],
                 3, // 詳細表示
                 '詳細情報'
             ),
             new ColumnDefine(
-                7, '次回アクション', 'textarea', 7, [], 
-                false, false, false, '', [], 
+                7, '次回アクション', 'textarea', 7, [],
+                false, false, false, '', [],
                 2, // 概要表示
                 '詳細情報'
             ),
@@ -386,7 +395,7 @@ MARKDOWN;
             '新製品展開',
             '顧客管理',
         ];
-        
+
         foreach ($definesTags as $name) {
             $this->tags[$name] = Tag::firstOrCreate(
                 [
@@ -401,7 +410,7 @@ MARKDOWN;
             );
         }
 
-        $this->command->info("   ✓ Tags attached to ledger define: " . implode(', ', $definesTags));
+        $this->command->info('   ✓ Tags attached to ledger define: '.implode(', ', $definesTags));
     }
 
     private function createDemoLedgers(): void
@@ -633,8 +642,8 @@ MARKDOWN,
                     3 => '契約済み',
                     4 => '中',
                     5 => "既存顧客である株式会社Bシステムズへの定期訪問を実施しました。担当の佐藤様から、現在使用中の当社システムについて概ね満足しているとのフィードバックをいただきました。\n\n一方で、以下の要望もいただきました:\n- スマートフォンアプリの操作性向上\n- CSVエクスポート機能の拡充\n- より詳細な利用統計レポート\n\n特にスマートフォンアプリについては、現場作業員の方々がタブレットで日報を入力する際に、若干使いづらさを感じているとのことでした。",
-                    6 => "長期的な信頼関係が構築できていることを実感しました。要望事項については、開発チームと相談の上、次回バージョンアップで対応できる見込みです。",
-                    7 => "開発チームに要望を伝え、対応可否と時期を確認します。来月の定期訪問時に回答します。",
+                    6 => '長期的な信頼関係が構築できていることを実感しました。要望事項については、開発チームと相談の上、次回バージョンアップで対応できる見込みです。',
+                    7 => '開発チームに要望を伝え、対応可否と時期を確認します。来月の定期訪問時に回答します。',
                 ],
                 'created_at' => now()->subDays(6),
             ],
@@ -648,8 +657,8 @@ MARKDOWN,
                     3 => '契約直前',
                     4 => '高',
                     5 => "C製造株式会社の導入検討が最終段階に入りました。本日は経理部長の伊藤様も同席され、価格についての詳細な協議を行いました。\n\n先方からの要望:\n- 初期費用の分割払い対応\n- ユーザー数に応じた段階的な料金設定\n- 3年契約での割引適用\n\n当社としては、3年契約を条件に15%の割引を提示しました。また、初期費用については6ヶ月の分割払いに対応できることをお伝えしました。\n\n伊藤部長からは「予算内に収まる見込みが立った」とのコメントをいただき、次回の役員会で最終承認を得る方向で進めていただけることになりました。",
-                    6 => "価格交渉は難航するかと思いましたが、柔軟な支払い条件を提示できたことで、スムーズに合意に至りました。役員会の承認が得られれば、今月中の契約締結も可能です。",
-                    7 => "正式な見積書と契約書ドラフトを作成し、来週初めに提出します。",
+                    6 => '価格交渉は難航するかと思いましたが、柔軟な支払い条件を提示できたことで、スムーズに合意に至りました。役員会の承認が得られれば、今月中の契約締結も可能です。',
+                    7 => '正式な見積書と契約書ドラフトを作成し、来週初めに提出します。',
                 ],
                 'created_at' => now()->subDays(4),
             ],
@@ -663,8 +672,8 @@ MARKDOWN,
                     3 => '契約済み',
                     4 => '高',
                     5 => "昨日、D社の担当者から緊急の連絡があり、システムの動作が遅くなっているとのことで訪問しました。\n\n原因を調査したところ、データ量の急激な増加によりデータベースのインデックスが最適化されていない状態でした。現場でインデックスの再構築を実施したところ、パフォーマンスが大幅に改善されました。\n\nまた、今後同様の問題が発生しないよう、定期的なメンテナンスについて提案を行いました:\n- 月次でのインデックス最適化\n- データアーカイブの実施（2年以前のデータ）\n- パフォーマンス監視の導入\n\n担当の加藤様からは、迅速な対応に感謝していただけました。",
-                    6 => "トラブルは発生しましたが、迅速に対応できたことで信頼関係を維持できました。予防的なメンテナンス提案も好意的に受け止めていただき、追加契約の可能性も出てきました。",
-                    7 => "メンテナンスサービスの提案書を作成し、来週提出します。",
+                    6 => 'トラブルは発生しましたが、迅速に対応できたことで信頼関係を維持できました。予防的なメンテナンス提案も好意的に受け止めていただき、追加契約の可能性も出てきました。',
+                    7 => 'メンテナンスサービスの提案書を作成し、来週提出します。',
                 ],
                 'created_at' => now()->subDays(1),
             ],
@@ -678,8 +687,8 @@ MARKDOWN,
                     3 => '見送り',
                     4 => '中',
                     5 => "3ヶ月にわたり提案を続けてきた株式会社E物産ですが、本日、導入を見送る旨の連絡をいただきました。\n\n見送りの理由:\n1. 予算の都合（今期の設備投資予算が削減された）\n2. 既存システムの延命対応を優先\n3. 社内の業務プロセス見直しが先決\n\n担当の木村様からは、来期以降に改めて検討したいとのお話をいただきました。また、当社の提案内容自体は高く評価していただけているとのことです。",
-                    6 => "残念な結果ではありますが、完全に見送りというわけではなく、時期の問題であることが確認できました。来期の予算編成時期（12月頃）に再度アプローチする価値はあります。",
-                    7 => "半年後（2026年3月）に状況確認の連絡を入れます。それまで定期的な情報提供（メールマガジン等）で関係を維持します。",
+                    6 => '残念な結果ではありますが、完全に見送りというわけではなく、時期の問題であることが確認できました。来期の予算編成時期（12月頃）に再度アプローチする価値はあります。',
+                    7 => '半年後（2026年3月）に状況確認の連絡を入れます。それまで定期的な情報提供（メールマガジン等）で関係を維持します。',
                 ],
                 'created_at' => now()->subDays(9),
             ],
@@ -693,8 +702,8 @@ MARKDOWN,
                     3 => '初回訪問',
                     4 => '高',
                     5 => "新規案件として、株式会社Fソリューションズへの初回訪問を実施しました。\n\nF社は従業員300名規模のIT企業で、現在は紙とExcelで各種報告書を管理しているとのことです。情報システム部長の林様から、以下の課題をお聞きしました:\n\n主要課題:\n1. 情報が分散しており、過去の記録を探すのに時間がかかる\n2. 承認プロセスが煩雑で、承認待ちの書類が滞留する\n3. テレワーク環境で紙の書類を扱うのが困難\n4. 法令対応（電子帳簿保存法など）への不安\n\n林様は、LedgerLeapのワークフロー機能と全文検索機能に強い関心を示されました。特に、OCR機能による紙資料のデジタル化と検索については「まさに求めていた機能」とおっしゃっていました。",
-                    6 => "非常に前向きな反応をいただけました。課題が明確で、当社のソリューションがフィットする可能性が高いです。競合他社の提案も受けているとのことですが、機能面で優位性があると感じています。",
-                    7 => "来週、デモ環境をご用意して、実際の操作感を確認していただきます。特にワークフロー機能とOCR検索を中心にデモを実施する予定です。",
+                    6 => '非常に前向きな反応をいただけました。課題が明確で、当社のソリューションがフィットする可能性が高いです。競合他社の提案も受けているとのことですが、機能面で優位性があると感じています。',
+                    7 => '来週、デモ環境をご用意して、実際の操作感を確認していただきます。特にワークフロー機能とOCR検索を中心にデモを実施する予定です。',
                 ],
                 'created_at' => now(),
             ],

@@ -46,6 +46,7 @@ class SearchController extends Controller
      *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=422, description="Validation Error")
      * )
+     *
      * @OA\Post(
      *     path="/api/v1/search",
      *     summary="Search ledgers (POST)",
@@ -55,8 +56,10 @@ class SearchController extends Controller
      *
      *     @OA\RequestBody(
      *         required=false,
+     *
      *         @OA\JsonContent(
      *             type="object",
+     *
      *             @OA\Property(property="q", type="string", description="Full-text search keyword. Supports Japanese without URL encoding (e.g., '株式会社')."),
      *             @OA\Property(property="tags", type="string", description="Comma-separated tag names to filter by (AND condition)."),
      *             @OA\Property(property="folder_id", type="integer", description="Search recursively within the specified folder ID."),
@@ -93,28 +96,28 @@ class SearchController extends Controller
     {
         if (config('app.debug')) {
             \Log::info('[MCP Search Debug] === SearchController::search called ===');
-            \Log::info('[MCP Search Debug] Request URL: ' . $request->fullUrl());
-            \Log::info('[MCP Search Debug] Request method: ' . $request->method());
-            \Log::info('[MCP Search Debug] Request Headers: ' . json_encode($request->headers->all()));
+            \Log::info('[MCP Search Debug] Request URL: '.$request->fullUrl());
+            \Log::info('[MCP Search Debug] Request method: '.$request->method());
+            \Log::info('[MCP Search Debug] Request Headers: '.json_encode($request->headers->all()));
         }
-        
+
         $validatedParams = $request->validated();
-        
+
         if (config('app.debug')) {
-            \Log::info('[MCP Search Debug] Validated params: ' . json_encode($validatedParams, JSON_UNESCAPED_UNICODE));
+            \Log::info('[MCP Search Debug] Validated params: '.json_encode($validatedParams, JSON_UNESCAPED_UNICODE));
         }
 
         try {
             $startTime = microtime(true);
             $result = $ledgerService->searchLedgersForApi($request->user(), $validatedParams);
             $totalTime = microtime(true) - $startTime;
-            
+
             if (config('app.debug')) {
-                \Log::info('[MCP Search Debug] Total service time: ' . round($totalTime * 1000, 2) . 'ms');
+                \Log::info('[MCP Search Debug] Total service time: '.round($totalTime * 1000, 2).'ms');
             }
         } catch (\Exception $e) {
-            \Log::error('[MCP Search Debug] Exception occurred: ' . $e->getMessage());
-            \Log::error('[MCP Search Debug] Stack trace: ' . $e->getTraceAsString());
+            \Log::error('[MCP Search Debug] Exception occurred: '.$e->getMessage());
+            \Log::error('[MCP Search Debug] Stack trace: '.$e->getTraceAsString());
             throw $e;
         }
 
@@ -122,6 +125,7 @@ class SearchController extends Controller
             if (config('app.debug')) {
                 \Log::info('[MCP Search Debug] Returning count mode response');
             }
+
             return response()->json([
                 'meta' => [
                     'total' => $result['total'],
@@ -141,12 +145,12 @@ class SearchController extends Controller
             ],
         ]);
         $resourceTime = microtime(true) - $resourceStartTime;
-        
+
         if (config('app.debug')) {
-            \Log::info('[MCP Search Debug] Resource collection built in: ' . round($resourceTime * 1000, 2) . 'ms');
+            \Log::info('[MCP Search Debug] Resource collection built in: '.round($resourceTime * 1000, 2).'ms');
             \Log::info('[MCP Search Debug] === SearchController::search completed ===');
         }
-        
+
         return $response;
     }
 }

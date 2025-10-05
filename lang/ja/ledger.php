@@ -209,6 +209,8 @@ return [
         'date' => [
             'default_offset' => 'デフォルト日付オフセット',
             'default_offset_hint' => '入力時のデフォルト日付 (例: 0d=今日, 1d=明日, -1w=1週間前, 1M=1ヶ月後, 1y=1年後)',
+            'overwrite_existing' => '既存値を上書き',
+            'overwrite_existing_hint' => '再編集時も常にデフォルト日付を適用する',
         ],
         'bg_file' => '背景画像',
         'delete_file' => 'ファイルを削除',
@@ -1080,4 +1082,6 @@ return [
         'status' => 'ステータス',
         'updated_at' => '更新日時',
     ],
+    'show_more' => 'もっと見る',
+    'show_less' => '少なく表示',
 ];
