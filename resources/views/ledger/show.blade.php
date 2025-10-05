@@ -23,11 +23,21 @@
             <label for="createDescription"
                    class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
             <div class="collapse-content">
-                <x-markdown class="prose text-sm leading-relaxed max-w-none">
                 @if($ledgerDefineRecord->detail_description)
-                    {!! app(App\Services\AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), null, $ledgerDefineRecord) !!}
+                    @php
+                        $detailDescriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+                            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), 
+                            null, 
+                            $ledgerDefineRecord
+                        );
+                    @endphp
+                    <div class="prose text-sm leading-relaxed max-w-none">
+                        <x-expandable-content 
+                            :content="$detailDescriptionHtml"
+                            max-height="6rem"
+                        />
+                    </div>
                 @endif
-                </x-markdown>
             </div>
         </div>
         <livewire:ledger.show :ledgerId="$ledger->id"/>

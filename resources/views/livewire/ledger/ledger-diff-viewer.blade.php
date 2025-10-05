@@ -84,14 +84,20 @@
                                         @if($column['status']=='empty')
                                             <x-ledger.empty-message/>
                                         @else
-                                            {!! $column['current_value_html'] !!}
+                                            <x-expandable-content 
+                                                :content="$column['current_value_html']"
+                                                max-height="6rem"
+                                            />
                                         @endif
                                     </td>
                                     <td class="w-1/3 lg:w-3/8 break-words pt-2 align-top">
                                         @if(empty($column['old_value_html']))
                                             <x-ledger.empty-message/>
                                         @else
-                                            {!! $column['old_value_html'] !!}
+                                            <x-expandable-content 
+                                                :content="$column['old_value_html']"
+                                                max-height="6rem"
+                                            />
                                         @endif
                                     </td>
                                 @else
@@ -100,7 +106,10 @@
                                         @if($column['status']=='empty')
                                             <x-ledger.empty-message/>
                                         @else
-                                            {!! $column['current_value_html'] !!}
+                                            <x-expandable-content 
+                                                :content="$column['current_value_html']"
+                                                max-height="6rem"
+                                            />
                                         @endif
                                     </td>
                                 @endif

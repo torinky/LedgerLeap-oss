@@ -45,14 +45,22 @@
     @foreach($filteredColumnDefines as $cKey=>$columnDefine)
         <td class="hover:bg-accent/20 border px-4 py-2">
             @if (!$canView)
-            <x-ledger.not-authorized-message/>
-        @elseif (empty($ledgerRecord->content[$columnDefine->id]))
-            <x-ledger.empty-message/>
-        @else
-            {!! ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
-                         ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
-                         ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword, tenant()?->id) !!}
-        @endif
+                <x-ledger.not-authorized-message/>
+            @elseif (empty($ledgerRecord->content[$columnDefine->id]))
+                <x-ledger.empty-message/>
+            @else
+                @php
+                    $columnHtml = ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
+                                 ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
+                                 ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword, tenant()?->id);
+                    $columnHtmlString = $columnHtml->toHtml();
+                @endphp
+                
+                <x-expandable-content 
+                    :content="$columnHtmlString"
+                    max-height="6rem"
+                />
+            @endif
         </td>
     @endforeach
     {{--                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}}--}}

@@ -113,11 +113,28 @@
                 @endscope
 
                 @scope('cell_changes', $activity)
-                {!! ActivityLogFormatter::formatChanges($activity) !!}
+                @php
+                    $changesHtml = ActivityLogFormatter::formatChanges($activity);
+                    $changesContent = is_string($changesHtml) ? $changesHtml : $changesHtml->toHtml();
+                @endphp
+                @if(!empty($changesContent))
+                    <x-expandable-content 
+                        :content="$changesContent"
+                        max-height="6rem"
+                    />
+                @endif
                 @endscope
 
                 @scope('cell_comment', $activity)
-                {{ ActivityLogFormatter::formatComment($activity) }}
+                @php
+                    $comment = ActivityLogFormatter::formatComment($activity);
+                @endphp
+                @if(!empty($comment))
+                    <x-expandable-content 
+                        :content="e($comment)"
+                        max-height="4rem"
+                    />
+                @endif
                 @endscope
 
                 <x-slot:empty>
