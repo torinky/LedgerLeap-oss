@@ -64,7 +64,7 @@ class SearchLedgersToolTest extends TestCase
         $response = $this->tool->handle($request);
 
         $this->assertTrue($response->isError());
-        $this->assertEquals('Authentication token not provided.', $response->content());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
     }
 
     #[Test]
@@ -75,7 +75,7 @@ class SearchLedgersToolTest extends TestCase
         $response = $this->tool->handle($request);
 
         $this->assertTrue($response->isError());
-        $this->assertEquals('Invalid authentication token.', $response->content());
+        $this->assertStringContainsString('The provided token is invalid or has been revoked', $response->content());
     }
 
     #[Test]
