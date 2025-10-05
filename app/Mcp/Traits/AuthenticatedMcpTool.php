@@ -26,17 +26,26 @@ trait AuthenticatedMcpTool
     {
         $token = getenv('MCP_AUTH_TOKEN');
         if (! $token) {
-            throw new \Exception('Authentication token not provided.');
+            throw new \Exception('Authentication failed: MCP_AUTH_TOKEN environment variable is not set. Please set the MCP_AUTH_TOKEN in your .env file with a valid Sanctum token.');
         }
 
         $accessToken = PersonalAccessToken::findToken($token);
-        if (! $accessToken || ! $accessToken->tokenable) {
-            throw new \Exception('Invalid authentication token.');
+        if (! $accessToken) {
+            throw new \Exception('Authentication failed: The provided token is invalid or has been revoked. Please generate a new token using: php artisan demo:generate-mcp-token');
+        }
+
+        if (! $accessToken->tokenable) {
+            throw new \Exception('Authentication failed: The token is not associated with any user. Please generate a new token using: php artisan demo:generate-mcp-token');
         }
 
         $user = $accessToken->tokenable;
         if (! $user instanceof User) {
-            throw new \Exception('Invalid user associated with token.');
+            throw new \Exception('Authentication failed: The token is associated with an invalid user type.');
+        }
+
+        // トークンの能力（abilities）をチェック
+        if (! $accessToken->can('mcp:*')) {
+            throw new \Exception('Authentication failed: The token does not have MCP access permissions. Please generate a token with mcp:* ability.');
         }
 
         // 現在のユーザーを設定

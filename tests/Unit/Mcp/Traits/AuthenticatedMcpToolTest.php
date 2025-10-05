@@ -96,7 +96,7 @@ class AuthenticatedMcpToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Authentication token not provided.');
+        $this->expectExceptionMessage('MCP_AUTH_TOKEN environment variable is not set');
 
         $this->testClass->callAuthenticateUser();
     }
@@ -107,7 +107,7 @@ class AuthenticatedMcpToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=invalid-token-12345');
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Invalid authentication token.');
+        $this->expectExceptionMessage('The provided token is invalid or has been revoked');
 
         $this->testClass->callAuthenticateUser();
     }
@@ -196,7 +196,7 @@ class AuthenticatedMcpToolTest extends TestCase
 
         $this->assertInstanceOf(Response::class, $result);
         $this->assertTrue($result->isError());
-        $this->assertStringContainsString('Authentication token not provided', $result->content());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $result->content());
     }
 
     #[Test]
