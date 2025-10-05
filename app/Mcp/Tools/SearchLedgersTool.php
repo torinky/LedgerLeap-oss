@@ -40,6 +40,26 @@ class SearchLedgersTool extends Tool
         - 'creator_id': Filter by creator user ID
         - 'created_from' / 'created_to': Date range filter (YYYY-MM-DD)
         - 'limit' / 'offset': Pagination
+
+        **Strategic Usage (戦略的利用法):**
+        This tool is not just for single searches; it can be combined with other tools to answer more complex questions.
+
+        - **Leveraging Metadata (メタデータの活用):**
+          When a search is successful, the `meta` field in the response is automatically populated with complete information about related entities, such as the users (creators, modifiers) associated with the returned ledgers. When trying to identify a person in charge, the most efficient method is to first find the relevant ledger with this tool and then check the `meta` field.
+
+        - **Iterative Information Discovery Workflow (段階的な情報特定ワークフロー):**
+          If an initial, broad keyword search (e.g., `q="Company A"`) yields no results, follow these steps:
+          1. Use another tool like `get_activity_log_tool` to find related activities.
+          2. From the activity log, identify a **clue** that can uniquely identify the target ledger (e.g., a unique phrase from the content, a specific tag).
+          3. Use that **clue** as the `q` parameter in a new search with this tool.
+          4. This targeted search will allow you to retrieve both the ledger data and the responsible user's information from the `meta` field in a single call.
+
+        **Workflow Example (ワークフロー例):**
+        1. User asks: "Who is in charge of Project X?"
+        2. `search_ledgers_tool(q='Project X')` returns 0 results.
+        3. `get_activity_log_tool()` reveals an activity: "Submitted the final report for Project X".
+        4. `search_ledgers_tool(q='"Submitted the final report for Project X"')` is executed.
+        5. The response now contains the target ledger and the creator's (the person in charge) information in `meta.users`, allowing for a direct answer.
 MARKDOWN;
 
     protected LedgerService $ledgerService;
