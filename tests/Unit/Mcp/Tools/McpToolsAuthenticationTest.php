@@ -66,7 +66,7 @@ class McpToolsAuthenticationTest extends TestCase
         $response = $tool->handle($request);
 
         $this->assertTrue($response->isError());
-        $this->assertStringContainsString('Authentication token not provided', $response->content());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
     }
 
     #[Test]
@@ -108,7 +108,7 @@ class McpToolsAuthenticationTest extends TestCase
         $response = $tool->handle($request, $ledgerService);
 
         $this->assertTrue($response->isError());
-        $this->assertStringContainsString('Authentication token not provided', $response->content());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
     }
 
     #[Test]
@@ -208,7 +208,7 @@ class McpToolsAuthenticationTest extends TestCase
             }
 
             $this->assertTrue($response->isError());
-            $this->assertStringContainsString('Invalid authentication token', $response->content());
+            $this->assertStringContainsString('The provided token is invalid or has been revoked', $response->content());
         }
     }
 
