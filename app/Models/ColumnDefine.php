@@ -96,7 +96,9 @@ class ColumnDefine
         bool $unique = false,
         bool $sortBy = false,
         string $hint = '',
-        array $file = []
+        array $file = [],
+        int $display_level = 3,
+        ?string $group = null
     ) {
         $this->id = (int) $id;
         $this->setName($name);
@@ -108,9 +110,9 @@ class ColumnDefine
         $this->setHint($hint);
         $this->setFile($file);
 
-        // 新しいプロパティの初期化 (constructByArgsではデフォルト値のみ)
-        $this->display_level = 3;
-        $this->group = null;
+        // 表示レベルとグループの初期化
+        $this->display_level = $display_level;
+        $this->group = $group;
 
         $this->initializeType(['type' => $typeIdentifier, 'options' => $options]);
     }

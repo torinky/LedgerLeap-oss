@@ -201,33 +201,74 @@ class DemoMinimalSeeder extends Seeder
 
     private function createSalesDailyDefine(): void
     {
-        // カラム定義（日本語項目名 + 状態管理カラム）
-        // 引数順序: id, name, typeIdentifier, order, options, required, unique, sortBy, hint, file
+        // カラム定義（日本語項目名 + 状態管理カラム + 表示レベル + グループ）
+        // 引数順序: id, name, typeIdentifier, order, options, required, unique, sortBy, hint, file, display_level, group
         $columns = [
-            new ColumnDefine(0, '日付', 'YMD', 0, [], true, false, false, '', []),
-            new ColumnDefine(1, '顧客名', 'text', 1, [], true, false, false, '', []),
-            new ColumnDefine(2, '訪問目的', 'text', 2, [], false, false, false, '', []),
+            // 基本情報グループ - 常に表示（display_level: 1）
+            new ColumnDefine(
+                0, '日付', 'YMD', 0, 
+                ['default_offset' => '0d'], // 今日をデフォルト
+                true, false, false, '訪問日', [], 
+                1, // display_level: 1 (常に表示)
+                '基本情報' // group
+            ),
+            new ColumnDefine(
+                1, '顧客名', 'text', 1, [], 
+                true, false, false, '', [], 
+                1, '基本情報'
+            ),
+            new ColumnDefine(
+                2, '訪問目的', 'text', 2, [], 
+                false, false, false, '', [], 
+                2, // display_level: 2 (概要表示)
+                '基本情報'
+            ),
             
-            // 商談ステータス（状態管理）
-            new ColumnDefine(3, '商談ステータス', 'select', 3, [
-                '初回訪問',
-                '提案中',
-                'フォローアップ',
-                '価格交渉中',
-                '契約直前',
-                '契約済み',
-                '見送り',
-                '再提案予定',
-            ], true, false, false, '', []),
+            // 商談情報グループ
+            new ColumnDefine(
+                3, '商談ステータス', 'select', 3, [
+                    '初回訪問',
+                    '提案中',
+                    'フォローアップ',
+                    '価格交渉中',
+                    '契約直前',
+                    '契約済み',
+                    '見送り',
+                    '再提案予定',
+                ], 
+                true, false, false, '', [], 
+                1, // 常に表示
+                '商談情報'
+            ),
             
-            // 優先度
-            new ColumnDefine(4, '優先度', 'select', 4, [
-                '高', '中', '低'
-            ], true, false, false, '', []),
+            new ColumnDefine(
+                4, '優先度', 'select', 4, [
+                    '高', '中', '低'
+                ], 
+                true, false, false, '', [], 
+                1, // 常に表示
+                '商談情報'
+            ),
             
-            new ColumnDefine(5, '商談内容', 'textarea', 5, [], true, false, false, '', []),
-            new ColumnDefine(6, '成果・所感', 'textarea', 6, [], false, false, false, '', []),
-            new ColumnDefine(7, '次回アクション', 'textarea', 7, [], false, false, false, '', []),
+            // 詳細情報グループ
+            new ColumnDefine(
+                5, '商談内容', 'textarea', 5, [], 
+                true, false, false, '', [], 
+                2, // 概要表示
+                '詳細情報'
+            ),
+            new ColumnDefine(
+                6, '成果・所感', 'textarea', 6, [], 
+                false, false, false, '', [], 
+                3, // 詳細表示
+                '詳細情報'
+            ),
+            new ColumnDefine(
+                7, '次回アクション', 'textarea', 7, [], 
+                false, false, false, '', [], 
+                2, // 概要表示
+                '詳細情報'
+            ),
         ];
 
         $this->salesDailyDefine = LedgerDefine::firstOrCreate(
