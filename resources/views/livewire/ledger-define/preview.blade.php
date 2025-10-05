@@ -56,7 +56,7 @@
                 </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->create_description, null, $ledgerDefineRecord)) !!}
+                        {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->create_description ?? '', null, $ledgerDefineRecord)) !!}
                     </x-markdown>
                 </x-slot:content>
             </x-mary-collapse>
@@ -68,7 +68,7 @@
                 </x-slot:heading>
                 <x-slot:content>
                     <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                        {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->list_description, null, $ledgerDefineRecord)) !!}
+                        {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->list_description ?? '', null, $ledgerDefineRecord)) !!}
                     </x-markdown>
                 </x-slot:content>
             </x-mary-collapse>
@@ -79,7 +79,7 @@
                             wire:click="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
                 </x-slot:heading>
                 <x-slot:content>
-                    {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), null, $ledgerDefineRecord) !!}
+                    {!! app(AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description ?? ''), null, $ledgerDefineRecord) !!}
                 </x-slot:content>
             </x-mary-collapse>
         </x-mary-accordion>
