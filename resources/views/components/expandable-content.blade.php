@@ -5,14 +5,17 @@
     'showLessText' => __('ledger.show_less'),
 ])
 
-<div 
-    x-data="{ 
-        expanded: false, 
+<div
+    x-data="{
+        expanded: false,
         showToggle: false,
         checkOverflow() {
             const content = this.$refs.content;
             if (content) {
-                this.showToggle = content.scrollHeight > content.clientHeight;
+                // コンテンツの実高さが max-height よりも大きい場合にトグルを表示
+                // style.maxHeight は '6rem' のような文字列なので、pixel値に変換して比較する
+                const maxHeightInPixels = parseFloat(getComputedStyle(content).maxHeight);
+                this.showToggle = content.scrollHeight > maxHeightInPixels;
             }
         }
     }"
@@ -22,28 +25,21 @@
     "
     class="relative"
 >
-    <div 
+    <div
         x-ref="content"
         :class="{ 'overflow-hidden': !expanded }"
-        :style="expanded ? '' : 'max-height: {{ $maxHeight }}'"
+        :style="expanded ? '' : (showToggle ? `max-height: {{ $maxHeight }}; -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent 100%); mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent 100%);` : `max-height: {{ $maxHeight }}`)"
         {{ $attributes->merge(['class' => 'transition-all duration-300']) }}
     >
         {!! $content !!}
     </div>
-    
-    <!-- グラデーションオーバーレイ（折りたたみ時のみ表示） -->
-    <div 
-        x-show="showToggle && !expanded"
-        x-transition
-        class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
-    ></div>
-    
+
     <!-- Show more/less ボタン -->
-    <button 
+    <button
         x-show="showToggle"
         @click="expanded = !expanded"
         type="button"
-        class="btn btn-sm btn-outline btn-primary w-full mt-2 gap-2"
+        class="btn btn-sm btn-ghost w-full mt-2 gap-2"
     >
         <span x-text="expanded ? '{{ $showLessText }}' : '{{ $showMoreText }}'"></span>
         <i class="fas text-sm transition-transform duration-200"
