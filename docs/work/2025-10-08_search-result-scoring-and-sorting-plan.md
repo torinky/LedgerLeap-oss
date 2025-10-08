@@ -1,0 +1,986 @@
+# ハイブリッド型情報価値評価システム 実装計画
+
+**作成日:** 2025年10月8日  
+**最終更新:** 2025年10月8日  
+**対象:** LedgerLeap開発チーム  
+**関連ドキュメント:**
+- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md) - ユーザー要件定義
+- [検索機能](../function/Search.md) - 既存検索機能の仕様
+- [RecordsTable.php](../../app/Livewire/Ledger/RecordsTable.php) - 現在の実装
+
+---
+
+## 📝 更新履歴
+
+### 2025-10-08 初版作成
+- ハイブリッド型スコアリングシステムの基本設計
+- 5つの評価指標の定義
+- 段階的実装計画（Phase 1-5）
+- ペルソナ別ユースケースの整理
+
+---
+
+## 📋 概要
+
+### 背景
+
+現在の検索・表示機能は `ledger_define_id` の昇順（作成順）で台帳定義をグループ化しており、業務の活発度や情報の新鮮度が反映されていない。ユーザーが大量の検索結果から「今必要な情報」を迅速に発見できるよう、**複数の評価指標を組み合わせたハイブリッド型の情報価値評価システム**を導入する。
+
+### 設計思想
+
+情報の価値は単一の指標では測れない。以下の**5つの次元**を数値化し、**状況に応じて重み付けを変更**できる柔軟なシステムを構築する：
+
+1. **活動スコア** (Activity Score) - 操作頻度を反映
+2. **新鮮度スコア** (Freshness Score) - 時間的関連性を反映
+3. **重要度スコア** (Importance Score) - ビジネス上の重要性を反映
+4. **関連性スコア** (Relevance Score) - 検索キーワードとの適合度
+5. **人気度スコア** (Popularity Score) - 多くの人が注目している情報
+
+### 実装目標
+
+**ビジネス目標:**
+- 情報発見効率を**40%向上**（目的の情報到達までのクリック数削減）
+- ユーザー満足度を**80%以上**に向上（「求めている情報が見つかった」率）
+- 多様なユースケースに対応できる柔軟な表示モード提供
+
+**技術目標:**
+- 既存の検索・ソート・フィルタ機能との整合性維持
+- パフォーマンス影響を最小化（平均レスポンス時間増加を**100ms以内**に抑制）
+- 段階的な実装により、各フェーズで価値を提供
+
+---
+
+## 🎭 ペルソナ別ユースケース分析
+
+本システムがどのようにユーザーの業務を支援するかを、ペルソナごとに整理する。
+
+### 1. 実務担当者（Operational Staff）の視点
+
+#### ユースケース1: 日報作成時の類似事例検索
+```
+シナリオ:
+顧客Aへの訪問後、日報を作成しようとしている。
+過去の訪問記録を参考にしたい。
+
+従来の問題:
+「顧客A」で検索すると、古い契約書や提案書も混在し、
+最近の日報を見つけるのに時間がかかる。
+
+ハイブリッド型での改善:
+検索モード（関連性50% + 新鮮度30% + 活動20%）が自動適用され、
+「最近の、よく参照されている顧客A関連の日報」が上位に表示される。
+
+活用される指標:
+✅ 関連性スコア: 「顧客A」キーワードとのマッチング
+✅ 新鮮度スコア: 過去1週間の日報を優先
+✅ 活動スコア: 他のメンバーも参照している日報
+```
+
+#### ユースケース2: 承認待ちタスクの優先順位判断
+```
+シナリオ:
+マイポータルで3件の承認待ちタスクがある。
+どれから処理すべきか判断したい。
+
+従来の問題:
+単純な日時順では、緊急度の高いタスクを見落とす可能性がある。
+
+ハイブリッド型での改善:
+重要度重視モードを選択すると、
+「期限が近い」「上司からピン留めされた」「添付ファイル多数」の
+タスクが上位に表示される。
+
+活用される指標:
+✅ 重要度スコア: is_pinned, priority_level, 期限
+✅ 新鮮度スコア: 作成日時からの経過時間
+```
+
+### 2. 現場リーダー（Team Leader）の視点
+
+#### ユースケース3: チーム活動状況の把握
+```
+シナリオ:
+月曜朝、チームメンバーの週末作業を確認したい。
+どのプロジェクトが活発に動いているかを把握する。
+
+従来の問題:
+フォルダを開いても、台帳定義の表示順が固定で、
+停滞しているプロジェクトとの区別がつかない。
+
+ハイブリッド型での改善:
+フォルダ内の台帳定義が「新鮮度重視モード」で自動ソートされ、
+「週末に多数の更新があった日報台帳」が最上位に表示される。
+
+活用される指標:
+✅ 新鮮度スコア: 台帳定義配下の最新更新日時
+✅ 活動スコア: 直近7日間の作成・更新件数
+✅ 人気度スコア: チームメンバーの閲覧状況
+```
+
+#### ユースケース4: 重要案件のフォローアップ
+```
+シナリオ:
+複数のプロジェクトを管理しており、
+重要顧客の案件を優先的にフォローしたい。
+
+従来の問題:
+タグやフォルダでの絞り込みは可能だが、
+その中での優先順位付けができない。
+
+ハイブリッド型での改善:
+「活動重視モード」を選択すると、
+「頻繁に更新されている」「複数メンバーが閲覧している」
+案件が上位に表示される。
+
+活用される指標:
+✅ 活動スコア: 作成・更新・閲覧の累積
+✅ 人気度スコア: ユニーク閲覧者数
+✅ 重要度スコア: タグ、添付ファイル数
+```
+
+### 3. 管理者（Administrator）の視点
+
+#### ユースケース5: 利用状況の監査
+```
+シナリオ:
+どの台帳が活発に使われているか、
+逆にどの台帳が使われていないかを把握したい。
+
+従来の問題:
+アクティビティログは見られるが、
+台帳の「活発度」を一覧で把握する方法がない。
+
+ハイブリッド型での改善:
+「活動重視モード」で全体表示すると、
+活動スコアの高い台帳定義が上位に表示され、
+使われていない台帳定義が一目で分かる。
+
+活用される指標:
+✅ 活動スコア: 長期間の累積スコア（減衰処理済み）
+✅ 人気度スコア: 組織全体での利用状況
+✅ 新鮮度スコア: 最終更新からの経過時間
+```
+
+---
+
+## 🏗️ システム設計
+
+### 評価指標（5つの次元）
+
+#### 1. 活動スコア（Activity Score）
+
+**目的:** 台帳への操作頻度を反映し、「よく使われている情報」を評価
+
+**測定方法:**
+```php
+// 各イベントでのスコア加算
+活動スコア += イベント種別ごとの基礎点数 × (減衰率 ^ 経過週数)
+
+// config/ledgerleap.php での定義
+'scoring' => [
+    'activity' => [
+        'create' => 10,      // 台帳作成
+        'update' => 5,       // 台帳更新
+        'view' => 1,         // 台帳閲覧（1セッション1回のみ）
+        'attach_file' => 3,  // ファイル添付
+        'workflow_advance' => 7, // ワークフロー進行
+    ],
+    'decay' => [
+        'rate' => 0.95,      // 週次で5%減衰
+        'minimum' => 0,
+    ],
+],
+```
+
+**数値範囲:** 0 ～ ∞（実質的には0-1000程度）
+
+**台帳定義レベルでの集計:**
+```
+台帳定義の活動スコア = Σ(配下台帳の活動スコア)
+```
+
+#### 2. 新鮮度スコア（Freshness Score）
+
+**目的:** 最終更新からの経過時間を反映し、「今」関連性の高い情報を評価
+
+**測定方法:**
+```php
+// ロジスティック関数による滑らかな時間減衰
+function calculateFreshnessScore($updatedAt): float
+{
+    $hoursAgo = now()->diffInHours($updatedAt);
+    
+    // 0時間=100点, 24時間=80点, 7日=50点, 30日=20点, 90日=5点
+    $score = 100 / (1 + exp(($hoursAgo - 168) / 168));
+    
+    return round($score, 2);
+}
+```
+
+**数値範囲:** 0 - 100
+
+**台帳定義レベルでの集計:**
+```
+台帳定義の新鮮度スコア = (Σ(各台帳の新鮮度 × 活動スコア)) / Σ(活動スコア)
+```
+
+**実装時の指針:**
+- 日報のような時系列性の高い台帳では、この指標が最も重要
+- 契約書のような参照型台帳では、重み付けを下げる
+
+#### 3. 重要度スコア（Importance Score）
+
+**目的:** ビジネス上の重要性を反映し、「見逃してはいけない情報」を評価
+
+**測定方法:**
+```php
+基礎スコア = 0
++ (is_pinned ? 50 : 0)                    // ピン留め
++ (priority_level × 20)                   // 優先度レベル（0-2）
++ (workflow_status == 'pending' ? 20 : 0) // 承認待ち
++ (has_attachments ? 10 : 0)              // 添付ファイルあり
++ min(tag_count × 2, 10)                  // タグ数（最大10点）
+
+// 最大100点にクリッピング
+```
+
+**数値範囲:** 0 - 100
+
+**実装時の指針:**
+- 管理者がピン留めした台帳は最優先で表示
+- ワークフロー有効な台帳では、承認待ち状態の台帳を上位に
+
+#### 4. 関連性スコア（Relevance Score）
+
+**目的:** 検索キーワードとの適合度を反映（検索時のみ使用）
+
+**測定方法:**
+```sql
+-- Mroongaの MATCH ... AGAINST スコアを活用
+SELECT 
+    ledgers.*,
+    (MATCH(`content`) AGAINST (? IN BOOLEAN MODE) * 2.0) + 
+    MATCH(`content_attached`) AGAINST (? IN BOOLEAN MODE) 
+    AS relevance_raw_score
+FROM ledgers
+```
+
+```php
+// 0-100スケールに正規化
+relevance_score = min(100, relevance_raw_score × 10)
+```
+
+**数値範囲:** 0 - 100
+
+**実装時の指針:**
+- グローバル検索時（キーワードあり、フォルダ未選択）には、この指標が最重要
+- フォルダ内のブラウジング時（キーワードなし）には、この指標は使用しない（重み=0）
+
+#### 5. 人気度スコア（Popularity Score）
+
+**目的:** 多くの人が見ている情報を評価し、「組織で注目されている情報」を発見
+
+**測定方法:**
+```php
+// 直近30日間のユニーク閲覧者数
+popularity_score = min(100, unique_viewers_count_30days × 5)
+```
+
+**数値範囲:** 0 - 100
+
+**実装時の指針:**
+- チーム全体での関心度を把握する際に有用
+- 個人作業時には重み付けを下げる
+
+---
+
+### 表示モード（Display Modes）
+
+ユーザーの状況に応じて、自動または手動で切り替え可能な**5つのモード**を提供：
+
+| モード名 | 重み付け | 使用シーン | 自動切替条件 |
+|---------|---------|-----------|------------|
+| **🤖 スマートモード** | 状況に応じて自動 | 迷ったときのデフォルト | 常に利用可能 |
+| **⚡ 活動重視モード** | 活動40% + 新鮮30% + 重要30% | フォルダ全体を俯瞰したい | フォルダ未選択時 |
+| **🕐 新鮮度重視モード** | 新鮮60% + 活動20% + 重要20% | 最近の作業を確認したい | 特定フォルダ選択時 |
+| **🔍 検索モード** | 関連50% + 新鮮30% + 活動20% | キーワード検索時 | 検索キーワードあり |
+| **⭐ 人気度モード** | 人気40% + 活動20% + 新鮮20% + 重要20% | チームのトレンド把握 | 複数台帳定義選択時 |
+
+**スマートモードの自動切り替えロジック:**
+```php
+class SmartModeSelector
+{
+    public function selectOptimalPreset(
+        string $search,
+        array $selectedFolderIds,
+        array $selectedLedgerDefineIds
+    ): string {
+        // 検索キーワードがある → 検索モード
+        if (!empty($search)) {
+            return 'search';
+        }
+        
+        // フォルダ未選択（全体表示） → 活動モード
+        if (empty($selectedFolderIds) && empty($selectedLedgerDefineIds)) {
+            return 'activity';
+        }
+        
+        // 特定フォルダ内の表示 → 新鮮度モード
+        if (count($selectedFolderIds) === 1) {
+            return 'freshness';
+        }
+        
+        // 複数台帳定義選択 → 人気度モード
+        if (count($selectedLedgerDefineIds) > 1) {
+            return 'popular';
+        }
+        
+        // デフォルト → 活動モード
+        return 'activity';
+    }
+}
+```
+
+---
+
+## 📊 データベース設計
+
+### 新規カラム追加
+
+#### `ledgers` テーブル
+```sql
+-- 活動スコア関連
+ALTER TABLE ledgers ADD COLUMN activity_score INT DEFAULT 0;
+ALTER TABLE ledgers ADD COLUMN last_viewed_at TIMESTAMP NULL;
+ALTER TABLE ledgers ADD COLUMN unique_viewers_count INT DEFAULT 0;
+
+-- 重要度フラグ
+ALTER TABLE ledgers ADD COLUMN is_pinned BOOLEAN DEFAULT FALSE;
+ALTER TABLE ledgers ADD COLUMN priority_level TINYINT DEFAULT 0;
+    -- 0: 通常, 1: 重要, 2: 緊急
+
+-- インデックス
+CREATE INDEX idx_activity_score ON ledgers(activity_score DESC);
+CREATE INDEX idx_updated_freshness ON ledgers(updated_at DESC);
+CREATE INDEX idx_composite ON ledgers(activity_score, updated_at);
+```
+
+#### `ledger_defines` テーブル
+```sql
+-- 台帳定義レベルの集計スコア
+ALTER TABLE ledger_defines ADD COLUMN activity_score INT DEFAULT 0;
+ALTER TABLE ledger_defines ADD COLUMN total_records_count INT DEFAULT 0;
+ALTER TABLE ledger_defines ADD COLUMN active_records_count INT DEFAULT 0;
+    -- 直近30日以内に更新されたレコード数
+
+CREATE INDEX idx_define_activity_score ON ledger_defines(activity_score DESC);
+```
+
+#### `ledger_views` テーブル（新規）
+```sql
+CREATE TABLE ledger_views (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    ledger_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    viewed_at TIMESTAMP NOT NULL,
+    session_id VARCHAR(255) NOT NULL,
+    tenant_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    INDEX idx_ledger_viewed(ledger_id, viewed_at),
+    INDEX idx_user_viewed(user_id, viewed_at),
+    INDEX idx_session(session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+#### `scoring_configs` テーブル（新規）
+```sql
+CREATE TABLE scoring_configs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    profile_name VARCHAR(50) NOT NULL,
+        -- 'activity', 'freshness', 'search', 'popular', 'custom'
+    activity_weight DECIMAL(3,2) DEFAULT 0.33,
+    freshness_weight DECIMAL(3,2) DEFAULT 0.33,
+    importance_weight DECIMAL(3,2) DEFAULT 0.34,
+    relevance_weight DECIMAL(3,2) DEFAULT 0.00,
+    popularity_weight DECIMAL(3,2) DEFAULT 0.00,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    user_id BIGINT NULL,  -- ユーザー個別設定の場合
+    tenant_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    
+    UNIQUE KEY unique_profile_tenant(profile_name, tenant_id, user_id),
+    INDEX idx_tenant_profile(tenant_id, profile_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+---
+
+## 🚀 段階的実装ロードマップ
+
+### Phase 1: 基礎スコアリング（2週間） 🔴 優先度：高
+
+**目標:** 活動スコアと新鮮度スコアの基本実装
+
+#### Step 1.1: データベース基盤整備（2-3日）
+- [ ] マイグレーションファイル作成
+  - [ ] `ledgers` テーブル: activity_score, last_viewed_at, unique_viewers_count, is_pinned, priority_level
+  - [ ] `ledger_defines` テーブル: activity_score, total_records_count, active_records_count
+  - [ ] `ledger_views` テーブル新規作成
+  - [ ] `scoring_configs` テーブル新規作成
+- [ ] インデックス追加
+- [ ] テストデータ生成用のSeeder作成
+
+**テスト:**
+```php
+// tests/Unit/Migrations/ScoringTablesTest.php
+public function test_ledgers_table_has_scoring_columns()
+{
+    $this->assertTrue(Schema::hasColumn('ledgers', 'activity_score'));
+    $this->assertTrue(Schema::hasColumn('ledgers', 'is_pinned'));
+    // ... 他のカラム検証
+}
+```
+
+#### Step 1.2: 活動スコア計算サービス（3-4日）
+- [ ] `app/Services/Scoring/ActivityScoreService.php` 作成
+  - [ ] `addScore(Ledger $ledger, string $eventType)` メソッド
+  - [ ] `decayScores()` メソッド（バッチ処理用）
+  - [ ] `calculateLedgerDefineScore(LedgerDefine $define)` メソッド
+- [ ] `app/Observers/LedgerObserver.php` 作成
+  - [ ] `created`, `updated` イベントでのスコア加算
+  - [ ] トランザクション外での非同期実行
+- [ ] `config/ledgerleap.php` にスコア設定追加
+
+**テスト:**
+```php
+// tests/Unit/Services/ActivityScoreServiceTest.php
+public function test_adds_score_for_create_event()
+{
+    $ledger = Ledger::factory()->create();
+    $service = new ActivityScoreService();
+    
+    $service->addScore($ledger, 'create');
+    
+    $this->assertEquals(10, $ledger->fresh()->activity_score);
+}
+
+public function test_decays_scores_correctly()
+{
+    $ledger = Ledger::factory()->create(['activity_score' => 100]);
+    Carbon::setTestNow(now()->addWeek());
+    
+    $service = new ActivityScoreService();
+    $service->decayScores();
+    
+    $this->assertEquals(95, $ledger->fresh()->activity_score);
+}
+```
+
+#### Step 1.3: 新鮮度スコア計算（2-3日）
+- [ ] `app/Services/Scoring/FreshnessScoreService.php` 作成
+  - [ ] `calculate(Carbon $updatedAt): float` メソッド
+  - [ ] `calculateForLedgerDefine(LedgerDefine $define): float` メソッド
+- [ ] Ledger モデルに `freshness_score` アクセサ追加
+
+**テスト:**
+```php
+// tests/Unit/Services/FreshnessScoreServiceTest.php
+public function test_calculates_freshness_score_correctly()
+{
+    $service = new FreshnessScoreService();
+    
+    // 1時間前
+    $score1 = $service->calculate(now()->subHour());
+    $this->assertGreaterThan(95, $score1);
+    
+    // 7日前
+    $score7 = $service->calculate(now()->subDays(7));
+    $this->assertEqualsWithDelta(50, $score7, 5);
+    
+    // 30日前
+    $score30 = $service->calculate(now()->subDays(30));
+    $this->assertEqualsWithDelta(20, $score30, 5);
+}
+```
+
+#### Step 1.4: シンプルな表示順変更（2-3日）
+- [ ] `RecordsTable.php` に新鮮度順ソート追加
+  - [ ] 台帳定義の最新更新日時を計算
+  - [ ] `$displayMode` プロパティ追加（'freshness', 'activity', 'default'）
+- [ ] Blade ビューに簡易的な切替ボタン追加
+
+**テスト:**
+```php
+// tests/Feature/Livewire/RecordsTableTest.php
+public function test_sorts_ledger_defines_by_freshness()
+{
+    $old = LedgerDefine::factory()->create();
+    $new = LedgerDefine::factory()->create();
+    
+    Ledger::factory()->create([
+        'ledger_define_id' => $old->id,
+        'updated_at' => now()->subWeek()
+    ]);
+    Ledger::factory()->create([
+        'ledger_define_id' => $new->id,
+        'updated_at' => now()
+    ]);
+    
+    Livewire::test(RecordsTable::class)
+        ->set('displayMode', 'freshness')
+        ->assertSeeInOrder([$new->title, $old->title]);
+}
+```
+
+**完了条件:**
+- ✅ 全テストが通過
+- ✅ 新鮮度順でのソートが動作
+- ✅ 活動スコアが正しく加算・減衰
+- ✅ パフォーマンス影響が100ms以内
+
+---
+
+### Phase 2: 複合スコア計算エンジン（2週間） 🟡 優先度：中
+
+**目標:** 5つの指標を統合した複合スコア計算の実装
+
+#### Step 2.1: 重要度・関連性・人気度スコア実装（4-5日）
+- [ ] `app/Services/Scoring/ImportanceScoreService.php` 作成
+- [ ] `app/Services/Scoring/RelevanceScoreService.php` 作成
+- [ ] `app/Services/Scoring/PopularityScoreService.php` 作成
+- [ ] 閲覧追跡機能実装
+  - [ ] `app/Observers/LedgerViewObserver.php`
+  - [ ] セッション単位での重複防止
+
+**テスト:**
+```php
+// tests/Unit/Services/ImportanceScoreServiceTest.php
+public function test_calculates_importance_score_with_all_factors()
+{
+    $ledger = Ledger::factory()->create([
+        'is_pinned' => true,
+        'priority_level' => 2,
+        'status' => WorkflowStatus::PENDING_APPROVAL,
+    ]);
+    $ledger->define->tags()->attach([Tag::factory()->create()]);
+    AttachedFile::factory()->create(['ledger_id' => $ledger->id]);
+    
+    $service = new ImportanceScoreService();
+    $score = $service->calculate($ledger);
+    
+    // 50(pinned) + 40(priority) + 20(pending) + 10(attachment) + 2(tag) = 122 -> 100
+    $this->assertEquals(100, $score);
+}
+```
+
+#### Step 2.2: 複合スコア計算サービス（3-4日）
+- [ ] `app/Services/Scoring/CompositeScoreCalculator.php` 作成
+  - [ ] `calculate(Ledger $ledger, ScoringConfig $config, ?SearchContext $context)` メソッド
+  - [ ] 各指標の正規化（0-100スケール）
+  - [ ] 重み付き合計の計算
+- [ ] `app/Services/Scoring/LedgerDefineScoreAggregator.php` 作成
+  - [ ] 台帳定義レベルのスコア集計
+
+**テスト:**
+```php
+// tests/Unit/Services/CompositeScoreCalculatorTest.php
+public function test_calculates_composite_score_with_activity_preset()
+{
+    $ledger = Ledger::factory()->create([
+        'activity_score' => 100,
+        'updated_at' => now()->subDays(3)
+    ]);
+    
+    $config = ScoringConfig::factory()->create([
+        'profile_name' => 'activity',
+        'activity_weight' => 0.40,
+        'freshness_weight' => 0.30,
+        'importance_weight' => 0.30,
+    ]);
+    
+    $calculator = new CompositeScoreCalculator();
+    $result = $calculator->calculate($ledger, $config);
+    
+    $this->assertArrayHasKey('composite_score', $result);
+    $this->assertArrayHasKey('breakdown', $result);
+    $this->assertGreaterThan(50, $result['composite_score']);
+}
+```
+
+#### Step 2.3: 設定管理（2-3日）
+- [ ] ScoringConfig モデル作成
+- [ ] システムデフォルトプリセットのSeeder作成
+- [ ] Filament管理画面での設定編集機能（オプション）
+
+**完了条件:**
+- ✅ 5つの指標すべてが正しく計算される
+- ✅ プリセットごとの重み付けが機能
+- ✅ 複合スコアの計算が正確
+
+---
+
+### Phase 3: UI/UX実装（2週間） 🟡 優先度：中
+
+**目標:** モード切替UIとスコア可視化
+
+#### Step 3.1: モード切替UI（4-5日）
+- [ ] `RecordsTable.php` リファクタリング
+  - [ ] `$currentSortMode` プロパティ追加
+  - [ ] `applySortMode(string $mode)` メソッド実装
+  - [ ] スマートモード自動切り替えロジック
+- [ ] Blade ビュー改修
+  - [ ] モード切替ボタングループ
+  - [ ] 現在のモード表示
+  - [ ] アクティブ状態のスタイリング
+
+**テスト:**
+```php
+// tests/Feature/Livewire/RecordsTableSortingTest.php
+public function test_switches_to_search_mode_with_keyword()
+{
+    Livewire::test(RecordsTable::class)
+        ->set('search', 'キーワード')
+        ->assertSet('currentSortMode', 'search');
+}
+
+public function test_manually_switches_to_freshness_mode()
+{
+    Livewire::test(RecordsTable::class)
+        ->call('applySortMode', 'freshness')
+        ->assertSet('currentSortMode', 'freshness');
+}
+```
+
+#### Step 3.2: スコア可視化（4-5日）
+- [ ] 台帳レコード単位のスコア表示
+  - [ ] 星表示（5段階）コンポーネント
+  - [ ] ツールチップでの詳細表示
+- [ ] 台帳定義ヘッダーへの集計スコア表示
+  - [ ] バッジ表示（活動・新鮮・重要）
+  - [ ] 総合スコア表示
+- [ ] スコア詳細モーダル実装（オプション）
+
+**テスト:**
+```php
+// tests/Feature/Livewire/RecordsTableDisplayTest.php
+public function test_displays_composite_score_for_ledger()
+{
+    $ledger = Ledger::factory()->create(['activity_score' => 85]);
+    
+    Livewire::test(RecordsTable::class)
+        ->assertSee('⭐⭐⭐⭐⭐') // 5つ星
+        ->assertSee('85pt');
+}
+```
+
+#### Step 3.3: 翻訳とアクセシビリティ（2-3日）
+- [ ] `lang/ja/ledger.php` に翻訳キー追加
+  - [ ] モード名（スマート、活動重視、etc.）
+  - [ ] スコア説明文
+  - [ ] ヘルプテキスト
+- [ ] アクセシビリティ対応
+  - [ ] aria-label 追加
+  - [ ] キーボード操作対応
+
+**完了条件:**
+- ✅ 全モードの切り替えが直感的に操作可能
+- ✅ スコアが分かりやすく可視化
+- ✅ 日本語翻訳完備
+- ✅ アクセシビリティ基準を満たす
+
+---
+
+### Phase 4: パフォーマンス最適化（1週間） 🟢 優先度：低
+
+**目標:** 本番環境での実用的なパフォーマンス確保
+
+#### Step 4.1: キャッシング戦略（2-3日）
+- [ ] Redis キャッシュ実装
+  - [ ] 複合スコアの5分間キャッシュ
+  - [ ] 台帳定義集計スコアの1時間キャッシュ
+  - [ ] キャッシュキー設計: `ledger:score:{id}:{preset}`
+- [ ] キャッシュ無効化ロジック
+  - [ ] 台帳更新時の自動クリア
+
+**テスト:**
+```php
+// tests/Unit/Services/CompositeScoreCalculatorCacheTest.php
+public function test_uses_cached_score_when_available()
+{
+    $ledger = Ledger::factory()->create();
+    $calculator = new CompositeScoreCalculator();
+    
+    // 初回計算
+    $result1 = $calculator->calculate($ledger, $config);
+    
+    // 2回目はキャッシュから
+    $result2 = $calculator->calculate($ledger, $config);
+    
+    $this->assertEquals($result1, $result2);
+    $this->assertTrue(Cache::has("ledger:score:{$ledger->id}:activity"));
+}
+```
+
+#### Step 4.2: バッチ処理最適化（2-3日）
+- [ ] スコア減衰Artisanコマンド
+  - [ ] `php artisan scoring:decay`
+  - [ ] チャンク処理（1000件ずつ）
+  - [ ] 進捗バー表示
+- [ ] 台帳定義集計スコア再計算コマンド
+  - [ ] `php artisan scoring:recalculate-defines`
+- [ ] スケジュール登録（週次実行）
+
+**テスト:**
+```php
+// tests/Feature/Console/ScoringDecayCommandTest.php
+public function test_decays_all_scores_correctly()
+{
+    Ledger::factory()->count(10)->create(['activity_score' => 100]);
+    
+    $this->artisan('scoring:decay')
+        ->expectsOutput('Processing 10 ledgers...')
+        ->assertExitCode(0);
+    
+    $this->assertEquals(95, Ledger::first()->activity_score);
+}
+```
+
+#### Step 4.3: インデックス最適化（1-2日）
+- [ ] スロークエリログ分析
+- [ ] 複合インデックスの追加・調整
+- [ ] EXPLAIN 分析結果のドキュメント化
+
+**完了条件:**
+- ✅ 平均レスポンス時間増加が100ms以内
+- ✅ バッチ処理が5分以内に完了（1万レコード想定）
+- ✅ キャッシュヒット率80%以上
+
+---
+
+### Phase 5: 高度な機能（2週間） 🔵 優先度：任意
+
+**目標:** ユーザーごとのカスタマイズと機械学習準備
+
+#### Step 5.1: ユーザー個別設定（5-6日）
+- [ ] ユーザーごとの重み付け設定画面（Filament）
+- [ ] 設定の保存・読み込みロジック
+- [ ] デフォルト値へのリセット機能
+
+#### Step 5.2: A/Bテスト基盤（4-5日）
+- [ ] 複数プリセットの効果測定
+- [ ] ユーザー行動ログ収集
+  - [ ] クリックされた台帳の順位
+  - [ ] モード切り替え頻度
+- [ ] 集計ダッシュボード
+
+#### Step 5.3: 機械学習準備（任意）
+- [ ] ユーザー行動データのエクスポート機能
+- [ ] Python連携API（将来実装）
+- [ ] 推奨重み付けの自動調整（将来実装）
+
+**完了条件:**
+- ✅ ユーザーが自由に重み付けをカスタマイズ可能
+- ✅ A/Bテストデータの収集開始
+- ✅ 機械学習への拡張性を確保
+
+---
+
+## 📈 評価指標（KPI）
+
+システム導入後、以下を測定して効果を検証：
+
+### 1. 情報発見効率
+```
+測定方法: ユーザーテスト + アナリティクス
+- 目的の情報到達までのクリック数（目標: 30%削減）
+- 検索から閲覧までの時間（目標: 40%短縮）
+- 検索後の「見つからない」報告数（目標: 50%削減）
+```
+
+### 2. ユーザー満足度
+```
+測定方法: アンケート
+- 「求めている情報が見つかった」率（目標: 80%以上）
+- モード切替機能の使用率（目標: 30%以上）
+- システム全体の満足度（目標: 4.0/5.0以上）
+```
+
+### 3. システム負荷
+```
+測定方法: パフォーマンスモニタリング
+- スコア計算による平均レスポンス時間増加（目標: 100ms以内）
+- バッチ処理の所要時間（目標: 5分以内、1万レコード）
+- キャッシュヒット率（目標: 80%以上）
+```
+
+---
+
+## 💡 実装時の指針
+
+### 迷ったときの判断基準
+
+#### 指針1: ペルソナの業務を最優先
+```
+実装判断に迷ったら、ペルソナの具体的なユースケースに立ち返る：
+- 「実務担当者がこの機能で日報作成が楽になるか？」
+- 「現場リーダーがチーム状況を把握しやすくなるか？」
+- 「管理者の監査業務を支援できるか？」
+
+例: スコア詳細モーダルの実装優先度を判断する場合
+→ 実務担当者は「なぜこの順序なのか」を知りたいニーズがある
+→ 透明性の向上に寄与するため、Phase 3に含める
+```
+
+#### 指針2: 既存機能との整合性
+```
+新機能は既存の検索・ソート・フィルタ機能と**共存**すべきである：
+- カラム単位のソートは維持（ユーザーが慣れている）
+- フィルタ機能はそのまま動作
+- 新しいソートモードは「追加」であり「置き換え」ではない
+
+例: 複合スコアソートを実装する際
+→ 既存の orderBy('updated_at') は引き続き利用可能にする
+→ スコアソートは「オプション」として提供
+```
+
+#### 指針3: 段階的な価値提供
+```
+各Phaseで「使える機能」を提供し、次のPhaseへ進む：
+- Phase 1完了時点で、新鮮度順ソートが使える
+- Phase 2完了時点で、複合スコアが表示される
+- Phase 3完了時点で、モード切り替えができる
+
+最初から完璧を目指さず、フィードバックを得ながら改善
+```
+
+#### 指針4: パフォーマンスは後回しにしない
+```
+各Phaseでパフォーマンステストを実施：
+- Phase 1: 新鮮度計算の負荷測定
+- Phase 2: 複合スコア計算の負荷測定
+- Phase 3: UI更新の体感速度確認
+
+100ms以内という目標を常に意識し、超えそうなら設計を見直す
+```
+
+#### 指針5: テスタビリティ優先
+```
+スコア計算ロジックは必ず独立したサービスクラスに：
+- Pure Function として実装（副作用なし）
+- モックなしでユニットテスト可能
+- 設定値は config から注入
+
+例: CompositeScoreCalculator
+→ Ledger モデルに直接メソッドを追加せず、独立したサービスに
+→ テストで任意のスコア値を渡して結果を検証できる
+```
+
+---
+
+## 🎓 技術的補足
+
+### スコア正規化の数学的根拠
+
+各指標を0-100スケールに正規化する理由：
+
+```
+1. 異なるスケールの指標を比較可能にする
+   - 活動スコア: 0-∞
+   - 新鮮度スコア: 0-100
+   → 正規化なしでは、活動スコアが支配的になる
+
+2. 重み付けの直感性を確保
+   - 「活動40%、新鮮度30%」が分かりやすい
+   - パーセンテージ表記が理解しやすい
+
+3. UI表示の統一性
+   - すべてのスコアを「○○点」として表示可能
+   - プログレスバーやグラフで可視化しやすい
+```
+
+### 減衰処理の設計意図
+
+活動スコアを週次で5%減衰させる理由：
+
+```
+1. 情報の陳腐化を反映
+   - 3ヶ月前に頻繁に更新された台帳が、
+     今も高スコアのまま上位に残るのは不適切
+
+2. 新旧のバランス
+   - 5%減衰 → 20週（約5ヶ月）で半減
+   - 急激すぎず、緩やかすぎない
+
+3. 調整可能な設計
+   - config/ledgerleap.php で変更可能
+   - 運用しながら最適値を探る
+```
+
+### Mroonga関連性スコアの扱い
+
+検索時の関連性スコアは、Mroongaの `MATCH ... AGAINST` スコアを活用：
+
+```sql
+-- content は本文、content_attached は添付ファイル内容
+-- content を2倍の重みで計算（本文の方が重要）
+SELECT 
+    (MATCH(`content`) AGAINST ('キーワード' IN BOOLEAN MODE) * 2.0) + 
+    MATCH(`content_attached`) AGAINST ('キーワード' IN BOOLEAN MODE) 
+    AS relevance_raw_score
+```
+
+注意点：
+- Mroongaのスコアは文書長や出現頻度に依存
+- 絶対値ではなく、相対的な順位として使用
+- 10倍して0-100スケールに正規化（経験的な値）
+
+---
+
+## 📝 関連ドキュメント
+
+- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md)
+- [検索機能](../function/Search.md)
+- [アクティビティログ機能](../function/Activity.md)
+- [RecordsTable.php](../../app/Livewire/Ledger/RecordsTable.php)
+- [Ledger.php](../../app/Models/Ledger.php)
+
+---
+
+## ✅ 進捗管理
+
+### Phase 1: 基礎スコアリング
+- [ ] Step 1.1: データベース基盤整備
+- [ ] Step 1.2: 活動スコア計算サービス
+- [ ] Step 1.3: 新鮮度スコア計算
+- [ ] Step 1.4: シンプルな表示順変更
+
+### Phase 2: 複合スコア計算エンジン
+- [ ] Step 2.1: 重要度・関連性・人気度スコア実装
+- [ ] Step 2.2: 複合スコア計算サービス
+- [ ] Step 2.3: 設定管理
+
+### Phase 3: UI/UX実装
+- [ ] Step 3.1: モード切替UI
+- [ ] Step 3.2: スコア可視化
+- [ ] Step 3.3: 翻訳とアクセシビリティ
+
+### Phase 4: パフォーマンス最適化
+- [ ] Step 4.1: キャッシング戦略
+- [ ] Step 4.2: バッチ処理最適化
+- [ ] Step 4.3: インデックス最適化
+
+### Phase 5: 高度な機能（任意）
+- [ ] Step 5.1: ユーザー個別設定
+- [ ] Step 5.2: A/Bテスト基盤
+- [ ] Step 5.3: 機械学習準備
+
+---
+
+**最終更新:** 2025年10月8日  
+**次回レビュー予定:** Phase 1完了時
