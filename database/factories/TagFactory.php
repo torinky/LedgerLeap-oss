@@ -19,8 +19,8 @@ class TagFactory extends Factory
     public function definition()
     {
         return [
-            'ledger_define_id' => null,
-            'folder_id' => null,
+            'ledger_define_id' => \App\Models\LedgerDefine::factory(),
+            'folder_id' => \App\Models\Folder::factory(),
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
             'name' => $this->faker->word(), // realText(10) から word() に変更

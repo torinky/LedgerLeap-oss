@@ -51,7 +51,7 @@ class DatabaseSeeder extends Seeder
             }
 
             Ledger::factory($seedCount)->recycle($users)->recycle($ledgerDefines)->create(); // $seedCount を渡す
-            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->recycle($folders)->create();
         }
     }
 }
