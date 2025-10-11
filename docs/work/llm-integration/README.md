@@ -2,6 +2,15 @@
 
 このカテゴリには、LedgerLeapと大規模言語モデル（LLM）を連携させるための機能に関する実装計画やAPI仕様、作業ログを格納しています。
 
+---
+
+### ✅ 現状サマリー (2025-10-11)
+
+このカテゴリに記載されている機能（API基盤、MCPサーバー、各種MCPツール、統計機能など）は、すべて実装・解決済みです。
+各ドキュメントに記載されている計画や仕様は、現在のコードベースに正しく反映されており、実装との間に大きな齟齬がないことを確認済みです。
+
+---
+
 ## 📚 ドキュメント一覧
 
 - **[LLM連携機能 開発ロードマップ](./2025-09-23_LLM_Integration_Roadmap.md)**: LLM連携機能の全体像と開発ロードマップ。
@@ -144,12 +153,12 @@ After: "業務全体を自然言語で操作可能"
 ## 🔗 関連ドキュメント
 
 ### 技術ドキュメント
-- [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md)
-- [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md)
+- [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)
+- [MCP プロンプトガイドライン](../../development/MCP_Prompt_Guidelines.md)
 
 ### 要件・設計ドキュメント  
-- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md)
-- [API仕様概要](../api/README.md)
+- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md)
+- [API仕様概要](../../api/README.md)
 
 ---
 
