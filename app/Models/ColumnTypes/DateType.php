@@ -10,7 +10,6 @@ class DateType implements InputType
 
     public function __construct($options = [])
     {
-        \Illuminate\Support\Facades\Log::debug('DateType constructed with options:', is_array($options) ? $options : []);
         // optionsがarrayの場合、default_offset と overwrite_existing を取得
         if (is_array($options)) {
             if (isset($options['default_offset'])) {
@@ -20,10 +19,6 @@ class DateType implements InputType
                 $this->overwriteExisting = (bool) $options['overwrite_existing'];
             }
         }
-        \Illuminate\Support\Facades\Log::debug('DateType properties set:', [
-            'defaultOffset' => $this->defaultOffset,
-            'overwriteExisting' => $this->overwriteExisting,
-        ]);
     }
 
     /**
@@ -71,30 +66,17 @@ class DateType implements InputType
      */
     public function getDefaultDate($existingValue = null): ?string
     {
-        \Illuminate\Support\Facades\Log::debug('getDefaultDate called:', [
-            'existingValue' => $existingValue,
-            'defaultOffset' => $this->defaultOffset,
-            'overwriteExisting' => $this->overwriteExisting,
-        ]);
-
         // オフセットが空欄の場合はnullを返す
         if (empty($this->defaultOffset)) {
-            \Illuminate\Support\Facades\Log::debug('getDefaultDate returning null because defaultOffset is empty.');
-
             return null;
         }
 
         // 既存値があり、上書き設定がfalseの場合は既存値を優先
         if (! empty($existingValue) && ! $this->overwriteExisting) {
-            \Illuminate\Support\Facades\Log::debug('getDefaultDate returning null because existing value should be preserved.');
-
             return null; // 既存値を変更しない
         }
 
-        $calculatedDate = $this->calculateDateFromOffset($this->defaultOffset);
-        \Illuminate\Support\Facades\Log::debug('getDefaultDate returning calculated date:', ['date' => $calculatedDate]);
-
-        return $calculatedDate;
+        return $this->calculateDateFromOffset($this->defaultOffset);
     }
 
     /**

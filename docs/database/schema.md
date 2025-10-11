@@ -246,6 +246,19 @@ erDiagram
 -   **カラム定義:** `content` と `content_attached` は `longtext` 型ですが、Mroongaの `flags "COLUMN_VECTOR"` コメントによって、**ベクターカラム**として扱われます。これにより、JSON配列の各要素がインデックス化の対象となります。
 -   **データ形式:** これらのカラムには、Laravelのカスタムキャスト (`AsColumnArrayJson`) を通じてPHPの配列がJSON配列として保存されます。注意点として、配列の要素には単純な文字列だけでなく、**PHPでシリアライズされた配列 (`___serialized___...`) が含まれる**ことがあり、データ構造は複雑です。
 
+#### contentの正規化プロセス
+
+**重要**: Ledgerの`content`および`content_attached`は、保存前に`LedgerDefine::normalizeByColumnDefine()`によって正規化され、`AsColumnArrayJson`キャストによって変換されます：
+
+1. **Livewireでの管理**: カラムIDをキーとした連想配列 `[1 => 'value', 3 => 'value']`
+2. **正規化処理**: カラムIDの欠番を空文字で埋める → `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+3. **DB保存**: `array_values()`で連番配列に変換 → JSON: `["", "value", "", "value"]`
+4. **DB読み取り**: 連番配列として復元 → `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+
+この正規化により、**カラムIDが配列インデックスと一致**し、`$ledger->content[$columnId]`で直接値にアクセスできます。
+
+詳細は [Ledgerモデルのドキュメント](../models/Ledger.md#contentとcontent_attachedの正規化とデータ構造) および [Testing-Best-Practices.md](../development/Testing-Best-Practices.md#-ledgerモデルのcontentデータ構造とテスト) を参照してください。
+
 ### 2. インデックスの挙動と制約
 
 -   **単一カラムインデックス:** `content` と `content_attached` には、それぞれ個別の `FULLTEXT` インデックスが作成されています。`tinker` 等を用いた直接のDB検証により、これらの**単一カラムインデックスは正しく機能する**ことが確認されています。

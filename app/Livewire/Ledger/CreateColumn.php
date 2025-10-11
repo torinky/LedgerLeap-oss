@@ -158,19 +158,26 @@ class CreateColumn extends Component
                     : '',
                 default => '',
             };
+
             // content がまだセットされていない場合のみデフォルト値を設定
             if (! isset($this->content[$column->id])) {
-                $this->content[$column->id] = $this->ledgerRecord?->content[$column->id] ?? $defaultValue;
+                // 既存のledgerRecordがある場合、content配列から値を探す
+                // DBからの取得時にarray_values()で数値インデックス化され、
+                // normalizeByColumnDefine()でカラムIDの欠番が空文字で埋められているため、
+                // カラムID自体をインデックスとして使用できる
+                if ($this->ledgerRecord && isset($this->ledgerRecord->content)) {
+                    // カラムIDをそのままインデックスとして使用
+                    // normalizeByColumnDefine()により、content配列のインデックスはカラムIDと一致している
+                    $this->content[$column->id] = $this->ledgerRecord->content[$column->id] ?? $defaultValue;
+                } else {
+                    $this->content[$column->id] = $defaultValue;
+                }
             }
 
             // labelColor の初期設定
             $this->updateContentStatusLabel($column);
         }
-        // DBからの復元時に存在しないキーを埋める (Modify用)
-        if ($this->ledgerRecord ?? $this->content) {
-                    $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
-                }
-                \Illuminate\Support\Facades\Log::debug('Content after initColumns:', is_array($this->content) ? $this->content : []);    }
+    }
 
     public function initRequireColumns(): void
     {
@@ -726,9 +733,9 @@ class CreateColumn extends Component
             $frequentUsers = $this->workflowService->getFrequentAssignees($this->ledgerDefineId, 'inspector', 1);
             if (! empty($frequentUsers)) {
                 $initialUserId = $frequentUsers[0]['id'];
-                Log::debug("Initial inspector ID based on frequency: {$initialUserId}");
+                // Log::debug("Initial inspector ID based on frequency: {$initialUserId}");
             } else {
-                Log::debug('No frequent inspector found.');
+                // Log::debug('No frequent inspector found.');
             }
         }
         // TODO: 承認者用の初期値決定ロジック
@@ -752,7 +759,7 @@ class CreateColumn extends Component
     public function handleAssigneeSelected(int $userId, string $roleType): void
     {
         //        dd("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
-        Log::debug("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
+        // Log::debug("Assignee selected via modal: User ID {$userId}, Role Type: {$roleType}");
         // ここで $userId を使って WorkflowService のメソッドを呼び出す
         if ($roleType === 'inspector') {
             //            $this->requestInspectionInternal($userId); // 内部メソッド呼び出し

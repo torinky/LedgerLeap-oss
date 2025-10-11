@@ -74,7 +74,9 @@ class ModifyColumnTenancyTest extends TestCase
         $this->ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'tenant_id' => $this->tenant->id,
-            'content' => ['Initial Value'],
+            // normalizeByColumnDefineと同じ形式でデータを作成
+            // カラムID=1なので、インデックス0（空）とインデックス1（値）が必要
+            'content' => [0 => '', 1 => 'Initial Value'],
         ]);
     }
 

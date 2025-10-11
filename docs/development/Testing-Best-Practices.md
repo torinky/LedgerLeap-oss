@@ -343,6 +343,153 @@ public function test_requires_specific_environment()
 
 ---
 
+## 📦 Ledgerモデルのcontentデータ構造とテスト
+
+### 1. contentの正規化とデータベース保存
+
+**重要**: Ledgerの`content`および`content_attached`は、`AsColumnArrayJson`キャストと`normalizeByColumnDefine()`によって特殊な変換が行われます。
+
+```php
+// ✅ 実際のデータフロー
+// 1. Livewireコンポーネントでの入力
+$content = [1 => 'テキスト', 3 => '値'];  // カラムIDをキーとした連想配列
+
+// 2. normalizeByColumnDefine()による正規化（保存前）
+// - カラムIDの欠番を空文字で埋める
+// - maxIdまでのすべてのインデックスを作成
+$normalized = [0 => '', 1 => 'テキスト', 2 => '', 3 => '値'];  // インデックス0,2が追加
+
+// 3. AsColumnArrayJson::set()による変換（DB保存）
+// - array_values()で連番配列に変換
+$stored = ['', 'テキスト', '', '値'];  // JSON: ["","テキスト","","値"]
+
+// 4. DBから読み取り時（AsColumnArrayJson::get()）
+// - 連番配列として復元される
+$fromDb = [0 => '', 1 => 'テキスト', 2 => '', 3 => '値'];
+```
+
+### 2. テストでのLedger作成時の注意点
+
+**問題**: テストでLedgerを直接作成する場合、`normalizeByColumnDefine()`が呼ばれないため、データ構造が実際のアプリケーションと異なる可能性があります。
+
+```php
+// ❌ 間違ったテストデータ作成
+$ledger = Ledger::factory()->create([
+    'ledger_define_id' => $ledgerDefine->id,
+    'content' => [1 => 'テスト値'],  // カラムID=1のみ指定
+]);
+// → DBには ['テスト値'] として保存される（インデックス0のみ）
+// → ModifyColumnで読み取ると content[1] が存在しない！
+
+// ✅ 正しいテストデータ作成
+// normalizeByColumnDefine()と同じ形式でデータを作成
+$ledger = Ledger::factory()->create([
+    'ledger_define_id' => $ledgerDefine->id,
+    'content' => [0 => '', 1 => 'テスト値'],  // カラムIDの欠番も含める
+]);
+// → DBには ['', 'テスト値'] として保存される（インデックス0,1）
+// → ModifyColumnで content[1] が正しく読み取れる
+```
+
+### 3. カラムIDと配列インデックスの対応関係
+
+```php
+// ✅ normalizeByColumnDefine()の動作理解
+$ledgerDefine->column_define = [
+    new ColumnDefine(0, 'フィールド0', ...),  // カラムID=0
+    new ColumnDefine(2, 'フィールド2', ...),  // カラムID=2（ID=1は欠番）
+];
+
+// maxId = 2 なので、インデックス0,1,2が作成される
+$content = [1 => '値'];  // カラムID=1に値を設定
+
+// normalizeByColumnDefine()後:
+// [0 => '', 1 => '値', 2 => '']
+//  ↑        ↑         ↑
+//  カラム0   カラム1    カラム2
+//  (空)     (値)      (空)
+
+// DBから読み取り後も同じ構造
+// $ledger->content[0] → ''（カラムID=0の値）
+// $ledger->content[1] → '値'（カラムID=1の値）
+// $ledger->content[2] → ''（カラムID=2の値）
+```
+
+### 4. 実際のアプリケーションフロー
+
+**重要**: 実際のアプリケーションでは、Livewireコンポーネント経由で保存されるため、常に正規化が行われます。
+
+```php
+// app/Livewire/Ledger/CreateColumn.php (line 648-649)
+protected function processFilesForSave(): void
+{
+    // ... ファイル処理 ...
+    
+    // 保存前に必ず正規化
+    $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+    $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
+}
+```
+
+### 5. テストのベストプラクティス
+
+```php
+// ✅ 推奨パターン1: 実際のフローを使う
+Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id])
+    ->set('content.1', 'テスト値')
+    ->call('saveDraft');
+// → 正規化が自動的に行われる
+
+// ✅ 推奨パターン2: 正規化された形式で直接作成
+$ledger = Ledger::factory()->create([
+    'content' => [
+        0 => '',           // カラムID=0（空の場合でも含める）
+        1 => 'テスト値',   // カラムID=1
+        2 => '',           // カラムID=2（空の場合でも含める）
+    ],
+]);
+
+// ✅ 推奨パターン3: ヘルパーメソッドを作成
+protected function createLedgerWithContent(LedgerDefine $define, array $content): Ledger
+{
+    // normalizeByColumnDefine()を明示的に呼び出す
+    $normalized = $define->normalizeByColumnDefine($content);
+    
+    return Ledger::factory()->create([
+        'ledger_define_id' => $define->id,
+        'content' => $normalized,
+    ]);
+}
+```
+
+### 6. トラブルシューティング
+
+**症状**: `Undefined array key X` エラーが発生
+
+```php
+// 問題のコード例
+$component = Livewire::test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+$component->assertSet('content.1', 'expected_value');
+// → Error: Undefined array key 1
+```
+
+**チェックポイント**:
+1. テストでLedgerを作成する際、カラムIDの欠番を空文字で埋めているか？
+2. `column_define`のmaxIdまでのすべてのインデックスを含めているか？
+3. DBに保存された実際のJSON構造を確認したか？
+
+```php
+// デバッグ方法
+$ledger = Ledger::find($ledgerId);
+dd([
+    'content' => $ledger->content,
+    'content_keys' => array_keys($ledger->content),
+    'db_raw' => $ledger->getAttributes()['content'],  // 生のJSON文字列
+]);
+```
+
+---
+
 ## 🧩 MCPツール専用テストパターン
 
 ### 1. 統合テスト vs 詳細テストの責任分担

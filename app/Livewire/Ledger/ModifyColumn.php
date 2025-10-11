@@ -354,7 +354,7 @@ class ModifyColumn extends CreateColumn
                 return;
             }
 
-            Log::debug("[ModifyColumn] Handling 'request_inspection_with_comment'. Ledger ID: {$ledgerId}, Comment: ".($comment ?? 'N/A'));
+            // Log::debug("[ModifyColumn] Handling 'request_inspection_with_comment'. Ledger ID: {$ledgerId}, Comment: ".($comment ?? 'N/A'));
             //            dd("[ModifyColumn] Action: {$actionType}, Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
 
             // 親クラスのメソッドを呼び出すか、ModifyColumn 固有の処理を記述
@@ -364,7 +364,7 @@ class ModifyColumn extends CreateColumn
         }
 
         // 上記のどの条件にも当てはまらない場合は、この ModifyColumn インスタンスが処理すべきイベントではない
-        Log::debug("[ModifyColumn] Received 'workflow-action-with-comment' with unhandled actionType: {$actionType} for Ledger ID: {$ledgerId}. Ignoring.");
+        // Log::debug("[ModifyColumn] Received 'workflow-action-with-comment' with unhandled actionType: {$actionType} for Ledger ID: {$ledgerId}. Ignoring.");
         $this->error(__('messages.error.generic'));
     }
 

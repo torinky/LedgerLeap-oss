@@ -123,7 +123,9 @@ class DateDefaultInitializationTest extends TestCase
         $existingDate = '2024-01-15';
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
-            'content' => [1 => $existingDate],
+            // normalizeByColumnDefineと同じ形式でデータを作成
+            // カラムID=1なので、インデックス0（空）とインデックス1（値）が必要
+            'content' => [0 => '', 1 => $existingDate],
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -148,7 +150,9 @@ class DateDefaultInitializationTest extends TestCase
         $existingDate = '2024-01-15';
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
-            'content' => [1 => $existingDate],
+            // normalizeByColumnDefineと同じ形式でデータを作成
+            // カラムID=1なので、インデックス0（空）とインデックス1（値）が必要
+            'content' => [0 => '', 1 => $existingDate],
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -173,7 +177,9 @@ class DateDefaultInitializationTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
-            'content' => [], // 既存値なし
+            // normalizeByColumnDefineと同じ形式でデータを作成
+            // カラムID=1なので、インデックス0（空）とインデックス1（空）が必要
+            'content' => [0 => '', 1 => ''], // 既存値なし
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
