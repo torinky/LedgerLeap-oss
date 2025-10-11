@@ -960,6 +960,7 @@ MARKDOWN;
         }
 
         $define = $this->ledgerDefines['経費申請'];
+
         $statuses = [
             WorkflowStatus::DRAFT,
             WorkflowStatus::DRAFT,
@@ -1127,9 +1128,9 @@ MARKDOWN,
                 0 => 'EXP-'.str_pad($index + 1, 4, '0', STR_PAD_LEFT),
                 1 => now()->subDays(rand(1, 30))->format('Y-m-d'),
                 2 => $expenseType,
-                3 => $amount,
+                3 => $amount,  // AsColumnArrayJsonで自動的に文字列に変換される
                 4 => $descriptionTemplates[$expenseType],
-                5 => '', // 領収書（実際のファイルはスキップ）
+                5 => [],
             ];
 
             $ledger = Ledger::create([
@@ -1149,11 +1150,16 @@ MARKDOWN,
 
     private function createFacilityInspectionLedgers(): void
     {
+        $this->command->info('   🔍 [DEBUG] Starting createFacilityInspectionLedgers...');
+
         if (! isset($this->ledgerDefines['設備点検表'])) {
+            $this->command->warn('   ⚠️  [DEBUG] 設備点検表 LedgerDefine not found in array');
+
             return;
         }
 
         $define = $this->ledgerDefines['設備点検表'];
+        $this->command->info("   🔍 [DEBUG] LedgerDefine found: ID={$define->id}, Title={$define->title}");
         $facilities = [
             ['name' => 'エアコンA', 'location' => '1F 事務室', 'model' => 'ダイキン FXシリーズ'],
             ['name' => 'エアコンB', 'location' => '2F 会議室', 'model' => '三菱電機 Zシリーズ'],
@@ -1236,7 +1242,10 @@ MARKDOWN,
         ];
 
         foreach ($facilities as $index => $facility) {
+            $this->command->info("   🔍 [DEBUG] Processing facility ledger #{$index}: {$facility['name']}");
+
             $inspector = $inspectors[$index % count($inspectors)] ?? $this->users['点検一郎'];
+            $this->command->info("   🔍 [DEBUG] Inspector: {$inspector->name} (ID={$inspector->id})");
 
             // ランダムに所見を選択
             $observationKey = match ($index % 3) {
@@ -1245,21 +1254,39 @@ MARKDOWN,
                 2 => 'excellent',
             };
 
-            $ledger = Ledger::create([
-                'ledger_define_id' => $define->id,
-                'creator_id' => $inspector->id,
-                'modifier_id' => $inspector->id,
-                'status' => WorkflowStatus::APPROVED,
-                'content' => [
-                    0 => now()->subMonths($index)->format('Y-m-d'),
-                    1 => $facility['name'],
-                    2 => '月次点検',
-                    3 => ['外観異常なし', '動作正常', '異音なし', '温度正常', '清掃実施'],
-                    4 => $observationTemplates[$observationKey],
-                ],
-                'created_at' => now()->subMonths($index),
-                'updated_at' => now()->subMonths($index),
-            ]);
+            $contentData = [
+                0 => now()->subMonths($index)->format('Y-m-d'),
+                1 => $facility['name'],
+                2 => '月次点検',
+                3 => ['外観異常なし', '動作正常', '異音なし', '温度正常', '清掃実施'],
+                4 => $observationTemplates[$observationKey],
+            ];
+
+            $this->command->info('   🔍 [DEBUG] Content data prepared:');
+            $this->command->info('     - 点検日: '.$contentData[0]);
+            $this->command->info('     - 設備名: '.$contentData[1]);
+            $this->command->info('     - 点検区分: '.$contentData[2]);
+            $this->command->info('     - 点検項目 type: '.gettype($contentData[3]));
+            $this->command->info('     - 点検項目 count: '.count($contentData[3]));
+            $this->command->info('     - 所見・特記事項: '.substr($contentData[4], 0, 50).'...');
+
+            try {
+                $ledger = Ledger::create([
+                    'ledger_define_id' => $define->id,
+                    'creator_id' => $inspector->id,
+                    'modifier_id' => $inspector->id,
+                    'status' => WorkflowStatus::APPROVED,
+                    'content' => $contentData,
+                    'created_at' => now()->subMonths($index),
+                    'updated_at' => now()->subMonths($index),
+                ]);
+
+                $this->command->info("   ✅ [DEBUG] Ledger created successfully: ID={$ledger->id}");
+                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
+            } catch (\Exception $e) {
+                $this->command->error('   ❌ [DEBUG] Failed to create ledger: '.$e->getMessage());
+                $this->command->error('   ❌ [DEBUG] Stack trace: '.$e->getTraceAsString());
+            }
 
             $this->command->info("   ✓ Ledger: 設備点検表 - {$facility['name']}");
         }
@@ -1267,11 +1294,16 @@ MARKDOWN,
 
     private function createWeeklyReportLedgers(): void
     {
+        $this->command->info('   🔍 [DEBUG] Starting createWeeklyReportLedgers...');
+
         if (! isset($this->ledgerDefines['週報'])) {
+            $this->command->warn('   ⚠️  [DEBUG] 週報 LedgerDefine not found in array');
+
             return;
         }
 
         $define = $this->ledgerDefines['週報'];
+        $this->command->info("   🔍 [DEBUG] LedgerDefine found: ID={$define->id}, Title={$define->title}");
         $creators = array_values(array_filter($this->users, fn ($u) => str_contains($u->name, '開発')));
 
         // 週報のテンプレート（マークダウン形式）
@@ -1577,24 +1609,45 @@ MARKDOWN,
         ];
 
         for ($i = 0; $i < 4; $i++) {
+            $this->command->info("   🔍 [DEBUG] Processing weekly report #{$i}...");
+
             $creator = $creators[$i % count($creators)] ?? $this->users['開発太郎'];
             $weekStart = now()->subWeeks($i)->startOfWeek();
             $template = $weeklyTemplates[$i % count($weeklyTemplates)];
 
-            $ledger = Ledger::create([
-                'ledger_define_id' => $define->id,
-                'creator_id' => $creator->id,
-                'modifier_id' => $creator->id,
-                'status' => $i === 0 ? WorkflowStatus::DRAFT : WorkflowStatus::APPROVED,
-                'content' => [
-                    0 => $weekStart->format('Y-m-d'),
-                    1 => $template['achievements'],
-                    2 => $template['plans'],
-                    3 => $template['status'],
-                ],
-                'created_at' => $weekStart->addDays(4),
-                'updated_at' => $weekStart->addDays(4),
-            ]);
+            $this->command->info("   🔍 [DEBUG] Creator: {$creator->name} (ID={$creator->id})");
+            $this->command->info("   🔍 [DEBUG] Week start: {$weekStart->format('Y-m-d')}");
+
+            $contentData = [
+                0 => $weekStart->format('Y-m-d'),
+                1 => $template['achievements'],
+                2 => $template['plans'],
+                3 => $template['status'],
+            ];
+
+            $this->command->info('   🔍 [DEBUG] Content data prepared:');
+            $this->command->info('     - 週開始日: '.$contentData[0]);
+            $this->command->info('     - 今週の成果: '.substr($contentData[1], 0, 50).'...');
+            $this->command->info('     - 来週の予定: '.substr($contentData[2], 0, 50).'...');
+            $this->command->info('     - 進捗状況: '.$contentData[3]);
+
+            try {
+                $ledger = Ledger::create([
+                    'ledger_define_id' => $define->id,
+                    'creator_id' => $creator->id,
+                    'modifier_id' => $creator->id,
+                    'status' => $i === 0 ? WorkflowStatus::DRAFT : WorkflowStatus::APPROVED,
+                    'content' => $contentData,
+                    'created_at' => $weekStart->addDays(4),
+                    'updated_at' => $weekStart->addDays(4),
+                ]);
+
+                $this->command->info("   ✅ [DEBUG] Ledger created successfully: ID={$ledger->id}");
+                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
+            } catch (\Exception $e) {
+                $this->command->error('   ❌ [DEBUG] Failed to create ledger: '.$e->getMessage());
+                $this->command->error('   ❌ [DEBUG] Stack trace: '.$e->getTraceAsString());
+            }
 
             $this->command->info('   ✓ Ledger: 週報 - Week '.$weekStart->format('Y-m-d'));
         }

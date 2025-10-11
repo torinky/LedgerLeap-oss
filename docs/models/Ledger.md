@@ -27,6 +27,44 @@
 *   **その他主要な属性**:
     *   `id`: 一意なID (Primary Key)
 
+### AsColumnArrayJsonカスタムキャストについて
+
+`AsColumnArrayJson`カスタムキャストは、Mroongaの全文検索に対応するための特殊な実装です。
+
+**重要な機能：Mroonga対応の自動型変換**
+
+Mroongaのベクターカラム処理には、数値キーのJSON配列内に整数値がある場合、その配列をさらにJSON配列としてエンコードしてしまう副作用があります：
+
+```php
+// 問題のあるケース（整数を含む配列）
+["EXP-0001", "2025-10-11", "交通費", 1000, "説明", []]
+// → Mroongaの処理により二重配列化
+// → ["[\"EXP-00","01\",...]"]  // 分割されて破損
+// → Eloquentでの取得時にJSON decodeエラーでnullに
+```
+
+この問題を回避するため、`AsColumnArrayJson::setContent()`メソッドで**整数・浮動小数点数を自動的に文字列に変換**しています：
+
+```php
+// app/Casts/AsColumnArrayJson.php
+public function setContent(mixed $item): mixed
+{
+    // Mroongaのベクターカラム処理の副作用を回避
+    if (is_int($item) || is_float($item)) {
+        return (string) $item;
+    }
+    // ... 他の処理
+}
+```
+
+**メリット：**
+- シーダーやテストコードで整数を直接渡しても自動的に文字列に変換される
+- 開発者がMroongaの副作用を意識する必要がない
+- UIからのフォーム入力（自動的に文字列）との整合性が保たれる
+- 一箇所で対策が完結し、メンテナンスが容易
+
+詳細は`app/Casts/AsColumnArrayJson.php`のクラスコメントおよび[データベーススキーマ](/docs/database/schema.md)を参照してください。
+
 ## リレーションシップ
 
 *   **`define()`**:

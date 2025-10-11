@@ -269,7 +269,41 @@ erDiagram
 
 -   **`Ledger::scopeSearch`:** `Ledger` モデルの `scopeSearch` メソッドに、上記の制約を考慮した全文検索ロジックが実装されています。このスコープは、内部で `match(content) ... OR match(content_attached) ...` というクエリを生成し、正しい検索を実現します。API等で全文検索を実装する際は、このスコープを利用してください。
 
-### 4. テスト実装時の極めて重要な注意点
+### 4. Mroonga対応の自動型変換（重要）
+
+**問題:** Mroongaのベクターカラム処理には、数値キーのJSON配列内に整数値がある場合、その配列をさらにJSON配列としてエンコードしてしまう副作用があります。
+
+```php
+// 問題のあるケース
+["EXP-0001", "2025-10-11", "交通費", 1000, "説明", []]
+// → Mroongaの処理により二重配列化・分割
+// → ["[\"EXP-00","01\",\"2025-","10-11\",..."]"]
+// → Eloquentでの取得時にJSON decodeエラーでnullに
+```
+
+**解決策:** `AsColumnArrayJson`カスタムキャストの`setContent()`メソッドで、**整数・浮動小数点数を自動的に文字列に変換**しています：
+
+```php
+// app/Casts/AsColumnArrayJson.php
+public function setContent(mixed $item): mixed
+{
+    // Mroongaのベクターカラム処理の副作用を回避
+    if (is_int($item) || is_float($item)) {
+        return (string) $item;
+    }
+    // ... 他の処理
+}
+```
+
+この対策により：
+- シーダーやテストで整数を直接渡しても正しく動作
+- 開発者がMroongaの副作用を意識する必要がない
+- UIからのフォーム入力（自動的に文字列）との整合性が保たれる
+- 一箇所で対策が完結し、メンテナンスが容易
+
+詳細は`app/Casts/AsColumnArrayJson.php`のクラスコメントおよび[Ledgerモデルのドキュメント](/docs/models/Ledger.md)を参照してください。
+
+### 5. テスト実装時の極めて重要な注意点
 
 -   **`RefreshDatabase` トレイトとの非互換性:** Mroongaのインデックス更新は、データベースのトランザクションがコミットされた後に行われると推測されます。Laravelのテストで一般的に使われる `RefreshDatabase` トレイトは、テスト全体を単一のトランザクション内で実行し、最後にロールバックするため、テスト中に作成されたデータのインデックスが更新されません。これにより、**`RefreshDatabase` を使用したテストでは、全文検索が必ず失敗します。**
 -   **必須の対策:** 全文検索機能を含むフィーチャーテストを記述する際は、必ず `RefreshDatabase` の代わりに **`Illuminate\Foundation\Testing\DatabaseMigrations` トレイトを使用してください。** これにより、テストごとにDBが再構築され、トランザクションの問題を回避できます。
