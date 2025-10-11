@@ -168,9 +168,9 @@ class CreateColumn extends Component
         }
         // DBからの復元時に存在しないキーを埋める (Modify用)
         if ($this->ledgerRecord ?? $this->content) {
-            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
-        }
-    }
+                    $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+                }
+                \Illuminate\Support\Facades\Log::debug('Content after initColumns:', is_array($this->content) ? $this->content : []);    }
 
     public function initRequireColumns(): void
     {

@@ -485,7 +485,10 @@ class ModifyColumn extends CreateColumn
     }
 
     /**
-     * 日付カラムのデフォルト値を初期化する
+     * 日付カラムのデフォルト値を初期化する (ModifyColumn オーバーライド)
+     *
+     * DateType::getDefaultDate() が上書きロジックを内包しているため、
+     * nullでない値が返ってきた場合は、それを content に設定する。
      */
     protected function initializeDateDefaults(): void
     {
@@ -498,12 +501,11 @@ class ModifyColumn extends CreateColumn
             $existingValue = $this->content[$columnId] ?? null;
             $inputType = $column->getInputType();
 
-            // DateTypeのgetDefaultDateメソッドを使用
             if (method_exists($inputType, 'getDefaultDate')) {
                 $defaultDate = $inputType->getDefaultDate($existingValue);
 
-                // デフォルト値が計算され、既存値がない場合のみ設定
-                if ($defaultDate !== null && empty($existingValue)) {
+                // getDefaultDate が値を返してきた場合、それは設定すべき値
+                if ($defaultDate !== null) {
                     $this->content[$columnId] = $defaultDate;
                 }
             }
