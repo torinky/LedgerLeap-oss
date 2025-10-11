@@ -73,9 +73,10 @@ return new class extends Migration
         });
 
         Schema::table('attached_files', function (Blueprint $table) {
-            if ($this->indexExists('attached_files', 'idx_tenant_ledger')) {
-                $table->dropIndex('idx_tenant_ledger');
-            }
+            // 外部キー制約がインデックスを使用しているため、インデックスは削除しない
+            // tenant_idの外部キーは attached_files_tenant_id_foreign という名前で存在
+            // インデックス idx_tenant_ledger (tenant_id, ledger_id) がこの外部キーに使用されている
+            // MySQLでは外部キーに使用されているインデックスは削除不可
         });
 
         Schema::table('activity_log', function (Blueprint $table) {
