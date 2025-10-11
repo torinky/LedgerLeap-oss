@@ -120,6 +120,10 @@ class AsColumnArrayJson extends AsJson
      */
     public function set($model, $key, $value, $attributes): array
     {
+        Log::info('AsColumnArrayJson: set method called for key: ' . $key);
+        Log::info('AsColumnArrayJson: Input value type: ' . gettype($value));
+        Log::info('AsColumnArrayJson: Input value: ' . Str::limit(json_encode($value), 500));
+        
         // 利用可能であれば $value を直接使用します。
         $content = $value ?? $attributes[$key];
 
@@ -171,7 +175,7 @@ class AsColumnArrayJson extends AsJson
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
         );
 
-        // Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
+        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
         return [$key => $jsonString];
     }
 

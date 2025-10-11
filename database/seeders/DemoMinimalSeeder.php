@@ -388,15 +388,15 @@ MARKDOWN;
 
     private function createTags(): void
     {
-        // タグは台帳定義に付与（フォルダ・台帳定義を横断する検索用）
-        // プロジェクト横断的なキーワードを使用
-        $definesTags = [
-            '2025年度営業計画',
-            '新製品展開',
-            '顧客管理',
+        // タグは台帳定義に紐づき、横断検索を可能にする
+        // 営業日報には営業活動に関連する汎用タグを付与
+        $tagNames = [
+            '営業活動',     // 業務種別
+            '顧客対応',     // 業務種別
+            '日次報告',     // 頻度
         ];
 
-        foreach ($definesTags as $name) {
+        foreach ($tagNames as $name) {
             $this->tags[$name] = Tag::firstOrCreate(
                 [
                     'name' => $name,
@@ -410,7 +410,7 @@ MARKDOWN;
             );
         }
 
-        $this->command->info('   ✓ Tags attached to ledger define: '.implode(', ', $definesTags));
+        $this->command->info('   ✓ Tags attached to ledger define: '.implode(', ', $tagNames));
     }
 
     private function createDemoLedgers(): void

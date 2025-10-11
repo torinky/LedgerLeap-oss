@@ -12,10 +12,28 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application\'s database.
+     * Seed the application's database.
      */
     public function run(int $seedCount = 50): void // 引数を追加
     {
+        // 環境変数でデモデータモードかどうかを判定
+        $isDemoMode = env('SEEDER_MODE') === 'demo';
+
+        if ($isDemoMode) {
+            $this->command->info('🎯 Demo Mode: Running Demo Complete Seeder...');
+
+            // 権限システムを先に初期化
+            $this->call(RolesAndPermissionsSeeder::class);
+
+            // その後デモデータを作成
+            $this->call(DemoCompleteSeeder::class);
+
+            return;
+        }
+
+        // 通常モード: 既存のSeeder処理
+        $this->command->info('🔧 Standard Mode: Running standard seeders...');
+
         // 中央DBの初期データを投入
         $this->call([
             UsersSeeder::class,
