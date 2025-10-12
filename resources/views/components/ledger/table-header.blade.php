@@ -24,6 +24,24 @@
         </button>
 
     </th>
+    {{-- 複合スコア列 --}}
+    <th class="text-center px-4 py-2 tracking-wider bg-accent bg-opacity-30">
+        <span class="text-sm font-bold">{{ __('ledger.scoring.composite_score') }}</span>
+        <button class="btn btn-xs"
+                wire:click.self="sort('composite_score')"
+                wire:key="ledger_composite_score_sort_{{$ledgerDefine->id}}"
+        >
+            @if($orderBy == 'composite_score')
+                @if($orderAsc)
+                    <i class="fas fa-sort-up"></i>
+                @else
+                    <i class="fas fa-sort-down"></i>
+                @endif
+            @else
+                <i class="fas fa-sort opacity-30"></i>
+            @endif
+        </button>
+    </th>
     @foreach($filteredColumnDefines as $cKey=>$column_define)
         <td class="px-4 py-2 space-y-1 text-center bg-accent bg-opacity-30"
             wire:key="ledger_table_header_{{$ledgerDefine->id}}_column_{{$column_define->id}}"

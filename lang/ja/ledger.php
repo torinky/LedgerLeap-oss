@@ -53,6 +53,12 @@ return [
     'action_returned_to_draft' => 'を作成中に戻しました',
     'action_success' => 'アクションが正常に実行されました。',
     'action_task_claimed' => 'を引き継ぎました',
+    'scoring' => [
+        'composite_score' => '総合スコア',
+        'activity_score' => '活動スコア',
+        'freshness_score' => '新鮮度',
+        'importance_score' => '重要度',
+    ],
     'action_updated' => 'を更新しました。',
     'activity' => [
         'changes' => [

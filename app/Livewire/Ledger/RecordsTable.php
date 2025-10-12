@@ -14,6 +14,7 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -31,7 +32,7 @@ class RecordsTable extends Component
     #[Url(as: 'q')]
     public $search = '';
 
-    public $orderBy = 'id';
+    public $orderBy = 'composite_score';
 
     public $orderAsc = false;
 
@@ -105,6 +106,12 @@ class RecordsTable extends Component
         }
 
         $this->currentTenantId = tenant()?->id;
+
+        // composite_scoreカラムの存在確認
+        if (! Schema::hasColumn('ledgers', 'composite_score')) {
+            // マイグレーション未適用時のフォールバック
+            $this->orderBy = 'id';
+        }
 
         // 検索キーワードの初期化
         $search = $request->keyword();
@@ -267,7 +274,13 @@ class RecordsTable extends Component
 //          重複データを持たないように
 //          ->with('define.folder')
             ->orderBy('ledger_define_id', 'asc')
-            ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+            ->when($this->orderBy === 'composite_score', function ($query) {
+                // MySQLでは NULLS LAST が使えないため、スコア0を最後に
+                return $query->orderByRaw('composite_score = 0, composite_score '.
+                    ($this->orderAsc ? 'ASC' : 'DESC'));
+            }, function ($query) {
+                return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+            });
         // dd($ledgerRecords);
 
         //      重複データを持たないように台帳定義とフォルダ情報は別に取得する

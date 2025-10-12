@@ -42,6 +42,26 @@
 
     </th>
 
+    {{-- 複合スコア表示 --}}
+    <td class="px-2 py-2 text-center border">
+        @php
+            $scoreClass = match(true) {
+                $ledgerRecord->composite_score >= 70 => 'badge-success',  // 緑: 非常に重要
+                $ledgerRecord->composite_score >= 40 => 'badge-primary',   // 青: 重要
+                $ledgerRecord->composite_score >= 20 => 'badge-info',      // 水色: 注目
+                $ledgerRecord->composite_score > 0 => 'badge-ghost',       // グレー: 通常
+                default => ''
+            };
+        @endphp
+        @if($ledgerRecord->composite_score > 0)
+            <span class="badge badge-sm {{ $scoreClass }}">
+                {{ number_format($ledgerRecord->composite_score, 1) }}
+            </span>
+        @else
+            <span class="text-base-content/30 text-xs">-</span>
+        @endif
+    </td>
+
     @foreach($filteredColumnDefines as $cKey=>$columnDefine)
         <td class="hover:bg-accent/20 border px-4 py-2">
             @if (!$canView)
