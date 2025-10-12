@@ -23,7 +23,7 @@
             </span>
             <button class="btn btn-xs"
                     wire:key="ledger_sort_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
-                    wire:click.self="sort('content->{{ (string)$column_define->id }}')"
+                    wire:click.self="sort('content->{{ (string)$column_define->id }}', '{{ $column_define->name }}')"
             >
                 @if($orderBy == 'content->'.(string)$column_define->id)
                     @if($orderAsc)
@@ -49,7 +49,7 @@
         <span class="text-sm font-bold">
             {{__('ledger.updated_at')}}
         </span>
-        <button href="#" class="btn btn-xs" wire:click="sort('updated_at')">
+        <button href="#" class="btn btn-xs" wire:click="sort('updated_at', '{{ __('ledger.updated_at') }}')">
             @if($orderBy == 'updated_at')
                 @if($orderAsc)
                     <i class="fas fa-sort-down"></i>

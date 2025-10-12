@@ -14,6 +14,7 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -95,6 +96,8 @@ class RecordsTable extends Component
 
     public bool $hasWorkflowEnabled = false;
 
+    public string $orderByLabel = '';
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -127,6 +130,9 @@ class RecordsTable extends Component
         $this->synonymServiceConfig = $synonymServiceConfig;
         $this->filter = $request->filter ?? [];
         $this->initSearchContext();
+
+        // ★ 追加: 初期orderByLabelの設定
+        $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
 
         // 現在のフォルダーIDを初期化
         // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
@@ -192,17 +198,51 @@ class RecordsTable extends Component
      * 列のソートを行う
      *
      * @param  string  $columnName
+     * @param  string|null  $columnLabel
      * @return void
      */
-    public function sort($columnName)
+    public function sort($columnName, $columnLabel = null)
     {
         $this->orderBy = $columnName;
 
         // 現在のソート順をトグル
         $this->orderAsc = ! $this->orderAsc;
 
+        // ★ 追加: orderByLabelの設定
+        $this->orderByLabel = $columnLabel ?? $this->getStandardSortLabel($columnName);
+
         $this->initSearchContext();
-        $this->render($this->searchContext);
+        Log::info('sort method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+    }
+
+    /**
+     * orderByが変更されたときにorderByLabelを更新するライフサイクルフック
+     */
+    public function updatedOrderBy($value)
+    {
+        // ユーザーがカスタムソートのオプションを再度選択した場合、デフォルトのソートに戻す
+        if ($this->getStandardSortLabel($value) === '' && $value === $this->orderBy) {
+            $this->orderBy = 'composite_score'; // デフォルトのソートに戻す
+            $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
+            Log::info('updatedOrderBy: custom sort option re-selected, reverting to default', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+            return; // これ以上処理しない
+        }
+
+        $this->orderByLabel = $this->getStandardSortLabel($value);
+        Log::info('updatedOrderBy called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+    }
+
+    /**
+     * 標準ソートのラベルを取得するヘルパーメソッド
+     */
+    private function getStandardSortLabel(string $columnName): string
+    {
+        return match ($columnName) {
+            'composite_score' => __('ledger.scoring.score'),
+            'created_at' => __('ledger.created_at'),
+            'updated_at' => __('ledger.updated_at'),
+            default => '', // 標準ソート以外の場合は空文字列を返す
+        };
     }
 
     /**
@@ -240,6 +280,7 @@ class RecordsTable extends Component
             'keywords' => $this->searchContext->keywords,
             'filter' => $this->filter,
         ]);
+        Log::info('render method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
 
         // グローバル検索かどうかの判定
         $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
