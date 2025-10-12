@@ -13,6 +13,12 @@
 
 ## 📝 更新履歴
 
+### 2025-10-12 第3版
+- **Phase 1に着手し、作業実績を反映:**
+  - Step 1.1（データベース基盤整備）を完了。
+  - Step 4.2で計画されていたバッチ処理の雛形として `scoring:calculate` Artisanコマンドを作成。
+  - 実装時の教訓を「実装時の指針」に追記。
+
 ### 2025-10-12 第2版
 - **活動スコア算出方法を具体化:**
   - `LedgerObserver`案から、既存の`activity_log`テーブルを直接集計する方式に変更。
@@ -424,31 +430,20 @@ CREATE TABLE scoring_configs (
 **目標:** 活動スコアと新鮮度スコアの基本実装
 
 #### Step 1.1: データベース基盤整備（2-3日）
-- [ ] マイグレーションファイル作成
-  - [ ] `ledgers` テーブル: `activity_score`, `is_pinned`, `priority_level` を追加
-  - [ ] `ledger_defines` テーブル: `activity_score`, `total_records_count`, `active_records_count` を追加
-  - [ ] `scoring_configs` テーブル新規作成
-- [ ] インデックス追加
+- [✅] マイグレーションファイル作成 **(完了: 2025-10-12)**
+  - [✅] `ledgers` テーブル: `activity_score`, `composite_score`, `is_pinned`, `priority_level` を追加
+  - [✅] `ledger_defines` テーブル: `activity_score` を追加
+  - [✅] `scoring_configs` テーブル新規作成
+- [✅] インデックス追加 **(完了: 2025-10-12)**
+  - [✅] `ledgers.composite_score`
+  - [✅] `activity_log` に `idx_activity_for_scoring` を追加
 - [ ] テストデータ生成用のSeeder作成
 
-**テスト:**
-```php
-// tests/Unit/Migrations/ScoringTablesTest.php
-public function test_ledgers_table_has_scoring_columns()
-{
-    $this->assertTrue(Schema::hasColumn('ledgers', 'activity_score'));
-    $this->assertTrue(Schema::hasColumn('ledgers', 'is_pinned'));
-    // ... 他のカラム検証
-}
-```
-
 #### Step 1.2: 活動スコア計算サービス（3-4日）
+- [✅] `scoring:calculate` Artisanコマンドの雛形作成 **(着手: 2025-10-12)**
 - [ ] `app/Services/Scoring/ActivityScoreService.php` 作成
   - [ ] `calculateForLedger(Ledger $ledger)`: `activity_log`を集計してスコアを返す
   - [ ] `updateLedgerScore(Ledger $ledger)`: 計算したスコアを`ledgers.activity_score`に保存
-  - [ ] `decayScores()`: 全台帳のスコアを減衰させる（バッチ処理用）
-  - [ ] `calculateLedgerDefineScore(LedgerDefine $define)`: 台帳定義のスコアを集計
-- [ ] `config/ledgerleap.php` にスコア設定追加
 - [ ] 台帳閲覧時に`viewed`イベントを記録する処理を実装
   - [ ] `LedgersController@show` 等で `activity()->log('viewed')` を実行
   - [ ] セッション単位での重複記録を防止
@@ -880,6 +875,12 @@ public function test_decays_all_scores_correctly()
 → Ledger モデルに直接メソッドを追加せず、独立したサービスに
 → テストで任意のスコア値を渡して結果を検証できる
 ```
+
+#### 指針6: マイグレーション作成時のスキーマ確認の徹底 (2025-10-12追記)
+`after()`句などでカラムの配置を指定する際は、対象テーブルのスキーマを既存のマイグレーションファイル等で事前に正確に確認する。これにより、`Unknown column`エラーを未然に防ぐことができる。
+
+#### 指針7: 開発環境でのマイグレーション失敗時の復旧方法 (2025-10-12追記)
+マイグレーションが中途半端な状態で失敗した場合、開発環境においては`artisan migrate:fresh`コマンドの利用が有効である。これによりデータベースをクリーンな状態に戻し、`Table already exists`のような後続エラーを防ぎつつ、安全に再試行できる。
 
 ---
 
