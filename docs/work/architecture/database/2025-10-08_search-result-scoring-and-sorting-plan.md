@@ -13,6 +13,11 @@
 
 ## 📝 更新履歴
 
+### 2025-10-12 第4版
+- **フィーチャーテストの実装:**
+  - `scoring:calculate` Artisanコマンドのフィーチャーテストを実装し、バッチ処理の基本動作を保証。
+  - テスト実装の過程で得られた技術的知見を「実装時の指針」に追記。
+
 ### 2025-10-12 第3版
 - **Phase 1に着手し、作業実績を反映:**
   - Step 1.1（データベース基盤整備）を完了。
@@ -441,6 +446,7 @@ CREATE TABLE scoring_configs (
 
 #### Step 1.2: 活動スコア計算サービス（3-4日）
 - [✅] `scoring:calculate` Artisanコマンドの雛形作成 **(着手: 2025-10-12)**
+- [✅] コマンドの基本動作を保証するフィーチャーテストを実装 **(完了: 2025-10-12)**
 - [ ] `app/Services/Scoring/ActivityScoreService.php` 作成
   - [ ] `calculateForLedger(Ledger $ledger)`: `activity_log`を集計してスコアを返す
   - [ ] `updateLedgerScore(Ledger $ledger)`: 計算したスコアを`ledgers.activity_score`に保存
@@ -881,6 +887,15 @@ public function test_decays_all_scores_correctly()
 
 #### 指針7: 開発環境でのマイグレーション失敗時の復旧方法 (2025-10-12追記)
 マイグレーションが中途半端な状態で失敗した場合、開発環境においては`artisan migrate:fresh`コマンドの利用が有効である。これによりデータベースをクリーンな状態に戻し、`Table already exists`のような後続エラーを防ぎつつ、安全に再試行できる。
+
+#### 指針8: ArtisanコマンドのテストにおけるDBトランザクションの考慮 (2025-10-12追記)
+`$this->artisan()` でコマンドを呼び出すテストは、DBトランザクションが分離されてテストデータが見えない問題が発生する場合がある。その場合、コマンドの `handle` メソッドをテストコードから直接 `app()->call()` で呼び出すアプローチが有効である。
+
+#### 指針9: コマンドの `handle` メソッド直接呼び出し時の注意点 (2025-10-12追記)
+`app()->call()` でコマンドの `handle` メソッドを直接呼び出す場合、`$this->output` が初期化されないため、`$this->info()` 等のIOメソッドが `null` アクセスエラーを引き起こす。テストコード側で `Symfony\Component\Console\Output\BufferedOutput` と `Illuminate\Console\OutputStyle` を使い、手動で出力オブジェクトをコマンドにセットする必要がある。
+
+#### 指針10: テスト実行時のコンフィグ値の保証 (2025-10-12追記)
+テストが外部の `config` ファイルの状態に依存しないように、`setUp()` メソッド内で `config([...])` ヘルパーを使い、テストに必要な設定値を明示的に定義することが、安定したテストを記述する上で極めて重要である。
 
 ---
 

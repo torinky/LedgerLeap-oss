@@ -47,6 +47,7 @@ class DatabaseSeeder extends Seeder
         if (tenancy()->tenant) {
             $this->call([
                 FolderSeeder::class,
+                ScoringConfigSeeder::class,
             ]);
 
             // ファクトリで作成されるユーザーもテナントに紐づく

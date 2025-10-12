@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ScoringConfig;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
 use App\Services\Scoring\ActivityScoreService;
@@ -37,11 +38,18 @@ class CalculateScores extends Command
         $this->info("Found {$tenants->count()} tenants.");
 
         $tenants->each(function (Tenant $tenant) use ($activityScoreService, $compositeScoreCalculator) {
-            // 各テナントのコンテキストで処理を実行
             tenancy()->initialize($tenant);
             
             $this->info("Processing tenant: {$tenant->id}");
             Log::info("Processing tenant: {$tenant->id}");
+
+            // このテナントのデフォルト設定を取得
+            $config = ScoringConfig::where('is_system_default', true)->where('profile_name', 'activity')->first();
+            if (!$config) {
+                $this->error("Scoring config 'activity' not found for tenant {$tenant->id}. Skipping.");
+                Log::error("Scoring config 'activity' not found for tenant {$tenant->id}. Skipping.");
+                return;
+            }
 
             $ledgers = Ledger::all();
             $total = $ledgers->count();
@@ -63,10 +71,8 @@ class CalculateScores extends Command
                 $ledger->activity_score = $activityScore;
 
                 // 2. 複合スコアを計算して保存
-                // ToDo: ScoringConfig を取得するロジックが必要
-                // $config = ...;
-                // $compositeResult = $compositeScoreCalculator->calculate($ledger, $config);
-                // $ledger->composite_score = $compositeResult['composite_score'];
+                $compositeResult = $compositeScoreCalculator->calculate($ledger, $config);
+                $ledger->composite_score = $compositeResult['composite_score'];
 
                 $ledger->save();
                 $progressBar->advance();
