@@ -355,10 +355,33 @@ class RecordsTable extends Component
                 ->sortBy('order');
         });
 
+        // 台帳定義ごとのスコア統計を計算
+        $scoreStatsByDefineId = $ledgerRecords->groupBy('ledger_define_id')->map(function ($records) {
+            $scores = $records->pluck('composite_score')->filter(fn ($score) => $score > 0);
+
+            return [
+                'count' => $records->count(),
+                'avg_score' => $scores->count() > 0 ? round($scores->avg(), 1) : 0,
+                'max_score' => $scores->count() > 0 ? round($scores->max(), 1) : 0,
+                'min_score' => $scores->count() > 0 ? round($scores->min(), 1) : 0,
+                'has_scores' => $scores->count() > 0,
+            ];
+        });
+
+        // 台帳定義をグループ化し、検索時はスコア順にソート
+        $ledgerRecordsGroupByDefineIds = $ledgerRecords->groupBy('ledger_define_id');
+
+        // 検索時は平均スコアの降順で台帳定義をソート
+        if (! empty($this->search)) {
+            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortByDesc(function ($records, $defineId) use ($scoreStatsByDefineId) {
+                return $scoreStatsByDefineId[$defineId]['avg_score'] ?? 0;
+            });
+        }
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
-            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->groupBy('ledger_define_id'),
+            'ledgerRecordsGroupByDefineIds' => $ledgerRecordsGroupByDefineIds,
             'allAttachments' => $allAttachments, // ★ ビューに渡す
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
@@ -366,6 +389,7 @@ class RecordsTable extends Component
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
             'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
+            'scoreStatsByDefineId' => $scoreStatsByDefineId, // スコア統計
             'currentTenantId' => $this->currentTenantId,
         ]);
     }

@@ -156,6 +156,15 @@
                     </div>
                 </div>
             @endif
+            @if(!empty($search))
+                <div class="badge badge-primary badge-sm tooltip h-8 flex items-stretch"
+                     data-tip="{{__('ledger.scoring.sorted_by_score')}}">
+                    <div class="self-center space-x-2">
+                        <i class="fas fa-sort-amount-down"></i>
+                        <span class="text-xs">{{__('ledger.scoring.score_order')}}</span>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -191,6 +200,7 @@
                             :ledgerDefineId="$ledgerDefineId"
                             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
                             :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                            :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null"
                             :currentTenantId="$currentTenantId"
                         />
 

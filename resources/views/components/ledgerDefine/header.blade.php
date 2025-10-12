@@ -8,12 +8,37 @@
     'filter'=>[],
     'ledgerDefineId'=>null,
     'ledgerDefineRecordsKeyById'=>[],
+    'scoreStats'=>null,
     'currentTenantId' => null,
 ])
 <div
     class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
     <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2 mr-4">
         <span><i class="fa-solid fa-book-open mr-2"></i>{{$ledgerDefine->title}}</span>
+        @if($scoreStats && $scoreStats['has_scores'])
+            <span class="text-sm font-normal text-base-content/70 ml-4">
+                @php
+                    $avgScoreClass = match(true) {
+                        $scoreStats['avg_score'] >= 70 => 'badge-success',
+                        $scoreStats['avg_score'] >= 40 => 'badge-primary',
+                        $scoreStats['avg_score'] >= 20 => 'badge-info',
+                        $scoreStats['avg_score'] > 0 => 'badge-ghost',
+                        default => 'badge-ghost'
+                    };
+                @endphp
+                <span class="badge {{ $avgScoreClass }} badge-sm gap-1">
+                    <i class="fas fa-chart-line text-xs"></i>
+                    {{ __('ledger.scoring.avg_score') }}: {{ $scoreStats['avg_score'] }}
+                </span>
+                <span class="badge badge-ghost badge-sm gap-1 ml-1">
+                    <i class="fas fa-arrow-up text-xs"></i>
+                    {{ __('ledger.scoring.max') }}: {{ $scoreStats['max_score'] }}
+                </span>
+                <span class="text-xs text-base-content/50">
+                    ({{ $scoreStats['count'] }}{{ __('ledger.records') }})
+                </span>
+            </span>
+        @endif
     </h3>
         <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
         />

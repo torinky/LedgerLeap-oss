@@ -58,6 +58,11 @@ return [
         'activity_score' => '活動スコア',
         'freshness_score' => '新鮮度',
         'importance_score' => '重要度',
+        'avg_score' => '平均',
+        'max' => '最高',
+        'min' => '最低',
+        'score_order' => 'スコア順',
+        'sorted_by_score' => '検索時は台帳定義をスコア順（平均値の降順）で表示しています',
     ],
     'action_updated' => 'を更新しました。',
     'activity' => [
