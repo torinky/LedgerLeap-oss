@@ -1,16 +1,24 @@
 # ハイブリッド型情報価値評価システム 実装計画
 
 **作成日:** 2025年10月8日  
-**最終更新:** 2025年10月8日  
+**最終更新:** 2025年10月12日  
 **対象:** LedgerLeap開発チーム  
 **関連ドキュメント:**
-- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md) - ユーザー要件定義
-- [検索機能](../function/Search.md) - 既存検索機能の仕様
-- [RecordsTable.php](../../app/Livewire/Ledger/RecordsTable.php) - 現在の実装
+- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md) - ユーザー要件定義
+- [検索機能](../../function/Search.md) - 既存検索機能の仕様
+- [アクティビティログ機能](../../function/Activity.md) - スコア計算のデータソース
+- [RecordsTable.php](../../../app/Livewire/Ledger/RecordsTable.php) - 現在の実装
 
 ---
 
 ## 📝 更新履歴
+
+### 2025-10-12 第2版
+- **活動スコア算出方法を具体化:**
+  - `LedgerObserver`案から、既存の`activity_log`テーブルを直接集計する方式に変更。
+  - 閲覧履歴も`activity_log`に`viewed`イベントとして記録する方式に統一し、`ledger_views`テーブルを不要とした。
+- **スコアリング対象イベントを拡充:** `comment`, `download`, `delete`, `restore`などをスコア定義に追加。
+- **実装ロードマップを更新:** 上記変更を反映し、Phase1のステップとテストコード例を具体化。
 
 ### 2025-10-08 初版作成
 - ハイブリッド型スコアリングシステムの基本設計
@@ -30,11 +38,11 @@
 
 情報の価値は単一の指標では測れない。以下の**5つの次元**を数値化し、**状況に応じて重み付けを変更**できる柔軟なシステムを構築する：
 
-1. **活動スコア** (Activity Score) - 操作頻度を反映
-2. **新鮮度スコア** (Freshness Score) - 時間的関連性を反映
-3. **重要度スコア** (Importance Score) - ビジネス上の重要性を反映
-4. **関連性スコア** (Relevance Score) - 検索キーワードとの適合度
-5. **人気度スコア** (Popularity Score) - 多くの人が注目している情報
+1.  **活動スコア** (Activity Score) - 操作頻度を反映
+2.  **新鮮度スコア** (Freshness Score) - 時間的関連性を反映
+3.  **重要度スコア** (Importance Score) - ビジネス上の重要性を反映
+4.  **関連性スコア** (Relevance Score) - 検索キーワードとの適合度
+5.  **人気度スコア** (Popularity Score) - 多くの人が注目している情報
 
 ### 実装目標
 
@@ -172,6 +180,8 @@
 **目的:** 台帳への操作頻度を反映し、「よく使われている情報」を評価
 
 **測定方法:**
+`spatie/laravel-activitylog` によって記録された `activity_log` テーブルを定期的に集計する。各イベントの `description` に応じてスコアを加算し、時間経過で減衰させる。
+
 ```php
 // 各イベントでのスコア加算
 活動スコア += イベント種別ごとの基礎点数 × (減衰率 ^ 経過週数)
@@ -179,11 +189,15 @@
 // config/ledgerleap.php での定義
 'scoring' => [
     'activity' => [
-        'create' => 10,      // 台帳作成
-        'update' => 5,       // 台帳更新
-        'view' => 1,         // 台帳閲覧（1セッション1回のみ）
-        'attach_file' => 3,  // ファイル添付
-        'workflow_advance' => 7, // ワークフロー進行
+        'created' => 10,          // 台帳作成
+        'updated' => 5,           // 台帳更新
+        'viewed' => 1,            // 台帳閲覧（1セッション1回のみ）
+        'commented' => 2,         // コメント追加
+        'file_attached' => 3,     // ファイル添付
+        'file_downloaded' => 2,   // ファイルダウンロード
+        'workflow_advanced' => 7, // ワークフロー進行
+        'restored' => 10,         // 台帳復元
+        'deleted' => -5,          // 台帳削除（スコアをリセットまたは減点）
     ],
     'decay' => [
         'rate' => 0.95,      // 週次で5%減衰
@@ -281,6 +295,7 @@ relevance_score = min(100, relevance_raw_score × 10)
 **目的:** 多くの人が見ている情報を評価し、「組織で注目されている情報」を発見
 
 **測定方法:**
+`activity_log`テーブルから`viewed`イベントを記録したユニークユーザー数を集計する。
 ```php
 // 直近30日間のユニーク閲覧者数
 popularity_score = min(100, unique_viewers_count_30days × 5)
@@ -351,8 +366,7 @@ class SmartModeSelector
 ```sql
 -- 活動スコア関連
 ALTER TABLE ledgers ADD COLUMN activity_score INT DEFAULT 0;
-ALTER TABLE ledgers ADD COLUMN last_viewed_at TIMESTAMP NULL;
-ALTER TABLE ledgers ADD COLUMN unique_viewers_count INT DEFAULT 0;
+-- last_viewed_at, unique_viewers_count は activity_log から集計するため不要
 
 -- 重要度フラグ
 ALTER TABLE ledgers ADD COLUMN is_pinned BOOLEAN DEFAULT FALSE;
@@ -377,25 +391,7 @@ CREATE INDEX idx_define_activity_score ON ledger_defines(activity_score DESC);
 ```
 
 #### `ledger_views` テーブル（新規）
-```sql
-CREATE TABLE ledger_views (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    ledger_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    viewed_at TIMESTAMP NOT NULL,
-    session_id VARCHAR(255) NOT NULL,
-    tenant_id VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NULL,
-    updated_at TIMESTAMP NULL,
-    
-    FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    
-    INDEX idx_ledger_viewed(ledger_id, viewed_at),
-    INDEX idx_user_viewed(user_id, viewed_at),
-    INDEX idx_session(session_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+**[変更]** このテーブルは作成せず、`activity_log`テーブルに`viewed`イベントとして記録する方式に統一します。これにより、関連するアクティビティを一元管理でき、DBスキーマの複雑化を防ぎます。
 
 #### `scoring_configs` テーブル（新規）
 ```sql
@@ -429,9 +425,8 @@ CREATE TABLE scoring_configs (
 
 #### Step 1.1: データベース基盤整備（2-3日）
 - [ ] マイグレーションファイル作成
-  - [ ] `ledgers` テーブル: activity_score, last_viewed_at, unique_viewers_count, is_pinned, priority_level
-  - [ ] `ledger_defines` テーブル: activity_score, total_records_count, active_records_count
-  - [ ] `ledger_views` テーブル新規作成
+  - [ ] `ledgers` テーブル: `activity_score`, `is_pinned`, `priority_level` を追加
+  - [ ] `ledger_defines` テーブル: `activity_score`, `total_records_count`, `active_records_count` を追加
   - [ ] `scoring_configs` テーブル新規作成
 - [ ] インデックス追加
 - [ ] テストデータ生成用のSeeder作成
@@ -449,25 +444,32 @@ public function test_ledgers_table_has_scoring_columns()
 
 #### Step 1.2: 活動スコア計算サービス（3-4日）
 - [ ] `app/Services/Scoring/ActivityScoreService.php` 作成
-  - [ ] `addScore(Ledger $ledger, string $eventType)` メソッド
-  - [ ] `decayScores()` メソッド（バッチ処理用）
-  - [ ] `calculateLedgerDefineScore(LedgerDefine $define)` メソッド
-- [ ] `app/Observers/LedgerObserver.php` 作成
-  - [ ] `created`, `updated` イベントでのスコア加算
-  - [ ] トランザクション外での非同期実行
+  - [ ] `calculateForLedger(Ledger $ledger)`: `activity_log`を集計してスコアを返す
+  - [ ] `updateLedgerScore(Ledger $ledger)`: 計算したスコアを`ledgers.activity_score`に保存
+  - [ ] `decayScores()`: 全台帳のスコアを減衰させる（バッチ処理用）
+  - [ ] `calculateLedgerDefineScore(LedgerDefine $define)`: 台帳定義のスコアを集計
 - [ ] `config/ledgerleap.php` にスコア設定追加
+- [ ] 台帳閲覧時に`viewed`イベントを記録する処理を実装
+  - [ ] `LedgersController@show` 等で `activity()->log('viewed')` を実行
+  - [ ] セッション単位での重複記録を防止
 
 **テスト:**
 ```php
 // tests/Unit/Services/ActivityScoreServiceTest.php
-public function test_adds_score_for_create_event()
+use Spatie\Activitylog\Models\Activity;
+
+public function test_calculates_score_from_activity_log()
 {
     $ledger = Ledger::factory()->create();
     $service = new ActivityScoreService();
     
-    $service->addScore($ledger, 'create');
+    // テスト用のアクティビティログを作成
+    activity()->forSubject($ledger)->log('created'); // 10点
+    activity()->forSubject($ledger)->log('viewed');  // 1点
     
-    $this->assertEquals(10, $ledger->fresh()->activity_score);
+    $score = $service->calculateForLedger($ledger);
+    
+    $this->assertEquals(11, $score);
 }
 
 public function test_decays_scores_correctly()
@@ -475,8 +477,8 @@ public function test_decays_scores_correctly()
     $ledger = Ledger::factory()->create(['activity_score' => 100]);
     Carbon::setTestNow(now()->addWeek());
     
-    $service = new ActivityScoreService();
-    $service->decayScores();
+    // Artisanコマンド経由でテスト
+    $this->artisan('scoring:decay');
     
     $this->assertEquals(95, $ledger->fresh()->activity_score);
 }
@@ -541,7 +543,7 @@ public function test_sorts_ledger_defines_by_freshness()
 **完了条件:**
 - ✅ 全テストが通過
 - ✅ 新鮮度順でのソートが動作
-- ✅ 活動スコアが正しく加算・減衰
+- ✅ 活動スコアが`activity_log`から正しく計算・減衰される
 - ✅ パフォーマンス影響が100ms以内
 
 ---
@@ -554,9 +556,7 @@ public function test_sorts_ledger_defines_by_freshness()
 - [ ] `app/Services/Scoring/ImportanceScoreService.php` 作成
 - [ ] `app/Services/Scoring/RelevanceScoreService.php` 作成
 - [ ] `app/Services/Scoring/PopularityScoreService.php` 作成
-- [ ] 閲覧追跡機能実装
-  - [ ] `app/Observers/LedgerViewObserver.php`
-  - [ ] セッション単位での重複防止
+  - [ ] `activity_log`から`viewed`イベントのユニークユーザー数を集計
 
 **テスト:**
 ```php
@@ -944,11 +944,11 @@ SELECT
 
 ## 📝 関連ドキュメント
 
-- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md)
-- [検索機能](../function/Search.md)
-- [アクティビティログ機能](../function/Activity.md)
-- [RecordsTable.php](../../app/Livewire/Ledger/RecordsTable.php)
-- [Ledger.php](../../app/Models/Ledger.php)
+- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md)
+- [検索機能](../../function/Search.md)
+- [アクティビティログ機能](../../function/Activity.md)
+- [RecordsTable.php](../../../app/Livewire/Ledger/RecordsTable.php)
+- [Ledger.php](../../../app/Models/Ledger.php)
 
 ---
 
@@ -982,5 +982,5 @@ SELECT
 
 ---
 
-**最終更新:** 2025年10月8日  
+**最終更新:** 2025年10月12日  
 **次回レビュー予定:** Phase 1完了時
