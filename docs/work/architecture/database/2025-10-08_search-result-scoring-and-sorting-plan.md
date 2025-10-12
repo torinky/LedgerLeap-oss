@@ -13,6 +13,16 @@
 
 ## 📝 更新履歴
 
+### 2025-10-12 第8版（Phase 1.5計画追加）
+- **Phase 1.5: スケジューリング最適化計画を策定:**
+  - 環境変数による頻度制御機能の設計
+  - 開発環境では高頻度（5分ごと）、本番では低頻度（日次）
+  - 既存の scheduler コンテナ活用方針の明確化
+  - 動的頻度調整（データ量ベース）をPhase 2で検討
+- **実装優先度:** 中（Phase 1.5として実施推奨）
+- **工数見積もり:** 0.5日
+- **メリット:** 開発・デモ環境での動作確認の容易化、本番環境の負荷最適化
+
 ### 2025-10-12 第7版（Phase 1完了）
 - **Phase 1完了（Step 1.1~1.7）:**
   - ✅ データベース基盤整備完了（マイグレーション適用）
@@ -1006,6 +1016,134 @@ Duration: 48.79s
 
 ---
 
+#### Step 1.8: スケジューリング最適化（0.5日） 🔜 計画策定完了
+
+**目的:** 環境別のスコア更新頻度を制御可能にする
+
+**背景:**
+- 現在は `Kernel.php` で日次スケジュール（`daily()`）を固定設定
+- 開発環境やデモでは高頻度更新が必要
+- 本番環境では低頻度で十分（計算コスト削減）
+- 既存の scheduler コンテナ（docker-compose.yml）を活用
+
+**実装内容:**
+
+**1. Kernel.php の修正**
+```php
+// app/Console/Kernel.php
+protected function schedule(Schedule $schedule): void
+{
+    // 環境変数から頻度を取得（デフォルト: daily）
+    $frequency = config('ledgerleap.scoring.schedule_frequency', 'daily');
+    
+    $command = $schedule->command('scoring:calculate');
+    
+    // 頻度に応じた設定
+    match ($frequency) {
+        'everyMinute' => $command->everyMinute(),           // デバッグ用のみ
+        'everyFiveMinutes' => $command->everyFiveMinutes(), // 開発・デモ推奨
+        'everyTenMinutes' => $command->everyTenMinutes(),   // 開発・デモ
+        'hourly' => $command->hourly(),                     // アクティブな本番
+        'daily' => $command->daily(),                       // 通常の本番（デフォルト）
+        'weekly' => $command->weekly(),                     // 大規模環境
+        default => $command->daily(),
+    };
+}
+```
+
+**2. config/ledgerleap.php の拡張**
+```php
+'scoring' => [
+    // ... 既存の重み設定 ...
+    
+    /**
+     * スコア計算の実行頻度
+     * 
+     * 環境別推奨値:
+     * - 開発/デモ: 'everyFiveMinutes' - リアルタイムに近い動作確認
+     * - 本番（小〜中規模）: 'hourly' - 活発な環境
+     * - 本番（通常）: 'daily' - 標準設定
+     * - 本番（大規模）: 'weekly' - データ量が多い場合
+     * 
+     * 注意: 'everyMinute' はデバッグ時のみ使用すること
+     */
+    'schedule_frequency' => env('SCORING_SCHEDULE_FREQUENCY', 'daily'),
+],
+```
+
+**3. 環境変数の設定**
+```bash
+# .env.development（開発環境・デモ用）
+SCORING_SCHEDULE_FREQUENCY=everyFiveMinutes
+
+# .env.production（本番環境）
+SCORING_SCHEDULE_FREQUENCY=daily
+
+# .env.example（デフォルト値を明示）
+SCORING_SCHEDULE_FREQUENCY=daily
+```
+
+**4. テストの追加**
+```php
+// tests/Feature/Console/Commands/CalculateScoresScheduleTest.php
+public function test_schedule_frequency_respects_config(): void
+{
+    // 頻度設定のテスト
+    config(['ledgerleap.scoring.schedule_frequency' => 'hourly']);
+    
+    // スケジュールが正しく設定されているか確認
+    // （Laravel のスケジュールテスト機能を使用）
+}
+```
+
+**完了条件:**
+- [ ] Kernel.php の match 式実装
+- [ ] config/ledgerleap.php の拡張
+- [ ] .env.example に設定例追加
+- [ ] ドキュメント更新（README.md）
+- [ ] 開発環境で5分間隔動作を確認
+- [ ] テスト実装・実行完了
+
+**メリット:**
+1. ✅ 開発環境でリアルタイムに近い動作確認が可能
+2. ✅ デモ時にスコア変化をすぐに見せられる
+3. ✅ 本番環境では計算負荷を最小化
+4. ✅ 環境変数のみで制御可能（再デプロイ不要）
+5. ✅ 既存の scheduler コンテナをそのまま活用
+
+**注意点:**
+- `everyMinute` は開発デバッグ時のみ使用（本番では厳禁）
+- scheduler コンテナは既に `restart: always` で常時起動中
+- `schedule:work` が実行されているため、追加のインフラ設定は不要
+- docker-compose.yml の scheduler サービスは変更不要
+
+**Phase 2 への橋渡し:**
+将来的に、データ量に基づく動的頻度調整を実装する基盤となる：
+```php
+// Phase 2 での拡張案
+private function determineOptimalFrequency(): string
+{
+    $ledgerCount = DB::table('ledgers')->count();
+    $activityCount = DB::table('activity_log')
+        ->where('created_at', '>', now()->subDay())
+        ->count();
+    
+    // データ量と活動量に基づいた頻度決定
+    return match (true) {
+        $ledgerCount > 100000 || $activityCount > 10000 => 'daily',
+        $ledgerCount > 10000 || $activityCount > 1000 => 'hourly',
+        default => 'everyFiveMinutes',
+    };
+}
+```
+
+**実装優先度:** 中（推奨）  
+**工数見積もり:** 0.5日  
+**依存関係:** Phase 1 完了後  
+**リスク:** 低（既存インフラ活用）
+
+---
+
 ### Phase 2: フィードバック収集とスコアロジック改善（1-2週間） 🟡 MVP検証
 
 **ステータス:** 🔜 Phase 1完了後に着手
@@ -1058,7 +1196,145 @@ Duration: 48.79s
   - コメント数による加点
   - 添付ファイル数による加点
 
-#### Step 2.3: パフォーマンス最適化（2日）
+#### Step 2.3: データ量ベース動的頻度調整の実装（2日） 🆕
+
+**目的:** レコード数と活動量に応じてスコア更新頻度を自動最適化
+
+**実装内容:**
+
+```php
+// app/Console/Kernel.php
+
+protected function schedule(Schedule $schedule): void
+{
+    // 動的頻度調整が有効な場合
+    if (config('ledgerleap.scoring.adaptive_scheduling', false)) {
+        $frequency = $this->determineOptimalFrequency();
+    } else {
+        $frequency = config('ledgerleap.scoring.schedule_frequency', 'daily');
+    }
+    
+    $command = $schedule->command('scoring:calculate');
+    
+    match ($frequency) {
+        'everyMinute' => $command->everyMinute(),
+        'everyFiveMinutes' => $command->everyFiveMinutes(),
+        'everyTenMinutes' => $command->everyTenMinutes(),
+        'hourly' => $command->hourly(),
+        'daily' => $command->daily(),
+        'weekly' => $command->weekly(),
+        default => $command->daily(),
+    };
+}
+
+/**
+ * データ量と活動量に基づいて最適な頻度を決定
+ */
+private function determineOptimalFrequency(): string
+{
+    // 全テナントのデータを考慮
+    $totalLedgers = 0;
+    $totalRecentActivity = 0;
+    
+    foreach (Tenant::all() as $tenant) {
+        tenancy()->initialize($tenant);
+        
+        $totalLedgers += DB::table('ledgers')->count();
+        $totalRecentActivity += DB::table('activity_log')
+            ->where('created_at', '>', now()->subDay())
+            ->count();
+    }
+    
+    // 閾値に基づく判定
+    return match (true) {
+        // 大規模・高負荷環境
+        $totalLedgers > 100000 || $totalRecentActivity > 10000 => 'daily',
+        
+        // 中規模環境
+        $totalLedgers > 10000 || $totalRecentActivity > 1000 => 'hourly',
+        
+        // 小規模環境（開発環境を含む）
+        default => 'everyFiveMinutes',
+    };
+}
+```
+
+**設定ファイルの拡張:**
+```php
+// config/ledgerleap.php
+'scoring' => [
+    // ... 既存設定 ...
+    
+    /**
+     * 動的頻度調整の有効化
+     * 
+     * true: データ量と活動量に基づいて自動調整
+     * false: schedule_frequency の固定値を使用
+     * 
+     * 推奨: 本番環境では false（予測可能性重視）
+     *      開発環境では true（自動最適化）
+     */
+    'adaptive_scheduling' => env('SCORING_ADAPTIVE_SCHEDULING', false),
+    
+    /**
+     * 動的頻度調整の閾値
+     */
+    'adaptive_thresholds' => [
+        'large_scale_ledgers' => env('SCORING_LARGE_SCALE_LEDGERS', 100000),
+        'large_scale_activity' => env('SCORING_LARGE_SCALE_ACTIVITY', 10000),
+        'medium_scale_ledgers' => env('SCORING_MEDIUM_SCALE_LEDGERS', 10000),
+        'medium_scale_activity' => env('SCORING_MEDIUM_SCALE_ACTIVITY', 1000),
+    ],
+],
+```
+
+**環境変数例:**
+```bash
+# .env.development（自動最適化）
+SCORING_ADAPTIVE_SCHEDULING=true
+
+# .env.production（固定値で予測可能に）
+SCORING_ADAPTIVE_SCHEDULING=false
+SCORING_SCHEDULE_FREQUENCY=daily
+```
+
+**テスト:**
+```php
+// tests/Feature/Console/Commands/AdaptiveSchedulingTest.php
+public function test_determines_frequency_based_on_data_volume(): void
+{
+    config(['ledgerleap.scoring.adaptive_scheduling' => true]);
+    
+    // 大量データを作成
+    Ledger::factory()->count(150000)->create();
+    
+    // daily になるはず
+    $frequency = $this->app->make(Kernel::class)
+        ->determineOptimalFrequency();
+    
+    $this->assertEquals('daily', $frequency);
+}
+```
+
+**メリット:**
+- ✅ 環境の成長に合わせて自動的に最適化
+- ✅ 小規模開始→大規模運用への移行が容易
+- ✅ 手動での頻度調整が不要
+
+**注意点:**
+- 本番環境では予測可能性を重視して `adaptive_scheduling=false` を推奨
+- 開発環境やステージング環境での検証に有効
+- 閾値は運用しながら調整可能
+
+**完了条件:**
+- [ ] `determineOptimalFrequency()` メソッド実装
+- [ ] config/ledgerleap.php に設定追加
+- [ ] テスト実装・実行完了
+- [ ] ドキュメント更新
+
+**予定工数:** 2日
+
+#### Step 2.4: パフォーマンス最適化（2日）
 
 - [ ] 大量データでのレスポンスタイム測定
   - 1万レコード以上の環境でテスト
@@ -1071,8 +1347,9 @@ Duration: 48.79s
 - [ ] バッチ処理の最適化
   - 処理時間が長い場合はチャンク処理導入
   - 進捗表示の改善
+  - 環境別頻度設定の効果測定
 
-#### Step 2.4: スコア詳細の可視化（2日）
+#### Step 2.5: スコア詳細の可視化（2日）
 
 **追加機能（任意）:**
 
@@ -1994,6 +2271,120 @@ SELECT
 - 実績工数: 3.2日
 - **削減率: 36%**（効率的な実装達成）
 
+### Phase 1.5: スケジューリング最適化計画（2025-10-12 追加）
+
+**背景:**
+- 現在は `Kernel.php` で日次スケジュール（`daily()`）を設定
+- 既存の `scheduler` コンテナで実行中（docker-compose.yml L66-111）
+- 開発環境やデモでは高頻度更新が必要、本番では低頻度で十分
+- データ量に応じた頻度調整が望ましい
+
+**実装計画（Step 1.8）:**
+
+#### 1.8.1 環境変数による頻度制御
+```php
+// app/Console/Kernel.php
+protected function schedule(Schedule $schedule): void
+{
+    $frequency = config('ledgerleap.scoring.schedule_frequency', 'daily');
+    
+    $command = $schedule->command('scoring:calculate');
+    
+    match ($frequency) {
+        'everyMinute' => $command->everyMinute(),
+        'everyFiveMinutes' => $command->everyFiveMinutes(),
+        'everyTenMinutes' => $command->everyTenMinutes(),
+        'hourly' => $command->hourly(),
+        'daily' => $command->daily(),
+        'weekly' => $command->weekly(),
+        default => $command->daily(),
+    };
+}
+```
+
+#### 1.8.2 設定ファイルの拡張
+```php
+// config/ledgerleap.php
+'scoring' => [
+    // 既存の重み設定...
+    
+    /**
+     * スコア計算の実行頻度
+     * 
+     * 設定値:
+     * - 'everyMinute': 毎分（デバッグ用のみ）
+     * - 'everyFiveMinutes': 5分ごと（開発・デモ環境推奨）
+     * - 'everyTenMinutes': 10分ごと（開発・デモ環境）
+     * - 'hourly': 毎時（アクティブな本番環境）
+     * - 'daily': 毎日（デフォルト、通常の本番環境）
+     * - 'weekly': 毎週（データ量が多い場合）
+     */
+    'schedule_frequency' => env('SCORING_SCHEDULE_FREQUENCY', 'daily'),
+],
+```
+
+#### 1.8.3 環境別の設定例
+```bash
+# .env.development（開発環境・デモ）
+SCORING_SCHEDULE_FREQUENCY=everyFiveMinutes
+
+# .env.production（本番環境）
+SCORING_SCHEDULE_FREQUENCY=daily
+
+# .env.example
+SCORING_SCHEDULE_FREQUENCY=daily
+```
+
+#### 1.8.4 動的頻度調整の検討（Phase 2 で実装）
+データ量に応じて自動的に頻度を調整する機能を後続フェーズで検討：
+
+```php
+// 将来的な拡張案（Phase 2）
+protected function schedule(Schedule $schedule): void
+{
+    if (config('ledgerleap.scoring.adaptive_scheduling', false)) {
+        $frequency = $this->determineOptimalFrequency();
+    } else {
+        $frequency = config('ledgerleap.scoring.schedule_frequency', 'daily');
+    }
+    
+    // スケジュール設定...
+}
+
+private function determineOptimalFrequency(): string
+{
+    $ledgerCount = Ledger::count();
+    $activityLogCount = ActivityLog::where('created_at', '>', now()->subDay())->count();
+    
+    // データ量と活動量に基づいた頻度決定ロジック
+    if ($ledgerCount > 100000 || $activityLogCount > 10000) {
+        return 'daily'; // 大規模環境
+    } elseif ($ledgerCount > 10000 || $activityLogCount > 1000) {
+        return 'hourly'; // 中規模環境
+    } else {
+        return 'everyFiveMinutes'; // 小規模環境・開発環境
+    }
+}
+```
+
+**実装優先度:**
+- 優先度: 中（Phase 1.5として実施推奨）
+- 工数: 0.5日
+- 依存関係: Phase 1 完了後
+- リスク: 低（既存の scheduler コンテナ活用）
+
+**メリット:**
+1. ✅ 開発環境でリアルタイムに近い動作確認が可能
+2. ✅ デモ時にスコア変化をすぐに見せられる
+3. ✅ 本番環境では計算負荷を最小化
+4. ✅ 環境変数のみで制御可能（再デプロイ不要）
+5. ✅ 既存の scheduler コンテナをそのまま活用
+
+**注意点:**
+- `everyMinute` は開発デバッグ時のみ使用（本番では厳禁）
+- scheduler コンテナは既に `restart: always` で常時起動中
+- `schedule:work` が既に実行されているため追加のインフラ設定は不要
+
 ### 主要機能
 
 1. **自動スコアリング**
@@ -2034,18 +2425,24 @@ SELECT
 
 ### 次のステップ
 
+**Phase 1.5: スケジューリング最適化（推奨）**
+- 予定期間: 0.5日
+- 目的: 環境別のスコア更新頻度を制御可能にする
+- 内容: Step 1.8（環境変数による頻度制御）
+
 **Phase 2: フィードバック収集とスコアロジック改善**
-- 予定開始: Phase 1の本番運用開始後
+- 予定開始: Phase 1（または1.5）の本番運用開始後
 - 期間: 1-2週間
 - 目的: 実際の使用感を基にスコア計算式を最適化
+- 検討事項: 動的頻度調整（データ量ベース）の実装
 
 ---
 
-**最終更新:** 2025年10月12日（第7版・Phase 1完了）  
-**進捗状況:** ✅ Phase 1 100%完了（MVP稼働可能）  
-**次回レビュー予定:** Phase 2着手時  
+**最終更新:** 2025年10月12日（第8版・Phase 1.5計画追加）  
+**進捗状況:** ✅ Phase 1 100%完了（MVP稼働可能）/ 🔜 Phase 1.5 計画策定完了  
+**次回レビュー予定:** Phase 1.5実装時  
 **主要変更:** 
-- Phase 1 全ステップ完了（Step 1.1~1.7）
-- 追加実装：台帳定義スコア表示・ソート機能
-- 実装コスト36%削減達成（計画5日→実績3.2日）
-- MVPとして本番運用可能な状態
+- Phase 1.5 スケジューリング最適化計画を追加
+- 環境変数による頻度制御（開発/本番で異なる更新頻度）
+- 動的頻度調整の検討（Phase 2で実装予定）
+- scheduler コンテナ活用方針の明確化
