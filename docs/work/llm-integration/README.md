@@ -28,16 +28,18 @@
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
 - **[日本語検索対応実装レポート](./JAPANESE_SEARCH_IMPLEMENTATION_2025-10-05.md)**: MCPツールでの日本語キーワード検索への対応記録。
 - **[MCP検索API調査レポート](./MCP_SEARCH_DEBUG_REPORT_2025-10-05.md)**: MCP API経由での検索タイムアウト問題に関する調査レポート。
-- **[日付デフォルト値初期化の調査](./2025-10-05_DateDefaultInitialization_Investigation.md)**: 日付カラムのデフォルト値初期化に関する不具合の調査記録。
+- **[日付デフォルト値初期化の調査](./demo/2025-10-05_DateDefaultInitialization_Investigation.md)**: 日付カラムのデフォルト値初期化に関する不具合の調査記録。
 - **[フェーズ3完了レポート](./PHASE3_COMPLETION_REPORT.md)**: MCP統計・レポート機能の実装完了報告。
 
 ### デモデータ (Demo Data)
 
 - **[デモデータ マスタープラン](../../development/test-data-design.md)**: MCPツールやUIの機能を包括的に検証・デモするためのデータセット全体の設計思想と計画。
-- **[デモデータ実装ログ](./2025-10-04_demo_implementation_log.md)**: デモデータ作成の過程で発生した課題やパフォーマンス改善の記録。
-- **[デモフェーズ1完了レポート](./2025-10-11_demo_phase1_complete.md)**: マスタープランのフェーズ1で定義されたデモデータの実装完了レポート。
+- **[デモデータ実装ログ](./demo/2025-10-04_demo_implementation_log.md)**: デモデータ作成の過程で発生した課題やパフォーマンス改善の記録。
+- **[デモフェーズ1完了レポート](./demo/2025-10-11_demo_phase1_complete.md)**: マスタープランのフェーズ1で定義されたデモデータの実装完了レポート。
 - **[Seeder利用ガイド](../../development/database-seeding-guide.md)**: デモデータを含むデータベースSeederの利用方法に関するガイド。
 - **[デモ環境ログイン情報](../../development/demo-credentials.md)**: デモ環境で使用するユーザーアカウント情報。
+- **[デモStep1最小構成](./demo/2025-10-04_demo_step1_minimal.md)**: LLMとの対話デモができる最小限のデータセット構築計画。
+- **[デモフェーズ1拡張実装進捗](./demo/2025-10-11_demo_phase1_extension_progress.md)**: マスタープランPhase1の拡張データセット実装に関する進捗レポート。
 
 ---
 

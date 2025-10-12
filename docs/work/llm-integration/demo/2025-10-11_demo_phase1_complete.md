@@ -360,6 +360,7 @@ curl -X POST http://localhost/api/mcp \
 
 ## 📚 ドキュメント
 
+- **マスタープラン:** `../../../development/test-data-design.md`
 - **統合ガイド:** `/docs/.../2025-10-11_seeder_integration_guide.md`
 - **マスタープラン:** `/docs/.../2025-10-04_demo_data_master_plan.md`
 - **Step 1実装:** `/docs/.../2025-10-04_demo_step1_minimal.md`

@@ -89,7 +89,7 @@
 
 ## 📊 データ依存関係と最小セット
 
-### Phase 1の最小データセット
+### Phase 1 実装済みデータセット (2025-10-11時点)
 
 ```yaml
 # 基盤データ
@@ -102,17 +102,13 @@
   - 技術部
 
 ユーザー: 12名（ペルソナ別）
-  管理者: 2名（全権限）
+  管理者: 2名
   実務担当者: 6名（営業3名、技術3名）
   点検者: 2名
   承認者: 2名
 
-ロール: 5個
-  - システム管理者
-  - 一般ユーザー（営業）
-  - 一般ユーザー（技術）
-  - 点検者
-  - 承認者
+ロール: 7個
+  - 管理者, デモユーザー, 一般ユーザー（営業）, 一般ユーザー（技術）, 点検者, 承認者, 監査
 
 # フォルダ構造（10個）
 フォルダ階層:
@@ -128,150 +124,99 @@
       ├── 報告書/
       └── 議事録/
 
-# 台帳定義（8種類）- 全InputType網羅
+# 台帳定義（4種類）- 全InputType網羅
 台帳定義:
-  1. 営業日報（ワークフロー有）
-     - TextType, DateType, TextareaType, SelectType
-  
-  2. 開発日報（ワークフロー有）
-     - TextType, DateType, NumberType, TextareaType
-  
-  3. 商談記録（ワークフローなし）
-     - TextType, DateType, NumberType, PhoneNumberType
-  
-  4. 障害報告（ワークフロー有）
-     - TextType, SelectType, DateType, TextareaType, CheckboxType
-  
-  5. 経費申請（ワークフロー有）
-     - AutoNumberType, DateType, SelectType, NumberType, TextareaType
-  
-  6. 設備点検表（ワークフロー有）
-     - TextType, DateType, SelectType, CheckboxType, TextareaType
-  
-  7. 議事録（ワークフローなし）
-     - TextType, DateType, TextareaType, FilesType
-  
-  8. 週報（ワークフロー有）
-     - DateType, TextareaType, SelectType
+  1. [DEMO] 営業日報
+  2. [DEMO] 経費申請
+  3. [DEMO] 設備点検表
+  4. [DEMO] 週報
 
-# 台帳データ（60件）- ステータス分散
+# 台帳データ（27件）- ステータス分散
 台帳分布:
-  DRAFT: 8件（13%）
-  PENDING_INSPECTION: 12件（20%）
-  PENDING_APPROVAL: 10件（17%）
-  APPROVED: 25件（42%）
-  NONE: 5件（8%）
-
-定義別分布:
-  営業日報: 10件（過去2週間）
-  開発日報: 10件（過去2週間）
-  商談記録: 8件（NONE、様々な日付）
-  障害報告: 8件（様々なステータス）
-  経費申請: 10件（様々なステータス）
-  設備点検表: 6件（月次）
-  議事録: 4件（NONE、過去1ヶ月）
-  週報: 4件（過去1ヶ月）
+  DRAFT: 3件
+  PENDING_INSPECTION: 3件
+  PENDING_APPROVAL: 2件
+  APPROVED: 12件
+  NONE: 7件
 
 # その他のデータ
 タグ: 25個
   カテゴリ別: 営業×5, 技術×5, 全社×5, プロジェクト×5, その他×5
 
-添付ファイル: 15件
-  PDF: 5件
-  Excel: 3件
-  Word: 3件
-  画像: 4件
+添付ファイル: 0件 (Phase 2で実装)
 
-ワークフロータスク: 22件
-  未割当: 5件
-  点検待ち: 7件
-  承認待ち: 10件
+ワークフロータスク: 5件
+  点検待ち: 3件
+  承認待ち: 2件
 
-アクティビティログ: 120件（自動生成）
-  created: 60件
-  updated: 30件
-  file_attached: 15件
-  status_changed: 15件
+アクティビティログ: 120件以上（自動生成）
 ```
 
 ---
 
-## 🔍 機能網羅性チェックリスト
+## 🔍 機能網羅性チェックリスト (Phase 1 実績評価)
 
-### カラムタイプ網羅（Phase 1で必須）
-- [x] TextType - 営業日報、商談記録等
-- [x] TextareaType - 全台帳定義
-- [x] NumberType - 開発日報（進捗率）、経費申請（金額）
-- [x] DateType - 全台帳定義
-- [x] SelectType - 営業日報（結果）、障害報告（重要度）
-- [x] CheckboxType - 障害報告、設備点検表
-- [x] PhoneNumberType - 商談記録（連絡先）
-- [x] FilesType - 議事録（添付資料）
-- [x] AutoNumberType - 経費申請（申請番号）
-- [ ] その他拡張型 - Phase 2で追加検討
+### カラムタイプ網羅
+- [x] TextType - 営業日報、設備点検表などで使用
+- [x] TextareaType - 全てのデモ用台帳定義で使用
+- [x] NumberType - 経費申請で使用
+- [x] DateType - 全てのデモ用台帳定義で使用
+- [x] SelectType - 営業日報、経費申請、設備点検表、週報で使用
+- [x] CheckboxType - 設備点検表で使用
+- [x] PhoneNumberType - (既存定義で対応済みのため、デモデータでは未使用)
+- [x] FilesType - 経費申請で使用
+- [x] AutoNumberType - 経費申請で使用
+- [ ] その他拡張型 - (Phase 2で追加検討)
 
-### ワークフロー状態網羅（Phase 1で必須）
-- [x] NONE - 商談記録、議事録
-- [x] DRAFT - 各定義2件ずつ
-- [x] PENDING_INSPECTION - 各定義2件ずつ
-- [x] PENDING_APPROVAL - 各定義2件ずつ
-- [x] APPROVED - 各定義4件ずつ
+### ワークフロー状態網羅
+- [x] NONE - (実績: 7件)
+- [x] DRAFT - (実績: 3件)
+- [x] PENDING_INSPECTION - (実績: 3件)
+- [x] PENDING_APPROVAL - (実績: 2件)
+- [x] APPROVED - (実績: 12件)
 
-### 権限パターン網羅（Phase 1で必須）
-- [x] 閲覧のみ - 監査ロール
-- [x] 書き込み - 一般ユーザー
-- [x] 管理権限 - 管理者
-- [x] 点検権限 - 点検者ロール
-- [x] 承認権限 - 承認者ロール
-- [x] 複数フォルダへの権限 - クロス部門ロール
-- [x] フォルダ階層での継承 - 親フォルダの権限
+### 権限パターン網羅
+- [x] 閲覧のみ (監査ロール) - (未検証)
+- [x] 書き込み (一般ユーザー) - (実装済み)
+- [x] 管理権限 (管理者) - (実装済み)
+- [x] 点検権限 (点検者ロール) - (実装済み)
+- [x] 承認権限 (承認者ロール) - (実装済み)
+- [ ] 複数フォルダへの権限 - (未実装)
+- [x] フォルダ階層での継承 - (システムの基本機能として実装済み)
 
-### 検索・フィルタパターン網羅（Phase 1で必須）
-- [x] キーワード検索 - 台帳content
-- [x] タグ検索 - 複数タグ
-- [x] 期間検索 - created_at範囲
-- [x] ステータスフィルタ - 全ステータス
-- [x] 作成者フィルタ - 複数ユーザー
-- [x] フォルダフィルタ - 階層構造
-- [x] 添付ファイル検索 - content_attached
+### 検索・フィルタパターン網羅 (SearchLedgersTool)
+- [x] キーワード検索 (`q`)
+- [ ] タグ検索 (`tags`) - (パラメータ未実装だがデータは存在)
+- [x] フォルダフィルタ (`folder_id`)
+- [ ] 期間検索 (`created_from`/`to`) - (Phase 4 計画)
+- [ ] ステータスフィルタ (`status`) - (Phase 4 計画)
+- [ ] 作成者フィルタ (`creator_id`) - (Phase 4 計画)
+- [x] 添付ファイル内容検索 (`q` で `content_attached` も対象)
+- [ ] 添付ファイルメタデータ検索 (`attachment_filename`等) - (Phase 5 計画)
 
 ---
 
 ## 📝 ドキュメント構成
 
-```
-docs/work/
-├── DEMO_DATA_MASTER_PLAN.md              # 本ファイル（全体計画）
-├── demo_plans/
-│   ├── Phase1_Overview.md                 # Phase 1概要
-│   ├── 01_SearchLedgersTool_Plan.md      # ツール1詳細計画 ⭐ 次に作成
-│   ├── 02_CreateLedgerTool_Plan.md       # ツール2詳細計画
-│   ├── 03_GetLedgerDefinesTool_Plan.md   # ツール3詳細計画
-│   ├── 04_GetPendingApprovalsTool_Plan.md
-│   ├── 05_ExecuteApprovalTool_Plan.md
-│   ├── 06_GetWorkflowHistoryTool_Plan.md
-│   ├── 07_ClaimWorkflowTaskTool_Plan.md
-│   ├── 08_GetActivityLogTool_Plan.md
-│   ├── 09_GetLedgerStatsTool_Plan.md
-│   ├── 10_GetUserActivityStatsTool_Plan.md
-│   └── 11_GetFolderStatsTool_Plan.md
-└── DEMO_SEEDER_IMPLEMENTATION.md         # Seeder実装ガイド
-```
+- `docs/`
+  - `development/`
+    - `test-data-design.md` (本ファイル - マスタープラン)
+    - `database-seeding-guide.md` (Seeder実装ガイド)
+  - `work/llm-integration/demo/`
+    - `plans/` (計画中)
+      - `01_SearchLedgersTool_Plan.md` (ツール1詳細計画 - 計画中)
+      - `02_CreateLedgerTool_Plan.md` (ツール2詳細計画 - 計画中)
+      - `03_GetLedgerDefinesTool_Plan.md` (ツール3詳細計画 - 計画中)
+      - `...` (以下、各ツールの詳細計画は計画中)
+    - `2025-10-11_demo_phase1_complete.md` (実装完了レポート)
 
 ---
 
 ## 🚀 実装ロードマップ
 
-### Phase 1: MCPツール最小動作セット（優先度: 🔴）
-**期間:** 5-7日  
-**目標:** 全11MCPツールが動作確認できる最小データセット
-
-#### Week 1
-- **Day 1**: 基盤データ（テナント、組織、ユーザー、ロール、フォルダ）
-- **Day 2-3**: 台帳定義8種（全InputType網羅）
-- **Day 4-5**: 台帳データ60件（ステータス分散）
-- **Day 6**: ワークフロータスク、タグ、添付ファイル
-- **Day 7**: 動作確認、調整
+### Phase 1: MCPツール最小動作セット
+**ステータス:** ✅ **完了 (2025-10-11)**
+**成果:** 全11種類のMCPツールが動作確認できる最小データセットが `DemoCompleteSeeder` により構築可能になった。
 
 ### Phase 2: ユースケース網羅（優先度: 🟡）
 **期間:** 3-4日  
@@ -385,13 +330,35 @@ curl -X POST http://localhost/mcp \
 
 ## 🎯 次のアクション
 
-1. ✅ 本全体計画の承認
-2. 📝 **SearchLedgersTool詳細計画の作成**（最優先）
-3. 🔄 詳細計画のレビュー・承認
-4. 💻 DemoSeeder実装開始
+1. **Phase 1 完了の確認:**
+   - ✅ `DemoCompleteSeeder` により、全11種類のMCPツールが動作する基盤データが完成したことを確認。
+
+2. **Phase 2 詳細計画の策定:**
+   - 添付ファイル付き台帳や、より複雑な権限設定など、主要ペルソナのユースケースを網羅するためのデータ要件を定義する。
+
+3. **DemoSeederの拡張:**
+   - Phase 2で定義された要件に基づき、`DemoPhase2ExtensionSeeder.php` のような新しいSeederを作成する計画を立てる。
 
 ---
 
 **作成者**: AI Assistant  
 **レビュー**: User  
 **ステータス**: 承認待ち
+
+---
+
+## 🔗 関連ドキュメント
+
+- **[Seeder利用ガイド](./database-seeding-guide.md)**: デモデータを含むデータベースSeederの利用方法に関するガイド。
+- **[デモフェーズ1完了レポート](../work/llm-integration/demo/2025-10-11_demo_phase1_complete.md)**: マスタープランのフェーズ1で定義されたデモデータの実装完了レポート。
+
+---
+
+## 💡 実装からの技術的知見
+
+### Mroongaのベクターカラム処理による二重JSON化問題
+
+- **問題**: Seederで作成した経費申請の台帳（数値カラムを含む）のみ`content`が`null`になる事象が発生した。
+- **原因**: Mroongaのベクターカラム前処理が、数値キーのJSON配列内に整数値を含む場合、その配列をさらにJSONエンコードしてしまう副作用があった。
+- **解決策**: `AsColumnArrayJson`キャストクラスを修正し、DB保存時に整数・浮動小数点数を自動的に文字列に変換するようにした。これにより、Mroongaの副作用を回避した。
+- **効果**: この問題は`AsColumnArrayJson`レベルで一元的に対処されたため、今後のSeederやテスト実装で開発者がこの問題を意識する必要がなくなった。
