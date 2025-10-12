@@ -68,5 +68,18 @@ return [
             'chunk_size' => 100,     // 一度に処理するレコード数
             'schedule' => 'daily',   // 実行頻度（daily: 日次）
         ],
+
+        /*
+        | スコア計算の実行頻度
+        |
+        | 環境別推奨値:
+        | - 開発/デモ: 'everyFiveMinutes' - リアルタイムに近い動作確認
+        | - 本番（小〜中規模）: 'hourly' - 活発な環境
+        | - 本番（通常）: 'daily' - 標準設定
+        | - 本番（大規模）: 'weekly' - データ量が多い場合
+        |
+        | 注意: 'everyMinute' はデバッグ時のみ使用すること
+        */
+        'schedule_frequency' => env('SCORING_SCHEDULE_FREQUENCY', 'daily'),
     ],
 ];
