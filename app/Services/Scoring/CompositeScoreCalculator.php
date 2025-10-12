@@ -7,6 +7,13 @@ use App\Models\ScoringConfig;
 
 class CompositeScoreCalculator
 {
+    public function __construct(
+        private FreshnessScoreService $freshnessScoreService,
+        private ImportanceScoreService $importanceScoreService,
+        private PopularityScoreService $popularityScoreService
+    ) {
+    }
+
     /**
      * @param Ledger $ledger
      * @param ScoringConfig $config
@@ -14,13 +21,11 @@ class CompositeScoreCalculator
      */
     public function calculate(Ledger $ledger, ScoringConfig $config): array
     {
-        // ToDo: 各スコアサービス（Freshness, Importance, Popularity）を呼び出し、
-        //       正規化したスコアを取得するロジックを実装する
-
-        $activityScore = $ledger->activity_score; // 活動スコアは事前計算済み
-        $freshnessScore = 50.0; //仮
-        $importanceScore = 50.0; //仮
-        $popularityScore = 50.0; //仮
+        // 各スコアサービスを呼び出し、スコアを取得
+        $activityScore = (float) $ledger->activity_score;
+        $freshnessScore = $this->freshnessScoreService->calculate($ledger->updated_at);
+        $importanceScore = $this->importanceScoreService->calculate($ledger);
+        $popularityScore = $this->popularityScoreService->calculate($ledger);
         $relevanceScore = 0; // バッチ処理では関連性スコアは0
 
         // 重み付けに基づいて複合スコアを計算
