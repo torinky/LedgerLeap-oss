@@ -11,7 +11,7 @@
     </div>
     {{--   Dummy for CSS Build --}}
 
-    <x-ledger.search/>
+    <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" />
 
     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
         <x-ledger.livewire-breadcrumbs

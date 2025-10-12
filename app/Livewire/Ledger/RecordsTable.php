@@ -36,6 +36,8 @@ class RecordsTable extends Component
 
     public $orderAsc = false;
 
+    public $filterStatus = '';
+
     #[Url(as: 'fi')]
     public $filter = [];
 
@@ -90,6 +92,8 @@ class RecordsTable extends Component
     public ?string $modalResourceType = null;
 
     public ?string $currentTenantId = null;
+
+    public bool $hasWorkflowEnabled = false;
 
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
@@ -151,6 +155,8 @@ class RecordsTable extends Component
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
+
+        $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
     }
 
     /**
@@ -271,6 +277,9 @@ class RecordsTable extends Component
 //            ->search($this->searchContext)
             ->searchContext($this->searchContext)
             ->contentsFilter($this->filter)
+            ->when(!empty($this->filterStatus), function ($query) {
+                return $query->where('status', $this->filterStatus);
+            })
 //          重複データを持たないように
 //          ->with('define.folder')
             ->orderBy('ledger_define_id', 'asc')
