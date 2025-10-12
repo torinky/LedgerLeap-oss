@@ -8,37 +8,20 @@ use App\Models\Ledger;
 class ImportanceScoreService
 {
     /**
-     * Calculate the importance score for a ledger.
+     * Calculate the importance score for a ledger based on workflow status.
      *
-     * @param Ledger $ledger
-     * @return float
+     * Phase 1では既存のワークフロー状態のみを使用し、
+     * is_pinned や priority_level は使用しない（既存機能に存在しないため）。
      */
     public function calculate(Ledger $ledger): float
     {
-        $score = 0;
+        $score = match ($ledger->status) {
+            WorkflowStatus::PENDING_APPROVAL => 30,    // 承認待ち（最優先）
+            WorkflowStatus::PENDING_INSPECTION => 20,  // 点検待ち
+            WorkflowStatus::DRAFT => 10,               // 下書き
+            default => 0,                               // 通常
+        };
 
-        // Pinned status
-        if ($ledger->is_pinned) {
-            $score += 50;
-        }
-
-        // Priority level (0-2)
-        $score += ($ledger->priority_level ?? 0) * 20;
-
-        // Workflow status (pending approval)
-        if ($ledger->status === WorkflowStatus::PENDING_APPROVAL) {
-            $score += 20;
-        }
-
-        // Attachments
-        if ($ledger->attached_files_count > 0) { // Assuming attached_files_count is available
-            $score += 10;
-        }
-
-        // Number of tags (max 10 points)
-        $score += min(($ledger->tags_count ?? 0) * 2, 10);
-
-        // Clip the score to a maximum of 100
-        return min($score, 100.0);
+        return (float) $score;
     }
 }

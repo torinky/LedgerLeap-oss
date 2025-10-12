@@ -76,12 +76,14 @@
 - `scoring_configs`テーブルによるプロファイル管理が過剰
 - `ledger_defines.activity_score`集計の管理コストが高い
 - 人気度スコア実装のための閲覧履歴管理が必要
+- **ピン留め・優先度機能が既存仕様に存在しない**（第5版で発覚）
 - 実装期間が**3週間以上**かかる見込み
 
 **第5版での方針転換:**
 - **MVP優先:** 最小限の機能で1週間以内にリリース
 - **段階的拡張:** 運用しながらフィードバックを得て機能追加
 - **実装コスト67%削減:** 複雑な機能を後続フェーズに延期
+- **既存機能のみ使用:** 新規UI開発を避け、既存のワークフロー状態を活用
 
 ### 実装目標
 
@@ -293,45 +295,71 @@ public function calculateForLedger(Ledger $ledger): int
 
 **実装:** `App\Services\Scoring\FreshnessScoreService` - 既存実装のまま
 
-#### 3. 重要度スコア（Importance Score）- 簡素化版
+#### 3. 重要度スコア（Importance Score）- 簡素化版（第5版で再検討）
 
 **目的:** ビジネス上の重要性を反映し、「優先すべき情報」を評価
 
-**測定方法（第5版で簡素化）:**
+**⚠️ 重要な設計変更（2025-10-12）:**
+当初計画では`is_pinned`と`priority_level`を使用する予定でしたが、**既存の台帳仕様にこれらの機能は存在しません**。Phase 1では以下の方針に変更します。
+
+**測定方法（第5版・修正版）:**
 ```php
-重要度スコア = (is_pinned ? 50 : 0) + (priority_level × 20)
+重要度スコア = ワークフロー状態による加点のみ
 ```
 
-**旧計画（第4版まで）との違い:**
-| 要素 | 旧計画 | 新計画（第5版） | 理由 |
-|------|--------|----------------|------|
-| ピン留め | 50点 | 50点 | 維持 |
-| 優先度レベル | 20点/段階 | 20点/段階 | 維持 |
-| タグ数 | 最大10点 | **廃止** | 実装を簡素化 |
-| 添付ファイル数 | 10点 | **廃止** | 実装を簡素化 |
-| ワークフロー状態 | 20点 | **廃止** | 実装を簡素化 |
+**具体的な計算:**
+| ワークフロー状態 | スコア | 理由 |
+|----------------|--------|------|
+| `PENDING_APPROVAL` | 30点 | 承認待ちは優先度が高い |
+| `PENDING_INSPECTION` | 20点 | 点検待ちも重要 |
+| `DRAFT` | 10点 | 作業中の台帳 |
+| `NONE`, その他 | 0点 | 通常の台帳 |
 
 **実装コード:**
 ```php
 // App\Services\Scoring\ImportanceScoreService::calculate()
 public function calculate(Ledger $ledger): float
 {
-    $score = 0;
+    $score = match($ledger->status) {
+        WorkflowStatus::PENDING_APPROVAL => 30,
+        WorkflowStatus::PENDING_INSPECTION => 20,
+        WorkflowStatus::DRAFT => 10,
+        default => 0,
+    };
     
-    if ($ledger->is_pinned) {
-        $score += 50;
-    }
-    
-    $score += ($ledger->priority_level ?? 0) * 20;
-    
-    return min($score, 100.0);
+    return (float) $score;
 }
 ```
 
+**Phase 2以降での拡張案（任意）:**
+もし重要度スコアをより強化する必要がある場合、以下の要素を検討：
+- [ ] タグに「重要」「緊急」などの特別なタグを定義し、それがある場合に加点
+- [ ] 添付ファイル数による加点（多数のファイルがある = 重要な案件）
+- [ ] コメント数による加点（議論が活発 = 重要度が高い）
+
+**旧計画（第4版まで）との違い:**
+| 要素 | 旧計画 | 新計画（第5版・修正版） | 理由 |
+|------|--------|----------------------|------|
+| ピン留め | 50点 | **機能なし・削除** | 既存仕様に存在しない |
+| 優先度レベル | 20点/段階 | **機能なし・削除** | 既存仕様に存在しない |
+| ワークフロー状態 | 20点 | **30点に変更** | 唯一使用可能な指標 |
+| タグ数 | 最大10点 | **廃止** | Phase 2で検討 |
+| 添付ファイル数 | 10点 | **廃止** | Phase 2で検討 |
+
 **スコア例:**
-- ピン留め + 優先度2: 50 + 40 = 90点
-- 優先度1のみ: 20点
+- 承認待ち台帳: 30点
+- 点検待ち台帳: 20点
+- 下書き台帳: 10点
 - 通常台帳: 0点
+
+**複合スコアへの影響:**
+重要度スコアの最大値が100点→30点に下がるため、複合スコアの計算式は実質的に以下のようになります：
+```php
+複合スコア = (活動スコア × 0.40) + (新鮮度スコア × 0.30) + (重要度スコア × 0.30)
+// 重要度の最大寄与: 30 × 0.30 = 9点（複合スコア全体の9%）
+```
+
+これにより、活動スコアと新鮮度スコアの影響がより強くなります。
 
 #### 4. 関連性スコア（Relevance Score）- Phase 3で実装
 
@@ -412,10 +440,14 @@ SELECT
 
 **ledgersテーブル（変更あり）:**
 ```sql
+-- スコア保存用カラム
 ALTER TABLE ledgers ADD COLUMN activity_score INT DEFAULT 0;
 ALTER TABLE ledgers ADD COLUMN composite_score DECIMAL(10,4) DEFAULT 0;
-ALTER TABLE ledgers ADD COLUMN is_pinned BOOLEAN DEFAULT FALSE;
-ALTER TABLE ledgers ADD COLUMN priority_level TINYINT DEFAULT 0;
+
+-- 重要度関連カラム（第5版で削除）
+-- is_pinned, priority_level は既存機能に存在しないため削除
+-- ワークフロー状態（status）は既存カラムを使用
+
 ALTER TABLE ledgers ADD INDEX idx_composite_score (composite_score);
 ```
 
@@ -733,6 +765,8 @@ CREATE TABLE scoring_configs (
 **必要な修正:**
 - [ ] マイグレーションから`scoring_configs`テーブル作成を削除
 - [ ] マイグレーションから`ledger_defines.activity_score`追加を削除
+- [ ] マイグレーションから`ledgers.is_pinned`追加を削除
+- [ ] マイグレーションから`ledgers.priority_level`追加を削除
 - [ ] マイグレーション再実行（開発環境）
 
 #### Step 1.2: 設定ファイル作成（0.5日）
@@ -794,11 +828,33 @@ CREATE TABLE scoring_configs (
 
 **既存実装の修正:**
 - [ ] `App\Services\Scoring\ImportanceScoreService` を簡素化版に書き換え
-  - [ ] タグ数の計算を削除
-  - [ ] 添付ファイル数の計算を削除
-  - [ ] ワークフロー状態の計算を削除
-  - [ ] `is_pinned`と`priority_level`のみ残す
+  - [ ] ワークフロー状態（`status`）のみを使用
+  - [ ] `is_pinned`の計算を削除（機能が存在しないため）
+  - [ ] `priority_level`の計算を削除（機能が存在しないため）
+  - [ ] タグ数、添付ファイル数の計算を削除
 - [ ] 単体テスト更新
+  ```php
+  public function test_calculates_importance_from_workflow_status()
+  {
+      $ledgerPendingApproval = Ledger::factory()->create([
+          'status' => WorkflowStatus::PENDING_APPROVAL,
+      ]);
+      
+      $ledgerDraft = Ledger::factory()->create([
+          'status' => WorkflowStatus::DRAFT,
+      ]);
+      
+      $ledgerNormal = Ledger::factory()->create([
+          'status' => WorkflowStatus::NONE,
+      ]);
+      
+      $service = new ImportanceScoreService();
+      
+      $this->assertEquals(30, $service->calculate($ledgerPendingApproval));
+      $this->assertEquals(10, $service->calculate($ledgerDraft));
+      $this->assertEquals(0, $service->calculate($ledgerNormal));
+  }
+  ```
 
 #### Step 1.5: 複合スコア計算サービス（1日）
 
@@ -819,8 +875,7 @@ CREATE TABLE scoring_configs (
       $ledger = Ledger::factory()->create([
           'activity_score' => 50,
           'updated_at' => now()->subDays(7),
-          'is_pinned' => true,
-          'priority_level' => 1,
+          'status' => WorkflowStatus::PENDING_APPROVAL, // 30点
       ]);
       
       $calculator = app(CompositeScoreCalculator::class);
@@ -828,9 +883,9 @@ CREATE TABLE scoring_configs (
       
       // activity: 50 × 0.4 = 20
       // freshness: ~50 × 0.3 = 15
-      // importance: 70 × 0.3 = 21
-      // total: ~56
-      $this->assertEqualsWithDelta(56, $result['composite_score'], 5);
+      // importance: 30 × 0.3 = 9
+      // total: ~44
+      $this->assertEqualsWithDelta(44, $result['composite_score'], 5);
   }
   ```
 
@@ -1114,11 +1169,12 @@ CREATE TABLE scoring_configs (
 | `scoring_configs`テーブル | 2日 | config/ledgerleap.phpで十分。DB管理は過剰 |
 | `ledger_defines.activity_score` | 1.5日 | リアルタイム集計で十分。管理コストが高い |
 | 人気度スコア（Phase 1-3） | 2日 | 活動スコアで代替可能。Phase 5で検討 |
-| 重要度スコアの複雑要素 | 1日 | is_pinned + priority_levelで十分 |
+| ピン留め・優先度機能 | 2日 | **既存機能に存在しない。新規開発は後回し** |
+| 重要度スコアの複雑要素 | 1日 | ワークフロー状態のみで十分 |
 | モード切替UI（Phase 1-2） | 3日 | MVP段階では不要。Phase 5で検討 |
 | スコア可視化（Phase 1-2） | 2日 | デバッグ機能は後回し。Phase 4で検討 |
 | 毎時バッチ処理 | 1日 | 日次バッチで十分。サーバー負荷削減 |
-| **合計削減** | **約15日** | **実装期間を3週間→1.5週間に短縮** |
+| **合計削減** | **約17日** | **実装期間を3週間→1.5週間に短縮** |
 
 ---
 

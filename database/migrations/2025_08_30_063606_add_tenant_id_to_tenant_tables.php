@@ -10,10 +10,10 @@ return new class extends Migration
      * Run the migrations.
      *
      * テナントIDカラムとインデックスの追加
-     * 
+     *
      * 複合インデックスは別マイグレーションで追加:
      * - 2025_10_11_000001_add_composite_indexes_for_tenant_queries.php
-     * 
+     *
      * 関連ドキュメント:
      * - docs/work/db-architecture-study/2025-10-09_physical-db-separation-architecture-study.md
      * - docs/work/db-architecture-study/2025-10-11_partitioning-investigation-result.md

@@ -7,67 +7,72 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Config;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * 活動スコア計算サービス（簡素化版）
+ *
+ * Phase 1: 期間別カウント方式
+ * - 直近7日間のイベント数 × 10点
+ * - 直近30日間のイベント数 × 3点
+ * - すべてのイベントを均等に1件としてカウント
+ */
 class ActivityScoreService
 {
-    private array $scoreConfig;
-    private float $decayRate;
+    private array $windows;
 
     public function __construct()
     {
-        $this->scoreConfig = Config::get('ledgerleap.scoring.activity', []);
-        $this->decayRate = Config::get('ledgerleap.scoring.decay.rate', 0.95);
+        $this->windows = Config::get('ledgerleap.scoring.activity.windows', [
+            ['days' => 7, 'multiplier' => 10],
+            ['days' => 30, 'multiplier' => 3],
+        ]);
     }
 
     /**
      * Calculate the activity score for a single ledger.
      *
-     * @param Ledger $ledger
-     * @return int
+     * 直近7日間と7-30日間を別々にカウント
      */
     public function calculateForLedger(Ledger $ledger): int
     {
-        $activities = Activity::query()
-            ->where('subject_type', Ledger::class)
-            ->where('subject_id', $ledger->id)
-            ->get();
-
-        $totalScore = 0;
         $now = Carbon::now();
 
-        foreach ($activities as $activity) {
-            $eventType = $activity->description;
-            $baseScore = $this->scoreConfig[$eventType] ?? 0;
+        // 直近7日間のイベント数
+        $last7days = Activity::query()
+            ->where('subject_type', Ledger::class)
+            ->where('subject_id', $ledger->id)
+            ->where('created_at', '>=', $now->copy()->subDays(7))
+            ->count();
 
-            if ($baseScore !== 0) {
-                // Calculate the number of weeks passed since the activity occurred.
-                $weeksPassed = $activity->created_at->diffInWeeks($now);
+        // 7-30日間のイベント数
+        $last30days = Activity::query()
+            ->where('subject_type', Ledger::class)
+            ->where('subject_id', $ledger->id)
+            ->where('created_at', '>=', $now->copy()->subDays(30))
+            ->where('created_at', '<', $now->copy()->subDays(7))
+            ->count();
 
-                // Apply decay to the score.
-                $decayedScore = $baseScore * pow($this->decayRate, $weeksPassed);
-                $totalScore += $decayedScore;
-            }
-        }
-
-        return (int) round($totalScore);
+        return ($last7days * 10) + ($last30days * 3);
     }
 
     /**
-     * Decay scores for all ledgers.
-     * This method should be called periodically by a scheduled command.
-     */
-    public function decayScores(): void
-    {
-        // ToDo: Implement logic to decay scores for all ledgers.
-        // This might involve chunking results for performance.
-    }
-
-    /**
-     * Calculate and update the aggregated activity score for a ledger define.
+     * Calculate activity score for all ledgers and update database.
      *
-     * @param \App\Models\LedgerDefine $ledgerDefine
+     * @return int Number of ledgers updated
      */
-    public function calculateLedgerDefineScore(\App\Models\LedgerDefine $ledgerDefine): void
+    public function updateAllLedgers(): int
     {
-        // ToDo: Implement logic to sum up scores from related ledgers.
+        $chunkSize = Config::get('ledgerleap.scoring.batch.chunk_size', 100);
+        $updatedCount = 0;
+
+        Ledger::query()->chunk($chunkSize, function ($ledgers) use (&$updatedCount) {
+            foreach ($ledgers as $ledger) {
+                $score = $this->calculateForLedger($ledger);
+                $ledger->activity_score = $score;
+                $ledger->save();
+                $updatedCount++;
+            }
+        });
+
+        return $updatedCount;
     }
 }

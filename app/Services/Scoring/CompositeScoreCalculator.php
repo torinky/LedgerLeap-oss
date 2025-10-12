@@ -3,24 +3,37 @@
 namespace App\Services\Scoring;
 
 use App\Models\Ledger;
-use App\Models\ScoringConfig;
+use Illuminate\Support\Facades\Config;
 
+/**
+ * 複合スコア計算サービス
+ *
+ * 複数のスコアを重み付けして最終的な複合スコアを算出
+ */
 class CompositeScoreCalculator
 {
     public function __construct(
         private FreshnessScoreService $freshnessScoreService,
         private ImportanceScoreService $importanceScoreService,
         private PopularityScoreService $popularityScoreService
-    ) {
-    }
+    ) {}
 
     /**
-     * @param Ledger $ledger
-     * @param ScoringConfig $config
+     * Calculate composite score for a ledger using configured weights.
+     *
      * @return array{composite_score: float, breakdown: array}
      */
-    public function calculate(Ledger $ledger, ScoringConfig $config): array
+    public function calculate(Ledger $ledger): array
     {
+        // config/ledgerleap.php から重み付けを取得
+        $weights = Config::get('ledgerleap.scoring.weights', [
+            'activity' => 0.40,
+            'freshness' => 0.30,
+            'importance' => 0.30,
+            'relevance' => 0.00,
+            'popularity' => 0.00,
+        ]);
+
         // 各スコアサービスを呼び出し、スコアを取得
         $activityScore = (float) $ledger->activity_score;
         $freshnessScore = $this->freshnessScoreService->calculate($ledger->updated_at);
@@ -30,11 +43,11 @@ class CompositeScoreCalculator
 
         // 重み付けに基づいて複合スコアを計算
         $compositeScore =
-            ($activityScore * $config->activity_weight) +
-            ($freshnessScore * $config->freshness_weight) +
-            ($importanceScore * $config->importance_weight) +
-            ($popularityScore * $config->popularity_weight) +
-            ($relevanceScore * $config->relevance_weight);
+            ($activityScore * $weights['activity']) +
+            ($freshnessScore * $weights['freshness']) +
+            ($importanceScore * $weights['importance']) +
+            ($popularityScore * $weights['popularity']) +
+            ($relevanceScore * $weights['relevance']);
 
         return [
             'composite_score' => $compositeScore,

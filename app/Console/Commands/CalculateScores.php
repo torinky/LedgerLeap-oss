@@ -2,14 +2,19 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ScoringConfig;
+use App\Models\Ledger;
 use App\Models\Tenant;
-use Illuminate\Console\Command;
 use App\Services\Scoring\ActivityScoreService;
 use App\Services\Scoring\CompositeScoreCalculator;
-use App\Models\Ledger;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * スコア計算コマンド（簡素化版）
+ *
+ * Phase 1: config/ledgerleap.php の設定を使用
+ * ScoringConfigモデルへの依存を削除
+ */
 class CalculateScores extends Command
 {
     /**
@@ -39,27 +44,20 @@ class CalculateScores extends Command
 
         $tenants->each(function (Tenant $tenant) use ($activityScoreService, $compositeScoreCalculator) {
             tenancy()->initialize($tenant);
-            
+
             $this->info("Processing tenant: {$tenant->id}");
             Log::info("Processing tenant: {$tenant->id}");
 
-            // このテナントのデフォルト設定を取得
-            $config = ScoringConfig::where('is_system_default', true)->where('profile_name', 'activity')->first();
-            if (!$config) {
-                $this->error("Scoring config 'activity' not found for tenant {$tenant->id}. Skipping.");
-                Log::error("Scoring config 'activity' not found for tenant {$tenant->id}. Skipping.");
+            $ledgers = Ledger::all();
+            $total = $ledgers->count();
+
+            if ($total === 0) {
+                $this->info('No ledgers found for this tenant. Skipping.');
+                Log::info("No ledgers found for tenant {$tenant->id}. Skipping.");
+
                 return;
             }
 
-            $ledgers = Ledger::all();
-            $total = $ledgers->count();
-            
-            if ($total === 0) {
-                $this->info("No ledgers found for this tenant. Skipping.");
-                Log::info("No ledgers found for tenant {$tenant->id}. Skipping.");
-                return;
-            }
-            
             $this->info("Found {$total} ledgers to process.");
 
             $progressBar = $this->output->createProgressBar($total);
@@ -70,8 +68,8 @@ class CalculateScores extends Command
                 $activityScore = $activityScoreService->calculateForLedger($ledger);
                 $ledger->activity_score = $activityScore;
 
-                // 2. 複合スコアを計算して保存
-                $compositeResult = $compositeScoreCalculator->calculate($ledger, $config);
+                // 2. 複合スコアを計算して保存（configから重み付けを取得）
+                $compositeResult = $compositeScoreCalculator->calculate($ledger);
                 $ledger->composite_score = $compositeResult['composite_score'];
 
                 $ledger->save();

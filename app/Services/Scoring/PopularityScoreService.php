@@ -9,9 +9,6 @@ class PopularityScoreService
 {
     /**
      * Calculate the popularity score for a ledger.
-     *
-     * @param Ledger $ledger
-     * @return float
      */
     public function calculate(Ledger $ledger): float
     {

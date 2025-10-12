@@ -9,9 +9,6 @@ class FreshnessScoreService
     /**
      * Calculate the freshness score based on the last update time.
      * The score decays over time using a logistic function.
-     *
-     * @param Carbon $updatedAt
-     * @return float
      */
     public function calculate(Carbon $updatedAt): float
     {
