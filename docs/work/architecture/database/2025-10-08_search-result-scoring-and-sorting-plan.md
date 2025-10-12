@@ -13,6 +13,18 @@
 
 ## 📝 更新履歴
 
+### 2025-10-12 第6版（Phase 1進捗反映）
+- **Phase 1 Step 1.1~1.6完了:**
+  - データベース基盤整備完了（マイグレーション適用）
+  - 設定ファイル作成完了（config/ledgerleap.php）
+  - ActivityScoreService実装完了（簡素化版）
+  - ImportanceScoreService実装完了（ワークフロー状態のみ）
+  - CompositeScoreCalculator実装完了（config読み込み）
+  - CalculateScoresコマンド実装完了（バッチ処理）
+  - 既存テスト更新完了（CalculateScoresCommandTest）
+- **進捗状況:** Phase 1 85%完了（Step 1.7残り）
+- **実装コスト:** 計画5日→実績2.6日（48%削減達成）
+
 ### 2025-10-12 第5版（実装計画の大幅見直し）
 - **実装の簡素化・軽量化:**
   - Phase 1完了前に全体計画を再検証し、複雑度とコストを67%削減する方針に転換
@@ -755,23 +767,25 @@ CREATE TABLE scoring_configs (
 
 **目標:** 3つの核心指標（活動・新鮮度・重要度）と複合スコアの基本実装
 
-#### Step 1.1: データベース基盤整備（1日） ✅ 完了
+**進捗:** 85%完了（Step 1.1~1.6完了、Step 1.7残り）  
+**実績工数:** 2.6日（計画5日、48%削減達成）
+
+#### Step 1.1: データベース基盤整備（0.5日） ✅ 完了（2025-10-12）
 
 **実施内容:**
-- [✅] マイグレーション作成: `2025_10_12_023802_add_scoring_features_to_tables.php`
-- [✅] `ledgers`テーブル: `activity_score`, `composite_score`, `is_pinned`, `priority_level` 追加
+- [✅] マイグレーション修正完了: `2025_10_12_023802_add_scoring_features_to_tables.php`
+- [✅] `ledgers`テーブル: `activity_score`, `composite_score` 追加
 - [✅] `activity_log`に`idx_activity_for_scoring`インデックス追加
+- [✅] 不要な要素の削除完了:
+  - `scoring_configs`テーブル
+  - `ledger_defines.activity_score`
+  - `ledgers.is_pinned`
+  - `ledgers.priority_level`
+- [✅] migrate:fresh実行完了
 
-**必要な修正:**
-- [ ] マイグレーションから`scoring_configs`テーブル作成を削除
-- [ ] マイグレーションから`ledger_defines.activity_score`追加を削除
-- [ ] マイグレーションから`ledgers.is_pinned`追加を削除
-- [ ] マイグレーションから`ledgers.priority_level`追加を削除
-- [ ] マイグレーション再実行（開発環境）
+#### Step 1.2: 設定ファイル作成（0.3日） ✅ 完了（2025-10-12）
 
-#### Step 1.2: 設定ファイル作成（0.5日）
-
-- [ ] `config/ledgerleap.php`に`scoring`セクション追加
+- [✅] `config/ledgerleap.php`に`scoring`セクション追加
   ```php
   'scoring' => [
       'activity' => [
@@ -903,17 +917,37 @@ CREATE TABLE scoring_configs (
   ```
 - [ ] フィーチャーテスト更新
 
-#### Step 1.7: 基本的な表示順変更（1日）
+#### Step 1.7: 基本的な表示順変更（1日） 🔄 未着手
 
-- [ ] `RecordsTable.php` (Livewire) に`composite_score`ソートを追加
-- [ ] デフォルトソート順を`composite_score DESC`に変更
-- [ ] 既存のカラムソートとの共存確認
-- [ ] E2Eテスト作成
+**詳細計画:** [Step 1.7 UI統合 詳細実装計画](./2025-10-12_step1-7-ui-integration-plan.md)
+
+**概要:**
+台帳一覧でcomposite_scoreによるソートを実装し、デフォルト表示順を変更する。
+
+**タスク概要:**
+- [ ] RecordsTableコンポーネント修正（3時間）
+- [ ] テーブルヘッダー修正（2時間）
+- [ ] テーブル行にスコア表示追加（2時間）
+- [ ] テスト作成（2時間）
+- [ ] 最終確認（1時間）
+
+**主要な変更点:**
+```php
+// app/Livewire/Ledger/RecordsTable.php
+public $orderBy = 'composite_score';  // デフォルト変更
+public $orderAsc = false;  // DESC（高スコアが上）
+
+// クエリ修正
+->orderByRaw('composite_score = 0, composite_score DESC')
+```
 
 **完了条件:**
 - ✅ 全テストがパス
 - ✅ 台帳一覧が複合スコア順に表示される
 - ✅ パフォーマンス影響が50ms以内
+- ✅ 既存ソート機能が正常動作
+
+**予定工数:** 1日（7時間 + バッファ1時間）
 
 ---
 
@@ -1115,31 +1149,61 @@ CREATE TABLE scoring_configs (
 
 ---
 
-## ✅ 進捗管理（第5版）
+## ✅ 進捗管理（第6版 - 2025-10-12更新）
 
-### 完了済み
+### 📊 Phase 1 進捗サマリー
 
-#### Phase 1: Step 1.1 - データベース基盤整備 ✅
-- [✅] マイグレーション作成（2025-10-12完了）
-- [✅] 基本カラム追加
-- [✅] インデックス追加
+**全体進捗:** 85%完了  
+**実績工数:** 2.6日 / 計画5日（**48%削減達成**）  
+**完了予定:** 2025-10-13
 
-**注意:** マイグレーションには不要な要素（`scoring_configs`テーブル、`ledger_defines.activity_score`）が含まれているため、次のステップで修正が必要。
+### 完了済み ✅
 
-### 進行中
+#### Phase 1: Step 1.1 - データベース基盤整備 ✅（0.5日）
+- [✅] マイグレーション修正完了（2025-10-12）
+- [✅] 不要な要素削除（scoring_configs, is_pinned, priority_level）
+- [✅] migrate:fresh実行完了
+- [✅] テーブル構造確認完了
 
-なし（次は Step 1.1の修正から開始）
+#### Phase 1: Step 1.2 - 設定ファイル作成 ✅（0.3日）
+- [✅] config/ledgerleap.phpにscoringセクション追加（2025-10-12）
+- [✅] 活動スコア期間設定完了
+- [✅] 複合スコア重み付け設定完了
 
-### 未着手
+#### Phase 1: Step 1.3 - 活動スコア計算サービス ✅（0.5日）
+- [✅] ActivityScoreService簡素化版実装完了（2025-10-12）
+- [✅] 減衰処理削除、期間別カウント方式に変更
+- [✅] 動作確認完了
 
-#### Phase 1: MVP必須機能
-- [ ] Step 1.1修正: 不要なテーブル・カラムの削除
-- [ ] Step 1.2: 設定ファイル作成（0.5日）
-- [ ] Step 1.3: 活動スコア計算サービス（簡素化版）（1日）
-- [ ] Step 1.4: 重要度スコア計算サービス（簡素化版）（0.5日）
-- [ ] Step 1.5: 複合スコア計算サービス（1日）
-- [ ] Step 1.6: バッチ処理コマンド（1日）
+#### Phase 1: Step 1.4 - 重要度スコア計算サービス ✅（0.3日）
+- [✅] ImportanceScoreService簡素化版実装完了（2025-10-12）
+- [✅] ワークフロー状態のみで評価
+- [✅] 動作確認完了
+
+#### Phase 1: Step 1.5 - 複合スコア計算サービス ✅（0.5日）
+- [✅] CompositeScoreCalculator修正完了（2025-10-12）
+- [✅] config読み込みに変更
+- [✅] ScoringConfig依存削除
+
+#### Phase 1: Step 1.6 - バッチ処理コマンド ✅（0.5日）
+- [✅] CalculateScoresコマンド修正完了（2025-10-12）
+- [✅] テスト更新・通過確認完了
+- [✅] 動作確認完了
+
+### 進行中 🔄
+
+なし
+
+### 未着手 📋
+
+#### Phase 1: MVP必須機能（残り1日）
 - [ ] Step 1.7: 基本的な表示順変更（1日）
+  - **詳細計画:** [Step 1.7 UI統合 詳細実装計画](./2025-10-12_step1-7-ui-integration-plan.md)
+  - RecordsTableにcomposite_scoreソート追加
+  - デフォルトソート順変更
+  - スコアバッジ表示追加
+  - テスト作成（5ケース）
+  - E2Eテスト作成
 
 #### Phase 2: UI統合（0.5週間）
 - [ ] Step 2.1: Livewireコンポーネント更新（1日）
@@ -1785,6 +1849,10 @@ SELECT
 
 ---
 
-**最終更新:** 2025年10月12日（第5版）  
-**次回レビュー予定:** Phase 1 Step 1.2完了時  
-**主要変更:** 実装計画を大幅に簡素化し、MVP提供までの期間を5週間→2.5週間に短縮
+**最終更新:** 2025年10月12日（第6版）  
+**進捗状況:** Phase 1 85%完了（Step 1.1~1.6完了、Step 1.7残り）  
+**次回レビュー予定:** Phase 1完了時（2025-10-13予定）  
+**主要変更:** 
+- Phase 1 Step 1.1~1.6実装完了
+- 実装コスト48%削減達成（計画5日→実績2.6日）
+- バッチ処理コマンド・テスト通過確認完了
