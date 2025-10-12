@@ -81,16 +81,21 @@
                     $ledgerRecord->composite_score > 0 => 'badge-ghost',
                     default => ''
                 };
+                // ステータスに応じたアイコンを決定 (Enumから取得)
+                $statusIcon = $ledgerRecord->status->icon();
             @endphp
             @if($ledgerRecord->composite_score > 0)
-                <span class="badge badge-xl {{ $scoreClass }}">
+                <span class="badge badge-xl {{ $scoreClass }} flex items-center gap-1">
+                    <i class="fas fa-star"></i> {{-- スコアアイコン --}}
                     {{ number_format($ledgerRecord->composite_score, 1) }}
                 </span>
             @endif
 
             @if($ledgerRecord->define->workflow_enabled && $ledgerRecord->status)
-                <x-mary-badge :value="$ledgerRecord->status->label()"
-                              class="badge-lg {{ $ledgerRecord->status->colorClass() }}"/>
+                <span class="badge badge-lg {{ $ledgerRecord->status->colorClass() }} flex items-center gap-1">
+                    <i class="{{ $statusIcon }}"></i> {{-- ステータスアイコン --}}
+                    {{ $ledgerRecord->status->label() }}
+                </span>
             @endif
         </div>
     </td>
