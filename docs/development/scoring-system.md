@@ -185,7 +185,7 @@ php artisan scoring:calculate
    c. 各Ledgerに対して:
       - ActivityScoreService で活動スコア計算
       - CompositeScoreCalculator で複合スコア計算
-      - Ledger に保存
+      - saveQuietly() でアクティビティログを記録せずに保存
    d. 進捗バー表示
 3. ログ出力
 ```
@@ -198,10 +198,105 @@ public function handle(
 ): int
 ```
 
+**重要な実装ポイント:**
+- `saveQuietly()` を使用してスコア更新自体がアクティビティログに記録されることを防ぐ
+- これによりスコア更新がアクティビティとしてカウントされ、スコアが無限に上昇する問題を回避
+
 **テスト:**
 - `tests/Feature/Feature/Console/CalculateScoresCommandTest.php`
 - マルチテナント対応を確認
 - スコア計算の正確性を検証
+
+---
+
+### ResetScores 🆕
+
+**場所:** `app/Console/Commands/ResetScores.php`
+
+**シグネチャ:**
+```bash
+php artisan scoring:reset [options]
+```
+
+**概要:**
+スコアを0にリセットするのではなく、既存のアクティビティログから正しいスコアを再計算します。スコアリングロジックの変更後や、無限ループ問題が発生した場合の復旧に使用します。
+
+**オプション:**
+- `--tenant=ID` - 特定テナントのみ再計算
+- `--folder=ID` - 特定フォルダ（子孫含む）のみ再計算
+- `--force` - 確認プロンプトをスキップ
+
+**使用例:**
+```bash
+# 全テナントの全台帳を再計算（確認あり）
+php artisan scoring:reset
+
+# 特定テナントのスコアを再計算
+php artisan scoring:reset --tenant=demo
+
+# 特定フォルダとその子孫フォルダの台帳を再計算
+php artisan scoring:reset --folder=5
+
+# 確認なしで強制実行
+php artisan scoring:reset --force
+
+# テナントとフォルダを組み合わせ
+php artisan scoring:reset --tenant=demo --folder=5 --force
+```
+
+**処理フロー:**
+```php
+1. テナント選択（--tenant オプション指定時は特定テナント、未指定時は全テナント）
+2. 確認プロンプト表示（--force でスキップ可能）
+3. 各テナントに対して:
+   a. テナントコンテキストを初期化
+   b. フォルダ指定がある場合は子孫フォルダを取得
+   c. 該当する台帳を絞り込み（フォルダ指定時のみ）
+   d. 各台帳のアクティビティログから:
+      - ActivityScoreService で活動スコア計算
+      - CompositeScoreCalculator で複合スコア計算
+   e. saveQuietly() でアクティビティログを記録せずに保存
+   f. 進捗バーを表示
+4. 処理件数をログ出力
+```
+**使用シチュエーション（実行が必要な場合）:**
+
+1. **スコアロジックを変更した時**
+   - `config/ledgerleap.php` の重み付け（weights）を変更
+   - `ActivityScoreService` の計算式を修正
+   - `FreshnessScoreService` や `ImportanceScoreService` のロジック変更
+   - 例: 活動スコアの重みを40%→50%に変更した場合
+
+2. **無限ループ問題が発生した時（緊急対応）**
+   - スコア更新がアクティビティログに記録され続ける問題
+   - バージョン1.0.1以前で発生した場合の復旧
+   - 異常に高いスコア値の修正
+
+3. **データ移行・環境構築時**
+   - 本番データをステージング環境にコピーした後
+   - テナントの新規作成後の初期スコア計算
+   - データベースリストア後のスコア再構築
+
+4. **スコアの整合性確認**
+   - スコアが正しく計算されているか疑わしい時
+   - アクティビティログとスコアの不一致を疑う場合
+
+
+**scoring:calculate との違い:**
+- `scoring:calculate`: 定期的な自動更新（日次・毎時など）。既存のスコアを現在のアクティビティログに基づいて更新
+- `scoring:reset`: 手動実行による全面再計算。すべてのスコアをアクティビティログから完全に再構築
+
+**注意事項:**
+- 両コマンドは同じ計算ロジックを使用するため、アクティビティログが正しければ結果は同じ
+- `scoring:reset`の価値は「確実に全台帳を再計算する」という明示的な意図と実行記録
+- `scoring:calculate`が正常に動作していれば、通常は`scoring:reset`は不要
+
+
+**安全機能:**
+- デフォルトで確認プロンプトを表示（誤操作防止）
+- 対象範囲を明確に表示（テナント数、フォルダ情報）
+- 進捗バー表示（処理状況の可視化）
+- ログに詳細な実行記録を残す
 
 ---
 
@@ -631,6 +726,38 @@ protected function setUp(): void
 # 開発環境のみ
 ./vendor/bin/sail artisan migrate:fresh --seed
 ```
+
+**問題4: スコアが無限に上昇し続ける** 🆕
+
+原因: スコア更新時にアクティビティログが記録され、それがまた活動スコアを上げる無限ループが発生
+
+現象:
+- `scoring:calculate` コマンド実行のたびにスコアが上昇
+- アクティビティログに `composite_score` や `activity_score` の更新が大量に記録される
+- 活動スコアが異常に高い値になる
+
+解決策:
+```bash
+# 1. まずスコアをリセット
+./vendor/bin/sail artisan scoring:reset --force
+
+# 2. 修正済みコードを確認
+# app/Console/Commands/CalculateScores.php と
+# app/Services/Scoring/ActivityScoreService.php で
+# save() ではなく saveQuietly() を使用していることを確認
+
+# 3. スコアを再計算
+./vendor/bin/sail artisan scoring:calculate
+
+# 4. アクティビティログを確認（スコア更新が記録されていないことを確認）
+./vendor/bin/sail artisan tinker
+> Activity::latest()->take(10)->get(['description', 'properties'])
+```
+
+**予防策:**
+- スコア計算時は必ず `saveQuietly()` を使用
+- `Ledger` モデルの `getActivitylogOptions()` で `dontLogIfAttributesChangedOnly(['activity_score', 'composite_score'])` が設定されていることを確認
+- 定期的にアクティビティログを監視し、異常なパターンがないか確認
 
 ---
 

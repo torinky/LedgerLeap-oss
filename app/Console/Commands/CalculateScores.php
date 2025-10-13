@@ -72,7 +72,8 @@ class CalculateScores extends Command
                 $compositeResult = $compositeScoreCalculator->calculate($ledger);
                 $ledger->composite_score = $compositeResult['composite_score'];
 
-                $ledger->save();
+                // saveQuietly()を使用してアクティビティログを記録しない
+                $ledger->saveQuietly();
                 $progressBar->advance();
             }
 
