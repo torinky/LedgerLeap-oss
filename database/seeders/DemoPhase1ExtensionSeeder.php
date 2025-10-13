@@ -1282,7 +1282,7 @@ MARKDOWN,
                 ]);
 
                 $this->command->info("   ✅ [DEBUG] Ledger created successfully: ID={$ledger->id}");
-//                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
+                //                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
             } catch (\Exception $e) {
                 $this->command->error('   ❌ [DEBUG] Failed to create ledger: '.$e->getMessage());
                 $this->command->error('   ❌ [DEBUG] Stack trace: '.$e->getTraceAsString());
@@ -1643,7 +1643,7 @@ MARKDOWN,
                 ]);
 
                 $this->command->info("   ✅ [DEBUG] Ledger created successfully: ID={$ledger->id}");
-//                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
+                //                $this->command->info('   🔍 [DEBUG] Saved content: '.json_encode($ledger->content, JSON_UNESCAPED_UNICODE));
             } catch (\Exception $e) {
                 $this->command->error('   ❌ [DEBUG] Failed to create ledger: '.$e->getMessage());
                 $this->command->error('   ❌ [DEBUG] Stack trace: '.$e->getTraceAsString());

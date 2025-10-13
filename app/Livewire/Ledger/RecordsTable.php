@@ -225,6 +225,7 @@ class RecordsTable extends Component
             $this->orderBy = 'composite_score'; // デフォルトのソートに戻す
             $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
             Log::info('updatedOrderBy: custom sort option re-selected, reverting to default', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+
             return; // これ以上処理しない
         }
 
@@ -318,7 +319,7 @@ class RecordsTable extends Component
 //            ->search($this->searchContext)
             ->searchContext($this->searchContext)
             ->contentsFilter($this->filter)
-            ->when(!empty($this->filterStatus), function ($query) {
+            ->when(! empty($this->filterStatus), function ($query) {
                 return $query->where('status', $this->filterStatus);
             })
 //          重複データを持たないように

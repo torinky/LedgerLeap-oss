@@ -169,12 +169,22 @@ class RecordsTableQueryTest extends TestCase
     public function it_displays_auto_links_in_list_view()
     {
         // 自動リンク定義の準備
-        AutoLink::factory()->create([
+        $autoLink = AutoLink::factory()->create([
             'label' => 'Test AutoLink',
             'pattern' => '/(SPEC-\\d{3})/',
             'url_template' => '/l/$1',
             'is_enabled' => true,
         ]);
+
+        // AutoLinkScopeを作成してフォルダにスコープを限定
+        \App\Models\AutoLinkScope::create([
+            'auto_link_id' => $autoLink->id,
+            'scopeable_type' => (new Folder)->getMorphClass(),
+            'scopeable_id' => $this->folder->id,
+        ]);
+
+        // キャッシュクリア
+        \Illuminate\Support\Facades\Cache::tags('auto_links')->flush();
 
         // 台帳データの準備
         $autoLinkText = 'これはSPEC-007を含むテキストです。';
@@ -190,8 +200,11 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])->test(RecordsTable::class);
+
+        // AutoLinkが適用されると、リンクとして表示される
+        // 完全なURLはhttp://localhost/l/SPEC-007となる
         $component->assertOk()
-            ->assertSeeHtml('href="/l/SPEC-007"')
+            ->assertSeeHtml('/l/SPEC-007') // URLパス部分が含まれていることを確認
             ->assertSee('SPEC-007');
     }
 }

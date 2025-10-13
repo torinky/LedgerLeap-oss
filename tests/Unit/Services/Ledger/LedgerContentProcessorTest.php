@@ -325,7 +325,8 @@ class LedgerContentProcessorTest extends TestCase
         // 2. Act: コンテキストなしでサービスを直接呼び出す
         $html = $service->convert($text);
 
-        // 3. Assert
-        $this->assertStringContainsString('<a href="/docs/DOC-123"', $html);
+        // 3. Assert: 新しいフォーマット（ツールチップ付きリンク）を期待
+        $this->assertStringContainsString('href="http://localhost/docs/DOC-123"', $html);
+        $this->assertStringContainsString('DOC-123', $html);
     }
 }

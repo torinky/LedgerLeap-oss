@@ -254,6 +254,7 @@ class AutoLinkCrossReferenceSeeder extends Seeder
 
             if (! $autoNumberColumn) {
                 $this->command->info("     ⚠ {$defineName} has no auto_number column. Skipping.");
+
                 continue;
             }
 
@@ -412,6 +413,7 @@ MARKDOWN,
         $nextNumber = Ledger::where('ledger_define_id', $define->id)->count() + 1;
 
         $content = [
+            'EXP-'.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT),
             now()->format('Y-m-d'), // 申請日
             '交通費', // 経費区分
             5000, // 金額
@@ -436,7 +438,6 @@ MARKDOWN,
 この商談は今期の重点案件のため、速やかな承認をお願いいたします。
 MARKDOWN,
             [], // 領収書（添付ファイル）
-            'EXP-'.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT),
         ];
 
         Ledger::create([

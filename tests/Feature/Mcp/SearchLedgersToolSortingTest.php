@@ -11,7 +11,7 @@ use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * MCP SearchLedgersTool のソート機能テスト
- * 
+ *
  * 注: スコアリング機能の詳細なテストは RecordsTableCompositeScoreSortTest で実施済み
  * このテストはMCPツール固有のAPI（order_by/order_directionパラメータ）の動作を確認
  */
@@ -58,7 +58,7 @@ class SearchLedgersToolSortingTest extends TestCase
             ->with(
                 Mockery::type(\App\Models\User::class),
                 Mockery::on(function ($params) {
-                    return $params['order_by'] === 'activity_score' 
+                    return $params['order_by'] === 'activity_score'
                         && $params['format'] === 'raw';
                 })
             )
@@ -114,7 +114,7 @@ class SearchLedgersToolSortingTest extends TestCase
                 Mockery::type(\App\Models\User::class),
                 Mockery::on(function ($params) {
                     // order_byが指定されていないか、composite_scoreがデフォルト
-                    return !isset($params['order_by']) || $params['order_by'] === 'composite_score';
+                    return ! isset($params['order_by']) || $params['order_by'] === 'composite_score';
                 })
             )
             ->andReturn([
@@ -188,5 +188,3 @@ class SearchLedgersToolSortingTest extends TestCase
         }
     }
 }
-
-
