@@ -93,6 +93,20 @@ class SearchLedgersTool extends Tool
         - Multiple keywords (AND): q='商事 提案' (space-separated)
         - Note: Mroonga uses morphological analysis, so searches are word-based
 
+        **Sorting (ソート機能):**
+        - 'order_by': Field to sort by (default: composite_score)
+          - 'composite_score': Overall importance combining activity, freshness, and workflow status
+          - 'activity_score': Recent activity frequency (useful for "What's hot?" queries)
+          - 'created_at': Creation date (useful for "Show recent entries")
+          - 'updated_at': Last update date
+        - 'order_direction': Sort direction ('asc' or 'desc', default: 'desc')
+        
+        **Sorting Examples:**
+        - "Show me the most important ledgers" → order_by='composite_score' (default)
+        - "What are people working on recently?" → order_by='activity_score'
+        - "Show oldest pending items" → order_by='created_at', order_direction='asc'
+        - "What needs attention?" → order_by='composite_score' (high score = important)
+
         **Performance Tips (パフォーマンスのヒント):**
         - Broad searches without filters may be slow with large datasets
         - Use 'ledger_define_id' or 'folder_id' to narrow down the search scope
@@ -340,6 +354,8 @@ MARKDOWN;
             'creator_id' => $schema->integer('The ID of the user who created the ledger. Use this to find all work by a specific person. You can get user IDs from meta.users in previous search results.'),
             'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-01" for records from October 1st onwards.'),
             'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-07" for records up to October 7th. Use with created_from for date range filtering.'),
+            'order_by' => $schema->string('The field to sort results by. "composite_score" (default) sorts by overall importance (activity + freshness + workflow status). "activity_score" shows recently active items. "created_at" shows newest first. "updated_at" shows recently modified.')->enum(['composite_score', 'activity_score', 'created_at', 'updated_at'])->default('composite_score'),
+            'order_direction' => $schema->string('The sort direction. "desc" (default) shows highest/newest first. "asc" shows lowest/oldest first. Useful with composite_score asc to find neglected items.')->enum(['asc', 'desc'])->default('desc'),
             'format' => $schema->string('The format of the response. "summary" (default) includes display-friendly fields like __display_fields__ and __summary__ with translations. "raw" returns only the normalized data without formatting (faster, use for machine processing).')->enum(['raw', 'summary'])->default('summary'),
             'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to false for quick browsing of many ledgers (only metadata and preview shown). Default: true.')->default(true),
             'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false. Default: 200 characters. Increase for longer previews, decrease for quicker overview.')->default(200),

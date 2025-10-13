@@ -3,6 +3,20 @@
 **対象読者:** LedgerLeap開発者・保守担当者  
 **最終更新:** 2025年10月13日
 
+## 📖 関連ドキュメント
+
+### 公式ドキュメント
+- [MCP アーキテクチャと動作フロー](./MCP_Architecture_and_Flow.md) - スコアリング機能のMCP統合
+- [機能仕様: スコアリングシステム](../features/scoring-system.md) - ユーザー向け機能説明
+
+### 作業ファイル（計画・設計・実装記録）
+- [スコアリング実装計画](../work/architecture/scoring-system/2025-10-08_search-result-scoring-and-sorting-plan.md) - 初期設計
+- [ハイブリッドスコアリング性能調査](../work/architecture/scoring-system/2025-10-12_hybrid-scoring-performance-study.md) - パフォーマンス最適化
+- [Phase 1.5 Step1-8 実装完了](../work/architecture/scoring-system/2025-10-12_phase1-5-step1-8-implementation-complete.md) - 実装記録
+- [ドキュメント再編成完了](../work/architecture/scoring-system/2025-10-13_documentation-reorganization-complete.md) - ドキュメント整備
+- [MCPスコアリング統合計画](../work/llm-integration/2025-10-13_MCP_Scoring_Integration_Plan.md) - MCP統合設計 🆕
+- [MCPスコアリング統合実装完了](../work/llm-integration/2025-10-13_MCP_Sorting_Implementation_Complete.md) - MCP統合実装記録 🆕
+
 ---
 
 ## アーキテクチャ概要

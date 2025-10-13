@@ -6,37 +6,51 @@
 > このカテゴリの作業結果として実装された機能の公式ドキュメントは以下を参照してください：
 > - [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 実装済みMCPの全体構造
 > - [MCP プロンプトガイドライン](../../development/MCP_Prompt_Guidelines.md) - LLM対話のベストプラクティス
+> - [スコアリングシステム 開発者ガイド](../../development/scoring-system.md) - レコードスコアリング機能
 > - [API仕様](../../api/README.md) - REST API公式仕様
 
 このカテゴリには、LedgerLeapと大規模言語モデル（LLM）を連携させるための機能に関する実装計画やAPI仕様、およびそのテストやデモに必要なデータセットの設計・実装に関する作業ログを格納しています。
 
 ---
 
-### ✅ 現状サマリー (2025-10-11)
+### ✅ 現状サマリー (2025-10-13)
 
-このカテゴリに記載されている機能（API基盤、MCPサーバー、各種MCPツール、統計機能、デモデータ）は、すべて実装・解決済みです。
+このカテゴリに記載されている機能（API基盤、MCPサーバー、各種MCPツール、統計機能、デモデータ、**スコアリング統合**）は、すべて実装・解決済みです。
 各ドキュメントに記載されている計画や仕様は、現在のコードベースに正しく反映されており、実装との間に大きな齟齬がないことを確認済みです。
 
 ---
 
 ## 📚 ドキュメント一覧
 
-### MCP（Model-driven Command-line Processor）
+### MCP（Model Context Protocol）実装
 
+#### 基盤・アーキテクチャ
 - **[LLM連携機能 開発ロードマップ](./2025-09-23_LLM_Integration_Roadmap.md)**: LLM連携機能の全体像と開発ロードマップ。
 - **[フェーズ1 API技術仕様書](./2025-09-24_LLM_Phase1_API_Specification.md)**: 外部連携用APIの技術仕様。
 - **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)**: MCPサーバー機能の全体実装計画。
-- **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[MCPサーバー実装計画](./2025-09-27_MCP_Server_Implementation_Plan.md)**: `laravel/mcp` パッケージを利用したMCPサーバー機能の実装計画。
+
+#### プロンプト設計・最適化
 - **[MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md)**: ペルソナに基づいた、`gemini` CLIの具体的な質問応答例と設計方針。
 - **[MCP応答最適化計画](./2025-09-28_MCP_Response_Optimization_Plan.md)**: MCPレスポンスをLLMが解釈しやすいように最適化する計画。
 - **[SearchLedgersTool レスポンス仕様変更計画](./2025-10-03_MCP_SearchLedgersTool_Response_Refactoring_Plan.md)**: `search_ledgers_tool` の応答仕様の改訂計画。
 - **[SearchLedgersTool ドキュメント改善実装](./2025-10-05_MCP_SearchLedgersTool_Enhancement.md)**: `SearchLedgersTool` の説明文（description）を改善した際の実装記録。
+
+#### スコアリング統合 🆕
+- **[MCPスコアリング統合計画](./2025-10-13_MCP_Scoring_Integration_Plan.md)**: レコードスコアリングシステムとMCPの統合設計。
+- **[MCPスコアリング統合実装完了](./2025-10-13_MCP_Sorting_Implementation_Complete.md)**: SearchLedgersToolへのソートパラメータ追加の実装完了報告。
+
+#### 機能拡張
+- **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
+
+#### トラブルシューティング
 - **[日本語検索対応実装レポート](./JAPANESE_SEARCH_IMPLEMENTATION_2025-10-05.md)**: MCPツールでの日本語キーワード検索への対応記録。
 - **[MCP検索API調査レポート](./MCP_SEARCH_DEBUG_REPORT_2025-10-05.md)**: MCP API経由での検索タイムアウト問題に関する調査レポート。
 - **[日付デフォルト値初期化の調査](./demo/2025-10-05_DateDefaultInitialization_Investigation.md)**: 日付カラムのデフォルト値初期化に関する不具合の調査記録。
+
+#### 統計・レポート機能
 - **[フェーズ3完了レポート](./PHASE3_COMPLETION_REPORT.md)**: MCP統計・レポート機能の実装完了報告。
 
 ### デモデータ (Demo Data)

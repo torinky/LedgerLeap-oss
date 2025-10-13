@@ -131,11 +131,29 @@ class LedgerService
                     });
                 }),
             ])
-            ->allowedSorts(['created_at', 'updated_at', 'id'])
-            ->defaultSort('-created_at') // デフォルトは作成日時の降順
+            ->allowedSorts(['composite_score', 'activity_score', 'created_at', 'updated_at', 'id'])
             ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
                 $q->whereIn('id', $readableFolderIds);
             });
+
+        // ソート処理を適用
+        $orderBy = $params['order_by'] ?? 'composite_score';
+        $orderDirection = $params['order_direction'] ?? 'desc';
+
+        \Log::info('[MCP Search Debug] Applying sort: order_by='.$orderBy.', order_direction='.$orderDirection);
+
+        if ($orderBy === 'composite_score' || $orderBy === 'activity_score') {
+            // スコアカラムの場合、NULL（0）を最後にソート
+            $query->orderByRaw("{$orderBy} = 0")
+                ->orderBy($orderBy, $orderDirection);
+        } else {
+            $query->orderBy($orderBy, $orderDirection);
+        }
+
+        // 同点の場合の第2ソートキー
+        if ($orderBy !== 'created_at') {
+            $query->orderBy('created_at', 'desc');
+        }
 
         $buildTime = microtime(true) - $buildStartTime;
         \Log::info('[MCP Search Debug] QueryBuilder built in: '.round($buildTime * 1000, 2).'ms');

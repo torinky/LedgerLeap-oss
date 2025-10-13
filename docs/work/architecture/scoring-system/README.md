@@ -43,6 +43,11 @@
   - テスト戦略
   - パフォーマンス考慮事項
   - 拡張方法
+  - **MCP統合情報** 🆕
+  
+- **[MCP アーキテクチャと動作フロー](../../../development/MCP_Architecture_and_Flow.md)** - MCP機能の全体構造 🆕
+  - スコアリング機能のMCP統合
+  - SearchLedgersToolのソート機能
   
 - **[データベーススキーマ](../../../database/schema.md)** - スコア関連テーブルの定義
   - `ledgers.activity_score`、`ledgers.composite_score` カラム
@@ -50,6 +55,14 @@
   
 - **[メインREADME](../../../README.md)** - プロジェクト全体のエントリーポイント
   - スコアリング機能へのリンク
+
+## 🔗 関連するLLM統合ドキュメント 🆕
+
+スコアリング機能のLLM連携に関するドキュメント：
+
+- **[MCPスコアリング統合計画](../../llm-integration/2025-10-13_MCP_Scoring_Integration_Plan.md)** - MCP統合の設計と方針
+- **[MCPスコアリング統合実装完了](../../llm-integration/2025-10-13_MCP_Sorting_Implementation_Complete.md)** - 実装完了報告
+- **[MCPプロンプトと応答内容の設計案](../../llm-integration/2025-09-27_MCP_Prompt_and_Response_Design.md)** - LLMユースケース
 
 ## 📊 実装状況サマリー
 

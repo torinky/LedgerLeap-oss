@@ -9,6 +9,7 @@
 
 ### 公式ドキュメント
 - [MCP プロンプトガイドライン](./MCP_Prompt_Guidelines.md) - LLM連携のベストプラクティス
+- [スコアリングシステム 開発者ガイド](./scoring-system.md) - レコードスコアリング機能
 - [API仕様概要](../api/README.md) - REST API仕様
 
 ### 作業ファイル（計画・設計）
@@ -16,6 +17,8 @@
 - [フェーズ1 API技術仕様書](../work/llm-integration/2025-09-24_LLM_Phase1_API_Specification.md) - API詳細仕様
 - [MCP包括的実装計画](../work/llm-integration/2025-09-29_Comprehensive_MCP_Implementation_Plan.md) - 実装計画の詳細
 - [MCP応答最適化計画](../work/llm-integration/2025-09-28_MCP_Response_Optimization_Plan.md) - レスポンス最適化設計
+- [MCPスコアリング統合計画](../work/llm-integration/2025-10-13_MCP_Scoring_Integration_Plan.md) - スコアリング統合設計
+- [MCPスコアリング統合実装完了](../work/llm-integration/2025-10-13_MCP_Sorting_Implementation_Complete.md) - 実装完了報告
 - [実装ログ](../work/IMPLEMENTATION_LOG.md) - 実装作業記録
 
 ---
