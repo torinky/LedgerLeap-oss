@@ -31,18 +31,10 @@ class AutoLinkService
 
         return $this->htmlProcessorService->processTextNodes(
             $text,
-            function (\DOMText $textNode, \DOMDocument $dom) use ($column, $context) {
+            function (\DOMText $textNode, \DOMDocument $dom) use ($context) {
                 $originalText = $textNode->nodeValue;
 
-                // auto_number カラムの特別処理
-                if ($column && $column->getType() === 'auto_number') {
-                    $linkHtml = $this->createAutoNumberLink($originalText);
-                    $this->replaceTextNodeWithHtml($textNode, $linkHtml, $dom);
-
-                    return; // auto_numberは他のカスタムリンクと重複させない
-                }
-
-                // カスタム定義によるリンク変換
+                // カスタム定義（仮想リンクを含む）によるリンク変換
                 $autoLinks = $this->getAutoLinksForContext($context);
                 if ($autoLinks->isEmpty()) {
                     return;
@@ -53,17 +45,80 @@ class AutoLinkService
         );
     }
 
-    private function createAutoNumberLink(string $text): string
+    /**
+     * 自動ナンバリングカラムの設定から、パターンマッチング用の正規表現を生成する
+     *
+     * @param  object  $options  auto_number カラムの options (prefix, digits, revision)
+     * @param  bool  $isUnique  unique フラグ
+     * @return string 正規表現パターン
+     */
+    private function generateAutoNumberPattern(object $options, bool $isUnique): string
     {
-        // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
-        // グローバルルートなので、テナントに依存しないURLを生成
-        $url = url('/ledgers/lookup/'.urlencode($text)); // 修正
+        $prefix = preg_quote($options->prefix ?? '', '/');
+        $digits = max(1, (int) ($options->digits ?? 3));
+        $revision = preg_quote($options->revision ?? '', '/');
 
-        $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
-        $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
-        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+        // 数字部分: 指定桁数以上の数字にマッチ
+        $numberPattern = '\d{'.$digits.',}';
 
-        return '<div class="tooltip mx-2" data-tip="'.e($tooltip).'"><a href="'.e($url).'" target="_blank" class="font-bold text-primary-500 hover:underline">'.$iconHtml.' '.e($text).'</a></div>';
+        if ($isUnique) {
+            // unique の場合、版記号は無視（任意の文字が続いても可）
+            return '/('.$prefix.$numberPattern.'.*?)/u';
+        } else {
+            // unique でない場合、版記号まで厳密にマッチ
+            if (! empty($revision)) {
+                return '/('.$prefix.$numberPattern.$revision.')/u';
+            } else {
+                return '/('.$prefix.$numberPattern.')(?![0-9])/u'; // 後ろに数字が続かない
+            }
+        }
+    }
+
+    /**
+     * 全台帳定義の auto_number カラムから、仮想的な AutoLink 定義を生成する
+     *
+     * @return \Illuminate\Support\Collection<AutoLink> 仮想 AutoLink オブジェクトのコレクション
+     */
+    private function getVirtualAutoNumberLinks(): \Illuminate\Support\Collection
+    {
+        $cacheKey = 'auto_links_virtual_auto_numbers';
+
+        return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () {
+            $virtualLinks = collect();
+
+            // 全テナントの台帳定義を取得（マルチテナント対応）
+            $ledgerDefines = LedgerDefine::with('folder')->get();
+
+            foreach ($ledgerDefines as $define) {
+                foreach ($define->column_define as $column) {
+                    if ($column->type !== 'auto_number') {
+                        continue;
+                    }
+
+                    // パターン生成
+                    $pattern = $this->generateAutoNumberPattern(
+                        (object) $column->options,
+                        $column->unique ?? false
+                    );
+
+                    // 仮想 AutoLink オブジェクトを生成
+                    $virtualLink = new AutoLink([
+                        'label' => "自動リンク: {$define->title} - {$column->name}",
+                        'pattern' => $pattern,
+                        'url_template' => '/ledgers/lookup/$1', // 横断検索ルートを利用
+                        'priority' => -1000, // 最高優先度（負の値で既存より優先）
+                        'is_enabled' => true,
+                        'open_in_new_tab' => true,
+                        'link_type' => 'default',
+                    ]);
+
+                    // データベースに保存しないため、id は設定しない
+                    $virtualLinks->push($virtualLink);
+                }
+            }
+
+            return $virtualLinks;
+        });
     }
 
     private function applyCustomLinks(\DOMText $textNode, $autoLinks, \DOMDocument $dom): void
@@ -140,6 +195,10 @@ class AutoLinkService
         $cacheKey = $this->getCacheKeyForContext($context);
 
         return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
+            // 仮想 auto_number リンクを取得
+            $virtualLinks = $this->getVirtualAutoNumberLinks();
+
+            // 既存のカスタム定義を取得
             $query = AutoLink::where('is_enabled', true);
 
             if ($context) {
@@ -164,7 +223,10 @@ class AutoLinkService
                 });
             }
 
-            return $query->with('tenant')->orderBy('priority', 'asc')->get();
+            $customLinks = $query->with('tenant')->orderBy('priority', 'asc')->get();
+
+            // 仮想リンクとカスタムリンクを結合（仮想リンクが優先）
+            return $virtualLinks->concat($customLinks);
         });
     }
 

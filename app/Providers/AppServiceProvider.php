@@ -79,14 +79,12 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);
+        \App\Models\LedgerDefine::observe(\App\Observers\LedgerDefineObserver::class);
 
         // Domain モデルが作成される際にUUIDを自動生成
         Domain::creating(function (Domain $domain) {

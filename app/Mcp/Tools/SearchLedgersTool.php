@@ -93,6 +93,12 @@ class SearchLedgersTool extends Tool
         - Multiple keywords (AND): q='商事 提案' (space-separated)
         - Note: Mroonga uses morphological analysis, so searches are word-based
 
+        **Handling "Important" Items (「重要」な案件の扱い):**
+        The term "important" (重要) can be interpreted in two ways:
+        1.  **By Tag:** Some ledgers might have a "重要" (Important) tag. Use `tags='重要'` to find these. This is a direct, explicit search.
+        2.  **By Score:** The system calculates a `composite_score` for each ledger based on activity, freshness, and status. To find items that are algorithmically determined to be important, sort by this score using `order_by='composite_score'`. This is useful for finding items that need attention, even if they are not explicitly tagged.
+        **Recommendation:** For a comprehensive search for "important" items, consider both approaches. Start with a score-based search (`order_by='composite_score'`) and supplement with a tag-based search if needed.
+
         **Sorting (ソート機能):**
         - 'order_by': Field to sort by (default: composite_score)
           - 'composite_score': Overall importance combining activity, freshness, and workflow status

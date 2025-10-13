@@ -205,6 +205,30 @@ class DemoMinimalSeeder extends Seeder
             ]
         );
 
+        // デモユーザーロールにルートフォルダへの読み取り権限を付与
+        RoleFolderPermission::updateOrCreate(
+            [
+                'role_id' => $this->demoRole->id,
+                'folder_id' => $this->rootFolder->id,
+            ],
+            [
+                'permission' => FolderPermissionType::READ,
+                'modifier_id' => $this->adminUser->id,
+            ]
+        );
+
+        // デモユーザーロールにデモ用フォルダへの読み取り権限を付与
+        RoleFolderPermission::updateOrCreate(
+            [
+                'role_id' => $this->demoRole->id,
+                'folder_id' => $this->demoFolder->id,
+            ],
+            [
+                'permission' => FolderPermissionType::READ,
+                'modifier_id' => $this->adminUser->id,
+            ]
+        );
+
         $this->command->info('   ✓ Permissions set: WRITE for demo user, ADMIN for admin user');
     }
 
