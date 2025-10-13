@@ -139,4 +139,116 @@ class AutoLinkServiceAutoNumberTest extends TestCase
         // キャッシュがクリアされたか確認
         $this->assertNull(Cache::tags(['auto_links'])->get('test_key'));
     }
+
+    public function test_it_converts_standalone_auto_number_value_to_link()
+    {
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'title' => 'テスト台帳',
+            'column_define' => [
+                [
+                    'id' => 0,
+                    'name' => '文書番号',
+                    'type' => 'auto_number',
+                    'order' => 0,
+                    'options' => [
+                        'prefix' => 'TEST-',
+                        'digits' => 3,
+                        'revision' => '',
+                    ],
+                    'unique' => false,
+                ],
+            ],
+        ]);
+
+        $ledger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['TEST-001'],
+        ]);
+
+        // 自動ナンバリング値のみのテキストを変換
+        $html = $this->service->convert('TEST-001', null, $ledger);
+
+        $this->assertStringContainsString('<a href', $html);
+        $this->assertStringContainsString('/ledgers/lookup/TEST-001', $html);
+        $this->assertStringContainsString('TEST-001', $html);
+    }
+
+    public function test_it_converts_auto_number_value_at_text_boundary()
+    {
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'title' => 'テスト台帳',
+            'column_define' => [
+                [
+                    'id' => 0,
+                    'name' => '文書番号',
+                    'type' => 'auto_number',
+                    'order' => 0,
+                    'options' => [
+                        'prefix' => 'DOC-',
+                        'digits' => 4,
+                        'revision' => '',
+                    ],
+                    'unique' => false,
+                ],
+            ],
+        ]);
+
+        $ledger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['DOC-0001'],
+        ]);
+
+        // テキストの先頭に自動ナンバリング値がある場合
+        $htmlStart = $this->service->convert('DOC-0001の修正', null, $ledger);
+        $this->assertStringContainsString('<a href', $htmlStart);
+        $this->assertStringContainsString('/ledgers/lookup/DOC-0001', $htmlStart);
+
+        // テキストの末尾に自動ナンバリング値がある場合
+        $htmlEnd = $this->service->convert('修正対象: DOC-0001', null, $ledger);
+        $this->assertStringContainsString('<a href', $htmlEnd);
+        $this->assertStringContainsString('/ledgers/lookup/DOC-0001', $htmlEnd);
+    }
+
+    public function test_it_handles_empty_string_parts_correctly()
+    {
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'title' => 'テスト台帳',
+            'column_define' => [
+                [
+                    'id' => 0,
+                    'name' => '番号',
+                    'type' => 'auto_number',
+                    'order' => 0,
+                    'options' => [
+                        'prefix' => 'NUM-',
+                        'digits' => 2,
+                        'revision' => '',
+                    ],
+                    'unique' => false,
+                ],
+            ],
+        ]);
+
+        $ledger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['NUM-01'],
+        ]);
+
+        // preg_split が空文字列を含む配列を返す場合でも正しく処理される
+        $html = $this->service->convert('NUM-01', null, $ledger);
+
+        // リンクが正しく生成されていることを確認
+        $this->assertStringContainsString('<a href', $html);
+        $this->assertStringContainsString('/ledgers/lookup/NUM-01', $html);
+        $this->assertStringContainsString('NUM-01', $html);
+
+        // リンクタグとテキストが正しく配置されている
+        $this->assertStringContainsString('NUM-01</a>', $html);
+    }
 }

@@ -157,3 +157,89 @@ it('handles auto_number with revision suffix', function () {
 
     expect($html)->toContain('/ledgers/lookup/DOC-042-A');
 });
+
+// 今回のバグ修正に対するテストケース: 自動ナンバリング値単体のリンク化
+it('creates link for standalone auto_number value', function () {
+    $service = app(AutoLinkService::class);
+    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+
+    $report = Ledger::factory()->create([
+        'ledger_define_id' => $this->reportDefine->id,
+        'content' => ['2025-10-13', 'SPEC-001'],  // 自動ナンバリング値のみ
+    ]);
+
+    // テキストが完全に自動ナンバリング値のみの場合でもリンク化される
+    $html = $service->convert(
+        htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
+        $columnDefine,
+        $report
+    );
+
+    expect($html)->toContain('<a href');
+    expect($html)->toContain('/ledgers/lookup/SPEC-001');
+    expect($html)->toContain('SPEC-001');
+});
+
+it('creates link for auto_number value at the beginning of text', function () {
+    $service = app(AutoLinkService::class);
+    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+
+    $report = Ledger::factory()->create([
+        'ledger_define_id' => $this->reportDefine->id,
+        'content' => ['2025-10-13', 'SPEC-001の修正作業を実施'],  // 先頭が自動ナンバリング値
+    ]);
+
+    $html = $service->convert(
+        htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
+        $columnDefine,
+        $report
+    );
+
+    expect($html)->toContain('<a href');
+    expect($html)->toContain('/ledgers/lookup/SPEC-001');
+});
+
+it('creates link for auto_number value at the end of text', function () {
+    $service = app(AutoLinkService::class);
+    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+
+    $report = Ledger::factory()->create([
+        'ledger_define_id' => $this->reportDefine->id,
+        'content' => ['2025-10-13', '修正作業を実施: SPEC-001'],  // 末尾が自動ナンバリング値
+    ]);
+
+    $html = $service->convert(
+        htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
+        $columnDefine,
+        $report
+    );
+
+    expect($html)->toContain('<a href');
+    expect($html)->toContain('/ledgers/lookup/SPEC-001');
+});
+
+it('creates links for multiple auto_number values without surrounding text', function () {
+    $service = app(AutoLinkService::class);
+    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+
+    // 追加の仕様書レコード作成
+    $spec2 = Ledger::factory()->create([
+        'ledger_define_id' => $this->specDefine->id,
+        'content' => ['SPEC-003', '詳細設計仕様書'],
+    ]);
+
+    $report = Ledger::factory()->create([
+        'ledger_define_id' => $this->reportDefine->id,
+        'content' => ['2025-10-13', 'SPEC-001,SPEC-003'],  // カンマ区切りのみ
+    ]);
+
+    $html = $service->convert(
+        htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
+        $columnDefine,
+        $report
+    );
+
+    // 両方がリンク化される
+    expect($html)->toContain('/ledgers/lookup/SPEC-001');
+    expect($html)->toContain('/ledgers/lookup/SPEC-003');
+});

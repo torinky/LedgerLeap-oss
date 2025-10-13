@@ -129,10 +129,13 @@ class AutoLinkService
             $pattern = $autoLink->pattern.(str_contains($autoLink->pattern, 'u') ? '' : 'u');
             $text = $currentNode->nodeValue;
 
-            $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-            if (count($parts) <= 1) {
+            // まずマッチがあるかチェック
+            if (! preg_match($pattern, $text)) {
                 continue;
             }
+
+            // マッチがあれば分割処理を実行
+            $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
 
             $fragment = $dom->createDocumentFragment();
             $matches = [];
@@ -140,6 +143,11 @@ class AutoLinkService
             $matchIndex = 0;
 
             foreach ($parts as $part) {
+                // 空文字列はスキップ
+                if ($part === '') {
+                    continue;
+                }
+
                 if ($matchIndex < count($matches) && $part === $matches[$matchIndex][0]) {
                     $linkHtml = $this->createCustomLink($autoLink, $matches[$matchIndex]);
                     $linkFragment = $dom->createDocumentFragment();
