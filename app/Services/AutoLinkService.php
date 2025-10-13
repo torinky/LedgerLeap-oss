@@ -74,11 +74,6 @@ class AutoLinkService
         }
     }
 
-    /**
-     * 全台帳定義の auto_number カラムから、仮想的な AutoLink 定義を生成する
-     *
-     * @return \Illuminate\Support\Collection<AutoLink> 仮想 AutoLink オブジェクトのコレクション
-     */
     private function getVirtualAutoNumberLinks(): \Illuminate\Support\Collection
     {
         $cacheKey = 'auto_links_virtual_auto_numbers';
@@ -90,6 +85,9 @@ class AutoLinkService
             $ledgerDefines = LedgerDefine::with('folder')->get();
 
             foreach ($ledgerDefines as $define) {
+                // テナントIDを取得（現在のテナントコンテキストまたは台帳定義から）
+                $tenantId = tenant() ? tenant()->id : $define->tenant_id;
+
                 foreach ($define->column_define as $column) {
                     if ($column->type !== 'auto_number') {
                         continue;
@@ -101,11 +99,14 @@ class AutoLinkService
                         $column->unique ?? false
                     );
 
+                    // テナントパスを含むURLテンプレートを生成
+                    $urlTemplate = $tenantId ? "/{$tenantId}/l/\$1" : '/l/$1';
+
                     // 仮想 AutoLink オブジェクトを生成
                     $virtualLink = new AutoLink([
                         'label' => "自動リンク: {$define->title} - {$column->name}",
                         'pattern' => $pattern,
-                        'url_template' => '/ledgers/lookup/$1', // 横断検索ルートを利用
+                        'url_template' => $urlTemplate,
                         'priority' => -1000, // 最高優先度（負の値で既存より優先）
                         'is_enabled' => true,
                         'open_in_new_tab' => true,
@@ -181,6 +182,16 @@ class AutoLinkService
                 $protocol = parse_url(config('app.url'), PHP_URL_SCHEME) ?? 'http';
                 $url = $protocol.'://'.$domain.'/'.$path;
             }
+        }
+
+        // 仮想リンク（tenant_idがnull）で相対URLの場合、設定されたベースURLを使用
+        if (! $autoLink->tenant_id && str_starts_with($url, '/')) {
+            $baseUrl = config('ledgerleap.auto_links.base_url');
+            if ($baseUrl) {
+                // ベースURLが設定されている場合、完全なURLを生成
+                $url = rtrim($baseUrl, '/').$url;
+            }
+            // baseUrlがnullの場合は相対URLのまま（サブドメイン方式用）
         }
 
         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';

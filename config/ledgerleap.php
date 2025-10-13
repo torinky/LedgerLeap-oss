@@ -7,6 +7,15 @@ return [
     |--------------------------------------------------------------------------
     */
     'auto_links' => [
+        /*
+        | 仮想AutoLinkのベースURL設定
+        |
+        | テナント識別方式によって適切なホストを設定:
+        | - パスベース: 'http://localhost' (推奨)
+        | - サブドメイン: null (相対URLを使用)
+        */
+        'base_url' => env('AUTO_LINK_BASE_URL', 'http://localhost'),
+
         'link_types' => [
             'default' => [
                 'icon' => 'o-link',
