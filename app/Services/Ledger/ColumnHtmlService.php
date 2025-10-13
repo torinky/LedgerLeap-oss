@@ -41,9 +41,9 @@ class ColumnHtmlService
 
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
 
-    public const BADGE_CLASS_NAME = 'badge badge-secondary bg-secondary/50 py-4 mx-1 my-1';
+    public const BADGE_CLASS_NAME = 'badge py-4 mx-1 my-1';
 
-    public const SELECT_BADGE_CLASS_NAME = 'badge badge-neutral badge-outline py-4 mx-1 my-1';
+    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline py-4 mx-1 my-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
@@ -155,7 +155,7 @@ class ColumnHtmlService
 
         // 最終的なHTMLをラップ
         if ($type === 'textarea') {
-            $html = '<div class="prose max-w-none">'.$html.'</div>';
+            $html = '<div class="prose dark:prose-invert max-w-none">'.$html.'</div>';
         }
 
         return new HtmlString($html ?? '');

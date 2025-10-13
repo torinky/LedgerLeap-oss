@@ -53,9 +53,9 @@
                             @php
                                 $rowClass = 'hover:bg-base-300';
 //                                if ($showChanges) {
-                                    if ($column['status'] === 'modified') $rowClass .= ' bg-warning/20 text-warning-content';
-                                    if ($column['status'] === 'added') $rowClass .= ' bg-success/20 text-success-content';
-                                    if ($column['status'] === 'deleted') $rowClass .= ' bg-error/20 text-error-content';
+                                    if ($column['status'] === 'modified') $rowClass .= ' bg-warning/20';
+                                    if ($column['status'] === 'added') $rowClass .= ' bg-success/20';
+                                    if ($column['status'] === 'deleted') $rowClass .= ' bg-error/20';
 //                                }
                             @endphp
                             <tr class="{{ $rowClass }}" wire:key="column-{{ $column['id'] }}">

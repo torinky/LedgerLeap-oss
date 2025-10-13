@@ -13,7 +13,7 @@ export default {
         './resources/views/filament/**/*.blade.php',
         './vendor/filament/**/*.blade.php',
         './vendor/robsontenorio/mary/src/View/Components/**/*.php',
-        './vendor/robsontenorio/mary/resources/views/**/*.blade.php',
+        './vendor/robsontenorio/mary/resources/views/**/*.blade.php'
     ],
 
     theme: {
@@ -41,11 +41,8 @@ export default {
                 '4xl': '2048px', // 4xlブレークポイントを設定
                 '5xl': '2560px', // 5xlブレークポイントを設定
                 '6xl': '3840px', // 6xlブレークポイントを設定
-            },
-            colors: {
-                'warning-content': '#c27c07',
             }
-        },
+        }
     },
 
     plugins: [
@@ -55,7 +52,7 @@ export default {
     ],
 
     daisyui: {
-        themes: ["nord","coffee"], // アプリケーションで使用するテーマを指定
+        themes: ["nord", "coffee"], // アプリケーションで使用するテーマを指定
         darkTheme: "coffee", // ダークモード時のデフォルトテーマ
     },
 
