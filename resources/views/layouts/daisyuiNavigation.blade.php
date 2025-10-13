@@ -123,19 +123,40 @@
             </div>
 
             {{-- テーマ切り替え --}}
-            <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle" x-data="{
-                currentTheme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'coffee' : 'nord')
-            }">
-                {{-- この隠しチェックボックスが状態を制御します --}}
+            <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle"
+                   x-data="{
+                        isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                   }"
+                   x-init="
+                        // 初期読み込み時にHTMLクラスとDaisyUIテーマを設定
+                        if (isDark) {
+                            document.documentElement.classList.add('dark');
+                            document.documentElement.setAttribute('data-theme', 'coffee');
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                            document.documentElement.setAttribute('data-theme', 'nord');
+                        }
+                   "
+            >
                 <input type="checkbox"
                        @change.prevent="
-                            let newTheme = (currentTheme === 'nord' ? 'coffee' : 'nord');
-                            localStorage.setItem('theme', newTheme);
-                            document.documentElement.setAttribute('data-theme', newTheme);
-                            currentTheme = newTheme;
+                            isDark = !isDark;
+                            const newFilamentTheme = isDark ? 'dark' : 'light';
+                            const newDaisyUiTheme = isDark ? 'coffee' : 'nord';
+
+                            // Filamentのテーマを更新
+                            localStorage.setItem('theme', newFilamentTheme);
+                            if (isDark) {
+                                document.documentElement.classList.add('dark');
+                            } else {
+                                document.documentElement.classList.remove('dark');
+                            }
+
+                            // DaisyUIのテーマを更新
+                            document.documentElement.setAttribute('data-theme', newDaisyUiTheme);
                        "
-                       :checked="currentTheme === 'coffee'"
-                       />
+                       :checked="!isDark"
+                />
                 <i class="swap-on fas fa-sun"></i>
                 <i class="swap-off fas fa-moon"></i>
             </label>

@@ -12,17 +12,12 @@
         // This script reads the theme from localStorage and applies it.
         // It also respects the OS preference for dark mode on the first visit.
         (function() {
-            const theme = localStorage.getItem('theme');
+            const colorTheme = localStorage.getItem('color-theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-            if (theme) {
-                // If a theme is stored in localStorage, use it.
-                document.documentElement.setAttribute('data-theme', theme);
-            } else if (prefersDark) {
-                // If no theme is stored and OS is dark mode, use 'coffee'.
+            if (colorTheme === 'dark' || (!colorTheme && prefersDark)) {
                 document.documentElement.setAttribute('data-theme', 'coffee');
             } else {
-                // Otherwise (no theme stored, OS is light mode), use 'nord'.
                 document.documentElement.setAttribute('data-theme', 'nord');
             }
         })();
