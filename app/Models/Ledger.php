@@ -369,7 +369,7 @@ class Ledger extends Model
             ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName))
             ->logFillable()
             // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-            ->dontLogIfAttributesChangedOnly(['latest_diff_id']); // 特定の属性のみが変更された場合はログを記録しない
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id', 'activity_score', 'composite_score']); // 特定の属性のみが変更された場合はログを記録しない
     }
 
     /**

@@ -16,6 +16,18 @@
 
 ## 📝 更新履歴
 
+### 2025-10-13 第10版（Phase 1.5 バグ修正）
+- **重大なバグ修正: スコア累積問題を解決:**
+  - **問題:** スコア計算バッチ実行時に `Ledger::save()` がアクティビティログに記録され、次回計算時にスコアが累積的に増加
+  - **原因:** `LogsActivity` トレイトが `activity_score` と `composite_score` の更新を記録
+  - **解決策:** `Ledger::getActivitylogOptions()` の `dontLogIfAttributesChangedOnly()` にスコアカラムを追加
+  - **テスト追加:**
+    - `it_does_not_accumulate_scores_on_repeated_calculations()` - 複数回実行でスコアが累積しないことを検証
+    - `it_does_not_log_score_updates_as_activity()` - スコア更新がアクティビティログに記録されないことを検証
+  - **影響範囲:** 5分ごと更新時と日次更新時で同一のスコアが保証されるように修正
+- **テスト結果:** 17テスト全てパス（50 assertions）
+- **進捗状況:** Phase 1.5完了（バグ修正版）
+
 ### 2025-10-12 第9版（Phase 1.5 Step 1.8完了）
 - **Step 1.8: スケジューリング最適化 実装完了:**
   - `Kernel.php` に match 式による頻度制御を実装
@@ -2473,12 +2485,11 @@ private function determineOptimalFrequency(): string
 
 ---
 
-**最終更新:** 2025年10月12日（第9版・Phase 1.5完了）  
-**進捗状況:** ✅ Phase 1 100%完了 / ✅ Phase 1.5 100%完了（MVP稼働可能）  
+**最終更新:** 2025年10月13日（第10版・Phase 1.5バグ修正完了）  
+**進捗状況:** ✅ Phase 1 100%完了 / ✅ Phase 1.5 100%完了（MVP稼働可能・バグ修正済み）  
 **次回レビュー予定:** Phase 2着手時  
 **主要変更:** 
-- Phase 1.5 Step 1.8 実装完了（スケジューリング最適化）
-- 環境変数による頻度制御実装（開発/本番で異なる更新頻度）
-- ScheduleTest追加（5テスト、11 assertions、全てパス）
-- schedulerコンテナ動作確認完了
-- 実装コスト40%削減達成（計画0.5日→実績0.3日）
+- **重大なバグ修正:** スコア累積問題を解決（`dontLogIfAttributesChangedOnly` にスコアカラム追加）
+- 複数回実行テスト追加（累積防止、ログ記録抑制の検証）
+- 5分ごと更新と日次更新で同一スコアを保証
+- 全17テストパス（50 assertions）
