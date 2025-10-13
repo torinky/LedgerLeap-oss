@@ -40,6 +40,9 @@ class AutoLinkCrossReferenceSeeder extends Seeder
         $this->command->info('📝 Step 2: Adding auto_number columns to existing ledger defines...');
         $this->addAutoNumberColumns();
 
+        $this->command->info('🔢 Step 2.5: Assigning dummy auto_numbers to existing ledgers...');
+        $this->assignDummyAutoNumbersToExistingLedgers();
+
         $this->command->info('📊 Step 3: Creating ledgers with cross-references...');
         $this->createCrossReferenceLedgers();
 
@@ -238,6 +241,45 @@ class AutoLinkCrossReferenceSeeder extends Seeder
             $this->command->info('   ✓ Verified: [DEMO] 経費申請 already has auto_number (EXP-XXXX)');
         } else {
             $this->command->warn('   ⚠ [DEMO] 経費申請 does not have auto_number. Please check the seeder.');
+        }
+    }
+
+    private function assignDummyAutoNumbersToExistingLedgers(): void
+    {
+        $this->command->info('   🔍 Assigning dummy auto_numbers to existing ledgers...');
+
+        foreach ($this->ledgerDefines as $defineName => $define) {
+            $autoNumberColumn = collect($define->column_define)
+                ->first(fn ($c) => $c->type === 'auto_number');
+
+            if (! $autoNumberColumn) {
+                $this->command->info("     ⚠ {$defineName} has no auto_number column. Skipping.");
+                continue;
+            }
+
+            $ledgers = Ledger::where('ledger_define_id', $define->id)->get();
+            $prefix = $autoNumberColumn->options['prefix'] ?? '';
+            $digits = $autoNumberColumn->options['digits'] ?? 4;
+            $autoNumberIndex = $autoNumberColumn->id; // auto_numberカラムのインデックス
+
+            $count = 1;
+            foreach ($ledgers as $ledger) {
+                $content = $ledger->content;
+
+                // auto_numberカラムのインデックスに値が設定されていない場合のみ更新
+                if (! isset($content[$autoNumberIndex]) || empty($content[$autoNumberIndex])) {
+                    $dummyNumber = $prefix.str_pad((string) $count, $digits, '0', STR_PAD_LEFT);
+                    $revision = $autoNumberColumn->options['revision'] ?? '';
+                    if (! empty($revision)) {
+                        $dummyNumber .= $revision;
+                    }
+                    $content[$autoNumberIndex] = $dummyNumber;
+                    $ledger->content = $content;
+                    $ledger->save();
+                    $this->command->info("     ✓ Assigned dummy auto_number {$dummyNumber} to {$defineName} Ledger ID: {$ledger->id}");
+                }
+                $count++;
+            }
         }
     }
 
