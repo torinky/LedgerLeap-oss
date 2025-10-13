@@ -27,6 +27,44 @@
 *   **その他主要な属性**:
     *   `id`: 一意なID (Primary Key)
 
+### AsColumnArrayJsonカスタムキャストについて
+
+`AsColumnArrayJson`カスタムキャストは、Mroongaの全文検索に対応するための特殊な実装です。
+
+**重要な機能：Mroonga対応の自動型変換**
+
+Mroongaのベクターカラム処理には、数値キーのJSON配列内に整数値がある場合、その配列をさらにJSON配列としてエンコードしてしまう副作用があります：
+
+```php
+// 問題のあるケース（整数を含む配列）
+["EXP-0001", "2025-10-11", "交通費", 1000, "説明", []]
+// → Mroongaの処理により二重配列化
+// → ["[\"EXP-00","01\",...]"]  // 分割されて破損
+// → Eloquentでの取得時にJSON decodeエラーでnullに
+```
+
+この問題を回避するため、`AsColumnArrayJson::setContent()`メソッドで**整数・浮動小数点数を自動的に文字列に変換**しています：
+
+```php
+// app/Casts/AsColumnArrayJson.php
+public function setContent(mixed $item): mixed
+{
+    // Mroongaのベクターカラム処理の副作用を回避
+    if (is_int($item) || is_float($item)) {
+        return (string) $item;
+    }
+    // ... 他の処理
+}
+```
+
+**メリット：**
+- シーダーやテストコードで整数を直接渡しても自動的に文字列に変換される
+- 開発者がMroongaの副作用を意識する必要がない
+- UIからのフォーム入力（自動的に文字列）との整合性が保たれる
+- 一箇所で対策が完結し、メンテナンスが容易
+
+詳細は`app/Casts/AsColumnArrayJson.php`のクラスコメントおよび[データベーススキーマ](/docs/database/schema.md)を参照してください。
+
 ## リレーションシップ
 
 *   **`define()`**:
@@ -85,6 +123,63 @@
 *   `LogsActivity` トレイトを利用して、モデルの変更履歴を記録します。
 *   `booted()` メソッドのコメントアウト部分 (`saving` イベントでの `normalizeContent()`) は、過去に存在したか検討された正規化処理の可能性があります。
 *   `AsColumnArrayJson` カスタムキャストは、JSON形式で保存されているカラムデータをPHPの配列として透過的に扱えるようにするものです。
+
+### contentとcontent_attachedの正規化とデータ構造
+
+**重要**: Ledgerの`content`および`content_attached`は、保存前に`normalizeByColumnDefine()`によって正規化され、`AsColumnArrayJson`キャストによって特殊な変換が行われます。
+
+#### データフローの詳細
+
+1. **Livewireコンポーネントでの管理**:
+   - カラムIDをキーとした連想配列で管理: `[1 => 'value', 3 => 'value']`
+
+2. **保存前の正規化** (`normalizeByColumnDefine()`):
+   - カラムIDの欠番を空文字で埋める
+   - maxId（最大カラムID）までのすべてのインデックスを作成
+   - 例: `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+
+3. **DB保存時の変換** (`AsColumnArrayJson::set()`):
+   - `array_values()`で連番配列に変換
+   - JSON文字列として保存: `["", "value", "", "value"]`
+
+4. **DB読み取り時の復元** (`AsColumnArrayJson::get()`):
+   - JSON文字列を連番配列として復元
+   - 結果: `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+   - **カラムIDが配列インデックスと一致する**
+
+#### 実装上の注意点
+
+```php
+// app/Livewire/Ledger/CreateColumn.php
+protected function processFilesForSave(): void
+{
+    // 保存前に必ず正規化を実行
+    $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->content);
+    $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->contentAttached);
+}
+```
+
+**この正規化により**:
+- DBから読み取ったcontentは、カラムIDを配列インデックスとして直接アクセス可能
+- `$ledger->content[$columnId]`で値を取得できる
+- ModifyColumnコンポーネントで既存値を正しく読み取れる
+
+#### テストでの注意点
+
+テストでLedgerを直接作成する場合、`normalizeByColumnDefine()`が呼ばれないため、手動で正規化された形式でデータを作成する必要があります：
+
+```php
+// 正しいテストデータの作成例
+$ledger = Ledger::factory()->create([
+    'ledger_define_id' => $ledgerDefine->id,
+    'content' => [
+        0 => '',           // カラムID=0（空でも含める）
+        1 => 'テスト値',   // カラムID=1
+    ],
+]);
+```
+
+詳細は [Testing-Best-Practices.md](../development/Testing-Best-Practices.md#-ledgerモデルのcontentデータ構造とテスト) を参照してください。
 
 ## 定数
 

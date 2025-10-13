@@ -136,6 +136,7 @@ class GenerateThumbnailTest extends TestCase
 
         // 3. Mockeryによるログの検証はテスト終了時に自動で行われる
     }
+
     #[Test]
     public function it_skips_generation_for_non_image_files()
     {

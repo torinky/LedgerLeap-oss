@@ -9,21 +9,23 @@ use App\Models\User;
 use App\Services\WorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Livewire\Component;
 use Tests\TestCase;
-use App\Traits\WorkflowActions; // テスト対象のトレイト
-use Mary\Traits\Toast; // 追加
 
-
+// テスト対象のトレイト
+// 追加
 
 class WorkflowActionsTest extends TestCase
 {
     use RefreshDatabase;
 
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
+
     protected Ledger $ledger;
+
     protected WorkflowService $workflowServiceMock;
+
     protected \App\Models\Folder $folder;
 
     protected function setUp(): void

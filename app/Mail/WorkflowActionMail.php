@@ -19,14 +19,23 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public NotificationType $notificationType;
+
     public LedgerDiff $ledgerDiff;
+
     public ?User $causer;
+
     public ?string $comment;
+
     public string $subjectLine;
+
     public string $greeting;
+
     public string $line1;
+
     public ?string $line2 = null;
+
     public string $actionText;
+
     public string $actionUrl;
 
     public $subject;
@@ -39,7 +48,6 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
         $this->comment = $comment;
         $this->configureMailContent();
     }
-
 
     /**
      * 通知タイプに応じてメールの内容を設定する
@@ -96,7 +104,7 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
             default: // GenericNotification から呼ばれた場合など
                 $this->subjectLine = __('ledger.mail.subject.generic', ['appName' => $appName, 'type' => $this->notificationType->name]);
                 $this->greeting = __('ledger.mail.greeting.generic');
-                $subjectTypeName = __('ledger.notification_types.' . $this->notificationType->name) ?? $this->notificationType->name;
+                $subjectTypeName = __('ledger.notification_types.'.$this->notificationType->name) ?? $this->notificationType->name;
                 $this->line1 = __('ledger.mail.body.line1.generic', [
                     'causerName' => $causerName,
                     'subjectType' => $subjectTypeName,

@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Illuminate\Console\Command;
-use Stancl\Tenancy\Facades\Tenancy;
 
 class AssignTenantIdToLedgerDefines extends Command
 {
@@ -34,13 +33,15 @@ class AssignTenantIdToLedgerDefines extends Command
 
         if ($ledgerDefines->isEmpty()) {
             $this->info('No LedgerDefine models with null tenant_id found.');
+
             return Command::SUCCESS;
         }
 
         $this->withProgressBar($ledgerDefines, function ($ledgerDefine) {
             // フォルダが存在しない場合はスキップ
-            if (!$ledgerDefine->folder_id) {
+            if (! $ledgerDefine->folder_id) {
                 $this->warn("Skipping LedgerDefine ID: {$ledgerDefine->id} - folder_id is null.");
+
                 return;
             }
 

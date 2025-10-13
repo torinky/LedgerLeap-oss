@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\MorphPivot;
 class AutoLinkScope extends MorphPivot
 {
     protected $table = 'auto_link_scopes';
+
     public $timestamps = false;
 
     /**

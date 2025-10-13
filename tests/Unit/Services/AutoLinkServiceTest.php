@@ -49,7 +49,7 @@ class AutoLinkServiceTest extends TestCase
 
         // 生成されるURLの期待値
         // routes/web.php で定義した 'ledger.lookup' ルート
-        $expectedUrl = url('/ledgers/lookup/' . urlencode($query)); // 修正
+        $expectedUrl = url('/ledgers/lookup/'.urlencode($query)); // 修正
 
         // 生成されたHTMLに期待されるURLが含まれていることをアサート
         $this->assertStringContainsString($expectedUrl, $linkHtml);

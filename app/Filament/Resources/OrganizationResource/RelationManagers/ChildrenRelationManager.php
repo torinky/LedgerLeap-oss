@@ -21,6 +21,7 @@ class ChildrenRelationManager extends RelationManager
     {
         return __('ledger.organizations.children');
     }
+
     public static function getModelLabel(): string
     {
         return __('ledger.organization');
@@ -30,7 +31,6 @@ class ChildrenRelationManager extends RelationManager
     {
         return __('ledger.organization');
     }
-
 
     public function form(Form $form): Form
     {

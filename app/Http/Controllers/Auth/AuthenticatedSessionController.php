@@ -32,11 +32,12 @@ class AuthenticatedSessionController extends Controller
 
         // 認証済みユーザーを取得
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             // 異常系フォールバック（念のため）
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+
             return redirect()->route('login');
         }
 
@@ -59,6 +60,7 @@ class AuthenticatedSessionController extends Controller
         if ($tenant) {
             return redirect()->intended(route($landingPageRouteName, ['tenant' => $tenant->id]));
         }
+
         return redirect()->intended(route($landingPageRouteName));
     }
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\Show;
 use App\Models\AttachedFile;
@@ -9,21 +10,16 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
-use App\Models\AutoLink;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\RoleFolderPermission;
-use App\Enums\FolderPermissionType;
-use App\Services\UserService;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ShowTest extends TestCase
@@ -31,12 +27,19 @@ class ShowTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private User $inspector;
+
     private User $approver;
+
     private Ledger $ledger;
+
     private Role $inspectorRole;
+
     private Role $approverRole;
+
     private Folder $folder;
+
     protected Tenant $tenant;
 
     protected function setUp(): void
@@ -141,7 +144,7 @@ class ShowTest extends TestCase
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->assertSee(__('ledger.workflow.request_approval_short'))
             ->assertSee(__('ledger.workflow.return_to_draft_short'))
-            ->assertDontSeeHtml('<button[^>]*>' . __('ledger.workflow.approve') . '</button>');
+            ->assertDontSeeHtml('<button[^>]*>'.__('ledger.workflow.approve').'</button>');
 
         // 他のユーザーでログイン
         $this->actingAs($this->user);
@@ -154,7 +157,7 @@ class ShowTest extends TestCase
     public function it_shows_correct_buttons_when_status_is_pending_approval()
     {
         $this->ledger->latestDiff->update([
-            'completed_inspector_role_ids' => [$this->inspectorRole->id]
+            'completed_inspector_role_ids' => [$this->inspectorRole->id],
         ]);
         $this->ledger->update(['status' => WorkflowStatus::PENDING_APPROVAL]);
 
@@ -178,8 +181,8 @@ class ShowTest extends TestCase
         // 他のユーザーでログイン
         $this->actingAs($this->user);
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
-            ->assertDontSee(">" . __('ledger.workflow.approve') . "<")
-            ->assertDontSee(">" . __('ledger.workflow.return_to_draft_short') . "<");
+            ->assertDontSee('>'.__('ledger.workflow.approve').'<')
+            ->assertDontSee('>'.__('ledger.workflow.return_to_draft_short').'<');
     }
 
     #[Test]
@@ -195,7 +198,7 @@ class ShowTest extends TestCase
 
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->assertDontSee(__('ledger.workflow.request_approval_short'))
-            ->assertDontSeeHtml('<button[^>]*>' . __('ledger.workflow.approve') . '</button>')
+            ->assertDontSeeHtml('<button[^>]*>'.__('ledger.workflow.approve').'</button>')
             ->assertDontSee(__('ledger.workflow.return_to_draft_short'));
     }
 
@@ -238,6 +241,4 @@ class ShowTest extends TestCase
 
         $component->assertHasErrors(); // エラーが発生することを確認
     }
-
-
 }

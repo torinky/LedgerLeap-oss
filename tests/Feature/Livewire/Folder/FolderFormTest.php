@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Livewire\Folder;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Folder\FolderForm;
 use App\Models\Folder;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Enums\FolderPermissionType;
-use App\Models\RoleFolderPermission;
 use App\Services\UserService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -21,7 +21,9 @@ class FolderFormTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Folder $rootFolder;
 
     protected function setUp(): void

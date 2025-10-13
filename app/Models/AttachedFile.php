@@ -16,7 +16,7 @@ class AttachedFile extends Model
 
     protected $fillable = [
         'filename', 'hashedbasename', 'ledger_define_id',
-        'ledger_id', 'column_id', 'mime', 'path','size', 'status',
+        'ledger_id', 'column_id', 'mime', 'path', 'size', 'status',
         'contain_content', 'optimized', 'creator_id', 'modifier_id', 'original_file_path', 'original_mime_type',
     ];
 

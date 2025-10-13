@@ -3,7 +3,6 @@
 namespace App\Jobs\Ledger;
 
 use App\Exports\LedgerExport;
-use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +12,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExportJob implements ShouldQueue
 {
-    use Exportable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, Exportable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Ledger定義のID
@@ -53,11 +52,11 @@ class ExportJob implements ShouldQueue
     /**
      * コンストラクタメソッド
      *
-     * @param int $ledgerDefineId Ledger定義のID
-     * @param array $keywords キーワード情報
-     * @param array $filter フィルター情報
-     * @param object $columnDefines カラム定義情報
-     * @param string $filename ファイル名
+     * @param  int  $ledgerDefineId  Ledger定義のID
+     * @param  array  $keywords  キーワード情報
+     * @param  array  $filter  フィルター情報
+     * @param  object  $columnDefines  カラム定義情報
+     * @param  string  $filename  ファイル名
      */
     public function __construct(int $ledgerDefineId, array $keywords, array $filter, object $columnDefines, string $filename)
     {

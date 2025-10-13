@@ -13,7 +13,7 @@ class SearchController extends Controller
     /**
      * Handle the incoming request.
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return Response
      */
     public function __invoke(SearchRequest $request, LedgerService $ledgerService)
@@ -24,7 +24,7 @@ class SearchController extends Controller
             $ledgers = $ledgerService->getLedgers();
         }
 
-        //dd($ledgers);
+        // dd($ledgers);
 
         return view('ledger.index')
             ->with(compact('ledgers'));

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
-use App\Models\Organization; // 追加
+// 追加
 use CodeWithDennis\FilamentSelectTree\SelectTree; // 追加
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -58,13 +58,13 @@ class OrganizationRelationManager extends RelationManager
             ->heading(__('ledger.organization'))
             ->columns([
                 TextColumn::make('full_name') // 内部的な識別子を full_name に変更
-                ->label(__('ledger.organizations.full_name')) // ラベルをフルネーム用に変更
+                    ->label(__('ledger.organizations.full_name')) // ラベルをフルネーム用に変更
                 // getStateUsing で表示内容（full_name）を明示的に取得
-                ->getStateUsing(fn (Model $record): ?string => $record->full_name)
+                    ->getStateUsing(fn (Model $record): ?string => $record->full_name)
                     // 検索は実際の 'name' カラムに対して行うよう明示
-                    ->searchable( ['name'])
+                    ->searchable(['name'])
                     // ソートも実際の 'name' カラムに対して行うよう明示
-                    ->sortable( ['name']),
+                    ->sortable(['name']),
             ])
             ->filters([
                 //
@@ -98,6 +98,7 @@ class OrganizationRelationManager extends RelationManager
                 //
             ]);
     }
+
     /**
      * N+1問題を回避するため、full_nameで必要となるリレーションをEager Loadする
      */

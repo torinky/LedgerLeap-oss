@@ -6,13 +6,20 @@ use App\Enums\AttachedFileStatus;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class AttachedFileTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+    }
 
     #[Test]
     public function it_retries_processing_correctly()

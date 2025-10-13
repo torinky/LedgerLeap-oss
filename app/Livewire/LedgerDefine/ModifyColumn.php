@@ -3,8 +3,10 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\AutoNumberType;
+use App\Models\ColumnTypes\DateType;
 use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\ColumnTypes\NumberType;
 use App\Models\Ledger;
@@ -12,16 +14,14 @@ use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class ModifyColumn extends Component
 {
-    use Toast, WithFileUploads, InitializesTenantContext;
+    use InitializesTenantContext, Toast, WithFileUploads;
 
     #[Locked]
     public LedgerDefine $ledgerDefineRecord;
@@ -40,7 +40,7 @@ class ModifyColumn extends Component
             return;
         }
 
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
         $this->ledgerDefineRecord = LedgerDefine::findOrNew($ledgerDefineId);
 
         // Ensure $this->columns is initialized as an array of associative arrays.
@@ -52,17 +52,17 @@ class ModifyColumn extends Component
                 'type' => $columnDefineObject->type,
                 'order' => $columnDefineObject->order,
                 'useOptions' => $columnDefineObject->useOptions,
-//                'options' => (array)$columnDefineObject->options,
-                'required' => (bool)$columnDefineObject->required,
-                'unique' => (bool)$columnDefineObject->unique,
-                'sortBy' => (bool)$columnDefineObject->sortBy,
-                'hint' => (string)$columnDefineObject->hint,
-                'file' => (array)$columnDefineObject->file,
+                //                'options' => (array)$columnDefineObject->options,
+                'required' => (bool) $columnDefineObject->required,
+                'unique' => (bool) $columnDefineObject->unique,
+                'sortBy' => (bool) $columnDefineObject->sortBy,
+                'hint' => (string) $columnDefineObject->hint,
+                'file' => (array) $columnDefineObject->file,
                 'display_level' => $columnDefineObject->display_level,
                 'group' => $columnDefineObject->group,
                 'is_collapsed' => false, // 初期状態で折りたたむ
                 'options' => array_merge(
-                    (array)$columnDefineObject->options,
+                    (array) $columnDefineObject->options,
                     $columnDefineObject->getInputType() instanceof NumberType ? [
                         'min' => $columnDefineObject->getInputType()->min,
                         'max' => $columnDefineObject->getInputType()->max,
@@ -73,9 +73,13 @@ class ModifyColumn extends Component
                         'prefix' => $columnDefineObject->getInputType()->prefix,
                         'digits' => $columnDefineObject->getInputType()->digits,
                         'revision' => $columnDefineObject->getInputType()->revision,
+                    ] : [],
+                    $columnDefineObject->getInputType() instanceof DateType ? [
+                        'default_offset' => $columnDefineObject->getInputType()->default_offset,
                     ] : []
                 ),
             ];
+
             return $column;
         })->values()->all(); // values()でキーをリセットし、インデックス付き配列にする
 
@@ -102,37 +106,38 @@ class ModifyColumn extends Component
 
     public function searchGroups(string $value = ''): void
     {
-//        Log::info('search method called', ['value' => $value]);
+        //        Log::info('search method called', ['value' => $value]);
 
         $allGroups = LedgerDefine::all()
-            ->flatMap(fn($ledgerDefine) => collect($ledgerDefine->column_define)->pluck('group'))
+            ->flatMap(fn ($ledgerDefine) => collect($ledgerDefine->column_define)->pluck('group'))
             ->filter() // null や空文字列を除外
             ->unique() // 重複を除外
             ->values() // キーをリセット
-            ->map(fn($group) => ['id' => $group, 'name' => $group]) // MaryUI choices の形式に変換
+            ->map(fn ($group) => ['id' => $group, 'name' => $group]) // MaryUI choices の形式に変換
             ->toArray();
 
-//        Log::info('search: allGroups', ['allGroups' => $allGroups]);
+        //        Log::info('search: allGroups', ['allGroups' => $allGroups]);
 
         if (empty($value)) {
-//            Log::info('search: returning allGroups (empty value)');
+            //            Log::info('search: returning allGroups (empty value)');
             $this->groupNames = $allGroups; // 検索クエリがない場合は全グループを返す
+
             return;
         }
 
-//        Log::info('search: filteredGroups', ['filteredGroups' => $filteredGroups]);
+        //        Log::info('search: filteredGroups', ['filteredGroups' => $filteredGroups]);
 
         // ユーザーが入力した値が既存のグループにない場合、それを新しい選択肢として追加
-        if (!collect($this->groupNames)->contains('name', $value)) {
+        if (! collect($this->groupNames)->contains('name', $value)) {
             array_unshift($this->groupNames, ['id' => $value, 'name' => $value]); // 先頭に追加
-//            Log::info('search: added new value', ['newValue' => $value]);
+            //            Log::info('search: added new value', ['newValue' => $value]);
         }
 
-//        Log::info('search: final return', ['finalGroups' => $filteredGroups]);
+        //        Log::info('search: final return', ['finalGroups' => $filteredGroups]);
     }
 
     /**
-     * @param array $columnOrder
+     * @param  array  $columnOrder
      * @return void
      */
     public function updateColumnOrder($orderedItems)
@@ -143,8 +148,8 @@ class ModifyColumn extends Component
 
         $newOrderedColumns = [];
         foreach ($orderedItems as $item) {
-            $id = (int)$item['value'];
-            $order = (int)$item['order'];
+            $id = (int) $item['value'];
+            $order = (int) $item['order'];
 
             if ($columnsById->has($id)) {
                 $column = $columnsById->get($id);
@@ -163,12 +168,14 @@ class ModifyColumn extends Component
     }
 
     /**
-     * @param int $columnId
+     * @param  int  $columnId
      * @return void
      */
     public function removeColumn($index)
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         $columns = collect($this->columns);
         $columns->forget($index);
@@ -176,6 +183,7 @@ class ModifyColumn extends Component
         // Re-index the array and update order
         $this->columns = $columns->values()->map(function ($column, $key) {
             $column['order'] = $key + 1;
+
             return $column;
         })->all();
     }
@@ -185,7 +193,7 @@ class ModifyColumn extends Component
         // $key will be in the format "0.type", "1.type", etc.
         // We need to extract the numeric index.
         $parts = explode('.', $key);
-        $columnIndex = (int)$parts[0];
+        $columnIndex = (int) $parts[0];
         $propertyName = $parts[1];
 
         if (isset($this->columns[$columnIndex]) && $propertyName === 'type') {
@@ -196,7 +204,7 @@ class ModifyColumn extends Component
             $this->columns[$columnIndex]['useOptions'] = $hasOptions;
 
             // If the new type does not use options, clear any existing options
-            if (!$hasOptions) {
+            if (! $hasOptions) {
                 $this->columns[$columnIndex]['options'] = [];
             }
             $this->isDirty = true; // フォームが変更された
@@ -210,7 +218,9 @@ class ModifyColumn extends Component
 
     public function saveColumn($index)
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         $column = $this->columns[$index];
         $rules = [
@@ -225,8 +235,8 @@ class ModifyColumn extends Component
 
         if ($column['type'] === 'number') {
             $rules["columns.{$index}.options.min"] = 'required|numeric';
-            $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.' . $index . '.options.min'];
-            $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
+            $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+            $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
                 $min = $column['options']['min'] ?? null;
                 $max = $column['options']['max'] ?? null;
                 if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
@@ -240,6 +250,8 @@ class ModifyColumn extends Component
             $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
             $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
             $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
+        } elseif ($column['type'] === 'YMD') {
+            $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
         }
 
         $this->validate($rules);
@@ -259,7 +271,6 @@ class ModifyColumn extends Component
         // Update the main ledgerDefineRecord's column_define with the current state of $this->columns
         $this->ledgerDefineRecord->column_define = collect($saveForColumns)->toArray();
 
-
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
 
@@ -270,7 +281,9 @@ class ModifyColumn extends Component
 
     public function addColumn()
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         $maxId = collect($this->columns)->max('id') ?? -1;
 
@@ -296,7 +309,9 @@ class ModifyColumn extends Component
 
     public function save()
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         // Before saving, ensure all columns are simple associative arrays.
         $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
@@ -304,6 +319,7 @@ class ModifyColumn extends Component
             if (is_array($column['group'])) {
                 $column['group'] = $column['group']['name'] ?? null;
             }
+
             // Just return the array, as it should already be in the correct format.
             return $column;
         })->toArray();
@@ -334,8 +350,8 @@ class ModifyColumn extends Component
         foreach ($this->columns as $index => $column) {
             if ($column['type'] === 'number') {
                 $rules["columns.{$index}.options.min"] = 'required|numeric';
-                $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.' . $index . '.options.min'];
-                $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column, $index) {
+                $rules["columns.{$index}.options.max"] = ['required', 'numeric', 'gt:columns.'.$index.'.options.min'];
+                $rules["columns.{$index}.options.step"] = ['required', 'numeric', 'min:0.000001', function ($attribute, $value, $fail) use ($column) {
                     $min = $column['options']['min'] ?? null;
                     $max = $column['options']['max'] ?? null;
                     if (is_numeric($min) && is_numeric($max) && is_numeric($value)) {
@@ -349,6 +365,8 @@ class ModifyColumn extends Component
                 $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
                 $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
                 $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
+            } elseif ($column['type'] === 'YMD') {
+                $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
             }
         }
 
@@ -357,7 +375,9 @@ class ModifyColumn extends Component
 
     public function storeFile($columnId)
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         // columnUploadedFile は Livewire の一時ファイル
         if (isset($this->columnUploadedFile[$columnId])) {
@@ -387,7 +407,9 @@ class ModifyColumn extends Component
 
     public function deleteFile($columnId)
     {
-        if (!$this->canModifyColumns()) return;
+        if (! $this->canModifyColumns()) {
+            return;
+        }
 
         // $this->columns から該当カラムを見つける
         $columnIndex = null;
@@ -408,7 +430,7 @@ class ModifyColumn extends Component
         if ($filePath) {
             // サムネイルのパスを生成
             $pathParts = pathinfo($filePath);
-            $thumbnailPath = 'thumbnails/' . $pathParts['dirname'] . '/' . $pathParts['filename'] . '.' . $pathParts['extension'];
+            $thumbnailPath = 'thumbnails/'.$pathParts['dirname'].'/'.$pathParts['filename'].'.'.$pathParts['extension'];
         }
 
         // 元のファイルを削除
@@ -433,6 +455,7 @@ class ModifyColumn extends Component
 
     /**
      * 台帳定義の列構成を変更可能かチェックする
+     *
      * @return bool true: 変更可能, false: 変更不可
      */
     private function canModifyColumns(): bool // メソッド名変更
@@ -440,27 +463,29 @@ class ModifyColumn extends Component
         $pendingCount = Ledger::where('ledger_define_id', $this->ledgerDefineRecord->id)
             ->whereIn('status', [
                 WorkflowStatus::PENDING_INSPECTION,
-                WorkflowStatus::PENDING_APPROVAL
+                WorkflowStatus::PENDING_APPROVAL,
             ])->count();
 
         if ($pendingCount > 0) {
             $this->error(__('ledger.define.cannot_modify_while_workflow'));
+
             return false;
         }
+
         return true;
     }
 
     public function createThumbnail($path): void
     {
-        $thumbnailPath = Storage::disk('public')->path('thumbnails/' . $path);
-        if (!is_dir(dirname($thumbnailPath))) {
-            if (!mkdir($concurrentDirectory = dirname($thumbnailPath), 0777, true) && !is_dir($concurrentDirectory)) {
+        $thumbnailPath = Storage::disk('public')->path('thumbnails/'.$path);
+        if (! is_dir(dirname($thumbnailPath))) {
+            if (! mkdir($concurrentDirectory = dirname($thumbnailPath), 0777, true) && ! is_dir($concurrentDirectory)) {
                 throw new RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
             }
         }
 
         $sourcePath = Storage::disk('public')->path($path);
-        if (!file_exists($thumbnailPath) && file_exists($sourcePath)) {
+        if (! file_exists($thumbnailPath) && file_exists($sourcePath)) {
             $img = Image::make($sourcePath);
             $img->resize(200, null, function ($constraint) {
                 $constraint->aspectRatio();

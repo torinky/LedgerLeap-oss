@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GlobalMyPortalController;
 use App\Http\Controllers\LedgerLookupController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,4 +23,3 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
 });
-

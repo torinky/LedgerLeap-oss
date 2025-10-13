@@ -5,8 +5,11 @@ namespace App\Models\ColumnTypes;
 class NumberType implements InputType
 {
     public ?float $min;
+
     public ?float $max;
+
     public ?float $step;
+
     public ?string $unit;
 
     public function __construct(array $options = [])
@@ -47,6 +50,7 @@ class NumberType implements InputType
         if (is_numeric($value)) {
             return $value + 0; // Converts to int or float
         }
+
         return $value;
     }
 
@@ -62,6 +66,7 @@ class NumberType implements InputType
         if (isset($this->step)) {
             $rules[] = 'multiple_of:'.$this->step;
         }
+
         return $rules;
     }
 }

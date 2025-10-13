@@ -41,7 +41,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
     /**
      * コンストラクタ
      *
-     * @param array $columnDefines Ledgerモデルのカラム定義情報
+     * @param  array  $columnDefines  Ledgerモデルのカラム定義情報
      */
     public function __construct(LedgerDefine $ledgerDefine, $mode = self::MODE_UPDATE)
     {
@@ -81,7 +81,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
     {
         $this->currentRows++;
         Cache::forever("current_rows_{$this->id}", $this->currentRows);
-        //dd($this->currentRows);
+        // dd($this->currentRows);
         $id = '';
         if ($this->importMode == self::MODE_UPDATE) {
             $id = $row['[[[id]]]'] ?? '';
@@ -110,7 +110,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
     /**
      * Ledgerモデルのcontentを更新
      *
-     * @param array $contentData コンテンツ行のデータ
+     * @param  array  $contentData  コンテンツ行のデータ
      * @return array
      */
     protected function generateLedgerContent($contentData)

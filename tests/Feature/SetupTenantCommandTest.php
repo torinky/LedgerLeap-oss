@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Folder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Role;
 use Stancl\Tenancy\Database\Models\Tenant;
 use Tests\TestCase;
@@ -127,7 +126,7 @@ class SetupTenantCommandTest extends TestCase
         tenancy()->find($tenantId)->run(function () {
             // 1. フォルダ構造の検証
             $totalFolders = \App\Models\Folder::count();
-                        $this->assertEquals(12, $totalFolders, 'FolderSeeder should create exactly 12 folders.');
+            $this->assertEquals(12, $totalFolders, 'FolderSeeder should create exactly 12 folders.');
 
             $rootFolder = \App\Models\Folder::whereIsRoot()->first();
             $this->assertNotNull($rootFolder, 'A root folder should exist.');

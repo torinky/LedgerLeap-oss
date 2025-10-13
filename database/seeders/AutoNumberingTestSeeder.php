@@ -16,7 +16,7 @@ class AutoNumberingTestSeeder extends Seeder
         // AutoNumberLedgerDefineFactory を使用して台帳定義を作成
         $ledgerDefine = AutoNumberLedgerDefineFactory::new()->create();
 
-        $this->command->info('Created LedgerDefine for AutoNumbering Test: ' . $ledgerDefine->title);
+        $this->command->info('Created LedgerDefine for AutoNumbering Test: '.$ledgerDefine->title);
 
         // テスト用の初期レコードをいくつか作成
         // シナリオ1: unique=false の自動採番カラム (ID: 0)

@@ -13,7 +13,7 @@ enum LoginLandingPage: string
     {
 
         return collect(self::cases())
-            ->mapWithKeys(fn($case) => [$case->value => $case->label()])
+            ->mapWithKeys(fn ($case) => [$case->value => $case->label()])
             ->all();
     }
 
@@ -42,13 +42,12 @@ enum LoginLandingPage: string
     /**
      * MaryUI の x-radio が期待する形式の options 配列を返す
      *
-     * @param string $currentValue 現在選択されている値 (Enum の value)
-     * @return array
+     * @param  string  $currentValue  現在選択されている値 (Enum の value)
      */
     public static function optionsForMaryUIRadio(string $currentValue): array // メソッド名を変更 (Radio用)
     {
         return collect(self::cases())
-            ->map(fn($case) => [
+            ->map(fn ($case) => [
                 'id' => $case->value, // value 属性になるキー
                 'name' => $case->label(), // 表示ラベルになるキー
                 // 修正: 現在の値と一致する場合に checked: true を追加
@@ -62,13 +61,12 @@ enum LoginLandingPage: string
     /**
      * MaryUI の x-radio が期待する形式の options 配列を返す
      *
-     * @param string $currentValue 現在選択されている値 (Enum の value)
-     * @return array
+     * @param  string  $currentValue  現在選択されている値 (Enum の value)
      */
     public static function optionsForMaryUI(string $currentValue): array // メソッド名を変更 (Radio用)
     {
         return collect(self::cases())
-            ->map(fn($case) => [
+            ->map(fn ($case) => [
                 'id' => $case->value, // value 属性になるキー
                 'name' => $case->label(), // 表示ラベルになるキー
                 // 修正: 現在の値と一致する場合に checked: true を追加
@@ -78,6 +76,4 @@ enum LoginLandingPage: string
             ])
             ->all();
     }
-
-
 }

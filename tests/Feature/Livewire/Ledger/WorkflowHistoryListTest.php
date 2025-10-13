@@ -16,6 +16,7 @@ class WorkflowHistoryListTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Ledger $ledger;
 
     protected function setUp(): void

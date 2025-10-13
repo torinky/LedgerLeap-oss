@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Auth\Access\Response;
 
 class UserPolicy
 {
@@ -50,7 +49,7 @@ class UserPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, User $model = null): bool
+    public function delete(User $user, ?User $model = null): bool
     {
         return $this->userService->hasPermission($user, ['delete_users', 'manage_users']);
     }

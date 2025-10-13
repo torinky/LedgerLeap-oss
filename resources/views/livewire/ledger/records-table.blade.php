@@ -11,7 +11,11 @@
     </div>
     {{--   Dummy for CSS Build --}}
 
-    <x-ledger.search/>
+    <x-ledger.search
+        :hasWorkflowEnabled="$hasWorkflowEnabled"
+        :orderBy="$orderBy"
+        :orderByLabel="$orderByLabel"
+    />
 
     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
         <x-ledger.livewire-breadcrumbs
@@ -156,6 +160,15 @@
                     </div>
                 </div>
             @endif
+            @if(!empty($search))
+                <div class="badge badge-primary badge-sm tooltip h-8 flex items-stretch"
+                     data-tip="{{__('ledger.scoring.sorted_by_score')}}">
+                    <div class="self-center space-x-2">
+                        <i class="fas fa-sort-amount-down"></i>
+                        <span class="text-xs">{{__('ledger.scoring.score_order')}}</span>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -191,6 +204,7 @@
                             :ledgerDefineId="$ledgerDefineId"
                             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
                             :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                            :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null"
                             :currentTenantId="$currentTenantId"
                         />
 

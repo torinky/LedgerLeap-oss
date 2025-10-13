@@ -8,10 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
-
 use Livewire\Component;
 use Mary\Traits\Toast;
-
 
 // Filament 通知を use
 
@@ -22,7 +20,6 @@ class Settings extends Component
     #[Locked] // ユーザーIDは変更不可にする
     public User $user;
 
-
     #[Locked] // 対象とするPermission名リストは変更不可
     public array $targetPermissionNames = [
         'receive_workflow_summary_email',
@@ -32,14 +29,13 @@ class Settings extends Component
 
     public array $notificationSettings = []; // ビューで使う設定データ配列
 
-
     // 保存ボタンを有効にするかどうかの Computed プロパティ
     #[Computed]
     public function canSaveChanges(): bool
     {
         // notificationSettings 配列が存在し、かつ disabled が false の項目が1つでもあれば true
         // collect を使って判定
-        return !empty($this->notificationSettings) && collect($this->notificationSettings)->contains(fn($setting) => !$setting['disabled']);
+        return ! empty($this->notificationSettings) && collect($this->notificationSettings)->contains(fn ($setting) => ! $setting['disabled']);
     }
 
     public function mount()
@@ -56,16 +52,16 @@ class Settings extends Component
         foreach ($permissions as $permission) {
             $permissionName = $permission->name;
             $hasDirectPermission = $this->user->hasDirectPermission($permissionName);
-            $hasPermissionViaRole = $this->user->hasPermissionTo($permissionName) && !$hasDirectPermission;
+            $hasPermissionViaRole = $this->user->hasPermissionTo($permissionName) && ! $hasDirectPermission;
 
             // description は lang ファイルから取得 (キー名を descriptions に変更)
-            $descriptionKey = 'permission.descriptions.' . $permissionName; // descriptions を使用
+            $descriptionKey = 'permission.descriptions.'.$permissionName; // descriptions を使用
             // Lang::has() でキーの存在を確認してから __() を使う
             $description = Lang::has($descriptionKey) ? __($descriptionKey) : ($permission->description ?? '');
 
             $this->notificationSettings[$permissionName] = [
                 'name' => $permissionName,
-                'label' => __('permission.name.' . $permissionName),
+                'label' => __('permission.name.'.$permissionName),
                 'description' => $description, // 修正した description を格納
                 'enabled' => $this->user->can($permissionName),
                 'is_direct' => $hasDirectPermission,
@@ -84,7 +80,7 @@ class Settings extends Component
     public function save(): void
     {
         // 保存ボタンが非活性なら処理しない
-        if (!$this->canSaveChanges()) {
+        if (! $this->canSaveChanges()) {
             return;
         }
 
@@ -103,9 +99,9 @@ class Settings extends Component
                 $shouldHavePermission = $setting['enabled']; // トグルの状態
 
                 // 状態が変更された場合のみ処理
-                if ($shouldHavePermission && !$hasDirectPermissionCurrently) {
+                if ($shouldHavePermission && ! $hasDirectPermissionCurrently) {
                     $this->user->givePermissionTo($permissionName);
-                } elseif (!$shouldHavePermission && $hasDirectPermissionCurrently) {
+                } elseif (! $shouldHavePermission && $hasDirectPermissionCurrently) {
                     $this->user->revokePermissionTo($permissionName);
                 }
             }
@@ -121,7 +117,7 @@ class Settings extends Component
             $this->error(__('ledger.stored.failed'), $e->getMessage()); // MaryUI の toastError を使用
 
             // 必要であればログに記録
-            Log::error("Failed to save notification settings for user {$this->user->id}: " . $e->getMessage());
+            Log::error("Failed to save notification settings for user {$this->user->id}: ".$e->getMessage());
         }
     }
 }

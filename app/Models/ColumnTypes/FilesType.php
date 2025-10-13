@@ -31,6 +31,7 @@ class FilesType implements InputType
         if ($this->shouldConvertToJson()) {
             return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
+
         return (string) $value;
     }
 
@@ -40,6 +41,7 @@ class FilesType implements InputType
             // Logic from ColumnDefine::restoreColumnValueFromText for 'files'
             if (is_string($value)) {
                 $files = json_decode($value, true);
+
                 // The original code had a check for $files === $value, which seems redundant
                 // if json_decode fails, it returns null. If it succeeds, it's an array.
                 // A string input that is also valid JSON and identical to itself after decoding is unlikely.
@@ -48,8 +50,10 @@ class FilesType implements InputType
             } elseif (is_array($value)) { // Already an array, no need to decode
                 return $value;
             }
+
             return null; // Or handle error appropriately
         }
+
         return $value;
     }
 

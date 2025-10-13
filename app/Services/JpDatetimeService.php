@@ -61,7 +61,7 @@ class JpDatetimeService
             }
             // 元号が取得できない場合はException
             if (empty($gengo)) {
-                throw new Exception('Can not be converted to a timestamp : ' . $timestamp);
+                throw new Exception('Can not be converted to a timestamp : '.$timestamp);
             }
         }
 

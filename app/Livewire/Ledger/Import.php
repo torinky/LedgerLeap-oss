@@ -3,17 +3,17 @@
 namespace App\Livewire\Ledger;
 
 use App\Imports\LedgerImport;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Import extends Component
 {
-    use WithFileUploads, InitializesTenantContext;
+    use InitializesTenantContext, WithFileUploads;
 
     public $ledgerDefine;
 
@@ -50,7 +50,7 @@ class Import extends Component
     {
         $this->ledgerDefine = LedgerDefine::where('id', $request->route('ledgerDefineId'))
             ->first();
-        //dd($request);
+        // dd($request);
     }
 
     public function render()
@@ -60,12 +60,12 @@ class Import extends Component
 
     public function updateImportProgress()
     {
-        $this->totalRows = Cache::get('total_rows_' . $this->ledgerDefine->id);
-        $this->currentRows = Cache::get('current_rows_' . $this->ledgerDefine->id);
-        $this->insertRows = Cache::get('insert_rows_' . $this->ledgerDefine->id);
-        $this->updateRows = Cache::get('update_rows_' . $this->ledgerDefine->id);
+        $this->totalRows = Cache::get('total_rows_'.$this->ledgerDefine->id);
+        $this->currentRows = Cache::get('current_rows_'.$this->ledgerDefine->id);
+        $this->insertRows = Cache::get('insert_rows_'.$this->ledgerDefine->id);
+        $this->updateRows = Cache::get('update_rows_'.$this->ledgerDefine->id);
         //        $this->importFinished = $this->importBatch->finished();
-        $this->importFinished = Cache::has('end_date_' . $this->ledgerDefine->id) && Cache::get('end_date_' . $this->ledgerDefine->id) < now();
+        $this->importFinished = Cache::has('end_date_'.$this->ledgerDefine->id) && Cache::get('end_date_'.$this->ledgerDefine->id) < now();
 
         if ($this->importFinished) {
             //            Storage::delete($this->importFilePath);

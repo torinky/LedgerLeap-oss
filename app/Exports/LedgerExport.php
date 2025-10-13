@@ -11,22 +11,20 @@ use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class LedgerExport implements FromQuery, WithHeadings, WithMapping, ShouldQueue, WithCustomCsvSettings
+class LedgerExport implements FromQuery, ShouldQueue, WithCustomCsvSettings, WithHeadings, WithMapping
 {
     use Exportable;
 
     protected $ledgerDefineId;
+
     protected $keywords;
+
     protected $filter;
+
     protected $columnDefines;
 
     /**
      * Create a new export instance.
-     *
-     * @param int $ledgerDefineId
-     * @param array $keywords
-     * @param array $filter
-     * @param object $columnDefines
      */
     public function __construct(int $ledgerDefineId, array $keywords, array $filter, object $columnDefines)
     {
@@ -51,8 +49,6 @@ class LedgerExport implements FromQuery, WithHeadings, WithMapping, ShouldQueue,
 
     /**
      * Define the headers for the exported file.
-     *
-     * @return array
      */
     public function headings(): array
     {
@@ -72,8 +68,7 @@ class LedgerExport implements FromQuery, WithHeadings, WithMapping, ShouldQueue,
     /**
      * Map the values of each row.
      *
-     * @param mixed $record
-     * @return array
+     * @param  mixed  $record
      */
     public function map($record): array
     {
@@ -111,5 +106,4 @@ class LedgerExport implements FromQuery, WithHeadings, WithMapping, ShouldQueue,
             'test_auto_detect' => true,
         ];
     }
-
 }

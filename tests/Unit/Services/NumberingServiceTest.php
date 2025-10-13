@@ -8,21 +8,25 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\NumberingService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class NumberingServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
     protected bool $tenancy = true;
 
     protected NumberingService $numberingService;
+
     protected Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->numberingService = new NumberingService();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->numberingService = new NumberingService;
         $this->folder = Folder::factory()->create();
     }
 

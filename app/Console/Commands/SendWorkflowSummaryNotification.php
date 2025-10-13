@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Services\NotificationService;
-
 // NotificationService を use
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 class SendWorkflowSummaryNotification extends Command
 {
     protected $signature = 'workflow:send-summary';
+
     protected $description = 'Send summary notifications to users with pending workflow tasks.';
 
     // NotificationService をインジェクト
@@ -40,6 +40,7 @@ class SendWorkflowSummaryNotification extends Command
         if ($usersToNotify->isEmpty()) {
             $this->info('No users with pending tasks found.');
             Log::info('Workflow Summary: No users to notify.');
+
             return Command::SUCCESS;
         }
 
@@ -51,13 +52,14 @@ class SendWorkflowSummaryNotification extends Command
                 // NotificationService のメソッドを呼び出す
                 $this->notificationService->sendWorkflowSummaryNotification($user);
             } catch (\Exception $e) {
-                Log::error("Failed to send summary notification to User ID: {$user->id}. Error: " . $e->getMessage());
+                Log::error("Failed to send summary notification to User ID: {$user->id}. Error: ".$e->getMessage());
                 $this->error("Failed for User ID: {$user->id}");
             }
         }
 
         $this->info('Finished sending workflow summary notifications.');
         Log::info('Workflow Summary Notification Batch Finished.');
+
         return Command::SUCCESS;
     }
 }

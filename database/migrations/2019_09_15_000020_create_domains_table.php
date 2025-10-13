@@ -10,12 +10,10 @@ class CreateDomainsTable extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
     public function up(): void
     {
-                Schema::create('domains', function (Blueprint $table) {
+        Schema::create('domains', function (Blueprint $table) {
             $table->string('id', 64)->primary();
             $table->string('tenant_id');
             $table->string('domain');
@@ -27,8 +25,6 @@ class CreateDomainsTable extends Migration
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
     public function down(): void
     {

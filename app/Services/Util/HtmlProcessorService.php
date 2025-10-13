@@ -12,8 +12,8 @@ class HtmlProcessorService
     /**
      * HTMLフラグメント内のテキストノードをコールバック関数で処理する
      *
-     * @param string $htmlFragment 処理対象のHTML文字列
-     * @param callable $callback 各テキストノードに適用するコールバック関数
+     * @param  string  $htmlFragment  処理対象のHTML文字列
+     * @param  callable  $callback  各テキストノードに適用するコールバック関数
      * @return string 処理後のHTML文字列
      */
     public function processTextNodes(string $htmlFragment, callable $callback): string
@@ -22,13 +22,13 @@ class HtmlProcessorService
             return $htmlFragment;
         }
 
-        $dom = new DOMDocument();
+        $dom = new DOMDocument;
 
         // 部分的なHTMLを正しく扱うための設定
         // UTF-8エンコーディングと、HTMLエンティティの文字化け対策
         $encodedHtml = mb_convert_encoding($htmlFragment, 'HTML-ENTITIES', 'UTF-8');
         // html, bodyタグの自動補完を抑制
-        @$dom->loadHTML('<div>' . $encodedHtml . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        @$dom->loadHTML('<div>'.$encodedHtml.'</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
         $xpath = new DOMXPath($dom);
         // テキストノードのみを検索対象とする

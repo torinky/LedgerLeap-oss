@@ -43,7 +43,7 @@ class SynonymController extends Controller
     {
         $synonyms = [];
         $words = $this->synonymService->getWords($word);
-        if (!empty($words)) {
+        if (! empty($words)) {
             foreach ($words as $w) {
                 $s = $this->synonymService->getSynonyms($w->wordid);
                 $synonyms = array_merge($synonyms, $s);

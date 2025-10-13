@@ -90,7 +90,7 @@ class WorkflowService
         array $contentAttached,
         int $modifierId
     ): array {
-        Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached); // デバッグログ追加
+        // Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached);
         // ToDo: 権限チェック (modifierId が下書き保存できるか？)
 
         return DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $modifierId) {
@@ -171,10 +171,10 @@ class WorkflowService
      * 点検依頼を処理する
      * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param int $ledgerId 台帳レコードID
-     * @param int $requesterId 点検依頼を行った User ID
-     * @param int $inspectorId 次の担当者 User ID
-     * @param string|null $comments 点検コメント (任意)
+     * @param  int  $ledgerId  台帳レコードID
+     * @param  int  $requesterId  点検依頼を行った User ID
+     * @param  int  $inspectorId  次の担当者 User ID
+     * @param  string|null  $comments  点検コメント (任意)
      * @return Ledger 更新後の Ledger
      *
      * @throws Throwable
@@ -666,7 +666,7 @@ class WorkflowService
         int $modifierId,
         ?string $comments
     ): array {
-        Log::debug('[WorkflowService::saveEditedRecord] Received content_attached:', is_array($newContentAttached) ? $newContentAttached : []); // デバッグログ追加
+        // Log::debug('[WorkflowService::saveEditedRecord] Received content_attached:', is_array($newContentAttached) ? $newContentAttached : []);
         if ($ledger->isLocked()) {
             throw new Exception('Cannot modify an approved record.');
         }

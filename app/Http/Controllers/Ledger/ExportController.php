@@ -16,7 +16,7 @@ class ExportController extends Controller
     /**
      * CSVファイルとしてLedgerの内容をダウンロードする
      *
-     * @param SearchRequest $request 検索条件を指定するリクエスト
+     * @param  SearchRequest  $request  検索条件を指定するリクエスト
      * @return BinaryFileResponse
      */
     public function downloadExcelCSV(SearchRequest $request)
@@ -25,7 +25,7 @@ class ExportController extends Controller
         $ledgerDefineId = $request->ledgerDefineId();
         $columnDefines = LedgerDefine::where('id', $ledgerDefineId)->pluck('column_define')->sortBy('order')->all()[0];
 
-        $exportFilename = LedgerDefine::find($ledgerDefineId)->title . '.csv';
+        $exportFilename = LedgerDefine::find($ledgerDefineId)->title.'.csv';
 
         /**
          * 第一引数: インスタンス化したExportクラスを指定

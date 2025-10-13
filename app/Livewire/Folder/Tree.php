@@ -3,12 +3,11 @@
 namespace App\Livewire\Folder;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
-use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class Tree extends Component
 {
@@ -66,7 +65,7 @@ class Tree extends Component
         if ($newFolderId == 1) {
             $this->selectedFolderIds = [];
         } else {
-            if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
+            if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
                 $this->selectedFolderIds = [];
             } else {
                 $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();

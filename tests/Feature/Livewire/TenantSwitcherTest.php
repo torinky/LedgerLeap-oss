@@ -2,13 +2,11 @@
 
 namespace Tests\Feature\Livewire;
 
-use App\Livewire\TenantSwitcher;
-use App\Models\Folder;
-use App\Models\Tenant;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Enums\FolderPermissionType;
+use App\Livewire\TenantSwitcher;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -16,6 +14,7 @@ use Tests\TestCase;
 class TenantSwitcherTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     protected function setUp(): void
@@ -138,7 +137,7 @@ class TenantSwitcherTest extends TestCase
         $tenant = \App\Models\Tenant::create(['id' => 'link-tenant']);
 
         $folder = null; // Initialize $folder outside the closure
-        $tenant->run(function () use ($role, $user, & $folder) {
+        $tenant->run(function () use ($role, $user, &$folder) {
             $folder = \App\Models\Folder::factory()->create(['title' => 'Test Folder', 'parent_id' => null]);
             \App\Models\RoleFolderPermission::create([
                 'role_id' => $role->id,

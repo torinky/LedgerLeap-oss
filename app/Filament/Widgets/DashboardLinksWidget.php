@@ -21,7 +21,7 @@ class DashboardLinksWidget extends Widget
 
     protected function onTenantContext(): void
     {
-        if ($this->from_tenant && !session()->has('tenant_context_notified_' . $this->from_tenant)) {
+        if ($this->from_tenant && ! session()->has('tenant_context_notified_'.$this->from_tenant)) {
             $tenant = Tenant::find($this->from_tenant);
             if ($tenant) {
                 Notification::make()
@@ -29,14 +29,14 @@ class DashboardLinksWidget extends Widget
                     ->body(__('ledger.tenant_context_notification_body', ['name' => $tenant->name ?: $tenant->id]))
                     ->info()
                     ->send();
-                session()->put('tenant_context_notified_' . $this->from_tenant, true);
+                session()->put('tenant_context_notified_'.$this->from_tenant, true);
             }
         }
     }
 
     public function mount(): void
     {
-        $this->from_tenant=session('filament_from_tenant_id');
+        $this->from_tenant = session('filament_from_tenant_id');
         $this->onTenantContext();
     }
 
@@ -62,7 +62,7 @@ class DashboardLinksWidget extends Widget
         // テナントIDが存在する場合、テナント固有の設定グループを配列の先頭に追加
         if ($fromTenantId && $tenant = Tenant::find($fromTenantId)) {
             $groups[] = [
-                'title' => __('ledger.current_tenant') . ': ' . ($tenant->name ?: $tenant->id),
+                'title' => __('ledger.current_tenant').': '.($tenant->name ?: $tenant->id),
                 'icon' => 'heroicon-o-identification',
                 'links' => [
                     [
@@ -141,7 +141,7 @@ class DashboardLinksWidget extends Widget
                         'url' => route('filament.admin.resources.synonym.technical-term-groups.index'),
                         'color' => 'success',
                     ],
-/*                    [
+                    /*                    [
                         'title' => __('ledger.settings.folder'),
                         'icon' => 'heroicon-o-folder',
                         'url' => route('filament.admin.resources.folders.index'),

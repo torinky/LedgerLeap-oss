@@ -82,7 +82,7 @@ class TenantAccessServiceTest extends TestCase
         DB::table('role_folder_permissions')->insert([
             ['role_id' => $role->id, 'folder_id' => $folder->id, 'permission' => 1, 'modifier_id' => $user->id],
         ]);
-        
+
         $user->assignRole($role);
 
         // 実行と評価

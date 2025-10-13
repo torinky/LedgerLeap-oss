@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
 class ListFolders extends ListRecords
 {
-
     protected static string $resource = FolderResource::class;
 
     protected function getHeaderActions(): array
@@ -31,7 +30,7 @@ class ListFolders extends ListRecords
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn() => Folder::withDepth()->orderBy('_lft'))
+            ->query(fn () => Folder::withDepth()->orderBy('_lft'))
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -42,14 +41,14 @@ class ListFolders extends ListRecords
                         return $query->where('title', 'like', "%{$search}%");
                     })
                     ->getStateUsing(function (Folder $record) {
-                        return str_repeat('・', $record->depth) . ' ' . $record->title;
+                        return str_repeat('・', $record->depth).' '.$record->title;
                     }),
                 Tables\Columns\TextColumn::make('description')
                     ->label('説明')
                     ->limit(50),
                 Tables\Columns\TextColumn::make('parent.title')
                     ->label('親フォルダ')
-                    ->searchable(query: fn(EloquentBuilder $query, string $search): EloquentBuilder => $query->whereRelation('parent', 'title', 'like', "%{$search}%")),
+                    ->searchable(query: fn (EloquentBuilder $query, string $search): EloquentBuilder => $query->whereRelation('parent', 'title', 'like', "%{$search}%")),
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('ロール')
                     ->badge(),
@@ -81,7 +80,7 @@ class ListFolders extends ListRecords
 
                 // 新しく追加する「フォルダで絞り込み」フィルタ
                 Tables\Filters\SelectFilter::make('folder_scope') // フィルタを識別する一意なキー
-                ->label('フォルダで絞り込み')
+                    ->label('フォルダで絞り込み')
                     ->options(Folder::pluck('title', 'id')->all()) // 全てのフォルダを選択肢に
                     ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
                         if (empty($data['value'])) {
@@ -91,7 +90,7 @@ class ListFolders extends ListRecords
                         $folder = Folder::find($data['value']);
 
                         // フォルダが見つからない場合は何もしない
-                        if (!$folder) {
+                        if (! $folder) {
                             return $query;
                         }
 
@@ -102,13 +101,13 @@ class ListFolders extends ListRecords
                     ->preload(),
             ])
             ->actions([
-//                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
-                    Tables\Actions\ForceDeleteAction::make(),
-                    Tables\Actions\RestoreAction::make(),
-//                ]),
+                //                Tables\Actions\ActionGroup::make([
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
+                Tables\Actions\RestoreAction::make(),
+                //                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

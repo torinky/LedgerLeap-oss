@@ -62,7 +62,7 @@ class AutoLink extends Model
                 'tenant_id',
             ])
             ->logOnlyDirty()
-            ->setDescriptionForEvent(fn(string $eventName) => "自動リンク「{$this->label}」を{$this->getEventDescription($eventName)}しました");
+            ->setDescriptionForEvent(fn (string $eventName) => "自動リンク「{$this->label}」を{$this->getEventDescription($eventName)}しました");
     }
 
     private function getEventDescription(string $eventName): string

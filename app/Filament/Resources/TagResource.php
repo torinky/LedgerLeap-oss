@@ -53,7 +53,7 @@ class TagResource extends Resource
                 Tables\Columns\TextColumn::make('ledgerDefines')
                     ->label(__('ledger.title'))
                     ->badge()
-                    ->getStateUsing(fn($record) => $record->ledgerDefine()->pluck('title'))
+                    ->getStateUsing(fn ($record) => $record->ledgerDefine()->pluck('title'))
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('creator.name')->label(__('ledger.creator.name'))

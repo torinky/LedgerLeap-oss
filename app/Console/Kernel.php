@@ -14,12 +14,29 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
-        // --- ステップ6.5 追加 ---
+
+        // --- Workflow Summary Notification ---
         $schedule->command(SendWorkflowSummaryNotification::class)
             // ->hourly(); // 毎時実行
             ->daily(); // または毎日実行
-//            ->everyMinute(); // デバッグ用
-        // --- ここまで ---
+        //            ->everyMinute(); // デバッグ用
+
+        // --- Scoring System (Phase 1.5: Step 1.8) ---
+        // 環境変数から頻度を取得（デフォルト: daily）
+        $frequency = config('ledgerleap.scoring.schedule_frequency', 'daily');
+
+        $command = $schedule->command('scoring:calculate');
+
+        // 頻度に応じた設定
+        match ($frequency) {
+            'everyMinute' => $command->everyMinute(),           // デバッグ用のみ
+            'everyFiveMinutes' => $command->everyFiveMinutes(), // 開発・デモ推奨
+            'everyTenMinutes' => $command->everyTenMinutes(),   // 開発・デモ
+            'hourly' => $command->hourly(),                     // アクティブな本番
+            'daily' => $command->daily(),                       // 通常の本番（デフォルト）
+            'weekly' => $command->weekly(),                     // 大規模環境
+            default => $command->daily(),
+        };
     }
 
     /**
@@ -27,7 +44,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__ . '/Commands');
+        $this->load(__DIR__.'/Commands');
 
         require base_path('routes/console.php');
     }

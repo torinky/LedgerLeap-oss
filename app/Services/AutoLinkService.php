@@ -3,26 +3,24 @@
 namespace App\Services;
 
 use App\Models\AutoLink;
-use App\Models\Ledger;
-use App\Models\Folder;
-use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
 
 class AutoLinkService
 {
-    public function __construct(private HtmlProcessorService $htmlProcessorService)
-    {
-    }
+    public function __construct(private HtmlProcessorService $htmlProcessorService) {}
 
     /**
      * テキストを自動リンクに変換する
      *
-     * @param string $text 変換対象のHTML文字列
-     * @param ColumnDefine|null $column オプション。ColumnDefine オブジェクト。auto_number タイプの場合に特別処理を行うために使用
-     * @param mixed $context オプション。適用範囲を絞り込むためのコンテキスト情報（例: Folder モデルのインスタンス、LedgerDefine モデルのインスタンスなど）
+     * @param  string  $text  変換対象のHTML文字列
+     * @param  ColumnDefine|null  $column  オプション。ColumnDefine オブジェクト。auto_number タイプの場合に特別処理を行うために使用
+     * @param  mixed  $context  オプション。適用範囲を絞り込むためのコンテキスト情報（例: Folder モデルのインスタンス、LedgerDefine モデルのインスタンスなど）
      * @return string 変換後のHTML文字列
      */
     public function convert(string $text, ?ColumnDefine $column = null, $context = null): string
@@ -40,6 +38,7 @@ class AutoLinkService
                 if ($column && $column->getType() === 'auto_number') {
                     $linkHtml = $this->createAutoNumberLink($originalText);
                     $this->replaceTextNodeWithHtml($textNode, $linkHtml, $dom);
+
                     return; // auto_numberは他のカスタムリンクと重複させない
                 }
 
@@ -58,13 +57,13 @@ class AutoLinkService
     {
         // テナントIDをURLに含めない、または現在のテナントのドメインを考慮しない
         // グローバルルートなので、テナントに依存しないURLを生成
-        $url = url('/ledgers/lookup/' . urlencode($text)); // 修正
+        $url = url('/ledgers/lookup/'.urlencode($text)); // 修正
 
         $iconName = config('ledgerleap.auto_links.link_types.default.icon', 'o-link');
         $tooltip = __('auto_links.tooltip_auto_number', ['value' => $text]);
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
 
-        return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '" target="_blank" class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($text) . '</a></div>';
+        return '<div class="tooltip mx-2" data-tip="'.e($tooltip).'"><a href="'.e($url).'" target="_blank" class="font-bold text-primary-500 hover:underline">'.$iconHtml.' '.e($text).'</a></div>';
     }
 
     private function applyCustomLinks(\DOMText $textNode, $autoLinks, \DOMDocument $dom): void
@@ -72,7 +71,7 @@ class AutoLinkService
         $currentNode = $textNode;
 
         foreach ($autoLinks as $autoLink) {
-            $pattern = $autoLink->pattern . (str_contains($autoLink->pattern, 'u') ? '' : 'u');
+            $pattern = $autoLink->pattern.(str_contains($autoLink->pattern, 'u') ? '' : 'u');
             $text = $currentNode->nodeValue;
 
             $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
@@ -108,7 +107,7 @@ class AutoLinkService
     {
         $url = $autoLink->url_template;
         for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
-            $url = str_replace('$' . $i, urlencode($matches[$i]), $url);
+            $url = str_replace('$'.$i, urlencode($matches[$i]), $url);
         }
 
         // リンク先テナントが指定されている場合のみ、完全なURLに書き換える
@@ -117,16 +116,16 @@ class AutoLinkService
             if ($tenant && $domain = $tenant->domains->first()?->domain) {
                 $path = ltrim($url, '/');
                 $protocol = parse_url(config('app.url'), PHP_URL_SCHEME) ?? 'http';
-                $url = $protocol . '://' . $domain . '/' . $path;
+                $url = $protocol.'://'.$domain.'/'.$path;
             }
         }
 
         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
-        $iconName = config('ledgerleap.auto_links.link_types.' . $autoLink->link_type . '.icon', 'o-link');
+        $iconName = config('ledgerleap.auto_links.link_types.'.$autoLink->link_type.'.icon', 'o-link');
         $tooltip = $autoLink->label;
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
 
-        return '<div class="tooltip mx-2" data-tip="' . e($tooltip) . '"><a href="' . e($url) . '"' . $target . ' class="font-bold text-primary-500 hover:underline">' . $iconHtml . ' ' . e($matches[0]) . '</a></div>';
+        return '<div class="tooltip mx-2" data-tip="'.e($tooltip).'"><a href="'.e($url).'"'.$target.' class="font-bold text-primary-500 hover:underline">'.$iconHtml.' '.e($matches[0]).'</a></div>';
     }
 
     private function replaceTextNodeWithHtml(\DOMText $textNode, string $html, \DOMDocument $dom): void
@@ -139,6 +138,7 @@ class AutoLinkService
     private function getAutoLinksForContext($context)
     {
         $cacheKey = $this->getCacheKeyForContext($context);
+
         return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
             $query = AutoLink::where('is_enabled', true);
 
@@ -171,16 +171,17 @@ class AutoLinkService
     protected function getCacheKeyForContext($context): string
     {
         if ($context instanceof Folder) {
-            return 'auto_links_folder_' . $context->id;
+            return 'auto_links_folder_'.$context->id;
         }
         if ($context instanceof LedgerDefine) {
-            return 'auto_links_ledger_define_' . $context->id;
+            return 'auto_links_ledger_define_'.$context->id;
         }
         if ($context instanceof Ledger) {
             if ($context->define && $context->define->folder) {
-                return 'auto_links_folder_' . $context->define->folder->id;
+                return 'auto_links_folder_'.$context->define->folder->id;
             }
         }
+
         return 'auto_links_global';
     }
 }

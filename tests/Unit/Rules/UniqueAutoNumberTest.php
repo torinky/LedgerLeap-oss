@@ -8,17 +8,19 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Rules\UniqueAutoNumber;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use Mockery;
 use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use Tests\TestCase;
 
 class UniqueAutoNumberTest extends TestCase
 {
     use RefreshDatabase;
+
     protected bool $tenancy = true;
 
     protected LedgerDefine $ledgerDefine;
+
     protected ColumnDefine $columnDefine;
 
     protected function setUp(): void

@@ -64,7 +64,7 @@ class LedgerDefinePolicy
     public function create(User $user, Folder $folder)
     {
         // ユーザーが所属する組織の権限も含めて、台帳定義の作成権限があるか確認
-        if (!$this->userService->hasPermission($user, 'create_ledger_defines')) {
+        if (! $this->userService->hasPermission($user, 'create_ledger_defines')) {
             return false;
         }
         if ($this->userService->isWritableFolderForUser($user, $folder)) {
@@ -148,12 +148,12 @@ class LedgerDefinePolicy
 
     public function ledgerView(User $user, LedgerDefine $ledgerDefine)
     {
-        if (!$this->userService->hasPermission($user, 'view_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'view_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -163,12 +163,12 @@ class LedgerDefinePolicy
     public function ledgerCreate(User $user, LedgerDefine $ledgerDefine): bool
     {
         //        dd('LedgerPolicy@create called');
-        if (!$this->userService->hasPermission($user, 'create_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'create_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -177,12 +177,12 @@ class LedgerDefinePolicy
 
     public function ledgerUpdate(User $user, LedgerDefine $ledgerDefine): bool
     {
-        if (!$this->userService->hasPermission($user, 'update_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'update_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -191,12 +191,12 @@ class LedgerDefinePolicy
 
     public function ledgerDelete(User $user, LedgerDefine $ledgerDefine): bool
     {
-        if (!$this->userService->hasPermission($user, 'delete_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'delete_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -205,12 +205,12 @@ class LedgerDefinePolicy
 
     public function ledgerRestore(User $user, LedgerDefine $ledgerDefine): bool
     {
-        if (!$this->userService->hasPermission($user, 'restore_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'restore_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 
@@ -219,12 +219,12 @@ class LedgerDefinePolicy
 
     public function ledgerForceDelete(User $user, LedgerDefine $ledgerDefine): bool
     {
-        if (!$this->userService->hasPermission($user, 'delete_ledgers')) {
+        if (! $this->userService->hasPermission($user, 'delete_ledgers')) {
             return false;
         }
         $folder = $ledgerDefine->folder;
 
-        if (!$folder) {
+        if (! $folder) {
             return false;
         }
 

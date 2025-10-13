@@ -40,7 +40,7 @@ class UpdateController extends Controller
 
     public function delete(UpdateRequest $request)
     {
-        $folderId = (int)$request->route('folderId');
+        $folderId = (int) $request->route('folderId');
 
         $folder = Folder::find($folderId);
         $folder->delete();

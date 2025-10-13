@@ -3,38 +3,46 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\RecordsTable;
+use App\Models\AutoLink;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\AutoLink;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class RecordsTableQueryTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private User $user;
+
     private LedgerDefine $ledgerDefine;
+
     private Folder $folder;
+
     protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tenant = \App\Models\Tenant::create();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
         tenancy()->initialize($this->tenant);
+
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
-            'email' => 'test.' . \Illuminate\Support\Str::random(10) . '@example.com',
+            'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
         ]);
-        // The component expects a root folder with id=1 to exist.
-        Folder::factory()->create(['id' => 1, 'parent_id' => null]);
-        $this->folder = Folder::factory()->create(['parent_id' => 1]);
+
+        // The component expects a root folder to exist - use factory without fixed ID
+        $rootFolder = Folder::factory()->create(['parent_id' => null]);
+        $this->folder = Folder::factory()->create(['parent_id' => $rootFolder->id]);
+
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,
             'column_define' => [
@@ -42,37 +50,58 @@ class RecordsTableQueryTest extends TestCase
                 // Add other column definitions as needed for other tests
             ],
         ]);
+
         $this->actingAs($this->user);
+
         // Add permission for the user to view LedgerDefines
-        Permission::findOrCreate('view_ledger_defines');
+        Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
         $this->user->givePermissionTo('view_ledger_defines');
+
         // Add permission for the user to view Ledgers
-        Permission::findOrCreate('ledgerView');
+        Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
         $this->user->givePermissionTo('ledgerView');
+
         // Add permission for the user to view AutoLinks (追加)
-        Permission::findOrCreate('view_auto_links');
+        Permission::firstOrCreate(['name' => 'view_auto_links', 'guard_name' => 'web']);
         $this->user->givePermissionTo('view_auto_links');
     }
 
-    
+    protected function getTablesToTruncate(): array
+    {
+        return [
+            'folders',
+            'ledgers',
+            'ledger_defines',
+            'auto_links',
+            'personal_access_tokens',
+        ];
+    }
+
+    protected function tearDown(): void
+    {
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+        parent::tearDown();
+    }
 
     #[Test]
     public function it_shows_list_on_multiple_matches()
     {
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['common-term']
+            'content' => ['common-term'],
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['common-term']
+            'content' => ['common-term'],
         ]);
 
         Livewire::withQueryParams([
             'q' => 'common-term',
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
+            'cf' => $this->folder->id,
         ])
             ->test(RecordsTable::class)
             ->assertOk()
@@ -86,7 +115,7 @@ class RecordsTableQueryTest extends TestCase
             'q' => 'non-existent-term',
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
+            'cf' => $this->folder->id,
         ])
             ->test(RecordsTable::class)
             ->assertOk()
@@ -98,7 +127,7 @@ class RecordsTableQueryTest extends TestCase
     {
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['unique-id-for-list']
+            'content' => ['unique-id-for-list'],
         ]);
 
         Livewire::withQueryParams([
@@ -106,7 +135,7 @@ class RecordsTableQueryTest extends TestCase
             'mode' => 'list',
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
+            'cf' => $this->folder->id,
         ])
             ->test(RecordsTable::class)
             ->assertOk()
@@ -118,7 +147,7 @@ class RecordsTableQueryTest extends TestCase
     {
         // テストデータの準備
         $keyword = 'テストキーワード';
-        $contentWithKeyword = ['text_column' => 'これは' . $keyword . 'を含むテキストです。'];
+        $contentWithKeyword = ['text_column' => 'これは'.$keyword.'を含むテキストです。'];
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $contentWithKeyword,
@@ -129,11 +158,11 @@ class RecordsTableQueryTest extends TestCase
             'q' => $keyword,
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
+            'cf' => $this->folder->id,
         ])
             ->test(RecordsTable::class)
             ->assertOk()
-            ->assertSeeHtml('<mark class="text-error font-bold text-lg">' . $keyword . '</mark>');
+            ->assertSeeHtml('<mark class="text-error font-bold text-lg">'.$keyword.'</mark>');
     }
 
     #[Test]
@@ -159,7 +188,7 @@ class RecordsTableQueryTest extends TestCase
             'q' => 'SPEC-007',
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id
+            'cf' => $this->folder->id,
         ])->test(RecordsTable::class);
         $component->assertOk()
             ->assertSeeHtml('href="/l/SPEC-007"')

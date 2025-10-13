@@ -46,12 +46,12 @@ class CompareTranslations extends Command
         $changes = [];
 
         foreach ($jsonArray as $key => $value) {
-            if (!str_contains($key, 'ledger.')) {
+            if (! str_contains($key, 'ledger.')) {
                 continue;
             }
             $phpKey = strtr($key, ['ledger.' => '']);
-            $this->info('php [' . $phpKey . '] : json [' . $key . ']');
-            if (!isset($phpArray[$phpKey])) {
+            $this->info('php ['.$phpKey.'] : json ['.$key.']');
+            if (! isset($phpArray[$phpKey])) {
                 $this->info("Adding missing key to php: $phpKey");
                 $changes[] = "Added $key = $value";
                 $mergedArray[$phpKey] = $value;
@@ -68,8 +68,8 @@ class CompareTranslations extends Command
             return;
         }
 
-        if (!$this->option('force')) {
-            if (!$this->confirm('Apply changes?')) {
+        if (! $this->option('force')) {
+            if (! $this->confirm('Apply changes?')) {
                 return;
             }
         }
@@ -90,7 +90,7 @@ class CompareTranslations extends Command
     private function updatePhpFile($phpArray)
     {
         $unflatPhpArray = Arr::undot($phpArray);
-        $php = '<?php return ' . var_export($unflatPhpArray, true) . ';';
+        $php = '<?php return '.var_export($unflatPhpArray, true).';';
         file_put_contents(lang_path('ja/ledger.php'), $php);
         $this->info('lang/ja/ledger.php updated successfully!');
     }

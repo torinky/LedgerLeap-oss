@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\Folder;
 use Illuminate\Console\Command;
-use Stancl\Tenancy\Facades\Tenancy;
 
 class AssignTenantIdToFolders extends Command
 {
@@ -31,8 +30,9 @@ class AssignTenantIdToFolders extends Command
 
         $defaultTenantId = $this->argument('defaultTenantId');
 
-        if (!$defaultTenantId) {
+        if (! $defaultTenantId) {
             $this->warn('No default tenant ID provided. Please specify one as an argument (e.g., php artisan ledgerleap:assign-tenant-id-to-folders testa).');
+
             return Command::FAILURE;
         }
 
@@ -40,6 +40,7 @@ class AssignTenantIdToFolders extends Command
 
         if ($folders->isEmpty()) {
             $this->info('No Folder models with null tenant_id found.');
+
             return Command::SUCCESS;
         }
 
@@ -55,7 +56,7 @@ class AssignTenantIdToFolders extends Command
             }
 
             // 親から継承できなかった場合、またはルートフォルダの場合、デフォルトテナントIDを使用
-            if (!$assignedTenantId) {
+            if (! $assignedTenantId) {
                 $assignedTenantId = $defaultTenantId;
             }
 

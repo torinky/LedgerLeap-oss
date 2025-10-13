@@ -5,12 +5,12 @@ namespace Tests\Unit\Policies;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class RolePolicyTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private RolePolicy $rolePolicy;
 
@@ -117,6 +117,7 @@ class RolePolicyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->userService = $this->mock(UserService::class);
         $this->rolePolicy = new RolePolicy($this->userService);

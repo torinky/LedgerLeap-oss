@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,6 +14,8 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -20,21 +23,21 @@ use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
-use Illuminate\Support\Collection;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
-    use withPagination, InitializesTenantContext,Toast;
+    use InitializesTenantContext, Toast,withPagination;
 
     public $perPage = 100;
 
     #[Url(as: 'q')]
     public $search = '';
 
-    public $orderBy = 'id';
+    public $orderBy = 'composite_score';
 
     public $orderAsc = false;
+
+    public $filterStatus = '';
 
     #[Url(as: 'fi')]
     public $filter = [];
@@ -80,12 +83,20 @@ class RecordsTable extends Component
     private $synonymServiceConfig;
 
     public bool $showPermissionModal = false;
+
     public bool $showActivityModal = false;
+
     public ?string $modalTitle = null;
+
     public ?int $modalResourceId = null;
+
     public ?string $modalResourceType = null;
 
     public ?string $currentTenantId = null;
+
+    public bool $hasWorkflowEnabled = false;
+
+    public string $orderByLabel = '';
 
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
@@ -103,9 +114,15 @@ class RecordsTable extends Component
 
         $this->currentTenantId = tenant()?->id;
 
+        // composite_scoreカラムの存在確認
+        if (! Schema::hasColumn('ledgers', 'composite_score')) {
+            // マイグレーション未適用時のフォールバック
+            $this->orderBy = 'id';
+        }
+
         // 検索キーワードの初期化
         $search = $request->keyword();
-        if (empty($this->search) && !empty($search)) {
+        if (empty($this->search) && ! empty($search)) {
             $this->search = $search;
         } elseif (empty($this->search)) {
             $this->search = session()->get('search', '');
@@ -113,6 +130,9 @@ class RecordsTable extends Component
         $this->synonymServiceConfig = $synonymServiceConfig;
         $this->filter = $request->filter ?? [];
         $this->initSearchContext();
+
+        // ★ 追加: 初期orderByLabelの設定
+        $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
 
         // 現在のフォルダーIDを初期化
         // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
@@ -135,12 +155,14 @@ class RecordsTable extends Component
 
         // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
         // そうでない場合、または不正な値の場合はデフォルトの1を使用
-        if (!in_array($this->displayLevel, [1, 2, 3])) {
+        if (! in_array($this->displayLevel, [1, 2, 3])) {
             $this->displayLevel = 1;
         }
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
+
+        $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
     }
 
     /**
@@ -153,7 +175,7 @@ class RecordsTable extends Component
      */
     protected function initSearchContext()
     {
-        if (!$this->synonymServiceConfig) {
+        if (! $this->synonymServiceConfig) {
             $this->synonymServiceConfig = new SynonymServiceConfig([
                 'useSynonym' => $this->useSynonym,
                 'useTechnicalTerm' => $this->useTechnicalTerm,
@@ -175,29 +197,60 @@ class RecordsTable extends Component
     /**
      * 列のソートを行う
      *
-     * @param string $columnName
+     * @param  string  $columnName
+     * @param  string|null  $columnLabel
      * @return void
      */
-    public function sort($columnName)
+    public function sort($columnName, $columnLabel = null)
     {
         $this->orderBy = $columnName;
 
         // 現在のソート順をトグル
-        $this->orderAsc = !$this->orderAsc;
+        $this->orderAsc = ! $this->orderAsc;
+
+        // ★ 追加: orderByLabelの設定
+        $this->orderByLabel = $columnLabel ?? $this->getStandardSortLabel($columnName);
 
         $this->initSearchContext();
-        $this->render($this->searchContext);
+        Log::info('sort method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+    }
+
+    /**
+     * orderByが変更されたときにorderByLabelを更新するライフサイクルフック
+     */
+    public function updatedOrderBy($value)
+    {
+        // ユーザーがカスタムソートのオプションを再度選択した場合、デフォルトのソートに戻す
+        if ($this->getStandardSortLabel($value) === '' && $value === $this->orderBy) {
+            $this->orderBy = 'composite_score'; // デフォルトのソートに戻す
+            $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
+            Log::info('updatedOrderBy: custom sort option re-selected, reverting to default', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+            return; // これ以上処理しない
+        }
+
+        $this->orderByLabel = $this->getStandardSortLabel($value);
+        Log::info('updatedOrderBy called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
+    }
+
+    /**
+     * 標準ソートのラベルを取得するヘルパーメソッド
+     */
+    private function getStandardSortLabel(string $columnName): string
+    {
+        return match ($columnName) {
+            'composite_score' => __('ledger.scoring.score'),
+            'created_at' => __('ledger.created_at'),
+            'updated_at' => __('ledger.updated_at'),
+            default => '', // 標準ソート以外の場合は空文字列を返す
+        };
     }
 
     /**
      * 表示レベルを設定する
-     *
-     * @param int $level
-     * @return void
      */
     public function setDisplayLevel(int $level): void
     {
-        if (!in_array($level, [1, 2, 3])) {
+        if (! in_array($level, [1, 2, 3])) {
             // 不正なレベルが指定された場合は何もしないか、エラーをログに記録
             return;
         }
@@ -227,9 +280,10 @@ class RecordsTable extends Component
             'keywords' => $this->searchContext->keywords,
             'filter' => $this->filter,
         ]);
+        Log::info('render method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
 
-                // グローバル検索かどうかの判定
-        $isGlobalSearch = !empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
+        // グローバル検索かどうかの判定
+        $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
 
         if ($isGlobalSearch) {
             // グローバル検索の場合、すべての台帳定義を対象にする
@@ -264,10 +318,19 @@ class RecordsTable extends Component
 //            ->search($this->searchContext)
             ->searchContext($this->searchContext)
             ->contentsFilter($this->filter)
+            ->when(!empty($this->filterStatus), function ($query) {
+                return $query->where('status', $this->filterStatus);
+            })
 //          重複データを持たないように
 //          ->with('define.folder')
             ->orderBy('ledger_define_id', 'asc')
-            ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+            ->when($this->orderBy === 'composite_score', function ($query) {
+                // MySQLでは NULLS LAST が使えないため、スコア0を最後に
+                return $query->orderByRaw('composite_score = 0, composite_score '.
+                    ($this->orderAsc ? 'ASC' : 'DESC'));
+            }, function ($query) {
+                return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+            });
         // dd($ledgerRecords);
 
         //      重複データを持たないように台帳定義とフォルダ情報は別に取得する
@@ -331,21 +394,44 @@ class RecordsTable extends Component
         $currentFolder = Folder::find($this->currentFolderId);
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
 
-
         // Filter column_define for each ledgerDefine based on displayLevel
         $filteredColumnDefines = $ledgerDefineRecords->map(function ($ledgerDefine) {
             return collect($ledgerDefine->column_define)
                 ->filter(function ($column) {
                     $columnDisplayLevel = $column->display_level ?? 3;
+
                     return $columnDisplayLevel <= $this->displayLevel;
                 })
                 ->sortBy('order');
         });
 
+        // 台帳定義ごとのスコア統計を計算
+        $scoreStatsByDefineId = $ledgerRecords->groupBy('ledger_define_id')->map(function ($records) {
+            $scores = $records->pluck('composite_score')->filter(fn ($score) => $score > 0);
+
+            return [
+                'count' => $records->count(),
+                'avg_score' => $scores->count() > 0 ? round($scores->avg(), 1) : 0,
+                'max_score' => $scores->count() > 0 ? round($scores->max(), 1) : 0,
+                'min_score' => $scores->count() > 0 ? round($scores->min(), 1) : 0,
+                'has_scores' => $scores->count() > 0,
+            ];
+        });
+
+        // 台帳定義をグループ化し、検索時はスコア順にソート
+        $ledgerRecordsGroupByDefineIds = $ledgerRecords->groupBy('ledger_define_id');
+
+        // 検索時は平均スコアの降順で台帳定義をソート
+        if (! empty($this->search)) {
+            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortByDesc(function ($records, $defineId) use ($scoreStatsByDefineId) {
+                return $scoreStatsByDefineId[$defineId]['avg_score'] ?? 0;
+            });
+        }
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
-            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->groupBy('ledger_define_id'),
+            'ledgerRecordsGroupByDefineIds' => $ledgerRecordsGroupByDefineIds,
             'allAttachments' => $allAttachments, // ★ ビューに渡す
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'totalRecords' => $this->totalRecords,
@@ -353,6 +439,7 @@ class RecordsTable extends Component
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
             'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
+            'scoreStatsByDefineId' => $scoreStatsByDefineId, // スコア統計
             'currentTenantId' => $this->currentTenantId,
         ]);
     }
@@ -367,7 +454,7 @@ class RecordsTable extends Component
     /**
      * 選択する台帳を1つにする
      *
-     * @param int $defineId
+     * @param  int  $defineId
      * @return void
      */
     #[On('focusLedgerDefine')]
@@ -380,7 +467,7 @@ class RecordsTable extends Component
     /**
      * 現在のフォルダーを変更する
      *
-     * @param int $newFolderId
+     * @param  int  $newFolderId
      * @return void
      */
     public function changeCurrentFolder($newFolderId)
@@ -389,7 +476,7 @@ class RecordsTable extends Component
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
         } else {
-            if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
+            if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
                 $this->selectedFolderIds = [];
             } else {
                 $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
@@ -423,7 +510,7 @@ class RecordsTable extends Component
     /**
      * 台帳を開閉する（コメントアウト済みのコード）
      *
-     * @param int $targetLedgerDefineId
+     * @param  int  $targetLedgerDefineId
      */
     /*
     public function toggleLedgerDefineOpen($targetLedgerDefineId)
@@ -446,12 +533,12 @@ class RecordsTable extends Component
         // currentFolderId が未設定、または別テナントのID/存在しないIDの可能性があるためガードする
         $currentFolder = null;
 
-        if (!empty($this->currentFolderId)) {
+        if (! empty($this->currentFolderId)) {
             $currentFolder = Folder::find($this->currentFolderId);
         }
 
         // 指定IDで見つからない場合はテナントのルートフォルダを試す
-        if (!$currentFolder) {
+        if (! $currentFolder) {
             $currentFolder = Folder::root()->first();
 
             if ($currentFolder) {
@@ -460,10 +547,11 @@ class RecordsTable extends Component
         }
 
         // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
-        if (!$currentFolder) {
+        if (! $currentFolder) {
             $this->breadcrumbs = [];
             $this->folderRecords = collect();
             $this->ledgerDefineRecords = collect();
+
             return;
         }
 
@@ -477,7 +565,7 @@ class RecordsTable extends Component
     /**
      * フォルダの選択状態をトグルする
      *
-     * @param int $folderId
+     * @param  int  $folderId
      * @return void
      */
     public function toggleFolderId($folderId)
@@ -505,7 +593,7 @@ class RecordsTable extends Component
     /**
      * 台帳の選択状態をトグルする
      *
-     * @param int $ledgerDefineId
+     * @param  int  $ledgerDefineId
      * @return void
      */
     public function toggleLedgerDefineId($ledgerDefineId)
@@ -545,7 +633,7 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.access_and_permissions.title');
+        $this->modalTitle = $title.' '.__('ledger.access_and_permissions.title');
         $this->showPermissionModal = true;
     }
 
@@ -553,7 +641,7 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.activity.title');
+        $this->modalTitle = $title.' '.__('ledger.activity.title');
         $this->showActivityModal = true;
     }
 
@@ -561,8 +649,9 @@ class RecordsTable extends Component
     {
         $attachedFile = AttachedFile::find($attachedFileId);
 
-        if (!$attachedFile) {
+        if (! $attachedFile) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.file_not_found'));
+
             return;
         }
 

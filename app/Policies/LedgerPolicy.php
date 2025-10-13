@@ -14,6 +14,7 @@ class LedgerPolicy
     use HandlesAuthorization;
 
     protected $userService;
+
     private LedgerDefinePolicy $ledgerDefinePolicy;
 
     public function __construct(UserService $userService, LedgerDefinePolicy $ledgerDefinePolicy)
@@ -41,7 +42,6 @@ class LedgerPolicy
     {
         return $this->ledgerDefinePolicy->ledgerUpdate($user, $ledger->define);
     }
-
 
     public function delete(User $user, Ledger $ledger): bool
     {

@@ -3,8 +3,8 @@
 namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
-use App\Models\AttachedFile;
 use App\Helpers\AttachedFilePathHelper;
+use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
-use Stancl\Tenancy\Facades\Tenancy;
 use Throwable;
 
 class GenerateThumbnail implements ShouldQueue
@@ -43,8 +42,9 @@ class GenerateThumbnail implements ShouldQueue
             return AttachedFile::find($this->attachedFileId);
         });
 
-        if (!$attachedFile) {
+        if (! $attachedFile) {
             Log::warning("[GenerateThumbnail] AttachedFile not found for ID: {$this->attachedFileId}. Aborting job.");
+
             return;
         }
 
@@ -63,21 +63,24 @@ class GenerateThumbnail implements ShouldQueue
         if (Storage::disk('public')->exists($thumbnailPath)) {
             Log::info("[GenerateThumbnail] Thumbnail already exists for AttachedFile ID: {$this->attachedFileId}. Skipping generation.");
             $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+
             return;
         }
 
         // 画像ファイル以外はスキップ
-        if (!Str::startsWith($attachedFile->mime, 'image/')) {
+        if (! Str::startsWith($attachedFile->mime, 'image/')) {
             Log::info("[GenerateThumbnail] File is not an image (MIME: {$attachedFile->mime}). Skipping thumbnail generation for ID: {$this->attachedFileId}.");
             $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+
             return;
         }
 
         try {
             // ▼▼▼ ファイルパスではなく、ファイルコンテンツを Storage から取得 ▼▼▼
-            if (!Storage::disk('public')->exists($attachedFile->path)) {
+            if (! Storage::disk('public')->exists($attachedFile->path)) {
                 Log::error("[GenerateThumbnail] Source file not found at path: {$sourcePathForLog}");
                 $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED->value]);
+
                 return;
             }
             $sourceContent = Storage::disk('public')->get($attachedFile->path);

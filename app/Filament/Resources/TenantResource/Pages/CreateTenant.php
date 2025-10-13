@@ -20,7 +20,7 @@ class CreateTenant extends CreateRecord
     {
         $tenantId = $data['id'];
         $adminEmail = $data['admin_email'];
-        $domain = $tenantId . '.localhost'; // or your domain logic
+        $domain = $tenantId.'.localhost'; // or your domain logic
 
         // Domain existence check
         if (Domain::where('domain', $domain)->exists()) {
@@ -35,7 +35,7 @@ class CreateTenant extends CreateRecord
         $tenant = null;
 
         try {
-            DB::transaction(function () use ($data, $tenantId, $domain, $adminEmail, &$tenant) {
+            DB::transaction(function () use ($data, $domain, $adminEmail, &$tenant) {
                 // Filamentがフォームデータを自動的にモデルの属性にマッピングしてくれる
                 $tenant = static::getModel()::create($data);
 
@@ -53,7 +53,7 @@ class CreateTenant extends CreateRecord
                 Artisan::call('tenants:seed', [
                     '--tenants' => [$tenant->id],
                     '--class' => 'DatabaseSeeder',
-                    '--force' => true
+                    '--force' => true,
                 ]);
                 activity()->enableLogging();
 
@@ -61,7 +61,7 @@ class CreateTenant extends CreateRecord
                     return User::where('email', $adminEmail)->first();
                 });
 
-                if (!$user) {
+                if (! $user) {
                     throw new Exception("Admin user with email '{$adminEmail}' not found.");
                 }
 
@@ -94,7 +94,6 @@ class CreateTenant extends CreateRecord
                     // エラーハンドリング: ルートフォルダが見つからない場合
                     throw new Exception("Root folder ('/') not found after seeding.");
                 }
-
 
                 $user->assignRole('Super Admin');
             });

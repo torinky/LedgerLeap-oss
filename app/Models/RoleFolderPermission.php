@@ -3,14 +3,9 @@
 namespace App\Models;
 
 use App\Enums\FolderPermissionType;
-use App\Repositories\WritableFolderRepository;
-use App\Services\TenantAccessService;
-use App\Services\UserService;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
-use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -49,7 +44,7 @@ class RoleFolderPermission extends Pivot
     // Optionally disable logging of empty attributes.
     public function attributeValuesToBeLogged(): array
     {
-//        $attributes = parent::attributeValues();
+        //        $attributes = parent::attributeValues();
         $attributes = $this->getAttributes();
 
         return array_filter($attributes, function ($value, $key) {
@@ -85,7 +80,7 @@ class RoleFolderPermission extends Pivot
             ->useLogName('roleFolderPermission')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**

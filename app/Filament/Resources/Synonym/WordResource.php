@@ -52,9 +52,9 @@ class WordResource extends Resource
             ])
             ->filters([
                 Filter::make('jpn')
-                    ->query(fn(Builder $query): Builder => $query->where('lang', 'jpn')),
+                    ->query(fn (Builder $query): Builder => $query->where('lang', 'jpn')),
                 Filter::make('eng')
-                    ->query(fn(Builder $query): Builder => $query->where('lang', 'eng')),
+                    ->query(fn (Builder $query): Builder => $query->where('lang', 'eng')),
             ])
 
             ->actions([

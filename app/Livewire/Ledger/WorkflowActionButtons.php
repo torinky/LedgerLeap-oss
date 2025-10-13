@@ -2,17 +2,17 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Services\WorkflowService;
 use App\Traits\WorkflowActions;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class WorkflowActionButtons extends Component
 {
-    use AuthorizesRequests, Toast, WorkflowActions, InitializesTenantContext;
+    use AuthorizesRequests, InitializesTenantContext, Toast, WorkflowActions;
 
     public Ledger $ledgerRecord;
 

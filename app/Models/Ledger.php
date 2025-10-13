@@ -37,6 +37,7 @@ class Ledger extends Model
 
     protected $fillable = [
         'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version',
+        'activity_score', 'composite_score',
     ];
 
     /**
@@ -60,20 +61,40 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
+        \Log::info('[MCP Search Debug] scopeSearch called with freeWord: '.$freeWord);
+
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
+            \Log::info('[MCP Search Debug] scopeSearch: freeWord is empty after trim, returning original query');
+
             return $query;
         }
-        //        dd($freeWord);
-        //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        $query->where(function (EloquentBuilder $q) use ($freeWord) {
-            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
-                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
+
+        $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
+        \Log::info('[MCP Search Debug] scopeSearch: extracted keywords: '.json_encode($keywords, JSON_UNESCAPED_UNICODE));
+
+        if (empty($keywords)) {
+            \Log::info('[MCP Search Debug] scopeSearch: no keywords found, returning original query');
+
+            return $query;
+        }
+
+        // 単一キーワードの場合は `+` を、複数キーワードの場合は `+"..."` を使用
+        if (count($keywords) > 1) {
+            $searchString = '+"'.implode(' ', $keywords).'"';
+        } else {
+            $searchString = '+'.$keywords[0];
+        }
+        \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: '.$searchString);
+
+        // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
+        $query->where(function (EloquentBuilder $q) use ($searchString) {
+            \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
+            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
+                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
         });
 
-        //        dd($query->toSql(), $query->getBindings());
-
+        \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
     }
 
     /**
@@ -113,12 +134,169 @@ class Ledger extends Model
             // Mroongaの列番号は1始まり
             $mroongaColumnCount = $column + 1;
             //            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-            $query->where(function (Builder $q) use ($mroongaColumnCount, $filterStr) {
+            $query->where(function ($q) use ($mroongaColumnCount, $filterStr) {
                 $q->whereRaw("match(`content`) against ('*W".$mroongaColumnCount.' +"'.$filterStr."\"' IN BOOLEAN MODE)")
                     ->orWhereRaw("match(`content_attached`) against ('*W".$mroongaColumnCount.' +'.$filterStr."' IN BOOLEAN MODE)");
             });
         }
 
+    }
+
+    public function scopeCreatedBetween(EloquentBuilder $query, $value)
+    {
+        // $value が配列の場合と文字列の場合の両方に対応
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            // $value は 'YYYY-MM-DD,YYYY-MM-DD' の形式を想定
+            $dates = explode(',', $value);
+        }
+
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        return $query;
+    }
+
+    /**
+     * 更新日時範囲での絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeUpdatedBetween(EloquentBuilder $query, $value)
+    {
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            $dates = explode(',', $value);
+        }
+
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('updated_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('updated_at', '<=', $endDate);
+        }
+
+        return $query;
+    }
+
+    /**
+     * フォルダIDでの階層的絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeFolderHierarchy(EloquentBuilder $query, $folderId)
+    {
+        if (! empty($folderId)) {
+            $folderIds = Folder::descendantsAndSelf($folderId)->pluck('id');
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($folderIds) {
+                $q->whereIn('id', $folderIds);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * タグでの絞り込みスコープ (AND条件)
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeWithTags(EloquentBuilder $query, $tags)
+    {
+        if (! empty($tags)) {
+            $tagNames = is_string($tags) ? array_filter(explode(',', $tags)) : $tags;
+            if (! empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * 除外タグでの絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeWithoutTags(EloquentBuilder $query, $excludeTags)
+    {
+        if (! empty($excludeTags)) {
+            $excludeTagNames = is_string($excludeTags) ? array_filter(explode(',', $excludeTags)) : $excludeTags;
+            if (! empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+
+        return $query;
+    }
+
+    public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
+    {
+        // キーワード検索
+        if (! empty($params['q'])) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$params['q']])
+                    ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$params['q']]);
+            });
+        }
+
+        // 除外キーワード検索 (全文検索のNOT演算子を利用)
+        if (! empty($params['exclude_q'])) {
+            $excludeKeywords = '-'.implode(' -', explode(' ', $params['exclude_q']));
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
+                    ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+            });
+        }
+
+        // 台帳定義IDでの絞り込み
+        if (! empty($params['ledger_define_id'])) {
+            $query->where('ledger_define_id', $params['ledger_define_id']);
+        }
+
+        // フォルダIDでの絞り込み (再帰的)
+        if (! empty($params['folder_id'])) {
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
+                $q->whereIn('id', $folderIds);
+            });
+        }
+
+        // タグでの絞り込み (AND条件)
+        if (! empty($params['tags'])) {
+            $tagNames = array_filter(explode(',', $params['tags']));
+            if (! empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+
+        // 除外タグでの絞り込み
+        if (! empty($params['exclude_tags'])) {
+            $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
+            if (! empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+
+        return $query;
     }
 
     /**
@@ -191,7 +369,7 @@ class Ledger extends Model
             ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName))
             ->logFillable()
             // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-            ->dontLogIfAttributesChangedOnly(['latest_diff_id']); // 特定の属性のみが変更された場合はログを記録しない
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id', 'activity_score', 'composite_score']); // 特定の属性のみが変更された場合はログを記録しない
     }
 
     /**

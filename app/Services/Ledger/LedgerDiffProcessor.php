@@ -15,7 +15,7 @@ class LedgerDiffProcessor
         $latestDiffId = $ledgerRecord->latest_diff_id;
         $currentRawContent = $ledgerRecord->getRawOriginal('content');
 
-        if (!$latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
+        if (! $latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
             return null;
         }
 
@@ -35,9 +35,9 @@ class LedgerDiffProcessor
     {
         $currentContent = $ledgerRecord->content ?? [];
         $currentColumnDefines = collect($ledgerRecord->define->column_define ?? [])->keyBy('id');
-//        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
+        //        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
-        if (!$comparisonTargetDiff) {
+        if (! $comparisonTargetDiff) {
             // 比較対象がない場合は、現在の内容のみを整形して返す
             $contentChanges = $currentColumnDefines->map(function ($colDef) use ($currentContent, $ledgerRecord) {
                 $normalizedContent = $ledgerRecord->define->normalizeByColumnDefine($currentContent);
@@ -102,9 +102,9 @@ class LedgerDiffProcessor
             if (empty($currentValue)) {
                 $status = 'empty';
             }
-            if (!$oldColDef) {
+            if (! $oldColDef) {
                 $status = 'added';
-            } elseif (!$currentColDef) {
+            } elseif (! $currentColDef) {
                 $status = 'deleted';
             } elseif (json_encode($currentValue) !== json_encode($oldValue)) {
                 $status = 'modified';

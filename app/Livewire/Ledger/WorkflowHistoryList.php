@@ -9,6 +9,7 @@ use Livewire\Component;
 class WorkflowHistoryList extends Component
 {
     public Ledger $ledgerRecord;
+
     public Collection $workflowHistory;
 
     public function mount(): void

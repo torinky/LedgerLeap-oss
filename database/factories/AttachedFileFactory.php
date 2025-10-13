@@ -27,9 +27,9 @@ class AttachedFileFactory extends Factory
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
         $user = User::factory()->create();
 
-        $filename = $this->faker->word() . '.pdf';
-        $hashedbasename = Str::random(40) . '.pdf';
-        $path = 'public/Ledger/Attachments/' . $ledgerDefine->id . '/' . $hashedbasename;
+        $filename = $this->faker->word().'.pdf';
+        $hashedbasename = Str::random(40).'.pdf';
+        $path = 'public/Ledger/Attachments/'.$ledgerDefine->id.'/'.$hashedbasename;
 
         return [
             'filename' => $filename,
@@ -53,9 +53,9 @@ class AttachedFileFactory extends Factory
     public function image(): Factory
     {
         return $this->state(function (array $attributes) {
-            $filename = $this->faker->word() . '.jpg';
-            $hashedbasename = Str::random(40) . '.jpg';
-            $path = 'public/Ledger/Attachments/' . $attributes['ledger_define_id'] . '/' . $hashedbasename;
+            $filename = $this->faker->word().'.jpg';
+            $hashedbasename = Str::random(40).'.jpg';
+            $path = 'public/Ledger/Attachments/'.$attributes['ledger_define_id'].'/'.$hashedbasename;
 
             return [
                 'filename' => $filename,
@@ -69,9 +69,9 @@ class AttachedFileFactory extends Factory
     public function withOriginalFile(): Factory
     {
         return $this->state(function (array $attributes) {
-            $originalFilename = $this->faker->word() . '.png';
+            $originalFilename = $this->faker->word().'.png';
             $originalMimeType = 'image/png';
-            $originalPath = 'public/Ledger/Attachments/' . $attributes['ledger_define_id'] . '/Originals/' . Str::random(40) . '.png';
+            $originalPath = 'public/Ledger/Attachments/'.$attributes['ledger_define_id'].'/Originals/'.Str::random(40).'.png';
 
             return [
                 'original_file_path' => $originalPath,

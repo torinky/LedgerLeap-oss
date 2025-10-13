@@ -5,7 +5,6 @@ namespace App\Policies;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Auth\Access\Response;
 
 class OrganizationPolicy
 {
@@ -51,7 +50,7 @@ class OrganizationPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Organization $organization = null): bool
+    public function delete(User $user, ?Organization $organization = null): bool
     {
         return $this->userService->hasPermission($user, ['delete_organizations', 'manage_organizations']);
     }

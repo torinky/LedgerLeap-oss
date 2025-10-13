@@ -40,7 +40,7 @@ class StoreRequest extends FormRequest
     public function content()
     {
         $content = $this->input('content');
-        //id順になっているのでorderで並び替える
+        // id順になっているのでorderで並び替える
         ksort($content);
 
         return collect($content);

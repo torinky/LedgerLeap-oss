@@ -2,17 +2,18 @@
 
 namespace App\Rules;
 
-use App\Models\Ledger;
+use App\Traits\MroongaSearchableColumn;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
-use App\Traits\MroongaSearchableColumn;
 
 class UniqueAutoNumber implements ValidationRule
 {
     use MroongaSearchableColumn;
 
     protected int $ledgerDefineId;
+
     protected object $columnDefine;
+
     protected ?int $ignoreLedgerId;
 
     public function __construct(int $ledgerDefineId, object $columnDefine, ?int $ignoreLedgerId = null)
@@ -49,16 +50,16 @@ class UniqueAutoNumber implements ValidationRule
         // 入力値から接頭辞と連番部分を抽出
         // 例: "DOC-001-A" から "DOC-" と "001" を抽出
         // 正規表現: ^(接頭辞)(\d+)(.*)$  (連番の後に続く版記号などの部分もキャプチャ)
-        $inputPattern = $delimiter . '^' . $escapedPrefix . '(\d+)(.*)$' . $delimiter;
+        $inputPattern = $delimiter.'^'.$escapedPrefix.'(\d+)(.*)$'.$delimiter;
 
-        if (!preg_match($inputPattern, $value, $inputMatches)) {
+        if (! preg_match($inputPattern, $value, $inputMatches)) {
             // 自動採番のパターンに一致しない場合は、このルールでは失敗としない。
             // 形式のバリデーションは別途行うべき。
             return;
         }
 
         $inputNumberPart = $inputMatches[1]; // 抽出された連番部分 (例: "001")
-        $inputSearchKey = $prefix . $inputNumberPart; // 比較用のキー (例: "DOC-001")
+        $inputSearchKey = $prefix.$inputNumberPart; // 比較用のキー (例: "DOC-001")
 
         // Mroongaの全文検索で候補を高速に絞り込む
         // トレイトのメソッドを呼び出す際に、必要な引数を渡す
@@ -78,7 +79,7 @@ class UniqueAutoNumber implements ValidationRule
                 // DBに保存されている値も同じパターンで解析
                 if (is_string($storedValue) && preg_match($inputPattern, $storedValue, $storedMatches)) {
                     $storedNumberPart = $storedMatches[1];
-                    $storedSearchKey = $prefix . $storedNumberPart;
+                    $storedSearchKey = $prefix.$storedNumberPart;
 
                     // 抽出した「接頭辞 + 連番」部分が一致するかを厳密に比較
                     if ($inputSearchKey === $storedSearchKey) {
@@ -87,6 +88,7 @@ class UniqueAutoNumber implements ValidationRule
                         } else {
                             $fail('validation.unique')->translate();
                         }
+
                         return;
                     }
                 }

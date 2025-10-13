@@ -20,6 +20,7 @@ class LedgerDefineSeeder extends Seeder
         if ($folderIds->isEmpty()) {
             // フォルダが存在しない場合は、警告を出すか、何もしない
             $this->command->warn('No folders found, skipping LedgerDefineSeeder.');
+
             return;
         }
 

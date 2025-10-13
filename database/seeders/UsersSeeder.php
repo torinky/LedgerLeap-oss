@@ -17,7 +17,7 @@ class UsersSeeder extends Seeder
     {
         //        User::factory(10)->create();
         User::updateOrCreate([
-            'email' => 'super_admin@ll.com'
+            'email' => 'super_admin@ll.com',
         ], [
             'name' => 'super_admin',
             'email_verified_at' => now(),
@@ -26,7 +26,7 @@ class UsersSeeder extends Seeder
         ]);
 
         User::updateOrCreate([
-            'email' => 'general_user@ll.com'
+            'email' => 'general_user@ll.com',
         ], [
             'name' => 'general_user',
             'email_verified_at' => now(),

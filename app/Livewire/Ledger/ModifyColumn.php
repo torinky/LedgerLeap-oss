@@ -3,28 +3,24 @@
 namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
-
 use App\Enums\WorkflowStatus;
+use App\Helpers\AttachedFilePathHelper;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
-use App\Helpers\AttachedFilePathHelper;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class ModifyColumn extends CreateColumn
 {
     use InitializesTenantContext;
 
     public array $deletedContent = [];
-
 
     // --- Workflow ---
     public bool $confirmingEdit = false; // 編集確認モーダルの表示状態
@@ -33,10 +29,12 @@ class ModifyColumn extends CreateColumn
     // ---------------
 
     public ?int $selectedInspectorId = null;
+
     public array $attachmentIdMap = []; // 添付ファイルのIDマップ
+
     public array $filePondInitialFiles = []; // FilePond初期化用
 
-//    public $tenantId='';
+    //    public $tenantId='';
 
     public function mount(int $ledgerId): void
     {
@@ -47,20 +45,21 @@ class ModifyColumn extends CreateColumn
             $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);
             $this->tenantId = $this->ledgerRecord->define->tenant_id;
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
-            if (!empty($this->ledgerRecord->define)) {
+            if (! empty($this->ledgerRecord->define)) {
                 $this->ledgerDefineRecord = $this->ledgerRecord->define;
                 $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
                     return $column->required;
                 })->count();
             }
-            if (!empty($this->ledgerRecord->content)) {
+            if (! empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
             }
-            if (!empty($this->ledgerRecord->content_attached)) {
+            if (! empty($this->ledgerRecord->content_attached)) {
                 $this->contentAttached = $this->ledgerRecord->content_attached;
             }
             $this->initColumns(); // カラム初期化 (必須マーク色など)
             $this->initRequireColumns();
+            $this->initializeDateDefaults(); // 日付カラムのデフォルト値初期化
             $this->updateProgress();
             //            $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
 
@@ -97,7 +96,6 @@ class ModifyColumn extends CreateColumn
         ]);
     }
 
-
     public function storeLedgerDiff(): void
     {
         $ledgerDiff = new LedgerDiff;
@@ -116,17 +114,13 @@ class ModifyColumn extends CreateColumn
 
     // Modify 用のファイルマージ処理をオーバーライド
 
-    /**
-     * @param mixed $column
-     * @return void
-     */
     public function updateColumnFiles(mixed $column): void
     {
         $columnId = $column->id;
 
         // 新規アップロードされたファイル (TemporaryUploadedFileオブジェクト)
         $newUploads = collect($this->content[$columnId] ?? [])
-            ->filter(fn($file) => $file instanceof TemporaryUploadedFile)
+            ->filter(fn ($file) => $file instanceof TemporaryUploadedFile)
             ->all();
 
         // 画面上で削除されずに残っている既存ファイル
@@ -156,7 +150,7 @@ class ModifyColumn extends CreateColumn
         $tmpContent = $this->content[$column->id] ?? [];
         $tmpContentAttached = $this->contentAttached[$column->id] ?? [];
 
-//        dd($column->id,$this->deletedContent ,$tmpContent);
+        //        dd($column->id,$this->deletedContent ,$tmpContent);
 
         // 削除指定されたファイルを既存リストから除去
         $deletedBaseFilenames = $this->deletedContent[$column->id] ?? [];
@@ -174,8 +168,8 @@ class ModifyColumn extends CreateColumn
         }
 
         // TemporaryUploadedFile オブジェクトをフィルタリング
-        $tmpContent = collect($tmpContent)->filter(fn($value) => !($value instanceof TemporaryUploadedFile))->all();
-        $tmpContentAttached = collect($tmpContentAttached)->filter(fn($value) => !($value instanceof TemporaryUploadedFile))->all();
+        $tmpContent = collect($tmpContent)->filter(fn ($value) => ! ($value instanceof TemporaryUploadedFile))->all();
+        $tmpContentAttached = collect($tmpContentAttached)->filter(fn ($value) => ! ($value instanceof TemporaryUploadedFile))->all();
 
         // 新規ファイルと残った既存ファイルをマージ
         $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
@@ -188,7 +182,7 @@ class ModifyColumn extends CreateColumn
     public function saveChanges(): void
     {
         // ワークフローが無効なら直接保存
-        if (!$this->ledgerDefineRecord?->workflow_enabled) {
+        if (! $this->ledgerDefineRecord?->workflow_enabled) {
             $this->saveDirectly(); // 親クラスの直接保存メソッド呼び出し
 
             return;
@@ -228,7 +222,7 @@ class ModifyColumn extends CreateColumn
      */
     public function saveChangesAndReturnToDraft(): void
     {
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -252,7 +246,7 @@ class ModifyColumn extends CreateColumn
             $this->editReason = null;
 
         } catch (\Exception $e) {
-            Log::error('Saving edited record failed: ' . $e->getMessage());
+            Log::error('Saving edited record failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -270,6 +264,7 @@ class ModifyColumn extends CreateColumn
                 $this->updateColumnFiles($column);
             }
         }
+
         return $attributes;
     }
 
@@ -287,7 +282,7 @@ class ModifyColumn extends CreateColumn
             return;
         }
 
-        $this->validate(array_filter($this->rules(), fn($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -304,7 +299,7 @@ class ModifyColumn extends CreateColumn
             $this->success(__('ledger.draft_saved'));
             $this->js("if (window.opener && !window.opener.closed) { window.opener.Livewire.dispatch('ledgerStored'); }");
         } catch (\Exception $e) {
-            Log::error('Draft save failed (modify): ' . $e->getMessage());
+            Log::error('Draft save failed (modify): '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -320,9 +315,9 @@ class ModifyColumn extends CreateColumn
         }
         parent::requestInspection();
         // 下書き保存と併せて申請する場合に対応
-//        $this->saveDraft();
+        //        $this->saveDraft();
         // モーダルを開く
-//        $this->openAssigneeModal('inspector');
+        //        $this->openAssigneeModal('inspector');
     }
 
     #[On('workflow-action-with-comment')]
@@ -338,6 +333,7 @@ class ModifyColumn extends CreateColumn
         if ($ledgerId !== $this->ledgerId) {
             Log::error("[ModifyColumn] Received 'workflow-action-with-comment' for a different ledger. Component Ledger ID: {$this->ledgerId}, Event Ledger ID: {$ledgerId}. Ignoring.");
             $this->error(__('messages.error.generic'));
+
             return; // 自分の担当する台帳でなければ無視
         }
 
@@ -354,22 +350,23 @@ class ModifyColumn extends CreateColumn
             if ($this->ledgerRecord?->status !== WorkflowStatus::DRAFT) {
                 Log::error("[ModifyColumn] Received 'request_inspection_with_comment' but status is not DRAFT. Ledger ID: {$this->ledgerId}. Ignoring.");
                 $this->error(__('messages.error.generic'));
+
                 return;
             }
 
-            Log::debug("[ModifyColumn] Handling 'request_inspection_with_comment'. Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
-//            dd("[ModifyColumn] Action: {$actionType}, Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
+            // Log::debug("[ModifyColumn] Handling 'request_inspection_with_comment'. Ledger ID: {$ledgerId}, Comment: ".($comment ?? 'N/A'));
+            //            dd("[ModifyColumn] Action: {$actionType}, Ledger ID: {$ledgerId}, Comment: " . ($comment ?? 'N/A'));
 
             // 親クラスのメソッドを呼び出すか、ModifyColumn 固有の処理を記述
             parent::handleRequestInspectionWithComment($actionType, $ledgerId, $comment);
+
             return; // 処理が終わったら抜ける
         }
 
         // 上記のどの条件にも当てはまらない場合は、この ModifyColumn インスタンスが処理すべきイベントではない
-        Log::debug("[ModifyColumn] Received 'workflow-action-with-comment' with unhandled actionType: {$actionType} for Ledger ID: {$ledgerId}. Ignoring.");
+        // Log::debug("[ModifyColumn] Received 'workflow-action-with-comment' with unhandled actionType: {$actionType} for Ledger ID: {$ledgerId}. Ignoring.");
         $this->error(__('messages.error.generic'));
     }
-
 
     // --- ワークフロー無効時の直接保存 (親クラスのメソッドを呼び出す) ---
     public function saveDirectly(): void
@@ -383,7 +380,6 @@ class ModifyColumn extends CreateColumn
         // バリデーション、ファイル処理は親クラスで行われる
         parent::saveDirectly();
     }
-
 
     public function prepareFilePondInitialFiles(): void
     {
@@ -399,7 +395,7 @@ class ModifyColumn extends CreateColumn
 
             // contentのキー（hashedBasename）を元に、attachmentIdMapからIDを取得し、
             // FilePondが要求する 'source' をキーとするオブジェクトの配列に変換する
-            if (!empty($this->content[$columnId]) && is_array($this->content[$columnId])) {
+            if (! empty($this->content[$columnId]) && is_array($this->content[$columnId])) {
                 $loopIndex = 0;
                 foreach ($this->content[$columnId] as $hashedBasename => $originalFilename) {
                     $attachmentId = $this->attachmentIdMap[$hashedBasename] ?? null;
@@ -436,7 +432,7 @@ class ModifyColumn extends CreateColumn
                     $posterUrl = '';
 
                     if ($fileExists) {
-//                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
+                        //                        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($hashedBasename);
                         $posterUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachmentId, 'thumbnail' => true]);
                     }
 
@@ -457,7 +453,7 @@ class ModifyColumn extends CreateColumn
                         ],
                     ];
                     $filesForColumn[] = $fileObject;
-//                    $loopIndex++;
+                    //                    $loopIndex++;
                 }
             }
 
@@ -468,8 +464,8 @@ class ModifyColumn extends CreateColumn
     /**
      * FilePond で既存ファイルが削除されたときにフロントエンドから呼び出される
      *
-     * @param int $columnId 削除されたファイルが属するカラムのID
-     * @param string $hashedBasename 削除されたファイルのハッシュ化されたベース名
+     * @param  int  $columnId  削除されたファイルが属するカラムのID
+     * @param  string  $hashedBasename  削除されたファイルのハッシュ化されたベース名
      */
     public function handleFileRemoval(int $columnId, string $hashedBasename): void
     {
@@ -488,4 +484,31 @@ class ModifyColumn extends CreateColumn
         $this->updateContentStatusLabel($column, true); // trueで強制更新
     }
 
+    /**
+     * 日付カラムのデフォルト値を初期化する (ModifyColumn オーバーライド)
+     *
+     * DateType::getDefaultDate() が上書きロジックを内包しているため、
+     * nullでない値が返ってきた場合は、それを content に設定する。
+     */
+    protected function initializeDateDefaults(): void
+    {
+        foreach ($this->ledgerDefineRecord->column_define as $column) {
+            if ($column->type !== 'YMD') {
+                continue;
+            }
+
+            $columnId = $column->id;
+            $existingValue = $this->content[$columnId] ?? null;
+            $inputType = $column->getInputType();
+
+            if (method_exists($inputType, 'getDefaultDate')) {
+                $defaultDate = $inputType->getDefaultDate($existingValue);
+
+                // getDefaultDate が値を返してきた場合、それは設定すべき値
+                if ($defaultDate !== null) {
+                    $this->content[$columnId] = $defaultDate;
+                }
+            }
+        }
+    }
 }

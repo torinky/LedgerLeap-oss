@@ -10,7 +10,9 @@ use App\Services\UserService;
 class RoleFolderPermissionObserver
 {
     protected WritableFolderRepository $writableFolderRepository;
+
     protected TenantAccessService $tenantAccessService;
+
     protected UserService $userService;
 
     public function __construct(WritableFolderRepository $writableFolderRepository, TenantAccessService $tenantAccessService, UserService $userService)

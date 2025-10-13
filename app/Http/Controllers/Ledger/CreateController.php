@@ -17,7 +17,7 @@ class CreateController extends Controller
     /**
      * 新規台帳を作成するための処理を実行します。
      *
-     * @param CreateRequest $request リクエストオブジェクトで必要なパラメータが含まれています。
+     * @param  CreateRequest  $request  リクエストオブジェクトで必要なパラメータが含まれています。
      * @return \Illuminate\Contracts\View\View|Factory 新規台帳を作成するためのビューを返します。
      *
      * @throws AuthorizationException 台帳を作成する権限がない場合にスローされます。
@@ -27,14 +27,14 @@ class CreateController extends Controller
     public function create(CreateRequest $request)
     {
         // 台帳を作成する権限があるか確認
-        if (!auth()->user()->can('create_ledgers')) {
+        if (! auth()->user()->can('create_ledgers')) {
             abort(403, __('ledger.not_allow_create'));
         }
 
         // リクエストパラメータから台帳定義を特定
         $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
 
-//        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
+        //        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
         if (auth()->user()->cannot('create', [Ledger::class, $ledgerDefine])) {
             abort(403, __('ledger.not_allow_create'));
         }

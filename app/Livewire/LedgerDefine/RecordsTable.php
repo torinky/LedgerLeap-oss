@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\IndexRequest;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Illuminate\Contracts\Foundation\Application;
@@ -10,7 +11,6 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class RecordsTable extends Component
 {
@@ -30,7 +30,7 @@ class RecordsTable extends Component
 
     public $currentFolderId;
 
-//    public $tenantId; // ここを追加
+    //    public $tenantId; // ここを追加
 
     private $ledgerDefineRecords;
 
@@ -85,10 +85,11 @@ class RecordsTable extends Component
             $this->breadcrumbs = [];
             $this->folderRecords = collect();
             $this->ledgerDefineRecords = collect();
+
             return;
         }
 
-        if (!empty($currentFolder)) {
+        if (! empty($currentFolder)) {
             $this->breadcrumbs = $currentFolder->parent()->get();
         }
         $this->breadcrumbs[] = $currentFolder;
@@ -105,6 +106,7 @@ class RecordsTable extends Component
         Folder::fixtree();
         $this->prepareFolderAsset();
     }
+
     #[On('folderSavedAndRefreshList')]
     public function refreshList(): void
     {

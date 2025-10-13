@@ -5,7 +5,9 @@ namespace App\Models\ColumnTypes;
 class AutoNumberType implements InputType
 {
     public ?string $prefix;
+
     public ?int $digits;
+
     public ?string $revision;
 
     public function __construct(array $options = [])
@@ -48,7 +50,7 @@ class AutoNumberType implements InputType
     public function getValidationRules(): array
     {
         $prefixLength = strlen($this->prefix ?? '');
-        $digitsLength = (int)($this->digits ?? 0);
+        $digitsLength = (int) ($this->digits ?? 0);
         $minAutoNumberLength = $prefixLength + $digitsLength;
 
         return ['string', 'min:'.$minAutoNumberLength];

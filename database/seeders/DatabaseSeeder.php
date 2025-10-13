@@ -8,15 +8,32 @@ use App\Models\LedgerDefine;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Stancl\Tenancy\Facades\Tenancy;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application\'s database.
+     * Seed the application's database.
      */
     public function run(int $seedCount = 50): void // 引数を追加
     {
+        // 環境変数でデモデータモードかどうかを判定
+        $isDemoMode = env('SEEDER_MODE') === 'demo';
+
+        if ($isDemoMode) {
+            $this->command->info('🎯 Demo Mode: Running Demo Complete Seeder...');
+
+            // 権限システムを先に初期化
+            $this->call(RolesAndPermissionsSeeder::class);
+
+            // その後デモデータを作成
+            $this->call(DemoCompleteSeeder::class);
+
+            return;
+        }
+
+        // 通常モード: 既存のSeeder処理
+        $this->command->info('🔧 Standard Mode: Running standard seeders...');
+
         // 中央DBの初期データを投入
         $this->call([
             UsersSeeder::class,
@@ -30,6 +47,7 @@ class DatabaseSeeder extends Seeder
         if (tenancy()->tenant) {
             $this->call([
                 FolderSeeder::class,
+                ScoringConfigSeeder::class,
             ]);
 
             // ファクトリで作成されるユーザーもテナントに紐づく
@@ -52,7 +70,7 @@ class DatabaseSeeder extends Seeder
             }
 
             Ledger::factory($seedCount)->recycle($users)->recycle($ledgerDefines)->create(); // $seedCount を渡す
-            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->create();
+            $tags = Tag::factory(100)->recycle($users)->recycle($ledgerDefines)->recycle($folders)->create();
         }
     }
 }

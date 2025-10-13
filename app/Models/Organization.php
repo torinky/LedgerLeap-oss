@@ -2,22 +2,22 @@
 
 namespace App\Models;
 
-//use CubeAgency\FilamentTreeView\Traits\HasTreeView;
+// use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
-use Studio15\FilamentTree\Concerns\InteractsWithTree;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
+use Studio15\FilamentTree\Concerns\InteractsWithTree;
 
 class Organization extends Model
 {
-//    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
-    use HasFactory, HasRoles, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree;
+    //    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
+    use HasFactory, HasRoles, InteractsWithTree, LogsActivity, NodeTrait, SoftDeletes;
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
@@ -25,6 +25,7 @@ class Organization extends Model
     {
         return 'name';  // 例：タイトル列が `name` の場合
     }
+
     /**
      * ログに記録する項目
      */
@@ -33,7 +34,7 @@ class Organization extends Model
         return LogOptions::defaults()
             ->logFillable()
             ->useLogName('organization')
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**
@@ -183,8 +184,6 @@ class Organization extends Model
      *
      * 'ancestors' リレーションが Eager Loading されている場合はそれを効率的に利用し、
      * N+1問題を回避してフルパスを生成します。
-     *
-     * @return string
      */
     public function getFullNameAttribute(): string
     {

@@ -20,6 +20,7 @@ class UserRelationManager extends RelationManager
     {
         return __('ledger.user');
     }
+
     public static function getModelLabel(): string
     {
         return __('ledger.user');
@@ -80,7 +81,7 @@ class UserRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\AttachAction::make()
                     ->preloadRecordSelect() // 検索パフォーマンス向上のため追加
-                    ->form(fn(Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (Tables\Actions\AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple()
                             ->searchable(),

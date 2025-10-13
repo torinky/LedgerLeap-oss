@@ -1,4 +1,5 @@
 <?php
+
 return [
     'error' => [
         'generic' => '予期せぬエラーが発生しました。',
@@ -13,4 +14,5 @@ return [
         'login_again_for_tenant' => 'ページの表示にはログインが必要です。お手数ですが、再度ログインしてください。',
     ],
     'tenant_not_identified_redirect' => 'アクセスしようとしたページのテナントが指定されていなかったため、マイポータルに移動しました。',
+    'found_ledgers' => '台帳が:count件見つかりました。',
 ];

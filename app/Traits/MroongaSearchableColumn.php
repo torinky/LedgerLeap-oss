@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use App\Models\Ledger;
-use Closure;
 use Illuminate\Database\Eloquent\Collection;
 
 trait MroongaSearchableColumn
@@ -11,11 +10,10 @@ trait MroongaSearchableColumn
     /**
      * Mroongaを使用して、重複の可能性があるLedgerレコードの候補を取得します。
      *
-     * @param mixed $value 検索する値
-     * @param int $columnId 対象のカラムID (content JSON内のキー)
-     * @param int $ledgerDefineId 台帳定義ID
-     * @param int|null $ignoreLedgerId 検証時に無視する台帳ID
-     * @return Collection
+     * @param  mixed  $value  検索する値
+     * @param  int  $columnId  対象のカラムID (content JSON内のキー)
+     * @param  int  $ledgerDefineId  台帳定義ID
+     * @param  int|null  $ignoreLedgerId  検証時に無視する台帳ID
      */
     private function getPotentialMatches(mixed $value, int $columnId, int $ledgerDefineId, ?int $ignoreLedgerId = null): Collection
     {

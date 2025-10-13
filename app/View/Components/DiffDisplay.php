@@ -27,8 +27,8 @@ class DiffDisplay extends Component
     /**
      * Create a new component instance.
      *
-     * @param mixed $old
-     * @param mixed $new
+     * @param  mixed  $old
+     * @param  mixed  $new
      * @return void
      */
     public function __construct(string $attribute, $old, $new, string $mode = 'table', bool $showLabel = true)
@@ -50,9 +50,9 @@ class DiffDisplay extends Component
 
         foreach ($lines as $line) {
             if (str_starts_with($line, '+')) {
-                $newLines[] = '<span class="text-success">' . e(substr($line, 1)) . '</span>';
+                $newLines[] = '<span class="text-success">'.e(substr($line, 1)).'</span>';
             } elseif (str_starts_with($line, '-')) {
-                $oldLines[] = '<span class="text-error">' . e(substr($line, 1)) . '</span>';
+                $oldLines[] = '<span class="text-error">'.e(substr($line, 1)).'</span>';
             } elseif (str_starts_with($line, '@@')) {
                 // Skip context lines
                 continue;
@@ -73,13 +73,13 @@ class DiffDisplay extends Component
         if (is_string($this->old)) {
             $challenged = json_decode($this->old, true);
 
-            if (!empty($challenged) && !empty($this->old)) {
+            if (! empty($challenged) && ! empty($this->old)) {
                 $this->old = $challenged;
             }
         }
         if (is_string($this->new)) {
             $challenged = json_decode($this->new, true);
-            if (!empty($challenged) && !empty($this->new)) {
+            if (! empty($challenged) && ! empty($this->new)) {
                 $this->new = $challenged;
             }
         }

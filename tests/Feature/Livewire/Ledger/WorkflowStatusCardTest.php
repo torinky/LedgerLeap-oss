@@ -17,9 +17,13 @@ class WorkflowStatusCardTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
+
     protected Ledger $ledger;
+
     protected WorkflowService $workflowServiceMock;
+
     protected \App\Models\Folder $folder;
 
     protected function setUp(): void

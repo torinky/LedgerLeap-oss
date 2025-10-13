@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,12 +7,32 @@
 
     <title>{{ $attributes->get('title') ?? 'page'}} | {{ config('app.name', 'Laravel')}}</title>
 
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC.
+        // This script reads the theme from localStorage and applies it.
+        // It also respects the OS preference for dark mode on the first visit.
+        (function() {
+            const theme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (theme) {
+                // If a theme is stored in localStorage, use it.
+                document.documentElement.setAttribute('data-theme', theme);
+            } else if (prefersDark) {
+                // If no theme is stored and OS is dark mode, use 'coffee'.
+                document.documentElement.setAttribute('data-theme', 'coffee');
+            } else {
+                // Otherwise (no theme stored, OS is light mode), use 'nord'.
+                document.documentElement.setAttribute('data-theme', 'nord');
+            }
+        })();
+    </script>
+
     <!-- Fonts -->
     {{--    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">--}}
 
     <!-- Styles  Scripts -->
-    @livewireStyles
-    @vite(['resources/sass/app.scss','resources/js/app.js'])
+    @vite(['resources/sass/app.scss'])
     @stack('stylesheets')
 
 </head>
@@ -50,7 +70,6 @@
     </div>
     @vite(['resources/js/app.js'])
     @stack('scripts')
-    @livewireScripts
 <script>
     // 別タブからの更新指令を監視し、一覧リストを更新する
     window.addEventListener('storage', function (e) {

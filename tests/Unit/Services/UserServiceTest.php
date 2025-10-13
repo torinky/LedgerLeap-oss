@@ -19,6 +19,7 @@ use Tests\TestCase;
 class UserServiceTest extends TestCase
 {
     protected bool $tenancy = true;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -30,7 +31,7 @@ class UserServiceTest extends TestCase
         app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();

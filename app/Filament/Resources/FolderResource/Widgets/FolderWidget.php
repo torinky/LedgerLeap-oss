@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\FolderResource\Widgets;
 
-use Filament\Widgets\Widget as BaseWidget;
 use App\Models\Folder;
-use Illuminate\Database\Eloquent\Model;
-use Filament\Tables\Actions\ViewAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Widgets\Widget as BaseWidget;
+use Illuminate\Database\Eloquent\Model;
 
 class FolderWidget extends BaseWidget
 {

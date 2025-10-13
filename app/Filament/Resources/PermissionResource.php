@@ -49,9 +49,9 @@ class PermissionResource extends BasePermissionResource
                         ...$parentForm->getComponents(), // 親のスキーマを取得
 
                         TextInput::make('description') // descriptionフィールドを追加
-                        ->label('Description') // ラベルを設定
-                        ->nullable() // nullableにする場合
-                        ->placeholder('Enter a description...'), // プレースホルダーを設定
+                            ->label('Description') // ラベルを設定
+                            ->nullable() // nullableにする場合
+                            ->placeholder('Enter a description...'), // プレースホルダーを設定
                     ]),
             ]);
     }
@@ -69,7 +69,7 @@ class PermissionResource extends BasePermissionResource
                 TextColumn::make('name')
                     ->label(__('permission.title'))
                     ->formatStateUsing(function ($record) {
-                        return __('permission.name.' . $record->name);
+                        return __('permission.name.'.$record->name);
                     })
                     ->searchable(),
 

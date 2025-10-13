@@ -22,9 +22,9 @@ class AutoLinkFactory extends Factory
     public function definition()
     {
         return [
-            'label' => $this->faker->unique()->word . ' AutoLink',
+            'label' => $this->faker->unique()->word.' AutoLink',
             'pattern' => $this->faker->regexify('[A-Z]{3}-\\d{3}'),
-            'url_template' => '/l/' . $this->faker->word,
+            'url_template' => '/l/'.$this->faker->word,
             'is_enabled' => $this->faker->boolean,
         ];
     }

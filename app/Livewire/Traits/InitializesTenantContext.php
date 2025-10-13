@@ -2,14 +2,15 @@
 
 namespace App\Livewire\Traits;
 
-use Stancl\Tenancy\Tenancy;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Request; // Request ファサードを追加
+use Illuminate\Support\Facades\Request;
+use Stancl\Tenancy\Tenancy; // Request ファサードを追加
 
 trait InitializesTenantContext
 {
     public $tenantId;
+
     public function initializeTenantContext(Tenancy $tenancy): void
     {
         // 1. tenantIdがまだセットされていない場合（主に初回リクエスト時）、ルートから取得を試みる
@@ -24,7 +25,7 @@ trait InitializesTenantContext
         }
 
         // 2. tenantIdが取得できていて、かつテナンシーが初期化されていない場合に初期化する
-        if ($this->tenantId && !$tenancy->initialized) {
+        if ($this->tenantId && ! $tenancy->initialized) {
             $tenant = Tenant::find($this->tenantId); // find() を使う方が簡潔
             if ($tenant) {
                 $tenancy->initialize($tenant);

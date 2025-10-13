@@ -11,7 +11,7 @@ class FolderFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => $this->faker->realText(10),
+            'title' => $this->faker->word(), // realText(10) から word() に変更
             'modifier_id' => User::factory(),
             'creator_id' => User::factory(),
         ];
@@ -20,8 +20,6 @@ class FolderFactory extends Factory
     /**
      * Indicate that the folder has required roles.
      *
-     * @param  array  $inspectors
-     * @param  array  $approvers
      * @return \Illuminate\Database\Eloquent\Factories\Factory
      */
     public function withRequiredRoles(array $inspectors = [], array $approvers = [])

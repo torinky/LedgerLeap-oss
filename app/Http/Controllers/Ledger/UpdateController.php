@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Ledger\UpdateRequest;
 use App\Models\Ledger;
-use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -15,8 +13,7 @@ class UpdateController extends Controller
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
 
-
-        $ledgerId = (int)$request->route('ledgerId');
+        $ledgerId = (int) $request->route('ledgerId');
 
         $ledgerRecord = Ledger::with('define')->where('ledgers.id', $ledgerId)->firstOrFail();
         // 権限チェック
@@ -33,7 +30,7 @@ class UpdateController extends Controller
 
     public function delete(request $request)
     {
-        $ledgerId = (int)$request->route('ledgerId');
+        $ledgerId = (int) $request->route('ledgerId');
 
         $ledgerRecord = Ledger::findOrFail($ledgerId);
         // 権限チェック
@@ -50,7 +47,7 @@ class UpdateController extends Controller
     public function destroy(Request $request, Ledger $ledger)
     {
         // 権限チェック
-//        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
+        //        if (Gate::denies('delete', [Ledger::class, $ledger->define])) {
         if (auth()->user()->cannot('delete', $ledger)) {
             abort(403, __('ledger.not_allow_destroy'));
         }
@@ -60,5 +57,4 @@ class UpdateController extends Controller
         return redirect()->route('ledger.index', ['tenant' => tenant()])
             ->with('success', __('ledger.remove_success'));
     }
-
 }

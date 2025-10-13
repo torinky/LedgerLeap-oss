@@ -3,25 +3,23 @@
 namespace App\Livewire\Workflow;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
 use App\Services\WorkflowService;
 use Exception;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
-use App\Livewire\Traits\InitializesTenantContext;
 
 class PendingList extends Component
 {
-    use Toast, WithPagination, InitializesTenantContext;
+    use InitializesTenantContext, Toast, WithPagination;
 
     #[Locked] // selectedTaskId はURL等から不正に変更されたくない場合 Locked を付ける
     public $selectedTaskId = null;
@@ -34,11 +32,17 @@ class PendingList extends Component
 
     // --- モーダル制御用プロパティ ---
     public bool $approvalRequestModal = false; // 承認申請モーダルの表示状態
+
     public bool $returnToDraftModal = false; // 戻し理由モーダルの表示状態
+
     public bool $showAssigneeModal = false; // 承認者選択モーダル用
+
     public string $assigneeModalRoleType = 'approver'; // 固定
+
     public ?int $modalLedgerId = null; // <<<--- モーダルに渡す Ledger ID を保持
+
     public ?int $modalLedgerDefineId = null;
+
     public ?int $modalFolderId = null;
 
     // ------------------------------
@@ -48,14 +52,16 @@ class PendingList extends Component
     public int $totalPendingTasks = 0; //  合計件数用プロパティ
 
     public array $returnComments = []; // 戻し理由コメント (タスクIDをキーにする)
+
     /**
      * @var mixed|null
      */
     private mixed $workflowService;
+
     /**
      * @var mixed|null
      */
-    public string $comments='';
+    public string $comments = '';
 
     public function boot(WorkflowTaskRepository $repository, WorkflowService $workflowService): void
     {
@@ -90,15 +96,16 @@ class PendingList extends Component
             } else {
                 $ledger->required_roles_progress_summary = null; // ワークフロー無効ならnull
             }
+
             return $ledger;
         });
+
         return view('livewire.workflow.pending-list', [
             'pendingTasks' => $pendingTasks,
         ]);
-//            ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
+        //            ->layout('layouts.app', ['title' => __('ledger.workflow.title')]); // アプリケーションのレイアウトを使用
 
     }
-
 
     // 承認者選択肢をロードするメソッド (モーダル表示時に呼ぶ)
 
@@ -112,59 +119,58 @@ class PendingList extends Component
     /**
      * 承認者選択モーダルを開く
      */
-/*    public function openApprovalRequestModal(int $taskId): void
-    {
-        $this->selectedTaskId = $taskId;
-        $this->selectedApproverId = null; // 選択肢をリセット
-//        $this->loadApproverOptions($taskId); // 承認者候補をロード
-        if (empty($this->approverOptions)) {
-            $this->error(__('ledger.workflow.no_approvers_found'));
-            return;
-        }
-        $this->approvalRequestModal = true; // <<<--- モーダル表示プロパティを true に
-    }*/
-
+    /*    public function openApprovalRequestModal(int $taskId): void
+        {
+            $this->selectedTaskId = $taskId;
+            $this->selectedApproverId = null; // 選択肢をリセット
+    //        $this->loadApproverOptions($taskId); // 承認者候補をロード
+            if (empty($this->approverOptions)) {
+                $this->error(__('ledger.workflow.no_approvers_found'));
+                return;
+            }
+            $this->approvalRequestModal = true; // <<<--- モーダル表示プロパティを true に
+        }*/
 
     /**
      * 承認者の選択肢をロードする
      */
-//    public function loadApproverOptions(int $taskId): void
-//    {
-//        $ledgerDiff = LedgerDiff::with('ledger.define')->find($this->selectedTaskId);
-//        if (!$ledgerDiff || !$ledgerDiff->ledger) {
-//            $this->approverOptions = [];
-//            return;
-//        }
-//        $ledgerDefine = $ledgerDiff->ledger->define;
-//
-//        $options = [];
-//        // 推奨ユーザー
-//        if ($ledgerDefine?->recommendedApprover) {
-//            $approver = $ledgerDefine->recommendedApprover;
-//            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
-//            $this->selectedApproverId = $approver->id; // デフォルト選択
-//        }
-//        // 推奨ロール
-//        if ($ledgerDefine?->recommendedApproverRole) {
-//            $roleUsers = $ledgerDefine->recommendedApproverRole->users()->orderBy('name')->get();
-//            foreach ($roleUsers as $user) {
-//                if (!isset($options[$user->id])) { // 重複チェック
-//                    $options[$user->id] = ['id' => $user->id, 'name' => $user->name . ' (' . __('ledger.workflow.recommended_role') . ')'];
-//                    if (!$this->selectedApproverId) $this->selectedApproverId = $user->id; // ロールが最初ならデフォルト選択
-//                }
-//            }
-//        }
-//        // その他の全ユーザー (必要に応じてフィルタリング)
-//        // 例: $allUsers = User::where('is_active', true)->orderBy('name')->get();
-//        $allUsers = User::orderBy('name')->get();
-//        foreach ($allUsers as $user) {
-//            if (!isset($options[$user->id])) { // 重複チェック
-//                $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
-//            }
-//        }
-//
-//        $this->approverOptions = array_values($options);
-//    }
+    //    public function loadApproverOptions(int $taskId): void
+    //    {
+    //        $ledgerDiff = LedgerDiff::with('ledger.define')->find($this->selectedTaskId);
+    //        if (!$ledgerDiff || !$ledgerDiff->ledger) {
+    //            $this->approverOptions = [];
+    //            return;
+    //        }
+    //        $ledgerDefine = $ledgerDiff->ledger->define;
+    //
+    //        $options = [];
+    //        // 推奨ユーザー
+    //        if ($ledgerDefine?->recommendedApprover) {
+    //            $approver = $ledgerDefine->recommendedApprover;
+    //            $options[$approver->id] = ['id' => $approver->id, 'name' => $approver->name . ' (' . __('ledger.workflow.recommended_user') . ')'];
+    //            $this->selectedApproverId = $approver->id; // デフォルト選択
+    //        }
+    //        // 推奨ロール
+    //        if ($ledgerDefine?->recommendedApproverRole) {
+    //            $roleUsers = $ledgerDefine->recommendedApproverRole->users()->orderBy('name')->get();
+    //            foreach ($roleUsers as $user) {
+    //                if (!isset($options[$user->id])) { // 重複チェック
+    //                    $options[$user->id] = ['id' => $user->id, 'name' => $user->name . ' (' . __('ledger.workflow.recommended_role') . ')'];
+    //                    if (!$this->selectedApproverId) $this->selectedApproverId = $user->id; // ロールが最初ならデフォルト選択
+    //                }
+    //            }
+    //        }
+    //        // その他の全ユーザー (必要に応じてフィルタリング)
+    //        // 例: $allUsers = User::where('is_active', true)->orderBy('name')->get();
+    //        $allUsers = User::orderBy('name')->get();
+    //        foreach ($allUsers as $user) {
+    //            if (!isset($options[$user->id])) { // 重複チェック
+    //                $options[$user->id] = ['id' => $user->id, 'name' => $user->name];
+    //            }
+    //        }
+    //
+    //        $this->approverOptions = array_values($options);
+    //    }
 
     /**
      * 承認申請を実行する
@@ -172,12 +178,13 @@ class PendingList extends Component
     public function requestApproval(): void
     {
         $validated = $this->validate([
-            'selectedApproverId' => ['required', 'integer', 'exists:users,id']
+            'selectedApproverId' => ['required', 'integer', 'exists:users,id'],
         ]);
         $ledgerDiff = LedgerDiff::find($this->selectedTaskId);
 
-        if (!$ledgerDiff) {
+        if (! $ledgerDiff) {
             $this->error('Task not found.'); // エラー処理
+
             return;
         }
 
@@ -191,7 +198,7 @@ class PendingList extends Component
             $this->dispatch('close-modal', 'approval-request-modal');
             $this->success(__('ledger.workflow.approval_requested_message'));
         } catch (Exception $e) {
-            Log::error("Approval request failed: " . $e->getMessage());
+            Log::error('Approval request failed: '.$e->getMessage());
             $this->error(__('messages.error.generic')); // 汎用エラーメッセージ
         } finally {
             $this->selectedTaskId = null; // 選択解除
@@ -207,14 +214,16 @@ class PendingList extends Component
     {
         $ledgerDiff = LedgerDiff::find($taskId);
 
-        if (!$ledgerDiff) {
+        if (! $ledgerDiff) {
             $this->error('Task not found.');
+
             return;
         }
 
         // 承認者自身であるかの簡易チェック (より厳密な権限チェックは Service 側でも推奨)
         if ($ledgerDiff->approver_id !== Auth::id()) {
             $this->error(__('messages.error.unauthorized'));
+
             return;
         }
 
@@ -223,9 +232,9 @@ class PendingList extends Component
             $this->workflowService->approve($ledgerDiff->ledger_id, Auth::id());
 
             $this->success(__('ledger.workflow.approved_message'));
-//            $this->dispatch('$refresh'); // リストを更新
+            //            $this->dispatch('$refresh'); // リストを更新
         } catch (\Exception $e) {
-            Log::error("Approval failed for task ID {$taskId}: " . $e->getMessage());
+            Log::error("Approval failed for task ID {$taskId}: ".$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -233,22 +242,22 @@ class PendingList extends Component
     /**
      * 戻し理由入力モーダルを開く
      */
-/*    public function openReturnToDraftModal(int $taskId): void
-    {
-        $this->selectedTaskId = $taskId;
-        // 配列キーが存在しない場合のエラーを防ぐため、初期化
-        if (!isset($this->returnComments[$taskId])) {
-            $this->returnComments[$taskId] = '';
-        }
-        $this->returnToDraftModal = true;
-    }*/
+    /*    public function openReturnToDraftModal(int $taskId): void
+        {
+            $this->selectedTaskId = $taskId;
+            // 配列キーが存在しない場合のエラーを防ぐため、初期化
+            if (!isset($this->returnComments[$taskId])) {
+                $this->returnComments[$taskId] = '';
+            }
+            $this->returnToDraftModal = true;
+        }*/
     /**
      * 作成中に戻すモーダルを開く (引数を LedgerDiff ID に変更)
      */
     public function openReturnToDraftModal(int $ledgerDiffId): void // <<<--- 引数変更
     {
         $this->selectedLedgerDiffId = $ledgerDiffId; // <<<--- プロパティにセット
-        if (!isset($this->returnComments[$ledgerDiffId])) {
+        if (! isset($this->returnComments[$ledgerDiffId])) {
             $this->returnComments[$ledgerDiffId] = '';
         }
         $this->returnToDraftModal = true;
@@ -257,67 +266,79 @@ class PendingList extends Component
     /**
      * タスクを作成中に戻す
      */
-//    public function returnTaskToDraft(): void
-//    {
-//        if ($this->selectedTaskId === null) {
-//            $this->error('No task selected.'); // エラー処理
-//            return;
-//        }
-//
-//        // コメントを取得 (null の可能性もある)
-//        $comments = $this->returnComments[$this->selectedTaskId] ?? null;
-//
-//        // コメント必須の場合のバリデーション (任意)
-//        // $validated = $this->validate(['returnComments.'.$this->selectedTaskId => ['required', 'string', 'max:1000']]);
-//        // $comments = $validated['returnComments'][$this->selectedTaskId];
-//
-//        $ledgerDiff = LedgerDiff::find($this->selectedTaskId);
-//        if (!$ledgerDiff) {
-//            $this->error('Task not found.');
-//            return;
-//        }
-//
-//        // 権限チェック (簡易) - Service 側でもチェック推奨
-//        $canReturn = ($ledgerDiff->status === WorkflowStatus::PENDING_INSPECTION && $ledgerDiff->inspector_id === Auth::id()) ||
-//            ($ledgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $ledgerDiff->approver_id === Auth::id());
-//
-//        if (!$canReturn) {
-//            $this->error(__('messages.error.unauthorized'));
-//            return;
-//        }
-//
-//        try {
-//            // WorkflowService の returnToDraft メソッドを呼び出す
-//            $this->workflowService->returnToDraft($ledgerDiff->ledger_id, Auth::id(), $comments);
-//
-//            $this->returnToDraftModal = false; // モーダルを閉じる
-//            $this->success(__('ledger.workflow.returned_to_draft_message'));
-////            $this->dispatch('$refresh'); // リストを更新
-//        } catch (\Exception $e) {
-//            Log::error("Return to draft failed for task ID {$this->selectedTaskId}: " . $e->getMessage());
-//            $this->error(__('messages.error.generic'));
-//        } finally {
-//            // コメントと選択タスクIDをリセット
-//            unset($this->returnComments[$this->selectedTaskId]);
-//            $this->selectedTaskId = null;
-//            $this->returnToDraftModal = false;
-//
-//        }
-//    }
+    //    public function returnTaskToDraft(): void
+    //    {
+    //        if ($this->selectedTaskId === null) {
+    //            $this->error('No task selected.'); // エラー処理
+    //            return;
+    //        }
+    //
+    //        // コメントを取得 (null の可能性もある)
+    //        $comments = $this->returnComments[$this->selectedTaskId] ?? null;
+    //
+    //        // コメント必須の場合のバリデーション (任意)
+    //        // $validated = $this->validate(['returnComments.'.$this->selectedTaskId => ['required', 'string', 'max:1000']]);
+    //        // $comments = $validated['returnComments'][$this->selectedTaskId];
+    //
+    //        $ledgerDiff = LedgerDiff::find($this->selectedTaskId);
+    //        if (!$ledgerDiff) {
+    //            $this->error('Task not found.');
+    //            return;
+    //        }
+    //
+    //        // 権限チェック (簡易) - Service 側でもチェック推奨
+    //        $canReturn = ($ledgerDiff->status === WorkflowStatus::PENDING_INSPECTION && $ledgerDiff->inspector_id === Auth::id()) ||
+    //            ($ledgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $ledgerDiff->approver_id === Auth::id());
+    //
+    //        if (!$canReturn) {
+    //            $this->error(__('messages.error.unauthorized'));
+    //            return;
+    //        }
+    //
+    //        try {
+    //            // WorkflowService の returnToDraft メソッドを呼び出す
+    //            $this->workflowService->returnToDraft($ledgerDiff->ledger_id, Auth::id(), $comments);
+    //
+    //            $this->returnToDraftModal = false; // モーダルを閉じる
+    //            $this->success(__('ledger.workflow.returned_to_draft_message'));
+    // //            $this->dispatch('$refresh'); // リストを更新
+    //        } catch (\Exception $e) {
+    //            Log::error("Return to draft failed for task ID {$this->selectedTaskId}: " . $e->getMessage());
+    //            $this->error(__('messages.error.generic'));
+    //        } finally {
+    //            // コメントと選択タスクIDをリセット
+    //            unset($this->returnComments[$this->selectedTaskId]);
+    //            $this->selectedTaskId = null;
+    //            $this->returnToDraftModal = false;
+    //
+    //        }
+    //    }
     /**
      * タスクを作成中に戻す (引数を LedgerDiff ID に変更)
      */
     public function returnTaskToDraft(): void
     {
-        if ($this->selectedLedgerDiffId === null) { $this->error('No task selected.'); return; }
+        if ($this->selectedLedgerDiffId === null) {
+            $this->error('No task selected.');
+
+            return;
+        }
         $comments = $this->returnComments[$this->selectedLedgerDiffId] ?? null;
         $ledgerDiff = LedgerDiff::find($this->selectedLedgerDiffId); // <<<--- ID で検索
-        if (!$ledgerDiff) { $this->error('Task not found.'); return; }
+        if (! $ledgerDiff) {
+            $this->error('Task not found.');
+
+            return;
+        }
 
         // 権限チェック (変更なし)
         $canReturn = ($ledgerDiff->status === WorkflowStatus::PENDING_INSPECTION && $ledgerDiff->inspector_id === Auth::id()) ||
             ($ledgerDiff->status === WorkflowStatus::PENDING_APPROVAL && $ledgerDiff->approver_id === Auth::id());
-        if (!$canReturn) { $this->error(__('messages.error.unauthorized')); return; }
+        if (! $canReturn) {
+            $this->error(__('messages.error.unauthorized'));
+
+            return;
+        }
 
         try {
             $this->workflowService->returnToDraft($ledgerDiff->ledger_id, Auth::id(), $comments); // <<<--- ledger_id を使用
@@ -325,7 +346,7 @@ class PendingList extends Component
             $this->success(__('ledger.workflow.returned_to_draft_message'));
             $this->dispatch('$refresh'); // リスト更新
         } catch (\Exception $e) {
-            Log::error("Return to draft failed from PendingList for Diff ID {$this->selectedLedgerDiffId}: " . $e->getMessage());
+            Log::error("Return to draft failed from PendingList for Diff ID {$this->selectedLedgerDiffId}: ".$e->getMessage());
             $this->error(__('messages.error.generic'));
         } finally {
             unset($this->returnComments[$this->selectedLedgerDiffId]);
@@ -340,12 +361,17 @@ class PendingList extends Component
     public function openApproverSelectModal(int $ledgerId): void // <<<--- Ledger ID を受け取る
     {
         $ledger = Ledger::with('define:id,folder_id')->find($ledgerId); // Define ID と Folder ID も取得
-        if (!$ledger || !$ledger->define) { $this->error(__('Task not found.')); return; }
+        if (! $ledger || ! $ledger->define) {
+            $this->error(__('Task not found.'));
+
+            return;
+        }
         $latestDiff = $ledger->latestDiff()->first();
 
         // 権限チェック (自分が点検者か？)
         if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || Auth::id() !== $latestDiff?->inspector_id) {
             $this->error(__('messages.error.unauthorized'));
+
             return;
         }
 
@@ -366,7 +392,6 @@ class PendingList extends Component
             initialUserId: $initialApproverId
         );
     }
-
 
     // --- loadApproverOptions は削除 ---
 
@@ -394,18 +419,25 @@ class PendingList extends Component
     protected function requestApprovalInternal(int $approverId): void
     {
         $ledger = Ledger::find($this->modalLedgerId); // モーダルに渡したIDを使用
-        if (!$ledger) {
+        if (! $ledger) {
             $this->error(__('ledger.workflow.ledger_not_found'));
             Log::error('Approval request failed from PendingList: Ledger not found.'.$this->modalLedgerId);
+
             return;
         }
         $latestDiff = $ledger->latestDiff()->first();
 
         // 権限チェック (再確認)
         if ($ledger->status !== WorkflowStatus::PENDING_INSPECTION || Auth::id() !== $latestDiff?->inspector_id) {
-            $this->error(__('messages.error.unauthorized')); return;
+            $this->error(__('messages.error.unauthorized'));
+
+            return;
         }
-        if(!User::find($approverId)){ $this->error(__('無効な担当者が選択されました。')); return; }
+        if (! User::find($approverId)) {
+            $this->error(__('無効な担当者が選択されました。'));
+
+            return;
+        }
 
         try {
             $this->workflowService->requestApproval(
@@ -418,7 +450,7 @@ class PendingList extends Component
             // リスト更新のために $this->render() を再実行させるか、リフレッシュイベントを発行
             $this->dispatch('$refresh'); // 自分自身をリフレッシュ
         } catch (Exception $e) {
-            Log::error("Approval request failed from PendingList: " . $e->getMessage());
+            Log::error('Approval request failed from PendingList: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
     }
@@ -428,7 +460,8 @@ class PendingList extends Component
     {
         // 実績ベースで取得 (CreateColumn と同じロジック)
         $frequentUsers = $this->workflowService->getFrequentAssignees($ledgerDefineId, 'approver', 1);
-        return !empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
+
+        return ! empty($frequentUsers) ? $frequentUsers[0]['id'] : null;
     }
 
     #[On('refreshPendingList')] // イベントをリッスン
@@ -443,7 +476,6 @@ class PendingList extends Component
         // 例: $this->loadPendingTasks();
         // $this->dispatch('$refresh'); // これでも可
         $this->render(); // 強制的に再描画 (Livewireのバージョンや実装による)
-        Log::info("PendingList refreshed by event.");
+        Log::info('PendingList refreshed by event.');
     }
-
 }
