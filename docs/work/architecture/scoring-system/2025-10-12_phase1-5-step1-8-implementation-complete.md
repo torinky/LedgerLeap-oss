@@ -189,9 +189,15 @@ SCORING_SCHEDULE_FREQUENCY=weekly
 
 ## 📝 関連ドキュメント
 
+**作業ドキュメント:**
 - [ハイブリッド型情報価値評価システム 実装計画](./2025-10-08_search-result-scoring-and-sorting-plan.md)
 - [Phase 1 完了サマリー](./2025-10-08_search-result-scoring-and-sorting-plan.md#phase-1-完了サマリー2025-10-12)
 - [Phase 1.5 計画](./2025-10-08_search-result-scoring-and-sorting-plan.md#phase-15-スケジューリング最適化計画2025-10-12-追加)
+
+**公式ドキュメント:**
+- [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け説明
+- [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け詳細
+- [データベーススキーマ](../../../database/schema.md) - テーブル定義
 
 ---
 

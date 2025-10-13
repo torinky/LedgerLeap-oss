@@ -314,6 +314,19 @@ Tests: 10 passed (29 assertions)
 
 ---
 
+## 📝 関連ドキュメント
+
+**作業ドキュメント:**
+- [ハイブリッド型情報価値評価システム 実装計画](./2025-10-08_search-result-scoring-and-sorting-plan.md) - 親ドキュメント
+- [Step 1.7 実装完了レポート](./2025-10-12_step1-7-implementation-complete.md) - 基本実装
+- [検索時の台帳定義スコア順ソート](./2025-10-12_step1-7-ledger-define-sort.md) - 関連実装
+
+**公式ドキュメント:**
+- [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け説明
+- [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け詳細
+
+---
+
 **実装日:** 2025年10月12日  
 **所要時間:** 約30分  
 **ステータス:** ✅ 完了  

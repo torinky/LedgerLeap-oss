@@ -1,13 +1,16 @@
 # ハイブリッド型情報価値評価システム 実装計画
 
 **作成日:** 2025年10月8日  
-**最終更新:** 2025年10月12日  
+**最終更新:** 2025年10月13日  
 **対象:** LedgerLeap開発チーム  
 **関連ドキュメント:**
-- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md) - ユーザー要件定義
-- [検索機能](../../function/Search.md) - 既存検索機能の仕様
-- [アクティビティログ機能](../../function/Activity.md) - スコア計算のデータソース
-- [RecordsTable.php](../../../app/Livewire/Ledger/RecordsTable.php) - 現在の実装
+- [ペルソナ、ユースケース、シナリオ](../../../function/PersonaUseCaseScenario.md) - ユーザー要件定義
+- [検索機能](../../../function/Search.md) - 既存検索機能の仕様
+- [アクティビティログ機能](../../../function/Activity.md) - スコア計算のデータソース
+- [RecordsTable.php](../../../../app/Livewire/Ledger/RecordsTable.php) - 現在の実装
+- **公式ドキュメント:**
+  - [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け
+  - [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け
 
 ---
 
@@ -2263,11 +2266,20 @@ SELECT
 
 ## 📝 関連ドキュメント
 
-- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md)
-- [検索機能](../../function/Search.md)
-- [アクティビティログ機能](../../function/Activity.md)
-- [RecordsTable.php](../../../app/Livewire/Ledger/RecordsTable.php)
-- [Ledger.php](../../../app/Models/Ledger.php)
+**作業ドキュメント:**
+- [Phase 1.5 Step 1.8 実装完了レポート](./2025-10-12_phase1-5-step1-8-implementation-complete.md)
+- [Step 1.7 UI統合 実装完了レポート](./2025-10-12_step1-7-implementation-complete.md)
+- [ハイブリッドスコアリング パフォーマンス検討](./2025-10-12_hybrid-scoring-performance-study.md)
+
+**公式ドキュメント:**
+- [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け説明
+- [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け詳細
+- [データベーススキーマ](../../../database/schema.md) - テーブル定義
+- [アクティビティログ機能](../../../function/Activity.md) - イベントログ仕様
+
+**実装ファイル:**
+- [RecordsTable.php](../../../../app/Livewire/Ledger/RecordsTable.php) - Livewireコンポーネント
+- [Ledger.php](../../../../app/Models/Ledger.php) - Eloquentモデル
 
 ---
 

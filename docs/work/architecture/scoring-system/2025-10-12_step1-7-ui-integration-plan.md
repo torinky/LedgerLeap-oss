@@ -572,6 +572,7 @@ public function it_hides_score_for_zero_composite_score()
 
 ## 📚 関連ドキュメント
 
+**作業ドキュメント:**
 - **親ドキュメント:** [検索結果スコアリング・ソート機能 実装計画](./2025-10-08_search-result-scoring-and-sorting-plan.md)
 - **Phase 1全体:** 第5版（簡素化版）
 - **実装済みステップ:**
@@ -581,6 +582,14 @@ public function it_hides_score_for_zero_composite_score()
   - Step 1.4: 重要度スコア計算サービス
   - Step 1.5: 複合スコア計算サービス
   - Step 1.6: バッチ処理コマンド
+- **関連実装レポート:**
+  - [Step 1.7 実装完了レポート](./2025-10-12_step1-7-implementation-complete.md)
+  - [台帳定義ヘッダーにスコア統計表示](./2025-10-12_step1-7-header-score-display.md)
+  - [検索時の台帳定義スコア順ソート](./2025-10-12_step1-7-ledger-define-sort.md)
+
+**公式ドキュメント:**
+- [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け説明
+- [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け詳細
 
 ---
 

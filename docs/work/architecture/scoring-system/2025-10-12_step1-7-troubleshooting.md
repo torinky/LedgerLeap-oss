@@ -229,6 +229,19 @@ echo 'Schema has composite_score: ' . (Schema::hasColumn('ledgers', 'composite_s
 
 ---
 
+## 📝 関連ドキュメント
+
+**作業ドキュメント:**
+- [ハイブリッド型情報価値評価システム 実装計画](./2025-10-08_search-result-scoring-and-sorting-plan.md) - 親ドキュメント
+- [Step 1.7 実装完了レポート](./2025-10-12_step1-7-implementation-complete.md) - 実装サマリー
+- [Step 1.7 UI統合 詳細計画](./2025-10-12_step1-7-ui-integration-plan.md) - 詳細計画
+
+**公式ドキュメント:**
+- [スコアリングシステム（機能）](../../../features/scoring-system.md) - ユーザー向け説明
+- [スコアリングシステム（開発者ガイド）](../../../development/scoring-system.md) - 開発者向け詳細
+
+---
+
 **作成日:** 2025年10月12日  
 **最終更新:** 2025年10月12日  
 **ステータス:** スコア計算済み、UI実装完了
