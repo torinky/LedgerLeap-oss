@@ -56,6 +56,7 @@ class DemoCompleteSeeder extends Seeder
         $this->command->info('📚 Usage Guide:');
         $this->command->info('');
         $this->command->info('🔑 Login Credentials:');
+        $this->command->info('   (以下は代表的なログイン情報です。他のユーザーも同様に demo1234 でログイン可能です)');
         $this->command->info('   Super Admin:  superadmin@example.com / demo1234 (全権限)');
         $this->command->info('   Demo User:    demo@example.com  / demo1234');
         $this->command->info('   Admin User:   admin@example.com / demo1234');
@@ -68,11 +69,11 @@ class DemoCompleteSeeder extends Seeder
         $this->command->info('   Tenant: demo-tenant');
         $this->command->info('   Organizations: 3 (本社、営業部、技術部)');
         $this->command->info('   Users: 13+ (includes super admin + demo users)');
-        $this->command->info('   Roles: 7+');
+        $this->command->info('   Roles: 8+');
         $this->command->info('   Folders: 10 (hierarchical structure)');
         $this->command->info('   Ledger Defines: 4 (営業日報、経費申請、設備点検表、週報)');
-        $this->command->info('   Ledgers: 80+ (with various workflow states)');
-        $this->command->info('   Tags: 25+');
+        $this->command->info('   Ledgers: 34+ (with various workflow states)');
+        $this->command->info('   Tags: 15+');
         $this->command->info('   Auto-Link Cross-References: 4 ledgers with cross-references');
         $this->command->info('');
         $this->command->info('🔗 Auto Number Formats:');
