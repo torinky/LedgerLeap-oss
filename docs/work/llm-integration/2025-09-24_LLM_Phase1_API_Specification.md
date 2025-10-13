@@ -1,6 +1,11 @@
 # LedgerLeap LLM連携フェーズ1 API技術仕様書
 
-**日付:** 2025年9月24日
+**日付:** 2025年9月24日  
+**ドキュメント種別:** 作業ファイル（技術仕様）
+
+> **📖 関連する公式ドキュメント:**  
+> - [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 実装済みの全体アーキテクチャ
+> - [API仕様概要](../../api/README.md) - REST API公式仕様
 
 ## 1. 概要
 
@@ -10,7 +15,11 @@
 
 ### 1.2. 関連ドキュメント
 
-- [LedgerLeap LLM連携機能 開発ロードマップ](./2025-09-23_LLM_Integration_Roadmap.md)
+#### 作業ファイル（計画・設計）
+- [LedgerLeap LLM連携機能 開発ロードマップ](./2025-09-23_LLM_Integration_Roadmap.md) - 上位計画ドキュメント
+
+#### 公式ドキュメント（実装済み）
+- [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 実装されたアーキテクチャの詳細
 
 ## 2. 共通仕様
 

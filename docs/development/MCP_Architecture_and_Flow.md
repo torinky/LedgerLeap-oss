@@ -1,13 +1,22 @@
 # MCP アーキテクチャと動作フロー
 
 **作成日:** 2025年1月19日  
-**更新日:** 2025年1月XX日  
+**更新日:** 2025年10月13日  
 **対象:** LedgerLeap開発者・技術者  
-**関連ドキュメント:**
-- [MCP プロンプトガイドライン](./MCP_Prompt_Guidelines.md)
-- [API仕様概要](../api/README.md)
-- [MCP応答最適化計画](../work/2025-09-28_MCP_Response_Optimization_Plan.md)
-- [実装ログ](../work/IMPLEMENTATION_LOG.md)
+**ドキュメント種別:** 公式ドキュメント（実装済み機能の技術仕様）
+
+## 📖 関連ドキュメント
+
+### 公式ドキュメント
+- [MCP プロンプトガイドライン](./MCP_Prompt_Guidelines.md) - LLM連携のベストプラクティス
+- [API仕様概要](../api/README.md) - REST API仕様
+
+### 作業ファイル（計画・設計）
+- [LLM連携機能 開発ロードマップ](../work/llm-integration/2025-09-23_LLM_Integration_Roadmap.md) - 全体戦略とフェーズ計画
+- [フェーズ1 API技術仕様書](../work/llm-integration/2025-09-24_LLM_Phase1_API_Specification.md) - API詳細仕様
+- [MCP包括的実装計画](../work/llm-integration/2025-09-29_Comprehensive_MCP_Implementation_Plan.md) - 実装計画の詳細
+- [MCP応答最適化計画](../work/llm-integration/2025-09-28_MCP_Response_Optimization_Plan.md) - レスポンス最適化設計
+- [実装ログ](../work/IMPLEMENTATION_LOG.md) - 実装作業記録
 
 ---
 

@@ -1,11 +1,19 @@
 # MCP プロンプトガイドライン
 
-**作成日:** 2025年1月19日
-**対象:** LedgerLeap MCPサーバーを使用するLLM
-**関連ドキュメント:**
+**作成日:** 2025年1月19日  
+**更新日:** 2025年10月13日  
+**対象:** LedgerLeap MCPサーバーを使用するLLM  
+**ドキュメント種別:** 公式ドキュメント（LLM対話のベストプラクティス）
+
+## 📖 関連ドキュメント
+
+### 公式ドキュメント
 - [MCP アーキテクチャと動作フロー](./MCP_Architecture_and_Flow.md) - 技術的な動作メカニズムの詳細
 - [API仕様概要](../api/README.md) - REST API仕様
-- [MCP応答最適化計画](../work/2025-09-28_MCP_Response_Optimization_Plan.md) - 実装計画
+
+### 作業ファイル（計画・設計）
+- [MCP応答最適化計画](../work/llm-integration/2025-09-28_MCP_Response_Optimization_Plan.md) - レスポンス設計の意思決定プロセス
+- [MCPプロンプトと応答内容の設計案](../work/llm-integration/2025-09-27_MCP_Prompt_and_Response_Design.md) - ユースケース設計
 
 ## 概要
 

@@ -3,11 +3,19 @@
 **作成日:** 2025年9月29日  
 **最終更新:** 2025年10月4日  
 **対象:** LedgerLeap開発チーム  
-**関連ドキュメント:**
+**ドキュメント種別:** 作業ファイル（実装計画）
+
+## 📖 関連ドキュメント
+
+### 作業ファイル（計画・設計）
 - [MCP応答最適化計画](./2025-09-28_MCP_Response_Optimization_Plan.md) - 基盤実装完了
 - [MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md) - ユースケース設計
-- [ペルソナ、ユースケース、シナリオ](../function/PersonaUseCaseScenario.md) - 要件定義
+- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md) - 要件定義
 - [添付ファイル統合計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md) - Phase 5詳細
+
+### 公式ドキュメント（実装済み機能）
+- [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 実装されたアーキテクチャ
+- [MCP プロンプトガイドライン](../../development/MCP_Prompt_Guidelines.md) - ベストプラクティス
 
 ---
 

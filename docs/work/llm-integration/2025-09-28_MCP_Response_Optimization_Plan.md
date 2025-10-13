@@ -1,10 +1,16 @@
 # MCP応答最適化計画：LLMのためのテンプレート実装
 
-**日付:** 2025年9月28日
+**日付:** 2025年9月28日  
+**ドキュメント種別:** 作業ファイル（設計・実装計画）
 
-**関連ドキュメント:**
-- [LedgerLeap MCPサーバー実装計画](./2025-09-27_MCP_Server_Implementation_Plan.md)
-- [MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md)
+## 📖 関連ドキュメント
+
+### 作業ファイル（計画・設計）
+- [LedgerLeap MCPサーバー実装計画](./2025-09-27_MCP_Server_Implementation_Plan.md) - MCP基盤実装
+- [MCPプロンプトと応答内容の設計案](./2025-09-27_MCP_Prompt_and_Response_Design.md) - ユースケース設計
+
+### 公式ドキュメント（実装済み）
+- [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 本計画の実装結果
 
 ---
 

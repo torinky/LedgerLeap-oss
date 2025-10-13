@@ -1,5 +1,13 @@
 # LLM連携 (LLM Integration)
 
+**カテゴリ:** 作業ファイル（計画・設計・作業ログ）
+
+> **📖 公式ドキュメントへのリンク:**  
+> このカテゴリの作業結果として実装された機能の公式ドキュメントは以下を参照してください：
+> - [MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md) - 実装済みMCPの全体構造
+> - [MCP プロンプトガイドライン](../../development/MCP_Prompt_Guidelines.md) - LLM対話のベストプラクティス
+> - [API仕様](../../api/README.md) - REST API公式仕様
+
 このカテゴリには、LedgerLeapと大規模言語モデル（LLM）を連携させるための機能に関する実装計画やAPI仕様、およびそのテストやデモに必要なデータセットの設計・実装に関する作業ログを格納しています。
 
 ---
