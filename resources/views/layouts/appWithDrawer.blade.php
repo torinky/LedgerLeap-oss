@@ -9,20 +9,21 @@
 
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC.
-        // This script reads the theme from localStorage and applies it.
-        // It also respects the OS preference for dark mode on the first visit.
         (function() {
+            // 'theme' キーでローカルストレージからテーマを取得
             const theme = localStorage.getItem('theme');
+            // OSのダークモード設定をフォールバックとして使用
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // ローカルストレージに設定があればそれを使い、なければOSの設定に従う
+            const isDark = theme === 'dark' || (!theme && prefersDark);
 
-            if (theme) {
-                // If a theme is stored in localStorage, use it.
-                document.documentElement.setAttribute('data-theme', theme);
-            } else if (prefersDark) {
-                // If no theme is stored and OS is dark mode, use 'coffee'.
+            if (isDark) {
+                // FilamentとTailwind用の 'dark' クラスを適用
+                document.documentElement.classList.add('dark');
+                // DaisyUI用のテーマ属性を設定
                 document.documentElement.setAttribute('data-theme', 'coffee');
             } else {
-                // Otherwise (no theme stored, OS is light mode), use 'nord'.
+                document.documentElement.classList.remove('dark');
                 document.documentElement.setAttribute('data-theme', 'nord');
             }
         })();

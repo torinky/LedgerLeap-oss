@@ -127,16 +127,7 @@
                    x-data="{
                         isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
                    }"
-                   x-init="
-                        // 初期読み込み時にHTMLクラスとDaisyUIテーマを設定
-                        if (isDark) {
-                            document.documentElement.classList.add('dark');
-                            document.documentElement.setAttribute('data-theme', 'coffee');
-                        } else {
-                            document.documentElement.classList.remove('dark');
-                            document.documentElement.setAttribute('data-theme', 'nord');
-                        }
-                   "
+                   
             >
                 <input type="checkbox"
                        @change.prevent="
