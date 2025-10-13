@@ -21,10 +21,8 @@ class TenantFactory extends Factory
      */
     public function definition()
     {
-        $faker = \Faker\Factory::create('en_US');
-
         return [
-            'id' => $faker->unique()->word(),
+            'id' => 'test-'.uniqid().'-'.mt_rand(1000, 9999),
             'data' => [],
         ];
     }
