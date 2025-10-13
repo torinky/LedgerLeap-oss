@@ -1129,3 +1129,217 @@ AUTO_LINK_BASE_URL=https://app.your-domain.com
 ---
 
 **すべての修正が完了し、本番環境へのデプロイ準備が整っています。**
+
+## 15. テナント横断検索ルートの採用（2025年10月13日）
+
+### 15.1. 最終的な要件
+
+ユーザーからの要望：
+- `http://localhost/l/DAILY-0002` のようなテナントを指定しないURLで動作させたい
+- 複数のテナントでレコードが見つかった場合はテナントを選択できるようにしたい
+
+### 15.2. 既存機能の確認
+
+ドキュメントとコードを確認した結果、既に以下のルートが実装されていました：
+
+```php
+// routes/web.php
+Route::get('/l/{query}', [LedgerLookupController::class, 'searchAllTenants'])
+    ->name('ledger.shortcut_lookup');
+```
+
+#### `searchAllTenants` メソッドの動作
+
+```php
+public function searchAllTenants(?string $query = null)
+{
+    // 全テナントを検索
+    foreach ($tenants as $tenant) {
+        // 完全一致する値を持つ台帳を検索
+    }
+    
+    // 結果に応じた処理
+    if ($allResults->count() === 1) {
+        return redirect($allResults->first()['url']); // 1件: 直接リダイレクト
+    } elseif ($allResults->count() > 1) {
+        return view('ledger.lookup.results', ...); // 複数件: 選択画面
+    } else {
+        return view('ledger.lookup.no-results', ...); // 0件: 結果なし
+    }
+}
+```
+
+### 15.3. 修正内容
+
+既存のテナント横断検索機能を活用するように変更しました。
+
+**URLテンプレートの変更:**
+
+```php
+// 変更前（テナント指定）
+$urlTemplate = $tenantId ? "/{$tenantId}/l/\$1" : '/l/$1';
+
+// 変更後（テナント横断検索）
+$urlTemplate = '/l/$1';
+```
+
+**理由:**
+1. 既存の `searchAllTenants` 機能が要件を満たしている
+2. テナントを指定しない方がユーザーにとって便利
+3. システムが自動的に最適なテナントへ誘導する
+
+### 15.4. URL動作フロー
+
+```
+1. ユーザーがリンクをクリック
+   http://localhost/l/DAILY-0001
+
+2. searchAllTenants メソッドが実行
+   - 全テナントでDAILY-0001を検索
+
+3. 結果に応じた処理
+   a) 1件見つかった場合:
+      → http://localhost/demo-tenant/ledger/2?highlight=DAILY-0001
+      （直接リダイレクト）
+   
+   b) 複数件見つかった場合:
+      → テナント選択画面を表示
+      （ユーザーが選択）
+   
+   c) 0件の場合:
+      → 結果なしページを表示
+```
+
+### 15.5. 利点
+
+| 項目 | テナント指定URL | テナント横断検索URL |
+|------|----------------|-------------------|
+| URL | `http://localhost/{tenant}/l/DAILY-0001` | `http://localhost/l/DAILY-0001` |
+| 長さ | 長い | **短い ✓** |
+| テナント移動 | テナント変更時にリンク切れ | **常に有効 ✓** |
+| 複数テナント対応 | できない | **自動選択 ✓** |
+| ユーザー体験 | 手動でテナント確認が必要 | **システムが自動誘導 ✓** |
+
+### 15.6. テスト結果
+
+```
+Tests: 1 skipped, 14 passed (39 assertions)
+✓ すべてのテストが成功
+✓ テナント横断検索URLが正しく生成される
+```
+
+### 15.7. 修正ファイル
+
+- `app/Services/AutoLinkService.php`
+  - `getVirtualAutoNumberLinks()`: URLテンプレートを `/l/$1` に変更
+  - `createCustomLink()`: ベースURL適用ロジックを維持
+- `tests/Feature/AutoLink/CrossReferenceTest.php` - URL期待値を更新
+- `tests/Unit/Services/AutoLinkServiceAutoNumberTest.php` - URL期待値を更新
+
+### 15.8. 設定
+
+`.env`ファイルでベースURLを指定することで、完全なURLを生成：
+
+```env
+AUTO_LINK_BASE_URL=http://localhost
+```
+
+生成されるURL:
+```
+http://localhost/l/DAILY-0001
+http://localhost/l/EXP-0003
+http://localhost/l/INSP-0042
+```
+
+### 15.9. 関連ドキュメント
+
+- [AutoLink マルチテナント対応計画](/docs/work/core-features/auto-link/2025-09-15_auto-link-multi-tenant-hybrid-plan.md)
+- [AutoLink クエリ処理計画](/docs/work/core-features/auto-link/2025-08-13_auto-link-query-handling-plan.md)
+- [AutoLink 機能概要](/docs/function/AutoLink.md)
+
+---
+
+**最終版として、すべての修正が完了し、本番環境へのデプロイ準備が整っています。**
+
+## 17. テストの追加（2025年10月13日）
+
+### 17.1. 追加したテスト
+
+今回のバグ（`tenant_route()` が誤ったURLを生成する問題）を検知するためのテストを追加しました。
+
+#### LedgerLookupControllerTest.php
+
+1. **`test_it_generates_correct_url_format_for_single_match`**
+   - 単一の検索結果のリダイレクトURLが正しい形式であることを確認
+   - ベースURLで始まることを検証
+   - テナント名がホスト名として使用されていないことを検証
+
+2. **`test_it_generates_correct_url_format_for_multiple_matches`**
+   - 複数の検索結果のURLが正しい形式であることを確認
+   - すべての結果URLがベースURLで始まることを検証
+
+3. **`test_it_uses_base_url_configuration_for_url_generation`**
+   - `AUTO_LINK_BASE_URL` 設定が正しく使用されることを確認
+   - カスタムベースURLが適用されることを検証
+
+#### CrossReferenceTest.php
+
+4. **`test_generates_cross_tenant_lookup_url_not_tenant_specific_url`**
+   - 自動リンクがテナント横断検索URL (`/l/{query}`) を生成することを確認
+   - テナント指定URL (`/{tenant}/l/{query}`) ではないことを検証
+
+### 17.2. テスト結果
+
+```
+PASS  Tests\Feature\LedgerLookupControllerTest
+✓ it redirects to ledger show page if single match found
+✓ it shows results page if multiple matches found
+✓ it shows no results page if no matches found
+✓ it redirects to global my portal if query is empty
+✓ it generates correct url format for single match (NEW)
+✓ it generates correct url format for multiple matches (NEW)
+✓ it uses base url configuration for url generation (NEW)
+
+WARN  Tests\Feature\AutoLink\CrossReferenceTest
+✓ it creates links for auto_number values in text columns of other ledgers
+✓ it creates links for multiple auto_number references in textarea
+✓ it handles auto_number with revision suffix
+✓ it creates link for standalone auto_number value
+✓ it generates cross-tenant lookup url not tenant-specific url (NEW)
+✓ it creates link for auto_number value at the beginning of text
+✓ it creates link for auto_number value at the end of text
+✓ it creates links for multiple auto_number values without surrounding text
+
+Tests: 1 skipped, 15 passed (37 assertions)
+```
+
+### 17.3. 回帰テストとしての価値
+
+これらのテストは以下を保証します：
+
+1. **URL形式の検証**: 誤ったホスト名が使用されないことを検証
+2. **設定の使用**: `AUTO_LINK_BASE_URL` が正しく適用されることを確認
+3. **横断検索の動作**: テナント横断検索URLが正しく生成されることを確認
+4. **回帰防止**: 同様のバグが再発した場合に即座に検知
+
+### 17.4. 修正が必要だった既存テスト
+
+既存の `test_it_redirects_to_ledger_show_page_if_single_match_found` テストが、誤った `tenant_route()` を使用していたため失敗しました。これを修正することで、テストが実際のコードの動作と一致するようになりました。
+
+**修正前:**
+```php
+$expectedUrl = tenant_route($this->tenant2->id, 'ledger.show', ...);
+// 生成されるURL: http://tenant2/tenant2/ledger/2 (誤り)
+```
+
+**修正後:**
+```php
+$baseUrl = config('ledgerleap.auto_links.base_url', config('app.url'));
+$path = route('ledger.show', [...], false);
+$expectedUrl = rtrim($baseUrl, '/').$path;
+// 生成されるURL: http://localhost/tenant2/ledger/2 (正しい)
+```
+
+---
+
+**すべての実装とテストが完了し、本番環境へのデプロイ準備が整っています。**

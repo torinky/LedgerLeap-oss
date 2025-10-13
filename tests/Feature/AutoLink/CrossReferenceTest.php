@@ -66,7 +66,7 @@ it('creates links for auto_number values in text columns of other ledgers', func
     );
 
     expect($html)->toContain('<a href');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
     expect($html)->toContain('SPEC-001');
 });
 
@@ -100,8 +100,8 @@ it('creates links for multiple auto_number references in textarea', function () 
     );
 
     // 両方の番号がリンク化されている
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-003');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-003');
 });
 
 test('auto_number column links work through virtual links', function () {
@@ -116,7 +116,7 @@ test('auto_number column links work through virtual links', function () {
     );
 
     expect($html)->toContain('<a href');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
 })->skip('Debugging required - implementation is correct but test setup may need adjustment');
 
 it('handles auto_number with revision suffix', function () {
@@ -155,11 +155,12 @@ it('handles auto_number with revision suffix', function () {
         $report
     );
 
-    expect($html)->toContain('http://localhost/test-tenant/l/DOC-042-A');
+    expect($html)->toContain('http://localhost/l/DOC-042-A');
 });
 
-// 今回のバグ修正に対するテストケース: 自動ナンバリング値単体のリンク化
-it('creates link for standalone auto_number value', function () {
+// 今回のバグ修正に対するテストケース: 自動ナンバリング値単体のリンク化とURL形式
+it('creates cross-tenant lookup link for standalone auto_number value', function () {
+    // 単体値のリンク化と、横断検索URLの形式を同時に検証
     $service = app(AutoLinkService::class);
     $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
 
@@ -176,8 +177,12 @@ it('creates link for standalone auto_number value', function () {
     );
 
     expect($html)->toContain('<a href');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
     expect($html)->toContain('SPEC-001');
+
+    // 横断検索URLの形式であることを確認（バグ検知用）
+    expect($html)->toContain('http://localhost/l/SPEC-001');
+    // テナント指定URLではないことを確認
+    expect($html)->not->toContain('/test-tenant/l/SPEC-001');
 });
 
 it('creates link for auto_number value at the beginning of text', function () {
@@ -196,7 +201,7 @@ it('creates link for auto_number value at the beginning of text', function () {
     );
 
     expect($html)->toContain('<a href');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
 });
 
 it('creates link for auto_number value at the end of text', function () {
@@ -215,7 +220,7 @@ it('creates link for auto_number value at the end of text', function () {
     );
 
     expect($html)->toContain('<a href');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
 });
 
 it('creates links for multiple auto_number values without surrounding text', function () {
@@ -240,6 +245,6 @@ it('creates links for multiple auto_number values without surrounding text', fun
     );
 
     // 両方がリンク化される
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-001');
-    expect($html)->toContain('http://localhost/test-tenant/l/SPEC-003');
+    expect($html)->toContain('http://localhost/l/SPEC-001');
+    expect($html)->toContain('http://localhost/l/SPEC-003');
 });

@@ -111,7 +111,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
 
         $this->assertNotNull($matchingLink);
         $this->assertEquals(-1000, $matchingLink->priority);
-        $this->assertEquals('/test-tenant/l/$1', $matchingLink->url_template);
+        $this->assertEquals('/l/$1', $matchingLink->url_template);
     }
 
     public function test_it_invalidates_cache_when_ledger_define_column_define_changes()
@@ -171,7 +171,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
         $html = $this->service->convert('TEST-001', null, $ledger);
 
         $this->assertStringContainsString('<a href', $html);
-        $this->assertStringContainsString('http://localhost/test-tenant/l/TEST-001', $html);
+        $this->assertStringContainsString('http://localhost/l/TEST-001', $html);
         $this->assertStringContainsString('TEST-001', $html);
     }
 
@@ -205,12 +205,12 @@ class AutoLinkServiceAutoNumberTest extends TestCase
         // テキストの先頭に自動ナンバリング値がある場合
         $htmlStart = $this->service->convert('DOC-0001の修正', null, $ledger);
         $this->assertStringContainsString('<a href', $htmlStart);
-        $this->assertStringContainsString('http://localhost/test-tenant/l/DOC-0001', $htmlStart);
+        $this->assertStringContainsString('http://localhost/l/DOC-0001', $htmlStart);
 
         // テキストの末尾に自動ナンバリング値がある場合
         $htmlEnd = $this->service->convert('修正対象: DOC-0001', null, $ledger);
         $this->assertStringContainsString('<a href', $htmlEnd);
-        $this->assertStringContainsString('http://localhost/test-tenant/l/DOC-0001', $htmlEnd);
+        $this->assertStringContainsString('http://localhost/l/DOC-0001', $htmlEnd);
     }
 
     public function test_it_handles_empty_string_parts_correctly()
@@ -245,7 +245,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
 
         // リンクが正しく生成されていることを確認
         $this->assertStringContainsString('<a href', $html);
-        $this->assertStringContainsString('http://localhost/test-tenant/l/NUM-01', $html);
+        $this->assertStringContainsString('http://localhost/l/NUM-01', $html);
         $this->assertStringContainsString('NUM-01', $html);
 
         // リンクタグとテキストが正しく配置されている

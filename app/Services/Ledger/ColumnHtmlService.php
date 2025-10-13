@@ -125,6 +125,7 @@ class ColumnHtmlService
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+
         }
 
         // ハイライト処理

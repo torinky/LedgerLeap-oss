@@ -85,9 +85,6 @@ class AutoLinkService
             $ledgerDefines = LedgerDefine::with('folder')->get();
 
             foreach ($ledgerDefines as $define) {
-                // テナントIDを取得（現在のテナントコンテキストまたは台帳定義から）
-                $tenantId = tenant() ? tenant()->id : $define->tenant_id;
-
                 foreach ($define->column_define as $column) {
                     if ($column->type !== 'auto_number') {
                         continue;
@@ -99,8 +96,9 @@ class AutoLinkService
                         $column->unique ?? false
                     );
 
-                    // テナントパスを含むURLテンプレートを生成
-                    $urlTemplate = $tenantId ? "/{$tenantId}/l/\$1" : '/l/$1';
+                    // テナント横断検索ルートを使用（/l/{query}）
+                    // このルートは全テナントを検索し、1件なら直接リダイレクト、複数件なら選択画面を表示
+                    $urlTemplate = '/l/$1';
 
                     // 仮想 AutoLink オブジェクトを生成
                     $virtualLink = new AutoLink([
@@ -109,7 +107,7 @@ class AutoLinkService
                         'url_template' => $urlTemplate,
                         'priority' => -1000, // 最高優先度（負の値で既存より優先）
                         'is_enabled' => true,
-                        'open_in_new_tab' => true,
+                        'open_in_new_tab' => true, // 別ウィンドウで開く（デバッグのため戻す）
                         'link_type' => 'default',
                     ]);
 
@@ -184,7 +182,8 @@ class AutoLinkService
             }
         }
 
-        // 仮想リンク（tenant_idがnull）で相対URLの場合、設定されたベースURLを使用
+        // 仮想リンク（tenant_idがnull）の場合、ベースURLを適用
+        // これにより、テナント横断検索ルート /l/{query} が完全なURLになる
         if (! $autoLink->tenant_id && str_starts_with($url, '/')) {
             $baseUrl = config('ledgerleap.auto_links.base_url');
             if ($baseUrl) {

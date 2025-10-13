@@ -59,12 +59,18 @@ class LedgerLookupController extends Controller
                         // content 配列内にクエリと完全一致する値があるか再検証
                         $contentValues = is_array($ledger->content) ? array_values($ledger->content) : [];
                         if (in_array($query, $contentValues, true)) {
+                            // パスベーステナントの場合、正しいURLを生成
+                            // tenant_route()は誤ったホスト名を生成するため、直接URLを構築
+                            $baseUrl = config('ledgerleap.auto_links.base_url', config('app.url'));
+                            $path = route('ledger.show', ['tenant' => $tenant->id, 'ledgerId' => $ledger->id, 'highlight' => $query], false);
+                            $url = rtrim($baseUrl, '/').$path;
+
                             $allResults->push([
                                 'tenant_id' => $tenant->id,
                                 'tenant_name' => $tenant->name,
                                 'ledger_id' => $ledger->id,
                                 'ledger_title' => $ledger->define->title,
-                                'url' => tenant_route($tenant->id, 'ledger.show', ['tenant' => $tenant->id, 'ledgerId' => $ledger->id, 'highlight' => $query]),
+                                'url' => $url,
                             ]);
                         }
                     }
