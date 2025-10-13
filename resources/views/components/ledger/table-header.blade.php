@@ -27,12 +27,12 @@
             >
                 @if($orderBy == 'content->'.(string)$column_define->id)
                     @if($orderAsc)
-                        <i class="fas fa-sort-down"></i>
+                        <i class="fas fa-sort-down" style="pointer-events: none;"></i>
                     @else
-                        <i class="fas fa-sort-up"></i>
+                        <i class="fas fa-sort-up" style="pointer-events: none;"></i>
                     @endif
                 @else
-                    <i class="fas fa-sort opacity-30"></i>
+                    <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
                 @endif
             </button>
             <input
@@ -52,12 +52,12 @@
         <button href="#" class="btn btn-xs" wire:click="sort('updated_at', '{{ __('ledger.updated_at') }}')">
             @if($orderBy == 'updated_at')
                 @if($orderAsc)
-                    <i class="fas fa-sort-down"></i>
+                    <i class="fas fa-sort-down" style="pointer-events: none;"></i>
                 @else
-                    <i class="fas fa-sort-up"></i>
+                    <i class="fas fa-sort-up" style="pointer-events: none;"></i>
                 @endif
             @else
-                <i class="fas fa-sort opacity-30"></i>
+                <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
                 @endif
 
         </button>
