@@ -41,6 +41,11 @@ class DemoCompleteSeeder extends Seeder
         $this->call(DemoPhase1ExtensionSeeder::class);
         $this->command->info('');
 
+        // Step 3: 自動リンククロスリファレンスデータ（AutoLinkCrossReferenceSeederの内容）
+        $this->command->info('📦 Phase 3: Adding auto-link cross-references...');
+        $this->call(AutoLinkCrossReferenceSeeder::class);
+        $this->command->info('');
+
         $this->command->info('✅ Demo Complete Seeder finished successfully!');
         $this->command->info('');
         $this->displayUsage();
@@ -68,6 +73,13 @@ class DemoCompleteSeeder extends Seeder
         $this->command->info('   Ledger Defines: 4 (営業日報、経費申請、設備点検表、週報)');
         $this->command->info('   Ledgers: 80+ (with various workflow states)');
         $this->command->info('   Tags: 25+');
+        $this->command->info('   Auto-Link Cross-References: 4 ledgers with cross-references');
+        $this->command->info('');
+        $this->command->info('🔗 Auto Number Formats:');
+        $this->command->info('   営業日報:   DAILY-XXXX');
+        $this->command->info('   経費申請:   EXP-XXXX');
+        $this->command->info('   週報:       WR-XXXX');
+        $this->command->info('   設備点検表: INSP-XXXX');
         $this->command->info('');
         $this->command->info('🧪 MCP Tools Testing:');
         $this->command->info('   All 11 MCP tools can be tested with this data');
