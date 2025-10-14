@@ -77,17 +77,18 @@ https://ledgerleap.example.com/demo-org/ledger/create/5
 
 #### 2.1.2 対応カラムタイプ
 
-| カラムタイプ | 対応 | パラメータ例 |
-|------------|------|-------------|
-| text | ✅ | `prefill[1]=設備A` |
-| number | ✅ | `prefill[2]=123.45` |
-| YMD | ✅ | `prefill[3]=2025-10-14` |
-| YMDHM | ✅ | `prefill[4]=2025-10-14 15:30` |
-| select | ✅ | `prefill[5]=正常` |
-| chk | ✅ | `prefill[6][]=項目1&prefill[6][]=項目2` |
-| textarea | ✅ | `prefill[7]=説明文` |
-| files | ❌ | - |
-| auto_number | ❌ | - |
+| カラムタイプ | 対応 | パラメータ例 | 備考 |
+|------------|------|-------------|------|
+| text | ✅ | `prefill[1]=設備A` | |
+| number | ✅ | `prefill[2]=123.45` | |
+| YMD | ✅ | `prefill[3]=2025-10-14` | |
+| YMDHM | ✅ | `prefill[4]=2025-10-14 15:30` | |
+| select | ✅ | `prefill[5]=正常` | |
+| chk | ✅ | `prefill[6][]=項目1&prefill[6][]=項目2` | |
+| textarea | ✅ | `prefill[7]=説明文` | |
+| user_name | ✅ | `prefill[8]=山田太郎` | **新規追加** 入力者名 |
+| files | ❌ | - | セキュリティ上非対応 |
+| auto_number | ❌ | - | 自動採番のため非対応 |
 
 #### 2.1.3 実装（CreateController）
 
@@ -448,32 +449,504 @@ public function copyURL(): void
 
 ---
 
+### 2.3 新規カラムタイプ: user_name（入力者名）
+
+#### 2.3.1 概要
+
+点検者、記録者、作業者など、台帳を入力するユーザーの名前を自動的に設定するカラムタイプです。
+組織情報を含めた柔軟な表示オプションを提供します。
+
+#### 2.3.2 設定オプション
+
+**台帳定義での設定項目:**
+
+```json
+{
+  "id": 10,
+  "name": "点検者",
+  "type": "user_name",
+  "required": true,
+  "options": {
+    "name_format": "full_name",
+    "org_prefix": "bottom_only",
+    "edit_mode": "append"
+  }
+}
+```
+
+**オプション詳細:**
+
+| オプション | 設定値 | 説明 | 例 |
+|-----------|--------|------|-----|
+| **name_format** | `full_name` | フルネーム（デフォルト） | `山田太郎` |
+|  | `family_name_only` | 苗字のみ | `山田` |
+| **org_prefix** | `none` | 組織名なし（デフォルト） | `山田太郎` |
+|  | `bottom_only` | 最下層組織のみ | `営業一課 山田太郎` |
+|  | `bottom_3_levels` | 最下層から3階層 | `営業本部/営業部/営業一課 山田太郎` |
+| **edit_mode** | `overwrite` | 上書き（デフォルト） | `山田太郎` → `佐藤花子`（編集時） |
+|  | `append` | カンマ区切りで追加 | `山田太郎` → `山田太郎, 佐藤花子`（編集時） |
+
+#### 2.3.3 動作仕様
+
+**新規作成時:**
+- ログインユーザーの情報から自動的に値を生成
+- `name_format` に応じてフルネームまたは苗字を使用
+- `org_prefix` に応じて組織名をプレフィックスとして付与
+
+**編集時:**
+- `edit_mode: overwrite` の場合: 現在のログインユーザーで上書き
+- `edit_mode: append` の場合: 既存の値に`, ` で区切って現在のログインユーザーを追加
+  - 重複チェック: 同じユーザー名が既に含まれている場合は追加しない
+
+**プレフィル（URL経由）:**
+- URLパラメータで明示的に値が指定されている場合はそれを使用
+- 指定がない場合は自動生成ロジックを適用
+
+#### 2.3.4 実装
+
+**新規ColumnType:**
+`app/Models/ColumnTypes/UserNameType.php`
+
+```php
+<?php
+
+namespace App\Models\ColumnTypes;
+
+class UserNameType implements InputType
+{
+    public array $options;
+    
+    public function __construct(array $options = [])
+    {
+        $this->options = array_merge([
+            'name_format' => 'full_name',
+            'org_prefix' => 'none',
+            'edit_mode' => 'overwrite',
+        ], $options);
+    }
+    
+    public function getName(): string
+    {
+        return 'user_name';
+    }
+    
+    public function getLabel(): string
+    {
+        return __('ledger.form.user_name');
+    }
+    
+    public function hasOptions(): bool
+    {
+        return true;
+    }
+    
+    public function shouldConvertToJson(): bool
+    {
+        return false;
+    }
+    
+    public function convertToText($value)
+    {
+        return (string) $value;
+    }
+    
+    public function restoreFromString($value)
+    {
+        return (string) $value;
+    }
+    
+    public function getValidationRules(): array
+    {
+        return ['string', 'max:500'];
+    }
+    
+    /**
+     * ログインユーザーから値を生成
+     */
+    public function generateValue(\App\Models\User $user): string
+    {
+        $name = $this->formatUserName($user);
+        $orgPrefix = $this->getOrganizationPrefix($user);
+        
+        return $orgPrefix ? "{$orgPrefix} {$name}" : $name;
+    }
+    
+    /**
+     * ユーザー名をフォーマット
+     */
+    protected function formatUserName(\App\Models\User $user): string
+    {
+        $fullName = $user->name;
+        
+        if ($this->options['name_format'] === 'family_name_only') {
+            // 苗字のみを抽出（半角・全角スペースで分割して最初の要素）
+            $parts = preg_split('/[\s　]+/u', $fullName);
+            return $parts[0] ?? $fullName;
+        }
+        
+        return $fullName;
+    }
+    
+    /**
+     * 組織名プレフィックスを取得
+     */
+    protected function getOrganizationPrefix(\App\Models\User $user): ?string
+    {
+        if ($this->options['org_prefix'] === 'none') {
+            return null;
+        }
+        
+        // ユーザーのプライマリ組織を取得
+        $organization = $user->organizations()
+            ->wherePivot('is_primary', true)
+            ->first();
+        
+        if (!$organization) {
+            return null;
+        }
+        
+        if ($this->options['org_prefix'] === 'bottom_only') {
+            return $organization->name;
+        }
+        
+        if ($this->options['org_prefix'] === 'bottom_3_levels') {
+            return $this->getOrganizationHierarchy($organization, 3);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 組織階層を取得（下から指定階層分）
+     */
+    protected function getOrganizationHierarchy(\App\Models\Organization $organization, int $levels): string
+    {
+        $names = [$organization->name];
+        $current = $organization;
+        
+        for ($i = 1; $i < $levels; $i++) {
+            if (!$current->parent) {
+                break;
+            }
+            $current = $current->parent;
+            array_unshift($names, $current->name);
+        }
+        
+        return implode('/', $names);
+    }
+    
+    /**
+     * 編集時の値を生成（追加モード対応）
+     */
+    public function generateEditValue(\App\Models\User $user, ?string $currentValue): string
+    {
+        $newValue = $this->generateValue($user);
+        
+        if ($this->options['edit_mode'] === 'overwrite' || empty($currentValue)) {
+            return $newValue;
+        }
+        
+        // appendモード: 既存の値に追加
+        $existingNames = array_map('trim', explode(',', $currentValue));
+        
+        // 重複チェック
+        if (in_array($newValue, $existingNames, true)) {
+            return $currentValue; // 既に含まれている場合は追加しない
+        }
+        
+        $existingNames[] = $newValue;
+        return implode(', ', $existingNames);
+    }
+}
+```
+
+**InputTypeFactory への登録:**
+`app/Models/ColumnTypes/InputTypeFactory.php`
+
+```php
+private static $typeMap = [
+    'text' => TextType::class,
+    'textarea' => TextareaType::class,
+    'number' => NumberType::class,
+    'auto_number' => AutoNumberType::class,
+    'chk' => CheckboxType::class,
+    'select' => SelectType::class,
+    'YMD' => DateType::class,
+    'files' => FilesType::class,
+    'phone' => PhoneNumberType::class,
+    'user_name' => UserNameType::class, // ← 追加
+];
+```
+
+**CreateColumn での自動設定:**
+`app/Livewire/Ledger/CreateColumn.php`
+
+```php
+protected function initColumns(): void
+{
+    foreach ($this->ledgerDefineRecord->column_define ?? [] as $column) {
+        $defaultValue = match ($column->type) {
+            'files', 'chk' => [],
+            'auto_number' => $column->getInputType() instanceof \App\Models\ColumnTypes\AutoNumberType
+                ? $this->numberingService->getNextNumber($column, $this->ledgerDefineId)
+                : '',
+            'user_name' => $this->generateUserNameValue($column), // ← 追加
+            default => '',
+        };
+        
+        // ... 既存処理
+    }
+}
+
+protected function generateUserNameValue($column): string
+{
+    $inputType = $column->getInputType();
+    
+    if (!($inputType instanceof \App\Models\ColumnTypes\UserNameType)) {
+        return '';
+    }
+    
+    // 編集モードの場合
+    if ($this->ledgerRecord && isset($this->ledgerRecord->content[$column->id])) {
+        return $inputType->generateEditValue(
+            auth()->user(),
+            $this->ledgerRecord->content[$column->id]
+        );
+    }
+    
+    // 新規作成モードの場合
+    return $inputType->generateValue(auth()->user());
+}
+```
+
+#### 2.3.5 バリデーション（CreateController）
+
+```php
+private function validatePrefillValue($value, $column)
+{
+    try {
+        switch ($column->type) {
+            // ... 既存のケース
+            
+            case 'user_name':
+                if (!is_string($value)) return null;
+                return htmlspecialchars(mb_substr($value, 0, 500), ENT_QUOTES, 'UTF-8');
+            
+            default:
+                return null;
+        }
+    } catch (\Exception $e) {
+        Log::warning('Prefill validation error', [
+            'columnId' => $column->id,
+            'error' => $e->getMessage()
+        ]);
+        return null;
+    }
+}
+```
+
+#### 2.3.6 UI実装
+
+**台帳定義編集画面でのオプション設定:**
+`resources/views/livewire/ledger-define/edit.blade.php`
+
+```blade
+@if($column->type === 'user_name')
+    <div class="space-y-3 mt-3 p-3 bg-base-200 rounded">
+        <h4 class="font-bold text-sm">入力者名オプション</h4>
+        
+        <!-- 名前フォーマット -->
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">名前フォーマット</span>
+            </label>
+            <select wire:model="columns.{{ $index }}.options.name_format" 
+                    class="select select-bordered select-sm">
+                <option value="full_name">フルネーム</option>
+                <option value="family_name_only">苗字のみ</option>
+            </select>
+        </div>
+        
+        <!-- 組織名プレフィックス -->
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">組織名プレフィックス</span>
+            </label>
+            <select wire:model="columns.{{ $index }}.options.org_prefix" 
+                    class="select select-bordered select-sm">
+                <option value="none">なし</option>
+                <option value="bottom_only">最下層組織のみ</option>
+                <option value="bottom_3_levels">最下層から3階層</option>
+            </select>
+        </div>
+        
+        <!-- 編集モード -->
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">編集時の動作</span>
+            </label>
+            <select wire:model="columns.{{ $index }}.options.edit_mode" 
+                    class="select select-bordered select-sm">
+                <option value="overwrite">上書き</option>
+                <option value="append">追加（カンマ区切り）</option>
+            </select>
+        </div>
+        
+        <!-- プレビュー -->
+        <div class="alert alert-info text-sm">
+            <i class="fas fa-eye"></i>
+            <div>
+                <p class="font-bold">プレビュー:</p>
+                <p>{{ $this->getUserNamePreview($column) }}</p>
+            </div>
+        </div>
+    </div>
+@endif
+```
+
+**台帳登録画面での表示:**
+`resources/views/livewire/ledger/create-column.blade.php`
+
+```blade
+@if($column->type === 'user_name')
+    <div class="form-control">
+        <label class="label">
+            <span class="label-text font-bold">
+                {{ $column->name }}
+                @if($column->required)
+                    <span class="text-error">*</span>
+                @endif
+            </span>
+            <span class="label-text-alt text-info">
+                <i class="fas fa-user-check"></i>
+                自動設定
+            </span>
+        </label>
+        <input 
+            type="text" 
+            wire:model="content.{{ $column->id }}" 
+            class="input input-bordered bg-base-200"
+            readonly />
+        <label class="label">
+            <span class="label-text-alt text-base-content/60">
+                ログイン中のユーザー情報から自動設定されます
+            </span>
+        </label>
+    </div>
+@endif
+```
+
+#### 2.3.7 使用例
+
+**設備点検の例:**
+
+```json
+{
+  "columns": [
+    {
+      "id": 1,
+      "name": "設備ID",
+      "type": "text"
+    },
+    {
+      "id": 2,
+      "name": "点検者",
+      "type": "user_name",
+      "options": {
+        "name_format": "full_name",
+        "org_prefix": "bottom_only",
+        "edit_mode": "overwrite"
+      }
+    },
+    {
+      "id": 3,
+      "name": "動作状態",
+      "type": "select",
+      "options": ["正常", "要注意", "異常"]
+    }
+  ]
+}
+```
+
+**表示例:**
+- 山田太郎さん（営業一課所属）が新規作成: `営業一課 山田太郎`
+- 佐藤花子さん（営業一課所属）が編集（overwriteモード）: `営業一課 佐藤花子`
+
+**複数人での点検の例:**
+
+```json
+{
+  "id": 10,
+  "name": "点検者",
+  "type": "user_name",
+  "options": {
+    "name_format": "family_name_only",
+    "org_prefix": "none",
+    "edit_mode": "append"
+  }
+}
+```
+
+**表示例:**
+- 山田さんが新規作成: `山田`
+- 佐藤さんが編集（appendモード）: `山田, 佐藤`
+- 鈴木さんがさらに編集: `山田, 佐藤, 鈴木`
+
+---
+
 ## 3. 実装スケジュール
 
-### 1日目（6時間）
+### 1日目（8時間）
 
-**午前（3時間）:**
-- CreateController の `validatePrefillParams()` 実装（1.5時間）
+**午前（4時間）:**
+- UserNameType 実装（2時間）
+  - 基本クラス構造
+  - オプション処理（name_format, org_prefix, edit_mode）
+  - 組織階層取得ロジック
+  - generateValue(), generateEditValue() メソッド
+- InputTypeFactory への登録（0.5時間）
+- CreateColumn での user_name 自動設定ロジック（1.5時間）
+  - initColumns() 拡張
+  - generateUserNameValue() メソッド実装
+
+**午後（4時間）:**
+- CreateController の `validatePrefillParams()` 実装（2時間）
+  - user_name タイプのバリデーション追加
+  - 各カラムタイプのバリデーション
 - CreateColumn の `applyPrefillParams()` 実装（1時間）
-- 各カラムタイプのバリデーション実装（0.5時間）
-
-**午後（3時間）:**
-- CreateColumn の `generateRegistrationURL()` 実装（1時間）
-- Bladeビュー（ボタン & モーダル）実装（1時間）
 - 動作確認とバグ修正（1時間）
 
-### 2日目（6時間）
+### 2日目（8時間）
 
-**午前（3時間）:**
-- 機能テスト実装（CreateController）（1.5時間）
-- Livewireテスト実装（CreateColumn）（1.5時間）
+**午前（4時間）:**
+- CreateColumn の `generateRegistrationURL()` 実装（1.5時間）
+- Bladeビュー（ボタン & モーダル）実装（1.5時間）
+- 台帳定義編集画面に user_name オプション設定UI追加（1時間）
 
-**午後（3時間）:**
-- 統合テスト（E2Eシナリオ）（1時間）
-- ドキュメント整備（ユーザーマニュアル）（1時間）
+**午後（4時間）:**
+- 機能テスト実装（2時間）
+  - CreateController のテスト
+  - UserNameType のテスト
+- Livewireテスト実装（1.5時間）
+  - CreateColumn のテスト
+  - user_name 自動設定のテスト
+- 統合テスト（0.5時間）
+
+### 3日目（4時間）
+
+**午前（2時間）:**
+- E2Eシナリオテスト
+  - 新規作成 → user_name 自動設定確認
+  - 編集 → overwrite/append モード確認
+  - URL生成 → user_name がパラメータに含まれることを確認
+
+**午後（2時間）:**
+- ドキュメント整備（1時間）
+  - ユーザーマニュアル更新
+  - user_name カラムタイプの説明追加
 - 最終動作確認とデモ準備（1時間）
 
-**合計: 12時間（1.5日間）**
+**合計: 20時間（2.5日間）**
 
 ---
 
@@ -647,6 +1120,109 @@ public function test_empty_content_shows_warning()
 }
 ```
 
+### 6.3 UserNameType テスト
+
+```php
+// tests/Unit/Models/ColumnTypes/UserNameTypeTest.php
+
+public function test_generate_value_with_full_name()
+{
+    $user = User::factory()->create(['name' => '山田太郎']);
+    $type = new UserNameType(['name_format' => 'full_name', 'org_prefix' => 'none']);
+    
+    $value = $type->generateValue($user);
+    
+    $this->assertEquals('山田太郎', $value);
+}
+
+public function test_generate_value_with_family_name_only()
+{
+    $user = User::factory()->create(['name' => '山田太郎']);
+    $type = new UserNameType(['name_format' => 'family_name_only', 'org_prefix' => 'none']);
+    
+    $value = $type->generateValue($user);
+    
+    $this->assertEquals('山田', $value);
+}
+
+public function test_generate_value_with_org_prefix_bottom_only()
+{
+    $user = User::factory()->create(['name' => '山田太郎']);
+    $org = Organization::factory()->create(['name' => '営業一課']);
+    $user->organizations()->attach($org, ['is_primary' => true]);
+    
+    $type = new UserNameType([
+        'name_format' => 'full_name',
+        'org_prefix' => 'bottom_only'
+    ]);
+    
+    $value = $type->generateValue($user);
+    
+    $this->assertEquals('営業一課 山田太郎', $value);
+}
+
+public function test_generate_value_with_org_prefix_bottom_3_levels()
+{
+    $parent2 = Organization::factory()->create(['name' => '営業本部']);
+    $parent1 = Organization::factory()->create(['name' => '営業部', 'parent_id' => $parent2->id]);
+    $org = Organization::factory()->create(['name' => '営業一課', 'parent_id' => $parent1->id]);
+    
+    $user = User::factory()->create(['name' => '山田太郎']);
+    $user->organizations()->attach($org, ['is_primary' => true]);
+    
+    $type = new UserNameType([
+        'name_format' => 'full_name',
+        'org_prefix' => 'bottom_3_levels'
+    ]);
+    
+    $value = $type->generateValue($user);
+    
+    $this->assertEquals('営業本部/営業部/営業一課 山田太郎', $value);
+}
+
+public function test_generate_edit_value_with_overwrite_mode()
+{
+    $user = User::factory()->create(['name' => '佐藤花子']);
+    $type = new UserNameType([
+        'name_format' => 'full_name',
+        'org_prefix' => 'none',
+        'edit_mode' => 'overwrite'
+    ]);
+    
+    $value = $type->generateEditValue($user, '山田太郎');
+    
+    $this->assertEquals('佐藤花子', $value);
+}
+
+public function test_generate_edit_value_with_append_mode()
+{
+    $user = User::factory()->create(['name' => '佐藤花子']);
+    $type = new UserNameType([
+        'name_format' => 'full_name',
+        'org_prefix' => 'none',
+        'edit_mode' => 'append'
+    ]);
+    
+    $value = $type->generateEditValue($user, '山田太郎');
+    
+    $this->assertEquals('山田太郎, 佐藤花子', $value);
+}
+
+public function test_generate_edit_value_with_append_mode_prevents_duplicate()
+{
+    $user = User::factory()->create(['name' => '山田太郎']);
+    $type = new UserNameType([
+        'name_format' => 'full_name',
+        'org_prefix' => 'none',
+        'edit_mode' => 'append'
+    ]);
+    
+    $value = $type->generateEditValue($user, '山田太郎, 佐藤花子');
+    
+    $this->assertEquals('山田太郎, 佐藤花子', $value); // 重複しない
+}
+```
+
 ---
 
 ## 7. ユーザーマニュアル
@@ -748,15 +1324,31 @@ public function test_empty_content_shows_warning()
 1. URLパラメータによる台帳カラム初期値設定（コア機能）
 2. 台帳登録画面で「登録用URLを確認」ボタン
 3. 現在の入力内容からURLを生成してモーダル表示
+4. **【新規】user_name カラムタイプ（入力者名自動設定）**
 
 **❌ 実装しない機能:**
 - QRコード画像生成（外部サービスに完全に任せる）
 - 台帳定義画面でのサンプルURL機能（不要）
 - URL管理・履歴機能（Phase 2以降）
 
+### user_name カラムタイプの特徴
+
+**自動設定オプション:**
+- 名前フォーマット: フルネーム / 苗字のみ
+- 組織名プレフィックス: なし / 最下層のみ / 最下層から3階層
+- 編集モード: 上書き / 追加（カンマ区切り）
+
+**使用例:**
+- 設備点検の点検者記録: `営業一課 山田太郎`
+- 複数人での作業記録: `山田, 佐藤, 鈴木` （appendモード）
+- シンプルな記録者: `山田太郎`
+
 ### 実装期間
 
-**1.5日間（12時間）で完成**
+**2.5日間（20時間）で完成**
+- Day 1（8時間）: UserNameType + コア機能
+- Day 2（8時間）: URL生成機能 + UI + テスト
+- Day 3（4時間）: 統合テスト + ドキュメント
 
 ### ユースケースカバー率
 
@@ -778,3 +1370,8 @@ public function test_empty_content_shows_warning()
 
 **文書履歴:**
 - 2025-10-14: 超最小限MVP実装計画作成（台帳登録画面のみで完結する設計）
+- 2025-10-14: user_name カラムタイプ追加（入力者名自動設定機能）
+  - 名前フォーマット: フルネーム / 苗字のみ
+  - 組織名プレフィックス: なし / 最下層 / 3階層
+  - 編集モード: 上書き / 追加（カンマ区切り）
+  - 実装期間を2.5日間に調整
