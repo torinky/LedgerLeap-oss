@@ -11,10 +11,10 @@
 
 ### 1.1 コンセプト
 
-台帳登録画面で入力内容から登録用URLを生成し、QRコード化することで効率的な繰り返し登録を実現します。
+台帳登録画面で入力内容から事前入力リンクを生成し、クリップボードにコピーすることで効率的な繰り返し登録を実現します。
 
 **特徴:**
-- QRコード生成は外部サービスに任せる（実装不要）
+- URLをクリップボードにコピー（QRコード化や共有方法はユーザー判断）
 - 自動生成値（入力者名、日時、自動採番）は初期値と異なる場合のみURLに含める
 - 台帳登録画面だけで完結
 
@@ -22,11 +22,11 @@
 
 ```
 【URL作成】
-台帳登録画面 → 想定値を入力 → 「登録用URLを確認」ボタン
-→ URLをコピー → 外部サービスでQRコード化
+台帳登録画面 → 想定値を入力 → 「事前入力リンクを取得」ボタン
+→ URLをクリップボードにコピー → 必要に応じてQRコード化やメール送信
 
 【URL使用】
-QRコード読み取り → ブラウザで台帳作成画面が開く（初期値設定済み）
+リンクをクリック（またはQRコード読み取り） → ブラウザで台帳作成画面が開く（初期値設定済み）
 → 内容確認・修正 → 登録
 ```
 
@@ -176,8 +176,8 @@ protected function applyPrefillParams(): void
     }
 }
 
-// URL生成メソッド
-public function generateRegistrationURL(): void
+// 事前入力リンク生成メソッド
+public function generatePrefillLink(): void
 {
     $params = [];
     
@@ -274,25 +274,65 @@ class UserNameType implements InputType
 
 **ボタン追加（台帳登録画面）:**
 ```blade
-<button wire:click="generateRegistrationURL" class="btn btn-outline btn-info">
+<button wire:click="generatePrefillLink" class="btn btn-outline btn-info">
     <i class="fas fa-link"></i>
-    登録用URLを確認
+    事前入力リンクを取得
 </button>
 ```
 
 **モーダル:**
 ```blade
-<x-modal wire:model="showURLModal" title="登録用URL">
-    <input type="text" value="{{ $generatedURL }}" readonly />
-    <button wire:click="copyURL">コピー</button>
+<x-modal wire:model="showURLModal" title="事前入力リンク">
+    <div class="form-control">
+        <label class="label">
+            <span class="label-text">このリンクで台帳作成画面を開くと、現在の入力内容が自動入力されます</span>
+        </label>
+        <input type="text" value="{{ $generatedURL }}" readonly class="input input-bordered" />
+    </div>
     
-    <div class="alert alert-info">
-        外部サービスでQRコード化: 
-        <a href="https://www.qr-code-generator.com/" target="_blank">
-            QR Code Generator
-        </a>
+    <div class="modal-action">
+        <button wire:click="copyToClipboard" class="btn btn-primary">
+            <i class="fas fa-copy"></i>
+            クリップボードにコピー
+        </button>
+        <button wire:click="$set('showURLModal', false)" class="btn">閉じる</button>
+    </div>
+    
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle"></i>
+        <span>コピーしたリンクはQRコード化したり、メールで送信したりできます</span>
     </div>
 </x-modal>
+```
+
+**クリップボードコピー処理（Alpine.js）:**
+```javascript
+public function copyToClipboard(): void
+{
+    $this->dispatch('copy-to-clipboard', url: $this->generatedURL);
+}
+```
+
+```blade
+@script
+<script>
+    $wire.on('copy-to-clipboard', (event) => {
+        navigator.clipboard.writeText(event.url).then(() => {
+            $wire.dispatch('mary-toast', {
+                type: 'success',
+                title: 'コピーしました',
+                description: 'クリップボードにリンクをコピーしました'
+            });
+        }).catch(() => {
+            $wire.dispatch('mary-toast', {
+                type: 'error',
+                title: 'コピー失敗',
+                description: 'クリップボードへのコピーに失敗しました'
+            });
+        });
+    });
+</script>
+@endscript
 ```
 
 ---
@@ -306,8 +346,8 @@ class UserNameType implements InputType
 - 動作確認（2時間）
 
 ### Day 2（8時間）
-- generateRegistrationURL 実装（自動生成値の判定含む）（3時間）
-- UI実装（ボタン、モーダル）（2時間）
+- generatePrefillLink 実装（自動生成値の判定含む）（2.5時間）
+- UI実装（ボタン、モーダル、クリップボードコピー）（2.5時間）
 - テスト実装（3時間）
 
 ### Day 3（4時間）
@@ -411,9 +451,10 @@ public function test_generate_url_excludes_empty_values()
 
 ### 実装内容
 1. URLパラメータによる台帳カラム初期値設定
-2. 台帳登録画面で「登録用URLを確認」ボタン
-3. user_name カラムタイプ（入力者名自動設定）
-4. **自動生成値は初期値と異なる場合のみURLに含める**
+2. 台帳登録画面で「事前入力リンクを取得」ボタン
+3. クリップボードコピー機能（QRコード化や共有はユーザー判断）
+4. user_name カラムタイプ（入力者名自動設定）
+5. **自動生成値は初期値と異なる場合のみURLに含める**
 
 ### 実装期間
 **2.5日間（20時間）**
