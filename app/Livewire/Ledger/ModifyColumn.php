@@ -36,9 +36,9 @@ class ModifyColumn extends CreateColumn
 
     //    public $tenantId='';
 
-    public function mount(int $ledgerId): void
+    public function mount(int $ledgerId, array $prefillParams = []): void
     {
-
+        // ModifyColumnではprefillParamsは使用しないが、親クラスとの互換性のために引数として受け取る
         $this->ledgerId = $ledgerId;
         if ($this->ledgerId) {
             // edit
@@ -73,7 +73,6 @@ class ModifyColumn extends CreateColumn
         }
         $this->initBackgroundImages();
         $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
-
     }
 
     public function render(): View

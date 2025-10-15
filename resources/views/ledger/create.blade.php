@@ -34,7 +34,7 @@
             </div>
 
 
-            <livewire:ledger.create-column :ledger-define-id="$ledgerDefineRecord->id" />
+            <livewire:ledger.create-column :ledger-define-id="$ledgerDefineRecord->id" :prefill-params="$prefillParams ?? []" />
         </div>
 
 
