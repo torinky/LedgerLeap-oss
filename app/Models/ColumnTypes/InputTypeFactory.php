@@ -14,8 +14,10 @@ class InputTypeFactory
         'chk' => CheckboxType::class,
         'select' => SelectType::class,
         'YMD' => DateType::class,
+        'YMDHM' => DateType::class,
         'files' => FilesType::class,
-        'phone' => PhoneNumberType::class, // New type
+        'phone' => PhoneNumberType::class,
+        'user_name' => UserNameType::class,
     ];
 
     /**

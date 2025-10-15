@@ -29,7 +29,7 @@ class UserNameType implements InputType
 
     public function hasOptions(): bool
     {
-        return false;
+        return true;
     }
 
     public function shouldConvertToJson(): bool

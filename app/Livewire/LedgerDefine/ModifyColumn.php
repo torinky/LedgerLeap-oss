@@ -76,6 +76,11 @@ class ModifyColumn extends Component
                     ] : [],
                     $columnDefineObject->getInputType() instanceof DateType ? [
                         'default_offset' => $columnDefineObject->getInputType()->default_offset,
+                    ] : [],
+                    $columnDefineObject->getInputType() instanceof UserNameType ? [
+                        'format' => $columnDefineObject->getInputType()->format,
+                        'organization_prefix' => $columnDefineObject->getInputType()->organization_prefix,
+                        'edit_mode' => $columnDefineObject->getInputType()->edit_mode,
                     ] : []
                 ),
             ];
@@ -494,3 +499,5 @@ class ModifyColumn extends Component
         }
     }
 }
+
+use App\Models\ColumnTypes\UserNameType;

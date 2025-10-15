@@ -83,7 +83,7 @@
                                                 />
                                             @else
                                                 @php
-                                                    $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
+                                                    $componentName = 'ledger.form.'. str_replace('_', '-', $columnDefine->type);
                                                     // auto_number タイプの場合、text コンポーネントを使用
                                                     if ($columnDefine->type === 'auto_number') {
                                                         $componentName = 'ledger.form.text';

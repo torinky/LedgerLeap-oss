@@ -332,10 +332,14 @@ class CreateColumn extends Component
     protected function initColumns(): void
     {
         foreach ($this->ledgerDefineRecord->column_define ?? [] as $column) {
+            // 初期値の決定
             $defaultValue = match ($column->type) {
                 'files', 'chk' => [],
                 'auto_number' => $column->getInputType() instanceof \App\Models\ColumnTypes\AutoNumberType
                     ? $this->numberingService->getNextNumber($column, $this->ledgerDefineId)
+                    : '',
+                'user_name' => $column->getInputType() instanceof \App\Models\ColumnTypes\UserNameType
+                    ? $column->getInputType()->generateValue(Auth::user())
                     : '',
                 default => '',
             };

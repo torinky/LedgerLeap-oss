@@ -173,6 +173,40 @@
                                                                          wire:model.live="columns.{{$index}}.options.overwrite_existing"
                                                                          wire:key="overwrite-existing-{{$column['id']}}"
                                                                          hint="{{__('ledger.column.date.overwrite_existing_hint')}}"/>
+                                                    @elseif($column['type'] === 'user_name')
+                                                        <x-mary-select 
+                                                            label="{{__('ledger.column.user_name.format')}}"
+                                                            wire:model.live="columns.{{$index}}.options.format"
+                                                            wire:key="format-{{$column['id']}}"
+                                                            :options="[
+                                                                ['id' => 'full_name', 'name' => __('ledger.column.user_name.format_full_name')],
+                                                                ['id' => 'family_name_only', 'name' => __('ledger.column.user_name.format_family_name_only')]
+                                                            ]"
+                                                            option-value="id"
+                                                            option-label="name" />
+                                                        
+                                                        <x-mary-select 
+                                                            label="{{__('ledger.column.user_name.organization_prefix')}}"
+                                                            wire:model.live="columns.{{$index}}.options.organization_prefix"
+                                                            wire:key="organization-prefix-{{$column['id']}}"
+                                                            :options="[
+                                                                ['id' => 'none', 'name' => __('ledger.column.user_name.organization_prefix_none')],
+                                                                ['id' => 'bottom_only', 'name' => __('ledger.column.user_name.organization_prefix_bottom_only')],
+                                                                ['id' => 'bottom_3_levels', 'name' => __('ledger.column.user_name.organization_prefix_bottom_3_levels')]
+                                                            ]"
+                                                            option-value="id"
+                                                            option-label="name" />
+                                                        
+                                                        <x-mary-select 
+                                                            label="{{__('ledger.column.user_name.edit_mode')}}"
+                                                            wire:model.live="columns.{{$index}}.options.edit_mode"
+                                                            wire:key="edit-mode-{{$column['id']}}"
+                                                            :options="[
+                                                                ['id' => 'overwrite', 'name' => __('ledger.column.user_name.edit_mode_overwrite')],
+                                                                ['id' => 'append', 'name' => __('ledger.column.user_name.edit_mode_append')]
+                                                            ]"
+                                                            option-value="id"
+                                                            option-label="name" />
                                                     @elseif($column['type'] === 'number')
                                                         <div class="grid grid-cols-2 gap-4">
                                                             {{--                                                        @dd($columns[$index])--}}
