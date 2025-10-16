@@ -118,7 +118,9 @@
                         </div>
                     @else
                         @php
-                            $componentName = 'ledger.form.'. Str::kebab($columnDefine->type);
+                            // コンポーネント名を生成（アンダースコアをハイフンに変換）
+                            $typeName = str_replace('_', '-', $columnDefine->type);
+                            $componentName = 'ledger.form.'. $typeName;
                             // auto_number タイプの場合、text コンポーネントを使用
                             if ($columnDefine->type === 'auto_number') {
                                 $componentName = 'ledger.form.text';

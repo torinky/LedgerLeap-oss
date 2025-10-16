@@ -200,7 +200,26 @@
 
     {{-- 事前入力リンクモーダル --}}
     <x-mary-modal wire:model="showPrefillModal" class="backdrop-blur" title="">
-        <div class="space-y-4" x-data="{ showSuccess: false, showWarning: false }">
+        <div class="space-y-4" x-data="{ 
+            showSuccess: false, 
+            showWarning: false,
+            init() {
+                // モーダルが開いたときにURLを選択
+                this.$watch('$wire.showPrefillModal', (value) => {
+                    if (value) {
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                const textarea = document.getElementById('prefill-url-textarea');
+                                if (textarea) {
+                                    textarea.focus();
+                                    textarea.select();
+                                }
+                            }, 200);
+                        });
+                    }
+                });
+            }
+        }">
             {{-- カスタムタイトル --}}
             <h3 class="font-bold text-lg flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -233,12 +252,14 @@
             
             {{-- URLを選択可能なテキストエリアとして表示（Safari対応） --}}
             <div>
+{{--
                 <label class="label">
                     <span class="label-text text-xs text-base-content/70 break-words whitespace-normal">
                         {{ __('ledger.prefill.manual_copy_instruction') }}
                     </span>
                 </label>
-                <textarea 
+--}}
+                <textarea
                     id="prefill-url-textarea"
                     readonly 
                     class="textarea textarea-bordered w-full font-mono text-xs"
@@ -253,12 +274,6 @@
         </div>
         
         <x-slot:actions>
-            <x-mary-button 
-                label="{{ __('ledger.prefill.select_url') }}" 
-                icon="o-cursor-arrow-rays"
-                class="btn-secondary btn-sm"
-                @click="document.getElementById('prefill-url-textarea').select()"
-            />
             <x-mary-button 
                 label="{{ __('ledger.prefill.copy_to_clipboard') }}" 
                 icon="o-clipboard-document"

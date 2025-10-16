@@ -113,169 +113,30 @@
                                                                  class="input-accent w-full"
                                                                  wire:key="hint-{{$column['id']}}"/>
 
-                                                @if(isset($column['file']['path']))
-                                                    <a href="{{ asset('storage/'.$column['file']['path']) }}"
-                                                       target="_blank">
-                                                        <img src="{{ asset('storage/thumbnails/'.$column['file']['path']) }}"
-                                                             alt="{{ $column['file']['name'] }}">
-                                                    </a>
-                                                    <label for="delete-file-modal-{{$column['id']}}"
-                                                           class="btn btn-sm tooltip"
-                                                           data-tip="{{__('ledger.column.delete_file')}}">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                    </label>
-                                                    <!-- 背景画像削除確認モーダル -->
-                                                    <input type="checkbox" id="delete-file-modal-{{$column['id']}}"
-                                                           class="modal-toggle hidden"/>
-                                                    <div class="modal" role="dialog" class="z-50">
-                                                        <div class="modal-box">
-                                                            <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
-                                                            <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>
-                                                            <div class="modal-action">
-                                                                <label for="delete-file-modal-{{$column['id']}}"
-                                                                       wire:click.prevent="deleteFile({{$column['id']}})"
-                                                                       class="btn btn-error">{{__('actions.delete')}}</label>
-                                                                <label for="delete-file-modal-{{$column['id']}}"
-                                                                       class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <x-mary-file label="{{__('ledger.column.bg_file')}}"
-                                                                 wire:model.live="columnUploadedFile.{{$column['id']}}"
-                                                                 class="input-accent" wire:key="file-{{$column['id']}}"
-                                                                 hint="png, jpg, jpeg, gif, svg"/>
-                                                @endif
-
-                                                @if($columns[$index]['useOptions'])
-                                                    @if($column['type'] === 'auto_number')
-                                                        <x-mary-input label="{{__('ledger.column.auto_number.prefix')}}"
-                                                                      wire:model.live="columns.{{$index}}.options.prefix"
-                                                                      wire:key="prefix-{{$column['id']}}"
-                                                                      hint="{{__('ledger.column.auto_number.prefix_hint')}}"/>
-                                                        <x-mary-input label="{{__('ledger.column.auto_number.digits')}}"
-                                                                      wire:model.live="columns.{{$index}}.options.digits"
-                                                                      wire:key="digits-{{$column['id']}}"
-                                                                      type="number" min="1"
-                                                                      hint="{{__('ledger.column.auto_number.digits_hint')}}"/>
-                                                        <x-mary-input
-                                                                label="{{__('ledger.column.auto_number.revision')}}"
-                                                                wire:model.live="columns.{{$index}}.options.revision"
-                                                                wire:key="revision-{{$column['id']}}"
-                                                                hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
-                                                    @elseif($column['type'] === 'YMD')
-                                                        <x-mary-input label="{{__('ledger.column.date.default_offset')}}"
-                                                                      wire:model.live="columns.{{$index}}.options.default_offset"
-                                                                      wire:key="default-offset-{{$column['id']}}"
-                                                                      placeholder="0d"
-                                                                      hint="{{__('ledger.column.date.default_offset_hint')}}"/>
-                                                        <x-mary-checkbox label="{{__('ledger.column.date.overwrite_existing')}}"
-                                                                         wire:model.live="columns.{{$index}}.options.overwrite_existing"
-                                                                         wire:key="overwrite-existing-{{$column['id']}}"
-                                                                         hint="{{__('ledger.column.date.overwrite_existing_hint')}}"/>
-                                                    @elseif($column['type'] === 'user_name')
-                                                        <x-mary-select 
-                                                            label="{{__('ledger.column.user_name.format')}}"
-                                                            wire:model.live="columns.{{$index}}.options.format"
-                                                            wire:key="format-{{$column['id']}}"
-                                                            :options="[
-                                                                ['id' => 'full_name', 'name' => __('ledger.column.user_name.format_full_name')],
-                                                                ['id' => 'family_name_only', 'name' => __('ledger.column.user_name.format_family_name_only')]
-                                                            ]"
-                                                            option-value="id"
-                                                            option-label="name" />
-                                                        
-                                                        <x-mary-select 
-                                                            label="{{__('ledger.column.user_name.organization_prefix')}}"
-                                                            wire:model.live="columns.{{$index}}.options.organization_prefix"
-                                                            wire:key="organization-prefix-{{$column['id']}}"
-                                                            :options="[
-                                                                ['id' => 'none', 'name' => __('ledger.column.user_name.organization_prefix_none')],
-                                                                ['id' => 'bottom_only', 'name' => __('ledger.column.user_name.organization_prefix_bottom_only')],
-                                                                ['id' => 'bottom_3_levels', 'name' => __('ledger.column.user_name.organization_prefix_bottom_3_levels')]
-                                                            ]"
-                                                            option-value="id"
-                                                            option-label="name" />
-                                                        
-                                                        <x-mary-select 
-                                                            label="{{__('ledger.column.user_name.edit_mode')}}"
-                                                            wire:model.live="columns.{{$index}}.options.edit_mode"
-                                                            wire:key="edit-mode-{{$column['id']}}"
-                                                            :options="[
-                                                                ['id' => 'overwrite', 'name' => __('ledger.column.user_name.edit_mode_overwrite')],
-                                                                ['id' => 'append', 'name' => __('ledger.column.user_name.edit_mode_append')]
-                                                            ]"
-                                                            option-value="id"
-                                                            option-label="name" />
-                                                    @elseif($column['type'] === 'number')
-                                                        <div class="grid grid-cols-2 gap-4">
-                                                            {{--                                                        @dd($columns[$index])--}}
-                                                            <x-mary-input label="{{__('ledger.column.number.min')}}"
-                                                                          wire:model.live="columns.{{$index}}.options.min"
-                                                                          wire:key="min-{{$column['id']}}"
-                                                                          type="number"
-                                                                          placeholder="{{__('ledger.column.number.min_placeholder')}}"/>
-                                                            <x-mary-input label="{{__('ledger.column.number.max')}}"
-                                                                          wire:model.live="columns.{{$index}}.options.max"
-                                                                          wire:key="max-{{$column['id']}}"
-                                                                          type="number"
-                                                                          placeholder="{{__('ledger.column.number.max_placeholder')}}"/>
-                                                            <x-mary-input label="{{__('ledger.column.number.step')}}"
-                                                                          wire:model.live="columns.{{$index}}.options.step"
-                                                                          wire:key="step-{{$column['id']}}"
-                                                                          type="number"
-                                                                          placeholder="{{__('ledger.column.number.step_placeholder')}}"/>
-                                                            <x-mary-input label="{{__('ledger.column.number.unit')}}"
-                                                                          wire:model.live="columns.{{$index}}.options.unit"
-                                                                          wire:key="unit-{{$column['id']}}"
-                                                                          placeholder="{{__('ledger.column.number.unit_placeholder')}}"/>
-                                                        </div>
-                                                    @else
-
-                                                        <x-mary-tags label="{{__('ledger.options')}}"
-                                                                     wire:model.live="columns.{{$index}}.options"
-                                                                     wire:key="options-{{$column['id']}}" icon="o-tag"
-                                                                     hint="Hit enter to create a new tag"/>
-                                                    @endif
-                                                @endif
-
+                                                @include('livewire.ledger-define.partials.column-options', [
+                                                    'column' => $column,
+                                                    'index' => $index,
+                                                    'columnUploadedFile' => $columnUploadedFile
+                                                ])
 
                                                 <div class="mt-3 flex items-center justify-end w-full space-x-2">
-                                                    @if($isDirty)
-                                                        <x-mary-button label="{{__('actions.save')}}"
-                                                                       wire:click="saveColumn({{$index}})"
-                                                                       icon="o-pencil-square"
-                                                                       class="btn-primary btn-sm"
-                                                                       spinner="saveColumn({{$index}})"
-                                                        />
-                                                    @else
-                                                        <x-mary-button label="{{__('actions.save')}}"
-                                                                       icon="o-pencil-square"
-                                                                       class="btn-primary btn-sm"
-                                                                       disabled
-                                                        />
-                                                    @endif
+                                                    @include('livewire.ledger-define.partials.save-button', [
+                                                        'isDirty' => $isDirty,
+                                                        'label' => __('actions.save'),
+                                                        'wireClick' => "saveColumn({$index})",
+                                                        'spinner' => "saveColumn({$index})",
+                                                        'class' => 'btn-primary btn-sm'
+                                                    ])
                                                     <label for="delete-modal-{{$column['id']}}"
-                                                           class="btn btn-outline btn-sm btn-error ml-10 justify-self-end"><i
-                                                                class="fa-solid fa-trash mr-1"></i> {{__('ledger.column.remove')}}
+                                                           class="btn btn-outline btn-sm btn-error ml-10 justify-self-end">
+                                                        <i class="fa-solid fa-trash mr-1"></i> {{__('ledger.column.remove')}}
                                                     </label>
                                                 </div>
-                                                <input type="checkbox" id="delete-modal-{{$column['id']}}"
-                                                       class="modal-toggle hidden"/>
-                                                <div class="modal" role="dialog">
-                                                    <div class="modal-box">
-                                                        <h3 class="font-bold text-lg">{{__('ledger.column.remove')}}</h3>
-                                                        <p class="py-4">{{__('ledger.column.remove_message',['name'=>$column['name']])}}</p>
-                                                        <p class="text-lg text-bold text-error">{{__('ledger.column.will_ledger_delete_message')}}</p>
-                                                        <div class="modal-action">
-                                                            <label for="delete-modal-{{$column['id']}}"
-                                                                   wire:click.prevent="removeColumn({{$index}})"
-                                                                   class="btn btn-error">{{__('ledger.column.remove')}}</label>
-                                                            <label for="delete-modal-{{$column['id']}}"
-                                                                   class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
+
+                                                @include('livewire.ledger-define.partials.delete-column-modal', [
+                                                    'column' => $column,
+                                                    'index' => $index
+                                                ])
                                             </div>
                                         </div>
                                     </div>
@@ -293,22 +154,10 @@
             <i class="fa-solid fa-plus-circle mr-1"></i>
             {{__('ledger.column.add')}}
         </button>
-        @if($isDirty)
-            <x-mary-button label="{{__('actions.save')}}"
-                           type="button"
-                           wire:click="save"
-                           icon="o-pencil-square"
-                           class="btn-primary"
-                           spinner="save"
-            />
-        @else
-            <x-mary-button label="{{__('actions.save')}}"
-                           type="button"
-                           wire:click="save"
-                           icon="o-pencil-square"
-                           class="btn-primary"
-                           disabled
-            />
-        @endif
+        @include('livewire.ledger-define.partials.save-button', [
+            'isDirty' => $isDirty,
+            'label' => __('actions.save'),
+            'type' => 'button'
+        ])
     </div>
 </div>
