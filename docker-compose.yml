@@ -207,6 +207,33 @@ services:
     restart: unless-stopped
     networks:
       - sail
+  embedding:
+    build:
+      context: ./docker/embedding
+      dockerfile: Dockerfile
+    container_name: ledgerleap_embedding
+    volumes:
+      - ./storage/app/embedding:/app/models
+    environment:
+      - EMBEDDING_MODEL=BAAI/bge-m3
+      - USE_ONNX=true
+      - CPU_THREADS=4
+    networks:
+      - sail
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '2.0'
+          memory: 2G
 networks:
   sail:
     driver: bridge
