@@ -6,11 +6,13 @@ use App\Database\MySqlConnection;
 use App\Models\AutoLink;
 use App\Models\Folder;
 use App\Models\LedgerDiff;
+use App\Models\Ledger;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
 use App\Observers\AutoLinkObserver;
 use App\Observers\FolderObserver;
 use App\Observers\LedgerDiffObserver;
+use App\Observers\LedgerObserver;
 use App\Services\TenantAccessService;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
@@ -55,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
             return new TenantAccessService;
         });
 
+        $this->app->singleton(\App\Services\EmbeddingService::class, function ($app) {
+            return new \App\Services\EmbeddingService;
+        });
+
         $this->app->singleton(\Vaites\ApacheTika\Client::class, function ($app) {
             return \Vaites\ApacheTika\Client::make('tika', 9998);
         });
@@ -84,6 +90,7 @@ class AppServiceProvider extends ServiceProvider
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);
+        Ledger::observe(LedgerObserver::class);
         \App\Models\LedgerDefine::observe(\App\Observers\LedgerDefineObserver::class);
 
         // Domain モデルが作成される際にUUIDを自動生成

@@ -208,6 +208,7 @@ services:
     networks:
       - sail
   embedding:
+    platform: linux/amd64  # Rosetta 2エミュレーションでx86_64版を使用（ARM64安定性問題の回避）
     build:
       context: ./docker/embedding
       dockerfile: Dockerfile
@@ -215,11 +216,12 @@ services:
     volumes:
       - ./storage/app/embedding:/app/models
     environment:
-      - EMBEDDING_MODEL=BAAI/bge-m3
-      - USE_ONNX=true
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - USE_ONNX=false
       - CPU_THREADS=4
     networks:
       - sail
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 60s
@@ -230,7 +232,7 @@ services:
       resources:
         limits:
           cpus: '4.0'
-          memory: 4G
+          memory: 8G
         reservations:
           cpus: '2.0'
           memory: 2G
