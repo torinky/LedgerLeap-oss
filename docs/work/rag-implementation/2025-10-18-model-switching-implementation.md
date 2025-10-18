@@ -10,19 +10,23 @@
 ### 1. ✅ config/rag.phpの拡張
 
 **変更前:** 3つのモデルのみ定義
-- all-minilm-l6-v2
-- bge-m3
-- multilingual-e5-base
 
-**変更後:** 6つのモデルに拡張、詳細な説明付き
+**変更後:** 7つのモデルに拡張、詳細な説明付き
 
 ```php
 'available_models' => [
     // ✨ 新規追加（推奨モデル）
     'ruri-v3-30m' => [
         'name' => 'ruri-nakamura/ruri-v3-30m',
+        'dimension' => 256, // 修正
+        'description' => 'Ultra-fast and lightweight model specialized for Japanese.',
+    ],
+
+    // ✨ 新規追加（高品質日本語モデル）
+    'ruri-v3-310m' => [
+        'name' => 'ruri-nakamura/ruri-v3-310m',
         'dimension' => 768,
-        'description' => 'Fast and lightweight model with excellent Japanese performance (recommended for dev).',
+        'description' => 'High-quality model specialized for Japanese.',
     ],
 
     // ✨ 新規追加（軽量多言語）
@@ -32,23 +36,7 @@
         'description' => 'Lightweight multilingual model with good performance.',
     ],
 
-    // 既存（名前変更なし）
-    'all-minilm-l6-v2' => [...],
-    'multilingual-e5-base' => [...],
-
-    // ✨ 新規追加（特殊用途）
-    'granite-embedding-107m' => [
-        'name' => 'ibm/granite-embedding-107m-multilingual',
-        'dimension' => 1024,
-        'description' => 'Unique multilingual model that also supports code search.',
-    ],
-
-    // 既存（説明を追加）
-    'bge-m3' => [
-        'name' => 'BAAI/bge-m3',
-        'dimension' => 1024,
-        'description' => 'High-quality multilingual model (slow on ARM64, use x86_64).',
-    ],
+    // ... 他のモデル
 ],
 ```
 
@@ -62,12 +50,6 @@
 1. モデル一覧の表示
 2. 現在の設定の表示
 3. モデルの自動切り替え
-   - .envの更新
-   - docker-compose.ymlの更新
-   - コンテナの停止・削除
-   - イメージの削除
-   - コンテナの再ビルド
-   - コンテナの起動
 
 **使い方:**
 ```bash
@@ -80,21 +62,99 @@
 
 ---
 
-### 3. ✅ ドキュメント作成
+## 対応モデル一覧
 
-#### docs/work/rag-implementation/2025-10-18-model-alternatives.md
-- 各モデルの詳細情報
-- 性能比較表
-- シナリオ別推奨
-
-#### docs/work/rag-implementation/2025-10-18-switch-model-guide.md
-- スクリプトの使い方
-- トラブルシューティング
-- 性能比較
+| Key | Model Name | Dimensions | 推奨用途 |
+|-----|-----------|-----------|----------|
+| **ruri-v3-30m** | ruri-nakamura/ruri-v3-30m | **256** | ⭐ 日本語特化・超高速 |
+| **ruri-v3-310m** | ruri-nakamura/ruri-v3-310m | **768** | ⭐ 日本語特化・高品質 |
+| **multilingual-e5-small** | intfloat/multilingual-e5-small | 384 | 汎用・軽量多言語（推奨） |
+| **all-minilm-l6-v2** | sentence-transformers/all-MiniLM-L6-v2 | 384 | 超高速（英語中心） |
+| **multilingual-e5-base** | intfloat/multilingual-e5-base | 768 | バランス型多言語 |
+| **granite-embedding-107m** | ibm/granite-embedding-107m-multilingual | 1024 | コード検索 |
+| **bge-m3** | BAAI/bge-m3 | 1024 | 最高品質（x86_64） |
 
 ---
 
-## 対応モデル一覧
+## 使用例
+
+### 推奨モデルに切り替え
+
+```bash
+$ ./bin/switch-model.sh multilingual-e5-small
+
+==========================================
+RAG Embedding Model Switcher
+==========================================
+
+==========================================
+Switching to: multilingual-e5-small
+==========================================
+  Model: intfloat/multilingual-e5-small
+  Dimensions: 384
+  Description: Lightweight multilingual model
+
+Continue? (y/n) y
+
+[Step 1/6] Updating .env file...
+...
+```
+
+---
+
+## 期待される効果
+
+### 開発効率の劇的向上
+
+#### BGE-M3 → multilingual-e5-small
+
+| 指標 | Before | After | 改善 |
+|------|--------|-------|------|
+| **処理時間/text** | 120秒 | 2-3秒 | **98%** ⚡ |
+| **テスト完了時間** | 15-20分 | 2-3分 | **85-90%** ⚡ |
+| **開発サイクル** | 遅い | 高速 | **劇的改善** |
+| **ストレス** | 高い | 低い | **大幅削減** |
+
+---
+
+## ファイル構成
+
+```
+config/
+└── rag.php                              # ✨ 7モデルに拡張
+
+bin/
+├── switch-model.sh                      # ✨ 新規作成（切り替えスクリプト）
+└── test-rag-performance.sh              # 既存（テストスクリプト）
+
+docs/work/rag-implementation/
+├── 2025-10-18-model-alternatives.md     # ✨ モデル比較ガイド
+├── 2025-10-18-switch-model-guide.md     # ✨ スクリプト使用ガイド
+└── 2025-10-18-model-switching-implementation.md  # このファイル
+```
+
+---
+
+## まとめ
+
+### 実装した機能
+
+1. **モデル定義の拡張** - 7つのモデルに対応
+2. **自動切り替えスクリプト** - 1コマンドで完結
+3. **包括的なドキュメント** - 使い方からトラブルシューティングまで
+
+### 得られる効果
+
+- ⚡ **98%の速度向上**（BGE-M3 → e5-small）
+- 🚀 **開発サイクルの高速化**（15-20分 → 2-3分）
+- 😊 **ストレスの大幅削減**
+- 🎯 **柔軟なモデル選択**（用途に応じて最適化）
+
+### 今すぐ実行
+
+```bash
+./bin/switch-model.sh multilingual-e5-small
+```
 
 | Key | Model Name | Dimensions | 推奨用途 |
 |-----|-----------|-----------|----------|
