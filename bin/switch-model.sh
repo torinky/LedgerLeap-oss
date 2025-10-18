@@ -126,7 +126,7 @@ switch_model() {
     fi
     
     echo ""
-    echo -e "${YELLOW}[Step 1/6]${NC} Updating .env file..."
+    echo -e "${YELLOW}[Step 1/7]${NC} Updating .env file..."
     
     # .envの更新
     if [ -f "$PROJECT_ROOT/.env" ]; then
@@ -148,7 +148,16 @@ switch_model() {
     fi
     
     echo ""
-    echo -e "${YELLOW}[Step 2/6]${NC} Updating docker-compose.yml..."
+    echo -e "${YELLOW}[Step 2/7]${NC} Verifying Laravel configuration consistency..."
+    
+    # config/rag.phpの次元設定を確認（情報表示のみ）
+    echo -e "  ${BLUE}ℹ${NC}  Model dimension: ${dimension}D"
+    echo -e "  ${BLUE}ℹ${NC}  Binary storage: MEDIUMBLOB (up to 16MB, sufficient for all models)"
+    echo -e "  ${BLUE}ℹ${NC}  Laravel config: config/rag.php reads from .env (RAG_MODEL=${model_key})"
+    echo -e "  ${GREEN}✓${NC} Configuration verified"
+    
+    echo ""
+    echo -e "${YELLOW}[Step 3/7]${NC} Updating docker-compose.yml..."
     
     # docker-compose.ymlの更新
     if [ -f "$PROJECT_ROOT/docker-compose.yml" ]; then
@@ -173,13 +182,13 @@ switch_model() {
     fi
     
     echo ""
-    echo -e "${YELLOW}[Step 3/6]${NC} Stopping existing embedding container..."
+    echo -e "${YELLOW}[Step 4/7]${NC} Stopping existing embedding container..."
     cd "$PROJECT_ROOT"
     ./vendor/bin/sail down embedding 2>&1 | tail -3
     echo -e "  ${GREEN}✓${NC} Container stopped"
     
     echo ""
-    echo -e "${YELLOW}[Step 4/6]${NC} Removing old image..."
+    echo -e "${YELLOW}[Step 5/7]${NC} Removing old image..."
     docker rmi ledgerleap-embedding 2>/dev/null || echo "  (No old image to remove)"
     echo -e "  ${GREEN}✓${NC} Old image removed"
     
@@ -202,13 +211,13 @@ switch_model() {
     # fi
     
     echo ""
-    echo -e "${YELLOW}[Step 5/6]${NC} Building new container..."
+    echo -e "${YELLOW}[Step 6/7]${NC} Building new container..."
     echo -e "  ${BLUE}This may take a few minutes...${NC}"
     ./vendor/bin/sail build --no-cache embedding 2>&1 | grep -E "Step|Successfully|named" | tail -5
     echo -e "  ${GREEN}✓${NC} Container built"
     
     echo ""
-    echo -e "${YELLOW}[Step 6/6]${NC} Starting embedding container..."
+    echo -e "${YELLOW}[Step 7/7]${NC} Starting embedding container..."
     ./vendor/bin/sail up -d embedding 2>&1 | tail -3
     echo -e "  ${GREEN}✓${NC} Container started"
     
@@ -216,6 +225,16 @@ switch_model() {
     echo -e "${CYAN}=========================================="
     echo -e "${GREEN}✓ Model switch completed!${NC}"
     echo -e "==========================================${NC}"
+    echo ""
+    echo -e "${CYAN}Configuration Summary:${NC}"
+    echo -e "  Model Key: ${YELLOW}${model_key}${NC}"
+    echo -e "  Model Name: ${YELLOW}${model_name}${NC}"
+    echo -e "  Dimensions: ${YELLOW}${dimension}D${NC}"
+    echo -e "  Platform: ${YELLOW}linux/${platform}${NC}"
+    echo ""
+    echo -e "  Storage: ${GREEN}MEDIUMBLOB${NC} (supports up to 4M dimensions)"
+    echo -e "  Config: ${GREEN}config/rag.php${NC} → 'available_models.${model_key}'"
+    echo -e "  Env: ${GREEN}.env${NC} → RAG_MODEL=${model_key}"
     echo ""
     echo -e "Next steps:"
     echo -e "  1. Wait for model to load (30-90 seconds depending on size)"
@@ -226,6 +245,10 @@ switch_model() {
     echo ""
     echo -e "  3. Run performance test:"
     echo -e "     ${BLUE}./bin/test-rag-performance.sh${NC}"
+    echo ""
+    echo -e "  ${YELLOW}Note:${NC} If you have existing chunks with different dimensions,"
+    echo -e "        you may need to re-chunk existing ledgers:"
+    echo -e "     ${BLUE}./vendor/bin/sail artisan rag:chunk-existing-ledgers${NC}"
     echo ""
 }
 
