@@ -83,8 +83,7 @@ graph TD
 | 1.2 | Mroongaベクトル検索の技術検証（Spike） | Backend | 0.5日 | ベクトル格納・検索の実装方式確認 |
 | 1.3 | `LedgerObserver` の実装 | Backend | 0.5日 | `created`, `updated`, `deleted`イベント処理 |
 | 1.4 | `ProcessLedgerForRagJob` の実装 | Backend | 1.0日 | content + content_attachedのチャンキング |
-| 1.5 | `EmbeddingService` の実装 | Backend | 0.5日 | OpenAI APIラッパー、エラーハンドリング |
-| 1.6 | コスト試算とAPI予算確保 | Backend | 0.5日 | OpenAI API使用料の見積もり |
+| 1.5 | `EmbeddingService` の実装と性能評価 | Backend | 1.0日 | Python連携実装、bge-m3/e5-baseのCPU性能測定 |
 | **2** | **API・検索ロジック実装** | **Backend** | **2.5日** | |
 | 2.1 | `RagSearchService` の基本骨格作成 | Backend | 0.5日 | インターフェース定義、DI設定 |
 | 2.2 | ベクトル検索とスコア集計ロジック実装 | Backend | 1.0日 | チャンク→台帳スコア集計 |
@@ -100,31 +99,11 @@ graph TD
 | 5.1 | バックエンド単体テスト作成 | Backend | 1.0日 | Job, Service, Observer, Mroonga検索 |
 | 5.2 | Livewire統合テスト | Backend | 0.5日 | UI操作のエンドツーエンドテスト |
 | 5.3 | MCP API統合テスト | Backend | 0.5日 | SearchLedgersToolの動作確認 |
-| 5.4 | パフォーマンス測定 | 全員 | 0.5日 | レスポンスタイム、検索品質評価 |
-| 5.5 | モニタリング設定 | Backend | 0.5日 | ジョブ失敗率、APIレイテンシ監視 |
+| 5.4 | パフォーマンス測定 | 全員 | 0.5日 | **エンベディング速度**、検索レスポンスタイム |
+| 5.5 | モニタリング設定 | Backend | 0.5日 | ジョブ失敗率、エンベディング処理時間監視 |
 | | **合計** | | **11.0日** | |
 
-### 3.1. コスト試算（追加タスク 1.6）
 
-OpenAI Embeddings API使用料の概算：
-
-```
-モデル: text-embedding-3-small
-料金: $0.02 / 1Mトークン
-
-【初期投入コスト】
-- 想定台帳数: 10,000台帳
-- 平均トークン数: 1,500トークン/台帳
-- 合計: 15Mトークン
-- コスト: $0.30
-
-【月間運用コスト（想定）】
-- 新規・更新台帳: 500台帳/月
-- 合計: 0.75Mトークン/月
-- コスト: $0.015/月
-
-→ Phase1での予算: $1.00（十分なバッファ込み）
-```
 
 ## 4. 詳細設計
 
@@ -364,8 +343,9 @@ Schema::create('ledger_chunks', function (Blueprint $table) {
     $table->text('chunk_text'); // 元テキスト
     $table->enum('chunk_source', ['content', 'content_attached']);
     
-    // ベクトルデータ（1536次元 × 4bytes = 6144bytes）
-    $table->binary('embedding')->nullable();
+    // ベクトルデータ（bge-m3: 1024次元, e5-base: 768次元）
+    // 1024次元 * 4bytes = 4096 bytes を想定し、VARBINARY(4096)とする
+    $table->binary('embedding', 4096)->nullable();
     
     $table->timestamps();
     
@@ -568,11 +548,13 @@ class ProcessLedgerForRagJob implements ShouldQueue
      */
     private function chunkText(string $text, string $source): array
     {
-        $chunkSize = 1000; // トークン数の目安
-        $overlapSize = 200;
+        // bge-m3は最大8192トークンまで扱えるが、検索精度と処理速度のバランスを考慮し、
+        // Phase1では2000文字程度（約1000トークン強）を目安とする。
+        $chunkSize = 2000; // 文字数の目安
+        $overlapSize = 400;
         
         // 簡易的な文字ベースの分割（Phase1）
-        // Phase2以降でLangChain PHPのRecursiveCharacterTextSplitterを使用
+        // Phase2以降でLangChain PHPのRecursiveCharacterTextSplitterや、トークナイザを考慮した分割を検討
         $chunks = [];
         $textLength = mb_strlen($text);
         $position = 0;
@@ -742,7 +724,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $mock = $this->mock(EmbeddingService::class);
         $mock->shouldReceive('embed')
             ->atLeast()->once()
-            ->andReturn(array_fill(0, 1536, 0.1));
+            ->andReturn(array_fill(0, 1024, 0.1)); // bge-m3の次元数に修正
         
         $ledger = Ledger::factory()->create([
             'content' => ['body' => 'テスト']
@@ -1126,7 +1108,7 @@ class ChunkStatus extends Command
 
 1. **スコア集計:** 最高スコアのみ採用（合計・平均・重み付き平均は Phase2）
 2. **チャンキング:** 固定サイズ分割（意味的分割は Phase2）
-3. **エンベディング:** OpenAI API使用（自前モデル・ローカル実行は Phase2）
+3. **エンベディング:** Python連携による簡易実装（安定性を高めたマイクロサービス化は Phase2）
 4. **リランキング:** 未実装（Phase3で検討）
 5. **ハイブリッド検索:** 未実装（キーワード+セマンティックの融合はPhase3）
 6. **キャッシング:** 未実装（頻繁な検索のキャッシュはPhase2）
