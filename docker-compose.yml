@@ -113,7 +113,7 @@ services:
 
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
-    platform: linux/amd64
+    platform: linux/arm64  # Auto-set by switch-model.sh
     ports:
       - '${FORWARD_DB_PORT:-3306}:3306'
     environment:
@@ -152,7 +152,7 @@ services:
       timeout: 5s
   meilisearch:
     image: 'getmeili/meilisearch:latest'
-    platform: linux/amd64
+    platform: linux/arm64  # Auto-set by switch-model.sh
     ports:
       - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
     volumes:
@@ -185,7 +185,7 @@ services:
       - sail
   tika:
     image: apache/tika:latest
-    platform: linux/amd64
+    platform: linux/arm64  # Auto-set by switch-model.sh
     ports:
       - 9998:9998
     #        command: -c /tika-config.xml
@@ -208,7 +208,7 @@ services:
     networks:
       - sail
   embedding:
-    platform: linux/amd64  # Rosetta 2エミュレーションでx86_64版を使用（ARM64安定性問題の回避）
+    platform: linux/arm64  # Auto-set by switch-model.sh
     build:
       context: ./docker/embedding
       dockerfile: Dockerfile
@@ -216,9 +216,14 @@ services:
     volumes:
       - ./storage/app/embedding:/app/models
     environment:
-      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - EMBEDDING_MODEL=cl-nagoya/ruri-v3-310m
       - USE_ONNX=false
       - CPU_THREADS=4
+      - EMBEDDING_BATCH_SIZE=${RAG_BATCH_SIZE:-1}
+      - RAG_NUM_THREADS=${RAG_NUM_THREADS:-0}
+      - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}
+      - RAG_CONVERT_TO_NUMPY=${RAG_CONVERT_TO_NUMPY:-true}
+      - RAG_DEVICE=${RAG_DEVICE:-cpu}
     networks:
       - sail
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
