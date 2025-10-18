@@ -113,7 +113,7 @@ services:
 
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
-    platform: linux/arm64  # Auto-set by switch-model.sh
+#    platform: linux/arm64/v8  # Auto-set by switch-model.sh
     ports:
       - '${FORWARD_DB_PORT:-3306}:3306'
     environment:

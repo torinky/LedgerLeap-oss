@@ -106,7 +106,7 @@ switch_model() {
         exit 1
     fi
     
-    IFS='|' read -r model_name dimension description platform <<< "$model_info"
+    IFS='|' read -r model_name dimension description model_platform <<< "$model_info"
     
     echo -e "${CYAN}=========================================="
     echo "Switching to: ${model_key}"
@@ -114,7 +114,35 @@ switch_model() {
     echo -e "  Model: ${YELLOW}${model_name}${NC}"
     echo -e "  Dimensions: ${YELLOW}${dimension}${NC}"
     echo -e "  Description: ${description}"
-    echo -e "  Platform: ${YELLOW}linux/${platform}${NC}"
+    echo -e "  Platform: ${YELLOW}linux/${model_platform}${NC}"
+
+    # ホストアーキテクチャの判定
+    HOST_ARCH=$(uname -m)
+    local TARGET_PLATFORM="linux/${model_platform}" # デフォルト
+
+    echo -e "  Host Arch: ${YELLOW}${HOST_ARCH}${NC}"
+    echo -e "  Model's Recommended Platform: ${YELLOW}${model_platform}${NC}"
+
+    # アーキテクチャの互換性チェック
+    if [[ "$HOST_ARCH" == "arm64" || "$HOST_ARCH" == "aarch64" ]]; then
+        if [ "$model_platform" != "arm64" ]; then
+            echo -e "\n${RED}Warning:${NC} The selected model '${model_key}' is not optimized for your ARM64 machine."
+            echo -e "         It will run under emulation (Rosetta 2) and may be very slow or unstable."
+            TARGET_PLATFORM="linux/amd64"
+        else
+            TARGET_PLATFORM="linux/arm64"
+        fi
+    elif [[ "$HOST_ARCH" == "x86_64" ]]; then
+        if [ "$model_platform" == "arm64" ]; then
+            echo -e "\n${YELLOW}Info:${NC} The selected model '${model_key}' is optimized for ARM64, but you are on x86_64."
+            echo -e "      The script will use the 'amd64' platform. Performance should be acceptable."
+        fi
+        TARGET_PLATFORM="linux/amd64"
+    else
+        echo -e "\n${YELLOW}Warning:${NC} Unknown host architecture '${HOST_ARCH}'. Using model's default platform."
+    fi
+
+    echo -e "  Target Platform to be set: ${YELLOW}${TARGET_PLATFORM}${NC}"
     echo ""
     
     # 確認
@@ -170,12 +198,16 @@ switch_model() {
         echo -e "  ${GREEN}✓${NC} Updated EMBEDDING_MODEL=${model_name}"
         
         # platformの更新
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|platform: linux/.*|platform: linux/${platform}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
+        if grep -q "platform: linux/.*" "$PROJECT_ROOT/docker-compose.yml"; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' "s|platform: linux/.*|platform: ${TARGET_PLATFORM}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
+            else
+                sed -i "s|platform: linux/.*|platform: ${TARGET_PLATFORM}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
+            fi
+            echo -e "  ${GREEN}✓${NC} Updated platform=${TARGET_PLATFORM}"
         else
-            sed -i "s|platform: linux/.*|platform: linux/${platform}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
+            echo -e "  ${YELLOW}Warning: 'platform' line not found in docker-compose.yml for the embedding service. Please add it manually if needed for cross-platform compatibility.${NC}"
         fi
-        echo -e "  ${GREEN}✓${NC} Updated platform=linux/${platform}"
     else
         echo -e "  ${RED}✗${NC} docker-compose.yml file not found"
         exit 1
@@ -229,8 +261,8 @@ switch_model() {
     echo -e "${CYAN}Configuration Summary:${NC}"
     echo -e "  Model Key: ${YELLOW}${model_key}${NC}"
     echo -e "  Model Name: ${YELLOW}${model_name}${NC}"
-    echo -e "  Dimensions: ${YELLOW}${dimension}D${NC}"
-    echo -e "  Platform: ${YELLOW}linux/${platform}${NC}"
+  Dimensions: ${YELLOW}${dimension}D${NC}
+    echo -e "  Platform: ${YELLOW}${TARGET_PLATFORM}${NC}"
     echo ""
     echo -e "  Storage: ${GREEN}MEDIUMBLOB${NC} (supports up to 4M dimensions)"
     echo -e "  Config: ${GREEN}config/rag.php${NC} → 'available_models.${model_key}'"

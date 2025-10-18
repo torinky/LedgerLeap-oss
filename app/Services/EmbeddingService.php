@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\ConnectionException;
 
 class EmbeddingService
 {
@@ -23,10 +24,13 @@ class EmbeddingService
      *
      * @param string|array $texts The text(s) to embed.
      * @return array The embedding(s).
-     * @throws \Exception If the embedding process fails.
+     * @throws \Exception If the embedding process fails or times out.
      */
     public function embed(string|array $texts): array
     {
+        // Wait for the service to become ready before proceeding.
+        $this->waitUntilReady($this->timeout);
+
         $isSingleText = is_string($texts);
         $textsToEmbed = $isSingleText ? [$texts] : $texts;
 
@@ -77,20 +81,59 @@ class EmbeddingService
     /**
      * Check the health of the embedding service.
      *
-     * @return bool True if the service is healthy, false otherwise.
+     * @return array The health status response from the service.
      */
-    public function healthCheck(): bool
+    public function healthCheck(): array
     {
         try {
-            $response = Http::timeout(5)
-                ->get("{$this->embeddingServiceUrl}/health");
+            $response = Http::timeout(5)->get("{$this->embeddingServiceUrl}/health");
 
-            return $response->successful();
+            if ($response->serverError()) {
+                return ['status' => 'unhealthy', 'message' => 'Server error'];
+            }
+            
+            return $response->json() ?? ['status' => 'unhealthy', 'message' => 'Invalid response'];
+
+        } catch (ConnectionException $e) {
+            Log::channel($this->logChannel)->warning('Embedding service is not reachable yet.', [
+                'error' => $e->getMessage(),
+            ]);
+            return ['status' => 'unreachable'];
         } catch (\Exception $e) {
             Log::channel($this->logChannel)->error('Embedding service health check failed.', [
                 'error' => $e->getMessage(),
             ]);
-            return false;
+            return ['status' => 'unhealthy', 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Wait until the embedding service is ready.
+     *
+     * @param int $timeoutSeconds The maximum time to wait in seconds.
+     * @throws \RuntimeException If the service does not become ready within the timeout.
+     */
+    private function waitUntilReady(int $timeoutSeconds): void
+    {
+        $startTime = time();
+        while (time() - $startTime < $timeoutSeconds) {
+            $health = $this->healthCheck();
+            $status = $health['status'] ?? 'unhealthy';
+
+            if ($status === 'healthy') {
+                Log::channel($this->logChannel)->info('Embedding service is ready.');
+                return;
+            }
+
+            if ($status === 'loading') {
+                Log::channel($this->logChannel)->info('Embedding service is loading, waiting...');
+            } else {
+                Log::channel($this->logChannel)->warning('Embedding service is not healthy, waiting...', ['health' => $health]);
+            }
+
+            sleep(10); // Wait for 10 seconds before retrying
+        }
+
+        throw new \RuntimeException("Embedding service did not become ready within {$timeoutSeconds} seconds.");
     }
 }
