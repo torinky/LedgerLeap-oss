@@ -20,19 +20,14 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
     private User $user;
 
-    private static bool $isDataSeeded = false;
-
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        if (!self::$isDataSeeded) {
-            // 1. デモデータを準備
-            Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
-            Artisan::call('rag:chunk-demo-ledgers');
-            self::$isDataSeeded = true;
-        }
+        // 1. デモデータを準備
+        Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
+        Artisan::call('rag:chunk-demo-ledgers');
 
         $this->user = User::where('email', 'admin@example.com')->first();
         $token = $this->user->createToken('test-token')->plainTextToken;
@@ -134,5 +129,56 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
         // Assert
         $this->assertFalse($response->isError());
+    }
+
+    #[Test]
+    #[Group("semantic-search")]
+    public function it_finds_semantically_similar_ledger_even_if_keywords_do_not_match()
+    {
+        //1件にヒットさせるために意図的に調整
+        config(['rag.similarity_threshold' => 0.15]);
+
+        // Arrange
+        // 1. テストデータを作成
+        $ledgerDefine = \App\Models\LedgerDefine::where('title', '[DEMO] 営業日報')->first();
+        $folder = \App\Models\Folder::where('title', '日報')->first();
+
+        // 認証ユーザーを設定
+        $this->actingAs($this->user);
+
+        $ledgerService = $this->app->make(LedgerService::class);
+        $ledger = $ledgerService->createLedger([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [
+                '2025-10-20', // 日付
+                'セマンティック検索テスト株式会社', // 顧客名
+                '性能評価', // 訪問目的
+                '提案中', // 商談ステータス
+                '高', // 優先度
+                'このプロジェクトでは、全社的な経費削減が最重要課題となっている。特に、出張費や交際費の見直しが急務である。', // 商談内容
+                'コストカットの具体的な方法について、次回の会議で提案する必要がある。', // 成果・所感
+                '経費削減案の資料を作成する。', // 次回アクション
+            ],
+            'tags' => [],
+        ]);
+
+        // 2. 作成した台帳をベクトル化
+        Artisan::call('rag:chunk-existing-ledgers', ['--no-interaction' => true]);
+
+        // 3. 検索ツールを準備
+        $tool = new SearchLedgersTool($this->app->make(LedgerService::class));
+        $request = new Request([
+            'q' => '費用を切り詰める方法', // レコードに直接含まれない類義語で検索
+            'order_by' => 'semantic_score',
+        ]);
+
+        // Act
+        $response = $tool->handle($request);
+        $result = json_decode($response->content(), true);
+
+        // Assert
+        $this->assertFalse($response->isError(), "MCP tool returned an error: {$response->content()}");
+        $this->assertCount(1, $result['ledgers'], "Expected to find 1 ledger, but found ".count($result['ledgers']));
+        $this->assertEquals($ledger->id, $result['ledgers'][0]['id'], "The found ledger ID does not match the created one.");
     }
 }

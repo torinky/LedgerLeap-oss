@@ -200,8 +200,8 @@ class RagSearchService
         // Step 1: Get vector search results from Mroonga (IDs and scores only)
         $groonga_filter_parts = [];
         if (! empty($keyword)) {
-            $escaped_keyword = str_replace('"', '\\"', $keyword);
-            $groonga_filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
+            // $escaped_keyword = str_replace('"', '\\"', $keyword);
+            // $groonga_filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
             $groonga_filter_parts[] = sprintf('%s < %f', $distance_expression, config('rag.search.similarity_threshold', 0.7));
         }
 

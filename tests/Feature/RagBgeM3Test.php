@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class RagBgeM3Test extends TestCase
@@ -54,7 +55,7 @@ class RagBgeM3Test extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function test_bge_m3_model_configuration()
     {
         $this->assertEquals('bge-m3', config('rag.model.active'));
@@ -62,7 +63,7 @@ class RagBgeM3Test extends TestCase
         $this->assertEquals(1024, config('rag.model.available_models.bge-m3.dimension'));
     }
 
-    /** @test */
+    #[Test]
     public function test_embedding_service_health_check()
     {
         $response = Http::timeout(10)->get(config('rag.embedding_service.url') . '/health');
@@ -74,7 +75,7 @@ class RagBgeM3Test extends TestCase
         $this->assertStringContainsString('bge-m3', strtolower($data['model_name'] ?? ''), 'Wrong model loaded');
     }
 
-    /** @test */
+    #[Test]
     public function test_embedding_generation_with_bge_m3()
     {
         $embeddingService = app(\App\Services\EmbeddingService::class);
@@ -96,7 +97,7 @@ class RagBgeM3Test extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function test_ledger_chunk_creation_with_bge_m3()
     {
         // 2000文字以上のテストコンテンツを作成
@@ -133,7 +134,7 @@ class RagBgeM3Test extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function test_benchmark_scenario_1_with_bge_m3()
     {
         $startTime = microtime(true);
@@ -186,7 +187,7 @@ class RagBgeM3Test extends TestCase
         $this->assertLessThan(10, $averageTime, 'Average processing time exceeds 10 seconds per ledger');
     }
 
-    /** @test */
+    #[Test]
     public function test_embedding_vector_quality()
     {
         $embeddingService = app(\App\Services\EmbeddingService::class);
