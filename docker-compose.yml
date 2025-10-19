@@ -57,6 +57,8 @@ services:
         condition: service_started
       tika:
         condition: service_started
+      embedding:
+        condition: service_healthy
     #            - mysql
     #            - redis
     #            - tika

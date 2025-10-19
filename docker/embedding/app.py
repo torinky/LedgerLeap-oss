@@ -74,10 +74,15 @@ async def _load_model():
 
         logger.info("--- Background Model Loading Started ---")
         logger.info(f"Attempting to load model: '{model_name_to_load}' on device: {device}")
-        logger.info(f"Performance settings:")
+        
+        # --- Performance Settings Log ---
+        logger.info("Performance settings:")
         logger.info(f"  - Device: {device}")
-        logger.info(f"  - PyTorch threads: {torch.get_num_threads()}")
-        logger.info(f"  - PyTorch interop threads: {torch.get_num_interop_threads()}")
+        logger.info(f"  - PyTorch num_threads: {torch.get_num_threads()}")
+        logger.info(f"  - PyTorch num_interop_threads: {torch.get_num_interop_threads()}")
+        logger.info(f"  - Batch size: {os.getenv('EMBEDDING_BATCH_SIZE', '1')}")
+        logger.info(f"  - Convert to numpy: {os.getenv('RAG_CONVERT_TO_NUMPY', 'true').lower() == 'true'}")
+        # --- End of Performance Settings Log ---
 
         model = SentenceTransformer(
             model_name_to_load,
@@ -145,14 +150,18 @@ async def embed_texts(request: EmbedRequest):
         )
 
     try:
+        # --- Detailed Logging ---
+        total_chars = sum(len(text) for text in request.texts)
+        avg_chars = total_chars / len(request.texts) if request.texts else 0
+        logger.info(f"Processing embedding request for {len(request.texts)} texts "
+                    f"({total_chars} total chars, {avg_chars:.2f} avg chars).")
+        
+        start_time = asyncio.get_event_loop().time()
+        # --- End of Detailed Logging ---
+
         batch_size = int(os.getenv('EMBEDDING_BATCH_SIZE', '1'))
         convert_to_numpy = os.getenv('RAG_CONVERT_TO_NUMPY', 'true').lower() == 'true'
         
-        logger.info(f"Processing embedding request for {len(request.texts)} texts")
-        logger.info(f"  - batch_size: {batch_size}")
-        logger.info(f"  - convert_to_numpy: {convert_to_numpy}")
-        logger.info(f"  - normalize: {request.normalize}")
-
         embeddings = model.encode(
             request.texts,
             normalize_embeddings=request.normalize,
@@ -160,6 +169,12 @@ async def embed_texts(request: EmbedRequest):
             batch_size=batch_size,
             convert_to_numpy=convert_to_numpy
         )
+        
+        # --- Performance Logging ---
+        end_time = asyncio.get_event_loop().time()
+        duration_ms = (end_time - start_time) * 1000
+        logger.info(f"Embedding completed in {duration_ms:.2f} ms.")
+        # --- End of Performance Logging ---
         
         return EmbedResponse(
             embeddings=embeddings.tolist(),
