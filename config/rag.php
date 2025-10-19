@@ -141,4 +141,20 @@ return [
 
     // Logging channel for RAG related processes
     'log_channel' => 'rag',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the search behavior, including similarity thresholds.
+    |
+    */
+    'search' => [
+        // Cosine distance threshold for hybrid search.
+        // Only chunks with a distance LESS than this value will be considered.
+        // A lower value means higher similarity (0.0 = identical, 1.0 = opposite).
+        // This is only applied when a keyword is provided in the search.
+        'similarity_threshold' => env('RAG_SIMILARITY_THRESHOLD', 0.7),
+    ],
 ];

@@ -202,7 +202,7 @@ class RagSearchService
         if (! empty($keyword)) {
             $escaped_keyword = str_replace('"', '\\"', $keyword);
             $groonga_filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
-            $groonga_filter_parts[] = sprintf('%s < 0.7', $distance_expression);
+            $groonga_filter_parts[] = sprintf('%s < %f', $distance_expression, config('rag.search.similarity_threshold', 0.7));
         }
 
         $groonga_filter = implode(' && ', $groonga_filter_parts);
