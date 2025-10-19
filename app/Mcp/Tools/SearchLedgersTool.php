@@ -104,7 +104,7 @@ class SearchLedgersTool extends Tool
           - 'composite_score': Overall importance combining activity, freshness, and workflow status
           - 'activity_score': Recent activity frequency (useful for "What's hot?" queries)
           - 'created_at': Creation date (useful for "Show recent entries")
-          - 'updated_at': Last update date
+          - 'semantic_score': Semantic relevance to search query (requires 'q' parameter). Finds records based on meaning, not just keywords.
         - 'order_direction': Sort direction ('asc' or 'desc', default: 'desc')
         
         **Sorting Examples:**
