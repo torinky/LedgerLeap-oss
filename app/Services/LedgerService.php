@@ -70,11 +70,20 @@ class LedgerService
                 ]
             );
 
-            // APIのレスポンス形式に合わせる
-            $ledgers = collect($ragResults)->pluck('ledger');
-            $total = $ledgers->count();
-            
-            // メタデータ構築 (既存ロジックを参考に簡略化)
+            // RAG検索の結果からIDのリストを取得
+            $ledgerIds = collect($ragResults)->pluck('ledger.id')->all();
+            $total = count($ledgerIds);
+
+            if ($total > 0) {
+                // 取得したIDを元にEloquentモデルを取得し、元の順序を維持する
+                $ledgers = Ledger::whereIn('id', $ledgerIds)
+                    ->orderByRaw('FIELD(id, '.implode(',', $ledgerIds).')')
+                    ->get();
+            } else {
+                $ledgers = new Collection();
+            }
+
+            // メタデータ構築
             $meta = $this->buildMetaData($ledgers);
 
             \Log::info('[MCP Search Debug] === End searchLedgersForApi (Semantic Search) ===');
@@ -172,7 +181,7 @@ class LedgerService
                     });
                 }),
             ])
-            ->allowedSorts(['composite_score', 'activity_score', 'created_at', 'updated_at', 'id'])
+            ->allowedSorts(['composite_score', 'activity_score', 'created_at', 'updated_at', 'id', 'semantic_score'])
             ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
                 $q->whereIn('id', $readableFolderIds);
             });
