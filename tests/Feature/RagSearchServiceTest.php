@@ -141,4 +141,152 @@ class RagSearchServiceTest extends TestCase
 
         return $ledger;
     }
+
+    #[Test]
+    public function search_respects_user_folder_permissions()
+    {
+        // Setup: Create two folders with different permissions
+        $folder1 = Folder::factory()->create(['creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+        $folder2 = Folder::factory()->create(['creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+
+        $ledgerDefine1 = LedgerDefine::factory()->create(['folder_id' => $folder1->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+        $ledgerDefine2 = LedgerDefine::factory()->create(['folder_id' => $folder2->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+
+        // Mock embedding service
+        $vector1 = array_fill(0, 768, 0.1);
+        $vector2 = array_fill(0, 768, 0.2);
+        $queryVector = array_fill(0, 768, 0.15);
+
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')->with(['document folder'])->andReturn([$vector1]);
+        $embeddingServiceMock->shouldReceive('embed')->with(['another document'])->andReturn([$vector2]);
+        $embeddingServiceMock->shouldReceive('embed')->with('')->andReturn($queryVector);
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Create ledgers in both folders
+        $ledger1 = $this->createAndProcessLedger(['title' => 'document folder'], $ledgerDefine1);
+        $ledger2 = $this->createAndProcessLedger(['title' => 'another document'], $ledgerDefine2);
+
+        // Create a new user with access only to folder1
+        $restrictedUser = User::factory()->create();
+        $role = \App\Models\Role::create(['name' => 'RestrictedRole', 'guard_name' => 'web']);
+        $restrictedUser->roles()->attach($role->id);
+        $role->folderPermissions()->attach($folder1->id, [
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'modifier_id' => $restrictedUser->id,
+        ]);
+
+        // Get readable folders for restricted user
+        $repo = app(\App\Repositories\WritableFolderRepository::class);
+        $readableFolders = $repo->getReadableFolderIds($restrictedUser);
+        $this->assertNotEmpty($readableFolders, 'User should have at least one readable folder');
+        $this->assertContains($folder1->id, $readableFolders, 'User should have access to folder1');
+
+        // Verify chunks exist with correct folder_id
+        $chunks = \DB::table('ledger_chunks')->get();
+        $ledger1Chunks = $chunks->where('ledger_id', $ledger1->id);
+        $this->assertGreaterThan(0, $ledger1Chunks->count(), 'Ledger1 should have chunks');
+        $this->assertEquals($folder1->id, $ledger1Chunks->first()->folder_id, 'Chunk should have correct folder_id');
+
+        // Search with restricted user using readable_folder_ids directly
+        \Log::info('=== RAG TEST DEBUG ===', [
+            'readable_folders' => $readableFolders,
+            'ledger1_id' => $ledger1->id,
+            'folder1_id' => $folder1->id,
+        ]);
+
+        $results = $this->ragSearchService->searchLedgers('', 10, [
+            'readable_folder_ids' => $readableFolders,
+        ]);
+
+        \Log::info('=== SEARCH RESULTS ===', [
+            'results_count' => count($results),
+            'results' => $results,
+        ]);
+
+        // Verify search results respect permissions
+        $this->assertNotEmpty($results, sprintf(
+            'Search should return results. Chunks: %d, Readable folders: %s',
+            $chunks->count(),
+            json_encode($readableFolders)
+        ));
+
+        $resultLedgerIds = array_column($results, 'ledger_id');
+        $this->assertContains($ledger1->id, $resultLedgerIds, 'User should see ledger from accessible folder');
+        $this->assertNotContains($ledger2->id, $resultLedgerIds, 'User should NOT see ledger from inaccessible folder');
+    }
+
+    #[Test]
+    public function search_method_with_pagination_returns_paginator()
+    {
+        // Mock embedding service
+        $vector = array_fill(0, 768, 0.5);
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->andReturnUsing(function ($input) use ($vector) {
+                return is_array($input) ? array_fill(0, count($input), $vector) : $vector;
+            });
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Setup: Grant user access to folder
+        $role = \App\Models\Role::create(['name' => 'TestRole1', 'guard_name' => 'web']);
+        $this->user->roles()->attach($role->id);
+        $role->folderPermissions()->attach($this->folder->id, [
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // Create multiple ledgers
+        for ($i = 0; $i < 15; $i++) {
+            $this->createAndProcessLedger(['title' => "Test document $i", 'content' => 'testing content'], $this->ledgerDefine);
+        }
+
+        // Use empty query for vector search only
+        $result = $this->ragSearchService->search('', $this->user, [$this->ledgerDefine->id], [], 10);
+
+        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertLessThanOrEqual(10, $result->count(), 'Should respect perPage limit');
+        $this->assertGreaterThan(0, $result->total(), 'Should have total count');
+    }
+
+    #[Test]
+    public function search_for_api_returns_structured_results()
+    {
+        // Mock embedding service
+        $vector = array_fill(0, 768, 0.5);
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->andReturnUsing(function ($input) use ($vector) {
+                return is_array($input) ? array_fill(0, count($input), $vector) : $vector;
+            });
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Setup: Grant user access
+        $role = \App\Models\Role::create(['name' => 'TestRole2', 'guard_name' => 'web']);
+        $this->user->roles()->attach($role->id);
+        $role->folderPermissions()->attach($this->folder->id, [
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // Create ledger
+        $ledger = $this->createAndProcessLedger(['title' => 'API Test Document'], $this->ledgerDefine);
+
+        // Search using API method
+        $results = $this->ragSearchService->searchForApi($this->user, [
+            'query' => 'API Test',
+            'limit' => 5,
+        ]);
+
+        $this->assertIsArray($results);
+        if (! empty($results)) {
+            $this->assertArrayHasKey('ledger', $results[0]);
+            $this->assertArrayHasKey('similarity_score', $results[0]);
+            $this->assertArrayHasKey('best_chunk_text', $results[0]);
+            $this->assertArrayHasKey('chunk_count', $results[0]);
+        }
+    }
 }

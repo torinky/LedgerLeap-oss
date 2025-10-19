@@ -3,15 +3,92 @@
 namespace App\Services;
 
 use App\Models\Ledger;
+use App\Models\User;
+use App\Repositories\WritableFolderRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator as PaginatorImpl;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RagSearchService
 {
     public function __construct(
-        private EmbeddingService $embeddingService
+        private EmbeddingService $embeddingService,
+        private WritableFolderRepository $writableFolderRepository
     ) {}
 
+    /**
+     * Search ledgers with RAG (for API and general use)
+     *
+     * @param  string  $query  Search query text
+     * @param  int  $limit  Maximum number of results
+     * @param  array  $filters  Additional filters (folder_id, ledger_define_id, ledger_ids, user)
+     * @return array Array of ledger scores
+     */
+    public function search(
+        string $query,
+        User $user,
+        array $ledgerDefineIds = [],
+        array $filters = [],
+        int $perPage = 100
+    ): LengthAwarePaginator {
+        // 1. Get readable folder IDs for permission filtering
+        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
+
+        if (empty($readableFolderIds)) {
+            return new PaginatorImpl([], 0, $perPage);
+        }
+
+        // 2. Build filter array
+        $searchFilters = array_merge($filters, [
+            'user' => $user,
+            'readable_folder_ids' => $readableFolderIds,
+        ]);
+
+        if (! empty($ledgerDefineIds)) {
+            $searchFilters['ledger_define_ids'] = $ledgerDefineIds;
+        }
+
+        // 3. Perform search (get more than perPage for accurate pagination)
+        $searchResults = $this->searchLedgers($query, $perPage * 10, $searchFilters);
+
+        if (empty($searchResults)) {
+            return new PaginatorImpl([], 0, $perPage);
+        }
+
+        // 4. Load ledger models
+        $ledgerIds = array_column($searchResults, 'ledger_id');
+        $ledgers = Ledger::whereIn('id', $ledgerIds)
+            ->with(['define', 'creator', 'modifier'])
+            ->get()
+            ->keyBy('id');
+
+        // 5. Sort ledgers according to search results order
+        $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers) {
+            return $ledgers->get($result['ledger_id']);
+        })->filter();
+
+        // 6. Paginate
+        $currentPage = Paginator::resolveCurrentPage();
+        $currentPageItems = $sortedLedgers->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        return new PaginatorImpl(
+            $currentPageItems,
+            $sortedLedgers->count(),
+            $perPage,
+            $currentPage
+        );
+    }
+
+    /**
+     * Search ledgers with RAG (basic search without pagination)
+     *
+     * @param  string  $query  Search query text
+     * @param  int  $limit  Maximum number of results
+     * @param  array  $filters  Additional filters (folder_id, ledger_define_id, ledger_ids, user)
+     * @return array Array of ledger scores
+     */
     public function searchLedgers(string $query, int $limit = 20, array $filters = []): array
     {
         $logChannel = config('rag.log_channel', 'stack');
@@ -24,10 +101,16 @@ class RagSearchService
         // 1. Generate embedding for the query
         $queryEmbedding = $this->embeddingService->embed($query);
 
-        // 2. Perform search using Mroonga native functions
+        // 2. Apply permission-based filtering if user is provided
+        if (isset($filters['user'])) {
+            $filters = $this->applyPermissionFilters($filters);
+            unset($filters['user']); // Remove user object from filters before passing to Mroonga
+        }
+
+        // 3. Perform search using Mroonga native functions
         $chunkScores = $this->searchWithMroonga($queryEmbedding, $filters, $query);
 
-        // 3. Aggregate scores by ledger (using max score strategy)
+        // 4. Aggregate scores by ledger (using max score strategy)
         $ledgerScores = [];
         foreach ($chunkScores as $chunkScore) {
             $ledgerId = $chunkScore['ledger_id'];
@@ -50,7 +133,7 @@ class RagSearchService
             }
         }
 
-        // 4. Sort by score descending and limit results
+        // 5. Sort by score descending and limit results
         usort($ledgerScores, fn ($a, $b) => $b['max_score'] <=> $a['max_score']);
         $results = array_slice($ledgerScores, 0, $limit);
 
@@ -62,38 +145,72 @@ class RagSearchService
         return $results;
     }
 
+    /**
+     * Search ledgers for API responses (with full model data)
+     *
+     * @param  \App\Models\User  $user  User for permission filtering
+     * @param  array  $params  Search parameters (query, limit, filters)
+     * @return array Array of ledger models with metadata
+     */
+    public function searchForApi(User $user, array $params): array
+    {
+        $query = $params['query'] ?? '';
+        $limit = $params['limit'] ?? 20;
+        $filters = $params['filters'] ?? [];
+
+        // Add user to filters for permission checking
+        $filters['user'] = $user;
+
+        // Perform search
+        $searchResults = $this->searchLedgers($query, $limit, $filters);
+
+        if (empty($searchResults)) {
+            return [];
+        }
+
+        // Load ledger models with relationships
+        $ledgerIds = array_column($searchResults, 'ledger_id');
+        $ledgers = Ledger::whereIn('id', $ledgerIds)
+            ->with(['define', 'creator', 'modifier'])
+            ->get()
+            ->keyBy('id');
+
+        // Map results to include both ledger data and search metadata
+        $results = [];
+        foreach ($searchResults as $result) {
+            $ledger = $ledgers->get($result['ledger_id']);
+            if ($ledger) {
+                $results[] = [
+                    'ledger' => $ledger,
+                    'similarity_score' => $result['max_score'],
+                    'best_chunk_text' => $result['best_chunk_text'],
+                    'chunk_count' => $result['chunk_count'],
+                ];
+            }
+        }
+
+        return $results;
+    }
+
     private function searchWithMroonga(array $queryEmbedding, array $filters, string $keyword, int $chunkLimit = 100): array
     {
         $query_vector_str = '['.implode(',', $queryEmbedding).']';
         $distance_expression = "distance_cosine(embedding, {$query_vector_str})";
 
-        // Build filter conditions
-        $filter_parts = [];
+        // Step 1: Get vector search results from Mroonga (IDs and scores only)
+        $groonga_filter_parts = [];
         if (! empty($keyword)) {
-            // Use @ for full-text search, not @@, and escape quotes properly
             $escaped_keyword = str_replace('"', '\\"', $keyword);
-            $filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
-        }
-        // 類似度が極端に低いもの（距離が遠いもの）を足切り
-        $filter_parts[] = sprintf('%s < 0.7', $distance_expression);
-
-        if (isset($filters['folder_id'])) {
-            $filter_parts[] = 'folder_id == '.(int) $filters['folder_id'];
-        }
-        if (isset($filters['ledger_define_id'])) {
-            $filter_parts[] = 'ledger_define_id == '.(int) $filters['ledger_define_id'];
-        }
-        if (isset($filters['ledger_ids'])) {
-            $escaped_ids = implode(', ', array_map('intval', $filters['ledger_ids']));
-            $filter_parts[] = "ledger_id IN ({$escaped_ids})";
+            $groonga_filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
+            $groonga_filter_parts[] = sprintf('%s < 0.7', $distance_expression);
         }
 
-        $filter_condition = implode(' && ', $filter_parts);
+        $groonga_filter = implode(' && ', $groonga_filter_parts);
+        $filter_clause = ! empty($groonga_filter) ? "--filter '{$groonga_filter}'" : '';
 
-        // Build the mroonga command - note: --columns must come AFTER --filter
         $mroonga_command = sprintf(
-            "select ledger_chunks --filter '%s' --columns[score].stage filtered --columns[score].flags COLUMN_SCALAR --columns[score].types Float32 --columns[score].value '%s' --output_columns ledger_id,chunk_text,score --limit %d",
-            $filter_condition,
+            "select ledger_chunks %s --columns[score].stage filtered --columns[score].flags COLUMN_SCALAR --columns[score].types Float32 --columns[score].value '%s' --output_columns _id,score --limit %d",
+            $filter_clause,
             $distance_expression,
             $chunkLimit
         );
@@ -103,25 +220,93 @@ class RagSearchService
         ]);
 
         try {
-            // Use a bound parameter to let the driver handle escaping
+            // Execute Mroonga command to get chunk IDs and scores
             $result = DB::select('SELECT mroonga_command(?) AS res', [$mroonga_command]);
             if (empty($result)) {
                 return [];
             }
-            $groonga_response = json_decode($result[0]->res, true);
 
-            Log::channel(config('rag.log_channel', 'stack'))->debug('Mroonga response structure', [
-                'is_array' => is_array($groonga_response),
-                'count' => is_array($groonga_response) && isset($groonga_response[0][0][0]) ? $groonga_response[0][0][0] : 'N/A',
-                'columns' => is_array($groonga_response) && isset($groonga_response[0][1]) ? array_map(fn ($c) => $c[0], $groonga_response[0][1]) : 'N/A',
-                'rows_count' => is_array($groonga_response) ? count($groonga_response[0]) - 2 : 0,
+            $groonga_response = json_decode($result[0]->res, true);
+            $parsed = $this->parseGroongaResponse($groonga_response);
+
+            if (empty($parsed)) {
+                return [];
+            }
+
+            // Extract chunk IDs and their scores
+            $chunkIds = array_column($parsed, '_id');
+            $scoreMap = [];
+            foreach ($parsed as $row) {
+                $scoreMap[$row['_id']] = $row['score'];
+            }
+
+            if (empty($chunkIds)) {
+                return [];
+            }
+
+            // Step 2: Apply SQL filters on the actual ledger_chunks table
+            $sql = 'SELECT id, ledger_id, chunk_text FROM ledger_chunks WHERE id IN ('.implode(',', array_map('intval', $chunkIds)).')';
+
+            $sqlFilters = [];
+            $bindings = [];
+
+            if (isset($filters['folder_id'])) {
+                $sqlFilters[] = 'folder_id = ?';
+                $bindings[] = (int) $filters['folder_id'];
+            }
+
+            if (isset($filters['readable_folder_ids']) && ! empty($filters['readable_folder_ids'])) {
+                $placeholders = implode(',', array_fill(0, count($filters['readable_folder_ids']), '?'));
+                $sqlFilters[] = "folder_id IN ({$placeholders})";
+                $bindings = array_merge($bindings, array_map('intval', $filters['readable_folder_ids']));
+            }
+
+            if (isset($filters['ledger_define_id'])) {
+                $sqlFilters[] = 'ledger_define_id = ?';
+                $bindings[] = (int) $filters['ledger_define_id'];
+            }
+
+            if (isset($filters['ledger_define_ids']) && ! empty($filters['ledger_define_ids'])) {
+                $placeholders = implode(',', array_fill(0, count($filters['ledger_define_ids']), '?'));
+                $sqlFilters[] = "ledger_define_id IN ({$placeholders})";
+                $bindings = array_merge($bindings, array_map('intval', $filters['ledger_define_ids']));
+            }
+
+            if (isset($filters['ledger_ids']) && ! empty($filters['ledger_ids'])) {
+                $placeholders = implode(',', array_fill(0, count($filters['ledger_ids']), '?'));
+                $sqlFilters[] = "ledger_id IN ({$placeholders})";
+                $bindings = array_merge($bindings, array_map('intval', $filters['ledger_ids']));
+            }
+
+            if (! empty($sqlFilters)) {
+                $sql .= ' AND '.implode(' AND ', $sqlFilters);
+            }
+
+            $chunks = DB::select($sql, $bindings);
+
+            // Combine with scores
+            $results = [];
+            foreach ($chunks as $chunk) {
+                $results[] = [
+                    'ledger_id' => $chunk->ledger_id,
+                    'chunk_text' => $chunk->chunk_text,
+                    'score' => $scoreMap[$chunk->id] ?? 1.0,
+                ];
+            }
+
+            // Sort by score (ascending, since it's distance)
+            usort($results, fn ($a, $b) => $a['score'] <=> $b['score']);
+
+            Log::channel(config('rag.log_channel', 'stack'))->debug('Mroonga search completed', [
+                'total_chunks' => count($parsed),
+                'filtered_chunks' => count($results),
             ]);
 
-            return $this->parseGroongaResponse($groonga_response);
+            return $results;
         } catch (\Exception $e) {
             Log::channel(config('rag.log_channel', 'stack'))->error('Mroonga search failed', [
                 'error' => $e->getMessage(),
-                'mroonga_command' => $mroonga_command,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [];
@@ -145,6 +330,29 @@ class RagSearchService
         }
 
         return $results;
+    }
+
+    /**
+     * Apply permission-based filtering to search filters
+     */
+    private function applyPermissionFilters(array $filters): array
+    {
+        $user = $filters['user'];
+
+        // Get readable folder IDs
+        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
+
+        if (empty($readableFolderIds)) {
+            // User has no readable folders, return empty filter
+            $filters['ledger_ids'] = [-1]; // Impossible ID to match nothing
+
+            return $filters;
+        }
+
+        // Add readable folders to filter
+        $filters['readable_folder_ids'] = $readableFolderIds;
+
+        return $filters;
     }
 
     public function searchLedgersWithModels(string $query, int $limit = 20, array $filters = [])
