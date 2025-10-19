@@ -92,7 +92,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
                     'chunk_index' => $index,
                     'chunk_text' => $chunk['text'],
                     'chunk_source' => $chunk['source'],
-                    'embedding' => $this->serializeEmbedding($embeddings[$index]),
+                    'embedding' => json_encode($embeddings[$index]),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -162,12 +162,5 @@ class ProcessLedgerForRagJob implements ShouldQueue
         return $chunks;
     }
 
-    /**
-     * Serialize the embedding array into a binary string.
-     */
-    private function serializeEmbedding(array $embedding): string
-    {
-        // Pack the float array into a binary string (using 'f' for single-precision float)
-        return pack('f*', ...$embedding);
-    }
+
 }

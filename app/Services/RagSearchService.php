@@ -6,25 +6,12 @@ use App\Models\Ledger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-/**
- * RAG (Retrieval-Augmented Generation) Search Service
- *
- * Provides semantic search functionality using vector embeddings stored in ledger_chunks.
- */
 class RagSearchService
 {
     public function __construct(
         private EmbeddingService $embeddingService
     ) {}
 
-    /**
-     * Search ledgers by semantic similarity to the query text.
-     *
-     * @param  string  $query  The search query text
-     * @param  int  $limit  Maximum number of results to return
-     * @param  array  $filters  Additional filters (folder_id, ledger_define_id, etc.)
-     * @return array Array of ledger IDs with their similarity scores
-     */
     public function searchLedgers(string $query, int $limit = 20, array $filters = []): array
     {
         $logChannel = config('rag.log_channel', 'stack');
@@ -37,73 +24,33 @@ class RagSearchService
         // 1. Generate embedding for the query
         $queryEmbedding = $this->embeddingService->embed($query);
 
-        // 2. Retrieve all chunks (with filters if applicable)
-        $chunksQuery = DB::table('ledger_chunks')
-            ->select('id', 'ledger_id', 'chunk_text', 'embedding', 'chunk_source');
+        // 2. Perform search using Mroonga native functions
+        $chunkScores = $this->searchWithMroonga($queryEmbedding, $filters, $query);
 
-        // Apply filters
-        if (isset($filters['folder_id'])) {
-            $chunksQuery->where('folder_id', $filters['folder_id']);
-        }
-        if (isset($filters['ledger_define_id'])) {
-            $chunksQuery->where('ledger_define_id', $filters['ledger_define_id']);
-        }
-        if (isset($filters['ledger_ids'])) {
-            $chunksQuery->whereIn('ledger_id', $filters['ledger_ids']);
-        }
-
-        $chunks = $chunksQuery->get();
-
-        if ($chunks->isEmpty()) {
-            Log::channel($logChannel)->info('No chunks found for search', ['filters' => $filters]);
-
-            return [];
-        }
-
-        Log::channel($logChannel)->info('Retrieved chunks for similarity calculation', [
-            'chunk_count' => $chunks->count(),
-        ]);
-
-        // 3. Calculate similarity scores for each chunk
-        $chunkScores = [];
-        foreach ($chunks as $chunk) {
-            $chunkEmbedding = $this->deserializeEmbedding($chunk->embedding);
-            $similarity = $this->cosineSimilarity($queryEmbedding, $chunkEmbedding);
-
-            $chunkScores[] = [
-                'chunk_id' => $chunk->id,
-                'ledger_id' => $chunk->ledger_id,
-                'chunk_text' => $chunk->chunk_text,
-                'chunk_source' => $chunk->chunk_source,
-                'similarity' => $similarity,
-            ];
-        }
-
-        // 4. Aggregate scores by ledger (using max score strategy for Phase 1)
+        // 3. Aggregate scores by ledger (using max score strategy)
         $ledgerScores = [];
         foreach ($chunkScores as $chunkScore) {
             $ledgerId = $chunkScore['ledger_id'];
+            // Mroongaのスコアはコサイン「距離」なので、1から引いて「類似度」に変換
+            $similarity = 1 - $chunkScore['score'];
 
             if (! isset($ledgerScores[$ledgerId])) {
                 $ledgerScores[$ledgerId] = [
                     'ledger_id' => $ledgerId,
-                    'max_score' => $chunkScore['similarity'],
+                    'max_score' => $similarity,
                     'best_chunk_text' => $chunkScore['chunk_text'],
-                    'best_chunk_source' => $chunkScore['chunk_source'],
                     'chunk_count' => 1,
                 ];
             } else {
-                // Update max score if this chunk has higher similarity
-                if ($chunkScore['similarity'] > $ledgerScores[$ledgerId]['max_score']) {
-                    $ledgerScores[$ledgerId]['max_score'] = $chunkScore['similarity'];
+                if ($similarity > $ledgerScores[$ledgerId]['max_score']) {
+                    $ledgerScores[$ledgerId]['max_score'] = $similarity;
                     $ledgerScores[$ledgerId]['best_chunk_text'] = $chunkScore['chunk_text'];
-                    $ledgerScores[$ledgerId]['best_chunk_source'] = $chunkScore['chunk_source'];
                 }
                 $ledgerScores[$ledgerId]['chunk_count']++;
             }
         }
 
-        // 5. Sort by score descending and limit results
+        // 4. Sort by score descending and limit results
         usort($ledgerScores, fn ($a, $b) => $b['max_score'] <=> $a['max_score']);
         $results = array_slice($ledgerScores, 0, $limit);
 
@@ -115,60 +62,92 @@ class RagSearchService
         return $results;
     }
 
-    /**
-     * Calculate cosine similarity between two embedding vectors.
-     *
-     * @param  array  $vec1  First embedding vector
-     * @param  array  $vec2  Second embedding vector
-     * @return float Cosine similarity score (0.0 to 1.0)
-     */
-    private function cosineSimilarity(array $vec1, array $vec2): float
+    private function searchWithMroonga(array $queryEmbedding, array $filters, string $keyword, int $chunkLimit = 100): array
     {
-        if (count($vec1) !== count($vec2)) {
-            throw new \InvalidArgumentException('Vectors must have the same dimension');
+        $query_vector_str = '[' . implode(',', $queryEmbedding) . ']';
+        $distance_expression = "distance_cosine(embedding, {$query_vector_str})";
+
+        // Build filter conditions
+        $filter_parts = [];
+        if (! empty($keyword)) {
+            $filter_parts[] = sprintf('chunk_text @@ "%s"', $keyword);
+        }
+        // 類似度が極端に低いもの（距離が遠いもの）を足切り
+        $filter_parts[] = sprintf('%s < 0.7', $distance_expression);
+
+        if (isset($filters['folder_id'])) {
+            $filter_parts[] = 'folder_id = ' . (int) $filters['folder_id'];
+        }
+        if (isset($filters['ledger_define_id'])) {
+            $filter_parts[] = 'ledger_define_id = ' . (int) $filters['ledger_define_id'];
+        }
+        if (isset($filters['ledger_ids'])) {
+            $escaped_ids = implode(', ', array_map('intval', $filters['ledger_ids']));
+            $filter_parts[] = "ledger_id IN ({$escaped_ids})";
         }
 
-        $dotProduct = 0;
-        $magnitude1 = 0;
-        $magnitude2 = 0;
+        $filter_condition = implode(' && ', $filter_parts);
 
-        for ($i = 0; $i < count($vec1); $i++) {
-            $dotProduct += $vec1[$i] * $vec2[$i];
-            $magnitude1 += $vec1[$i] * $vec1[$i];
-            $magnitude2 += $vec2[$i] * $vec2[$i];
+        $mroonga_command_template = "select ledger_chunks "
+            . "--columns[score].stage filtered "
+            . "--columns[score].flags COLUMN_SCALAR "
+            . "--columns[score].types Float32 "
+            . "--columns[score].value '%s' "
+            . "--filter '%s' "
+            . "--output_columns ledger_id,chunk_text,score "
+            . "--limit %d";
+
+        $mroonga_command = sprintf(
+            $mroonga_command_template,
+            $distance_expression,
+            $filter_condition,
+            $chunkLimit
+        );
+
+        // Escape only double quotes for the final SQL string
+        $escaped_mroonga_command = str_replace('"', '\"', $mroonga_command);
+        $search_sql = "SELECT mroonga_command(\"" . $escaped_mroonga_command . "\") AS res";
+
+        Log::channel(config('rag.log_channel', 'stack'))->debug('Executing Mroonga Search', [
+            'mroonga_command' => $mroonga_command,
+            'final_sql' => $search_sql,
+        ]);
+
+        try {
+            $result = DB::select($search_sql);
+            if (empty($result)) {
+                return [];
+            }
+            $groonga_response = json_decode($result[0]->res);
+            return $this->parseGroongaResponse($groonga_response);
+        } catch (\Exception $e) {
+            Log::channel(config('rag.log_channel', 'stack'))->error('Mroonga search failed', [
+                'error' => $e->getMessage(),
+                'sql' => $search_sql,
+            ]);
+            return [];
         }
-
-        $magnitude1 = sqrt($magnitude1);
-        $magnitude2 = sqrt($magnitude2);
-
-        if ($magnitude1 == 0 || $magnitude2 == 0) {
-            return 0.0;
-        }
-
-        return $dotProduct / ($magnitude1 * $magnitude2);
     }
 
-    /**
-     * Deserialize binary embedding data into float array.
-     *
-     * @param  string  $binaryData  Binary string from database
-     * @return array Float array representing the embedding (0-indexed)
-     */
-    private function deserializeEmbedding(string $binaryData): array
+    private function parseGroongaResponse(?array $response): array
     {
-        // Unpack binary string to float array (using 'f' for single-precision float)
-        // unpack() returns 1-indexed array, so we convert to 0-indexed
-        return array_values(unpack('f*', $binaryData));
+        if (is_null($response) || ! isset($response[0][0][0]) || $response[0][0][0] === 0) {
+            return [];
+        }
+
+        $columns = array_map(fn ($col) => $col[0], $response[0][1]);
+        $rows = array_slice($response[0], 2);
+
+        $results = [];
+        foreach ($rows as $row) {
+            if (count($columns) === count($row)) {
+                $results[] = array_combine($columns, $row);
+            }
+        }
+
+        return $results;
     }
 
-    /**
-     * Get similar ledgers with full model instances.
-     *
-     * @param  string  $query  The search query text
-     * @param  int  $limit  Maximum number of results
-     * @param  array  $filters  Additional filters
-     * @return \Illuminate\Support\Collection Collection of Ledger models with similarity scores
-     */
     public function searchLedgersWithModels(string $query, int $limit = 20, array $filters = [])
     {
         $searchResults = $this->searchLedgers($query, $limit, $filters);
@@ -179,25 +158,20 @@ class RagSearchService
 
         $ledgerIds = array_column($searchResults, 'ledger_id');
 
-        // Load ledgers with relationships
         $ledgers = Ledger::with(['define', 'creator', 'modifier'])
             ->whereIn('id', $ledgerIds)
             ->get()
             ->keyBy('id');
 
-        // Attach similarity scores and maintain order
         $results = collect($searchResults)->map(function ($result) use ($ledgers) {
             $ledger = $ledgers->get($result['ledger_id']);
             if ($ledger) {
-                // Add dynamic attributes to the model
                 $ledger->setAttribute('similarity_score', $result['max_score']);
                 $ledger->setAttribute('best_chunk_text', $result['best_chunk_text']);
-                $ledger->setAttribute('best_chunk_source', $result['best_chunk_source']);
                 $ledger->setAttribute('chunk_count', $result['chunk_count']);
             }
-
             return $ledger;
-        })->filter(); // Remove nulls if ledger was deleted
+        })->filter();
 
         return $results;
     }

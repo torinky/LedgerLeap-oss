@@ -19,19 +19,15 @@ return new class extends Migration
             $table->unsignedInteger('chunk_index');
             $table->text('chunk_text');
             $table->enum('chunk_source', ['content', 'content_attached']);
+            $table->text('embedding')->nullable()->comment('flags "COLUMN_VECTOR", type "Float"');
 
             $table->timestamps();
 
             $table->index(['ledger_id', 'chunk_index']);
-            
+
             // Add full-text index for chunk_text for hybrid search in the future
             $table->fullText('chunk_text');
         });
-
-        // Add embedding column with raw SQL since Laravel doesn't directly support MEDIUMBLOB
-        // MEDIUMBLOB can hold up to 16MB, sufficient for embeddings up to 4M dimensions
-        // Common dimensions: 384 (1,536 bytes), 768 (3,072 bytes), 1024 (4,096 bytes)
-        DB::statement('ALTER TABLE ledger_chunks ADD COLUMN embedding MEDIUMBLOB NULL AFTER chunk_source');
     }
 
     /**
