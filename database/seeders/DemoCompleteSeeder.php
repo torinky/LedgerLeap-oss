@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
@@ -25,6 +26,19 @@ class DemoCompleteSeeder extends Seeder
     {
         $this->command->info('🚀 Starting Demo Complete Seeder (Phase 1 Full)...');
         $this->command->info('');
+
+        // 基本的なシーディングが実行されているか確認
+        if (User::where('email', 'super_admin@ll.com')->doesntExist()) {
+            $this->command->warn('⚠️ Basic seeding not found. Running standard seeders first...');
+            $this->call([
+                UsersSeeder::class,
+                OrganizationSeeder::class,
+                AllUsersRoleSeeder::class,
+                NotificationTypeSeeder::class,
+            ]);
+            $this->command->info('✅ Standard seeders completed.');
+            $this->command->info('');
+        }
 
         // Step 0: 権限システムの初期化（重要！）
         $this->command->info('📦 Phase 0: Initializing permissions system...');

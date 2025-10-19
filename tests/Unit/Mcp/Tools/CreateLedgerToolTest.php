@@ -233,4 +233,29 @@ class CreateLedgerToolTest extends TestCase
         $this->assertTrue($response->isError());
         $this->assertStringContainsString('Failed to create ledger', $response->content());
     }
+
+    #[Test]
+    public function it_returns_error_if_user_lacks_write_permission()
+    {
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        // 権限なしのモック設定
+        $this->folderRepository->shouldReceive('getAccessibleFolderIds')
+            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->andReturn([]); // 空の配列を返し、書き込み権限がないことを示す
+
+        $this->ledgerService->shouldNotReceive('createLedger');
+
+        $request = new Request([
+            'ledger_define_id' => $ledgerDefine->id,
+            'folder_id' => $folder->id,
+            'content' => '{"title": "Test"}',
+        ]);
+
+        $response = $this->tool->handle($request, $this->ledgerService);
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString('Permission denied to create ledger in folder: '.$folder->id, $response->content());
+    }
 }

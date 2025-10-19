@@ -156,6 +156,7 @@ MARKDOWN;
                 user: $user, // 認証済みユーザーを直接渡す
                 params: $parameters,
             );
+            \Log::info('[MCP Search Debug] searchLedgersForApi result: '.json_encode($results, JSON_UNESCAPED_UNICODE));
         } catch (\Exception $e) {
             return Response::error("Search failed: {$e->getMessage()}");
         }
