@@ -104,17 +104,13 @@ class RagSearchService
             $chunkLimit
         );
 
-        // Escape only double quotes for the final SQL string
-        $escaped_mroonga_command = str_replace('"', '\"', $mroonga_command);
-        $search_sql = "SELECT mroonga_command(\"" . $escaped_mroonga_command . "\") AS res";
-
         Log::channel(config('rag.log_channel', 'stack'))->debug('Executing Mroonga Search', [
             'mroonga_command' => $mroonga_command,
-            'final_sql' => $search_sql,
         ]);
 
         try {
-            $result = DB::select($search_sql);
+            // Use a bound parameter to let the driver handle escaping
+            $result = DB::select("SELECT mroonga_command(?) AS res", [$mroonga_command]);
             if (empty($result)) {
                 return [];
             }
@@ -123,7 +119,7 @@ class RagSearchService
         } catch (\Exception $e) {
             Log::channel(config('rag.log_channel', 'stack'))->error('Mroonga search failed', [
                 'error' => $e->getMessage(),
-                'sql' => $search_sql,
+                'mroonga_command' => $mroonga_command,
             ]);
             return [];
         }
