@@ -110,6 +110,13 @@ class RagSearchService
             }
             $groonga_response = json_decode($result[0]->res, true);
 
+            Log::channel(config('rag.log_channel', 'stack'))->debug('Mroonga response structure', [
+                'is_array' => is_array($groonga_response),
+                'count' => is_array($groonga_response) && isset($groonga_response[0][0][0]) ? $groonga_response[0][0][0] : 'N/A',
+                'columns' => is_array($groonga_response) && isset($groonga_response[0][1]) ? array_map(fn ($c) => $c[0], $groonga_response[0][1]) : 'N/A',
+                'rows_count' => is_array($groonga_response) ? count($groonga_response[0]) - 2 : 0,
+            ]);
+
             return $this->parseGroongaResponse($groonga_response);
         } catch (\Exception $e) {
             Log::channel(config('rag.log_channel', 'stack'))->error('Mroonga search failed', [

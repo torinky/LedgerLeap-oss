@@ -436,10 +436,102 @@ $result = DB::select('SELECT mroonga_command(?) AS res', [$cmd]);
 
 **次のステップ:**
 
-1. テストの `EmbeddingService` モック設定を詳細に確認
-2. テストが `DatabaseMigrations` ではなく `RefreshDatabase` を使用していないか確認
-3. より詳細なデバッグログを追加して、実際の Groonga レスポンスを確認
-4. 必要に応じて、モックを使わない統合テストも作成
+1. ~~テストの `EmbeddingService` モック設定を詳細に確認~~ ✅ **解決済み**
+2. ~~テストが `DatabaseMigrations` ではなく `RefreshDatabase` を使用していないか確認~~ ✅ **確認済み（DatabaseMigrations使用）**
+3. ~~より詳細なデバッグログを追加して、実際の Groonga レスポンスを確認~~ ✅ **完了**
+4. ~~必要に応じて、モックを使わない統合テストも作成~~ ✅ **不要（モック修正で解決）**
+
+### 4.9 テスト失敗の根本原因と解決 ⭐ **最重要**
+
+**問題の本質:**
+
+テストが失敗していた真の原因は、**モックが正しく適用されていなかった**ことでした。
+
+**発見された問題点:**
+
+1. **RagSearchService の早期インスタンス化**
+   - `setUp()` メソッドで `RagSearchService` をインスタンス化
+   - その時点では `EmbeddingService` のモックがまだ作成されていない
+   - 結果: 実際の `EmbeddingService` が注入され、本物の API が呼ばれる
+
+2. **ヘルパーメソッドでの誤った取得方法**
+   - `createAndProcessLedger()` で `app(EmbeddingService::class)` を使用
+   - これもコンテナから実際のサービスを取得してしまう
+
+3. **ベクトルの不一致**
+   - テストではモックで `[0.1, 0.1, ...]` を返すように設定
+   - 実際には本物の API が呼ばれ、異なるベクトル `[-0.033..., 0.067...]` が生成される
+   - 結果: 検索クエリと保存されたベクトルが全く異なり、類似度が低くなる
+   - Groonga の `distance_cosine(...) < 0.7` フィルタで除外される
+
+**解決方法:**
+
+```php
+// Before (誤り)
+class RagSearchServiceTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->ragSearchService = app(RagSearchService::class); // モック前にインスタンス化
+    }
+    
+    public function test_search()
+    {
+        $this->mock(EmbeddingService::class); // 遅すぎる
+        $results = $this->ragSearchService->searchLedgers('cats'); // 実APIが呼ばれる
+    }
+}
+
+// After (正解)
+class RagSearchServiceTest extends TestCase
+{
+    public function test_search()
+    {
+        // 1. 最初にモックを作成
+        $this->mock(EmbeddingService::class, function ($mock) {
+            $mock->shouldReceive('embed')->andReturn($vector);
+        });
+        
+        // 2. その後でサービスをインスタンス化
+        $this->ragSearchService = app(RagSearchService::class); // モック版が注入される
+        
+        // 3. テスト実行
+        $results = $this->ragSearchService->searchLedgers('cats');
+    }
+}
+```
+
+**Mroonga ログによる検証:**
+
+Mroonga のログレベルを `DUMP` に設定することで、以下を確認できました：
+
+```bash
+# ログレベル設定
+DB::statement('SET GLOBAL mroonga_log_level="DUMP"');
+
+# ログ確認
+/var/lib/mysql/groonga.log
+```
+
+ログから判明した事実：
+- 全文検索 `chunk_text @ "cats"` は正常に動作（`hits=1`）
+- しかし最終結果は 0 件
+- 原因: `distance_cosine` のベクトルが異なるため、類似度フィルタで除外
+
+**最終的なテスト結果:**
+
+✅ すべてのテストが正常に通過:
+- `vector_is_stored_as_json_string`: 9.68s ✅
+- `it_performs_hybrid_search_with_mroonga`: 2.43s ✅  
+- `search_with_filters_correctly_narrows_results`: 2.53s ✅
+
+**重要な教訓:**
+
+1. **モックは使用前に作成**: 依存性注入されるサービスは、使用するクラスのインスタンス化**前**にモックを作成する必要がある
+2. **`app()` ヘルパーの注意点**: `app(Service::class)` はコンテナから取得するため、モック済みであれば自動的にモックが返される。ただし、タイミングが重要
+3. **ログの重要性**: Mroonga のログを確認することで、どこで問題が発生しているかを正確に特定できた
+4. **ベクトルの一致性**: ベクトル検索では、保存時と検索時で同じ埋め込みモデル（またはモック）を使用することが絶対条件
 
 ---
 

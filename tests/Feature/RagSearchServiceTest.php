@@ -19,8 +19,11 @@ class RagSearchServiceTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     private User $user;
+
     private Folder $folder;
+
     private LedgerDefine $ledgerDefine;
+
     private RagSearchService $ragSearchService;
 
     protected function setUp(): void
@@ -58,7 +61,7 @@ class RagSearchServiceTest extends TestCase
     #[Test]
     public function it_performs_hybrid_search_with_mroonga()
     {
-        // 1. Setup Mocks and Data
+        // 1. Setup Mocks FIRST (before creating RagSearchService)
         $vectorCat = array_fill(0, 768, 0.1);
         $vectorDog = array_fill(0, 768, 0.9);
 
@@ -69,34 +72,32 @@ class RagSearchServiceTest extends TestCase
         // When embed is called with a single string for the search query, it returns a single array (NOT array of arrays)
         $embeddingServiceMock->shouldReceive('embed')->with('cats')->andReturn($vectorCat);
 
+        // Recreate RagSearchService with the mocked EmbeddingService
+        $this->ragSearchService = app(RagSearchService::class);
+
         // Create ledgers and process them to generate chunks
         $ledgerCat = $this->createAndProcessLedger(['title' => 'About Cats', 'description' => 'A document about cats'], $this->ledgerDefine);
         $ledgerDog = $this->createAndProcessLedger(['title' => 'About Dogs', 'description' => 'A document about dogs'], $this->ledgerDefine);
 
         // 2. Execute Search with keyword filter
-        // Debug: Check what chunks exist
-        $allChunks = DB::table('ledger_chunks')->get();
-        $this->assertGreaterThan(0, $allChunks->count(), 'Chunks should exist in database. Found: ' . $allChunks->count());
-        dump('Chunks:', $allChunks->pluck('chunk_text', 'id')->toArray());
-        dump('Searching for:', 'cats');
-        
         $results = $this->ragSearchService->searchLedgers('cats');
 
         // 3. Assertions
         $this->assertNotEmpty($results, 'Search should return results.');
-        
+
         // The cat document should have a much better score than the dog document
         $catResult = collect($results)->firstWhere('ledger_id', $ledgerCat->id);
         $this->assertNotNull($catResult, 'Cat ledger should be in results');
-        
+
         // Score is 1 - cosine_distance, so identical vectors (distance=0) should give score=1
         // Since vectors are identical, expect score close to 1
         $this->assertGreaterThan(0.99, $catResult['max_score'], 'Identical vectors should have very high similarity (score close to 1)');
     }
-    
+
     #[Test]
     public function search_with_filters_correctly_narrows_results()
     {
+        // Setup mocks FIRST
         $vector1 = array_fill(0, 768, 0.1);
         $vector2 = array_fill(0, 768, 0.2);
         $this->mock(EmbeddingService::class, function ($mock) use ($vector1, $vector2) {
@@ -105,6 +106,9 @@ class RagSearchServiceTest extends TestCase
             // For the search query itself
             $mock->shouldReceive('embed')->with('doc')->andReturn($vector1);
         });
+
+        // Recreate RagSearchService with the mocked EmbeddingService
+        $this->ragSearchService = app(RagSearchService::class);
 
         $folder2 = Folder::factory()->create(['creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
         $ledgerDefine2 = LedgerDefine::factory()->create(['folder_id' => $folder2->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
@@ -128,9 +132,10 @@ class RagSearchServiceTest extends TestCase
             'content' => $content,
         ]);
 
+        // Use the bound EmbeddingService from the container (which should be the mock)
         $job = new ProcessLedgerForRagJob($ledger);
-        $job->handle(app(EmbeddingService::class));
-        
+        $job->handle($this->app->make(EmbeddingService::class));
+
         // Wait for Mroonga to index the full-text and vector data
         sleep(1);
 
