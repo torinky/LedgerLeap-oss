@@ -19,7 +19,6 @@ return new class extends Migration
             $table->unsignedInteger('chunk_index');
             $table->text('chunk_text');
             $table->enum('chunk_source', ['content', 'content_attached']);
-            $table->text('embedding')->nullable()->comment('flags "COLUMN_VECTOR", type "Float"');
 
             $table->timestamps();
 
@@ -28,6 +27,9 @@ return new class extends Migration
             // Add full-text index for chunk_text for hybrid search in the future
             $table->fullText('chunk_text');
         });
+
+        // Add the embedding column as a proper vector column
+        DB::statement('ALTER TABLE ledger_chunks ADD COLUMN embedding longtext COMMENT \'flags "COLUMN_VECTOR", type "Float"\'');
     }
 
     /**

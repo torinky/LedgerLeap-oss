@@ -64,22 +64,24 @@ class RagSearchService
 
     private function searchWithMroonga(array $queryEmbedding, array $filters, string $keyword, int $chunkLimit = 100): array
     {
-        $query_vector_str = '[' . implode(',', $queryEmbedding) . ']';
+        $query_vector_str = '['.implode(',', $queryEmbedding).']';
         $distance_expression = "distance_cosine(embedding, {$query_vector_str})";
 
         // Build filter conditions
         $filter_parts = [];
         if (! empty($keyword)) {
-            $filter_parts[] = sprintf('chunk_text @@ "%s"', $keyword);
+            // Use @ for full-text search, not @@, and escape quotes properly
+            $escaped_keyword = str_replace('"', '\\"', $keyword);
+            $filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
         }
         // 類似度が極端に低いもの（距離が遠いもの）を足切り
         $filter_parts[] = sprintf('%s < 0.7', $distance_expression);
 
         if (isset($filters['folder_id'])) {
-            $filter_parts[] = 'folder_id = ' . (int) $filters['folder_id'];
+            $filter_parts[] = 'folder_id == '.(int) $filters['folder_id'];
         }
         if (isset($filters['ledger_define_id'])) {
-            $filter_parts[] = 'ledger_define_id = ' . (int) $filters['ledger_define_id'];
+            $filter_parts[] = 'ledger_define_id == '.(int) $filters['ledger_define_id'];
         }
         if (isset($filters['ledger_ids'])) {
             $escaped_ids = implode(', ', array_map('intval', $filters['ledger_ids']));
@@ -88,19 +90,11 @@ class RagSearchService
 
         $filter_condition = implode(' && ', $filter_parts);
 
-        $mroonga_command_template = "select ledger_chunks "
-            . "--columns[score].stage filtered "
-            . "--columns[score].flags COLUMN_SCALAR "
-            . "--columns[score].types Float32 "
-            . "--columns[score].value '%s' "
-            . "--filter '%s' "
-            . "--output_columns ledger_id,chunk_text,score "
-            . "--limit %d";
-
+        // Build the mroonga command - note: --columns must come AFTER --filter
         $mroonga_command = sprintf(
-            $mroonga_command_template,
-            $distance_expression,
+            "select ledger_chunks --filter '%s' --columns[score].stage filtered --columns[score].flags COLUMN_SCALAR --columns[score].types Float32 --columns[score].value '%s' --output_columns ledger_id,chunk_text,score --limit %d",
             $filter_condition,
+            $distance_expression,
             $chunkLimit
         );
 
@@ -110,17 +104,19 @@ class RagSearchService
 
         try {
             // Use a bound parameter to let the driver handle escaping
-            $result = DB::select("SELECT mroonga_command(?) AS res", [$mroonga_command]);
+            $result = DB::select('SELECT mroonga_command(?) AS res', [$mroonga_command]);
             if (empty($result)) {
                 return [];
             }
-            $groonga_response = json_decode($result[0]->res);
+            $groonga_response = json_decode($result[0]->res, true);
+
             return $this->parseGroongaResponse($groonga_response);
         } catch (\Exception $e) {
             Log::channel(config('rag.log_channel', 'stack'))->error('Mroonga search failed', [
                 'error' => $e->getMessage(),
                 'mroonga_command' => $mroonga_command,
             ]);
+
             return [];
         }
     }
@@ -166,6 +162,7 @@ class RagSearchService
                 $ledger->setAttribute('best_chunk_text', $result['best_chunk_text']);
                 $ledger->setAttribute('chunk_count', $result['chunk_count']);
             }
+
             return $ledger;
         })->filter();
 
