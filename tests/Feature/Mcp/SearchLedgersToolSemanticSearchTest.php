@@ -6,7 +6,9 @@ use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\User;
 use App\Services\LedgerService;
 use App\Services\RagSearchService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\Traits\RefreshDatabaseWithTenant;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Mcp\Request;
 use Mockery;
@@ -14,17 +16,23 @@ use Tests\TestCase;
 
 class SearchLedgersToolSemanticSearchTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private User $user;
+
+    private static bool $isDataSeeded = false;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        // 1. デモデータを準備
-        Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
-        Artisan::call('rag:chunk-demo-ledgers');
+        if (!self::$isDataSeeded) {
+            // 1. デモデータを準備
+            Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
+            Artisan::call('rag:chunk-demo-ledgers');
+            self::$isDataSeeded = true;
+        }
 
         $this->user = User::where('email', 'admin@example.com')->first();
         $token = $this->user->createToken('test-token')->plainTextToken;
@@ -40,10 +48,8 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         putenv('MCP_AUTH_TOKEN'); // 環境変数をクリーンアップ
     }
 
-    /**
-     * @test
-     * @group semantic-search
-     */
+    #[Group("semantic-search")]
+    #[Test]
     public function it_performs_semantic_search_via_mcp_when_semantic_score_is_specified()
     {
         // Arrange
@@ -76,10 +82,8 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
-    /**
-     * @test
-     * @group semantic-search
-     */
+    #[Test]
+    #[Group("semantic-search")]
     public function it_throws_an_error_when_semantic_search_is_called_without_a_query()
     {
         // Arrange
@@ -98,10 +102,8 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->assertStringContainsString('semantic_score sorting requires a search query (q parameter)', $response->content());
     }
 
-    /**
-     * @test
-     * @group semantic-search
-     */
+    #[Group("semantic-search")]
+    #[Test]
     public function it_does_not_perform_semantic_search_for_other_order_by_values()
     {
         // Arrange

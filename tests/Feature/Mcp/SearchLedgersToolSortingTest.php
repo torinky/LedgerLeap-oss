@@ -6,6 +6,7 @@ use App\Mcp\Tools\SearchLedgersTool;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -49,7 +50,7 @@ class SearchLedgersToolSortingTest extends TestCase
         Mockery::close();
         parent::tearDown();
     }
-
+    #[test]
     public function test_accepts_order_by_parameter(): void
     {
         // order_byパラメータが正しく受け取られることを確認
@@ -77,6 +78,7 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
+    #[test]
     public function test_accepts_order_direction_parameter(): void
     {
         // order_directionパラメータが正しく受け取られることを確認
@@ -105,6 +107,7 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
+    #[test]
     public function test_defaults_to_composite_score_when_no_order_by_specified(): void
     {
         // order_byが指定されていない場合のデフォルト動作を確認
@@ -129,6 +132,7 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
+    #[test]
     public function test_supports_all_sort_field_options(): void
     {
         // 全てのソートオプションが受け入れられることを確認
@@ -159,6 +163,7 @@ class SearchLedgersToolSortingTest extends TestCase
         }
     }
 
+    #[test]
     public function test_supports_both_sort_directions(): void
     {
         // 昇順・降順の両方が受け入れられることを確認
