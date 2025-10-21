@@ -27,7 +27,7 @@ class SearchLedgersTool extends Tool
         
         **Response Format:**
         The 'format' parameter determines the response structure:
-        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta)
+        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta). Each ledger in the summary format will also include a 'link' field in its '__display_fields__' pointing to the ledger's detail page.
         - 'raw': Returns only the normalized data (ledgers, meta, total) for machine processing
         
         **Search Parameters:**
@@ -220,6 +220,12 @@ MARKDOWN;
                 'workflow_status' => $statusDisplay,
                 'updated_at' => $updatedAtFormatted,
             ];
+
+            if (isset($ledger->tenant_id) && isset($ledger->id)) {
+//                $baseUrl = rtrim(config('app.url'), '/');
+                $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
+                $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
+            }
 
             // contentの処理
             if (! $includeContent) {
