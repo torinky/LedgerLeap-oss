@@ -47,6 +47,33 @@ class SearchLedgersTool extends Tool
         **Strategic Usage (戦略的利用法):**
         This tool is not just for single searches; it can be combined with other tools to answer more complex questions.
 
+        - **The Golden Rule of Search: Keyword -> Semantic -> Other Tools**
+          **最重要検索ルール: まずキーワード検索、次に意味検索、それでも見つからなければ他のツール**
+
+          This tool offers two primary search modes. Following this workflow is CRITICAL for efficient and accurate information retrieval.
+          このツールは2つの主要な検索モードを提供します。効率的で正確な情報検索のために、以下のワークフローに従うことが**非常に重要**です。
+
+          1.  **Step 1: Keyword Search (キーワード検索)**
+              - **What it is:** A direct, full-text search for specific terms.
+              - **When to use:** When you know the exact keywords, company names, product codes, or specific phrases.
+              - **How to use:** Simply provide the keyword in the `q` parameter.
+              - **Example:** `search_ledgers(q='株式会社A商事')`
+
+          2.  **Step 2: Semantic Search (意味検索) - **MANDATORY if Step 1 fails**
+              - **What it is:** An AI-powered search that finds documents based on conceptual meaning, not just exact words.
+              - **When to use:** **ALWAYS** use this if the Keyword Search returns no results or irrelevant results. It's excellent for finding related information when you don't know the exact terms.
+              - **How to use:** Set `order_by='semantic_score'` and phrase your query `q` as a natural question or sentence.
+              - **Example:** `search_ledgers(q='A社との価格交渉に関する過去の議事録', order_by='semantic_score')`
+
+          3.  **Step 3: Use Other Tools (他のツールの利用)**
+              - **When to use:** **ONLY** after both Keyword Search and Semantic Search have failed to find the desired information.
+              - **What to do:** If you still can't find the ledger, use a tool like `get_activity_log_tool` to find clues (like a specific phrase from a log entry). Then, return to Step 1 with this new, more specific clue.
+              - **Example Workflow:**
+                1. `search_ledgers(q='Project X')` -> No results.
+                2. `search_ledgers(q='Project Xに関する資料', order_by='semantic_score')` -> Still no relevant results.
+                3. `get_activity_log_tool()` -> Finds a log: "Submitted the final report for Project X".
+                4. `search_ledgers(q='"Submitted the final report for Project X"')` -> Success!
+
         - **Leveraging Metadata (メタデータの活用):**
           When a search is successful, the `meta` field in the response is automatically populated with complete information about related entities:
           - meta.users: Full user information for creators and modifiers (including id, name)
@@ -56,13 +83,6 @@ class SearchLedgersTool extends Tool
           **Best Practice for Identifying Responsible Persons:**
           To find who is in charge of something, search for the relevant ledger first, then check meta.users using the creator_id.
           Example: "Who is in charge of Company A?" → search_ledgers(q='Company A') → Check ledger.creator_id in meta.users
-
-        - **Iterative Information Discovery Workflow (段階的な情報特定ワークフロー):**
-          If an initial, broad keyword search (e.g., `q="Company A"`) yields no results, follow these steps:
-          1. Use another tool like `get_activity_log_tool` to find related activities.
-          2. From the activity log, identify a **clue** that can uniquely identify the target ledger (e.g., a unique phrase from the content, a specific tag).
-          3. Use that **clue** as the `q` parameter in a new search with this tool.
-          4. This targeted search will allow you to retrieve both the ledger data and the responsible user's information from the `meta` field in a single call.
 
         **Common Search Patterns (よく使う検索パターン):**
         
@@ -104,7 +124,8 @@ class SearchLedgersTool extends Tool
           - 'composite_score': Overall importance combining activity, freshness, and workflow status
           - 'activity_score': Recent activity frequency (useful for "What's hot?" queries)
           - 'created_at': Creation date (useful for "Show recent entries")
-          - 'semantic_score': Semantic relevance to search query (requires 'q' parameter). Finds records based on meaning, not just keywords.
+          - 'semantic_score': Semantic relevance to search query (requires 'q' parameter). Finds records based on meaning, not just keywords. This enables **Semantic Search**.
+            - **Important:** When using `semantic_score`, the `q` parameter should be a natural language sentence or question to provide context for the AI model (e.g., "先月のA社との打ち合わせでの決定事項"). Simple keywords are less effective.
         - 'order_direction': Sort direction ('asc' or 'desc', default: 'desc')
         
         **Sorting Examples:**

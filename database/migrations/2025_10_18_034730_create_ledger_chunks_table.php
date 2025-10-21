@@ -18,7 +18,6 @@ return new class extends Migration
 
             $table->unsignedInteger('chunk_index');
             $table->text('chunk_text');
-            $table->enum('chunk_source', ['content', 'content_attached']);
 
             $table->timestamps();
 
