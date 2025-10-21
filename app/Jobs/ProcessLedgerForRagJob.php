@@ -77,7 +77,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
         // 4. Generate embeddings and save to DB
         try {
             $chunkTexts = array_column($chunks, 'text');
-            $embeddings = $embeddingService->embed($chunkTexts);
+            $embeddings = $embeddingService->embed($chunkTexts, 'passage');
 
             $chunkData = [];
             $now = now();

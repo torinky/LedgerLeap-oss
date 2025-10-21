@@ -23,10 +23,11 @@ class EmbeddingService
      * Embed texts using the Python embedding service.
      *
      * @param string|array $texts The text(s) to embed.
+     * @param string $type The type of text being embedded ('query' or 'passage').
      * @return array The embedding(s).
      * @throws \Exception If the embedding process fails or times out.
      */
-    public function embed(string|array $texts): array
+    public function embed(string|array $texts, string $type = 'query'): array
     {
         // Wait for the service to become ready before proceeding.
         $this->waitUntilReady($this->timeout);
@@ -36,6 +37,14 @@ class EmbeddingService
 
         if (empty($textsToEmbed)) {
             return [];
+        }
+
+        // Get prefix from config based on active model and type
+        $activeModel = config('rag.model.active');
+        $prefix = config("rag.model.available_models.{$activeModel}.prefix.{$type}", '');
+
+        if (!empty($prefix)) {
+            $textsToEmbed = array_map(fn($text) => $prefix . $text, $textsToEmbed);
         }
 
         $startTime = microtime(true);

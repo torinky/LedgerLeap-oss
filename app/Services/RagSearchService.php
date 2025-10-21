@@ -99,7 +99,7 @@ class RagSearchService
         ]);
 
         // 1. Generate embedding for the query
-        $queryEmbedding = $this->embeddingService->embed($query);
+        $queryEmbedding = $this->embeddingService->embed($query, 'query');
 
         // 2. Apply permission-based filtering if user is provided
         if (isset($filters['user'])) {

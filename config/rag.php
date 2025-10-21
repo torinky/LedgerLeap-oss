@@ -24,7 +24,7 @@ return [
     'model' => [
         // The currently active embedding model.
         // This value should match one of the keys in the 'available_models' array.
-        'active' => env('RAG_MODEL', 'all-minilm-l6-v2'),
+        'active' => env('RAG_MODEL', 'cl-nagoya/ruri-v3-310m'),
 
         // A list of available embedding models and their configurations.
         'available_models' => [
@@ -33,12 +33,20 @@ return [
                 'name' => 'cl-nagoya/ruri-v3-310m',
                 'dimension' => 768,
                 'description' => 'Fast and lightweight Japanese model with excellent performance (recommended for ARM64 dev).',
+                'prefix' => [
+                    'query' => '検索クエリ: ',
+                    'passage' => '検索文書: ',
+                ],
             ],
 
             'ruri-v3-30m' => [
                 'name' => 'cl-nagoya/ruri-v3-30m',
                 'dimension' => 256,
                 'description' => 'Fast and lightweight Japanese model with excellent performance (recommended for ARM64 dev).',
+                'prefix' => [
+                    'query' => '検索クエリ: ',
+                    'passage' => '検索文書: ',
+                ],
             ],
 
             // Multilingual models - Lightweight
@@ -46,11 +54,19 @@ return [
                 'name' => 'intfloat/multilingual-e5-small',
                 'dimension' => 384,
                 'description' => 'Lightweight multilingual model with good performance.',
+                'prefix' => [
+                    'query' => '',
+                    'passage' => '',
+                ],
             ],
             'all-minilm-l6-v2' => [
                 'name' => 'sentence-transformers/all-MiniLM-L6-v2',
                 'dimension' => 384,
                 'description' => 'Ultra-fast lightweight model (English-focused).',
+                'prefix' => [
+                    'query' => '',
+                    'passage' => '',
+                ],
             ],
 
             // Multilingual models - Balanced
@@ -58,6 +74,10 @@ return [
                 'name' => 'intfloat/multilingual-e5-base',
                 'dimension' => 768,
                 'description' => 'Balanced multilingual model with high quality.',
+                'prefix' => [
+                    'query' => '',
+                    'passage' => '',
+                ],
             ],
 
             // Special purpose models
@@ -65,6 +85,10 @@ return [
                 'name' => 'ibm/granite-embedding-107m-multilingual',
                 'dimension' => 1024,
                 'description' => 'Unique multilingual model that also supports code search.',
+                'prefix' => [
+                    'query' => '',
+                    'passage' => '',
+                ],
             ],
 
             // High-quality models (x86_64 recommended)
@@ -72,6 +96,10 @@ return [
                 'name' => 'BAAI/bge-m3',
                 'dimension' => 1024,
                 'description' => 'High-quality multilingual model (slow on ARM64, use x86_64).',
+                'prefix' => [
+                    'query' => '',
+                    'passage' => '',
+                ],
             ],
         ],
     ],

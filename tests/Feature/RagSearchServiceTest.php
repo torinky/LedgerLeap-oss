@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\EmbeddingService;
 use App\Services\RagSearchService;
 use Illuminate\Support\Facades\DB;
+use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -43,7 +44,8 @@ class RagSearchServiceTest extends TestCase
     {
         $embedding = array_fill(0, 768, 0.123);
         $this->mock(EmbeddingService::class, function ($mock) use ($embedding) {
-            $mock->shouldReceive('embed')->andReturn([$embedding]);
+            // The job will call embed with an array of texts and 'passage' type
+            $mock->shouldReceive('embed')->with(Mockery::type('array'), 'passage')->andReturn([$embedding]);
         });
 
         $ledger = $this->createAndProcessLedger(['title' => 'Test JSON Storage'], $this->ledgerDefine);
@@ -66,11 +68,11 @@ class RagSearchServiceTest extends TestCase
         $vectorDog = array_fill(0, 768, 0.9);
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        // When embed is called with an array, it returns array of arrays
-        $embeddingServiceMock->shouldReceive('embed')->with(["About Cats\n\nA document about cats"])->andReturn([$vectorCat]);
-        $embeddingServiceMock->shouldReceive('embed')->with(["About Dogs\n\nA document about dogs"])->andReturn([$vectorDog]);
-        // When embed is called with a single string for the search query, it returns a single array (NOT array of arrays)
-        $embeddingServiceMock->shouldReceive('embed')->with('cats')->andReturn($vectorCat);
+        // Expectations for chunking process (called from createAndProcessLedger via job)
+        $embeddingServiceMock->shouldReceive('embed')->with(["About Cats\n\nA document about cats"], 'passage')->andReturn([$vectorCat]);
+        $embeddingServiceMock->shouldReceive('embed')->with(["About Dogs\n\nA document about dogs"], 'passage')->andReturn([$vectorDog]);
+        // Expectation for the search query itself
+        $embeddingServiceMock->shouldReceive('embed')->with('cats', 'query')->andReturn($vectorCat);
 
         // Recreate RagSearchService with the mocked EmbeddingService
         $this->ragSearchService = app(RagSearchService::class);
@@ -101,10 +103,11 @@ class RagSearchServiceTest extends TestCase
         $vector1 = array_fill(0, 768, 0.1);
         $vector2 = array_fill(0, 768, 0.2);
         $this->mock(EmbeddingService::class, function ($mock) use ($vector1, $vector2) {
-            $mock->shouldReceive('embed')->with(['doc in folder 1'])->andReturn([$vector1]);
-            $mock->shouldReceive('embed')->with(['doc in folder 2'])->andReturn([$vector2]);
-            // For the search query itself
-            $mock->shouldReceive('embed')->with('doc')->andReturn($vector1);
+            // Expectations for chunking
+            $mock->shouldReceive('embed')->with(['doc in folder 1'], 'passage')->andReturn([$vector1]);
+            $mock->shouldReceive('embed')->with(['doc in folder 2'], 'passage')->andReturn([$vector2]);
+            // Expectation for the search query
+            $mock->shouldReceive('embed')->with('doc', 'query')->andReturn($vector1);
         });
 
         // Recreate RagSearchService with the mocked EmbeddingService
@@ -158,9 +161,11 @@ class RagSearchServiceTest extends TestCase
         $queryVector = array_fill(0, 768, 0.15);
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        $embeddingServiceMock->shouldReceive('embed')->with(['document folder'])->andReturn([$vector1]);
-        $embeddingServiceMock->shouldReceive('embed')->with(['another document'])->andReturn([$vector2]);
-        $embeddingServiceMock->shouldReceive('embed')->with('')->andReturn($queryVector);
+        // Expectations for chunking
+        $embeddingServiceMock->shouldReceive('embed')->with(['document folder'], 'passage')->andReturn([$vector1]);
+        $embeddingServiceMock->shouldReceive('embed')->with(['another document'], 'passage')->andReturn([$vector2]);
+        // Expectation for search query
+        $embeddingServiceMock->shouldReceive('embed')->with('', 'query')->andReturn($queryVector);
 
         $this->ragSearchService = app(RagSearchService::class);
 
@@ -224,8 +229,11 @@ class RagSearchServiceTest extends TestCase
         $vector = array_fill(0, 768, 0.5);
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
         $embeddingServiceMock->shouldReceive('embed')
-            ->andReturnUsing(function ($input) use ($vector) {
-                return is_array($input) ? array_fill(0, count($input), $vector) : $vector;
+            ->andReturnUsing(function ($input, $type) use ($vector) {
+                if ($type === 'query') {
+                    return $vector;
+                }
+                return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
             });
 
         $this->ragSearchService = app(RagSearchService::class);
@@ -246,7 +254,7 @@ class RagSearchServiceTest extends TestCase
         // Use empty query for vector search only
         $result = $this->ragSearchService->search('', $this->user, [$this->ledgerDefine->id], [], 10);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf("Illuminate\Contracts\Pagination\LengthAwarePaginator", $result);
         $this->assertLessThanOrEqual(10, $result->count(), 'Should respect perPage limit');
         $this->assertGreaterThan(0, $result->total(), 'Should have total count');
     }
@@ -258,8 +266,11 @@ class RagSearchServiceTest extends TestCase
         $vector = array_fill(0, 768, 0.5);
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
         $embeddingServiceMock->shouldReceive('embed')
-            ->andReturnUsing(function ($input) use ($vector) {
-                return is_array($input) ? array_fill(0, count($input), $vector) : $vector;
+            ->andReturnUsing(function ($input, $type) use ($vector) {
+                 if ($type === 'query') {
+                    return $vector;
+                }
+                return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
             });
 
         $this->ragSearchService = app(RagSearchService::class);
@@ -288,5 +299,27 @@ class RagSearchServiceTest extends TestCase
             $this->assertArrayHasKey('best_chunk_text', $results[0]);
             $this->assertArrayHasKey('chunk_count', $results[0]);
         }
+    }
+
+    #[Test]
+    public function it_calls_embedding_service_with_query_prefix()
+    {
+        // Arrange: Mock EmbeddingService to verify its method call
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->once()
+            ->with('test query', 'query') // Expect 'embed' to be called with the query and type 'query'
+            ->andReturn(array_fill(0, 768, 0.1));
+
+        // Mock DB to avoid Mroonga errors in this unit-like test
+        DB::shouldReceive('select')->andReturn([]);
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Act: Call the search method
+        $this->ragSearchService->searchLedgers('test query');
+
+        // Assert: Mockery will assert that the expectation was met.
+        $this->assertTrue(true);
     }
 }
