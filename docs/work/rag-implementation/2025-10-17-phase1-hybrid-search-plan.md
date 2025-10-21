@@ -581,8 +581,7 @@ Schema::create('ledger_chunks', function (Blueprint $table) {
     $table->unsignedBigInteger('folder_id')->index(); // 権限チェック用
     
     $table->unsignedInteger('chunk_index'); // チャンク順序
-    $table->text('chunk_text'); // 元テキスト
-    $table->enum('chunk_source', ['content', 'content_attached']);
+    $table->text('chunk_text'); // 意味的検索のために整形されたMarkdown形式のテキスト
     
     // ベクトルデータ（bge-m3: 1024次元, e5-base: 768次元）
     // 1024次元 * 4bytes = 4096 bytes を想定し、VARBINARY(4096)とする
@@ -723,35 +722,27 @@ class ProcessLedgerForRagJob implements ShouldQueue
             ->where('ledger_id', $this->ledger->id)
             ->delete();
         
-        $chunks = [];
-        
-        // 1. ledger.content のチャンク化
-        if (!empty($this->ledger->content)) {
-            $contentText = $this->extractTextFromContent($this->ledger->content);
-            $contentChunks = $this->chunkText($contentText, 'content');
-            $chunks = array_merge($chunks, $contentChunks);
+        // 1. 構造化されたMarkdownテキストを生成
+        $structuredText = $this->buildMarkdownFromLedger($this->ledger);
+
+        if (empty($structuredText)) {
+            Log::channel('rag')->warning('No content to chunk.', ['ledger_id' => $this->ledger->id]);
+            return;
         }
         
-        // 2. ledger.content_attached のチャンク化
-        if (!empty($this->ledger->content_attached)) {
-            $attachedChunks = $this->chunkText(
-                $this->ledger->content_attached, 
-                'content_attached'
-            );
-            $chunks = array_merge($chunks, $attachedChunks);
-        }
+        // 2. 生成された単一のテキストをチャンク化
+        $chunks = $this->chunkText($structuredText);
         
         // 3. エンベディング生成とDB保存
-        foreach ($chunks as $index => $chunk) {
-            $embedding = $embeddingService->embed($chunk['text']);
+        foreach ($chunks as $index => $chunkText) {
+            $embedding = $embeddingService->embed($chunkText, 'passage');
             
             DB::table('ledger_chunks')->insert([
                 'ledger_id' => $this->ledger->id,
                 'ledger_define_id' => $this->ledger->ledger_define_id,
                 'folder_id' => $this->ledger->define->folder_id,
                 'chunk_index' => $index,
-                'chunk_text' => $chunk['text'],
-                'chunk_source' => $chunk['source'],
+                'chunk_text' => $chunkText,
                 'embedding' => $this->serializeEmbedding($embedding),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -765,29 +756,26 @@ class ProcessLedgerForRagJob implements ShouldQueue
     }
     
     /**
-     * JSON形式のcontentからテキストを抽出
+     * LedgerDefineの構造とLedgerのデータを基に、階層的なMarkdownテキストを生成する
+     * (詳細は WBS 1.4.1 設計・実装指示書 を参照)
      */
-    private function extractTextFromContent(array $content): string
+    private function buildMarkdownFromLedger(Ledger $ledger): string
     {
-        // ColumnDefineの定義に基づいてテキストフィールドを抽出
-        $textFields = [];
+        // WBS 1.4.1 の設計に基づき、以下の処理を実装
+        // 1. LedgerDefineのタイトル・説明をヘッダーとして追加
+        // 2. ColumnDefineのgroup, display_level, orderに基づき、項目を階層的に整形
+        // 3. ColumnDefineのtypeに応じて、値を人間が読めるテキストに変換
+        // 4. content_attachedの内容を末尾に追加
         
-        foreach ($content as $key => $value) {
-            if (is_string($value)) {
-                $textFields[] = $value;
-            } elseif (is_array($value)) {
-                // ネストされた配列も再帰的に処理
-                $textFields[] = $this->extractTextFromContent($value);
-            }
-        }
+        // (ここに具体的な実装が入る)
         
-        return implode("\n", $textFields);
+        return "生成されたMarkdown文字列";
     }
     
     /**
      * テキストをチャンクに分割
      */
-    private function chunkText(string $text, string $source): array
+    private function chunkText(string $text): array
     {
         // bge-m3は最大8192トークンまで扱えるが、検索精度と処理速度のバランスを考慮し、
         // Phase1では2000文字程度（約1000トークン強）を目安とする。
@@ -802,12 +790,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
         
         while ($position < $textLength) {
             $chunkText = mb_substr($text, $position, $chunkSize);
-            
-            $chunks[] = [
-                'text' => $chunkText,
-                'source' => $source
-            ];
-            
+            $chunks[] = $chunkText;
             $position += ($chunkSize - $overlapSize);
         }
         
@@ -822,22 +805,9 @@ class ProcessLedgerForRagJob implements ShouldQueue
 }
 ```
 
-#### 4.6.4. チャンク化対象データの優先順位
+#### 4.6.4. チャンク化アプローチの更新
 
-Phase1では以下の優先順位でチャンク化を実施：
-
-1. **高優先度:** `ledger.content` （台帳本体）
-   - ユーザーが直接入力するデータ
-   - 検索で最も頻繁にヒットする内容
-
-2. **高優先度:** `ledger.content_attached` （添付ファイルのテキスト）
-   - OCR/Tikaで抽出されたテキスト
-   - PDFや画像内の情報を検索可能にする
-
-**Phase2以降の拡張候補:**
-- コメント・履歴データ
-- タグ・メタデータ
-- 関連する他の台帳の情報
+**注:** 当初は`content`と`content_attached`から単純にテキストを抽出する計画でしたが、検索精度を最大化するため、`LedgerDefine`の構造（グループ、ラベル等）を反映した階層的なMarkdownを生成するアプローチに更新しました。詳細は`docs/work/rag-implementation/2025-10-21-phase1-wbs1-4-1-chunking-improvement-plan.md`に記載されています。この変更はWBS 1.4「`ProcessLedgerForRagJob` の実装」の具体的な実装内容を更新するものです。
 
 ## 5. テスト戦略
 
