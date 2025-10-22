@@ -200,16 +200,17 @@ class RagSearchService
         // Step 1: Get vector search results from Mroonga (IDs and scores only)
         $groonga_filter_parts = [];
         if (! empty($keyword)) {
-            // $escaped_keyword = str_replace('"', '\\"', $keyword);
-            // $groonga_filter_parts[] = sprintf('chunk_text @ "%s"', $escaped_keyword);
-            $groonga_filter_parts[] = sprintf('%s < %f', $distance_expression, config('rag.search.similarity_threshold', 0.7));
+            // The score filter is now applied using the calculated score column
+            $groonga_filter_parts[] = sprintf('score < %f', config('rag.search.similarity_threshold', 0.7));
         }
 
         $groonga_filter = implode(' && ', $groonga_filter_parts);
         $filter_clause = ! empty($groonga_filter) ? "--filter '{$groonga_filter}'" : '';
 
+        // The stage is changed to 'initial' to allow filtering by the calculated score.
+        // Added --sortby score to sort by distance in ascending order.
         $mroonga_command = sprintf(
-            "select ledger_chunks %s --columns[score].stage filtered --columns[score].flags COLUMN_SCALAR --columns[score].types Float32 --columns[score].value '%s' --output_columns _id,score --limit %d",
+            "select ledger_chunks %s --columns[score].stage initial --columns[score].flags COLUMN_SCALAR --columns[score].types Float32 --columns[score].value '%s' --output_columns _id,score --sortby score --limit %d",
             $filter_clause,
             $distance_expression,
             $chunkLimit
@@ -293,9 +294,6 @@ class RagSearchService
                     'score' => $scoreMap[$chunk->id] ?? 1.0,
                 ];
             }
-
-            // Sort by score (ascending, since it's distance)
-            usort($results, fn ($a, $b) => $a['score'] <=> $b['score']);
 
             Log::channel(config('rag.log_channel', 'stack'))->debug('Mroonga search completed', [
                 'total_chunks' => count($parsed),

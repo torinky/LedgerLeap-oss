@@ -68,9 +68,17 @@ class RagSearchServiceTest extends TestCase
         $vectorDog = array_fill(0, 768, 0.9);
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        // Expectations for chunking process (called from createAndProcessLedger via job)
-        $embeddingServiceMock->shouldReceive('embed')->with(["About Cats\n\nA document about cats"], 'passage')->andReturn([$vectorCat]);
-        $embeddingServiceMock->shouldReceive('embed')->with(["About Dogs\n\nA document about dogs"], 'passage')->andReturn([$vectorDog]);
+        // Expectations for chunking process - accept any array with 'passage'
+        $embeddingServiceMock->shouldReceive('embed')
+            ->with(Mockery::type('array'), 'passage')
+            ->andReturnUsing(function ($texts) use ($vectorCat, $vectorDog) {
+                // Return appropriate vector based on content
+                if (isset($texts[0]) && str_contains($texts[0], 'Cats')) {
+                    return [$vectorCat];
+                }
+
+                return [$vectorDog];
+            });
         // Expectation for the search query itself
         $embeddingServiceMock->shouldReceive('embed')->with('cats', 'query')->andReturn($vectorCat);
 
@@ -103,9 +111,16 @@ class RagSearchServiceTest extends TestCase
         $vector1 = array_fill(0, 768, 0.1);
         $vector2 = array_fill(0, 768, 0.2);
         $this->mock(EmbeddingService::class, function ($mock) use ($vector1, $vector2) {
-            // Expectations for chunking
-            $mock->shouldReceive('embed')->with(['doc in folder 1'], 'passage')->andReturn([$vector1]);
-            $mock->shouldReceive('embed')->with(['doc in folder 2'], 'passage')->andReturn([$vector2]);
+            // Expectations for chunking - accept any array with 'passage'
+            $mock->shouldReceive('embed')
+                ->with(Mockery::type('array'), 'passage')
+                ->andReturnUsing(function ($texts) use ($vector1, $vector2) {
+                    if (isset($texts[0]) && str_contains($texts[0], 'folder 1')) {
+                        return [$vector1];
+                    }
+
+                    return [$vector2];
+                });
             // Expectation for the search query
             $mock->shouldReceive('embed')->with('doc', 'query')->andReturn($vector1);
         });
@@ -161,9 +176,16 @@ class RagSearchServiceTest extends TestCase
         $queryVector = array_fill(0, 768, 0.15);
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        // Expectations for chunking
-        $embeddingServiceMock->shouldReceive('embed')->with(['document folder'], 'passage')->andReturn([$vector1]);
-        $embeddingServiceMock->shouldReceive('embed')->with(['another document'], 'passage')->andReturn([$vector2]);
+        // Expectations for chunking - accept any array with 'passage'
+        $embeddingServiceMock->shouldReceive('embed')
+            ->with(Mockery::type('array'), 'passage')
+            ->andReturnUsing(function ($texts) use ($vector1, $vector2) {
+                if (isset($texts[0]) && str_contains($texts[0], 'document folder')) {
+                    return [$vector1];
+                }
+
+                return [$vector2];
+            });
         // Expectation for search query
         $embeddingServiceMock->shouldReceive('embed')->with('', 'query')->andReturn($queryVector);
 
@@ -233,6 +255,7 @@ class RagSearchServiceTest extends TestCase
                 if ($type === 'query') {
                     return $vector;
                 }
+
                 return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
             });
 
@@ -267,9 +290,10 @@ class RagSearchServiceTest extends TestCase
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
         $embeddingServiceMock->shouldReceive('embed')
             ->andReturnUsing(function ($input, $type) use ($vector) {
-                 if ($type === 'query') {
+                if ($type === 'query') {
                     return $vector;
                 }
+
                 return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
             });
 
@@ -321,5 +345,60 @@ class RagSearchServiceTest extends TestCase
 
         // Assert: Mockery will assert that the expectation was met.
         $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function it_builds_optimized_mroonga_query()
+    {
+        // Arrange
+        $query = 'test query';
+        $queryEmbedding = array_fill(0, 768, 0.1);
+        $passageEmbedding = array_fill(0, 768, 0.2);
+
+        // Setup user and permissions
+        $user = $this->user;
+        $folder = $this->folder;
+        $ledgerDefine = $this->ledgerDefine;
+        $role = \App\Models\Role::create(['name' => 'QueryTestRole', 'guard_name' => 'web']);
+        $user->roles()->attach($role->id);
+        $role->folderPermissions()->attach($folder->id, [
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Mock EmbeddingService
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')->with($query, 'query')->andReturn($queryEmbedding);
+        $embeddingServiceMock->shouldReceive('embed')->with(Mockery::type('array'), 'passage')->andReturn([$passageEmbedding]);
+
+        // Spy on the Log facade and properly handle channel calls
+        $logSpy = \Illuminate\Support\Facades\Log::spy();
+        $channelMock = \Mockery::mock();
+        $logSpy->shouldReceive('channel')->andReturn($channelMock);
+        $channelMock->shouldReceive('info')->zeroOrMoreTimes(); // Allow info calls
+        $channelMock->shouldReceive('debug')->zeroOrMoreTimes(); // Allow debug calls
+
+        // Re-instantiate the service to ensure it uses the mocked services
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Create a ledger so that the search has something to find
+        $this->createAndProcessLedger(['title' => 'test data'], $ledgerDefine);
+
+        // Act
+        $this->ragSearchService->searchLedgers($query, 10, ['user' => $user]);
+
+        // Assert - verify the debug log was called with correct query structure
+        $channelMock->shouldHaveReceived('debug')
+            ->with('Executing Mroonga Search', Mockery::on(function ($context) {
+                $command = $context['mroonga_command'] ?? '';
+                $this->assertStringContainsString('select ledger_chunks', $command);
+                $this->assertStringContainsString("--filter 'score < ", $command);
+                $this->assertStringContainsString('--columns[score].stage initial', $command);
+                $this->assertStringContainsString('--sortby score', $command);
+                // Verify distance_cosine is ONLY in the value clause, not in filter
+                $this->assertStringContainsString("--columns[score].value 'distance_cosine(embedding", $command);
+
+                return true;
+            }));
     }
 }
