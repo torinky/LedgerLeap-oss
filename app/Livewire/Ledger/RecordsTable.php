@@ -242,6 +242,7 @@ class RecordsTable extends Component
             'composite_score' => __('ledger.scoring.score'),
             'created_at' => __('ledger.created_at'),
             'updated_at' => __('ledger.updated_at'),
+            'semantic_score' => __('ledger.semantic_search'),
             default => '', // 標準ソート以外の場合は空文字列を返す
         };
     }
@@ -315,36 +316,53 @@ class RecordsTable extends Component
         }
 
         // 表示対象の台帳に紐づく仕訳データを取得
-        $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-//            ->search($this->searchContext)
-            ->searchContext($this->searchContext)
-            ->contentsFilter($this->filter)
-            ->when(! empty($this->filterStatus), function ($query) {
-                return $query->where('status', $this->filterStatus);
-            })
-//          重複データを持たないように
-//          ->with('define.folder')
-            ->orderBy('ledger_define_id', 'asc')
-            ->when($this->orderBy === 'composite_score', function ($query) {
-                // MySQLでは NULLS LAST が使えないため、スコア0を最後に
-                return $query->orderByRaw('composite_score = 0, composite_score '.
-                    ($this->orderAsc ? 'ASC' : 'DESC'));
-            }, function ($query) {
-                return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
-            });
-        // dd($ledgerRecords);
+        if ($this->orderBy === 'semantic_score' && !empty($this->search)) {
+            $ledgerRecords = app(\App\Services\RagSearchService::class)->search(
+                query: $this->search,
+                user: auth()->user(),
+                ledgerDefineIds: $searchTargetLedgerDefineIds,
+                filters: $this->filter,
+                perPage: $this->perPage
+            );
+            // RAGサービスは LengthAwarePaginator を返す
+            $this->totalRecords = $ledgerRecords->total();
+            $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->getCollection()->pluck('ledger_define_id')->unique()->toArray())
+                ->with('folder')
+                ->get()
+                ->keyBy('id');
+        }
+        else {
+            $ledgerRecordsQuery = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                ->searchContext($this->searchContext)
+                ->contentsFilter($this->filter)
+                ->when(! empty($this->filterStatus), function ($query) {
+                    return $query->where('status', $this->filterStatus);
+                })
+                ->orderBy('ledger_define_id', 'asc')
+                ->when($this->orderBy === 'composite_score', function ($query) {
+                    return $query->orderByRaw('composite_score = 0, composite_score '.
+                        ($this->orderAsc ? 'ASC' : 'DESC'));
+                }, function ($query) {
+                    // semantic_score はDBカラムではないので、ここでソートしようとするとエラーになる
+                    if ($this->orderBy !== 'semantic_score') {
+                        return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+                    }
+                    // semantic_scoreが選択されているが検索語がない場合、デフォルトのソートに戻す
+                    return $query->orderByRaw('composite_score = 0, composite_score DESC');
+                });
 
-        //      重複データを持たないように台帳定義とフォルダ情報は別に取得する
-        $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
-            ->with('folder')
-            ->get()
-            ->keyBy('id');
+            // 台帳定義とフォルダ情報を先に取得
+            $ledgerDefineRecords = LedgerDefine::whereIn('id', (clone $ledgerRecordsQuery)->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
+                ->with('folder')
+                ->get()
+                ->keyBy('id');
 
-        // 台帳レコードの総数を取得
-        $this->totalRecords = $ledgerRecords->count();
+            // 総数を取得
+            $this->totalRecords = $ledgerRecordsQuery->count();
 
-        // ページネーション実行
-        $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
+            // ページネーション実行
+            $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
+        }
 
         // 表示される台帳レコードIDリストを取得
         $ledgerIds = $ledgerRecords->pluck('id');

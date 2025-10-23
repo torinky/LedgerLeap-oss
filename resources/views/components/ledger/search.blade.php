@@ -19,13 +19,17 @@
                 <label class="label">
                     <span class="label-text">{{ __('ledger.sort_by') }}</span>
                 </label>
-                <select wire:model.live="orderBy" class="select select-bordered select-sm">
+                <select wire:model.change="orderBy" class="select select-bordered select-sm">
                     @if ($orderByLabel !== '')
                         <option value="{{ $orderBy }}" selected>{{ $orderByLabel }}</option>
                     @endif
                     <option value="composite_score">{{ __('ledger.scoring.score') }}</option>
                     <option value="created_at">{{ __('ledger.created_at') }}</option>
                     <option value="updated_at">{{ __('ledger.updated_at') }}</option>
+{{--                    <option value="semantic_score" {{ empty($search) ? 'disabled' : '' }}>--}}
+                    <option value="semantic_score">
+                        {{ __('ledger.semantic_search') }}
+                    </option>
                 </select>
             </div>
 
