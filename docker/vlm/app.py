@@ -1,132 +1,116 @@
 import traceback
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from paddleocr import PaddleOCR
+from paddleocr import PaddleOCR, PPStructure
+from PIL import Image
 import logging
 import time
 from pathlib import Path
 import tempfile
 import os
+import cv2
+import numpy as np
+import fitz  # PyMuPDF
 
 # ロギング設定
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="VLM API", version="1.0.0")
 
-# (中略)
+table_engine = None
 
 @app.on_event("startup")
 async def startup_event():
-    global ocr
-    logger.info("Initializing PaddleOCR model...")
+    global table_engine
+    logger.info("Initializing PPStructure model with Japanese OCR engine...")
     try:
-        ocr = PaddleOCR(
-            use_angle_cls=True,
-            lang='japan',  # 日本語モデル
-            use_gpu=False,  # CPU使用
-            show_log=False
+        # 1. Initialize a Japanese-specific OCR engine
+        japanese_ocr_engine = PaddleOCR(lang='japan', use_gpu=False, show_log=False)
+        
+        # 2. Initialize PPStructure for layout/table analysis (using 'ch' models)
+        #    and inject the Japanese OCR engine for text recognition.
+        table_engine = PPStructure(
+            lang='ch',  # Use Chinese models for layout and table detection
+            ocr_engine=japanese_ocr_engine, # Inject Japanese engine for OCR
+            show_log=False, 
+            image_orientation=True
         )
-        logger.info("PaddleOCR model initialized successfully")
+        logger.info("PPStructure model with Japanese OCR engine initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize PaddleOCR: {e}")
+        logger.error(f"Failed to initialize PPStructure model: {e}")
+        logger.error(traceback.format_exc())
         raise
 
 @app.get("/health")
 async def health_check():
-    """ヘルスチェックエンドポイント"""
-    if ocr is None:
+    if table_engine is None:
         raise HTTPException(status_code=503, detail="Model not initialized")
-    return {
-        "status": "healthy",
-        "model": "PaddleOCR",
-        "version": "2.7.0"
-    }
+    return {"status": "healthy", "model": "PP-Structure"}
 
-@app.post("/extract")
-async def extract_text(file: UploadFile = File(...)):
-    """
-    画像/PDFからテキストを抽出
-    
-    Returns:
-        {
-            "success": bool,
-            "text": str,
-            "confidence": float,
-            "processing_time_ms": int
-        }
-    """
-    if ocr is None:
-        logger.error("OCR model is not initialized.")
+@app.post("/extract_structured")
+async def extract_structured_data(file: UploadFile = File(...)):
+    if table_engine is None:
         raise HTTPException(status_code=503, detail="Model not initialized")
-    
-    tmp_path = None  # 初期化
+
+    tmp_path = None
+    total_processing_time = 0
+    all_tables_html = []
+    page_count = 0
+
     try:
-        # ファイルを一時的に保存
         with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
-        
-        logger.info(f"File saved to temporary path: {tmp_path}")
-        logger.info(f"Processing file: {file.filename} ({len(content)} bytes)")
-        
-        # OCR実行
-        logger.info("Starting OCR process...")
-        start_time = time.time()
-        result = ocr.ocr(tmp_path, cls=True)
-        processing_time_ms = int((time.time() - start_time) * 1000)
-        logger.info(f"OCR process finished in {processing_time_ms}ms.")
-        logger.debug(f"Raw OCR result: {result}")
 
-        # 結果解析
-        if result is None or result[0] is None or len(result[0]) == 0:
-            logger.warning("No text detected in the document.")
-            return {
-                "success": False,
-                "text": "",
-                "confidence": 0.0,
-                "processing_time_ms": processing_time_ms,
-                "error": "No text detected"
-            }
-        
-        # テキストと信頼度を抽出
-        text_lines = []
-        confidences = []
-        
-        for line in result[0]:
-            if line:
-                text = line[1][0]
-                confidence = line[1][1]
-                text_lines.append(text)
-                confidences.append(confidence)
-        
-        full_text = "\n".join(text_lines)
-        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
-        
-        logger.info(f"Extraction completed: {len(text_lines)} lines, confidence={avg_confidence:.3f}")
-        
+        logger.info(f"Processing file for structure analysis: {file.filename}")
+        file_extension = Path(file.filename).suffix.lower()
+
+        if file_extension == ".pdf":
+            doc = fitz.open(tmp_path)
+            page_count = doc.page_count
+            for i in range(page_count):
+                page = doc.load_page(i)
+                pix = page.get_pixmap()
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img_np = np.array(img)
+
+                start_time = time.time()
+                result = table_engine(img_np)
+                total_processing_time += (time.time() - start_time)
+                
+                for item in result:
+                    if item['type'] == 'table':
+                        all_tables_html.append(item['res']['html'])
+            doc.close()
+        else: # Assume image
+            page_count = 1
+            img = cv2.imread(tmp_path)
+            start_time = time.time()
+            result = table_engine(img)
+            total_processing_time += (time.time() - start_time)
+            for item in result:
+                if item['type'] == 'table':
+                    all_tables_html.append(item['res']['html'])
+
+        logger.info(f"Structure analysis completed in {total_processing_time:.2f}s. Found {len(all_tables_html)} tables across {page_count} pages.")
+
         return {
             "success": True,
-            "text": full_text,
-            "confidence": avg_confidence,
-            "processing_time_ms": processing_time_ms,
-            "line_count": len(text_lines)
+            "processing_time_s": total_processing_time,
+            "page_count": page_count,
+            "tables_found": len(all_tables_html),
+            "tables_html": all_tables_html,
         }
-        
+
     except Exception as e:
-        logger.error(f"Extraction failed: {e}")
-        logger.error(traceback.format_exc()) # スタックトレースをログに出力
+        logger.error(f"Structure extraction failed: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
     
     finally:
-        # 一時ファイル削除
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
-            logger.info(f"Temporary file deleted: {tmp_path}")
-
-
-# (以下略)
-
 
 @app.get("/")
 async def root():
@@ -134,6 +118,6 @@ async def root():
         "message": "VLM API Server",
         "endpoints": {
             "health": "/health",
-            "extract": "POST /extract"
+            "extract_structured": "POST /extract_structured"
         }
     }
