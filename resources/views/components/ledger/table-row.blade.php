@@ -33,7 +33,7 @@
         <div class="tooltip tooltip-right"
              data-tip="{{__('ledger.show_details')}}"
         >
-            <a href="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId'=>$ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
+            <a href="{{ route('ledger.show', ['tenant' => $ledgerRecord->tenant_id ?? tenant()?->id, 'ledgerId'=>$ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
                class="btn btn-outline btn-info btn-sm my-1 btn-square opacity-70 hover:opacity-100"
                target="ledgerShow_{{$ledgerRecord->define->id}}}}">
                 <i class="fas fa-table-list"></i>

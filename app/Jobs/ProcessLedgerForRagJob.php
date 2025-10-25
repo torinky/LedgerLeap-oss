@@ -24,6 +24,11 @@ class ProcessLedgerForRagJob implements ShouldQueue
         private Ledger $ledger
     ) {}
 
+    public function getLedger(): Ledger
+    {
+        return $this->ledger;
+    }
+
     /**
      * Execute the job.
      */

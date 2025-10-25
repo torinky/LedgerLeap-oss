@@ -91,10 +91,12 @@ class RecordsTableQueryTest extends TestCase
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['common-term'],
+            'tenant_id' => $this->tenant->id,
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => ['common-term'],
+            'tenant_id' => $this->tenant->id,
         ]);
 
         Livewire::withQueryParams([
@@ -206,5 +208,26 @@ class RecordsTableQueryTest extends TestCase
         $component->assertOk()
             ->assertSeeHtml('/l/SPEC-007') // URLパス部分が含まれていることを確認
             ->assertSee('SPEC-007');
+    }
+
+    #[Test]
+    public function it_calls_rag_search_service_when_semantic_search_is_selected()
+    {
+        // RagSearchServiceをモック
+        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+            $mock->shouldReceive('search')
+                ->once()
+                ->andReturn(new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15));
+        });
+
+        Livewire::withQueryParams([
+            'q' => 'semantic query',
+            'f' => [$this->folder->id],
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->folder->id,
+        ])
+            ->test(RecordsTable::class)
+            ->set('orderBy', 'semantic_score')
+            ->assertOk();
     }
 }
