@@ -9,6 +9,7 @@ import os
 import subprocess
 import asyncio
 from contextlib import asynccontextmanager
+from PIL import Image
 
 # ロギング設定（即座にフラッシュ）
 logging.basicConfig(
@@ -173,21 +174,67 @@ async def extract_markdown(
             headers={"Retry-After": "60"}
         )
     
-    if Path(file.filename).suffix.lower() != ".pdf":
-        raise HTTPException(status_code=400, detail="Marker only supports PDF files.")
+    # サポートされる形式をチェック
+    file_suffix = Path(file.filename).suffix.lower()
+    supported_image_formats = [".jpg", ".jpeg", ".png"]
+    is_image = file_suffix in supported_image_formats
+    is_pdf = file_suffix == ".pdf"
+    
+    if not (is_pdf or is_image):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unsupported file format. Supported: PDF, JPG, PNG (got: {file_suffix})"
+        )
 
     app_state.is_processing = True
     tmp_in_path = None
     tmp_out_dir = None
+    tmp_converted_pdf = None
     try:
         # Create a temporary directory for output
         tmp_out_dir = tempfile.mkdtemp()
         
-        # Save the uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_in:
-            content = await file.read()
-            tmp_in.write(content)
-            tmp_in_path = tmp_in.name
+        content = await file.read()
+        
+        # 画像ファイルの場合はPDFに変換
+        if is_image:
+            logger.info(f"Marker: Converting image to PDF: {file.filename}")
+            
+            # 画像を一時ファイルに保存
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp_img:
+                tmp_img.write(content)
+                tmp_img_path = tmp_img.name
+            
+            try:
+                # PILで画像を開いてPDFに変換
+                img = Image.open(tmp_img_path)
+                
+                # RGBモードに変換（PNGのアルファチャンネル対策）
+                if img.mode in ("RGBA", "LA", "P"):
+                    # 白背景で透明部分を埋める
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    if img.mode == "P":
+                        img = img.convert("RGBA")
+                    background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                    img = background
+                elif img.mode != "RGB":
+                    img = img.convert("RGB")
+                
+                # PDFとして保存
+                tmp_converted_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                img.save(tmp_converted_pdf.name, "PDF", resolution=100.0)
+                tmp_in_path = tmp_converted_pdf.name
+                
+                logger.info(f"Marker: Image converted to PDF successfully")
+            finally:
+                # 元の画像ファイルを削除
+                if os.path.exists(tmp_img_path):
+                    os.unlink(tmp_img_path)
+        else:
+            # PDFファイルの場合はそのまま保存
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_in:
+                tmp_in.write(content)
+                tmp_in_path = tmp_in.name
 
         logger.info(f"Marker: Processing file via CLI: {file.filename}")
         start_time = time.time()
@@ -266,6 +313,8 @@ async def extract_markdown(
         app_state.is_processing = False
         if tmp_in_path and os.path.exists(tmp_in_path):
             os.unlink(tmp_in_path)
+        if tmp_converted_pdf and os.path.exists(tmp_converted_pdf.name):
+            os.unlink(tmp_converted_pdf.name)
         if tmp_out_dir and os.path.exists(tmp_out_dir):
             import shutil
             shutil.rmtree(tmp_out_dir)
@@ -281,7 +330,7 @@ async def root():
         ],
         "endpoints": {
             "health": "GET /health - Check service status and readiness",
-            "extract_markdown": "POST /extract/markdown - Convert PDF to Markdown (supports max_pages parameter)"
+            "extract_markdown": "POST /extract/markdown - Convert PDF/Image to Markdown (supports PDF, JPG, PNG with max_pages parameter)"
         },
         "status": {
             "ready": app_state.is_ready,

@@ -11,3 +11,4 @@ torch
 Pillow
 numpy
 PyMuPDF
+img2pdf
