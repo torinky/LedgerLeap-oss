@@ -1,0 +1,13 @@
+# Base requirements
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Marker PDF requirements
+marker-pdf
+torch
+
+# Common dependencies
+Pillow
+numpy
+PyMuPDF

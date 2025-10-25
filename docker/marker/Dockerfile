@@ -1,4 +1,4 @@
-# docker/vlm/Dockerfile
+# docker/marker/Dockerfile
 FROM python:3.10-slim
 
 # 作業ディレクトリ
@@ -24,9 +24,6 @@ COPY app.py .
 # ポート公開
 EXPOSE 8000
 
-# ヘルスチェック
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-
 # 起動
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+

@@ -244,18 +244,45 @@ services:
           cpus: '2.0'
           memory: 2G
 
-  vlm:
+#  paddle:
+#    build:
+#      context: ./docker/paddle
+#      dockerfile: Dockerfile
+#    container_name: ledgerleap_paddle
+#    ports:
+#      - "8001:8000"
+#    volumes:
+#      - ./storage/paddle-cache:/root/.paddleocr
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '4'
+#          memory: 8G
+#        reservations:
+#          cpus: '2'
+#          memory: 4G
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#      start_period: 180s
+#    networks:
+#      - sail
+
+  marker:
     build:
-      context: ./docker/vlm
+      context: docker/marker
       dockerfile: Dockerfile
     container_name: ledgerleap_vlm
     ports:
       - "8001:8000"
     volumes:
-      - ./storage/vlm-cache:/root/.paddleocr  # モデルキャッシュ
+      - ./storage/vlm-cache:/root/.cache/huggingface
     environment:
       - PYTHONUNBUFFERED=1
-    # リソース制限（Phase 0検証用）
     deploy:
       resources:
         limits:
@@ -269,7 +296,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 300s # Model download can be slow
     networks:
       - sail
 
