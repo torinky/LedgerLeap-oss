@@ -24,6 +24,7 @@ COPY app.py .
 # ポート公開
 EXPOSE 8000
 
-# 起動
+# 起動 (Pythonのバッファリングを無効化)
+ENV PYTHONUNBUFFERED=1
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 
