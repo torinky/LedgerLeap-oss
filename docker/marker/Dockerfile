@@ -1,5 +1,6 @@
 # docker/marker/Dockerfile
-FROM python:3.10-slim
+# ARM64ネイティブイメージを明示的に指定
+FROM --platform=linux/arm64/v8 python:3.10-slim
 
 # 作業ディレクトリ
 WORKDIR /app
@@ -26,5 +27,10 @@ EXPOSE 8000
 
 # 起動 (Pythonのバッファリングを無効化)
 ENV PYTHONUNBUFFERED=1
+
+# Marker最適化設定（環境変数）
+ENV MARKER_LOWRES_DPI=72
+ENV MARKER_HIGHRES_DPI=144
+
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 

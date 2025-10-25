@@ -95,16 +95,24 @@ startxref
         
         logger.info(f"Running warmup conversion...")
         
+        # 最適化設定を適用
+        lowres_dpi = os.getenv("MARKER_LOWRES_DPI", "96")
+        highres_dpi = os.getenv("MARKER_HIGHRES_DPI", "192")
+        
         # ウォームアップ実行（モデルダウンロード + 初回ロード）
         result = subprocess.run(
-            ["marker_single", tmp_in_path, "--output_dir", tmp_out_dir],
+            [
+                "marker_single", tmp_in_path, "--output_dir", tmp_out_dir,
+                "--lowres_image_dpi", lowres_dpi,
+                "--highres_image_dpi", highres_dpi
+            ],
             check=True,
             capture_output=True,  # ウォームアップ時はログを抑制
             text=True,
             timeout=300  # 5分でタイムアウト
         )
         
-        logger.info("Warmup conversion completed successfully")
+        logger.info(f"Warmup conversion completed successfully (DPI: low={lowres_dpi}, high={highres_dpi})")
         
     except subprocess.TimeoutExpired:
         logger.warning("Warmup timed out, but models may have been downloaded")
@@ -186,6 +194,15 @@ async def extract_markdown(
 
         # コマンド引数を構築
         cmd = ["marker_single", tmp_in_path, "--output_dir", tmp_out_dir]
+        
+        # パフォーマンス最適化オプション
+        lowres_dpi = os.getenv("MARKER_LOWRES_DPI", "96")
+        highres_dpi = os.getenv("MARKER_HIGHRES_DPI", "192")
+        cmd.extend([
+            "--lowres_image_dpi", lowres_dpi,
+            "--highres_image_dpi", highres_dpi
+        ])
+        logger.info(f"Using DPI settings: lowres={lowres_dpi}, highres={highres_dpi}")
         
         # ページ数制限が指定されている場合
         if max_pages:
