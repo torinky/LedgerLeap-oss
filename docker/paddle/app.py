@@ -1,36 +1,41 @@
 # docker/paddle/app.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from paddleocr import PaddleOCR
+# This import path should work with paddleocr==2.7.3
+import numpy as np
+from PIL import Image
 import logging
 import time
 from pathlib import Path
 import tempfile
 import os
+import cv2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="PaddleOCR API", version="1.0.0")
+app = FastAPI(title="PaddleOCR API", version="2.7.3")
 
-ocr_engine = None
+structure_engine = None
 
 @app.on_event("startup")
 async def startup_event():
-    global ocr_engine
-    logger.info("Initializing PaddleOCR model...")
-    ocr_engine = PaddleOCR(use_angle_cls=True, lang='japan', use_gpu=False, show_log=False)
-    logger.info("PaddleOCR model initialized successfully.")
+    global structure_engine
+    logger.info("Initializing PaddleOCR model for PP-Structure...")
+    # Initialize PaddleOCR with structure recognition enabled
+    structure_engine = PaddleOCR(use_angle_cls=True, lang='japan', structure_version='PP-StructureV2', layout=True, show_log=True, use_gpu=False)
+    logger.info("PaddleOCR PP-Structure model initialized successfully.")
 
 @app.get("/health")
 async def health_check():
-    if ocr_engine is None:
+    if structure_engine is None:
         raise HTTPException(status_code=503, detail="Model not initialized.")
-    return {"status": "healthy", "model": "PaddleOCR"}
+    return {"status": "healthy", "model": "PaddleOCR PP-Structure"}
 
-@app.post("/extract/text")
-async def extract_text(file: UploadFile = File(...)):
-    if ocr_engine is None:
-        raise HTTPException(status_code=500, detail="Model is not available.")
+@app.post("/extract/structured")
+async def extract_structured(file: UploadFile = File(...)):
+    if structure_engine is None:
+        raise HTTPException(status_code=500, detail="Structure model is not available.")
     
     tmp_path = None
     try:
@@ -40,75 +45,45 @@ async def extract_text(file: UploadFile = File(...)):
             tmp_path = tmp.name
 
         start_time = time.time()
-        result = ocr_engine.ocr(tmp_path, cls=True)
-        processing_time_s = time.time() - start_time
-
-        if result is None or result[0] is None:
-            return {"success": False, "text": "", "confidence": 0.0, "processing_time_s": processing_time_s}
-
-        text_lines = [line[1][0] for line in result[0] if line]
-        confidences = [line[1][1] for line in result[0] if line]
         
-        full_text = "\n".join(text_lines)
-        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        img = cv2.imread(tmp_path)
+        if img is None:
+            # Try to open with Pillow as a fallback for formats cv2 might not handle
+            try:
+                pil_img = Image.open(tmp_path).convert('RGB')
+                # Convert PIL image to OpenCV format
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            except Exception as pil_e:
+                raise HTTPException(status_code=400, detail=f"Invalid image file: {pil_e}")
+
+        # Run structure analysis
+        result = structure_engine.ocr(img, cls=False)
+        
+        # The result for structure analysis is a list of dictionaries
+        # The sorting function is not available in this version, so we use the raw result.
+        res = result
+        
+        html_output = "<html><body>"
+        for region in res:
+            if region['type'] == 'table':
+                # The html content is already prepared in the result
+                html_output += region['res']['html']
+            else:
+                for line in region['res']:
+                    html_output += f"<p>{line[1][0]}</p>"
+        html_output += "</body></html>"
+
+        processing_time_s = time.time() - start_time
         
         return {
             "success": True,
-            "text": full_text,
-            "confidence": avg_confidence,
+            "html": html_output,
+            "raw_result": res, # For debugging
             "processing_time_s": processing_time_s,
         }
+    except Exception as e:
+        logger.error(f"Error during structured extraction: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
-
-# --- 以下、将来の構造化テキスト抽出機能のための準備 ---
-# from paddleocr import PPStructure
-# import cv2
-# import numpy as np
-# import fitz # PyMuPDF
-
-# structure_engine = None
-
-# @app.on_event("startup")
-# async def startup_event_structured():
-#     # logger.info("Initializing PPStructure model...")
-#     # try:
-#     #     # 将来、PP-Structureが日本語のレイアウト解析に正式対応した場合、
-#     #     # 以下のように lang='japan' だけで初期化できると期待される。
-#     #     structure_engine = PPStructure(lang='japan', show_log=False, image_orientation=True)
-#     #     logger.info("PPStructure model initialized successfully.")
-#     # except Exception as e:
-#     #     logger.error(f"Failed to initialize PPStructure model: {e}")
-#     pass
-
-# @app.post("/extract/structured")
-# async def extract_structured(file: UploadFile = File(...)):
-#     # if structure_engine is None:
-#     #     raise HTTPException(status_code=500, detail="Structure model is not available.")
-#     
-#     # tmp_path = None
-#     # try:
-#     #     with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
-#     #         content = await file.read()
-#     #         tmp.write(content)
-#     #         tmp_path = tmp.name
-#     # 
-#     #     start_time = time.time()
-#     #     
-#     #     img = cv2.imread(tmp_path)
-#     #     result = structure_engine(img)
-#     #     
-#     #     processing_time_s = time.time() - start_time
-#     #     
-#     #     # TODO: resultのパース処理
-#     #     
-#     #     return {
-#     #         "success": True,
-#     #         "result": result, # 仮
-#     #         "processing_time_s": processing_time_s,
-#     #     }
-#     # finally:
-#     #     if tmp_path and os.path.exists(tmp_path):
-#     #         os.unlink(tmp_path)
-#     raise HTTPException(status_code=501, detail="Structured extraction for Japanese is not yet implemented.")

@@ -1,10 +1,15 @@
-# docker/paddle/requirements.txt
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-paddlepaddle==2.6.0
-paddleocr==2.7.0
-Pillow==10.1.0
-numpy==1.24.3
+
+# Pinning versions to a stable combination for PaddleOCR with Structure Recognition
+paddlepaddle==2.6.1
+paddleocr[doc-parser]==2.7.3
+
+# Force numpy to a version compatible with the old dependencies (pre-2.0)
+numpy<2
+
+# Other dependencies
 PyMuPDF==1.19.0
 opencv-python-headless
+Pillow==10.1.0
