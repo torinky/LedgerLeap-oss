@@ -15,19 +15,23 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+PURPLE='\033[0;35m'
+
 show_usage() {
-    echo "Usage: $0 [paddleocr|paddleocr-vl|marker|status]"
+    echo "Usage: $0 [paddleocr|paddleocr-vl|marker|mineru|status]"
     echo ""
     echo "Commands:"
     echo "  paddleocr      Switch to PaddleOCR 2.7.3 (stable)"
     echo "  paddleocr-vl   Switch to PaddleOCR-VL 0.9B (experimental)"
     echo "  marker         Switch to Marker (PDF to Markdown)"
+    echo "  mineru         Switch to MinerU (PDF to Markdown)"
     echo "  status         Show current VLM model configuration"
     echo ""
     echo "Examples:"
     echo "  $0 paddleocr"
     echo "  $0 paddleocr-vl"
     echo "  $0 marker"
+    echo "  $0 mineru"
     echo "  $0 status"
 }
 
@@ -59,6 +63,11 @@ show_status() {
     elif [ "$current_model" = "marker" ]; then
         echo -e "  Current Model: ${YELLOW}Marker${NC} (PDF to Markdown)"
         echo "  Context: ./docker/marker"
+        echo "  Port: 8001 -> 8000"
+        echo "  Status: 📄 PDF Specialized"
+    elif [ "$current_model" = "mineru" ]; then
+        echo -e "  Current Model: ${PURPLE}MinerU${NC} (PDF to Markdown)"
+        echo "  Context: ./docker/mineru"
         echo "  Port: 8001 -> 8000"
         echo "  Status: 📄 PDF Specialized"
     else
@@ -155,6 +164,34 @@ switch_model() {
             echo "  3. docker-compose up -d vlm"
             echo "  4. Check health: curl http://localhost:8001/health"
             ;;
+
+        mineru)
+            echo -e "${PURPLE}Switching to MinerU (PDF to Markdown)${NC}"
+            
+            if [ -f "$ENV_FILE" ]; then
+                # Update existing .env
+                sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=mineru/' "$ENV_FILE"
+                sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/mineru/' "$ENV_FILE"
+                sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
+                rm -f "$ENV_FILE.bak"
+            else
+                echo -e "${RED}Error: .env file not found${NC}"
+                echo "Please copy .env.example to .env first"
+                exit 1
+            fi
+            
+            echo ""
+            echo "✅ Configuration updated"
+            echo "   VLM_MODEL=mineru"
+            echo "   VLM_SERVICE_CONTEXT=./docker/mineru"
+            echo "   VLM_INTERNAL_PORT=8000"
+            echo ""
+            echo "Next steps:"
+            echo "  1. docker-compose down vlm"
+            echo "  2. docker-compose build vlm --no-cache"
+            echo "  3. docker-compose up -d vlm"
+            echo "  4. Check health: curl http://localhost:8001/health"
+            ;;
             
         *)
             echo -e "${RED}Error: Unknown model '$target_model'${NC}"
@@ -166,7 +203,7 @@ switch_model() {
 
 # Main
 case "${1:-}" in
-    paddleocr|paddleocr-vl|marker)
+    paddleocr|paddleocr-vl|marker|mineru)
         switch_model "$1"
         echo ""
         show_status

@@ -1,0 +1,13 @@
+{
+  "models-dir": "/app/models",
+  "device-mode": "cpu",
+  "latex-delimiter": {
+    "inline": ["$", "$"],
+    "display": ["$$", "$$"]
+  },
+  "table-config": {
+    "is_table_recog_enable": true,
+    "table_max_time": 400,
+    "model": "slanet"
+  }
+}
