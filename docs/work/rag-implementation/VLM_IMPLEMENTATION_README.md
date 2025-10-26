@@ -269,3 +269,75 @@ ls -la tests/fixtures/files/
 **実装完了日:** 2025年10月26日 午前2時  
 **作成者:** GitHub Copilot CLI + Development Team  
 **最終更新:** 2025年10月26日 午前2時
+
+---
+
+## 🚀 PaddleOCR-VL 0.9B 試行版
+
+### 世界1位のOCR性能を試す
+
+**最新情報:** PaddleOCR-VL 0.9Bのテストコンテナが準備完了しました。
+
+**特徴:**
+- 🏆 **OmniBenchDoc V1.5 世界1位**（総合スコア90.67）
+- 🚀 **GPT-4oを超える性能**（わずか0.9Bパラメータ）
+- 📊 **表構造認識**（88%精度）
+- 🔢 **数式認識**（85%精度）
+- 📷 **QRコード・スタンプ抽出**
+- 🌍 **109言語対応**
+
+### 詳細情報
+
+**📖 試行計画書:** [2025-10-26_paddleocr-vl-trial-plan.md](./2025-10-26_paddleocr-vl-trial-plan.md)
+
+この試行版は実験的なものです。CPU環境での動作可否を検証中です。
+検証が成功すれば、LedgerLeapのOCR機能が大幅に向上します。
+
+---
+
+**最終更新:** 2025年10月26日 午前2時30分
+
+## 🔄 モデル切り替え
+
+### クイック切り替え
+
+LedgerLeapは2つのOCRモデルをサポート：
+
+| モデル | ステータス | 特徴 |
+|--------|-----------|------|
+| **PaddleOCR 2.7.3** | ✅ 安定版 | 実績あり・本番環境使用可能 |
+| **PaddleOCR-VL 0.9B** | 🧪 試行版 | 世界1位性能・実験的 |
+
+### 切り替えコマンド
+
+```bash
+# 現在のモデルを確認
+./bin/vlm-switch.sh status
+
+# 安定版に切り替え
+./bin/vlm-switch.sh paddleocr
+
+# 試行版に切り替え
+./bin/vlm-switch.sh paddleocr-vl
+```
+
+### 切り替え後の手順
+
+```bash
+docker-compose down vlm
+docker-compose build vlm --no-cache
+docker-compose up -d vlm
+curl http://localhost:8001/health | jq .
+```
+
+
+### 全モデル対応
+
+現在、3つのVLMモデルをサポート:
+
+| モデル | 切り替えコマンド | 用途 |
+|--------|----------------|------|
+| PaddleOCR 2.7.3 | `./bin/vlm-switch.sh paddleocr` | 汎用OCR（安定） |
+| PaddleOCR-VL 0.9B | `./bin/vlm-switch.sh paddleocr-vl` | 高度OCR（試行） |
+| Marker | `./bin/vlm-switch.sh marker` | PDF→Markdown |
+
