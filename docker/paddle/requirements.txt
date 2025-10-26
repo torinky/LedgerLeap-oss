@@ -2,11 +2,11 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# Pinning versions to a stable combination for PaddleOCR with Structure Recognition
+# PaddleOCR with stable version
 paddlepaddle==2.6.1
-paddleocr[doc-parser]==2.7.3
+paddleocr==2.7.3
 
-# Force numpy to a version compatible with the old dependencies (pre-2.0)
+# Force numpy to compatible version
 numpy<2
 
 # Other dependencies
