@@ -37,12 +37,10 @@ async def extract_structured_data(file: UploadFile = File(...)) -> Dict[str, Any
 
         try:
             # Call mineru CLI (MinerU v2.6+)
-            # Temporarily disable table recognition due to missing TabCls models
             command = [
                 "mineru",
                 "-p", input_path,
                 "-o", output_dir,
-                "-t", "false",
             ]
             
             result = subprocess.run(

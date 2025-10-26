@@ -7,7 +7,6 @@
   },
   "table-config": {
     "is_table_recog_enable": true,
-    "table_max_time": 400,
-    "model": "slanet"
+    "table_max_time": 400
   }
 }

@@ -37,11 +37,13 @@ RUN pip install --no-cache-dir \
 # Download models
 RUN mineru-models-download -s huggingface -m all
 
-# Download UnetStructure model manually (not included in 'all')
-RUN mkdir -p /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/TabRec/UnetStructure && \
-    cd /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/TabRec/UnetStructure && \
-    curl -L -o unet.onnx https://huggingface.co/opendatalab/PDF-Extract-Kit-1.0/resolve/main/models/TabRec/UnetStructure/unet.onnx || \
-    echo "Warning: Failed to download unet.onnx"
+# Download missing models manually
+RUN mkdir -p /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/TabCls/paddle_table_cls && \
+    cd /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/TabCls/paddle_table_cls && \
+    curl -L -o PP-LCNet_x1_0_table_cls.onnx https://huggingface.co/opendatalab/PDF-Extract-Kit-1.0/resolve/main/models/TabCls/paddle_table_cls/PP-LCNet_x1_0_table_cls.onnx && \
+    mkdir -p /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/OriCls/paddle_orientation_classification && \
+    cd /root/.cache/huggingface/hub/models--opendatalab--PDF-Extract-Kit-1.0/snapshots/1d9a3cd772329d0f83d84638a789296863f940f9/models/OriCls/paddle_orientation_classification && \
+    curl -L -o PP-LCNet_x1_0_doc_ori.onnx https://huggingface.co/opendatalab/PDF-Extract-Kit-1.0/resolve/main/models/OriCls/paddle_orientation_classification/PP-LCNet_x1_0_doc_ori.onnx
 
 # Copy application code and configuration
 COPY app.py /app/app.py
