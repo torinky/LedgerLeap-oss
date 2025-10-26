@@ -612,9 +612,40 @@ tests/fixtures/files/
 ---
 
 **アップグレード実施日:** 2025年10月26日 20:48 JST  
-**テスト完了日:** 2025年10月26日 20:51 JST  
+**テスト完了日:** 2025年10月26 20:51 JST  
+**バージョン切り替えシステム実装日:** 2025年10月26日 21:20 JST  
 **実装者:** GitHub Copilot CLI + Development Team  
 **ステータス:** ✅ **アップグレード完了・本番環境使用可能**
+
+---
+
+## 🔄 バージョン切り替えシステム（2025-10-26 21:20 追加）
+
+PaddleOCR 2.x（安定版）と 3.x（実験版）を簡単に切り替えられるシステムを実装しました。
+
+### クイックスタート
+
+```bash
+# バージョン2.x（安定版）に切り替え
+bash bin/switch-paddleocr-version.sh 2
+
+# バージョン3.x（実験版）に切り替え
+bash bin/switch-paddleocr-version.sh 3
+```
+
+### 詳細
+
+👉 **[PaddleOCR バージョン切り替えガイド](./2025-10-26_paddleocr-version-switching-guide.md)** を参照してください。
+
+**実装内容:**
+- ✅ バージョン切り替えスクリプト（`bin/switch-paddleocr-version.sh`）
+- ✅ バージョン別ファイル（`app.py.v2`, `app.py.v3`, `requirements.txt.v2`, `requirements.txt.v3`）
+- ✅ 詳細なドキュメント
+- ✅ ワンコマンドでの切り替え
+
+**推奨:**
+- 本番環境: バージョン2.8.1（安定版）
+- 実験/調査: バージョン3.3+（ARM64では不安定）
 
 ---
 
