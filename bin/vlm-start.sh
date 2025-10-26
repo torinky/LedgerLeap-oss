@@ -12,6 +12,10 @@ fi
 # Default to paddleocr if not set
 VLM_MODEL=${VLM_MODEL:-paddleocr}
 
+echo "🚀 Starting VLM Service..."
+echo "   Selected Model: $VLM_MODEL"
+echo ""
+
 # Determine the Docker context based on VLM_MODEL
 case "$VLM_MODEL" in
     paddleocr)
@@ -29,9 +33,14 @@ case "$VLM_MODEL" in
         export VLM_INTERNAL_PORT=8000
         echo "📄 Using Marker (PDF to Markdown converter)"
         ;;
+    mineru)
+        export VLM_SERVICE_CONTEXT="./docker/mineru"
+        export VLM_INTERNAL_PORT=8000
+        echo "🔬 Using MinerU (Advanced PDF extraction with layout analysis)"
+        ;;
     *)
         echo "❌ Error: Unknown VLM_MODEL value: $VLM_MODEL"
-        echo "   Valid values: paddleocr, paddleocr-vl, marker"
+        echo "   Valid values: paddleocr, paddleocr-vl, marker, mineru"
         exit 1
         ;;
 esac

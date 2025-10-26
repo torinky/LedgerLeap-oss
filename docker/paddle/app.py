@@ -21,11 +21,10 @@ ocr_engine = None
 async def startup_event():
     global ocr_engine
     logger.info("Initializing PaddleOCR model...")
-    # Initialize PaddleOCR with basic OCR functionality
+    # Initialize PaddleOCR with stable version
     ocr_engine = PaddleOCR(
         use_angle_cls=True,
         lang='japan',
-        show_log=True,
         use_gpu=False
     )
     logger.info("PaddleOCR model initialized successfully.")
