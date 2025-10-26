@@ -20,14 +20,21 @@ ocr_engine = None
 @app.on_event("startup")
 async def startup_event():
     global ocr_engine
-    logger.info("Initializing PaddleOCR model...")
-    # Initialize PaddleOCR with stable version
+    logger.info("Initializing PaddleOCR 3.x model (minimal config)...")
+    
+    # Set environment variables to prevent SIGSEGV
+    import os
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    
+    # Initialize PaddleOCR 3.x with MINIMAL parameters (proven to work)
+    # Based on working examples - use only essential parameters
     ocr_engine = PaddleOCR(
-        use_angle_cls=True,
-        lang='japan',
-        use_gpu=False
+        lang='japan'
+        # NO device, use_angle_cls, show_log - removed for 3.x compatibility
+        # Let PaddleOCR use all defaults for maximum stability
     )
-    logger.info("PaddleOCR model initialized successfully.")
+    logger.info("PaddleOCR 3.x model initialized successfully.")
 
 @app.get("/health")
 async def health_check():
@@ -72,8 +79,8 @@ async def extract_structured(file: UploadFile = File(...)):
                 pil_img = Image.open(tmp_path).convert('RGB')
                 img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
         
-        # Execute OCR
-        result = ocr_engine.ocr(img, cls=True)
+        # Execute OCR (3.x API - cls parameter removed)
+        result = ocr_engine.ocr(img)
         
         # Process results
         text_lines = []

@@ -2,9 +2,9 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# PaddleOCR with stable version (CPU compatible)
-paddlepaddle==2.6.2
-paddleocr==2.8.1
+# PaddleOCR with latest stable version 3.x (CPU)
+paddlepaddle>=3.0.0
+paddleocr>=3.3.0
 
 # Force numpy to compatible version
 numpy<2
