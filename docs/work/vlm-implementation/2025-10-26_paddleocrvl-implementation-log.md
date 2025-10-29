@@ -6,7 +6,7 @@
 **関連ドキュメント:**
 - [Phase 0: VLM追加調査計画書](./2025-10-26_phase0-vlm-additional-investigation-plan.md)
 - [PaddleOCR最新版による日本語構造化抽出 実装ガイド](./2025-10-26_paddleocr-latest-impl-guide.md)
-- [📊 PaddleOCR バージョンアップ報告書](./2025-10-26_paddleocr-version-upgrade-report.md) ⭐️ **NEW**
+- [📊 PaddleOCR バージョンアップ報告書](./2025-10-26_paddleocr-version-upgrade-report.md)
 
 ---
 

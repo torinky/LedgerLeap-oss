@@ -352,7 +352,7 @@ return response()->json([
 1. 2025-10-26_paddleocr-vl-web-research.md
 2. 2025-10-26_paddleocr-vl-new-findings.md
 3. 2025-10-26_paddleocr-vl-test-results.md
-4. VLM_IMPLEMENTATION_README.md
+- [VLM実装README](../../development/vlm-ocr.md)
 
 ---
 

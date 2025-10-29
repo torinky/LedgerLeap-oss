@@ -101,7 +101,7 @@ curl -X POST http://localhost:8001/extract/markdown \
 - `docker/marker/Dockerfile`: コンテナ定義
 
 ### ドキュメント
-- `docs/work/rag-implementation/2025-10-25_phase0-vlm-poc-execution-log.md`: 実装経緯
+- `docs/work/vlm-implementation/2025-10-25_phase0-vlm-poc-execution-log.md`: 実装経緯
 - `storage/test/vlm-poc/results/image_support_implementation.md`: 技術詳細
 
 ### テストデータ
@@ -158,4 +158,4 @@ $ledger->update([
 ---
 
 **参考:** Phase 0 PoC実施記録を必ず確認してください  
-`docs/work/rag-implementation/2025-10-25_phase0-vlm-poc-execution-log.md`
+`../work/vlm-implementation/2025-10-25_phase0-vlm-poc-execution-log.md`

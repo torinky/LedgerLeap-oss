@@ -9,7 +9,7 @@
 
 ### 🎯 メインドキュメント（必読）
 
-**[PaddleOCRVL API実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)**
+**[PaddleOCRVL API実装完了記録](../work/vlm-implementation/2025-10-26_paddleocrvl-implementation-log.md)**
 - 実装の全詳細
 - テスト結果（5/5成功）
 - 日本語OCR精度検証
@@ -18,12 +18,12 @@
 
 ### 📋 関連ドキュメント
 
-1. **[Phase 0: VLM追加調査計画書](./2025-10-26_phase0-vlm-additional-investigation-plan.md)**
+1. **[Phase 0: VLM追加調査計画書](../work/vlm-implementation/2025-10-26_phase0-vlm-additional-investigation-plan.md)**
    - 調査の経緯と結果
    - 技術選定の根拠
    - 最終実装結果
 
-2. **[PaddleOCR最新版実装ガイド](./2025-10-26_paddleocr-latest-impl-guide.md)**
+2. **[PaddleOCR最新版実装ガイド](../work/vlm-implementation/2025-10-26_paddleocr-latest-impl-guide.md)**
    - 初期設計案
    - 実装完了への参照
 
@@ -260,7 +260,7 @@ ls -la tests/fixtures/files/
 
 ## 📞 サポート
 
-- **メインドキュメント:** [実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)
+- **メインドキュメント:** [実装完了記録](../work/vlm-implementation/2025-10-26_paddleocrvl-implementation-log.md)
 - **テスト結果:** 実装完了記録の「12. テスト結果」セクション参照
 - **トラブルシューティング:** 実装完了記録の「8. トラブルシューティング」セクション参照
 
@@ -288,7 +288,7 @@ ls -la tests/fixtures/files/
 
 ### 詳細情報
 
-**📖 試行計画書:** [2025-10-26_paddleocr-vl-trial-plan.md](./2025-10-26_paddleocr-vl-trial-plan.md)
+**📖 試行計画書:** [2025-10-26_paddleocr-vl-trial-plan.md](../work/vlm-implementation/2025-10-26_paddleocr-vl-trial-plan.md)
 
 この試行版は実験的なものです。CPU環境での動作可否を検証中です。
 検証が成功すれば、LedgerLeapのOCR機能が大幅に向上します。

@@ -218,9 +218,9 @@ result = ocr_engine.ocr(img)  # cls パラメータも削除
 
 ## 関連ドキュメント
 
-- [PaddleOCR バージョンアップ報告書](./2025-10-26_paddleocr-version-upgrade-report.md)
-- [PaddleOCRVL API実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)
-- [PaddleOCR最新版実装ガイド](./2025-10-26_paddleocr-latest-impl-guide.md)
+- [PaddleOCR バージョンアップ報告書](../work/vlm-implementation/2025-10-26_paddleocr-version-upgrade-report.md)
+- [PaddleOCRVL API実装完了記録](../work/vlm-implementation/2025-10-26_paddleocrvl-implementation-log.md)
+- [PaddleOCR最新版実装ガイド](../work/vlm-implementation/2025-10-26_paddleocr-latest-impl-guide.md)
 
 ---
 

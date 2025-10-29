@@ -635,7 +635,9 @@ bash bin/switch-paddleocr-version.sh 3
 
 ### 詳細
 
-👉 **[PaddleOCR バージョン切り替えガイド](./2025-10-26_paddleocr-version-switching-guide.md)** を参照してください。
+- [PaddleOCRVL API実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)
+- [PaddleOCR最新版実装ガイド](./2025-10-26_paddleocr-latest-impl-guide.md)
+- [PaddleOCR バージョン切り替えガイド](../../development/vlm-model-switching-guide.md)
 
 **実装内容:**
 - ✅ バージョン切り替えスクリプト（`bin/switch-paddleocr-version.sh`）

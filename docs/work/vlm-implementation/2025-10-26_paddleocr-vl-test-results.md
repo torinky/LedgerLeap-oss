@@ -178,7 +178,7 @@ Client → vLLM Server (GPU) → PaddleOCR-VL
 
 - [x] 検証結果のドキュメント化
 - [ ] 試行計画書の更新（検証完了）
-- [ ] VLM_IMPLEMENTATION_README.mdの更新
+- [VLM実装README](../../development/vlm-ocr.md)
 
 ### 検討事項
 

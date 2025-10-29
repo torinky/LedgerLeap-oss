@@ -1,7 +1,7 @@
 # VLM/OCR結果ダウンロードUI機能追加計画
 
 **作成日:** 2025年10月25日  
-**対象ドキュメント:** 2025-10-23_vlm-ocr-and-indexing-strategy-review.md  
+**対象ドキュメント:** [VLM-OCR技術とインデックス戦略の再評価](../../architecture/vlm-ocr-technology-selection.md)  
 **追加セクション:** 3.2 ユーザーへの処理結果提供戦略
 
 ---

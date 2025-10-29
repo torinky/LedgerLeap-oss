@@ -1,7 +1,7 @@
 # インデックス強化構想の技術評価レポート
 
 **作成日:** 2025年10月25日  
-**評価対象:** [2025-10-23_vlm-ocr-and-indexing-strategy-review.md](./2025-10-23_vlm-ocr-and-indexing-strategy-review.md) セクション3以降  
+**評価対象:** [VLM-OCR技術とインデックス戦略の再評価](../../architecture/vlm-ocr-technology-selection.md) セクション3以降  
 **評価者:** GitHub Copilot CLI (Serena)  
 **ステータス:** 技術評価完了
 

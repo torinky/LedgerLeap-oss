@@ -5,7 +5,7 @@
 **関連ドキュメント:**
 - [現行実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md) - PaddleOCR 2.7.3の実装記録
 - [Phase 0追加調査計画書](./2025-10-26_phase0-vlm-additional-investigation-plan.md) - 調査の背景
-- [VLM実装README](./VLM_IMPLEMENTATION_README.md) - 現行実装のクイックガイド
+- [VLM実装README](../../development/vlm-ocr.md) - 現行実装のクイックガイド
 
 ---
 
@@ -383,7 +383,7 @@ T+20min: 判定完了
    - 技術選定の理由
    - 最終実装結果
 
-3. **[VLM実装README](./VLM_IMPLEMENTATION_README.md)**
+3. **[VLM実装README](../../development/vlm-ocr.md)** - 現行実装のクイックガイド
    - クイックスタートガイド
    - トラブルシューティング
    - API仕様

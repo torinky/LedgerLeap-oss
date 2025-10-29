@@ -8,7 +8,7 @@
 
 ## 📋 エグゼクティブサマリー
 
-本格的なVLM/RAG統合実装（[VLM/RAG統合実装計画書](./2025-10-25_vlm-rag-integration-plan-final.md)）を開始する前に、**VLMコンテナの動作確認と基本機能の検証**を行います。
+本格的なVLM/RAG統合実装（[VLM/RAG統合実装計画書](../../architecture/vlm-rag-integration.md)）を開始する前に、**VLMコンテナの動作確認と基本機能の検証**を行います。
 
 **Phase 0の位置づけ:**
 ```

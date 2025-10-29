@@ -2,7 +2,9 @@
 
 **最終更新日:** 2025年10月26日
 **ステータス:** ✅ **PoC完了**
-**関連ドキュメント:** [Phase 0: VLM動作検証PoC計画書](./2025-10-25_phase0-vlm-poc-plan.md)
+**関連ドキュメント:** 
+- [Phase 0: VLM動作検証PoC計画書](./2025-10-25_phase0-vlm-poc-plan.md)
+- [Phase 0: VLM追加調査計画書](./2025-10-26_phase0-vlm-additional-investigation-plan.md)
 
 ---
 
@@ -57,7 +59,7 @@
     -   `libgl1-mesa-glx` -> `libgl1` に変更 (Dockerfile)
     -   起動コマンドを`uvicorn`に変更 (Dockerfile)
     -   `PyMuPDF`のバージョンを`1.19.0`に固定 (requirements.txt)
--   **成果:** この時点で、JPGおよびPDFから日本語のプレーンテキストを高精度で抽出できるコンテナが完成した。
+-   **成果:** この時点で、JPGおよびPDFから日本語のプレーンテキストを高精度で抽出できるコンテナが完成した。詳細は[PaddleOCRVL API実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)を参照。
 
 ### 3.2. `PaddleOCR`による構造化データ抽出 (失敗)
 

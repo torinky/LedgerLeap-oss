@@ -51,4 +51,5 @@
 - 🎨 **[UI/UX改善 (ui-ux)](./ui-ux/)**: カラム表示やナビゲーションなど、ユーザー体験の向上に関する改修。
 - 🏗️ **[アーキテクチャ (architecture)](./architecture/)**: マルチテナント、データベース、テスト戦略など、システム全体の設計。
 - 🤖 **[LLM連携 (llm-integration)](./llm-integration/)**: 大規模言語モデルとの連携機能。
+- 👁️ **[VLM実装 (vlm-implementation)](./vlm-implementation/)**: VLM/OCR機能の実装に関する過去の作業記録。
 - 🛠️ **[プロジェクト管理 (project-management)](./project-management/)**: 開発プロセス、環境構築、ライセンス管理など。

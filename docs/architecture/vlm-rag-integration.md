@@ -2,11 +2,13 @@
 
 **作成日:** 2025年10月25日  
 **ステータス:** ✅ **実装準備完了**  
-**ドキュメント種別:** 実装計画書  
+**ドキュメント種別:** 公式ドキュメント（実装計画書）  
 **基準文書:**
-- [VLM-OCR技術調査](./2025-10-23_vlm-ocr-and-indexing-strategy-review_original.md)
-- [VLM保存戦略提案](./2025-10-25_vlm-storage-strategy-proposal.md)
-- [技術評価レポート](./2025-10-25_indexing-strategy-review-evaluation.md)
+- [VLM-OCR技術調査](./vlm-ocr-technology-selection.md)
+- [Phase 0: VLM動作検証PoC計画書](../work/vlm-implementation/2025-10-25_phase0-vlm-poc-plan.md)
+- [Phase 0: VLM動作検証PoC 実施記録](../work/vlm-implementation/2025-10-25_phase0-vlm-poc-execution-log.md)
+- [VLM保存戦略提案](../work/vlm-implementation/2025-10-25_vlm-storage-strategy-proposal.md)
+- [技術評価レポート](../work/vlm-implementation/2025-10-25_indexing-strategy-review-evaluation.md)
 
 ---
 
