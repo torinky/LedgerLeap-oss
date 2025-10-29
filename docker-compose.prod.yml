@@ -35,7 +35,7 @@ services:
       args:
         WWWGROUP: '${WWWGROUP}'
         DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}'
-    image: sail-8.4/app
+    image: sail-8.4/app-queue
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
@@ -59,6 +59,8 @@ services:
         condition: service_started
       tika:
         condition: service_started
+      embedding:
+        condition: service_healthy
     restart: on-failure
 
   # --- scheduler サービス ---
@@ -102,8 +104,7 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
     volumes:
       - 'sail-mysql:/var/lib/mysql'
-      - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
-      - './docker/mroonga/my.cnf:/etc/mysql/conf.d/mroonga.cnf'
+      - './docker/mroonga/my.cnf/mroonga.cnf:/etc/mysql/conf.d/mroonga.cnf'
     networks:
       - sail
     healthcheck:
@@ -130,7 +131,6 @@ services:
     platform: linux/amd64
     ports:
       - 9998:9998
-    #        command: -c /tika-config.xml
     restart: on-failure
     volumes:
       - './docker/tika/tika-config.xml:/tika-config.xml'
@@ -148,6 +148,71 @@ services:
     restart: unless-stopped
     networks:
       - sail
+  embedding:
+    platform: linux/amd64
+    build:
+      context: ./docker/embedding
+      dockerfile: Dockerfile
+    container_name: ledgerleap_embedding
+    volumes:
+      - ./storage/app/embedding:/app/models
+    environment:
+      - EMBEDDING_MODEL=cl-nagoya/ruri-v3-310m
+      - USE_ONNX=false
+      - CPU_THREADS=4
+      - EMBEDDING_BATCH_SIZE=${RAG_BATCH_SIZE:-1}
+      - RAG_NUM_THREADS=${RAG_NUM_THREADS:-0}
+      - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}
+      - RAG_CONVERT_TO_NUMPY=${RAG_CONVERT_TO_NUMPY:-true}
+      - RAG_DEVICE=${RAG_DEVICE:-cpu}
+    networks:
+      - sail
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 2G
+
+  vlm:
+    platform: linux/amd64
+    build:
+      context: ${VLM_SERVICE_CONTEXT:-./docker/paddle} # Use environment variable to switch context, default to paddle
+      dockerfile: Dockerfile
+    container_name: ledgerleap_vlm
+    ports:
+      - "${VLM_SERVICE_PORT:-8001}:${VLM_INTERNAL_PORT:-8000}"
+    volumes:
+      - ./storage/vlm-cache:/root/.cache/huggingface
+      - .:/var/www/html
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 10G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VLM_INTERNAL_PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s # Model download can be slow
+    networks:
+      - sail
+
 networks:
   sail:
     driver: bridge
