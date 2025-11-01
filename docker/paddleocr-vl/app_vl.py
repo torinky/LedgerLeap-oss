@@ -68,12 +68,10 @@ async def startup_event():
 async def health_check():
     """ヘルスチェックエンドポイント"""
     if pipeline is None:
-        return {
-            "status": "failed",
-            "model": "PaddleOCR-VL-0.9B",
-            "error": initialization_error or "Unknown error",
-            "message": "PaddleOCR-VL is not available"
-        }
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "failed", "model": "PaddleOCR-VL-0.9B", "error": initialization_error or "Unknown error", "message": "PaddleOCR-VL is not available"}
+        )
     
     return {
         "status": "healthy",
