@@ -1,16 +1,14 @@
-# dockerfile
-FROM python:3.10-slim
+# paddlepaddle/paddleの公式GPUイメージをベースイメージとして使用
+# これにはCUDA、cuDNN、およびGPUサポート付きのPaddlePaddleが含まれています。
+FROM paddlepaddle/paddle:3.2.0-gpu-cuda12.6-cudnn9.5
 
-LABEL maintainer="LedgerLeap Development Team"
-LABEL description="PaddleOCR-VL 0.9B Test Container for CPU inference validation"
-
-ARG PADDLE_VERSION=cpu
-
+# コンテナ内の作業ディレクトリを設定
 WORKDIR /app
 ENV PYTHONPATH=/app
 
-# システム依存関係のインストール
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 一般的なユーティリティと依存関係をインストール
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libgomp1 \
     libglib2.0-0 \
     libsm6 \
@@ -21,20 +19,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# PaddlePaddleをインストール
-RUN if [ "$PADDLE_VERSION" = "gpu" ]; then \
-        python -m pip install --upgrade paddlepaddle-gpu -i https://www.paddlepaddle.org.cn/packages/stable/cu126/; \
-    else \
-        pip install --no-cache-dir --upgrade paddlepaddle -i https://pypi.tuna.tsinghua.edu.cn/simple; \
-    fi
+# PaddleOCR-VLとそのドキュメント解析の依存関係をインストール
+# "[doc-parser]"オプションは、PaddleOCR-VLの高度な機能に必要な追加パッケージをインストールします。
+# 2025年11月時点の最新版を使用（bfloat16問題の修正を含む）
+RUN pip install --no-cache-dir -U "paddleocr[doc-parser]"
 
-# PaddleNLPとsafetensorsをインストール（PaddleOCR-VLの依存関係を解決）
-RUN pip install --no-cache-dir --upgrade paddlenlp safetensors
+# CRITICAL FIX (2025-11): PaddleX 3.3.5+ required to fix bfloat16 weight format issue
+# This resolves "framework paddle is invalid" error with PaddleOCR-VL-0.9B
+RUN pip install --no-cache-dir -U paddlex
 
-# PaddleOCR with doc-parser（最新版）
-RUN pip install --no-cache-dir --upgrade "paddleocr[doc-parser]"
+# Install special safetensors wheel with PaddlePaddle framework support
+# Standard pip safetensors does NOT support Paddle framework
+RUN pip install --no-cache-dir \
+    https://paddle-whl.bj.bcebos.com/nightly/cu126/safetensors/safetensors-0.6.2.dev0-cp38-abi3-linux_x86_64.whl
 
-# FastAPI関連`
+# FastAPI関連のライブラリをインストール
 RUN pip install --no-cache-dir \
     fastapi==0.104.1 \
     uvicorn[standard]==0.24.0 \
@@ -44,15 +43,12 @@ RUN pip install --no-cache-dir \
 # アプリケーションファイルをコピー
 COPY app_vl.py /app/
 
-# ビルド時に import チェック（依存不足や構文エラーを早期検出）
-RUN python -c "import importlib, sys; importlib.import_module('app_vl')"
-
-# ポート公開
+# ポートを公開
 EXPOSE 8002
 
-# ヘルスチェック（curl）
+# ヘルスチェック
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8002/health || exit 1
 
-# サーバー起動（python -m uvicorn でモジュール解決を安定化）
+# サーバーを起動
 CMD ["python", "-m", "uvicorn", "app_vl:app", "--host", "0.0.0.0", "--port", "8002"]

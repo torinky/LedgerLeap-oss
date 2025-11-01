@@ -22,8 +22,9 @@ initialization_error = None
 async def startup_event():
     global pipeline, initialization_error
     logger.info("=" * 80)
-    device = os.environ.get("PADDLEOCR_DEVICE", "cpu")
+    device = os.environ.get("PADDLEOCR_DEVICE", "gpu")  # Default to GPU (CPU not officially supported as of 2025-11)
     logger.info(f'Attempting to initialize PaddleOCR-VL on {device}...')
+    logger.info("NOTE: PaddleOCR-VL requires GPU and CUDA. CPU inference is not officially supported.")
     logger.info("=" * 80)
     
     try:
@@ -31,7 +32,7 @@ async def startup_event():
         
         logger.info("PaddleOCRVL module imported successfully")
         
-        # CPU/GPU版での初期化を試行
+        # GPU版での初期化（2025-11時点でGPUのみサポート）
         logger.info(f'Initializing PaddleOCRVL with device={device}...')
         pipeline = PaddleOCRVL(
             device=device,
@@ -42,7 +43,7 @@ async def startup_event():
         )
         
         logger.info("=" * 80)
-        logger.info("✅ SUCCESS! PaddleOCR-VL initialized on CPU!")
+        logger.info(f"✅ SUCCESS! PaddleOCR-VL initialized on {device}!")
         logger.info("=" * 80)
         
     except Exception as e:
@@ -74,10 +75,11 @@ async def health_check():
             detail={"status": "failed", "model": "PaddleOCR-VL-0.9B", "error": initialization_error or "Unknown error", "message": "PaddleOCR-VL is not available"}
         )
     
+    device = os.environ.get("PADDLEOCR_DEVICE", "gpu")
     return {
         "status": "healthy",
         "model": "PaddleOCR-VL-0.9B",
-        "device": "cpu",
+        "device": device,
         "message": "PaddleOCR-VL is ready"
     }
 
