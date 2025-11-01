@@ -22,7 +22,8 @@ initialization_error = None
 async def startup_event():
     global pipeline, initialization_error
     logger.info("=" * 80)
-    logger.info("Attempting to initialize PaddleOCR-VL on CPU...")
+    device = os.environ.get("PADDLEOCR_DEVICE", "cpu")
+    logger.info(f'Attempting to initialize PaddleOCR-VL on {device}...')
     logger.info("=" * 80)
     
     try:
@@ -30,10 +31,10 @@ async def startup_event():
         
         logger.info("PaddleOCRVL module imported successfully")
         
-        # CPU版での初期化を試行
-        logger.info("Initializing PaddleOCRVL with device='cpu'...")
+        # CPU/GPU版での初期化を試行
+        logger.info(f'Initializing PaddleOCRVL with device={device}...')
         pipeline = PaddleOCRVL(
-            device="cpu",
+            device=device,
             use_doc_orientation_classify=True,
             use_layout_detection=True,
             use_doc_unwarping=False,

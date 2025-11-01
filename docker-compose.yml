@@ -247,6 +247,8 @@ services:
     build:
       context: ${VLM_SERVICE_CONTEXT:-./docker/paddle} # Use environment variable to switch context, default to paddle
       dockerfile: Dockerfile
+      args:
+        PADDLE_VERSION: cpu
     ports:
       - "${VLM_SERVICE_PORT:-8001}:${VLM_INTERNAL_PORT:-8000}"
     volumes:
@@ -255,6 +257,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - VLM_INTERNAL_PORT=${VLM_INTERNAL_PORT:-8000}
+      - PADDLEOCR_DEVICE=${PADDLEOCR_DEVICE:-cpu}
     deploy:
       resources:
         limits:

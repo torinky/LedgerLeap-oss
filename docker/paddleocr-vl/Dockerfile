@@ -4,8 +4,10 @@ FROM python:3.10-slim
 LABEL maintainer="LedgerLeap Development Team"
 LABEL description="PaddleOCR-VL 0.9B Test Container for CPU inference validation"
 
-WORKDIR /var/www/html
-ENV PYTHONPATH=/var/www/html
+ARG PADDLE_VERSION=cpu
+
+WORKDIR /app
+ENV PYTHONPATH=/app
 
 # システム依存関係のインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,17 +21,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# PaddlePaddle（CPU版）をインストール
-RUN pip install --no-cache-dir paddlepaddle \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple
+# PaddlePaddleをインストール
+RUN if [ "$PADDLE_VERSION" = "gpu" ]; then \
+        python -m pip install --upgrade paddlepaddle-gpu -i https://www.paddlepaddle.org.cn/packages/stable/cu126/; \
+    else \
+        pip install --no-cache-dir --upgrade paddlepaddle -i https://pypi.tuna.tsinghua.edu.cn/simple; \
+    fi
 
 # PaddleNLPとsafetensorsをインストール（PaddleOCR-VLの依存関係を解決）
-RUN pip install --no-cache-dir paddlenlp safetensors
+RUN pip install --no-cache-dir --upgrade paddlenlp safetensors
 
 # PaddleOCR with doc-parser（最新版）
-RUN pip install --no-cache-dir "paddleocr[doc-parser]"
+RUN pip install --no-cache-dir --upgrade "paddleocr[doc-parser]"
 
-# FastAPI関連
+# FastAPI関連`
 RUN pip install --no-cache-dir \
     fastapi==0.104.1 \
     uvicorn[standard]==0.24.0 \
@@ -37,7 +42,7 @@ RUN pip install --no-cache-dir \
     requests
 
 # アプリケーションファイルをコピー
-COPY app_vl.py .
+COPY app_vl.py /app/
 
 # ビルド時に import チェック（依存不足や構文エラーを早期検出）
 RUN python -c "import importlib, sys; importlib.import_module('app_vl')"
