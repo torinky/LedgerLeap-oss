@@ -44,6 +44,7 @@ def initialize_paddleocr():
         det_db_score_mode='slow',
         det_limit_side_len=960,
         return_word_box=True,
+        use_doc_unwarping=True,
         show_log=False
     )
     logger.info(f"PaddleOCR initialized successfully (device: {device})")
