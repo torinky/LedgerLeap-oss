@@ -39,7 +39,12 @@ def initialize_paddleocr():
     engine = PaddleOCR(
         use_angle_cls=True,
         lang='japan',
-        use_gpu=use_gpu
+        use_gpu=use_gpu,
+        use_space_char=True,
+        det_db_score_mode='slow',
+        det_limit_side_len=960,
+        return_word_box=True,
+        show_log=False
     )
     logger.info(f"PaddleOCR initialized successfully (device: {device})")
     return engine, "paddleocr"
@@ -173,16 +178,45 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
     # Execute OCR
     result = model_engine.ocr(img, cls=True)
     
-    # Process results
+    # Process results with enhanced structured data extraction
     text_lines = []
+    text_blocks = []
+    key_value_pairs = []
     html_parts = ["<html><body>"]
     
     if result and result[0]:
-        for line in result[0]:
+        for idx, line in enumerate(result[0]):
             if len(line) >= 2:
-                text = line[1][0]
+                bbox = line[0]
+                text_info = line[1]
+                text = text_info[0]
+                confidence = text_info[1] if len(text_info) > 1 else 1.0
+                
                 text_lines.append(text)
                 html_parts.append(f"<p>{text}</p>")
+                
+                # Enhanced structured data with bbox and confidence
+                text_blocks.append({
+                    "type": "text",
+                    "content": text,
+                    "bbox": [[float(p[0]), float(p[1])] for p in bbox],
+                    "confidence": float(confidence),
+                    "line_index": idx
+                })
+                
+                # Extract key-value pairs from lines containing colons
+                if ':' in text or '：' in text:
+                    parts = text.replace('：', ':').split(':', 1)
+                    if len(parts) == 2:
+                        key = parts[0].strip()
+                        value = parts[1].strip()
+                        if key and value:
+                            key_value_pairs.append({
+                                "key": key,
+                                "value": value,
+                                "confidence": float(confidence),
+                                "bbox": [[float(p[0]), float(p[1])] for p in bbox]
+                            })
     
     html_parts.append("</body></html>")
     
@@ -190,10 +224,14 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
         "html": "\n".join(html_parts),
         "markdown": "\n\n".join(text_lines),
         "structured_data": {
-            "pages": [{"page_index": 0, "text_lines": text_lines}],
-            "text_blocks": [{"type": "text", "content": line} for line in text_lines],
+            "pages": [{
+                "page_index": 0,
+                "text_lines": text_lines,
+                "line_count": len(text_lines)
+            }],
+            "text_blocks": text_blocks,
             "tables": [],
-            "key_value_pairs": []
+            "key_value_pairs": key_value_pairs
         }
     }
 
