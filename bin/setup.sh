@@ -6,10 +6,11 @@
 # It builds the Docker containers, installs dependencies, and runs migrations.
 #
 # Usage:
-# 1. Make sure you have Docker Desktop installed and running.
-# 2. Clone the project repository.
-# 3. Copy .env.example to .env and configure if needed. (sail share does not require this)
-# 4. Run this script from the project root: ./bin/setup.sh
+#   ./bin/setup.sh [-p] [-h]
+#
+# Options:
+#   -p  Use production configuration
+#   -h  Show help message
 #
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -19,22 +20,115 @@ info() {
     echo "INFO: $1"
 }
 
-# --- Main Setup ---
+error() {
+    echo "ERROR: $1" >&2
+}
 
-info "Starting LedgerLeap setup..."
+print_usage() {
+    echo "Usage: $0 [-p] [-h]"
+    echo ""
+    echo "Options:"
+    echo "  -p  Use production configuration"
+    echo "  -h  Show this help message"
+    echo ""
+    echo "Environment detection:"
+    echo "  - Architecture: Automatically detected (ARM64/AMD64)"
+    echo "  - GPU support: Based on PADDLEOCR_DEVICE in .env"
+    echo ""
+    echo "Examples:"
+    echo "  $0      # Development environment"
+    echo "  $0 -p   # Production environment"
+}
 
-# 0. Copy .env file
+# --- Environment Configuration ---
+ENV="development"
+COMPOSE_FILES_ARRAY=()
+
+# 0. .env ファイルの存在確認
 if [ ! -f .env ]; then
     info "Creating .env file from .env.example..."
     cp .env.example .env
 fi
 
-# 1. Build and start Docker containers
+# .env を読み込む（GPU判定等で使用）
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+# 1. ベースファイルの追加
+COMPOSE_FILES_ARRAY+=("docker-compose.yml")
+
+# 2. 環境に応じたオーバーライドファイルの判定
+while getopts "ph" opt; do
+  case ${opt} in
+    p )
+      ENV="production"
+      COMPOSE_FILES_ARRAY+=("docker-compose.prod.yml")
+      ;;
+    h )
+      print_usage
+      exit 0
+      ;;
+    \? )
+      error "Invalid option"
+      print_usage
+      exit 1
+      ;;
+  esac
+done
+
+# 開発環境では docker-compose.override.yml が自動で読み込まれる
+# （Docker Compose のデフォルト挙動）
+if [ "$ENV" = "development" ] && [ -f "docker-compose.override.yml" ]; then
+    info "docker-compose.override.yml will be loaded automatically (development mode)"
+fi
+
+# 3. アーキテクチャの自動検出
+ARCH=$(uname -m)
+info "Detected architecture: $ARCH"
+
+if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
+    if [ -f "docker-compose.arm64.yml" ]; then
+        COMPOSE_FILES_ARRAY+=("docker-compose.arm64.yml")
+        info "Using ARM64 architecture configuration"
+    fi
+elif [[ "$ARCH" == "x86_64" ]]; then
+    if [ -f "docker-compose.amd64.yml" ]; then
+        COMPOSE_FILES_ARRAY+=("docker-compose.amd64.yml")
+        info "Using AMD64 architecture configuration"
+    fi
+else
+    error "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+# 4. GPU利用の判定
+if [ "$PADDLEOCR_DEVICE" = "gpu" ]; then
+    if [ -f "docker-compose.gpu.yml" ]; then
+        COMPOSE_FILES_ARRAY+=("docker-compose.gpu.yml")
+        info "GPU support enabled"
+    else
+        error "docker-compose.gpu.yml not found, but PADDLEOCR_DEVICE=gpu is set"
+        exit 1
+    fi
+fi
+
+# 5. COMPOSE_FILE環境変数を構築
+export COMPOSE_FILE=$(IFS=: ; echo "${COMPOSE_FILES_ARRAY[*]}")
+info "Using COMPOSE_FILE: $COMPOSE_FILE"
+
+# --- Main Setup ---
+
+info "Starting LedgerLeap setup..."
+
+# Build and start Docker containers
 info "Building and starting Docker containers with Sail... (This may take a while)"
 ./vendor/bin/sail build --no-cache
 ./vendor/bin/sail up -d
 
-# 2. Install dependencies and run migrations
+# Install dependencies and run migrations
 info "Installing dependencies and running migrations..."
 
 # Clean Node.js modules and lock file on the host

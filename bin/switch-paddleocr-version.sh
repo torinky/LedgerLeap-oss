@@ -85,7 +85,7 @@ switch_to_v2() {
     # Update .env file
     update_env_file "VLM_MODEL" "paddleocr"
     update_env_file "PADDLEOCR_DEVICE" "cpu"
-    remove_from_env_file "COMPOSE_FILE"
+
 
     echo -e "${GREEN}✅ Switched to PaddleOCR 2.x${NC}"
     echo ""
@@ -95,7 +95,7 @@ switch_to_v2() {
     echo "  - API: 2.x compatible (use_angle_cls, use_gpu, .ocr())"
     echo "  - VLM_MODEL set to 'paddleocr'"
     echo "  - PADDLEOCR_DEVICE set to 'cpu'"
-    echo "  - COMPOSE_FILE removed from .env"
+
     echo ""
     echo "Next steps:"
     echo "  1. Rebuild container: ./vendor/bin/sail build --no-cache vlm"
@@ -135,7 +135,7 @@ switch_to_v3() {
     # Update .env file
     update_env_file "VLM_MODEL" "paddleocr"
     update_env_file "PADDLEOCR_DEVICE" "cpu"
-    remove_from_env_file "COMPOSE_FILE"
+
 
     echo -e "${YELLOW}✅ Switched to PaddleOCR 3.x${NC}"
     echo ""
@@ -145,7 +145,7 @@ switch_to_v3() {
     echo "  - API: 3.x compatible (lang only, minimal config)"
     echo "  - VLM_MODEL set to 'paddleocr'"
     echo "  - PADDLEOCR_DEVICE set to 'cpu'"
-    echo "  - COMPOSE_FILE removed from .env"
+
     echo ""
     echo "Next steps:"
     echo "  1. Rebuild container: ./vendor/bin/sail build --no-cache vlm"
@@ -161,14 +161,14 @@ switch_to_gpu() {
     # Update .env file
     update_env_file "VLM_MODEL" "paddleocr-vl"
     update_env_file "PADDLEOCR_DEVICE" "gpu"
-    update_env_file "COMPOSE_FILE" "docker-compose.yml:docker-compose.gpu.yml"
+
 
     echo -e "${BLUE}✅ Switched to PaddleOCR-VL (GPU)${NC}"
     echo ""
     echo "Changes:"
     echo "  - VLM_MODEL set to 'paddleocr-vl'"
     echo "  - PADDLEOCR_DEVICE set to 'gpu'"
-    echo "  - COMPOSE_FILE set to 'docker-compose.yml:docker-compose.gpu.yml'"
+
     echo ""
     echo "Next steps:"
     echo "  1. Ensure you have a compatible NVIDIA GPU and nvidia-docker installed."

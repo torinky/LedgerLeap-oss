@@ -16,6 +16,23 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# .env ファイルを更新する関数
+update_env_file() {
+    local key=$1
+    local value=$2
+    local env_file="$PROJECT_ROOT/.env"
+
+    if grep -q "^${key}=" "$env_file"; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|^${key}=.*|${key}=${value}|" "$env_file"
+        else
+            sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+        fi
+    else
+        echo "${key}=${value}" >> "$env_file"
+    fi
+}
+
 # モデルを検索する関数
 find_model() {
     local search_key="$1"

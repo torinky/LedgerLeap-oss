@@ -89,6 +89,7 @@ switch_model() {
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=paddleocr/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/paddle/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
+                sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
                 echo -e "${RED}Error: .env file not found${NC}"
@@ -101,6 +102,7 @@ switch_model() {
             echo "   VLM_MODEL=paddleocr"
             echo "   VLM_SERVICE_CONTEXT=./docker/paddle"
             echo "   VLM_INTERNAL_PORT=8000"
+            echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
             echo "Next steps:"
             echo "  1. docker-compose down vlm"
@@ -117,6 +119,7 @@ switch_model() {
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=paddleocr-vl/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/paddleocr-vl/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8002/' "$ENV_FILE"
+                sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=gpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=gpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
                 echo -e "${RED}Error: .env file not found${NC}"
@@ -129,6 +132,7 @@ switch_model() {
             echo "   VLM_MODEL=paddleocr-vl"
             echo "   VLM_SERVICE_CONTEXT=./docker/paddleocr-vl"
             echo "   VLM_INTERNAL_PORT=8002"
+            echo "   PADDLEOCR_DEVICE=gpu (GPU required)"
             echo ""
             echo "Next steps:"
             echo "  1. docker-compose down vlm"
@@ -145,6 +149,7 @@ switch_model() {
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=marker/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/marker/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
+                sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
                 echo -e "${RED}Error: .env file not found${NC}"
@@ -157,6 +162,7 @@ switch_model() {
             echo "   VLM_MODEL=marker"
             echo "   VLM_SERVICE_CONTEXT=./docker/marker"
             echo "   VLM_INTERNAL_PORT=8000"
+            echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
             echo "Next steps:"
             echo "  1. docker-compose down vlm"
@@ -173,6 +179,7 @@ switch_model() {
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=mineru/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/mineru/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
+                sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
                 echo -e "${RED}Error: .env file not found${NC}"
@@ -185,6 +192,7 @@ switch_model() {
             echo "   VLM_MODEL=mineru"
             echo "   VLM_SERVICE_CONTEXT=./docker/mineru"
             echo "   VLM_INTERNAL_PORT=8000"
+            echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
             echo "Next steps:"
             echo "  1. docker-compose down vlm"
