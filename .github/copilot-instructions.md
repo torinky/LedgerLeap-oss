@@ -34,7 +34,14 @@
 # Artisan
 ./vendor/bin/sail artisan [command]
 
-# 初回セットアップ
+# 初回セットアップ（開発環境）
+./bin/setup.sh        # または ./dev.sh
+
+# 本番環境セットアップ
+./bin/setup.sh -p     # または ./prod.sh
+
+# GPU環境の場合
+# .env で PADDLEOCR_DEVICE=gpu に設定してから
 ./bin/setup.sh
 ```
 
@@ -63,6 +70,7 @@ Webサーバー (Nginx) → Laravel (PHP-FPM) → MySQL/Mroonga
 └── Mcp/             # LLM統合API
 
 /docs/               # 全ドキュメント
+/docs/work           # 計画、作業ドキュメント
 /resources/views/    # Bladeテンプレート
 /tests/              # テストコード
 ```

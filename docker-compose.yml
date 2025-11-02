@@ -115,7 +115,6 @@ services:
 
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
-#    platform: linux/arm64/v8  # Auto-set by switch-model.sh
     ports:
       - '${FORWARD_DB_PORT:-3306}:3306'
     environment:
@@ -154,7 +153,6 @@ services:
       timeout: 5s
   meilisearch:
     image: 'getmeili/meilisearch:latest'
-    platform: linux/arm64  # Auto-set by switch-model.sh
     ports:
       - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
     volumes:
@@ -187,7 +185,6 @@ services:
       - sail
   tika:
     image: apache/tika:latest
-    platform: linux/arm64  # Auto-set by switch-model.sh
     ports:
       - 9998:9998
     #        command: -c /tika-config.xml
@@ -210,7 +207,6 @@ services:
     networks:
       - sail
   embedding:
-    platform: linux/arm64  # Auto-set by switch-model.sh
     build:
       context: ./docker/embedding
       dockerfile: Dockerfile

@@ -1,6 +1,13 @@
 #!/bin/bash
 # PaddleOCR Version Switcher
 # Switch between PaddleOCR 2.x (stable), 3.x (experimental) and paddleocr-vl (gpu)
+#
+# このスクリプトは .env ファイルの PADDLEOCR_DEVICE を更新します
+# COMPOSE_FILE は setup.sh が自動的に構築します
+#
+# GPU版への切り替え後は setup.sh で環境を再起動してください:
+#   ./vendor/bin/sail down
+#   ./bin/setup.sh
 
 set -e
 

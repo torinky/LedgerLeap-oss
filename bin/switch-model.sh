@@ -3,7 +3,14 @@
 set -e
 
 # モデル切り替えスクリプト
+# このスクリプトは .env ファイルの EMBEDDING_MODEL を更新します
+# docker-compose.yml は変更しません
+#
 # Usage: ./bin/switch-model.sh [model-key]
+#
+# 切り替え後は環境を再起動してください:
+#   ./vendor/bin/sail down
+#   ./bin/setup.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -202,33 +209,15 @@ switch_model() {
     echo -e "  ${GREEN}✓${NC} Configuration verified"
     
     echo ""
-    echo -e "${YELLOW}[Step 3/7]${NC} Updating docker-compose.yml..."
+    echo ""
+    echo -e "${YELLOW}[Step 3/7]${NC} Updating .env configuration..."
     
-    # docker-compose.ymlの更新
-    if [ -f "$PROJECT_ROOT/docker-compose.yml" ]; then
-        # EMBEDDING_MODELの行を探して更新
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|EMBEDDING_MODEL=.*|EMBEDDING_MODEL=${model_name}|" "$PROJECT_ROOT/docker-compose.yml"
-        else
-            sed -i "s|EMBEDDING_MODEL=.*|EMBEDDING_MODEL=${model_name}|" "$PROJECT_ROOT/docker-compose.yml"
-        fi
-        echo -e "  ${GREEN}✓${NC} Updated EMBEDDING_MODEL=${model_name}"
-        
-        # platformの更新
-        if grep -q "platform: linux/.*" "$PROJECT_ROOT/docker-compose.yml"; then
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' "s|platform: linux/.*|platform: ${TARGET_PLATFORM}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
-            else
-                sed -i "s|platform: linux/.*|platform: ${TARGET_PLATFORM}  # Auto-set by switch-model.sh|" "$PROJECT_ROOT/docker-compose.yml"
-            fi
-            echo -e "  ${GREEN}✓${NC} Updated platform=${TARGET_PLATFORM}"
-        else
-            echo -e "  ${YELLOW}Warning: 'platform' line not found in docker-compose.yml for the embedding service. Please add it manually if needed for cross-platform compatibility.${NC}"
-        fi
-    else
-        echo -e "  ${RED}✗${NC} docker-compose.yml file not found"
-        exit 1
-    fi
+    # .env の更新（docker-compose.ymlは触らない）
+    update_env_file "EMBEDDING_MODEL" "${model_name}"
+    update_env_file "EMBEDDING_DIMENSIONS" "${dimension}"
+    echo -e "  ${GREEN}✓${NC} Updated EMBEDDING_MODEL=${model_name}"
+    echo -e "  ${GREEN}✓${NC} Updated EMBEDDING_DIMENSIONS=${dimension}"
+    echo -e "  ${BLUE}ℹ${NC}  Platform configuration is now handled by docker-compose.arm64.yml or docker-compose.amd64.yml"
     
     echo ""
     echo -e "${YELLOW}[Step 4/7]${NC} Stopping existing embedding container..."

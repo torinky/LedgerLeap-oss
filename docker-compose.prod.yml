@@ -92,7 +92,6 @@ services:
 
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
-    platform: linux/amd64
     ports:
       - '${FORWARD_DB_PORT:-3306}:3306'
     environment:
@@ -128,7 +127,6 @@ services:
       timeout: 5s
   tika:
     image: apache/tika:latest
-    platform: linux/amd64
     ports:
       - 9998:9998
     restart: on-failure
@@ -149,7 +147,6 @@ services:
     networks:
       - sail
   embedding:
-    platform: linux/amd64
     build:
       context: ./docker/embedding
       dockerfile: Dockerfile
@@ -183,7 +180,6 @@ services:
           memory: 2G
 
   vlm:
-    platform: linux/amd64
     build:
       context: ${VLM_SERVICE_CONTEXT:-./docker/paddle} # Use environment variable to switch context, default to paddle
       dockerfile: Dockerfile

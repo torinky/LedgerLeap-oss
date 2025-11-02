@@ -37,9 +37,11 @@ MySQLコンテナの初期化メカニズムを活用し、`sail`ユーザーへ
 -   **原因:** `DockerfileQueue`が`ubuntu:24.04`をベースにしているため、デフォルトでは`sail`ユーザーが存在しませんでした。`sail`ユーザーは、`laravel`サービスのベースイメージ（`vendor/laravel/sail/runtimes/8.4/Dockerfile`）内で作成されています。
 -   **解決策:** `DockerfileQueue`内に、`sail`ユーザーを作成するコマンド（`groupadd --force -g $WWWGROUP sail`と`useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail`）を、`usermod`コマンドの前に追記しました。これにより、`queue`サービスイメージのビルド時に`sail`ユーザーが正しく作成されるようになりました。
 
-## 3. セットアップスクリプトの実装
+## 3. セットアップスクリプトの実装と改善 (2025年11月2日更新)
 
-上記の問題解決を経て、プロジェクトの初期セットアップを完全に自動化するシェルスクリプト`bin/setup.sh`を作成しました。
+プロジェクトの初期セットアップを完全に自動化するシェルスクリプト`bin/setup.sh`を作成し、その後Docker Compose構成のリファクタリングを実施しました。
+
+### 3.1. 初期実装 (2025年8月24日)
 
 -   **目的:** 新しい開発者がプロジェクトをクローンした後、このスクリプトを一度実行するだけで、開発を開始できる状態にする。
 -   **内容:**
@@ -52,6 +54,50 @@ MySQLコンテナの初期化メカニズムを活用し、`sail`ユーザーへ
     7.  `sail npm install`でNPM依存関係をインストール。
     8.  `sail npm run dev`でフロントエンドアセットをビルド。
 -   **実行権限:** `chmod +x bin/setup.sh`で実行権限を付与。
+
+### 3.2. Docker Compose構成のリファクタリング (2025年11月2日)
+
+環境構築の複雑性を解消するため、Docker Compose構成の大規模なリファクタリングを実施しました。
+
+**主な改善点:**
+
+1. **責務の明確化**
+   - `docker-compose.yml`: 全環境共通のベース定義
+   - `docker-compose.override.yml`: 開発環境専用設定（自動読み込み）
+   - `docker-compose.prod.yml`: 本番環境用オーバーライド
+   - `docker-compose.gpu.yml`: GPU利用時の設定
+   - `docker-compose.arm64.yml` / `docker-compose.amd64.yml`: アーキテクチャ別設定（新規追加）
+
+2. **設定の一元化**
+   - `.env`ファイルを環境設定の唯一の情報源（Single Source of Truth）とする
+   - `switch-*.sh`スクリプトは`.env`のみを編集（`docker-compose.yml`には触らない）
+   - `EMBEDDING_MODEL`, `PADDLEOCR_DEVICE`など、動作に影響する設定を`.env`で管理
+
+3. **`setup.sh`の機能強化**
+   - アーキテクチャ自動検出（ARM64/AMD64）
+   - GPU利用の自動判定（`.env`の`PADDLEOCR_DEVICE`を参照）
+   - `-p`オプションで本番環境にも対応
+   - 動的な`COMPOSE_FILE`環境変数の構築
+
+**使用方法:**
+
+```bash
+# 開発環境
+./bin/setup.sh        # または ./dev.sh
+
+# 本番環境
+./bin/setup.sh -p     # または ./prod.sh
+
+# GPU環境
+# .env で PADDLEOCR_DEVICE=gpu に設定してから
+./bin/setup.sh
+
+# ヘルプ表示
+./bin/setup.sh -h
+```
+
+**詳細な設計と実装記録:**
+- [Docker Compose構成のリファクタリング計画](../work/environment/2025-11-02_docker-compose-refactoring-plan.md)
 
 ## 4. ドキュメントの更新
 
