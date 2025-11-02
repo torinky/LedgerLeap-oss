@@ -217,9 +217,9 @@ services:
     volumes:
       - ./storage/app/embedding:/app/models
     environment:
-      - EMBEDDING_MODEL=cl-nagoya/ruri-v3-310m
-      - USE_ONNX=false
-      - CPU_THREADS=4
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-cl-nagoya/ruri-v3-310m}
+      - USE_ONNX=${EMBEDDING_USE_ONNX:-false}
+      - CPU_THREADS=${EMBEDDING_CPU_THREADS:-4}
       - EMBEDDING_BATCH_SIZE=${RAG_BATCH_SIZE:-1}
       - RAG_NUM_THREADS=${RAG_NUM_THREADS:-0}
       - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}

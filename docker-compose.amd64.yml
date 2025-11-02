@@ -1,0 +1,21 @@
+# Docker Compose configuration for AMD64 architecture
+# This file is automatically loaded by setup.sh on AMD64 systems
+
+services:
+  mysql:
+    platform: linux/amd64
+
+  meilisearch:
+    platform: linux/amd64
+
+  redis:
+    platform: linux/amd64
+
+  tika:
+    platform: linux/amd64
+
+  embedding:
+    platform: linux/amd64
+
+  vlm:
+    platform: linux/amd64
