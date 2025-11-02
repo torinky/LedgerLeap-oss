@@ -19,8 +19,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# アプリケーションコード
-COPY app.py .
+# Unified API will be available via volume mount at /var/www/html/docker/paddle/unified_api.py
 
 # ポート公開
 EXPOSE 8000
@@ -32,5 +31,8 @@ ENV PYTHONUNBUFFERED=1
 ENV MARKER_LOWRES_DPI=72
 ENV MARKER_HIGHRES_DPI=144
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use unified API that handles VLM_MODEL environment variable
+# In production, this will be available via volume mount at /var/www/html
+WORKDIR /var/www/html
+CMD ["uvicorn", "docker.paddle.unified_api:app", "--host", "0.0.0.0", "--port", "8000"]
 

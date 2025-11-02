@@ -34,12 +34,30 @@ RUN pip install --no-cache-dir \
     uvicorn[standard]==0.24.0 \
     python-multipart==0.0.6
 
-# Download models
-RUN mineru-models-download -s huggingface -m all
+# Download models using the correct command
+# MinerU v2.6+ uses magic-pdf-models-download
+RUN echo "=== Downloading MinerU models ===" && \
+    magic-pdf-models-download || \
+    (echo "Trying alternative command..." && \
+     mineru-models-download -s huggingface -m all) || \
+    echo "WARNING: Model download failed"
 
-# Copy application code and configuration
-COPY app.py /app/app.py
+# Verify models were downloaded
+RUN echo "=== Verifying models ===" && \
+    ls -lah /root/.cache/huggingface/hub/ 2>/dev/null || \
+    echo "No HuggingFace cache found" && \
+    find /root -name "*.pt" -o -name "*.onnx" 2>/dev/null | head -10 || \
+    echo "No model files found"
+
+# Copy configuration file to home directory (MinerU expects it here)
 COPY magic-pdf.json /root/magic-pdf.json
+
+# Verify configuration
+RUN echo "=== Configuration ===" && \
+    cat /root/magic-pdf.json && \
+    echo ""
+
+# Unified API will be available via volume mount at /var/www/html/docker/paddle/unified_api.py
 
 # Create models directory
 RUN mkdir -p /app/models
@@ -59,5 +77,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run FastAPI application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run FastAPI application with unified API
+# In production, this will be available via volume mount at /var/www/html
+WORKDIR /var/www/html
+CMD ["uvicorn", "docker.paddle.unified_api:app", "--host", "0.0.0.0", "--port", "8000"]

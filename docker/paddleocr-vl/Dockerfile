@@ -41,14 +41,16 @@ RUN pip install --no-cache-dir \
     requests
 
 # アプリケーションファイルをコピー
-COPY app_vl.py /app/
+# Note: unified_api.py will be available via volume mount in actual deployment
 
 # ポートを公開
-EXPOSE 8002
+EXPOSE 8000
 
 # ヘルスチェック
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8002/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # サーバーを起動
-CMD ["python", "-m", "uvicorn", "app_vl:app", "--host", "0.0.0.0", "--port", "8002"]
+# Use unified API that automatically detects VLM_MODEL environment variable
+WORKDIR /var/www/html
+CMD ["python", "-m", "uvicorn", "docker.paddle.unified_api:app", "--host", "0.0.0.0", "--port", "8000"]

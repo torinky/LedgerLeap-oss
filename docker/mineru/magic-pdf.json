@@ -1,5 +1,5 @@
 {
-  "models-dir": "/app/models",
+  "models-dir": "/root/.cache/huggingface/hub",
   "device-mode": "cpu",
   "latex-delimiter": {
     "inline": ["$", "$"],

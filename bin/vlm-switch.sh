@@ -57,17 +57,17 @@ show_status() {
         echo "  Status: ✅ Production-ready"
     elif [ "$current_model" = "paddleocr-vl" ]; then
         echo -e "  Current Model: ${BLUE}PaddleOCR-VL 0.9B${NC} (experimental)"
-        echo "  Context: ./docker/paddleocr-vl"
-        echo "  Port: 8001 -> 8002"
-        echo "  Status: 🧪 Experimental"
+        echo "  Context: ./docker/paddle (unified API)"
+        echo "  Port: 8001 -> 8000"
+        echo "  Status: 🧪 Experimental (GPU required)"
     elif [ "$current_model" = "marker" ]; then
         echo -e "  Current Model: ${YELLOW}Marker${NC} (PDF to Markdown)"
-        echo "  Context: ./docker/marker"
+        echo "  Context: ./docker/paddle (unified API)"
         echo "  Port: 8001 -> 8000"
         echo "  Status: 📄 PDF Specialized"
     elif [ "$current_model" = "mineru" ]; then
         echo -e "  Current Model: ${PURPLE}MinerU${NC} (PDF to Markdown)"
-        echo "  Context: ./docker/mineru"
+        echo "  Context: ./docker/paddle (unified API)"
         echo "  Port: 8001 -> 8000"
         echo "  Status: 📄 PDF Specialized"
     else
@@ -88,7 +88,6 @@ switch_model() {
                 # Update existing .env
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=paddleocr/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/paddle/' "$ENV_FILE"
-                sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
                 sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
@@ -101,13 +100,16 @@ switch_model() {
             echo "✅ Configuration updated"
             echo "   VLM_MODEL=paddleocr"
             echo "   VLM_SERVICE_CONTEXT=./docker/paddle"
-            echo "   VLM_INTERNAL_PORT=8000"
             echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
-            echo "Next steps:"
-            echo "  1. docker-compose down vlm"
-            echo "  2. docker-compose build vlm"
-            echo "  3. docker-compose up -d vlm"
+            echo -e "${BLUE}Rebuilding VLM container...${NC}"
+            cd "$PROJECT_ROOT"
+            docker-compose stop vlm
+            docker-compose build vlm  # Use cache for faster build
+            docker-compose up -d vlm
+            echo ""
+            echo -e "${GREEN}✅ Switched to PaddleOCR and container restarted${NC}"
+            echo "   Check health: curl http://localhost:8001/health"
             ;;
             
         paddleocr-vl)
@@ -118,7 +120,6 @@ switch_model() {
                 # Update existing .env
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=paddleocr-vl/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/paddleocr-vl/' "$ENV_FILE"
-                sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8002/' "$ENV_FILE"
                 sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=gpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=gpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
@@ -130,15 +131,17 @@ switch_model() {
             echo ""
             echo "✅ Configuration updated"
             echo "   VLM_MODEL=paddleocr-vl"
-            echo "   VLM_SERVICE_CONTEXT=./docker/paddleocr-vl"
-            echo "   VLM_INTERNAL_PORT=8002"
+            echo "   VLM_SERVICE_CONTEXT=./docker/paddle"
             echo "   PADDLEOCR_DEVICE=gpu (GPU required)"
             echo ""
-            echo "Next steps:"
-            echo "  1. docker-compose down vlm"
-            echo "  2. docker-compose build vlm --no-cache"
-            echo "  3. docker-compose up -d vlm"
-            echo "  4. Check health: curl http://localhost:8001/health"
+            echo -e "${BLUE}Rebuilding VLM container (using cache)...${NC}"
+            cd "$PROJECT_ROOT"
+            docker-compose stop vlm
+            docker-compose build vlm
+            docker-compose up -d vlm
+            echo ""
+            echo -e "${GREEN}✅ Switched to PaddleOCR-VL and container restarted${NC}"
+            echo "   Check health: curl http://localhost:8001/health"
             ;;
             
         marker)
@@ -148,7 +151,6 @@ switch_model() {
                 # Update existing .env
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=marker/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/marker/' "$ENV_FILE"
-                sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
                 sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
@@ -161,14 +163,16 @@ switch_model() {
             echo "✅ Configuration updated"
             echo "   VLM_MODEL=marker"
             echo "   VLM_SERVICE_CONTEXT=./docker/marker"
-            echo "   VLM_INTERNAL_PORT=8000"
             echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
-            echo "Next steps:"
-            echo "  1. docker-compose down vlm"
-            echo "  2. docker-compose build vlm --no-cache"
-            echo "  3. docker-compose up -d vlm"
-            echo "  4. Check health: curl http://localhost:8001/health"
+            echo -e "${BLUE}Rebuilding VLM container (using cache)...${NC}"
+            cd "$PROJECT_ROOT"
+            docker-compose stop vlm
+            docker-compose build vlm
+            docker-compose up -d vlm
+            echo ""
+            echo -e "${GREEN}✅ Switched to Marker and container restarted${NC}"
+            echo "   Check health: curl http://localhost:8001/health"
             ;;
 
         mineru)
@@ -178,7 +182,6 @@ switch_model() {
                 # Update existing .env
                 sed -i.bak 's/^VLM_MODEL=.*/VLM_MODEL=mineru/' "$ENV_FILE"
                 sed -i.bak 's/^VLM_SERVICE_CONTEXT=.*/VLM_SERVICE_CONTEXT=.\/docker\/mineru/' "$ENV_FILE"
-                sed -i.bak 's/^VLM_INTERNAL_PORT=.*/VLM_INTERNAL_PORT=8000/' "$ENV_FILE"
                 sed -i.bak 's/^PADDLEOCR_DEVICE=.*/PADDLEOCR_DEVICE=cpu/' "$ENV_FILE" 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> "$ENV_FILE"
                 rm -f "$ENV_FILE.bak"
             else
@@ -191,14 +194,16 @@ switch_model() {
             echo "✅ Configuration updated"
             echo "   VLM_MODEL=mineru"
             echo "   VLM_SERVICE_CONTEXT=./docker/mineru"
-            echo "   VLM_INTERNAL_PORT=8000"
             echo "   PADDLEOCR_DEVICE=cpu"
             echo ""
-            echo "Next steps:"
-            echo "  1. docker-compose down vlm"
-            echo "  2. docker-compose build vlm --no-cache"
-            echo "  3. docker-compose up -d vlm"
-            echo "  4. Check health: curl http://localhost:8001/health"
+            echo -e "${BLUE}Rebuilding VLM container (using cache)...${NC}"
+            cd "$PROJECT_ROOT"
+            docker-compose stop vlm
+            docker-compose build vlm
+            docker-compose up -d vlm
+            echo ""
+            echo -e "${GREEN}✅ Switched to MinerU and container restarted${NC}"
+            echo "   Check health: curl http://localhost:8001/health"
             ;;
             
         *)
