@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "receipt_01",
+    "timestamp": "20251102_185415",
+    "model": "mineru"
+  },
+  "performance": {
+    "processing_time_s": 28.394555807113647,
+    "total_time_s": 28.445116
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 1,
+    "key_value_pairs": 0,
+    "tables": 0
+  },
+  "quality_metrics": {
+    "markdown_length": 668,
+    "html_length": 705,
+    "confidence": {
+      "average": 0.0,
+      "min": 0,
+      "max": 0
+    }
+  }
+}

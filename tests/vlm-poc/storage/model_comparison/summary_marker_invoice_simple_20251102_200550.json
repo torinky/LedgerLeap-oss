@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "invoice_simple",
+    "timestamp": "20251102_200550",
+    "model": "marker"
+  },
+  "performance": {
+    "processing_time_s": 354.41530108451843,
+    "total_time_s": 354.49085
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 19,
+    "key_value_pairs": 3,
+    "tables": 1
+  },
+  "quality_metrics": {
+    "markdown_length": 1566,
+    "html_length": 2202,
+    "confidence": {
+      "average": 0.9505263157894737,
+      "min": 0.9,
+      "max": 0.98
+    }
+  }
+}

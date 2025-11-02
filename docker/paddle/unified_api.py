@@ -12,6 +12,7 @@ import os
 import glob
 import shutil
 import subprocess
+import re
 from typing import Optional, Dict, Any
 
 logging.basicConfig(level=logging.INFO)
@@ -236,8 +237,208 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
         }
     }
 
+def parse_markdown_structure(markdown_text: str) -> Dict[str, Any]:
+    """
+    Parse Markdown text into structured data compatible with PaddleOCR output format
+    
+    Extracts:
+    - Text blocks with types (header, paragraph, list, table, etc.)
+    - Tables (Markdown table format)
+    - Key-Value pairs (lines with colons)
+    """
+    import re
+    
+    text_blocks = []
+    tables = []
+    key_value_pairs = []
+    
+    lines = markdown_text.split('\n')
+    current_paragraph = []
+    in_table = False
+    table_lines = []
+    line_index = 0
+    
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        
+        if not stripped:
+            # Empty line: flush current paragraph
+            if current_paragraph:
+                text_blocks.append({
+                    "type": "text",
+                    "content": '\n'.join(current_paragraph),
+                    "line_index": line_index,
+                    "confidence": 0.95
+                })
+                current_paragraph = []
+                line_index = idx + 1
+            continue
+        
+        # Header detection
+        if stripped.startswith('#'):
+            if current_paragraph:
+                text_blocks.append({
+                    "type": "text",
+                    "content": '\n'.join(current_paragraph),
+                    "line_index": line_index,
+                    "confidence": 0.95
+                })
+                current_paragraph = []
+            
+            level = len(re.match(r'^#+', stripped).group())
+            header_text = stripped.lstrip('#').strip()
+            text_blocks.append({
+                "type": f"header_{level}",
+                "content": header_text,
+                "line_index": idx,
+                "confidence": 0.98
+            })
+            line_index = idx + 1
+            continue
+        
+        # Table detection (Markdown table format)
+        if '|' in stripped and not stripped.startswith('!['):
+            if not in_table:
+                # Start of table
+                if current_paragraph:
+                    text_blocks.append({
+                        "type": "text",
+                        "content": '\n'.join(current_paragraph),
+                        "line_index": line_index,
+                        "confidence": 0.95
+                    })
+                    current_paragraph = []
+                in_table = True
+                table_lines = []
+                line_index = idx
+            
+            table_lines.append(stripped)
+            continue
+        elif in_table:
+            # End of table
+            if table_lines:
+                # Parse table structure
+                table_html = parse_markdown_table(table_lines)
+                tables.append({
+                    "type": "table",
+                    "html": table_html,
+                    "markdown": '\n'.join(table_lines),
+                    "line_index": line_index,
+                    "confidence": 0.90
+                })
+                text_blocks.append({
+                    "type": "table",
+                    "content": '\n'.join(table_lines),
+                    "line_index": line_index,
+                    "confidence": 0.90
+                })
+            in_table = False
+            table_lines = []
+            line_index = idx
+        
+        # List detection
+        if re.match(r'^[-*+]\s', stripped) or re.match(r'^\d+\.\s', stripped):
+            if current_paragraph:
+                text_blocks.append({
+                    "type": "text",
+                    "content": '\n'.join(current_paragraph),
+                    "line_index": line_index,
+                    "confidence": 0.95
+                })
+                current_paragraph = []
+            
+            text_blocks.append({
+                "type": "list_item",
+                "content": re.sub(r'^[-*+\d.]\s+', '', stripped),
+                "line_index": idx,
+                "confidence": 0.95
+            })
+            line_index = idx + 1
+            continue
+        
+        # Key-Value detection (similar to PaddleOCR logic)
+        if ':' in stripped or '：' in stripped:
+            normalized = stripped.replace('：', ':')
+            if normalized.count(':') == 1:
+                parts = normalized.split(':', 1)
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    # Filter out time-like patterns and ensure meaningful content
+                    if (key and value and 
+                        len(key) > 1 and len(key) < 50 and 
+                        not re.match(r'^\d{1,2}$', key)):  # Not just numbers (time)
+                        key_value_pairs.append({
+                            "key": key,
+                            "value": value,
+                            "confidence": 0.92,
+                            "line_index": idx
+                        })
+        
+        # Regular paragraph text
+        current_paragraph.append(stripped)
+    
+    # Flush any remaining content
+    if current_paragraph:
+        text_blocks.append({
+            "type": "text",
+            "content": '\n'.join(current_paragraph),
+            "line_index": line_index,
+            "confidence": 0.95
+        })
+    
+    if in_table and table_lines:
+        table_html = parse_markdown_table(table_lines)
+        tables.append({
+            "type": "table",
+            "html": table_html,
+            "markdown": '\n'.join(table_lines),
+            "line_index": line_index,
+            "confidence": 0.90
+        })
+    
+    return {
+        "text_blocks": text_blocks,
+        "tables": tables,
+        "key_value_pairs": key_value_pairs
+    }
+
+def parse_markdown_table(table_lines: list) -> str:
+    """Convert Markdown table to HTML"""
+    if not table_lines:
+        return ""
+    
+    html_parts = ["<table>"]
+    is_header = True
+    
+    for line in table_lines:
+        # Skip separator lines (e.g., |---|---|)
+        if re.match(r'^\|[\s\-:]+\|$', line):
+            is_header = False
+            continue
+        
+        cells = [cell.strip() for cell in line.split('|')[1:-1]]  # Remove empty first/last
+        
+        if is_header:
+            html_parts.append("<tr>")
+            for cell in cells:
+                html_parts.append(f"<th>{cell}</th>")
+            html_parts.append("</tr>")
+            is_header = False
+        else:
+            html_parts.append("<tr>")
+            for cell in cells:
+                html_parts.append(f"<td>{cell}</td>")
+            html_parts.append("</tr>")
+    
+    html_parts.append("</table>")
+    return "".join(html_parts)
+
 def process_with_marker(file_path: str) -> Dict[str, Any]:
-    """Process document with Marker backend (PDF to Markdown)"""
+    """Process document with Marker backend (PDF to Markdown)
+    
+    Optimized for Japanese OCR with balanced speed/quality settings
+    """
     import subprocess
     import tempfile
     import shutil
@@ -245,16 +446,39 @@ def process_with_marker(file_path: str) -> Dict[str, Any]:
     tmp_out_dir = tempfile.mkdtemp()
     
     try:
+        # Optimized DPI for Japanese OCR (balance between speed and accuracy)
+        # 96 DPI for layout detection, 400 DPI for Japanese OCR quality
         lowres_dpi = os.environ.get("MARKER_LOWRES_DPI", "96")
-        highres_dpi = os.environ.get("MARKER_HIGHRES_DPI", "192")
+        highres_dpi = os.environ.get("MARKER_HIGHRES_DPI", "400")
+        
+        # Force CPU mode for stability (avoids GPU-related segfaults)
+        os.environ["TORCH_DEVICE"] = "cpu"
+        
+        # Optimal thread count for CPU (use physical cores)
+        cpu_count = os.cpu_count() or 4
+        os.environ.setdefault("OMP_NUM_THREADS", str(cpu_count))
+        os.environ.setdefault("MKL_NUM_THREADS", str(cpu_count))
         
         cmd = [
             "marker_single", file_path, 
             "--output_dir", tmp_out_dir,
             "--lowres_image_dpi", lowres_dpi,
-            "--highres_image_dpi", highres_dpi
+            "--highres_image_dpi", highres_dpi,
+            # NOTE: --disable_ocr is NOT used (OCR required for Japanese)
         ]
         
+        # Optimized batch size for Japanese text processing
+        batch_size = os.environ.get("MARKER_BATCH_SIZE", "2")
+        cmd.extend([
+            "--layout_batch_size", batch_size,
+            "--recognition_batch_size", batch_size,
+        ])
+        
+        # Disable multiprocessing if specified (for stability)
+        if os.environ.get("MARKER_DISABLE_MULTIPROCESSING", "false").lower() == "true":
+            cmd.append("--disable_multiprocessing")
+        
+        logger.info(f"Running Marker (Japanese OCR optimized) with command: {' '.join(cmd)}")
         subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=600)
         
         # Find output markdown
@@ -270,14 +494,41 @@ def process_with_marker(file_path: str) -> Dict[str, Any]:
         with open(output_md_files[0], "r", encoding="utf-8") as f:
             markdown_text = f.read()
         
+        # Parse Markdown into structured data
+        parsed = parse_markdown_structure(markdown_text)
+        
+        # Generate HTML from text blocks
+        html_parts = ["<html><body>"]
+        for block in parsed["text_blocks"]:
+            block_type = block.get("type", "text")
+            content = block.get("content", "")
+            
+            if block_type.startswith("header_"):
+                level = block_type.split("_")[1]
+                html_parts.append(f"<h{level}>{content}</h{level}>")
+            elif block_type == "table":
+                # Table HTML is already in the tables array
+                table_data = next((t for t in parsed["tables"] if t.get("markdown") == content), None)
+                if table_data:
+                    html_parts.append(table_data.get("html", ""))
+            elif block_type == "list_item":
+                html_parts.append(f"<li>{content}</li>")
+            else:
+                html_parts.append(f"<p>{content}</p>")
+        html_parts.append("</body></html>")
+        
         return {
-            "html": f"<html><body><pre>{markdown_text}</pre></body></html>",
+            "html": "\n".join(html_parts),
             "markdown": markdown_text,
             "structured_data": {
-                "pages": [{"page_index": 0, "content": markdown_text}],
-                "text_blocks": [{"type": "markdown", "content": markdown_text}],
-                "tables": [],
-                "key_value_pairs": []
+                "pages": [{
+                    "page_index": 0,
+                    "text_lines": [b.get("content", "") for b in parsed["text_blocks"]],
+                    "line_count": len(parsed["text_blocks"])
+                }],
+                "text_blocks": parsed["text_blocks"],
+                "tables": parsed["tables"],
+                "key_value_pairs": parsed["key_value_pairs"]
             }
         }
     finally:
@@ -285,7 +536,10 @@ def process_with_marker(file_path: str) -> Dict[str, Any]:
             shutil.rmtree(tmp_out_dir)
 
 def process_with_mineru(file_path: str) -> Dict[str, Any]:
-    """Process document with MinerU backend (PDF to Markdown)"""
+    """Process document with MinerU backend (PDF to Markdown)
+    
+    Using default settings (already optimized internally)
+    """
     import subprocess
     import tempfile
     import shutil
@@ -294,9 +548,11 @@ def process_with_mineru(file_path: str) -> Dict[str, Any]:
     tmp_out_dir = tempfile.mkdtemp()
     
     try:
+        # Keep default settings - MinerU CLI is already optimized
+        # Adding environment variables caused 32% slowdown in tests
         cmd = ["mineru", "-p", file_path, "-o", tmp_out_dir]
         
-        logger.info(f"Running MinerU command: {' '.join(cmd)}")
+        logger.info(f"Running MinerU (default settings) with command: {' '.join(cmd)}")
         result = subprocess.run(
             cmd, 
             capture_output=True, 
@@ -342,14 +598,41 @@ def process_with_mineru(file_path: str) -> Dict[str, Any]:
         if not markdown_content:
             raise ValueError(f"MinerU did not produce markdown output. Checked patterns: {search_patterns}")
         
+        # Parse Markdown into structured data
+        parsed = parse_markdown_structure(markdown_content)
+        
+        # Generate HTML from text blocks
+        html_parts = ["<html><body>"]
+        for block in parsed["text_blocks"]:
+            block_type = block.get("type", "text")
+            content = block.get("content", "")
+            
+            if block_type.startswith("header_"):
+                level = block_type.split("_")[1]
+                html_parts.append(f"<h{level}>{content}</h{level}>")
+            elif block_type == "table":
+                # Table HTML is already in the tables array
+                table_data = next((t for t in parsed["tables"] if t.get("markdown") == content), None)
+                if table_data:
+                    html_parts.append(table_data.get("html", ""))
+            elif block_type == "list_item":
+                html_parts.append(f"<li>{content}</li>")
+            else:
+                html_parts.append(f"<p>{content}</p>")
+        html_parts.append("</body></html>")
+        
         return {
-            "html": f"<html><body><pre>{markdown_content}</pre></body></html>",
+            "html": "\n".join(html_parts),
             "markdown": markdown_content,
             "structured_data": {
-                "pages": [{"page_index": 0, "content": markdown_content}],
-                "text_blocks": [{"type": "markdown", "content": markdown_content}],
-                "tables": [],
-                "key_value_pairs": []
+                "pages": [{
+                    "page_index": 0,
+                    "text_lines": [b.get("content", "") for b in parsed["text_blocks"]],
+                    "line_count": len(parsed["text_blocks"])
+                }],
+                "text_blocks": parsed["text_blocks"],
+                "tables": parsed["tables"],
+                "key_value_pairs": parsed["key_value_pairs"]
             }
         }
     finally:
