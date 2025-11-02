@@ -3,10 +3,11 @@
 **作成日:** 2025年11月2日  
 **最終更新:** 2025年11月2日（ステップバイステップ化）  
 **ドキュメント種別:** 作業ファイル（計画・設計）  
-**ステータス:** 実装準備完了
+**ステータス:** ✅ 実装完了
 
 > **📖 関連ドキュメント:**
-> - [環境構築スクリプト実装記録](../../development/environment-setup.md)
+> - **[実装記録](./2025-11-02_docker-compose-refactoring-implementation.md)** - 本計画の実施結果と詳細記録
+> - [環境構築スクリプト実装記録](../../development/environment-setup.md) - 公式実装記録（更新済み）
 > - `bin/setup.sh`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.gpu.yml`
 > - `bin/switch-model.sh`, `bin/vlm-switch.sh`, `bin/switch-paddleocr-version.sh`
 
