@@ -37,6 +37,7 @@ services:
     command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
     environment:
       WWWUSER: '${WWWUSER}'
+      WWWGROUP: '${WWWGROUP}'
       DOCKER_GROUP_ID: "${DOCKER_GROUP_ID}"
       LARAVEL_SAIL: 1
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
