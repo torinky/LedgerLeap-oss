@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -63,6 +64,7 @@ class ModifyColumnTest extends TestCase
         Storage::fake('public');
 
         // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
         $hashedBasename = 'test_hashed_basename.jpg';
         $originalFilename = 'test_original_filename.jpg';
 
@@ -89,10 +91,10 @@ class ModifyColumnTest extends TestCase
             'filename' => $originalFilename,
             'column_id' => 0, // 1から0に変更
             'path' => $path, // 生成したパスを設定
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // 実行 (Act) & 検証 (Assert)
-        tenancy()->initialize($this->tenant); // 追加
         $livewireTest = Livewire::actingAs($this->user)
             ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
 
@@ -132,6 +134,7 @@ class ModifyColumnTest extends TestCase
         Storage::fake('public');
 
         // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
         // 複数のカラム定義を持つLedgerDefineをセットアップ
         $multiColumnDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -178,6 +181,7 @@ class ModifyColumnTest extends TestCase
             'filename' => $originalFilename,
             'column_id' => 1, // filesカラムのID
             'path' => $path,
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // 実行 (Act) & 検証 (Assert)
@@ -207,6 +211,7 @@ class ModifyColumnTest extends TestCase
         Storage::fake('public');
 
         // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
         // カラムIDが飛んでいるLedgerDefineをセットアップ
         $sparseColumnDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -255,6 +260,7 @@ class ModifyColumnTest extends TestCase
             'filename' => $originalFilename,
             'column_id' => 2, // filesカラムのID
             'path' => $path,
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // 実行 (Act) & 検証 (Assert)
@@ -276,5 +282,149 @@ class ModifyColumnTest extends TestCase
         $fileData = $filePondFiles[2][0];
         $expectedSourceUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id]);
         $this->assertEquals($expectedSourceUrl, $fileData['source']);
+    }
+
+    #[Test]
+    public function it_can_upload_new_files()
+    {
+        Bus::fake();
+        Storage::fake('public');
+
+        // 準備: ファイルを持たないLedgerを作成
+        tenancy()->initialize($this->tenant);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [], // ファイルカラムは空
+            ],
+        ]);
+
+        // 新しいダミーファイルを準備
+        $newFile = UploadedFile::fake()->image('new_upload.jpg');
+
+        // 実行 & 検証
+        Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id])
+            ->set('content.0', [$newFile]) // 新しいファイルをセット
+            ->call('saveDirectly');
+
+        // DBにAttachedFileレコードが作成されたか確認
+        $this->assertDatabaseHas('attached_files', [
+            'ledger_id' => $ledger->id,
+            'filename' => 'new_upload.jpg',
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id, // テナントIDを検証
+        ]);
+
+        // ストレージにファイルが保存されたか確認
+        $attachedFile = AttachedFile::where('filename', 'new_upload.jpg')->first();
+        $this->assertNotNull($attachedFile);
+        Storage::disk('public')->assertExists($attachedFile->path);
+    }
+
+    #[Test]
+    public function it_can_remove_existing_files()
+    {
+        Storage::fake('public');
+
+        // 準備: 既存ファイルを持つLedgerを作成
+        tenancy()->initialize($this->tenant);
+        $originalFile = UploadedFile::fake()->image('original.jpg');
+        $path = $originalFile->store('attachments', 'public');
+        $hashedBasename = basename($path);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $hashedBasename => 'original.jpg',
+                ],
+            ],
+        ]);
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $hashedBasename,
+            'filename' => 'original.jpg',
+            'column_id' => 0,
+            'path' => $path,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        // 実行 & 検証
+        Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id])
+            ->call('handleFileRemoval', 0, $hashedBasename) // ファイルを削除対象に
+            ->call('saveDirectly');
+
+        // DBからAttachedFileレコードが論理削除されたか確認
+        $this->assertSoftDeleted('attached_files', [
+            'hashedbasename' => $hashedBasename,
+            'ledger_id' => $ledger->id,
+        ]);
+
+    }
+
+    #[Test]
+    public function it_can_add_and_remove_files_simultaneously()
+    {
+        Bus::fake();
+        Storage::fake('public');
+
+        // 準備: 既存ファイルを持つLedgerを作成
+        tenancy()->initialize($this->tenant);
+        $originalFile = UploadedFile::fake()->image('original_to_delete.jpg');
+        $originalPath = $originalFile->store('attachments', 'public');
+        $originalHashedBasename = basename($originalPath);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $originalHashedBasename => 'original_to_delete.jpg',
+                ],
+            ],
+        ]);
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $originalHashedBasename,
+            'filename' => 'original_to_delete.jpg',
+            'column_id' => 0,
+            'path' => $originalPath,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        // 新しいダミーファイルを準備
+        $newFile = UploadedFile::fake()->image('new_upload_simultaneously.jpg');
+
+        // 実行 & 検証
+        Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id])
+            ->call('handleFileRemoval', 0, $originalHashedBasename) // 既存ファイルを削除対象に
+            ->set('content.0', [$newFile]) // 新しいファイルをセット
+            ->call('saveDirectly');
+
+        // 既存ファイルがDBから論理削除されたか確認
+        $this->assertSoftDeleted('attached_files', [
+            'hashedbasename' => $originalHashedBasename,
+            'ledger_id' => $ledger->id,
+        ]);
+
+        // 新しいファイルがDBに作成されたか確認
+        $this->assertDatabaseHas('attached_files', [
+            'ledger_id' => $ledger->id,
+            'filename' => 'new_upload_simultaneously.jpg',
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        // 新しいファイルがストレージに保存されたか確認
+        $newAttachedFile = AttachedFile::where('filename', 'new_upload_simultaneously.jpg')->first();
+        $this->assertNotNull($newAttachedFile);
+        Storage::disk('public')->assertExists($newAttachedFile->path);
     }
 }

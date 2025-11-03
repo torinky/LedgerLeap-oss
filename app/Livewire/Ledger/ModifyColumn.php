@@ -42,7 +42,15 @@ class ModifyColumn extends CreateColumn
         $this->ledgerId = $ledgerId;
         if ($this->ledgerId) {
             // edit
-            $this->ledgerRecord = Ledger::with(['define', 'latestDiff'])->findOrFail($this->ledgerId);
+            // テナントスコープを一時的に無視してLedgerを取得
+            $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
+
+            // 取得したLedgerのテナントIDでコンテキストを初期化
+            tenancy()->initialize($this->ledgerRecord->tenant_id);
+
+            // 手動でリレーションをロード
+            $this->ledgerRecord->load(['define', 'latestDiff']);
+
             $this->tenantId = $this->ledgerRecord->define->tenant_id;
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
             if (! empty($this->ledgerRecord->define)) {
@@ -145,34 +153,43 @@ class ModifyColumn extends CreateColumn
             $addedFileContents[$stored->hashedBaseName] = ['meta' => ['content' => '']];
         }
 
-        // 既存ファイルの取得 (DBから再取得が安全)
-        $tmpContent = $this->content[$column->id] ?? [];
-        $tmpContentAttached = $this->contentAttached[$column->id] ?? [];
+        // 既存ファイルの取得 (DBのレコードを正とする)
+        $originalLedgerContentForColumn = $this->ledgerRecord->content[$column->id] ?? [];
+        $originalLedgerContentAttachedForColumn = $this->ledgerRecord->content_attached[$column->id] ?? [];
 
-        //        dd($column->id,$this->deletedContent ,$tmpContent);
+        // 画面の最新状態 (TemporaryUploadedFile を含む可能性あり)
+        $currentContentForColumn = $this->content[$column->id] ?? [];
+        $currentContentAttachedForColumn = $this->contentAttached[$column->id] ?? [];
 
-        // 削除指定されたファイルを既存リストから除去
+        // 削除指定されたファイルを処理
         $deletedBaseFilenames = $this->deletedContent[$column->id] ?? [];
-        foreach ($tmpContent as $hashedBaseName => $originalName) {
-            if (in_array($hashedBaseName, $deletedBaseFilenames, true)) {
-                unset($tmpContent[$hashedBaseName]);
-                unset($tmpContentAttached[$hashedBaseName]);
-                // 実体ファイル削除や AttachedFile レコード削除はここで行う
-                // AttachedFile::where('hashedbasename', $hashedBaseName)
-                //     ->where('ledger_id', $this->ledgerId) // ledgerId を使う
-                //     ->where('ledger_define_id', $this->ledgerDefineId) // ledgerDefineId も使う
-                //     ->where('column_id', $column->id)
-                //     ->delete();
+        foreach ($originalLedgerContentForColumn as $hashedBasename => $originalName) {
+            if (in_array($hashedBasename, $deletedBaseFilenames, true)) {
+                // AttachedFileレコードを論理削除
+                $attachedFile = AttachedFile::where('hashedbasename', $hashedBasename)
+                    ->where('ledger_id', $this->ledgerId)
+                    ->where('column_id', $column->id)
+                    ->first();
+
+                if ($attachedFile) {
+                    $attachedFile->delete();
+                }
             }
         }
 
-        // TemporaryUploadedFile オブジェクトをフィルタリング
-        $tmpContent = collect($tmpContent)->filter(fn ($value) => ! ($value instanceof TemporaryUploadedFile))->all();
-        $tmpContentAttached = collect($tmpContentAttached)->filter(fn ($value) => ! ($value instanceof TemporaryUploadedFile))->all();
+        // 画面上で残っているファイル（TemporaryUploadedFile を除く）を取得
+        // ここでは $currentContentForColumn から削除対象を除外する
+        $remainingFiles = collect($currentContentForColumn)
+            ->filter(fn ($value, $hashedBasename) => ! ($value instanceof TemporaryUploadedFile) && ! in_array($hashedBasename, $deletedBaseFilenames, true))
+            ->all();
+
+        $remainingFilesAttached = collect($currentContentAttachedForColumn)
+            ->filter(fn ($value, $hashedBasename) => ! ($value instanceof TemporaryUploadedFile) && ! in_array($hashedBasename, $deletedBaseFilenames, true))
+            ->all();
 
         // 新規ファイルと残った既存ファイルをマージ
-        $this->content[$column->id] = array_merge($addedFilenames, $tmpContent);
-        $this->contentAttached[$column->id] = array_merge($addedFileContents, $tmpContentAttached);
+        $this->content[$column->id] = array_merge($addedFilenames, $remainingFiles);
+        $this->contentAttached[$column->id] = array_merge($addedFileContents, $remainingFilesAttached);
     }
 
     /**

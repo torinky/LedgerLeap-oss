@@ -18,11 +18,17 @@
     *   `mime`: ファイルのMIMEタイプ
     *   `path`: ストレージ内の物理パス。OCR処理対象のファイルの場合、OCR処理後に生成された最適化済みPDFのパスが格納されます。
     *   `size`: ファイルサイズ（バイト）
-    *   `content`: TikaやOCRによって抽出されたテキストコンテンツ
+    *   `content`: TikaやOCRによって抽出されたテキストコンテンツ。主にMroonga全文検索に使用されます。VLMが有効な場合は、`vlm_markdown`が優先的にRAGに使用されます。
     *   `contain_content`: テキストコンテンツが含まれているかどうかのフラグ
     *   `optimized`: OCR処理により最適化されたかどうかのフラグ
     *   `original_file_path`: OCR処理前のオリジナルファイルのパス。OCR処理対象のファイルの場合、`storage/app/public/Ledger/Attachments/Originals/` ディレクトリに退避されたオリジナルファイルのパスが格納されます。
     *   `original_mime_type`: オリジナルファイルのMIMEタイプ
+    *   `vlm_markdown`: VLMによって抽出されたMarkdown形式のテキスト
+    *   `vlm_structured_data`: VLMによって抽出された構造化データ（JSON形式）
+    *   `vlm_model`: 抽出に使用されたVLMモデル名
+    *   `vlm_confidence`: VLMの処理信頼度
+    *   `vlm_processing_time_ms`: VLMの処理時間（ミリ秒）
+    *   `vlm_processed_at`: VLMの処理完了日時
     *   `creator_id`: 作成者のユーザーID
     *   `modifier_id`: 更新者のユーザーID
 *   **`$casts`**:

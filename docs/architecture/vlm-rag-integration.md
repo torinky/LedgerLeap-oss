@@ -1,7 +1,7 @@
 # VLM/RAG統合実装計画書（最終版）
 
 **作成日:** 2025年10月25日  
-**ステータス:** ✅ **実装準備完了**  
+**ステータス:** ✅ **Phase 1 実装完了**  
 **ドキュメント種別:** 公式ドキュメント（実装計画書）  
 基準文書:
 - [VLM-OCR技術調査](./vlm-ocr-technology-selection.md)
@@ -862,26 +862,26 @@ return [
 ### 7.1. Phase 1: 基盤整備（Week 1-2）
 
 #### データベース
-- [ ] `attached_files` テーブルへのVLMカラム追加マイグレーション作成
-- [ ] マイグレーション実行・確認
-- [ ] インデックス性能テスト
+- [x] ~~`attached_files` テーブルへのVLMカラム追加マイグレーション作成~~
+- [x] ~~マイグレーション実行・確認~~
+- [x] ~~インデックス性能テスト~~
 
 #### モデル
-- [ ] `AttachedFile` モデルへのアクセサ追加
-  - [ ] `hasVlmResult()`
-  - [ ] `isVlmProcessing()`
-  - [ ] `isVlmFailed()`
-  - [ ] `getVlmConfidenceAttribute()`
+- [x] ~~`AttachedFile` モデルへのアクセサ追加~~
+  - [x] ~~`hasVlmResult()`~~
+  - [x] ~~`isVlmProcessing()`~~
+  - [x] ~~`isVlmFailed()`~~
+  - [x] ~~`getVlmConfidenceAttribute()`~~
 
 #### Enum
-- [ ] `AttachedFileStatus` へのVLM関連ステータス追加
-  - [ ] `VLM_PROCESSING`
-  - [ ] `VLM_FAILED`
+- [x] ~~`AttachedFileStatus` へのVLM関連ステータス追加~~
+  - [x] ~~`VLM_PROCESSING`~~
+  - [x] ~~`VLM_FAILED`~~
 
 #### 設定
-- [ ] `config/vlm.php` 作成
-- [ ] `config/rag.php` 拡張
-- [ ] `.env.example` 更新
+- [x] ~~`config/vlm.php` 作成~~
+- [x] ~~`config/rag.php` 拡張~~
+- [x] ~~`.env.example` 更新~~
 
 ### 7.2. Phase 2: VLM処理実装（Week 2-3）
 

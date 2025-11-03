@@ -18,6 +18,7 @@ class AttachedFile extends Model
         'filename', 'hashedbasename', 'ledger_define_id',
         'ledger_id', 'column_id', 'mime', 'path', 'size', 'status',
         'contain_content', 'optimized', 'creator_id', 'modifier_id', 'original_file_path', 'original_mime_type',
+        'vlm_markdown', 'vlm_structured_data', 'vlm_model', 'vlm_confidence', 'vlm_processing_time_ms', 'vlm_processed_at',
     ];
 
     protected $casts = [
@@ -78,5 +79,20 @@ class AttachedFile extends Model
         if ($thumbnailFailed) {
             Bus::dispatch(new GenerateThumbnail($this->id));
         }
+    }
+
+    public function hasVlmResult(): bool
+    {
+        return !empty($this->vlm_markdown) && $this->status === AttachedFileStatus::COMPLETED;
+    }
+
+    public function isVlmProcessing(): bool
+    {
+        return $this->status === AttachedFileStatus::VLM_PROCESSING;
+    }
+
+    public function isVlmFailed(): bool
+    {
+        return $this->status === AttachedFileStatus::VLM_FAILED;
     }
 }

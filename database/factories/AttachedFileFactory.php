@@ -23,8 +23,11 @@ class AttachedFileFactory extends Factory
      */
     public function definition(): array
     {
-        $ledgerDefine = LedgerDefine::factory()->for(Folder::factory())->create();
-        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create();
+        $tenant = \App\Models\Tenant::factory()->create(); // テスト用に新しいテナントを作成
+        tenancy()->initialize($tenant); // テナントコンテキストを初期化
+
+        $ledgerDefine = LedgerDefine::factory()->for(Folder::factory()->create(['tenant_id' => $tenant->id]))->create(['tenant_id' => $tenant->id]);
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create(['tenant_id' => $tenant->id]);
         $user = User::factory()->create();
 
         $filename = $this->faker->word().'.pdf';
@@ -47,6 +50,7 @@ class AttachedFileFactory extends Factory
             'modifier_id' => $user->id,
             'original_file_path' => null,
             'original_mime_type' => null,
+            'tenant_id' => $tenant->id, // AttachedFileにもtenant_idを追加
         ];
     }
 

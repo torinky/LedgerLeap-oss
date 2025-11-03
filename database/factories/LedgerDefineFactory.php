@@ -46,7 +46,7 @@ class LedgerDefineFactory extends Factory
             'folder_id' => Folder::count() > 0 ? Folder::all()->random()->id : Folder::factory()->create()->id,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
-            'tenant_id' => tenant()->id,
+            'tenant_id' => tenant()->id ?? \App\Models\Tenant::factory()->create()->id,
         ];
     }
 

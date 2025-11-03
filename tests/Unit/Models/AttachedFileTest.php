@@ -70,4 +70,62 @@ class AttachedFileTest extends TestCase
             return $job->attachedFileId === $attachedFile->id;
         });
     }
+
+    #[Test]
+    public function hasVlmResult_returns_true_when_markdown_exists_and_status_is_completed()
+    {
+        $file = AttachedFile::factory()->make([
+            'vlm_markdown' => '# Test', 
+            'status' => AttachedFileStatus::COMPLETED
+        ]);
+        $this->assertTrue($file->hasVlmResult());
+    }
+
+    #[Test]
+    public function hasVlmResult_returns_false_when_markdown_is_empty()
+    {
+        $file = AttachedFile::factory()->make([
+            'vlm_markdown' => null, 
+            'status' => AttachedFileStatus::COMPLETED
+        ]);
+        $this->assertFalse($file->hasVlmResult());
+    }
+
+    #[Test]
+    public function hasVlmResult_returns_false_when_status_is_not_completed()
+    {
+        $file = AttachedFile::factory()->make([
+            'vlm_markdown' => '# Test', 
+            'status' => AttachedFileStatus::VLM_PROCESSING
+        ]);
+        $this->assertFalse($file->hasVlmResult());
+    }
+
+    #[Test]
+    public function isVlmProcessing_returns_true_when_status_is_vlm_processing()
+    {
+        $file = AttachedFile::factory()->make(['status' => AttachedFileStatus::VLM_PROCESSING]);
+        $this->assertTrue($file->isVlmProcessing());
+    }
+
+    #[Test]
+    public function isVlmProcessing_returns_false_when_status_is_not_vlm_processing()
+    {
+        $file = AttachedFile::factory()->make(['status' => AttachedFileStatus::COMPLETED]);
+        $this->assertFalse($file->isVlmProcessing());
+    }
+
+    #[Test]
+    public function isVlmFailed_returns_true_when_status_is_vlm_failed()
+    {
+        $file = AttachedFile::factory()->make(['status' => AttachedFileStatus::VLM_FAILED]);
+        $this->assertTrue($file->isVlmFailed());
+    }
+
+    #[Test]
+    public function isVlmFailed_returns_false_when_status_is_not_vlm_failed()
+    {
+        $file = AttachedFile::factory()->make(['status' => AttachedFileStatus::COMPLETED]);
+        $this->assertFalse($file->isVlmFailed());
+    }
 }

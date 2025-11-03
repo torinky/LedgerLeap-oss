@@ -109,6 +109,8 @@ return [
         'size' => env('RAG_CHUNK_SIZE', 2000), // Target characters per chunk
         'overlap' => env('RAG_CHUNK_OVERLAP', 400), // Characters to overlap between chunks
         'max_attached_text_length' => env('RAG_MAX_ATTACHED_TEXT_LENGTH', 50000), // Maximum length of attached file text to include
+        'auto_update_chunks' => env('RAG_AUTO_UPDATE_CHUNKS', true),
+        'prefer_vlm_markdown' => env('RAG_PREFER_VLM_MARKDOWN', true),
     ],
 
     /*

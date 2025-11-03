@@ -14,6 +14,9 @@ enum AttachedFileStatus: string
     case THUMBNAIL_FAILED = 'thumbnail_failed';
     case PROCESSING_FAILED = 'processing_failed';
 
+    case VLM_PROCESSING = 'vlm_processing';
+    case VLM_FAILED = 'vlm_failed';
+
     // 既存のステータスも残しておくが、将来的には新しいステータスに統合することを検討
     case UPLOADED = 'uploaded';
     case OPTIMIZED = 'optimized';
@@ -27,9 +30,9 @@ enum AttachedFileStatus: string
     {
         return match ($this) {
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'fa-solid fa-clock',
-            self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'fa-solid fa-gear',
+            self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING => 'fa-solid fa-gear',
             self::COMPLETED => 'fa-solid fa-circle-check',
-            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED => 'fa-solid fa-triangle-exclamation',
+            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'fa-solid fa-triangle-exclamation',
             // 既存のステータス
             self::UPLOADED => 'fa-solid fa-cloud-arrow-up',
             self::OPTIMIZED => 'fa-solid fa-circle-check',
@@ -45,9 +48,9 @@ enum AttachedFileStatus: string
     {
         return match ($this) {
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'text-info',
-            self::INITIAL_PROCESSING, self::OCR_PROCESSING => 'text-warning animate-spin',
+            self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING => 'text-warning animate-spin',
             self::COMPLETED => 'text-success',
-            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED => 'text-error',
+            self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'text-error',
             // 既存のステータス
             self::UPLOADED => 'text-info',
             self::OPTIMIZED => 'text-success',
@@ -71,6 +74,8 @@ enum AttachedFileStatus: string
             self::OCR_FAILED => __('ledger.uploadedFile.status.ocr_failed'),
             self::THUMBNAIL_FAILED => __('ledger.uploadedFile.status.thumbnail_failed'),
             self::PROCESSING_FAILED => __('ledger.uploadedFile.status.processing_failed'),
+            self::VLM_PROCESSING => __('ledger.uploadedFile.status.vlm_processing'),
+            self::VLM_FAILED => __('ledger.uploadedFile.status.vlm_failed'),
             // 既存のステータス
             self::UPLOADED => __('ledger.uploadedFile.status.uploaded'),
             self::OPTIMIZED => __('ledger.uploadedFile.status.optimized'),
