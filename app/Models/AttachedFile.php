@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 
 class AttachedFile extends Model
 {
@@ -94,5 +95,18 @@ class AttachedFile extends Model
     public function isVlmFailed(): bool
     {
         return $this->status === AttachedFileStatus::VLM_FAILED;
+    }
+
+    public function getPhysicalPath(): ?string
+    {
+        if (empty($this->path)) {
+            return null;
+        }
+
+        if (Storage::disk('public')->exists($this->path)) {
+            return Storage::disk('public')->path($this->path);
+        }
+
+        return null;
     }
 }
