@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
-use App\Jobs\Ledger\ProcessVlmExtraction;
+
 // ★ 追加
 
 class ProcessAttachedFile implements ShouldQueue
@@ -155,6 +155,7 @@ class ProcessAttachedFile implements ShouldQueue
                     Log::info('[Tika] Dispatching VLM job for file: '.$this->attachedFile->id);
                     $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
                     ProcessVlmExtraction::dispatch($this->attachedFile);
+
                     // VLMジョブに処理を委譲するため、このジョブはここで終了
                     return;
                 }
@@ -204,6 +205,7 @@ class ProcessAttachedFile implements ShouldQueue
                     Log::info('[Tika Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
                     $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
                     ProcessVlmExtraction::dispatch($this->attachedFile);
+
                     return; // VLMに処理を委譲
                 }
 
@@ -261,22 +263,21 @@ class ProcessAttachedFile implements ShouldQueue
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));
         Log::info('ProcessAttachedFile job finished for file: '.$this->attachedFile->id
             .', status: '.$this->attachedFile->status->value);
+    }
+
     /**
      * Determines if the attached file should be processed by the VLM service.
-     *
-     * @param AttachedFile $file
-     * @return bool
      */
     private function shouldProcessWithVlm(AttachedFile $file): bool
     {
-        if (!config('vlm.enabled')) {
+        if (! config('vlm.enabled')) {
             return false;
         }
 
         $mimeType = $file->mime;
         $isVlmTargetMime = str_starts_with($mimeType, 'image/') || str_starts_with($mimeType, 'application/pdf');
 
-        if (!$isVlmTargetMime) {
+        if (! $isVlmTargetMime) {
             return false;
         }
 

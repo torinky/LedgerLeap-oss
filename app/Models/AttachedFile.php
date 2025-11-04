@@ -25,6 +25,8 @@ class AttachedFile extends Model
     protected $casts = [
         'optimized' => 'boolean',
         'status' => AttachedFileStatus::class,
+        'vlm_structured_data' => 'array',
+        'vlm_processed_at' => 'datetime',
     ];
 
     public function getOriginalFilenameAttribute(): ?string
@@ -84,7 +86,7 @@ class AttachedFile extends Model
 
     public function hasVlmResult(): bool
     {
-        return !empty($this->vlm_markdown) && $this->status === AttachedFileStatus::COMPLETED;
+        return ! empty($this->vlm_markdown) && $this->status === AttachedFileStatus::COMPLETED;
     }
 
     public function isVlmProcessing(): bool
