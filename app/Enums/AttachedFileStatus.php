@@ -16,6 +16,7 @@ enum AttachedFileStatus: string
 
     case VLM_PROCESSING = 'vlm_processing';
     case VLM_FAILED = 'vlm_failed';
+    case PENDING_VLM = 'pending_vlm';
 
     // 既存のステータスも残しておくが、将来的には新しいステータスに統合することを検討
     case UPLOADED = 'uploaded';
@@ -29,7 +30,7 @@ enum AttachedFileStatus: string
     public function icon(): string
     {
         return match ($this) {
-            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'fa-solid fa-clock',
+            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR, self::PENDING_VLM => 'fa-solid fa-clock',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING => 'fa-solid fa-gear',
             self::COMPLETED => 'fa-solid fa-circle-check',
             self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'fa-solid fa-triangle-exclamation',
@@ -47,7 +48,7 @@ enum AttachedFileStatus: string
     public function colorClass(): string
     {
         return match ($this) {
-            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR => 'text-info',
+            self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR, self::PENDING_VLM => 'text-info',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING => 'text-warning animate-spin',
             self::COMPLETED => 'text-success',
             self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'text-error',
@@ -76,6 +77,7 @@ enum AttachedFileStatus: string
             self::PROCESSING_FAILED => __('ledger.uploadedFile.status.processing_failed'),
             self::VLM_PROCESSING => __('ledger.uploadedFile.status.vlm_processing'),
             self::VLM_FAILED => __('ledger.uploadedFile.status.vlm_failed'),
+            self::PENDING_VLM => __('ledger.uploadedFile.status.pending_vlm'),
             // 既存のステータス
             self::UPLOADED => __('ledger.uploadedFile.status.uploaded'),
             self::OPTIMIZED => __('ledger.uploadedFile.status.optimized'),

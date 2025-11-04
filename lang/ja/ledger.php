@@ -1032,6 +1032,7 @@
                     'optimizing' => '最適化中',
                     'pending_initial_processing' => '初期処理待ち',
                     'pending_ocr' => 'OCR処理待ち',
+                    'pending_vlm' => 'VLM処理待ち',
                     'tika_failed' => 'テキスト/メタデータ抽出失敗',
                     'uploaded' => 'アップロード済み',
                 ],

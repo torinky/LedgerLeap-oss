@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Vaites\ApacheTika\Client;
-
+use App\Jobs\Ledger\ProcessVlmExtraction;
 // ★ 追加
 
 class ProcessAttachedFile implements ShouldQueue
@@ -150,6 +150,16 @@ class ProcessAttachedFile implements ShouldQueue
                     }
                 }
 
+                // VLM処理の要否を判定
+                if ($this->shouldProcessWithVlm($this->attachedFile)) {
+                    Log::info('[Tika] Dispatching VLM job for file: '.$this->attachedFile->id);
+                    $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
+                    ProcessVlmExtraction::dispatch($this->attachedFile);
+                    // VLMジョブに処理を委譲するため、このジョブはここで終了
+                    return;
+                }
+
+                // VLMが有効でない、または対象外の場合の既存フォールバック処理
                 if (! empty($extractedText)) {
                     // テキスト抽出成功時
                     $result['meta']['content'] = $extractedText;
@@ -188,6 +198,15 @@ class ProcessAttachedFile implements ShouldQueue
 
             } catch (Exception $e) {
                 Log::error('Tika service error for file '.$this->attachedFile->id.': '.$e->getMessage().'\nStack trace: '.$e->getTraceAsString());
+
+                // Tikaエラー時もVLM処理を試みる
+                if ($this->shouldProcessWithVlm($this->attachedFile)) {
+                    Log::info('[Tika Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
+                    $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
+                    ProcessVlmExtraction::dispatch($this->attachedFile);
+                    return; // VLMに処理を委譲
+                }
+
                 $mimeType = $this->attachedFile->mime;
                 if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && ! $this->attachedFile->optimized) {
                     $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
@@ -242,5 +261,29 @@ class ProcessAttachedFile implements ShouldQueue
         // Log::info('ProcessAttachedFile: Final attachedFile state: ' . json_encode($this->attachedFile->toArray()));
         Log::info('ProcessAttachedFile job finished for file: '.$this->attachedFile->id
             .', status: '.$this->attachedFile->status->value);
+    /**
+     * Determines if the attached file should be processed by the VLM service.
+     *
+     * @param AttachedFile $file
+     * @return bool
+     */
+    private function shouldProcessWithVlm(AttachedFile $file): bool
+    {
+        if (!config('vlm.enabled')) {
+            return false;
+        }
+
+        $mimeType = $file->mime;
+        $isVlmTargetMime = str_starts_with($mimeType, 'image/') || str_starts_with($mimeType, 'application/pdf');
+
+        if (!$isVlmTargetMime) {
+            return false;
+        }
+
+        if ($file->vlm_processed_at !== null) {
+            return false;
+        }
+
+        return true;
     }
 }

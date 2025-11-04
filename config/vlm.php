@@ -2,7 +2,7 @@
 
 return [
     // VLM機能の有効化
-    'enabled' => env('VLM_ENABLED', false),
+    'enabled' => (bool) env('VLM_ENABLED', false),
     
     // VLMコンテナURL
     'url' => env('VLM_URL', 'http://vlm:8000'),
