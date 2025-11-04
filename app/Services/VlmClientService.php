@@ -11,8 +11,11 @@ use RuntimeException;
 class VlmClientService
 {
     private string $vlmServiceUrl;
+
     private int $timeout;
+
     private string $defaultModel;
+
     private string $logChannel;
 
     public function __construct()
@@ -26,24 +29,25 @@ class VlmClientService
     /**
      * Extracts markdown and structured data from an attached file using the VLM service.
      *
-     * @param AttachedFile $attachedFile The attached file model instance to process.
+     * @param  AttachedFile  $attachedFile  The attached file model instance to process.
      * @return array An associative array containing the VLM extraction results,
      *               typically including 'markdown', 'structured_data', 'html', 'model', etc.
      *               Example:
      *               [
-     *                   'success' => true,
-     *                   'html' => '<html><body>...</body></html>',
-     *                   'markdown' => '# Document Title\n\n...',
-     *                   'structured_data' => [
-     *                       'pages' => [...],
-     *                       'tables' => [...],
-     *                       'key_value_pairs' => [...],
-     *                       'text_blocks' => [...]
-     *                   ],
-     *                   'processing_time_s' => 12.34,
-     *                   'model' => 'paddleocr-vl',
-     *                   'device' => 'cpu'
+     *               'success' => true,
+     *               'html' => '<html><body>...</body></html>',
+     *               'markdown' => '# Document Title\n\n...',
+     *               'structured_data' => [
+     *               'pages' => [...],
+     *               'tables' => [...],
+     *               'key_value_pairs' => [...],
+     *               'text_blocks' => [...]
+     *               ],
+     *               'processing_time_s' => 12.34,
+     *               'model' => 'paddleocr-vl',
+     *               'device' => 'cpu'
      *               ]
+     *
      * @throws RuntimeException If the file path is not available, or VLM service returns an error.
      * @throws ConnectionException If unable to connect to the VLM service.
      * @throws \Exception For any other unexpected errors during the process.
@@ -53,7 +57,7 @@ class VlmClientService
         $this->waitUntilReady($this->timeout);
 
         $filePath = $attachedFile->getPhysicalPath();
-        if (!$filePath) {
+        if (! $filePath) {
             throw new RuntimeException("File path is not available for AttachedFile ID: {$attachedFile->id}");
         }
 
@@ -69,7 +73,7 @@ class VlmClientService
                 )
                 ->post("{$this->vlmServiceUrl}/extract/structured");
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::channel($this->logChannel)->error('VLM service returned an error.', [
                     'status' => $response->status(),
                     'response' => $response->body(),
@@ -124,16 +128,18 @@ class VlmClientService
             Log::channel($this->logChannel)->warning('VLM service is not reachable yet.', [
                 'error' => $e->getMessage(),
             ]);
+
             return ['status' => 'unreachable'];
         } catch (\Exception $e) {
             Log::channel($this->logChannel)->error('VLM service health check failed.', [
                 'error' => $e->getMessage(),
             ]);
+
             return ['status' => 'unhealthy', 'message' => $e->getMessage()];
         }
     }
 
-    private function waitUntilReady(int $timeoutSeconds): void
+    protected function waitUntilReady(int $timeoutSeconds): void
     {
         $startTime = time();
         while (time() - $startTime < $timeoutSeconds) {
@@ -142,6 +148,7 @@ class VlmClientService
 
             if ($status === 'healthy') {
                 Log::channel($this->logChannel)->info('VLM service is ready.');
+
                 return;
             }
 
