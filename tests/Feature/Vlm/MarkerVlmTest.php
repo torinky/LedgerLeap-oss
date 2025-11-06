@@ -21,7 +21,7 @@ class MarkerVlmTest extends TestCase
 
         $response->throw();
         $this->assertEquals(200, $response->status());
-        
+
         $data = $response->json();
         $this->assertArrayHasKey('status', $data);
         $this->assertContains($data['status'], ['healthy', 'warming_up']);
@@ -31,8 +31,8 @@ class MarkerVlmTest extends TestCase
     public function test_extract_markdown_from_simple_invoice_pdf(): void
     {
         $testFile = storage_path('test/vlm-poc/invoice_simple.pdf');
-        
-        if (!file_exists($testFile)) {
+
+        if (! file_exists($testFile)) {
             $this->markTestSkipped("Test file not found: {$testFile}");
         }
 
@@ -44,27 +44,27 @@ class MarkerVlmTest extends TestCase
             )->post("{$this->vlmBaseUrl}/extract/markdown");
 
         if ($response->status() === 503) {
-            $this->markTestSkipped("Service is warming up. Please retry later.");
+            $this->markTestSkipped('Service is warming up. Please retry later.');
         }
 
         $response->throw();
         $this->assertEquals(200, $response->status());
-        
+
         $data = $response->json();
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('markdown', $data);
         $this->assertArrayHasKey('processing_time_s', $data);
         $this->assertNotEmpty($data['markdown']);
-        
+
         // Markdownフォーマットを確認
         $markdown = $data['markdown'];
-        
+
         // 日本語が含まれていることを確認
         $this->assertStringContainsString('請求書', $markdown);
-        
+
         // Markdown要素が含まれていることを期待（見出しや表など）
         $this->assertTrue(
-            str_contains($markdown, '#') || 
+            str_contains($markdown, '#') ||
             str_contains($markdown, '|') ||
             str_contains($markdown, '-'),
             'Markdown should contain structural elements'
@@ -74,8 +74,8 @@ class MarkerVlmTest extends TestCase
     public function test_extract_markdown_from_handwriting_image(): void
     {
         $testFile = storage_path('test/vlm-poc/hand_writing_01.png');
-        
-        if (!file_exists($testFile)) {
+
+        if (! file_exists($testFile)) {
             $this->markTestSkipped("Test file not found: {$testFile}");
         }
 
@@ -87,17 +87,17 @@ class MarkerVlmTest extends TestCase
             )->post("{$this->vlmBaseUrl}/extract/markdown");
 
         if ($response->status() === 503) {
-            $this->markTestSkipped("Service is warming up or processing. Please retry later.");
+            $this->markTestSkipped('Service is warming up or processing. Please retry later.');
         }
 
         $response->throw();
         $this->assertEquals(200, $response->status());
-        
+
         $data = $response->json();
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('markdown', $data);
         $this->assertNotEmpty($data['markdown']);
-        
+
         // 画像から変換されたことを確認
         $this->assertArrayHasKey('processing_time_s', $data);
     }
@@ -112,7 +112,7 @@ class MarkerVlmTest extends TestCase
 
         // 400エラーが返ることを期待
         $this->assertEquals(400, $response->status());
-        
+
         $data = $response->json();
         $this->assertStringContainsString('Unsupported file format', $data['detail']);
     }
@@ -120,8 +120,8 @@ class MarkerVlmTest extends TestCase
     public function test_processing_prevents_concurrent_requests(): void
     {
         $testFile = storage_path('test/vlm-poc/invoice_simple.pdf');
-        
-        if (!file_exists($testFile)) {
+
+        if (! file_exists($testFile)) {
             $this->markTestSkipped("Test file not found: {$testFile}");
         }
 
@@ -132,7 +132,7 @@ class MarkerVlmTest extends TestCase
                 file_get_contents($testFile),
                 'invoice_simple.pdf'
             )->post("{$this->vlmBaseUrl}/extract/markdown"),
-            
+
             // わずかな遅延の後に2つ目のリクエスト
             $pool->timeout(5)->attach(
                 'file',
@@ -158,8 +158,8 @@ class MarkerVlmTest extends TestCase
     public function test_markdown_output_quality(): void
     {
         $testFile = storage_path('test/vlm-poc/invoice_simple.pdf');
-        
-        if (!file_exists($testFile)) {
+
+        if (! file_exists($testFile)) {
             $this->markTestSkipped("Test file not found: {$testFile}");
         }
 
@@ -171,26 +171,26 @@ class MarkerVlmTest extends TestCase
             )->post("{$this->vlmBaseUrl}/extract/markdown");
 
         if ($response->status() === 503) {
-            $this->markTestSkipped("Service is warming up. Please retry later.");
+            $this->markTestSkipped('Service is warming up. Please retry later.');
         }
 
         $response->throw();
-        
+
         $data = $response->json();
         $markdown = $data['markdown'];
-        
+
         // 品質チェック: 最小限の長さがあること
-        $this->assertGreaterThan(100, strlen($markdown), 
+        $this->assertGreaterThan(100, strlen($markdown),
             'Markdown output should have substantial content');
-        
+
         // 構造化された要素があること
-        $hasStructure = 
+        $hasStructure =
             str_contains($markdown, "\n\n") ||  // 段落区切り
             str_contains($markdown, '# ') ||     // 見出し
             str_contains($markdown, '## ') ||
             str_contains($markdown, '|');        // テーブル
-        
-        $this->assertTrue($hasStructure, 
+
+        $this->assertTrue($hasStructure,
             'Markdown should contain structured elements (paragraphs, headings, or tables)');
     }
 }

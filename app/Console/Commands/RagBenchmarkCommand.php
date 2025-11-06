@@ -38,29 +38,32 @@ class RagBenchmarkCommand extends Command
         $contentSize = (int) $this->option('content-size');
         $isSync = $this->option('sync');
 
-        $this->info("Starting RAG Benchmark...");
-        $this->info("---------------------------");
+        $this->info('Starting RAG Benchmark...');
+        $this->info('---------------------------');
         $this->info("Ledgers to process: {$ledgerCount}");
         $this->info("Content size per ledger: {$contentSize} chars");
-        $this->info("Dispatch mode: " . ($isSync ? 'Synchronous' : 'Asynchronous'));
-        $this->info("---------------------------");
+        $this->info('Dispatch mode: '.($isSync ? 'Synchronous' : 'Asynchronous'));
+        $this->info('---------------------------');
 
         // Prepare necessary data
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $this->error('No user found. Please run database seeders first.');
+
             return 1;
         }
-        
+
         $folder = Folder::first();
-        if (!$folder) {
+        if (! $folder) {
             $this->error('No folder found. Please run database seeders first.');
+
             return 1;
         }
-        
+
         $ledgerDefine = LedgerDefine::first();
-        if (!$ledgerDefine) {
+        if (! $ledgerDefine) {
             $this->error('No ledger define found. Please run database seeders first.');
+
             return 1;
         }
 
@@ -76,7 +79,7 @@ class RagBenchmarkCommand extends Command
                 'ledger_define_id' => $ledgerDefine->id,
                 'creator_id' => $user->id,
                 'content' => [
-                    'title' => 'Benchmark Ledger ' . ($i + 1),
+                    'title' => 'Benchmark Ledger '.($i + 1),
                     'body' => Str::random($contentSize),
                 ],
                 'content_attached' => Str::random($contentSize / 2),
@@ -96,12 +99,12 @@ class RagBenchmarkCommand extends Command
         $endTime = microtime(true);
         $duration = $endTime - $startTime;
 
-        $this->info("Benchmark finished.");
-        $this->info("-------------------");
-        $this->info("Total time: " . round($duration, 2) . " seconds");
-        $this->info("Average time per ledger: " . round($duration / $ledgerCount, 2) . " seconds");
+        $this->info('Benchmark finished.');
+        $this->info('-------------------');
+        $this->info('Total time: '.round($duration, 2).' seconds');
+        $this->info('Average time per ledger: '.round($duration / $ledgerCount, 2).' seconds');
 
-        if (!$isSync) {
+        if (! $isSync) {
             $this->warn('Jobs were dispatched asynchronously. The total time reflects dispatch time only.');
             $this->warn('Monitor your queue worker and logs to see the actual processing time.');
         }

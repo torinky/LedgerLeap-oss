@@ -3,12 +3,11 @@
 namespace Tests\Feature\Jobs;
 
 use App\Jobs\ProcessLedgerForRagJob;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\EmbeddingService;
-use Illuminate\Support\Facades\Log;
-use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -313,86 +312,6 @@ class ProcessLedgerForRagJobTest extends TestCase
     }
 
     #[Test]
-    public function it_includes_attached_file_content()
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'title' => 'テスト',
-            'column_define' => [
-                ['id' => 1, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
-            ],
-        ]);
-
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'creator_id' => $user->id,
-            'content' => [0 => '', 1 => 'テスト'],
-            'content_attached' => 'これは添付ファイルから抽出されたテキストです。',
-        ]);
-
-        $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
-
-        // Act
-        $job = new ProcessLedgerForRagJob($ledger);
-        $job->handle($embeddingServiceMock);
-
-        // Assert
-        $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('## 添付ファイル内容', $chunk->chunk_text);
-        $this->assertStringContainsString('これは添付ファイルから抽出されたテキストです。', $chunk->chunk_text);
-    }
-
-    #[Test]
-    public function it_truncates_long_attached_text_and_logs_warning()
-    {
-        // Arrange
-        config(['rag.chunking.max_attached_text_length' => 100]);
-        Log::shouldReceive('channel')->andReturnSelf();
-        Log::shouldReceive('info')->andReturnSelf();
-        Log::shouldReceive('warning')
-            ->atLeast()->once()
-            ->with('Attached text truncated for RAG', Mockery::type('array'));
-
-        $user = User::factory()->create();
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'title' => 'テスト',
-            'column_define' => [
-                ['id' => 1, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
-            ],
-        ]);
-
-        $longText = str_repeat('あ', 150);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'creator_id' => $user->id,
-            'content' => [0 => '', 1 => 'テスト'],
-            'content_attached' => $longText,
-        ]);
-
-        $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
-
-        // Act
-        $job = new ProcessLedgerForRagJob($ledger);
-        $job->handle($embeddingServiceMock);
-
-        // Assert
-        $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('[... 以降のテキストは省略されました]', $chunk->chunk_text);
-
-        // Extract the attached content section and verify it was truncated
-        preg_match('/## 添付ファイル内容\n(.+)$/s', $chunk->chunk_text, $matches);
-        $this->assertNotEmpty($matches, 'Attached file content section should exist');
-        $attachedSection = $matches[1] ?? '';
-
-        // The attached section should be around 100 chars (config limit) plus truncation message
-        // Original was 150 chars, so it should be less
-        $this->assertLessThan(150, mb_strlen($attachedSection));
-    }
-
-    #[Test]
     public function it_handles_empty_group_name()
     {
         // Arrange
@@ -423,34 +342,155 @@ class ProcessLedgerForRagJobTest extends TestCase
     }
 
     #[Test]
-    public function it_handles_array_content_attached()
+    public function it_updates_content_attached_when_vlm_result_is_better()
     {
         // Arrange
         $user = User::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create([
-            'title' => 'テスト',
             'column_define' => [
-                ['id' => 1, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
+                ['id' => 1, 'name' => '添付', 'type' => 'files', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
             ],
         ]);
-
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
-            'content' => [0 => '', 1 => 'テスト'],
-            'content_attached' => ['ファイル1のテキスト', 'ファイル2のテキスト'],
+            'content' => [
+                0 => '',
+                1 => ['file1.pdf' => 'original_file1.pdf'],
+            ],
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'file1.pdf' => [
+                        'meta' => ['content' => '古いTikaテキスト'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $vlmText = 'これはVLMによって生成された、より詳細で優れたテキストです。';
+        AttachedFile::factory()->for($ledger)->create([
+            'filename' => 'file1.pdf',
+            'hashedbasename' => 'file1.pdf',
+            'column_id' => 1,
+            'vlm_markdown' => $vlmText,
+            'vlm_processed_at' => now(),
         ]);
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
-        $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
+        $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
         $job = new ProcessLedgerForRagJob($ledger);
         $job->handle($embeddingServiceMock);
 
-        // Assert
+        // Assert - refresh to get updated data from database
+        $ledger->refresh();
+        $this->assertEquals($vlmText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
+
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('ファイル1のテキスト', $chunk->chunk_text);
-        $this->assertStringContainsString('ファイル2のテキスト', $chunk->chunk_text);
+        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM解析結果)', $chunk->chunk_text);
+        $this->assertStringContainsString($vlmText, $chunk->chunk_text);
+        $this->assertStringNotContainsString('古いTikaテキスト', $chunk->chunk_text);
+    }
+
+    #[Test]
+    public function it_does_not_update_content_attached_when_vlm_result_is_worse()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'column_define' => [
+                ['id' => 1, 'name' => '添付', 'type' => 'files', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
+            ],
+        ]);
+        $tikaText = 'これはTikaによって抽出された、より詳細で優れたテキストです。';
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'content' => [
+                0 => '',
+                1 => ['file1.pdf' => 'original_file1.pdf'],
+            ],
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'file1.pdf' => [
+                        'meta' => ['content' => $tikaText],
+                    ],
+                ],
+            ],
+        ]);
+
+        AttachedFile::factory()->for($ledger)->create([
+            'filename' => 'file1.pdf',
+            'hashedbasename' => 'file1.pdf',
+            'column_id' => 1,
+            'vlm_markdown' => 'VLMの短いテキスト',
+            'vlm_processed_at' => now(),
+        ]);
+
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
+
+        // Act
+        $job = new ProcessLedgerForRagJob($ledger);
+        $job->handle($embeddingServiceMock);
+
+        // Assert - refresh to get data from database
+        $ledger->refresh();
+        $this->assertEquals($tikaText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
+
+        $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
+        // VLM処理済みでもテキストが更新されなかったので、VLM解析結果ラベルが付く
+        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM解析結果)', $chunk->chunk_text);
+        $this->assertStringContainsString($tikaText, $chunk->chunk_text);
+        $this->assertStringNotContainsString('VLMの短いテキスト', $chunk->chunk_text);
+    }
+
+    #[Test]
+    public function it_adds_new_entry_to_content_attached_from_vlm_result()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'column_define' => [
+                ['id' => 1, 'name' => '添付', 'type' => 'files', 'order' => 1, 'group' => 'G1', 'display_level' => 1, 'required' => false, 'options' => []],
+            ],
+        ]);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'content' => [
+                0 => '',
+                1 => ['new_file.pdf' => 'original_new_file.pdf'],
+            ],
+            'content_attached' => [], // content_attached is initially empty
+        ]);
+
+        $vlmText = 'これはVLMによって生成された新しいテキストです。';
+        AttachedFile::factory()->for($ledger)->create([
+            'filename' => 'new_file.pdf',
+            'hashedbasename' => 'new_file.pdf',
+            'column_id' => 1,
+            'vlm_markdown' => $vlmText,
+            'vlm_processed_at' => now(),
+        ]);
+
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
+
+        // Act
+        $job = new ProcessLedgerForRagJob($ledger);
+        $job->handle($embeddingServiceMock);
+
+        // Assert - refresh to get updated data from database
+        $ledger->refresh();
+        $this->assertArrayHasKey('new_file.pdf', $ledger->content_attached[1]);
+        $this->assertEquals($vlmText, $ledger->content_attached[1]['new_file.pdf']['meta']['content']);
+
+        $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
+        $this->assertStringContainsString('### 添付ファイル: original_new_file.pdf (VLM解析結果)', $chunk->chunk_text);
+        $this->assertStringContainsString($vlmText, $chunk->chunk_text);
     }
 }

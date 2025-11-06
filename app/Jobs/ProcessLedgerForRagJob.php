@@ -45,6 +45,9 @@ class ProcessLedgerForRagJob implements ShouldQueue
             'ledger_id' => $this->ledger->id,
         ]);
 
+        // ★★★ STEP 1: データ準備フェーズ ★★★
+        $this->updateContentAttachedWithVlmResult();
+
         // 1. Delete existing chunks to ensure data consistency
         DB::table('ledger_chunks')->where('ledger_id', $this->ledger->id)->delete();
 
@@ -242,29 +245,51 @@ class ProcessLedgerForRagJob implements ShouldQueue
         }
 
         // 3. Add attached file content
+        $attachedTexts = [];
         if (! empty($ledger->content_attached)) {
-            $attachedText = $ledger->content_attached;
-            if (is_array($attachedText)) {
-                $attachedText = implode("\n\n", $attachedText);
+            // Eager load attachedFiles with ledger relation for original_filename accessor
+            $ledger->load('attachedFiles');
+
+            // ファイル情報を効率的に引くためにhashedbasenameをキーにした連想配列を作成
+            $filesMap = $ledger->attachedFiles->keyBy('hashedbasename');
+
+            // content_attachedの構造: [column_id][hashedbasename]['meta']['content']
+            foreach ($ledger->content_attached as $columnId => $filesInColumn) {
+                if (! is_array($filesInColumn)) {
+                    continue;
+                }
+
+                foreach ($filesInColumn as $hashedbasename => $contentData) {
+                    $file = $filesMap->get($hashedbasename);
+                    $originalFilename = $file ? $file->original_filename : $hashedbasename;
+                    $text = $contentData['meta']['content'] ?? '';
+
+                    if (empty($text)) {
+                        continue;
+                    }
+
+                    // VLMで処理されたかどうかに基づいてラベルを決定
+                    $sourceLabel = ($file && ! empty($file->vlm_processed_at)) ? 'VLM解析結果' : 'テキスト抽出結果';
+
+                    // 長さ制限ロジック
+                    $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
+                    if (mb_strlen($text) > $maxAttachedLength) {
+                        $text = mb_substr($text, 0, $maxAttachedLength)."\n\n[...以降のテキストは省略されました]";
+                        Log::channel(config('rag.log_channel', 'stack'))->warning('Attached text truncated for RAG', [
+                            'ledger_id' => $ledger->id,
+                            'file' => $originalFilename,
+                        ]);
+                    }
+
+                    $attachedTexts[] = "### 添付ファイル: {$originalFilename} ({$sourceLabel})\n\n{$text}";
+                }
             }
+        }
 
-            $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
-            $originalLength = mb_strlen($attachedText);
-
-            if ($originalLength > $maxAttachedLength) {
-                $attachedText = mb_substr($attachedText, 0, $maxAttachedLength)
-                    ."\n\n[... 以降のテキストは省略されました]";
-
-                Log::channel($logChannel)->warning('Attached text truncated for RAG', [
-                    'ledger_id' => $ledger->id,
-                    'original_length' => $originalLength,
-                    'truncated_length' => $maxAttachedLength,
-                ]);
-            }
-
+        if (! empty($attachedTexts)) {
+            $lines[] = '---';
             $lines[] = '## 添付ファイル内容';
-            $lines[] = $attachedText;
-            $lines[] = '';
+            $lines[] = implode("\n\n---\n", $attachedTexts);
         }
 
         return implode("\n", $lines);
@@ -408,5 +433,74 @@ class ProcessLedgerForRagJob implements ShouldQueue
         }
 
         return $chunks;
+    }
+
+    private function updateContentAttachedWithVlmResult(): void
+    {
+        $logChannel = config('rag.log_channel', 'stack');
+        $wasUpdated = false;
+        $contentAttached = $this->ledger->content_attached ?? [];
+
+        // 関連ファイルをEager Load
+        $this->ledger->load('attachedFiles');
+
+        // Ensure content_attached has all column positions initialized (required by AsColumnArrayJson)
+        $columnDefines = $this->ledger->define->column_define;
+        $maxColumnId = $columnDefines->max('id');
+
+        // Initialize all column positions to preserve array indices
+        for ($i = 0; $i <= $maxColumnId; $i++) {
+            if (! isset($contentAttached[$i])) {
+                $contentAttached[$i] = [];
+            }
+        }
+
+        foreach ($this->ledger->attachedFiles as $file) {
+            if (empty($file->vlm_markdown)) {
+                continue;
+            }
+
+            $vlmText = $file->vlm_markdown;
+            $vlmTextLength = mb_strlen($vlmText);
+            $columnId = $file->column_id;
+
+            // content_attachedの構造: [column_id][hashedbasename]['meta']['content']
+            $existingText = $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] ?? '';
+            $existingTextLength = mb_strlen($existingText);
+
+            if ($vlmTextLength > $existingTextLength) {
+                // VLMのテキストで上書き
+                // 配列構造を確保
+                if (! isset($contentAttached[$columnId])) {
+                    $contentAttached[$columnId] = [];
+                }
+                if (! isset($contentAttached[$columnId][$file->hashedbasename])) {
+                    $contentAttached[$columnId][$file->hashedbasename] = [];
+                }
+                if (! isset($contentAttached[$columnId][$file->hashedbasename]['meta'])) {
+                    $contentAttached[$columnId][$file->hashedbasename]['meta'] = [];
+                }
+
+                $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] = $vlmText;
+                $wasUpdated = true;
+
+                Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
+                    'ledger_id' => $this->ledger->id,
+                    'file_id' => $file->id,
+                    'column_id' => $columnId,
+                    'hashedbasename' => $file->hashedbasename,
+                    'vlm_text_length' => $vlmTextLength,
+                    'old_text_length' => $existingTextLength,
+                ]);
+            }
+        }
+
+        if ($wasUpdated) {
+            $this->ledger->content_attached = $contentAttached;
+            Ledger::withoutEvents(fn () => $this->ledger->save());
+            Log::channel($logChannel)->info('[RAG Pre-processing] Saved updated content_attached to database.', [
+                'ledger_id' => $this->ledger->id,
+            ]);
+        }
     }
 }

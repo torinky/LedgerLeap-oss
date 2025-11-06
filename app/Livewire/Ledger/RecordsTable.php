@@ -316,7 +316,7 @@ class RecordsTable extends Component
         }
 
         // 表示対象の台帳に紐づく仕訳データを取得
-        if ($this->orderBy === 'semantic_score' && !empty($this->search)) {
+        if ($this->orderBy === 'semantic_score' && ! empty($this->search)) {
             $ledgerRecords = app(\App\Services\RagSearchService::class)->search(
                 query: $this->search,
                 user: auth()->user(),
@@ -330,8 +330,7 @@ class RecordsTable extends Component
                 ->with('folder')
                 ->get()
                 ->keyBy('id');
-        }
-        else {
+        } else {
             $ledgerRecordsQuery = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
                 ->searchContext($this->searchContext)
                 ->contentsFilter($this->filter)
@@ -347,6 +346,7 @@ class RecordsTable extends Component
                     if ($this->orderBy !== 'semantic_score') {
                         return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
                     }
+
                     // semantic_scoreが選択されているが検索語がない場合、デフォルトのソートに戻す
                     return $query->orderByRaw('composite_score = 0, composite_score DESC');
                 });

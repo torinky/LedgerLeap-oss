@@ -37,6 +37,7 @@ class RagChunkDemoLedgersCommand extends Command
 
         if ($demoLedgerIds->isEmpty()) {
             $this->info('No demo ledger data found to chunk.');
+
             return 0;
         }
 

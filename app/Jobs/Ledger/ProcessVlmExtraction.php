@@ -74,7 +74,7 @@ class ProcessVlmExtraction implements ShouldQueue
             // VLM APIコール
             $vlmOutput = $vlmClient->extract($this->attachedFile);
 
-            $processingTimeMs = (int)((microtime(true) - $startTime) * 1000);
+            $processingTimeMs = (int) ((microtime(true) - $startTime) * 1000);
 
             // バリデーション
             if (empty($vlmOutput['markdown'])) {

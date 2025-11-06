@@ -12,9 +12,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
-use App\Enums\FolderPermissionType;
-use App\Models\RoleFolderPermission;
-
 class LedgerCreateControllerPrefillTest extends TestCase
 {
     use RefreshDatabase;
@@ -137,7 +134,7 @@ class LedgerCreateControllerPrefillTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewHas('prefillParams');
-        
+
         $prefillParams = $response->viewData('prefillParams');
         $this->assertEquals('テスト値', $prefillParams[0]);
         $this->assertEquals('123', $prefillParams[1]);
@@ -155,9 +152,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // HTMLタグが除去されていることを確認
         $this->assertStringNotContainsString('<script>', $prefillParams[0]);
         $this->assertStringNotContainsString('</script>', $prefillParams[0]);
@@ -176,9 +173,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // 存在しないカラムIDは除外される
         $this->assertArrayNotHasKey(999, $prefillParams);
     }
@@ -211,9 +208,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // auto_numberカラムは除外される
         $this->assertArrayNotHasKey(3, $prefillParams);
     }
@@ -246,9 +243,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // filesカラムは除外される
         $this->assertArrayNotHasKey(3, $prefillParams);
     }
@@ -265,9 +262,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // 選択肢に存在しない値は除外される
         $this->assertArrayNotHasKey(2, $prefillParams);
     }
@@ -284,9 +281,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         $this->assertEquals('選択肢2', $prefillParams[2]);
     }
 
@@ -304,9 +301,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // 5000文字に制限されている
         $this->assertEquals(5000, mb_strlen($prefillParams[0]));
     }
@@ -343,9 +340,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // user_nameカラムは事前入力可能
         $this->assertEquals('手動入力ユーザー名', $prefillParams[3]);
     }
@@ -380,9 +377,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // 日付カラムも事前入力可能
         $this->assertEquals('2025-12-25', $prefillParams[4]);
     }
@@ -415,9 +412,9 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]));
 
         $response->assertStatus(200);
-        
+
         $prefillParams = $response->viewData('prefillParams');
-        
+
         // 配列形式の事前入力も正しく処理される
         $this->assertIsArray($prefillParams[5]);
         $this->assertContains('Option1', $prefillParams[5]);

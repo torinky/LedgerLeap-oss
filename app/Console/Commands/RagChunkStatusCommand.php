@@ -20,6 +20,7 @@ class RagChunkStatusCommand extends Command
 
         if ($totalLedgers === 0) {
             $this->info('No ledgers found in the database.');
+
             return 0;
         }
 
@@ -31,9 +32,9 @@ class RagChunkStatusCommand extends Command
             [
                 ['Total Ledgers', $totalLedgers, '100%'],
                 ['Chunked Ledgers', $chunkedLedgers,
-                 round($chunkedLedgers / $totalLedgers * 100, 1) . '%'],
+                    round($chunkedLedgers / $totalLedgers * 100, 1).'%'],
                 ['Pending Ledgers', $pendingLedgers,
-                 round($pendingLedgers / $totalLedgers * 100, 1) . '%'],
+                    round($pendingLedgers / $totalLedgers * 100, 1).'%'],
             ]
         );
 

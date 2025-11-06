@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Client\ConnectionException;
 
 class EmbeddingService
 {
     private string $embeddingServiceUrl;
+
     private int $timeout;
+
     private string $logChannel;
 
     public function __construct()
@@ -22,9 +24,10 @@ class EmbeddingService
     /**
      * Embed texts using the Python embedding service.
      *
-     * @param string|array $texts The text(s) to embed.
-     * @param string $type The type of text being embedded ('query' or 'passage').
+     * @param  string|array  $texts  The text(s) to embed.
+     * @param  string  $type  The type of text being embedded ('query' or 'passage').
      * @return array The embedding(s).
+     *
      * @throws \Exception If the embedding process fails or times out.
      */
     public function embed(string|array $texts, string $type = 'query'): array
@@ -43,8 +46,8 @@ class EmbeddingService
         $activeModel = config('rag.model.active');
         $prefix = config("rag.model.available_models.{$activeModel}.prefix.{$type}", '');
 
-        if (!empty($prefix)) {
-            $textsToEmbed = array_map(fn($text) => $prefix . $text, $textsToEmbed);
+        if (! empty($prefix)) {
+            $textsToEmbed = array_map(fn ($text) => $prefix.$text, $textsToEmbed);
         }
 
         $startTime = microtime(true);
@@ -56,7 +59,7 @@ class EmbeddingService
                     'normalize' => true,
                 ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::channel($this->logChannel)->error('Embedding service returned an error.', [
                     'status' => $response->status(),
                     'response' => $response->body(),
@@ -100,18 +103,20 @@ class EmbeddingService
             if ($response->serverError()) {
                 return ['status' => 'unhealthy', 'message' => 'Server error'];
             }
-            
+
             return $response->json() ?? ['status' => 'unhealthy', 'message' => 'Invalid response'];
 
         } catch (ConnectionException $e) {
             Log::channel($this->logChannel)->warning('Embedding service is not reachable yet.', [
                 'error' => $e->getMessage(),
             ]);
+
             return ['status' => 'unreachable'];
         } catch (\Exception $e) {
             Log::channel($this->logChannel)->error('Embedding service health check failed.', [
                 'error' => $e->getMessage(),
             ]);
+
             return ['status' => 'unhealthy', 'message' => $e->getMessage()];
         }
     }
@@ -119,7 +124,8 @@ class EmbeddingService
     /**
      * Wait until the embedding service is ready.
      *
-     * @param int $timeoutSeconds The maximum time to wait in seconds.
+     * @param  int  $timeoutSeconds  The maximum time to wait in seconds.
+     *
      * @throws \RuntimeException If the service does not become ready within the timeout.
      */
     private function waitUntilReady(int $timeoutSeconds): void
@@ -131,6 +137,7 @@ class EmbeddingService
 
             if ($status === 'healthy') {
                 Log::channel($this->logChannel)->info('Embedding service is ready.');
+
                 return;
             }
 

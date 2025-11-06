@@ -4,7 +4,6 @@ namespace Tests\Unit\Services;
 
 use App\Services\EmbeddingService;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Http;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -58,7 +57,7 @@ class EmbeddingServiceTest extends TestCase
         $expectedText = '検索クエリ: こんにちは';
         $this->mockHttp([$expectedText]);
 
-        $service = new EmbeddingService();
+        $service = new EmbeddingService;
 
         // Act
         $service->embed($text, 'query');
@@ -76,7 +75,7 @@ class EmbeddingServiceTest extends TestCase
         $expectedTexts = ['検索文書: テキスト1', '検索文書: テキスト2'];
         $this->mockHttp($expectedTexts);
 
-        $service = new EmbeddingService();
+        $service = new EmbeddingService;
 
         // Act
         $service->embed($texts, 'passage');
@@ -93,7 +92,7 @@ class EmbeddingServiceTest extends TestCase
         $text = 'hello';
         $this->mockHttp([$text]);
 
-        $service = new EmbeddingService();
+        $service = new EmbeddingService;
 
         // Act
         $service->embed($text, 'query');
@@ -108,7 +107,7 @@ class EmbeddingServiceTest extends TestCase
         // Arrange
         Config::set('rag.model.active', 'all-minilm-l6-v2');
         $this->mockHttp(['test']);
-        $service = new EmbeddingService();
+        $service = new EmbeddingService;
 
         // Act
         $result = $service->embed('test');
@@ -123,7 +122,7 @@ class EmbeddingServiceTest extends TestCase
         // Arrange
         Config::set('rag.model.active', 'all-minilm-l6-v2');
         $this->mockHttp(['test1', 'test2']);
-        $service = new EmbeddingService();
+        $service = new EmbeddingService;
 
         // Act
         $result = $service->embed(['test1', 'test2']);

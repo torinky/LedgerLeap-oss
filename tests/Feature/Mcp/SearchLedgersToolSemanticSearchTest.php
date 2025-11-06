@@ -5,14 +5,13 @@ namespace Tests\Feature\Mcp;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\User;
 use App\Services\LedgerService;
-use App\Services\RagSearchService;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\Traits\RefreshDatabaseWithTenant;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Mcp\Request;
 use Mockery;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class SearchLedgersToolSemanticSearchTest extends TestCase
 {
@@ -43,7 +42,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         putenv('MCP_AUTH_TOKEN'); // 環境変数をクリーンアップ
     }
 
-    #[Group("semantic-search")]
+    #[Group('semantic-search')]
     #[Test]
     public function it_performs_semantic_search_via_mcp_when_semantic_score_is_specified()
     {
@@ -78,7 +77,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
     }
 
     #[Test]
-    #[Group("semantic-search")]
+    #[Group('semantic-search')]
     public function it_throws_an_error_when_semantic_search_is_called_without_a_query()
     {
         // Arrange
@@ -97,7 +96,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->assertStringContainsString('semantic_score sorting requires a search query (q parameter)', $response->content());
     }
 
-    #[Group("semantic-search")]
+    #[Group('semantic-search')]
     #[Test]
     public function it_does_not_perform_semantic_search_for_other_order_by_values()
     {
@@ -132,10 +131,10 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
     }
 
     #[Test]
-    #[Group("semantic-search")]
+    #[Group('semantic-search')]
     public function it_finds_semantically_similar_ledger_even_if_keywords_do_not_match()
     {
-        //1件にヒットさせるために意図的に調整
+        // 1件にヒットさせるために意図的に調整
         config(['rag.similarity_threshold' => 0.15]);
 
         // Arrange
@@ -178,7 +177,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
         // Assert
         $this->assertFalse($response->isError(), "MCP tool returned an error: {$response->content()}");
-        $this->assertCount(1, $result['ledgers'], "Expected to find 1 ledger, but found ".count($result['ledgers']));
-        $this->assertEquals($ledger->id, $result['ledgers'][0]['id'], "The found ledger ID does not match the created one.");
+        $this->assertCount(1, $result['ledgers'], 'Expected to find 1 ledger, but found '.count($result['ledgers']));
+        $this->assertEquals($ledger->id, $result['ledgers'][0]['id'], 'The found ledger ID does not match the created one.');
     }
 }

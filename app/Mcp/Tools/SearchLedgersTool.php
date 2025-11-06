@@ -222,7 +222,7 @@ MARKDOWN;
             ];
 
             if (isset($ledger->tenant_id) && isset($ledger->id)) {
-//                $baseUrl = rtrim(config('app.url'), '/');
+                //                $baseUrl = rtrim(config('app.url'), '/');
                 $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
                 $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
             }

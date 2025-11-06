@@ -50,6 +50,7 @@ class SearchLedgersToolSortingTest extends TestCase
         Mockery::close();
         parent::tearDown();
     }
+
     #[test]
     public function test_accepts_order_by_parameter(): void
     {

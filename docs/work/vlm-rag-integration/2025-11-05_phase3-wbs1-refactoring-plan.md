@@ -3,7 +3,13 @@
 **ドキュメントID:** 2025-11-05_phase3-wbs1-refactoring-plan.md
 **担当者:** (担当者名)
 **作成日:** 2025年11月5日
-**最終更新日:** 2025年11月6日
+**最終更新日:** 2025年11月6日（実装後修正）
+
+**修正履歴:**
+- 2025年11月6日: 実装完了後、`content_attached`の正しい構造（2階層）を反映
+  - セクション3.1のコード例を実装結果に基づいて修正
+  - `AsColumnArrayJson`キャストの特性を明記
+  - 配列インデックス保持のためのカラムID初期化処理を追加
 **関連ドキュメント:**
 - [VLM/RAG統合実装計画書（最終版）](../../architecture/vlm-rag-integration.md)
 - [VLM/RAG統合 - Phase3 RAG統合実装 WBS (改訂版)](./2025-11-05_phase3-wbs.md)
@@ -100,6 +106,19 @@ private function updateContentAttachedWithVlmResult(): void
 
     // 関連ファイルをEager Load
     $this->ledger->load('attachedFiles');
+    
+    // ★★★ 重要: content_attachedは2階層構造 ★★★
+    // [column_id][hashedbasename]['meta']['content']
+    // AsColumnArrayJsonキャストにより1階層目は強制的にインデックス配列になる
+    
+    // すべてのカラムIDの位置を初期化（AsColumnArrayJsonの要件）
+    $columnDefines = $this->ledger->define->column_define;
+    $maxColumnId = $columnDefines->max('id');
+    for ($i = 0; $i <= $maxColumnId; $i++) {
+        if (!isset($contentAttached[$i])) {
+            $contentAttached[$i] = [];
+        }
+    }
 
     foreach ($this->ledger->attachedFiles as $file) {
         if (empty($file->vlm_markdown)) {
@@ -108,19 +127,33 @@ private function updateContentAttachedWithVlmResult(): void
 
         $vlmText = $file->vlm_markdown;
         $vlmTextLength = mb_strlen($vlmText);
+        $columnId = $file->column_id;
 
         // content_attachedにエントリが存在しない場合も更新対象
-        $existingText = $contentAttached[$file->hashedbasename]['meta']['content'] ?? '';
+        $existingText = $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] ?? '';
         $existingTextLength = mb_strlen($existingText);
 
         if ($vlmTextLength > $existingTextLength) {
             // VLMのテキストで上書き
-            $contentAttached[$file->hashedbasename]['meta']['content'] = $vlmText;
+            // 配列構造を確保
+            if (!isset($contentAttached[$columnId])) {
+                $contentAttached[$columnId] = [];
+            }
+            if (!isset($contentAttached[$columnId][$file->hashedbasename])) {
+                $contentAttached[$columnId][$file->hashedbasename] = [];
+            }
+            if (!isset($contentAttached[$columnId][$file->hashedbasename]['meta'])) {
+                $contentAttached[$columnId][$file->hashedbasename]['meta'] = [];
+            }
+            
+            $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] = $vlmText;
             $wasUpdated = true;
 
             Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
                 'ledger_id' => $this->ledger->id,
                 'file_id' => $file->id,
+                'column_id' => $columnId,
+                'hashedbasename' => $file->hashedbasename,
                 'vlm_text_length' => $vlmTextLength,
                 'old_text_length' => $existingTextLength,
             ]);
@@ -129,7 +162,7 @@ private function updateContentAttachedWithVlmResult(): void
 
     if ($wasUpdated) {
         $this->ledger->content_attached = $contentAttached;
-        $this->ledger->save();
+        Ledger::withoutEvents(fn () => $this->ledger->save());
         Log::channel($logChannel)->info('[RAG Pre-processing] Saved updated content_attached to database.', [
             'ledger_id' => $this->ledger->id,
         ]);
@@ -148,32 +181,47 @@ private function buildMarkdownFromLedger(Ledger $ledger): string
     // 3. Add attached file content
     $attachedTexts = [];
     if (!empty($ledger->content_attached)) {
+        // Eager load attachedFiles with ledger relation for original_filename accessor
+        $ledger->load('attachedFiles');
+        
         // ファイル情報を効率的に引くためにhashedbasenameをキーにした連想配列を作成
         $filesMap = $ledger->attachedFiles->keyBy('hashedbasename');
 
-        foreach ($ledger->content_attached as $hashedbasename => $contentData) {
-            $file = $filesMap->get($hashedbasename);
-            $originalFilename = $file->original_filename ?? $hashedbasename;
-            $text = $contentData['meta']['content'] ?? '';
-
-            if (empty($text)) {
+        // ★★★ 重要: content_attachedは2階層ループが必要 ★★★
+        // [column_id][hashedbasename]['meta']['content']
+        foreach ($ledger->content_attached as $columnId => $filesInColumn) {
+            if (!is_array($filesInColumn)) {
                 continue;
             }
+            
+            foreach ($filesInColumn as $hashedbasename => $contentData) {
+                $file = $filesMap->get($hashedbasename);
+                $originalFilename = $file ? $file->original_filename : $hashedbasename;
+                $text = $contentData['meta']['content'] ?? '';
 
-            // VLMで処理されたかどうかに基づいてラベルを決定
-            $sourceLabel = ($file && !empty($file->vlm_processed_at)) ? 'VLM解析結果' : 'テキスト抽出結果';
+                if (empty($text)) {
+                    continue;
+                }
 
-            // 長さ制限ロジック
-            $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
-            if (mb_strlen($text) > $maxAttachedLength) {
-                $text = mb_substr($text, 0, $maxAttachedLength) . "\n\n[...以降のテキストは省略されました]";
-                Log::channel(config('rag.log_channel', 'stack'))->warning('Attached text truncated for RAG', [
-                    'ledger_id' => $ledger->id,
-                    'file' => $originalFilename,
-                ]);
+                // VLMで処理されたかどうかに基づいてラベルを決定
+                $sourceLabel = ($file && !empty($file->vlm_processed_at)) ? 'VLM解析結果' : 'テキスト抽出結果';
+
+                // 長さ制限ロジック
+                $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
+                if (mb_strlen($text) > $maxAttachedLength) {
+                    $text = mb_substr($text, 0, $maxAttachedLength) . "
+
+[...以降のテキストは省略されました]";
+                    Log::channel(config('rag.log_channel', 'stack'))->warning('Attached text truncated for RAG', [
+                        'ledger_id' => $ledger->id,
+                        'file' => $originalFilename,
+                    ]);
+                }
+
+                $attachedTexts[] = "### 添付ファイル: {$originalFilename} ({$sourceLabel})
+
+{$text}";
             }
-
-            $attachedTexts[] = "### 添付ファイル: {$originalFilename} ({$sourceLabel})\n\n{$text}";
         }
     }
 

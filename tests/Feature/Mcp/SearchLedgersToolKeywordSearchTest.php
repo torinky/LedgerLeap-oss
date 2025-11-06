@@ -8,7 +8,6 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Request;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -117,7 +116,6 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
-
 
         $ledgerService = app(LedgerService::class);
         $tool = new SearchLedgersTool($ledgerService);

@@ -7,8 +7,8 @@ use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Ledger;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\Traits\RefreshDatabaseWithTenant;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerObserverTest extends TestCase
 {
@@ -43,14 +43,14 @@ class LedgerObserverTest extends TestCase
         Queue::fake();
 
         $ledger = Ledger::factory()->create([
-            'content' => ['body' => 'initial content']
+            'content' => ['body' => 'initial content'],
         ]);
 
         Queue::assertPushed(ProcessLedgerForRagJob::class, 1); // For creation
 
         // Update content
         $ledger->update([
-            'content' => ['body' => 'updated content']
+            'content' => ['body' => 'updated content'],
         ]);
 
         Queue::assertPushed(ProcessLedgerForRagJob::class, 2); // For update
@@ -62,14 +62,14 @@ class LedgerObserverTest extends TestCase
         Queue::fake();
 
         $ledger = Ledger::factory()->create([
-            'content_attached' => 'initial attached content'
+            'content_attached' => 'initial attached content',
         ]);
 
         Queue::assertPushed(ProcessLedgerForRagJob::class, 1); // For creation
 
         // Update content_attached
         $ledger->update([
-            'content_attached' => 'updated attached content'
+            'content_attached' => 'updated attached content',
         ]);
 
         Queue::assertPushed(ProcessLedgerForRagJob::class, 2); // For update
@@ -85,7 +85,7 @@ class LedgerObserverTest extends TestCase
 
         // Update a field other than content or content_attached
         $ledger->update([
-            'status' => WorkflowStatus::PENDING_INSPECTION->value
+            'status' => WorkflowStatus::PENDING_INSPECTION->value,
         ]);
 
         // The job should not be dispatched again
@@ -98,7 +98,7 @@ class LedgerObserverTest extends TestCase
         // This test requires a real job dispatch to create chunks first.
         // We will simulate the chunk creation.
         $ledger = Ledger::factory()->create([
-            'content' => ['body' => 'test content']
+            'content' => ['body' => 'test content'],
         ]);
 
         // Manually create a chunk to simulate the job's effect
@@ -113,7 +113,7 @@ class LedgerObserverTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('ledger_chunks', [
-            'ledger_id' => $ledger->id
+            'ledger_id' => $ledger->id,
         ]);
 
         // Delete the ledger
@@ -121,7 +121,7 @@ class LedgerObserverTest extends TestCase
 
         // Assert that the related chunks are also deleted
         $this->assertDatabaseMissing('ledger_chunks', [
-            'ledger_id' => $ledger->id
+            'ledger_id' => $ledger->id,
         ]);
     }
 }

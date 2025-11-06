@@ -17,6 +17,7 @@ class SearchLedgersToolTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     private User $user;
+
     protected Tenant $tenant;
 
     protected function setUp(): void
@@ -28,7 +29,7 @@ class SearchLedgersToolTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();
-        
+
         // Create Sanctum token for MCP authentication
         $token = $this->user->createToken('mcp-test-token', ['mcp:*']);
         putenv('MCP_AUTH_TOKEN='.$token->plainTextToken);
@@ -57,9 +58,9 @@ class SearchLedgersToolTest extends TestCase
         $tool = app(SearchLedgersTool::class);
         $request = new Request([
             'q' => 'test query',
-            'order_by' => 'semantic_score'
+            'order_by' => 'semantic_score',
         ]);
-        
+
         $response = $tool->handle($request);
 
         $this->assertFalse($response->isError());
@@ -80,9 +81,9 @@ class SearchLedgersToolTest extends TestCase
         $tool = app(SearchLedgersTool::class);
         $request = new Request([
             'q' => 'test query',
-            'order_by' => 'created_at'
+            'order_by' => 'created_at',
         ]);
-        
+
         $response = $tool->handle($request);
 
         $this->assertFalse($response->isError());
@@ -93,20 +94,20 @@ class SearchLedgersToolTest extends TestCase
     {
         $tool = app(SearchLedgersTool::class);
         $request = new Request([
-            'order_by' => 'semantic_score'
+            'order_by' => 'semantic_score',
         ]);
-        
+
         $response = $tool->handle($request);
 
         $this->assertTrue($response->isError());
-        
+
         // Use reflection to access protected text property
         $content = $response->content();
         $reflection = new \ReflectionClass($content);
         $textProperty = $reflection->getProperty('text');
         $textProperty->setAccessible(true);
         $text = $textProperty->getValue($content);
-        
+
         $this->assertStringContainsString('semantic_score sorting requires a search query', $text);
     }
 }

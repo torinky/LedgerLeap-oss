@@ -106,7 +106,6 @@ class CreateColumnTest extends TestCase
         $this->assertEquals('Test Value', $ledger->content[0]);
     }
 
-
     #[Test]
     public function it_generates_prefill_link_correctly()
     {
@@ -169,7 +168,7 @@ class CreateColumnTest extends TestCase
             ->call('generatePrefillLink');
 
         $url = $component->get('generatedPrefillURL');
-        
+
         // 空の値は含まれない
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringNotContainsString('prefill%5B2%5D=', $url);
@@ -202,7 +201,7 @@ class CreateColumnTest extends TestCase
             ->call('generatePrefillLink');
 
         $url = $component->get('generatedPrefillURL');
-        
+
         // auto_numberは含まれない
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringNotContainsString('prefill%5B2%5D=', $url);
@@ -236,7 +235,7 @@ class CreateColumnTest extends TestCase
             ->call('generatePrefillLink');
 
         $url = $component->get('generatedPrefillURL');
-        
+
         // filesは含まれない
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringNotContainsString('prefill%5B2%5D=', $url);
@@ -267,14 +266,14 @@ class CreateColumnTest extends TestCase
 
         // 初期値と同じ値の場合は含まれない
         $component = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id]);
-        
+
         $initialUserName = $component->get('content')[2];
-        
+
         $component->set('content', [1 => 'テスト値', 2 => $initialUserName])
             ->call('generatePrefillLink');
 
         $url = $component->get('generatedPrefillURL');
-        
+
         // 初期値と同じuser_nameは含まれない
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringNotContainsString('prefill%5B2%5D=', $url);
@@ -308,7 +307,7 @@ class CreateColumnTest extends TestCase
             ->call('generatePrefillLink');
 
         $url = $component->get('generatedPrefillURL');
-        
+
         // 変更されたuser_nameは含まれる
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringContainsString('prefill%5B2%5D=', $url);
@@ -349,7 +348,6 @@ class CreateColumnTest extends TestCase
         $this->assertEquals('事前入力テキスト', $component->get('content')[1]);
         $this->assertEquals('999', $component->get('content')[2]);
     }
-
 
     #[Test]
     public function it_initializes_user_name_column_with_current_user()
@@ -397,7 +395,7 @@ class CreateColumnTest extends TestCase
         $organization = \App\Models\Organization::factory()->create([
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $this->user->update(['primary_organization_id' => $organization->id]);
         $this->user->refresh();
 
@@ -439,7 +437,7 @@ class CreateColumnTest extends TestCase
         $component = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id]);
 
         // user_nameカラムに組織付きのユーザー名が設定されているか確認
-        $expectedName = $organization->name . ' ' . $this->user->name;
+        $expectedName = $organization->name.' '.$this->user->name;
         $this->assertEquals($expectedName, $component->get('content')[1]);
     }
 

@@ -34,7 +34,7 @@ return new class extends Migration
             $table->dropIndex('idx_status_vlm_processed');
             $table->dropIndex('idx_vlm_processed_at');
             $table->dropIndex('idx_vlm_model');
-            
+
             $table->dropColumn([
                 'vlm_markdown',
                 'vlm_structured_data',

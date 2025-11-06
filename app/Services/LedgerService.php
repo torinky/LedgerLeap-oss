@@ -54,7 +54,7 @@ class LedgerService
                     'semantic_score sorting requires a search query (q parameter).'
                 );
             }
-            
+
             \Log::info('[MCP Search Debug] Semantic search triggered. Delegating to RagSearchService.');
 
             // RagSearchServiceを呼び出し、結果をAPI形式に整形して返す
@@ -66,7 +66,7 @@ class LedgerService
                     'filters' => [
                         'ledger_define_id' => $params['ledger_define_id'] ?? null,
                         'folder_id' => $params['folder_id'] ?? null,
-                    ]
+                    ],
                 ]
             );
 
@@ -80,7 +80,7 @@ class LedgerService
                     ->orderByRaw('FIELD(id, '.implode(',', $ledgerIds).')')
                     ->get();
             } else {
-                $ledgers = new Collection();
+                $ledgers = new Collection;
             }
 
             // メタデータ構築
