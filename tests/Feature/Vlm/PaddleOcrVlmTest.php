@@ -3,17 +3,14 @@
 namespace Tests\Feature\Vlm;
 
 use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
 
-class PaddleOcrVlmTest extends TestCase
+class PaddleOcrVlmTest extends VlmTestBase
 {
-    private string $vlmBaseUrl;
-
     protected function setUp(): void
     {
         parent::setUp();
-        // Docker内部ネットワークではサービス名でアクセス
-        $this->vlmBaseUrl = 'http://vlm:8000';
+        $this->expectedModel = 'paddleocr';
+        $this->checkExpectedModel();
     }
 
     public function test_health_check(): void
@@ -25,31 +22,15 @@ class PaddleOcrVlmTest extends TestCase
 
         $data = $response->json();
         $this->assertEquals('healthy', $data['status']);
-        $this->assertEquals('PaddleOCR', $data['model']);
+        $this->assertEquals('paddleocr', $data['model']);
     }
 
     public function test_extract_structured_from_simple_invoice_pdf(): void
     {
-        $testFile = base_path('tests/fixtures/files/invoice_simple.pdf');
+        $data = $this->extractStructured('invoice_simple.pdf');
 
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
-
-        $response = Http::timeout(120)->attach(
-            'file',
-            file_get_contents($testFile),
-            'invoice_simple.pdf'
-        )->post("{$this->vlmBaseUrl}/extract/structured");
-
-        $response->throw();
-        $this->assertEquals(200, $response->status());
-
-        $data = $response->json();
-        $this->assertTrue($data['success']);
-        $this->assertArrayHasKey('html', $data);
-        $this->assertArrayHasKey('markdown', $data);
-        $this->assertArrayHasKey('processing_time_s', $data);
+        $this->assertUnifiedApiResponse($data);
+        $this->assertEquals('paddleocr', $data['model']);
         $this->assertNotEmpty($data['html']);
         $this->assertNotEmpty($data['markdown']);
 
@@ -61,26 +42,10 @@ class PaddleOcrVlmTest extends TestCase
 
     public function test_extract_structured_from_handwriting_image(): void
     {
-        $testFile = base_path('tests/fixtures/files/hand_writing_01.png');
+        $data = $this->extractStructured('hand_writing_01.png');
 
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
-
-        $response = Http::timeout(120)->attach(
-            'file',
-            file_get_contents($testFile),
-            'hand_writing_01.png'
-        )->post("{$this->vlmBaseUrl}/extract/structured");
-
-        $response->throw();
-        $this->assertEquals(200, $response->status());
-
-        $data = $response->json();
-        $this->assertTrue($data['success']);
-        $this->assertArrayHasKey('html', $data);
-        $this->assertArrayHasKey('markdown', $data);
-        $this->assertArrayHasKey('processing_time_s', $data);
+        $this->assertUnifiedApiResponse($data);
+        $this->assertEquals('paddleocr', $data['model']);
         $this->assertNotEmpty($data['html']);
     }
 
@@ -98,15 +63,12 @@ class PaddleOcrVlmTest extends TestCase
 
     public function test_processing_time_is_reasonable(): void
     {
-        $testFile = base_path('tests/fixtures/files/hand_writing_01.png');
-
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
+        $this->assertTestFileExists('hand_writing_01.png');
+        $testFile = $this->getTestFilePath('hand_writing_01.png');
 
         $startTime = microtime(true);
 
-        $response = Http::timeout(120) // 2分のタイムアウト
+        $response = Http::timeout(120)
             ->attach(
                 'file',
                 file_get_contents($testFile),

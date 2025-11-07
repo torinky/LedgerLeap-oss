@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -44,7 +45,7 @@ class VlmRagIntegrationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function it_dispatches_process_ledger_for_rag_job_after_vlm_extraction_succeeds(): void
     {
         // 1. 準備 (Arrange)
@@ -70,7 +71,7 @@ class VlmRagIntegrationTest extends TestCase
         });
     }
 
-    /** @test */
+    #[Test]
     public function full_vlm_to_embedding_flow_works_correctly_via_queue(): void
     {
         // 準備 (Arrange)

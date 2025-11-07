@@ -3,17 +3,14 @@
 namespace Tests\Feature\Vlm;
 
 use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
 
-class MinerUVlmTest extends TestCase
+class MinerUVlmTest extends VlmTestBase
 {
-    private string $vlmBaseUrl;
-
     protected function setUp(): void
     {
         parent::setUp();
-        // Docker内部ネットワークではサービス名でアクセス
-        $this->vlmBaseUrl = env('MINERU_URL', 'http://vlm:8000');
+        $this->expectedModel = 'mineru';
+        $this->checkExpectedModel();
     }
 
     public function test_health_check(): void
@@ -26,32 +23,16 @@ class MinerUVlmTest extends TestCase
         $data = $response->json();
         $this->assertArrayHasKey('status', $data);
         $this->assertEquals('healthy', $data['status']);
-        $this->assertEquals('MinerU', $data['model']);
-        $this->assertEquals('CPU', $data['backend']);
+        $this->assertEquals('mineru', $data['model']);
+        $this->assertEquals('cpu', $data['device']);
     }
 
     public function test_extract_structured_from_simple_invoice_pdf(): void
     {
-        $testFile = base_path('tests/fixtures/files/invoice_simple.pdf');
+        $data = $this->extractStructured('invoice_simple.pdf', 300);
 
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
-
-        $response = Http::timeout(120) // 2分のタイムアウト（CPU処理）
-            ->attach(
-                'file',
-                file_get_contents($testFile),
-                'invoice_simple.pdf'
-            )->post("{$this->vlmBaseUrl}/extract/structured");
-
-        $response->throw();
-        $this->assertEquals(200, $response->status());
-
-        $data = $response->json();
-        $this->assertTrue($data['success']);
-        $this->assertArrayHasKey('markdown', $data);
-        $this->assertArrayHasKey('processing_time_s', $data);
+        $this->assertUnifiedApiResponse($data);
+        $this->assertEquals('mineru', $data['model']);
         $this->assertNotEmpty($data['markdown']);
 
         // Markdownフォーマットを確認
@@ -77,25 +58,10 @@ class MinerUVlmTest extends TestCase
 
     public function test_extract_structured_from_meeting_notes_pdf(): void
     {
-        $testFile = base_path('tests/fixtures/files/meeting_notes.pdf');
+        $data = $this->extractStructured('meeting_notes.pdf', 300);
 
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
-
-        $response = Http::timeout(120)
-            ->attach(
-                'file',
-                file_get_contents($testFile),
-                'meeting_notes.pdf'
-            )->post("{$this->vlmBaseUrl}/extract/structured");
-
-        $response->throw();
-        $this->assertEquals(200, $response->status());
-
-        $data = $response->json();
-        $this->assertTrue($data['success']);
-        $this->assertArrayHasKey('markdown', $data);
+        $this->assertUnifiedApiResponse($data);
+        $this->assertEquals('mineru', $data['model']);
         $this->assertNotEmpty($data['markdown']);
     }
 
@@ -113,34 +79,19 @@ class MinerUVlmTest extends TestCase
 
     public function test_markdown_output_quality(): void
     {
-        $testFile = base_path('tests/fixtures/files/invoice_simple.pdf');
+        $data = $this->extractStructured('invoice_simple.pdf', 300);
 
-        if (! file_exists($testFile)) {
-            $this->markTestSkipped("Test file not found: {$testFile}");
-        }
-
-        $response = Http::timeout(120)
-            ->attach(
-                'file',
-                file_get_contents($testFile),
-                'invoice_simple.pdf'
-            )->post("{$this->vlmBaseUrl}/extract/structured");
-
-        $response->throw();
-
-        $data = $response->json();
         $markdown = $data['markdown'];
 
         // 品質チェック: 最小限の長さがあること
-        $this->assertGreaterThan(100, strlen($markdown),
-            'Markdown output should have substantial content');
+        $this->assertMarkdownQuality($markdown);
 
         // 構造化された要素があること
         $hasStructure =
-            str_contains($markdown, "\n\n") ||  // 段落区切り
-            str_contains($markdown, '# ') ||     // 見出し
+            str_contains($markdown, "\n\n") ||
+            str_contains($markdown, '# ') ||
             str_contains($markdown, '## ') ||
-            str_contains($markdown, '<table>');  // テーブル
+            str_contains($markdown, '<table>');
 
         $this->assertTrue($hasStructure,
             'Markdown should contain structured elements');
@@ -150,13 +101,13 @@ class MinerUVlmTest extends TestCase
             'Processing should complete within 60 seconds on CPU');
     }
 
-    public function test_backend_is_cpu(): void
+    public function test_device_is_cpu(): void
     {
         $response = Http::get("{$this->vlmBaseUrl}/health");
         $data = $response->json();
 
         // CPU環境で動作していることを確認
-        $this->assertEquals('CPU', $data['backend']);
+        $this->assertEquals('cpu', $data['device']);
     }
 
     public function test_large_pdf_processing(): void
