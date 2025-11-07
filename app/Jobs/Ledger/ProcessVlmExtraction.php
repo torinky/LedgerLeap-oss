@@ -99,9 +99,8 @@ class ProcessVlmExtraction implements ShouldQueue
                 'markdown_length' => strlen($vlmOutput['markdown']),
             ]);
 
-            // RAG更新トリガー（オプション）
-            if (config('rag.auto_update_chunks', true)) {
-                \App\Jobs\Rag\UpdateLedgerChunks::dispatch($this->attachedFile->ledger)
+            if (config('rag.chunking.auto_update_chunks', true)) {
+                \App\Jobs\ProcessLedgerForRagJob::dispatch($this->attachedFile->ledger)
                     ->delay(now()->addSeconds(5));
             }
 

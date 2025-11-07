@@ -12,18 +12,13 @@
 
 ---
 
-## 1. 関連コンポーネントの役割分担
+## 1. 関連コンポーネントの役割分担（現状反映版）
 
-本タスクを計画するにあたり、関連するジョブの役割を以下のように定義する。
+調査の結果、Phase3で計画された `UpdateLedgerChunks` ジョブは作成されておらず、代わりに `rag:chunk-existing-ledgers` コマンドが `ProcessLedgerForRagJob` を直接呼び出す形で手動更新機能が実装されていることが判明した。これを踏まえ、コンポーネントの役割を以下のように再定義する。
 
 - **`ProcessVlmExtraction` (Phase2成果物):**
     - 添付ファイルのVLM解析を実行し、`attached_files.vlm_markdown` を保存する。
-    - 処理成功後、`UpdateLedgerChunks` ジョブをディスパッチする責務を持つ。
-
-- **`UpdateLedgerChunks` (Phase3成果物):**
-    - `Ledger` モデルを引数に取る。
-    - `handle` メソッド内で、後続の `ProcessLedgerForRagJob` をディスパッチする責務を持つ。
-    - *備考: 当初計画ではこのジョブがチャンク作成まで担う想定だったが、既存の `ProcessLedgerForRagJob` に責務が集約されているため、本ジョブは後続ジョブへの「トリガー」に特化させる方針とする。*
+    - **[修正対象]** 処理成功後、後続の `ProcessLedgerForRagJob` を直接ディスパッチする責務を持つ。（現状は存在しない `UpdateLedgerChunks` を呼び出しており、不整合が生じている）
 
 - **`ProcessLedgerForRagJob` (既存コンポーネント):**
     - `Ledger` モデルを引数に取る。
@@ -33,50 +28,35 @@
         3. Markdownのチャンク化 (`chunkText`)
         4. チャンクのEmbedding生成とDB保存 (`EmbeddingService->embed()`)
 
-## 2. 実装ステップ
+- **`RagChunkExistingLedgersCommand` (Phase3代替実装):**
+    - 手動で `ProcessLedgerForRagJob` をディスパッチするためのArtisanコマンド。
 
-### ステップ1: `UpdateLedgerChunks` ジョブの実装 (WBS 1.1)
 
-- **ファイル:** `app/Jobs/Rag/UpdateLedgerChunks.php` (Phase3で作成)
+## 2. 実装ステップ（現状反映版）
+
+### ステップ1: 自動更新フローの不整合修正 (WBS 1.1)
+
+- **ファイル:** `app/Jobs/Ledger/ProcessVlmExtraction.php`
+- **目的:** VLM処理成功後に、後続のチャンク作成・Embedding生成ジョブが正しくトリガーされるように、ジョブの連携を修正する。
 - **要点:**
-    1. `Ledger` モデルをコンストラクタで受け取る。
-    2. `handle` メソッドを実装し、その中で `ProcessLedgerForRagJob::dispatch($this->ledger)` を実行する。
-    3. キューは `rag-processing` を指定する。
-    4. ジョブ失敗時のリトライ処理とログ出力を設定する。
+    1. `handle` メソッド内の処理成功ブロックにある、存在しない `\App\Jobs\Rag\UpdateLedgerChunks::dispatch(...)` の呼び出しを削除する。
+    2. 代わりに `\App\Jobs\ProcessLedgerForRagJob::dispatch($this->attachedFile->ledger)` を呼び出すように修正する。
+    3. このディスパッチが `config('rag.auto_update_chunks', true)` の設定値に依存する点は維持する。
 
-### ステップ2: `ProcessVlmExtraction` からの連携 (Phase3成果物)
+### ステップ2: 統合テストの実装 (WBS 2.1)
 
-- **ファイル:** `app/Jobs/Ledger/ProcessVlmExtraction.php` (Phase2で作成)
-- **要点:**
-    1. VLM処理が成功し、`attached_files` テーブルへの保存が完了した直後に、`UpdateLedgerChunks::dispatch($this->attachedFile->ledger)` を実行する。
-    2. `config('rag.auto_update_chunks', true)` の設定値を参照し、自動更新が有効な場合のみディスパッチする。
-
-### ステップ3: `ProcessLedgerForRagJob` の動作検証 (WBS 1.2)
-
-- **ファイル:** `app/Jobs/ProcessLedgerForRagJob.php`
-- **要点:**
-    1. **VLM優先ロジックの確認:** `updateContentAttachedWithVlmResult` メソッドが、`attached_files.vlm_markdown` の内容で `content_attached` を上書きすることを確認する。これにより、後続の `buildMarkdownFromLedger` がVLM結果を間接的に利用できる。
-    2. **Embedding生成処理の確認:** `handle` メソッドの終盤で `EmbeddingService` が呼び出され、返却されたベクトルデータが `ledger_chunks.embedding` にJSON形式で保存されることをコードレビューで再確認する。
-    3. **一括挿入の確認:** チャンクデータが `DB::table('ledger_chunks')->insert($chunkData)` によって一括で挿入されており、パフォーマンスが考慮されていることを確認する。
-
-### ステップ4: 統合テストの実装 (WBS 1.3)
-
-- **ファイル:** `tests/Feature/Rag/RagIntegrationTest.php` (新規作成)
+- **ファイル:** `tests/Feature/Rag/VlmRagIntegrationTest.php` (新規作成)
+- **目的:** VLM処理からEmbedding生成までの一連の自動更新フロー全体が、意図通りに動作することを検証する。
 - **要点:**
     1. **テスト準備:**
-        - `RefreshDatabase` トレイトを使用する。
-        - `Bus::fake()` を使用してジョブチェーンをテストできるようにする。
-        - テスト用の `Ledger` と、それに関連する `AttachedFile` (VLM結果あり/なしの両方) をファクトリで作成する。
+        - `RefreshDatabase` トレイトと `Bus::fake()` を使用する。
+        - テスト用の `Ledger` と `AttachedFile` を作成する。
     2. **テストシナリオ:**
-        - `UpdateLedgerChunks` ジョブをディスパッチする。
-        - `Bus::assertDispatched(UpdateLedgerChunks::class)` を確認。
-        - 実際に `UpdateLedgerChunks` ジョブを実行する。
-        - `Bus::assertDispatched(ProcessLedgerForRagJob::class)` を確認。
-        - 実際に `ProcessLedgerForRagJob` を実行する。
+        - `ProcessVlmExtraction` ジョブをディスパッチし、実行する。（VLMコンテナへのAPI呼び出しはモックする）
+        - `Bus::assertDispatched(ProcessLedgerForRagJob::class)` を使用して、後続ジョブが正しくディスパッチされたことを確認する。
     3. **結果検証:**
-        - `assertDatabaseHas('ledger_chunks', ...)` を使用して、チャンクが作成されたことを確認する。
-        - 作成された `ledger_chunks` のレコードを取得し、`embedding` カラムが `null` でないこと、かつ有効なJSON形式であることをアサートする。
-        - VLM結果を含むチャンクテキストが正しく生成されていることを部分的に検証する。
+        - `ProcessLedgerForRagJob` を実際に実行させた後、`assertDatabaseHas('ledger_chunks', ...)` を使用して、チャンクが作成され、かつ `embedding` カラムが `null` でないことを検証する。
+
 
 ## 3. 懸念事項（詳細調査後）
 
