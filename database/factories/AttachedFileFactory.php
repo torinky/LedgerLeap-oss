@@ -83,4 +83,17 @@ class AttachedFileFactory extends Factory
             ];
         });
     }
+
+    public function forLedger(Ledger $ledger): Factory
+    {
+        return $this->state(function (array $attributes) use ($ledger) {
+            return [
+                'ledger_id' => $ledger->id,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'tenant_id' => $ledger->tenant_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $ledger->modifier_id,
+            ];
+        });
+    }
 }

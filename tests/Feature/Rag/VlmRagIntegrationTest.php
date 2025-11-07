@@ -9,26 +9,27 @@ use App\Models\Ledger;
 use App\Models\LedgerChunk;
 use App\Services\EmbeddingService;
 use App\Services\VlmClientService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Mockery\MockInterface;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class VlmRagIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
         Storage::fake('local');
 
         // VLMクライアントをモック化
         $this->mock(VlmClientService::class, function (MockInterface $mock) {
             $mock->shouldReceive('extract')->andReturn([
-                'markdown' => '# VLM Markdown Content', 
+                'markdown' => '# VLM Markdown Content',
                 'structured_data' => [],
                 'model' => 'mock-vlm-model',
                 'confidence' => 0.95,
@@ -38,7 +39,7 @@ class VlmRagIntegrationTest extends TestCase
         // Embeddingサービスをモック化 (APIコールを避けるため)
         $this->mock(EmbeddingService::class, function (MockInterface $mock) {
             $mock->shouldReceive('embed')->andReturn([
-                array_fill(0, 384, 0.123) // ダミーのベクトルデータを返す
+                array_fill(0, 384, 0.123), // ダミーのベクトルデータを返す
             ]);
         });
     }
@@ -51,9 +52,9 @@ class VlmRagIntegrationTest extends TestCase
         Config::set('rag.chunking.auto_update_chunks', true);
 
         $ledger = Ledger::factory()->create();
-        $attachedFile = AttachedFile::factory()->for($ledger)->create([
-            'path' => 'test.pdf',
-        ]);
+        $attachedFile = AttachedFile::factory()
+            ->forLedger($ledger)
+            ->create(['path' => 'test.pdf']);
 
         Storage::disk('local')->put($attachedFile->path, 'dummy content');
 
@@ -74,21 +75,19 @@ class VlmRagIntegrationTest extends TestCase
     {
         // 準備 (Arrange)
         Config::set('rag.chunking.auto_update_chunks', true);
-        Config::set('queue.default', 'database'); // テスト用にキューをDBドライバに
+        Config::set('rag.enabled', true);
+        Config::set('queue.default', 'sync'); // 同期実行でテスト
 
         $ledger = Ledger::factory()->create();
-        $attachedFile = AttachedFile::factory()->for($ledger)->create([
-            'path' => 'test.pdf',
-        ]);
+        $attachedFile = AttachedFile::factory()
+            ->forLedger($ledger)
+            ->create(['path' => 'test.pdf']);
+
         Storage::disk('local')->put($attachedFile->path, 'dummy content');
 
         // 2. 実行 (Act)
-        // VLMジョブをディスパッチ
+        // VLMジョブをディスパッチ（同期実行）
         ProcessVlmExtraction::dispatch($attachedFile);
-
-        // キューワーカーを実行してジョブを処理
-        $this->artisan('queue:work', ['--once' => true]); // ProcessVlmExtraction を実行
-        $this->artisan('queue:work', ['--once' => true]); // ProcessLedgerForRagJob を実行
 
         // 3. 検証 (Assert)
         // チャンクが作成されたことを確認
@@ -98,8 +97,9 @@ class VlmRagIntegrationTest extends TestCase
 
         // Embeddingが生成されたことを確認
         $chunk = LedgerChunk::where('ledger_id', $ledger->id)->first();
+        $this->assertNotNull($chunk);
         $this->assertNotNull($chunk->embedding);
-        $this->assertJson($chunk->embedding);
+        $this->assertIsArray($chunk->embedding);
 
         // VLMのMarkdownがチャンクに含まれていることを確認
         $this->assertStringContainsString('VLM Markdown Content', $chunk->chunk_text);
