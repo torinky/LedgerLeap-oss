@@ -107,10 +107,14 @@ class ProcessVlmExtractionTest extends TestCase
 
             $job->failed($e);
 
+            // Phase5: Check vlm_failed_at is set
             $this->assertDatabaseHas('attached_files', [
                 'id' => $attachedFile->id,
                 'status' => AttachedFileStatus::VLM_FAILED->value,
             ]);
+
+            $attachedFile->refresh();
+            $this->assertNotNull($attachedFile->vlm_failed_at);
         }
     }
 
@@ -142,10 +146,14 @@ class ProcessVlmExtractionTest extends TestCase
 
             $job->failed($e);
 
+            // Phase5: Check vlm_failed_at is set
             $this->assertDatabaseHas('attached_files', [
                 'id' => $attachedFile->id,
                 'status' => AttachedFileStatus::VLM_FAILED->value,
             ]);
+
+            $attachedFile->refresh();
+            $this->assertNotNull($attachedFile->vlm_failed_at);
         }
     }
 }

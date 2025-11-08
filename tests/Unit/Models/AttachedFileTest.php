@@ -128,4 +128,110 @@ class AttachedFileTest extends TestCase
         $file = AttachedFile::factory()->make(['status' => AttachedFileStatus::COMPLETED]);
         $this->assertFalse($file->isVlmFailed());
     }
+
+    // Phase5: New method tests
+    #[Test]
+    public function is_vlm_or_ocr_target_returns_true_for_images()
+    {
+        $file = AttachedFile::factory()->make(['mime' => 'image/png']);
+        $this->assertTrue($file->isVlmOrOcrTarget());
+
+        $file = AttachedFile::factory()->make(['mime' => 'image/jpeg']);
+        $this->assertTrue($file->isVlmOrOcrTarget());
+    }
+
+    #[Test]
+    public function is_vlm_or_ocr_target_returns_true_for_pdf()
+    {
+        $file = AttachedFile::factory()->make(['mime' => 'application/pdf']);
+        $this->assertTrue($file->isVlmOrOcrTarget());
+    }
+
+    #[Test]
+    public function is_vlm_or_ocr_target_returns_false_for_other_types()
+    {
+        $file = AttachedFile::factory()->make(['mime' => 'application/zip']);
+        $this->assertFalse($file->isVlmOrOcrTarget());
+
+        $file = AttachedFile::factory()->make(['mime' => 'text/plain']);
+        $this->assertFalse($file->isVlmOrOcrTarget());
+    }
+
+    #[Test]
+    public function is_ready_for_finalization_returns_true_when_all_processing_done()
+    {
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'processing_finalized_at' => null,
+        ]);
+        $this->assertTrue($file->isReadyForFinalization());
+    }
+
+    #[Test]
+    public function is_ready_for_finalization_returns_true_when_vlm_failed_and_ocr_done()
+    {
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => now(),
+            'vlm_failed_at' => now(),
+            'ocr_processed_at' => now(),
+            'processing_finalized_at' => null,
+        ]);
+        $this->assertTrue($file->isReadyForFinalization());
+    }
+
+    #[Test]
+    public function is_ready_for_finalization_returns_false_when_already_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'processing_finalized_at' => now(),
+        ]);
+        $this->assertFalse($file->isReadyForFinalization());
+    }
+
+    #[Test]
+    public function is_ready_for_finalization_returns_false_when_tika_not_done()
+    {
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => null,
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+        ]);
+        $this->assertFalse($file->isReadyForFinalization());
+    }
+
+    #[Test]
+    public function get_processing_status_returns_correct_status()
+    {
+        // Finalized
+        $file = AttachedFile::factory()->make(['processing_finalized_at' => now()]);
+        $this->assertEquals('finalized', $file->processing_status);
+
+        // Ready for finalization
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'processing_finalized_at' => null,
+        ]);
+        $this->assertEquals('ready_for_finalization', $file->processing_status);
+
+        // Parallel processing
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => now(),
+            'vlm_processed_at' => null,
+            'ocr_processed_at' => null,
+        ]);
+        $this->assertEquals('parallel_processing', $file->processing_status);
+
+        // Initial processing
+        $file = AttachedFile::factory()->make([
+            'tika_processed_at' => null,
+        ]);
+        $this->assertEquals('initial_processing', $file->processing_status);
+    }
 }
