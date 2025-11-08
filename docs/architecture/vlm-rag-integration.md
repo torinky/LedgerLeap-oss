@@ -1,3 +1,32 @@
+# ⚠️ 重要なアーキテクチャ変更通知
+
+**変更日:** 2025年11月8日  
+**対象:** VLM/RAG統合アーキテクチャ
+
+---
+
+## 🔄 アーキテクチャの大幅変更
+
+本ドキュメントのアーキテクチャは**Phase5で大幅に変更**されます。
+
+### 変更内容
+
+- **変更前**: 直列処理（Tika → VLM → OCR）
+- **変更後**: 並列処理（Tika → VLM & OCR → スケジュール最終化）
+
+### 新しいドキュメント
+
+**最新のアーキテクチャは以下を参照してください:**
+- [VLM/OCR並列処理統合アーキテクチャ](./vlm-parallel-processing-integration.md)
+- [Phase5 WBS](../work/vlm-rag-integration/2025-11-08_phase5-wbs.md)
+- [並列処理提案書](../work/vlm-rag-integration/2025-11-08_parallel-processing-proposal.md)
+
+### Phase4実装済み機能
+
+本ドキュメントに記載されているPhase4機能（VLM結果表示UI等）は**実装完了済み**です。
+
+---
+
 # VLM/RAG統合実装計画書（最終版）
 
 **作成日:** 2025年10月25日  
