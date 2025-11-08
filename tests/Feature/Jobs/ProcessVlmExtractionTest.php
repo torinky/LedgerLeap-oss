@@ -62,7 +62,8 @@ class ProcessVlmExtractionTest extends TestCase
         // Assert
         $this->assertDatabaseHas('attached_files', [
             'id' => $attachedFile->id,
-            'status' => AttachedFileStatus::COMPLETED->value,
+            // ★ Phase5: VLM成功時はステータスを更新しない（最終化処理で設定される）
+            // 'status' => AttachedFileStatus::COMPLETED->value,
             'vlm_markdown' => '# Invoice\n\nTotal: $500',
             'vlm_model' => 'test-model-v1',
         ]);
@@ -72,6 +73,8 @@ class ProcessVlmExtractionTest extends TestCase
         $this->assertEquals(['total' => 500], $attachedFile->vlm_structured_data);
         $this->assertEquals(0.95, $attachedFile->vlm_confidence);
         $this->assertNotNull($attachedFile->vlm_processed_at);
+        // ★ Phase5: VLM成功後はVLM_PROCESSINGのまま（最終化処理でCOMPLETEDになる）
+        $this->assertEquals(AttachedFileStatus::VLM_PROCESSING, $attachedFile->status);
     }
 
     #[Test]

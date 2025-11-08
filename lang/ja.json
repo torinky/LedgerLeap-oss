@@ -418,5 +418,7 @@
     "Yes": "はい。",
     "You are receiving this email because we received a password reset request for your account.": "パスワード再設定のリクエストを受け付けました。",
     "You're logged in!": "ログイン成功",
-    "Your email address is unverified.": "メールアドレスが未認証です。"
+    "Your email address is unverified.": "メールアドレスが未認証です。",
+    "file.status.confidence": "信頼度",
+    "ledger.vlm.source.label": "抽出方法"
 }

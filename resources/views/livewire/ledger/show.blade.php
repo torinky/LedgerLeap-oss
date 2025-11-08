@@ -151,18 +151,26 @@
                     </p>
                     
                     {{-- VLM品質情報 --}}
-                    <div class="flex gap-2 flex-wrap mb-3">
-                        {{-- VLM抽出バッジ --}}
-                        <x-mary-badge 
-                            :value="__('ledger.vlm.source.vlm')"
-                            class="badge-success" />
-                        
-                        {{-- VLM信頼度バッジ --}}
-                        @if($this->previewingFile->vlm_confidence)
-                            <x-mary-badge
-                                :value="__('ledger.vlm.confidence_label') . ': ' . $this->previewingFile->VlmConfidenceFormatted"
-                                :class="$this->previewingFile->vlm_confidence >= 0.9 ? 'badge-success' : 
-                                       ($this->previewingFile->vlm_confidence >= 0.7 ? 'badge-info' : 'badge-warning')" />
+                    <div class="flex gap-4 items-center mb-3"> {{-- items-center と gap を調整 --}}
+                        {{-- 抽出方法 --}}
+                        <div class="flex items-center gap-1 text-sm">
+{{--                            <span class="text-gray-500">{{ __('ledger.vlm.source.label') }}:</span>--}}
+                            <x-mary-badge :value="__('ledger.vlm.source.vlm')" class="badge-info" />
+                        </div>
+
+                        {{-- 信頼度 --}}
+                        @if($this->previewingFile->finalized_source === 'vlm' && $this->previewingFile->vlm_confidence)
+                            <div class="flex items-center gap-1 text-sm tooltip" data-tip="{{ __('file.status.confidence') }} : {{$this->previewingFile->VlmConfidenceFormatted}}">
+                                <span class="font-semibold">{{ $this->previewingFile->VlmConfidenceFormatted }}</span>
+                                
+                                @if($this->previewingFile->vlm_confidence >= 0.9)
+                                    <x-heroicon-s-check-badge class="w-5 h-5 text-success" />
+                                @elseif($this->previewingFile->vlm_confidence >= 0.7)
+                                    <x-heroicon-s-shield-check class="w-5 h-5 text-info" />
+                                @else
+                                    <x-heroicon-s-exclamation-triangle class="w-5 h-5 text-warning" />
+                                @endif
+                            </div>
                         @endif
                     </div>
                 </div>

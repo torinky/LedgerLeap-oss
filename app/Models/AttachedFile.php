@@ -25,6 +25,7 @@ class AttachedFile extends Model
 
     protected $casts = [
         'optimized' => 'boolean',
+        'contain_content' => 'boolean',
         'status' => AttachedFileStatus::class,
         'vlm_structured_data' => 'array',
         'vlm_processed_at' => 'datetime',

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -122,9 +123,6 @@ class FinalizeAttachedFileProcessing extends Command
             ->get();
     }
 
-    /**
-     * Finalize a single file by selecting the best content.
-     */
     private function finalizeFile(AttachedFile $file): void
     {
         DB::transaction(function () use ($file) {
@@ -142,19 +140,59 @@ class FinalizeAttachedFileProcessing extends Command
             // content_attachedを更新
             $this->updateContentAttached($file, $bestContent);
 
+            // ★ Phase5: 適切なステータスを判定
+            $finalStatus = $this->determineFinalStatus($file, $bestContent);
+
             // 最終化マークを設定
             $file->update([
                 'processing_finalized_at' => now(),
                 'finalized_source' => $bestContent['source'],
                 'contain_content' => ! empty($bestContent['text']),
+                'status' => $finalStatus, // ★ Phase5: ステータス更新を追加
             ]);
 
             Log::info('File finalized', [
                 'file_id' => $file->id,
                 'source' => $bestContent['source'],
+                'status' => $finalStatus->value,
                 'text_length' => mb_strlen($bestContent['text']),
             ]);
         });
+    }
+
+    /**
+     * Determine the final status based on processing results.
+     */
+    private function determineFinalStatus(AttachedFile $file, array $bestContent): AttachedFileStatus
+    {
+        // 成功した処理がある場合はCOMPLETED
+        if (! empty($bestContent['text'])) {
+            return AttachedFileStatus::COMPLETED;
+        }
+
+        // テキストが空の場合、失敗理由を判定
+        // VLMとOCRの両方が失敗している場合
+        if ($file->vlm_failed_at && $file->ocr_failed_at) {
+            return AttachedFileStatus::PROCESSING_FAILED;
+        }
+
+        // VLMのみ失敗
+        if ($file->vlm_failed_at) {
+            return AttachedFileStatus::VLM_FAILED;
+        }
+
+        // OCRのみ失敗
+        if ($file->ocr_failed_at) {
+            return AttachedFileStatus::OCR_FAILED;
+        }
+
+        // Tikaも失敗している場合
+        if (empty($this->extractTikaTextFromContentAttached($file))) {
+            return AttachedFileStatus::TIKA_FAILED;
+        }
+
+        // デフォルトはCOMPLETED（空のコンテンツでも処理は完了）
+        return AttachedFileStatus::COMPLETED;
     }
 
     /**

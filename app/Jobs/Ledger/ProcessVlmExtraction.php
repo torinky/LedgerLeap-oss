@@ -90,7 +90,7 @@ class ProcessVlmExtraction implements ShouldQueue
                 'vlm_confidence' => $vlmOutput['confidence'] ?? null,
                 'vlm_processing_time_ms' => $processingTimeMs,
                 'vlm_processed_at' => now(), // ★ Phase5: 成功時のタイムスタンプ
-                'status' => AttachedFileStatus::COMPLETED,
+                // ★ Phase5: ステータスは最終化処理で設定されるため、ここでは更新しない
             ]);
 
             Log::info('[VLM] Extraction successful', [

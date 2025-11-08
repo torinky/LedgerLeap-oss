@@ -185,6 +185,7 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
     text_blocks = []
     key_value_pairs = []
     html_parts = ["<html><body>"]
+    confidences = []  # List to store confidence scores
     
     if result and result[0]:
         for idx, line in enumerate(result[0]):
@@ -193,6 +194,7 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
                 text_info = line[1]
                 text = text_info[0]
                 confidence = text_info[1] if len(text_info) > 1 else 1.0
+                confidences.append(float(confidence))
                 
                 text_lines.append(text)
                 html_parts.append(f"<p>{text}</p>")
@@ -222,9 +224,14 @@ def process_with_paddleocr(file_path: str) -> Dict[str, Any]:
     
     html_parts.append("</body></html>")
     
+    # Calculate average confidence
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+    logger.info(f"Calculated average confidence: {avg_confidence}") # ← この行を追加
+    
     return {
         "html": "\n".join(html_parts),
         "markdown": "\n\n".join(text_lines),
+        "confidence": avg_confidence,  # Add average confidence to the top level
         "structured_data": {
             "pages": [{
                 "page_index": 0,
