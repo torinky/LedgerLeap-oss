@@ -37,6 +37,13 @@ class Kernel extends ConsoleKernel
             'weekly' => $command->weekly(),                     // 大規模環境
             default => $command->daily(),
         };
+
+        // --- Phase5: VLM/OCR Parallel Processing Finalization ---
+        $schedule->command('ledger:finalize-processing')
+            ->everyMinute()                    // 毎分実行
+            ->withoutOverlapping(10)           // 重複実行防止（10分タイムアウト）
+            ->onOneServer()                    // 複数サーバー環境で1サーバーのみ実行
+            ->runInBackground();               // バックグラウンド実行
     }
 
     /**
