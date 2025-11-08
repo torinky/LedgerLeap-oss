@@ -272,19 +272,23 @@ class ColumnHtmlService
             $retryIconHtml = '';
 
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
+                // Phase5: ユーザーフレンドリーなステータス表示
+                $userFriendlyStatus = $attachment->user_friendly_status;
+                $statusBadgeColor = $attachment->status_badge_color;
+
+                // ステータスアイコンをバッジに変更
                 $statusIconHtml = <<<HTML
-    <div class="tooltip tooltip-bottom" data-tip="{$attachment->status->tooltip()}">
-        <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} text-lg"></i>
+    <div class="tooltip tooltip-bottom" data-tip="{$userFriendlyStatus}">
+        <span class="badge {$statusBadgeColor} badge-sm">{$userFriendlyStatus}</span>
     </div>
 HTML;
 
-                if ($attachment->status === \App\Enums\AttachedFileStatus::TIKA_FAILED ||
-                    $attachment->status === \App\Enums\AttachedFileStatus::OCR_FAILED ||
-                    $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
+                // Phase5: 再処理ボタンの条件を新しいロジックに更新
+                if ($attachment->canRetryProcessing()) {
                     $retryTooltipText = __('ledger.uploadedFile.retry');
                     $retryIconHtml = <<<HTML
-<div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
-    <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
+<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$retryTooltipText}">
+    <i class="fa-solid fa-arrow-rotate-right cursor-pointer" 
     wire:click="\$dispatch('retryProcessingEvent', { attachedFileId: {$attachment->id} })"></i>
 </div>
 HTML;
@@ -304,6 +308,20 @@ HTML;
     <i class="fa-solid fa-eye cursor-pointer" 
     wire:click="\$dispatch('showVlmPreviewEvent', { fileId: {$attachment->id} })"></i>
 </div>
+HTML;
+                }
+
+                // Phase5: 品質インジケーターの追加
+                $confidenceBadgeHtml = '';
+                if ($attachment->processing_finalized_at && $attachment->confidence_level) {
+                    $confidenceClass = match ($attachment->confidence_level) {
+                        '高精度' => 'badge-success',
+                        '標準精度' => 'badge-info',
+                        '低精度', '基本抽出' => 'badge-warning',
+                        default => 'badge-neutral',
+                    };
+                    $confidenceBadgeHtml = <<<HTML
+<span class="badge {$confidenceClass} badge-xs ml-1">{$attachment->confidence_level}</span>
 HTML;
                 }
             }
@@ -369,6 +387,7 @@ HTML;
 <div class="indicator"> 
 <span class="indicator-item">
     {$statusIconHtml}
+    {$confidenceBadgeHtml}
  {$retryIconHtml}
  {$vlmPreviewButtonHtml}
     {$auxiliaryLinksHtml}
@@ -389,6 +408,7 @@ HTML;
 <div class="indicator">
 <span class="indicator-item">
  {$statusIconHtml}
+ {$confidenceBadgeHtml}
  {$retryIconHtml}
  {$vlmPreviewButtonHtml}
  {$auxiliaryLinksHtml}

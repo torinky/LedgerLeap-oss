@@ -175,4 +175,127 @@ class AttachedFile extends Model
         return str_starts_with($this->mime, 'image/') ||
                $this->mime === 'application/pdf';
     }
+
+    /**
+     * Get user-friendly status text
+     */
+    public function getUserFriendlyStatusAttribute(): string
+    {
+        // エラー状態のチェック（優先）
+        if ($this->hasExtractionError()) {
+            return 'テキストを抽出できませんでした';
+        }
+
+        // 最終化済み
+        if ($this->processing_finalized_at) {
+            return match ($this->finalized_source) {
+                'vlm' => '高精度抽出完了',
+                'ocr' => 'テキスト抽出完了',
+                'tika' => '処理完了',
+                default => '完了',
+            };
+        }
+
+        // 処理中
+        if ($this->tika_processed_at) {
+            if ($this->isVlmOrOcrTarget()) {
+                return '画像を読み取り中...';
+            }
+
+            return '処理中...';
+        }
+
+        return '待機中';
+    }
+
+    /**
+     * Get confidence level badge
+     */
+    public function getConfidenceLevelAttribute(): ?string
+    {
+        if (! $this->processing_finalized_at) {
+            return null;
+        }
+
+        return match ($this->finalized_source) {
+            'vlm' => $this->vlm_confidence ?
+                ($this->vlm_confidence >= 0.9 ? '高精度' :
+                ($this->vlm_confidence >= 0.7 ? '標準精度' : '低精度')) :
+                '高精度',
+            'ocr' => '標準精度',
+            'tika' => '基本抽出',
+            default => null,
+        };
+    }
+
+    /**
+     * Check if extraction failed
+     */
+    public function hasExtractionError(): bool
+    {
+        // 最終化済みで、コンテンツが空の場合はエラー
+        if ($this->processing_finalized_at && ! $this->contain_content) {
+            return true;
+        }
+
+        // VLM/OCR対象なのに両方失敗した場合
+        if ($this->isVlmOrOcrTarget() &&
+            $this->vlm_failed_at &&
+            $this->ocr_failed_at &&
+            ! $this->contain_content) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user can retry processing
+     */
+    public function canRetryProcessing(): bool
+    {
+        // エラー状態の場合は再処理可能
+        if ($this->hasExtractionError()) {
+            return true;
+        }
+
+        // 低精度の場合も再処理可能
+        if ($this->finalized_source === 'vlm' &&
+            $this->vlm_confidence &&
+            $this->vlm_confidence < 0.7) {
+            return true;
+        }
+
+        // OCRフォールバックの場合も再処理可能（VLMを試す価値がある）
+        if ($this->finalized_source === 'ocr' && $this->vlm_failed_at) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get badge color class for status
+     */
+    public function getStatusBadgeColorAttribute(): string
+    {
+        if ($this->hasExtractionError()) {
+            return 'badge-error';
+        }
+
+        if ($this->processing_finalized_at) {
+            return match ($this->finalized_source) {
+                'vlm' => 'badge-success',
+                'ocr' => 'badge-info',
+                'tika' => 'badge-success',
+                default => 'badge-neutral',
+            };
+        }
+
+        if ($this->tika_processed_at) {
+            return 'badge-warning';
+        }
+
+        return 'badge-ghost';
+    }
 }
