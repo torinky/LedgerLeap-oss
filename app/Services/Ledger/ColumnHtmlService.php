@@ -285,7 +285,7 @@ HTML;
                     $retryIconHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost " data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer " 
-    wire:click="retryProcessing({$attachment->id})"></i>
+    wire:click="\$dispatch('retryProcessingEvent', { attachedFileId: {$attachment->id} })"></i>
 </div>
 HTML;
                 }
@@ -293,6 +293,18 @@ HTML;
                 if ($attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
                     \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachment->id));
                     Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: '.$attachment->id);
+                }
+
+                // VLMプレビューボタンの生成
+                $vlmPreviewButtonHtml = '';
+                if ($attachment->hasVlmResult()) {
+                    $vlmPreviewTooltip = __('ledger.vlm.preview_button');
+                    $vlmPreviewButtonHtml = <<<HTML
+<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$vlmPreviewTooltip}">
+    <i class="fa-solid fa-eye cursor-pointer" 
+    wire:click="\$dispatch('showVlmPreviewEvent', { fileId: {$attachment->id} })"></i>
+</div>
+HTML;
                 }
             }
 
@@ -358,6 +370,7 @@ HTML;
 <span class="indicator-item">
     {$statusIconHtml}
  {$retryIconHtml}
+ {$vlmPreviewButtonHtml}
     {$auxiliaryLinksHtml}
 </span>
 {$contentHtmlStart}
@@ -377,6 +390,7 @@ HTML;
 <span class="indicator-item">
  {$statusIconHtml}
  {$retryIconHtml}
+ {$vlmPreviewButtonHtml}
  {$auxiliaryLinksHtml}
  </span>
      <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}

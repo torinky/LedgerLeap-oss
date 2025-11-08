@@ -44,6 +44,16 @@ class ProcessAttachedFile implements ShouldQueue
         tenancy()->initialize($this->attachedFile->tenant_id);
 
         Log::info('ProcessAttachedFile: ID: '.$this->attachedFile->id.', Status: '.$this->attachedFile->status->value);
+
+        // ★ 既にVLM処理が完了している場合はスキップ（リトライ時の重複処理防止）
+        if ($this->attachedFile->vlm_processed_at !== null) {
+            Log::info('ProcessAttachedFile: File already processed by VLM, skipping: '.$this->attachedFile->id);
+            if ($this->attachedFile->status !== AttachedFileStatus::COMPLETED) {
+                $this->attachedFile->update(['status' => AttachedFileStatus::COMPLETED]);
+            }
+
+            return;
+        }
         // Log::info('ProcessAttachedFile job started for file: ' . $this->attachedFile->id);
 
         // 1. オリジナルファイルの退避 (ProcessAttachedFile の責任とする)
@@ -154,9 +164,13 @@ class ProcessAttachedFile implements ShouldQueue
                 if ($this->shouldProcessWithVlm($this->attachedFile)) {
                     Log::info('[Tika] Dispatching VLM job for file: '.$this->attachedFile->id);
                     $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
-                    ProcessVlmExtraction::dispatch($this->attachedFile);
+                    ProcessVlmExtraction::dispatchSync($this->attachedFile);
+                    // dispatchSyncは同期実行なので、完了後にこの処理が続く
+                    // VLM処理でステータスはCOMPLETEDに更新されている
+                    $this->attachedFile->refresh(); // モデルを再読み込み
+                    Log::info('[Tika] VLM processing completed for file: '.$this->attachedFile->id);
 
-                    // VLMジョブに処理を委譲するため、このジョブはここで終了
+                    // VLM処理が完了したので、このジョブはここで終了（OCR処理は不要）
                     return;
                 }
 
@@ -204,9 +218,12 @@ class ProcessAttachedFile implements ShouldQueue
                 if ($this->shouldProcessWithVlm($this->attachedFile)) {
                     Log::info('[Tika Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
                     $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
-                    ProcessVlmExtraction::dispatch($this->attachedFile);
+                    ProcessVlmExtraction::dispatchSync($this->attachedFile);
+                    // dispatchSyncは同期実行なので、完了後にこの処理が続く
+                    $this->attachedFile->refresh();
+                    Log::info('[Tika Fallback] VLM processing completed for file: '.$this->attachedFile->id);
 
-                    return; // VLMに処理を委譲
+                    return; // VLM処理完了後に終了
                 }
 
                 $mimeType = $this->attachedFile->mime;

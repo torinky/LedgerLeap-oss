@@ -269,7 +269,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
                     }
 
                     // VLMで処理されたかどうかに基づいてラベルを決定
-                    $sourceLabel = ($file && ! empty($file->vlm_processed_at)) ? 'VLM解析結果' : 'テキスト抽出結果';
+                    $sourceLabel = ($file && ! empty($file->vlm_processed_at)) ? 'VLM-OCR 結果' : 'テキスト抽出結果';
 
                     // 長さ制限ロジック
                     $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);

@@ -99,6 +99,15 @@ class AttachedFile extends Model
         return $this->status === AttachedFileStatus::VLM_FAILED;
     }
 
+    public function getVlmConfidenceFormattedAttribute(): ?string
+    {
+        if ($this->vlm_confidence === null) {
+            return null;
+        }
+
+        return number_format($this->vlm_confidence * 100, 1).'%';
+    }
+
     public function getPhysicalPath(): ?string
     {
         if (empty($this->path)) {

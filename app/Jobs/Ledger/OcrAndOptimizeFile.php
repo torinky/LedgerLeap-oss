@@ -174,8 +174,41 @@ class OcrAndOptimizeFile implements ShouldQueue
                 'output' => $e->result->output(),
                 'errorOutput' => $e->result->errorOutput(),
             ]);
-            // 失敗時: status を OCR_FAILED に更新
+
+            // OCR失敗時、VLM処理にフォールバック
+            if ($this->shouldProcessWithVlm($this->attachedFile)) {
+                Log::info('[OCR Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
+                $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
+                ProcessVlmExtraction::dispatchSync($this->attachedFile);
+
+                return; // VLMに処理を委譲
+            }
+
+            // VLMも対象外の場合は失敗として記録
             $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
         }
+    }
+
+    /**
+     * Determines if the attached file should be processed by the VLM service.
+     */
+    private function shouldProcessWithVlm(AttachedFile $attachedFile): bool
+    {
+        if (! config('vlm.enabled')) {
+            return false;
+        }
+
+        $mimeType = $attachedFile->mime;
+        $isVlmTargetMime = str_starts_with($mimeType, 'image/') || str_starts_with($mimeType, 'application/pdf');
+
+        if (! $isVlmTargetMime) {
+            return false;
+        }
+
+        if ($attachedFile->vlm_processed_at !== null) {
+            return false;
+        }
+
+        return true;
     }
 }

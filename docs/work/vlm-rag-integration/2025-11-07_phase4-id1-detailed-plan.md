@@ -17,7 +17,7 @@
 調査の結果、Phase3で計画された `UpdateLedgerChunks` ジョブは作成されておらず、代わりに `rag:chunk-existing-ledgers` コマンドが `ProcessLedgerForRagJob` を直接呼び出す形で手動更新機能が実装されていることが判明した。これを踏まえ、コンポーネントの役割を以下のように再定義する。
 
 - **`ProcessVlmExtraction` (Phase2成果物):**
-    - 添付ファイルのVLM解析を実行し、`attached_files.vlm_markdown` を保存する。
+    - 添付ファイルのVLM-OCR を実行し、`attached_files.vlm_markdown` を保存する。
     - **[修正対象]** 処理成功後、後続の `ProcessLedgerForRagJob` を直接ディスパッチする責務を持つ。（現状は存在しない `UpdateLedgerChunks` を呼び出しており、不整合が生じている）
 
 - **`ProcessLedgerForRagJob` (既存コンポーネント):**

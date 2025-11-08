@@ -105,4 +105,9 @@ Route::group([
     Route::get('/files/{attachedFile}/download', [\App\Http\Controllers\AttachedFileDownloadController::class, 'download'])
         ->name('file.download')
         ->where('attachedFile', '[0-9]+');
+
+    // VLM Result Download Route
+    Route::get('/files/{attachedFile}/download-vlm', [\App\Http\Controllers\AttachedFileDownloadController::class, 'downloadVlm'])
+        ->name('files.download-vlm')
+        ->where('attachedFile', '[0-9]+');
 });

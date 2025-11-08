@@ -142,4 +142,63 @@ class AttachedFileDownloadController extends Controller
             'Content-Disposition' => $disposition.'; filename="'.$fileNameToServe.'"',
         ]);
     }
+
+    public function downloadVlm(Request $request, AttachedFile $attachedFile)
+    {
+        Log::info('[DownloadController@downloadVlm] Started.', [
+            'attached_file_id' => $attachedFile->id,
+            'format' => $request->query('format', 'markdown'),
+        ]);
+
+        // 1. 認可チェック
+        try {
+            Gate::authorize('view', $attachedFile->ledger);
+            Log::info('[DownloadController@downloadVlm] Authorization successful.');
+        } catch (\Exception $e) {
+            Log::error('[DownloadController@downloadVlm] Authorization failed.', ['error' => $e->getMessage()]);
+            abort(403, 'Forbidden');
+        }
+
+        // 2. VLM結果の存在確認
+        if (! $attachedFile->hasVlmResult()) {
+            Log::error('[DownloadController@downloadVlm] VLM result not found.', ['attached_file_id' => $attachedFile->id]);
+            abort(404, 'VLM Result Not Found');
+        }
+
+        // 3. フォーマット決定
+        $format = $request->query('format', 'markdown');
+        $baseFilename = pathinfo($attachedFile->original_filename ?? $attachedFile->filename, PATHINFO_FILENAME);
+
+        if ($format === 'json' && $attachedFile->vlm_structured_data) {
+            $content = json_encode($attachedFile->vlm_structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $contentType = 'application/json';
+            $filename = $baseFilename.'_vlm.json';
+        } else {
+            $content = $attachedFile->vlm_markdown;
+            $contentType = 'text/markdown';
+            $filename = $baseFilename.'_vlm.md';
+        }
+
+        // 4. アクティビティログの記録
+        activity()
+            ->performedOn($attachedFile)
+            ->causedBy(auth()->user())
+            ->event('downloaded_vlm')
+            ->withProperties([
+                'ledger_id' => $attachedFile->ledger->id,
+                'ledger_define_id' => $attachedFile->ledger->ledger_define_id,
+                'format' => $format,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ])
+            ->log("User downloaded VLM result for file: {$filename}");
+
+        Log::info('[DownloadController@downloadVlm] Returning VLM result.', ['format' => $format, 'filename' => $filename]);
+
+        // 5. レスポンス生成
+        return response($content, 200, [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
 }

@@ -62,7 +62,10 @@ class GenerateThumbnail implements ShouldQueue
         // サムネイルが既に存在する場合はスキップ
         if (Storage::disk('public')->exists($thumbnailPath)) {
             Log::info("[GenerateThumbnail] Thumbnail already exists for AttachedFile ID: {$this->attachedFileId}. Skipping generation.");
-            $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            // VLM処理待ちの場合は、ステータスを変更しない
+            if (! in_array($attachedFile->status, [AttachedFileStatus::PENDING_VLM, AttachedFileStatus::VLM_PROCESSING])) {
+                $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            }
 
             return;
         }
@@ -70,7 +73,10 @@ class GenerateThumbnail implements ShouldQueue
         // 画像ファイル以外はスキップ
         if (! Str::startsWith($attachedFile->mime, 'image/')) {
             Log::info("[GenerateThumbnail] File is not an image (MIME: {$attachedFile->mime}). Skipping thumbnail generation for ID: {$this->attachedFileId}.");
-            $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            // VLM処理待ちの場合は、ステータスを変更しない
+            if (! in_array($attachedFile->status, [AttachedFileStatus::PENDING_VLM, AttachedFileStatus::VLM_PROCESSING])) {
+                $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            }
 
             return;
         }
@@ -96,7 +102,10 @@ class GenerateThumbnail implements ShouldQueue
             Storage::disk('public')->put($thumbnailPath, (string) $encodedImage);
 
             // サムネイル生成成功
-            $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            // VLM処理待ちの場合は、ステータスを変更しない
+            if (! in_array($attachedFile->status, [AttachedFileStatus::PENDING_VLM, AttachedFileStatus::VLM_PROCESSING])) {
+                $attachedFile->update(['status' => AttachedFileStatus::COMPLETED->value]);
+            }
             Log::info("[GenerateThumbnail] Thumbnail successfully generated for AttachedFile ID: {$this->attachedFileId}. Path: {$thumbnailPath}");
 
         } catch (Throwable $e) {

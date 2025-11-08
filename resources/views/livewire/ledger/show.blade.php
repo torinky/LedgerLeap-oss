@@ -133,5 +133,70 @@
         </x-mary-modal>
         --}}
 
+
     </div>
+
+    {{-- VLM結果プレビューモーダル --}}
+        <x-mary-modal wire:model="showVlmModal" boxClass="w-11/12 max-w-5xl">
+
+            <x-slot:title>
+                    {{ __('ledger.vlm.preview_title') }}
+            </x-slot:title>
+
+            @if($this->previewingFile)
+                <p class="text-sm font-normal mb-2 mt-0"><i class="fas fa-file-alt"></i> {{ $this->previewingFile->original_filename ?? $this->previewingFile->filename }}
+                @if($this->previewingFile->vlm_confidence)
+                    <x-mary-badge
+                            :value="__('ledger.vlm.confidence') . ': ' . $this->previewingFile->VlmConfidenceFormatted"
+                            class="badge-primary" />
+                @endif
+                </p>
+            @endif
+
+            @if($this->previewingFile && $this->previewingFile->vlm_markdown)
+                <div class="prose max-w-none overflow-y-auto max-h-[70vh]">
+                    @php
+                        $renderedMarkdown = Illuminate\Support\Str::markdown($this->previewingFile->vlm_markdown, ['html_input' => 'strip']);
+                        // Remove Livewire/Blade comment artifacts
+                        $renderedMarkdown = preg_replace('/<!--\[if.*?\]><!?\[endif\]-->/', '', $renderedMarkdown);
+                    @endphp
+                    {!! $renderedMarkdown !!}
+                </div>
+
+                <x-slot:actions>
+                    @php
+                        $downloadMarkdownUrl = route('files.download-vlm', [
+                            'tenant' => tenant('id'),
+                            'attachedFile' => $this->previewingFile->id,
+                            'format' => 'markdown'
+                        ]);
+                        $downloadJsonUrl = route('files.download-vlm', [
+                            'tenant' => tenant('id'),
+                            'attachedFile' => $this->previewingFile->id,
+                            'format' => 'json'
+                        ]);
+                    @endphp
+                    
+                    <div class="flex gap-2">
+                        <a href="{{ $downloadMarkdownUrl }}" target="_blank" class="btn btn-sm btn-outline">
+                            <i class="fa-solid fa-download"></i>
+                            {{ __('ledger.vlm.download_markdown') }}
+                        </a>
+                        @if($this->previewingFile->vlm_structured_data)
+                            <a href="{{ $downloadJsonUrl }}" target="_blank" class="btn btn-sm btn-outline">
+                                <i class="fa-solid fa-download"></i>
+                                {{ __('ledger.vlm.download_json') }}
+                            </a>
+                        @endif
+                    </div>
+                    
+                    <x-mary-button label="{{ __('actions.close') }}" @click="$wire.showVlmModal = false"/>
+                </x-slot:actions>
+            @else
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>{{ __('ledger.vlm.result_not_found') }}</span>
+                </div>
+            @endif
+        </x-mary-modal>
 </div>

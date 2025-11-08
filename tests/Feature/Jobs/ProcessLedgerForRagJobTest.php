@@ -389,7 +389,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertEquals($vlmText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
 
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM解析結果)', $chunk->chunk_text);
+        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM-OCR 結果)', $chunk->chunk_text);
         $this->assertStringContainsString($vlmText, $chunk->chunk_text);
         $this->assertStringNotContainsString('古いTikaテキスト', $chunk->chunk_text);
     }
@@ -442,8 +442,8 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertEquals($tikaText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
 
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        // VLM処理済みでもテキストが更新されなかったので、VLM解析結果ラベルが付く
-        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM解析結果)', $chunk->chunk_text);
+        // VLM処理済みでもテキストが更新されなかったので、VLM-OCR 結果ラベルが付く
+        $this->assertStringContainsString('### 添付ファイル: original_file1.pdf (VLM-OCR 結果)', $chunk->chunk_text);
         $this->assertStringContainsString($tikaText, $chunk->chunk_text);
         $this->assertStringNotContainsString('VLMの短いテキスト', $chunk->chunk_text);
     }
@@ -490,7 +490,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertEquals($vlmText, $ledger->content_attached[1]['new_file.pdf']['meta']['content']);
 
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('### 添付ファイル: original_new_file.pdf (VLM解析結果)', $chunk->chunk_text);
+        $this->assertStringContainsString('### 添付ファイル: original_new_file.pdf (VLM-OCR 結果)', $chunk->chunk_text);
         $this->assertStringContainsString($vlmText, $chunk->chunk_text);
     }
 }

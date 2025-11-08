@@ -71,7 +71,7 @@
 1.  **添付ファイル処理ロジックの簡素化:**
     -   `handle` メソッドで `content_attached` が最適化済みであることを前提とする。
     -   `buildMarkdownFromLedger` 内の添付ファイル処理では、`$this->ledger->content_attached` をループし、`['meta']['content']` の内容を連結する。
-    -   各テキストの出典を明確にするため、`AttachedFile` モデルの `vlm_processed_at` タイムスタンプの有無を確認し、「(VLM解析結果)」または「(テキスト抽出結果)」というラベルを動的に付与する。
+    -   各テキストの出典を明確にするため、`AttachedFile` モデルの `vlm_processed_at` タイムスタンプの有無を確認し、「(VLM-OCR 結果)」または「(テキスト抽出結果)」というラベルを動的に付与する。
     -   テキスト長の制限と切り詰め処理は、このメソッド内に集約する。
 
 **実装イメージ (改訂後):**
@@ -204,7 +204,7 @@ private function buildMarkdownFromLedger(Ledger $ledger): string
                 }
 
                 // VLMで処理されたかどうかに基づいてラベルを決定
-                $sourceLabel = ($file && !empty($file->vlm_processed_at)) ? 'VLM解析結果' : 'テキスト抽出結果';
+                $sourceLabel = ($file && !empty($file->vlm_processed_at)) ? 'VLM-OCR 結果' : 'テキスト抽出結果';
 
                 // 長さ制限ロジック
                 $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
@@ -246,7 +246,7 @@ private function buildMarkdownFromLedger(Ledger $ledger): string
         -   **検証:**
             1.  `$ledger->refresh()` を実行。
             2.  `$ledger->content_attached` の該当部分が `vlm_markdown` の内容で更新されていることを `assertEquals` で検証。
-            3.  `buildMarkdownFromLedger` メソッド（リフレクション経由で呼び出し）が返すMarkdownに、VLMの内容と「(VLM解析結果)」ラベルが含まれることを `assertStringContainsString` で検証。
+            3.  `buildMarkdownFromLedger` メソッド（リフレクション経由で呼び出し）が返すMarkdownに、VLMの内容と「(VLM-OCR 結果)」ラベルが含まれることを `assertStringContainsString` で検証。
     -   **VLMが `content_attached` を更新しないテスト (短い場合):**
         -   **準備:** `vlm_markdown` が既存テキストより短い `AttachedFile` を持つ `Ledger` を作成。
         -   **実行:** Jobをディスパッチ。

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -35,6 +36,10 @@ class Show extends Component
     public bool $refresh = false;
 
     public ?string $highlight = null;
+
+    public bool $showVlmModal = false;
+
+    public ?int $previewingFileId = null;
 
     public function mount(int $ledgerId): void
     {
@@ -115,6 +120,31 @@ class Show extends Component
             }
         }
         $this->mount($this->ledgerRecord->id);
+    }
+
+    #[Computed]
+    public function previewingFile(): ?AttachedFile
+    {
+        if (! $this->previewingFileId) {
+            return null;
+        }
+
+        return AttachedFile::find($this->previewingFileId);
+    }
+
+    #[On('showVlmPreviewEvent')]
+    public function showVlmPreview(int $fileId): void
+    {
+        $file = AttachedFile::find($fileId);
+
+        if (! $file || ! $file->hasVlmResult()) {
+            $this->dispatch('mary-toast', title: __('ledger.vlm.result_not_found'), type: 'error');
+
+            return;
+        }
+
+        $this->previewingFileId = $fileId;
+        $this->showVlmModal = true;
     }
 
     public function render()

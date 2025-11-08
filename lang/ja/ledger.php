@@ -1129,4 +1129,12 @@ return [
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
     'semantic_search' => '意味検索',
+    'vlm' => [
+        'result_not_found' => 'VLM-OCR 結果が存在しません',
+        'preview_title' => 'VLM-OCR 結果',
+        'preview_button' => 'VLM-OCR 結果を表示',
+        'download_markdown' => 'Markdown形式でダウンロード',
+        'download_json' => 'JSON形式でダウンロード',
+        'confidence' => '信頼度',
+    ],
 ];

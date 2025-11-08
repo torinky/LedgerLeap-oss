@@ -70,10 +70,11 @@ class AttachedFilePathHelper
      * サムネイルのストレージパスを生成します。
      *
      * @param  string  $hashedBasename  ハッシュ化されたファイル名（拡張子含む）
+     * @param  string|null  $tenantId  テナントID（省略時は現在のテナント）
      */
-    public static function getThumbnailStoragePath(string $hashedBasename): string
+    public static function getThumbnailStoragePath(string $hashedBasename, ?string $tenantId = null): string
     {
-        $tenantId = tenant('id');
+        $tenantId = $tenantId ?? tenant('id');
         if (! $tenantId) {
             Log::error('Tenant ID not found while generating thumbnail path.');
 
