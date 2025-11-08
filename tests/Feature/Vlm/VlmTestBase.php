@@ -58,6 +58,16 @@ abstract class VlmTestBase extends TestCase
         $this->assertArrayHasKey('processing_time_s', $data);
         $this->assertArrayHasKey('model', $data);
         $this->assertArrayHasKey('device', $data);
+
+        // Assert confidence field exists (may be null for some models like marker/mineru)
+        $this->assertArrayHasKey('confidence', $data);
+
+        // For PaddleOCR, confidence should be a valid float between 0 and 1
+        if ($data['model'] === 'paddleocr' && $data['confidence'] !== null) {
+            $this->assertIsFloat($data['confidence']);
+            $this->assertGreaterThanOrEqual(0.0, $data['confidence']);
+            $this->assertLessThanOrEqual(1.0, $data['confidence']);
+        }
     }
 
     protected function assertStructuredDataFormat(array $structuredData): void

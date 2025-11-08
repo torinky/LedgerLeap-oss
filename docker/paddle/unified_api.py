@@ -795,6 +795,7 @@ async def extract_structured(file: UploadFile = File(...)):
             "html": result["html"],
             "markdown": result["markdown"],
             "structured_data": result["structured_data"],
+            "confidence": result.get("confidence"),  # Add confidence to response
             "processing_time_s": processing_time_s,
             "model": model_type,
             "device": os.environ.get("PADDLEOCR_DEVICE", "cpu")

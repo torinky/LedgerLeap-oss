@@ -1080,3 +1080,131 @@ docker exec ledgerleap-queue-1 supervisorctl status
 ---
 
 **Phase5実装報告書 - 完**
+
+---
+
+## 🔧 追加修正: PaddleOCR信頼度取得の不具合修正
+
+### 修正日: 2025年11月8日
+
+### 問題の発見
+
+Phase5実装後、UIでPaddleOCRの信頼度が表示されない問題が報告されました。調査の結果、以下の問題が判明しました。
+
+### 根本原因
+
+`docker/paddle/unified_api.py`の`/extract/structured`エンドポイントにおいて、`process_with_paddleocr`関数は信頼度を計算していましたが、**APIレスポンスに`confidence`フィールドを含めていませんでした**。
+
+#### 問題のコード（修正前）
+
+```python
+return {
+    "success": True,
+    "html": result["html"],
+    "markdown": result["markdown"],
+    "structured_data": result["structured_data"],
+    "processing_time_s": processing_time_s,
+    "model": model_type,
+    "device": os.environ.get("PADDLEOCR_DEVICE", "cpu")
+    # ← confidence フィールドが欠けている
+}
+```
+
+### 修正内容
+
+#### 1. APIレスポンスへの`confidence`追加
+
+**ファイル:** `docker/paddle/unified_api.py` (793-801行)
+
+```python
+return {
+    "success": True,
+    "html": result["html"],
+    "markdown": result["markdown"],
+    "structured_data": result["structured_data"],
+    "confidence": result.get("confidence"),  # ← 追加
+    "processing_time_s": processing_time_s,
+    "model": model_type,
+    "device": os.environ.get("PADDLEOCR_DEVICE", "cpu")
+}
+```
+
+#### 2. テストへのアサーション追加
+
+**ファイル:** `tests/Feature/Vlm/VlmTestBase.php`
+
+```php
+protected function assertUnifiedApiResponse(array $data): void
+{
+    // ... 既存のアサーション ...
+    
+    // Assert confidence field exists (may be null for some models)
+    $this->assertArrayHasKey('confidence', $data);
+    
+    // For PaddleOCR, confidence should be a valid float
+    if ($data['model'] === 'paddleocr' && $data['confidence'] !== null) {
+        $this->assertIsFloat($data['confidence']);
+        $this->assertGreaterThanOrEqual(0.0, $data['confidence']);
+        $this->assertLessThanOrEqual(1.0, $data['confidence']);
+    }
+}
+```
+
+### 検証結果
+
+#### 1. APIレスポンステスト
+
+```bash
+$ curl -X POST -F "file=@tests/fixtures/files/hand_writing_01.png" \
+  http://localhost:8000/extract/structured
+
+{
+  "success": true,
+  "confidence": 0.7766746977965037,  # ✅ 正しく返される
+  "model": "paddleocr",
+  "processing_time_s": 1.19
+}
+```
+
+#### 2. 自動テスト結果
+
+```
+PASS  Tests\Feature\Vlm\PaddleOcrVlmTest
+  ✓ health check
+  ✓ extract structured from simple invoice pdf
+  ✓ extract structured from handwriting image
+  ✓ extract structured handles invalid file
+  ✓ processing time is reasonable
+
+Tests:    5 passed (38 assertions)  # ← 26→38に増加（confidence検証追加）
+Duration: 9.34s
+```
+
+### 影響範囲
+
+#### 影響を受けるモデル
+
+- ✅ **PaddleOCR:** 修正により信頼度が正しく返されるようになった
+- ⚠️ **PaddleOCR-VL:** 元々信頼度は返さない（仕様通り）
+- ⚠️ **Marker/MinerU:** 固定値を返す（仕様通り）
+
+#### データベースへの影響
+
+- `attached_files.vlm_confidence`カラムに正しい値が保存されるようになった
+- 既存データ（修正前に処理されたデータ）は`NULL`のまま
+- 再処理により正しい信頼度が取得可能
+
+### 今後の対応
+
+1. **既存データの再処理:** 必要に応じて、Phase5の再処理機能を使用して信頼度を取得
+2. **UI表示:** `AttachedFile::getFormattedVlmConfidence()`メソッドで信頼度を表示
+3. **監視:** ログで信頼度計算の動作を継続的に監視
+
+### 関連コミット
+
+- 修正コミット: `fix(vlm): Add confidence field to API response`
+- テスト追加: `test(vlm): Add confidence assertions to VlmTestBase`
+
+---
+
+**修正完了 - 2025年11月8日**
