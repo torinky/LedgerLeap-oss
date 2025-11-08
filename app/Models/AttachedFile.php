@@ -177,68 +177,16 @@ class AttachedFile extends Model
     }
 
     /**
-     * Get user-friendly status text
-     */
-    public function getUserFriendlyStatusAttribute(): string
-    {
-        // エラー状態のチェック（優先）
-        if ($this->hasExtractionError()) {
-            return 'テキストを抽出できませんでした';
-        }
-
-        // 最終化済み
-        if ($this->processing_finalized_at) {
-            return match ($this->finalized_source) {
-                'vlm' => '高精度抽出完了',
-                'ocr' => 'テキスト抽出完了',
-                'tika' => '処理完了',
-                default => '完了',
-            };
-        }
-
-        // 処理中
-        if ($this->tika_processed_at) {
-            if ($this->isVlmOrOcrTarget()) {
-                return '画像を読み取り中...';
-            }
-
-            return '処理中...';
-        }
-
-        return '待機中';
-    }
-
-    /**
-     * Get confidence level badge
-     */
-    public function getConfidenceLevelAttribute(): ?string
-    {
-        if (! $this->processing_finalized_at) {
-            return null;
-        }
-
-        return match ($this->finalized_source) {
-            'vlm' => $this->vlm_confidence ?
-                ($this->vlm_confidence >= 0.9 ? '高精度' :
-                ($this->vlm_confidence >= 0.7 ? '標準精度' : '低精度')) :
-                '高精度',
-            'ocr' => '標準精度',
-            'tika' => '基本抽出',
-            default => null,
-        };
-    }
-
-    /**
-     * Check if extraction failed
+     * テキスト抽出に失敗したか判定
      */
     public function hasExtractionError(): bool
     {
-        // 最終化済みで、コンテンツが空の場合はエラー
+        // 最終化済みだがコンテンツが空
         if ($this->processing_finalized_at && ! $this->contain_content) {
             return true;
         }
 
-        // VLM/OCR対象なのに両方失敗した場合
+        // VLM/OCR対象なのに両方失敗してコンテンツなし
         if ($this->isVlmOrOcrTarget() &&
             $this->vlm_failed_at &&
             $this->ocr_failed_at &&
@@ -250,52 +198,41 @@ class AttachedFile extends Model
     }
 
     /**
-     * Check if user can retry processing
+     * 一般ユーザーが再処理をリクエストできるか
      */
-    public function canRetryProcessing(): bool
+    public function canUserRequestRetry(): bool
     {
-        // エラー状態の場合は再処理可能
-        if ($this->hasExtractionError()) {
-            return true;
-        }
-
-        // 低精度の場合も再処理可能
-        if ($this->finalized_source === 'vlm' &&
-            $this->vlm_confidence &&
-            $this->vlm_confidence < 0.7) {
-            return true;
-        }
-
-        // OCRフォールバックの場合も再処理可能（VLMを試す価値がある）
-        if ($this->finalized_source === 'ocr' && $this->vlm_failed_at) {
-            return true;
-        }
-
-        return false;
+        return $this->hasExtractionError();
     }
 
     /**
-     * Get badge color class for status
+     * 管理者が再処理を実行できるか
      */
-    public function getStatusBadgeColorAttribute(): string
+    public function canAdminRetry(): bool
     {
-        if ($this->hasExtractionError()) {
-            return 'badge-error';
-        }
+        return $this->hasExtractionError() ||
+            ($this->finalized_source === 'vlm' &&
+                $this->vlm_confidence < 0.7) ||
+            ($this->finalized_source === 'ocr' &&
+                $this->vlm_failed_at);
+    }
 
-        if ($this->processing_finalized_at) {
-            return match ($this->finalized_source) {
-                'vlm' => 'badge-success',
-                'ocr' => 'badge-info',
-                'tika' => 'badge-success',
-                default => 'badge-neutral',
-            };
-        }
+    /**
+     * VLMによる高精度抽出が完了したか
+     */
+    public function isHighQualityExtraction(): bool
+    {
+        return $this->processing_finalized_at &&
+            $this->finalized_source === 'vlm' &&
+            $this->vlm_confidence >= 0.7;
+    }
 
-        if ($this->tika_processed_at) {
-            return 'badge-warning';
-        }
-
-        return 'badge-ghost';
+    /**
+     * フォールバック処理で完了したか
+     */
+    public function isFallbackExtraction(): bool
+    {
+        return $this->processing_finalized_at &&
+            in_array($this->finalized_source, ['ocr', 'tika']);
     }
 }
