@@ -205,6 +205,78 @@ class AttachedFileTest extends TestCase
     }
 
     #[Test]
+    public function get_display_status_returns_original_status_when_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::OCR_FAILED,
+            'processing_finalized_at' => now(),
+            'mime' => 'image/png',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::OCR_FAILED, $file->getDisplayStatus());
+    }
+
+    #[Test]
+    public function get_display_status_returns_parallel_processing_when_ocr_failed_but_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::OCR_FAILED,
+            'processing_finalized_at' => null,
+            'mime' => 'image/png',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::PARALLEL_PROCESSING, $file->getDisplayStatus());
+    }
+
+    #[Test]
+    public function get_display_status_returns_parallel_processing_when_vlm_failed_but_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::VLM_FAILED,
+            'processing_finalized_at' => null,
+            'mime' => 'application/pdf',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::PARALLEL_PROCESSING, $file->getDisplayStatus());
+    }
+
+    #[Test]
+    public function get_display_status_returns_parallel_processing_when_tika_failed_but_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::TIKA_FAILED,
+            'processing_finalized_at' => null,
+            'mime' => 'image/jpeg',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::PARALLEL_PROCESSING, $file->getDisplayStatus());
+    }
+
+    #[Test]
+    public function get_display_status_returns_original_status_for_non_vlm_ocr_target()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::OCR_FAILED,
+            'processing_finalized_at' => null,
+            'mime' => 'text/plain',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::OCR_FAILED, $file->getDisplayStatus());
+    }
+
+    #[Test]
+    public function get_display_status_returns_original_status_for_processing_states()
+    {
+        $file = AttachedFile::factory()->make([
+            'status' => AttachedFileStatus::PARALLEL_PROCESSING,
+            'processing_finalized_at' => null,
+            'mime' => 'image/png',
+        ]);
+
+        $this->assertEquals(AttachedFileStatus::PARALLEL_PROCESSING, $file->getDisplayStatus());
+    }
+
+    #[Test]
     public function get_processing_status_returns_correct_status()
     {
         // Finalized

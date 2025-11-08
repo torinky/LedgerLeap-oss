@@ -178,6 +178,37 @@ class AttachedFile extends Model
     }
 
     /**
+     * UI表示用のステータスを取得
+     *
+     * Phase5並列処理において、最終化前は個別の失敗ステータス（OCR_FAILED等）を
+     * 処理中ステータス（PARALLEL_PROCESSING）に変換する。
+     * これにより、VLM処理が進行中の場合でもエラーアイコンではなく処理中アイコンが表示される。
+     */
+    public function getDisplayStatus(): AttachedFileStatus
+    {
+        // 最終化済みの場合は現在のステータスをそのまま返す
+        if ($this->processing_finalized_at) {
+            return $this->status;
+        }
+
+        // 最終化前で、VLM/OCR対象ファイルの場合
+        if ($this->isVlmOrOcrTarget()) {
+            // 個別処理の失敗ステータスは処理中に変換
+            // （他の処理が成功する可能性があるため）
+            if (in_array($this->status, [
+                AttachedFileStatus::OCR_FAILED,
+                AttachedFileStatus::VLM_FAILED,
+                AttachedFileStatus::TIKA_FAILED,
+            ])) {
+                return AttachedFileStatus::PARALLEL_PROCESSING;
+            }
+        }
+
+        // その他の場合は現在のステータスをそのまま返す
+        return $this->status;
+    }
+
+    /**
      * テキスト抽出に失敗したか判定
      */
     public function hasExtractionError(): bool

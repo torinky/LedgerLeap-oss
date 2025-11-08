@@ -272,10 +272,12 @@ class ColumnHtmlService
             $retryIconHtml = '';
 
             if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
-                $tooltip = $attachment->status->getDetailedTooltip($attachment);
+                // Phase5: 最終化前は処理中ステータスを表示
+                $displayStatus = $attachment->getDisplayStatus();
+                $tooltip = $displayStatus->getDetailedTooltip($attachment);
                 $statusIconHtml = <<<HTML
     <div class="tooltip tooltip-bottom" data-tip="{$tooltip}">
-        <i class="{$attachment->status->icon()} {$attachment->status->colorClass()} text-lg"></i>
+        <i class="{$displayStatus->icon()} {$displayStatus->colorClass()} text-lg"></i>
     </div>
 HTML;
 
