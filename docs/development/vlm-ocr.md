@@ -341,3 +341,108 @@ curl http://localhost:8001/health | jq .
 | PaddleOCR-VL 0.9B | `./bin/vlm-switch.sh paddleocr-vl` | 高度OCR（試行） |
 | Marker | `./bin/vlm-switch.sh marker` | PDF→Markdown |
 
+
+---
+
+## 📊 Phase4実装完了情報（2025-11-08追記）
+
+### VLM統合の現状
+
+LedgerLeapのVLM機能は**Phase4で完全実装**され、以下の機能が利用可能です：
+
+#### ✅ 実装済み機能
+
+1. **VLM自動処理フロー**
+   - ファイルアップロード時に自動でVLM処理実行
+   - OCR失敗時の自動フォールバック
+   - 処理結果を`attached_files.vlm_markdown`に保存
+
+2. **VLM結果表示UI**
+   - プレビューモーダルでMarkdown表示
+   - 信頼度スコアの表示
+   - Markdown/JSON形式のダウンロード
+
+3. **ステータス管理**
+   - 処理中・完了・失敗の視覚的フィードバック
+   - リトライ機能
+   - 重複処理の自動防止
+
+### 開発者向け情報
+
+#### VLM処理の実行方式
+
+**重要:** VLM処理は現在**同期実行（dispatchSync）**で実装されています。
+
+```php
+// app/Jobs/Ledger/ProcessAttachedFile.php
+if ($this->shouldProcessWithVlm($this->attachedFile)) {
+    ProcessVlmExtraction::dispatchSync($this->attachedFile); // 同期実行
+    $this->attachedFile->refresh();
+    return;
+}
+```
+
+**理由:**
+- キュー処理の技術的問題を回避
+- 確実な処理完了を保証
+- VLM処理は高速（1-2秒）のためパフォーマンス影響は軽微
+
+#### 設定
+
+VLM機能を有効にするため、`.env`ファイルに以下を設定：
+
+```env
+VLM_ENABLED=true
+VLM_URL=http://vlm:8000
+VLM_DEFAULT_MODEL=PaddleOCR-VL-0.9B
+VLM_TIMEOUT=300
+```
+
+#### 関連ファイル
+
+- `app/Jobs/Ledger/ProcessVlmExtraction.php` - VLM処理ジョブ
+- `app/Services/VlmClientService.php` - VLM API クライアント
+- `app/Livewire/Ledger/Show.php` - VLM結果表示UI
+- `app/Http/Controllers/AttachedFileDownloadController.php` - ダウンロード機能
+
+### トラブルシューティング
+
+#### VLM処理が実行されない
+
+1. VLMコンテナの状態確認:
+```bash
+docker ps | grep vlm
+curl http://localhost:8001/health
+```
+
+2. 設定確認:
+```bash
+./vendor/bin/sail artisan tinker --execute="echo config('vlm.enabled') ? 'Enabled' : 'Disabled';"
+```
+
+3. ログ確認:
+```bash
+tail -f storage/logs/queue-2025-11-08.log | grep VLM
+```
+
+#### VLM結果が表示されない
+
+1. VLM処理が完了しているか確認:
+```bash
+./vendor/bin/sail artisan tinker --execute="
+\$file = App\Models\AttachedFile::find(FILE_ID);
+echo 'VLM processed: ' . (\$file->vlm_processed_at ? 'Yes' : 'No');
+"
+```
+
+2. ブラウザのキャッシュクリア・リロード
+
+### 関連ドキュメント
+
+- [Phase4実装完了レポート](../work/vlm-rag-integration/2025-11-08_phase4-id3-implementation-report.md)
+- [VLM-RAG統合アーキテクチャ](../architecture/vlm-rag-integration.md)
+- [Phase4テストガイド](../work/vlm-rag-integration/2025-11-08_phase4-id3-testing-guide.md)
+
+---
+
+**最終更新:** 2025年11月8日（Phase4実装完了）

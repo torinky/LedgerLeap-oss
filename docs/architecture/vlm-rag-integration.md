@@ -44,78 +44,42 @@
 
 ### 1.1. 全体フローチャート（統合版）
 
+**更新日:** 2025年11月8日（Phase4実装完了後に更新）
+
+**重要な変更:**
+- VLM処理を同期実行（`dispatchSync`）に変更し、確実な処理完了を実現
+- OCR失敗時のVLMフォールバックを実装
+- VLM処理完了後はOCR処理をスキップ（VLM優先フロー）
+
 ```mermaid
 graph TD
-    subgraph "ユーザー操作"
-        A[ファイルアップロード via FilePond]
-    end
-    
-    subgraph "フェーズ1: 基本処理（既存）"
-        B[ProcessAttachedFile Job]
-        C{Apache Tika<br/>テキスト抽出}
-        D[content_attached更新<br/>★既存Mroonga検索用]
-        E{OCR必要?}
-        F[OcrAndOptimizeFile Job]
-        G[OcrMyPDF処理]
-        H[最適化PDF生成]
-    end
-    
-    subgraph "フェーズ2: VLM処理（新規）"
-        I{VLM対象判定<br/>mime/size}
-        J[ProcessVlmExtraction Job<br/>★新規]
-        K[VLMコンテナ API呼び出し]
-        L[attached_files.vlm_markdown保存<br/>★新規カラム]
-    end
-    
-    subgraph "フェーズ3: RAG統合（新規）"
-        M[UpdateLedgerChunks Job<br/>★新規]
-        N{vlm_markdown<br/>存在?}
-        O[VLM Markdown使用<br/>高品質データ]
-        P[Tika結果使用<br/>フォールバック]
-        Q[ChunkingService実行]
-        R[ledger_chunks作成/更新]
-    end
-    
-    subgraph "フェーズ4: Embedding（既存）"
-        S[GenerateEmbedding Job]
-        T[Embeddingコンテナ API]
-        U[ledger_chunks.embedding保存]
-    end
-    
-    subgraph "検索利用"
-        V[セマンティック検索可能]
-        W[ハイブリッド検索可能]
-    end
-    
-    A --> B
-    B --> C
-    C -->|成功| D
-    C -->|失敗 & PDF/Image| E
-    E -->|Yes| F
-    F --> G
-    G --> H
-    H --> B
-    E -->|No| D
-    
-    D --> I
-    I -->|Yes PDF/Image<br/>& size≤10MB| J
-    I -->|No| M
-    J --> K
-    K -->|成功| L
-    K -->|失敗| M
-    L --> M
-    
-    M --> N
-    N -->|Yes| O
-    N -->|No| P
-    O --> Q
-    P --> Q
-    Q --> R
-    R --> S
+    A[ファイルアップロード] --> B[ProcessAttachedFile]
+    B --> C{VLM対象?}
+    C -->|Yes<br/>画像/PDF| D[VLM処理<br/>★dispatchSync]
+    C -->|No| E{Tika<br/>テキスト抽出}
+    D --> F{VLM成功?}
+    F -->|Yes| G[vlm_markdown保存<br/>★COMPLETED]
+    F -->|No| E
+    E -->|成功| H[content_attached保存<br/>COMPLETED]
+    E -->|失敗| I{OCR対象?}
+    I -->|Yes| J[OCR処理]
+    I -->|No| K[COMPLETED]
+    J --> L{OCR成功?}
+    L -->|Yes| G
+    L -->|No| M{VLM対象?}
+    M -->|Yes| N[VLMフォールバック<br/>★dispatchSync]
+    M -->|No| O[OCR_FAILED]
+    N --> F
+    G --> P[UpdateLedgerChunks]
+    H --> P
+    P --> Q{vlm_markdown<br/>存在?}
+    Q -->|Yes| R[VLM優先使用]
+    Q -->|No| S[Tika結果使用]
+    R --> T[ChunkingService]
     S --> T
-    T --> U
-    U --> V
-    U --> W
+    T --> U[ledger_chunks作成]
+    U --> V[GenerateEmbedding]
+    V --> W[検索可能]
 ```
 
 ### 1.2. 各フェーズの詳細仕様
@@ -155,9 +119,15 @@ PENDING_INITIAL_PROCESSING
 
 ---
 
-#### フェーズ2: VLM処理（新規実装）
+#### フェーズ2: VLM処理（★実装完了 2025-11-08）
 
 **目的:** VLMによるMarkdown/構造化データ抽出と`attached_files`への保存
+
+**実装状況:** ✅ Phase4で完全実装済み
+- VLM処理の同期実行化（`dispatchSync`）
+- OCR失敗時の自動フォールバック
+- VLM結果表示UI実装
+- ダウンロード機能実装
 
 **トリガー条件:**
 ```php
@@ -1124,6 +1094,55 @@ $this->vlmService->improveModel($feedbackData);
 
 ---
 
+---
+
+## 📊 Phase4実装完了情報（2025-11-08追記）
+
+### 実装完了事項
+
+✅ **VLM処理フローの最適化**
+- VLM処理の同期実行化（`dispatchSync`）による確実な処理完了
+- OCR失敗時の自動VLMフォールバック実装
+- VLM処理完了後のOCR処理スキップ（VLM優先フロー）
+- リトライ時の重複処理防止
+
+✅ **VLM結果表示UI**
+- プレビューモーダル（Markdown表示、信頼度スコア表示）
+- ダウンロード機能（Markdown/JSON形式）
+- ステータスバッジ表示（処理中・完了・失敗）
+- イベント駆動のLivewire設計
+
+✅ **エラーハンドリング改善**
+- サムネイル生成とVLM処理の干渉解消
+- Tenant ID not foundエラーの解消
+- XSS防止（HTMLコメント除去）
+
+### 技術的な重要変更
+
+**VLM処理の同期実行化:**
+```php
+// 変更前: dispatch() でキュー追加
+ProcessVlmExtraction::dispatch($file);
+
+// 変更後: dispatchSync() で同期実行
+ProcessVlmExtraction::dispatchSync($file);
+$file->refresh(); // モデル再読み込み
+```
+
+**理由:** キュー処理の問題（原因不明でジョブが消失）を回避し、確実な処理完了を実現。VLM処理は高速（1-2秒）のため、パフォーマンスへの影響は軽微。
+
+**VLM優先フロー:**
+- Tika失敗 → VLM処理 → 成功時はOCRスキップ
+- OCR失敗 → VLMフォールバック → 再試行
+
+### 関連ドキュメント
+
+- [Phase4実装完了レポート](../work/vlm-rag-integration/2025-11-08_phase4-id3-implementation-report.md)
+- [Phase4テストガイド](../work/vlm-rag-integration/2025-11-08_phase4-id3-testing-guide.md)
+- [Phase4詳細計画書](../work/vlm-rag-integration/2025-11-08_phase4-id3-detailed-plan.md)
+
+---
+
 **作成者:** GitHub Copilot CLI (Serena)  
-**最終更新:** 2025-10-25  
-**バージョン:** 1.0（最終版）
+**最終更新:** 2025-11-08（Phase4実装完了）  
+**バージョン:** 2.0（Phase4実装反映版）
