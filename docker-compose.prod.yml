@@ -17,10 +17,14 @@ services:
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
       XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
       IGNITION_LOCAL_SITES_PATH: '${PWD}'
-    volumes:
-      - '.:/var/www/html'
     networks:
       - sail
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       mysql:
         condition: service_healthy
@@ -61,6 +65,12 @@ services:
         condition: service_started
       embedding:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "queue:work"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: on-failure
 
   # --- scheduler サービス ---
@@ -73,7 +83,7 @@ services:
     image: sail-8.4/app
     volumes:
       - .:/var/www/html
-    command: [ "php", "/var/www/html/artisan", "schedule:work", "--no-interaction" ]
+    command: /bin/sh -c "php /var/www/html/artisan schedule:work --no-interaction >> /var/www/html/storage/logs/schedule.log 2>&1"
     environment:
       WWWUSER: '${WWWUSER}'
       LARAVEL_SAIL: 1
@@ -88,6 +98,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "schedule:work"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: always
 
   mysql:
@@ -130,10 +146,14 @@ services:
     ports:
       - 9998:9998
     restart: on-failure
-    volumes:
-      - './docker/tika/tika-config.xml:/tika-config.xml'
     networks:
       - sail
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9998'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
   ocrmypdf:
     build:
       context: ./docker/ocrmypdf
@@ -143,9 +163,14 @@ services:
     working_dir: /var/www/html
     entrypoint: []
     command: tail -f /dev/null
-    restart: unless-stopped
     networks:
       - sail
+    healthcheck:
+      test: ["CMD", "ocrmypdf", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
   embedding:
     build:
       context: ./docker/embedding
