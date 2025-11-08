@@ -160,41 +160,25 @@ class ProcessAttachedFile implements ShouldQueue
                     }
                 }
 
-                // VLM処理の要否を判定
-                if ($this->shouldProcessWithVlm($this->attachedFile)) {
-                    Log::info('[Tika] Dispatching VLM job for file: '.$this->attachedFile->id);
-                    $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
-                    ProcessVlmExtraction::dispatchSync($this->attachedFile);
-                    // dispatchSyncは同期実行なので、完了後にこの処理が続く
-                    // VLM処理でステータスはCOMPLETEDに更新されている
-                    $this->attachedFile->refresh(); // モデルを再読み込み
-                    Log::info('[Tika] VLM processing completed for file: '.$this->attachedFile->id);
-
-                    // VLM処理が完了したので、このジョブはここで終了（OCR処理は不要）
-                    return;
-                }
-
-                // VLMが有効でない、または対象外の場合の既存フォールバック処理
+                // Tika処理が成功したらテキストを保存
                 if (! empty($extractedText)) {
-                    // テキスト抽出成功時
                     $result['meta']['content'] = $extractedText;
                     $this->attachedFile->contain_content = true;
-                    $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
-                    Log::info('Tika text extraction successful for file: '.$this->attachedFile->id);
+                }
+
+                // ★ Phase5: Tika処理完了マーク
+                $this->attachedFile->tika_processed_at = now();
+
+                // ★ Phase5: VLM/OCR並列処理の判定とディスパッチ
+                if ($this->attachedFile->isVlmOrOcrTarget()) {
+                    Log::info('[Phase5] File is VLM/OCR target, dispatching parallel processing: '.$this->attachedFile->id);
+                    $this->dispatchParallelProcessing();
                 } else {
-                    // テキスト抽出失敗時
-                    $mimeType = $this->attachedFile->mime;
-                    if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && ! $this->attachedFile->optimized) {
-                        // OCR対象の場合 (PDF/画像) かつまだ最適化されていない場合: PENDING_OCR に更新し、OcrAndOptimizeFile ジョブをディスパッチ
-                        $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
-                        OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
-                        Log::info('Dispatched OcrAndOptimizeFile for file: '.$this->attachedFile->id);
-                    } else {
-                        // OCR対象外の場合 (ZIP, etc.) または既に最適化されている場合: COMPLETED に更新して処理を正常終了
-                        // optimized が true の場合、OCR処理は完了しているため、Tikaがテキストを抽出できなくてもCOMPLETEDとする
-                        $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
-                        Log::info('File is not OCR-eligible or already optimized, marking as completed: '.$this->attachedFile->id);
-                    }
+                    // VLM/OCR対象外のファイルは即座に最終化完了
+                    Log::info('[Phase5] File is not VLM/OCR target, marking as finalized: '.$this->attachedFile->id);
+                    $this->attachedFile->processing_finalized_at = now();
+                    $this->attachedFile->finalized_source = 'tika';
+                    $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
                 }
 
                 // メタデータも更新 (extractedMetaがオブジェクトの場合のみ)
@@ -214,28 +198,19 @@ class ProcessAttachedFile implements ShouldQueue
             } catch (Exception $e) {
                 Log::error('Tika service error for file '.$this->attachedFile->id.': '.$e->getMessage().'\nStack trace: '.$e->getTraceAsString());
 
-                // Tikaエラー時もVLM処理を試みる
-                if ($this->shouldProcessWithVlm($this->attachedFile)) {
-                    Log::info('[Tika Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
-                    $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
-                    ProcessVlmExtraction::dispatchSync($this->attachedFile);
-                    // dispatchSyncは同期実行なので、完了後にこの処理が続く
-                    $this->attachedFile->refresh();
-                    Log::info('[Tika Fallback] VLM processing completed for file: '.$this->attachedFile->id);
+                // ★ Phase5: Tikaエラー時もTika処理完了マーク（空のコンテンツで）
+                $this->attachedFile->tika_processed_at = now();
 
-                    return; // VLM処理完了後に終了
-                }
-
-                $mimeType = $this->attachedFile->mime;
-                if ((str_starts_with($mimeType, 'application/pdf') || str_starts_with($mimeType, 'image/')) && ! $this->attachedFile->optimized) {
-                    $this->attachedFile->status = AttachedFileStatus::PENDING_OCR->value;
-                    OcrAndOptimizeFile::dispatch($this->attachedFile)->delay(now()->addSeconds(5));
-                    Log::info('Dispatched OcrAndOptimizeFile after Tika error for file: '.$this->attachedFile->id);
+                // ★ Phase5: VLM/OCR対象ならエラー時も並列処理を試みる
+                if ($this->attachedFile->isVlmOrOcrTarget()) {
+                    Log::info('[Phase5 Fallback] Tika failed but dispatching parallel processing: '.$this->attachedFile->id);
+                    $this->dispatchParallelProcessing();
                 } else {
-                    // OCR対象外の場合、または既に最適化されている場合 (TikaがOCR済みPDFからテキスト抽出できなかったケース)
-                    // Tikaエラーが発生したが、OCR処理は完了している（optimized=true）場合はCOMPLETEDとする
-                    $this->attachedFile->status = $this->attachedFile->optimized ? AttachedFileStatus::COMPLETED->value : AttachedFileStatus::TIKA_FAILED->value;
-                    Log::info('File is not OCR-eligible or already optimized after Tika error, marking as completed/failed: '.$this->attachedFile->id);
+                    // VLM/OCR対象外の場合はTIKA_FAILEDとして終了
+                    $this->attachedFile->processing_finalized_at = now();
+                    $this->attachedFile->finalized_source = 'tika';
+                    $this->attachedFile->status = AttachedFileStatus::TIKA_FAILED->value;
+                    Log::info('[Phase5] Non-VLM/OCR file with Tika error, marking as failed: '.$this->attachedFile->id);
                 }
             }
 
@@ -303,5 +278,40 @@ class ProcessAttachedFile implements ShouldQueue
         }
 
         return true;
+    }
+
+    /**
+     * ★ Phase5: Dispatch VLM and OCR processing in parallel.
+     */
+    private function dispatchParallelProcessing(): void
+    {
+        $vlmEnabled = config('vlm.enabled', false);
+        $ocrEnabled = true; // OCR is always available
+
+        // VLMジョブをディスパッチ（vlmキュー）
+        if ($vlmEnabled) {
+            ProcessVlmExtraction::dispatch($this->attachedFile)
+                ->onQueue('vlm');
+            Log::info('[Phase5] Dispatched VLM job to vlm queue for file: '.$this->attachedFile->id);
+        } else {
+            // VLMが無効な場合は即座に失敗マーク
+            $this->attachedFile->vlm_failed_at = now();
+            Log::info('[Phase5] VLM disabled, marking as failed for file: '.$this->attachedFile->id);
+        }
+
+        // OCRジョブをディスパッチ（ocrキュー、2秒遅延）
+        if ($ocrEnabled) {
+            OcrAndOptimizeFile::dispatch($this->attachedFile)
+                ->delay(now()->addSeconds(2))
+                ->onQueue('ocr');
+            Log::info('[Phase5] Dispatched OCR job to ocr queue (2s delay) for file: '.$this->attachedFile->id);
+        } else {
+            // OCRが無効な場合は即座に失敗マーク（通常ありえない）
+            $this->attachedFile->ocr_failed_at = now();
+            Log::info('[Phase5] OCR disabled, marking as failed for file: '.$this->attachedFile->id);
+        }
+
+        // ステータスは変更しない（Phase4のステータスを保持）
+        // 最終化処理がスケジューラーで実行される
     }
 }

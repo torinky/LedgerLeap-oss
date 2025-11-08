@@ -20,6 +20,7 @@ class AttachedFile extends Model
         'ledger_id', 'column_id', 'mime', 'path', 'size', 'status',
         'contain_content', 'optimized', 'creator_id', 'modifier_id', 'original_file_path', 'original_mime_type',
         'vlm_markdown', 'vlm_structured_data', 'vlm_model', 'vlm_confidence', 'vlm_processing_time_ms', 'vlm_processed_at',
+        'tika_processed_at', 'vlm_failed_at', 'ocr_processed_at', 'ocr_failed_at', 'processing_finalized_at', 'finalized_source',
     ];
 
     protected $casts = [
@@ -27,6 +28,11 @@ class AttachedFile extends Model
         'status' => AttachedFileStatus::class,
         'vlm_structured_data' => 'array',
         'vlm_processed_at' => 'datetime',
+        'tika_processed_at' => 'datetime',
+        'vlm_failed_at' => 'datetime',
+        'ocr_processed_at' => 'datetime',
+        'ocr_failed_at' => 'datetime',
+        'processing_finalized_at' => 'datetime',
     ];
 
     public function getOriginalFilenameAttribute(): ?string
@@ -119,5 +125,54 @@ class AttachedFile extends Model
         }
 
         return null;
+    }
+
+    public function getProcessingStatusAttribute(): string
+    {
+        if ($this->processing_finalized_at) {
+            return 'finalized';
+        }
+
+        $tikaComplete = (bool) $this->tika_processed_at;
+        $vlmComplete = (bool) $this->vlm_processed_at;
+        $vlmFailed = (bool) $this->vlm_failed_at;
+        $ocrComplete = (bool) $this->ocr_processed_at;
+        $ocrFailed = (bool) $this->ocr_failed_at;
+
+        if ($tikaComplete && ($vlmComplete || $vlmFailed) && ($ocrComplete || $ocrFailed)) {
+            return 'ready_for_finalization';
+        }
+
+        if ($tikaComplete) {
+            return 'parallel_processing';
+        }
+
+        return 'initial_processing';
+    }
+
+    public function isReadyForFinalization(): bool
+    {
+        if ($this->processing_finalized_at) {
+            return false;
+        }
+
+        if (! $this->tika_processed_at) {
+            return false;
+        }
+
+        $vlmDone = $this->vlm_processed_at || $this->vlm_failed_at;
+        $ocrDone = $this->ocr_processed_at || $this->ocr_failed_at;
+
+        return $vlmDone && $ocrDone;
+    }
+
+    public function isVlmOrOcrTarget(): bool
+    {
+        if (! $this->mime) {
+            return false;
+        }
+
+        return str_starts_with($this->mime, 'image/') ||
+               $this->mime === 'application/pdf';
     }
 }

@@ -136,22 +136,6 @@ class OcrAndOptimizeFile implements ShouldQueue
             $result->throw();
 
             // 4. レコード情報の更新
-            //            $this->attachedFile->path = $outputStoragePath;
-            //            $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
-            //            $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
-            //            $this->attachedFile->optimized = true; // optimized を true に設定
-
-            // Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
-            // try {
-            //     $fileContent = Storage::disk('public')->get($this->attachedFile->path);
-            //     Log::info('File content length: ' . strlen($fileContent));
-            // } catch (\Exception $e) {
-            //     Log::error('Failed to get file content: ' . $e->getMessage());
-            // }
-
-            //            $this->attachedFile->size = Storage::disk('public')->size($this->attachedFile->path);
-            //            $this->attachedFile->save();
-            // Log::info('OCR and optimization successful for file: ' . $this->attachedFile->id);
             // --- 成功時の処理 ---
             $this->attachedFile->update([
                 'path' => $outputStoragePath,
@@ -160,55 +144,37 @@ class OcrAndOptimizeFile implements ShouldQueue
                 'optimized' => true,
                 'size' => Storage::disk('public')->size($outputStoragePath),
                 'status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value, // Tika再処理のためのステータス
+                'ocr_processed_at' => now(), // ★ Phase5: OCR成功時のタイムスタンプ
+            ]);
+
+            Log::info('[OCR] Processing successful', [
+                'file_id' => $this->attachedFile->id,
+                'output_file' => $outputFileName,
             ]);
 
             // 5. Tikaによる再処理
-            //            $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
             ProcessAttachedFile::dispatch($this->attachedFile);
-            // Log::info('Dispatched ProcessAttachedFile for re-processing: ' . $this->attachedFile->id);
+            Log::info('[OCR] Dispatched Tika re-processing for file: '.$this->attachedFile->id);
 
         } catch (ProcessFailedException $e) {
             // --- 失敗時の処理 ---
-            Log::error('OCR and optimization failed for file '.$this->attachedFile->id, [
+            Log::error('[OCR] Processing failed', [
+                'file_id' => $this->attachedFile->id,
                 'error' => $e->getMessage(),
                 'output' => $e->result->output(),
                 'errorOutput' => $e->result->errorOutput(),
             ]);
 
-            // OCR失敗時、VLM処理にフォールバック
-            if ($this->shouldProcessWithVlm($this->attachedFile)) {
-                Log::info('[OCR Fallback] Dispatching VLM job for file: '.$this->attachedFile->id);
-                $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_VLM]);
-                ProcessVlmExtraction::dispatchSync($this->attachedFile);
+            // ★ Phase5: OCR失敗時のタイムスタンプを設定
+            $this->attachedFile->update([
+                'status' => AttachedFileStatus::OCR_FAILED->value,
+                'ocr_failed_at' => now(), // ★ Phase5: OCR失敗時のタイムスタンプ
+            ]);
 
-                return; // VLMに処理を委譲
-            }
-
-            // VLMも対象外の場合は失敗として記録
-            $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
+            // ★ Phase5: VLMフォールバック削除（並列処理なので不要）
+            // OCR失敗はOCR失敗として記録し、最終化処理がVLM結果を選択する
         }
     }
 
-    /**
-     * Determines if the attached file should be processed by the VLM service.
-     */
-    private function shouldProcessWithVlm(AttachedFile $attachedFile): bool
-    {
-        if (! config('vlm.enabled')) {
-            return false;
-        }
-
-        $mimeType = $attachedFile->mime;
-        $isVlmTargetMime = str_starts_with($mimeType, 'image/') || str_starts_with($mimeType, 'application/pdf');
-
-        if (! $isVlmTargetMime) {
-            return false;
-        }
-
-        if ($attachedFile->vlm_processed_at !== null) {
-            return false;
-        }
-
-        return true;
-    }
+    // ★ Phase5: shouldProcessWithVlmメソッドは不要（並列処理で削除）
 }

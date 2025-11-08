@@ -81,14 +81,15 @@ class ProcessVlmExtraction implements ShouldQueue
                 throw new \RuntimeException('VLM returned empty markdown');
             }
 
+            // ★ Phase5: タイムスタンプ設定（成功時）
             // データベース保存
             $this->attachedFile->update([
                 'vlm_markdown' => $vlmOutput['markdown'],
                 'vlm_structured_data' => $vlmOutput['structured_data'] ?? null,
                 'vlm_model' => $vlmOutput['model'] ?? config('vlm.default_model'),
-                'vlm_confidence' => $vlmOutput['confidence'] ?? null, // confidenceはVLMコンテナの実装に依存
+                'vlm_confidence' => $vlmOutput['confidence'] ?? null,
                 'vlm_processing_time_ms' => $processingTimeMs,
-                'vlm_processed_at' => now(),
+                'vlm_processed_at' => now(), // ★ Phase5: 成功時のタイムスタンプ
                 'status' => AttachedFileStatus::COMPLETED,
             ]);
 
@@ -99,10 +100,11 @@ class ProcessVlmExtraction implements ShouldQueue
                 'markdown_length' => strlen($vlmOutput['markdown']),
             ]);
 
-            if (config('rag.chunking.auto_update_chunks', true)) {
-                \App\Jobs\ProcessLedgerForRagJob::dispatch($this->attachedFile->ledger)
-                    ->delay(now()->addSeconds(5));
-            }
+            // ★ Phase5: RAGジョブディスパッチを削除（スケジューラーが最終化時に実行）
+            // if (config('rag.chunking.auto_update_chunks', true)) {
+            //     \App\Jobs\ProcessLedgerForRagJob::dispatch($this->attachedFile->ledger)
+            //         ->delay(now()->addSeconds(5));
+            // }
 
         } catch (\Exception $e) {
             Log::error('[VLM] Extraction failed', [
@@ -112,9 +114,12 @@ class ProcessVlmExtraction implements ShouldQueue
                 'attempt' => $this->attempts(),
             ]);
 
-            // 最終試行失敗時のみステータス更新
+            // ★ Phase5: 最終試行失敗時に失敗タイムスタンプを設定
             if ($this->attempts() >= $this->tries) {
-                $this->attachedFile->update(['status' => AttachedFileStatus::VLM_FAILED]);
+                $this->attachedFile->update([
+                    'status' => AttachedFileStatus::VLM_FAILED,
+                    'vlm_failed_at' => now(), // ★ Phase5: 失敗時のタイムスタンプ
+                ]);
             }
 
             throw $e; // リトライ処理のため再スロー
@@ -132,7 +137,11 @@ class ProcessVlmExtraction implements ShouldQueue
         ]);
 
         if ($this->attachedFile) {
-            $this->attachedFile->update(['status' => AttachedFileStatus::VLM_FAILED]);
+            // ★ Phase5: 失敗時のタイムスタンプも設定
+            $this->attachedFile->update([
+                'status' => AttachedFileStatus::VLM_FAILED,
+                'vlm_failed_at' => now(),
+            ]);
         }
     }
 }
