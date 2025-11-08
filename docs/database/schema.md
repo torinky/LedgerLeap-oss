@@ -46,7 +46,7 @@ erDiagram
     ledger_defines {
         int id PK
         string title
-        text column_define JSON
+        text column_define "JSON column definitions"
         int folder_id FK
         int creator_id FK
         int modifier_id FK
@@ -201,8 +201,8 @@ erDiagram
         morphs subject
         string event
         morphs causer
-        text properties JSON
-        uuid batch_uuid
+        text properties "properties in JSON format"
+        string batch_uuid "UUID"
         datetime created_at
         datetime updated_at
     }
@@ -236,6 +236,8 @@ erDiagram
     tags ||--o{ taggables : "applied_to"
     users ||--o{ activity_log : "caused_by"
     notification_types ||--o{ notifications : "categorizes"
+
+```
 
 ## 全文検索 (Mroonga) に関する仕様と注意点
 
