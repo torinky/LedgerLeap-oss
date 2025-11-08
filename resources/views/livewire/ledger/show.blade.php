@@ -144,17 +144,36 @@
             </x-slot:title>
 
             @if($this->previewingFile)
-                <p class="text-sm font-normal mb-2 mt-0"><i class="fas fa-file-alt"></i> {{ $this->previewingFile->original_filename ?? $this->previewingFile->filename }}
-                @if($this->previewingFile->vlm_confidence)
-                    <x-mary-badge
-                            :value="__('ledger.vlm.confidence') . ': ' . $this->previewingFile->VlmConfidenceFormatted"
-                            class="badge-primary" />
-                @endif
-                </p>
+                <div class="mb-4">
+                    <p class="text-sm font-normal mb-2">
+                        <i class="fas fa-file-alt"></i> 
+                        {{ $this->previewingFile->original_filename ?? $this->previewingFile->filename }}
+                    </p>
+                    
+                    {{-- VLM品質情報 --}}
+                    <div class="flex gap-2 flex-wrap mb-3">
+                        {{-- VLM抽出バッジ --}}
+                        <x-mary-badge 
+                            :value="__('ledger.vlm.source.vlm')"
+                            class="badge-success" />
+                        
+                        {{-- VLM信頼度バッジ --}}
+                        @if($this->previewingFile->vlm_confidence)
+                            <x-mary-badge
+                                :value="__('ledger.vlm.confidence_label') . ': ' . $this->previewingFile->VlmConfidenceFormatted"
+                                :class="$this->previewingFile->vlm_confidence >= 0.9 ? 'badge-success' : 
+                                       ($this->previewingFile->vlm_confidence >= 0.7 ? 'badge-info' : 'badge-warning')" />
+                        @endif
+                    </div>
+                </div>
             @endif
 
             @if($this->previewingFile && $this->previewingFile->vlm_markdown)
-                <div class="prose max-w-none overflow-y-auto max-h-[70vh]">
+
+
+                <div class="prose max-w-none overflow-y-auto max-h-[70vh]" 
+                     x-ref="markdownContent"
+                     data-markdown="{{ $this->previewingFile->vlm_markdown }}">
                     @php
                         $renderedMarkdown = Illuminate\Support\Str::markdown($this->previewingFile->vlm_markdown, ['html_input' => 'strip']);
                         // Remove Livewire/Blade comment artifacts
@@ -164,6 +183,57 @@
                 </div>
 
                 <x-slot:actions>
+                    {{-- クリップボードコピーボタン（メイン機能） --}}
+                    <div class="mb-3" x-data="{
+                    copied: false,
+                    copyToClipboard() {
+                        const markdownEl = this.$refs.markdownContent;
+                        const markdown = markdownEl?.dataset?.markdown || '';
+
+                        if (!markdown) {
+                            $wire.call('notifyCopyFailed');
+                            return;
+                        }
+
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(markdown)
+                                .then(() => {
+                                    this.copied = true;
+                                    $wire.call('notifyCopySuccess');
+                                    setTimeout(() => { this.copied = false; }, 2000);
+                                })
+                                .catch(() => {
+                                    this.fallbackCopy(markdown);
+                                });
+                        } else {
+                            this.fallbackCopy(markdown);
+                        }
+                    },
+                    fallbackCopy(text) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                            this.copied = true;
+                            $wire.call('notifyCopySuccess');
+                            setTimeout(() => { this.copied = false; }, 2000);
+                        } catch (err) {
+                            $wire.call('notifyCopyFailed');
+                        }
+                        document.body.removeChild(textarea);
+                    }
+                }">
+
+                        <x-mary-button @click="copyToClipboard()" class="btn btn-primary ">
+                            <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                            <span x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.vlm.copy_to_clipboard') }}'"></span>
+                        </x-mary-button>
+
+                    </div>
                     @php
                         $downloadMarkdownUrl = route('files.download-vlm', [
                             'tenant' => tenant('id'),
@@ -177,20 +247,11 @@
                         ]);
                     @endphp
                     
-                    <div class="flex gap-2">
-                        <a href="{{ $downloadMarkdownUrl }}" target="_blank" class="btn btn-sm btn-outline">
-                            <i class="fa-solid fa-download"></i>
-                            {{ __('ledger.vlm.download_markdown') }}
-                        </a>
-                        @if($this->previewingFile->vlm_structured_data)
-                            <a href="{{ $downloadJsonUrl }}" target="_blank" class="btn btn-sm btn-outline">
-                                <i class="fa-solid fa-download"></i>
-                                {{ __('ledger.vlm.download_json') }}
-                            </a>
-                        @endif
-                    </div>
-                    
-                    <x-mary-button label="{{ __('actions.close') }}" @click="$wire.showVlmModal = false"/>
+
+                    <x-mary-button label="{{ __('ledger.vlm.download_markdown') }}" link="{{ $downloadMarkdownUrl }}" icon="o-arrow-down-on-square" external="true"/>
+                    <x-mary-button label="{{ __('ledger.vlm.download_json') }}" link="{{ $downloadJsonUrl }}" icon="o-arrow-down-on-square" external="true"/>
+
+                    <x-mary-button label="{{ __('actions.close') }}" icon="o-x-circle" @click="$wire.showVlmModal = false"/>
                 </x-slot:actions>
             @else
                 <div class="alert alert-warning">

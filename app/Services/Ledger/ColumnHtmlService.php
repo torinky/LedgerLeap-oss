@@ -370,7 +370,7 @@ HTML;
 
             if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
                 $thumbnails[] = <<<HTML
-<div class="indicator"> 
+<div class="indicator my-5"> 
 <span class="indicator-item">
     {$statusIconHtml}
  {$retryIconHtml}
@@ -389,20 +389,20 @@ HTML;
                 }
                 $files[] = <<<HTML
  {$contentHtmlStart}
-<div class="flex items-center mx-1 my-1 py-2">
-<div class="indicator">
-<span class="indicator-item">
- {$statusIconHtml}
- {$retryIconHtml}
- {$vlmPreviewButtonHtml}
- {$auxiliaryLinksHtml}
- </span>
-     <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
- opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
-         <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
-         <span>{$originalFilename}</span>
-     </a>
-</div>
+<div class="flex items-center mx-1 my-5 py-2">
+    <div class="indicator">
+        <span class="indicator-item">
+            {$statusIconHtml}
+            {$retryIconHtml}
+            {$vlmPreviewButtonHtml}
+            {$auxiliaryLinksHtml}
+        </span>
+        <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
+     opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
+            <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
+            <span>{$originalFilename}</span>
+        </a>
+    </div>
 </div>
  {$contentHtmlEnd}
 HTML;

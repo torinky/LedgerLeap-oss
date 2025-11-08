@@ -36,6 +36,198 @@
 
 ---
 
+## 🔍 技術調査: 品質表示（信頼度）の実現可能性
+
+### 調査日: 2025年11月8日
+
+### 調査結果サマリー
+
+| 処理手法 | 信頼度データの有無 | 実装状況 | 表示可否 |
+|---------|----------------|---------|---------|
+| **VLM (PaddleOCR-VL)** | ✅ あり (`vlm_confidence`) | ✅ DB保存済み | ✅ 可能 |
+| **OCR (PaddleOCR)** | ✅ あり（API提供） | ❌ 未保存 | ⚠️ 追加実装必要 |
+| **Tika** | ❌ なし | - | ❌ 不可能 |
+
+### 詳細調査内容
+
+#### 1. VLMの信頼度
+
+**データベース設計:**
+```sql
+vlm_confidence DECIMAL(4,3) -- 0.000-1.000の範囲
+```
+
+**現在の実装:**
+- ✅ `ProcessVlmExtraction`ジョブで保存済み
+- ✅ `AttachedFile::getFormattedConfidenceAttribute()`で%表示
+- ✅ 0.7以上を高精度、未満を低精度とする閾値設定済み
+
+**UI表示:**
+```php
+// 既存実装（app/Models/AttachedFile.php）
+public function getFormattedConfidenceAttribute(): ?string
+{
+    if ($this->vlm_confidence === null) {
+        return null;
+    }
+    return number_format($this->vlm_confidence * 100, 1) . '%';
+}
+
+// Phase5で追加実装
+public function isHighQualityExtraction(): bool
+{
+    return $this->finalized_source === 'vlm' &&
+           $this->vlm_confidence >= 0.7;
+}
+```
+
+**結論:** ✅ **VLMの信頼度表示は実装可能**
+
+---
+
+#### 2. PaddleOCRの信頼度
+
+**API仕様（公式ドキュメント調査）:**
+
+PaddleOCRは各検出テキストに対して信頼度スコア（0.0-1.0）を返します:
+
+```python
+# PaddleOCR出力フォーマット
+[
+  [
+    [[x1, y1], [x2, y2], [x3, y3], [x4, y4]],  # bounding box
+    ('recognized_text', confidence_score)      # text and score
+  ],
+  ...
+]
+
+# 例:
+[[[[641.0, 65.0], [813.0, 61.0], [815.0, 130.0], [643.0, 134.0]], 
+  ('FRLU', 0.988)],  # 98.8% confidence
+ [[[645.0, 156.0], [953.0, 152.0], [954.0, 214.0], [645.0, 217.0]], 
+  ('8616911', 0.963)]]  # 96.3% confidence
+```
+
+**REST API JSON形式:**
+```json
+{
+  "results": [
+    {
+      "text": "XPO",
+      "confidence": 0.995,
+      "bounding_box": [[329, 124], [515, 128], [513, 200], [327, 197]]
+    }
+  ]
+}
+```
+
+**現在の実装:**
+
+LedgerLeapでは`OcrAndOptimizeFile`ジョブが`ocrmypdf`コマンドを実行していますが、**confidence情報を取得・保存していません**:
+
+```php
+// app/Jobs/Ledger/OcrAndOptimizeFile.php （現在）
+$command = [
+    'ocrmypdf',
+    '--force-ocr',
+    '-l', 'jpn+eng',
+    $dockerInputPath,
+    $dockerOutputPath,
+];
+// → PDFを生成するのみ、confidence情報は取得しない
+```
+
+**問題点:**
+- `ocrmypdf`はPaddleOCRのconfidence情報を公開していない
+- 現在のPDF→Tika抽出フローではconfidence情報が失われる
+- PaddleOCR APIを直接呼び出す必要がある
+
+**実装の選択肢:**
+
+**オプションA: PaddleOCR APIの直接呼び出し（推奨）**
+```python
+# 新規Pythonスクリプト: scripts/paddleocr_extract.py
+from paddleocr import PaddleOCR
+
+ocr = PaddleOCR(use_angle_cls=True, lang='japan')
+result = ocr.ocr(img_path, cls=True)
+
+# 平均confidenceを計算
+confidences = [line[1][1] for line in result[0]]
+avg_confidence = sum(confidences) / len(confidences)
+
+return {
+    "text": "
+".join([line[1][0] for line in result[0]]),
+    "confidence": avg_confidence,
+    "details": result
+}
+```
+
+**オプションB: ocrmypdfの出力ログをパース（非推奨）**
+- ocrmypdfのverbose出力にconfidence情報が含まれる場合がある
+- 信頼性が低く、バージョン依存のリスク
+
+**結論:** ⚠️ **OCRの信頼度表示には追加実装が必要**
+- 短期的には「標準精度」と表示（confidenceなし）
+- 長期的にはPaddleOCR API直接呼び出しに移行
+
+---
+
+#### 3. Tikaの信頼度
+
+**公式ドキュメント調査:**
+Apache Tikaはメタデータ抽出に特化しており、**信頼度スコアは提供していません**。
+
+**理由:**
+- Tikaは既存テキストレイヤーの抽出のみ
+- OCRは行わない（PDFに既に埋め込まれたテキストを読む）
+- 信頼度の概念が存在しない
+
+**結論:** ❌ **Tikaの信頼度表示は不可能**
+
+---
+
+### 実装方針の決定
+
+#### フェーズ5.1（現在）: VLMのみ信頼度表示
+
+```php
+// モーダル内で表示
+@if($file->finalized_source === 'vlm' && $file->vlm_confidence)
+    <div class="text-sm text-gray-600">
+        {{ __('file.status.quality') }}: 
+        <span class="font-semibold">{{ $file->formatted_confidence }}</span>
+        @if($file->vlm_confidence >= 0.9)
+            <x-heroicon-s-check-badge class="w-4 h-4 text-success inline" />
+        @elseif($file->vlm_confidence >= 0.7)
+            <x-heroicon-s-shield-check class="w-4 h-4 text-info inline" />
+        @else
+            <x-heroicon-s-exclamation-triangle class="w-4 h-4 text-warning inline" />
+        @endif
+    </div>
+@endif
+```
+
+**表示ルール:**
+- VLM処理の場合のみ信頼度を表示
+- 90%以上: 高精度（緑チェック）
+- 70-90%: 標準精度（青シールド）
+- 70%未満: 低精度（黄色警告）
+- OCR/Tika: 信頼度表示なし（「標準抽出」等の文言のみ）
+
+#### フェーズ6（将来）: OCR信頼度の追加
+
+**実装タスク:**
+1. PaddleOCR APIラッパースクリプト作成
+2. `ocr_confidence`カラムをマイグレーション追加
+3. `OcrAndOptimizeFile`を改修してconfidence保存
+4. UI表示ロジックを拡張
+
+**優先度:** 低（Phase6以降で検討）
+
+---
+
 ## 🎯 WBS 9.1: UI改善タスク分解
 
 ### タスク 9.1.1: AttachedFileモデルの表示ロジック整理
@@ -389,23 +581,107 @@ HTML;
 └─────────────────────────────────────────────┘
 ```
 
-**2. 品質情報バッジ**
-- **抽出手法バッジ:** 
-  - VLM: 緑色 `badge-success`「VLM (高精度AI)」
-  - OCR: 青色 `badge-info`「OCR」
-  - Tika: グレー `badge-neutral`「Tika」
+**2. 品質情報バッジ（2025-11-08更新）**
+
+**変更方針:**
+技術調査の結果、**VLMのみ信頼度表示が可能**であることが判明しました。
+
+**実装する表示:**
+
+- **抽出手法:**
+  - 表示しない（ユーザーには不要な技術情報）
+  - ツールチップで管理者向けに表示
   
-- **信頼度バッジ（既存拡張）:**
-  - 90%以上: 緑色 `badge-success`
-  - 70-89%: 青色 `badge-info`
-  - 70%未満: 黄色 `badge-warning`
+- **信頼度表示（VLMのみ）:**
+  - VLM処理かつconfidenceが存在する場合のみ表示
+  - 表示形式: 「92.3%」（既存の`formatted_confidence`を使用）
+  - アイコンで視覚化:
+    - 90%以上: ✅ `heroicon-s-check-badge`（緑）
+    - 70-89%: 🛡️ `heroicon-s-shield-check`（青）
+    - 70%未満: ⚠️ `heroicon-s-exclamation-triangle`（黄）
   
-- **品質レベルバッジ:**
-  - VLM 90%以上: 「高精度」
-  - VLM 70-89%: 「標準精度」
-  - VLM 70%未満: 「低精度」
-  - OCR: 「標準精度」
-  - Tika: 表示なし
+- **品質レベル:**
+  - 表示しない（信頼度%で十分）
+  
+- **OCR/Tika:**
+  - 信頼度表示なし
+  - 処理完了のステータスのみ表示
+
+**理由:**
+1. **PaddleOCRのconfidence:** API仕様では提供されるが、現在の`ocrmypdf`実装では取得していない
+2. **Tikaのconfidence:** 信頼度の概念が存在しない（既存テキスト抽出のみ）
+3. **Phase6で拡張可能:** PaddleOCR API直接呼び出しに移行すればOCR信頼度も追加可能
+
+**モーダル表示例:**
+
+```
+┌─────────────────────────────────────────────┐
+│ VLMプレビュー - invoice.pdf                 │
+├─────────────────────────────────────────────┤
+│ 📄 invoice_simple.pdf                       │
+│                                             │
+│ 【VLMの場合】                               │
+│ 信頼度: 92.3% ✅                            │
+│                                             │
+│ 【OCRの場合】                               │
+│ OCRで抽出完了                               │
+│                                             │
+│ 【Tikaの場合】                              │
+│ テキスト抽出完了                            │
+│                                             │
+│ [📋 クリップボードにコピー] ← メインボタン    │
+│ [⬇️ Markdown] [⬇️ JSON]                     │
+├─────────────────────────────────────────────┤
+│ [マークダウンプレビュー]                     │
+│ # 請求書                                    │
+│ 株式会社○○御中                              │
+│ ...                                         │
+└─────────────────────────────────────────────┘
+```
+
+**実装コード例:**
+
+```blade
+{{-- 品質情報表示（VLMのみ） --}}
+@if($file->finalized_source === 'vlm' && $file->vlm_confidence)
+    <div class="flex items-center gap-2 text-sm">
+        <span class="text-gray-600">{{ __('file.status.confidence') }}:</span>
+        <span class="font-semibold">{{ $file->formatted_confidence }}</span>
+        @if($file->vlm_confidence >= 0.9)
+            <x-heroicon-s-check-badge class="w-5 h-5 text-success" />
+        @elseif($file->vlm_confidence >= 0.7)
+            <x-heroicon-s-shield-check class="w-5 h-5 text-info" />
+        @else
+            <x-heroicon-s-exclamation-triangle class="w-5 h-5 text-warning" />
+        @endif
+    </div>
+@elseif($file->finalized_source === 'ocr')
+    <div class="text-sm text-gray-600">
+        {{ __('file.status.ocrCompleted') }}
+    </div>
+@elseif($file->finalized_source === 'tika')
+    <div class="text-sm text-gray-600">
+        {{ __('file.status.textExtracted') }}
+    </div>
+@endif
+```
+
+**翻訳キー追加:**
+
+```json
+// lang/ja/file.php
+'status' => [
+    'confidence' => '信頼度',
+    'ocrCompleted' => 'OCRで抽出完了',
+    'textExtracted' => 'テキスト抽出完了',
+],
+```
+
+**Phase6での拡張計画:**
+- PaddleOCR APIラッパースクリプト作成
+- `ocr_confidence`カラム追加
+- `OcrAndOptimizeFile`改修
+- UI表示ロジック拡張（OCRでも信頼度表示）
 
 **3. ボタン配置の優先順位**
 ```

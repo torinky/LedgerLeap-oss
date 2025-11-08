@@ -93,10 +93,10 @@ class Show extends Component
         try {
             $attachedFile = AttachedFile::findOrFail($attachedFileId);
             $attachedFile->retryProcessing();
-            $this->success(__('file.status.retry_success'));
+            $this->success(__('ledger.uploadedFile.retry_success'));
         } catch (\Exception $e) {
             Log::error("AttachedFile retryProcessing failed for ID: {$attachedFileId}. Error: ".$e->getMessage());
-            $this->addError('retryProcessing', __('file.status.retry_failed'));
+            $this->addError('retryProcessing', __('ledger.uploadedFile.retry_failed'));
         }
         $this->mount($this->ledgerRecord->id);
     }
@@ -145,6 +145,16 @@ class Show extends Component
 
         $this->previewingFileId = $fileId;
         $this->showVlmModal = true;
+    }
+
+    public function notifyCopySuccess(): void
+    {
+        $this->success(__('ledger.vlm.copied'));
+    }
+
+    public function notifyCopyFailed(): void
+    {
+        $this->error(__('ledger.vlm.copy_failed'));
     }
 
     public function render()
