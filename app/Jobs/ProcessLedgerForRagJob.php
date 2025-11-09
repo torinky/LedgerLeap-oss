@@ -370,9 +370,25 @@ class ProcessLedgerForRagJob implements ShouldQueue
         $logChannel = config('rag.log_channel', 'stack');
         $wasUpdated = false;
         $contentAttached = $ledger->content_attached ?? [];
+        
+        Log::channel($logChannel)->info('[VLM Debug] Start updateContentAttachedWithVlmResult', [
+            'ledger_id' => $ledger->id,
+            'initial_content_attached' => $contentAttached,
+        ]);
 
         // 関連ファイルをEager Load
         $ledger->load('attachedFiles');
+        
+        Log::channel($logChannel)->info('[VLM Debug] Loaded attachedFiles', [
+            'ledger_id' => $ledger->id,
+            'attachedFiles_count' => $ledger->attachedFiles->count(),
+            'attachedFiles' => $ledger->attachedFiles->map(fn($f) => [
+                'id' => $f->id,
+                'hashedbasename' => $f->hashedbasename,
+                'column_id' => $f->column_id,
+                'vlm_markdown_length' => mb_strlen($f->vlm_markdown ?? ''),
+            ])->toArray(),
+        ]);
 
         // Ensure content_attached has all column positions initialized (required by AsColumnArrayJson)
         $columnDefines = $ledger->define->column_define;
@@ -412,14 +428,14 @@ class ProcessLedgerForRagJob implements ShouldQueue
                 }
 
                 $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] = $vlmText;
-                
+
                 // originalNameがない場合は、contentから取得
                 if (! isset($contentAttached[$columnId][$file->hashedbasename]['originalName'])) {
                     $content = $ledger->content ?? [];
                     $originalName = $content[$columnId][$file->hashedbasename] ?? $file->filename;
                     $contentAttached[$columnId][$file->hashedbasename]['originalName'] = $originalName;
                 }
-                
+
                 $wasUpdated = true;
 
                 Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
@@ -435,8 +451,26 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if ($wasUpdated) {
             $ledger->content_attached = $contentAttached;
+            
+            Log::channel($logChannel)->info('[VLM Debug] Before save', [
+                'ledger_id' => $ledger->id,
+                'content_attached_to_save' => $contentAttached,
+            ]);
+            
             Ledger::withoutEvents(fn () => $ledger->save());
+            
             Log::channel($logChannel)->info('[RAG Pre-processing] Saved updated content_attached to database.', [
+                'ledger_id' => $ledger->id,
+            ]);
+            
+            // Verify save
+            $ledger->refresh();
+            Log::channel($logChannel)->info('[VLM Debug] After save and refresh', [
+                'ledger_id' => $ledger->id,
+                'content_attached_from_db' => $ledger->content_attached,
+            ]);
+        } else {
+            Log::channel($logChannel)->info('[VLM Debug] No updates made', [
                 'ledger_id' => $ledger->id,
             ]);
         }

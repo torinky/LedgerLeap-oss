@@ -23,8 +23,13 @@ class AttachedFileFactory extends Factory
      */
     public function definition(): array
     {
-        $tenant = \App\Models\Tenant::factory()->create(); // テスト用に新しいテナントを作成
-        tenancy()->initialize($tenant); // テナントコンテキストを初期化
+        // Use existing tenant if initialized, otherwise create new one
+        if (tenancy()->initialized) {
+            $tenant = tenancy()->tenant;
+        } else {
+            $tenant = \App\Models\Tenant::factory()->create();
+            tenancy()->initialize($tenant);
+        }
 
         $ledgerDefine = LedgerDefine::factory()->for(Folder::factory()->create(['tenant_id' => $tenant->id]))->create(['tenant_id' => $tenant->id]);
         $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create(['tenant_id' => $tenant->id]);

@@ -369,13 +369,17 @@ class ProcessLedgerForRagJobTest extends TestCase
         ]);
 
         $vlmText = 'これはVLMによって生成された、より詳細で優れたテキストです。';
-        AttachedFile::factory()->for($ledger)->create([
+        $attachedFile = AttachedFile::factory()->for($ledger)->create([
             'filename' => 'file1.pdf',
             'hashedbasename' => 'file1.pdf',
             'column_id' => 1,
             'vlm_markdown' => $vlmText,
             'vlm_processed_at' => now(),
         ]);
+        
+        // Debug: Verify attached file was created with correct tenant_id
+        $this->assertEquals($ledger->tenant_id, $attachedFile->tenant_id, 
+            "AttachedFile tenant_id ({$attachedFile->tenant_id}) should match Ledger tenant_id ({$ledger->tenant_id})");
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);
         $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
@@ -389,7 +393,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertEquals($vlmText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
 
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        $this->assertStringContainsString('#### ファイル: original_new_file.pdf', $chunk->chunk_text);
+        $this->assertStringContainsString('#### ファイル: original_file1.pdf', $chunk->chunk_text);
         $this->assertStringContainsString($vlmText, $chunk->chunk_text);
         $this->assertStringNotContainsString('古いTikaテキスト', $chunk->chunk_text);
     }
@@ -442,8 +446,8 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertEquals($tikaText, $ledger->content_attached[1]['file1.pdf']['meta']['content']);
 
         $chunk = \DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->first();
-        // VLM処理済みでもテキストが更新されなかったので、VLM-OCR 結果ラベルが付く
-        $this->assertStringContainsString('#### ファイル: original_new_file.pdf', $chunk->chunk_text);
+        // VLM処理済みでもテキストが更新されなかったので、Tikaテキストが使われる
+        $this->assertStringContainsString('#### ファイル: original_file1.pdf', $chunk->chunk_text);
         $this->assertStringContainsString($tikaText, $chunk->chunk_text);
         $this->assertStringNotContainsString('VLMの短いテキスト', $chunk->chunk_text);
     }
