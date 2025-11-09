@@ -8,8 +8,8 @@ use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
 use App\Models\Tenant; // ★ 追加
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
@@ -26,7 +26,7 @@ class GenerateThumbnailTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
-        Bus::fake();
+        Queue::fake(); // Bus::fake() から Queue::fake() に変更
         // ★ 追加
         $tenant = Tenant::factory()->create();
         tenancy()->initialize($tenant);
