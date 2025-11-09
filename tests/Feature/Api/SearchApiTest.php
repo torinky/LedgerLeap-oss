@@ -20,6 +20,22 @@ class SearchApiTest extends TestCase
 
     protected bool $tenancy = true;
 
+    /**
+     * 共有データを保持するため、トランケートを完全に無効化
+     * RefreshDatabaseWithTenantトレイトは、テナント環境でデータが予期せず消える問題があるため、
+     * このテストクラスでは共有データを1回作成し、全テストで再利用する
+     */
+    protected array $tablesToTruncate = [];
+
+    /**
+     * トランケートを完全に無効化してデータ消失を防ぐ
+     */
+    protected function truncateTenantTables(): void
+    {
+        // 何もしない - stancl/tenancyの既知の問題により、
+        // トランケートするとデータが消えるため無効化
+    }
+
     private static User $adminUser;
 
     private static User $writerUser;
@@ -89,50 +105,61 @@ class SearchApiTest extends TestCase
 
         // テナント内処理を最適化（必要最小限のデータ作成）
         $this->getTenant()->run(function () use ($adminRole, $writerRole, $viewerRole) {
-            // フォルダ作成（軽量）
-            self::$writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
-            self::$readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
-            self::$privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
+            try {
+                // フォルダ作成（軽量）
+                self::$writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
+                self::$readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
+                self::$privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
 
-            // フォルダ権限作成（最小限）
-            $folderPermissions = [
-                ['role_id' => $adminRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                ['role_id' => $adminRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                ['role_id' => $adminRole->id, 'folder_id' => self::$privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                ['role_id' => $writerRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                ['role_id' => $viewerRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-            ];
+                // フォルダ権限作成（最小限）
+                $folderPermissions = [
+                    ['role_id' => $adminRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                    ['role_id' => $adminRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                    ['role_id' => $adminRole->id, 'folder_id' => self::$privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                    ['role_id' => $writerRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                    ['role_id' => $viewerRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                ];
 
-            foreach ($folderPermissions as $permission) {
-                RoleFolderPermission::create($permission);
+                foreach ($folderPermissions as $permission) {
+                    RoleFolderPermission::create($permission);
+                }
+
+                // 台帳定義作成（最小限）
+                $writeLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$writeFolder->id]);
+                $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$readFolder->id]);
+                $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$privateFolder->id]);
+
+                // 台帳作成（最小限のコンテンツ）
+                $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
+                self::$writeLedger = Ledger::factory()->minimal()->create([
+                    'ledger_define_id' => $writeLedgerDefine->id,
+                    'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'],
+                    'creator_id' => self::$adminUser->id,
+                ]);
+                \Log::info('Created writeLedger: '.self::$writeLedger->id);
+
+                $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
+                self::$readLedger = Ledger::factory()->minimal()->create([
+                    'ledger_define_id' => $readLedgerDefine->id,
+                    'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder'],
+                    'creator_id' => self::$adminUser->id,
+                ]);
+                \Log::info('Created readLedger: '.self::$readLedger->id);
+
+                $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
+                self::$privateLedger = Ledger::factory()->minimal()->create([
+                    'ledger_define_id' => $privateLedgerDefine->id,
+                    'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder'],
+                    'creator_id' => self::$adminUser->id,
+                ]);
+                \Log::info('Created privateLedger: '.self::$privateLedger->id);
+
+                \Log::info('Total ledgers in DB after creation: '.Ledger::count());
+            } catch (\Exception $e) {
+                \Log::error('Error in createSharedData: '.$e->getMessage());
+                \Log::error($e->getTraceAsString());
+                throw $e;
             }
-
-            // 台帳定義作成（最小限）
-            $writeLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$writeFolder->id]);
-            $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$readFolder->id]);
-            $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$privateFolder->id]);
-
-            // 台帳作成（最小限のコンテンツ）
-            $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
-            self::$writeLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $writeLedgerDefine->id,
-                'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'],
-                'creator_id' => self::$adminUser->id,
-            ]);
-
-            $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
-            self::$readLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $readLedgerDefine->id,
-                'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder'],
-                'creator_id' => self::$adminUser->id,
-            ]);
-
-            $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
-            self::$privateLedger = Ledger::factory()->minimal()->create([
-                'ledger_define_id' => $privateLedgerDefine->id,
-                'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder'],
-                'creator_id' => self::$adminUser->id,
-            ]);
 
             // タグ作成（最小限）
             Tag::factory()->create([
@@ -172,7 +199,11 @@ class SearchApiTest extends TestCase
 
     public function test_admin_can_search_all_ledgers()
     {
+        // テナントコンテキストを確実に初期化
+        tenancy()->initialize($this->getTenant());
+
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->actingAs(self::$adminUser, 'sanctum')
             ->getJson('/api/v1/search') // キーワード検索を外してテスト
             ->assertStatus(200)

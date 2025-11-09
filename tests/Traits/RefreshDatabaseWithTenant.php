@@ -28,9 +28,14 @@ use Illuminate\Support\Facades\DB;
 trait RefreshDatabaseWithTenant
 {
     /**
-     * このテストクラスでデータベースが初期化されたか
+     * クラスごとにデータベースが初期化されたかを管理
      */
-    protected static bool $databaseInitialized = false;
+    protected static array $databaseInitializedByClass = [];
+
+    /**
+     * グローバルにデータベースが初期化されたかを管理（複数回のrefreshを防ぐ）
+     */
+    protected static bool $globalDatabaseInitialized = false;
 
     /**
      * 作成されたテナント（クラス全体で共有）
@@ -50,9 +55,9 @@ trait RefreshDatabaseWithTenant
         parent::setUpBeforeClass();
 
         // クラスごとにフラグをリセット
-        static::$databaseInitialized = false;
-        static::$sharedTenant = null;
-        static::$truncatableTablesCache = null;
+        $className = static::class;
+        static::$databaseInitializedByClass[$className] = false;
+        // 注: $sharedTenant と $truncatableTablesCache はリセットしない（複数クラスで共有）
     }
 
     /**
@@ -69,19 +74,35 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
-        // このクラスで最初のテストの場合のみマイグレーション実行
-        if (! static::$databaseInitialized) {
-            $this->refreshDatabase();
-            $this->createSharedTenant();
+        $className = static::class;
+        $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
-            // テナントを初期化してからテナントデータベースをマイグレーション
-            tenancy()->initialize(static::$sharedTenant);
-            $this->migrateTenantDatabase();
+        // デバッグログは本番環境では削除可能
+        if (config('app.debug')) {
+            \Log::info("setUpRefreshDatabaseWithTenant() called: class=$className, initialized=".($initialized ? 'true' : 'false'));
+        }
+
+        // このクラスで最初のテストの場合のみ初期化
+        if (! $initialized) {
+            // グローバルに初期化されていない場合のみrefreshDatabaseを実行
+            if (! static::$globalDatabaseInitialized) {
+                $this->refreshDatabase();
+                static::$globalDatabaseInitialized = true;
+            }
+
+            // テナントが存在しない場合のみ作成
+            if (! static::$sharedTenant) {
+                $this->createSharedTenant();
+                tenancy()->initialize(static::$sharedTenant);
+                $this->migrateTenantDatabase();
+            } else {
+                tenancy()->initialize(static::$sharedTenant);
+            }
 
             // 共有データ（ユーザーなど）を作成
             $this->createSharedData();
 
-            static::$databaseInitialized = true;
+            static::$databaseInitializedByClass[$className] = true;
         } else {
             // 2回目以降のテストではトランケートしてクリーンアップ
             if (static::$sharedTenant) {
@@ -202,21 +223,19 @@ trait RefreshDatabaseWithTenant
         // 外部キー制約を一時的に無効化してトランケート
         $connection->statement('SET FOREIGN_KEY_CHECKS=0');
 
-        // トランケート可能なテーブルを取得（初回のみチェック）
-        if (static::$truncatableTablesCache === null) {
-            $tablesToCheck = $this->getTablesToTruncate();
-            static::$truncatableTablesCache = [];
+        // トランケート対象のテーブルを取得
+        $tablesToCheck = $this->getTablesToTruncate();
 
-            foreach ($tablesToCheck as $table) {
-                if ($connection->getSchemaBuilder()->hasTable($table)) {
-                    static::$truncatableTablesCache[] = $table;
-                }
-            }
+        if (empty($tablesToCheck)) {
+            $connection->statement('SET FOREIGN_KEY_CHECKS=1');
+
+            return;
         }
 
-        // キャッシュされたテーブルをトランケート
-        foreach (static::$truncatableTablesCache as $table) {
-            $connection->table($table)->truncate();
+        foreach ($tablesToCheck as $table) {
+            if ($connection->getSchemaBuilder()->hasTable($table)) {
+                $connection->table($table)->truncate();
+            }
         }
 
         $connection->statement('SET FOREIGN_KEY_CHECKS=1');
@@ -238,7 +257,6 @@ trait RefreshDatabaseWithTenant
         }
 
         // デフォルトでは最小限のテーブルのみトランケート
-        // モックを多用するテストではほとんど不要
         return [
             'personal_access_tokens', // トークンはクリーンアップ
         ];

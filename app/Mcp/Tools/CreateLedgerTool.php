@@ -43,7 +43,7 @@ class CreateLedgerTool extends Tool
         // フォルダに対する書き込み権限チェック
         $permissionCheck = $this->checkFolderPermissionOrError($user, $folder, 'WRITE');
         if ($permissionCheck instanceof Response) {
-            return Response::error("Permission denied to create ledger in folder: {$folderId}");
+            return $permissionCheck;
         }
 
         try {

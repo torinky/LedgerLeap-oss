@@ -4,7 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Services\EmbeddingService;
 use Illuminate\Support\Facades\Config;
-use Mockery;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -12,40 +12,26 @@ class EmbeddingServiceTest extends TestCase
 {
     protected function tearDown(): void
     {
-        Mockery::close();
         parent::tearDown();
     }
 
-    private function mockHttp(array $expectedTexts)
+    private function mockHttp(array $expectedTexts): void
     {
-        $mock = Mockery::mock('alias:Illuminate\Support\Facades\Http');
-
-        // 1. healthCheck()からのget()呼び出しをモック
-        $healthResponseMock = Mockery::mock(\Illuminate\Http\Client\Response::class);
-        $healthResponseMock->shouldReceive('serverError')->andReturn(false); // serverError()はfalseを返す
-        $healthResponseMock->shouldReceive('json')->andReturn(['status' => 'healthy']);
-
-        $mock->shouldReceive('timeout')->with(5)->andReturnSelf();
-        $mock->shouldReceive('get')
-            ->with('http://embedding:8000/health')
-            ->andReturn($healthResponseMock);
-
-        // 2. embed()からのpost()呼び出しをモック
-        $embedResponseMock = Mockery::mock(\Illuminate\Http\Client\Response::class);
-        $embedResponseMock->shouldReceive('successful')->andReturn(true);
-        $embedResponseMock->shouldReceive('json')->andReturn([
-            'embeddings' => array_fill(0, count($expectedTexts), [0.1, 0.2, 0.3]),
-            'dimension' => 3,
-            'model' => 'test-model',
+        Http::fake([
+            'http://embedding:8000/health' => Http::response(['status' => 'healthy'], 200),
+            'http://embedding:8000/embed' => function ($request) use ($expectedTexts) {
+                $payload = $request->data();
+                // 期待されたテキスト配列であることを検証
+                if (($payload['texts'] ?? null) !== $expectedTexts) {
+                    return Http::response(['message' => 'Unexpected payload'], 422);
+                }
+                return Http::response([
+                    'embeddings' => array_fill(0, count($expectedTexts), [0.1, 0.2, 0.3]),
+                    'dimension' => 3,
+                    'model' => 'test-model',
+                ], 200);
+            },
         ]);
-
-        $mock->shouldReceive('timeout')->with(60)->andReturnSelf();
-        $mock->shouldReceive('post')
-            ->once()
-            ->with('http://embedding:8000/embed', Mockery::on(function ($data) use ($expectedTexts) {
-                return $data['texts'] === $expectedTexts;
-            }))
-            ->andReturn($embedResponseMock);
     }
 
     #[Test]
