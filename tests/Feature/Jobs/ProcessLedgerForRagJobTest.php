@@ -362,6 +362,7 @@ class ProcessLedgerForRagJobTest extends TestCase
                 0 => [],
                 1 => [
                     'file1.pdf' => [
+                        'originalName' => 'original_file1.pdf',
                         'meta' => ['content' => '古いTikaテキスト'],
                     ],
                 ],
@@ -420,6 +421,7 @@ class ProcessLedgerForRagJobTest extends TestCase
                 0 => [],
                 1 => [
                     'file1.pdf' => [
+                        'originalName' => 'original_file1.pdf',
                         'meta' => ['content' => $tikaText],
                     ],
                 ],
