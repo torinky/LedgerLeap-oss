@@ -256,6 +256,7 @@ class CreateLedgerToolTest extends TestCase
         $response = $this->tool->handle($request, $this->ledgerService);
 
         $this->assertTrue($response->isError());
-        $this->assertStringContainsString('Permission denied to create ledger in folder: '.$folder->id, $response->content());
+        $this->assertStringContainsString('Insufficient permission (WRITE) for folder:', $response->content());
+        $this->assertStringContainsString($folder->name, $response->content());
     }
 }
