@@ -9,25 +9,19 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProcessLedgerForRagJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable;
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        private Ledger $ledger
+        public int $ledgerId
     ) {}
-
-    public function getLedger(): Ledger
-    {
-        return $this->ledger;
-    }
 
     /**
      * Execute the job.
@@ -41,30 +35,42 @@ class ProcessLedgerForRagJob implements ShouldQueue
         $logChannel = config('rag.log_channel', 'stack');
         $startTime = microtime(true);
 
+        // QueueTenancyBootstrapperが自動的にtenancyを初期化済み
+        $ledger = Ledger::find($this->ledgerId);
+
+        if (! $ledger) {
+            Log::channel($logChannel)->warning('Ledger not found in job', [
+                'ledger_id' => $this->ledgerId,
+            ]);
+
+            return;
+        }
+
         Log::channel($logChannel)->info('Start chunking process for ledger', [
-            'ledger_id' => $this->ledger->id,
+            'ledger_id' => $ledger->id,
+            'tenant_id' => $ledger->tenant_id ?? 'N/A',
         ]);
 
         // ★★★ STEP 1: データ準備フェーズ ★★★
-        $this->updateContentAttachedWithVlmResult();
+        $this->updateContentAttachedWithVlmResult($ledger);
 
         // 1. Delete existing chunks to ensure data consistency
-        DB::table('ledger_chunks')->where('ledger_id', $this->ledger->id)->delete();
+        DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->delete();
 
         // 2. Build structured Markdown from ledger
         try {
-            $markdown = $this->buildMarkdownFromLedger($this->ledger);
+            $markdown = $this->buildMarkdownFromLedger($ledger);
             $generationTime = (microtime(true) - $startTime) * 1000;
 
             if ($generationTime > 1000) {
                 Log::channel($logChannel)->warning('Markdown generation took too long', [
-                    'ledger_id' => $this->ledger->id,
+                    'ledger_id' => $ledger->id,
                     'generation_time_ms' => $generationTime,
                 ]);
             }
         } catch (\Exception $e) {
             Log::channel($logChannel)->error('Markdown generation failed', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
@@ -72,7 +78,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if (empty($markdown)) {
             Log::channel($logChannel)->info('No content to chunk for ledger', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
             ]);
 
             return;
@@ -83,7 +89,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if (empty($chunks)) {
             Log::channel($logChannel)->info('No chunks generated for ledger', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
             ]);
 
             return;
@@ -103,9 +109,9 @@ class ProcessLedgerForRagJob implements ShouldQueue
                 }
 
                 $chunkData[] = [
-                    'ledger_id' => $this->ledger->id,
-                    'ledger_define_id' => $this->ledger->ledger_define_id,
-                    'folder_id' => $this->ledger->define->folder_id,
+                    'ledger_id' => $ledger->id,
+                    'ledger_define_id' => $ledger->ledger_define_id,
+                    'folder_id' => $ledger->define->folder_id,
                     'chunk_index' => $index,
                     'chunk_text' => $chunk['text'],
                     'embedding' => json_encode($embeddings[$index]),
@@ -117,7 +123,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
             DB::table('ledger_chunks')->insert($chunkData);
 
             Log::channel($logChannel)->info('Chunking process completed for ledger', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
                 'chunks_created' => count($chunkData),
                 'markdown_length' => mb_strlen($markdown),
                 'total_time_ms' => (microtime(true) - $startTime) * 1000,
@@ -125,7 +131,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::channel($logChannel)->error('Chunking process failed for ledger', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
@@ -158,194 +164,113 @@ class ProcessLedgerForRagJob implements ShouldQueue
         // 2. Process columns by group
         $columnDefinesData = $ledgerDefine->column_define;
 
-        // Ensure it's a collection
-        if (! ($columnDefinesData instanceof \Illuminate\Support\Collection)) {
-            $columnDefinesData = collect($columnDefinesData);
+        if (empty($columnDefinesData)) {
+            return '';
         }
 
-        if ($columnDefinesData->isEmpty()) {
-            Log::channel($logChannel)->info('No column definitions for ledger', [
-                'ledger_id' => $ledger->id,
-            ]);
-        }
-
-        // Group columns
-        $groupedColumns = $columnDefinesData->groupBy(function ($column) {
-            $col = is_array($column) ? (object) $column : $column;
-            $group = $col->group ?? '';
-
-            return $group === '' ? __('ledger.form.group_default') : $group;
+        $columnDefines = collect($columnDefinesData)->map(function ($data) {
+            return new ColumnDefine($data);
         });
 
-        // Sort groups by the order of their first column
-        $sortedGroups = $groupedColumns->sortBy(function ($columns, $groupName) {
-            if ($columns->isNotEmpty()) {
-                $firstColumn = $columns->first();
-                $col = is_array($firstColumn) ? (object) $firstColumn : $firstColumn;
+        $groupedColumns = $columnDefines->groupBy('group');
 
-                return $col->order ?? PHP_INT_MAX;
+        foreach ($groupedColumns as $groupName => $columns) {
+            if (! empty($groupName)) {
+                $lines[] = "## {$groupName}";
+                $lines[] = '';
             }
 
-            return PHP_INT_MAX;
-        });
+            foreach ($columns as $column) {
+                $value = $this->getColumnValue($ledger, $column);
 
-        $totalColumns = 0;
-        $skippedColumns = 0;
-
-        foreach ($sortedGroups as $groupName => $columnsInGroup) {
-            $hasGroupContent = false;
-            $groupLines = [];
-
-            // Sort columns within group
-            $sortedColumns = collect($columnsInGroup)->sortBy(function ($column) {
-                $col = is_array($column) ? (object) $column : $column;
-
-                return $col->order ?? PHP_INT_MAX;
-            });
-
-            foreach ($sortedColumns as $columnData) {
-                $totalColumns++;
-                $columnDefine = new ColumnDefine($columnData);
-
-                // Get value from content
-                // Note: content array uses column ID as index after normalization
-                // e.g., column_define = [{id:1, ...}, {id:3, ...}]
-                //       content = [0=>'', 1=>'value1', 2=>'', 3=>'value3']
-                $value = $content[$columnDefine->id] ?? null;
-                $textValue = $this->extractValueAsText($columnDefine, $value);
-
-                if ($textValue === null) {
-                    $skippedColumns++;
-
+                if ($value === null) {
                     continue;
                 }
 
-                // Determine heading level based on display_level
-                $displayLevel = $columnDefine->display_level ?? 1;
-                $headingLevel = match ($displayLevel) {
-                    1 => '###',
-                    2 => '####',
-                    3 => '#####',
-                    default => '###'
-                };
-
-                if (! $hasGroupContent) {
-                    $groupLines[] = "## {$groupName}";
-                    $hasGroupContent = true;
-                }
-
-                $groupLines[] = "{$headingLevel} {$columnDefine->name}";
-                $groupLines[] = $textValue;
-                $groupLines[] = '';
-            }
-
-            if ($hasGroupContent) {
-                $lines = array_merge($lines, $groupLines);
+                $lines[] = "**{$column->label}**: {$value}";
+                $lines[] = '';
             }
         }
 
-        // 3. Add attached file content
-        $attachedTexts = [];
-        if (! empty($ledger->content_attached)) {
-            // Eager load attachedFiles with ledger relation for original_filename accessor
-            $ledger->load('attachedFiles');
+        // 3. Add attachments section
+        $contentAttached = $ledger->content_attached ?? [];
 
-            // ファイル情報を効率的に引くためにhashedbasenameをキーにした連想配列を作成
-            $filesMap = $ledger->attachedFiles->keyBy('hashedbasename');
+        if (! empty($contentAttached)) {
+            $lines[] = '---';
+            $lines[] = '## 添付ファイル';
+            $lines[] = '';
 
-            // content_attachedの構造: [column_id][hashedbasename]['meta']['content']
-            foreach ($ledger->content_attached as $columnId => $filesInColumn) {
-                if (! is_array($filesInColumn)) {
+            foreach ($contentAttached as $columnId => $files) {
+                if (! is_array($files) || empty($files)) {
                     continue;
                 }
 
-                foreach ($filesInColumn as $hashedbasename => $contentData) {
-                    $file = $filesMap->get($hashedbasename);
-                    $originalFilename = $file ? $file->original_filename : $hashedbasename;
-                    $text = $contentData['meta']['content'] ?? '';
+                $column = $columnDefines->firstWhere('id', $columnId);
 
-                    if (empty($text)) {
+                if (! $column) {
+                    continue;
+                }
+
+                $lines[] = "### {$column->label}";
+                $lines[] = '';
+
+                foreach ($files as $hashedBasename => $fileData) {
+                    if (! is_array($fileData)) {
                         continue;
                     }
 
-                    // VLMで処理されたかどうかに基づいてラベルを決定
-                    $sourceLabel = ($file && ! empty($file->vlm_processed_at)) ? 'VLM-OCR 結果' : 'テキスト抽出結果';
+                    $originalName = $fileData['originalName'] ?? $hashedBasename;
+                    $meta = $fileData['meta'] ?? [];
+                    $content = $meta['content'] ?? null;
 
-                    // 長さ制限ロジック
-                    $maxAttachedLength = config('rag.chunking.max_attached_text_length', 50000);
-                    if (mb_strlen($text) > $maxAttachedLength) {
-                        $text = mb_substr($text, 0, $maxAttachedLength)."\n\n[...以降のテキストは省略されました]";
-                        Log::channel(config('rag.log_channel', 'stack'))->warning('Attached text truncated for RAG', [
-                            'ledger_id' => $ledger->id,
-                            'file' => $originalFilename,
-                        ]);
+                    $lines[] = "#### ファイル: {$originalName}";
+                    $lines[] = '';
+
+                    if (! empty($content)) {
+                        $trimmedContent = mb_strlen($content) > 5000
+                            ? mb_substr($content, 0, 5000).'...'
+                            : $content;
+
+                        $lines[] = $trimmedContent;
+                        $lines[] = '';
                     }
-
-                    $attachedTexts[] = "### 添付ファイル: {$originalFilename} ({$sourceLabel})\n\n{$text}";
                 }
             }
-        }
-
-        if (! empty($attachedTexts)) {
-            $lines[] = '---';
-            $lines[] = '## 添付ファイル内容';
-            $lines[] = implode("\n\n---\n", $attachedTexts);
         }
 
         return implode("\n", $lines);
     }
 
     /**
-     * Extract human-readable text value from a column's raw data.
+     * Get formatted column value.
      */
-    private function extractValueAsText(ColumnDefine $column, $value): ?string
+    private function getColumnValue(Ledger $ledger, ColumnDefine $column): ?string
     {
-        // Handle null or empty values
-        if ($value === null || $value === '' || $value === []) {
+        $type = $column->type;
+        $content = $ledger->content ?? [];
+        $value = $content[$column->id] ?? null;
+
+        if ($value === null || $value === '') {
             return null;
-        }
-
-        $type = $column->getType();
-
-        // Handle basic text types
-        if (in_array($type, ['text', 'textarea', 'url', 'auto_number', 'date', 'phone_number', 'user_name'])) {
-            $text = trim((string) $value);
-
-            return $text === '' ? null : $text;
-        }
-
-        // Handle number type with unit
-        if ($type === 'number') {
-            $text = (string) $value;
-            $unit = $column->getInputType()->unit ?? null;
-            if ($unit) {
-                $text .= " {$unit}";
-            }
-            $text = trim($text);
-
-            return $text === '' ? null : $text;
         }
 
         // Handle select type
         if ($type === 'select') {
+            if (! is_string($value) && ! is_numeric($value)) {
+                return null;
+            }
+
             $options = $column->options ?? [];
 
-            // Associative array: ["draft" => "下書き", "published" => "公開"]
             if ($this->isAssocArray($options) && isset($options[$value])) {
                 return $options[$value];
             }
 
-            // Simple array: ["option1", "option2"]
-            if (in_array($value, $options, true)) {
-                return $value;
-            }
-
-            // Fallback: return value as-is
-            return trim((string) $value) ?: null;
+            return (string) $value;
         }
 
         // Handle checkbox type
-        if ($type === 'chk') {
+        if ($type === 'checkbox') {
             if (! is_array($value)) {
                 return null;
             }
@@ -435,17 +360,17 @@ class ProcessLedgerForRagJob implements ShouldQueue
         return $chunks;
     }
 
-    private function updateContentAttachedWithVlmResult(): void
+    private function updateContentAttachedWithVlmResult(Ledger $ledger): void
     {
         $logChannel = config('rag.log_channel', 'stack');
         $wasUpdated = false;
-        $contentAttached = $this->ledger->content_attached ?? [];
+        $contentAttached = $ledger->content_attached ?? [];
 
         // 関連ファイルをEager Load
-        $this->ledger->load('attachedFiles');
+        $ledger->load('attachedFiles');
 
         // Ensure content_attached has all column positions initialized (required by AsColumnArrayJson)
-        $columnDefines = $this->ledger->define->column_define;
+        $columnDefines = $ledger->define->column_define;
         $maxColumnId = $columnDefines->max('id');
 
         // Initialize all column positions to preserve array indices
@@ -455,7 +380,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
             }
         }
 
-        foreach ($this->ledger->attachedFiles as $file) {
+        foreach ($ledger->attachedFiles as $file) {
             if (empty($file->vlm_markdown)) {
                 continue;
             }
@@ -485,7 +410,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
                 $wasUpdated = true;
 
                 Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
-                    'ledger_id' => $this->ledger->id,
+                    'ledger_id' => $ledger->id,
                     'file_id' => $file->id,
                     'column_id' => $columnId,
                     'hashedbasename' => $file->hashedbasename,
@@ -496,10 +421,10 @@ class ProcessLedgerForRagJob implements ShouldQueue
         }
 
         if ($wasUpdated) {
-            $this->ledger->content_attached = $contentAttached;
-            Ledger::withoutEvents(fn () => $this->ledger->save());
+            $ledger->content_attached = $contentAttached;
+            Ledger::withoutEvents(fn () => $ledger->save());
             Log::channel($logChannel)->info('[RAG Pre-processing] Saved updated content_attached to database.', [
-                'ledger_id' => $this->ledger->id,
+                'ledger_id' => $ledger->id,
             ]);
         }
     }

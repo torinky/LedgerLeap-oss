@@ -151,7 +151,7 @@ class RagSearchServiceTest extends TestCase
         ]);
 
         // Use the bound EmbeddingService from the container (which should be the mock)
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($this->app->make(EmbeddingService::class));
 
         // Wait for Mroonga to index the full-text and vector data

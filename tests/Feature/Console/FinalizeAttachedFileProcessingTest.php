@@ -321,7 +321,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
                 'size' => 1000,
                 'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
                 'contain_content' => false,
-            'optimized' => false,
+                'optimized' => false,
                 'tika_processed_at' => now()->subMinutes(2),
                 'vlm_processed_at' => now()->subMinute(),
                 'vlm_markdown' => '# Test',

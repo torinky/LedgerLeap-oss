@@ -25,6 +25,7 @@ class EmbeddingServiceTest extends TestCase
                 if (($payload['texts'] ?? null) !== $expectedTexts) {
                     return Http::response(['message' => 'Unexpected payload'], 422);
                 }
+
                 return Http::response([
                     'embeddings' => array_fill(0, count($expectedTexts), [0.1, 0.2, 0.3]),
                     'dimension' => 3,

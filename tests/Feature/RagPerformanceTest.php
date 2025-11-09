@@ -122,7 +122,7 @@ class RagPerformanceTest extends TestCase
                 'content' => $content,
             ]);
 
-            $job = new ProcessLedgerForRagJob($ledger);
+            $job = new ProcessLedgerForRagJob($ledger->id);
             $job->handle($this->app->make(EmbeddingService::class));
         }
 
@@ -178,7 +178,7 @@ class RagPerformanceTest extends TestCase
                 'modifier_id' => $this->user->id,
                 'content' => ['title' => "Folder1 Doc $i", 'text' => str_repeat('content ', 50)],
             ]);
-            $job = new ProcessLedgerForRagJob($ledger);
+            $job = new ProcessLedgerForRagJob($ledger->id);
             $job->handle($this->app->make(EmbeddingService::class));
         }
 
@@ -189,7 +189,7 @@ class RagPerformanceTest extends TestCase
                 'modifier_id' => $this->user->id,
                 'content' => ['title' => "Folder2 Doc $i", 'text' => str_repeat('content ', 50)],
             ]);
-            $job = new ProcessLedgerForRagJob($ledger);
+            $job = new ProcessLedgerForRagJob($ledger->id);
             $job->handle($this->app->make(EmbeddingService::class));
         }
 

@@ -72,7 +72,7 @@ class ProcessLedgerForRagJobTest extends TestCase
             ->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert - check that chunk contains structured markdown
@@ -111,7 +111,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -152,7 +152,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -192,7 +192,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -232,7 +232,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -271,7 +271,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -302,7 +302,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -333,7 +333,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert
@@ -381,7 +381,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert - refresh to get updated data from database
@@ -434,7 +434,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert - refresh to get data from database
@@ -481,7 +481,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         $embeddingServiceMock->shouldReceive('embed')->once()->andReturn([array_fill(0, 768, 0.1)]);
 
         // Act
-        $job = new ProcessLedgerForRagJob($ledger);
+        $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle($embeddingServiceMock);
 
         // Assert - refresh to get updated data from database

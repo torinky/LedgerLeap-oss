@@ -33,7 +33,7 @@ class LedgerObserverTest extends TestCase
         $ledger = Ledger::factory()->create();
 
         Queue::assertPushed(ProcessLedgerForRagJob::class, function ($job) use ($ledger) {
-            return $job->getLedger()->id === $ledger->id;
+            return $job->ledgerId === $ledger->id;
         });
     }
 

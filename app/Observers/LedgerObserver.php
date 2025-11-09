@@ -31,31 +31,26 @@ class LedgerObserver
         }
     }
 
-    /**
-     * Dispatch RAG job with tenancy awareness
-     *
-     * syncキューの場合は同期実行してtenancyコンテキストを維持
-     * ただし、Queue::fake()使用時は通常のdispatchを使用（テスト互換性）
-     */
     private function dispatchRagJob(Ledger $ledger): void
     {
         // Queue::fake()使用時はQueueFakeが使われるのでdispatchを使用
         $queueManager = app('queue');
         $isFake = $queueManager instanceof \Illuminate\Support\Testing\Fakes\QueueFake;
-        
+
         if ($isFake) {
             // テスト環境でQueue::fake()使用時
-            ProcessLedgerForRagJob::dispatch($ledger);
+            ProcessLedgerForRagJob::dispatch($ledger->id);
+
             return;
         }
-        
+
         if (config('queue.default') === 'sync') {
             // 同期実行の場合は直接実行（tenancyコンテキストを維持）
-            (new ProcessLedgerForRagJob($ledger))->handle(app(EmbeddingService::class));
+            (new ProcessLedgerForRagJob($ledger->id))->handle(app(EmbeddingService::class));
         } else {
             // 非同期の場合は通常通りdispatch
             // QueueTenancyBootstrapperがtenancyを処理
-            ProcessLedgerForRagJob::dispatch($ledger);
+            ProcessLedgerForRagJob::dispatch($ledger->id);
         }
     }
 

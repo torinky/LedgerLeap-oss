@@ -67,7 +67,7 @@ class VlmRagIntegrationTest extends TestCase
         // ProcessLedgerForRagJobがディスパッチされたことを確認
         Bus::assertDispatched(ProcessLedgerForRagJob::class, function ($job) use ($ledger) {
             // dispatchされたジョブが正しいLedgerインスタンスを持っているか確認
-            return $job->getLedger()->id === $ledger->id;
+            return $job->ledgerId === $ledger->id;
         });
     }
 
