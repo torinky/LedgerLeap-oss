@@ -187,7 +187,12 @@ class ProcessLedgerForRagJob implements ShouldQueue
                     continue;
                 }
 
-                $lines[] = "**{$column->label}**: {$value}";
+                // display_levelに応じてヘッダーレベルを調整
+                // level 1 → ###, level 2 → ####, level 3 → #####
+                $headerLevel = str_repeat('#', $column->display_level + 2);
+                $lines[] = "{$headerLevel} {$column->name}";
+                $lines[] = '';
+                $lines[] = $value;
                 $lines[] = '';
             }
         }
@@ -211,7 +216,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
                     continue;
                 }
 
-                $lines[] = "### {$column->label}";
+                $lines[] = "### {$column->name}";
                 $lines[] = '';
 
                 foreach ($files as $hashedBasename => $fileData) {
@@ -407,6 +412,14 @@ class ProcessLedgerForRagJob implements ShouldQueue
                 }
 
                 $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] = $vlmText;
+                
+                // originalNameがない場合は、contentから取得
+                if (! isset($contentAttached[$columnId][$file->hashedbasename]['originalName'])) {
+                    $content = $ledger->content ?? [];
+                    $originalName = $content[$columnId][$file->hashedbasename] ?? $file->filename;
+                    $contentAttached[$columnId][$file->hashedbasename]['originalName'] = $originalName;
+                }
+                
                 $wasUpdated = true;
 
                 Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
