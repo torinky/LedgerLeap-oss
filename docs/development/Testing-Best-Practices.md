@@ -690,6 +690,386 @@ tests/Unit/Mcp/
 
 ---
 
+## 🧪 ファクトリとテストデータ作成の高度なパターン
+
+### 1. ファクトリの副作用に注意
+
+**Phase5 Hotfix実装時の教訓** (2025-11-09):
+
+Eloquentファクトリは便利だが、`definition()`メソッド内で多くの依存データを自動作成する場合、テストで意図しないデータ構造が作られる可能性がある。
+
+#### 問題例: AttachedFileFactory
+
+```php
+// database/factories/AttachedFileFactory.php
+public function definition(): array
+{
+    // ❌ 問題: 自動的に新しいTenant、Ledger、LedgerDefine、Userを作成
+    $tenant = \App\Models\Tenant::factory()->create();
+    tenancy()->initialize($tenant);
+    
+    $ledgerDefine = LedgerDefine::factory()->create();
+    $ledger = Ledger::factory()->create();
+    $user = User::factory()->create();
+    
+    return [
+        'ledger_id' => $ledger->id,  // ← テストで指定した値が無視される
+        'ledger_define_id' => $ledgerDefine->id,
+        'creator_id' => $user->id,
+        // ...
+    ];
+}
+```
+
+#### 問題点
+
+```php
+// テストコード
+$ledger = Ledger::factory()->create(['id' => 100]);
+$file = AttachedFile::factory()->create([
+    'ledger_id' => $ledger->id,  // 100を指定
+]);
+
+// 実際の動作:
+// AttachedFileFactoryが新しいLedgerを作成してしまい、
+// $file->ledger_id は 100 ではなく、新しく作成されたLedgerのIDになる
+```
+
+#### 解決策
+
+**重要なテストでは、ファクトリを使わず`Model::create()`を使用:**
+
+```php
+// ✅ 推奨: 明示的な依存データ作成とフィールド指定
+public function test_finalize_command()
+{
+    // 依存データを明示的に作成
+    $folder = Folder::factory()->create();
+    $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+    $user = User::factory()->create();
+    $ledger = Ledger::factory()->create([
+        'ledger_define_id' => $ledgerDefine->id,
+        'creator_id' => $user->id,
+        'modifier_id' => $user->id,
+    ]);
+
+    // AttachedFileを全フィールド明示で作成（ファクトリを使わない）
+    $file = AttachedFile::create([
+        'ledger_id' => $ledger->id,  // ← 確実に指定した値が使われる
+        'ledger_define_id' => $ledgerDefine->id,
+        'column_id' => 1,
+        'filename' => 'test.jpg',
+        'hashedbasename' => 'test.jpg',
+        'mime' => 'image/jpeg',
+        'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+        'size' => 1000,
+        'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+        'contain_content' => false,
+        'optimized' => false,
+        'tika_processed_at' => now()->subMinutes(2),
+        'vlm_processed_at' => now()->subMinute(),
+        'vlm_markdown' => '# Test VLM Result',
+        'ocr_processed_at' => now()->subMinute(),
+        'processing_finalized_at' => null,
+        'creator_id' => $user->id,
+        'modifier_id' => $user->id,
+    ]);
+}
+```
+
+### 2. データベース必須フィールドの完全指定
+
+テストデータ作成時は、マイグレーションとモデルの`$fillable`を確認し、**必須フィールドを全て指定**する。
+
+#### チェックすべき項目
+
+```php
+// 1. マイグレーションで NOT NULL のカラム
+// database/migrations/xxx_create_attached_files_table.php
+$table->string('filename');           // NOT NULL
+$table->string('mime');               // NOT NULL
+$table->string('path');               // NOT NULL
+$table->integer('size');              // NOT NULL
+$table->boolean('contain_content');   // NOT NULL (default なし)
+$table->boolean('optimized');         // NOT NULL (default なし)
+
+// 2. 外部キー
+$table->foreignId('ledger_id');
+$table->foreignId('ledger_define_id');
+$table->foreignId('creator_id');
+$table->foreignId('modifier_id');
+
+// 3. Enum型
+$table->string('status');  // AttachedFileStatus enum
+```
+
+#### エラーパターンと対策
+
+```bash
+# エラー例
+SQLSTATE[HY000]: General error: 1364 Field 'contain_content' doesn't have a default value
+
+# 原因: フィールドの指定漏れ
+$file = AttachedFile::create([
+    'ledger_id' => $ledger->id,
+    'filename' => 'test.jpg',
+    // contain_content が指定されていない ← エラー
+]);
+
+# ✅ 修正: 全必須フィールドを指定
+$file = AttachedFile::create([
+    'ledger_id' => $ledger->id,
+    'ledger_define_id' => $ledgerDefine->id,
+    'column_id' => 1,
+    'filename' => 'test.jpg',
+    'hashedbasename' => 'test.jpg',
+    'mime' => 'image/jpeg',
+    'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+    'size' => 1000,
+    'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+    'contain_content' => false,  // ← 追加
+    'optimized' => false,         // ← 追加
+    'creator_id' => $user->id,
+    'modifier_id' => $user->id,
+]);
+```
+
+### 3. カスタムキャストの動作理解
+
+Laravelのカスタムキャスト（`AsColumnArrayJson`など）は、保存時・読み込み時に配列を変換する。この動作を理解していないと、予期しないインデックスのずれが発生する。
+
+#### content_attachedの配列構造問題
+
+**問題:**
+```php
+// ❌ 誤り - カラムID 1を直接使用
+$ledger = Ledger::factory()->create([
+    'content_attached' => [
+        1 => [
+            'test.jpg' => ['meta' => ['content' => 'OCR text']],
+        ],
+    ],
+]);
+
+// DBに保存される: [["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
+// 読み込まれる:   [0 => ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
+//                  ↑ カラムID 1 ではなく 0 になる！
+```
+
+**原因:**  
+`AsColumnArrayJson`カスタムキャストは、保存時に`array_values()`で連番に変換する。
+
+**正しい方法:**
+```php
+// ✅ 正解 - カラムID 0も含める
+$ledger = Ledger::factory()->create([
+    'content_attached' => [
+        0 => [],  // カラムID 0（空でも必要）
+        1 => [
+            'test.jpg' => ['meta' => ['content' => 'OCR text']],
+        ],
+    ],
+]);
+
+// DBに保存される: [[], ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
+// 読み込まれる:   [0 => [], 1 => ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
+//                  ↑ カラムID 1 が正しく保持される
+```
+
+#### 対策
+
+1. **カスタムキャストのコードを確認**
+2. **配列のインデックスが保持されるか検証**
+3. **必要に応じて、欠番を空配列で埋める**
+
+```php
+// テストヘルパー関数の例
+protected function createLedgerWithContent(
+    LedgerDefine $define,
+    array $content,
+    array $contentAttached = []
+): Ledger {
+    // maxColumnIdまでの配列を作成
+    $maxId = collect($define->column_define)->max('id');
+    
+    $normalizedContent = array_fill(0, $maxId + 1, '');
+    foreach ($content as $columnId => $value) {
+        $normalizedContent[$columnId] = $value;
+    }
+    
+    $normalizedAttached = array_fill(0, $maxId + 1, []);
+    foreach ($contentAttached as $columnId => $value) {
+        $normalizedAttached[$columnId] = $value;
+    }
+    
+    return Ledger::factory()->create([
+        'ledger_define_id' => $define->id,
+        'content' => $normalizedContent,
+        'content_attached' => $normalizedAttached,
+    ]);
+}
+```
+
+### 4. 処理フローに沿ったテストデータ設計
+
+実際の処理フロー（Tika → OCR → VLM → 最終化）を理解し、各段階でのデータ構造の変化を考慮する。
+
+#### OCR処理のファイル名変換
+
+**問題:**  
+OCR処理は画像ファイルをPDFに変換するため、`content_attached`内のキーも変更される。
+
+```php
+// ❌ 誤り: OCR結果がtest.jpgに格納されると仮定
+$ledger = Ledger::factory()->create([
+    'content_attached' => [
+        0 => [],
+        1 => [
+            'test.jpg' => ['meta' => ['content' => 'OCR extracted text']],
+        ],
+    ],
+]);
+
+$file = AttachedFile::create([
+    'hashedbasename' => 'test.jpg',  // 元のファイル名
+    'ocr_processed_at' => now(),
+]);
+
+// コマンド実行
+$this->artisan('ledger:finalize-processing');
+
+// ✗ OCRテキストが見つからない（test.pdfを探すため）
+```
+
+**正しい方法:**
+```php
+// ✅ 正解: TikaとOCRの結果を分離
+$ledger = Ledger::factory()->create([
+    'content_attached' => [
+        0 => [],
+        1 => [
+            'test.jpg' => [
+                'meta' => ['content' => 'Tika extracted text'],  // Tika結果
+            ],
+            'test.pdf' => [
+                'meta' => ['content' => 'OCR extracted text'],   // OCR結果（PDF変換後）
+            ],
+        ],
+    ],
+]);
+
+$file = AttachedFile::create([
+    'hashedbasename' => 'test.jpg',  // 元のファイル名
+    'ocr_processed_at' => now(),
+]);
+
+// FinalizeAttachedFileProcessingコマンドは:
+// 1. test.jpg でTikaテキストを探す
+// 2. test.pdf でOCRテキストを探す（拡張子を変換して試す）
+```
+
+### 5. テストの独立性を保つ
+
+グローバルなデータカウントではなく、テストで作成した特定のデータに限定してアサーションを行う。
+
+```php
+// ❌ 間違い: グローバルカウント（他のテストの影響を受ける）
+public function test_respects_limit_parameter()
+{
+    // ... 3つのファイルを作成 ...
+    
+    $this->artisan('ledger:finalize-processing', ['--limit' => 2]);
+    
+    $finalized = AttachedFile::whereNotNull('processing_finalized_at')->count();
+    $this->assertEquals(2, $finalized);  // 前のテストで作成されたファイルも含まれる
+}
+
+// ✅ 正しい: 特定Ledgerにスコープ
+public function test_respects_limit_parameter()
+{
+    $ledger = Ledger::factory()->create();
+    // ... $ledgerに関連する3つのファイルを作成 ...
+    
+    $this->artisan('ledger:finalize-processing', ['--limit' => 2]);
+    
+    $finalized = AttachedFile::where('ledger_id', $ledger->id)
+        ->whereNotNull('processing_finalized_at')
+        ->count();
+    $this->assertEquals(2, $finalized);  // このテストのファイルのみ
+}
+```
+
+### 6. テストデータ作成のチェックリスト
+
+#### 作成前の確認事項
+- [ ] マイグレーションで NOT NULL のカラムをリスト化
+- [ ] 外部キー制約をリスト化
+- [ ] Enum型のフィールドを確認
+- [ ] カスタムキャストの動作を理解
+
+#### 作成時の注意事項
+- [ ] ファクトリの自動作成を確認（意図しない副作用がないか）
+- [ ] 全必須フィールドを明示的に指定
+- [ ] 配列フィールドは正規化された形式で作成
+- [ ] 処理フローに沿ったデータ構造（ファイル名変換など）
+
+#### テスト実行後の確認
+- [ ] `Undefined array key` エラーがないか
+- [ ] `Field 'xxx' doesn't have a default value` エラーがないか
+- [ ] 他のテストに影響を与えていないか（独立性）
+
+### 7. トラブルシューティング
+
+#### よくあるエラーと対処法
+
+**エラー1: Undefined array key**
+```php
+// 症状
+$component->assertSet('content.1', 'value');
+// Error: Undefined array key 1
+
+// チェックポイント
+// 1. カラムID 0 を含めているか？
+// 2. maxColumnIdまでの配列を作成しているか？
+$ledger = Ledger::factory()->create([
+    'content' => [0 => '', 1 => 'value'],  // ← 0を追加
+]);
+```
+
+**エラー2: Field doesn't have a default value**
+```php
+// 症状
+SQLSTATE[HY000]: General error: 1364 Field 'contain_content' doesn't have a default value
+
+// チェックポイント
+// マイグレーションで NOT NULL かつ default なしのカラムを全て指定
+$file = AttachedFile::create([
+    // ...
+    'contain_content' => false,  // ← 追加
+    'optimized' => false,        // ← 追加
+]);
+```
+
+**エラー3: ファクトリが指定値を無視**
+```php
+// 症状
+$file->ledger_id !== $expectedLedgerId
+
+// 原因
+// ファクトリのdefinition()で新しいLedgerを作成している
+
+// 対策
+// ファクトリを使わず、Model::create()で全フィールド指定
+```
+
+### 8. 関連ドキュメント
+
+- [FinalizeAttachedFileProcessingTest修正記録](../work/vlm-rag-integration/2025-11-09_phase5-hotfix-ledger-updated-at.md#追加修正-finalizeattachedfileprocessingtest-テストの修正) - 実際の修正事例
+- [Ledgerモデル](../models/Ledger.md) - content_attached構造の詳細
+- [AttachedFileモデル](../models/AttachedFile.md) - 必須フィールドの一覧
+
+---
+
 ## 📋 チェックリスト
 
 ### テスト作成時のチェックポイント
