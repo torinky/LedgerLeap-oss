@@ -330,19 +330,17 @@ class FinalizeAttachedFileProcessing extends Command
             return;
         }
 
-        $ledgers = Ledger::whereIn('id', $ledgerIds)->get();
-
-        foreach ($ledgers as $ledger) {
+        foreach ($ledgerIds as $ledgerId) {
             // 遅延ディスパッチ（5秒後）で重複を避ける
-            ProcessLedgerForRagJob::dispatch($ledger)
+            ProcessLedgerForRagJob::dispatch($ledgerId)
                 ->delay(now()->addSeconds(5))
                 ->onQueue('default');
 
             Log::info('Dispatched RAG job for ledger', [
-                'ledger_id' => $ledger->id,
+                'ledger_id' => $ledgerId,
             ]);
         }
 
-        $this->info('Dispatched RAG jobs for '.count($ledgers).' ledgers.');
+        $this->info('Dispatched RAG jobs for '.count($ledgerIds).' ledgers.');
     }
 }

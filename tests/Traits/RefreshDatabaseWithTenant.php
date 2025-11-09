@@ -33,11 +33,6 @@ trait RefreshDatabaseWithTenant
     protected static array $databaseInitializedByClass = [];
 
     /**
-     * グローバルにデータベースが初期化されたかを管理（複数回のrefreshを防ぐ）
-     */
-    protected static bool $globalDatabaseInitialized = false;
-
-    /**
      * 作成されたテナント（クラス全体で共有）
      */
     protected static $sharedTenant = null;
@@ -84,11 +79,7 @@ trait RefreshDatabaseWithTenant
 
         // このクラスで最初のテストの場合のみ初期化
         if (! $initialized) {
-            // グローバルに初期化されていない場合のみrefreshDatabaseを実行
-            if (! static::$globalDatabaseInitialized) {
-                $this->refreshDatabase();
-                static::$globalDatabaseInitialized = true;
-            }
+            $this->refreshDatabase();
 
             // テナントが存在しない場合のみ作成
             if (! static::$sharedTenant) {
@@ -104,12 +95,14 @@ trait RefreshDatabaseWithTenant
 
             static::$databaseInitializedByClass[$className] = true;
         } else {
-            // 2回目以降のテストではトランケートしてクリーンアップ
+            // 2回目以降のテストではテナントを初期化
             if (static::$sharedTenant) {
                 tenancy()->initialize(static::$sharedTenant);
-                $this->truncateTenantTables();
             }
         }
+
+        // トランザクションを開始（各テスト後に自動ロールバック）
+        $this->beginDatabaseTransaction();
     }
 
     /**
@@ -169,6 +162,11 @@ trait RefreshDatabaseWithTenant
 
         foreach ($this->connectionsToTransact() as $name) {
             try {
+                // テナント接続の場合、テナントが初期化されているか確認
+                if ($name === 'tenant' && ! tenancy()->initialized) {
+                    continue;
+                }
+
                 $connection = $database->connection($name);
                 $dispatcher = $connection->getEventDispatcher();
 
@@ -191,13 +189,21 @@ trait RefreshDatabaseWithTenant
                     continue;
                 }
 
-                $connection = $database->connection($name);
-                $dispatcher = $connection->getEventDispatcher();
+                try {
+                    $connection = $database->connection($name);
+                    $dispatcher = $connection->getEventDispatcher();
 
-                $connection->unsetEventDispatcher();
-                $connection->rollBack();
-                $connection->setEventDispatcher($dispatcher);
-                $connection->disconnect();
+                    $connection->unsetEventDispatcher();
+                    $connection->rollBack();
+                    $connection->setEventDispatcher($dispatcher);
+                    $connection->disconnect();
+                } catch (\InvalidArgumentException $e) {
+                    // テナント接続が設定されていない場合はスキップ
+                    if ($name === 'tenant') {
+                        continue;
+                    }
+                    throw $e;
+                }
             }
         });
     }
