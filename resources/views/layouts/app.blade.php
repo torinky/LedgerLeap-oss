@@ -62,5 +62,6 @@
 </fooer>
 @vite(['resources/js/app.js'])
 @stack('scripts')
+@livewire('attached-file.text-preview-modal')
 </body>
 </html>

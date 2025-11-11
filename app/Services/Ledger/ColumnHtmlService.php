@@ -301,14 +301,15 @@ HTML;
                     Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: '.$attachment->id);
                 }
 
-                // VLMプレビューボタンの生成
-                $vlmPreviewButtonHtml = '';
-                if ($attachment->hasVlmResult()) {
-                    $vlmPreviewTooltip = __('ledger.vlm.preview_button');
-                    $vlmPreviewButtonHtml = <<<HTML
-<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$vlmPreviewTooltip}">
+                // 抽出テキストプレビューボタンの生成
+                $textPreviewButtonHtml = '';
+                if ($attachment->hasPreviewableText() && !empty($attachment->previewable_text)) {
+                    $textPreviewTooltip = __('ledger.text_preview.button_tooltip');
+                    $textPreviewButtonHtml = <<<HTML
+<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$textPreviewTooltip}">
     <i class="fa-solid fa-eye cursor-pointer" 
-    wire:click="\$dispatch('showVlmPreviewEvent', { fileId: {$attachment->id} })"></i>
+       wire:click="\$dispatch('showTextPreview', { attachedFileId: {$attachment->id} })"
+       wire:loading.attr="disabled"></i>
 </div>
 HTML;
                 }
@@ -376,7 +377,7 @@ HTML;
 <span class="indicator-item">
     {$statusIconHtml}
  {$retryIconHtml}
- {$vlmPreviewButtonHtml}
+ {$textPreviewButtonHtml}
     {$auxiliaryLinksHtml}
 </span>
 {$contentHtmlStart}
@@ -396,7 +397,7 @@ HTML;
         <span class="indicator-item">
             {$statusIconHtml}
             {$retryIconHtml}
-            {$vlmPreviewButtonHtml}
+            {$textPreviewButtonHtml}
             {$auxiliaryLinksHtml}
         </span>
         <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}

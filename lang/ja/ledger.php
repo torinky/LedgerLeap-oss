@@ -1124,6 +1124,16 @@
                     'vlm' => 'VLM (高精度AI)',
                 ],
         ],
+    'text_preview' => [
+        'copy_unavailable' => 'コピー対象のテキストがありません',
+        'download_unavailable_not_vlm' => 'VLM抽出データではないためダウンロードできません',
+        'button_tooltip' => '抽出テキストをプレビュー',
+        'copy_full_text_button' => '全文をクリップボードにコピー',
+        'modal_title' => '抽出テキストプレビュー',
+        'not_found' => 'プレビュー可能なテキストがありません',
+        'copy_success' => 'コピーしました',
+        'copy_failed' => 'コピーに失敗しました',
+    ],
     'workflow' =>
         [
             'action_at' => '操作日時',
