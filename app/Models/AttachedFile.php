@@ -267,4 +267,101 @@ class AttachedFile extends Model
         return $this->processing_finalized_at &&
             in_array($this->finalized_source, ['ocr', 'tika']);
     }
+
+    /**
+     * プレビュー可能なテキストが存在するかを判定
+     */
+    public function hasPreviewableText(): bool
+    {
+        if (!$this->processing_finalized_at || !$this->finalized_source) {
+            return false;
+        }
+
+        // VLMの場合
+        if ($this->finalized_source === 'vlm') {
+            return !empty($this->vlm_markdown);
+        }
+
+        // OCR/Tikaの場合は、ledgerリレーションとcontent_attachedの存在を確認
+        return $this->relationLoaded('ledger') 
+            && $this->ledger 
+            && isset($this->ledger->content_attached[$this->column_id][$this->filename]['meta']['content']);
+    }
+
+    /**
+     * プレビュー用のテキストを取得
+     */
+    public function getPreviewableText(): ?string
+    {
+        if (!$this->processing_finalized_at || !$this->finalized_source) {
+            return null;
+        }
+
+        return match($this->finalized_source) {
+            'vlm' => $this->vlm_markdown,
+            'ocr', 'tika' => $this->getOcrTikaFormattedText(),
+            default => null,
+        };
+    }
+
+    private function getOcrTikaFormattedText(): ?string
+    {
+        // content_attachedからテキスト取得（Eager Loading推奨）
+        if (!$this->relationLoaded('ledger') || !$this->ledger) {
+            return null; // N+1防止のため、Eager Loading必須
+        }
+
+        // AsColumnArrayJsonキャストのシリアライゼーションにより、
+        // data_get()が正しく動作しないため、直接配列アクセスを使用
+        $text = $this->ledger->content_attached[$this->column_id][$this->filename]['meta']['content'] ?? null;
+
+        return $text ? "```\n{$text}\n```" : null;
+    }
+
+    public function getConfidenceBadgeInfo(): ?array
+    {
+        if (!$this->processing_finalized_at || !$this->finalized_source) {
+            return null;
+        }
+
+        return match($this->finalized_source) {
+            'vlm' => $this->getVlmBadgeInfo(),
+            'ocr' => [
+                'label' => __('ledger.vlm.source.ocr'),
+                'color' => 'warning',
+                'score' => null,
+                'tooltip' => __('ledger.attached_file.badge.ocr_tooltip'),
+            ],
+            'tika' => [
+                'label' => __('ledger.vlm.source.tika'),
+                'color' => 'info',
+                'score' => null,
+                'tooltip' => __('ledger.attached_file.badge.tika_tooltip'),
+            ],
+            default => null,
+        };
+    }
+
+    private function getVlmBadgeInfo(): array
+    {
+        $score = $this->vlm_confidence * 100;
+
+        if ($score >= 70) {
+            $color = 'success';
+            $tooltip = __('ledger.attached_file.badge.vlm_high_quality');
+        } elseif ($score >= 50) {
+            $color = 'warning';
+            $tooltip = __('ledger.attached_file.badge.vlm_medium_quality');
+        } else {
+            $color = 'error';
+            $tooltip = __('ledger.attached_file.badge.vlm_low_quality');
+        }
+
+        return [
+            'label' => __('ledger.vlm.source.vlm'),
+            'color' => $color,
+            'score' => number_format($score, 1) . '%',
+            'tooltip' => $tooltip,
+        ];
+    }
 }

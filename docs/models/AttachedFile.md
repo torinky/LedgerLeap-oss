@@ -65,6 +65,55 @@
 *   **`getActivitylogOptions(): LogOptions`**:
     *   説明: `spatie/laravel-activitylog` の設定。ログに記録する属性やログ名を定義します。
 
+### VLM/OCR処理関連メソッド（Phase4-5で追加）
+
+*   **`hasVlmResult(): bool`**:
+    *   説明: VLM抽出結果が存在するかを判定します。
+*   **`isVlmProcessing(): bool`**:
+    *   説明: VLM処理が進行中かを判定します。
+*   **`isVlmFailed(): bool`**:
+    *   説明: VLM処理が失敗したかを判定します。
+
+### プレビュー機能関連メソッド（Phase6で追加）
+
+*   **`hasPreviewableText(): bool`**:
+    *   説明: プレビュー可能なテキストが存在するかを判定します。VLMの場合は`vlm_markdown`の存在、OCR/Tikaの場合は`ledger.content_attached`の存在を確認します。
+    *   **重要:** OCR/Tikaの場合、`ledger`リレーションがEager Loadingされている必要があります。
+*   **`getPreviewableText(): ?string`**:
+    *   説明: プレビュー用のテキストを取得します。VLMの場合はMarkdown形式、OCR/Tikaの場合はコードブロック形式で返します。
+    *   戻り値: プレビュー用テキスト（存在しない場合は`null`）
+    *   **使用例:**
+        ```php
+        // VLM/OCR/Tikaが混在する場合
+        $attachments = AttachedFile::with('ledger')->get();
+        foreach ($attachments as $attachment) {
+            if ($attachment->hasPreviewableText()) {
+                $text = $attachment->getPreviewableText();
+            }
+        }
+        ```
+*   **`getConfidenceBadgeInfo(): ?array`**:
+    *   説明: プレビューモーダルに表示する品質バッジ情報を生成します。
+    *   戻り値構造:
+        ```php
+        [
+            'label' => 'VLM (高精度AI)',      // 抽出方法のラベル
+            'color' => 'success',              // バッジの色（success/warning/error/info）
+            'score' => '95.0%',                // 信頼度スコア（VLMのみ）
+            'tooltip' => '高精度なVLM抽出結果です',  // ツールチップテキスト
+        ]
+        ```
+    *   **色分けルール（VLM）:**
+        - `success`（緑）: 信頼度 ≥ 70%
+        - `warning`（黄）: 50% ≤ 信頼度 < 70%
+        - `error`（赤）: 信頼度 < 50%
+    *   **翻訳対応:** 全てのラベルとツールチップは`lang/ja/ledger.php`の翻訳キーを使用
+
+**実装上の注意:**
+- `getPreviewableText()`でOCR/Tikaテキストを取得する場合、必ず`with('ledger')`でEager Loadingを行ってください
+- `content_attached`へのアクセスには`data_get()`は使用できません（`AsColumnArrayJson`のシリアライゼーション制約）
+- 直接配列アクセス（`$ledger->content_attached[$column_id][$filename]['meta']['content']`）を使用してください
+
 ## その他
 
 *   `LogsActivity` トレイトを利用して、モデルの変更履歴を記録します。

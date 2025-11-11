@@ -259,6 +259,18 @@ erDiagram
 
 この正規化により、**カラムIDが配列インデックスと一致**し、`$ledger->content[$columnId]`で直接値にアクセスできます。
 
+**重要な注意点（Phase6で判明）:**
+- この正規化は**0から始まる連番配列の場合のみ**正しく動作します
+- カラムIDが1から始まる場合、インデックス0に空要素が必要です：
+  ```php
+  // 正しいデータ構造（カラムID 1を使用する場合）
+  'content' => [
+      0 => [],  // カラムID 0（空）
+      1 => ['hashed123' => 'test.pdf'],  // カラムID 1
+  ]
+  ```
+- テストやシーダーでデータを作成する際は、必ず0から始まる連番配列として準備してください
+
 詳細は [Ledgerモデルのドキュメント](../models/Ledger.md#contentとcontent_attachedの正規化とデータ構造) および [Testing-Best-Practices.md](../development/Testing-Best-Practices.md#-ledgerモデルのcontentデータ構造とテスト) を参照してください。
 
 ### 2. インデックスの挙動と制約
@@ -305,7 +317,31 @@ public function setContent(mixed $item): mixed
 
 詳細は`app/Casts/AsColumnArrayJson.php`のクラスコメントおよび[Ledgerモデルのドキュメント](/docs/models/Ledger.md)を参照してください。
 
-### 5. テスト実装時の極めて重要な注意点
+### 5. AsColumnArrayJsonキャストの制約（Phase6で判明）
+
+**`data_get()`ヘルパーとの非互換性:**
+
+`AsColumnArrayJson`キャストは内部でシリアライゼーション（`___serialized___`プレフィックス）を使用しているため、Laravelの`data_get()`ヘルパー関数が正しく動作しません。
+
+```php
+// ❌ 動作しない
+$text = data_get($ledger->content_attached, '1.test.pdf.meta.content');
+// => NULL
+
+// ✅ 正しい方法：直接配列アクセスを使用
+$text = $ledger->content_attached[$column_id][$filename]['meta']['content'] ?? null;
+```
+
+**対策:**
+- `content`や`content_attached`にアクセスする際は、**必ず直接配列アクセスを使用**してください
+- `data_get()`、`Arr::get()`などのヘルパー関数は使用しないでください
+- Null-safe演算子（`??`）で安全にアクセスしてください
+
+**関連実装:**
+- `AttachedFile::getPreviewableText()`: 直接配列アクセスの実装例
+- Phase6実装報告書: 詳細な問題と解決策
+
+### 6. テスト実装時の極めて重要な注意点
 
 -   **`RefreshDatabase` トレイトとの非互換性:** Mroongaのインデックス更新は、データベースのトランザクションがコミットされた後に行われると推測されます。Laravelのテストで一般的に使われる `RefreshDatabase` トレイトは、テスト全体を単一のトランザクション内で実行し、最後にロールバックするため、テスト中に作成されたデータのインデックスが更新されません。これにより、**`RefreshDatabase` を使用したテストでは、全文検索が必ず失敗します。**
 -   **必須の対策:** 全文検索機能を含むフィーチャーテストを記述する際は、必ず `RefreshDatabase` の代わりに **`Illuminate\Foundation\Testing\DatabaseMigrations` トレイトを使用してください。** これにより、テストごとにDBが再構築され、トランザクションの問題を回避できます。
@@ -363,7 +399,14 @@ public function setContent(mixed $item): mixed
     *   主要カラム: `tag_id`, `taggable_type`, `taggable_id`。
 *   **`attached_files`**:
     *   目的: `ledgers` レコードに添付されたファイルのメタデータ（パス、ファイル名、MIMEタイプ、サイズなど）を格納します。OCR処理の状態管理やオリジナルファイルのパスも保持します。
-    *   主要カラム: `id`, `ledger_id`, `file_path`, `file_name`, `mime_type`, `size`, `status`, `original_file_path`, `original_mime_type`。
+    *   主要カラム: `id`, `ledger_id`, `column_id`, `filename`, `hashedbasename`, `mime`, `path`, `size`, `status`, `original_file_path`, `original_mime_type`。
+    *   **VLM/OCR関連カラム（Phase4-5で追加）:**
+        *   `vlm_markdown` (longtext): VLM抽出結果（Markdown形式）
+        *   `vlm_confidence` (decimal 4,3): VLM信頼度スコア（0.000-1.000）
+        *   `finalized_source` (varchar 20): 最終化時の採用ソース（'vlm' | 'ocr' | 'tika'）
+        *   `processing_finalized_at` (timestamp): 最終化処理完了日時
+        *   `vlm_processed_at`, `ocr_processed_at`, `tika_processed_at`: 各処理の完了日時
+    *   **重要:** VLM/OCRの抽出結果は`attached_files`テーブルに格納され、`ledgers.content_attached`には最終化後に採用されたテキストのみが保存されます。
 *   **`notifications`**:
     *   目的: (Laravel標準) システム内で発生した通知（ワークフロー関連、お知らせなど）を格納します。
     *   主要カラム: `id`, `type` (通知クラス名), `notifiable_type`, `notifiable_id`, `data` (JSON), `read_at`。

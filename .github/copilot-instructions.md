@@ -1,5 +1,6 @@
 # GitHub Copilot CLI - LedgerLeap開発設定
 **作成日:** 2025年9月28日  
+**最終更新:** 2025年11月11日（Phase6実装に基づく知見追加）  
 **対象:** GitHub Copilot CLI (バージョン 0.0.328)  
 **プロジェクト:** LedgerLeap - Webベース台帳管理システム
 
@@ -15,6 +16,8 @@
 - **Mroonga:** 全文検索に必須。複合インデックスは機能しない
 - **テスト:** 全文検索機能は`DatabaseMigrations`トレイト必須
 - **Livewire:** パブリックプロパティはシンプルな連想配列のみ
+- **テナント:** 全てのFeatureテストで`tenancy()->initialize()`が必須（Phase6で確認）
+- **AsColumnArrayJson:** `data_get()`は使用不可。直接配列アクセス必須（Phase6で確認）
 
 ## 開発コマンド
 
@@ -288,6 +291,21 @@ if (!$this->permissionService->canUserAccess($user, $folder, 'WRITE')) {
 1. **OCR処理**: 外部プロセス連携を考慮
 2. **モック**: Pest=`mock()`, PHPUnit=`$this->mock()`
 3. **ファクトリ**: `ColumnDefine`は直接コンストラクタ使用
+4. **テナント初期化**: 全Featureテストで`tenancy()->initialize()`必須（Phase6）
+
+### AsColumnArrayJsonキャストの制約（Phase6で判明）
+1. **data_get()不可**: `AsColumnArrayJson`のシリアライゼーションにより`data_get()`が動作しない
+2. **直接配列アクセス必須**: `$ledger->content[$id]`, `$ledger->content_attached[$id][$file]` の形式で
+3. **0始まり連番必須**: テストデータは`[0 => '', 1 => 'value']`のように0から始める
+4. **Null-safe演算子**: `??`を使って安全にアクセス
+
+```php
+// ❌ 動作しない
+$text = data_get($ledger->content_attached, '1.file.meta.content');
+
+// ✅ 正しい
+$text = $ledger->content_attached[1]['file']['meta']['content'] ?? null;
+```
 
 ## 開発時必須チェック
 

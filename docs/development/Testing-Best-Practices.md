@@ -1,7 +1,11 @@
 # LedgerLeap テストベストプラクティス
 
-**最終更新:** 2025年10月1日  
+**最終更新:** 2025年11月11日  
 **適用対象:** LedgerLeap全体のテスト開発
+
+**更新履歴:**
+- 2025-11-11: Phase6実装に基づく重要な知見を追加（テナント初期化、data_get()制約、content_attached構造）
+- 2025-10-01: 初版作成
 
 ---
 
@@ -33,6 +37,35 @@ class UserTest extends TestCase
     // 高速なロールバック処理
 }
 ```
+
+### 3. テナント対応テストの必須セットアップ (Phase6で追加)
+
+**重要:** LedgerLeapはマルチテナント対応のため、**全てのFeatureテストでテナント初期化が必須**です。
+
+```php
+use App\Models\Tenant;
+
+class AttachedFilePreviewTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // ✅ 必須: テナント初期化
+        $tenant = Tenant::factory()->create();
+        tenancy()->initialize($tenant);
+    }
+    
+    // テストメソッド...
+}
+```
+
+**テナント初期化を忘れた場合の症状:**
+- リレーションクエリが`null`を返す
+- `ledger_id`は設定されているのに`$attachment->ledger`が`null`になる
+- 予期しないデータが取得される
 
 ---
 
@@ -381,14 +414,34 @@ $ledger = Ledger::factory()->create([
 // → DBには ['テスト値'] として保存される（インデックス0のみ）
 // → ModifyColumnで読み取ると content[1] が存在しない！
 
-// ✅ 正しいテストデータ作成
+// ✅ 正しいテストデータ作成（Phase6で確認）
 // normalizeByColumnDefine()と同じ形式でデータを作成
 $ledger = Ledger::factory()->create([
     'ledger_define_id' => $ledgerDefine->id,
-    'content' => [0 => '', 1 => 'テスト値'],  // カラムIDの欠番も含める
+    'content' => [
+        0 => '',           // カラムID 0（空要素必須）
+        1 => 'テスト値',   // カラムID 1
+    ],
 ]);
 // → DBには ['', 'テスト値'] として保存される（インデックス0,1）
 // → ModifyColumnで content[1] が正しく読み取れる
+```
+
+**Phase6で判明した重要な制約:**
+- `AsColumnArrayJson`キャストの`set()`メソッドは`array_values()`を使用
+- **0から始まる連番配列**として扱う必要がある
+- カラムIDが1から始まる場合、インデックス0に空要素が必須
+
+```php
+// ✅ content_attachedの正しい構造（Phase6実装例）
+'content_attached' => [
+    0 => [],  // カラムID 0（空）※必須
+    1 => [    // カラムID 1
+        'test.pdf' => [
+            'meta' => ['content' => 'OCR extracted text'],
+        ],
+    ],
+],
 ```
 
 ### 3. カラムIDと配列インデックスの対応関係
@@ -415,7 +468,48 @@ $content = [1 => '値'];  // カラムID=1に値を設定
 // $ledger->content[2] → ''（カラムID=2の値）
 ```
 
-### 4. 実際のアプリケーションフロー
+### 4. AsColumnArrayJsonキャストの制約（Phase6で判明）
+
+**重要な制約: `data_get()`ヘルパーとの非互換性**
+
+`AsColumnArrayJson`キャストは内部で`___serialized___`プレフィックスを使用したシリアライゼーションを行うため、Laravelの`data_get()`ヘルパー関数が正しく動作しません。
+
+```php
+// ❌ 動作しない
+$text = data_get($ledger->content_attached, '1.test.pdf.meta.content');
+// => NULL （期待する値が取得できない）
+
+// ✅ 正しい方法：直接配列アクセスを使用
+$text = $ledger->content_attached[$column_id][$filename]['meta']['content'] ?? null;
+// => 'OCR extracted text' （正しく取得できる）
+```
+
+**テストでの影響:**
+
+```php
+// ❌ 避けるべきパターン
+$this->assertEquals(
+    'expected value',
+    data_get($ledger->content, '1')  // 動作しない可能性
+);
+
+// ✅ 推奨パターン
+$this->assertEquals(
+    'expected value',
+    $ledger->content[1] ?? null  // 確実に動作
+);
+```
+
+**実装での注意点:**
+- `content`や`content_attached`へのアクセスには**必ず直接配列アクセス**を使用
+- `data_get()`, `Arr::get()`などのヘルパー関数は使用不可
+- Null-safe演算子（`??`）で安全にアクセス
+
+**参考実装:**
+- `AttachedFile::getPreviewableText()`: 直接配列アクセスの実装例
+- `docs/work/vlm-rag-integration/2025-11-11_phase6-wbs1-implementation-report.md`: 詳細な問題と解決策
+
+### 5. 実際のアプリケーションフロー
 
 **重要**: 実際のアプリケーションでは、Livewireコンポーネント経由で保存されるため、常に正規化が行われます。
 

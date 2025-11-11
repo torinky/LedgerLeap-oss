@@ -1015,6 +1015,17 @@
             'success' => '更新を完了しました',
         ],
     'updated_at' => '更新日時',
+    'attached_file' =>
+        [
+            'badge' =>
+                [
+                    'ocr_tooltip' => 'OCRで抽出されたテキストです',
+                    'tika_tooltip' => 'Apache Tikaで抽出されたテキストです',
+                    'vlm_high_quality' => '高精度なVLM抽出結果です',
+                    'vlm_low_quality' => '低精度のVLM抽出結果です',
+                    'vlm_medium_quality' => '中精度のVLM抽出結果です',
+                ],
+        ],
     'uploadedFile' =>
         [
             'download_pdf_with_text' => 'テキスト付きPDFをダウンロード',
