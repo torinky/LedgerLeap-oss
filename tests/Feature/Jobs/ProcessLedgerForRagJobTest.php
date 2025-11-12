@@ -377,9 +377,9 @@ class ProcessLedgerForRagJobTest extends TestCase
             'vlm_markdown' => $vlmText,
             'vlm_processed_at' => now(),
         ]);
-        
+
         // Debug: Verify attached file was created with correct tenant_id
-        $this->assertEquals($ledger->tenant_id, $attachedFile->tenant_id, 
+        $this->assertEquals($ledger->tenant_id, $attachedFile->tenant_id,
             "AttachedFile tenant_id ({$attachedFile->tenant_id}) should match Ledger tenant_id ({$ledger->tenant_id})");
 
         $embeddingServiceMock = $this->mock(EmbeddingService::class);

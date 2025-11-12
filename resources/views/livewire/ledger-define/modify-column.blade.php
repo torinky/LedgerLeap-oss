@@ -32,7 +32,7 @@
                             <x-mary-collapse x-data="{ is_collapsed: @js($column['is_collapsed']) }"
                                              x-bind:open="is_collapsed"
                                              @toggle-collapse.window="is_collapsed = $event.detail.is_collapsed"
-                                             class="bg-base-200 text-primary-content opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out"
+                                             class="bg-base-200 opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out"
                                              wire:key="collapse-{{ $column['id'] }}"
                                              x-on:mouseenter="updateBackground('{{ $column['id'] }}')"
                                              x-on:focusin="updateBackground('{{ $column['id'] }}')"
@@ -52,7 +52,7 @@
                                                               placeholder="{{__('ledger.column.title')}}"
                                                               icon="o-table-cells"
                                                               required
-                                                              wire:model.live="columns.{{$index}}.name"
+                                                              wire:model.change="columns.{{$index}}.name"
                                                               wire:key="name-{{$column['id']}}" class="input-accent"/>
 
                                                 @php
@@ -81,7 +81,7 @@
                                                 <x-mary-choices label="{{__('ledger.form.group_name')}}"
                                                                 placeholder="{{__('ledger.form.group_name')}}"
                                                                 icon="o-folder"
-                                                                wire:model.live="columns.{{$index}}.group"
+                                                                wire:model.change="columns.{{$index}}.group"
                                                                 wire:key="group-{{$column['id']}}"
                                                                 livewire-search="search"
                                                                 clearable

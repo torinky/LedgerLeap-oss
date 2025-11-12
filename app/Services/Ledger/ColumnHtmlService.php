@@ -217,6 +217,12 @@ class ColumnHtmlService
 
     public function setAttachmentCollection(Collection $attachments): static
     {
+        // テキストプレビュー機能のため、ledgerリレーションをEager Loadingする
+        // EloquentCollectionの場合のみloadMissingを実行
+        if ($attachments instanceof \Illuminate\Database\Eloquent\Collection) {
+            $attachments->loadMissing('ledger');
+        }
+
         $this->attachments = $attachments;
 
         return $this;
@@ -303,7 +309,7 @@ HTML;
 
                 // 抽出テキストプレビューボタンの生成
                 $textPreviewButtonHtml = '';
-                if ($attachment->hasPreviewableText() && !empty($attachment->previewable_text)) {
+                if ($attachment->hasPreviewableText()) {
                     $textPreviewTooltip = __('ledger.text_preview.button_tooltip');
                     $textPreviewButtonHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$textPreviewTooltip}">

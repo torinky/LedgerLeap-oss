@@ -276,6 +276,109 @@ class AttachedFileTest extends TestCase
         $this->assertEquals(AttachedFileStatus::PARALLEL_PROCESSING, $file->getDisplayStatus());
     }
 
+    // Phase6: Text Preview Tests
+    #[Test]
+    public function has_previewable_text_returns_true_for_vlm()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'vlm',
+            'vlm_markdown' => '# Test Content',
+        ]);
+        $this->assertTrue($file->hasPreviewableText());
+    }
+
+    #[Test]
+    public function has_previewable_text_returns_false_when_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => null,
+            'finalized_source' => 'vlm',
+            'vlm_markdown' => '# Test Content',
+        ]);
+        $this->assertFalse($file->hasPreviewableText());
+    }
+
+    #[Test]
+    public function get_previewable_text_attribute_returns_vlm_markdown()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'vlm',
+            'vlm_markdown' => '# Test Content',
+        ]);
+        $this->assertEquals('# Test Content', $file->previewable_text);
+    }
+
+    #[Test]
+    public function get_previewable_text_attribute_returns_null_when_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => null,
+            'finalized_source' => 'vlm',
+            'vlm_markdown' => '# Test Content',
+        ]);
+        $this->assertNull($file->previewable_text);
+    }
+
+    #[Test]
+    public function get_confidence_badge_info_returns_correct_vlm_badge()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'vlm',
+            'vlm_confidence' => 0.85,
+        ]);
+
+        $badgeInfo = $file->getConfidenceBadgeInfo();
+
+        $this->assertIsArray($badgeInfo);
+        $this->assertEquals('success', $badgeInfo['color']);
+        $this->assertEquals('85.0%', $badgeInfo['score']);
+    }
+
+    #[Test]
+    public function get_confidence_badge_info_returns_correct_ocr_badge()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'ocr',
+        ]);
+
+        $badgeInfo = $file->getConfidenceBadgeInfo();
+
+        $this->assertIsArray($badgeInfo);
+        $this->assertEquals('warning', $badgeInfo['color']);
+        $this->assertNull($badgeInfo['score']);
+    }
+
+    #[Test]
+    public function get_confidence_badge_info_returns_correct_tika_badge()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'tika',
+        ]);
+
+        $badgeInfo = $file->getConfidenceBadgeInfo();
+
+        $this->assertIsArray($badgeInfo);
+        $this->assertEquals('info', $badgeInfo['color']);
+        $this->assertNull($badgeInfo['score']);
+    }
+
+    #[Test]
+    public function get_confidence_badge_info_returns_null_when_not_finalized()
+    {
+        $file = AttachedFile::factory()->make([
+            'processing_finalized_at' => null,
+            'finalized_source' => 'vlm',
+            'vlm_confidence' => 0.85,
+        ]);
+
+        $this->assertNull($file->getConfidenceBadgeInfo());
+    }
+
     #[Test]
     public function get_processing_status_returns_correct_status()
     {

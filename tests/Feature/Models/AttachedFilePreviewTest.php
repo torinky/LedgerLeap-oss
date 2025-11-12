@@ -64,7 +64,7 @@ class AttachedFilePreviewTest extends TestCase
     public function test_previewable_text_returns_ocr_text_with_code_block()
     {
         $attachment = $this->createFinalizedAttachment('ocr');
-        
+
         // DBから再取得してリレーションをEager Load
         $attachment = AttachedFile::with('ledger')->find($attachment->id);
 

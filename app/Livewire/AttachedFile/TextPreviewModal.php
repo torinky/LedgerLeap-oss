@@ -3,18 +3,26 @@
 namespace App\Livewire\AttachedFile;
 
 use App\Models\AttachedFile;
-use Livewire\Component;
-use Livewire\Attributes\On;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Mary\Traits\Toast;
 
 class TextPreviewModal extends Component
 {
+    use Toast;
     public bool $showModal = false;
+
     public ?AttachedFile $file = null;
+
     public ?array $badgeInfo = null;
+
     public ?string $previewText = null;
+
     public bool $isTruncated = false;
+
+    public ?string $tenantId = null;
 
     // パフォーマンス対策定数
     private const MAX_PREVIEW_LENGTH = 500000; // 500KB
@@ -22,17 +30,19 @@ class TextPreviewModal extends Component
     #[On('showTextPreview')]
     public function show(int $attachedFileId): void
     {
-        $file = AttachedFile::find($attachedFileId);
+        $file = AttachedFile::with('ledger')->find($attachedFileId);
 
-        if (!$file) {
+        if (! $file) {
             Log::warning("AttachedFile not found for ID: {$attachedFileId}");
             $this->notifyNotFound();
+
             return;
         }
 
-        if (!$file->hasPreviewableText()) {
+        if (! $file->hasPreviewableText()) {
             Log::info("AttachedFile ID: {$attachedFileId} does not have previewable text.");
             $this->notifyNotFound();
+
             return;
         }
 
@@ -47,28 +57,29 @@ class TextPreviewModal extends Component
 
         $this->file = $file;
         $this->badgeInfo = $file->getConfidenceBadgeInfo();
+        $this->tenantId = tenant('id');
         $this->showModal = true;
     }
 
     public function closeModal(): void
     {
         $this->showModal = false;
-        $this->reset('file', 'badgeInfo', 'previewText', 'isTruncated');
+        $this->reset('file', 'badgeInfo', 'previewText', 'isTruncated', 'tenantId');
     }
 
     public function notifyCopySuccess(): void
     {
-        $this->dispatch('mary-toast', title: __('ledger.text_preview.copy_success'), icon: 'o-check');
+        $this->success(__('ledger.text_preview.copy_success'));
     }
 
     public function notifyCopyFailed(): void
     {
-        $this->dispatch('mary-toast', title: __('ledger.text_preview.copy_failed'), icon: 'o-x-mark', type: 'error');
+        $this->error(__('ledger.text_preview.copy_failed'));
     }
 
     private function notifyNotFound(): void
     {
-        $this->dispatch('mary-toast', title: __('ledger.text_preview.not_found'), icon: 'o-exclamation-triangle', type: 'warning');
+        $this->warning(__('ledger.text_preview.not_found'));
     }
 
     public function render()

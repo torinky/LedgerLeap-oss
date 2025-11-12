@@ -30,7 +30,7 @@ class Show extends Component
     public string $selectedTab = 'details';
 
     #[Url(as: 'dl')]
-    public int $displayLevel = 1;
+    public int $displayLevel = 3;
 
     #[Url(as: 'refresh')]
     public bool $refresh = false;

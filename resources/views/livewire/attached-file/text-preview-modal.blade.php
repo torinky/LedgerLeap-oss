@@ -1,7 +1,7 @@
 <x-mary-modal wire:model="showModal" box-class="w-11/12 max-w-4xl">
     {{-- ヘッダー --}}
     <x-slot:title class="flex justify-between items-center">
-        <span>{{ __('ledger.text_preview.modal_title') }}</span>
+        {{ __('ledger.text_preview.modal_title') }}
     </x-slot:title>
 
     {{-- ボディ --}}
@@ -11,13 +11,20 @@
             <div class="flex items-center gap-4">
                 <span class="font-bold"><x-heroicon-o-document class="inline w-5 h-5" /> {{ $file->original_filename }}</span>
                 @if($badgeInfo)
-                    <x-mary-badge :value="$badgeInfo['label']" :class="$badgeInfo['color']" />
+                    <span class="badge badge-{{ $badgeInfo['color'] }}">
+                        {{ $badgeInfo['label'] }}
+                        @if($badgeInfo['score'])
+                            : {{ $badgeInfo['score'] }}
+                        @endif
+                    </span>
                 @endif
             </div>
         </div>
 
         {{-- テキスト表示エリア --}}
-        <div class="prose max-w-none overflow-y-auto max-h-[60vh] bg-base-200 p-4 rounded-lg">
+        <div class="prose max-w-none overflow-y-auto max-h-[60vh] bg-base-200 p-4 rounded-lg"
+             x-ref="previewContent"
+             data-text="{{ $file->previewable_text }}">
             {!! Illuminate\Support\Str::markdown($previewText ?? '') !!}
         </div>
     @endif
@@ -25,8 +32,31 @@
     {{-- フッター (アクション) --}}
     <x-slot:actions>
         {{-- クリップボードコピーボタン --}}
-        <div x-data="{ 
-            textToCopy: @js($file?->previewable_text),
+        <div class="mb-3" x-data="{
+            copied: false,
+            copyToClipboard() {
+                const contentEl = this.$refs.previewContent;
+                const text = contentEl?.dataset?.text || '';
+
+                if (!text) {
+                    $wire.call('notifyCopyFailed');
+                    return;
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text)
+                        .then(() => {
+                            this.copied = true;
+                            $wire.call('notifyCopySuccess');
+                            setTimeout(() => { this.copied = false; }, 2000);
+                        })
+                        .catch(() => {
+                            this.fallbackCopy(text);
+                        });
+                } else {
+                    this.fallbackCopy(text);
+                }
+            },
             fallbackCopy(text) {
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
@@ -36,35 +66,25 @@
                 textarea.select();
                 try {
                     document.execCommand('copy');
-                    $wire.notifyCopySuccess();
+                    this.copied = true;
+                    $wire.call('notifyCopySuccess');
+                    setTimeout(() => { this.copied = false; }, 2000);
                 } catch (err) {
-                    $wire.notifyCopyFailed();
+                    $wire.call('notifyCopyFailed');
                 }
                 document.body.removeChild(textarea);
             }
         }">
-            <x-mary-button 
-                :label="$isTruncated ? __('ledger.text_preview.copy_full_text_button') : __('ledger.text_preview.copy_button')" 
-                icon="o-clipboard" 
-                @click="
-                    if (navigator.clipboard) {
-                        navigator.clipboard.writeText(textToCopy)
-                            .then(() => $wire.notifyCopySuccess())
-                            .catch(() => fallbackCopy(textToCopy));
-                    } else {
-                        fallbackCopy(textToCopy);
-                    }
-                " 
-                class="btn-primary"
-                :disabled="empty($previewText)"
-                :tooltip="empty($previewText) ? __('ledger.text_preview.copy_unavailable') : ''"
-            />
+            <x-mary-button @click="copyToClipboard()" class="btn btn-primary">
+                <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                <span x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.text_preview.copy_button') }}'"></span>
+            </x-mary-button>
         </div>
 
         @php
             $isVlmSource = $file?->finalized_source === 'vlm';
-            $downloadMarkdownUrl = $isVlmSource ? route('files.download-vlm', ['tenant' => tenant('id'), 'attachedFile' => $file->id, 'format' => 'markdown']) : '#';
-            $downloadJsonUrl = $isVlmSource ? route('files.download-vlm', ['tenant' => tenant('id'), 'attachedFile' => $file->id, 'format' => 'json']) : '#';
+            $downloadMarkdownUrl = $isVlmSource && $tenantId ? route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) : '#';
+            $downloadJsonUrl = $isVlmSource && $tenantId ? route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) : '#';
         @endphp
 
         {{-- ダウンロードボタン --}}
