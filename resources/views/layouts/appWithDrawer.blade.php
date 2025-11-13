@@ -69,6 +69,10 @@
             </ul>
         </div>
     </div>
+    
+    {{-- グローバルモーダル --}}
+    @livewire('attached-file.text-preview-modal')
+    
     @vite(['resources/js/app.js'])
     @stack('scripts')
 <script>

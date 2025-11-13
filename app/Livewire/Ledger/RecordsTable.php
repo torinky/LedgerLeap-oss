@@ -664,6 +664,7 @@ class RecordsTable extends Component
         $this->showActivityModal = true;
     }
 
+    #[On('retryProcessingEvent')]
     public function retryProcessing(int $attachedFileId): void
     {
         $attachedFile = AttachedFile::find($attachedFileId);

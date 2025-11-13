@@ -959,6 +959,7 @@ return [
     ],
     'uploadedFile' => [
         'download_pdf_with_text' => 'テキスト付きPDFをダウンロード',
+        'download_original_pdf' => 'オリジナルをダウンロード',
         'retry' => 'テキスト抽出/OCRを再試行',
         'retry_extraction' => 'テキスト抽出を再試行',
         'retry_failed' => '再処理の開始に失敗しました',
@@ -1051,7 +1052,6 @@ return [
         'button_tooltip' => '抽出テキストをプレビュー',
         'modal_title' => '抽出テキストプレビュー',
         'copy_button' => 'クリップボードにコピー',
-        'copy_full_text_button' => '全文をクリップボードにコピー',
         'copy_success' => 'コピーしました',
         'copy_failed' => 'コピーに失敗しました',
         'copy_unavailable' => 'コピー対象のテキストがありません',
