@@ -312,10 +312,11 @@ HTML;
                 if ($attachment->hasPreviewableText()) {
                     $textPreviewTooltip = __('ledger.text_preview.button_tooltip');
                     $textPreviewButtonHtml = <<<HTML
-<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$textPreviewTooltip}">
-    <i class="fa-solid fa-eye cursor-pointer" 
-       wire:click="\$dispatch('showTextPreview', { attachedFileId: {$attachment->id} })"
-       wire:loading.attr="disabled"></i>
+<div x-data="{ isLoading: false }" @text-preview-shown.window="isLoading = false" class="tooltip" data-tip="{$textPreviewTooltip}">
+    <button @click="isLoading = true; \$dispatch('showTextPreview', { attachedFileId: {$attachment->id} }); setTimeout(() => isLoading = false, 5000)" :disabled="isLoading" class="btn btn-square btn-ghost btn-sm">
+        <i class="fa-solid fa-eye cursor-pointer" x-show="!isLoading"></i>
+        <span class="loading loading-spinner loading-xs" x-show="isLoading" style="display: none;"></span>
+    </button>
 </div>
 HTML;
                 }
@@ -364,7 +365,7 @@ HTML;
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
+/*            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
                 $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
                 $plainTextContent = strip_tags($rawContent);
                 $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
@@ -375,7 +376,7 @@ HTML;
  HTML;
                     $contentHtmlEnd = '</div>';
                 }
-            }
+            }*/
 
             if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
                 $thumbnails[] = <<<HTML

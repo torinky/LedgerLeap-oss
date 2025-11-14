@@ -59,6 +59,9 @@ class TextPreviewModal extends Component
         $this->badgeInfo = $file->getConfidenceBadgeInfo();
         $this->tenantId = tenant('id');
         $this->showModal = true;
+
+        // モーダルが表示されたことをクライアントに通知
+        $this->dispatch('text-preview-shown');
     }
 
     public function closeModal(): void
