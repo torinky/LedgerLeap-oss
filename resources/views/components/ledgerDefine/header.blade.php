@@ -40,7 +40,7 @@
             </span>
         @endif
     </h3>
-        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id]"
+        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id] ?? []"
         />
     <div class="flex-grow text-right">
         <x-mary-button
