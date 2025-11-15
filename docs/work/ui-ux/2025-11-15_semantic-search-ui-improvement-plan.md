@@ -1,7 +1,8 @@
 # セマンティック検索UI改善計画書
 
-**日付:** 2025年11月15日
-**ステータス:** 計画中 (調査結果反映版)
+**日付:** 2025年11月15日  
+**最終更新:** 2025年11月15日  
+**ステータス:** レビュー完了・実装準備中
 **関連ドキュメント:**
 - [RAG導入 Phase1 実装計画 - セマンティック検索追加](../rag-implementation/2025-10-17-phase1-hybrid-search-plan.md)
 
@@ -9,25 +10,70 @@
 
 現在の台帳一覧画面では、「セマンティック検索」が並び順の一種として実装されている。しかし、これはユーザーの直感的な操作と乖離しており、UI/UXの観点から改善が必要である。
 
-本計画は、このUIを改善し、セマンティック検索を並び順から独立した「検索モード」として明確に切り替える機能を提供することを目的とする。
+本計画は、このUIを改善し、セマンティック検索を独立した「検索モード」として提供する。**さらに、セマンティック検索モード時でも既存の並び順（日付順など）を維持し、スコアオプション選択時は意味検索スコア（semantic_score）による並び替えとスコア表示を実現する。**
+
+### 1.1. 追加要件（重要）
+
+レビューの結果、以下の要件が追加された：
+
+1. **並び順の継続サポート**: セマンティック検索ON時も、`created_at`, `updated_at`, `composite_score`による並び替えが可能
+2. **スコア表示の切り替え**: 
+   - `composite_score`選択時: 従来の総合スコア表示
+   - セマンティック検索ON + `orderBy='semantic_score'`時: 意味検索スコア表示
+3. **柔軟なUX**: ユーザーが「意味的に関連する台帳を、作成日時順で見たい」といったニーズに対応
 
 ## 2. 現状の課題分析
 
-- **UI/UX上の問題:**
-    - 「並び順」と「検索方法」という異なる概念が混在しており、ユーザーが混乱しやすい。
-    - セマンティック検索を選択すると、他の並び順（作成日時、更新日時）が利用できなくなる。
-- **技術的な問題:**
-    - `app/Livewire/Ledger/RecordsTable.php` の `render()` メソッド内で、`$this->orderBy === 'semantic_score'` という条件分岐が検索ロジックの根幹を切り替えており、柔軟性に欠ける。
+### 2.1. UI/UX上の問題
+- 「並び順」と「検索方法」という異なる概念が混在しており、ユーザーが混乡しやすい
+- セマンティック検索を選択すると、他の並び順（作成日時、更新日時）が利用できなくなる
+- **致命的な制約**: `RagSearchService`は類似度順の`LengthAwarePaginator`を返すため、現状では後からソートできない
+
+### 2.2. 技術的な問題
+- `app/Livewire/Ledger/RecordsTable.php` の `render()` メソッド内で、`$this->orderBy === 'semantic_score'` という条件分岐が検索ロジックの根幹を切り替えており、柔軟性に欠ける
+- `RagSearchService->search()`が返す`LengthAwarePaginator`には、スコア情報が含まれていない（`$ledger->semantic_score`としてアクセス不可）
+- 現在の`searchWithMroonga()`メソッドはスコア情報を内部的には保持しているが、モデルに付与していない
 
 ## 3. 関連コードの調査結果
 
-- **UI:** `resources/views/components/ledger/search.blade.php`
-    - `<select>` 要素内に `<option value="semantic_score">` がハードコードされている。
-- **バックエンド:** `app/Livewire/Ledger/RecordsTable.php`
-    - 当初、検索ロジックは `App\Services\LedgerSearch` のような専用クラスにカプセル化されていると推測されたが、調査の結果、**該当クラスは存在せず、検索ロジックは `render()` メソッド内に直接実装されている**ことが判明した。
-    - `public $orderBy` プロパティで並び順を管理している。
-    - `render()` メソッド内で `$this->orderBy === 'semantic_score'` かつ検索語が存在する場合に、`app(\App\Services\RagSearchService::class)->search(...)` を直接呼び出している。
-    - `RagSearchService->search()` は、内部でMroongaのベクトル検索を実行し、スコア（類似度）順にソート済みの `LengthAwarePaginator` インスタンスを返す。このため、**セマンティック検索実行時に追加で `orderBy` を適用することはできない**。
+### 3.1. 現在の実装構造
+
+#### UI層 (`resources/views/components/ledger/search.blade.php`)
+- `<select>` 要素内に `<option value="semantic_score">` がハードコード
+- 行29-32: セマンティック検索オプションが並び順として表示
+
+#### バックエンド層 (`app/Livewire/Ledger/RecordsTable.php`)
+- 検索ロジックは `render()` メソッド（273-463行）内に直接実装
+- `public $orderBy` プロパティで並び順を管理
+- 行319: `if ($this->orderBy === 'semantic_score' && !empty($this->search))` で分岐
+- 行320-332: `RagSearchService->search()` を呼び出し
+
+#### サービス層 (`app/Services/RagSearchService.php`)
+- `search()` メソッド（28-82行）: `LengthAwarePaginator`を返す
+- `searchLedgers()` メソッド（92-152行）: 内部でスコア集計を実行
+- `searchWithMroonga()` メソッド（194-311行）: Mroongaベクトル検索の実装
+- **重要**: スコア情報は`$ledgerScores`配列に`max_score`として保持されているが、**Eloquentモデルの属性としては付与されていない**
+
+#### ビュー層 (`resources/views/livewire/ledger/records-table.blade.php`)
+- 行207: `scoreStatsByDefineId` を台帳定義ヘッダーに渡す
+- スコア表示は `resources/views/components/ledger/table-row.blade.php` 行77-92で実装
+- 現状は `$ledgerRecord->composite_score` のみ表示
+
+### 3.2. 技術的制約の詳細
+
+1. **RagSearchServiceの戻り値**:
+   ```php
+   // 行73-80: sortedLedgersはLedgerモデルのコレクション
+   $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers) {
+       return $ledgers->get($result['ledger_id']);
+   })->filter();
+   ```
+   - スコア情報（`$result['max_score']`）はこの時点で破棄される
+   - 返される`LengthAwarePaginator`には`$ledger->semantic_score`が存在しない
+
+2. **現状の並び替え不可の理由**:
+   - `RagSearchService`は類似度順でソート済みの結果を返す
+   - ページネーション済みのため、後から全体を再ソートできない
 
 ## 4. 変更計画
 
