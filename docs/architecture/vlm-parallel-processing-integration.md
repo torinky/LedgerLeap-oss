@@ -45,8 +45,207 @@ FinalizeProcessing コマンド
 ---
 
 ## 1. 処理フロー詳細設計
+## 1.1. 全体フローチャート
 
-### 1.0. ファイルタイプ別処理フロー一覧
+```mermaid
+graph TD
+    A[ファイルアップロード] --> B[ProcessAttachedFile]
+    B --> C[Tika処理]
+    C --> D[tika_processed_at設定]
+    D --> E{画像/PDF?}
+    
+    E -->|Yes| F[並列ディスパッチ]
+    E -->|No| G[COMPLETED<br/>Tika結果のみ]
+    
+    F --> H[ProcessVlmExtraction<br/>★キュー: vlm]
+    F --> I[OcrAndOptimizeFile<br/>★キュー: ocr]
+    
+    H --> J{VLM処理}
+    J -->|成功| K[vlm_processed_at設定<br/>vlm_markdown保存]
+    J -->|失敗| L[vlm_failed_at設定]
+    
+    I --> M{OCR処理}
+    M -->|成功| N[ocr_processed_at設定<br/>optimized=true]
+    M -->|失敗| O[ocr_failed_at設定]
+    
+    K --> P[★スケジューラー]
+    L --> P
+    N --> P
+    O --> P
+    
+    P --> Q[FinalizeProcessing<br/>★1分ごと]
+    Q --> R{両方完了?}
+    R -->|Yes| S[結果選択<br/>VLM > OCR > Tika]
+    R -->|No| T{タイムアウト?}
+    T -->|Yes| S
+    T -->|No| U[次回チェック待ち]
+    
+    S --> V[content_attached更新]
+    V --> W[processing_finalized_at設定]
+    W --> X[COMPLETED]
+    X --> Y[RAGジョブディスパッチ]
+```
+
+### 1.2. 各フェーズの詳細
+
+#### フェーズ1: 基本処理（Tika）
+
+**目的:** メタデータ抽出と基本テキスト抽出
+
+**実装:** `app/Jobs/Ledger/ProcessAttachedFile.php`
+
+**処理内容:**
+1. Tikaでテキスト・メタデータ抽出
+2. `tika_processed_at`設定
+3. 画像/PDFの場合は並列ディスパッチ
+4. その他のファイルは即座に完了
+
+**データフロー:**
+```php
+// 一時的にcontent_attachedに保存（後で上書きされる可能性）
+$ledger->content_attached[$columnId][$filename] = [
+    'meta' => [
+        'content' => $tikaText,
+        'source' => 'tika',
+        // ... メタデータ
+    ]
+];
+```
+
+#### フェーズ2a: VLM処理（並列）
+
+**目的:** 高品質Markdown生成、構造化データ抽出
+
+**実装:** `app/Jobs/Ledger/ProcessVlmExtraction.php`
+
+**処理内容:**
+1. VLMコンテナAPIに画像/PDF送信
+2. Markdown、構造化データを取得
+3. `attached_files`に保存
+4. `vlm_processed_at`または`vlm_failed_at`設定
+5. **最終化トリガーはなし**（スケジューラーが検出）
+
+**データ保存:**
+```php
+$attachedFile->update([
+    'vlm_markdown' => $markdown,           // Markdown形式（高品質）
+    'vlm_structured_data' => $structured,  // JSON形式
+    'vlm_model' => 'PaddleOCR-VL-0.9B',
+    'vlm_confidence' => 0.95,
+    'vlm_processed_at' => now(),
+]);
+```
+
+**キュー設定:**
+- キュー名: `vlm`
+- 専用ワーカー: 2プロセス
+- タイムアウト: 300秒
+
+#### フェーズ2b: OCR処理（並列）
+
+**目的:** テキストレイヤー追加、PDF最適化
+
+**実装:** `app/Jobs/Ledger/OcrAndOptimizeFile.php`
+
+**処理内容:**
+1. OcrMyPDFでOCR処理
+2. テキストレイヤー付きPDF生成
+3. `ocr_processed_at`または`ocr_failed_at`設定
+4. **最終化トリガーはなし**（スケジューラーが検出）
+
+**データ保存:**
+```php
+$attachedFile->update([
+    'optimized' => true,
+    'path' => $optimizedPdfPath,
+    'ocr_processed_at' => now(),
+]);
+```
+
+**キュー設定:**
+- キュー名: `ocr`
+- 専用ワーカー: 2プロセス
+- タイムアウト: 600秒
+
+#### フェーズ3: 最終化処理（スケジュール）
+
+**目的:** VLM/OCR結果を統合し、最適な結果をインデックス化
+
+**実装:** `app/Console/Commands/Ledger/FinalizeAttachedFileProcessing.php`
+
+**スケジュール設定:**
+```php
+// app/Console/Kernel.php
+$schedule->command('ledger:finalize-processing')
+    ->everyMinute()
+    ->withoutOverlapping(10)
+    ->onOneServer()
+    ->runInBackground();
+```
+
+**処理内容:**
+
+1. **最終化待ちファイルを検索**:
+```sql
+SELECT * FROM attached_files
+WHERE tika_processed_at IS NOT NULL
+  AND processing_finalized_at IS NULL
+  AND (
+    -- 両方完了（成功/失敗問わず）
+    (vlm_processed_at IS NOT NULL OR vlm_failed_at IS NOT NULL)
+    AND (ocr_processed_at IS NOT NULL OR ocr_failed_at IS NOT NULL)
+  )
+  OR created_at <= NOW() - INTERVAL 600 SECOND  -- タイムアウト
+LIMIT 50
+```
+
+2. **結果選択（優先順位）**:
+```php
+private function selectBestContent(AttachedFile $file): ?string
+{
+    // 1. VLM結果（最優先）
+    if ($file->vlm_markdown) {
+        return $file->vlm_markdown;
+    }
+    
+    // 2. OCR結果
+    if ($file->optimized && $file->ocr_processed_at) {
+        // optimized PDFからTikaで再抽出
+        return $tikaClient->getText($file->path);
+    }
+    
+    // 3. 元のTika結果
+    return $ledger->content_attached[$file->column_id][$file->filename]['meta']['content'];
+}
+```
+
+3. **content_attached更新**:
+```php
+$ledger->content_attached[$columnId][$filename] = [
+    'meta' => [
+        'content' => $bestContent,
+        'source' => 'vlm|ocr|tika',
+        // ... メタデータ
+    ]
+];
+```
+
+4. **最終化マーク**:
+```php
+$file->update([
+    'status' => AttachedFileStatus::COMPLETED,
+    'processing_finalized_at' => now(),
+    'contain_content' => $bestContent !== null,
+]);
+```
+
+5. **RAGジョブディスパッチ**:
+```php
+ProcessLedgerForRagJob::dispatch($file->ledger)->delay(5);
+```
+
+---
+### 1.3. ファイルタイプ別処理フロー一覧
 
 **重要:** Phase5並列処理アーキテクチャでは、ファイルタイプによって処理フローが異なります。
 

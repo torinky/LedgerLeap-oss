@@ -14,6 +14,7 @@
 
 以下は、公式ドキュメントとして整理される前の、初期の計画書、調査ログ、実装記録です。開発の経緯を追跡するために保管されています。
 
+- **[VLM-OCR技術とインデックス戦略の再評価](./2025-11-15_vlm-ocr-and-indexing-strategy-review.md)**: 2025年11月時点の最新技術動向を反映した、次世代インデックス戦略の構想です。
 - **[Phase 0: VLM動作検証PoC計画書](./2025-10-25_phase0-vlm-poc-plan.md)**: 初期概念実証の計画書です。
 - **[Phase 0: VLM動作検証PoC 実施記録](./2025-10-25_phase0-vlm-poc-execution-log.md)**: PoCの実施経緯、課題、解決策を詳述したログです。
 - **[PaddleOCRVL API実装完了記録](./2025-10-26_paddleocrvl-implementation-log.md)**: 最終的なPaddleOCR APIの実装記録です。
