@@ -218,7 +218,6 @@ class RecordsTable extends Component
         $this->orderByLabel = $columnLabel ?? $this->getStandardSortLabel($columnName);
 
         $this->initSearchContext();
-        Log::info('sort method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
     }
 
     /**
@@ -230,13 +229,11 @@ class RecordsTable extends Component
         if ($this->getStandardSortLabel($value) === '' && $value === $this->orderBy) {
             $this->orderBy = 'composite_score'; // デフォルトのソートに戻す
             $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
-            Log::info('updatedOrderBy: custom sort option re-selected, reverting to default', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
 
             return; // これ以上処理しない
         }
 
         $this->orderByLabel = $this->getStandardSortLabel($value);
-        Log::info('updatedOrderBy called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
     }
 
     /**
@@ -349,7 +346,6 @@ class RecordsTable extends Component
             'keywords' => $this->searchContext->keywords,
             'filter' => $this->filter,
         ]);
-        Log::info('render method called', ['orderBy' => $this->orderBy, 'orderByLabel' => $this->orderByLabel]);
 
         // グローバル検索かどうかの判定
         $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
@@ -453,25 +449,7 @@ class RecordsTable extends Component
                 // セマンティック検索時、composite_scoreが選択されている場合はsemantic_scoreを使用
                 $sortBy = ($this->orderBy === 'composite_score') ? 'semantic_score' : $this->orderBy;
 
-                Log::info('Applying sorting', [
-                    'original_orderBy' => $this->orderBy,
-                    'actual_sortBy' => $sortBy,
-                    'orderAsc' => $this->orderAsc,
-                    'sample_scores' => $ledgersCollection->take(5)->map(fn ($l) => [
-                        'id' => $l->id,
-                        'semantic_score' => $l->semantic_score,
-                    ])->values(),
-                ]);
-                $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
-
-                Log::info('After sorting', [
-                    'orderBy' => $this->orderBy,
-                    'sample_sorted' => $sortedLedgers->take(5)->map(fn ($l) => [
-                        'id' => $l->id,
-                        'semantic_score' => $l->semantic_score,
-                        'ledger_define_id' => $l->ledger_define_id,
-                    ])->values(),
-                ]);
+                    $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
 
                 // Step 5: ページネーション
                 $this->totalRecords = $sortedLedgers->count();
