@@ -1,6 +1,6 @@
 # GitHub Copilot CLI - LedgerLeap開発設定
 **作成日:** 2025年9月28日  
-**最終更新:** 2025年11月11日（Phase6実装に基づく知見追加）  
+**最終更新:** 2025年11月15日（Phase5/6ファイルタイプ別処理フロー追加）  
 **対象:** GitHub Copilot CLI (バージョン 0.0.328)  
 **プロジェクト:** LedgerLeap - Webベース台帳管理システム
 
@@ -18,6 +18,7 @@
 - **Livewire:** パブリックプロパティはシンプルな連想配列のみ
 - **テナント:** 全てのFeatureテストで`tenancy()->initialize()`が必須（Phase6で確認）
 - **AsColumnArrayJson:** `data_get()`は使用不可。直接配列アクセス必須（Phase6で確認）
+- **VLM/OCR処理:** ファイルタイプにより処理フローが異なる（Phase5/6で確認）`は使用不可。直接配列アクセス必須（Phase6で確認）
 
 ## 開発コマンド
 
@@ -273,6 +274,52 @@ if (!$this->permissionService->canUserAccess($user, $folder, 'WRITE')) {
     throw new UnauthorizedException();
 }
 ```
+
+## VLM/OCR/Tika処理フロー（Phase5/6）
+
+### ファイルタイプ別処理一覧
+
+| ファイルタイプ | MIME | VLM | OCR | ファイル名変更 | 最終source | 備考 |
+|--------------|------|-----|-----|---------------|-----------|------|
+| **画像（JPG/PNG）** | image/* | ✅ | ✅ | ✅ image.jpg→image.pdf | vlm > ocr > tika | OCRでPDF化 |
+| **テキスト付きPDF** | application/pdf | ✅ | ✅ (skip-text) | ❌ doc.pdf→doc.pdf | vlm > tika | OCRは最適化のみ |
+| **画像のみPDF** | application/pdf | ✅ | ✅ | ❌ scan.pdf→scan.pdf | vlm > ocr > tika | OCRでテキスト抽出 |
+| **Office文書** | application/vnd.* | ❌ | ❌ | ❌ | tika | Tikaのみ |
+| **テキスト** | text/* | ❌ | ❌ | ❌ | tika | 即座に完了 |
+
+### キー命名規則
+
+```php
+// 元のキー
+content_attached[$columnId][$hashedbasename]
+
+// OCR後のキー（画像ファイルのみ）
+content_attached[$columnId][$hashedbasename_without_ext . '.pdf']
+
+// 例:
+// image.jpg → content_attached[1]['image.pdf']（新キー作成）
+// document.pdf → content_attached[2]['document.pdf']（元キー上書き）
+```
+
+### 重要なロジック
+
+```php
+// OCR結果の判定（FinalizeAttachedFileProcessing.php）
+if ($file->ocr_processed_at) {
+    $isImageFile = str_starts_with($file->original_mime_type ?? '', 'image/');
+    
+    if ($isImageFile) {
+        // 画像ファイル: .pdf キーをチェック
+        $pdfKey = pathinfo($file->hashedbasename, PATHINFO_FILENAME) . '.pdf';
+        $text = $ledger->content_attached[$columnId][$pdfKey]['meta']['content'] ?? null;
+    } else {
+        // PDFファイル: 元のキーをチェック
+        $text = $ledger->content_attached[$columnId][$file->hashedbasename]['meta']['content'] ?? null;
+    }
+}
+```
+
+---
 
 ## 重要な実装教訓
 
