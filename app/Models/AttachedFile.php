@@ -330,9 +330,26 @@ class AttachedFile extends Model
             return null; // N+1防止のため、Eager Loading必須
         }
 
+        $columnId = $this->column_id;
+        $hashedbasename = $this->hashedbasename;
+
+        // OCRの場合は .pdf キーもチェック
+        if ($this->finalized_source === 'ocr') {
+            $originalExt = pathinfo($hashedbasename, PATHINFO_EXTENSION);
+            if ($originalExt !== 'pdf') {
+                // 画像ファイル（.jpg → .pdf）の場合
+                $pdfHashedbasename = pathinfo($hashedbasename, PATHINFO_FILENAME).'.pdf';
+                $text = $this->ledger->content_attached[$columnId][$pdfHashedbasename]['meta']['content'] ?? null;
+                if ($text) {
+                    return "```\n{$text}\n```";
+                }
+            }
+        }
+
+        // 元のキーをチェック（Tika、またはPDFのOCR）
         // AsColumnArrayJsonキャストのシリアライゼーションにより、
         // data_get()が正しく動作しないため、直接配列アクセスを使用
-        $text = $this->ledger->content_attached[$this->column_id][$this->hashedbasename]['meta']['content'] ?? null;
+        $text = $this->ledger->content_attached[$columnId][$hashedbasename]['meta']['content'] ?? null;
 
         return $text ? "```\n{$text}\n```" : null;
     }

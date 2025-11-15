@@ -195,9 +195,6 @@ class FinalizeAttachedFileProcessing extends Command
         return AttachedFileStatus::COMPLETED;
     }
 
-    /**
-     * Select the best content from VLM/OCR/Tika results.
-     */
     private function selectBestContent(AttachedFile $file): array
     {
         // Priority: VLM > OCR > Tika
@@ -210,16 +207,37 @@ class FinalizeAttachedFileProcessing extends Command
             ];
         }
 
-        // 2. OCR結果を厳密に確認（OCRが生成したPDFのテキストのみを対象とする）
+        // 2. OCR結果を厳密に確認
         if ($file->ocr_processed_at) {
-            $pdfHashedbasename = pathinfo($file->hashedbasename, PATHINFO_FILENAME).'.pdf';
-            $ocrText = $file->ledger?->content_attached[$file->column_id][$pdfHashedbasename]['meta']['content'] ?? null;
+            $originalExt = pathinfo($file->hashedbasename, PATHINFO_EXTENSION);
+            $isImageFile = str_starts_with($file->original_mime_type ?? '', 'image/');
 
-            if (! empty($ocrText)) {
-                return [
-                    'source' => 'ocr',
-                    'text' => $ocrText,
-                ];
+            // 画像ファイルの場合のみ .pdf キーをチェック
+            if ($isImageFile && $originalExt !== 'pdf') {
+                $pdfHashedbasename = pathinfo($file->hashedbasename, PATHINFO_FILENAME).'.pdf';
+                $ocrText = $file->ledger?->content_attached[$file->column_id][$pdfHashedbasename]['meta']['content'] ?? null;
+
+                if (! empty($ocrText)) {
+                    return [
+                        'source' => 'ocr',
+                        'text' => $ocrText,
+                    ];
+                }
+            }
+
+            // PDFファイルの場合は元のキーをチェック
+            // OCRは最適化のみなので、Tika再処理で更新されたテキストを使用
+            if (! $isImageFile || $originalExt === 'pdf') {
+                $ocrText = $file->ledger?->content_attached[$file->column_id][$file->hashedbasename]['meta']['content'] ?? null;
+
+                if (! empty($ocrText)) {
+                    // PDFのOCRは最適化のみなので、実質的にはTikaの結果
+                    // ただし、ocr_processed_atが設定されている場合はOCR処理を経由している
+                    return [
+                        'source' => 'tika', // 実質的にはTikaの結果
+                        'text' => $ocrText,
+                    ];
+                }
             }
         }
 

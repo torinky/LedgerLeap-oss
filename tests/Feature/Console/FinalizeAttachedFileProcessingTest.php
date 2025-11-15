@@ -170,6 +170,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'filename' => 'test.jpg',
             'hashedbasename' => 'test.jpg', // Original filename before OCR conversion
             'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
             'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
@@ -395,5 +396,167 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             ->whereNotNull('processing_finalized_at')
             ->count();
         $this->assertEquals(2, $finalized);
+    }
+
+    #[Test]
+    public function command_correctly_selects_ocr_for_image_files()
+    {
+        // 画像ファイル（.jpg → .pdf）のOCR結果を正しく検出
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = \App\Models\User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.pdf' => [ // OCR後のキー
+                        'meta' => [
+                            'content' => 'OCR extracted text from image',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
+            'size' => 1000,
+            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('ocr', $file->finalized_source);
+        $this->assertTrue($file->contain_content);
+    }
+
+    #[Test]
+    public function command_correctly_handles_pdf_with_skip_text_ocr()
+    {
+        // PDFファイル（.pdf → .pdf）のOCR処理（最適化のみ）
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = \App\Models\User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'document.pdf' => [ // 元のキーが上書きされる
+                        'meta' => [
+                            'content' => 'Tika re-extracted text after OCR optimization',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'document.pdf',
+            'hashedbasename' => 'document.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/document.pdf",
+            'size' => 1000,
+            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => true,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('tika', $file->finalized_source); // OCRは最適化のみなのでTika扱い
+        $this->assertTrue($file->contain_content);
+    }
+
+    #[Test]
+    public function command_selects_ocr_when_vlm_fails_for_image()
+    {
+        // VLM失敗、OCR成功のケース
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = \App\Models\User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'photo.pdf' => [
+                        'meta' => [
+                            'content' => 'OCR fallback text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'photo.jpg',
+            'hashedbasename' => 'photo.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/photo.pdf",
+            'size' => 1000,
+            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('ocr', $file->finalized_source);
+        $this->assertTrue($file->contain_content);
     }
 }

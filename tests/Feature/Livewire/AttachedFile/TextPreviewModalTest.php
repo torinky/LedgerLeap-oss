@@ -199,4 +199,79 @@ class TextPreviewModalTest extends TestCase
             ->call('notifyCopyFailed')
             ->assertDispatched('mary-toast');
     }
+
+    #[Test]
+    public function it_generates_correct_download_urls_for_vlm_files()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'vlm',
+            'vlm_markdown' => '# VLM Content',
+            'contain_content' => true,
+        ]);
+
+        $expectedMarkdownUrl = route('files.download-vlm', [
+            'tenant' => $file->tenant_id,
+            'attachedFile' => $file->id,
+            'format' => 'markdown',
+        ]);
+
+        Livewire::test(TextPreviewModal::class)
+            ->dispatch('showTextPreview', attachedFileId: $file->id)
+            ->assertSet('showModal', true)
+            ->assertSee($expectedMarkdownUrl);
+    }
+
+    #[Test]
+    public function it_displays_correct_buttons_for_non_vlm_files()
+    {
+        $hashedName = 'test123.jpg';
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'column_define' => [
+                ['id' => 0, 'type' => 'text', 'name' => 'Test', 'order' => 1],
+                ['id' => 1, 'type' => 'files', 'name' => 'Files', 'order' => 2],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [0 => 'test', 1 => [$hashedName => 'original.jpg']],
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test123.pdf' => [ // OCR後のキー
+                        'meta' => [
+                            'content' => 'OCR text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'original.jpg',
+            'hashedbasename' => $hashedName,
+            'processing_finalized_at' => now(),
+            'finalized_source' => 'ocr',
+            'contain_content' => true,
+        ]);
+
+        // ledgerリレーションをロード
+        $file->load('ledger');
+
+        Livewire::test(TextPreviewModal::class)
+            ->dispatch('showTextPreview', attachedFileId: $file->id)
+            ->assertSet('showModal', true)
+            ->assertSee('OCR text'); // コンテンツは表示される
+    }
 }
