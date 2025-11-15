@@ -98,6 +98,9 @@ class RecordsTable extends Component
 
     public string $orderByLabel = '';
 
+    #[Url(as: 'sem', history: true)]
+    public bool $useSemanticSearch = false;
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -234,6 +237,46 @@ class RecordsTable extends Component
     }
 
     /**
+     * 検索語が変更されたときに実行されるライフサイクルフック
+     * 検索語が空になった場合、セマンティック検索を自動的にOFFにする
+     */
+    public function updatedSearch($value)
+    {
+        if (empty($value) && $this->useSemanticSearch) {
+            $this->useSemanticSearch = false;
+        }
+        $this->initSearchContext();
+    }
+
+    /**
+     * セマンティック検索トグルが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedUseSemanticSearch($value)
+    {
+        // 検索語がないのにONにしようとした場合、OFFに戻す
+        if ($value && empty($this->search)) {
+            $this->useSemanticSearch = false;
+
+            return;
+        }
+
+        // セマンティック検索ONで、orderByが対応していない場合は調整
+        if ($value) {
+            // semantic_scoreが未選択の場合は自動的に設定（オプション）
+            if ($this->orderBy === 'composite_score') {
+                // デフォルトはcomposite_scoreのまま（ユーザーの選択を尊重）
+                // 必要に応じて semantic_score に変更可能
+            }
+        } else {
+            // セマンティック検索OFFの場合、semantic_scoreが選択されていたらcomposite_scoreに戻す
+            if ($this->orderBy === 'semantic_score') {
+                $this->orderBy = 'composite_score';
+                $this->orderByLabel = $this->getStandardSortLabel('composite_score');
+            }
+        }
+    }
+
+    /**
      * 標準ソートのラベルを取得するヘルパーメソッド
      */
     private function getStandardSortLabel(string $columnName): string
@@ -242,8 +285,34 @@ class RecordsTable extends Component
             'composite_score' => __('ledger.scoring.score'),
             'created_at' => __('ledger.created_at'),
             'updated_at' => __('ledger.updated_at'),
-            'semantic_score' => __('ledger.semantic_search'),
+            'semantic_score' => __('ledger.semantic_score_sort'),
             default => '', // 標準ソート以外の場合は空文字列を返す
+        };
+    }
+
+    /**
+     * コレクションに対してソートを適用する
+     * セマンティック検索時に使用
+     *
+     * @param  \Illuminate\Support\Collection  $collection
+     * @return \Illuminate\Support\Collection
+     */
+    private function applySorting($collection, string $orderBy, bool $orderAsc)
+    {
+        return match ($orderBy) {
+            'semantic_score' => $orderAsc
+                ? $collection->sortBy('semantic_score')
+                : $collection->sortByDesc('semantic_score'),
+            'composite_score' => $orderAsc
+                ? $collection->sortBy(fn ($ledger) => $ledger->composite_score ?: 0)
+                : $collection->sortByDesc(fn ($ledger) => $ledger->composite_score ?: 0),
+            'created_at' => $orderAsc
+                ? $collection->sortBy('created_at')
+                : $collection->sortByDesc('created_at'),
+            'updated_at' => $orderAsc
+                ? $collection->sortBy('updated_at')
+                : $collection->sortByDesc('updated_at'),
+            default => $collection // フォールバック: ソートしない
         };
     }
 
@@ -316,21 +385,74 @@ class RecordsTable extends Component
         }
 
         // 表示対象の台帳に紐づく仕訳データを取得
-        if ($this->orderBy === 'semantic_score' && ! empty($this->search)) {
-            $ledgerRecords = app(\App\Services\RagSearchService::class)->search(
+        if ($this->useSemanticSearch && ! empty($this->search)) {
+            // ============================================
+            // セマンティック検索モード
+            // ============================================
+
+            // Step 1: RAGで検索（スコア情報付きで全件取得）
+            $ragResults = app(\App\Services\RagSearchService::class)->searchLedgers(
                 query: $this->search,
-                user: auth()->user(),
-                ledgerDefineIds: $searchTargetLedgerDefineIds,
-                filters: $this->filter,
-                perPage: $this->perPage
+                limit: 1000, // 十分な件数を取得（後でソート・ページネーション）
+                filters: array_merge($this->filter, [
+                    'user' => auth()->user(),
+                    'ledger_define_ids' => $searchTargetLedgerDefineIds,
+                ])
             );
-            // RAGサービスは LengthAwarePaginator を返す
-            $this->totalRecords = $ledgerRecords->total();
-            $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->getCollection()->pluck('ledger_define_id')->unique()->toArray())
-                ->with('folder')
-                ->get()
-                ->keyBy('id');
+
+            if (empty($ragResults)) {
+                // 検索結果がない場合
+                $this->totalRecords = 0;
+                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                    [],
+                    0,
+                    $this->perPage,
+                    \Illuminate\Pagination\Paginator::resolveCurrentPage()
+                );
+                $ledgerDefineRecords = collect()->keyBy('id');
+            } else {
+                // Step 2: Ledgerモデルを取得
+                $ledgerIds = array_column($ragResults, 'ledger_id');
+                $scoreMap = collect($ragResults)->pluck('max_score', 'ledger_id');
+
+                $ledgersCollection = Ledger::whereIn('id', $ledgerIds)
+                    ->whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                    ->when(! empty($this->filterStatus), function ($query) {
+                        return $query->where('status', $this->filterStatus);
+                    })
+                    ->with(['define', 'creator', 'modifier'])
+                    ->get();
+
+                // Step 3: スコアを動的属性として付与
+                $ledgersCollection->each(function ($ledger) use ($scoreMap) {
+                    $ledger->semantic_score = $scoreMap[$ledger->id] ?? 0;
+                });
+
+                // Step 4: 並び順を適用
+                $sortedLedgers = $this->applySorting($ledgersCollection, $this->orderBy, $this->orderAsc);
+
+                // Step 5: ページネーション
+                $this->totalRecords = $sortedLedgers->count();
+                $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+                $currentPageItems = $sortedLedgers->slice(($currentPage - 1) * $this->perPage, $this->perPage)->values();
+
+                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $currentPageItems,
+                    $this->totalRecords,
+                    $this->perPage,
+                    $currentPage
+                );
+
+                // 台帳定義情報を取得
+                $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->pluck('ledger_define_id')->unique()->toArray())
+                    ->with('folder')
+                    ->get()
+                    ->keyBy('id');
+            }
         } else {
+            // ============================================
+            // 通常検索モード
+            // ============================================
             $ledgerRecordsQuery = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
                 ->searchContext($this->searchContext)
                 ->contentsFilter($this->filter)
@@ -342,13 +464,7 @@ class RecordsTable extends Component
                     return $query->orderByRaw('composite_score = 0, composite_score '.
                         ($this->orderAsc ? 'ASC' : 'DESC'));
                 }, function ($query) {
-                    // semantic_score はDBカラムではないので、ここでソートしようとするとエラーになる
-                    if ($this->orderBy !== 'semantic_score') {
-                        return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
-                    }
-
-                    // semantic_scoreが選択されているが検索語がない場合、デフォルトのソートに戻す
-                    return $query->orderByRaw('composite_score = 0, composite_score DESC');
+                    return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
                 });
 
             // 台帳定義とフォルダ情報を先に取得

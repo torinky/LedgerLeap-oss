@@ -215,9 +215,14 @@ class RecordsTableQueryTest extends TestCase
     {
         // RagSearchServiceをモック
         $this->mock(\App\Services\RagSearchService::class, function ($mock) {
-            $mock->shouldReceive('search')
+            $mock->shouldReceive('searchLedgers')
                 ->once()
-                ->andReturn(new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15));
+                ->with(
+                    \Mockery::type('string'),
+                    \Mockery::type('int'),
+                    \Mockery::type('array')
+                )
+                ->andReturn([]);
         });
 
         Livewire::withQueryParams([
@@ -227,7 +232,7 @@ class RecordsTableQueryTest extends TestCase
             'cf' => $this->folder->id,
         ])
             ->test(RecordsTable::class)
-            ->set('orderBy', 'semantic_score')
+            ->set('useSemanticSearch', true)
             ->assertOk();
     }
 }

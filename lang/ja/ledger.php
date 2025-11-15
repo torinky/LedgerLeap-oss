@@ -833,6 +833,11 @@ return [
     'select_organizations_to_attach' => '紐付ける組織を選択...',
     'select_roles' => 'ロールを選択',
     'semantic_search' => '意味検索',
+    'semantic_search_requires_query' => '意味検索を使用するには検索語を入力してください',
+    'semantic_search_active' => '意味検索モードで検索中',
+    'semantic_score_sort' => '意味検索スコア順',
+    'semantic_score_tooltip' => '検索語との意味的な関連度（AI判定）',
+    'composite_score_tooltip' => '総合スコア（活動度・新鮮度・ステータス）',
     'send' => '送信する',
     'setting' => '設定',
     'settings' => [
