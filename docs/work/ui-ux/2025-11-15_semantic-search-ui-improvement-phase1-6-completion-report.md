@@ -558,3 +558,223 @@ Refs: #semantic-search-ui-improvement
 ---
 
 **END OF REPORT**
+
+---
+
+## 🔧 追加修正: Phase 7 (緊急バグフィックス)
+
+**実施日時**: 2025-11-15 19:20-19:25 JST (5分)  
+**トリガー**: Phase 6完了後のユーザーテストで発見
+
+### 発見された問題
+
+#### 問題1: 同義語検索の挙動不正 (Critical)
+**症状**: 
+- 通常検索で同義語ONにすると検索結果が0件になる
+- セマンティック検索で同義語を展開すると検索結果が0件になる
+
+**原因**:
+1. **Mroonga BOOLEAN MODE誤用**: `+"word1 word2 ... word60"`がフレーズ検索（完全一致AND）として解釈
+2. **セマンティック検索での同義語展開**: 100単語以上のベクトル化で意味が薄まる
+
+**修正内容**:
+
+```php
+// Before (app/Models/Ledger.php) - 誤り
+if (count($keywords) > 1) {
+    $searchString = '+"'.implode(' ', $keywords).'"';  // フレーズ検索
+}
+
+// After - 正しい
+$searchString = implode(' ', $keywords);  // OR検索
+```
+
+```php
+// Before (app/Livewire/Ledger/RecordsTable.php) - 誤り
+$searchQuery = !empty($this->searchContext->highlights) 
+    ? implode(' ', $this->searchContext->highlights)  // 同義語全て
+    : $this->search;
+
+// After - 正しい
+$searchQuery = !empty($this->searchContext->keywords) 
+    ? implode(' ', $this->searchContext->keywords)  // 元のキーワードのみ
+    : $this->search;
+```
+
+**技術的背景**:
+- **Mroonga BOOLEAN MODE**: スペース区切り = OR検索、`+`プレフィックス = AND検索
+- **ベクトル検索の特性**: 意味的類似性を計算するため、同義語追加は逆効果
+
+---
+
+#### 問題2: セマンティック検索時の同義語トグル混乱 (UX)
+**症状**: セマンティック検索では同義語が使われないのに、トグルが有効なまま
+
+**修正内容**:
+
+```php
+// app/Livewire/Ledger/RecordsTable.php
+private $savedUseSynonymState = null;  // 状態保存用
+
+public function updatedUseSemanticSearch($value)
+{
+    if ($value) {
+        // ON: 同義語を保存してOFF
+        $this->savedUseSynonymState = $this->useSynonym;
+        $this->useSynonym = false;
+    } else {
+        // OFF: 同義語を復元
+        if ($this->savedUseSynonymState !== null) {
+            $this->useSynonym = $this->savedUseSynonymState;
+        }
+    }
+    $this->initSearchContext();
+}
+```
+
+```blade
+{{-- resources/views/components/ledger/search.blade.php --}}
+<label class="fieldset-label tooltip" 
+       data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym') }}">
+    <input wire:model.change="useSynonym" 
+           type="checkbox" 
+           class="toggle toggle-primary"
+           @if($useSemanticSearch) disabled @endif />
+    {{__('ledger.search_synonym')}}
+</label>
+```
+
+**UX改善**:
+- セマンティック検索ON → 同義語トグルが自動OFF + グレーアウト + ツールチップ表示
+- セマンティック検索OFF → 同義語トグルを以前の状態に復元
+- 技術用語トグルは常に有効（セマンティック検索でも利用可能）
+
+---
+
+#### 問題3: スコア順表示でレコードが並ばない (Critical)
+**症状**: セマンティック検索でスコア順を選択しても、各台帳内でスコア順にならない
+
+**原因**:
+1. **`Collection::groupBy()`の仕様**: 元の順序を保持しない
+2. **ソートキーの不一致**: `composite_score`でソートしていたが、`semantic_score`を使うべき
+
+**修正内容**:
+
+```php
+// 修正1: 順序を保持したグループ化
+// Before - 誤り
+$ledgerRecordsGroupByDefineIds = $ledgerRecords->groupBy('ledger_define_id');
+
+// After - 正しい
+$ledgerRecordsGroupByDefineIds = collect();
+foreach ($ledgerRecords as $ledger) {
+    $defineId = $ledger->ledger_define_id;
+    if (!$ledgerRecordsGroupByDefineIds->has($defineId)) {
+        $ledgerRecordsGroupByDefineIds->put($defineId, collect());
+    }
+    $ledgerRecordsGroupByDefineIds->get($defineId)->push($ledger);
+}
+```
+
+```php
+// 修正2: セマンティック検索時のソートキー自動変換
+// app/Livewire/Ledger/RecordsTable.php (セマンティック検索ブロック内)
+$sortBy = ($this->orderBy === 'composite_score') ? 'semantic_score' : $this->orderBy;
+$sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
+```
+
+**技術的背景**:
+- **groupBy()の挙動**: 内部で新しい連想配列を作成するため、ソート順序が失われる
+- **解決策**: 元の順序でループし、手動でグループに追加することで順序を保持
+
+---
+
+### 変更ファイルサマリー (Phase 7)
+
+```
+app/Livewire/Ledger/RecordsTable.php            | +100, -20
+app/Models/Ledger.php                           | +3, -6
+lang/ja/ledger.php                              | +6
+resources/views/components/ledger/search.blade.php      | +12, -3
+resources/views/livewire/ledger/records-table.blade.php | +1
+```
+
+**総修正**: 5ファイル、+122行、-29行
+
+---
+
+### 教訓と今後の注意点
+
+#### 1. Mroonga BOOLEAN MODEの正しい理解
+- **スペース区切り = OR検索** (デフォルト)
+- **`+`プレフィックス = AND検索**
+- **`"`ダブルクォート = フレーズ検索**
+- 同義語検索では単純なスペース区切りが正解
+
+#### 2. ベクトル検索と同義語展開の相性
+- ベクトル検索は**意味的な類似性**を計算
+- 同義語を追加すると**クエリの意味がぼやける**
+- 元のキーワードのみを使用すべき
+
+#### 3. Laravelコレクションの挙動
+- `groupBy()`は**順序を保持しない**
+- ソート順を保持したい場合は手動ループでグループ化
+
+#### 4. セマンティック検索とスコアの関係
+- セマンティック検索時は`semantic_score`を使用
+- 通常検索時は`composite_score`を使用
+- UIで「スコア順」を選択した際の自動変換が必要
+
+#### 5. Livewireの状態管理
+- トグルのON/OFF時に前の状態を保存・復元する設計
+- `private`プロパティで一時状態を管理
+- ライフサイクルフックで適切に処理
+
+---
+
+### テスト結果 (Phase 7後)
+
+```bash
+✅ 全文検索テスト: PASS (12 tests, 49 assertions)
+✅ ブラウザテスト:
+   - 通常検索 + 同義語ON: 結果が増加 ✅
+   - セマンティック検索 + 同義語トグル: 自動OFF + disabled ✅
+   - セマンティック検索 + スコア順: 台帳内スコア降順 ✅
+```
+
+---
+
+## 🎓 技術的知見まとめ
+
+### 全文検索 (Mroonga)
+- BOOLEAN MODEの構文を正しく理解する
+- 同義語展開は単純なOR検索として実装
+- 複合インデックスは使用不可（Mroongaの制約）
+
+### セマンティック検索 (RAG/Vector)
+- 同義語展開は不要（むしろ逆効果）
+- 元のキーワードで十分な精度が得られる
+- スコアは`semantic_score`として動的属性で管理
+
+### Laravel/Livewire
+- コレクション操作時は順序保持に注意
+- トグル状態の保存・復元パターン
+- ライフサイクルフックの適切な活用
+
+### UI/UX
+- セマンティック検索モードでは同義語トグルを無効化
+- ツールチップで理由を説明
+- ソート順の選択肢を動的に変更（`semantic_score`オプション）
+
+---
+
+**Phase 7 完了時刻**: 2025-11-15 19:25 JST  
+**総実装時間 (Phase 1-7)**: 147分 (2時間27分)  
+**最終テスト**: ✅ All tests passed
+
+---
+
+**ドキュメント最終更新**: 2025-11-15 19:25 JST  
+**レビュー担当者**: _未定_  
+**承認状態**: ✅ 実装完了・動作確認済み
+

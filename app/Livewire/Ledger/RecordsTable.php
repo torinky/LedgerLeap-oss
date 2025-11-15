@@ -450,7 +450,28 @@ class RecordsTable extends Component
                 });
 
                 // Step 4: 並び順を適用
-                $sortedLedgers = $this->applySorting($ledgersCollection, $this->orderBy, $this->orderAsc);
+                // セマンティック検索時、composite_scoreが選択されている場合はsemantic_scoreを使用
+                $sortBy = ($this->orderBy === 'composite_score') ? 'semantic_score' : $this->orderBy;
+
+                Log::info('Applying sorting', [
+                    'original_orderBy' => $this->orderBy,
+                    'actual_sortBy' => $sortBy,
+                    'orderAsc' => $this->orderAsc,
+                    'sample_scores' => $ledgersCollection->take(5)->map(fn ($l) => [
+                        'id' => $l->id,
+                        'semantic_score' => $l->semantic_score,
+                    ])->values(),
+                ]);
+                $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
+
+                Log::info('After sorting', [
+                    'orderBy' => $this->orderBy,
+                    'sample_sorted' => $sortedLedgers->take(5)->map(fn ($l) => [
+                        'id' => $l->id,
+                        'semantic_score' => $l->semantic_score,
+                        'ledger_define_id' => $l->ledger_define_id,
+                    ])->values(),
+                ]);
 
                 // Step 5: ページネーション
                 $this->totalRecords = $sortedLedgers->count();
