@@ -238,13 +238,9 @@ class RecordsTable extends Component
 
     /**
      * 検索語が変更されたときに実行されるライフサイクルフック
-     * 検索語が空になった場合、セマンティック検索を自動的にOFFにする
      */
     public function updatedSearch($value)
     {
-        if (empty($value) && $this->useSemanticSearch) {
-            $this->useSemanticSearch = false;
-        }
         $this->initSearchContext();
     }
 
@@ -253,26 +249,10 @@ class RecordsTable extends Component
      */
     public function updatedUseSemanticSearch($value)
     {
-        // 検索語がないのにONにしようとした場合、OFFに戻す
-        if ($value && empty($this->search)) {
-            $this->useSemanticSearch = false;
-
-            return;
-        }
-
-        // セマンティック検索ONで、orderByが対応していない場合は調整
-        if ($value) {
-            // semantic_scoreが未選択の場合は自動的に設定（オプション）
-            if ($this->orderBy === 'composite_score') {
-                // デフォルトはcomposite_scoreのまま（ユーザーの選択を尊重）
-                // 必要に応じて semantic_score に変更可能
-            }
-        } else {
-            // セマンティック検索OFFの場合、semantic_scoreが選択されていたらcomposite_scoreに戻す
-            if ($this->orderBy === 'semantic_score') {
-                $this->orderBy = 'composite_score';
-                $this->orderByLabel = $this->getStandardSortLabel('composite_score');
-            }
+        // セマンティック検索OFFの場合、semantic_scoreが選択されていたらcomposite_scoreに戻す
+        if (! $value && $this->orderBy === 'semantic_score') {
+            $this->orderBy = 'composite_score';
+            $this->orderByLabel = $this->getStandardSortLabel('composite_score');
         }
     }
 

@@ -26,13 +26,31 @@
                     <option value="composite_score">{{ __('ledger.scoring.score') }}</option>
                     <option value="created_at">{{ __('ledger.created_at') }}</option>
                     <option value="updated_at">{{ __('ledger.updated_at') }}</option>
-{{--                    <option value="semantic_score" {{ empty($search) ? 'disabled' : '' }}>--}}
-                    <option value="semantic_score">
-                        {{ __('ledger.semantic_search') }}
-                    </option>
+                    {{-- semantic_scoreは useSemanticSearch トグルがONの時のみ表示 --}}
+                    @if($useSemanticSearch ?? false)
+                        <option value="semantic_score">{{ __('ledger.semantic_score_sort') }}</option>
+                    @endif
                 </select>
             </div>
 
+            {{-- セマンティック検索トグル --}}
+            <div class="form-control tooltip" data-tip="{{ __('ledger.semantic_search_requires_query') }}">
+                <label class="label cursor-pointer gap-2">
+                    <span class="label-text flex items-center gap-1">
+                        <i class="fas fa-brain"></i>
+                        {{ __('ledger.semantic_search') }}
+                    </span>
+                    <input wire:model.live="useSemanticSearch" 
+                           type="checkbox" 
+                           class="toggle toggle-secondary" />
+                </label>
+                @if($useSemanticSearch ?? false)
+                    <span class="label-text-alt text-info flex items-center gap-1 text-xs">
+                        <i class="fas fa-check-circle"></i>
+                        {{ __('ledger.semantic_search_active') }}
+                    </span>
+                @endif
+            </div>
 
             <label class="fieldset-label">
                 <input wire:model.change="useSynonym" type="checkbox" class="toggle toggle-primary"/>

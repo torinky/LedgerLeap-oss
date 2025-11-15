@@ -74,20 +74,50 @@
         <!-- スコア・ステータスのオーバーレイ表示 -->
         <div class="absolute top-1 right-2 z-10 flex items-center gap-2 transition-opacity duration-300 opacity-30 group-hover:opacity-100 backdrop-blur-sm p-1 rounded-lg">
             @php
-                $scoreClass = match(true) {
-                    $ledgerRecord->composite_score >= 70 => 'badge-success',
-                    $ledgerRecord->composite_score >= 40 => 'badge-primary',
-                    $ledgerRecord->composite_score >= 20 => 'badge-info',
-                    $ledgerRecord->composite_score > 0 => 'badge-ghost',
-                    default => ''
-                };
+                // 表示するスコアとその種類を決定
+                $displayScore = null;
+                $scoreType = null;
+                $scoreClass = '';
+                
+                if (isset($ledgerRecord->semantic_score) && $ledgerRecord->semantic_score > 0) {
+                    // セマンティックスコアが存在する場合（セマンティック検索モード）
+                    $displayScore = $ledgerRecord->semantic_score;
+                    $scoreType = 'semantic';
+                    // 類似度スコア (0.0-1.0) に基づく色分け
+                    $scoreClass = match(true) {
+                        $displayScore >= 0.8 => 'badge-success',
+                        $displayScore >= 0.6 => 'badge-primary',
+                        $displayScore >= 0.4 => 'badge-info',
+                        $displayScore > 0 => 'badge-ghost',
+                        default => ''
+                    };
+                } elseif ($ledgerRecord->composite_score > 0) {
+                    // 通常の総合スコア
+                    $displayScore = $ledgerRecord->composite_score;
+                    $scoreType = 'composite';
+                    $scoreClass = match(true) {
+                        $displayScore >= 70 => 'badge-success',
+                        $displayScore >= 40 => 'badge-primary',
+                        $displayScore >= 20 => 'badge-info',
+                        $displayScore > 0 => 'badge-ghost',
+                        default => ''
+                    };
+                }
+                
                 // ステータスに応じたアイコンを決定 (Enumから取得)
                 $statusIcon = $ledgerRecord->status->icon();
             @endphp
-            @if($ledgerRecord->composite_score > 0)
-                <span class="badge badge-xl {{ $scoreClass }} flex items-center gap-1">
-                    <i class="fas fa-star"></i> {{-- スコアアイコン --}}
-                    {{ number_format($ledgerRecord->composite_score, 1) }}
+            
+            @if($displayScore !== null)
+                <span class="badge badge-xl {{ $scoreClass }} flex items-center gap-1 tooltip"
+                      data-tip="{{ $scoreType === 'semantic' ? __('ledger.semantic_score_tooltip') : __('ledger.composite_score_tooltip') }}">
+                    @if($scoreType === 'semantic')
+                        <i class="fas fa-brain"></i> {{-- セマンティックスコアアイコン --}}
+                        {{ number_format($displayScore * 100, 1) }}% {{-- 0.0-1.0 を 0-100% に変換 --}}
+                    @else
+                        <i class="fas fa-star"></i> {{-- 総合スコアアイコン --}}
+                        {{ number_format($displayScore, 1) }}
+                    @endif
                 </span>
             @endif
 
