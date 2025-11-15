@@ -76,6 +76,9 @@ class RecordsTable extends Component
 
     public $useTechnicalTerm = true;
 
+    // セマンティック検索ON前の同義語トグル状態を保存
+    private $savedUseSynonymState = null;
+
     protected SynonymService $synonymService;
 
     protected SearchContext $searchContext;
@@ -249,11 +252,26 @@ class RecordsTable extends Component
      */
     public function updatedUseSemanticSearch($value)
     {
-        // セマンティック検索OFFの場合、semantic_scoreが選択されていたらcomposite_scoreに戻す
-        if (! $value && $this->orderBy === 'semantic_score') {
-            $this->orderBy = 'composite_score';
-            $this->orderByLabel = $this->getStandardSortLabel('composite_score');
+        if ($value) {
+            // セマンティック検索ON: 同義語の状態を保存してOFFにする
+            $this->savedUseSynonymState = $this->useSynonym;
+            $this->useSynonym = false;
+        } else {
+            // セマンティック検索OFF: 同義語の状態を復元
+            if ($this->savedUseSynonymState !== null) {
+                $this->useSynonym = $this->savedUseSynonymState;
+                $this->savedUseSynonymState = null;
+            }
+
+            // semantic_scoreが選択されていたらcomposite_scoreに戻す
+            if ($this->orderBy === 'semantic_score') {
+                $this->orderBy = 'composite_score';
+                $this->orderByLabel = $this->getStandardSortLabel('composite_score');
+            }
         }
+
+        // SearchContextを再初期化
+        $this->initSearchContext();
     }
 
     /**
@@ -370,15 +388,38 @@ class RecordsTable extends Component
             // セマンティック検索モード
             // ============================================
 
-            // Step 1: RAGで検索（スコア情報付きで全件取得）
+            // Step 1: 検索クエリの準備
+            // セマンティック検索では元のキーワードのみを使用（同義語展開はしない）
+            // 理由: ベクトル検索は意味的な類似性を計算するため、
+            //       同義語を追加するとクエリの意味がぼやけて精度が落ちる
+            $searchQuery = ! empty($this->searchContext->keywords)
+                ? implode(' ', $this->searchContext->keywords)
+                : $this->search;
+
+            Log::info('Semantic Search Query', [
+                'original' => $this->search,
+                'query_for_embedding' => $searchQuery,
+                'keywords' => $this->searchContext->keywords,
+                'useSynonym' => $this->useSynonym,
+                'useTechnicalTerm' => $this->useTechnicalTerm,
+                'note' => 'Semantic search uses keywords only, not synonyms',
+            ]);
+
+            // Step 2: RAGで検索（スコア情報付きで全件取得）
             $ragResults = app(\App\Services\RagSearchService::class)->searchLedgers(
-                query: $this->search,
+                query: $searchQuery,
                 limit: 1000, // 十分な件数を取得（後でソート・ページネーション）
                 filters: array_merge($this->filter, [
                     'user' => auth()->user(),
                     'ledger_define_ids' => $searchTargetLedgerDefineIds,
                 ])
             );
+
+            Log::info('Semantic Search Results', [
+                'query' => $searchQuery,
+                'results_count' => count($ragResults),
+                'first_result' => ! empty($ragResults) ? $ragResults[0] : null,
+            ]);
 
             if (empty($ragResults)) {
                 // 検索結果がない場合
@@ -533,8 +574,16 @@ class RecordsTable extends Component
             ];
         });
 
-        // 台帳定義をグループ化し、検索時はスコア順にソート
-        $ledgerRecordsGroupByDefineIds = $ledgerRecords->groupBy('ledger_define_id');
+        // 台帳定義をグループ化（順序を保持）
+        // セマンティック検索時は既にソート済みなので、順序を維持したままグループ化
+        $ledgerRecordsGroupByDefineIds = collect();
+        foreach ($ledgerRecords as $ledger) {
+            $defineId = $ledger->ledger_define_id;
+            if (! $ledgerRecordsGroupByDefineIds->has($defineId)) {
+                $ledgerRecordsGroupByDefineIds->put($defineId, collect());
+            }
+            $ledgerRecordsGroupByDefineIds->get($defineId)->push($ledger);
+        }
 
         // 検索時は平均スコアの降順で台帳定義をソート
         if (! empty($this->search)) {

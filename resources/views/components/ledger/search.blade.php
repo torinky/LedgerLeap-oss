@@ -1,4 +1,4 @@
-@props(['hasWorkflowEnabled', 'orderBy', 'orderByLabel'])
+@props(['hasWorkflowEnabled', 'orderBy', 'orderByLabel', 'useSemanticSearch'])
 <div class="w-full flex flex-wrap pb-10 justify-center items-center px-0 mx-0 mt-5 flex-col md:flex-row">
     <div class="w-full md:w-3/6 lg:w-2/6 mx-1 mt-4 md:mt-0">
         <input wire:model.change="search" type="search"
@@ -52,10 +52,16 @@
                 @endif
             </div>
 
-            <label class="fieldset-label">
-                <input wire:model.change="useSynonym" type="checkbox" class="toggle toggle-primary"/>
+            {{-- 同義語検索トグル（セマンティック検索時はdisabled） --}}
+            <label class="fieldset-label tooltip" data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym') }}">
+                <input wire:model.change="useSynonym" 
+                       type="checkbox" 
+                       class="toggle toggle-primary"
+                       @if($useSemanticSearch) disabled @endif />
                 {{__('ledger.search_synonym')}}
             </label>
+            
+            {{-- 技術用語検索トグル（常に有効） --}}
             <label class="fieldset-label">
                 <input wire:model.change="useTechnicalTerm" type="checkbox" class="toggle toggle-primary"/>
                 {{__('ledger.search_technical_term')}}

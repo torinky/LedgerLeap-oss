@@ -15,6 +15,7 @@
         :hasWorkflowEnabled="$hasWorkflowEnabled"
         :orderBy="$orderBy"
         :orderByLabel="$orderByLabel"
+        :useSemanticSearch="$useSemanticSearch"
     />
 
     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">

@@ -79,12 +79,9 @@ class Ledger extends Model
             return $query;
         }
 
-        // 単一キーワードの場合は `+` を、複数キーワードの場合は `+"..."` を使用
-        if (count($keywords) > 1) {
-            $searchString = '+"'.implode(' ', $keywords).'"';
-        } else {
-            $searchString = '+'.$keywords[0];
-        }
+        // OR検索: 各キーワードをスペース区切りで渡す（+を付けない）
+        // Mroongaでは複数単語をスペース区切りにするとOR検索になる
+        $searchString = implode(' ', $keywords);
         \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: '.$searchString);
 
         // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
