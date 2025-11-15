@@ -401,4 +401,64 @@ class RagSearchServiceTest extends TestCase
                 return true;
             }));
     }
+
+    #[Test]
+    public function search_attaches_semantic_scores_to_ledgers()
+    {
+        // Setup: Create user and folder with permissions
+        $role = \App\Models\Role::create(['name' => 'ScoreTestRole', 'guard_name' => 'web']);
+        $this->user->roles()->attach($role->id);
+        $role->folderPermissions()->attach($this->folder->id, [
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        // Mock embedding service
+        $vector = array_fill(0, 768, 0.5);
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->andReturnUsing(function ($input, $type) use ($vector) {
+                if ($type === 'query') {
+                    return $vector;
+                }
+
+                return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
+            });
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Create test ledger
+        $ledger = $this->createAndProcessLedger(
+            ['title' => 'Score Test Document', 'content' => 'testing semantic score attachment'],
+            $this->ledgerDefine
+        );
+
+        // Execute search with pagination
+        $results = $this->ragSearchService->search(
+            query: 'test',
+            user: $this->user,
+            ledgerDefineIds: [$this->ledgerDefine->id],
+            perPage: 10
+        );
+
+        // Verify results
+        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $results);
+        $this->assertGreaterThan(0, $results->count(), 'Search should return at least one result');
+
+        // Verify semantic score is attached to ledger model as dynamic property
+        $firstLedger = $results->first();
+        $this->assertNotNull($firstLedger, 'First ledger should not be null');
+
+        // Check dynamic property existence using isset()
+        $this->assertTrue(isset($firstLedger->semantic_score), 'Ledger should have semantic_score property');
+        $this->assertIsFloat($firstLedger->semantic_score, 'Semantic score should be a float');
+        $this->assertGreaterThanOrEqual(0, $firstLedger->semantic_score, 'Semantic score should be >= 0');
+        $this->assertLessThanOrEqual(1.01, $firstLedger->semantic_score, 'Semantic score should be <= 1 (with float precision tolerance)');
+
+        // Verify additional metadata is attached
+        $this->assertTrue(isset($firstLedger->best_chunk_text), 'Ledger should have best_chunk_text property');
+        $this->assertTrue(isset($firstLedger->chunk_count), 'Ledger should have chunk_count property');
+        $this->assertIsInt($firstLedger->chunk_count, 'Chunk count should be an integer');
+        $this->assertGreaterThan(0, $firstLedger->chunk_count, 'Chunk count should be greater than 0');
+    }
 }

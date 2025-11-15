@@ -64,9 +64,17 @@ class RagSearchService
             ->get()
             ->keyBy('id');
 
-        // 5. Sort ledgers according to search results order
-        $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers) {
-            return $ledgers->get($result['ledger_id']);
+        // 5. Sort ledgers according to search results order AND attach scores
+        $scoreMap = collect($searchResults)->pluck('max_score', 'ledger_id');
+        $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers, $scoreMap) {
+            $ledger = $ledgers->get($result['ledger_id']);
+            if ($ledger) {
+                // Attach semantic score and related metadata as dynamic attributes
+                $ledger->semantic_score = $result['max_score'];
+                $ledger->best_chunk_text = $result['best_chunk_text'] ?? null;
+                $ledger->chunk_count = $result['chunk_count'] ?? 1;
+            }
+            return $ledger;
         })->filter();
 
         // 6. Paginate
