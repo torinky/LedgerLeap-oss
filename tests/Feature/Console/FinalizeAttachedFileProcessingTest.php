@@ -245,6 +245,60 @@ class FinalizeAttachedFileProcessingTest extends TestCase
     }
 
     #[Test]
+    public function command_correctly_selects_tika_when_ocr_is_empty()
+    {
+        // VLMは失敗、OCRは完了したがテキストは空、Tikaのみテキストがあるケース
+        // この場合、sourceは 'tika' となるべき
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = \App\Models\User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.pdf' => [ // Tikaは元のファイル名でテキストを保存
+                        'meta' => [
+                            'content' => 'Tika only text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.pdf',
+            'hashedbasename' => 'test.pdf',
+            'mime' => 'application/pdf',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
+            'size' => 1000,
+            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => true,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(), // OCRは完了したがテキストは抽出されなかった
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('tika', $file->finalized_source);
+    }
+
+    #[Test]
     public function command_respects_timeout_parameter()
     {
         // Arrange - File with tika_processed_at within timeout (should NOT be finalized)

@@ -210,9 +210,11 @@ class FinalizeAttachedFileProcessing extends Command
             ];
         }
 
-        // 2. OCR結果を確認（content_attachedから取得）
+        // 2. OCR結果を厳密に確認（OCRが生成したPDFのテキストのみを対象とする）
         if ($file->ocr_processed_at) {
-            $ocrText = $this->extractOcrTextFromContentAttached($file);
+            $pdfHashedbasename = pathinfo($file->hashedbasename, PATHINFO_FILENAME).'.pdf';
+            $ocrText = $file->ledger?->content_attached[$file->column_id][$pdfHashedbasename]['meta']['content'] ?? null;
+
             if (! empty($ocrText)) {
                 return [
                     'source' => 'ocr',

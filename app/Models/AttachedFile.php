@@ -282,10 +282,29 @@ class AttachedFile extends Model
             return ! empty($this->vlm_markdown);
         }
 
-        // OCR/Tikaの場合は、ledgerリレーションとcontent_attachedの存在を確認
-        return $this->relationLoaded('ledger')
-            && $this->ledger
-            && isset($this->ledger->content_attached[$this->column_id][$this->hashedbasename]['meta']['content']);
+        // Eager Loadingチェック
+        if (! $this->relationLoaded('ledger') || ! $this->ledger) {
+            return false;
+        }
+
+        $contentAttached = $this->ledger->content_attached;
+        $columnId = $this->column_id;
+        $hashedbasename = $this->hashedbasename;
+
+        // OCRの場合: .pdf付きと元の両方のキーをチェック
+        if ($this->finalized_source === 'ocr') {
+            $pdfHashedbasename = pathinfo($hashedbasename, PATHINFO_FILENAME).'.pdf';
+
+            return isset($contentAttached[$columnId][$pdfHashedbasename]['meta']['content'])
+                || isset($contentAttached[$columnId][$hashedbasename]['meta']['content']);
+        }
+
+        // Tikaの場合: 元のキーのみをチェック
+        if ($this->finalized_source === 'tika') {
+            return isset($contentAttached[$columnId][$hashedbasename]['meta']['content']);
+        }
+
+        return false;
     }
 
     /**

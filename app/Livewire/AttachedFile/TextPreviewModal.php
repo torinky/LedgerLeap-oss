@@ -57,8 +57,10 @@ class TextPreviewModal extends Component
 
         $this->file = $file;
         $this->badgeInfo = $file->getConfidenceBadgeInfo();
-        $this->tenantId = tenant('id');
+        $this->tenantId = $file->tenant_id;
         $this->showModal = true;
+
+        Log::info('Tenant ID in TextPreviewModal: ' . $this->tenantId);
 
         // モーダルが表示されたことをクライアントに通知
         $this->dispatch('text-preview-shown');
