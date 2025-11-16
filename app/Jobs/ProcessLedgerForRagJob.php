@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
+use App\Services\Embedding\KeywordEnhancedTextGenerator;
 use App\Services\EmbeddingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,11 +27,14 @@ class ProcessLedgerForRagJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(EmbeddingService $embeddingService): void
+    public function handle(EmbeddingService $embeddingService, ?KeywordEnhancedTextGenerator $keywordGenerator = null): void
     {
         if (! config('rag.enabled', false)) {
             return;
         }
+
+        // KeywordEnhancedTextGeneratorがnullの場合は新規作成（テスト互換性）
+        $keywordGenerator = $keywordGenerator ?? new KeywordEnhancedTextGenerator;
 
         $logChannel = config('rag.log_channel', 'stack');
         $startTime = microtime(true);
@@ -97,8 +101,14 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         // 4. Generate embeddings and save to DB
         try {
+            // Phase 2.5: キーワード拡張を適用
             $chunkTexts = array_column($chunks, 'text');
-            $embeddings = $embeddingService->embed($chunkTexts, 'passage');
+            $enhancedChunkTexts = array_map(
+                fn ($text) => $keywordGenerator->generateEnhancedText($text),
+                $chunkTexts
+            );
+
+            $embeddings = $embeddingService->embed($enhancedChunkTexts, 'passage');
 
             $chunkData = [];
             $now = now();
