@@ -112,14 +112,16 @@ class ProcessAttachedFileTest extends TestCase
         $job = new ProcessAttachedFile($attachedFile);
         $job->handle();
 
-        // Assert - Phase5: Non-VLM/OCR files are finalized immediately
+        // Assert - Phase2.6: VectorizeAttachedFileがディスパッチされる
         Bus::assertNotDispatched(ProcessVlmExtraction::class);
         Bus::assertNotDispatched(OcrAndOptimizeFile::class);
+        Bus::assertDispatched(\App\Jobs\Embedding\VectorizeAttachedFile::class, function ($job) use ($attachedFile) {
+            return $job->attachedFileId === $attachedFile->id && $job->source === 'tika';
+        });
 
         $attachedFile->refresh();
         $this->assertNotNull($attachedFile->tika_processed_at);
-        $this->assertNotNull($attachedFile->processing_finalized_at);
-        $this->assertEquals('tika', $attachedFile->finalized_source);
+        // processing_finalized_atはVectorizeAttachedFileで設定されるため、Bus::fake下では未設定
     }
 
     #[Test]

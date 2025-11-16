@@ -152,6 +152,12 @@ class OcrAndOptimizeFile implements ShouldQueue
                 'output_file' => $outputFileName,
             ]);
 
+            // ★ Phase2.6: OCR完了後、即座にベクトル化（Tikaより高品質で上書き）
+            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+                $this->attachedFile->id,
+                'ocr'
+            );
+
             // 5. Tikaによる再処理
             ProcessAttachedFile::dispatch($this->attachedFile);
             Log::info('[OCR] Dispatched Tika re-processing for file: '.$this->attachedFile->id);

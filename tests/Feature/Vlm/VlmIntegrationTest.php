@@ -68,12 +68,17 @@ class VlmIntegrationTest extends TestCase
             return $job->attachedFile->id === $attachedFile->id;
         });
 
-        Bus::assertNotDispatched(OcrAndOptimizeFile::class);
+        // Phase5: VLM有効時はOCRも並列でディスパッチされる
+        Bus::assertDispatched(OcrAndOptimizeFile::class);
 
+        // Phase5: ステータスはINITIAL_PROCESSINGのまま、tika_processed_atがセットされる
         $this->assertDatabaseHas('attached_files', [
             'id' => $attachedFile->id,
-            'status' => AttachedFileStatus::PENDING_VLM->value,
+            'status' => AttachedFileStatus::INITIAL_PROCESSING->value,
         ]);
+
+        $attachedFile->refresh();
+        $this->assertNotNull($attachedFile->tika_processed_at);
     }
 
     #[Test]
@@ -149,10 +154,16 @@ class VlmIntegrationTest extends TestCase
         Bus::assertNotDispatched(ProcessVlmExtraction::class);
         Bus::assertNotDispatched(OcrAndOptimizeFile::class);
 
+        // Phase2.6: VLM/OCR対象外もベクトル化されるため、ステータスはFINALIZED_BY_TIKA
+        // ただし、VectorizeAttachedFileは非同期のため、Bus::fakeでは実行されない
+        // よってステータスはINITIAL_PROCESSINGのまま
         $this->assertDatabaseHas('attached_files', [
             'id' => $attachedFile->id,
-            'status' => AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::INITIAL_PROCESSING->value,
         ]);
+
+        $attachedFile->refresh();
+        $this->assertNotNull($attachedFile->tika_processed_at);
     }
 
     #[Test]
@@ -191,9 +202,13 @@ class VlmIntegrationTest extends TestCase
             return $job->attachedFile->id === $attachedFile->id;
         });
 
+        // Phase5: Tikaエラー時もVLM/OCRは実行される、ステータスはINITIAL_PROCESSING
         $this->assertDatabaseHas('attached_files', [
             'id' => $attachedFile->id,
-            'status' => AttachedFileStatus::PENDING_VLM->value,
+            'status' => AttachedFileStatus::INITIAL_PROCESSING->value,
         ]);
+
+        $attachedFile->refresh();
+        $this->assertNotNull($attachedFile->tika_processed_at);
     }
 }

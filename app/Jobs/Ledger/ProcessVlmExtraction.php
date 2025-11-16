@@ -100,11 +100,11 @@ class ProcessVlmExtraction implements ShouldQueue
                 'markdown_length' => strlen($vlmOutput['markdown']),
             ]);
 
-            // ★ Phase5: RAGジョブディスパッチを削除（スケジューラーが最終化時に実行）
-            // if (config('rag.chunking.auto_update_chunks', true)) {
-            //     \App\Jobs\ProcessLedgerForRagJob::dispatch($this->attachedFile->ledger)
-            //         ->delay(now()->addSeconds(5));
-            // }
+            // ★ Phase2.6: VLM完了後、即座にベクトル化（最高品質で上書き）
+            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+                $this->attachedFile->id,
+                'vlm'
+            );
 
         } catch (\Exception $e) {
             Log::error('[VLM] Extraction failed', [

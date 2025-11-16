@@ -23,6 +23,11 @@ enum AttachedFileStatus: string
     case READY_FOR_FINALIZATION = 'ready_for_finalization';
     case FINALIZED = 'finalized';
 
+    // Phase 2.6: ソース別ファイナライズステータス
+    case FINALIZED_BY_TIKA = 'finalized_by_tika';
+    case FINALIZED_BY_OCR = 'finalized_by_ocr';
+    case FINALIZED_BY_VLM = 'finalized_by_vlm';
+
     // 既存のステータスも残しておくが、将来的には新しいステータスに統合することを検討
     case UPLOADED = 'uploaded';
     case OPTIMIZED = 'optimized';
@@ -38,7 +43,8 @@ enum AttachedFileStatus: string
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR, self::PENDING_VLM => 'fa-solid fa-clock',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING, self::PARALLEL_PROCESSING => 'fa-solid fa-gear',
             self::READY_FOR_FINALIZATION => 'fa-solid fa-clock',
-            self::FINALIZED, self::COMPLETED => 'fa-solid fa-circle-check',
+            self::FINALIZED, self::COMPLETED,
+            self::FINALIZED_BY_TIKA, self::FINALIZED_BY_OCR, self::FINALIZED_BY_VLM => 'fa-solid fa-circle-check',
             self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'fa-solid fa-triangle-exclamation',
             // 既存のステータス
             self::UPLOADED => 'fa-solid fa-cloud-arrow-up',
@@ -56,7 +62,8 @@ enum AttachedFileStatus: string
         return match ($this) {
             self::PENDING_INITIAL_PROCESSING, self::PENDING_OCR, self::PENDING_VLM, self::READY_FOR_FINALIZATION => 'text-info',
             self::INITIAL_PROCESSING, self::OCR_PROCESSING, self::VLM_PROCESSING, self::PARALLEL_PROCESSING => 'text-warning animate-spin',
-            self::FINALIZED, self::COMPLETED => 'text-success',
+            self::FINALIZED, self::COMPLETED,
+            self::FINALIZED_BY_TIKA, self::FINALIZED_BY_OCR, self::FINALIZED_BY_VLM => 'text-success',
             self::TIKA_FAILED, self::OCR_FAILED, self::THUMBNAIL_FAILED, self::PROCESSING_FAILED, self::VLM_FAILED => 'text-error',
             // 既存のステータス
             self::UPLOADED => 'text-info',
@@ -87,6 +94,9 @@ enum AttachedFileStatus: string
             self::PARALLEL_PROCESSING => __('ledger.uploadedFile.status.parallel_processing'),
             self::READY_FOR_FINALIZATION => __('ledger.uploadedFile.status.ready_for_finalization'),
             self::FINALIZED => __('ledger.uploadedFile.status.finalized'),
+            self::FINALIZED_BY_TIKA => __('ledger.uploadedFile.status.finalized_by_tika'),
+            self::FINALIZED_BY_OCR => __('ledger.uploadedFile.status.finalized_by_ocr'),
+            self::FINALIZED_BY_VLM => __('ledger.uploadedFile.status.finalized_by_vlm'),
             // 既存のステータス
             self::UPLOADED => __('ledger.uploadedFile.status.uploaded'),
             self::OPTIMIZED => __('ledger.uploadedFile.status.optimized'),
@@ -151,5 +161,70 @@ enum AttachedFileStatus: string
         return empty($parts)
             ? __('ledger.uploadedFile.status.detailed.processing')
             : implode(__('ledger.uploadedFile.status.detailed.separator'), $parts);
+    }
+
+    /**
+     * ファイナライズ済みか判定（Phase 2.6）
+     */
+    public function isFinalized(): bool
+    {
+        return in_array($this, [
+            self::FINALIZED,
+            self::FINALIZED_BY_TIKA,
+            self::FINALIZED_BY_OCR,
+            self::FINALIZED_BY_VLM,
+        ]);
+    }
+
+    /**
+     * より良いソースで上書き可能か判定（ファイルタイプ考慮）
+     * Phase 2.6
+     */
+    public function canUpgradeWith(string $newSource, \App\Models\AttachedFile $file): bool
+    {
+        // オフィスファイルの場合、Tikaが最高品質
+        if ($this->isOfficeFile($file->mime)) {
+            // FINALIZED_BY_TIKAの場合、上書き不要
+            if ($this === self::FINALIZED_BY_TIKA) {
+                return false;
+            }
+        }
+
+        // 画像/スキャンファイルの場合、通常の優先順位
+        $currentPriority = match ($this) {
+            self::FINALIZED_BY_TIKA => 1,
+            self::FINALIZED_BY_OCR => 2,
+            self::FINALIZED_BY_VLM => 3,
+            default => 0,
+        };
+
+        $newPriority = match ($newSource) {
+            'tika' => 1,
+            'ocr' => 2,
+            'vlm' => 3,
+            default => 0,
+        };
+
+        return $newPriority > $currentPriority;
+    }
+
+    /**
+     * オフィスファイルか判定（Phase 2.6）
+     */
+    private function isOfficeFile(string $mime): bool
+    {
+        $officeMimes = [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',       // Excel
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PowerPoint
+            'application/msword',                   // Word (旧)
+            'application/vnd.ms-excel',             // Excel (旧)
+            'application/vnd.ms-powerpoint',        // PowerPoint (旧)
+            'text/plain',                           // テキスト
+            'text/csv',                             // CSV
+        ];
+
+        // PDFは複雑（テキストPDFと画像PDFがある）ため除外
+        return in_array($mime, $officeMimes, true);
     }
 }

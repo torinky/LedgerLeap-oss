@@ -169,17 +169,18 @@ class ProcessAttachedFile implements ShouldQueue
                 // ★ Phase5: Tika処理完了マーク
                 $this->attachedFile->tika_processed_at = now();
 
+                // ★ Phase2.6: Tika完了後、即座にベクトル化（検索可能に）
+                \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+                    $this->attachedFile->id,
+                    'tika'
+                );
+
                 // ★ Phase5: VLM/OCR並列処理の判定とディスパッチ
                 if ($this->attachedFile->isVlmOrOcrTarget()) {
                     Log::info('[Phase5] File is VLM/OCR target, dispatching parallel processing: '.$this->attachedFile->id);
                     $this->dispatchParallelProcessing();
-                } else {
-                    // VLM/OCR対象外のファイルは即座に最終化完了
-                    Log::info('[Phase5] File is not VLM/OCR target, marking as finalized: '.$this->attachedFile->id);
-                    $this->attachedFile->processing_finalized_at = now();
-                    $this->attachedFile->finalized_source = 'tika';
-                    $this->attachedFile->status = AttachedFileStatus::COMPLETED->value;
                 }
+                // Phase2.6: VLM/OCR対象外でもベクトル化は実行済み（上記）
 
                 // メタデータも更新 (extractedMetaがオブジェクトの場合のみ)
                 $mime = null;
