@@ -58,7 +58,7 @@ class TextPreviewModalTest extends TestCase
         Livewire::test(TextPreviewModal::class)
             ->dispatch('showTextPreview', attachedFileId: 99999)
             ->assertSet('showModal', false)
-            ->assertDispatched('mary-toast');
+            ->assertDispatched('test-mary-toast-warning');
     }
 
     #[Test]
@@ -79,7 +79,7 @@ class TextPreviewModalTest extends TestCase
         Livewire::test(TextPreviewModal::class)
             ->dispatch('showTextPreview', attachedFileId: $file->id)
             ->assertSet('showModal', false)
-            ->assertDispatched('mary-toast');
+            ->assertDispatched('test-mary-toast-warning');
     }
 
     #[Test]
@@ -189,7 +189,7 @@ class TextPreviewModalTest extends TestCase
     {
         Livewire::test(TextPreviewModal::class)
             ->call('notifyCopySuccess')
-            ->assertDispatched('mary-toast');
+            ->assertDispatched('test-mary-toast-success');
     }
 
     #[Test]
@@ -197,7 +197,7 @@ class TextPreviewModalTest extends TestCase
     {
         Livewire::test(TextPreviewModal::class)
             ->call('notifyCopyFailed')
-            ->assertDispatched('mary-toast');
+            ->assertDispatched('test-mary-toast-error');
     }
 
     #[Test]

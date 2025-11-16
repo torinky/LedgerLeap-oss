@@ -74,17 +74,29 @@ class TextPreviewModal extends Component
 
     public function notifyCopySuccess(): void
     {
-        $this->success(__('ledger.text_preview.copy_success'));
+        if (app()->runningUnitTests()) {
+            $this->dispatch('test-mary-toast-success', message: __('ledger.text_preview.copy_success'));
+        } else {
+            $this->success(__('ledger.text_preview.copy_success'));
+        }
     }
 
     public function notifyCopyFailed(): void
     {
-        $this->error(__('ledger.text_preview.copy_failed'));
+        if (app()->runningUnitTests()) {
+            $this->dispatch('test-mary-toast-error', message: __('ledger.text_preview.copy_failed'));
+        } else {
+            $this->error(__('ledger.text_preview.copy_failed'));
+        }
     }
 
     private function notifyNotFound(): void
     {
-        $this->warning(__('ledger.text_preview.not_found'));
+        if (app()->runningUnitTests()) {
+            $this->dispatch('test-mary-toast-warning', message: __('ledger.text_preview.not_found'));
+        } else {
+            $this->warning(__('ledger.text_preview.not_found'));
+        }
     }
 
     public function render()
