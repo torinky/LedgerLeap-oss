@@ -188,4 +188,35 @@ return [
         // This is only applied when a keyword is provided in the search.
         'similarity_threshold' => env('RAG_SIMILARITY_THRESHOLD', 0.2),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Keyword Enhancement Settings (Phase 2.5)
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for keyword extraction and enhancement.
+    |
+    */
+    'keyword_enhancement' => [
+        // Default stopwords (common words to exclude from keyword extraction)
+        // These can be overridden per tenant
+        'default_stopwords' => [
+            // 一般的な除外語
+            'こと', 'もの', 'ため', 'について', 'により', 'など',
+            'これ', 'それ', 'あれ', 'この', 'その', 'あの',
+
+            // TODO: テナント固有のストップワード
+            // 例: '株式会社○○', '当社', '弊社'
+            // → テナントごとの設定テーブルまたはキャッシュから取得
+        ],
+
+        // Maximum number of keywords to extract
+        'max_keywords' => env('RAG_MAX_KEYWORDS', 20),
+
+        // Minimum frequency for a keyword to be included
+        'min_frequency' => env('RAG_MIN_FREQUENCY', 2),
+
+        // Target POS (Part of Speech) types
+        'target_types' => ['固有名詞', '名詞', '記号', '数'],
+    ],
 ];

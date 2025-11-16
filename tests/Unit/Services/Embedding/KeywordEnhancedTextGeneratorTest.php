@@ -202,4 +202,81 @@ TEXT;
         $this->assertStringContainsString('ABC', $keywordSection);
         $this->assertStringContainsString('商事', $keywordSection);
     }
+
+    #[Test]
+    public function it_separates_proper_nouns_and_common_nouns()
+    {
+        // Arrange
+        $text = '株式会社ABC商事の田中部長が製品ABC-12345を確認しました。株式会社ABC商事は重要な取引先です。';
+
+        // Act
+        $enhanced = $this->generator->generateEnhancedText($text, [
+            'min_frequency' => 1,
+            'max_keywords' => 20,
+        ]);
+
+        // Assert
+        $this->assertStringContainsString('【固有名詞】', $enhanced);
+        $this->assertStringContainsString('【重要語】', $enhanced);
+        $this->assertStringContainsString('ABC-12345', $enhanced); // 英数字識別子は固有名詞扱い
+        $this->assertStringContainsString($text, $enhanced); // 元のテキストも含む
+    }
+
+    #[Test]
+    public function it_excludes_stopwords()
+    {
+        // Arrange
+        $text = 'これはテストです。これはテストです。これはテストです。';
+
+        // Act
+        $enhanced = $this->generator->generateEnhancedText($text, [
+            'min_frequency' => 2,
+            'stopwords' => ['これ', 'です'],
+        ]);
+
+        // Assert
+        // ストップワードは除外される
+        $this->assertStringNotContainsString('【固有名詞】 これ', $enhanced);
+        $this->assertStringNotContainsString('【重要語】 これ', $enhanced);
+
+        // 「テスト」は含まれる
+        $this->assertStringContainsString('テスト', $enhanced);
+    }
+
+    #[Test]
+    public function it_uses_default_stopwords_from_config()
+    {
+        // Arrange
+        config(['rag.keyword_enhancement.default_stopwords' => ['こと', 'もの']]);
+        $text = 'このことは重要なことです。このことは大切なことです。';
+
+        // Act
+        $enhanced = $this->generator->generateEnhancedText($text, [
+            'min_frequency' => 2,
+        ]);
+
+        // Assert
+        // 設定ファイルのストップワードが適用される
+        $this->assertStringNotContainsString('こと', $enhanced);
+    }
+
+    #[Test]
+    public function it_handles_tenant_specific_stopwords()
+    {
+        // Arrange
+        $text = '株式会社サンプル商事の見積書です。株式会社サンプル商事は東京にあります。';
+
+        // Act
+        $enhanced = $this->generator->generateEnhancedText($text, [
+            'min_frequency' => 2,
+            'stopwords' => ['株式会社サンプル商事'], // テナント固有の除外語
+        ]);
+
+        // Assert
+        // 自社名は除外される
+        $this->assertStringNotContainsString('株式会社サンプル商事', $enhanced);
+
+        // 他のキーワードは含まれる
+        $this->assertStringContainsString('見積書', $enhanced);
+    }
 }

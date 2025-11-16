@@ -21,21 +21,12 @@ class KeywordEnhancedTextGenerator
         $this->tagger = new Tagger;
     }
 
-    /**
-     * OCRテキストを拡張し、重要キーワードを先頭に埋め込む
-     *
-     * @param  string  $ocrText  元のOCRテキスト
-     * @param  array  $options  オプション設定
-     *                          - max_keywords: 最大キーワード数（デフォルト: 20）
-     *                          - min_frequency: 最小出現回数（デフォルト: 2）
-     *                          - target_types: 対象品詞（デフォルト: ['固有名詞', '名詞', '記号', '数']）
-     * @return string 拡張後のテキスト
-     */
     public function generateEnhancedText(string $ocrText, array $options = []): string
     {
         $maxKeywords = $options['max_keywords'] ?? 20;
         $minFrequency = $options['min_frequency'] ?? 2;
         $targetTypes = $options['target_types'] ?? ['固有名詞', '名詞', '記号', '数'];
+        $stopwords = $options['stopwords'] ?? $this->getDefaultStopwords();
 
         if (empty($ocrText)) {
             return '';
@@ -44,95 +35,145 @@ class KeywordEnhancedTextGenerator
         // 1. 形態素解析
         $morphemes = $this->tagger->parse($ocrText);
 
-        // 2. 重要語抽出（頻度順）
-        $keywords = $this->extractKeywords($morphemes, $targetTypes, $minFrequency);
+        // 2. 重要語抽出（品詞別）
+        $extractedKeywords = $this->extractKeywords($morphemes, $targetTypes, $minFrequency, $stopwords);
 
-        if (empty($keywords)) {
+        if (empty($extractedKeywords['proper_nouns']) && empty($extractedKeywords['common_nouns'])) {
             return $ocrText;
         }
 
-        // 3. 頻度順にソート
-        arsort($keywords);
+        // 3. 品詞別にソートして上位を取得
+        $properNouns = $this->getTopKeywords($extractedKeywords['proper_nouns'], $maxKeywords / 2);
+        $commonNouns = $this->getTopKeywords($extractedKeywords['common_nouns'], $maxKeywords / 2);
 
-        // 4. 上位N件を取得
-        $topKeywords = array_slice(array_keys($keywords), 0, $maxKeywords);
-
-        // 5. テキスト構築
-        return $this->buildEnhancedText($topKeywords, $ocrText);
+        // 4. テキスト構築（品詞別にラベル）
+        return $this->buildEnhancedText($properNouns, $commonNouns, $ocrText);
     }
 
-    private function extractKeywords(array $morphemes, array $targetTypes, int $minFrequency): array
+    private function extractKeywords(array $morphemes, array $targetTypes, int $minFrequency, array $stopwords): array
     {
-        $keywords = [];
+        $properNouns = [];  // 固有名詞
+        $commonNouns = [];  // 一般名詞
         $compoundToken = '';
         $isAlphanumericSequence = false;
+        $currentPosDetail = '';
 
-        // 区切り記号リスト（これらは複合語に含めない）
+        // 区切り記号リスト
         $separatorSymbols = ['。', '、', '，', '．', '！', '？', '：', '；', '　', ' ', "\n", "\r", "\t"];
 
         foreach ($morphemes as $morpheme) {
             $pos = $morpheme->feature[0]; // 品詞
-            $posDetail = $morpheme->feature[1] ?? '';
+            $posDetail = $morpheme->feature[1] ?? ''; // 品詞細分類
             $surface = $morpheme->surface;
 
             // 区切り記号の場合は複合トークンを終了
             if (in_array($surface, $separatorSymbols, true)) {
                 if (mb_strlen($compoundToken) > 0) {
-                    $keywords[$compoundToken] = ($keywords[$compoundToken] ?? 0) + 1;
+                    $this->addKeyword($compoundToken, $currentPosDetail, $properNouns, $commonNouns, $stopwords);
                     $compoundToken = '';
                     $isAlphanumericSequence = false;
+                    $currentPosDetail = '';
                 }
 
                 continue;
             }
 
-            // 英数字・記号の連続（識別子パターン）を検出
+            // 英数字・記号の連続を検出
             $isAlphanumeric = $this->isAlphanumericOrSymbol($surface);
 
             if (in_array($pos, ['名詞', '記号', '数'])) {
-                // 英数字シーケンスの開始または継続
+                // 品詞細分類を記録（固有名詞判定用）
+                if ($pos === '名詞' && empty($currentPosDetail)) {
+                    $currentPosDetail = $posDetail;
+                }
+
                 if ($isAlphanumeric) {
                     if (! $isAlphanumericSequence && mb_strlen($compoundToken) > 0) {
-                        // 一般名詞の後に英数字が来た場合、一般名詞は分離
-                        $keywords[$compoundToken] = ($keywords[$compoundToken] ?? 0) + 1;
+                        $this->addKeyword($compoundToken, $currentPosDetail, $properNouns, $commonNouns, $stopwords);
                         $compoundToken = '';
+                        $currentPosDetail = '';
                     }
                     $compoundToken .= $surface;
                     $isAlphanumericSequence = true;
                 } else {
-                    // 一般的な日本語名詞
                     if ($isAlphanumericSequence) {
-                        // 英数字シーケンスの後に日本語名詞が来た場合、英数字を分離
                         if (mb_strlen($compoundToken) > 0) {
-                            $keywords[$compoundToken] = ($keywords[$compoundToken] ?? 0) + 1;
+                            $this->addKeyword($compoundToken, 'alphanumeric', $properNouns, $commonNouns, $stopwords);
                             $compoundToken = '';
+                            $currentPosDetail = '';
                         }
                         $isAlphanumericSequence = false;
                     }
                     $compoundToken .= $surface;
+                    if (empty($currentPosDetail)) {
+                        $currentPosDetail = $posDetail;
+                    }
                 }
             } else {
-                // 名詞・記号・数以外の品詞が来たら複合トークンを終了
                 if (mb_strlen($compoundToken) > 0) {
-                    $keywords[$compoundToken] = ($keywords[$compoundToken] ?? 0) + 1;
+                    $this->addKeyword($compoundToken, $currentPosDetail, $properNouns, $commonNouns, $stopwords);
                     $compoundToken = '';
                     $isAlphanumericSequence = false;
+                    $currentPosDetail = '';
                 }
 
-                // その他の品詞も抽出対象に含まれる場合は追加（2文字以上）
                 if (in_array($pos, $targetTypes) && mb_strlen($surface) > 1) {
-                    $keywords[$surface] = ($keywords[$surface] ?? 0) + 1;
+                    $this->addKeyword($surface, $posDetail, $properNouns, $commonNouns, $stopwords);
                 }
             }
         }
 
-        // 最後の複合トークンを追加
         if (mb_strlen($compoundToken) > 0) {
-            $keywords[$compoundToken] = ($keywords[$compoundToken] ?? 0) + 1;
+            $this->addKeyword($compoundToken, $currentPosDetail, $properNouns, $commonNouns, $stopwords);
         }
 
         // 最小出現回数でフィルタリング
-        return array_filter($keywords, fn ($freq) => $freq >= $minFrequency);
+        $properNouns = array_filter($properNouns, fn ($freq) => $freq >= $minFrequency);
+        $commonNouns = array_filter($commonNouns, fn ($freq) => $freq >= $minFrequency);
+
+        return [
+            'proper_nouns' => $properNouns,
+            'common_nouns' => $commonNouns,
+        ];
+    }
+
+    /**
+     * キーワードを品詞別に分類して追加
+     */
+    private function addKeyword(string $keyword, string $posDetail, array &$properNouns, array &$commonNouns, array $stopwords): void
+    {
+        // ストップワードチェック
+        if (in_array($keyword, $stopwords, true)) {
+            return;
+        }
+
+        // 固有名詞または英数字識別子
+        if ($posDetail === '固有名詞' || $posDetail === 'alphanumeric') {
+            $properNouns[$keyword] = ($properNouns[$keyword] ?? 0) + 1;
+        } else {
+            // 一般名詞
+            $commonNouns[$keyword] = ($commonNouns[$keyword] ?? 0) + 1;
+        }
+    }
+
+    /**
+     * 頻度順にソートして上位を取得
+     */
+    private function getTopKeywords(array $keywords, int $limit): array
+    {
+        arsort($keywords);
+
+        return array_slice(array_keys($keywords), 0, (int) $limit);
+    }
+
+    /**
+     * デフォルトストップワード（テナント設定から取得予定）
+     */
+    private function getDefaultStopwords(): array
+    {
+        // TODO: テナント設定から取得
+        // config('rag.stopwords.tenant_id') など
+        return config('rag.default_stopwords', []);
     }
 
     /**
@@ -144,24 +185,26 @@ class KeywordEnhancedTextGenerator
         return preg_match('/^[A-Za-z0-9\-_@#]+$/u', $text) === 1;
     }
 
-    /**
-     * キーワードと元のテキストから拡張テキストを構築
-     *
-     * @param  array  $keywords  重要キーワード配列
-     * @param  string  $originalText  元のテキスト
-     * @return string 拡張後のテキスト
-     */
-    private function buildEnhancedText(array $keywords, string $originalText): string
+    private function buildEnhancedText(array $properNouns, array $commonNouns, string $originalText): string
     {
-        if (empty($keywords)) {
+        $sections = [];
+
+        // 固有名詞セクション
+        if (! empty($properNouns)) {
+            $sections[] = '【固有名詞】 '.implode(' ', $properNouns);
+        }
+
+        // 一般名詞セクション
+        if (! empty($commonNouns)) {
+            $sections[] = '【重要語】 '.implode(' ', $commonNouns);
+        }
+
+        if (empty($sections)) {
             return $originalText;
         }
 
-        // キーワードセクションを作成（スペース区切り）
-        $keywordSection = implode(' ', $keywords);
-
-        // フォーマット: [重要キーワード] + セパレータ + [元のテキスト]
-        return "【重要キーワード】 {$keywordSection}\n\n---\n\n{$originalText}";
+        // フォーマット: [固有名詞] [重要語] + セパレータ + [元のテキスト]
+        return implode("\n", $sections)."\n\n---\n\n".$originalText;
     }
 
     /**
@@ -175,16 +218,19 @@ class KeywordEnhancedTextGenerator
     {
         $minFrequency = $options['min_frequency'] ?? 2;
         $targetTypes = $options['target_types'] ?? ['固有名詞', '名詞', '記号', '数'];
+        $stopwords = $options['stopwords'] ?? $this->getDefaultStopwords();
 
         if (empty($text)) {
             return [];
         }
 
         $morphemes = $this->tagger->parse($text);
-        $keywords = $this->extractKeywords($morphemes, $targetTypes, $minFrequency);
+        $result = $this->extractKeywords($morphemes, $targetTypes, $minFrequency, $stopwords);
 
-        arsort($keywords);
+        // 固有名詞と一般名詞を統合して返す
+        $allKeywords = array_merge($result['proper_nouns'], $result['common_nouns']);
+        arsort($allKeywords);
 
-        return $keywords;
+        return $allKeywords;
     }
 }

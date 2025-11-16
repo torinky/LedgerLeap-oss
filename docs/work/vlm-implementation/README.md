@@ -14,17 +14,24 @@
 
 ### 現在進行中のPhase
 
-**Phase 2.5-3.1 実装計画（改訂版）** - `2025-11-16_enhanced-vector-indexing-strategy.md` ⭐
-- Phase 2.5: 固有名詞・記号の先頭埋め込み（✅ **完了** 2025-11-16）
-- Phase 2.6: 複数OCR結果の統合（🔜 設計完了）
-- Phase 3.1: 2層ハイブリッド検索（📋 計画中）
-- **重要変更:** キーワード専用ベクトルを削除し、単一ベクトル戦略に改訂
+**Phase 2.5 実装完了報告** - `2025-11-16_enhanced-vector-indexing-strategy_phase-2.5-implementation-completed.md` ✅ **完了**
+- 固有名詞・記号の先頭埋め込み（基本機能）
+- **品詞別ラベリング機能追加**（固有名詞 vs 一般名詞）
+- **ストップワード機能追加**（自社名などを除外）
+- 実装日: 2025-11-16
+- テスト: 13ケース全てパス
+
+**Phase 2.5-3.1 実装計画（改訂版）** - `2025-11-16_enhanced-vector-indexing-strategy-enhanced-vector-indexing-strategy.md`
+- Phase 2.5: ✅ **完了** (2025-11-16)
+- Phase 2.6: 🔜 次のステップ
+- Phase 3.1: 📋 計画中
+- **重要変更:** 単一ベクトル戦略（キーワード専用ベクトル削除）
 - 実装期間を25.5日→13.5日に短縮（45%削減）
 
-**Phase 2.6 詳細設計** - `phase-2.6-ocr-integration-design.md` ⭐ **NEW**
-- 非同期OCR処理の統合戦略
-- 定期クローリングによる統合判定ロジック
-- データベース設計とジョブ実装
+**Phase 2.6 実装計画** - `2025-11-16_phase-2.6-ocr-integration-implementation-plan.md` ⭐ **NEW**
+- ソース別ステータス管理（FINALIZED_BY_TIKA/OCR/VLM）
+- ファイルタイプ別最適化（オフィスファイルはTikaのみ）
+- 即座にインデックス化→段階的品質向上
 - 実装工数: 3日
 
 ### 基本戦略ドキュメント
