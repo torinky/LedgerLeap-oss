@@ -313,7 +313,7 @@ HTML;
                     $textPreviewTooltip = __('ledger.text_preview.button_tooltip');
                     $textPreviewButtonHtml = <<<HTML
 <div x-data="{ isLoading: false }" @text-preview-shown.window="isLoading = false" class="tooltip" data-tip="{$textPreviewTooltip}">
-    <button @click="isLoading = true; \$dispatch('showTextPreview', { attachedFileId: {$attachment->id} }); setTimeout(() => isLoading = false, 5000)" :disabled="isLoading" class="btn btn-square btn-ghost btn-sm">
+    <button @click="isLoading = true; \$dispatch('showTextPreview', { attachedFileId: {$attachment->id} }); setTimeout('isLoading = false', 5000)" :disabled="isLoading" class="btn btn-square btn-ghost btn-sm">
         <i class="fa-solid fa-eye cursor-pointer" x-show="!isLoading"></i>
         <span class="loading loading-spinner loading-xs" x-show="isLoading" style="display: none;"></span>
     </button>
