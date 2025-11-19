@@ -288,16 +288,24 @@ class ColumnHtmlService
 HTML;
 
                 if ($attachment->canUserRequestRetry() ||
-                    $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
+                    $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED ||
+                    $attachment->isVlmFailed()
+                ) {
+                    $isVlmRetry = $attachment->isVlmFailed();
+
                     $retryTooltipText = match (true) {
+                        $isVlmRetry => __('ledger.uploadedFile.retry_vlm'),
                         $attachment->hasExtractionError() => __('ledger.uploadedFile.retry_extraction'),
                         $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED => __('ledger.uploadedFile.retry_thumbnail'),
                         default => __('ledger.uploadedFile.retry'),
                     };
+
+                    $eventName = $isVlmRetry ? 'retryVlmProcessingEvent' : 'retryProcessingEvent';
+
                     $retryIconHtml = <<<HTML
 <div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$retryTooltipText}">
     <i class="fa-solid fa-arrow-rotate-right cursor-pointer" 
-    wire:click="\$dispatch('retryProcessingEvent', { attachedFileId: {$attachment->id} })"></i>
+    wire:click="\$dispatch('{$eventName}', { attachedFileId: {$attachment->id} })"></i>
 </div>
 HTML;
                 }

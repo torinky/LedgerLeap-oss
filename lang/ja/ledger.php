@@ -976,6 +976,7 @@ return [
         'retry_failed' => '再処理の開始に失敗しました',
         'retry_success' => '再処理を開始しました',
         'retry_thumbnail' => 'サムネイル再生成',
+        'retry_vlm' => 'VLM処理を再試行',
         'status' => [
             'completed' => '完了',
             'detailed' => [
