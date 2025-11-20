@@ -51,7 +51,7 @@ class RagChunkDemoLedgersCommand extends Command
         $bar->start();
 
         Ledger::findMany($demoLedgerIds)->each(function (Ledger $ledger) use ($bar) {
-            ProcessLedgerForRagJob::dispatch($ledger);
+            ProcessLedgerForRagJob::dispatch($ledger->id);
             $bar->advance();
         });
 

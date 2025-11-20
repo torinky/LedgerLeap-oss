@@ -386,7 +386,7 @@ HTML;
                 }
             }*/
 
-            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename)))) {
+            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId))) {
                 $thumbnails[] = <<<HTML
 <div class="indicator my-5"> 
 <span class="indicator-item">

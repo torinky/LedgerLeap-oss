@@ -283,7 +283,7 @@ trait RefreshDatabaseWithTenant
     /**
      * トランザクション対象の接続名を取得
      *
-     * テナントデータベースに対してトランザクションを開始
+     * セントラルとテナントの両方のデータベースに対してトランザクションを開始
      */
     protected function connectionsToTransact(): array
     {
@@ -292,8 +292,8 @@ trait RefreshDatabaseWithTenant
             return $this->connectionsToTransact;
         }
 
-        // テナント接続を使用
-        return ['tenant'];
+        // セントラル（mysql）とテナント接続の両方を使用
+        return ['mysql', 'tenant'];
     }
 
     /**

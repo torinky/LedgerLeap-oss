@@ -129,6 +129,13 @@ class LedgerDiffViewer extends Component
 
     public function placeholder(): string
     {
-        return '<div>Loading diff viewer...</div>';
+        return <<<HTML
+    <div  class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
+        <div class="flex h-screen justify-center items-center">
+            <span class="loading loading-dots loading-lg"></span>
+        </div>
+    </div>
+
+HTML;
     }
 }

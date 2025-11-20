@@ -207,10 +207,23 @@ class RagSearchService
 
         // Step 1: Get vector search results from Mroonga (IDs and scores only)
         $groonga_filter_parts = [];
-        if (! empty($keyword)) {
-            // The score filter is now applied using the calculated score column
-            $groonga_filter_parts[] = sprintf('score < %f', config('rag.search.similarity_threshold', 0.7));
-        }
+        $similarity_threshold = config('rag.search.similarity_threshold', 0.7);
+
+/*        if (! empty($keyword)) {
+            // キーワード検索とベクトル検索のハイブリッド
+            // 1. キーワードにマッチするレコード
+            $escaped_keyword = str_replace('"', '\"', $keyword);
+            $keyword_filter = sprintf('chunk_text @~ "%s"', $escaped_keyword);
+            // 2. ベクトルが類似しているレコード
+            $vector_filter = sprintf('score < %f', $similarity_threshold);
+            // 上記のOR条件
+            $groonga_filter_parts[] = "({$keyword_filter} || {$vector_filter})";
+        } else {
+            // キーワードがない場合はベクトル検索のみ
+            $groonga_filter_parts[] = sprintf('score < %f', $similarity_threshold);
+        }*/
+
+        $groonga_filter_parts[] = sprintf('score < %f', $similarity_threshold);
 
         $groonga_filter = implode(' && ', $groonga_filter_parts);
         $filter_clause = ! empty($groonga_filter) ? "--filter '{$groonga_filter}'" : '';
