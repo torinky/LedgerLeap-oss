@@ -3,6 +3,8 @@
 namespace Tests\Unit\Services;
 
 use App\Models\AttachedFile;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Services\VlmClientService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
@@ -69,6 +71,66 @@ class VlmClientServiceTest extends TestCase
         $this->assertEquals('# Test Invoice\n\nAmount: $100', $result['markdown']);
         $this->assertEquals('test-model', $result['model']);
         $this->assertArrayHasKey('structured_data', $result);
+    }
+
+    #[Test]
+    public function extract_uses_correct_extension_when_original_filename_differs_from_physical_file(): void
+    {
+        // Arrange
+        Storage::fake('public');
+        // 物理ファイルはPDF (OCR処理後)
+        $fileName = 'test_file.pdf';
+        Storage::disk('public')->put($fileName, 'dummy pdf content');
+
+        // LedgerとAttachedFileのセットアップ
+        // original_filename (.jpg) を返すための準備
+        $originalName = 'receipt.jpg';
+        $hashedName = 'test_file.jpg'; // AttachedFileのhashedbasenameはこれになるはず（拡張子が変わる前の名前）
+
+        // Ledger作成
+        // contentのカラム構造を模倣: index 0 にファイル情報
+        $ledger = Ledger::factory()->create([
+            'content' => [
+                [$hashedName => $originalName]
+            ]
+        ]);
+
+        $attachedFile = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'column_id' => 0, // contentのindex 0に対応
+            'hashedbasename' => $hashedName,
+            'path' => $fileName, // 物理パスは .pdf
+        ]);
+
+        // healthCheckのモック
+        Http::fake([
+            'http://vlm.test/health' => Http::response(['status' => 'healthy'], 200),
+            'http://vlm.test/extract/structured' => Http::response(['success' => true, 'markdown' => 'ok'], 200),
+        ]);
+
+        $service = app(VlmClientService::class);
+
+        // Act
+        $service->extract($attachedFile);
+
+        // Assert
+        Http::assertSent(function ($request) use ($originalName) {
+            // 送信されるファイル名は、元の名前のベース部分 + 物理ファイルの拡張子 (.pdf) になっているべき
+            $expectedName = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
+            
+            // マルチパートデータのファイル名を確認するのは難しいが、
+            // Guzzle/Laravel Httpクライアントの内部構造に依存せず確認するには
+            // 少なくとも .pdf で終わっていることを確認したい。
+            // LaravelのHttp::assertSentの$requestはIlluminate\Http\Client\Request
+            
+            // dataプロパティにマルチパート情報がある
+            foreach ($request->data() as $part) {
+                if ($part['name'] === 'file' && $part['filename'] === $expectedName) {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 
     #[Test]

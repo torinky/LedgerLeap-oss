@@ -64,12 +64,16 @@ class VlmClientService
         $startTime = microtime(true);
 
         try {
+            $realExtension = pathinfo($filePath, PATHINFO_EXTENSION);
+            $originalFilename = $attachedFile->getOriginalFilenameAttribute() ?? basename($filePath);
+            $filenameToSend = pathinfo($originalFilename, PATHINFO_FILENAME).'.'.$realExtension;
+
             $response = Http::asMultipart()
                 ->timeout($this->timeout)
                 ->attach(
                     'file',
                     file_get_contents($filePath),
-                    $attachedFile->getOriginalFilenameAttribute() ?? basename($filePath)
+                    $filenameToSend
                 )
                 ->post("{$this->vlmServiceUrl}/extract/structured");
 
