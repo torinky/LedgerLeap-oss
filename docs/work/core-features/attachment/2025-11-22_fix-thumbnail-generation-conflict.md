@@ -1,7 +1,7 @@
 # サムネイル生成ジョブの競合解消とロジック改善計画
 
 **作成日:** 2025年11月22日
-**ステータス:** 計画中
+**ステータス:** 完了
 
 ## 1. 概要
 本ドキュメントは、OCR処理完了後のファイルに対してサムネイルが生成されない問題を解消するための、`GenerateThumbnail` ジョブの改修計画を定義します。
@@ -92,3 +92,34 @@ if (!in_array($attachedFile->status, [
 ## 5. 期待される効果
 *   OCR処理によってPDF化された画像ファイルについても、確実にサムネイルが生成されるようになる。
 *   サムネイル生成ジョブが、進行中のOCR/VLM処理のステータスを不正に上書きする事故を防げる。
+
+## 6. 実装結果報告 (2025-11-22)
+
+### 6.1 実装内容
+計画通り、`app/Jobs/Ledger/GenerateThumbnail.php` に以下の修正を適用しました。
+
+1.  **フォールバックロジックの実装**:
+    - 現在のファイルが画像でない場合（OCR済みPDFなど）、`original_file_path` を確認。
+    - `original_file_path` が存在し、かつMIMEタイプが画像であれば、それをソースとして使用するよう変更。
+    - ログ出力: `[GenerateThumbnail] Using original file as source: ...`
+
+2.  **ステータス更新ガードの実装**:
+    - 以下のステータスの場合、サムネイル生成完了後のステータス更新 (`COMPLETED`への変更) をスキップ。
+        - `PENDING_OCR`, `OCR_PROCESSING`
+        - `PENDING_VLM`, `VLM_PROCESSING`
+        - `PARALLEL_PROCESSING`
+    - ログ出力: `[GenerateThumbnail] Status update skipped due to processing status: ...`
+
+### 6.2 テスト結果
+`tests/Unit/Jobs/GenerateThumbnailTest.php` に新規テストケースを追加し、全テストが通過することを確認しました。
+
+- `it_falls_back_to_original_image_if_current_file_is_pdf`: PDF化されたファイルでも元画像からサムネイルが生成されることを検証。
+- `it_does_not_update_status_if_processing_is_ongoing`: 並列処理中のステータスが維持されることを検証。
+
+### 6.3 動作確認
+実環境（ID: 6 のファイル）において、手動でジョブを実行し、以下のログを確認しました。
+```
+[GenerateThumbnail] Using original file as source: tenants/demo-tenant/Ledger/Attachments/1/Originals/DEJZHLlIr6NTb9H2i6mHOyf0mpjPcghnWSmgfr27.jpg
+[GenerateThumbnail] Thumbnail successfully generated for AttachedFile ID: 6. ...
+```
+これにより、OCR処理後のファイルでも正常にサムネイルが生成されることが実証されました。
