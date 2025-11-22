@@ -1,7 +1,7 @@
 # VLM処理におけるファイル拡張子不整合の修正
 
 **作成日:** 2025年11月22日
-**ステータス:** 計画中
+**ステータス:** 完了
 
 ## 1. 概要
 
@@ -76,3 +76,28 @@ $filenameToSend = pathinfo($originalFilename, PATHINFO_FILENAME) . '.' . $realEx
 ## 5. 期待される効果
 *   OCR処理によってファイル形式が変更された場合でも、VLMサービスが正しいファイル形式として認識・処理できるようになる。
 *   「同じファイルなのにタイミングによって成功したり失敗したりする」という不安定な挙動が解消される。
+
+## 6. 実装結果報告 (2025-11-22)
+
+### 6.1 実装内容
+計画通り、`app/Services/VlmClientService.php` に以下の修正を適用しました。
+
+1.  **ファイル拡張子の強制同期**:
+    -   `extract` メソッド内で、送信するファイル名を決定する際に、物理ファイルのパス (`$filePath`) から拡張子 (`pathinfo($filePath, PATHINFO_EXTENSION)`) を取得。
+    -   `getOriginalFilenameAttribute()` で取得した元のファイル名の拡張子部分を、この物理ファイルの拡張子で置換するように変更。
+    -   これにより、例えば元ファイル名が `receipt.jpg` であっても、物理ファイルがPDFであれば `receipt.pdf` としてVLMサービスに送信されるようになりました。
+
+### 6.2 テスト結果
+`tests/Unit/Services/VlmClientServiceTest.php` に新規テストケース `extract_uses_correct_extension_when_original_filename_differs_from_physical_file` を追加しました。
+
+**テスト内容:**
+1.  物理ファイルとしてPDFを作成（OCR処理後の状態を模倣）。
+2.  `AttachedFile` モデルを作成し、そのパスを上記のPDFに向ける。
+3.  `Ledger` モデルを作成し、`content` カラムに元のファイル名（`.jpg`）を設定（メタデータの不一致状態を模倣）。
+4.  `VlmClientService::extract` を実行し、`Http::assertSent` を使用して、実際に送信されたリクエスト内のファイル名が `.pdf` になっていることを検証。
+
+**結果:**
+テストは成功し、修正されたロジックが意図通りに動作することを確認しました。既存のテストケースも含め、すべてのテストがパスしています。
+
+### 6.3 結論
+本修正により、OCR処理のタイミングに関わらず、VLMサービスには常に物理ファイルの実体と一致した拡張子を持つファイル名が送信されるようになりました。これにより、Pillowライブラリによる画像形式の誤認エラー (`UnidentifiedImageError`) は解消され、システムの堅牢性が向上しました。
