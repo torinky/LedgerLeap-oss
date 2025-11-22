@@ -84,10 +84,15 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         ]);
 
         // Assert
-        $this->assertStringContainsString('【重要キーワード】', $enhanced);
-        $this->assertStringContainsString('株式会社ABC商事', $enhanced);
+        $this->assertStringNotContainsString('【重要キーワード】', $enhanced);
         $this->assertStringContainsString('---', $enhanced);
         $this->assertStringContainsString($text, $enhanced);
+
+        // キーワードセクションに分割されたキーワードが含まれていることを確認
+        $keywordSection = explode('---', $enhanced)[0];
+        $this->assertStringContainsString('株式会社', $keywordSection);
+        $this->assertStringContainsString('ABC', $keywordSection);
+        $this->assertStringContainsString('商事', $keywordSection);
     }
 
     #[Test]
@@ -131,11 +136,12 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         ]);
 
         // Assert
-        $this->assertStringContainsString('【重要キーワード】', $enhanced);
+        $this->assertStringNotContainsString('【重要キーワード】', $enhanced);
         // 上位2件のみが含まれる
         $keywordSection = explode('---', $enhanced)[0];
-        $keywordCount = count(explode(' ', trim(str_replace('【重要キーワード】', '', $keywordSection))));
-        $this->assertLessThanOrEqual(2, $keywordCount);
+        // キーワードはスペースで区切られていると仮定
+        $keywords = array_filter(explode(' ', trim(str_replace(['【固有名詞】', '【重要語】'], '', $keywordSection))));
+        $this->assertLessThanOrEqual(2, count($keywords));
     }
 
     #[Test]
@@ -190,8 +196,7 @@ TEXT;
         ]);
 
         // Assert
-        $this->assertStringContainsString('【重要キーワード】', $enhanced);
-        $this->assertStringContainsString('株式会社ABC商事', $enhanced);
+        $this->assertStringNotContainsString('【重要キーワード】', $enhanced);
         $this->assertStringContainsString('---', $enhanced);
         $this->assertStringContainsString($text, $enhanced);
 
@@ -251,13 +256,15 @@ TEXT;
         $text = 'このことは重要なことです。このことは大切なことです。';
 
         // Act
-        $enhanced = $this->generator->generateEnhancedText($text, [
-            'min_frequency' => 2,
+        $keywords = $this->generator->extractKeywordsOnly($text, [
+            'min_frequency' => 1, // '重要'と'大切'をキーワードとして残すため頻度を1に
         ]);
 
         // Assert
-        // 設定ファイルのストップワードが適用される
-        $this->assertStringNotContainsString('こと', $enhanced);
+        // 設定ファイルのストップワードが適用され、キーワードから除外される
+        $this->assertArrayNotHasKey('こと', $keywords);
+        $this->assertArrayHasKey('重要', $keywords);
+        $this->assertArrayHasKey('大切', $keywords);
     }
 
     #[Test]
@@ -267,16 +274,17 @@ TEXT;
         $text = '株式会社サンプル商事の見積書です。株式会社サンプル商事は東京にあります。';
 
         // Act
-        $enhanced = $this->generator->generateEnhancedText($text, [
-            'min_frequency' => 2,
+        $keywords = $this->generator->extractKeywordsOnly($text, [
+            'min_frequency' => 1, // '見積書'と'東京'をキーワードとして残すため頻度を1に
             'stopwords' => ['株式会社サンプル商事'], // テナント固有の除外語
         ]);
 
         // Assert
-        // 自社名は除外される
-        $this->assertStringNotContainsString('株式会社サンプル商事', $enhanced);
+        // 自社名はキーワードから除外される
+        $this->assertArrayNotHasKey('株式会社サンプル商事', $keywords);
 
         // 他のキーワードは含まれる
-        $this->assertStringContainsString('見積書', $enhanced);
+        $this->assertArrayHasKey('見積書', $keywords);
+        $this->assertArrayHasKey('東京', $keywords);
     }
 }

@@ -30,7 +30,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
             'email' => 'test@example.com',
             'name' => 'Test User',
         ]);
-        
+
         $token = $this->user->createToken('test-token')->plainTextToken;
 
         // 認証トークンを環境変数に設定
@@ -138,7 +138,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
     {
         // このテストのみ実データが必要なため、ここでシードする
         Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
-        
+
         // さらに緩い閾値に設定して確実にヒットさせる
         config(['rag.similarity_threshold' => 0.0]);
 
@@ -146,7 +146,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         // 1. テストデータを作成
         $ledgerDefine = \App\Models\LedgerDefine::where('title', '[DEMO] 営業日報')->first();
         $folder = \App\Models\Folder::where('title', '日報')->first();
-        
+
         // DemoCompleteSeedで作成されたadminユーザーを使用
         $adminUser = \App\Models\User::where('email', 'admin@example.com')->first();
 
@@ -171,19 +171,19 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
         // 2. 作成した台帳のみを直接ベクトル化（Jobを同期実行）
         ProcessLedgerForRagJob::dispatchSync($ledger->id);
-        
+
         // テナントを再初期化してからチャンクを確認
         tenancy()->initialize($this->getTenant());
-        
+
         // チャンクが作成されたことを確認
         $chunkCount = \App\Models\LedgerChunk::where('ledger_id', $ledger->id)->count();
-        $this->assertGreaterThan(0, $chunkCount, 
+        $this->assertGreaterThan(0, $chunkCount,
             "No chunks were created for ledger {$ledger->id}. RAG processing may have failed.");
 
         // 3. admin用トークンで検索ツールを準備
         $adminToken = $adminUser->createToken('admin-test-token')->plainTextToken;
         putenv('MCP_AUTH_TOKEN='.$adminToken);
-        
+
         $tool = new SearchLedgersTool($this->app->make(LedgerService::class));
         $request = new Request([
             'q' => '費用を切り詰める方法', // レコードに直接含まれない類義語で検索
@@ -196,13 +196,13 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
         // Assert
         $this->assertFalse($response->isError(), "MCP tool returned an error: {$response->content()}");
-        
+
         // 閾値を0にしているので、最低でも1件はヒットするはず
-        $this->assertGreaterThanOrEqual(1, count($result['ledgers']), 
+        $this->assertGreaterThanOrEqual(1, count($result['ledgers']),
             'Expected at least 1 ledger, but found '.count($result['ledgers']).'. Result: '.json_encode($result));
-        
+
         // 最初の結果が作成したledgerであることを確認
-        $this->assertEquals($ledger->id, $result['ledgers'][0]['id'], 
+        $this->assertEquals($ledger->id, $result['ledgers'][0]['id'],
             'The found ledger ID does not match the created one. First result: '.json_encode($result['ledgers'][0] ?? []));
     }
 }

@@ -449,7 +449,7 @@ class RecordsTable extends Component
                 // セマンティック検索時、composite_scoreが選択されている場合はsemantic_scoreを使用
                 $sortBy = ($this->orderBy === 'composite_score') ? 'semantic_score' : $this->orderBy;
 
-                    $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
+                $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
 
                 // Step 5: ページネーション
                 $this->totalRecords = $sortedLedgers->count();

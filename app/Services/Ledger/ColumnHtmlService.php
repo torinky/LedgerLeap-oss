@@ -373,18 +373,18 @@ HTML;
 
             $contentHtmlStart = '';
             $contentHtmlEnd = '';
-/*            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
-                $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
-                $plainTextContent = strip_tags($rawContent);
-                $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
-                $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
-                if (! empty($content)) {
-                    $contentHtmlStart = <<<HTML
- <div class="tooltip" data-tip="{$content}">
- HTML;
-                    $contentHtmlEnd = '</div>';
-                }
-            }*/
+            /*            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
+                            $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
+                            $plainTextContent = strip_tags($rawContent);
+                            $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
+                            $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
+                            if (! empty($content)) {
+                                $contentHtmlStart = <<<HTML
+             <div class="tooltip" data-tip="{$content}">
+             HTML;
+                                $contentHtmlEnd = '</div>';
+                            }
+                        }*/
 
             if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId))) {
                 $thumbnails[] = <<<HTML

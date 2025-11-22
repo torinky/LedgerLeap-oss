@@ -142,6 +142,11 @@ class KeywordEnhancedTextGenerator
      */
     private function addKeyword(string $keyword, string $posDetail, array &$properNouns, array &$commonNouns, array $stopwords): void
     {
+        $keyword = trim($keyword);
+        if (empty($keyword)) {
+            return;
+        }
+
         // ストップワードチェック
         if (in_array($keyword, $stopwords, true)) {
             return;
@@ -173,7 +178,7 @@ class KeywordEnhancedTextGenerator
     {
         // TODO: テナント設定から取得
         // config('rag.stopwords.tenant_id') など
-        return config('rag.default_stopwords', []);
+        return config('rag.keyword_enhancement.default_stopwords', []);
     }
 
     /**

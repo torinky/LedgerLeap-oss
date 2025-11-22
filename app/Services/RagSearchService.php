@@ -66,7 +66,7 @@ class RagSearchService
 
         // 5. Sort ledgers according to search results order AND attach scores
         $scoreMap = collect($searchResults)->pluck('max_score', 'ledger_id');
-        $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers, $scoreMap) {
+        $sortedLedgers = collect($searchResults)->map(function ($result) use ($ledgers) {
             $ledger = $ledgers->get($result['ledger_id']);
             if ($ledger) {
                 // Attach semantic score and related metadata as dynamic attributes
@@ -74,6 +74,7 @@ class RagSearchService
                 $ledger->best_chunk_text = $result['best_chunk_text'] ?? null;
                 $ledger->chunk_count = $result['chunk_count'] ?? 1;
             }
+
             return $ledger;
         })->filter();
 
@@ -209,19 +210,19 @@ class RagSearchService
         $groonga_filter_parts = [];
         $similarity_threshold = config('rag.search.similarity_threshold', 0.7);
 
-/*        if (! empty($keyword)) {
-            // キーワード検索とベクトル検索のハイブリッド
-            // 1. キーワードにマッチするレコード
-            $escaped_keyword = str_replace('"', '\"', $keyword);
-            $keyword_filter = sprintf('chunk_text @~ "%s"', $escaped_keyword);
-            // 2. ベクトルが類似しているレコード
-            $vector_filter = sprintf('score < %f', $similarity_threshold);
-            // 上記のOR条件
-            $groonga_filter_parts[] = "({$keyword_filter} || {$vector_filter})";
-        } else {
-            // キーワードがない場合はベクトル検索のみ
-            $groonga_filter_parts[] = sprintf('score < %f', $similarity_threshold);
-        }*/
+        /*        if (! empty($keyword)) {
+                    // キーワード検索とベクトル検索のハイブリッド
+                    // 1. キーワードにマッチするレコード
+                    $escaped_keyword = str_replace('"', '\"', $keyword);
+                    $keyword_filter = sprintf('chunk_text @~ "%s"', $escaped_keyword);
+                    // 2. ベクトルが類似しているレコード
+                    $vector_filter = sprintf('score < %f', $similarity_threshold);
+                    // 上記のOR条件
+                    $groonga_filter_parts[] = "({$keyword_filter} || {$vector_filter})";
+                } else {
+                    // キーワードがない場合はベクトル検索のみ
+                    $groonga_filter_parts[] = sprintf('score < %f', $similarity_threshold);
+                }*/
 
         $groonga_filter_parts[] = sprintf('score < %f', $similarity_threshold);
 

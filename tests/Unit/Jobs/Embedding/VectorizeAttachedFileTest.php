@@ -130,7 +130,7 @@ class VectorizeAttachedFileTest extends TestCase
         ]);
 
         // Act & Assert - Tika → OCR → VLM の段階的アップグレード
-        
+
         // Step 1: Tika
         $job1 = new VectorizeAttachedFile($file->id, 'tika');
         $job1->handle();

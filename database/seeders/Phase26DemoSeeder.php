@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -12,8 +14,6 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Helpers\AttachedFilePathHelper;
-use App\Jobs\Ledger\ProcessAttachedFile;
 
 /**
  * Phase 2.6 効果測定用デモデータシーダー
@@ -206,7 +206,6 @@ class Phase26DemoSeeder extends Seeder
         $this->dispatchJobs();
     }
 
-
     private function dispatchJobs(): void
     {
         $this->command->info('Dispatching jobs...');
@@ -238,7 +237,7 @@ class Phase26DemoSeeder extends Seeder
             $this->createAttachedFile($ledger, $fileData);
         }
 
-        $this->command->info("  ✓ Scenario: {$ledgerName} (".count($files)." files)");
+        $this->command->info("  ✓ Scenario: {$ledgerName} (".count($files).' files)');
     }
 
     private function createBulkScenario(string $ledgerName, int $count): void

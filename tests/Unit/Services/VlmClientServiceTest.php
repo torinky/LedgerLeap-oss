@@ -4,7 +4,6 @@ namespace Tests\Unit\Services;
 
 use App\Models\AttachedFile;
 use App\Models\Ledger;
-use App\Models\LedgerDefine;
 use App\Services\VlmClientService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
@@ -91,8 +90,8 @@ class VlmClientServiceTest extends TestCase
         // contentのカラム構造を模倣: index 0 にファイル情報
         $ledger = Ledger::factory()->create([
             'content' => [
-                [$hashedName => $originalName]
-            ]
+                [$hashedName => $originalName],
+            ],
         ]);
 
         $attachedFile = AttachedFile::factory()->create([
@@ -116,19 +115,20 @@ class VlmClientServiceTest extends TestCase
         // Assert
         Http::assertSent(function ($request) use ($originalName) {
             // 送信されるファイル名は、元の名前のベース部分 + 物理ファイルの拡張子 (.pdf) になっているべき
-            $expectedName = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
-            
+            $expectedName = pathinfo($originalName, PATHINFO_FILENAME).'.pdf';
+
             // マルチパートデータのファイル名を確認するのは難しいが、
             // Guzzle/Laravel Httpクライアントの内部構造に依存せず確認するには
             // 少なくとも .pdf で終わっていることを確認したい。
             // LaravelのHttp::assertSentの$requestはIlluminate\Http\Client\Request
-            
+
             // dataプロパティにマルチパート情報がある
             foreach ($request->data() as $part) {
                 if ($part['name'] === 'file' && $part['filename'] === $expectedName) {
                     return true;
                 }
             }
+
             return false;
         });
     }

@@ -12,6 +12,7 @@ use Mary\Traits\Toast;
 class TextPreviewModal extends Component
 {
     use Toast;
+
     public bool $showModal = false;
 
     public ?AttachedFile $file = null;
@@ -60,7 +61,7 @@ class TextPreviewModal extends Component
         $this->tenantId = $file->tenant_id;
         $this->showModal = true;
 
-        Log::info('Tenant ID in TextPreviewModal: ' . $this->tenantId);
+        Log::info('Tenant ID in TextPreviewModal: '.$this->tenantId);
 
         // モーダルが表示されたことをクライアントに通知
         $this->dispatch('text-preview-shown');
