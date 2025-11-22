@@ -466,8 +466,9 @@ class SearchApiTest extends TestCase
         $this->refreshApplication();
 
         // 2ページ目を取得（offset=1） - 新しいリクエストとして
+        $url = 'http://localhost/api/v1/search?q=Ledger&limit=1&offset=1';
         $secondPageResponse = $this->actingAs(self::$adminUser, 'sanctum')
-            ->getJson('/api/v1/search?q=Ledger&limit=1&offset=1');
+            ->json('GET', $url);
 
         $secondPageResponse->assertStatus(200)
             ->assertJsonCount(1, 'data');
