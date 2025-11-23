@@ -8,8 +8,11 @@ use App\Helpers\AttachedFilePathHelper;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Policies\LedgerDefinePolicy;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -36,40 +39,69 @@ class ModifyColumn extends CreateColumn
 
     //    public $tenantId='';
 
-    public function mount(int $ledgerId, array $prefillParams = []): void
+    public function mount(int $ledgerId, LedgerDefinePolicy $ledgerDefinePolicy, array $prefillParams = []): void
     {
         // ModifyColumnではprefillParamsは使用しないが、親クラスとの互換性のために引数として受け取る
         $this->ledgerId = $ledgerId;
         if ($this->ledgerId) {
             // edit
             // テナントスコープを一時的に無視してLedgerを取得
-            $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
+            $ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
 
-            // 取得したLedgerのテナントIDでコンテキストを初期化
-            tenancy()->initialize($this->ledgerRecord->tenant_id);
+            // テナントコンテキストを初期化 (テナント間移動への対応)
+            // InitializesTenantContextトレイトは未初期化時のみ動作するため、
+            // 既に別のテナントで初期化されている場合(管理者が別テナントのデータを編集する場合など)は
+            // ここで明示的にコンテキストを切り替える必要がある。
+            if ($ledgerRecord->tenant_id !== tenancy()->tenant?->id) {
+                \Illuminate\Support\Facades\Log::info('ModifyColumn: Switching tenant', [
+                    'from' => tenancy()->tenant?->id,
+                    'to' => $ledgerRecord->tenant_id
+                ]);
+                tenancy()->initialize($ledgerRecord->tenant_id);
+            }
+
+            // 権限チェックのために、LedgerDefineもテナントスコープを無視して取得
+            $ledgerDefineRecord = LedgerDefine::withoutTenancy()->find($ledgerRecord->ledger_define_id);
+
+            \Illuminate\Support\Facades\Log::info('ModifyColumn: Debug Permission Check', [
+                'user_id' => Auth::id(),
+                'ledger_id' => $ledgerRecord->id,
+                'ledger_define_id' => $ledgerRecord->ledger_define_id,
+                'define_found' => (bool)$ledgerDefineRecord,
+                'current_tenant' => tenancy()->tenant?->id,
+                'folder_id' => $ledgerDefineRecord?->folder_id,
+                'folder_exists' => $ledgerDefineRecord?->folder ? 'yes' : 'no',
+            ]);
+
+            // 権限チェック: ユーザーがこの台帳を閲覧できるか確認
+            if (! $ledgerDefineRecord || ! $ledgerDefinePolicy->ledgerView(Auth::user(), $ledgerDefineRecord)) {
+                throw new ModelNotFoundException('Ledger not found or user does not have permission.');
+            }
+
+            // 権限チェックをパスした場合のみ、コンポーネントのプロパティを設定
+            $this->ledgerRecord = $ledgerRecord;
+            $this->ledgerDefineRecord = $ledgerDefineRecord;
 
             // 手動でリレーションをロード
-            $this->ledgerRecord->load(['define', 'latestDiff']);
+            $this->ledgerRecord->load(['latestDiff']);
 
-            $this->tenantId = $this->ledgerRecord->define->tenant_id;
+            $this->tenantId = $this->ledgerRecord->tenant_id; // tenant_id は define からではなく ledger から取得
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
-            if (! empty($this->ledgerRecord->define)) {
-                $this->ledgerDefineRecord = $this->ledgerRecord->define;
-                $this->totalRequireColumnCount = collect($this->ledgerDefineRecord->column_define)->filter(function ($column) {
-                    return $column->required;
-                })->count();
-            }
+
             if (! empty($this->ledgerRecord->content)) {
                 $this->content = $this->ledgerRecord->content;
             }
             if (! empty($this->ledgerRecord->content_attached)) {
                 $this->contentAttached = $this->ledgerRecord->content_attached;
             }
-            $this->initColumns(); // カラム初期化 (必須マーク色など)
+
+            // 親クラスの初期化メソッドを呼び出す
+            $this->initColumns();
             $this->initRequireColumns();
-            $this->initializeDateDefaults(); // 日付カラムのデフォルト値初期化
+            $this->initializeDateDefaults();
             $this->updateProgress();
-            //            $this->loadRecommendedPersonnel(); // 推奨担当者を読み込む
+            $this->initBackgroundImages();
+            $this->initializeGroups();
 
             // --- Attachment ID マップの作成 ---
             $this->attachmentIdMap = AttachedFile::where('ledger_id', $this->ledgerId)
@@ -79,8 +111,6 @@ class ModifyColumn extends CreateColumn
 
             $this->prepareFilePondInitialFiles(); // FilePond初期化
         }
-        $this->initBackgroundImages();
-        $this->initializeGroups(); // 親のグループ初期化メソッドを呼び出す
     }
 
     public function render(): View

@@ -12,12 +12,14 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use App\Policies\LedgerDefinePolicy;
 use App\Rules\UniqueAutoNumber;
 use App\Rules\UniqueColumnValue;
 use App\Services\NumberingService;
 use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -112,11 +114,16 @@ class CreateColumn extends Component
     }
 
     // mount は Create と Modify で異なるので、各クラスで実装 or 親で共通化
-    public function mount(int $ledgerDefineId, array $prefillParams = []): void
+    public function mount(int $ledgerDefineId, LedgerDefinePolicy $ledgerDefinePolicy, array $prefillParams = []): void
     {
         $this->ledgerDefineId = $ledgerDefineId;
         $this->prefillParams = $prefillParams;
         $this->ledgerDefineRecord = LedgerDefine::findOrFail($this->ledgerDefineId);
+
+        // 権限チェック: ユーザーがこの台帳を作成できるか確認
+        if (! $ledgerDefinePolicy->ledgerCreate(Auth::user(), $this->ledgerDefineRecord)) {
+            throw new ModelNotFoundException('Ledger definition not found or user does not have permission to create.');
+        }
 
         // tenantIdを設定
         $this->tenantId = $this->ledgerDefineRecord->tenant_id;

@@ -7,6 +7,7 @@ use App\Livewire\Ledger\RecordsTable;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Notification;
@@ -22,17 +23,19 @@ class TenantIsolationTest extends TestCase
 
     private static User $adminUser;
 
-    private static $tenant1;
+    private static User $tenant2User;
 
-    private static $tenant2;
+    private static Tenant $tenant1;
 
-    private static $tenant1LedgerDefine;
+    private static Tenant $tenant2;
 
-    private static $tenant1Ledger;
+    private static LedgerDefine $tenant1LedgerDefine;
 
-    private static $tenant2LedgerDefine;
+    private static Ledger $tenant1Ledger;
 
-    private static $tenant2Ledger;
+    private static LedgerDefine $tenant2LedgerDefine;
+
+    private static Ledger $tenant2Ledger;
 
     protected function setUp(): void
     {
@@ -54,14 +57,39 @@ class TenantIsolationTest extends TestCase
 
         // Super Adminロールを作成して付与
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web']);
+
+        // Super Adminに必要な全権限を明示的に定義・作成し、ロールに付与する
+        // テスト環境ではシーダーが走らないため、ここで必要な権限をセットアップする
+        $allPermissionNames = [
+            'view_users', 'create_users', 'update_users', 'delete_users', 'manage_users',
+            'view_organizations', 'create_organizations', 'update_organizations', 'delete_organizations', 'manage_organizations',
+            'view_roles', 'create_roles', 'update_roles', 'delete_roles', 'restore_roles', 'force_delete_roles',
+            'view_permissions', 'create_permissions', 'update_permissions', 'delete_permissions', 'manage_permissions',
+            'view_folder_permissions', 'create_folder_permissions', 'update_folder_permissions', 'delete_folder_permissions',
+            'view_ledgers', 'create_ledgers', 'update_ledgers', 'delete_ledgers',
+            'view_ledger_defines', 'create_ledger_defines', 'update_ledger_defines', 'delete_ledger_defines', 'restore_ledger_defines', 'force_delete_ledger_defines',
+            'view_folders', 'create_folders', 'update_folders', 'delete_folders', 'restore_folders', 'force_delete_folders',
+            'manage_auto_links',
+            'notify',
+            'view_activity_logs',
+            'receive_workflow_summary_email',
+            'receive_workflow_action_email',
+        ];
+
+        foreach ($allPermissionNames as $permissionName) {
+            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+        }
+
+        // 作成した全ての権限をSuper Adminロールに同期
+        $superAdminRole->syncPermissions($allPermissionNames);
         self::$adminUser->assignRole($superAdminRole);
 
         // Tenant 1を作成（共有テナントとは別の独立したテナント）
-        self::$tenant1 = \App\Models\Tenant::create(['id' => 'tenant1']);
+        self::$tenant1 = Tenant::create(['id' => 'tenant1']);
         self::$tenant1->domains()->create(['domain' => 'tenant1.localhost']);
 
         // Tenant 2を作成
-        self::$tenant2 = \App\Models\Tenant::create(['id' => 'tenant2']);
+        self::$tenant2 = Tenant::create(['id' => 'tenant2']);
         self::$tenant2->domains()->create(['domain' => 'tenant2.localhost']);
 
         // Tenant 1のデータを作成
@@ -100,6 +128,11 @@ class TenantIsolationTest extends TestCase
             // テナント2のマイグレーション実行
             \Artisan::call('tenants:migrate', ['--tenants' => ['tenant2']]);
 
+            // Tenant2 専用のユーザーとロールを作成
+            self::$tenant2User = User::factory()->create(['email' => 'tenant2user@example.com', 'password' => bcrypt('password')]);
+            $tenant2Role = Role::firstOrCreate(['name' => 'Tenant2User', 'guard_name' => 'web']);
+            self::$tenant2User->assignRole($tenant2Role);
+
             // ルートフォルダを作成
             $folder = Folder::create([
                 'title' => '/',
@@ -107,9 +140,18 @@ class TenantIsolationTest extends TestCase
                 'modifier_id' => self::$adminUser->id,
             ]);
 
-            // フォルダ権限を作成
+            // SuperAdmin には tenant2 のフォルダ権限も付与
             \App\Models\RoleFolderPermission::create([
                 'role_id' => $superAdminRole->id,
+                'folder_id' => $folder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'creator_id' => self::$adminUser->id,
+                'modifier_id' => self::$adminUser->id,
+            ]);
+
+            // Tenant2User には tenant2 のフォルダ権限のみ付与
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $tenant2Role->id,
                 'folder_id' => $folder->id,
                 'permission' => \App\Enums\FolderPermissionType::ADMIN,
                 'creator_id' => self::$adminUser->id,
@@ -157,22 +199,27 @@ class TenantIsolationTest extends TestCase
     }
 
     #[Test]
-    public function user_cannot_update_data_in_another_tenant(): void
+    public function super_admin_can_switch_tenant_context_to_edit_ledger(): void
     {
         $this->actingAs(self::$adminUser);
 
         self::$tenant2->run(function () {
-            $this->expectException(ModelNotFoundException::class);
+            // 例外が発生しないことを確認
             Livewire::test(ModifyColumn::class, ['ledgerId' => self::$tenant1Ledger->id]);
+
+            // 現在のテナントが tenant1 に切り替わっていることをアサート
+            $this->assertEquals('tenant1', tenancy()->tenant->id);
         });
     }
 
     #[Test]
-    public function user_cannot_delete_data_in_another_tenant(): void
+    public function unauthorized_user_cannot_access_resource_in_another_tenant(): void
     {
-        $this->actingAs(self::$adminUser);
+        // tenant2 にのみ権限を持つユーザーでログイン
+        $this->actingAs(self::$tenant2User);
 
         self::$tenant2->run(function () {
+            // tenant1 のリソースにアクセスしようとすると ModelNotFoundException が発生することを期待
             $this->expectException(ModelNotFoundException::class);
             Livewire::test(ModifyColumn::class, ['ledgerId' => self::$tenant1Ledger->id]);
         });
