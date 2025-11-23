@@ -33,7 +33,7 @@ class AttachedFilePreviewTest extends TestCase
             'content_attached' => [
                 0 => [],  // カラムID 0（空）
                 1 => [    // カラムID 1
-                    'test.pdf' => [
+                    'hashed123' => [
                         'meta' => ['content' => 'OCR extracted text'],
                     ],
                 ],
@@ -58,7 +58,7 @@ class AttachedFilePreviewTest extends TestCase
         $attachment = $this->createFinalizedAttachment('vlm', 0.95);
 
         $this->assertTrue($attachment->hasPreviewableText());
-        $this->assertEquals('# VLM Result', $attachment->getPreviewableText());
+        $this->assertEquals('# VLM Result', $attachment->previewable_text);
     }
 
     public function test_previewable_text_returns_ocr_text_with_code_block()
@@ -69,8 +69,8 @@ class AttachedFilePreviewTest extends TestCase
         $attachment = AttachedFile::with('ledger')->find($attachment->id);
 
         $this->assertTrue($attachment->hasPreviewableText());
-        $this->assertStringContainsString('```', $attachment->getPreviewableText());
-        $this->assertStringContainsString('OCR extracted text', $attachment->getPreviewableText());
+        $this->assertStringContainsString('```', $attachment->previewable_text);
+        $this->assertStringContainsString('OCR extracted text', $attachment->previewable_text);
     }
 
     public function test_previewable_text_returns_null_without_eager_loading()
@@ -80,7 +80,7 @@ class AttachedFilePreviewTest extends TestCase
 
         // hasPreviewableTextはfalseを返す（リレーションが読み込まれていないため）
         $this->assertFalse($attachment->hasPreviewableText());
-        $this->assertNull($attachment->getPreviewableText());
+        $this->assertNull($attachment->previewable_text);
     }
 
     public function test_has_previewable_text_returns_false_before_finalization()

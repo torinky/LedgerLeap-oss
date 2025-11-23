@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Rag;
 
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Jobs\Ledger\ProcessVlmExtraction;
-use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerChunk;
@@ -46,7 +46,7 @@ class VlmRagIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function it_dispatches_process_ledger_for_rag_job_after_vlm_extraction_succeeds(): void
+    public function it_dispatches_vectorize_attached_file_job_after_vlm_extraction_succeeds(): void
     {
         // 1. 準備 (Arrange)
         Bus::fake();
@@ -64,10 +64,10 @@ class VlmRagIntegrationTest extends TestCase
         $job->handle(app(VlmClientService::class));
 
         // 3. 検証 (Assert)
-        // ProcessLedgerForRagJobがディスパッチされたことを確認
-        Bus::assertDispatched(ProcessLedgerForRagJob::class, function ($job) use ($ledger) {
-            // dispatchされたジョブが正しいLedgerインスタンスを持っているか確認
-            return $job->ledgerId === $ledger->id;
+        // VectorizeAttachedFileがディスパッチされたことを確認
+        Bus::assertDispatched(VectorizeAttachedFile::class, function ($job) use ($attachedFile) {
+            // dispatchされたジョブが正しいAttachedFile IDを持っているか確認
+            return $job->attachedFileId === $attachedFile->id && $job->source === 'vlm';
         });
     }
 
@@ -80,9 +80,31 @@ class VlmRagIntegrationTest extends TestCase
         Config::set('queue.default', 'sync'); // 同期実行でテスト
 
         $ledger = Ledger::factory()->create();
+
+        // 最初のカラムIDを取得して使用
+        // column_defineはColumnDefineオブジェクトの配列としてキャストされるため、プロパティとしてアクセスする
+        $firstColumnId = $ledger->define->column_define[0]->id ?? 1;
+
         $attachedFile = AttachedFile::factory()
             ->forLedger($ledger)
-            ->create(['path' => 'test.pdf']);
+            ->create([
+                'path' => 'test.pdf',
+                'hashedbasename' => 'test_hash', // ハッシュを固定
+                'column_id' => $firstColumnId,   // 存在するカラムIDを使用
+            ]);
+
+        // content_attachedをこのファイル用に準備
+        // これによりProcessLedgerForRagJobがVLM結果を正しい位置にマージできるようになる
+        $ledger->update([
+            'content_attached' => [
+                $firstColumnId => [
+                    'test_hash' => [
+                        'originalName' => 'test.pdf',
+                        'meta' => ['content' => 'Initial content']
+                    ]
+                ]
+            ]
+        ]);
 
         Storage::disk('local')->put($attachedFile->path, 'dummy content');
 
@@ -97,8 +119,12 @@ class VlmRagIntegrationTest extends TestCase
         ]);
 
         // Embeddingが生成されたことを確認
-        $chunk = LedgerChunk::where('ledger_id', $ledger->id)->first();
-        $this->assertNotNull($chunk);
+        // ファクトリ等で生成された他のチャンクと区別するため、VLMコンテンツを含むものを検索
+        $chunk = LedgerChunk::where('ledger_id', $ledger->id)
+            ->where('chunk_text', 'like', '%VLM Markdown Content%')
+            ->first();
+
+        $this->assertNotNull($chunk, 'VLM content chunk was not found.');
         $this->assertNotNull($chunk->embedding);
         $this->assertIsArray($chunk->embedding);
 

@@ -456,19 +456,15 @@ class SearchApiTest extends TestCase
     {
         // 最初のページを取得（offset=0）
         $firstPageResponse = $this->actingAs(self::$adminUser, 'sanctum')
-            ->getJson('/api/v1/search?q=Ledger&limit=1&offset=0');
+            ->getJson('http://localhost/api/v1/search?q=Ledger&limit=1&offset=0');
 
         $firstPageResponse->assertStatus(200)
             ->assertJsonCount(1, 'data');
         $firstPageId = $firstPageResponse->json('data.0.id');
 
-        // アプリケーションをリフレッシュして状態をクリア
-        $this->refreshApplication();
-
-        // 2ページ目を取得（offset=1） - 新しいリクエストとして
-        $url = 'http://localhost/api/v1/search?q=Ledger&limit=1&offset=1';
+        // 2ページ目を取得（offset=1）
         $secondPageResponse = $this->actingAs(self::$adminUser, 'sanctum')
-            ->json('GET', $url);
+            ->getJson('http://localhost/api/v1/search?q=Ledger&limit=1&offset=1');
 
         $secondPageResponse->assertStatus(200)
             ->assertJsonCount(1, 'data');
