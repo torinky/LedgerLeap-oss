@@ -58,6 +58,13 @@ class PrefillParametersTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => Role::findByName('test-creator-role', 'web')->id,
+            'folder_id' => $this->folder->id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => $this->user->id,
+        ]);
+
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,

@@ -38,6 +38,12 @@ class ModifyColumnTest extends TestCase
         $this->actingAs($this->user);
         tenancy()->initialize($this->tenant);
 
+        // 権限設定
+        $role = \App\Models\Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
+        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']));
+        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_ledgers', 'guard_name' => 'web']));
+        $this->user->assignRole($role);
+
         // ファイルカラムを持つ台帳定義を作成
         $fileColumn = new ColumnDefine((object) [
             'id' => 0, // 1から0に変更
@@ -54,6 +60,27 @@ class ModifyColumnTest extends TestCase
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->tenant->id,
             'column_define' => [$fileColumn],
+        ]);
+
+        // フォルダ権限設定
+        if ($this->ledgerDefine->folder) {
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $this->ledgerDefine->folder_id,
+                'permission' => \App\Enums\FolderPermissionType::WRITE,
+                'modifier_id' => $this->user->id,
+            ]);
+        }
+    }
+
+    protected function assignFolderPermission(\App\Models\Folder $folder): void
+    {
+        $role = \App\Models\Role::findByName('test-editor-role', 'web');
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => $this->user->id,
         ]);
     }
 
@@ -153,6 +180,9 @@ class ModifyColumnTest extends TestCase
                 ]),
             ],
         ]);
+        if ($multiColumnDefine->folder) {
+            $this->assignFolderPermission($multiColumnDefine->folder);
+        }
 
         $hashedBasename = 'multi_col_test.jpg';
         $originalFilename = 'multi_col_test.jpg';
@@ -231,6 +261,9 @@ class ModifyColumnTest extends TestCase
                 ]),
             ],
         ]);
+        if ($sparseColumnDefine->folder) {
+            $this->assignFolderPermission($sparseColumnDefine->folder);
+        }
 
         $hashedBasename = 'sparse_col_test.jpg';
         $originalFilename = 'sparse_col_test.jpg';

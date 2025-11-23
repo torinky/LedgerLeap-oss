@@ -61,11 +61,22 @@ class CreateColumnTest extends TestCase
         parent::tearDown();
     }
 
+    protected function assignFolderPermission(Folder $folder): void
+    {
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => Role::findByName('test-creator-role', 'web')->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => $this->user->id,
+        ]);
+    }
+
     #[Test]
     public function it_creates_ledger_with_correct_tenant_id()
     {
         // 1. テストデータの準備
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+        $this->assignFolderPermission($folder);
 
         // ColumnDefineオブジェクトを作成
         $columnDefineArray = [
@@ -116,6 +127,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => true, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -150,6 +162,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -183,6 +196,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -217,6 +231,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -251,6 +266,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -288,6 +304,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -322,6 +339,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
@@ -358,6 +376,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             [
@@ -408,6 +427,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             [
@@ -450,6 +470,7 @@ class CreateColumnTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
+        $this->assignFolderPermission($folder);
 
         $columnDefineArray = [
             [

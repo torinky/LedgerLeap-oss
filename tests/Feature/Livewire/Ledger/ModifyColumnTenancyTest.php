@@ -41,9 +41,10 @@ class ModifyColumnTenancyTest extends TestCase
         $this->user = User::factory()->create();
 
         // 権限を作成し、ユーザーに付与
-        Permission::findOrCreate('edit_ledgers', 'web');
+        Permission::findOrCreate('view_ledgers', 'web');
+        Permission::findOrCreate('update_ledgers', 'web');
         $role = Role::findOrCreate('test-editor-role', 'web');
-        $role->givePermissionTo('edit_ledgers');
+        $role->givePermissionTo(['view_ledgers', 'update_ledgers']);
         $this->user->assignRole($role);
 
         // ユーザーを認証
@@ -51,6 +52,13 @@ class ModifyColumnTenancyTest extends TestCase
 
         // テストデータの準備
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => $this->user->id,
+        ]);
 
         $columnDefine = new ColumnDefine((object) [
             'id' => 1,

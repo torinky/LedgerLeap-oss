@@ -25,10 +25,27 @@ class LedgerColumnValidationTest extends TestCase
         tenancy()->initialize($this->tenant);
         // ユーザーを作成し、すべてのテストで認証済み状態にする
         $user = User::factory()->create();
+        
+        // 権限設定
+        $role = \App\Models\Role::firstOrCreate(['name' => 'test-validator-role', 'guard_name' => 'web']);
+        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'create_ledgers', 'guard_name' => 'web']));
+        $user->assignRole($role);
+        
         $this->actingAs($user);
 
         // Spatieの権限キャッシュをクリア
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    protected function assignFolderPermission(\App\Models\Folder $folder): void
+    {
+        $role = \App\Models\Role::findByName('test-validator-role', 'web');
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => auth()->id(),
+        ]);
     }
 
     protected function tearDown(): void
@@ -58,6 +75,9 @@ class LedgerColumnValidationTest extends TestCase
                 ]),
             ],
         ]);
+        if ($ledgerDefine->folder) {
+            $this->assignFolderPermission($ledgerDefine->folder);
+        }
 
         // 準備: 既存データを作成
         $content = [
@@ -94,6 +114,9 @@ class LedgerColumnValidationTest extends TestCase
                 ]),
             ],
         ]);
+        if ($ledgerDefine->folder) {
+            $this->assignFolderPermission($ledgerDefine->folder);
+        }
 
         // 準備: 既存データを作成
         $content = [
@@ -141,6 +164,9 @@ class LedgerColumnValidationTest extends TestCase
                 ]),
             ],
         ]);
+        if ($numberLedgerDefine->folder) {
+            $this->assignFolderPermission($numberLedgerDefine->folder);
+        }
 
         // --- 成功ケース ---
         Livewire::test(CreateColumn::class, ['ledgerDefineId' => $numberLedgerDefine->id])
@@ -205,6 +231,14 @@ class LedgerColumnValidationTest extends TestCase
                 ],
             ]);
         });
+
+        // Assign permission for ledgerDefine2's folder
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => \App\Models\Role::findByName('test-validator-role', 'web')->id,
+            'folder_id' => $ledgerDefine2->folder_id,
+            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'modifier_id' => auth()->id(),
+        ]);
 
         // テナント1で既存データを作成
         $tenant1->run(function () use ($ledgerDefine1) {
