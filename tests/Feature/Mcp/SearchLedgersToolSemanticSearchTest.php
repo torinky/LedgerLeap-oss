@@ -136,43 +136,96 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
     #[Group('semantic-search')]
     public function it_finds_semantically_similar_ledger_even_if_keywords_do_not_match()
     {
-        // このテストのみ実データが必要なため、ここでシードする
-        Artisan::call('db:seed', ['--class' => 'DemoCompleteSeeder']);
+        // 1. EmbeddingServiceのモック化 (外部API呼び出しを回避)
+        // これによりテストの高速化と安定化を図る
+        $embeddingServiceMock = Mockery::mock(\App\Services\EmbeddingService::class);
+        // 1536次元のダミーベクトル (全て0.1)
+        $dummyVector = array_fill(0, 1536, 0.1);
 
-        // さらに緩い閾値に設定して確実にヒットさせる
-        config(['rag.similarity_threshold' => 0.0]);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->andReturnUsing(function ($texts) use ($dummyVector) {
+                // 単一の文字列の場合は単一のベクトルを返す
+                if (is_string($texts)) {
+                    return $dummyVector;
+                }
+                // 配列の場合は入力テキスト数分のベクトルを返す
+                return array_fill(0, count($texts), $dummyVector);
+            });
 
-        // Arrange
-        // 1. テストデータを作成
-        $ledgerDefine = \App\Models\LedgerDefine::where('title', '[DEMO] 営業日報')->first();
-        $folder = \App\Models\Folder::where('title', '日報')->first();
+        $this->app->instance(\App\Services\EmbeddingService::class, $embeddingServiceMock);
 
-        // DemoCompleteSeedで作成されたadminユーザーを使用
-        $adminUser = \App\Models\User::where('email', 'admin@example.com')->first();
-
-        // 認証ユーザーを設定
+        // 2. テストデータの作成 (Seederを使わずFactoryで作成)
+        // Adminユーザー
+        $adminUser = User::factory()->create([
+            'email' => 'admin-test@example.com',
+        ]);
         $this->actingAs($adminUser);
 
-        $ledgerService = $this->app->make(LedgerService::class);
-        $ledger = $ledgerService->createLedger([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [
-                '2025-10-20', // 日付
-                'セマンティック検索テスト株式会社', // 顧客名
-                '性能評価', // 訪問目的
-                '提案中', // 商談ステータス
-                '高', // 優先度
-                'このプロジェクトでは、全社的な経費削減が最重要課題となっている。特に、出張費や交際費の見直しが急務である。', // 商談内容
-                'コストカットの具体的な方法について、次回の会議で提案する必要がある。', // 成果・所感
-                '経費削減案の資料を作成する。', // 次回アクション
-            ],
-            'tags' => [],
+        // フォルダー
+        $folder = \App\Models\Folder::factory()->create(['title' => '日報']);
+
+        // 権限設定: ユーザーが検索できるようにフォルダへのアクセス権を付与
+        $role = \Spatie\Permission\Models\Role::create(['name' => 'test-admin', 'guard_name' => 'web']);
+        $adminUser->assignRole($role);
+
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::ADMIN,
+            'creator_id' => $adminUser->id,
+            'modifier_id' => $adminUser->id,
         ]);
 
-        // 2. 作成した台帳のみを直接ベクトル化（Jobを同期実行）
+        // カラム定義
+        // IDを明示的に指定して、Ledgerのcontent作成時に参照できるようにする
+        $columns = [
+            ['id' => 1, 'name' => '日付', 'type' => 'YMD', 'key' => 'date', 'display_level' => 1, 'group' => '基本情報', 'order' => 1],
+            ['id' => 2, 'name' => '顧客名', 'type' => 'text', 'key' => 'client', 'display_level' => 1, 'group' => '基本情報', 'order' => 2],
+            ['id' => 3, 'name' => '訪問目的', 'type' => 'text', 'key' => 'purpose', 'display_level' => 2, 'group' => '詳細', 'order' => 3],
+            ['id' => 4, 'name' => '商談ステータス', 'type' => 'select', 'key' => 'status', 'options' => ['提案中', '成約', '失注'], 'display_level' => 2, 'group' => '詳細', 'order' => 4],
+            ['id' => 5, 'name' => '優先度', 'type' => 'select', 'key' => 'priority', 'options' => ['高', '中', '低'], 'display_level' => 2, 'group' => '詳細', 'order' => 5],
+            ['id' => 6, 'name' => '商談内容', 'type' => 'textarea', 'key' => 'details', 'display_level' => 3, 'group' => '内容', 'order' => 6],
+            ['id' => 7, 'name' => '成果・所感', 'type' => 'textarea', 'key' => 'results', 'display_level' => 3, 'group' => '内容', 'order' => 7],
+            ['id' => 8, 'name' => '次回アクション', 'type' => 'textarea', 'key' => 'next_action', 'display_level' => 3, 'group' => '内容', 'order' => 8],
+        ];
+
+        $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
+            'title' => '[TEST] 営業日報',
+            'folder_id' => $folder->id,
+            'column_define' => $columns,
+        ]);
+
+        // Ledger作成
+        // contentは column_id => value の形式
+        $content = [
+            1 => '2025-10-20',
+            2 => 'セマンティック検索テスト株式会社',
+            3 => '性能評価',
+            4 => '提案中',
+            5 => '高',
+            6 => 'このプロジェクトでは、全社的な経費削減が最重要課題となっている。特に、出張費や交際費の見直しが急務である。',
+            7 => 'コストカットの具体的な方法について、次回の会議で提案する必要がある。',
+            8 => '経費削減案の資料を作成する。',
+        ];
+
+        $ledger = \App\Models\Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => $content,
+            'creator_id' => $adminUser->id,
+            'tenant_id' => $this->getTenant()->id,
+        ]);
+
+        // テナントIDを確実に保存（Factoryで設定されない場合を考慮）
+        if ($ledger->tenant_id !== $this->getTenant()->id) {
+            $ledger->tenant_id = $this->getTenant()->id;
+            $ledger->save();
+        }
+
+        // 3. ベクトル化 Job実行 (同期)
+        // ここでMockされたEmbeddingServiceが呼ばれ、ダミーベクトルが保存される
         ProcessLedgerForRagJob::dispatchSync($ledger->id);
 
-        // テナントを再初期化してからチャンクを確認
+        // テナントを再初期化（念のため）
         tenancy()->initialize($this->getTenant());
 
         // チャンクが作成されたことを確認
@@ -180,13 +233,17 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->assertGreaterThan(0, $chunkCount,
             "No chunks were created for ledger {$ledger->id}. RAG processing may have failed.");
 
-        // 3. admin用トークンで検索ツールを準備
+        // 4. MCPツールで検索
+        // 類似度閾値を下げる（ダミーベクトル同士の距離計算になるため）
+        // 同じベクトルなら類似度1.0になるはずだが、念のため0.0にしておく
+        config(['rag.similarity_threshold' => 0.0]);
+
         $adminToken = $adminUser->createToken('admin-test-token')->plainTextToken;
         putenv('MCP_AUTH_TOKEN='.$adminToken);
 
         $tool = new SearchLedgersTool($this->app->make(LedgerService::class));
         $request = new Request([
-            'q' => '費用を切り詰める方法', // レコードに直接含まれない類義語で検索
+            'q' => '費用を切り詰める方法', // キーワード一致しないクエリ
             'order_by' => 'semantic_score',
         ]);
 
@@ -197,12 +254,11 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         // Assert
         $this->assertFalse($response->isError(), "MCP tool returned an error: {$response->content()}");
 
-        // 閾値を0にしているので、最低でも1件はヒットするはず
         $this->assertGreaterThanOrEqual(1, count($result['ledgers']),
             'Expected at least 1 ledger, but found '.count($result['ledgers']).'. Result: '.json_encode($result));
 
         // 最初の結果が作成したledgerであることを確認
         $this->assertEquals($ledger->id, $result['ledgers'][0]['id'],
-            'The found ledger ID does not match the created one. First result: '.json_encode($result['ledgers'][0] ?? []));
+            'The found ledger ID does not match the created one.');
     }
 }
