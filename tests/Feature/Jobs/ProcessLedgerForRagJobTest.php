@@ -38,9 +38,8 @@ class ProcessLedgerForRagJobTest extends TestCase
             ],
         ]);
 
-        $ledger = Ledger::factory()->create([
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'tenant_id' => tenant('id'),
-            'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
             'content' => [0 => '', 1 => '田中太郎'],
         ])->load('define');
@@ -82,12 +81,12 @@ class ProcessLedgerForRagJobTest extends TestCase
         // Arrange
         config(['rag.enabled' => false]);
 
-        $ledger = Ledger::factory()->create(['tenant_id' => tenant('id')]);
+        $ledger = Ledger::factory()->create(['tenant_id' => tenant('id')])->load('define');
         
         $file = AttachedFile::create([
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,
-            'ledger_define_id' => $ledger->ledger_define->id, // Use ledger->ledger_define->id
+            'ledger_define_id' => $ledger->define->id, // Use ledger->define->id
             'column_id' => 1,
             'filename' => 'test.pdf',
             'hashedbasename' => 'test.pdf',
@@ -142,16 +141,15 @@ class ProcessLedgerForRagJobTest extends TestCase
             ],
         ]);
 
-        $ledger = Ledger::factory()->create([
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create([
             'tenant_id' => tenant('id'),
-            'ledger_define_id' => $ledgerDefine->id,
             'content' => [0 => 'Content for ID 0', 1 => 'Ledger Body Text'],
-        ]);
+        ])->load('define');
         
         $baseFileData = [
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,
-            'ledger_define_id' => $ledger->ledger_define_id,
+            'ledger_define_id' => $ledgerDefine->id,
             'column_id' => 1,
             'mime' => 'application/pdf',
             'path' => 'path/to/file',
@@ -232,12 +230,12 @@ class ProcessLedgerForRagJobTest extends TestCase
                     ]
                 ]
             ]
-        ]);
+        ])->load('define');
         
         $file = AttachedFile::create([
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,
-            'ledger_define_id' => $ledger->ledger_define_id,
+            'ledger_define_id' => $ledger->define->id,
             'column_id' => 1,
             'filename' => 'test.pdf',
             'hashedbasename' => 'test.pdf',
