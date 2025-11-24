@@ -11,6 +11,7 @@ class LedgerChunk extends Model
         'ledger_id',
         'ledger_define_id',
         'folder_id',
+        'attached_file_id',
         'chunk_index',
         'chunk_text',
         'embedding',
@@ -23,6 +24,11 @@ class LedgerChunk extends Model
     public function ledger(): BelongsTo
     {
         return $this->belongsTo(Ledger::class);
+    }
+
+    public function attachedFile(): BelongsTo
+    {
+        return $this->belongsTo(AttachedFile::class);
     }
 
     public function ledgerDefine(): BelongsTo

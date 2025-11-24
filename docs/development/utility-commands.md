@@ -49,6 +49,32 @@
 
 -   **目的:** ワークフローの未処理タスク（点検・承認待ち）がある担当者に対して、タスクの件数を知らせる集約通知を送信します。
 -   **実行例（手動）:**
+## 4. RAG / ベクトル検索
+
+### `rag:chunk-existing-ledgers`
+
+-   **目的:** 既存の台帳データおよび添付ファイルに対して、RAG（検索拡張生成）用のベクトルインデックス（チャンク）を生成・再構築します。埋め込みモデルの変更時や、検索精度の改善（メタデータ注入など）を適用する際に使用します。
+-   **コマンド形式:**
     ```bash
-    ./vendor/bin/sail artisan workflow:send-summary
+    php artisan rag:chunk-existing-ledgers {--target=all} {--force} {--limit=} {--only-missing}
     ```
+-   **オプション:**
+    *   `--target`: 処理対象を指定します（デフォルト: `all`）。
+        *   `all`: 台帳本体と添付ファイルの両方を処理。
+        *   `ledger`: 台帳本体（カラム値など）のみ処理。
+        *   `files`: 添付ファイル（OCR/VLM結果）のみ処理。
+    *   `--force`: 既存のチャンクがある場合でも、強制的に削除して再生成します。
+    *   `--limit`: 処理する台帳の最大数を指定します（テスト用）。
+    *   `--only-missing`: チャンクがまだ存在しない台帳のみを処理します。
+-   **実行例:**
+    ```bash
+    # 全データのチャンクを強制的に再構築（推奨: モデル変更時など）
+    ./vendor/bin/sail artisan rag:chunk-existing-ledgers --target=all --force
+
+    # 添付ファイルのみ再処理（OCRエンジンの更新後など）
+    ./vendor/bin/sail artisan rag:chunk-existing-ledgers --target=files --force
+
+    # 未処理のデータのみチャンク生成（中断後の再開など）
+    ./vendor/bin/sail artisan rag:chunk-existing-ledgers --only-missing
+    ```
+

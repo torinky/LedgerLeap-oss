@@ -7,6 +7,7 @@ use App\Jobs\Ledger\GenerateThumbnail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
@@ -58,6 +59,11 @@ class AttachedFile extends Model
     public function define(): BelongsTo
     {
         return $this->belongsTo(LedgerDefine::class, 'ledger_define_id');
+    }
+
+    public function ledgerChunks(): HasMany
+    {
+        return $this->hasMany(LedgerChunk::class);
     }
 
     public function optimize()

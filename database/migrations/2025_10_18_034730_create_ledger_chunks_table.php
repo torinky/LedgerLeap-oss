@@ -15,6 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('ledger_id')->index();
             $table->unsignedBigInteger('ledger_define_id')->index();
             $table->unsignedBigInteger('folder_id')->index();
+            $table->unsignedBigInteger('attached_file_id')->nullable()->index()->comment('Source attached file ID (NULL if from ledger content)');
 
             $table->unsignedInteger('chunk_index');
             $table->text('chunk_text');

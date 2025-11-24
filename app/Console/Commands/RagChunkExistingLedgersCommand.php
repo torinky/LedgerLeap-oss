@@ -18,7 +18,8 @@ class RagChunkExistingLedgersCommand extends Command
                             {--limit= : Maximum number of ledgers to process}
                             {--offset=0 : Number of ledgers to skip}
                             {--force : Force re-chunk all ledgers (delete existing chunks)}
-                            {--only-missing : Only process ledgers without chunks}';
+                            {--only-missing : Only process ledgers without chunks}
+                            {--target=all : Target to process (all, ledger, files)}';
 
     /**
      * The console command description.
@@ -46,6 +47,13 @@ class RagChunkExistingLedgersCommand extends Command
         $offset = (int) $this->option('offset');
         $force = $this->option('force');
         $onlyMissing = $this->option('only-missing');
+        $target = $this->option('target');
+
+        if (! in_array($target, ['all', 'ledger', 'files'])) {
+            $this->error('Invalid target option. Use all, ledger, or files.');
+
+            return Command::FAILURE;
+        }
 
         // Build query
         $query = Ledger::query();
@@ -62,8 +70,10 @@ class RagChunkExistingLedgersCommand extends Command
             $this->info('Mode: Processing all ledgers');
         }
 
+        $this->info("Target: {$target}");
+
         if ($force && ! $onlyMissing) {
-            $this->warn('Force mode: All existing chunks will be deleted and recreated');
+            $this->warn('Force mode: Existing chunks for the target will be deleted and recreated by the job');
         }
 
         // Count total
@@ -115,24 +125,45 @@ class RagChunkExistingLedgersCommand extends Command
         $processed = 0;
         $failed = 0;
         $skipped = 0;
+        $jobsDispatched = 0;
 
-        $query->chunk(100, function ($ledgers) use (&$processed, &$failed, &$skipped, $force, $progressBar) {
+        $query->chunk(100, function ($ledgers) use (&$processed, &$failed, &$skipped, &$jobsDispatched, $force, $progressBar, $target) {
             foreach ($ledgers as $ledger) {
                 try {
-                    // Check if chunks already exist
-                    $existingChunks = DB::table('ledger_chunks')
-                        ->where('ledger_id', $ledger->id)
-                        ->count();
+                    $shouldProcess = $force;
 
-                    if ($existingChunks > 0 && ! $force) {
+                    if (! $shouldProcess) {
+                        // Check if chunks already exist (basic check)
+                        $existingChunks = DB::table('ledger_chunks')
+                            ->where('ledger_id', $ledger->id)
+                            ->count();
+                        if ($existingChunks === 0) {
+                            $shouldProcess = true;
+                        }
+                    }
+
+                    if (! $shouldProcess) {
                         $skipped++;
                         $progressBar->advance();
 
                         continue;
                     }
 
-                    // Dispatch job
-                    ProcessLedgerForRagJob::dispatch($ledger);
+                    // Dispatch for Ledger Body
+                    if ($target === 'all' || $target === 'ledger') {
+                        ProcessLedgerForRagJob::dispatch($ledger->id);
+                        $jobsDispatched++;
+                    }
+
+                    // Dispatch for Attached Files
+                    if ($target === 'all' || $target === 'files') {
+                        $attachedFiles = $ledger->attachedFiles()->get(); // Ensure relationships are loaded if not already
+                        foreach ($attachedFiles as $file) {
+                            ProcessLedgerForRagJob::dispatch($ledger->id, $file->id);
+                            $jobsDispatched++;
+                        }
+                    }
+
                     $processed++;
                 } catch (\Exception $e) {
                     $failed++;
@@ -152,8 +183,9 @@ class RagChunkExistingLedgersCommand extends Command
         $this->table(
             ['Status', 'Count'],
             [
-                ['Jobs Dispatched', $processed],
-                ['Already Chunked (Skipped)', $skipped],
+                ['Ledgers Processed', $processed],
+                ['Jobs Dispatched', $jobsDispatched],
+                ['Skipped', $skipped],
                 ['Failed', $failed],
             ]
         );

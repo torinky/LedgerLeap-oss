@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Ledger;
+use App\Services\Embedding\RuriChunkFormatter;
 use App\Services\EmbeddingService;
 use Illuminate\Support\Facades\DB;
 
@@ -46,7 +47,10 @@ class LedgerObserver
 
         if (config('queue.default') === 'sync') {
             // 同期実行の場合は直接実行（tenancyコンテキストを維持）
-            (new ProcessLedgerForRagJob($ledger->id))->handle(app(EmbeddingService::class));
+            (new ProcessLedgerForRagJob($ledger->id))->handle(
+                app(EmbeddingService::class),
+                app(RuriChunkFormatter::class)
+            );
         } else {
             // 非同期の場合は通常通りdispatch
             // QueueTenancyBootstrapperがtenancyを処理

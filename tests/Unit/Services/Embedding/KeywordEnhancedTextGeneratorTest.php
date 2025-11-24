@@ -23,7 +23,7 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         $text = '株式会社ABC商事の見積書です。株式会社ABC商事は東京都にあります。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 2,
         ]);
 
@@ -42,7 +42,7 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         $text = '製品番号ABC-12345の在庫を確認してください。製品番号ABC-12345は人気商品です。ABC-12345が重要です。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 2,
         ]);
 
@@ -62,7 +62,7 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         $text = '株式会社ABC商事の見積書です。東京都にあります。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 2,
         ]);
 
@@ -151,7 +151,7 @@ class KeywordEnhancedTextGeneratorTest extends TestCase
         $text = '東京都中央区日本橋の営業部です。東京都中央区日本橋の営業部は有名です。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 2,
         ]);
 
@@ -256,7 +256,7 @@ TEXT;
         $text = 'このことは重要なことです。このことは大切なことです。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 1, // '重要'と'大切'をキーワードとして残すため頻度を1に
         ]);
 
@@ -274,7 +274,7 @@ TEXT;
         $text = '株式会社サンプル商事の見積書です。株式会社サンプル商事は東京にあります。';
 
         // Act
-        $keywords = $this->generator->extractKeywordsOnly($text, [
+        $keywords = $this->generator->extract($text, [
             'min_frequency' => 1, // '見積書'と'東京'をキーワードとして残すため頻度を1に
             'stopwords' => ['株式会社サンプル商事'], // テナント固有の除外語
         ]);

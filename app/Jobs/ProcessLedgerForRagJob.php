@@ -2,9 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
-use App\Services\Embedding\KeywordEnhancedTextGenerator;
+use App\Services\Embedding\RuriChunkFormatter;
 use App\Services\EmbeddingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,27 +20,25 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     *
+     * @param int $ledgerId
+     * @param int|null $attachedFileId If null, process the ledger body. If set, process only the specific file.
      */
     public function __construct(
-        public int $ledgerId
+        public int $ledgerId,
+        public ?int $attachedFileId = null
     ) {}
 
     /**
      * Execute the job.
      */
-    public function handle(EmbeddingService $embeddingService, ?KeywordEnhancedTextGenerator $keywordGenerator = null): void
+    public function handle(EmbeddingService $embeddingService, RuriChunkFormatter $formatter): void
     {
         if (! config('rag.enabled', false)) {
             return;
         }
 
-        // KeywordEnhancedTextGeneratorがnullの場合は新規作成（テスト互換性）
-        $keywordGenerator = $keywordGenerator ?? new KeywordEnhancedTextGenerator;
-
         $logChannel = config('rag.log_channel', 'stack');
-        $startTime = microtime(true);
-
-        // QueueTenancyBootstrapperが自動的にtenancyを初期化済み
         $ledger = Ledger::find($this->ledgerId);
 
         if (! $ledger) {
@@ -50,114 +49,148 @@ class ProcessLedgerForRagJob implements ShouldQueue
             return;
         }
 
-        Log::channel($logChannel)->info('Start chunking process for ledger', [
-            'ledger_id' => $ledger->id,
-            'tenant_id' => $ledger->tenant_id ?? 'N/A',
-        ]);
-
-        // ★★★ STEP 1: データ準備フェーズ ★★★
-        $this->updateContentAttachedWithVlmResult($ledger);
-
-        // 1. Delete existing chunks to ensure data consistency
-        DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->delete();
-
-        // 2. Build structured Markdown from ledger
-        try {
-            $markdown = $this->buildMarkdownFromLedger($ledger);
-            $generationTime = (microtime(true) - $startTime) * 1000;
-
-            if ($generationTime > 1000) {
-                Log::channel($logChannel)->warning('Markdown generation took too long', [
-                    'ledger_id' => $ledger->id,
-                    'generation_time_ms' => $generationTime,
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::channel($logChannel)->error('Markdown generation failed', [
-                'ledger_id' => $ledger->id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-
-        if (empty($markdown)) {
-            Log::channel($logChannel)->info('No content to chunk for ledger', [
-                'ledger_id' => $ledger->id,
-            ]);
-
-            return;
-        }
-
-        // 3. Chunk the Markdown text
-        $chunks = $this->chunkText($markdown);
-
-        if (empty($chunks)) {
-            Log::channel($logChannel)->info('No chunks generated for ledger', [
-                'ledger_id' => $ledger->id,
-            ]);
-
-            return;
-        }
-
-        // 4. Generate embeddings and save to DB
-        try {
-            // Phase 2.5: キーワード拡張を適用
-            $chunkTexts = array_column($chunks, 'text');
-            $enhancedChunkTexts = array_map(
-                fn ($text) => $keywordGenerator->generateEnhancedText($text),
-                $chunkTexts
-            );
-
-            $embeddings = $embeddingService->embed($enhancedChunkTexts, 'passage');
-
-            $chunkData = [];
-            $now = now();
-
-            foreach ($chunks as $index => $chunk) {
-                if (! isset($embeddings[$index])) {
-                    continue;
-                }
-
-                $chunkData[] = [
-                    'ledger_id' => $ledger->id,
-                    'ledger_define_id' => $ledger->ledger_define_id,
-                    'folder_id' => $ledger->define->folder_id,
-                    'chunk_index' => $index,
-                    'chunk_text' => $chunk['text'],
-                    'embedding' => json_encode($embeddings[$index]),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            DB::table('ledger_chunks')->insert($chunkData);
-
-            Log::channel($logChannel)->info('Chunking process completed for ledger', [
-                'ledger_id' => $ledger->id,
-                'chunks_created' => count($chunkData),
-                'markdown_length' => mb_strlen($markdown),
-                'total_time_ms' => (microtime(true) - $startTime) * 1000,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::channel($logChannel)->error('Chunking process failed for ledger', [
-                'ledger_id' => $ledger->id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+        if ($this->attachedFileId) {
+            $this->processAttachedFile($ledger, $this->attachedFileId, $formatter, $embeddingService, $logChannel);
+        } else {
+            $this->processLedgerBody($ledger, $formatter, $embeddingService, $logChannel);
         }
     }
 
     /**
-     * Build structured Markdown text from ledger and its definition.
+     * Process a specific attached file.
      */
-    private function buildMarkdownFromLedger(Ledger $ledger): string
+    private function processAttachedFile(Ledger $ledger, int $attachedFileId, RuriChunkFormatter $formatter, EmbeddingService $embeddingService, string $logChannel): void
+    {
+        $file = AttachedFile::find($attachedFileId);
+
+        if (! $file) {
+            Log::channel($logChannel)->warning('Attached file not found', ['id' => $attachedFileId]);
+            return;
+        }
+
+        // Load ledger relationship for previewable_text accessor
+        $file->load('ledger');
+
+        // Check if there is content to process (VLM result or OCR text)
+        $content = $file->vlm_markdown;
+        // Fallback to OCR/Tika if VLM is empty? For now, let's stick to vlm_markdown as primary RAG source.
+        // If we want to support OCR fallback, we should get it here.
+        if (empty($content)) {
+             // Try to get previewable text (OCR/Tika)
+             $content = $file->previewable_text;
+        }
+
+        // 1. Delete existing chunks for this file
+        DB::table('ledger_chunks')
+            ->where('attached_file_id', $attachedFileId)
+            ->delete();
+
+        if (empty($content)) {
+            Log::channel($logChannel)->info('No content to chunk for attached file', ['id' => $attachedFileId]);
+            return;
+        }
+
+        // 2. Format text with metadata
+        $formattedText = $formatter->formatForAttachedFile($file, $content);
+
+        // 3. Chunk and Embed
+        $this->generateAndSaveChunks($ledger, $formattedText, $embeddingService, $logChannel, $attachedFileId);
+    }
+
+    /**
+     * Process the ledger body (excluding attachments).
+     */
+    private function processLedgerBody(Ledger $ledger, RuriChunkFormatter $formatter, EmbeddingService $embeddingService, string $logChannel): void
+    {
+        // 1. Delete existing chunks for ledger body (where attached_file_id is NULL)
+        DB::table('ledger_chunks')
+            ->where('ledger_id', $ledger->id)
+            ->whereNull('attached_file_id')
+            ->delete();
+
+        // 2. Generate markdown for ledger body
+        $markdown = $this->buildMarkdownFromLedgerBody($ledger);
+
+        if (empty($markdown)) {
+            Log::channel($logChannel)->info('No content to chunk for ledger body', ['ledger_id' => $ledger->id]);
+            return;
+        }
+
+        // 3. Format text with metadata
+        $formattedText = $formatter->formatForLedger($ledger, $markdown);
+
+        // 4. Chunk and Embed
+        $this->generateAndSaveChunks($ledger, $formattedText, $embeddingService, $logChannel, null);
+    }
+
+    /**
+     * Common logic for chunking, embedding, and saving.
+     */
+    private function generateAndSaveChunks(Ledger $ledger, string $text, EmbeddingService $embeddingService, string $logChannel, ?int $attachedFileId): void
+    {
+        $startTime = microtime(true);
+
+        // Chunk the text
+        $chunks = $this->chunkText($text);
+
+        if (empty($chunks)) {
+            return;
+        }
+
+        // Generate embeddings (Ruri expects 'passage' type for documents)
+        $chunkTexts = array_column($chunks, 'text');
+        try {
+            $embeddings = $embeddingService->embed($chunkTexts, 'passage');
+        } catch (\Exception $e) {
+            Log::channel($logChannel)->error('Embedding generation failed', [
+                'ledger_id' => $ledger->id,
+                'attached_file_id' => $attachedFileId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        // Prepare data for insertion
+        $chunkData = [];
+        $now = now();
+
+        foreach ($chunks as $index => $chunk) {
+            if (! isset($embeddings[$index])) {
+                continue;
+            }
+
+            $chunkData[] = [
+                'ledger_id' => $ledger->id,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'folder_id' => $ledger->define->folder_id,
+                'attached_file_id' => $attachedFileId,
+                'chunk_index' => $index,
+                'chunk_text' => $chunk['text'], // This now includes metadata header
+                'embedding' => json_encode($embeddings[$index]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // Bulk insert
+        DB::table('ledger_chunks')->insert($chunkData);
+
+        Log::channel($logChannel)->info('Chunking process completed', [
+            'ledger_id' => $ledger->id,
+            'attached_file_id' => $attachedFileId,
+            'chunks_created' => count($chunkData),
+            'text_length' => mb_strlen($text),
+            'total_time_ms' => (microtime(true) - $startTime) * 1000,
+        ]);
+    }
+
+    /**
+     * Build structured Markdown text from ledger body ONLY.
+     */
+    private function buildMarkdownFromLedgerBody(Ledger $ledger): string
     {
         $lines = [];
-        $logChannel = config('rag.log_channel', 'stack');
-
         $ledgerDefine = $ledger->define;
-        $content = $ledger->content ?? [];
 
         // 1. Add metadata header
         if (! empty($ledgerDefine->title)) {
@@ -185,7 +218,6 @@ class ProcessLedgerForRagJob implements ShouldQueue
         $groupedColumns = $columnDefines->groupBy('group');
 
         foreach ($groupedColumns as $groupName => $columns) {
-            // Handle empty group name as "その他"
             $displayGroupName = ! empty($groupName) ? $groupName : 'その他';
             $lines[] = "## {$displayGroupName}";
             $lines[] = '';
@@ -197,8 +229,6 @@ class ProcessLedgerForRagJob implements ShouldQueue
                     continue;
                 }
 
-                // display_levelに応じてヘッダーレベルを調整
-                // level 1 → ###, level 2 → ####, level 3 → #####
                 $headerLevel = str_repeat('#', $column->display_level + 2);
                 $lines[] = "{$headerLevel} {$column->name}";
                 $lines[] = '';
@@ -207,51 +237,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
             }
         }
 
-        // 3. Add attachments section
-        $contentAttached = $ledger->content_attached ?? [];
-
-        if (! empty($contentAttached)) {
-            $lines[] = '---';
-            $lines[] = '## 添付ファイル';
-            $lines[] = '';
-
-            foreach ($contentAttached as $columnId => $files) {
-                if (! is_array($files) || empty($files)) {
-                    continue;
-                }
-
-                $column = $columnDefines->firstWhere('id', $columnId);
-
-                if (! $column) {
-                    continue;
-                }
-
-                $lines[] = "### {$column->name}";
-                $lines[] = '';
-
-                foreach ($files as $hashedBasename => $fileData) {
-                    if (! is_array($fileData)) {
-                        continue;
-                    }
-
-                    $originalName = $fileData['originalName'] ?? $hashedBasename;
-                    $meta = $fileData['meta'] ?? [];
-                    $content = $meta['content'] ?? null;
-
-                    $lines[] = "#### ファイル: {$originalName}";
-                    $lines[] = '';
-
-                    if (! empty($content)) {
-                        $trimmedContent = mb_strlen($content) > 5000
-                            ? mb_substr($content, 0, 5000).'...'
-                            : $content;
-
-                        $lines[] = $trimmedContent;
-                        $lines[] = '';
-                    }
-                }
-            }
-        }
+        // Attachments section is intentionally omitted
 
         return implode("\n", $lines);
     }
@@ -385,116 +371,5 @@ class ProcessLedgerForRagJob implements ShouldQueue
         }
 
         return $chunks;
-    }
-
-    private function updateContentAttachedWithVlmResult(Ledger $ledger): void
-    {
-        $logChannel = config('rag.log_channel', 'stack');
-        $wasUpdated = false;
-        $contentAttached = $ledger->content_attached ?? [];
-
-        Log::channel($logChannel)->info('[VLM Debug] Start updateContentAttachedWithVlmResult', [
-            'ledger_id' => $ledger->id,
-            'initial_content_attached' => $contentAttached,
-        ]);
-
-        // 関連ファイルをEager Load
-        $ledger->load('attachedFiles');
-
-        Log::channel($logChannel)->info('[VLM Debug] Loaded attachedFiles', [
-            'ledger_id' => $ledger->id,
-            'attachedFiles_count' => $ledger->attachedFiles->count(),
-            'attachedFiles' => $ledger->attachedFiles->map(fn ($f) => [
-                'id' => $f->id,
-                'hashedbasename' => $f->hashedbasename,
-                'column_id' => $f->column_id,
-                'vlm_markdown_length' => mb_strlen($f->vlm_markdown ?? ''),
-            ])->toArray(),
-        ]);
-
-        // Ensure content_attached has all column positions initialized (required by AsColumnArrayJson)
-        $columnDefines = $ledger->define->column_define;
-        $maxColumnId = $columnDefines->max('id');
-
-        // Initialize all column positions to preserve array indices
-        for ($i = 0; $i <= $maxColumnId; $i++) {
-            if (! isset($contentAttached[$i])) {
-                $contentAttached[$i] = [];
-            }
-        }
-
-        foreach ($ledger->attachedFiles as $file) {
-            if (empty($file->vlm_markdown)) {
-                continue;
-            }
-
-            $vlmText = $file->vlm_markdown;
-            $vlmTextLength = mb_strlen($vlmText);
-            $columnId = $file->column_id;
-
-            // content_attachedの構造: [column_id][hashedbasename]['meta']['content']
-            $existingText = $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] ?? '';
-            $existingTextLength = mb_strlen($existingText);
-
-            if ($vlmTextLength > $existingTextLength) {
-                // VLMのテキストで上書き
-                // 配列構造を確保
-                if (! isset($contentAttached[$columnId])) {
-                    $contentAttached[$columnId] = [];
-                }
-                if (! isset($contentAttached[$columnId][$file->hashedbasename])) {
-                    $contentAttached[$columnId][$file->hashedbasename] = [];
-                }
-                if (! isset($contentAttached[$columnId][$file->hashedbasename]['meta'])) {
-                    $contentAttached[$columnId][$file->hashedbasename]['meta'] = [];
-                }
-
-                $contentAttached[$columnId][$file->hashedbasename]['meta']['content'] = $vlmText;
-
-                // originalNameがない場合は、contentから取得
-                if (! isset($contentAttached[$columnId][$file->hashedbasename]['originalName'])) {
-                    $content = $ledger->content ?? [];
-                    $originalName = $content[$columnId][$file->hashedbasename] ?? $file->filename;
-                    $contentAttached[$columnId][$file->hashedbasename]['originalName'] = $originalName;
-                }
-
-                $wasUpdated = true;
-
-                Log::channel($logChannel)->info('[RAG Pre-processing] Updated content_attached with VLM result.', [
-                    'ledger_id' => $ledger->id,
-                    'file_id' => $file->id,
-                    'column_id' => $columnId,
-                    'hashedbasename' => $file->hashedbasename,
-                    'vlm_text_length' => $vlmTextLength,
-                    'old_text_length' => $existingTextLength,
-                ]);
-            }
-        }
-
-        if ($wasUpdated) {
-            $ledger->content_attached = $contentAttached;
-
-            Log::channel($logChannel)->info('[VLM Debug] Before save', [
-                'ledger_id' => $ledger->id,
-                'content_attached_to_save' => $contentAttached,
-            ]);
-
-            Ledger::withoutEvents(fn () => $ledger->save());
-
-            Log::channel($logChannel)->info('[RAG Pre-processing] Saved updated content_attached to database.', [
-                'ledger_id' => $ledger->id,
-            ]);
-
-            // Verify save
-            $ledger->refresh();
-            Log::channel($logChannel)->info('[VLM Debug] After save and refresh', [
-                'ledger_id' => $ledger->id,
-                'content_attached_from_db' => $ledger->content_attached,
-            ]);
-        } else {
-            Log::channel($logChannel)->info('[VLM Debug] No updates made', [
-                'ledger_id' => $ledger->id,
-            ]);
-        }
     }
 }

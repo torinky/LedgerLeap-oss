@@ -213,13 +213,13 @@ class KeywordEnhancedTextGenerator
     }
 
     /**
-     * キーワードのみを抽出（テスト・デバッグ用）
+     * テキストから重要キーワードを抽出する
      *
      * @param  string  $text  解析対象テキスト
      * @param  array  $options  オプション設定
      * @return array キーワード配列（頻度順）
      */
-    public function extractKeywordsOnly(string $text, array $options = []): array
+    public function extract(string $text, array $options = []): array
     {
         $minFrequency = $options['min_frequency'] ?? 2;
         $targetTypes = $options['target_types'] ?? ['固有名詞', '名詞', '記号', '数'];
