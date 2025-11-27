@@ -1,7 +1,7 @@
 # VLM/OCR並列処理統合アーキテクチャ
 
 **作成日:** 2025年11月8日  
-**ステータス:** 🔄 **Phase5 設計完了・実装準備中**  
+**ステータス:** ✅ **Phase5 実装完了**  
 **ドキュメント種別:** 公式アーキテクチャ文書  
 
 **関連ドキュメント:**
@@ -50,59 +50,61 @@ FinalizeProcessing コマンド
 ```mermaid
 graph TD
     A[ファイルアップロード] --> B[ProcessAttachedFile]
-    B --> C[Tika処理]
+    B --> C[Tika処理<br/>基本メタデータ・テキスト抽出]
     C --> D[tika_processed_at設定]
-    D --> E{画像/PDF?}
+    D --> E[VectorizeAttachedFile<br/> Tika結果 ]
+    D --> F{画像/PDF対象?}
     
-    E -->|Yes| F[並列ディスパッチ]
-    E -->|No| G[COMPLETED<br/>Tika結果のみ]
+    E --> J[ProcessLedgerForRagJob<br/> チャンク/Embedding生成 ]
+    G --> J
+    H --> J
+    I --> J
+
+    F -->|Yes| K[並列ディスパッチ]
+    F -->|No| L[FINALIZED_BY_TIKA<br/> 非VLM/OCR対象 ]
     
-    F --> H[ProcessVlmExtraction<br/>★キュー: vlm]
-    F --> I[OcrAndOptimizeFile<br/>★キュー: ocr]
+    K --> G[ProcessVlmExtraction<br/>★キュー: vlm]
+    K --> H[OcrAndOptimizeFile<br/>★キュー: ocr]
     
-    H --> J{VLM処理}
-    J -->|成功| K[vlm_processed_at設定<br/>vlm_markdown保存]
-    J -->|失敗| L[vlm_failed_at設定]
-    
-    I --> M{OCR処理}
-    M -->|成功| N[ocr_processed_at設定<br/>optimized=true]
-    M -->|失敗| O[ocr_failed_at設定]
-    
-    K --> P[★スケジューラー]
-    L --> P
-    N --> P
-    O --> P
-    
-    P --> Q[FinalizeProcessing<br/>★1分ごと]
-    Q --> R{両方完了?}
-    R -->|Yes| S[結果選択<br/>VLM > OCR > Tika]
-    R -->|No| T{タイムアウト?}
-    T -->|Yes| S
-    T -->|No| U[次回チェック待ち]
-    
-    S --> V[content_attached更新]
-    V --> W[processing_finalized_at設定]
-    W --> X[COMPLETED]
-    X --> Y[RAGジョブディスパッチ]
+    G --> M{VLM処理}
+    M -->|成功| N[vlm_processed_at設定<br/>vlm_markdown保存]
+    M -->|失敗| O[vlm_failed_at設定]
+    N --> I[VectorizeAttachedFile<br/> VLM結果 ]
+    O --> I[VectorizeAttachedFile<br/> VLM結果 ]
+
+    H --> P{OCR処理}
+    P -->|成功| Q[ocr_processed_at設定<br/>optimized=true]
+    P -->|失敗| R[ocr_failed_at設定]
+    Q --> S[VectorizeAttachedFile<br/> OCR結果 ]
+    R --> S[VectorizeAttachedFile<br/> OCR結果 ]
+
+    J --> U[RAGチャンク/Embedding保存]
+    U --> T[FinalizeProcessing<br/> タイムアウト処理 ]
+    L --> T
+
+    T --> V[COMPLETED]
+    V --> W[検索可能]
 ```
 
 ### 1.2. 各フェーズの詳細
 
 #### フェーズ1: 基本処理（Tika）
 
-**目的:** メタデータ抽出と基本テキスト抽出
+**目的:** メタデータ抽出と基本テキスト抽出。ファイルアップロード後、RAGチャンクが即座に生成されるFast Pathをトリガーする。
 
 **実装:** `app/Jobs/Ledger/ProcessAttachedFile.php`
 
 **処理内容:**
-1. Tikaでテキスト・メタデータ抽出
-2. `tika_processed_at`設定
-3. 画像/PDFの場合は並列ディスパッチ
-4. その他のファイルは即座に完了
+1. Tikaでテキスト・メタデータ抽出。
+2. `tika_processed_at`設定。
+3. Tika処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/Embeddingを即座に生成する**Fast Path**をトリガーする。これにより、ファイルアップロード後すぐに検索可能となる。
+4. 画像/PDFの場合はVLM/OCRジョブを並列ディスパッチし、品質向上を図る。
+5. その他のファイル（Office文書、テキストファイル、バイナリファイルなど）は即座に`FINALIZED_BY_TIKA`ステータスとなる。
 
 **データフロー:**
 ```php
-// 一時的にcontent_attachedに保存（後で上書きされる可能性）
+// Tika処理完了後、content_attachedが一時的に更新され、即座にVectorizeAttachedFileがトリガーされる。
+// これにより、ファイルアップロード後すぐに検索可能となる。
 $ledger->content_attached[$columnId][$filename] = [
     'meta' => [
         'content' => $tikaText,
@@ -114,16 +116,16 @@ $ledger->content_attached[$columnId][$filename] = [
 
 #### フェーズ2a: VLM処理（並列）
 
-**目的:** 高品質Markdown生成、構造化データ抽出
+**目的:** 高品質Markdown生成、構造化データ抽出。VLM処理後、RAGチャンクをVLM結果で上書き更新する。
 
 **実装:** `app/Jobs/Ledger/ProcessVlmExtraction.php`
 
 **処理内容:**
-1. VLMコンテナAPIに画像/PDF送信
-2. Markdown、構造化データを取得
-3. `attached_files`に保存
-4. `vlm_processed_at`または`vlm_failed_at`設定
-5. **最終化トリガーはなし**（スケジューラーが検出）
+1. VLMコンテナAPIに画像/PDF送信。
+2. Markdown、構造化データを取得。
+3. `attached_files`に保存。
+4. `vlm_processed_at`または`vlm_failed_at`設定。
+5. VLM処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをVLM結果で上書き更新する。
 
 **データ保存:**
 ```php
@@ -143,15 +145,15 @@ $attachedFile->update([
 
 #### フェーズ2b: OCR処理（並列）
 
-**目的:** テキストレイヤー追加、PDF最適化
+**目的:** テキストレイヤー追加、PDF最適化。OCR処理後、RAGチャンクをOCR結果で上書き更新する。
 
 **実装:** `app/Jobs/Ledger/OcrAndOptimizeFile.php`
 
 **処理内容:**
-1. OcrMyPDFでOCR処理
-2. テキストレイヤー付きPDF生成
-3. `ocr_processed_at`または`ocr_failed_at`設定
-4. **最終化トリガーはなし**（スケジューラーが検出）
+1. OcrMyPDFでOCR処理。
+2. テキストレイヤー付きPDF生成。
+3. `ocr_processed_at`または`ocr_failed_at`設定。
+4. OCR処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをOCR結果で上書き更新する。
 
 **データ保存:**
 ```php
@@ -167,9 +169,25 @@ $attachedFile->update([
 - 専用ワーカー: 2プロセス
 - タイムアウト: 600秒
 
+#### フェーズ2c: VectorizeAttachedFileジョブ（Fast Path）
+
+**目的:** 各OCR/VLM処理完了時にRAGチャンク/Embeddingを即座に更新
+
+**実装:** `app/Jobs/Embedding/VectorizeAttachedFile.php`
+
+**処理内容:**
+1. `AttachedFile`のIDと`source`（'tika', 'ocr', 'vlm'）を受け取る。
+2. `UnifiedOcrAggregator`サービスを使用して、`file->finalized_source`に応じた最適なテキストソースを選択する。
+3. 選択されたテキストを`KeywordEnhancedTextGenerator`でキーワード強調し、Ruriモデルでベクトル化する。
+4. `ProcessLedgerForRagJob`をディスパッチし、`ledger_chunks`テーブルのチャンク/Embeddingを更新する。
+5. `AttachedFile`の`status`, `processing_finalized_at`, `finalized_source`を更新する。
+
+**キュー設定:**
+- キュー名: `default` (ProcessLedgerForRagJobが使用)
+
 #### フェーズ3: 最終化処理（スケジュール）
 
-**目的:** VLM/OCR結果を統合し、最適な結果をインデックス化
+**目的:** VLM/OCR処理がタイムアウトした場合のフォールバックと、最適な結果の選択を保証
 
 **実装:** `app/Console/Commands/Ledger/FinalizeAttachedFileProcessing.php`
 
@@ -185,64 +203,11 @@ $schedule->command('ledger:finalize-processing')
 
 **処理内容:**
 
-1. **最終化待ちファイルを検索**:
-```sql
-SELECT * FROM attached_files
-WHERE tika_processed_at IS NOT NULL
-  AND processing_finalized_at IS NULL
-  AND (
-    -- 両方完了（成功/失敗問わず）
-    (vlm_processed_at IS NOT NULL OR vlm_failed_at IS NOT NULL)
-    AND (ocr_processed_at IS NOT NULL OR ocr_failed_at IS NOT NULL)
-  )
-  OR created_at <= NOW() - INTERVAL 600 SECOND  -- タイムアウト
-LIMIT 50
-```
-
-2. **結果選択（優先順位）**:
-```php
-private function selectBestContent(AttachedFile $file): ?string
-{
-    // 1. VLM結果（最優先）
-    if ($file->vlm_markdown) {
-        return $file->vlm_markdown;
-    }
-    
-    // 2. OCR結果
-    if ($file->optimized && $file->ocr_processed_at) {
-        // optimized PDFからTikaで再抽出
-        return $tikaClient->getText($file->path);
-    }
-    
-    // 3. 元のTika結果
-    return $ledger->content_attached[$file->column_id][$file->filename]['meta']['content'];
-}
-```
-
-3. **content_attached更新**:
-```php
-$ledger->content_attached[$columnId][$filename] = [
-    'meta' => [
-        'content' => $bestContent,
-        'source' => 'vlm|ocr|tika',
-        // ... メタデータ
-    ]
-];
-```
-
-4. **最終化マーク**:
-```php
-$file->update([
-    'status' => AttachedFileStatus::COMPLETED,
-    'processing_finalized_at' => now(),
-    'contain_content' => $bestContent !== null,
-]);
-```
-
-5. **RAGジョブディスパッチ**:
-```php
-ProcessLedgerForRagJob::dispatch($file->ledger)->delay(5);
-```
+1. **最終化待ちファイルを検索**: `tika_processed_at` が設定済みで `processing_finalized_at` が未設定のファイル、かつVLM/OCR処理がタイムアウトしたファイルを検索。
+2. **結果選択（優先順位）**: `VLM > OCR > Tika` の優先順位で最適なコンテンツを選択。
+3. **content_attached更新**: 選択されたコンテンツで `ledger->content_attached` の該当部分を更新。
+4. **最終化マーク**: `processing_finalized_at` および `finalized_source` を更新。
+5. **RAGジョブディスパッチ**: `ProcessLedgerForRagJob` をディスパッチし、RAGチャンク/Embeddingを更新。
 
 ---
 ### 1.3. ファイルタイプ別処理フロー一覧
@@ -256,7 +221,7 @@ ProcessLedgerForRagJob::dispatch($file->ledger)->delay(5);
 | **画像のみPDF（スキャン）** | application/pdf | 空（メタデータのみ） | ✅ Markdown生成 | ✅ PDF化+テキスト抽出 | ❌ scan.pdf→scan.pdf | vlm > ocr > tika | OCRがテキスト抽出を実行 |
 | **Office文書（DOCX/XLSX/PPTX）** | application/vnd.* | ✅ テキスト抽出 | ❌ 非対象 | ❌ 非対象 | ❌ | tika | VLM/OCR非対象、Tikaのみ |
 | **テキストファイル（TXT/CSV）** | text/* | ✅ テキスト抽出 | ❌ 非対象 | ❌ 非対象 | ❌ | tika | VLM/OCR非対象、即座に最終化 |
-| **バイナリファイル（ZIP/EXE）** | application/zip等 | メタデータのみ | ❌ 非対象 | ❌ 非対象 | ❌ | tika | テキスト抽出なし |
+| **バイナリファイル（ZIP/EXE）** | application/zip等 | メタデータのみ | ❌ 非対象 | ❌ 非対象 | ❌ | | テキスト抽出なし |
 
 **処理フローの分岐条件:**
 ```php
@@ -289,6 +254,7 @@ ALTER TABLE attached_files
   ADD COLUMN ocr_processed_at TIMESTAMP NULL COMMENT 'OCR処理成功日時',
   ADD COLUMN ocr_failed_at TIMESTAMP NULL COMMENT 'OCR処理失敗日時',
   ADD COLUMN processing_finalized_at TIMESTAMP NULL COMMENT '最終化完了日時',
+  ADD COLUMN finalized_source VARCHAR(10) NULL COMMENT '最終的に採用された抽出ソース (vlm/ocr/tika)';
   
   ADD INDEX idx_finalization (
     tika_processed_at,
