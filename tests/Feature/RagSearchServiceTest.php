@@ -152,7 +152,10 @@ class RagSearchServiceTest extends TestCase
 
         // Use the bound EmbeddingService from the container (which should be the mock)
         $job = new ProcessLedgerForRagJob($ledger->id);
-        $job->handle($this->app->make(EmbeddingService::class));
+        $job->handle(
+            $this->app->make(EmbeddingService::class),
+            $this->app->make(\App\Services\Embedding\RuriChunkFormatter::class)
+        );
 
         // Wait for Mroonga to index the full-text and vector data
         sleep(1);

@@ -55,7 +55,7 @@ class ModifyColumn extends CreateColumn
             if ($ledgerRecord->tenant_id !== tenancy()->tenant?->id) {
                 \Illuminate\Support\Facades\Log::info('ModifyColumn: Switching tenant', [
                     'from' => tenancy()->tenant?->id,
-                    'to' => $ledgerRecord->tenant_id
+                    'to' => $ledgerRecord->tenant_id,
                 ]);
                 tenancy()->initialize($ledgerRecord->tenant_id);
             }
@@ -67,7 +67,7 @@ class ModifyColumn extends CreateColumn
                 'user_id' => Auth::id(),
                 'ledger_id' => $ledgerRecord->id,
                 'ledger_define_id' => $ledgerRecord->ledger_define_id,
-                'define_found' => (bool)$ledgerDefineRecord,
+                'define_found' => (bool) $ledgerDefineRecord,
                 'current_tenant' => tenancy()->tenant?->id,
                 'folder_id' => $ledgerDefineRecord?->folder_id,
                 'folder_exists' => $ledgerDefineRecord?->folder ? 'yes' : 'no',

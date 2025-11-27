@@ -21,8 +21,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param int $ledgerId
-     * @param int|null $attachedFileId If null, process the ledger body. If set, process only the specific file.
+     * @param  int|null  $attachedFileId  If null, process the ledger body. If set, process only the specific file.
      */
     public function __construct(
         public int $ledgerId,
@@ -65,6 +64,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if (! $file) {
             Log::channel($logChannel)->warning('Attached file not found', ['id' => $attachedFileId]);
+
             return;
         }
 
@@ -76,8 +76,8 @@ class ProcessLedgerForRagJob implements ShouldQueue
         // Fallback to OCR/Tika if VLM is empty? For now, let's stick to vlm_markdown as primary RAG source.
         // If we want to support OCR fallback, we should get it here.
         if (empty($content)) {
-             // Try to get previewable text (OCR/Tika)
-             $content = $file->previewable_text;
+            // Try to get previewable text (OCR/Tika)
+            $content = $file->previewable_text;
         }
 
         // 1. Delete existing chunks for this file
@@ -87,6 +87,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if (empty($content)) {
             Log::channel($logChannel)->info('No content to chunk for attached file', ['id' => $attachedFileId]);
+
             return;
         }
 
@@ -113,6 +114,7 @@ class ProcessLedgerForRagJob implements ShouldQueue
 
         if (empty($markdown)) {
             Log::channel($logChannel)->info('No content to chunk for ledger body', ['ledger_id' => $ledger->id]);
+
             return;
         }
 

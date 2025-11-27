@@ -100,10 +100,10 @@ class VlmRagIntegrationTest extends TestCase
                 $firstColumnId => [
                     'test_hash' => [
                         'originalName' => 'test.pdf',
-                        'meta' => ['content' => 'Initial content']
-                    ]
-                ]
-            ]
+                        'meta' => ['content' => 'Initial content'],
+                    ],
+                ],
+            ],
         ]);
 
         Storage::disk('local')->put($attachedFile->path, 'dummy content');

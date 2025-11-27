@@ -6,7 +6,6 @@ use App\Jobs\ProcessLedgerForRagJob;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\User;
 use App\Services\LedgerService;
-use Illuminate\Support\Facades\Artisan;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Group;
@@ -148,6 +147,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
                 if (is_string($texts)) {
                     return $dummyVector;
                 }
+
                 // 配列の場合は入力テキスト数分のベクトルを返す
                 return array_fill(0, count($texts), $dummyVector);
             });

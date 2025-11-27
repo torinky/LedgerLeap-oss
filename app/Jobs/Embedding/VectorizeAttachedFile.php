@@ -60,7 +60,8 @@ class VectorizeAttachedFile implements ShouldQueue
     {
         try {
             // ProcessLedgerForRagJobをトリガー
-            \App\Jobs\ProcessLedgerForRagJob::dispatch($file->ledger_id);
+            // 部分更新のために attached_file_id を渡す
+            \App\Jobs\ProcessLedgerForRagJob::dispatch($file->ledger_id, $file->id);
 
             // ステータスをソース別に更新
             $newStatus = match ($this->source) {

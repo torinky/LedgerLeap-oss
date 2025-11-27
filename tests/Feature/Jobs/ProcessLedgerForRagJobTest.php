@@ -82,7 +82,7 @@ class ProcessLedgerForRagJobTest extends TestCase
         config(['rag.enabled' => false]);
 
         $ledger = Ledger::factory()->create(['tenant_id' => tenant('id')])->load('define');
-        
+
         $file = AttachedFile::create([
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,
@@ -145,7 +145,7 @@ class ProcessLedgerForRagJobTest extends TestCase
             'tenant_id' => tenant('id'),
             'content' => [0 => 'Content for ID 0', 1 => 'Ledger Body Text'],
         ])->load('define');
-        
+
         $baseFileData = [
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,
@@ -162,15 +162,15 @@ class ProcessLedgerForRagJobTest extends TestCase
         ];
 
         $file1 = AttachedFile::create(array_merge($baseFileData, [
-            'filename' => 'file1.pdf', 
+            'filename' => 'file1.pdf',
             'hashedbasename' => 'file1.pdf',
-            'vlm_markdown' => 'File 1 content'
+            'vlm_markdown' => 'File 1 content',
         ]));
-        
+
         $file2 = AttachedFile::create(array_merge($baseFileData, [
             'filename' => 'file2.pdf',
             'hashedbasename' => 'file2.pdf',
-            'vlm_markdown' => 'File 2 content'
+            'vlm_markdown' => 'File 2 content',
         ]));
 
         \DB::table('ledger_chunks')->delete(); // Clean up chunks before Act
@@ -205,13 +205,19 @@ class ProcessLedgerForRagJobTest extends TestCase
         $this->assertNotEquals($oldChunkId, $newChunkId, 'Old chunk should be deleted and new one created');
 
         // Verify Ledger Body and File 2 chunks still exist
+        $chunks = \DB::table('ledger_chunks')->get();
+
         $this->assertTrue(
-            \DB::table('ledger_chunks')->where(function ($query) {
-                $query->whereNull('attached_file_id')->orWhere('attached_file_id', 0);
-            })->exists(),
+            $chunks->contains(function ($chunk) {
+                return is_null($chunk->attached_file_id) || $chunk->attached_file_id === 0;
+            }),
             'Ledger Body chunks should exist (attached_file_id is NULL or 0)'
         );
-        $this->assertTrue(\DB::table('ledger_chunks')->where('attached_file_id', $file2->id)->exists());
+
+        $this->assertTrue(
+            $chunks->contains('attached_file_id', $file2->id),
+            'File 2 chunks should exist'
+        );
     }
 
     #[Test]
@@ -227,11 +233,11 @@ class ProcessLedgerForRagJobTest extends TestCase
                 1 => [ // column_id
                     'test.pdf' => [
                         'meta' => ['content' => 'OCR Text Content'],
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ])->load('define');
-        
+
         $file = AttachedFile::create([
             'tenant_id' => tenant('id'),
             'ledger_id' => $ledger->id,

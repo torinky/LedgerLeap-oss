@@ -25,12 +25,12 @@ class LedgerColumnValidationTest extends TestCase
         tenancy()->initialize($this->tenant);
         // ユーザーを作成し、すべてのテストで認証済み状態にする
         $user = User::factory()->create();
-        
+
         // 権限設定
         $role = \App\Models\Role::firstOrCreate(['name' => 'test-validator-role', 'guard_name' => 'web']);
         $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'create_ledgers', 'guard_name' => 'web']));
         $user->assignRole($role);
-        
+
         $this->actingAs($user);
 
         // Spatieの権限キャッシュをクリア
