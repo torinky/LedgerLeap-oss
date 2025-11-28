@@ -7,6 +7,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use App\Services\Embedding\RuriChunkFormatter;
 use App\Services\EmbeddingService;
 use App\Services\RagSearchService;
 use Illuminate\Support\Facades\DB;
@@ -123,7 +124,7 @@ class RagPerformanceTest extends TestCase
             ]);
 
             $job = new ProcessLedgerForRagJob($ledger->id);
-            $job->handle($this->app->make(EmbeddingService::class));
+            $job->handle($this->app->make(EmbeddingService::class), $this->app->make(RuriChunkFormatter::class));
         }
 
         sleep(1); // Wait for indexing
@@ -179,7 +180,7 @@ class RagPerformanceTest extends TestCase
                 'content' => ['title' => "Folder1 Doc $i", 'text' => str_repeat('content ', 50)],
             ]);
             $job = new ProcessLedgerForRagJob($ledger->id);
-            $job->handle($this->app->make(EmbeddingService::class));
+            $job->handle($this->app->make(EmbeddingService::class), $this->app->make(RuriChunkFormatter::class));
         }
 
         for ($i = 0; $i < 100; $i++) {
@@ -190,7 +191,7 @@ class RagPerformanceTest extends TestCase
                 'content' => ['title' => "Folder2 Doc $i", 'text' => str_repeat('content ', 50)],
             ]);
             $job = new ProcessLedgerForRagJob($ledger->id);
-            $job->handle($this->app->make(EmbeddingService::class));
+            $job->handle($this->app->make(EmbeddingService::class), $this->app->make(RuriChunkFormatter::class));
         }
 
         sleep(1);
