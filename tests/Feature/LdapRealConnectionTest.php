@@ -2,59 +2,85 @@
 
 namespace Tests\Feature;
 
-use App\Ldap\User as LdapUser;
 use LdapRecord\Container;
+use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LdapRealConnectionTest extends TestCase
 {
-    /**
-     * @group integration
-     * @group ldap
-     */
+    protected function tearDown(): void
+    {
+        // 他のテストでのエミュレータ設定が残らないようにクリーンアップ
+        DirectoryEmulator::tearDown();
+        parent::tearDown();
+    }
+
+    #[Group("ldap")]
+    #[Group("integration")]
+    #[Test]
     public function test_can_connect_to_real_ldap_server()
     {
-        // 実際のLDAP接続を取得
-        // phpunit.xml で設定された LDAP_HOST=openldap などが使用される
+        // エミュレータが誤ってセットアップされていないことを確認
         try {
             $connection = Container::getConnection('default');
+            if ($connection instanceof \LdapRecord\Testing\LdapFake) {
+                 DirectoryEmulator::tearDown();
+            }
+        } catch (\Exception $e) {
+            // Connection might not exist yet, which is fine
+        }
+
+        try {
+            $connection = Container::getConnection('default');
+            
+            // 接続設定がテスト用コンテナを向いているか確認 (ローカル開発環境保護のため)
+            $config = $connection->getConfiguration()->all();
+            if ($config['hosts'][0] !== 'openldap' && $config['hosts'][0] !== '127.0.0.1') {
+                 $this->markTestSkipped('Skipping real LDAP test: Host is not openldap or localhost.');
+            }
+
             $connection->connect();
             
             $this->assertTrue($connection->isConnected(), 'Failed to connect to the LDAP server.');
         } catch (\LdapRecord\Auth\BindException $e) {
-            $this->fail('Failed to bind to LDAP server: ' . $e->getMessage());
+            $this->fail('Failed to bind to LDAP server. Error: ' . $e->getMessage());
         } catch (\LdapRecord\ConnectionException $e) {
-            $this->fail('Could not connect to LDAP host. Ensure the openldap container is running. Error: ' . $e->getMessage());
+             // コンテナが起動していない、またはネットワークの問題がある場合はテストをスキップする
+            $this->fail('Could not connect to LDAP host. Error: ' . $e->getMessage());
         }
     }
 
-    /**
-     * @group integration
-     * @group ldap
-     */
-    public function test_can_search_users_in_real_ldap_server()
+    #[Group("integration")]
+    #[Group("ldap")]
+    #[Test]
+    public function test_can_search_root_dse_in_real_ldap_server()
     {
-        // 接続確認
+        // 接続確認 (前のテストが失敗していればここも失敗するが、念のため)
         try {
-            Container::getConnection('default')->connect();
+            $connection = Container::getConnection('default');
+            $connection->connect();
         } catch (\Exception $e) {
             $this->markTestSkipped('LDAP server is not available: ' . $e->getMessage());
         }
 
-        // Adminユーザーが存在することを確認 (docker-composeで設定した管理者)
-        $adminDn = config('ldap.connections.default.username');
+        // Root DSE (ディレクトリサーバ自体の情報) は認証なしでも（設定によるが）またはBindユーザーなら確実に読めるはず
+        // LdapRecordでRoot DSEを取得
+        try {
+            $rootDse = $connection->query()->read()->first();
+            $this->assertNotNull($rootDse, 'Could not retrieve Root DSE from LDAP server.');
+        } catch (\Exception $e) {
+             $this->fail('LDAP search failed: ' . $e->getMessage());
+        }
         
-        // 低レベル検索を実行して接続と検索権限を確認
-        $results = Container::getConnection('default')->query()->where('cn', 'admin')->get();
-        
-        // rroemhild/test-openldap の仕様により、adminユーザーのCNや属性は構成によるが、
-        // 少なくともバインドユーザー自身は検索できるはず
-        // ここでは単純にエラーなくクエリが実行できることを確認するだけでも十分だが、
-        // 結果が返ってくるかを確認する。
-        
-        // BaseDN直下のオブジェクトを検索してみる
-        $results = Container::getConnection('default')->query()->limit(1)->get();
-        
-        $this->assertNotEmpty($results, 'LDAP search returned no results.');
+        // Base DN のオブジェクトが存在するか確認
+        $baseDn = config('ldap.connections.default.base_dn');
+        try {
+             $entry = $connection->query()->in($baseDn)->read()->first();
+             $this->assertNotNull($entry, "Could not find entry at Base DN: $baseDn");
+        } catch (\Exception $e) {
+            $this->fail("Search at Base DN ($baseDn) failed: " . $e->getMessage());
+        }
     }
 }

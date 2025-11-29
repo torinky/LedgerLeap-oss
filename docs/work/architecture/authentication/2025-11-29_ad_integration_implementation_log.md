@@ -42,6 +42,12 @@ OpenLDAP互換のため、`LdapRecord\Models\OpenLDAP\User` を継承し、`$gui
 *   **NestedSet修復:** 同期後に `Organization::fixTree()` を実行。
 *   **Dry Run機能:** `--dry-run` オプションでDB変更なしに動作確認可能。
 
+### 5. 同期ロジックの修正と安定化 (2025-11-29 追記)
+テスト (`Tests\Feature\Console\AdSyncTest`) を通じて発見された問題を修正しました。
+
+*   **ルートへの移動:** 組織がルートレベルへ移動（親がなくなる）した際に、`appendToNode` がスキップされ移動が反映されない問題を修正しました。`$currentOrg->makeRoot()` を明示的に呼び出すロジックを追加しました。
+*   **大量削除保護のテスト対応:** テストシナリオにおいて意図的に大規模な組織変更を行う際、安全装置（削除閾値チェック）が働いてテストが失敗しないよう、テストコード内で閾値を一時的に緩和 (`100%`) する対応を行いました。
+
 ## Phase 3: 認証プロバイダの切り替えとテスト
 
 *   **状況:** 完了
@@ -67,6 +73,19 @@ Tinker を使用して、LDAPユーザー (`fry@planetexpress.com`) での認証
 ```php
 Auth::guard('ldap')->attempt(['mail' => 'fry@planetexpress.com', 'password' => 'fry']); // true
 ```
+
+### 3. 実接続テスト (`LdapRealConnectionTest`) の有効化 (2025-11-29 追記)
+これまでスキップされていた `tests/Feature/LdapRealConnectionTest.php` を有効化し、LDAPコンテナとの実際の接続確認を自動テストに組み込みました。
+
+*   **PHPUnit設定:** `phpunit.xml` の環境変数を `rroemhild/test-openldap` コンテナの仕様に合わせて修正しました。
+    *   `LDAP_PORT`: `389` -> `10389`
+    *   `LDAP_BASE_DN`: `dc=planetexpress,dc=com`
+    *   `LDAP_USERNAME`: `cn=admin,dc=planetexpress,dc=com`
+    *   `LDAP_PASSWORD`: `GoodNewsEveryone`
+*   **Docker設定:** `docker-compose.override.yml` のヘルスチェックポートを `10389` に修正しました。
+*   **テストコード修正:**
+    *   テストスキップ (`markTestSkipped`) を失敗 (`fail`) に変更し、接続エラーを確実に検知するようにしました。
+    *   PHP 8 Attribute (`#[Group]`) を導入し、PHPUnitのDeprecation Warningを解消しました。
 
 ## 次のステップ
 

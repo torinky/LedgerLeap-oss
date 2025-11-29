@@ -22,9 +22,6 @@ class AdSyncService
 
     public function __construct()
     {
-        $this->hierarchyAttributes = config('ldap_sync.hierarchy_attributes', []);
-        $this->deleteMissing = config('ldap_sync.delete_missing', true);
-        $this->deletionThresholdPercentage = config('ldap_sync.deletion_threshold_percentage', 20);
     }
 
     /**
@@ -37,6 +34,10 @@ class AdSyncService
      */
     public function sync(bool $dryRun = false): array
     {
+        $this->hierarchyAttributes = config('ldap_sync.hierarchy_attributes', []);
+        $this->deleteMissing = config('ldap_sync.delete_missing', true);
+        $this->deletionThresholdPercentage = config('ldap_sync.deletion_threshold_percentage', 20);
+
         Log::info("Starting AD Sync (Dry Run: " . ($dryRun ? 'Yes' : 'No') . "). Hierarchy Attributes: " . json_encode($this->hierarchyAttributes));
         if (empty($this->hierarchyAttributes)) {
             Log::error("No hierarchy attributes defined in config/ldap_sync.php");
@@ -173,6 +174,8 @@ class AdSyncService
                             Log::info("    Org Parent Changed: {$currentOrg->name} from '{$currentParentId}' to '{$newParentId}'");
                             if ($parentOrg) {
                                 $currentOrg->appendToNode($parentOrg);
+                            } else {
+                                $currentOrg->makeRoot();
                             }
                             Log::info("    Org Moved: {$nameValue} to parent " . ($parentOrg?->name ?? 'Root'));
                             $currentOrg->save(); // Save after move

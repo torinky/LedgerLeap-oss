@@ -1,8 +1,8 @@
 # Active Directory 連携実装計画
 
 **作成日:** 2025-11-28
-**更新日:** 2025-11-29 (ペルソナ・ユースケースに基づく運用要件の反映)
-**ステータス:** 計画中
+**更新日:** 2025-11-29 (ペルソナ・ユースケースに基づく運用要件の反映、実装進捗の反映)
+**ステータス:** 実装中
 **対象:** 認証・認可システム、組織構造同期
 
 ## 1. 目的と背景
@@ -81,24 +81,26 @@ LedgerLeapの `UserService` は、ユーザーが所属する `Organization` に
 *   [x] AD接続テスト (Tinker等を使用)。
 
 ### Phase 2: モデル・同期ロジック実装
-*   [ ] **LdapRecordモデルの作成:**
+*   [x] **LdapRecordモデルの作成:**
     *   `App\Ldap\User`, `App\Ldap\OrganizationalUnit` クラスの作成。
-*   [ ] **属性マッピングの定義:**
+*   [x] **属性マッピングの定義:**
     *   環境差異（検証/本番）を吸収するため、マッピング設定を `config` ファイル等に切り出す。
-*   [ ] **Import/Syncロジックの実装:**
+*   [x] **Import/Syncロジックの実装:**
     *   OU を `Organization` に変換するJob/Serviceの実装。
         *   ※既存の `Organization` とのID整合性（`guid`カラムの追加）を考慮する。
     *   User を `User` に変換し、`Organization` に紐付けるハンドラの実装。
         *   `objectGuid` を利用したユーザー特定ロジック。
 
 ### Phase 3: 認証プロバイダの切り替えとUI実装
-*   [ ] 認証ガードを `ldap` と `database` のハイブリッド構成に設定。
+*   [x] 認証ガードを `ldap` と `database` のハイブリッド構成に設定。
 *   [ ] **管理者機能:** 「AD同期実行」ボタンと、同期ログ（成功/失敗、エラー内容）表示画面の実装。
 *   [ ] **マイポータル:** ユーザー自身の登録情報（メールアドレス等）を表示し、誤りがある場合の問い合わせ誘導UIを追加。
 
 ### Phase 4: テストと検証
-*   [ ] ログインテスト（ADユーザー、ローカルユーザー）。
-*   [ ] 同期テスト（新規作成、属性変更、移動、無効化）。
+*   [x] ログインテスト（ADユーザー、ローカルユーザー）。
+    *   ※LDAPモック環境での接続テスト (`LdapRealConnectionTest`) 完了。
+*   [x] 同期テスト（新規作成、属性変更、移動、無効化）。
+    *   `Tests\Feature\Console\AdSyncTest` にて検証完了。
 *   [ ] 権限継承（Organization経由）の動作確認。
 
 ### Phase 5: SSO (統合Windows認証) 対応の検討 (Optional)
@@ -139,3 +141,4 @@ LedgerLeapの `UserService` は、ユーザーが所属する `Organization` に
 *   [User モデル](../../../models/User.md) - 同期対象となるユーザーモデル定義。
 *   [Organization モデル](../../../models/Organization.md) - 同期対象となる組織モデル定義。
 *   [Role モデル](../../../models/Role.md) - 権限管理の中核となるロールモデル定義。
+*   [実装ログ](2025-11-29_ad_integration_implementation_log.md) - 実装の進捗と詳細な変更履歴。

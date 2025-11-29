@@ -2,7 +2,7 @@
 
 namespace App\Ldap;
 
-use LdapRecord\Models\OpenLDAP\OrganizationalUnit as LdapRecordOrganizationalUnit;
+use LdapRecord\Models\ActiveDirectory\OrganizationalUnit as LdapRecordOrganizationalUnit;
 
 class OrganizationalUnit extends LdapRecordOrganizationalUnit
 {
@@ -15,11 +15,4 @@ class OrganizationalUnit extends LdapRecordOrganizationalUnit
         'top',
         'organizationalUnit',
     ];
-
-    /**
-     * The attribute key that contains the models object GUID.
-     *
-     * @var string
-     */
-    protected string $guidKey = 'entryuuid';
 }

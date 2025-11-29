@@ -11,6 +11,12 @@ services:
       LDAP_ROOTPASS: secret
       LDAP_ORGANISATION: LedgerLeap
       LDAP_DOMAIN: local.com
-      LDAP_BASE_DN: dc=local,dc=com
+      LDAP_BASEDN: dc=local,dc=com
     networks:
       - sail
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:10389", "-b", "", "-s", "base", "(objectclass=*)", "namingContexts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
