@@ -42,7 +42,7 @@ return [
         ],
         // LDAPガードを追加
         'ldap' => [
-            'driver'   => 'ldap',
+            'driver'   => 'session',
             'provider' => 'ldap',
         ],
     ],

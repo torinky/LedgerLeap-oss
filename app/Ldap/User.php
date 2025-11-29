@@ -2,7 +2,7 @@
 
 namespace App\Ldap;
 
-use LdapRecord\Models\ActiveDirectory\User as LdapRecordUser;
+use LdapRecord\Models\OpenLDAP\User as LdapRecordUser;
 
 class User extends LdapRecordUser
 {
@@ -15,6 +15,13 @@ class User extends LdapRecordUser
         'top',
         'person',
         'organizationalPerson',
-        'user',
+        'inetOrgPerson',
     ];
+
+    /**
+     * The attribute key that contains the models object GUID.
+     *
+     * @var string
+     */
+    protected string $guidKey = 'entryuuid';
 }

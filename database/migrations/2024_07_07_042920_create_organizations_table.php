@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('organizations', function (Blueprint $table) {
             $table->id();
-            $table->string('org_id')->unique();  // 個別のID（文字列）
+            $table->string('objectguid')->nullable()->unique();
+            $table->string('org_id')->unique()->comment('組織ID (ユーザー入力)');
             $table->string('name');
             $table->string('description')->nullable();
             $table->string('sort_order')->nullable();

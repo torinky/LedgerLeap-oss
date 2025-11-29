@@ -6,83 +6,70 @@
 ## 概要
 
 `docs/work/architecture/authentication/2025-11-28_ad_integration_plan.md` に基づき、Active Directory (AD) 連携の実装を進めています。
-本ドキュメントでは、Phase 1 (環境構築と基本設定) の実施結果を記録します。
+本ドキュメントでは、Phase 1 (環境構築と基本設定) および Phase 2 (モデル・同期ロジック実装)、Phase 3 (認証プロバイダ切り替えとテスト) の実施結果を記録します。
 
 ## Phase 1: 環境構築と基本設定
 
-### 1. 開発環境の整備 (LDAPモック)
+*   **完了:** 2025-11-29
+*   **内容:**
+    *   LDAPモック (`rroemhild/test-openldap`) の導入。
+    *   `directorytree/ldaprecord-laravel` のインストールと設定。
+    *   `docker-compose.override.yml` へのサービス追加とポート設定 (10389ポート使用)。
+    *   `bin/setup.sh` の改修 (キャッシュビルド対応)。
+    *   LDAP接続テストの成功。
 
-#### 1.1. `directorytree/ldaprecord-laravel` のインストール
-Composer パッケージ `directorytree/ldaprecord-laravel` をインストールしました。
+## Phase 2: モデル・同期ロジック実装
 
-```bash
-composer require directorytree/ldaprecord-laravel
+*   **完了:** 2025-11-29
+*   **内容:**
+
+### 1. LdapRecordモデルの作成
+`App\Ldap\User`, `App\Ldap\OrganizationalUnit` を作成しました。
+OpenLDAP互換のため、`LdapRecord\Models\OpenLDAP\User` を継承し、`$guidKey = 'entryuuid'` を設定しました。
+
+### 2. データモデルの拡張 (マイグレーション)
+`users` および `organizations` テーブルに `objectguid` カラム (string, nullable, unique) を追加しました。
+
+### 3. 設定ファイル作成
+`config/ldap_sync.php` を作成し、同期モード (`attribute`)、階層属性 (`ou`)、LDAPフィルタ等を定義しました。
+
+### 4. 同期コマンド (`ad:sync`) の実装
+`app/Console/Commands/AdSync.php` を実装しました。
+
+*   **属性ベース階層生成:** ユーザーの `ou` 属性から `Organization` を動的に作成・階層化。
+*   **ユーザー同期:** LDAPユーザーを `User` モデルに同期し、`objectguid` をキーに関連付け。
+*   **所属管理:** ユーザーを適切な `Organization` に所属させ、Primaryフラグを設定。
+*   **NestedSet修復:** 同期後に `Organization::fixTree()` を実行。
+*   **Dry Run機能:** `--dry-run` オプションでDB変更なしに動作確認可能。
+
+## Phase 3: 認証プロバイダの切り替えとテスト
+
+*   **状況:** 完了
+*   **内容:**
+
+### 1. 認証ガードの設定
+`config/auth.php` に `ldap` ガードとプロバイダを追加しました。
+
+```php
+'guards' => [
+    'web' => ['driver' => 'session', 'provider' => 'users'],
+    'ldap' => ['driver' => 'session', 'provider' => 'ldap'], // driverはsession
+],
+'providers' => [
+    'users' => ['driver' => 'eloquent', 'model' => App\Models\User::class],
+    'ldap' => ['driver' => 'ldap', 'model' => App\Ldap\User::class],
+],
 ```
 
-#### 1.2. 設定ファイルのパブリッシュ
-`config/ldap.php` をパブリッシュしました。
+### 2. 認証テスト
+Tinker を使用して、LDAPユーザー (`fry@planetexpress.com`) での認証に成功しました。
 
-```bash
-php artisan vendor:publish --provider="LdapRecord\Laravel\LdapServiceProvider"
+```php
+Auth::guard('ldap')->attempt(['mail' => 'fry@planetexpress.com', 'password' => 'fry']); // true
 ```
 
-#### 1.3. Docker Compose 構成の変更
-開発環境 (`Sail`) に LDAP モックサーバーを追加するため、`docker-compose.override.yml` を作成・編集しました。
-テスト用イメージとして `rroemhild/test-openldap` を採用しました。
+## 次のステップ
 
-**`docker-compose.override.yml`:**
-```yaml
-services:
-  openldap:
-    image: rroemhild/test-openldap
-    ports:
-      - '${FORWARD_LDAP_PORT:-389}:10389' # コンテナ内は10389ポート
-    networks:
-      - sail
-```
-
-#### 1.4. 環境構築スクリプト (`bin/setup.sh`) の改修
-Docker Compose のリファクタリング計画に従い、`bin/setup.sh` を修正しました。
-
-*   **キャッシュビルドのデフォルト化:** `--no-cache` オプションを削除し、デフォルトでキャッシュを利用するように変更しました。
-*   **キャッシュなしビルドオプションの追加:** `-n` オプションを追加し、キャッシュを使わずに再構築できるようにしました。
-*   **`docker-compose.override.yml` の明示的読み込み:** 開発環境モード時に `docker-compose.override.yml` を `COMPOSE_FILE` 環境変数に明示的に追加するロジックを追加しました。
-
-#### 1.5. `.env` への接続情報設定
-`.env` ファイルに LDAP 接続情報を追加しました。`rroemhild/test-openldap` のデフォルト設定に合わせています。
-
-```env
-# LDAP Configuration for rroemhild/test-openldap
-LDAP_LOGGING=true
-LDAP_CONNECTION=default
-LDAP_HOST=openldap
-LDAP_USERNAME="cn=admin,dc=planetexpress,dc=com"
-LDAP_PASSWORD="GoodNewsEveryone"
-LDAP_PORT=10389
-LDAP_BASE_DN="dc=planetexpress,dc=com"
-LDAP_TIMEOUT=5
-LDAP_SSL=false
-LDAP_TLS=false
-LDAP_SASL=false
-```
-
-### 2. 接続テスト
-
-`php artisan ldap:test` コマンドを実行し、LDAPサーバーへの接続成功を確認しました。
-
-```bash
-Testing LDAP connection [default]...
-+------------+------------+----------------------------------+-------------------------+---------------+
-| Connection | Successful | Username                         | Message                 | Response Time |
-+------------+------------+----------------------------------+-------------------------+---------------+
-| default    | ✔ Yes      | cn=admin,dc=planetexpress,dc=com | Successfully connected. | 438.12ms      |
-+------------+------------+----------------------------------+-------------------------+---------------+
-```
-
-## 今後の予定
-
-Phase 2: モデル・同期ロジック実装 に移行します。
-
-*   LdapRecordモデル (`App\Ldap\User`, `App\Ldap\OrganizationalUnit`) の作成
-*   属性マッピングの定義
-*   同期ロジック (OU同期、ユーザー同期) の実装
+*   ログイン画面でのガード切り替え、またはハイブリッド認証の実装 (UI/UX)。
+*   定期同期ジョブ (`ad:sync`) のスケジューリング設定。
+*   本番AD環境での検証。
