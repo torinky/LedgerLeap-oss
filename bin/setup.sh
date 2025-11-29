@@ -25,10 +25,11 @@ error() {
 }
 
 print_usage() {
-    echo "Usage: $0 [-p] [-h]"
+    echo "Usage: $0 [-p] [-n] [-h]"
     echo ""
     echo "Options:"
     echo "  -p  Use production configuration"
+    echo "  -n  Build Docker images without cache"
     echo "  -h  Show this help message"
     echo ""
     echo "Environment detection:"
@@ -38,10 +39,12 @@ print_usage() {
     echo "Examples:"
     echo "  $0      # Development environment"
     echo "  $0 -p   # Production environment"
+    echo "  $0 -n   # Rebuild without cache"
 }
 
 # --- Environment Configuration ---
 ENV="development"
+NO_CACHE=false
 COMPOSE_FILES_ARRAY=()
 
 # 0. .env ファイルの存在確認
@@ -61,11 +64,14 @@ fi
 COMPOSE_FILES_ARRAY+=("docker-compose.yml")
 
 # 2. 環境に応じたオーバーライドファイルの判定
-while getopts "ph" opt; do
+while getopts "pnh" opt; do
   case ${opt} in
     p )
       ENV="production"
       COMPOSE_FILES_ARRAY+=("docker-compose.prod.yml")
+      ;;
+    n )
+      NO_CACHE=true
       ;;
     h )
       print_usage
@@ -82,7 +88,9 @@ done
 # 開発環境では docker-compose.override.yml が自動で読み込まれる
 # （Docker Compose のデフォルト挙動）
 if [ "$ENV" = "development" ] && [ -f "docker-compose.override.yml" ]; then
-    info "docker-compose.override.yml will be loaded automatically (development mode)"
+    COMPOSE_FILES_ARRAY+=("docker-compose.override.yml")
+    info "Added docker-compose.override.yml to COMPOSE_FILE (development mode)"
+    # Docker Composeのデフォルトの自動読み込みは、COMPOSE_FILEが明示的に指定された場合は機能しないため、ここで明示的に追加する
 fi
 
 # 3. アーキテクチャの自動検出
@@ -125,7 +133,14 @@ info "Starting LedgerLeap setup..."
 
 # Build and start Docker containers
 info "Building and starting Docker containers with Sail... (This may take a while)"
-./vendor/bin/sail build --no-cache
+
+BUILD_ARGS=""
+if [ "$NO_CACHE" = true ]; then
+    info "Building without cache..."
+    BUILD_ARGS="--no-cache"
+fi
+
+./vendor/bin/sail build $BUILD_ARGS
 ./vendor/bin/sail up -d
 
 # Install dependencies and run migrations
