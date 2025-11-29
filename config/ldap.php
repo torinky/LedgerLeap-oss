@@ -1,6 +1,44 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP Authentication
+    |--------------------------------------------------------------------------
+    |
+    | This option controls the authentication behavior for your LDAP users.
+    |
+    */
+
+    'auth' => [
+        'user_model' => App\Models\User::class,
+
+        'bind_attribute' => 'uid', // OpenLDAP では uid を使用
+        'query_attribute' => 'uid',
+
+        // ログイン時に自動でユーザーを作成・更新するか
+        'sync_attributes' => [
+            'name' => 'cn', // Common Name を name にマッピング
+            'email' => 'mail', // mail を email にマッピング
+            // 'password' => 'userpassword', // パスワードは同期しない
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP Models
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure any LDAP models your application uses to
+    | interact with your LDAP directory. These will map your LDAP
+    | entries to their own PHP objects.
+    |
+    */
+
+    'models' => [
+        App\Ldap\User::class,
+        App\Ldap\OrganizationalUnit::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------

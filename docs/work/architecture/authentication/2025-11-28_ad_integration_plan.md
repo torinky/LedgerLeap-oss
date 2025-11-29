@@ -74,11 +74,11 @@ LedgerLeapの `UserService` は、ユーザーが所属する `Organization` に
 ## 4. 実装フェーズ (WBS)
 
 ### Phase 1: 環境構築と基本設定
-*   [ ] **開発環境の整備:** Sail環境にLDAPモック（`rroemhild/test-openldap`等）を追加し、開発環境でAD連携をテスト可能にする。
-*   [ ] `directorytree/ldaprecord-laravel` のインストール。
-*   [ ] `config/ldap.php`, `config/auth.php` の設定。
-*   [ ] `.env` へのAD接続情報の追加。
-*   [ ] AD接続テスト (Tinker等を使用)。
+*   [x] **開発環境の整備:** Sail環境にLDAPモック（`rroemhild/test-openldap`等）を追加し、開発環境でAD連携をテスト可能にする。
+*   [x] `directorytree/ldaprecord-laravel` のインストール。
+*   [x] `config/ldap.php`, `config/auth.php` の設定。
+*   [x] `.env` へのAD接続情報の追加。
+*   [x] AD接続テスト (Tinker等を使用)。
 
 ### Phase 2: モデル・同期ロジック実装
 *   [ ] **LdapRecordモデルの作成:**

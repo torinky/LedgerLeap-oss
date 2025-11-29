@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        // LDAPガードを追加
+        'ldap' => [
+            'driver'   => 'ldap',
+            'provider' => 'ldap',
+        ],
     ],
 
     /*
@@ -63,6 +68,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+        // LDAPプロバイダを追加
+        'ldap' => [
+            'driver' => 'ldap',
+            'model'  => App\Ldap\User::class, // LdapRecordモデルを指定
         ],
 
         // 'users' => [
