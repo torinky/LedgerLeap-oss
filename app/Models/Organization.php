@@ -19,7 +19,7 @@ class Organization extends Model
     //    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
     use HasFactory, HasRoles, InteractsWithTree, LogsActivity, NodeTrait, SoftDeletes;
 
-    protected $fillable = ['objectguid', 'org_id', 'name', 'description', 'parent_id'];
+    protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
     public static function getTreeLabelAttribute(): string
     {

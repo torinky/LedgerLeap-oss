@@ -1,8 +1,16 @@
 services:
+  laravel:
+    depends_on:
+      - openldap
+
   openldap:
     image: rroemhild/test-openldap
     ports:
-      - '${FORWARD_LDAP_PORT:-389}:10389' # rroemhild/test-openldapのデフォルトポートは10389
-      # LDAPSは通常636だが、rroemhild/test-openldapはLDAP_PORT=10389で動作しているため、ここでは明示しない
+      - '${FORWARD_LDAP_PORT:-389}:10389'
+    environment:
+      LDAP_ROOTPASS: secret
+      LDAP_ORGANISATION: LedgerLeap
+      LDAP_DOMAIN: local.com
+      LDAP_BASE_DN: dc=local,dc=com
     networks:
       - sail

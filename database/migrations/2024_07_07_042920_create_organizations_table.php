@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::create('organizations', function (Blueprint $table) {
             $table->id();
-            $table->string('objectguid')->nullable()->unique();
-            $table->string('org_id')->unique()->comment('組織ID (ユーザー入力)');
+            $table->string('org_id')->nullable()->unique()->comment('組織ID (ユーザー入力 / AD/LDAP識別子)');
             $table->string('name');
             $table->string('description')->nullable();
             $table->string('sort_order')->nullable();

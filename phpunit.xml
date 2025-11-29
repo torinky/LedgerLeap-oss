@@ -28,5 +28,13 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+
+        <!-- LDAP Testing Configuration -->
+        <env name="LDAP_LOGGING" value="true"/>
+        <env name="LDAP_HOST" value="openldap"/>
+        <env name="LDAP_USERNAME" value="cn=admin,dc=local,dc=com"/>
+        <env name="LDAP_PASSWORD" value="secret"/>
+        <env name="LDAP_PORT" value="389"/>
+        <env name="LDAP_BASE_DN" value="dc=local,dc=com"/>
     </php>
 </phpunit>
