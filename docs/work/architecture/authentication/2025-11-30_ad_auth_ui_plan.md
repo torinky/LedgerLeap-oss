@@ -1,7 +1,7 @@
 # Active Directory 認証・UI実装詳細計画書
 
 **作成日:** 2025-11-30
-**更新日:** 2025-11-30 (要件確定: 範囲外ログイン不可仕様、棚卸しUI仕様確定)
+**更新日:** 2025-11-30 (SoftDeletes導入済み確認、棚卸しUI仕様確定)
 **対象:** Active Directory連携機能 (Phase 3)
 **関連:**
 - [Active Directory 連携実装計画](2025-11-28_ad_integration_plan.md)
@@ -12,7 +12,7 @@
 
 本ドキュメントは、Active Directory (AD) 連携プロジェクトの **Phase 3: 認証プロバイダの切り替えとUI実装** に関する詳細設計と実装計画を定義します。
 ハイブリッド認証の実装により、ADユーザーとローカルユーザーの共存を実現し、管理画面およびユーザー画面においてAD連携状態を可視化することで、運用上の混乱を防ぎます。
-また、ログイン画面を統合し、組織情報の整合性を自動維持しつつ、例外的な手動運用を厳格に管理する仕組みを導入します。
+また、ログイン画面を統合し、組織情報の整合性を自動維持しつつ、例外的な手動運用を厳格に管理する仕組みを導入し、退職者対応もフレームワークのベストプラクティスに従い安全に実施します。
 
 ## 2. 要件と対応方針
 
@@ -27,7 +27,8 @@
 | **統制** | **(仕様)** ADの所属組織がDB内に存在しない（同期範囲外）場合は、ログインを拒否する。 | **組織整合性チェック (Strict):**<br>ログイン時にAD組織を解決し、DB内に存在しない場合は `ValidationException` をスローしてログインを阻止します。 |
 | **例外運用** | 手動管理が必要な場合（出向等）は棚卸しを行い、期間を定型で延長する。理由も記録する。 | **組織自動修正 & 定型棚卸し:**<br>1. **自動修正:** AD組織がDB内に存在すれば、ユーザーの所属を自動更新します。<br>2. **例外:** `ignore_ad_org_sync_until` が有効なら上記チェック・修正をスキップ。<br>3. **棚卸し:** 管理画面の一括アクションで「確認済み」として処理。期間は設定ファイルの日数分自動延長され、任意の入力はできない（理由は備考として入力可）。 |
 | **警告** | 期限切れの手動管理ユーザーがいる場合、警告トーストは消せないようにする。 | **Persistent Toast:** 管理画面において、期限切れユーザーが存在する限り、閉じることのできない警告トースト（またはバナー）を常時表示します。 |
-| **DB変更** | 開発中のため、DBは気にせず全体マイグレーションしてよい。 | **全体マイグレーション (`migrate:fresh`):** 既存のマイグレーションファイルを修正し、DBを再構築する方針をとります。 |
+| **退職者対応** | ADからユーザーが消失した場合でも、履歴データとの整合性を保ちつつシステム利用を停止させる。 | **Laravel SoftDeletes (導入済み):** `users` テーブルに `deleted_at` カラムは既に存在し、Userモデルには `SoftDeletes` トレイトも適用済みです。ADに存在しないユーザーは論理削除されます。履歴データは保持され、ログインは自動的に拒否されます。 |
+| **DB変更** | 開発中のため、DBは気にせず全体マイグレーションしてよい。 | **全体マイグレーション (`migrate:fresh`):** 既存のマイグレーションファイルを修正し、DBを再構築する方針をとります（`deleted_at` カラムは既存のため変更不要）。 |
 
 ## 3. アーキテクチャ詳細
 
@@ -60,8 +61,10 @@
     *   `ad_last_synced_at` (`timestamp`, `nullable`): 最終AD同期日時。
     *   `ignore_ad_org_sync_until` (`timestamp`, `nullable`): 手動管理期限。
     *   `manual_sync_reason` (`text`, `nullable`): 手動管理の理由・備考。
+    *   `deleted_at` (`timestamp`, `nullable`): 論理削除日時 (`SoftDeletes` 用、**既存**)。
 *   **Organizations テーブル:**
     *   `ad_last_synced_at` (`timestamp`, `nullable`): 最終AD同期日時。
+    *   `deleted_at` (`timestamp`, `nullable`): 論理削除日時 (`SoftDeletes` 用、**既存**)。
 
 ### 3.3 設定ファイル (`config/ldap_sync.php`)
 
@@ -72,7 +75,7 @@
 *   **Filament UserResource:**
     *   **一覧:**
         *   フィルタ: 「組織手動管理」(有効/期限切れ/なし)。
-        *   カラム: `ignore_ad_org_sync_until`, `manual_sync_reason` を表示。
+        *   カラム: `ignore_ad_org_sync_until`, `manual_sync_reason`, `deleted_at` を表示。論理削除ユーザーを表示するためのフィルタ (`Tables\Filters\TrashedFilter::make()`) も活用。
         *   **Bulk Action (棚卸し - 確認処理):**
             *   アクション名: "手動管理期間の更新 (確認済み)"。
             *   **シナリオ:** 管理者は期限切れユーザーを選択し、内容に問題がないことを確認してこのアクションを実行する。
@@ -82,31 +85,56 @@
     *   **Persistent Alert:**
         *   `ListUsers` ページ (または Global Hook) で期限切れユーザーを検知。
         *   存在する場合、`duration('persistent')` な Notification を表示。内容は「組織手動管理の期限切れユーザーがX名います。直ちに対応してください」。
+*   **My Portal:**
+    *   AD連携ステータスと最終同期日時を表示。
+    *   手動管理ユーザーの場合、「組織構成は手動管理されています（期限: YYYY/MM/DD）」と表示。
 
 ## 4. 実装フェーズ (WBS)
 
+各フェーズの完了条件として、対応する自動テスト（ユニット/機能テスト）の実装とパスを必須とします。
+
 ### Phase 3.1: 認証ロジックのハイブリッド化と画面統合
-*   [ ] **3.1.1 データベース再構築:** `users` (カラム追加: `ad_last_synced_at`, `ignore_ad_org_sync_until`, `manual_sync_reason`), `organizations` (`ad_last_synced_at`) のスキーマ修正と `migrate:fresh`。
+*   [ ] **3.1.1 データベース再構築:**
+    *   `users` (カラム追加: `ad_last_synced_at`, `ignore_ad_org_sync_until`, `manual_sync_reason`、`deleted_at` は**既存**)。
+    *   `organizations` (カラム追加: `ad_last_synced_at`、`deleted_at` は**既存**)。
+    *   `php artisan migrate:fresh --seed` 実行。
 *   [ ] **3.1.2 設定追加:** `config/ldap_sync.php` に `sync_search_base_dns`, `manual_sync_extension_days` を追加。`config/ldap.php` に `login_search_base_dns` を追加。
-*   [ ] **3.1.3 ログインリクエスト改修:** `App\Http\Requests\Auth\LoginRequest::authenticate()` を修正。
+*   [ ] **3.1.3 テスト準備 (Login):** `tests/Feature/Auth/AuthenticationTest.php` を拡張し、以下のケースを追加。
+    *   ADユーザー認証成功（組織一致）。
+    *   ADユーザー認証失敗（パスワード違い）。
+    *   ローカルユーザー認証成功。
+    *   AD認証成功だが組織不一致（ログイン拒否）。
+    *   AD認証成功・組織不一致だが手動管理期限内（ログイン成功）。
+    *   AD認証成功・組織不一致・手動管理期限切れ（ログイン拒否）。
+*   [ ] **3.1.4 ログインリクエスト改修:** `App\Http\Requests\Auth\LoginRequest::authenticate()` を修正し、上記テストをパスさせる。
     *   複数DNループ。
     *   手動管理期限チェック。
     *   **組織自動修正ロジック** (DBに組織があれば更新)。
     *   **範囲外組織時のログイン拒否ロジック**。
-*   [ ] **3.1.4 Filament設定変更:** `AdminPanelProvider` から `->login()` を削除。
+*   [ ] **3.1.5 Filament設定変更:** `AdminPanelProvider` から `->login()` を削除。
 
 ### Phase 3.2: バッチ同期コマンドの強化
-*   [ ] **3.2.1 複数DN対応:** `AdSync` コマンド改修。
-*   [ ] **3.2.2 手動管理対応:** 同期処理時、期限内ユーザーの組織変更スキップ。
-*   [ ] **3.2.3 同期日時更新:** 成功時更新。
+*   [ ] **3.2.1 テスト準備 (Sync):** `tests/Feature/Console/AdSyncTest.php` を拡張。
+    *   複数DN同期のモックテスト。
+    *   手動管理ユーザー（期限内）の同期スキップ確認。
+    *   退職者（AD消失）の論理削除確認。
+*   [ ] **3.2.2 複数DN対応:** `AdSync` コマンド改修。
+*   [ ] **3.2.3 手動管理対応:** 同期処理時、期限内ユーザーの組織変更スキップ。
+*   [ ] **3.2.4 退職者対応:** ADに存在しないユーザーを論理削除するロジックを追加。
+*   [ ] **3.2.5 同期日時更新:** User/Organizationの同期成功時に `ad_last_synced_at` を更新。
 
 ### Phase 3.3: UI改修
-*   [ ] **3.3.1 UserResource:**
+*   [ ] **3.3.1 UserResource (Backend):**
+    *   `tests/Feature/Filament/UserResourceTest.php` (新規作成) で以下を検証。
+    *   手動管理期限の設定・保存。
+    *   棚卸しアクションの実行と期限延長。
+    *   論理削除ユーザーの表示。
+*   [ ] **3.3.2 UserResource (UI):**
     *   **Bulk Action実装:** 棚卸し（定型延長＆理由入力）。
     *   **Persistent Notification実装:** 期限切れ警告。
-    *   バッジ・カラム表示・フィールド制御。
-*   [ ] **3.3.2 OrganizationResource:** バッジ・同期日時表示。
-*   [ ] **3.3.3 MyPortal:** AD連携ステータス表示。
+    *   バッジ・カラム表示・フィールド制御。論理削除ユーザーの表示/復元対応。
+*   [ ] **3.3.3 OrganizationResource:** バッジ・同期日時表示。
+*   [ ] **3.3.4 MyPortal:** AD連携ステータス表示。
 
 ## 5. 影響範囲と懸念事項
 
@@ -132,6 +160,7 @@
 *   `app/Providers/Filament/AdminPanelProvider.php`
 *   `app/Console/Commands/AdSync.php`
 *   `app/Services/AdSyncService.php`
+*   `app/Models/User.php`
 *   `app/Filament/Resources/UserResource.php`
 *   `app/Filament/Resources/UserResource/Pages/ListUsers.php`
 *   `app/Filament/Resources/OrganizationResource.php`
