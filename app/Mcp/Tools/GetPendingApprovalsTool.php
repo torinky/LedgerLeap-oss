@@ -9,6 +9,7 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -26,6 +27,20 @@ class GetPendingApprovalsTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Get pending approval and inspection tasks assigned to the user with Japanese translations
 MARKDOWN;
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'format' => $schema->string('The format of the response. "raw" (default) returns JSON data. "summary" returns a human-readable summary.')
+                ->enum(['raw', 'summary'])->default('raw'),
+            'limit' => $schema->integer('The maximum number of tasks to return. Default: 50.')
+                ->default(50),
+            'sort_by' => $schema->string('Field to sort by: "created_at" (default), "updated_at", "title", "urgency", "deadline".')
+                ->enum(['created_at', 'updated_at', 'title', 'urgency', 'deadline'])->default('created_at'),
+            'sort_direction' => $schema->string('Sort direction: "asc" or "desc". Default: "asc".')
+                ->enum(['asc', 'desc'])->default('asc'),
+        ];
+    }
 
     public function handle(Request $request, WorkflowService $workflowService): Response
     {

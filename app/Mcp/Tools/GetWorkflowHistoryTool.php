@@ -6,6 +6,7 @@ use App\Mcp\Helpers\TranslationHelper;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -23,6 +24,15 @@ class GetWorkflowHistoryTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Get workflow history for a specific ledger with Japanese translations
 MARKDOWN;
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'ledger_id' => $schema->integer('The ID of the ledger to get history for.')->required(),
+            'limit' => $schema->integer('The maximum number of history items to return. Default: 50.')->default(50),
+            'format' => $schema->string('Response format: "raw" (default) or "summary".')->enum(['raw', 'summary'])->default('raw'),
+        ];
+    }
 
     public function handle(Request $request): Response
     {

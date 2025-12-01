@@ -53,7 +53,12 @@ class GetLedgerDefinesTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            //
+            'include_trashed' => $schema->boolean()
+                ->description('Include trashed ledger defines in the response')
+                ->default(false),
+            'folder_id' => $schema->integer()
+                ->description('Optional folder id to filter ledger defines')
+                ->nullable(),
         ];
     }
 }

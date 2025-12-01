@@ -9,6 +9,7 @@ use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\User;
+use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -26,6 +27,20 @@ class GetActivityLogTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Get activity logs with filtering options and Japanese translations
 MARKDOWN;
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'limit' => $schema->integer('The maximum number of logs to return. Default: 50.')->default(50),
+            'format' => $schema->string('Response format: "raw" (default) or "summary".')->enum(['raw', 'summary'])->default('raw'),
+            'ledger_id' => $schema->integer('Filter logs by ledger ID.'),
+            'folder_id' => $schema->integer('Filter logs by folder ID (includes logs for ledgers in that folder).'),
+            'user_id' => $schema->integer('Filter logs by the user who performed the action.'),
+            'event_type' => $schema->string('Filter by event type (e.g., "created", "updated", "status_updated").'),
+            'start_date' => $schema->string('Filter logs from this date (YYYY-MM-DD).'),
+            'end_date' => $schema->string('Filter logs up to this date (YYYY-MM-DD).'),
+        ];
+    }
 
     public function handle(Request $request): Response
     {

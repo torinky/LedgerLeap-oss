@@ -1,0 +1,166 @@
+
+--- a/src/Mcp/Tools/ListAvailableConfigKeys.php	2025-10-29 02:43:53
++++ b/src/Mcp/Tools/ListAvailableConfigKeys.php	2025-12-01 21:56:49
+@@ -4,6 +4,7 @@
+ 
+ namespace Laravel\Boost\Mcp\Tools;
+ 
++use Illuminate\JsonSchema\JsonSchema;
+ use Illuminate\Support\Facades\Config;
+ use Laravel\Mcp\Request;
+ use Laravel\Mcp\Response;
+@@ -25,12 +26,30 @@
+     {
+         $configArray = Config::all();
+         $dotKeys = $this->flattenToDotNotation($configArray);
++        
++        $prefix = $request->get('prefix');
++        if ($prefix) {
++            $dotKeys = array_filter($dotKeys, fn ($key) => str_starts_with($key, $prefix));
++        }
++
+         sort($dotKeys);
+ 
+-        return Response::json($dotKeys);
++        return Response::json(array_values($dotKeys));
+     }
+ 
+     /**
++     * Get the tool's input schema.
++     *
++     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     */
++    public function schema(JsonSchema $schema): array
++    {
++        return [
++            'prefix' => $schema->string()->description('Filter keys starting with this prefix (e.g. "app", "database").'),
++        ];
++    }
++
++    /**
+      * Flatten a multi-dimensional config array into dot notation keys.
+      *
+      * @param  array<int|string, string|array<int|string, string>>  $array
+@@ -57,4 +76,4 @@
+ 
+         return $results;
+     }
+-}
++}
+\ No newline at end of file
+--- a/src/Mcp/Tools/ApplicationInfo.php	2025-10-29 02:43:53
++++ b/src/Mcp/Tools/ApplicationInfo.php	2025-12-01 21:56:49
+@@ -4,6 +4,7 @@
+ 
+ namespace Laravel\Boost\Mcp\Tools;
+ 
++use Illuminate\JsonSchema\JsonSchema;
+ use Laravel\Boost\Install\GuidelineAssist;
+ use Laravel\Mcp\Request;
+ use Laravel\Mcp\Response;
+@@ -35,4 +36,16 @@
+             'models' => array_keys($this->guidelineAssist->models()),
+         ]);
+     }
+-}
++
++    /**
++     * Get the tool's input schema.
++     *
++     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     */
++    public function schema(JsonSchema $schema): array
++    {
++        return [
++            'refresh' => $schema->boolean()->description('Force refresh of the information (not used, just for schema validity).')->default(false),
++        ];
++    }
++}
+\ No newline at end of file
+--- a/src/Mcp/Tools/DatabaseConnections.php	2025-10-29 02:43:53
++++ b/src/Mcp/Tools/DatabaseConnections.php	2025-12-01 21:56:49
+@@ -4,6 +4,7 @@
+ 
+ namespace Laravel\Boost\Mcp\Tools;
+ 
++use Illuminate\JsonSchema\JsonSchema;
+ use Laravel\Mcp\Request;
+ use Laravel\Mcp\Response;
+ use Laravel\Mcp\Server\Tool;
+@@ -29,4 +30,16 @@
+             'connections' => $connections,
+         ]);
+     }
+-}
++
++    /**
++     * Get the tool's input schema.
++     *
++     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     */
++    public function schema(JsonSchema $schema): array
++    {
++        return [
++            'refresh' => $schema->boolean()->description('Force refresh (not used, just for schema validity).')->default(false),
++        ];
++    }
++}
+\ No newline at end of file
+--- a/src/Mcp/Tools/ListArtisanCommands.php	2025-10-29 02:43:53
++++ b/src/Mcp/Tools/ListArtisanCommands.php	2025-12-01 21:56:49
+@@ -5,6 +5,7 @@
+ namespace Laravel\Boost\Mcp\Tools;
+ 
+ use Illuminate\Console\Command;
++use Illuminate\JsonSchema\JsonSchema;
+ use Illuminate\Support\Facades\Artisan;
+ use Laravel\Mcp\Request;
+ use Laravel\Mcp\Response;
+@@ -40,4 +41,16 @@
+ 
+         return Response::json($commandList);
+     }
+-}
++
++    /**
++     * Get the tool's input schema.
++     *
++     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     */
++    public function schema(JsonSchema $schema): array
++    {
++        return [
++            'refresh' => $schema->boolean()->description('Force refresh (not used, just for schema validity).')->default(false),
++        ];
++    }
++}
+\ No newline at end of file
+--- a/src/Mcp/Tools/LastError.php	2025-10-29 02:43:53
++++ b/src/Mcp/Tools/LastError.php	2025-12-01 21:56:49
+@@ -4,6 +4,7 @@
+ 
+ namespace Laravel\Boost\Mcp\Tools;
+ 
++use Illuminate\JsonSchema\JsonSchema;
+ use Illuminate\Log\Events\MessageLogged;
+ use Illuminate\Support\Facades\Cache;
+ use Illuminate\Support\Facades\Log;
+@@ -79,4 +80,16 @@
+ 
+         return Response::error('Unable to find an ERROR entry in the inspected portion of the log file.');
+     }
+-}
++
++    /**
++     * Get the tool's input schema.
++     *
++     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     */
++    public function schema(JsonSchema $schema): array
++    {
++        return [
++            'refresh' => $schema->boolean()->description('Force refresh (not used, just for schema validity).')->default(false),
++        ];
++    }
++}
+\ No newline at end of file

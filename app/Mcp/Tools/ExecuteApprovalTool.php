@@ -8,6 +8,7 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -25,6 +26,17 @@ class ExecuteApprovalTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Execute workflow approval actions (approve, return to draft) with Japanese translations
 MARKDOWN;
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'ledger_id' => $schema->integer('The ID of the ledger to approve or return.')->required(),
+            'action' => $schema->string('The action to perform: "approve" or "return_to_draft".')
+                ->enum(['approve', 'return_to_draft'])->required(),
+            'comments' => $schema->string('Optional comments for the approval or return action.'),
+            'next_approver_id' => $schema->integer('Optional ID of the next approver (if applicable).'),
+        ];
+    }
 
     public function handle(Request $request, WorkflowService $workflowService): Response
     {

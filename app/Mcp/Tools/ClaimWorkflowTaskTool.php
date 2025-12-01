@@ -7,6 +7,7 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Illuminate\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -24,6 +25,14 @@ class ClaimWorkflowTaskTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Claim a workflow task (take over as assignee) with Japanese translations
 MARKDOWN;
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'ledger_id' => $schema->integer('The ID of the ledger task to claim.')->required(),
+            'comments' => $schema->string('Optional comments for the claim action.'),
+        ];
+    }
 
     public function handle(Request $request, WorkflowService $workflowService): Response
     {
