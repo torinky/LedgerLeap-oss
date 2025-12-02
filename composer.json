@@ -49,6 +49,7 @@
     "barryvdh/laravel-debugbar": "^3.8",
     "barryvdh/laravel-ide-helper": "^3",
     "bottelet/translation-checker": "^1.1",
+    "cweagans/composer-patches": "^2.0",
     "fakerphp/faker": "^1.9.1",
     "laravel-lang/attributes": "^2.7",
     "laravel-lang/common": "*",
@@ -99,6 +100,11 @@
   "extra": {
     "laravel": {
       "dont-discover": []
+    },
+    "patches": {
+      "laravel/boost": {
+        "Fix MCP tools schema": "patches/fix_mcp_tools_schema.patch"
+      }
     }
   },
   "config": {
@@ -107,7 +113,8 @@
     "sort-packages": true,
     "allow-plugins": {
       "pestphp/pest-plugin": true,
-      "php-http/discovery": true
+      "php-http/discovery": true,
+      "cweagans/composer-patches": true
     }
   },
   "minimum-stability": "stable",

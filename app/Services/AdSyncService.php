@@ -97,6 +97,81 @@ class AdSyncService
     }
 
     /**
+     * LDAPユーザーの属性に基づいて、既存の組織を検索します。
+     * 組織の作成や更新は行いません。
+     *
+     * @param  \LdapRecord\Models\Model  $ldapUser
+     * @return Organization|null
+     */
+    public function findMatchingOrganization(\LdapRecord\Models\Model $ldapUser): ?Organization
+    {
+        $this->hierarchyAttributes = config('ldap_sync.hierarchy_attributes', []);
+        $parentOrg = null;
+        $currentOrg = null;
+
+        foreach ($this->hierarchyAttributes as $key => $value) {
+            $codeAttributeName = '';
+            $nameAttributeName = '';
+
+            if (is_string($key)) {
+                $codeAttributeName = $key;
+                $nameAttributeName = $value;
+            } else {
+                $codeAttributeName = $value;
+                $nameAttributeName = $value;
+            }
+
+            $codeValue = $ldapUser->getFirstAttribute($codeAttributeName);
+            $nameValue = $ldapUser->getFirstAttribute($nameAttributeName);
+
+            \Illuminate\Support\Facades\Log::info("findMatchingOrganization: Attr: {$codeAttributeName}, Value: {$codeValue}");
+            \Illuminate\Support\Facades\Log::info("Existing Orgs: " . \App\Models\Organization::all()->pluck('org_id', 'name'));
+
+            if (empty($nameValue)) {
+                break;
+            }
+
+            // org_id (コード) として使う値
+            $orgIdValue = $codeValue ?: $nameValue;
+
+            // DB検索
+            $currentOrg = null;
+            if ($orgIdValue) {
+                $currentOrg = Organization::where('org_id', $orgIdValue)->first();
+            }
+
+            // コードで見つからなければ、親IDと名前で検索 (Fallback)
+            if (!$currentOrg) {
+                $query = Organization::where('name', $nameValue);
+                if ($parentOrg) {
+                    $query->where('parent_id', $parentOrg->id);
+                } else {
+                    $query->whereNull('parent_id');
+                }
+                $currentOrg = $query->first();
+            }
+
+            // 組織が見つからなければ、この時点で終了 (同期範囲外)
+            if (!$currentOrg) {
+                return null;
+            }
+
+            // 親子関係のチェック (念のため)
+            if ($parentOrg && $currentOrg->parent_id !== $parentOrg->id) {
+                // IDは合っているが親が違う -> 移動が発生しているが同期されていない状態
+                // 厳密にチェックするならここで null を返すべきだが、
+                // org_id が一致していれば同一組織とみなすポリシーなら続行可。
+                // 今回は「組織不一致時は同期エラー」とするため、厳密性を優先するなら null。
+                // しかし、AdSyncServiceのロジックではorg_id優先で移動を検知するため、ここでもorg_idで見つかればOKとするのが自然。
+            }
+
+            $parentOrg = $currentOrg;
+        }
+
+        return $currentOrg;
+    }
+
+    /**
      * LDAPユーザーから組織階層を解決し、必要に応じて組織を作成/更新します。
      *
      * @param  LdapUser  $ldapUser

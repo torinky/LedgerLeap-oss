@@ -42,15 +42,126 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        $email = $this->input('email');
+        $password = $this->input('password');
+        $credentials = $this->only('email', 'password');
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+        // 1. LDAP Authentication (Hybrid)
+        $baseDns = config('ldap_sync.login_search_base_dns', [env('LDAP_BASE_DN')]);
+        if (! is_array($baseDns)) {
+            $baseDns = [$baseDns];
+        }
+        \Illuminate\Support\Facades\Log::info("LoginRequest: Base DNs: " . json_encode($baseDns));
+
+        foreach ($baseDns as $dn) {
+            try {
+                // Find the user in AD
+                $userModel = config('ldap.auth.user_model', \App\Ldap\User::class);
+                $query = $userModel::query();
+                if ($dn) {
+                    $query->in($dn);
+                }
+                $ldapUser = $query->where('mail', $email)->first();
+
+                if ($ldapUser) {
+                    \Illuminate\Support\Facades\Log::info("LDAP User found: {$email} in DN: {$dn}");
+                    // Verify password
+                    $isValid = auth()->guard('ldap')->getProvider()->validateCredentials($ldapUser, ['password' => $password]);
+                    \Illuminate\Support\Facades\Log::info("LDAP Password Validation Result for {$email}: " . ($isValid ? 'True' : 'False'));
+
+                    if ($isValid) {
+                        // Authentication Successful
+
+                        // a. Sync/Create local user (Auto-provisioning)
+                        // Using objectguid as the immutable key
+                        $guid = $ldapUser->getObjectGuid();
+                        $name = $ldapUser->getName();
+
+                        $user = \App\Models\User::withTrashed()->where('objectguid', $guid)->first();
+
+                        if (! $user) {
+                            $user = \App\Models\User::withTrashed()->where('email', $email)->first();
+                            if ($user) {
+                                // Link existing user
+                                $user->update(['objectguid' => $guid]);
+                            } else {
+                                // Create new user
+                                $user = \App\Models\User::create([
+                                    'objectguid' => $guid,
+                                    'name' => $name,
+                                    'email' => $email,
+                                    'password' => bcrypt(\Illuminate\Support\Str::random(32)),
+                                ]);
+                            }
+                        }
+
+                        // Restore if soft-deleted (Re-joining)
+                        if ($user->trashed()) {
+                            $user->restore();
+                        }
+
+                        // b. Check manual sync expiry
+                        $isManualSyncValid = $user->ignore_ad_org_sync_until && $user->ignore_ad_org_sync_until->isFuture();
+
+                        if (! $isManualSyncValid) {
+                            // c. Resolve organization
+                            /** @var \App\Services\AdSyncService $adSyncService */
+                            $adSyncService = app(\App\Services\AdSyncService::class);
+                            $organization = $adSyncService->findMatchingOrganization($ldapUser);
+                            \Illuminate\Support\Facades\Log::info("Organization Resolution Result: " . ($organization ? "Found ({$organization->id})" : "Not Found"));
+
+                            // d. Update organization or Reject
+                            if ($organization) {
+                                // Update organization if different
+                                $currentPrimary = $user->primaryOrganization();
+                                if (! $currentPrimary || $currentPrimary->id !== $organization->id) {
+                                    $user->setPrimaryOrganization($organization);
+                                }
+                            } else {
+                                // Organization not found in DB (Out of scope)
+                                RateLimiter::hit($this->throttleKey());
+                                throw ValidationException::withMessages([
+                                    'email' => __('所属組織が同期範囲外です。管理者に連絡してください。'),
+                                ]);
+                            }
+                        }
+
+                        // e. Update sync timestamp
+                        $user->update([
+                            'ad_last_synced_at' => now(),
+                            // Update name/email if changed in AD (Optional but recommended)
+                            'name' => $name,
+                            'email' => $email,
+                        ]);
+
+                        // f. Log in
+                        // Log in using the 'web' guard (standard Laravel session) with the synced local user.
+                        // Auth::guard('ldap')->login() would log in to the LDAP guard, but we want the app session.
+                        \Illuminate\Support\Facades\Auth::guard('web')->login($user, $this->boolean('remember'));
+                        RateLimiter::clear($this->throttleKey());
+
+                        return;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log LDAP errors but continue to next DN or fallback
+                \Illuminate\Support\Facades\Log::error("LDAP Login Error for DN {$dn}: " . $e->getMessage());
+                continue;
+            }
         }
 
-        RateLimiter::clear($this->throttleKey());
+        // 2. Local Database Authentication (Fallback)
+        if (Auth::guard('web')->attempt($credentials, $this->boolean('remember'))) {
+            RateLimiter::clear($this->throttleKey());
+
+            return;
+        }
+
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
     }
 
     /**

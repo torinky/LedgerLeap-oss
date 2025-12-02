@@ -3,6 +3,40 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Login Search Base DNs
+    |--------------------------------------------------------------------------
+    |
+    | The base DNs to search for users during login.
+    | If not specified, it will default to the connection's base DN.
+    |
+    */
+    'login_search_base_dns' => array_filter(explode(',', env('LDAP_LOGIN_SEARCH_BASE_DNS', env('LDAP_BASE_DN')))),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sync Search Base DNs
+    |--------------------------------------------------------------------------
+    |
+    | The base DNs to search for users during the synchronization process.
+    | This allows synchronizing users from multiple OUs or containers.
+    | If not specified, it will default to the connection's base DN.
+    |
+    */
+    'sync_search_base_dns' => array_filter(explode(',', env('LDAP_SYNC_SEARCH_BASE_DNS', env('LDAP_BASE_DN')))),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Manual Sync Extension Days
+    |--------------------------------------------------------------------------
+    |
+    | The number of days to extend the manual synchronization period when
+    | a user is marked for manual management (e.g., during inventory).
+    |
+    */
+    'manual_sync_extension_days' => env('LDAP_MANUAL_SYNC_EXTENSION_DAYS', 90),
+
+    /*
+    |--------------------------------------------------------------------------
     | AD Sync Mode
     |--------------------------------------------------------------------------
     |

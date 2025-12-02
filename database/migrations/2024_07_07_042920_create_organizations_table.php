@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('sort_order')->nullable();
             //            $table->unsignedBigInteger('parent_id')->nullable();
             //            $table->foreign('parent_id')->references('id')->on('organizations')->onDelete('cascade');
+            $table->timestamp('ad_last_synced_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->nestedSet();

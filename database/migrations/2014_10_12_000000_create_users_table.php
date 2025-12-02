@@ -23,6 +23,10 @@ return new class extends Migration
             $table->string('login_landing_page')
                 ->default(LoginLandingPage::MyPortal->value);
 
+            $table->timestamp('ad_last_synced_at')->nullable();
+            $table->timestamp('ignore_ad_org_sync_until')->nullable();
+            $table->text('manual_sync_reason')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
         });
