@@ -1,0 +1,17 @@
+{
+    "_hash": "833017f6078da82dbbf6e07c4409c4e87c6f41d81b2807dfdd2c55497c9eb15a",
+    "patches": {
+        "laravel/boost": [
+            {
+                "package": "laravel/boost",
+                "description": "Fix MCP tools schema",
+                "url": "patches/fix_mcp_tools_schema.patch",
+                "sha256": "333934a59a66b9787505f3de2e1b8273d5dcfe1d40c1569b9045451871f3a4d2",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

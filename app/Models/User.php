@@ -39,7 +39,7 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
-        'login_landing_page',
+        'login_landing_page','ad_last_synced_at',
     ];
 
     /**

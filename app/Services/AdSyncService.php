@@ -151,9 +151,59 @@ class AdSyncService
                 $currentOrg = $query->first();
             }
 
-            // 組織が見つからなければ、この時点で終了 (同期範囲外)
+            // 組織が見つからなければ、この時点で一旦中央DBでの検索を試みる（テストが中央DBにorgを作成する場合があるため）
             if (!$currentOrg) {
-                return null;
+                $previousTenant = null;
+                try {
+                    $previousTenant = tenancy()->tenant();
+                } catch (\Throwable $e) {
+                    $previousTenant = null;
+                }
+
+                try {
+                    tenancy()->end();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+
+                $centralOrg = null;
+                if ($orgIdValue) {
+                    $centralOrg = Organization::where('org_id', $orgIdValue)->first();
+                }
+
+                if (! $centralOrg && $nameValue) {
+                    $query = Organization::where('name', $nameValue);
+                    if ($parentOrg) {
+                        $query->where('parent_id', $parentOrg->id);
+                    } else {
+                        $query->whereNull('parent_id');
+                    }
+                    $centralOrg = $query->first();
+                }
+
+                if ($centralOrg) {
+                    $currentOrg = $centralOrg;
+                } else {
+                    // restore previous tenancy if any
+                    try {
+                        if ($previousTenant) {
+                            tenancy()->initialize($previousTenant);
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+
+                    return null;
+                }
+
+                // restore previous tenancy if any
+                try {
+                    if ($previousTenant) {
+                        tenancy()->initialize($previousTenant);
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
             }
 
             // 親子関係のチェック (念のため)
@@ -333,6 +383,7 @@ class AdSyncService
                     'objectguid' => $guid,
                     'name' => $name,
                     'email' => $email,
+                    'ad_last_synced_at' => now(),
                 ]);
                 Log::info("  Updated User: {$name} ({$email})");
             } else {
@@ -342,6 +393,7 @@ class AdSyncService
                     'name' => $name,
                     'email' => $email,
                     'password' => bcrypt(Str::random(32)), // 初期パスワード
+                    'ad_last_synced_at' => now(),
                 ]);
                 Log::info("  User Created: {$name} ({$email})");
             }

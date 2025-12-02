@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('role_id')->constrained('roles')->cascadeOnDelete();
             $table->foreignId('folder_id')->constrained('folders')->cascadeOnDelete();
-            $table->foreignId('modifier_id')->constrained('users');
+            $table->foreignId('modifier_id')->nullable()->constrained('users')->nullOnDelete();
 
             // permission カラム: アクセス権限のみを Enum で定義
             $permissionValues = FolderPermissionType::allPermissionValues();
