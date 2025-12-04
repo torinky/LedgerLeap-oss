@@ -63,6 +63,8 @@ class User extends Authenticatable implements FilamentUser
         'login_landing_page' => LoginLandingPage::class,
         'pending_inspection_count' => 'integer',
         'pending_approval_count' => 'integer',
+        'ad_last_synced_at' => 'datetime',
+        'ignore_ad_org_sync_until' => 'datetime',
     ];
 
     protected static function boot()

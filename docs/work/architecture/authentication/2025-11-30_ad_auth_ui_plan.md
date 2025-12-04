@@ -123,6 +123,8 @@
 *   [ ] **3.2.4 退職者対応:** ADに存在しないユーザーを論理削除するロジックを追加。
 *   [ ] **3.2.5 同期日時更新:** User/Organizationの同期成功時に `ad_last_synced_at` を更新。
 
+*   **実装結果:** `AdSyncService` の組織割り当てロジックを `setPrimaryOrganization` から `attach`/`updateExistingPivot` に置き換え、手動同期保護ロジックを調整。デバッグ用 `dd()` を追加し、`OrgB` が作成されない問題を調査中。
+
 ### Phase 3.3: UI改修
 *   [ ] **3.3.1 UserResource (Backend):**
     *   `tests/Feature/Filament/UserResourceTest.php` (新規作成) で以下を検証。

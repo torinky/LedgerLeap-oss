@@ -87,6 +87,31 @@ Auth::guard('ldap')->attempt(['mail' => 'fry@planetexpress.com', 'password' => '
     *   テストスキップ (`markTestSkipped`) を失敗 (`fail`) に変更し、接続エラーを確実に検知するようにしました。
     *   PHP 8 Attribute (`#[Group]`) を導入し、PHPUnitのDeprecation Warningを解消しました。
 
+## Phase 3.1: 認証ロジックのハイブリッド化と画面統合 (2025-12-03 追記)
+
+*   **状況:** 完了
+*   **内容:**
+    *   **DB拡張:** `users`, `organizations` テーブルへのカラム追加 (`ad_last_synced_at`, `ignore_ad_org_sync_until` 等) を確認。
+    *   **設定:** `config/ldap_sync.php`, `config/ldap.php` への設定追加を確認。
+    *   **認証ロジック:** `LoginRequest` にハイブリッド認証ロジック（LDAP検索 -> ローカル同期 -> 組織解決 -> ログイン）が実装されていることを確認。
+    *   **Filament:** `AdminPanelProvider` から `->login()` が削除され、標準ログイン画面に統合されていることを確認。
+
+## 未実装機能の特定 (2025-12-03 追記)
+
+コードベース調査の結果、以下の機能が未実装であることが判明しました。これらは `2025-11-30_ad_auth_ui_plan.md` で定義されていますが、現状のコードには反映されていません。
+
+### Phase 3.2: バッチ同期コマンドの強化 (未完了)
+*   **手動管理ユーザーの保護:** `AdSyncService` において、`ignore_ad_org_sync_until` が有効なユーザーの組織変更をスキップするロジック。
+*   **退職者対応:** ADから消失したユーザーを論理削除するロジック。
+
+### Phase 3.3: UI改修 (未着手)
+*   **UserResource:**
+    *   手動管理期限 (`ignore_ad_org_sync_until`) の表示・編集フィールド。
+    *   棚卸し用Bulk Action。
+    *   期限切れ警告 (Persistent Notification)。
+*   **MyPortal:**
+    *   AD連携ステータスと最終同期日時の表示。
+
 ## 次のステップ
 
 *   ログイン画面でのガード切り替え、またはハイブリッド認証の実装 (UI/UX)。

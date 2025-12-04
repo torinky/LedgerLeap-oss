@@ -243,4 +243,69 @@ class AdSyncTest extends TestCase
         $this->assertNotEquals(0, $repaired->_lft);
         $this->assertNotEquals(0, $repaired->_rgt);
     }
+
+    public function test_tc08_manual_sync_protection()
+    {
+        Config::set('ldap_sync.hierarchy_attributes', ['department' => 'description']);
+
+        // Initial: OrgA
+        LdapUser::create([
+            'cn' => 'Fry', 'mail' => 'fry@ex.com', 'objectguid' => 'u1',
+            'department' => 'OrgA', 'description' => 'Org A',
+        ]);
+        Artisan::call('ad:sync');
+
+        $user = User::where('email', 'fry@ex.com')->first();
+        $orgA = Organization::where('org_id', 'OrgA')->first();
+        $this->assertEquals($orgA->id, $user->primaryOrganization()->id);
+
+        // Enable Manual Sync Protection
+        $user->update(['ignore_ad_org_sync_until' => now()->addDays(30)]);
+
+        // Move in AD: OrgA -> OrgB
+        $this->clearLdapDirectory();
+        LdapUser::create([
+            'cn' => 'Fry', 'mail' => 'fry@ex.com', 'objectguid' => 'u1',
+            'department' => 'OrgB', 'description' => 'Org B',
+        ]);
+
+        Artisan::call('ad:sync');
+
+        // Should still be in OrgA
+        $user->refresh();
+        $this->assertEquals($orgA->id, $user->primaryOrganization()->id, 'User should remain in OrgA due to manual protection');
+
+        // Expire Protection
+        $user->update(['ignore_ad_org_sync_until' => now()->subDay()]);
+
+        Artisan::call('ad:sync');
+
+        // Should now be in OrgB
+        $user->refresh();
+        $orgB = Organization::where('org_id', 'OrgB')->first();
+        $this->assertEquals($orgB->id, $user->primaryOrganization()->id, 'User should move to OrgB after protection expiry');
+    }
+
+    public function test_tc09_retired_users_are_soft_deleted()
+    {
+        Config::set('ldap_sync.hierarchy_attributes', ['department' => 'description']);
+        Config::set('ldap_sync.delete_missing', true); // Re-using this config for users if applicable, or default behavior
+        Config::set('ldap_sync.deletion_threshold_percentage', 100);
+
+        // Create User
+        LdapUser::create([
+            'cn' => 'Fry', 'mail' => 'fry@ex.com', 'objectguid' => 'u1',
+            'department' => 'OrgA', 'description' => 'Org A',
+        ]);
+        Artisan::call('ad:sync');
+
+        $this->assertDatabaseHas('users', ['email' => 'fry@ex.com', 'deleted_at' => null]);
+
+        // Remove from AD
+        $this->clearLdapDirectory();
+
+        Artisan::call('ad:sync');
+
+        $this->assertSoftDeleted('users', ['email' => 'fry@ex.com']);
+    }
 }

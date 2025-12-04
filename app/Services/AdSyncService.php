@@ -20,6 +20,8 @@ class AdSyncService
 
     protected array $syncedOrganizationIds = [];
 
+    protected array $syncedUserIds = [];
+
     public function __construct()
     {
     }
@@ -45,6 +47,7 @@ class AdSyncService
         }
 
         $this->syncedOrganizationIds = []; // リセット
+        $this->syncedUserIds = []; // リセット
         $organizationCache = []; // キャッシュ
 
         if (! $dryRun) {
@@ -68,9 +71,10 @@ class AdSyncService
                 }
             }
 
-            // 3. クリーンアップ (今回同期されなかった組織の論理削除)
+            // 3. クリーンアップ (今回同期されなかった組織とユーザーの論理削除)
             if (! $dryRun && $this->deleteMissing) {
                 $this->cleanupOrganizations();
+                $this->cleanupUsers();
             }
 
             // 4. NestedSetの修復
@@ -84,7 +88,7 @@ class AdSyncService
 
             return [
                 'status' => 'success',
-                'synced_users' => $ldapUsers->count(),
+                'synced_users' => count($this->syncedUserIds),
                 'synced_organizations' => count($this->syncedOrganizationIds),
             ];
         } catch (\Exception $e) {
@@ -249,6 +253,7 @@ class AdSyncService
 
             $codeValue = $ldapUser->getFirstAttribute($codeAttributeName);
             $nameValue = $ldapUser->getFirstAttribute($nameAttributeName);
+            Log::info('Debug hierarchy values: codeAttr=' . $codeAttributeName . ', nameAttr=' . $nameAttributeName . ', codeValue=' . $codeValue . ', nameValue=' . $nameValue);
             Log::info("    Hierarchy Level - CodeAttr: {$codeAttributeName}, NameAttr: {$nameAttributeName}, CodeValue: {$codeValue}, NameValue: {$nameValue}");
 
             if (empty($nameValue)) {
@@ -327,9 +332,11 @@ class AdSyncService
                             $currentOrg->saveAsRoot();
                         }
                         $currentOrg->save();
+                        // Refresh to ensure ID is loaded
+                        $currentOrg = $currentOrg->fresh();
                         Log::info("    Organization Created: {$nameValue} (Org ID: {$orgIdValue}, Parent ID: ".($parentOrg?->id ?? 'null').")");
                     }
-                    $this->syncedOrganizationIds[] = $currentOrg->id; // 同期済みリストに追加
+                    $this->syncedOrganizationIds[] = $currentOrg->id; // 同期済みリストに追加 (IDが確実にロードされた後)
                 }
                 $organizationCache[$cacheKey] = $currentOrg;
             }
@@ -368,10 +375,10 @@ class AdSyncService
             Log::info("  [Dry Run] Would sync User: {$name} ({$email}) -> Org: {$organization->name}");
         } else {
             // objectguidで検索、なければemailで検索して紐付け、それもなければ新規作成
-            $user = User::where('objectguid', $guid)->first();
+            $user = User::withTrashed()->where('objectguid', $guid)->first();
 
             if (! $user) {
-                $user = User::where('email', $email)->first();
+                $user = User::withTrashed()->where('email', $email)->first();
                 if ($user) {
                     Log::info("  Linked existing user {$email} to GUID {$guid}. Updating existing user.");
                 }
@@ -379,6 +386,11 @@ class AdSyncService
 
             if ($user) {
                 // 既存ユーザーの更新
+                if ($user->trashed()) {
+                    $user->restore();
+                    Log::info("  Restored soft-deleted user: {$name}");
+                }
+
                 $user->update([
                     'objectguid' => $guid,
                     'name' => $name,
@@ -398,12 +410,27 @@ class AdSyncService
                 Log::info("  User Created: {$name} ({$email})");
             }
 
-            // 所属の更新
+            // 同期済みユーザーとしてマーク
+            $this->syncedUserIds[] = $user->id;
+
+            // 所属の更新 (手動管理期間中はスキップ)
             if ($user) {
-                // 現在のPrimary組織を解除し、新しい組織をPrimaryに設定
-                $user->organizations()->updateExistingPivot($user->organizations()->pluck('organization_id'), ['is_primary' => false]);
-                $user->organizations()->syncWithoutDetaching([$organization->id => ['is_primary' => true]]);
-                Log::info("  User {$user->name} assigned to Organization: {$organization->name}");
+                $isManualSyncValid = $user->ignore_ad_org_sync_until && $user->ignore_ad_org_sync_until->isFuture();
+
+                if ($isManualSyncValid) {
+                    Log::info("  Skipping organization sync for user {$user->name} due to manual sync protection until {$user->ignore_ad_org_sync_until}");
+                } else {
+                    // 現在のPrimary組織を解除
+                    $user->organizations()->updateExistingPivot($user->organizations()->pluck('organization_id'), ['is_primary' => false]);
+
+                    // 新しい組織をPrimaryに設定
+                    if (! $user->organizations()->where('organization_id', $organization->id)->exists()) {
+                        $user->organizations()->attach($organization->id, ['is_primary' => true]);
+                    } else {
+                        $user->organizations()->updateExistingPivot($organization->id, ['is_primary' => true]);
+                    }
+                    Log::info("  User {$user->name} assigned to Organization: {$organization->name}");
+                }
             }
         }
     }
@@ -443,5 +470,41 @@ class AdSyncService
 
         Organization::whereIn('id', $orgsToSoftDeleteIds)->delete();
         Log::info("Soft deleted {$organizationsToDeleteCount} organizations.");
+    }
+
+    /**
+     * 今回同期されなかったユーザーを論理削除します。
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    protected function cleanupUsers(): void
+    {
+        // objectguidを持つユーザーをAD同期対象とみなす
+        $allSyncableUserIds = User::whereNotNull('objectguid')->pluck('id')->toArray();
+        $usersToSoftDeleteIds = array_diff($allSyncableUserIds, $this->syncedUserIds);
+        Log::info("Cleanup: All syncable User IDs: " . count($allSyncableUserIds));
+        Log::info("Cleanup: Synced User IDs: " . count($this->syncedUserIds));
+        Log::info("Cleanup: Users to soft delete IDs: " . count($usersToSoftDeleteIds));
+
+        if (empty($usersToSoftDeleteIds)) {
+            Log::info("No users to soft delete.");
+            return;
+        }
+
+        $totalUsers = count($allSyncableUserIds);
+        $usersToDeleteCount = count($usersToSoftDeleteIds);
+
+        $deletionPercentage = ($totalUsers > 0) ? ($usersToDeleteCount / $totalUsers) * 100 : 0;
+        Log::info("Cleanup: Total Users: {$totalUsers}, To Delete: {$usersToDeleteCount}, Percentage: {$deletionPercentage}%");
+
+        if ($this->deletionThresholdPercentage > 0 && $deletionPercentage > $this->deletionThresholdPercentage) {
+            Log::warning("Aborting user cleanup: Deletion percentage ({$deletionPercentage}%) exceeds threshold ({$this->deletionThresholdPercentage}%).");
+            throw new \Exception("User cleanup aborted due to exceeding deletion threshold.");
+        }
+
+        User::whereIn('id', $usersToSoftDeleteIds)->delete();
+        Log::info("Soft deleted {$usersToDeleteCount} users.");
     }
 }
