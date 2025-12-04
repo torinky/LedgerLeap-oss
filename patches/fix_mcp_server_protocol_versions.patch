@@ -1,0 +1,14 @@
+--- a/src/Server.php
++++ b/src/Server.php
+@@ -38,6 +38,8 @@
+      * @var array<int, string>
+      */
+     protected array $supportedProtocolVersion = [
++        '2025-11-25',
+         '2025-06-18',
+         '2025-03-26',
+         '2024-11-05',
++        '2024-10-07',
+     ];
+ 
+     /**

@@ -77,7 +77,10 @@ gen
 !/database/wordnet_data/wnjpn.db
 /.env.development
 /.env.production
-/storage/
+/storage/app/
+/storage/api-docs/
+/storage/vlm*
+/storage/test/
 
 # Added by Gemini
 .DS_Store
