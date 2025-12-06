@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LedgerLeap Introduction</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+
+        :root {
+            --primary: #1e3a8a; /* Deep Blue */
+            --secondary: #2563eb; /* Blue */
+            --accent: #0ea5e9; /* Cyan */
+            --text-dark: #1f2937;
+            --text-gray: #4b5563;
+            --text-light: #f3f4f6;
+            --bg-light: #ffffff;
+            --bg-subtle: #f8fafc;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--text-dark);
+        }
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-light);
+            position: relative;
+            background-image: radial-gradient(circle at 10% 10%, #f1f5f9 0%, transparent 20%), radial-gradient(circle at 90% 90%, #f1f5f9 0%, transparent 20%);
+        }
+        .slide.active {
+            display: flex;
+        }
+        /* Inner container for 16:9 content safety zone */
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            height: 85%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* Border for debugging: border: 1px dashed #ccc; */
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            letter-spacing: 0.05em;
+            line-height: 1.2;
+            text-align: center;
+        }
+        h2 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0 0 40px 0;
+            padding-bottom: 15px;
+            border-bottom: 5px solid var(--accent);
+            display: inline-block;
+            align-self: center; /* Center headers */
+            letter-spacing: 0.03em;
+        }
+        h3 {
+            font-size: 1.6rem;
+            color: var(--secondary);
+            margin: 0 0 15px 0;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        p, li {
+            font-size: 1.4rem;
+            color: var(--text-dark);
+            line-height: 1.8;
+            letter-spacing: 0.02em;
+        }
+        
+        /* Lists */
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        ul li {
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 35px;
+        }
+        ul li::before {
+            content: "✔";
+            color: var(--accent);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        /* Helpers */
+        .text-center { text-align: center; }
+        .highlight { color: var(--secondary); font-weight: bold; }
+        .big-text { font-size: 1.2em; font-weight: bold; color: var(--primary); }
+        .subtitle {
+            font-size: 1.8rem;
+            color: var(--text-gray);
+            margin-bottom: 40px;
+            text-align: center;
+            font-weight: 500;
+        }
+        .presenter {
+            font-size: 1.2rem;
+            color: var(--text-gray);
+            margin-top: 50px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+        }
+
+        /* Layouts */
+        .slide-title {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9)), url('title_bg.png');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .cols-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            width: 100%;
+            align-items: center;
+        }
+        
+        /* Cards & Visuals */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.3s;
+            border-top: 5px solid var(--accent);
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { margin-bottom: 10px; font-size: 1.8rem; }
+        .card p { font-size: 1.2rem; color: var(--text-gray); }
+        
+        .feature-box {
+            background: var(--bg-subtle);
+            border-left: 6px solid var(--secondary);
+            padding: 25px;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 25px;
+        }
+
+        .img-box {
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+            border: 4px solid white;
+        }
+        .img-box img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Table */
+        .styled-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 15px; /* Row spacing */
+        }
+        .styled-table th {
+            text-align: left;
+            padding: 15px 25px;
+            color: var(--text-gray);
+            font-size: 1.1rem;
+            font-weight: normal;
+        }
+        .styled-table td {
+            background: white;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+            font-size: 1.3rem;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+        .styled-table td:first-child {
+            border-left: 5px solid var(--primary);
+            border-radius: 8px 0 0 8px;
+            font-weight: bold;
+            color: var(--primary);
+            width: 20%;
+        }
+        .styled-table td:last-child {
+            border-radius: 0 8px 8px 0;
+            border-right: 1px solid #eee;
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        .controls:hover { opacity: 1; }
+        .btn {
+            background: var(--text-dark);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 30px;
+            font-weight: bold;
+        }
+        .progress {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 6px;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide 1: Title -->
+    <div class="slide slide-title active">
+        <div class="container">
+            <h1>LedgerLeap プロジェクト概要</h1>
+            <div class="subtitle">組織の情報を「資産」に変える、<br>次世代台帳管理プラットフォーム</div>
+            <div class="presenter">LegderLeap Project Team</div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Agenda -->
+    <div class="slide">
+        <div class="container" style="align-items: flex-start; max-width: 1000px;">
+            <h2>アジェンダ</h2>
+            <div class="cols-2" style="align-items: flex-start; gap: 80px;">
+                <ul style="font-size: 1.5rem;">
+                    <li><strong>1. 背景と課題</strong> <br><span style="font-size: 0.8em; color: gray;">なぜ今、新しいシステムが必要なのか？</span></li>
+                    <li><strong>2. LedgerLeapとは</strong> <br><span style="font-size: 0.8em; color: gray;">ソリューションの概要</span></li>
+                    <li><strong>3. 主な特徴</strong> <br><span style="font-size: 0.8em; color: gray;">ビジネスを加速させる3つの強み</span></li>
+                </ul>
+                <ul style="font-size: 1.5rem;">
+                    <li><strong>4. 利用イメージ</strong> <br><span style="font-size: 0.8em; color: gray;">ペルソナ：誰がどう使うのか？</span></li>
+                    <li><strong>5. ユースケース</strong> <br><span style="font-size: 0.8em; color: gray;">具体的な活用シーン</span></li>
+                    <li><strong>6. まとめ</strong> <br><span style="font-size: 0.8em; color: gray;">導入による効果</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Challenges -->
+    <div class="slide">
+        <div class="container">
+            <h2>背景と課題</h2>
+            <div class="cols-2">
+                <div>
+                    <h3>💣 現状の課題 (As-Is)</h3>
+                    <div class="feature-box">
+                        <span class="big-text">情報の散在</span>
+                        <p style="margin: 5px 0 0;">紙、Excel、メール... どこにあるか分からない。</p>
+                    </div>
+                    <div class="feature-box">
+                        <span class="big-text">検索の限界</span>
+                        <p style="margin: 5px 0 0;">PDFや画像の中身は検索できず、ナレッジが埋もれる。</p>
+                    </div>
+                    <div class="feature-box">
+                        <span class="big-text">業務の属人化</span>
+                        <p style="margin: 5px 0 0;">「あの件は〇〇さんしか知らない」リスク。</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>✨ 目指す姿 (To-Be)</h3>
+                    <ul style="font-size: 1.5rem; line-height: 2;">
+                        <li><strong>「探せばすぐ見つかる」</strong> 環境</li>
+                        <li><strong>「誰でも迷わず使える」</strong> システム</li>
+                        <li><strong>「安心して共有できる」</strong> セキュリティ</li>
+                    </ul>
+                    <div style="margin-top: 30px; padding: 20px; background: #e0f2fe; border-radius: 12px; color: var(--primary); text-align: center; font-weight: bold; font-size: 1.3rem;">
+                        情報管理の「負」を解消し、<br>組織のスピードと質を向上させる。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Overview -->
+    <div class="slide">
+        <div class="container">
+            <h2>LedgerLeapとは</h2>
+            <p class="text-center" style="max-width: 900px; margin: 0 auto 50px;">
+                組織内のあらゆる情報を一元管理し、<br>
+                高度な検索と柔軟な権限設定で<strong>「情報の活用」を最大化する</strong><br>
+                Webベースの台帳管理システム。
+            </p>
+            <div class="card-grid">
+                <div class="card">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🏢</div>
+                    <h3 style="color: var(--primary);">Centralize</h3>
+                    <p><strong>一元化</strong></p>
+                    <p style="font-size: 1rem; margin-top: 10px;">あらゆる業務データを<br>一箇所に集約。</p>
+                </div>
+                <div class="card" style="border-top-color: var(--secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">👁️</div>
+                    <h3 style="color: var(--secondary);">Visualize</h3>
+                    <p><strong>可視化</strong></p>
+                    <p style="font-size: 1rem; margin-top: 10px;">権限や活動履歴を<br>透明化して管理。</p>
+                </div>
+                <div class="card" style="border-top-color: var(--accent);">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🧠</div>
+                    <h3 style="color: var(--accent);">Intelligent</h3>
+                    <p><strong>知能化</strong></p>
+                    <p style="font-size: 1rem; margin-top: 10px;">全文検索とOCRで<br>埋もれた情報を知識へ。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Strengths -->
+    <div class="slide">
+        <div class="container">
+            <h2>LedgerLeapの3つの強み</h2>
+            <div class="card-grid" style="grid-template-columns: 1fr; gap: 20px;">
+                <div class="feature-box" style="display: flex; align-items: center; gap: 20px;">
+                    <div style="font-size: 2.5rem; min-width: 60px; text-align: center;">🔍</div>
+                    <div>
+                        <span class="big-text">1. Deep Search (全文検索)</span>
+                        <p style="margin: 5px 0 0;">Mroongaエンジン搭載。<strong>添付ファイル（PDF/画像）の中身まで</strong>OCR自動処理で完全検索。</p>
+                    </div>
+                </div>
+                <div class="feature-box" style="display: flex; align-items: center; gap: 20px; border-left-color: var(--text-dark);">
+                    <div style="font-size: 2.5rem; min-width: 60px; text-align: center;">🛡️</div>
+                    <div>
+                        <span class="big-text">2. 柔軟かつ強固な権限管理</span>
+                        <p style="margin: 5px 0 0;">フォルダ・テナント単位のきめ細やかなアクセス制御。「いつ・誰が・何を」の<strong>完全な監査ログ</strong>。</p>
+                    </div>
+                </div>
+                <div class="feature-box" style="display: flex; align-items: center; gap: 20px; border-left-color: var(--accent);">
+                    <div style="font-size: 2.5rem; min-width: 60px; text-align: center;">🚀</div>
+                    <div>
+                        <span class="big-text">3. ユーザーに優しいUI</span>
+                        <p style="margin: 5px 0 0;"><strong>「マイポータル」</strong>機能で、ITに不慣れなユーザーでも自分のタスクと担当範囲が一目瞭然。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Personas -->
+    <div class="slide">
+        <div class="container">
+            <h2>想定されるユーザー（ペルソナ）</h2>
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th width="20%">ペルソナ</th>
+                        <th width="30%">役割・特徴</th>
+                        <th>LedgerLeapでのメリット</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>実務担当者</td>
+                        <td>現場スタッフ・事務<br><small style="color: #888;">ITスキルは様々</small></td>
+                        <td>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li style="margin-bottom: 5px;">「マイポータル」で迷わず作業開始。</li>
+                                <li style="margin-bottom: 0;">必要な過去データを<strong>数秒で検索</strong>。</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>現場リーダー</td>
+                        <td>チーム管理・監督</td>
+                        <td>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li style="margin-bottom: 5px;">チーム内の情報共有がスムーズに。</li>
+                                <li style="margin-bottom: 0;"><strong>代理入力・承認フロー</strong>で進捗管理。</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>経営層・管理者</td>
+                        <td>全体統括・監査</td>
+                        <td>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li style="margin-bottom: 5px;">組織全体の活動状況を可視化。</li>
+                                <li style="margin-bottom: 0;"><strong>ガバナンス強化</strong>と資産の有効活用。</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Slide 7: Use Case 1 -->
+    <div class="slide">
+        <div class="container">
+            <h2 style="font-size: 2.2rem; margin-bottom: 30px;">ユースケース① 実務担当者</h2>
+            <div class="cols-2">
+                <div class="feature-box" style="background: white; border: none; padding: 0;">
+                    <h3 style="color: var(--text-dark); border-left: 5px solid var(--primary); padding-left: 15px;">シーン: 「過去のトラブル対応履歴を探したい」</h3>
+                    <p><strong>課題:</strong> <br>古い報告書が深い階層にあり、見つからない。ファイル名も思い出せない。</p>
+                    <div style="text-align: center; font-size: 2rem; color: #ccc; margin: 10px 0;">⬇</div>
+                    <p><strong>LedgerLeapでの解決:</strong></p>
+                    <ul>
+                        <li>キーワード（例: 「ポンプ故障 異音」）を入力。</li>
+                        <li><strong>PDFの中身のテキストまでヒット</strong>。</li>
+                        <li>該当ページを即座に開き、過去の対応策を参照。初動が劇的に速くなる。</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="img-box">
+                        <img src="search.png" alt="Search Concept">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 8: Use Case 2 -->
+    <div class="slide">
+        <div class="container">
+            <h2 style="font-size: 2.2rem; margin-bottom: 30px;">ユースケース② 現場リーダー</h2>
+            <div class="cols-2">
+                <div>
+                    <h3 style="color: var(--text-dark); border-left: 5px solid var(--secondary); padding-left: 15px;">シーン: 「チームメンバーの日報確認と承認」</h3>
+                    <ul style="font-size: 1.3rem;">
+                        <li><strong>Before:</strong> メールでバラバラに届き、未読・未承認が管理できない。</li>
+                        <li><strong>After:</strong> 
+                            <ul style="margin-top: 10px;">
+                                <li><strong>ワークフロー機能</strong>で提出と同時に通知。</li>
+                                <li>「マイポータル」のリストからワンクリックで確認。</li>
+                                <li>コメント付きで「承認」や「差し戻し」。ステータスが見える化され、確認漏れゼロへ。</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div style="background: var(--bg-subtle); padding: 30px; border-radius: 16px; text-align: center;">
+                    <div style="font-size: 4rem; margin-bottom: 10px;">✅</div>
+                    <h4>Workflow & Notification</h4>
+                    <p>承認プロセスをシステム化し、<br>コミュニケーションコストを削減。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 9: Use Case 3 -->
+    <div class="slide">
+        <div class="container">
+            <h2 style="font-size: 2.2rem; margin-bottom: 30px;">ユースケース③ 経営層・管理者</h2>
+            <div class="cols-2">
+                <div class="img-box">
+                    <img src="security.png" alt="Security Concept">
+                </div>
+                <div>
+                    <h3 style="color: var(--text-dark); border-left: 5px solid var(--accent); padding-left: 15px;">シーン: 「重要情報のアクセス管理と監査」</h3>
+                    <p><strong>課題:</strong> <br>人事異動のたびに設定が大変。誰がファイルを持ち出したか追跡できない。</p>
+                    <div style="text-align: center; font-size: 2rem; color: #ccc; margin: 10px 0;">⬇</div>
+                    <p><strong>LedgerLeapでの解決:</strong></p>
+                    <ul>
+                        <li><strong>ロールベース権限</strong>で、役割を変えるだけで権限設定完了。</li>
+                        <li><strong>アクティビティログ</strong>で、「いつ・誰が・何を」したか全て記録。</li>
+                        <li>内部統制や監査対応がスムーズに。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 10: Summary -->
+    <div class="slide">
+        <div class="container text-center">
+            <h2>導入による具体的効果</h2>
+            <div class="card-grid" style="margin-top: 40px;">
+                <div class="card" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🚀</div>
+                    <h3 style="color: white;">検索時間の短縮</h3>
+                    <p style="color: rgba(255,255,255,0.9);">1日30分の削減で<br><strong>年間約120時間の創出</strong></p>
+                </div>
+                <div class="card" style="background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%); color: white;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🧠</div>
+                    <h3 style="color: white;">ナレッジの継承</h3>
+                    <p style="color: rgba(255,255,255,0.9);">属人化リスクを低減し<br><strong>組織の資産</strong>として蓄積</p>
+                </div>
+                <div class="card" style="background: white; border: 2px solid var(--text-gray);">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🛡️</div>
+                    <h3 style="color: var(--text-dark);">ガバナンス強化</h3>
+                    <p style="color: var(--text-dark);">透明性の高い管理で<br><strong>リスクを最小化</strong></p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 60px;">
+                <p style="font-weight: bold; font-size: 1.5rem;">Next Step</p>
+                <p>デモ環境での操作体験、または特定部署でのパイロット運用をご提案します。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="prevSlide()">❮ Prev</button>
+        <button class="btn" onclick="nextSlide()">Next ❯</button>
+    </div>
+    <div class="progress" id="progress"></div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progress = document.getElementById('progress');
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) slide.classList.add('active');
+            });
+            updateProgress();
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        function updateProgress() {
+            const width = ((currentSlide + 1) / slides.length) * 100;
+            progress.style.width = width + '%';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>
