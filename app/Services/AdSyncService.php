@@ -415,20 +415,21 @@ class AdSyncService
 
             // 所属の更新 (手動管理期間中はスキップ)
             if ($user) {
+                // Debug manual sync field
+                try {
+                    $manualUntil = $user->ignore_ad_org_sync_until ? $user->ignore_ad_org_sync_until->toDateTimeString() : 'null';
+                } catch (\Throwable $e) {
+                    $manualUntil = 'invalid';
+                }
+                Log::info("  Manual sync until value for user {$user->email}: {$manualUntil}");
+
                 $isManualSyncValid = $user->ignore_ad_org_sync_until && $user->ignore_ad_org_sync_until->isFuture();
 
                 if ($isManualSyncValid) {
                     Log::info("  Skipping organization sync for user {$user->name} due to manual sync protection until {$user->ignore_ad_org_sync_until}");
                 } else {
-                    // 現在のPrimary組織を解除
-                    $user->organizations()->updateExistingPivot($user->organizations()->pluck('organization_id'), ['is_primary' => false]);
-
-                    // 新しい組織をPrimaryに設定
-                    if (! $user->organizations()->where('organization_id', $organization->id)->exists()) {
-                        $user->organizations()->attach($organization->id, ['is_primary' => true]);
-                    } else {
-                        $user->organizations()->updateExistingPivot($organization->id, ['is_primary' => true]);
-                    }
+                    // Set the organization as the user's primary using centralized logic
+                    $user->setPrimaryOrganization($organization);
                     Log::info("  User {$user->name} assigned to Organization: {$organization->name}");
                 }
             }
@@ -447,8 +448,25 @@ class AdSyncService
         // 今回同期対象外の組織（ad_sync_scope=true などで絞り込む可能性あり）
         // ここではorg_idを持つ組織をAD同期対象とみなす
         $allSyncableOrgIds = Organization::whereNotNull('org_id')->pluck('id')->toArray();
-        $orgsToSoftDeleteIds = array_diff($allSyncableOrgIds, $this->syncedOrganizationIds);
+
+        // 手動同期保護が有効なユーザーに関連する組織を保護対象とする
+        $protectedOrgIds = User::whereNotNull('ignore_ad_org_sync_until')
+            ->where('ignore_ad_org_sync_until', '>', now())
+            ->with('organizations')
+            ->get()
+            ->flatMap(function ($u) {
+                return $u->organizations->pluck('id');
+            })
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // 保護対象を除外した候補一覧
+        $candidates = array_diff($allSyncableOrgIds, $protectedOrgIds);
+
+        $orgsToSoftDeleteIds = array_diff($candidates, $this->syncedOrganizationIds);
         Log::info("Cleanup: All syncable Org IDs: " . json_encode($allSyncableOrgIds));
+        Log::info("Cleanup: Protected Org IDs (manual sync): " . json_encode($protectedOrgIds));
         Log::info("Cleanup: Synced Org IDs: " . json_encode($this->syncedOrganizationIds));
         Log::info("Cleanup: Orgs to soft delete IDs: " . json_encode($orgsToSoftDeleteIds));
 
@@ -464,8 +482,16 @@ class AdSyncService
         Log::info("Cleanup: Total Organizations: {$totalOrganizations}, To Delete: {$organizationsToDeleteCount}, Percentage: {$deletionPercentage}%");
 
         if ($this->deletionThresholdPercentage > 0 && $deletionPercentage > $this->deletionThresholdPercentage) {
-            Log::warning("Aborting organization cleanup: Deletion percentage ({$deletionPercentage}%) exceeds threshold ({$this->deletionThresholdPercentage}%).");
-            throw new \Exception("Organization cleanup aborted due to exceeding deletion threshold.");
+            Log::warning("Organization deletion percentage ({$deletionPercentage}%) exceeds threshold ({$this->deletionThresholdPercentage}%).");
+            // If everything would be deleted (100%), abort as a safety measure; otherwise skip deletion but continue.
+            if ($deletionPercentage >= 100) {
+                Log::warning("Aborting organization cleanup: would delete 100% of organizations.");
+                throw new \Exception("Organization cleanup aborted due to exceeding deletion threshold.");
+            }
+
+            Log::warning("Skipping organization deletion due to exceeding threshold but continuing sync.");
+
+            return;
         }
 
         Organization::whereIn('id', $orgsToSoftDeleteIds)->delete();

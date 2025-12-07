@@ -39,7 +39,10 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
-        'login_landing_page','ad_last_synced_at',
+        'login_landing_page',
+        'ignore_ad_org_sync_until',
+        'manual_sync_reason',
+        'ad_last_synced_at',
     ];
 
     /**
