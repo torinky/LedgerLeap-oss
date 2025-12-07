@@ -35,6 +35,29 @@
     @endforelse
     {{--    </x-mary-list>--}}
 
+    {{-- AD連携ステータスエリア --}}
+    @if(Auth::user()->ad_last_synced_at)
+        <div class="mt-8 pt-4 border-t border-base-300">
+            <h3 class="text-md font-medium text-base-content mb-3">
+                {{ __('ledger.ad_sync_status_title') }}
+            </h3>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-base-content/70">{{ __('ledger.last_synced_at') }}</p>
+                    <p class="text-lg font-medium">{{ Auth::user()->ad_last_synced_at->format('Y-m-d H:i') }}</p>
+                </div>
+                @if(Auth::user()->ignore_ad_org_sync_until && Auth::user()->ignore_ad_org_sync_until->isFuture())
+                    <div class="text-right">
+                        <x-mary-badge :value="__('ledger.manual_sync_enabled')" class="badge-warning mb-1"/>
+                        <p class="text-xs text-warning">{{ __('ledger.manual_sync_until', ['date' => Auth::user()->ignore_ad_org_sync_until->format('Y-m-d')]) }}</p>
+                    </div>
+                @else
+                    <x-mary-badge :value="__('ledger.auto_sync_enabled')" class="badge-success"/>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- シンプルな ul リストを使う例 --}}
     {{-- <ul class="list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
         @forelse ($organizations as $organization)

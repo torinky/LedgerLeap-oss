@@ -168,6 +168,21 @@ class UserResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ad_last_synced_at')
+                    ->label(__('ledger.ad_last_synced_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ignore_ad_org_sync_until')
+                    ->label(__('ledger.ignore_ad_org_sync_until'))
+                    ->date()
+                    ->sortable()
+                    ->color(fn ($state) => $state && \Illuminate\Support\Carbon::parse($state)->isPast() ? 'danger' : 'success')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('manual_sync_reason')
+                    ->label(__('ledger.manual_sync_reason'))
+                    ->limit(30)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\ViewColumn::make('combined_roles_permissions')
                     ->label(__('role.combined_roles_and_permissions')) // ラベルを翻訳キーに変更
                     ->view('filament.tables.columns.user-combined-roles-permissions'),
@@ -197,6 +212,31 @@ class UserResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
+                Tables\Filters\Filter::make('manual_sync_status')
+                    ->form([
+                        Forms\Components\Select::make('status')
+                            ->label(__('ledger.manual_sync_status_label'))
+                            ->options([
+                                'active' => __('ledger.manual_sync_status.active'),
+                                'expired' => __('ledger.manual_sync_status.expired'),
+                                'none' => __('ledger.manual_sync_status.none'),
+                            ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['status'] === 'active',
+                                fn (Builder $query) => $query->where('ignore_ad_org_sync_until', '>', now())
+                            )
+                            ->when(
+                                $data['status'] === 'expired',
+                                fn (Builder $query) => $query->where('ignore_ad_org_sync_until', '<=', now())
+                            )
+                            ->when(
+                                $data['status'] === 'none',
+                                fn (Builder $query) => $query->whereNull('ignore_ad_org_sync_until')
+                            );
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -210,6 +250,29 @@ class UserResource extends Resource
                     Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
+
+                // Bulk action: extend manual AD sync protection
+                Tables\Actions\BulkAction::make('extendManualSync')
+                    ->label(__('Extend Manual Sync'))
+                    ->form([
+                        Forms\Components\Textarea::make('manual_sync_reason')
+                            ->label(__('Manual Sync Reason'))
+                            ->rows(3)
+                            ->placeholder(__('Optional reason')),
+                    ])
+                    ->action(function ($records, $data) {
+                        $days = config('ldap_sync.manual_sync_extension_days', 90);
+                        $until = now()->addDays($days);
+
+                        $records->each(function ($record) use ($until, $data) {
+                            $record->update([
+                                'ignore_ad_org_sync_until' => $until,
+                                'manual_sync_reason' => $data['manual_sync_reason'] ?? null,
+                            ]);
+                        });
+
+                        $this->notify('success', __('Manual sync protection extended for selected users.'));
+                    }),
             ]);
     }
 

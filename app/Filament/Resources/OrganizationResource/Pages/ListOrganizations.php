@@ -70,6 +70,11 @@ class ListOrganizations extends ListRecords
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ad_last_synced_at')
+                    ->label(__('ledger.ad_last_synced_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 //                Tables\Columns\TextColumn::make('roles.name')->badge(),
                 /*                Tables\Columns\TextColumn::make('direct_roles')
                     ->label('Direct Roles')
