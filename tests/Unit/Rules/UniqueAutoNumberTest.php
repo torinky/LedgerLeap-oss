@@ -49,8 +49,11 @@ class UniqueAutoNumberTest extends TestCase
             ],
             true,
             true, // unique = true
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
     }
 

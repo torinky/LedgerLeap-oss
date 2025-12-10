@@ -70,6 +70,7 @@ class ModifyColumnTenancyTest extends TestCase
             'options' => [],
             'group' => 'Group 1',
             'file' => null,
+            'sort_index' => null,
         ]);
 
         $this->ledgerDefine = LedgerDefine::factory()->create([

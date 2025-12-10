@@ -55,7 +55,7 @@ class ModifyColumn extends Component
                 //                'options' => (array)$columnDefineObject->options,
                 'required' => (bool) $columnDefineObject->required,
                 'unique' => (bool) $columnDefineObject->unique,
-                'sortBy' => (bool) $columnDefineObject->sortBy,
+                'sort_index' => $columnDefineObject->sort_index, // sortBy を sort_index に変更
                 'hint' => (string) $columnDefineObject->hint,
                 'file' => (array) $columnDefineObject->file,
                 'display_level' => $columnDefineObject->display_level,
@@ -217,7 +217,8 @@ class ModifyColumn extends Component
             // is_collapsed の変更をAlpine.jsに通知
             $this->dispatch('toggle-collapse', ['is_collapsed' => $value])->self();
         } else {
-            $this->isDirty = true; // その他のカラムプロパティが変更された
+            // その他のカラムプロパティが変更された
+            $this->isDirty = true;
         }
     }
 
@@ -234,7 +235,7 @@ class ModifyColumn extends Component
             "columns.{$index}.options" => 'array',
             "columns.{$index}.required" => 'boolean',
             "columns.{$index}.unique" => 'boolean',
-            "columns.{$index}.sortBy" => 'boolean',
+            "columns.{$index}.sort_index" => 'nullable|integer|min:1', // sort_index に変更
             "columns.{$index}.hint" => 'nullable|string|max:255',
         ];
 
@@ -301,7 +302,7 @@ class ModifyColumn extends Component
             'options' => [], // Default value
             'required' => false, // Default value
             'unique' => false, // Default value
-            'sortBy' => false, // Default value
+            'sort_index' => null, // sortBy を sort_index に変更し、デフォルト値を null に
             'hint' => '', // Default value
             'file' => [], // Default value
             'display_level' => 3, // 追加: デフォルトの表示レベル
@@ -345,7 +346,7 @@ class ModifyColumn extends Component
             'columns.*.options' => 'array',
             'columns.*.required' => 'boolean',
             'columns.*.unique' => 'boolean',
-            'columns.*.sortBy' => 'boolean',
+            'columns.*.sort_index' => 'nullable|integer|min:1', // sort_index に変更
             'columns.*.hint' => 'nullable|string|max:255',
             'columnUploadedFile.*' => 'nullable|file|mimes:png,jpg,pdf|max:10240',
             'columns.*.display_level' => ['required', 'integer', 'min:1', 'max:3'],

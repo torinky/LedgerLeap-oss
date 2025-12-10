@@ -36,7 +36,7 @@ class AutoNumberLedgerDefineFactory extends Factory
             ],
             true, // required
             false, // unique = false
-            false,
+            null,
             '資料番号を自動採番します (版記号考慮)'
         );
 
@@ -53,7 +53,7 @@ class AutoNumberLedgerDefineFactory extends Factory
             ],
             true, // required
             true, // unique = true
-            false,
+            null,
             'プロジェクトIDを自動採番します (重複禁止)'
         );
 
@@ -66,7 +66,7 @@ class AutoNumberLedgerDefineFactory extends Factory
             (object) [],
             true,
             false,
-            false,
+            null,
             '台帳のタイトルを入力してください'
         );
 

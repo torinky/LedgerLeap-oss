@@ -78,7 +78,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => false], true),
+                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => false], true, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -96,7 +96,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => ''], false),
+                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => ''], false, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -113,7 +113,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '作成日', 'YMD', 1, ['default_offset' => '0d'], true),
+                new ColumnDefine(1, '作成日', 'YMD', 1, ['default_offset' => '0d'], true, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -131,7 +131,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => false], true),
+                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => false], true, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -158,7 +158,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => true], true),
+                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '7d', 'overwrite_existing' => true], true, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -186,7 +186,7 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '3d'], false),
+                new ColumnDefine(1, '提出日', 'YMD', 1, ['default_offset' => '3d'], false, false, null, '', [], 3, null),
             ],
         ]);
 
@@ -213,9 +213,9 @@ class DateDefaultInitializationTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(1, '開始日', 'YMD', 1, ['default_offset' => '0d'], true),
-                new ColumnDefine(2, '終了日', 'YMD', 2, ['default_offset' => '30d'], true),
-                new ColumnDefine(3, '任意日', 'YMD', 3, ['default_offset' => ''], false),
+                new ColumnDefine(1, '開始日', 'YMD', 1, ['default_offset' => '0d'], true, false, null, '', [], 3, null),
+                new ColumnDefine(2, '終了日', 'YMD', 2, ['default_offset' => '30d'], true, false, null, '', [], 3, null),
+                new ColumnDefine(3, '任意日', 'YMD', 3, ['default_offset' => ''], false, false, null, '', [], 3, null),
             ],
         ]);
 

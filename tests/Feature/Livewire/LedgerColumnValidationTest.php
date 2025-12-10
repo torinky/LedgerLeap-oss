@@ -67,11 +67,11 @@ class LedgerColumnValidationTest extends TestCase
                 // ▼▼▼ 名前付き引数から連想配列での初期化に修正 ▼▼▼
                 new ColumnDefine([
                     'id' => 0, 'name' => 'Non-Unique', 'type' => 'text', 'order' => 1,
-                    'required' => false, 'unique' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    'required' => false, 'unique' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                 ]),
                 new ColumnDefine([
                     'id' => 1, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 2,
-                    'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    'required' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                 ]),
             ],
         ]);
@@ -106,11 +106,11 @@ class LedgerColumnValidationTest extends TestCase
                 // ▼▼▼ 名前付き引数から連想配列での初期化に修正 ▼▼▼
                 new ColumnDefine([
                     'id' => 0, 'name' => 'Non-Unique', 'type' => 'text', 'order' => 1,
-                    'required' => false, 'unique' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    'required' => false, 'unique' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                 ]),
                 new ColumnDefine([
                     'id' => 1, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 2,
-                    'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                    'required' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                 ]),
             ],
         ]);
@@ -158,7 +158,7 @@ class LedgerColumnValidationTest extends TestCase
                     'required' => true,
                     // 不足していたキーを追加
                     'unique' => false,
-                    'sortBy' => false,
+                    'sort_index' => null,
                     'hint' => '',
                     'file' => [],
                 ]),
@@ -214,7 +214,7 @@ class LedgerColumnValidationTest extends TestCase
                 'column_define' => [
                     new ColumnDefine([
                         'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
-                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                        'required' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                     ]),
                 ],
             ]);
@@ -226,7 +226,7 @@ class LedgerColumnValidationTest extends TestCase
                 'column_define' => [
                     new ColumnDefine([
                         'id' => 0, 'name' => 'Unique Text', 'type' => 'text', 'unique' => true, 'order' => 1,
-                        'required' => false, 'sortBy' => false, 'hint' => '', 'file' => [], 'options' => [],
+                        'required' => false, 'sort_index' => null, 'hint' => '', 'file' => [], 'options' => [],
                     ]),
                 ],
             ]);

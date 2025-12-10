@@ -99,14 +99,17 @@
                                                 <x-mary-checkbox label="{{__('ledger.column.required')}}"
                                                                  wire:model.live="columns.{{$index}}.required"
                                                                  wire:key="required-{{$column['id']}}"/>
-                                                <x-mary-checkbox label="{{__('ledger.column.unique')}}"
-                                                                 wire:model.live="columns.{{$index}}.unique"
-                                                                 wire:key="unique-{{$column['id']}}"/>
-                                                <x-mary-checkbox label="{{__('ledger.column.sort')}}"
-                                                                 wire:model.live="columns.{{$index}}.sortBy"
-                                                                 wire:key="sortBy-{{$column['id']}}"/>
-                                            </div>
-
+                                                                                                 <x-mary-checkbox label="{{__('ledger.column.unique')}}"
+                                                                                                                 wire:model.live="columns.{{$index}}.unique"
+                                                                                                                 wire:key="unique-{{$column['id']}}"/>
+                                                                                                <x-mary-input label="{{__('ledger.column.sort_index')}}"
+                                                                                                              placeholder="1 ({{__('ledger.column.sort_priority_example')}})"
+                                                                                                              icon="o-arrows-up-down"
+                                                                                                              type="number"
+                                                                                                              min="1"
+                                                                                                              wire:model.live="columns.{{$index}}.sort_index"
+                                                                                                              wire:key="sortIndex-{{$column['id']}}" class="input-accent"/>
+                                                                                            </div>
                                             <div class="basis-1/2 space-y-4 m-3">
                                                 <x-mary-textarea label="{{__('ledger.column.hint')}}"
                                                                  wire:model.live="columns.{{$index}}.hint"

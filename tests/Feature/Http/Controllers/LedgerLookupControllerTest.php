@@ -77,6 +77,7 @@ class LedgerLookupControllerTest extends TestCase
                     'type' => 'text',
                     'unique' => true,
                     'order' => 1,
+                    'sort_index' => null,
                 ]),
             ],
         ]);

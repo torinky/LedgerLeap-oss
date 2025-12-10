@@ -259,7 +259,7 @@ class LedgerDiffViewerTest extends TestCase
         $ledgerDefineWithFiles = LedgerDefine::factory()->for($this->folder)->create([
             'workflow_enabled' => false,
             'column_define' => [
-                new ColumnDefine(1, 'File Column', 'files', 1, [], false, false, 1),
+                new ColumnDefine(1, 'File Column', 'files', 1, [], false, false, 1, '', [], 3, null),
             ],
         ]);
 

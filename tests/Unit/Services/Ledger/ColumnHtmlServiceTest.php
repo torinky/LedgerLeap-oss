@@ -16,7 +16,11 @@ it('column value is array', function () {
         ['aaa', 'bbb', 'ccc'],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $mockAutoLinkService = mock(AutoLinkService::class);
@@ -45,7 +49,11 @@ it('show returns empty string when no initial value', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $mockAutoLinkService = mock(AutoLinkService::class);
@@ -69,7 +77,11 @@ it('highlight keywords in html output', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
     $inputValue = 'This is a test content with keywords';
     $highlightKeyword = 'test';
@@ -103,7 +115,11 @@ it('renders textarea with markdown and applies auto links', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $markdownInput = '**Hello** `World`! See ticket #123.';
@@ -143,7 +159,7 @@ it('renders auto_number with link', function () {
         'options' => [],
         'required' => false,
         'unique' => true,
-        'sortBy' => false,
+        'sort_index' => null,
         'hint' => '',
         'file' => [],
         'display_level' => 3,
@@ -191,7 +207,11 @@ it('renders textarea with expandable content component', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $markdownInput = 'This is a long text that should be wrapped in an expandable component.';

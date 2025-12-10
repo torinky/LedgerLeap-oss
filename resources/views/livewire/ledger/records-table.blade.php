@@ -161,7 +161,7 @@
                     </div>
                 </div>
             @endif
-            @if(!empty($search))
+            @if($orderBy === 'composite_score' && !empty($search))
                 <div class="badge badge-primary badge-sm tooltip h-8 flex items-stretch"
                      data-tip="{{__('ledger.scoring.sorted_by_score')}}">
                     <div class="self-center space-x-2">
@@ -169,6 +169,15 @@
                         <span class="text-xs">{{__('ledger.scoring.score_order')}}</span>
                     </div>
                 </div>
+            @endif
+            @if ($orderBy !== 'default' && !empty($defaultSortColumns))
+                <x-mary-button
+                    wire:click="sort('default')"
+                    label="{{ __('ledger.actions.reset_sort') }}"
+                    icon="o-arrow-path"
+                    class="btn-sm btn-outline btn-info"
+                    spinner
+                />
             @endif
         </div>
     </div>
@@ -218,6 +227,7 @@
                                     :orderBy="$orderBy"
                                     :orderAsc="$orderAsc"
                                     :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                    :defaultSortColumns="$defaultSortColumns"
                                 />
                                 </thead>
                                 <tbody>

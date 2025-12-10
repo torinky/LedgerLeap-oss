@@ -30,6 +30,8 @@ class RecordsTable extends Component
 
     public $perPage = 100;
 
+    public string|int|null $currentTenantId = null;
+
     #[Url(as: 'q')]
     public $search = '';
 
@@ -95,11 +97,11 @@ class RecordsTable extends Component
 
     public ?string $modalResourceType = null;
 
-    public ?string $currentTenantId = null;
-
     public bool $hasWorkflowEnabled = false;
 
     public string $orderByLabel = '';
+
+    public array $defaultSortColumns = []; // 追加: デフォルトソートカラムを保持
 
     #[Url(as: 'sem', history: true)]
     public bool $useSemanticSearch = false;
@@ -120,12 +122,6 @@ class RecordsTable extends Component
 
         $this->currentTenantId = tenant()?->id;
 
-        // composite_scoreカラムの存在確認
-        if (! Schema::hasColumn('ledgers', 'composite_score')) {
-            // マイグレーション未適用時のフォールバック
-            $this->orderBy = 'id';
-        }
-
         // 検索キーワードの初期化
         $search = $request->keyword();
         if (empty($this->search) && ! empty($search)) {
@@ -136,9 +132,6 @@ class RecordsTable extends Component
         $this->synonymServiceConfig = $synonymServiceConfig;
         $this->filter = $request->filter ?? [];
         $this->initSearchContext();
-
-        // ★ 追加: 初期orderByLabelの設定
-        $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
 
         // 現在のフォルダーIDを初期化
         // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
@@ -169,6 +162,36 @@ class RecordsTable extends Component
         $this->prepareFolderAsset();
 
         $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
+
+        // ★★★ デフォルトソートカラムのロードとorderByの初期化 ★★★
+        if (count($this->selectedLedgerDefineIds) === 1) {
+            $singleLedgerDefineId = head($this->selectedLedgerDefineIds);
+            $singleLedgerDefine = LedgerDefine::find($singleLedgerDefineId);
+
+            if ($singleLedgerDefine) {
+                $this->defaultSortColumns = collect($singleLedgerDefine->column_define)
+                    ->filter(fn ($column) => $column->sort_index !== null)
+                    ->sortBy('sort_index')
+                    ->map(fn ($column) => $column->toArray()) // ColumnDefineオブジェクトを配列に変換
+                    ->values() // キーをリセット
+                    ->toArray();
+
+                if (! empty($this->defaultSortColumns)) {
+                    // デフォルトソートカラムが設定されている場合、orderByを'default'に設定
+                    $this->orderBy = 'default';
+                    $this->orderAsc = true; // デフォルトソートは常に昇順
+                }
+            }
+        }
+
+        // composite_scoreカラムの存在確認 (デフォルトソート設定がない場合にのみ適用)
+        if ($this->orderBy !== 'default' && ! Schema::hasColumn('ledgers', 'composite_score')) {
+            // マイグレーション未適用時のフォールバック
+            $this->orderBy = 'id';
+        }
+
+        // 初期orderByLabelの設定
+        $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
     }
 
     /**
@@ -338,6 +361,9 @@ class RecordsTable extends Component
     #[On('ledgerStored')]
     public function render(SearchContext $searchContext)
     {
+        Log::info('RecordsTable render method called.', [
+            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
+        ]);
         // $this->authorize('viewAny', LedgerDefine::class);
         $this->initSearchContext();
 
@@ -480,11 +506,33 @@ class RecordsTable extends Component
                     return $query->where('status', $this->filterStatus);
                 })
                 ->orderBy('ledger_define_id', 'asc')
+                ->when($this->orderBy === 'default', function ($query) {
+                    // defaultSortColumns を使用してソートを適用
+                    foreach ($this->defaultSortColumns as $column) {
+                        $columnId = $column['id'];
+                        $columnType = $column['type'];
+
+                        // JSON_EXTRACT を使ってパスを構築（$[0] 形式で配列インデックスアクセス）
+                        $jsonPath = "JSON_EXTRACT(`content`, '$[{$columnId}]')";
+
+                        // 型に応じたキャスト
+                        $expression = match ($columnType) {
+                            'number', 'auto_number' => "CAST({$jsonPath} AS DECIMAL(20, 6))",
+                            'date', 'YMD' => "CAST({$jsonPath} AS DATE)",
+                            default => $jsonPath,
+                        };
+
+                        $query->orderByRaw("{$expression} ".($this->orderAsc ? 'ASC' : 'DESC'));
+                    }
+                })
                 ->when($this->orderBy === 'composite_score', function ($query) {
                     return $query->orderByRaw('composite_score = 0, composite_score '.
                         ($this->orderAsc ? 'ASC' : 'DESC'));
                 }, function ($query) {
-                    return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+                    // デフォルトソートが設定されていない、かつ orderBy が default ではない場合
+                    if ($this->orderBy !== 'default') {
+                        return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+                    }
                 });
 
             // 台帳定義とフォルダ情報を先に取得
@@ -495,9 +543,11 @@ class RecordsTable extends Component
 
             // 総数を取得
             $this->totalRecords = $ledgerRecordsQuery->count();
+            Log::info('RecordsTable render: totalRecords', ['totalRecords' => $this->totalRecords]);
 
             // ページネーション実行
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
+            Log::info('RecordsTable render: ledgerRecords after simplePaginate', ['ledgerRecords' => $ledgerRecords->toArray()]);
         }
 
         // 表示される台帳レコードIDリストを取得

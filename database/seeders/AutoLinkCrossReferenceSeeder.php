@@ -112,7 +112,7 @@ class AutoLinkCrossReferenceSeeder extends Seeder
         $newColumn = new ColumnDefine(
             $newId, '日報番号', 'auto_number', 0, // orderを0に設定して先頭に
             ['prefix' => 'DAILY-', 'digits' => 4, 'revision' => ''],
-            false, true, true, '自動採番', [],
+            false, true, 1, '自動採番', [],
             1, '基本情報'
         );
         array_unshift($updatedColumns, $newColumn);
@@ -158,7 +158,7 @@ class AutoLinkCrossReferenceSeeder extends Seeder
         $newColumn = new ColumnDefine(
             $newId, '点検番号', 'auto_number', 0, // orderを0に設定して先頭に
             ['prefix' => 'INSP-', 'digits' => 4, 'revision' => ''],
-            false, true, true, '自動採番', [],
+            false, true, 1, '自動採番', [],
             1, '基本情報'
         );
         array_unshift($updatedColumns, $newColumn);
@@ -204,7 +204,7 @@ class AutoLinkCrossReferenceSeeder extends Seeder
         $newColumn = new ColumnDefine(
             $newId, '週報番号', 'auto_number', 0, // orderを0に設定して先頭に
             ['prefix' => 'WR-', 'digits' => 4, 'revision' => ''],
-            false, true, true, '自動採番', [],
+            false, true, 1, '自動採番', [],
             1, '基本情報'
         );
         array_unshift($updatedColumns, $newColumn);

@@ -3,15 +3,29 @@
     'orderBy'=>'id',
     'orderAsc'=>false,
     'filteredColumnDefines' => [],
+    'defaultSortColumns' => [],
     ])
 <tr class="hover"
     wire:key="ledger_table_header_{{$ledgerDefine->id}}"
 >
     {{-- アクションボタン用の列 --}}
     <th class="w-10 text-center px-4 py-2 tracking-wider bg-accent bg-opacity-30">
-        <div class="tooltip tooltip-right z-50" data-tip="{{ __('ledger.actions') }}">
-            <i class="fas fa-cogs"></i>
-        </div>
+        @if(!empty($defaultSortColumns) && $orderBy !== 'default')
+            {{-- デフォルト順に戻すボタン --}}
+            <x-mary-button
+                    wire:click="sort('default')"
+{{--                    label="{{ __('ledger.actions.reset_sort') }}"--}}
+                    icon="o-arrow-path"
+                    class="btn btn-square btn-warning"
+                    spinner
+            />
+
+        @else
+            {{-- 通常のアクションアイコン --}}
+            <div class="tooltip tooltip-right z-50" data-tip="{{ __('actions.actions') }}">
+                <i class="fas fa-cogs"></i>
+            </div>
+        @endif
     </th>
 
     @foreach($filteredColumnDefines as $cKey=>$column_define)
@@ -58,8 +72,7 @@
                 @endif
             @else
                 <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
-                @endif
-
+            @endif
         </button>
     </td>
 </tr>

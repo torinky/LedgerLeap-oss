@@ -55,7 +55,10 @@
     'action_success' => 'アクションが正常に実行されました。',
     'action_task_claimed' => 'を引き継ぎました',
     'action_updated' => 'を更新しました。',
-    'actions' => '操作',
+    'actions' =>
+        [
+            'reset_sort' => 'ソート順をリセット',
+        ],
     'activity' =>
         [
             'changes' =>
@@ -268,6 +271,8 @@
             'sort' => 'この列でリストを並び替え',
             'sort_active' => '列で並び替え中',
             'sort_active_tooltip' => 'ツールバーの並び順に戻すには、検索を実行するかページを更新してください。',
+            'sort_index' => 'ソート順位',
+            'sort_priority_example' => '優先度',
             'title' => '表示名',
             'title_input' => '列の表示名を入力',
             'type' => '入力形式',
@@ -306,6 +311,7 @@
             'name' => '作成者',
         ],
     'current_tenant' => '現在のテナント',
+    'default_sort_order' => 'デフォルト順',
     'define' =>
         [
             'basic_setting' => '基本設定',

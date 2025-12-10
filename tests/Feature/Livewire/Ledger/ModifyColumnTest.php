@@ -55,6 +55,7 @@ class ModifyColumnTest extends TestCase
             'options' => [],
             'group' => 'Files',
             'file' => null,
+            'sort_index' => null,
         ]);
 
         $this->ledgerDefine = LedgerDefine::factory()->create([

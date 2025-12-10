@@ -34,7 +34,7 @@ class LedgerDefineFactory extends Factory
             [],
             false,
             false,
-            false
+            null
         );
 
         return [
@@ -66,7 +66,7 @@ class LedgerDefineFactory extends Factory
                 $this->faker->words(random_int(3, 10)),
                 $this->faker->boolean(),
                 $this->faker->boolean(),
-                $this->faker->boolean()
+                ($this->faker->boolean() ? 1 : null)
             );
             $columnDefine[] = new ColumnDefine(
                 1,
@@ -76,7 +76,7 @@ class LedgerDefineFactory extends Factory
                 $this->faker->words(random_int(3, 10)),
                 $this->faker->boolean(),
                 $this->faker->boolean(),
-                $this->faker->boolean()
+                ($this->faker->boolean() ? 1 : null)
             );
 
             // Correctly get type identifiers once before the loop
@@ -91,7 +91,7 @@ class LedgerDefineFactory extends Factory
                     $this->faker->words(random_int(3, 10)),
                     $this->faker->boolean(),
                     $this->faker->boolean(),
-                    $this->faker->boolean(),
+                    ($this->faker->boolean() ? 1 : null),
                     $this->faker->word(),
                     ['name' => $this->faker->word().'.png', 'path' => $this->faker->word().'.png']
                 );

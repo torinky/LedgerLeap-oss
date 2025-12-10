@@ -241,18 +241,18 @@ class DemoMinimalSeeder extends Seeder
             new ColumnDefine(
                 0, '日付', 'YMD', 0,
                 ['default_offset' => '0d'], // 今日をデフォルト
-                true, false, false, '訪問日', [],
+                true, false, null, '訪問日', [], // null が sort_index
                 1, // display_level: 1 (常に表示)
                 '基本情報' // group
             ),
             new ColumnDefine(
                 1, '顧客名', 'text', 1, [],
-                true, false, false, '', [],
+                true, false, null, '', [],
                 1, '基本情報'
             ),
             new ColumnDefine(
                 2, '訪問目的', 'text', 2, [],
-                false, false, false, '', [],
+                false, false, null, '', [],
                 2, // display_level: 2 (概要表示)
                 '基本情報'
             ),
@@ -269,7 +269,7 @@ class DemoMinimalSeeder extends Seeder
                     '見送り',
                     '再提案予定',
                 ],
-                true, false, false, '', [],
+                true, false, null, '', [],
                 1, // 常に表示
                 '商談情報'
             ),
@@ -278,7 +278,7 @@ class DemoMinimalSeeder extends Seeder
                 4, '優先度', 'select', 4, [
                     '高', '中', '低',
                 ],
-                true, false, false, '', [],
+                true, false, null, '', [],
                 1, // 常に表示
                 '商談情報'
             ),
@@ -286,19 +286,19 @@ class DemoMinimalSeeder extends Seeder
             // 詳細情報グループ
             new ColumnDefine(
                 5, '商談内容', 'textarea', 5, [],
-                true, false, false, '', [],
+                true, false, null, '', [],
                 2, // 概要表示
                 '詳細情報'
             ),
             new ColumnDefine(
                 6, '成果・所感', 'textarea', 6, [],
-                false, false, false, '', [],
+                false, false, null, '', [],
                 3, // 詳細表示
                 '詳細情報'
             ),
             new ColumnDefine(
                 7, '次回アクション', 'textarea', 7, [],
-                false, false, false, '', [],
+                false, false, null, '', [],
                 2, // 概要表示
                 '詳細情報'
             ),

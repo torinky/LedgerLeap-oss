@@ -28,15 +28,7 @@ class ColumnDefine
 
     public $unique;     // 重複不可フラグ
 
-    public $sortBy;             // ソート対象フラグ
-
-    public $hint;
-
-    public $file = [];
-
-    public int $display_level; // 追加: 表示レベル
-
-    public ?string $group;      // 追加: グループ名
+    public ?int $sort_index;    // ソート順位
 
     /**
      * コンストラクタ
@@ -70,7 +62,7 @@ class ColumnDefine
         $this->setOptions((array) ($inObject->options ?? []));
         $this->setRequired($inObject->required ?? false);
         $this->setUnique($inObject->unique ?? false);
-        $this->setSortBy($inObject->sortBy ?? false);
+        $this->setSortIndex($inObject->sort_index ?? null);
         $this->setHint($inObject->hint ?? '');
         $this->setFile($inObject->file ?? []);
 
@@ -94,7 +86,7 @@ class ColumnDefine
         array $options = [],
         bool $required = false,
         bool $unique = false,
-        bool $sortBy = false,
+        ?int $sortIndex = null,
         string $hint = '',
         array $file = [],
         int $display_level = 3,
@@ -106,7 +98,7 @@ class ColumnDefine
         $this->setOptions($options);
         $this->setRequired($required);
         $this->setUnique($unique);
-        $this->setSortBy($sortBy);
+        $this->setSortIndex($sortIndex);
         $this->setHint($hint);
         $this->setFile($file);
 
@@ -216,11 +208,11 @@ class ColumnDefine
     }
 
     /**
-     * @param  mixed  $sortBy
+     * @param  mixed  $sortIndex
      */
-    public function setSortBy($sortBy): void
+    public function setSortIndex(?int $sortIndex): void
     {
-        $this->sortBy = $sortBy;
+        $this->sort_index = $sortIndex;
     }
 
     /**
@@ -261,7 +253,7 @@ class ColumnDefine
             'options' => $this->options,
             'required' => $this->required,
             'unique' => $this->unique,
-            'sortBy' => $this->sortBy,
+            'sort_index' => $this->sort_index,
             'hint' => $this->hint,
             'file' => $this->file,
             'display_level' => $this->display_level,
@@ -283,7 +275,7 @@ class ColumnDefine
                     'options' => isset($colDef->options) && is_array($colDef->options) ? $colDef->options : [],
                     'required' => $colDef->required ?? false,
                     'unique' => $colDef->unique ?? false,
-                    'sortBy' => $colDef->sortBy ?? false,
+                    'sort_index' => $colDef->sort_index ?? null,
                     'hint' => $colDef->hint ?? '',
                     'file' => isset($colDef->file) && is_array($colDef->file) ? $colDef->file : [],
                     'display_level' => $colDef->display_level ?? 3, // デフォルト値を追加
@@ -293,6 +285,7 @@ class ColumnDefine
                 // 配列の場合も同様にデフォルト値を適用
                 $colDef['display_level'] = $colDef['display_level'] ?? 3;
                 $colDef['group'] = $colDef['group'] ?? null;
+                $colDef['sort_index'] = $colDef['sort_index'] ?? null; // sort_indexもデフォルト値を追加
                 $result[$colDef['id']] = $colDef;
             }
         }

@@ -510,20 +510,20 @@ MARKDOWN;
             new ColumnDefine(
                 0, '申請番号', 'auto_number', 0,
                 ['prefix' => 'EXP-', 'digits' => 4],
-                true, false, true, '自動採番', [],
+                true, false, 1, '自動採番', [],
                 1, // display_level: 1 (常に表示)
                 '基本情報'
             ),
             new ColumnDefine(
                 1, '申請日', 'YMD', 1,
                 ['default_offset' => '0d'],
-                true, false, true, '支出発生日', [],
+                true, false, null, '支出発生日', [],
                 1, '基本情報'
             ),
             new ColumnDefine(
                 2, '経費区分', 'select', 2,
                 ['交通費', '宿泊費', '会議費', '交際費', 'その他'],
-                true, false, true, '', [],
+                true, false, null, '', [],
                 1, '基本情報'
             ),
 
@@ -531,7 +531,7 @@ MARKDOWN;
             new ColumnDefine(
                 3, '金額', 'number', 3,
                 ['unit' => '円', 'min' => 0],
-                true, false, true, '税込金額', [],
+                true, false, null, '税込金額', [],
                 1, '金額情報'
             ),
 
@@ -539,7 +539,7 @@ MARKDOWN;
             new ColumnDefine(
                 4, '用途説明', 'textarea', 4,
                 [],
-                true, false, false, '5W1Hを意識して具体的に', [],
+                true, false, null, '5W1Hを意識して具体的に', [],
                 2, // display_level: 2 (概要表示)
                 '詳細情報'
             ),
@@ -548,7 +548,7 @@ MARKDOWN;
             new ColumnDefine(
                 5, '領収書', 'files', 5,
                 [],
-                false, false, false, 'PDF・画像ファイル', [],
+                false, false, null, 'PDF・画像ファイル', [],
                 2, '添付資料'
             ),
         ];
@@ -687,20 +687,20 @@ MARKDOWN;
             new ColumnDefine(
                 0, '点検日', 'YMD', 0,
                 ['default_offset' => '0d'],
-                true, false, true, '実施日', [],
+                true, false, null, '実施日', [],
                 1, // display_level: 1 (常に表示)
                 '基本情報'
             ),
             new ColumnDefine(
                 1, '設備名', 'text', 1,
                 [],
-                true, false, true, '対象設備の正式名称', [],
+                true, false, null, '対象設備の正式名称', [],
                 1, '基本情報'
             ),
             new ColumnDefine(
                 2, '点検区分', 'select', 2,
                 ['日次点検', '週次点検', '月次点検', '年次点検'],
-                true, false, true, '', [],
+                true, false, null, '', [],
                 1, '基本情報'
             ),
 
@@ -716,7 +716,7 @@ MARKDOWN;
                         '清掃実施',
                     ],
                 ],
-                true, false, false, '該当する項目を全て選択', [],
+                true, false, null, '該当する項目を全て選択', [],
                 2, // display_level: 2 (概要表示)
                 '点検結果'
             ),
@@ -725,7 +725,7 @@ MARKDOWN;
             new ColumnDefine(
                 4, '所見・特記事項', 'textarea', 4,
                 [],
-                false, false, false, '異常があれば詳細を記載', [],
+                false, false, null, '異常があれば詳細を記載', [],
                 3, // display_level: 3 (詳細表示)
                 '詳細情報'
             ),
@@ -904,7 +904,7 @@ MARKDOWN;
             new ColumnDefine(
                 0, '週開始日', 'YMD', 0,
                 ['default_offset' => '0d'],
-                true, false, true, '月曜日の日付', [],
+                true, false, 1, '月曜日の日付', [],
                 1, // display_level: 1 (常に表示)
                 '基本情報'
             ),
@@ -913,14 +913,14 @@ MARKDOWN;
             new ColumnDefine(
                 1, '今週の成果', 'textarea', 1,
                 [],
-                true, false, false, '具体的な成果物・数値を含める', [],
+                true, false, null, '具体的な成果物・数値を含める', [],
                 2, // display_level: 2 (概要表示)
                 '活動内容'
             ),
             new ColumnDefine(
                 2, '来週の予定', 'textarea', 2,
                 [],
-                true, false, false, '優先順位をつけて記載', [],
+                true, false, null, '優先順位をつけて記載', [],
                 2, '活動内容'
             ),
 
@@ -928,7 +928,7 @@ MARKDOWN;
             new ColumnDefine(
                 3, '進捗状況', 'select', 3,
                 ['予定通り', 'やや遅れ', '遅れあり', '前倒し'],
-                true, false, true, '', [],
+                true, false, 1, '', [],
                 1, // 常に表示
                 '進捗情報'
             ),

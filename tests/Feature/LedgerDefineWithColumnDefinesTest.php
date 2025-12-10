@@ -54,7 +54,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             $this->assertEquals($originalColumn->options, $columnDefine->options);
             $this->assertEquals($originalColumn->required, $columnDefine->required);
             $this->assertEquals($originalColumn->unique, $columnDefine->unique);
-            $this->assertEquals($originalColumn->sortBy, $columnDefine->sortBy);
+            $this->assertEquals($originalColumn->sort_index, $columnDefine->sort_index);
             $this->assertEquals($originalColumn->hint, $columnDefine->hint);
             $this->assertEquals($originalColumn->file, $columnDefine->file); // file property
             $this->assertEquals($originalColumn->useOptions, $columnDefine->useOptions);
@@ -73,13 +73,13 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
         // Define a set of ColumnDefine objects with diverse types
         $columnDefines = [
-            new ColumnDefine(0, 'Text Column', 'text', 1, [], false, false, false, 'Hint1', []),
-            new ColumnDefine(1, 'Checkbox Column', 'chk', 2, ['opt1', 'opt2'], true, false, true, 'Hint2', []),
-            new ColumnDefine(2, 'Files Column', 'files', 3, [], false, true, false, 'Hint3', []),
-            new ColumnDefine(3, 'Number Column', 'number', 4, [], true, true, true, 'Hint4', []),
-            new ColumnDefine(4, 'Select Column', 'select', 5, ['s1', 's2', 's3'], false, false, false, 'Hint5', []),
-            new ColumnDefine(5, 'Date Column', 'YMD', 6, [], true, false, true, 'Hint6', []),
-            new ColumnDefine(6, 'Textarea Column', 'textarea', 7, [], false, false, false, 'Hint7', []),
+            new ColumnDefine(0, 'Text Column', 'text', 1, [], false, false, null, 'Hint1', []),
+            new ColumnDefine(1, 'Checkbox Column', 'chk', 2, ['opt1', 'opt2'], true, false, 1, 'Hint2', []), // sortBy: true -> sort_index: 1
+            new ColumnDefine(2, 'Files Column', 'files', 3, [], false, true, null, 'Hint3', []),
+            new ColumnDefine(3, 'Number Column', 'number', 4, [], true, true, 2, 'Hint4', []), // sortBy: true -> sort_index: 2
+            new ColumnDefine(4, 'Select Column', 'select', 5, ['s1', 's2', 's3'], false, false, null, 'Hint5', []),
+            new ColumnDefine(5, 'Date Column', 'YMD', 6, [], true, false, 3, 'Hint6', []), // sortBy: true -> sort_index: 3
+            new ColumnDefine(6, 'Textarea Column', 'textarea', 7, [], false, false, null, 'Hint7', []),
         ];
 
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
@@ -138,7 +138,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
     public function test_custom_phone_number_type_extensibility()
     {
         // 1. Create a ColumnDefine instance with the new 'phone' type
-        $phoneColumn = new \App\Models\ColumnDefine(10, 'Contact Phone', 'phone', 1);
+        $phoneColumn = new \App\Models\ColumnDefine(10, 'Contact Phone', 'phone', 1, [], false, false, null);
 
         // 2. Verify its properties
         $this->assertEquals('phone', $phoneColumn->getType());
@@ -171,7 +171,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         }
 
         $columnDefines = [
-            new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1), // Existing type
+            new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1, [], false, false, null), // Existing type
             $phoneColumn, // Our new phone type
         ];
 

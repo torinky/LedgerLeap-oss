@@ -21,7 +21,7 @@ class ColumnDefineTest extends TestCase
             'options' => ['option1', 'option2'],
             'required' => true,
             'unique' => false,
-            'sortBy' => true,
+            'sort_index' => 1, // sort_index: 1 (was sortBy: true)
             'hint' => '',
             'file' => [],
         ];
@@ -34,11 +34,11 @@ class ColumnDefineTest extends TestCase
         $this->assertEquals($data->name, $column->name);
         $this->assertEquals($data->type, $column->getType());
         $this->assertEquals($data->order, $column->order);
-        $this->assertFalse($column->useOptions);
+        $this->assertFalse($column->useOptions); // 'text' type has no options
         $this->assertEquals($data->options, $column->options);
         $this->assertEquals($data->required, $column->required);
         $this->assertEquals($data->unique, $column->unique);
-        $this->assertEquals($data->sortBy, $column->sortBy);
+        $this->assertEquals($data->sort_index, $column->sort_index);
         $this->assertEquals($data->hint, $column->hint);
         $this->assertEquals($data->file, $column->file);
 
@@ -54,7 +54,8 @@ class ColumnDefineTest extends TestCase
     public function test_value_initialization(): void
     {
         // 値による初期化のテスト
-        $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, false, 'hint text', []);
+        // sortBy(bool) -> sort_index(?int). false maps to null.
+        $column = new ColumnDefine(2, 'column2', 'select', 1, ['option1', 'option2'], false, true, null, 'hint text', []);
         // オブジェクトのプロパティが期待通りにセットされているかテスト
         $this->assertEquals(2, $column->id);
         $this->assertEquals('column2', $column->name);
@@ -65,7 +66,7 @@ class ColumnDefineTest extends TestCase
         $this->assertFalse($column->required);
         $this->assertTrue($column->unique);
         $this->assertEquals('hint text', $column->hint);
-        $this->assertFalse($column->sortBy);
+        $this->assertNull($column->sort_index);
 
         // 新しいプロパティのデフォルト値を確認
         $this->assertEquals(3, $column->display_level);
@@ -77,7 +78,7 @@ class ColumnDefineTest extends TestCase
     {
         // display_levelとgroupを指定した初期化のテスト
         $column = new ColumnDefine(
-            3, 'column3', 'text', 2, [], true, false, false, 'test hint', [],
+            3, 'column3', 'text', 2, [], true, false, null, 'test hint', [],
             1, // display_level
             '基本情報' // group
         );
@@ -436,7 +437,7 @@ class ColumnDefineTest extends TestCase
 
         // DateTypeインスタンスにdefault_offsetが渡されることを確認
         $dateType = $column->getInputType();
-        $this->assertInstanceOf(\App\Models\ColumnTypes\DateType::class, $dateType);
+        $this->assertInstanceOf("App\Models\ColumnTypes\DateType", $dateType);
 
         // デフォルト日付が取得できることを確認
         $defaultDate = $dateType->getDefaultDate();
@@ -488,7 +489,7 @@ class ColumnDefineTest extends TestCase
             'options' => [],
             'required' => false,
             'unique' => false,
-            'sortBy' => false,
+            'sort_index' => null,
             'hint' => '',
             'file' => [],
         ];
@@ -510,7 +511,7 @@ class ColumnDefineTest extends TestCase
             'options' => [],
             'required' => true,
             'unique' => false,
-            'sortBy' => false,
+            'sort_index' => null,
             'hint' => '',
             'file' => [],
             'display_level' => 1,
@@ -535,7 +536,7 @@ class ColumnDefineTest extends TestCase
             'options' => [],
             'required' => false,
             'unique' => false,
-            'sortBy' => false,
+            'sort_index' => null,
             'hint' => '',
             'file' => [],
         ];

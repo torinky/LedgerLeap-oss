@@ -45,8 +45,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         $nextNumber = $this->numberingService->getNextNumber($columnDefine, $ledgerDefine->id);
@@ -69,8 +72,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         // 既存レコードを作成
@@ -121,8 +127,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             true, // unique = true
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         // 既存レコードを作成 (異なる版記号)
@@ -165,8 +174,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -200,8 +212,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -235,8 +250,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -278,8 +296,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
