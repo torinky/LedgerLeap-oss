@@ -125,7 +125,7 @@ class SearchRequest extends FormRequest
 
     public function ledgerDefineId()
     {
-        $ledgerDefineId = $this->input('defineId') ?? $this->route('ledgerDefineId') ?? null;
+        $ledgerDefineId = $this->input('defineId') ?? $this->route('defineId') ?? $this->route('ledgerDefineId') ?? null;
         if (! is_null($ledgerDefineId)) {
             $this->isLedgerDefineRequest = true;
 

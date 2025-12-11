@@ -59,7 +59,7 @@ Route::group([
         ->where('ledgerDefineId', '[0-9]+');
 
     //    ledger (残りのルート)
-    Route::get('/ledger/define/{defineId}', [LedgerIndexController::class, 'indexByDefine'])->name('ledgerByDefineId')
+    Route::get('/ledger/define/{defineId}', LedgerIndexController::class)->name('ledgerByDefineId')
         ->where('defineId', '[0-9]+');
     Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
         ->where('folderId', '[0-9]+');

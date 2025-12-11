@@ -79,8 +79,16 @@
             </a>
         @endif
 
-        {{-- 閉じるボタン --}}
-        <x-ledger.close-window-button/>
+        {{-- 閉じるボタンとリストに戻るボタン --}}
+        <div class="flex gap-2 items-center justify-center">
+            <x-mary-button
+                    label="{{ __('ledger.back_to_list') }}"
+                    icon="o-list-bullet"
+                    class="btn-sm btn-outline"
+                    onclick="window.open('{{ route('ledger.index', ['tenant' => tenant('id'), 'l' => [$ledgerRecord->define->id], 'cf' => $ledgerRecord->define->folder_id ])}}', 'ledger-list');"
+            />
+            <x-ledger.close-window-button/>
+        </div>
 
     </div>
     {{-- 現在のステータス表示 --}}

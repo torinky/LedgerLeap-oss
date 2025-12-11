@@ -106,14 +106,6 @@
             <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity "> {{-- 透明度調整 --}}
                 <div class="card-body p-4">
                     <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord" wire:key="action-buttons-{{ $ledgerRecord->id }}" />
-                </div>
-            </div>
-        </div>
-
-        {{-- 担当者選択モーダルコンポーネント呼び出し --}}
-        @livewire('workflow.workflow-assignee-modal', key('assignee-modal-show'))
-
-        {{-- コメント入力モーダル --}}
         @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id],
         key('workflow-comment-modal-show'))
 

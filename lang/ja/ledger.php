@@ -202,6 +202,7 @@
         ],
     'attribute' => '属性',
     'auto_sync_enabled' => '自動同期中',
+    'back_to_list' => 'リストに戻る',
     'basic_information' => '基本情報',
     'basic_operations_info' => 'その他、フォルダの権限に応じて台帳の閲覧などの基本的な操作が可能です。',
     'basic_operations_permission' => '台帳の閲覧などの基本的な操作が可能です。',
