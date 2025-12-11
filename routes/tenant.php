@@ -37,6 +37,11 @@ Route::group([
         ->where('ledgerId', '[0-9]+');
     Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
 
+    // ledger duplicate
+    Route::get('/ledger/duplicate/{ledgerId}', [\App\Http\Controllers\Ledger\DuplicateController::class, 'duplicate'])
+        ->name('ledger.duplicate')
+        ->where('ledgerId', '[0-9]+');
+
     // ledgerDefine
     Route::get('/ledgerDefine', [LedgerDefineIndexController::class, 'index'])->name('ledgerDefine.index');
     Route::get('/ledgerDefine/folder/{folderId}', [LedgerDefineIndexController::class, 'index'])

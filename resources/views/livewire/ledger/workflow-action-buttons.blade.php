@@ -18,6 +18,24 @@
                                 class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
                 </div>
             @endif
+
+            {{-- 複製ボタン --}}
+            @php $canCreate = auth()->user()->can('create', [App\Models\Ledger::class, $ledgerRecord->define]); @endphp
+            @if($canCreate)
+                <a href="{{ route('ledger.duplicate', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
+                   class="join-item btn btn-outline btn-sm md:btn-md"
+                   target="_blank"
+                >
+                    <i class="fa-solid fa-copy mr-2"></i>{{__('ledger.duplicate_from_this')}}
+                </a>
+            @else
+                <div class="tooltip" data-tip="{{ __('ledger.no_create_permission') }}">
+                    <button class="join-item btn btn-outline btn-sm md:btn-md" disabled>
+                        <i class="fa-solid fa-copy mr-2"></i>{{__('ledger.duplicate_from_this')}}
+                    </button>
+                </div>
+            @endif
+
             {{-- ワークフローアクションボタン --}}
             {{-- 点検完了（承認申請）ボタン --}}
             @if($this->canRequestApproval())
