@@ -15,7 +15,6 @@ class DuplicateController extends Controller
     /**
      * 既存の台帳レコードを元に新規作成画面を表示
      *
-     * @param  Request  $request
      * @return \Illuminate\Contracts\View\View
      *
      * @throws AuthorizationException
@@ -31,6 +30,10 @@ class DuplicateController extends Controller
         $this->authorize('view', $sourceLedger);
 
         $ledgerDefine = $sourceLedger->define;
+
+        if (! $ledgerDefine) {
+            abort(404, __('ledger.define_not_found'));
+        }
 
         // 新規作成権限チェック
         if (auth()->user()->cannot('create', [Ledger::class, $ledgerDefine])) {
@@ -50,10 +53,6 @@ class DuplicateController extends Controller
 
     /**
      * 複製元レコードからprefillパラメータを構成
-     *
-     * @param  Ledger  $sourceLedger
-     * @param  LedgerDefine  $ledgerDefine
-     * @return array
      */
     private function buildPrefillParamsFromLedger(Ledger $sourceLedger, LedgerDefine $ledgerDefine): array
     {
@@ -61,7 +60,10 @@ class DuplicateController extends Controller
         $columnDefines = collect($ledgerDefine->column_define);
 
         // 除外するカラムタイプ
-        $excludedTypes = ['auto_number', 'files'];
+        // - YMD, YMDHM: 毎回新しい日付を入力する（日報の作成日等）
+        // - auto_number: システムが自動採番する
+        // - files: 毎回異なる資料を添付する（日報の写真等）
+        $excludedTypes = ['YMD', 'YMDHM', 'auto_number', 'files'];
 
         foreach ($sourceLedger->content as $columnId => $value) {
             $column = $columnDefines->firstWhere('id', (int) $columnId);
