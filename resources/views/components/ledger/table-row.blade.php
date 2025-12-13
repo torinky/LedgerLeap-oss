@@ -175,12 +175,18 @@
                 @if (empty($ledgerRecord->content[$columnDefine->id]))
                     <x-ledger.empty-message/>
                 @else
-                    {{-- テキスト/Markdownの安全表示（長文は省略） --}}
                     @php
-                        $raw = $ledgerRecord->content[$columnDefine->id];
-                        $display = is_string($raw) ? \Illuminate\Support\Str::limit($raw, 200) : (is_array($raw) ? json_encode($raw, JSON_UNESCAPED_UNICODE) : (string) $raw);
+                        // ColumnHtmlServiceを使用してバッジ表示などを適切にレンダリング
+                        $columnHtml = ColumnHtml::setAttachmentCollection($allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'))
+                                     ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
+                                     ->show($columnDefine, $ledgerRecord->content[$columnDefine->id], $canView, [], '', false, $ledgerRecord, $highlightKeyword, $currentTenantId ?? tenant()?->id);
+                        $columnHtmlString = $columnHtml->toHtml();
                     @endphp
-                    <div class="prose max-w-none">{!! \Illuminate\Support\Str::markdown($display, ['html_input' => 'strip']) !!}</div>
+
+                    <x-expandable-content
+                        :content="$columnHtmlString"
+                        max-height="6rem"
+                    />
                 @endif
             @endif
         </td>
