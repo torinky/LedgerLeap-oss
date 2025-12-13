@@ -219,14 +219,28 @@
                         />
 
                         <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{$ledgerDefineId}}">
-                            <table
-                                class="relative table table-zebra table-compact table-auto table-pin-rows table-pin-cols max-h-fit">
+                            @php
+                                // フロント表示用のモック添付ファイル列を追加
+                                $displayColumns = $filteredColumnDefines[$ledgerDefineId] ?? [];
+                                if ($displayColumns instanceof \Illuminate\Support\Collection) {
+                                    $displayColumns = $displayColumns->toArray();
+                                }
+                                $mockAttachmentColumn = (object) [
+                                    'id' => '__mock_files',
+                                    'type' => 'file',
+                                    'input_type' => 'file',
+                                    'name' => 'Attachments',
+                                    'label' => '添付(モック)',
+                                ];
+                                $displayColumnsWithMock = array_merge($displayColumns, [$mockAttachmentColumn]);
+                            @endphp
+                            <table class="relative table table-zebra table-compact table-auto table-pin-rows table-pin-cols max-h-fit">
                                 <thead>
                                 <x-ledger.table-header
                                     :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]"
                                     :orderBy="$orderBy"
                                     :orderAsc="$orderAsc"
-                                    :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                    :filteredColumnDefines="$displayColumnsWithMock"
                                     :defaultSortColumns="$defaultSortColumns"
                                 />
                                 </thead>
@@ -238,13 +252,14 @@
                                         :canUpdate="$canUpdate"
                                         :canView="$canView"
                                         :allAttachments="$allAttachments"
-                                        :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                        :filteredColumnDefines="$displayColumnsWithMock"
                                         :currentTenantId="$currentTenantId"
                                     />
                                 @endforeach
                                 </tbody>
                             </table>
                         </div>
+
                     </div>
                 </div>
 
@@ -279,7 +294,7 @@
             @livewire('common.permission-display', [
             'resourceId' => $modalResourceId,
             'resourceType' => $modalResourceType
-            ], key('permission-modal-'.$modalResourceId.'-'.$modalResourceType))
+            ])
         @endif
         <x-slot:actions>
             <x-mary-button label="{{ __('Close') }}" icon="o-x-circle" @click="$wire.showPermissionModal = false" />
@@ -296,10 +311,14 @@
             'resourceType' => $modalResourceType,
             // 台帳定義の場合、フォルダのアクティビティも表示すると便利かもしれない
             'includeRelatedResources' => ($modalResourceType === 'LedgerDefine')
-            ], key('activity-modal-'.$modalResourceId.'-'.$modalResourceType))
+            ])
         @endif
         <x-slot:actions>
             <x-mary-button label="{{ __('Close') }}" icon="o-x-circle" @click="$wire.showActivityModal = false" />
         </x-slot:actions>
     </x-mary-modal>
+
+    {{-- 添付ファイルのドロワーを一覧ページにも常駐配置 --}}
+    <livewire:attached-file.file-inspector />
 </div>
+

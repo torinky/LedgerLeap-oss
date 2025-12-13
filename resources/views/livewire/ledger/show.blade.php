@@ -260,4 +260,9 @@
                 </div>
             @endif
         </x-mary-modal>
+    </div>
+
+    {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
+    <livewire:attached-file.file-inspector />
 </div>
+
