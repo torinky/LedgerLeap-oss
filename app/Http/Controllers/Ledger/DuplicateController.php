@@ -87,7 +87,12 @@ class DuplicateController extends Controller
 
                 // select/chk の場合、現在の選択肢に存在するもののみ
                 if (in_array($column->type, ['select', 'chk']) && ! empty($column->options)) {
-                    $value = array_filter($value, fn ($v) => in_array($v, $column->options, true));
+                    $value = array_values(array_filter($value, fn ($v) => in_array($v, $column->options, true)));
+
+                    // フィルタリング後に空配列になった場合はスキップ
+                    if (empty($value)) {
+                        continue;
+                    }
                 }
             }
 
