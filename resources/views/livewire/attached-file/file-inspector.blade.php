@@ -1,15 +1,16 @@
 <div
-    x-data="{ open: @entangle('open') }"
-    @keydown.escape.window="open = false; $wire.close()"
-    @open-file-inspector.window="console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)"
+        x-data="{ open: @entangle('open') }"
+        @keydown.escape.window="open = false; $wire.close()"
+        @open-file-inspector.window="console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)"
 >
     {{-- DaisyUI Drawer --}}
     <div class="drawer drawer-end z-50">
-        <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open" />
+        <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open"/>
 
         {{-- Overlay --}}
         <div class="drawer-side">
-            <label for="file-inspector-drawer" aria-label="close sidebar" class="drawer-overlay" @click="open = false; $wire.close()"></label>
+            <label for="file-inspector-drawer" aria-label="close sidebar" class="drawer-overlay"
+                   @click="open = false; $wire.close()"></label>
 
             {{-- Drawer content --}}
             <div class="min-h-full w-96 md:w-[28rem] lg:w-[32rem] bg-base-100 flex flex-col shadow-2xl">
@@ -18,20 +19,22 @@
                 <div class="navbar bg-base-200 border-b border-base-300 min-h-[4rem] px-4 flex-none">
                     <div class="flex-1">
                         <div class="flex flex-col gap-1">
-                            <h2 id="drawer-title" class="text-base font-bold truncate line-clamp-1" title="{{ $file?->original_filename ?? $file?->filename ?? __('ledger.file_inspector.title') }}">
+                            <h2 id="drawer-title" class="text-base font-bold truncate line-clamp-1"
+                                title="{{ $file?->original_filename ?? $file?->filename ?? __('ledger.file_inspector.title') }}">
                                 <i class="fa-solid fa-file-lines mr-2 text-primary"></i>
                                 {{ \Illuminate\Support\Str::limit($file?->original_filename ?? $file?->filename ?? __('ledger.file_inspector.title'), 30) }}
                             </h2>
                             @if($file && ($file->mock_ledger_title ?? $file->ledger ?? null))
-                            <div class="text-xs text-base-content/60 flex items-center gap-2">
-                                <i class="fa-solid fa-folder text-warning text-[10px]"></i>
-                                <span class="truncate">{{ \Illuminate\Support\Str::limit($file->mock_folder_path ?? $file->ledger?->folder?->title ?? '', 40) }}</span>
-                            </div>
+                                <div class="text-xs text-base-content/60 flex items-center gap-2">
+                                    <i class="fa-solid fa-folder text-warning text-[10px]"></i>
+                                    <span class="truncate">{{ \Illuminate\Support\Str::limit($file->mock_folder_path ?? $file->ledger?->folder?->title ?? '', 40) }}</span>
+                                </div>
                             @endif
                         </div>
                     </div>
                     <div class="flex-none">
-                        <button class="btn btn-ghost btn-sm btn-circle" @click="open = false; $wire.close()" aria-label="{{ __('ledger.file_inspector.close') }}">
+                        <button class="btn btn-ghost btn-sm btn-circle" @click="open = false; $wire.close()"
+                                aria-label="{{ __('ledger.file_inspector.close') }}">
                             <i class="fa-solid fa-xmark text-lg"></i>
                         </button>
                     </div>
@@ -81,55 +84,53 @@
                 @endphp
 
                 @if($showPreview)
-                <div class="bg-base-200/50 border-b border-base-300 flex-none">
-                    @if($isImage)
-                        <div class="relative aspect-video bg-base-300">
-                            <img src="{{ $previewUrl }}"
-                                 alt="{{ $file?->original_filename ?? 'Preview' }}"
-                                 class="w-full h-full object-contain"
-                                 loading="lazy">
-                            <div class="absolute top-2 right-2">
-                                <button class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
-                                        data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
-                                        @click="window.open('{{ $previewUrl }}', '_blank')">
-                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                    @elseif($isPdf)
-                        <div class="relative aspect-video bg-base-300 flex items-center justify-center">
-                            @if($file && $file->id >= 1 && $file->id <= 8)
-                                <div class="text-center p-6">
-                                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-error/10 mb-4">
-                                        <i class="fa-solid fa-file-pdf text-4xl text-error"></i>
-                                    </div>
-                                    <p class="text-sm font-medium text-base-content mb-1">{{ __('ledger.file_inspector.preview.pdf_preview') }}</p>
-                                    <p class="text-xs text-base-content/60 mb-4">{{ number_format(($file->size ?? 0)/1024, 1) }} KB</p>
-                                    <button class="btn btn-sm btn-outline gap-2" @click="window.open('{{ $previewUrl }}', '_blank')">
-                                        <i class="fa-solid fa-external-link-alt"></i>
-                                        {{ __('ledger.file_inspector.preview.open_new_tab') }}
+                    <div class="bg-base-200/50 border-b border-base-300 flex-none">
+                        @if($isImage)
+                            <div class="relative aspect-video bg-base-300">
+                                <img src="{{ $previewUrl }}"
+                                     alt="{{ $file?->original_filename ?? 'Preview' }}"
+                                     class="w-full h-full object-contain"
+                                     loading="lazy">
+                                <div class="absolute top-2 right-2">
+                                    <button class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
+                                            data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
+                                            @click="window.open('{{ $previewUrl }}', '_blank')">
+                                        <i class="fa-solid fa-magnifying-glass-plus"></i>
                                     </button>
                                 </div>
-                            @else
-                                <iframe src="{{ $previewUrl }}" class="w-full h-full border-0" title="PDF Preview"></iframe>
-                            @endif
-                        </div>
-                    @endif
-                </div>
+                            </div>
+                        @elseif($isPdf)
+                            <div class="relative aspect-video bg-base-300 flex items-center justify-center">
+                                @if($file && $file->id >= 1 && $file->id <= 8)
+                                    <div class="text-center p-6">
+                                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-error/10 mb-4">
+                                            <i class="fa-solid fa-file-pdf text-4xl text-error"></i>
+                                        </div>
+                                        <p class="text-sm font-medium text-base-content mb-1">{{ __('ledger.file_inspector.preview.pdf_preview') }}</p>
+                                        <p class="text-xs text-base-content/60 mb-4">{{ number_format(($file->size ?? 0)/1024, 1) }}
+                                            KB</p>
+                                        <button class="btn btn-sm btn-outline gap-2"
+                                                @click="window.open('{{ $previewUrl }}', '_blank')">
+                                            <i class="fa-solid fa-external-link-alt"></i>
+                                            {{ __('ledger.file_inspector.preview.open_new_tab') }}
+                                        </button>
+                                    </div>
+                                @else
+                                    <iframe src="{{ $previewUrl }}" class="w-full h-full border-0"
+                                            title="PDF Preview"></iframe>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
                 @endif
 
                 {{-- Tabs & Content --}}
                 <div class="flex-1 overflow-hidden flex flex-col">
-                    <x-mary-tabs wire:model="selectedTab" class="tabs tabs-boxed bg-base-200 m-0 p-1 rounded-none border-b border-base-300 flex-none">
-                        <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}" icon="o-document-text" class="tab-lg gap-2" />
-                        <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}" icon="o-information-circle" class="tab-lg gap-2" />
-                        <x-mary-tab name="access" label="{{ __('ledger.file_inspector.tabs.access') }}" icon="o-shield-check" class="tab-lg gap-2" />
-                        <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}" icon="o-clock" class="tab-lg gap-2" />
-                    </x-mary-tabs>
-
-                    <div class="flex-1 overflow-y-auto">
-                        {{-- Content Tab --}}
-                        @if($selectedTab === 'content')
+                    <x-mary-tabs wire:model="selectedTab"
+                                 class="tabs tabs-boxed bg-base-200 m-0 p-1 rounded-none border-b border-base-300 flex-none">
+                        <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
+                                    icon="o-document-text" class="tab-lg gap-2">
+                            {{-- Content Tab --}}
                             <div class="p-4 space-y-4">
                                 @php
                                     $hasPreviewText = $file && (
@@ -149,7 +150,8 @@
                                         <div>
                                             <div class="font-semibold text-sm">{{ __('ledger.file_inspector.status.processing') }}</div>
                                             <div class="text-xs">{{ __('ledger.file_inspector.status.processing_message') }}</div>
-                                            <progress class="progress progress-warning w-full mt-2" value="65" max="100"></progress>
+                                            <progress class="progress progress-warning w-full mt-2" value="65"
+                                                      max="100"></progress>
                                         </div>
                                     </div>
                                 @elseif($isError)
@@ -162,33 +164,33 @@
                                     </div>
                                 @elseif($hasPreviewText)
                                     @if($confidence !== null && $confidence > 0)
-                                    <div class="stats shadow w-full">
-                                        <div class="stat p-3">
-                                            <div class="stat-title text-xs">{{ __('ledger.file_inspector.info.last_extraction') }}</div>
-                                            <div class="stat-value text-lg flex items-center gap-2">
-                                                @if($source === 'VLM')
-                                                    <span class="badge badge-success">VLM</span>
-                                                @elseif($source === 'OCR')
-                                                    <span class="badge badge-info">OCR</span>
-                                                @else
-                                                    <span class="badge badge-primary">Tika</span>
-                                                @endif
-                                                <span class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
-                                            </div>
-                                            <div class="stat-desc flex items-center gap-1">
-                                                @if($confidence >= 0.9)
-                                                    <i class="fa-solid fa-check-circle text-success"></i>
-                                                    <span class="text-success">高信頼度</span>
-                                                @elseif($confidence >= 0.7)
-                                                    <i class="fa-solid fa-shield-check text-info"></i>
-                                                    <span class="text-info">中信頼度</span>
-                                                @else
-                                                    <i class="fa-solid fa-exclamation-triangle text-warning"></i>
-                                                    <span class="text-warning">低信頼度</span>
-                                                @endif
+                                        <div class="stats shadow w-full">
+                                            <div class="stat p-3">
+                                                <div class="stat-title text-xs">{{ __('ledger.file_inspector.info.last_extraction') }}</div>
+                                                <div class="stat-value text-lg flex items-center gap-2">
+                                                    @if($source === 'VLM')
+                                                        <span class="badge badge-success">VLM</span>
+                                                    @elseif($source === 'OCR')
+                                                        <span class="badge badge-info">OCR</span>
+                                                    @else
+                                                        <span class="badge badge-primary">Tika</span>
+                                                    @endif
+                                                    <span class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
+                                                </div>
+                                                <div class="stat-desc flex items-center gap-1">
+                                                    @if($confidence >= 0.9)
+                                                        <i class="fa-solid fa-check-circle text-success"></i>
+                                                        <span class="text-success">高信頼度</span>
+                                                    @elseif($confidence >= 0.7)
+                                                        <i class="fa-solid fa-shield-check text-info"></i>
+                                                        <span class="text-info">中信頼度</span>
+                                                    @else
+                                                        <i class="fa-solid fa-exclamation-triangle text-warning"></i>
+                                                        <span class="text-warning">低信頼度</span>
+                                                    @endif
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                     @endif
 
                                     <div class="form-control">
@@ -227,10 +229,11 @@
                                     </div>
                                 @endif
                             </div>
-                        @endif
 
-                        {{-- Details Tab --}}
-                        @if($selectedTab === 'details')
+                        </x-mary-tab>
+                        <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
+                                    icon="o-information-circle" class="tab-lg gap-2">
+                            {{-- Details Tab --}}
                             <div class="p-4 space-y-4">
                                 <div>
                                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -240,22 +243,24 @@
                                     <div class="overflow-x-auto">
                                         <table class="table table-xs">
                                             <tbody>
-                                                <tr>
-                                                    <th class="w-1/3">{{ __('ledger.file_inspector.info.size') }}</th>
-                                                    <td>{{ number_format(($file?->size ?? 0)/1024, 1) }} KB</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('ledger.file_inspector.info.format') }}</th>
-                                                    <td><code class="text-xs">{{ $file?->original_mime_type ?? $file?->mime ?? 'N/A' }}</code></td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('ledger.file_inspector.info.uploaded') }}</th>
-                                                    <td>{{ $file?->created_at?->format('Y/m/d H:i') ?? 'N/A' }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <th>{{ __('ledger.file_inspector.info.uploaded_by') }}</th>
-                                                    <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 8 ? '山田太郎' : 'N/A') }}</td>
-                                                </tr>
+                                            <tr>
+                                                <th class="w-1/3">{{ __('ledger.file_inspector.info.size') }}</th>
+                                                <td>{{ number_format(($file?->size ?? 0)/1024, 1) }} KB</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ __('ledger.file_inspector.info.format') }}</th>
+                                                <td>
+                                                    <code class="text-xs">{{ $file?->original_mime_type ?? $file?->mime ?? 'N/A' }}</code>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ __('ledger.file_inspector.info.uploaded') }}</th>
+                                                <td>{{ $file?->created_at?->format('Y/m/d H:i') ?? 'N/A' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>{{ __('ledger.file_inspector.info.uploaded_by') }}</th>
+                                                <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 8 ? '山田太郎' : 'N/A') }}</td>
+                                            </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -275,28 +280,28 @@
                                     <div class="overflow-x-auto">
                                         <table class="table table-xs">
                                             <tbody>
-                                                <tr>
-                                                    <th class="w-1/3">{{ __('ledger.file_inspector.info.status') }}</th>
-                                                    <td>
-                                                        @if($isProcessing)
-                                                            <span class="badge badge-warning badge-sm gap-1">
+                                            <tr>
+                                                <th class="w-1/3">{{ __('ledger.file_inspector.info.status') }}</th>
+                                                <td>
+                                                    @if($isProcessing)
+                                                        <span class="badge badge-warning badge-sm gap-1">
                                                                 <i class="fa-solid fa-spinner fa-spin"></i>
                                                                 {{ __('ledger.file_inspector.status.processing') }}
                                                             </span>
-                                                        @elseif($isError)
-                                                            <span class="badge badge-error badge-sm gap-1">
+                                                    @elseif($isError)
+                                                        <span class="badge badge-error badge-sm gap-1">
                                                                 <i class="fa-solid fa-exclamation-triangle"></i>
                                                                 {{ __('ledger.file_inspector.status.error') }}
                                                             </span>
-                                                        @else
-                                                            <span class="badge badge-success badge-sm gap-1">
+                                                    @else
+                                                        <span class="badge badge-success badge-sm gap-1">
                                                                 <i class="fa-solid fa-check"></i>
                                                                 {{ __('ledger.file_inspector.status.completed') }}
                                                             </span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                                @if($file && $file->mock_source)
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            @if($file && $file->mock_source)
                                                 <tr>
                                                     <th>{{ __('ledger.file_inspector.info.last_extraction') }}</th>
                                                     <td>
@@ -309,16 +314,16 @@
                                                         @endif
                                                     </td>
                                                 </tr>
-                                                @endif
+                                            @endif
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
-                        @endif
-
-                        {{-- Access Tab --}}
-                        @if($selectedTab === 'access')
+                        </x-mary-tab>
+                        <x-mary-tab name="access" label="{{ __('ledger.file_inspector.tabs.access') }}"
+                                    icon="o-shield-check" class="tab-lg gap-2">
+                            {{-- Access Tab --}}
                             <div class="p-4 space-y-4">
                                 <div class="card bg-primary/5 border border-primary/20">
                                     <div class="card-body p-4">
@@ -374,10 +379,10 @@
                                     </div>
                                 </div>
                             </div>
-                        @endif
-
-                        {{-- History Tab --}}
-                        @if($selectedTab === 'history')
+                        </x-mary-tab>
+                        <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}" icon="o-clock"
+                                    class="tab-lg gap-2">
+                            {{-- History Tab --}}
                             <div class="p-4 space-y-4">
                                 <div>
                                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -389,7 +394,9 @@
                                             <div class="text-left ml-3">
                                                 <div class="font-semibold">{{ __('ledger.file_inspector.history.vlm_analysis') }}</div>
                                                 <div class="text-xs text-base-content/60">2025-12-13 10:45</div>
-                                                <div class="text-xs text-base-content/70">{{ __('ledger.file_inspector.info.confidence') }} 92.5% | 3.2秒</div>
+                                                <div class="text-xs text-base-content/70">{{ __('ledger.file_inspector.info.confidence') }}
+                                                    92.5% | 3.2秒
+                                                </div>
                                             </div>
                                         </li>
                                         <li class="step step-success">
@@ -451,8 +458,9 @@
                                     </div>
                                 </div>
                             </div>
-                        @endif
-                    </div>
+                        </x-mary-tab>
+                    </x-mary-tabs>
+
                 </div>
 
                 {{-- Footer --}}
