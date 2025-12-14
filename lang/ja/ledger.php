@@ -299,6 +299,89 @@
     'composite_score_tooltip' => '総合スコア（活動度・新鮮度・ステータス）',
     'confirm' => '確認する',
     'connect' => '接続する',
+    'file_inspector' =>
+        [
+            'title' => 'ファイル詳細',
+            'close' => '閉じる',
+            'actions' =>
+                [
+                    'download' => 'ダウンロード',
+                    'copy_link' => 'リンクをコピー',
+                    'open_new_tab' => '新しいタブで開く',
+                    'reprocess' => '再処理',
+                    'delete' => '削除',
+                    'copy_text' => 'コピー',
+                    'copy_markdown' => 'Markdownをコピー',
+                    'copy_structured' => '構造化データをコピー',
+                    'zoom' => '拡大表示',
+                ],
+            'tabs' =>
+                [
+                    'content' => '内容',
+                    'details' => '詳細',
+                    'access' => '権限',
+                    'history' => '履歴',
+                ],
+            'status' =>
+                [
+                    'processing' => '処理中',
+                    'error' => '処理エラー',
+                    'completed' => '完了',
+                    'processing_message' => 'OCR処理を実行しています...',
+                    'error_message' => 'このファイル形式はテキスト抽出に対応していません。',
+                    'no_text' => 'テキスト解析結果がありません',
+                ],
+            'info' =>
+                [
+                    'file_info' => 'ファイル情報',
+                    'size' => 'サイズ',
+                    'format' => '形式',
+                    'uploaded' => 'アップロード',
+                    'uploaded_by' => 'アップロード者',
+                    'processing_status' => '処理ステータス',
+                    'status' => 'ステータス',
+                    'last_extraction' => '最終抽出',
+                    'confidence' => '信頼度',
+                ],
+            'access' =>
+                [
+                    'your_permissions' => 'あなたの権限',
+                    'view' => '閲覧',
+                    'download' => 'DL',
+                    'edit' => '編集',
+                    'delete' => '削除',
+                    'org_role_settings' => '組織・ロール別設定',
+                    'organization' => '組織',
+                    'role' => 'ロール',
+                    'admin' => '管理',
+                    'write' => '編集',
+                    'read' => '閲覧',
+                    'read_only' => '閲覧のみ',
+                ],
+            'history' =>
+                [
+                    'processing_log' => '処理ログ',
+                    'activity' => 'アクティビティ',
+                    'vlm_analysis' => 'VLM解析完了',
+                    'ocr_processing' => 'OCR処理完了',
+                    'tika_extraction' => 'Tika抽出完了',
+                    'uploaded' => 'アップロード',
+                    'downloaded' => 'DL',
+                    'viewed' => '閲覧',
+                ],
+            'preview' =>
+                [
+                    'pdf_preview' => 'PDFプレビュー',
+                    'open_new_tab' => '新しいタブで開く',
+                ],
+            'messages' =>
+                [
+                    'link_copied' => 'リンクをコピーしました',
+                    'text_copied' => 'テキストをコピーしました',
+                    'markdown_copied' => 'Markdownをコピーしました',
+                    'structured_copied' => '構造化データをコピーしました',
+                ],
+        ],
     'containing' => '含む',
     'content' => '内容',
     'continue_edit' => '編集を続ける',

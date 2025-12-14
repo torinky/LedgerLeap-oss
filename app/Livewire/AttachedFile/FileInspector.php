@@ -19,13 +19,13 @@ class FileInspector extends Component
 
     public ?AttachedFile $file = null;
 
-    public string $selectedTab = 'analysis';
+    public string $selectedTab = 'content';
 
     public function mount(): void
     {
         // 初期状態
         $this->open = false;
-        $this->selectedTab = 'analysis';
+        $this->selectedTab = 'content'; // デフォルトは「内容」タブ
     }
 
     #[On('open-file-inspector')]

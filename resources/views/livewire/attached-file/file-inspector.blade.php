@@ -120,8 +120,8 @@
         {{-- Tabs - ユーザーシナリオベース --}}
         <div class="flex-1 overflow-y-auto">
             <x-mary-tabs wire:model="selectedTab" class="tabs-boxed m-2">
-                {{-- タブ1: 内容確認 (メイン) - ユーザーが最も頻繁に使う --}}
-                <x-mary-tab name="content" label="内容" icon="o-document-text">
+                {{-- タブ1: 内容確認 (メイン・デフォルト) - ユーザーが最も頻繁に使う --}}
+                <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}" icon="o-document-text">
                     <div class="p-4 space-y-3">
                         @php
                             $hasPreviewText = $file && (
@@ -139,8 +139,8 @@
                             <div class="alert alert-warning">
                                 <i class="fa-solid fa-spinner fa-spin"></i>
                                 <div>
-                                    <div class="font-bold text-sm">処理中</div>
-                                    <div class="text-xs">OCR処理を実行しています...</div>
+                                    <div class="font-bold text-sm">{{ __('ledger.file_inspector.status.processing') }}</div>
+                                    <div class="text-xs">{{ __('ledger.file_inspector.status.processing_message') }}</div>
                                     <progress class="progress progress-warning w-full mt-2" value="65" max="100"></progress>
                                 </div>
                             </div>
@@ -148,8 +148,8 @@
                             <div class="alert alert-error">
                                 <i class="fa-solid fa-exclamation-triangle"></i>
                                 <div>
-                                    <div class="font-bold text-sm">処理エラー</div>
-                                    <div class="text-xs">このファイル形式はテキスト抽出に対応していません。</div>
+                                    <div class="font-bold text-sm">{{ __('ledger.file_inspector.status.error') }}</div>
+                                    <div class="text-xs">{{ __('ledger.file_inspector.status.error_message') }}</div>
                                 </div>
                             </div>
                         @elseif($hasPreviewText)
@@ -164,7 +164,7 @@
                                     @else
                                         <span class="badge badge-primary badge-xs">Tika</span>
                                     @endif
-                                    <span>信頼度 {{ number_format($confidence * 100, 1) }}%</span>
+                                    <span>{{ __('ledger.file_inspector.info.confidence') }} {{ number_format($confidence * 100, 1) }}%</span>
                                 </div>
                                 @if($confidence >= 0.9)
                                     <i class="fa-solid fa-check-circle text-success"></i>
@@ -176,22 +176,40 @@
                             </div>
                             @endif
 
-                            <textarea class="textarea textarea-bordered w-full h-64 text-xs font-mono" readonly>{{ $previewText }}</textarea>
-                            <button class="btn btn-sm btn-outline w-full" x-data="{}" @click="navigator.clipboard.writeText($el.previousElementSibling.value)">
-                                <i class="fa-solid fa-copy"></i>
-                                コピー
-                            </button>
+                            <textarea id="preview-text-{{ $file?->id ?? 0 }}" class="textarea textarea-bordered w-full h-64 text-xs font-mono" readonly>{{ $previewText }}</textarea>
+
+                            {{-- コピーボタングループ --}}
+                            <div class="flex gap-2">
+                                <button class="btn btn-sm btn-outline flex-1"
+                                        x-data="{}"
+                                        @click="navigator.clipboard.writeText(document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value).then(() => alert('{{ __('ledger.file_inspector.messages.text_copied') }}'))">
+                                    <i class="fa-solid fa-copy"></i>
+                                    {{ __('ledger.file_inspector.actions.copy_text') }}
+                                </button>
+                                <button class="btn btn-sm btn-outline flex-1"
+                                        x-data="{}"
+                                        @click="navigator.clipboard.writeText('```\n' + document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value + '\n```').then(() => alert('{{ __('ledger.file_inspector.messages.markdown_copied') }}'))">
+                                    <i class="fa-brands fa-markdown"></i>
+                                    {{ __('ledger.file_inspector.actions.copy_markdown') }}
+                                </button>
+                                <button class="btn btn-sm btn-outline flex-1"
+                                        x-data="{}"
+                                        @click="navigator.clipboard.writeText(JSON.stringify({filename: '{{ $file?->original_filename ?? '' }}', content: document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value, source: '{{ $source }}', confidence: {{ $confidence ?? 0 }}}, null, 2)).then(() => alert('{{ __('ledger.file_inspector.messages.structured_copied') }}'))">
+                                    <i class="fa-solid fa-code"></i>
+                                    {{ __('ledger.file_inspector.actions.copy_structured') }}
+                                </button>
+                            </div>
                         @else
                             <div class="alert alert-info">
                                 <i class="fa-solid fa-info-circle"></i>
-                                <div class="text-xs">テキスト解析結果がありません</div>
+                                <div class="text-xs">{{ __('ledger.file_inspector.status.no_text') }}</div>
                             </div>
                         @endif
                     </div>
                 </x-mary-tab>
 
                 {{-- タブ2: 詳細情報 - 必要な時だけ見る --}}
-                <x-mary-tab name="details" label="詳細" icon="o-information-circle">
+                <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}" icon="o-information-circle">
                     <div class="p-4 space-y-4">
                         {{-- ファイル情報 --}}
                         <div>
@@ -399,10 +417,10 @@
                     ID: {{ $file?->id ?? 0 }}
                 </span>
                 <div class="flex gap-2">
-                    <button class="btn btn-warning btn-xs" title="再処理">
+                    <button class="btn btn-warning btn-xs" title="{{ __('ledger.file_inspector.actions.reprocess') }}">
                         <i class="fa-solid fa-refresh"></i>
                     </button>
-                    <button class="btn btn-error btn-xs" title="削除">
+                    <button class="btn btn-error btn-xs" title="{{ __('ledger.file_inspector.actions.delete') }}">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
