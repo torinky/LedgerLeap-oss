@@ -5,7 +5,7 @@
     'filteredColumnDefines' => [],
     'defaultSortColumns' => [],
     ])
-<tr class="hover"
+<tr class="hover z-30"
     wire:key="ledger_table_header_{{$ledgerDefine->id}}"
 >
     {{-- アクションボタン用の列 --}}
@@ -29,7 +29,7 @@
     </th>
 
     @foreach($filteredColumnDefines as $cKey=>$column_define)
-        <td class="px-4 py-2 space-y-1 text-center bg-accent bg-opacity-30"
+        <th class="px-4 py-2 space-y-1 text-center bg-accent bg-opacity-30"
             wire:key="ledger_table_header_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
         >
             <span class=" text-base font-bold">
@@ -56,10 +56,10 @@
                     type="search"
                     class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
                     placeholder="&#xf0b0; {{__('ledger.filter')}}...">
-        </td>
+        </th>
     @endforeach
 
-    <td class="px-4 py-2 text-center bg-accent bg-opacity-30">
+    <th class="px-4 py-2 text-center bg-accent bg-opacity-30">
         <span class="text-sm font-bold">
             {{__('ledger.updated_at')}}
         </span>
@@ -74,5 +74,5 @@
                 <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
             @endif
         </button>
-    </td>
+    </th>
 </tr>
