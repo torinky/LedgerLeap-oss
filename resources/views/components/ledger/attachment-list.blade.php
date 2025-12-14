@@ -250,7 +250,7 @@
     @empty
         <div class="col-span-full text-center py-8 text-base-content/60" role="status">
             <i class="fa-solid fa-folder-open fa-2x mb-2 opacity-40" aria-hidden="true"></i>
-            <p>{{ __('No Attachments') }}</p>
+            <p>@lang('ledger.no_attachments')</p>
         </div>
     @endforelse
 
@@ -262,9 +262,9 @@
                     x-on:click="showAll = true"
                     class="btn btn-ghost btn-sm text-primary hover:bg-primary/10"
                     role="button"
-                    aria-label="{{ __('Show More') }}: {{ __('(:count more files)', ['count' => $hiddenCount]) }}">
+                    aria-label="@lang('ledger.show_more'): @lang('ledger.more_files', ['count' => $hiddenCount])">
                 <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
-                <span class="text-sm">{{ __('Show More') }} (+{{ $hiddenCount }})</span>
+                <span class="text-sm">@lang('ledger.show_more') (+{{ $hiddenCount }})</span>
             </button>
 
             <button type="button"
@@ -275,9 +275,9 @@
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
                     role="button"
-                    aria-label="{{ __('Collapse') }}">
+                    aria-label="@lang('ledger.collapse')">
                 <i class="fa-solid fa-chevron-up text-xs" aria-hidden="true"></i>
-                <span class="text-sm">{{ __('Collapse') }}</span>
+                <span class="text-sm">@lang('ledger.collapse')</span>
             </button>
         </div>
     @endif
