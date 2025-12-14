@@ -6,8 +6,9 @@
 
 @php
     $isCompact = $mode === 'compact';
+    // Compactモード: 4件、Fullモード: 8件まで初期表示
     $fileCount = count($files);
-    $displayLimit = $isCompact ? 4 : PHP_INT_MAX;
+    $displayLimit = $isCompact ? 4 : 8;
     $hiddenCount = max(0, $fileCount - $displayLimit);
     $componentId = 'attachment-list-' . uniqid('', true);
 @endphp
@@ -27,10 +28,10 @@
         setTimeout(() => { this.loadingFiles[fileId] = false; }, 1000);
     },
     get displayLimit() {
-        return ({{ $isCompact ? 'true' : 'false' }} && !this.showAll) ? {{ $displayLimit }} : {{ $fileCount }};
+        return (!this.showAll) ? {{ $displayLimit }} : {{ $fileCount }};
     }
 }"
-     class="{{ $isCompact ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' }}"
+     class="{{ $isCompact ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3' }}"
      role="list"
      aria-label="{{ __('File List') }}"
      id="{{ $componentId }}">
@@ -140,13 +141,12 @@
 
             @else
                 {{-- Full モード: 詳細画面用のコンパクトカード表示 --}}
-                <div class="card bg-base-100 shadow hover:shadow-lg transition-all duration-300 border border-base-300 hover:border-primary/50 relative group overflow-hidden cursor-pointer tooltip"
+                <div class="card bg-base-100 shadow hover:shadow-lg transition-all duration-300 border border-base-300 hover:border-primary/50 relative group overflow-hidden cursor-pointer"
                      role="listitem"
                      x-data="{ imageLoading: true, imageError: false }"
                      x-on:click="handleFileClick({{ $fileId }})"
                      tabindex="0"
                      aria-label="{{ $label }} ({{ $statusLabel }})"
-                     data-tip="{{ __('ledger.show_details') }}"
                 >
 
                     {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -254,30 +254,32 @@
         </div>
     @endforelse
 
-    {{-- 「もっと見る」ボタン（Compactモードで4件以上の場合） --}}
-    @if($isCompact && $hiddenCount > 0)
-        <button type="button"
-                x-show="!showAll"
-                x-on:click="showAll = true"
-                class="btn btn-ghost btn-xs h-auto min-h-0 px-2 py-1 text-primary hover:bg-primary/10"
-                role="button"
-                aria-label="{{ __('Show More') }}: {{ __('(:count more files)', ['count' => $hiddenCount]) }}">
-            <i class="fa-solid fa-ellipsis text-xs" aria-hidden="true"></i>
-            <span class="text-xs">+{{ $hiddenCount }}</span>
-        </button>
+    {{-- 「もっと見る」ボタン（4件以上の場合） --}}
+    @if($hiddenCount > 0)
+        <div class="{{ $isCompact ? '' : 'col-span-full' }} flex justify-center">
+            <button type="button"
+                    x-show="!showAll"
+                    x-on:click="showAll = true"
+                    class="btn btn-ghost btn-sm text-primary hover:bg-primary/10"
+                    role="button"
+                    aria-label="{{ __('Show More') }}: {{ __('(:count more files)', ['count' => $hiddenCount]) }}">
+                <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
+                <span class="text-sm">{{ __('Show More') }} (+{{ $hiddenCount }})</span>
+            </button>
 
-        <button type="button"
-                x-show="showAll"
-                x-on:click="showAll = false"
-                class="btn btn-ghost btn-xs h-auto min-h-0 px-2 py-1 text-base-content/60 hover:bg-base-200"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100"
-                role="button"
-                aria-label="{{ __('Collapse') }}">
-            <i class="fa-solid fa-chevron-up text-xs" aria-hidden="true"></i>
-            <span class="text-xs">{{ __('Collapse') }}</span>
-        </button>
+            <button type="button"
+                    x-show="showAll"
+                    x-on:click="showAll = false"
+                    class="btn btn-ghost btn-sm text-base-content/60 hover:bg-base-200"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    role="button"
+                    aria-label="{{ __('Collapse') }}">
+                <i class="fa-solid fa-chevron-up text-xs" aria-hidden="true"></i>
+                <span class="text-sm">{{ __('Collapse') }}</span>
+            </button>
+        </div>
     @endif
 </div>
 
@@ -294,4 +296,3 @@
         }
     </style>
 @endonce
-
