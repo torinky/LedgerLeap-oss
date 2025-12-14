@@ -126,8 +126,27 @@
                             'thumbnailUrl' => null,
                             'downloadUrl' => '#',
                         ],
+                        // その他ファイル（ZIP）- エラー
+                        [
+                            'id' => 7,
+                            'filename' => '資料一式.zip',
+                            'mime' => 'application/zip',
+                            'status' => 'error',
+                            'thumbnailUrl' => null,
+                            'downloadUrl' => '#',
+                        ],
+                        // テキストファイル - 完了
+                        [
+                            'id' => 8,
+                            'filename' => '議事録_20251213.txt',
+                            'mime' => 'text/plain',
+                            'status' => 'completed',
+                            'thumbnailUrl' => null,
+                            'downloadUrl' => '#',
+                        ],
                     ];
                 @endphp
+                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" />
             @elseif($isAttachmentColumn)
                 @php
@@ -167,7 +186,7 @@
                     }
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" />
+                    <x-ledger.attachment-list :files="$files" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" />
                 @else
                     <x-ledger.empty-message/>
                 @endif
