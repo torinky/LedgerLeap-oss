@@ -315,6 +315,20 @@
                     'copy_structured' => '構造化データをコピー',
                     'zoom' => '拡大表示',
                 ],
+            'ocr' =>
+                [
+                    'image_to_pdf_title' => '画像からPDFへ変換済み',
+                    'image_to_pdf_desc' => 'この画像はOCR処理によりPDFファイルに変換されています。テキスト検索可能な状態です。',
+                    'optimized_pdf_title' => 'OCR最適化PDF',
+                    'optimized_pdf_desc' => 'このPDFはOCRmyPDFで最適化され、テキスト検索が可能になっています。',
+                    'download_pdf' => 'PDFをダウンロード',
+                    'download_optimized' => '最適化PDFをダウンロード',
+                    'converted_pdf' => 'PDF変換ファイル',
+                    'optimized_pdf' => 'OCR最適化PDF',
+                    'preview' => 'プレビュー',
+                    'image_info' => '元の画像ファイルをOCR処理でPDFに変換しました。テキスト検索とコピーが可能です。',
+                    'pdf_info' => 'OCRmyPDFで最適化しました。ファイルサイズの削減とテキスト検索の精度が向上しています。',
+                ],
             'tabs' =>
                 [
                     'content' => '内容',

@@ -43,7 +43,7 @@
                 {{-- Quick actions bar --}}
                 <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none">
                     @php
-                        $downloadUrl = $file && $file->id >= 1 && $file->id <= 8
+                        $downloadUrl = $file && $file->id >= 1 && $file->id <= 12
                             ? '#download-' . $file->id
                             : route('file.download', ['tenant' => tenant()?->id, 'attachedFile' => $file?->id ?? 0]);
                     @endphp
@@ -74,7 +74,7 @@
                     $isPdf = $mime === 'application/pdf';
                     $showPreview = $isImage || $isPdf;
                     $previewUrl = null;
-                    if ($file && $file->id >= 1 && $file->id <= 8) {
+                    if ($file && $file->id >= 1 && $file->id <= 12) {
                         if ($isImage) {
                             $previewUrl = 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' . urlencode($file->original_filename ?? 'Image');
                         } elseif ($isPdf) {
@@ -101,7 +101,7 @@
                             </div>
                         @elseif($isPdf)
                             <div class="relative aspect-video bg-base-300 flex items-center justify-center">
-                                @if($file && $file->id >= 1 && $file->id <= 8)
+                                @if($file && $file->id >= 1 && $file->id <= 12)
                                     <div class="text-center p-6">
                                         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-error/10 mb-4">
                                             <i class="fa-solid fa-file-pdf text-4xl text-error"></i>
@@ -163,6 +163,85 @@
                                         </div>
                                     </div>
                                 @elseif($hasPreviewText)
+                                    {{-- OCR処理後のファイルダウンロードUI --}}
+                                    @php
+                                        $isImageFile = str_starts_with($file?->original_mime_type ?? '', 'image/');
+                                        $isPdfFile = ($file?->original_mime_type ?? $file?->mime ?? '') === 'application/pdf';
+                                        $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
+
+                                        // デバッグ情報をログに出力
+                                        \Log::info('OCR Debug', [
+                                            'file_id' => $file?->id,
+                                            'original_mime_type' => $file?->original_mime_type,
+                                            'mime' => $file?->mime,
+                                            'isImageFile' => $isImageFile,
+                                            'isPdfFile' => $isPdfFile,
+                                            'ocr_processed_at' => $file?->ocr_processed_at,
+                                            'hasOcrProcessed' => $hasOcrProcessed,
+                                        ]);
+
+                                        $ocrPdfUrl = null;
+                                        if ($hasOcrProcessed) {
+                                            if ($isImageFile) {
+                                                $ocrPdfUrl = '#ocr-pdf-' . ($file->id ?? 0);
+                                            } elseif ($isPdfFile) {
+                                                $ocrPdfUrl = '#optimized-pdf-' . ($file->id ?? 0);
+                                            }
+                                        }
+                                    @endphp
+
+                                    {{-- デバッグ用: 変数の内容を表示 --}}
+{{--
+                                    @if(config('app.debug'))
+                                        <div class="alert alert-warning text-xs">
+                                            <div class="font-mono">
+                                                <strong>デバッグ情報:</strong><br>
+                                                File ID: {{ $file?->id }}<br>
+                                                MIME: {{ $file?->original_mime_type ?? $file?->mime }}<br>
+                                                isImageFile: {{ $isImageFile ? 'true' : 'false' }}<br>
+                                                isPdfFile: {{ $isPdfFile ? 'true' : 'false' }}<br>
+                                                ocr_processed_at: {{ $file?->ocr_processed_at ?? 'null' }}<br>
+                                                hasOcrProcessed: {{ $hasOcrProcessed ? 'true' : 'false' }}<br>
+                                                ocrPdfUrl: {{ $ocrPdfUrl ?? 'null' }}
+                                            </div>
+                                        </div>
+                                    @endif
+--}}
+
+                                    @if($hasOcrProcessed && $ocrPdfUrl)
+                                        <div class="alert alert-info shadow-lg">
+                                            <i class="fa-solid fa-file-pdf text-2xl"></i>
+                                            <div class="flex-1">
+                                                <h3 class="font-semibold text-sm">
+                                                    @if($isImageFile)
+                                                        {{ __('ledger.file_inspector.ocr.image_to_pdf_title') }}
+                                                    @else
+                                                        {{ __('ledger.file_inspector.ocr.optimized_pdf_title') }}
+                                                    @endif
+                                                </h3>
+                                                <div class="text-xs text-base-content/70 mt-1">
+                                                    @if($isImageFile)
+                                                        {{ __('ledger.file_inspector.ocr.image_to_pdf_desc') }}
+                                                    @else
+                                                        {{ __('ledger.file_inspector.ocr.optimized_pdf_desc') }}
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <a href="{{ $ocrPdfUrl }}"
+                                               class="btn btn-sm btn-primary gap-2"
+                                               download>
+                                                <i class="fa-solid fa-download"></i>
+                                                <span class="hidden sm:inline">
+                                                    @if($isImageFile)
+                                                        {{ __('ledger.file_inspector.ocr.download_pdf') }}
+                                                    @else
+                                                        {{ __('ledger.file_inspector.ocr.download_optimized') }}
+                                                    @endif
+                                                </span>
+                                            </a>
+                                        </div>
+                                    @endif
+
                                     @if($confidence !== null && $confidence > 0)
                                         <div class="stats shadow w-full">
                                             <div class="stat p-3">
@@ -259,7 +338,7 @@
                                             </tr>
                                             <tr>
                                                 <th>{{ __('ledger.file_inspector.info.uploaded_by') }}</th>
-                                                <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 8 ? '山田太郎' : 'N/A') }}</td>
+                                                <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 12 ? '山田太郎' : 'N/A') }}</td>
                                             </tr>
                                             </tbody>
                                         </table>
@@ -267,6 +346,81 @@
                                 </div>
 
                                 <div class="divider"></div>
+
+                                {{-- OCR処理後のファイル情報 --}}
+                                @php
+                                    $isImageFile = str_starts_with($file?->original_mime_type ?? '', 'image/');
+                                    $isPdfFile = ($file?->original_mime_type ?? $file?->mime ?? '') === 'application/pdf';
+                                    $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
+                                @endphp
+
+                                @if($hasOcrProcessed && ($isImageFile || $isPdfFile))
+                                    <div>
+                                        <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                                            <i class="fa-solid fa-file-pdf text-error"></i>
+                                            @if($isImageFile)
+                                                {{ __('ledger.file_inspector.ocr.converted_pdf') }}
+                                            @else
+                                                {{ __('ledger.file_inspector.ocr.optimized_pdf') }}
+                                            @endif
+                                        </h3>
+                                        <div class="card bg-base-200 border border-base-300">
+                                            <div class="card-body p-4">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-12 h-12 bg-error/10 rounded-lg flex items-center justify-center">
+                                                            <i class="fa-solid fa-file-pdf text-2xl text-error"></i>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium text-sm">
+                                                                @if($isImageFile)
+                                                                    {{ pathinfo($file?->original_filename ?? '', PATHINFO_FILENAME) }}.pdf
+                                                                @else
+                                                                    {{ $file?->original_filename ?? 'document.pdf' }}
+                                                                @endif
+                                                            </p>
+                                                            <p class="text-xs text-base-content/60 flex items-center gap-2 mt-1">
+                                                                <span class="badge badge-xs badge-info">OCR済み</span>
+                                                                <span>{{ $file?->ocr_processed_at?->diffForHumans() ?? '' }}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex flex-col gap-2">
+                                                        @php
+                                                            $ocrPdfUrl = $isImageFile
+                                                                ? '#ocr-pdf-' . ($file->id ?? 0)
+                                                                : '#optimized-pdf-' . ($file->id ?? 0);
+                                                        @endphp
+                                                        <a href="{{ $ocrPdfUrl }}"
+                                                           class="btn btn-sm btn-primary gap-2"
+                                                           download>
+                                                            <i class="fa-solid fa-download"></i>
+                                                            {{ __('ledger.file_inspector.actions.download') }}
+                                                        </a>
+                                                        <button class="btn btn-sm btn-ghost gap-2"
+                                                                @click="window.open('{{ $ocrPdfUrl }}', '_blank')">
+                                                            <i class="fa-solid fa-external-link-alt"></i>
+                                                            {{ __('ledger.file_inspector.ocr.preview') }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3 pt-3 border-t border-base-300">
+                                                    <p class="text-xs text-base-content/70">
+                                                        @if($isImageFile)
+                                                            <i class="fa-solid fa-info-circle mr-1"></i>
+                                                            {{ __('ledger.file_inspector.ocr.image_info') }}
+                                                        @else
+                                                            <i class="fa-solid fa-info-circle mr-1"></i>
+                                                            {{ __('ledger.file_inspector.ocr.pdf_info') }}
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="divider"></div>
+                                @endif
 
                                 <div>
                                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
