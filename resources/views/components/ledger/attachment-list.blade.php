@@ -20,6 +20,7 @@
     errorFiles: {},
     showAll: false,
     handleFileClick(fileId) {
+        console.log('handleFileClick called with fileId:', fileId);
         this.$dispatch('open-file-inspector', { id: fileId });
     },
     handleDownload(event, fileId, url) {
@@ -72,7 +73,7 @@
             };
         @endphp
 
-        <div x-show="{{ $index }} < displayLimit || showAll"
+        <div x-bind:style="{{ $index }} >= displayLimit && !showAll ? 'display: none;' : ''"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100">

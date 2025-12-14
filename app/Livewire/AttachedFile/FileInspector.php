@@ -36,8 +36,8 @@ class FileInspector extends Component
         try {
             $this->fileId = $id;
 
-            // モックデータの場合（id=1-8）はダミーオブジェクトを作成
-            if ($id >= 1 && $id <= 8) {
+            // モックデータの場合（id=1-12）はダミーオブジェクトを作成
+            if ($id >= 1 && $id <= 12) {
                 $mockData = [
                     1 => [
                         'filename' => '領収書_2025-12-01.jpg',
@@ -242,7 +242,7 @@ class FileInspector extends Component
             ])->findOrFail($id);
 
             if (! Gate::allows('view', [AttachedFile::class, $this->file])) {
-                $this->dispatch('mary-toast', title: __('ledger.no_view_permission'), type: 'error');
+                $this->error(__('ledger.no_view_permission'));
 
                 return;
             }
@@ -251,7 +251,7 @@ class FileInspector extends Component
             \Log::info('FileInspector: Drawer opened successfully for file id='.$id);
         } catch (\Exception $e) {
             \Log::error('FileInspector open failed: '.$e->getMessage());
-            $this->dispatch('mary-toast', title: __('ledger.vlm.result_not_found'), type: 'error');
+            $this->error(__('ledger.vlm.result_not_found'));
         }
     }
 
