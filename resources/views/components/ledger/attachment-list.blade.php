@@ -19,6 +19,8 @@
     loadingFiles: {},
     errorFiles: {},
     showAll: false,
+    displayLimit: {{ $displayLimit }},
+    totalCount: {{ $fileCount }},
     handleFileClick(fileId) {
         console.log('handleFileClick called with fileId:', fileId);
         this.$dispatch('open-file-inspector', { id: fileId });
@@ -28,8 +30,14 @@
         this.loadingFiles[fileId] = true;
         setTimeout(() => { this.loadingFiles[fileId] = false; }, 1000);
     },
-    get displayLimit() {
-        return (!this.showAll) ? {{ $displayLimit }} : {{ $fileCount }};
+    toggleShowAll() {
+        this.showAll = !this.showAll;
+        if (this.showAll) {
+            // スムーズにスクロール
+            this.$nextTick(() => {
+                this.$el.querySelector('[x-show]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        }
     }
 }"
      class="{{ $isCompact ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3' }}"
@@ -73,10 +81,11 @@
             };
         @endphp
 
-        <div x-bind:style="{{ $index }} >= displayLimit && !showAll ? 'display: none;' : ''"
+        <div x-show="{{ $index }} < displayLimit || showAll"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100">
+             x-transition:enter-end="opacity-100 scale-100"
+             style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
 
             @if($isCompact)
                 {{-- Compact モード: 一覧画面用のシンプル表示 --}}
@@ -257,11 +266,11 @@
 
     {{-- 「もっと見る」ボタン（4件以上の場合） --}}
     @if($hiddenCount > 0)
-        <div class="{{ $isCompact ? '' : 'col-span-full' }} flex justify-center">
+        <div class="{{ $isCompact ? '' : 'col-span-full' }} flex justify-center mt-2">
             <button type="button"
                     x-show="!showAll"
-                    x-on:click="showAll = true"
-                    class="btn btn-ghost btn-sm text-primary hover:bg-primary/10"
+                    x-on:click="toggleShowAll()"
+                    class="btn btn-ghost btn-sm text-primary hover:bg-primary/10 gap-2"
                     role="button"
                     aria-label="@lang('ledger.show_more'): @lang('ledger.more_files', ['count' => $hiddenCount])">
                 <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
@@ -270,8 +279,8 @@
 
             <button type="button"
                     x-show="showAll"
-                    x-on:click="showAll = false"
-                    class="btn btn-ghost btn-sm text-base-content/60 hover:bg-base-200"
+                    x-on:click="toggleShowAll()"
+                    class="btn btn-ghost btn-sm text-base-content/60 hover:bg-base-200 gap-2"
                     x-transition:enter="transition ease-out duration-200"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"

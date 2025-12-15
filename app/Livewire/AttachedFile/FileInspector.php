@@ -102,6 +102,7 @@ class FileInspector extends Component
                         'preview_text' => "会議議事録\n\n開催日時: 2025年12月10日 14:00-16:00\n参加者: 山田部長、田中課長、佐藤主任、鈴木\n\n議題1: 来期予算について\n- 各部門より予算案の説明\n- 全体で15%の増額を承認\n\n議題2: 新規プロジェクト立ち上げ\n- AI活用による業務効率化を検討",
                         'ledger_title' => '会議議事録台帳',
                         'folder_path' => '全社 > 会議室予約',
+                        'ocr_processed_at' => now()->subDays(1),
                     ],
                     6 => [
                         'filename' => '売上集計表_12月.xlsx',

@@ -537,78 +537,240 @@
                         <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}" icon="o-clock"
                                     class="tab-lg gap-2">
                             {{-- History Tab --}}
-                            <div class="p-4 space-y-4">
+                            <div class="p-4 space-y-4"
+                                 x-data="{
+                                    showAllLogs: false,
+                                    showAllActivity: false,
+                                    maxInitialLogs: 3,
+                                    maxInitialActivity: 5
+                                 }">
                                 <div>
                                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
                                         <i class="fa-solid fa-list-check text-success"></i>
                                         {{ __('ledger.file_inspector.history.processing_log') }}
                                     </h3>
-                                    <ul class="steps steps-vertical text-sm">
-                                        <li class="step step-success">
-                                            <div class="text-left ml-3">
-                                                <div class="font-semibold">{{ __('ledger.file_inspector.history.vlm_analysis') }}</div>
-                                                <div class="text-xs text-base-content/60">2025-12-13 10:45</div>
-                                                <div class="text-xs text-base-content/70">{{ __('ledger.file_inspector.info.confidence') }}
-                                                    92.5% | 3.2秒
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li class="step step-success">
-                                            <div class="text-left ml-3">
-                                                <div class="font-semibold">{{ __('ledger.file_inspector.history.ocr_processing') }}</div>
-                                                <div class="text-xs text-base-content/60">2025-12-13 10:45</div>
-                                                <div class="text-xs text-base-content/70">2.8秒</div>
-                                            </div>
-                                        </li>
-                                        <li class="step step-success">
-                                            <div class="text-left ml-3">
-                                                <div class="font-semibold">{{ __('ledger.file_inspector.history.tika_extraction') }}</div>
-                                                <div class="text-xs text-base-content/60">2025-12-13 10:45</div>
-                                                <div class="text-xs text-base-content/70">1.5秒</div>
-                                            </div>
-                                        </li>
-                                        <li class="step step-success">
-                                            <div class="text-left ml-3">
-                                                <div class="font-semibold">{{ __('ledger.file_inspector.history.uploaded') }}</div>
-                                                <div class="text-xs text-base-content/60">2025-12-13 10:45</div>
-                                                <div class="text-xs text-base-content/70">山田太郎</div>
-                                            </div>
-                                        </li>
-                                    </ul>
+
+                                    {{-- スクロール可能なログエリア --}}
+                                    <div class="relative">
+                                        <div class="overflow-y-auto"
+                                             :class="showAllLogs ? 'max-h-96' : 'max-h-64'"
+                                             style="scrollbar-width: thin;">
+                                            <ul class="steps steps-vertical text-sm">
+                                                <li class="step step-success">
+                                                    <div class="text-left ml-3">
+                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.vlm_analysis') }}</div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:23</div>
+                                                        <div class="text-xs text-base-content/70">{{ __('ledger.file_inspector.info.confidence') }}
+                                                            92.5% | 3.2秒
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="step step-success">
+                                                    <div class="text-left ml-3">
+                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.ocr_processing') }}</div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:20</div>
+                                                        <div class="text-xs text-base-content/70">2.8秒</div>
+                                                    </div>
+                                                </li>
+                                                <li class="step step-success">
+                                                    <div class="text-left ml-3">
+                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.tika_extraction') }}</div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:17</div>
+                                                        <div class="text-xs text-base-content/70">1.5秒</div>
+                                                    </div>
+                                                </li>
+                                                <li class="step step-success">
+                                                    <div class="text-left ml-3">
+                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.uploaded') }}</div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:15</div>
+                                                        <div class="text-xs text-base-content/70">山田太郎</div>
+                                                    </div>
+                                                </li>
+
+                                                {{-- 追加のモックデータ（実際には動的に生成） --}}
+                                                <template x-if="showAllLogs">
+                                                    <div>
+                                                        <li class="step step-info">
+                                                            <div class="text-left ml-3">
+                                                                <div class="font-semibold">再処理実行</div>
+                                                                <div class="text-xs text-base-content/60">2025-12-12 15:30:12</div>
+                                                                <div class="text-xs text-base-content/70">管理者</div>
+                                                            </div>
+                                                        </li>
+                                                        <li class="step step-warning">
+                                                            <div class="text-left ml-3">
+                                                                <div class="font-semibold">VLM処理リトライ</div>
+                                                                <div class="text-xs text-base-content/60">2025-12-12 15:29:45</div>
+                                                                <div class="text-xs text-base-content/70">信頼度低下により再実行</div>
+                                                            </div>
+                                                        </li>
+                                                        <li class="step step-success">
+                                                            <div class="text-left ml-3">
+                                                                <div class="font-semibold">メタデータ更新</div>
+                                                                <div class="text-xs text-base-content/60">2025-12-10 09:15:33</div>
+                                                                <div class="text-xs text-base-content/70">システム</div>
+                                                            </div>
+                                                        </li>
+                                                    </div>
+                                                </template>
+                                            </ul>
+                                        </div>
+
+                                        {{-- グラデーションオーバーレイ（スクロール可能を示す） --}}
+                                        <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                                             x-show="!showAllLogs"></div>
+                                    </div>
+
+                                    {{-- もっと見るボタン --}}
+                                    <div class="mt-3 text-center">
+                                        <button @click="showAllLogs = !showAllLogs"
+                                                class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
+                                            <template x-if="!showAllLogs">
+                                                <span>
+                                                    <i class="fa-solid fa-chevron-down"></i>
+                                                    {{ __('ledger.show_more') }}
+                                                </span>
+                                            </template>
+                                            <template x-if="showAllLogs">
+                                                <span>
+                                                    <i class="fa-solid fa-chevron-up"></i>
+                                                    {{ __('ledger.show_less') }}
+                                                </span>
+                                            </template>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="divider"></div>
 
                                 <div>
-                                    <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-                                        <i class="fa-solid fa-clock-rotate-left text-primary"></i>
-                                        {{ __('ledger.file_inspector.history.activity') }}
-                                    </h3>
-                                    <div class="space-y-2">
-                                        <div class="card card-compact bg-base-200">
-                                            <div class="card-body">
-                                                <div class="flex items-center justify-between">
-                                                    <div class="flex items-center gap-2">
-                                                        <i class="fa-solid fa-download text-primary"></i>
-                                                        <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h3 class="text-sm font-semibold flex items-center gap-2">
+                                            <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                                            {{ __('ledger.file_inspector.history.activity') }}
+                                        </h3>
+                                        <span class="text-xs text-base-content/50">{{ __('ledger.file_inspector.history.recent_30days') }}</span>
+                                    </div>
+
+                                    {{-- スクロール可能なアクティビティエリア --}}
+                                    <div class="relative">
+                                        <div class="space-y-2 overflow-y-auto"
+                                             :class="showAllActivity ? 'max-h-96' : 'max-h-64'"
+                                             style="scrollbar-width: thin;">
+                                            <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                <div class="card-body">
+                                                    <div class="flex items-center justify-between">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fa-solid fa-download text-primary"></i>
+                                                            <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                        </div>
+                                                        <span class="text-xs text-base-content/60">11:30</span>
                                                     </div>
-                                                    <span class="text-xs text-base-content/60">11:30</span>
+                                                    <div class="text-xs text-base-content/70 mt-1">田中花子</div>
                                                 </div>
-                                                <div class="text-xs text-base-content/70 mt-1">田中花子</div>
                                             </div>
-                                        </div>
-                                        <div class="card card-compact bg-base-200">
-                                            <div class="card-body">
-                                                <div class="flex items-center justify-between">
-                                                    <div class="flex items-center gap-2">
-                                                        <i class="fa-solid fa-eye text-info"></i>
-                                                        <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
+                                            <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                <div class="card-body">
+                                                    <div class="flex items-center justify-between">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fa-solid fa-eye text-info"></i>
+                                                            <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
+                                                        </div>
+                                                        <span class="text-xs text-base-content/60">11:15</span>
                                                     </div>
-                                                    <span class="text-xs text-base-content/60">11:15</span>
+                                                    <div class="text-xs text-base-content/70 mt-1">佐藤次郎</div>
                                                 </div>
-                                                <div class="text-xs text-base-content/70 mt-1">佐藤次郎</div>
                                             </div>
+
+                                            {{-- 追加のモックアクティビティ --}}
+                                            <template x-if="showAllActivity">
+                                                <div class="space-y-2">
+                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                        <div class="card-body">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <i class="fa-solid fa-share-nodes text-success"></i>
+                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.shared') }}</span>
+                                                                </div>
+                                                                <span class="text-xs text-base-content/60">10:45</span>
+                                                            </div>
+                                                            <div class="text-xs text-base-content/70 mt-1">鈴木一郎</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                        <div class="card-body">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <i class="fa-solid fa-download text-primary"></i>
+                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                                </div>
+                                                                <span class="text-xs text-base-content/60">09:20</span>
+                                                            </div>
+                                                            <div class="text-xs text-base-content/70 mt-1">高橋美咲</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                        <div class="card-body">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <i class="fa-solid fa-eye text-info"></i>
+                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
+                                                                </div>
+                                                                <span class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }} 16:45</span>
+                                                            </div>
+                                                            <div class="text-xs text-base-content/70 mt-1">伊藤健太</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                        <div class="card-body">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <i class="fa-solid fa-pen text-warning"></i>
+                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.edited') }}</span>
+                                                                </div>
+                                                                <span class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }} 14:30</span>
+                                                            </div>
+                                                            <div class="text-xs text-base-content/70 mt-1">渡辺明子</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                        <div class="card-body">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex items-center gap-2">
+                                                                    <i class="fa-solid fa-download text-primary"></i>
+                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                                </div>
+                                                                <span class="text-xs text-base-content/60">2025-12-13</span>
+                                                            </div>
+                                                            <div class="text-xs text-base-content/70 mt-1">中村春樹</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
+
+                                        {{-- グラデーションオーバーレイ --}}
+                                        <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                                             x-show="!showAllActivity"></div>
+                                    </div>
+
+                                    {{-- もっと見るボタン --}}
+                                    <div class="mt-3 text-center">
+                                        <button @click="showAllActivity = !showAllActivity"
+                                                class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
+                                            <template x-if="!showAllActivity">
+                                                <span>
+                                                    <i class="fa-solid fa-chevron-down"></i>
+                                                    {{ __('ledger.show_more') }}
+                                                </span>
+                                            </template>
+                                            <template x-if="showAllActivity">
+                                                <span>
+                                                    <i class="fa-solid fa-chevron-up"></i>
+                                                    {{ __('ledger.show_less') }}
+                                                </span>
+                                            </template>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
