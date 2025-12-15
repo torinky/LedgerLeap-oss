@@ -1,10 +1,30 @@
 <div
         x-data="{ open: @entangle('open') }"
         @keydown.escape.window="open = false; $wire.close()"
+        @keydown.tab.prevent="
+            if (open) {
+                let focusable = $el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex=\'-1\'])');
+                let first = focusable[0];
+                let last = focusable[focusable.length - 1];
+                if ($event.shiftKey) {
+                    if (document.activeElement === first) {
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        first.focus();
+                    }
+                }
+            }
+        "
+        x-init="$watch('open', value => { if(value) $nextTick(() => $refs.closeButton.focus()) })"
         @open-file-inspector.window="console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)"
 >
     {{-- DaisyUI Drawer --}}
-    <div class="drawer drawer-end z-50">
+    <div class="drawer drawer-end z-50"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="drawer-title">
         <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open"/>
 
         {{-- Overlay --}}
@@ -13,7 +33,7 @@
                    @click="open = false; $wire.close()"></label>
 
             {{-- Drawer content --}}
-            <div class="min-h-full w-96 md:w-[28rem] lg:w-[32rem] bg-base-100 flex flex-col shadow-2xl">
+            <div class="min-h-full w-full md:w-[28rem] lg:w-[32rem] bg-base-100 flex flex-col shadow-2xl">
 
                 {{-- Header --}}
                 <div class="navbar bg-base-200 border-b border-base-300 min-h-[4rem] px-4 flex-none">
@@ -33,7 +53,7 @@
                         </div>
                     </div>
                     <div class="flex-none">
-                        <button class="btn btn-ghost btn-sm btn-circle" @click="open = false; $wire.close()"
+                        <button x-ref="closeButton" class="btn btn-ghost btn-sm btn-circle" @click="open = false; $wire.close()"
                                 aria-label="{{ __('ledger.file_inspector.close') }}">
                             <i class="fa-solid fa-xmark text-lg"></i>
                         </button>
@@ -786,11 +806,13 @@
                     </div>
                     <div class="navbar-end gap-2">
                         <button class="btn btn-warning btn-sm btn-square tooltip"
-                                data-tip="{{ __('ledger.file_inspector.actions.reprocess') }}">
+                                data-tip="{{ __('ledger.file_inspector.actions.reprocess') }}"
+                                @if(!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif >
                             <i class="fa-solid fa-refresh"></i>
                         </button>
                         <button class="btn btn-error btn-sm btn-square tooltip"
-                                data-tip="{{ __('ledger.file_inspector.actions.delete') }}">
+                                data-tip="{{ __('ledger.file_inspector.actions.delete') }}"
+                                @if(!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif >
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
