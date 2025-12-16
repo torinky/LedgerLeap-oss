@@ -2,7 +2,7 @@
 
 **作成日:** 2025年12月16日  
 **最終更新:** 2025年12月16日  
-**ステータス:** 📋 計画策定中  
+**ステータス:** ✅ 完了  
 **対象:** バックエンドエンジニア
 
 **関連ドキュメント:**
@@ -869,11 +869,12 @@ AttachedFile::with([
 
 | ID | タスク名 | 詳細 | 成果物 | 工数 | ステータス |
 |:---|:---------|:-----|:-------|:-----|:----------|
-| **2.1** | **リレーション追加** | `creator`, `modifier`, `activities` の3つのリレーションメソッドを実装 | `AttachedFile.php` (更新)<br>`AttachedFileRelationsTest.php` (新規) | 2h | ⏳ 未着手 |
-| **2.2** | **タイムライン生成メソッド** | `getProcessingTimeline()` メソッドとヘルパーメソッドを実装 | `AttachedFile.php` (更新)<br>`ja.json` (更新)<br>`AttachedFileTimelineTest.php` (新規) | 3h | ⏳ 未着手 |
-| **2.3** | **統合テスト実装** | エッジケーステスト、パフォーマンステストを実装 | `AttachedFileModelExtensionTest.php` (新規)<br>`AttachedFilePerformanceTest.php` (新規) | 2h | ⏳ 未着手 |
+| **2.1** | **リレーション追加** | `creator`, `modifier`, `activities` の3つのリレーションメソッドを実装 | `AttachedFile.php` (更新)<br>`AttachedFileRelationsTest.php` (新規) | 2h | ✅ 完了 |
+| **2.2** | **タイムライン生成メソッド** | `getProcessingTimeline()` メソッドとヘルパーメソッドを実装 | `AttachedFile.php` (更新)<br>`ja.json` (更新)<br>`AttachedFileTimelineTest.php` (新規) | 3h | ✅ 完了 |
+| **2.3** | **統合テスト実装** | エッジケーステスト、パフォーマンステストを実装 | `AttachedFileModelExtensionTest.php` (新規)<br>`AttachedFilePerformanceTest.php` (新規) | 2h | ✅ 完了 |
 
-**総工数:** 7h
+**総工数:** 7h  
+**実績:** Phase 2完了（全テスト成功: 14テストケース、46アサーション）
 
 ---
 

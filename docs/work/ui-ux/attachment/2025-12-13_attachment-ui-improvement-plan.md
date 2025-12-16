@@ -102,9 +102,9 @@ wire:click="$dispatch('open-file-inspector', { id: {{ $file->id }}, tab: 'conten
 | | 1.2 | チーム/ステークホルダーによるUX評価・フィードバック | - | 1h | 1.1 | ✅ 完了 |
 | | 1.3 | UI仕様の確定と修正計画への反映 | - | 1h | 1.2 | ✅ 完了 |
 | | **1.4** | **データ構造・変数の網羅的整理** | - | **2h** | **1.3** | ✅ 完了 |
-| **2. モデル拡張** | **2.1** | **`AttachedFile` リレーション追加（creator/modifier/activities）** | - | **2h** | **1.4** | ⚠️ 新規 |
-| | **2.2** | **`AttachedFile::getProcessingTimeline()` メソッド実装** | - | **3h** | **2.1** | ⚠️ 新規 |
-| | **2.3** | **モデル拡張のテスト実装（Unit Test）** | - | **2h** | **2.1-2.2** | ⚠️ 新規 |
+| **2. モデル拡張** | **2.1** | **`AttachedFile` リレーション追加（creator/modifier/activities）** | - | **2h** | **1.4** | ✅ 完了 |
+| | **2.2** | **`AttachedFile::getProcessingTimeline()` メソッド実装** | - | **3h** | **2.1** | ✅ 完了 |
+| | **2.3** | **モデル拡張のテスト実装（Unit Test）** | - | **2h** | **2.1-2.2** | ✅ 完了 |
 | **3. 基盤改修** | 3.1 | `ColumnHtmlService` のリファクタリング (Bladeコンポーネント化) | - | 4h | 2.3 | 依存更新 |
 | | 3.2 | リスト表示用Bladeコンポーネントの実装 (`x-ledger.attachment-list`) | - | 4h | 3.1 | - |
 | | 3.3 | 一覧画面 (`RecordsTable`) での簡易表示モード実装 | - | 2h | 3.2 | - |
@@ -640,6 +640,42 @@ public function downloadOcrPdf(AttachedFile $attachedFile)
   - 完了条件の明確化（6項目）
   - 参考資料リンクの整備
 - **次フェーズ:** Phase 2実装開始準備完了、詳細な実装ガイドが揃った状態
+
+### 2025/12/16 午後 (Phase 2実装完了)
+- **Phase 2: モデル拡張の実装完了:**
+  - **タスク2.1完了（2h）:** `AttachedFile` リレーション追加
+    - `creator()` - BelongsTo User
+    - `modifier()` - BelongsTo User  
+    - `activities()` - MorphMany Activity
+    - テスト: 3ケース全て成功（6アサーション）
+  - **タスク2.2完了（3h）:** `getProcessingTimeline()` メソッド実装
+    - メインメソッド: 処理履歴を配列形式で取得（150行以上）
+    - ヘルパーメソッド3つ実装
+    - 翻訳キー6項目追加（`lang/ja.json`）
+    - テスト: 7ケース全て成功（22アサーション）
+  - **タスク2.3完了（2h）:** 統合テスト・パフォーマンステスト実装
+    - N+1クエリ回避検証
+    - Ledgerリレーションチェーン検証
+    - 処理時間計算精度検証
+    - 100msパフォーマンス要件クリア
+    - テスト: 4ケース全て成功（18アサーション）
+- **総合テスト結果:**
+  - 新規追加テスト: 14ケース、46アサーション
+  - 既存テスト含む全体: 77テスト、188アサーション - 全て成功
+  - テスト実行時間: 143.30s
+  - Pint実行: コードスタイル違反ゼロ
+- **成果物:**
+  - ✅ `app/Models/AttachedFile.php` (リレーション3つ + タイムライン生成メソッド追加)
+  - ✅ `lang/ja.json` (翻訳キー6項目追加)
+  - ✅ `tests/Unit/Models/AttachedFileRelationsTest.php` (新規作成)
+  - ✅ `tests/Unit/Models/AttachedFileTimelineTest.php` (新規作成)
+  - ✅ `tests/Unit/Models/AttachedFileModelExtensionTest.php` (新規作成)
+  - ✅ `tests/Unit/Models/AttachedFilePerformanceTest.php` (新規作成)
+- **Eager Loading戦略確立:**
+  - FileInspector用の最適化クエリパターン確定
+  - リスト表示用の軽量クエリパターン確定
+  - `ledger.define.folder` チェーンの検証完了
+- **次フェーズ:** Phase 3（基盤改修）実装準備完了。モデル拡張により全データ取得の準備が整った
   - Phase 2「モデル拡張」を新規追加（リレーション3つ、タイムライン生成、OCR-PDFダウンロード）
   - Phase 3-8の番号を再調整
   - Phase 6「VLM統合」を新規追加（既存VLMモーダルの廃止と統合）

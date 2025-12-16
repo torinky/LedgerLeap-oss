@@ -66,6 +66,32 @@ class AttachedFile extends Model
         return $this->hasMany(LedgerChunk::class);
     }
 
+    /**
+     * ファイルをアップロードしたユーザー
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * ファイルを最後に更新したユーザー
+     */
+    public function modifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'modifier_id');
+    }
+
+    /**
+     * ファイルに関連するアクティビティログ
+     * (アップロード、ダウンロード、処理ステップ等)
+     */
+    public function activities(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'subject')
+            ->orderBy('created_at', 'desc');
+    }
+
     public function optimize()
     {
         //        $this->status = AttachedFileStatus::OPTIMIZING->value;
@@ -405,5 +431,204 @@ class AttachedFile extends Model
             'score' => number_format($score, 1).'%',
             'tooltip' => $tooltip,
         ];
+    }
+
+    /**
+     * 処理履歴をタイムライン形式で取得
+     *
+     * @return array タイムラインステップの配列
+     */
+    public function getProcessingTimeline(): array
+    {
+        $timeline = [];
+
+        // 1. アップロード
+        $timeline[] = [
+            'step' => 'upload',
+            'label' => __('file.timeline.upload'),
+            'timestamp' => $this->created_at,
+            'status' => 'completed',
+            'icon' => 'fa-upload',
+            'color' => 'success',
+            'user' => $this->creator,
+            'duration_ms' => null,
+            'details' => [
+                'size' => $this->size,
+                'mime' => $this->original_mime_type ?? $this->mime,
+            ],
+        ];
+
+        // 2. Tika処理
+        if ($this->tika_processed_at) {
+            $timeline[] = [
+                'step' => 'tika',
+                'label' => __('file.timeline.tika'),
+                'timestamp' => $this->tika_processed_at,
+                'status' => 'completed',
+                'icon' => 'fa-file-text',
+                'color' => 'success',
+                'user' => null, // システム処理
+                'duration_ms' => $this->calculateProcessingDuration('tika'),
+                'details' => null,
+            ];
+        }
+
+        // 3. VLM処理
+        if ($this->vlm_processed_at) {
+            $timeline[] = [
+                'step' => 'vlm',
+                'label' => __('file.timeline.vlm'),
+                'timestamp' => $this->vlm_processed_at,
+                'status' => 'completed',
+                'icon' => 'fa-robot',
+                'color' => 'success',
+                'user' => null,
+                'duration_ms' => $this->vlm_processing_time_ms,
+                'details' => [
+                    'model' => $this->vlm_model,
+                    'confidence' => $this->vlm_confidence,
+                ],
+            ];
+        } elseif ($this->vlm_failed_at) {
+            $timeline[] = [
+                'step' => 'vlm',
+                'label' => __('file.timeline.vlm'),
+                'timestamp' => $this->vlm_failed_at,
+                'status' => 'failed',
+                'icon' => 'fa-exclamation-triangle',
+                'color' => 'error',
+                'user' => null,
+                'duration_ms' => null,
+                'details' => $this->getVlmErrorDetails(),
+            ];
+        }
+
+        // 4. OCR処理
+        if ($this->ocr_processed_at) {
+            $timeline[] = [
+                'step' => 'ocr',
+                'label' => __('file.timeline.ocr'),
+                'timestamp' => $this->ocr_processed_at,
+                'status' => 'completed',
+                'icon' => 'fa-text-width',
+                'color' => 'success',
+                'user' => null,
+                'duration_ms' => $this->calculateProcessingDuration('ocr'),
+                'details' => null,
+            ];
+        } elseif ($this->ocr_failed_at) {
+            $timeline[] = [
+                'step' => 'ocr',
+                'label' => __('file.timeline.ocr'),
+                'timestamp' => $this->ocr_failed_at,
+                'status' => 'failed',
+                'icon' => 'fa-exclamation-triangle',
+                'color' => 'error',
+                'user' => null,
+                'duration_ms' => null,
+                'details' => $this->getOcrErrorDetails(),
+            ];
+        }
+
+        // 5. 最終化
+        if ($this->processing_finalized_at) {
+            $timeline[] = [
+                'step' => 'finalization',
+                'label' => __('file.timeline.finalization'),
+                'timestamp' => $this->processing_finalized_at,
+                'status' => 'completed',
+                'icon' => 'fa-check-circle',
+                'color' => 'success',
+                'user' => null,
+                'duration_ms' => $this->calculateProcessingDuration('finalization'),
+                'details' => [
+                    'selected_source' => $this->finalized_source,
+                    'contain_content' => $this->contain_content,
+                ],
+            ];
+        }
+
+        // 6. Activity Logからのダウンロード履歴（最新5件）
+        if ($this->relationLoaded('activities')) {
+            $downloadActivities = $this->activities
+                ->where('description', 'downloaded')
+                ->take(5);
+
+            foreach ($downloadActivities as $activity) {
+                $timeline[] = [
+                    'step' => 'download',
+                    'label' => __('file.timeline.download'),
+                    'timestamp' => $activity->created_at,
+                    'status' => 'info',
+                    'icon' => 'fa-download',
+                    'color' => 'info',
+                    'user' => $activity->causer,
+                    'duration_ms' => null,
+                    'details' => $activity->properties->toArray(),
+                ];
+            }
+        }
+
+        // タイムスタンプでソート（降順）
+        usort($timeline, function ($a, $b) {
+            return $b['timestamp'] <=> $a['timestamp'];
+        });
+
+        return $timeline;
+    }
+
+    /**
+     * 処理時間を計算（ヘルパーメソッド）
+     */
+    private function calculateProcessingDuration(string $step): ?int
+    {
+        // 簡易実装: 実際のジョブログから取得する場合はHorizonのAPIを使用
+        return match ($step) {
+            'tika' => $this->tika_processed_at ?
+                $this->created_at->diffInMilliseconds($this->tika_processed_at) : null,
+            'ocr' => $this->ocr_processed_at && $this->tika_processed_at ?
+                $this->tika_processed_at->diffInMilliseconds($this->ocr_processed_at) : null,
+            'finalization' => $this->processing_finalized_at && $this->tika_processed_at ?
+                $this->tika_processed_at->diffInMilliseconds($this->processing_finalized_at) : null,
+            default => null,
+        };
+    }
+
+    /**
+     * VLMエラー詳細を取得（ヘルパーメソッド）
+     */
+    private function getVlmErrorDetails(): ?array
+    {
+        // Activity Logから取得
+        if ($this->relationLoaded('activities')) {
+            $errorActivity = $this->activities
+                ->where('description', 'vlm_failed')
+                ->first();
+
+            if ($errorActivity) {
+                return $errorActivity->properties->toArray();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * OCRエラー詳細を取得（ヘルパーメソッド）
+     */
+    private function getOcrErrorDetails(): ?array
+    {
+        // Activity Logから取得
+        if ($this->relationLoaded('activities')) {
+            $errorActivity = $this->activities
+                ->where('description', 'ocr_failed')
+                ->first();
+
+            if ($errorActivity) {
+                return $errorActivity->properties->toArray();
+            }
+        }
+
+        return null;
     }
 }
