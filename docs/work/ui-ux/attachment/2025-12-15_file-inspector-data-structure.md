@@ -9,6 +9,7 @@
 - [親計画: 添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md) ⚠️ 更新済み
 - [Phase 1 モックアップ評価報告書](/docs/work/ui-ux/attachment/2025-12-15_phase1_mockup_evaluation_report.md)
 - [Phase 1 モックアップ再検証報告書](/docs/work/ui-ux/attachment/2025-12-15_phase1_reverification_report.md)
+- **[Phase 2 詳細計画: モデル拡張](/docs/work/ui-ux/attachment/2025-12-16_phase2_model_extension_plan.md)** 📋 新規作成
 - [機能仕様書: 添付ファイル](/docs/function/Attachment.md) (要更新)
 
 ---

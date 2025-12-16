@@ -9,7 +9,8 @@
 - [機能仕様書: 添付ファイル](/docs/function/Attachment.md) (要更新)
 - [添付ファイル機能強化の記録](/docs/work/core-features/attachment/2025-07-13_attachment-feature-enhancement.md)
 - [ペルソナ・ユースケース](/docs/function/PersonaUseCaseScenario.md)
-- [FileInspector データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md) ⚠️ 新規
+- [FileInspector データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md) ✅ 完了
+- **[Phase 2 詳細計画: モデル拡張](/docs/work/ui-ux/attachment/2025-12-16_phase2_model_extension_plan.md)** 📋 新規作成
 
 ---
 
@@ -608,6 +609,37 @@ public function downloadOcrPdf(AttachedFile $attachedFile)
   - VLM統合方針をメイン計画書に明記（セクション2.3.1）
   - Folderモデルのリレーション修正を全体に反映
 - **次フェーズ:** Phase 2（モデル拡張）実装準備完全完了、工数削減により効率化
+
+### 2025/12/16 午後 (Phase 2詳細計画作成)
+- **Phase 2詳細計画ドキュメント作成完了:**
+  - タスク2.1: `AttachedFile` リレーション追加（creator/modifier/activities）- 2h
+  - タスク2.2: `getProcessingTimeline()` メソッド実装 - 3h
+  - タスク2.3: モデル拡張の統合テスト実装 - 2h
+  - 総工数: 7h（変更なし）
+- **詳細な実装コード例を作成:**
+  - 3つのリレーションメソッドの完全な実装コード
+  - `getProcessingTimeline()` メソッドの詳細実装（150行以上）
+  - ヘルパーメソッド3つ（`calculateProcessingDuration()`, `getVlmErrorDetails()`, `getOcrErrorDetails()`）
+  - タイムラインデータ構造の明確化
+- **包括的なテストケース設計:**
+  - リレーションテスト: 4テストケース
+  - タイムラインテスト: 7テストケース
+  - 統合テスト: 5テストケース
+  - パフォーマンステスト: 1テストケース
+  - 合計: 17テストケース
+- **Eager Loading戦略の確立:**
+  - FileInspector用の最適化クエリパターン
+  - リスト表示用の軽量クエリパターン
+  - N+1問題回避の検証方法
+- **リスク分析と対策:**
+  - Activity Log未設定時のフォールバック実装
+  - 処理時間計算の精度に関する注意事項
+  - タイムラインデータ肥大化への対策（最新5件制限）
+- **品質保証:**
+  - 品質保証チェックリスト（3カテゴリ、12項目）
+  - 完了条件の明確化（6項目）
+  - 参考資料リンクの整備
+- **次フェーズ:** Phase 2実装開始準備完了、詳細な実装ガイドが揃った状態
   - Phase 2「モデル拡張」を新規追加（リレーション3つ、タイムライン生成、OCR-PDFダウンロード）
   - Phase 3-8の番号を再調整
   - Phase 6「VLM統合」を新規追加（既存VLMモーダルの廃止と統合）
