@@ -1,14 +1,22 @@
 # 添付ファイルUI改善 Phase 1 詳細計画: モックアップとUI仕様策定
 
 **作成日:** 2025年12月13日
-**最終更新:** 2025年12月13日 (UX中心レビュー反映完了)
+**最終更新:** 2025年12月16日 (VLM統合方針・再処理UI追加)
 **ステータス:** ✅ 計画確定・実装準備完了
 **対象:** UI/UXデザイナー、フロントエンドエンジニア
 
 **関連ドキュメント:**
-- [親計画: 添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md)
+- [親計画: 添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md) ⚠️ 更新済み
+- [データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md) ⚠️ 更新済み
 - [機能仕様書: 添付ファイル](/docs/function/Attachment.md)
 - [ペルソナ・ユースケース](/docs/function/PersonaUseCaseScenario.md)
+
+**✅ Phase 1完了追記（2025/12/16）:**
+- モックアップ実装完了・評価完了
+- 未確定事項調査完了（OCR後PDF、再処理UI、Folderリレーション）
+- **VLM統合方針確定:** 既存VLMモーダルを廃止し、FileInspectorに完全統合
+- **再処理UIモックアップ追加:** Actionsタブ実装方針を策定
+- Phase 2（モデル拡張）実装準備完了
 
 ---
 
