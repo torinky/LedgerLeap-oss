@@ -1,14 +1,26 @@
 @props([
     'files' => [],
-    'mode' => 'compact', // 'full' | 'compact'
+    'mode' => 'compact', // 'full' | 'compact' | 'icon-only'
     'tenantId' => null,
 ])
 
 @php
+    use App\Helpers\MimeTypeHelper;
+    use Illuminate\Support\Number;
+    use Carbon\Carbon;
+
     $isCompact = $mode === 'compact';
-    // Compactモード: 4件、Fullモード: 8件まで初期表示
+    $isIconOnly = $mode === 'icon-only';
+
     $fileCount = count($files);
-    $displayLimit = $isCompact ? 4 : 8;
+
+    // 表示件数リミット調整
+    $displayLimit = match ($mode) {
+        'icon-only' => 5, // アイコンのみの場合は多めに
+        'compact' => 4,
+        default => 8,
+    };
+
     $hiddenCount = max(0, $fileCount - $displayLimit);
     $componentId = 'attachment-list-' . uniqid('', true);
 @endphp
@@ -22,7 +34,7 @@
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
     handleFileClick(fileId) {
-        console.log('handleFileClick called with fileId:', fileId);
+        // console.log('handleFileClick called with fileId:', fileId);
         this.$dispatch('open-file-inspector', { id: fileId });
     },
     handleDownload(event, fileId, url) {
@@ -40,216 +52,278 @@
         }
     }
 }"
-     class="{{ $isCompact ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3' }}"
-     role="list"
-     aria-label="{{ __('File List') }}"
-     id="{{ $componentId }}">
+    class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3' }}"
+    role="list" aria-label="{{ __('ledger.file_list') }}" id="{{ $componentId }}">
 
     @forelse($files as $index => $file)
         @php
             $mime = $file['mime'] ?? '';
-            $isImage = str_starts_with($mime, 'image/');
-            $isPdf = $mime === 'application/pdf';
-            $isWord = str_contains($mime, 'word');
-            $isExcel = str_contains($mime, 'excel') || str_contains($mime, 'spreadsheet');
-            $isText = str_contains($mime, 'text');
-            $isZip = str_contains($mime, 'zip') || str_contains($mime, 'archive');
-
-            // アイコンとカラー（色覚多様性対応: アイコン形状でも識別可能）
-            $iconClass = match (true) {
-                $isImage => 'fa-solid fa-file-image text-blue-500',
-                $isPdf => 'fa-solid fa-file-pdf text-red-500',
-                $isWord => 'fa-solid fa-file-word text-blue-700',
-                $isExcel => 'fa-solid fa-file-excel text-green-600',
-                $isText => 'fa-solid fa-file-lines text-gray-600',
-                $isZip => 'fa-solid fa-file-zipper text-purple-600',
-                default => 'fa-solid fa-file text-gray-400',
-            };
+            $fileInfo = MimeTypeHelper::getInfo($mime);
+            $iconClass = $fileInfo['icon'] . ' ' . $fileInfo['color'];
 
             $status = $file['status'] ?? 'completed';
-            $downloadUrl = $file['downloadUrl'] ?? '#';
+
+            // ダウンロードリンク構造への対応 (新: array, 旧: string)
+            $primaryDownload = $file['primary_download'] ?? null;
+            $downloadUrl = '#'; // Default fallback
+
+            if ($primaryDownload && is_array($primaryDownload)) {
+                $downloadUrl = $primaryDownload['url'];
+            } elseif (isset($file['downloadUrl']) && is_string($file['downloadUrl'])) {
+                $downloadUrl = $file['downloadUrl'];
+            }
+
             $label = $file['filename'] ?? 'file';
-            $fileId = (int)($file['id'] ?? 0);
+            $fileId = (int) ($file['id'] ?? 0);
             $fileSize = $file['size'] ?? null;
-            $formattedSize = $fileSize ? number_format($fileSize / 1024, 1) . ' KB' : '';
+
+            // ファイルサイズフォーマット (Laravel 10+ Number::fileSize 対応)
+            $formattedSize = '';
+            if ($fileSize) {
+                $formattedSize =
+                    class_exists(Number::class) && method_exists(Number::class, 'fileSize')
+                        ? Number::fileSize($fileSize, 2)
+                        : number_format($fileSize / 1024, 1) . ' KB';
+            }
 
             // ステータスのアクセシビリティテキスト
-            $statusLabel = match($status) {
-                'processing' => __('Processing'),
-                'error' => __('Error'),
-                default => __('Completed'),
+            $statusLabel = match ($status) {
+                'processing',
+                'pending_initial_processing',
+                'initial_processing',
+                'pending_ocr',
+                'ocr_processing',
+                'pending_vlm',
+                'vlm_processing',
+                'parallel_processing',
+                'optimizing',
+                'extracting',
+                'extracting_and_saved'
+                    => __('ledger.status.processing'),
+                'error',
+                'tika_failed',
+                'ocr_failed',
+                'vlm_failed',
+                'thumbnail_failed',
+                'processing_failed',
+                'optimize_failed',
+                'extraction_failed'
+                    => __('ledger.status.error'),
+                default => __('ledger.status.completed'),
             };
+
+            $isProcessing = in_array($status, [
+                'processing',
+                'pending_initial_processing',
+                'initial_processing',
+                'pending_ocr',
+                'ocr_processing',
+                'pending_vlm',
+                'vlm_processing',
+                'parallel_processing',
+                'optimizing',
+                'extracting',
+                'extracting_and_saved',
+            ]);
+
+            $isError = in_array($status, [
+                'error',
+                'tika_failed',
+                'ocr_failed',
+                'vlm_failed',
+                'thumbnail_failed',
+                'processing_failed',
+                'optimize_failed',
+                'extraction_failed',
+            ]);
         @endphp
 
-        <div x-show="{{ $index }} < displayLimit || showAll"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
+        <div x-show="{{ $index }} < displayLimit || showAll" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+            style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
 
-            @if($isCompact)
-                {{-- Compact モード: 一覧画面用のシンプル表示 --}}
-                <div class="relative group inline-flex items-center"
-                     role="listitem"
-                     x-on:mouseenter="hoveredFile = {{ $fileId }}"
-                     x-on:mouseleave="hoveredFile = null">
+            @if ($isIconOnly)
+                {{-- Icon Only モード: 一覧画面用極小表示 --}}
+                <div class="relative group inline-flex items-center" role="listitem"
+                    x-on:click="handleFileClick({{ $fileId }})" tabindex="0"
+                    aria-label="{{ $label }} ({{ $statusLabel }})" data-tip="{{ $label }}"
+                    class="tooltip">
+                    {{-- RPA用: 透過的ダウンロードリンク --}}
+                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
+
+                    <button type="button"
+                        class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center transition-all duration-200 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none"
+                        aria-hidden="true">
+                        <span class="relative">
+                            @if ($isProcessing)
+                                <span class="absolute -top-1 -right-1 flex h-2 w-2">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                </span>
+                            @elseif($isError)
+                                <span class="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-error"></span>
+                            @endif
+                            <i class="{{ $iconClass }} text-lg"></i>
+                        </span>
+                    </button>
+                </div>
+            @elseif($isCompact)
+                {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
+                <div class="relative group inline-flex items-center p-1 rounded-md border border-transparent hover:border-base-300 hover:bg-base-100 transition-colors"
+                    role="listitem" x-on:mouseenter="hoveredFile = {{ $fileId }}"
+                    x-on:mouseleave="hoveredFile = null">
 
                     {{-- RPA用: 透過的ダウンロードリンク --}}
-                    <a href="{{ $downloadUrl }}"
-                       class="direct-download-link sr-only"
-                       aria-label="{{ __('Download') }}: {{ $label }}"
-                       tabindex="-1"
-                       download></a>
+                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                     {{-- ファイル表示エリア（クリックでドロワー） --}}
-                    <button type="button"
-                            class="btn btn-ghost btn-xs h-auto min-h-0 px-1.5 py-1 flex items-center gap-1.5 transition-all duration-200 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none tooltip"
-                            x-on:click="handleFileClick({{ $fileId }})"
-                            x-bind:class="{ 'bg-base-200': hoveredFile === {{ $fileId }} }"
-                            aria-label="{{ $label }} ({{ $statusLabel }})"
-                            tabindex="0"
-                            data-tip="{{ $label }}"
-                    >
-
-                        {{-- ステータスインジケータ（アニメーション付き） --}}
-                        <span class="relative">
-                        @if($status === 'processing')
-                                <span class="absolute -top-0.5 -right-0.5 flex h-2 w-2"
-                                      role="status"
-                                      aria-label="{{ __('Processing') }}">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
-                            </span>
-                            @elseif($status === 'error')
-                                <span class="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-error"
-                                      role="status"
-                                      aria-label="{{ __('Error') }}">
-                                <i class="fa-solid fa-exclamation text-white text-[6px]"></i>
-                            </span>
+                    <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
+                        x-on:click="handleFileClick({{ $fileId }})"
+                        aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
+                        {{-- ステータスインジケータ --}}
+                        <div class="relative flex-shrink-0">
+                            @if ($isProcessing)
+                                <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                    <span
+                                        class="relative inline-flex rounded-full h-2.5 w-2.5 bg-warning border border-base-100"></span>
+                                </span>
+                            @elseif($isError)
+                                <span
+                                    class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10 rounded-full bg-error border border-base-100 text-[6px] items-center justify-center text-white font-bold">!</span>
                             @endif
+                            <i class="{{ $iconClass }} text-xl"></i>
+                        </div>
 
-                            {{-- ファイルアイコン --}}
-                        <i class="{{ $iconClass }} text-base" aria-hidden="true"></i>
-                    </span>
-
-                        {{-- ファイル名 --}}
-                        <span class="truncate max-w-[80px] text-xs">{{ \Illuminate\Support\Str::limit($label, 12, '...') }}</span>
+                        <div class="flex flex-col min-w-0">
+                            <span class="truncate text-sm font-medium text-base-content/90">{{ $label }}</span>
+                            <span class="text-[10px] text-base-content/60">{{ $formattedSize }}</span>
+                        </div>
                     </button>
 
-                    {{-- 直接ダウンロードボタン（常時表示） --}}
+                    {{-- ダウンロードボタン（ホバー時または常時表示） --}}
                     <a href="{{ $downloadUrl }}"
-                       class="btn btn-ghost btn-xs btn-square p-0 text-base-content/50 hover:text-primary"
-                       x-on:click="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
-                       title="{{ __('Download') }} ({{ $label }})"
-                       aria-label="{{ __('Download') }}: {{ $label }}"
-                       download
-                       tabindex="0">
-                        <i class="fa-solid fa-download text-xs" aria-hidden="true"></i>
-                        <span x-show="loadingFiles[{{ $fileId }}]" class="loading loading-spinner loading-xs"></span>
+                        class="btn btn-ghost btn-xs btn-circle ml-1 text-base-content/50 hover:text-primary hover:bg-base-200"
+                        onclick="event.stopPropagation()" title="{{ __('ledger.download') }}" download>
+                        <i class="fa-solid fa-download text-xs"></i>
                     </a>
                 </div>
-
             @else
-                {{-- Full モード: 詳細画面用のコンパクトカード表示 --}}
-                <div class="card bg-base-100 shadow hover:shadow-lg transition-all duration-300 border border-base-300 hover:border-primary/50 relative group overflow-hidden cursor-pointer"
-                     role="listitem"
-                     x-data="{ imageLoading: true, imageError: false }"
-                     x-on:click="handleFileClick({{ $fileId }})"
-                     tabindex="0"
-                     aria-label="{{ $label }} ({{ $statusLabel }})"
-                >
-
+                {{-- Full モード: 詳細画面用のカード表示 --}}
+                <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-300 border border-base-200 hover:border-primary/30 group cursor-pointer h-full"
+                    role="listitem" x-data="{ imageLoading: true, imageError: false }" x-on:click="handleFileClick({{ $fileId }})"
+                    tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
                     {{-- RPA用: 透過的ダウンロードリンク --}}
-                    <a href="{{ $downloadUrl }}"
-                       class="direct-download-link sr-only"
-                       aria-label="{{ __('Download') }}: {{ $label }}"
-                       tabindex="-1"
-                       download></a>
+                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                     {{-- ステータスバッジ（右上） --}}
                     @php
-                        $badgeClass = match($status) {
-                            'processing' => 'badge-warning',
-                            'error' => 'badge-error',
+                        $badgeClass = match (true) {
+                            $isProcessing => 'badge-warning',
+                            $isError => 'badge-error',
                             default => 'badge-success',
                         };
+                        $badgeIcon = match (true) {
+                            $isProcessing => 'fa-spinner fa-spin',
+                            $isError => 'fa-exclamation',
+                            default => 'fa-check',
+                        };
                     @endphp
-                    @if($status !== 'processing' && $status !== 'error')
-                    <div class="absolute right-2 top-2 z-10 badge badge-xs {{ $badgeClass }} shadow-md"
-                         role="status"
-                         aria-label="{{ $statusLabel }}">
-{{--
-                        @if($status === 'processing')
-                            <i class="fa-solid fa-spinner animate-spin text-[8px]" aria-hidden="true"></i>
-                        @elseif($status === 'error')
-                            <i class="fa-solid fa-exclamation-triangle text-[8px]" aria-hidden="true"></i>
-                        @else
---}}
-                            <i class="fa-solid fa-check text-[8px]" aria-hidden="true"></i>
-{{--                        @endif--}}
-                    </div>
+                    @if (!$isProcessing && !$isError)
+                        {{-- 正常完了時はバッジを控えめに（または表示しない） --}}
+                    @else
+                        <div class="absolute right-2 top-2 z-10 badge badge-sm {{ $badgeClass }} gap-1 shadow-sm">
+                            <i class="fa-solid {{ $badgeIcon }} text-[10px]"></i>
+                            <span class="text-[10px] uppercase">{{ $statusLabel }}</span>
+                        </div>
                     @endif
 
-
-                    {{-- 直接ダウンロードボタン（常時表示、右下） --}}
-                    <a href="{{ $downloadUrl }}"
-                       class="absolute left-1/2 bottom-1/4 transform -translate-x-1/2 z-10 btn btn-sm btn-circle btn-ghost text-base-content/50 bg-base-200/70 hover:text-primary hover:bg-base-200 tooltip"
-                       x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
-                       title="{{ __('Download') }} ({{ $formattedSize }})"
-                       aria-label="{{ __('Download') }}: {{ $label }}"
-                       download
-                       tabindex="0"
-                       data-tip="{{ __('Download') }}"
-                    >
-                        <i class="fa-solid fa-download text-xs" aria-hidden="true"></i>
-                        <span x-show="loadingFiles[{{ $fileId }}]" class="loading loading-spinner loading-xs"></span>
-                    </a>
-
-                    {{-- コンテンツエリア --}}
-                    <figure class="aspect-4/3 bg-base-200 flex items-center justify-center relative overflow-hidden">
-                        @if($status === 'processing')
-                            {{-- ローディング状態: スケルトンスクリーン --}}
-                            <div class="w-full h-full animate-pulse bg-gradient-to-r from-base-300 via-base-200 to-base-300"
-                                 style="background-size: 200% 100%; animation: shimmer 1.5s infinite;"></div>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                                <i class="fa-solid fa-spinner fa-spin text-xl text-warning" aria-hidden="true"></i>
-                                <span class="text-xs text-base-content/70">{{ __('Processing') }}...</span>
+                    {{-- コンテンツエリア（プレビュー/アイコン） --}}
+                    <figure
+                        class="aspect-video bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
+                        @if ($isProcessing)
+                            {{-- Processing --}}
+                            <div class="flex flex-col items-center gap-2">
+                                <span class="loading loading-spinner loading-md text-warning"></span>
+                                <span
+                                    class="text-xs text-base-content/60">{{ __('ledger.status.processing_short') }}</span>
                             </div>
-                        @elseif($status === 'error')
-                            {{-- エラー状態 --}}
-                            <div class="flex flex-col items-center justify-center gap-2 p-4 text-center">
-                                <i class="fa-solid fa-exclamation-triangle text-2xl text-error" aria-hidden="true"></i>
-                                <span class="text-xs font-medium text-error">{{ __('Processing Failed') }}</span>
-                                <span class="text-[10px] text-base-content/60">{{ $file['error_message'] ?? __('Unknown Error') }}</span>
+                        @elseif($isError)
+                            {{-- Error --}}
+                            <div class="text-error flex flex-col items-center gap-1">
+                                <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                                <span class="text-xs font-bold">{{ __('ledger.status.error_short') }}</span>
                             </div>
                         @else
-                            @if($isImage && isset($file['thumbnailUrl']))
-                                {{-- 画像のサムネイル表示（ローディング＆エラー対応） --}}
-                                <div x-show="imageLoading" class="absolute inset-0 animate-pulse bg-base-300"></div>
-                                <div x-show="imageError"
-                                     class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-base-300">
-                                    <i class="fa-solid fa-image-slash text-xl text-base-content/40"
-                                       aria-hidden="true"></i>
-                                    <span class="text-[10px] text-base-content/60">{{ __('Could Not Load Image') }}</span>
+                            {{-- Normal --}}
+                            @if (Str::startsWith($mime, 'image/') && isset($file['thumbnailUrl']))
+                                <div x-show="imageLoading"
+                                    class="absolute inset-0 flex items-center justify-center bg-base-200">
+                                    <span class="loading loading-dots loading-sm text-base-content/30"></span>
                                 </div>
-                                <img src="{{ $file['thumbnailUrl'] }}"
-                                     alt="{{ $label }}"
-                                     class="w-full h-full object-cover"
-                                     loading="lazy"
-                                     x-on:load="imageLoading = false"
-                                     x-on:error="imageLoading = false; imageError = true">
+                                <img src="{{ $file['thumbnailUrl'] }}" alt="{{ $label }}"
+                                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
+                                    x-on:error="imageLoading = false; imageError = true">
+                                {{-- Fallback if image fails --}}
+                                <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
+                                    <i class="fa-regular fa-image text-3xl mb-1"></i>
+                                    <span class="text-[10px]">No Preview</span>
+                                </div>
                             @else
-                                {{-- アイコン表示 --}}
-                                <i class="{{ $iconClass }} fa-3x" aria-hidden="true"></i>
+                                <div
+                                    class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+                                    <i class="{{ $iconClass }} text-5xl opacity-80"></i>
+                                </div>
                             @endif
                         @endif
                     </figure>
 
-                    {{-- Footer（ファイル名とサイズのみ） --}}
-                    <div class="p-2">
-                        <h3 class="text-xs font-medium line-clamp-1" title="{{ $label }}">{{ $label }}</h3>
-                        @if($formattedSize)
-                            <p class="text-[10px] text-base-content/60 mt-0.5">{{ $formattedSize }}</p>
+                    {{-- Footer --}}
+                    <div class="px-3 py-2 bg-base-100 flex-grow relative">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1"
+                                    title="{{ $label }}">
+                                    {{ $label }}
+                                </h3>
+                                <div class="flex items-center gap-2 text-[10px] text-base-content/60">
+                                    @if ($formattedSize)
+                                        <span>{{ $formattedSize }}</span>
+                                    @endif
+                                    @if (isset($file['created_at']))
+                                        <span>•</span>
+                                        <span>{{ \Carbon\Carbon::parse($file['created_at'])->diffForHumans() }}</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Download Button (Primary) --}}
+                            <a href="{{ $downloadUrl }}"
+                                class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-primary hover:bg-primary/10 -mt-1 -mr-1"
+                                x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
+                                title="{{ __('ledger.download') }}" download>
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                        </div>
+
+                        {{-- Secondary Download (e.g. PDF for Images) --}}
+                        @if (isset($file['secondary_download']) && $file['secondary_download'])
+                            <div class="mt-2 pt-2 border-t border-base-200 flex justify-end">
+                                <a href="{{ $file['secondary_download']['url'] }}"
+                                    class="btn btn-xs btn-ghost gap-1 text-base-content/60 font-normal hover:text-primary"
+                                    x-on:click.stop download>
+                                    @if (isset($file['secondary_download']['icon']))
+                                        <i class="fa-solid {{ $file['secondary_download']['icon'] }}"></i>
+                                    @endif
+                                    {{ $file['secondary_download']['label'] ?? 'PDF' }}
+                                </a>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -258,48 +332,57 @@
         </div>{{-- x-show wrapper end --}}
 
     @empty
-        <div class="col-span-full text-center py-8 text-base-content/60" role="status">
-            <i class="fa-solid fa-folder-open fa-2x mb-2 opacity-40" aria-hidden="true"></i>
-            <p>@lang('ledger.no_attachments')</p>
-        </div>
+        @if (!$isIconOnly)
+            <div
+                class="col-span-full flex flex-col items-center justify-center py-6 text-base-content/40 border border-dashed border-base-300 rounded-lg">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl mb-2"></i>
+                <p class="text-sm">{{ __('ledger.no_attachments') }}</p>
+            </div>
+        @else
+            <span class="text-base-content/30 text-xs">-</span>
+        @endif
     @endforelse
 
-    {{-- 「もっと見る」ボタン（4件以上の場合） --}}
-    @if($hiddenCount > 0)
-        <div class="{{ $isCompact ? '' : 'col-span-full' }} flex justify-center mt-2">
-            <button type="button"
-                    x-show="!showAll"
-                    x-on:click="toggleShowAll()"
-                    class="btn btn-ghost btn-sm text-primary hover:bg-primary/10 gap-2"
-                    role="button"
-                    aria-label="@lang('ledger.show_more'): @lang('ledger.more_files', ['count' => $hiddenCount])">
-                <i class="fa-solid fa-chevron-down text-xs" aria-hidden="true"></i>
-                <span class="text-sm">@lang('ledger.show_more') (+{{ $hiddenCount }})</span>
-            </button>
+    {{-- 「もっと見る」ボタン --}}
+    @if ($hiddenCount > 0)
+        <div
+            class="{{ $isCompact || $isIconOnly ? '' : 'col-span-full' }} flex justify-center {{ $isCompact || $isIconOnly ? 'ml-1' : 'mt-2' }}">
 
-            <button type="button"
-                    x-show="showAll"
-                    x-on:click="toggleShowAll()"
-                    class="btn btn-ghost btn-sm text-base-content/60 hover:bg-base-200 gap-2"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100"
-                    role="button"
-                    aria-label="@lang('ledger.collapse')">
-                <i class="fa-solid fa-chevron-up text-xs" aria-hidden="true"></i>
-                <span class="text-sm">@lang('ledger.collapse')</span>
-            </button>
+            @if ($isIconOnly)
+                {{-- Icon Only モードの「+N」 --}}
+                <button type="button" x-on:click="toggleShowAll()"
+                    class="badge badge-ghost badge-md cursor-pointer hover:bg-base-300 font-bold"
+                    :class="{ '!badge-primary !text-primary-content': showAll }" role="button"
+                    aria-label="{{ __('ledger.show_more') }}">
+                    <span x-show="!showAll">+{{ $hiddenCount }}</span>
+                    <i x-show="showAll" class="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+            @elseif($isCompact)
+                <button type="button" x-on:click="toggleShowAll()"
+                    class="btn btn-ghost btn-xs text-xs font-normal text-base-content/60 gap-1">
+                    <span
+                        x-text="showAll ? '{{ __('ledger.collapse') }}' : '+{{ $hiddenCount }} {{ __('ledger.more') }}'"></span>
+                </button>
+            @else
+                {{-- Full モード --}}
+                <button type="button" x-on:click="toggleShowAll()" class="btn btn-ghost btn-sm gap-2">
+                    <span
+                        x-text="showAll ? '{{ __('ledger.collapse') }}' : '{{ __('ledger.show_more') }} (+{{ $hiddenCount }})'"></span>
+                    <i class="fa-solid" :class="showAll ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                </button>
+            @endif
         </div>
     @endif
 </div>
 
-{{-- CSSアニメーション定義 --}}
+{{-- CSSアニメーション --}}
 @once
     <style>
         @keyframes shimmer {
             0% {
                 background-position: -200% 0;
             }
+
             100% {
                 background-position: 200% 0;
             }

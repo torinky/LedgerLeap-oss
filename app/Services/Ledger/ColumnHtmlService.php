@@ -102,7 +102,8 @@ class ColumnHtmlService
         $html = '';
 
         if ($type === 'files' && is_array($this->initialValue)) {
-            $html = $this->getFileHtml();
+            $mode = $this->attrs['mode'] ?? 'full';
+            $html = $this->getFileHtml($mode);
         } elseif (is_array($this->initialValue)) {
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
@@ -257,14 +258,23 @@ class ColumnHtmlService
         };
     }
 
-    public function getFileHtml(): string
+    public function getFileHtml(string $mode = 'full'): string
     {
-        $html = '';
         if (! is_array($this->initialValue) || ! isset($this->attachments)) {
-            return $html;
+            return '';
         }
 
-        $thumbnails = [];
+        $files = $this->prepareFilesData();
+
+        return view('components.ledger.attachment-list', [
+            'files' => $files,
+            'mode' => $mode,
+            'tenantId' => $this->tenantId,
+        ])->render();
+    }
+
+    private function prepareFilesData(): array
+    {
         $files = [];
 
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
@@ -274,164 +284,85 @@ class ColumnHtmlService
                 continue;
             }
 
-            $statusIconHtml = '';
-            $retryIconHtml = '';
-
-            if ($attachment->status instanceof \App\Enums\AttachedFileStatus) {
-                // Phase5: 最終化前は処理中ステータスを表示
-                $displayStatus = $attachment->getDisplayStatus();
-                $tooltip = $displayStatus->getDetailedTooltip($attachment);
-                $statusIconHtml = <<<HTML
-    <div class="tooltip tooltip-bottom" data-tip="{$tooltip}">
-        <i class="{$displayStatus->icon()} {$displayStatus->colorClass()} text-lg"></i>
-    </div>
-HTML;
-
-                if ($attachment->canUserRequestRetry() ||
-                    $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED ||
-                    $attachment->isVlmFailed()
-                ) {
-                    $isVlmRetry = $attachment->isVlmFailed();
-
-                    $retryTooltipText = match (true) {
-                        $isVlmRetry => __('ledger.uploadedFile.retry_vlm'),
-                        $attachment->hasExtractionError() => __('ledger.uploadedFile.retry_extraction'),
-                        $attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED => __('ledger.uploadedFile.retry_thumbnail'),
-                        default => __('ledger.uploadedFile.retry'),
-                    };
-
-                    $eventName = $isVlmRetry ? 'retryVlmProcessingEvent' : 'retryProcessingEvent';
-
-                    $retryIconHtml = <<<HTML
-<div class="tooltip btn btn-square btn-ghost btn-sm" data-tip="{$retryTooltipText}">
-    <i class="fa-solid fa-arrow-rotate-right cursor-pointer" 
-    wire:click="\$dispatch('{$eventName}', { attachedFileId: {$attachment->id} })"></i>
-</div>
-HTML;
-                }
-
-                if ($attachment->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
-                    \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachment->id));
-                    Log::info('[ColumnHtmlService] Re-dispatched GenerateThumbnail job for ID: '.$attachment->id);
-                }
-
-                // 抽出テキストプレビューボタンの生成
-                $textPreviewButtonHtml = '';
-                if ($attachment->hasPreviewableText()) {
-                    $textPreviewTooltip = __('ledger.text_preview.button_tooltip');
-                    $textPreviewButtonHtml = <<<HTML
-<div x-data="{ isLoading: false }" @text-preview-shown.window="isLoading = false" class="tooltip" data-tip="{$textPreviewTooltip}">
-    <button @click="isLoading = true; \$dispatch('showTextPreview', { attachedFileId: {$attachment->id} }); setTimeout('isLoading = false', 5000)" :disabled="isLoading" class="btn btn-square btn-ghost btn-sm">
-        <i class="fa-solid fa-eye cursor-pointer" x-show="!isLoading"></i>
-        <span class="loading loading-spinner loading-xs" x-show="isLoading" style="display: none;"></span>
-    </button>
-</div>
-HTML;
-                }
-            }
-
-            $hit = isset($attachment->hit) && $attachment->hit == true;
-            $hitClass = $hit ? 'badge-error' : 'badge-accent';
-
+            // ダウンロードURLの構築
             if (! $this->tenantId) {
                 Log::error('Tenant ID is not provided to ColumnHtmlService.');
                 $mainDownloadUrl = '#';
-                $thumbnailUrl = '#';
+                $thumbnailUrl = null;
                 $originalDownloadUrl = '#';
                 $optimizedPdfDownloadUrl = '#';
             } else {
                 $mainDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
-                $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+                // サムネイルURL (画像かつサムネイルファイルが存在する場合)
+                if (str_starts_with($attachment->original_mime_type, 'image/') &&
+                    Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId))) {
+                    $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+                } else {
+                    $thumbnailUrl = null;
+                }
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
             }
 
-            $auxiliaryLinksHtml = '';
+            // ダウンロードリンクの整理
+            $primaryDownload = null;
+            $secondaryDownload = null;
 
             if (str_starts_with($attachment->original_mime_type, 'image/')) {
-                $mainDownloadUrl = $originalDownloadUrl;
-                $downloadPdfTooltip = __('ledger.uploadedFile.download_pdf_with_text');
-                $auxiliaryLinksHtml = <<<HTML
-     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-square btn-ghost tooltip" 
- data-tip="{$downloadPdfTooltip}">
-         <i class="fa-solid fa-file-pdf w-4 h-4"></i>
-     </a>
-HTML;
+                // 画像ファイル
+                // メイン: 元画像 (original=true)
+                $primaryDownload = [
+                    'url' => $originalDownloadUrl,
+                    'label' => __('ledger.uploadedFile.download_image'),
+                    'icon' => 'fa-download',
+                ];
+                // 補助: OCR後PDF（もしあれば）- URLはoptimizedPdfDownloadUrl (optimized版 or 通常ダウンロード)
+                $secondaryDownload = [
+                    'url' => $optimizedPdfDownloadUrl,
+                    'label' => 'PDF',
+                    'icon' => 'fa-file-pdf',
+                    'tooltip' => __('ledger.uploadedFile.download_pdf_with_text'),
+                ];
+
             } elseif ($attachment->original_mime_type === 'application/pdf' && $attachment->optimized) {
-                $mainDownloadUrl = $optimizedPdfDownloadUrl;
-                $downloadPdfTooltip = __('ledger.uploadedFile.download_original_pdf');
-                $auxiliaryLinksHtml = <<<HTML
- <div class="flex items-center text-xs text-gray-500 mt-1">
-     <a href="{$originalDownloadUrl}" target="_blank" 
-     class="btn btn-square btn-ghost tooltip" 
-     data-tip="{$downloadPdfTooltip}">
-         <i class="fa-solid fa-file w-4 h-4"></i>
-     </a>
- </div>
-HTML;
-            }
-
-            $contentHtmlStart = '';
-            $contentHtmlEnd = '';
-            /*            if (! empty($this->attachmentContents[$hashedFilename]) && isset($this->attachmentContents[$hashedFilename]['meta']['content'])) {
-                            $rawContent = $this->attachmentContents[$hashedFilename]['meta']['content'];
-                            $plainTextContent = strip_tags($rawContent);
-                            $sanitizedContent = str_replace(["\r", "\n"], ' ', $plainTextContent);
-                            $content = htmlspecialchars(mb_strimwidth($sanitizedContent, 0, 300, '...'));
-                            if (! empty($content)) {
-                                $contentHtmlStart = <<<HTML
-             <div class="tooltip" data-tip="{$content}">
-             HTML;
-                                $contentHtmlEnd = '</div>';
-                            }
-                        }*/
-
-            if (str_starts_with($attachment->original_mime_type, 'image/') && Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId))) {
-                $thumbnails[] = <<<HTML
-<div class="indicator my-5"> 
-<span class="indicator-item">
-    {$statusIconHtml}
- {$retryIconHtml}
- {$textPreviewButtonHtml}
-    {$auxiliaryLinksHtml}
-</span>
-{$contentHtmlStart}
-         <a href="{$mainDownloadUrl}" target="_blank"><img class="m-1 rounded-lg shadow-xl {
- $hitClass}" src="{$thumbnailUrl}" alt="{$originalFilename}"></a>
-{$contentHtmlEnd}
-</div>
-HTML;
+                // 最適化済みPDF
+                // メイン: 最適化済みPDF (通常ルート)
+                $primaryDownload = [
+                    'url' => $optimizedPdfDownloadUrl,
+                    'label' => __('ledger.uploadedFile.download_optimized_pdf'),
+                    'icon' => 'fa-file-pdf',
+                ];
+                // 補助: 元PDF (original=true)
+                $secondaryDownload = [
+                    'url' => $originalDownloadUrl,
+                    'label' => 'Original',
+                    'icon' => 'fa-file',
+                    'tooltip' => __('ledger.uploadedFile.download_original_pdf'),
+                ];
             } else {
-                if (str_starts_with($attachment->original_mime_type, 'image/')) {
-                    Log::warning('Thumbnail not found for image file: '.$hashedFilename.' at expected path: '.AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId));
-                }
-                $files[] = <<<HTML
- {$contentHtmlStart}
-<div class="flex items-center mx-1 my-5 py-2">
-    <div class="indicator">
-        <span class="indicator-item">
-            {$statusIconHtml}
-            {$retryIconHtml}
-            {$textPreviewButtonHtml}
-            {$auxiliaryLinksHtml}
-        </span>
-        <a href="{$mainDownloadUrl}" target="_blank" class="btn btn-ghost {$hitClass}
-     opacity-70 hover:opacity-100 flex flex-col items-center py-10 px-2 m-0">
-            <i class="{$this->getFileIconClass($originalFilename)} fa-3x "></i>
-            <span>{$originalFilename}</span>
-        </a>
-    </div>
-</div>
- {$contentHtmlEnd}
-HTML;
+                // その他
+                $primaryDownload = [
+                    'url' => $mainDownloadUrl,
+                    'label' => __('ledger.download'),
+                    'icon' => 'fa-download',
+                ];
             }
+
+            $files[] = [
+                'id' => $attachment->id,
+                'filename' => $originalFilename,
+                'mime' => $attachment->original_mime_type ?? $attachment->mime,
+                'status' => $attachment->status instanceof \App\Enums\AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
+                'size' => $attachment->size,
+                'thumbnailUrl' => $thumbnailUrl,
+                'primary_download' => $primaryDownload,
+                'secondary_download' => $secondaryDownload,
+                'created_at' => $attachment->created_at,
+                // エラーメッセージなどが必要ならここに追加
+                'error_message' => $attachment->error_message ?? null,
+            ];
         }
 
-        $html .= '<div class="flex flex-wrap items-center gap-4">'
-            .implode('', $thumbnails)
-            .implode('', $files)
-            .'</div>';
-
-        return $html;
+        return $files;
     }
 }
