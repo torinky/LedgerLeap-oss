@@ -1,11 +1,42 @@
 # 添付ファイルUI改善 Phase 3 詳細計画: 基盤改修
 
 **作成日:** 2025年12月19日  
-**最終更新:** 2025年12月19日  
+**最終更新:** 2025年12月19日（MIMEタイプ拡張、時間/容量表示改善、ダウンロードリンク整理、UIモックアップ全分岐実装タイミング明確化）  
 **親ドキュメント:** [添付ファイルUI改善計画: インスペクター・ドロワー導入](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md)  
 **フェーズ:** Phase 3 (基盤改修)  
-**ステータス:** 📋 計画中  
+**ステータス:** 📋 計画完了  
 **前提条件:** Phase 2完了（`AttachedFile` モデル拡張済み）
+
+---
+
+## 更新内容サマリー（2025年12月19日）
+
+本ドキュメントの精査により、以下の要求事項を反映しました:
+
+### 追加・変更された要件
+1. **MIMEタイプの拡張**: プログラムコード、動画、音声、CAD等、業務で生じうる全てのMIMEタイプをサポート（タスク3.0, 3.1.2）
+2. **時間・容量表示の改善**: Laravelの `Number::fileSize()` と Carbon の `diffForHumans()` を使用してユーザーフレンドリーに（タスク3.1.3）
+3. **ダウンロードリンクの整理**: 最適化済みPDFと元ファイルの区別を明確化し、冗長な説明を削除（タスク3.2.2）
+4. **MimeTypeHelperの新規実装**: MIMEタイプ判定ロジックを共通化し、保守性を向上（タスク3.0）
+5. **UIモックアップ全分岐実装**: 全ステータス・全MIMEタイプのケースを3.1完了後に即座に検証（タスク3.3）
+
+### 工数の変更
+- 総見積工数: **13h → 18h**（+5h）
+  - MimeTypeHelper実装: +2h
+  - MIMEタイプ拡張対応: +1h
+  - 時間/容量表示実装: +1h
+  - ダウンロードリンク整理: +1h
+
+### 新規追加された懸念事項
+- **4.7**: MIMEタイプ判定の複雑化 → MimeTypeHelperで対応
+- **4.8**: `Number::fileSize()` のLaravelバージョン依存 → フォールバック実装
+- **4.9**: ダウンロードリンクの後方互換性 → CSSクラス維持とRPA検証
+
+### 品質保証チェックリストの拡充
+- MIMEタイプ判定テストの追加
+- ファイルサイズ・時間表示の検証項目追加
+- パフォーマンス確認項目の明確化
+- アクセシビリティ確認項目の追加
 
 ---
 
@@ -35,18 +66,151 @@ Phase 3では、PHPコード内でHTML文字列を結合しているレガシー
 
 ## 2. 実装計画 (WBS)
 
-総見積工数: **13h**（精査により+4h）
+総見積工数: **18h**（精査により+5h: MIMEタイプ拡張+1h、時間/容量表示+1h、ダウンロードリンク整理+1h、MimeTypeHelper実装+2h）
 
 | ID | タスク名称 | 担当 | 工数 | 依存 | 備考 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **3.1** | **`x-ledger.attachment-list` コンポーネントの強化** | - | **4h** | - | `icon-only` + エラー状態網羅 |
-| **3.2** | **`ColumnHtmlService` のリファクタリング** | - | **5h** | 3.1 | データ変換ロジック + 後方互換 |
+| **3.0** | **`MimeTypeHelper` クラスの実装** | - | **2h** | - | MIMEタイプ判定ロジックの共通化 |
+| **3.1** | **`x-ledger.attachment-list` コンポーネントの強化** | - | **6h** | 3.0 | `icon-only` + エラー状態網羅 + MIMEタイプ拡張 + 時間/容量表示 |
+| **3.2** | **`ColumnHtmlService` のリファクタリング** | - | **6h** | 3.1 | データ変換ロジック + 後方互換 + ダウンロードリンク整理 |
 | **3.3** | **UIモックアップ全分岐実装検証** | - | **2h** | 3.1 | 全ステータス・全MIMEタイプ |
 | **3.4** | **統合テストとRPA互換性検証** | - | **2h** | 3.2, 3.3 | Feature Test + RPA |
 
 ---
 
-## 3. 詳細タスク定義
+## 3. タスク詳細
+
+### タスク 3.0: `MimeTypeHelper` クラスの実装
+
+**ファイル:** `app/Helpers/MimeTypeHelper.php` (新規作成)
+
+#### 3.0.1. 目的
+多数のMIMEタイプ判定ロジックを一元管理し、保守性と拡張性を向上させます。
+
+#### 3.0.2. 実装仕様
+
+**メソッド一覧:**
+```php
+class MimeTypeHelper
+{
+    /**
+     * MIMEタイプからFont Awesomeアイコンクラスを取得
+     * @param string|null $mime
+     * @return string 例: 'fa-solid fa-file-pdf'
+     */
+    public static function getIcon(?string $mime): string;
+    
+    /**
+     * MIMEタイプからTailwind CSSカラークラスを取得
+     * @param string|null $mime
+     * @return string 例: 'text-red-500'
+     */
+    public static function getColor(?string $mime): string;
+    
+    /**
+     * MIMEタイプからカテゴリを取得
+     * @param string|null $mime
+     * @return string 例: 'pdf', 'image', 'video', 'code'
+     */
+    public static function getCategory(?string $mime): string;
+    
+    /**
+     * 包括的なファイル情報を取得
+     * @param string|null $mime
+     * @return array ['icon' => '...', 'color' => '...', 'category' => '...']
+     */
+    public static function getInfo(?string $mime): array;
+}
+```
+
+**実装例:**
+```php
+public static function getIcon(?string $mime): string
+{
+    if (empty($mime)) {
+        return 'fa-solid fa-file text-gray-400';
+    }
+    
+    return match (true) {
+        // 画像
+        str_starts_with($mime, 'image/') => 'fa-solid fa-file-image',
+        // PDF
+        $mime === 'application/pdf' => 'fa-solid fa-file-pdf',
+        // Office - Word
+        str_contains($mime, 'word') => 'fa-solid fa-file-word',
+        // Office - Excel
+        str_contains($mime, 'excel') || str_contains($mime, 'spreadsheet') => 'fa-solid fa-file-excel',
+        // Office - PowerPoint
+        str_contains($mime, 'powerpoint') || str_contains($mime, 'presentation') => 'fa-solid fa-file-powerpoint',
+        // アーカイブ
+        str_contains($mime, 'zip') || str_contains($mime, 'archive') || 
+        str_contains($mime, 'compressed') || str_contains($mime, 'tar') || 
+        str_contains($mime, 'gzip') || str_contains($mime, 'rar') => 'fa-solid fa-file-zipper',
+        // プログラムコード
+        str_starts_with($mime, 'text/x-') || 
+        $mime === 'application/json' || 
+        $mime === 'application/xml' || 
+        $mime === 'text/javascript' => 'fa-solid fa-file-code',
+        // 動画
+        str_starts_with($mime, 'video/') => 'fa-solid fa-file-video',
+        // 音声
+        str_starts_with($mime, 'audio/') => 'fa-solid fa-file-audio',
+        // テキスト
+        str_starts_with($mime, 'text/') => 'fa-solid fa-file-lines',
+        // CAD
+        str_contains($mime, 'autocad') || str_contains($mime, 'dwg') || str_contains($mime, 'dxf') => 'fa-solid fa-file-image',
+        // その他
+        default => 'fa-solid fa-file',
+    };
+}
+```
+
+#### 3.0.3. テスト実装
+
+**ファイル:** `tests/Unit/Helpers/MimeTypeHelperTest.php`
+
+**テストケース:**
+```php
+public function test_get_icon_for_various_mime_types()
+{
+    // 画像
+    $this->assertEquals('fa-solid fa-file-image', MimeTypeHelper::getIcon('image/jpeg'));
+    $this->assertEquals('fa-solid fa-file-image', MimeTypeHelper::getIcon('image/png'));
+    
+    // PDF
+    $this->assertEquals('fa-solid fa-file-pdf', MimeTypeHelper::getIcon('application/pdf'));
+    
+    // Office
+    $this->assertEquals('fa-solid fa-file-word', MimeTypeHelper::getIcon('application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
+    $this->assertEquals('fa-solid fa-file-excel', MimeTypeHelper::getIcon('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
+    
+    // プログラムコード
+    $this->assertEquals('fa-solid fa-file-code', MimeTypeHelper::getIcon('text/x-php'));
+    $this->assertEquals('fa-solid fa-file-code', MimeTypeHelper::getIcon('application/json'));
+    
+    // 動画
+    $this->assertEquals('fa-solid fa-file-video', MimeTypeHelper::getIcon('video/mp4'));
+    
+    // デフォルト
+    $this->assertEquals('fa-solid fa-file', MimeTypeHelper::getIcon('application/octet-stream'));
+    $this->assertEquals('fa-solid fa-file text-gray-400', MimeTypeHelper::getIcon(null));
+}
+```
+
+#### 3.0.4. Blade での使用例
+
+```blade
+@php
+    use App\Helpers\MimeTypeHelper;
+    
+    $fileInfo = MimeTypeHelper::getInfo($file['mime']);
+    $iconClass = $fileInfo['icon'] . ' ' . $fileInfo['color'];
+@endphp
+
+<i class="{{ $iconClass }}" aria-hidden="true"></i>
+```
+
+---
 
 ### タスク 3.1: `x-ledger.attachment-list` コンポーネントの強化
 
@@ -67,7 +231,93 @@ Phase 3では、PHPコード内でHTML文字列を結合しているレガシー
     - `compact`: 最大4件（「もっと見る」ボタン）
     - `full`: 最大8件（「もっと見る」ボタン）
 
-#### 3.1.2. 全ステータスとエラー状態の網羅的実装
+#### 3.1.2. MIMEタイプの拡張対応
+
+**目的:** ユーザーの業務で生じうる全てのファイルタイプをサポートし、適切なアイコンで表示します。
+
+**対応必須のMIMEタイプ:**
+- **画像**: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`, `image/bmp`, `image/tiff`
+- **PDF**: `application/pdf`
+- **Office文書**:
+  - Word: `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (.docx), `application/msword` (.doc)
+  - Excel: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (.xlsx), `application/vnd.ms-excel` (.xls)
+  - PowerPoint: `application/vnd.openxmlformats-officedocument.presentationml.presentation` (.pptx), `application/vnd.ms-powerpoint` (.ppt)
+- **アーカイブ**: `application/zip`, `application/x-7z-compressed`, `application/x-tar`, `application/gzip`, `application/x-rar-compressed`
+- **テキスト**: `text/plain`, `text/csv`, `text/markdown`, `text/html`, `text/xml`
+- **プログラムコード**: `text/x-php`, `text/x-python`, `text/javascript`, `application/json`, `text/x-java`, `text/x-c`, `text/x-ruby`, `application/xml`
+- **動画**: `video/mp4`, `video/quicktime`, `video/x-msvideo`, `video/webm`, `video/x-matroska`
+- **音声**: `audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/flac`
+- **CAD**: `application/x-autocad`, `image/vnd.dwg`, `image/vnd.dxf`
+- **その他**: `application/octet-stream`, `application/rtf`, `application/vnd.ms-outlook`
+
+**実装方針:**
+- Font Awesome 6 の包括的なファイルタイプアイコンを活用
+- アイコンの色を視覚的に識別しやすい配色に設定（色覚多様性対応）
+- 未対応のMIMEタイプには汎用アイコン (`fa-file`) を表示
+
+**実装例:**
+```php
+$iconClass = match (true) {
+    // 画像
+    $isImage => 'fa-solid fa-file-image text-blue-500',
+    // PDF
+    $isPdf => 'fa-solid fa-file-pdf text-red-500',
+    // Office
+    $isWord => 'fa-solid fa-file-word text-blue-700',
+    $isExcel => 'fa-solid fa-file-excel text-green-600',
+    $isPowerpoint => 'fa-solid fa-file-powerpoint text-orange-600',
+    // アーカイブ
+    $isZip => 'fa-solid fa-file-zipper text-purple-600',
+    // テキスト
+    $isText => 'fa-solid fa-file-lines text-gray-600',
+    // プログラムコード
+    $isCode => 'fa-solid fa-file-code text-green-700',
+    // 動画
+    $isVideo => 'fa-solid fa-file-video text-indigo-600',
+    // 音声
+    $isAudio => 'fa-solid fa-file-audio text-pink-500',
+    // CAD
+    $isCad => 'fa-solid fa-file-image text-teal-600',
+    // その他
+    default => 'fa-solid fa-file text-gray-400',
+};
+```
+
+#### 3.1.3. 時間・容量表示の改善
+
+**目的:** ファイルサイズと処理時間をユーザーフレンドリーな形式で表示します。
+
+**実装方針:**
+- **ファイルサイズ**: `Illuminate\Support\Number::fileSize()` を使用（Laravel 10+）
+- **処理時間**: `Carbon` の `diffForHumans()` または相対表記を優先
+- **処理時間（ミリ秒）**: `Carbon::parse()->addMilliseconds()` と組み合わせて人間可読形式に変換
+
+**実装例:**
+```php
+use Illuminate\Support\Number;
+
+// ファイルサイズのフォーマット
+$formattedSize = $fileSize ? Number::fileSize($fileSize, 2) : '';
+// 例: "1.23 MB", "456 KB", "2.5 GB"
+
+// タイムスタンプのフォーマット（相対表記）
+$uploadedTime = $file->created_at?->diffForHumans();
+// 例: "3時間前", "2日前", "1ヶ月前"
+
+// 処理時間のフォーマット
+$processingTime = $file->vlm_processing_time_ms 
+    ? ($file->vlm_processing_time_ms < 1000 
+        ? $file->vlm_processing_time_ms . 'ms' 
+        : round($file->vlm_processing_time_ms / 1000, 1) . 's')
+    : null;
+// 例: "850ms", "3.2s"
+```
+
+**注意事項:**
+- `Number::fileSize()` はLaravel 10以降で利用可能。バージョン確認が必要。
+- 下位互換性のため、古いバージョンでは `Storage::size()` + 手動フォーマットを使用。
+
+#### 3.1.4. 全ステータスとエラー状態の網羅的実装
 
 **対応必須のステータス** （`AttachedFileStatus` Enum全27ケース）:
 - **処理中（5種）**: `PENDING_INITIAL_PROCESSING`, `INITIAL_PROCESSING`, `PENDING_OCR`, `OCR_PROCESSING`, `PENDING_VLM`, `VLM_PROCESSING`, `PARALLEL_PROCESSING`
@@ -80,12 +330,12 @@ Phase 3では、PHPコード内でHTML文字列を結合しているレガシー
 - アニメーション: `animate-spin` は処理中ステータスのみ。
 - 色覚多様性対応: アイコン形状で識別可能なデザインを維持。
 
-#### 3.1.3. アクセシビリティ検証
+#### 3.1.5. アクセシビリティ検証
 - **ARIA属性:** `role="list"`, `role="listitem"`, `aria-label` の適切な設定。
 - **キーボード操作:** `tabindex="0"` でフォーカス可能、`Enter`/`Space`キーでドロワー展開。
 - **スクリーンリーダー:** ステータスが読み上げられる (`aria-label="ファイル名 (処理中)"`)。
 
-#### 3.1.4. ロジックの修正例
+#### 3.1.6. ロジックの修正例
 ```php
 @props([
     'files' => [],
@@ -131,10 +381,104 @@ Phase 3では、PHPコード内でHTML文字列を結合しているレガシー
     'thumbnailUrl' => $attachment->hasThumbnail() ? route('file.download', [..., 'thumbnail' => true]) : null,
     'size' => $attachment->size,
     'error_message' => $attachment->status->isError() ? $this->getErrorMessage($attachment) : null,
+    'optimized' => $attachment->optimized, // 最適化フラグ
+    'original_download_url' => route('file.download', [..., 'original' => true]), // 元ファイル用
 ]
 ```
 
-#### 3.2.2. `show` メソッドへの `$displayMode` 引数追加
+#### 3.2.2. ダウンロードリンクのロジック整理
+
+**目的:** タブ内の冗長な説明を削除し、メインダウンロードリンクで最適化状態を明示します。
+
+**仕様:**
+
+1. **画像ファイル（`image/*`）の場合:**
+   - **メインダウンロードリンク**: 元画像ファイル（OCR前）
+   - **補助ダウンロードリンク**: OCR後PDFファイル（アイコン: `fa-file-pdf`）
+   - **メッセージ**: メインリンク付近に「元画像をダウンロード」、補助リンクに「テキスト付きPDFをダウンロード」のツールチップ
+
+2. **最適化済みPDF（`application/pdf` かつ `optimized = true`）の場合:**
+   - **メインダウンロードリンク**: 最適化済みPDF
+   - **補助ダウンロードリンク**: 元PDFファイル（アイコン: `fa-file`, ツールチップ: 「元のPDFをダウンロード」）
+   - **メッセージ**: メインリンク付近に「最適化済みPDFをダウンロード」
+
+3. **未最適化PDF（`application/pdf` かつ `optimized = false`）の場合:**
+   - **メインダウンロードリンク**: 元PDFファイル
+   - **補助ダウンロードリンク**: なし
+   - **メッセージ**: 「PDFをダウンロード」
+
+4. **その他のファイル:**
+   - **メインダウンロードリンク**: 元ファイル
+   - **補助ダウンロードリンク**: なし
+   - **メッセージ**: 「ファイルをダウンロード」
+
+**既存実装（ColumnHtmlService.php L350-370）の改善:**
+```php
+// 現在の実装（冗長）
+if (str_starts_with($attachment->original_mime_type, 'image/')) {
+    $mainDownloadUrl = $originalDownloadUrl;
+    $auxiliaryLinksHtml = <<<HTML
+     <a href="{$optimizedPdfDownloadUrl}" target="_blank" class="btn btn-square btn-ghost tooltip" 
+         data-tip="{$downloadPdfTooltip}">
+         <i class="fa-solid fa-file-pdf w-4 h-4"></i>
+     </a>
+HTML;
+} elseif ($attachment->original_mime_type === 'application/pdf' && $attachment->optimized) {
+    $mainDownloadUrl = $optimizedPdfDownloadUrl;
+    $auxiliaryLinksHtml = <<<HTML
+ <div class="flex items-center text-xs text-gray-500 mt-1">
+     <a href="{$originalDownloadUrl}" target="_blank" 
+        class="btn btn-square btn-ghost tooltip" 
+        data-tip="{$downloadPdfTooltip}">
+         <i class="fa-solid fa-file w-4 h-4"></i>
+     </a>
+ </div>
+HTML;
+}
+
+// 改善案: データ構造に含めて Blade で処理
+[
+    'primary_download' => [
+        'url' => $mainDownloadUrl,
+        'label' => __('ledger.download_main'),
+        'icon' => 'fa-download',
+    ],
+    'secondary_download' => $auxiliaryLinksHtml ? [
+        'url' => $secondaryUrl,
+        'label' => __('ledger.download_secondary'),
+        'icon' => $secondaryIcon,
+        'tooltip' => $secondaryTooltip,
+    ] : null,
+]
+```
+
+**Blade側の実装:**
+```blade
+{{-- メインダウンロードボタン --}}
+<a href="{{ $file['primary_download']['url'] }}" 
+   class="btn btn-primary btn-sm direct-download-link"
+   download>
+    <i class="fa-solid {{ $file['primary_download']['icon'] }}"></i>
+    {{ $file['primary_download']['label'] }}
+</a>
+
+{{-- 補助ダウンロードボタン（存在する場合のみ） --}}
+@if($file['secondary_download'])
+    <a href="{{ $file['secondary_download']['url'] }}" 
+       class="btn btn-ghost btn-sm tooltip" 
+       data-tip="{{ $file['secondary_download']['tooltip'] }}"
+       download>
+        <i class="fa-solid {{ $file['secondary_download']['icon'] }}"></i>
+    </a>
+@endif
+```
+
+**影響範囲:**
+- `ColumnHtmlService.php` の L350-370 を削除
+- 新しいデータ構造を `prepareFilesData()` メソッドで生成
+- `x-ledger.attachment-list` コンポーネントでダウンロードボタンを統一デザインで表示
+
+#### 3.2.3. `show` メソッドへの `$displayMode` 引数追加
 
 **現在のシグネチャ:**
 ```php
@@ -153,7 +497,7 @@ public function show(
 
 **変更案:** `$attrs` 配列に `mode` キーを追加して対応（互換性重視）。
 
-#### 3.2.3. 呼び出し元の対応
+#### 3.2.4. 呼び出し元の対応
 
 **対応必要な箇所:**
 1. **`app/Livewire/Ledger/Show.php`**: `$attrs` に `['mode' => 'full']` を設定。
@@ -161,7 +505,7 @@ public function show(
 3. **`resources/views/components/ledger/table-row.blade.php`**: `$attrs` に `['mode' => 'icon-only']` を設定。
 4. **`RecordsTable.php`**: データ読み込み時に `setAttachmentCollection()` を呼ぶ際に適切なEager Loadingを確認。
 
-#### 3.2.4. Eager Loading戦略の実装
+#### 3.2.5. Eager Loading戦略の実装
 
 **N+1クエリ防止:**
 ```php
@@ -177,7 +521,7 @@ $attachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
     ->groupBy('ledger_id');
 ```
 
-#### 3.2.5. 後方互換性の担保
+#### 3.2.6. 後方互換性の担保
 
 **既存機能の維持:**
 - ✅ ダイレクトダウンロードリンク（`direct-download-link` クラス）
@@ -209,18 +553,26 @@ $attachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
 #### 3.3.2. MIMEタイプ別表示テスト
 
 **検証すべきファイルタイプ:**
-- 画像: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`
-- PDF: `application/pdf`
-- Office: `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (Word), `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (Excel), `application/vnd.openxmlformats-officedocument.presentationml.presentation` (PowerPoint)
-- アーカイブ: `application/zip`, `application/x-7z-compressed`, `application/x-tar`
-- テキスト: `text/plain`, `text/csv`, `text/markdown`
-- その他: `application/octet-stream`
+- **画像**: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml`, `image/bmp`, `image/tiff`
+- **PDF**: `application/pdf`
+- **Office文書**:
+  - Word: `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (.docx), `application/msword` (.doc)
+  - Excel: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (.xlsx), `application/vnd.ms-excel` (.xls)
+  - PowerPoint: `application/vnd.openxmlformats-officedocument.presentationml.presentation` (.pptx), `application/vnd.ms-powerpoint` (.ppt)
+- **アーカイブ**: `application/zip`, `application/x-7z-compressed`, `application/x-tar`, `application/gzip`, `application/x-rar-compressed`
+- **テキスト**: `text/plain`, `text/csv`, `text/markdown`, `text/html`, `text/xml`
+- **プログラムコード**: `text/x-php`, `text/x-python`, `text/javascript`, `application/json`, `text/x-java`, `text/x-c`, `text/x-ruby`, `application/xml`
+- **動画**: `video/mp4`, `video/quicktime`, `video/x-msvideo`, `video/webm`, `video/x-matroska`
+- **音声**: `audio/mpeg`, `audio/wav`, `audio/ogg`, `audio/flac`
+- **CAD**: `application/x-autocad`, `image/vnd.dwg`, `image/vnd.dxf`
+- **その他**: `application/octet-stream`, `application/rtf`, `application/vnd.ms-outlook`
 
 **検証項目:**
-- アイコンの正確性（`fa-file-image`, `fa-file-pdf`, `fa-file-word`, etc.）
+- アイコンの正確性（`fa-file-image`, `fa-file-pdf`, `fa-file-word`, `fa-file-excel`, `fa-file-powerpoint`, `fa-file-zipper`, `fa-file-lines`, `fa-file-code`, `fa-file-video`, `fa-file-audio`, etc.）
 - サムネイル表示の可否（画像ファイルのみ）
 - ダウンロードリンクの正常動作
 - OCR後PDFダウンロードの表示条件（画像ファイルの場合のみ）
+- 各MIMEタイプに適した色分けが適用されていることを確認
 
 #### 3.3.3. 複合条件テスト
 
@@ -317,6 +669,43 @@ $attachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
 - **多言語対応:** `diffForHumans()` を活用し、「3時間前」のような相対表記を優先します。
 - **タイムゾーン設定:** `config/app.php` の `timezone` 設定がテナントごとに異なる場合は、テナントのタイムゾーンを適用します。
 
+### 4.7. MIMEタイプ判定の複雑化
+**懸念:** 新たに追加する多数のMIMEタイプ（プログラムコード、動画、音声、CAD等）の判定ロジックが複雑化し、保守性が低下する可能性があります。
+
+**対策:**
+- **ヘルパークラスの作成:** `app/Helpers/MimeTypeHelper.php` を新規作成し、MIMEタイプからアイコン・色・カテゴリを返すメソッドを実装します。
+  ```php
+  MimeTypeHelper::getIcon($mime); // 'fa-solid fa-file-pdf'
+  MimeTypeHelper::getColor($mime); // 'text-red-500'
+  MimeTypeHelper::getCategory($mime); // 'pdf', 'image', 'code', etc.
+  ```
+- **テストカバレッジ:** `tests/Unit/Helpers/MimeTypeHelperTest.php` で全MIMEタイプの判定ロジックをテストします。
+- **拡張性:** 新しいMIMEタイプを追加する際は、ヘルパークラスのみを修正すればよいようにします。
+
+### 4.8. `Number::fileSize()` のLaravelバージョン依存
+**懸念:** `Illuminate\Support\Number::fileSize()` はLaravel 10以降で利用可能であり、現在のLedgerLeapがLaravel 12を使用していることを確認する必要があります。
+
+**対策:**
+- **バージョン確認:** `composer.json` で `"laravel/framework": "^12.0"` であることを確認済み（Copilot指示書より）。
+- **フォールバック実装:** 念のため、`Number::fileSize()` が存在しない場合の代替実装を用意します。
+  ```php
+  use Illuminate\Support\Number;
+  
+  $formattedSize = method_exists(Number::class, 'fileSize')
+      ? Number::fileSize($fileSize, 2)
+      : $this->formatFileSizeManually($fileSize);
+  ```
+- **手動フォーマット関数:** KB/MB/GB/TB の変換ロジックを実装します（既存実装がある場合は流用）。
+
+### 4.9. ダウンロードリンクの後方互換性
+**懸念:** 既存のRPA/自動化ツールが、現在の `auxiliaryLinksHtml` のHTML構造に依存している可能性があり、新しいBlade実装でセレクタが変わると動作しなくなるリスクがあります。
+
+**対策:**
+- **CSSクラスの維持:** `direct-download-link` クラスはメインダウンロードリンクに必ず付与します。
+- **セレクタの安定性:** 補助ダウンロードリンクにも識別可能なクラス（`secondary-download-link`）を付与します。
+- **RPA互換性テスト:** 既存のRPAスクリプトがある場合は、Phase 3完了後に動作検証を実施します（タスク3.4）。
+- **ドキュメント化:** ダウンロードリンクのHTML構造とセレクタを `docs/function/Attachment.md` に明記します。
+
 ---
 
 ## 5. 品質保証チェックリスト
@@ -328,8 +717,15 @@ Phase 3完了時に以下の項目を全て満たすことを確認します。
 - [ ] `compact` モードでファイルが正しく表示される（既存）
 - [ ] `full` モードでファイルが正しく表示される（既存）
 - [ ] 全27ステータスが適切なアイコン・色・アニメーションで表示される
-- [ ] 全主要MIMEタイプが適切なアイコンで表示される
-- [ ] ダウンロードリンクが正常に動作する
+- [ ] **全対応MIMEタイプ（画像、PDF、Office、アーカイブ、テキスト、コード、動画、音声、CAD等）が適切なアイコンで表示される**
+- [ ] **ファイルサイズが `Number::fileSize()` で適切にフォーマットされる（例: "1.23 MB"）**
+- [ ] **タイムスタンプが `diffForHumans()` で相対表記される（例: "3時間前"）**
+- [ ] **処理時間（ミリ秒）が人間可読形式で表示される（例: "850ms", "3.2s"）**
+- [ ] **画像ファイルのメインダウンロードリンクが元画像を指す**
+- [ ] **画像ファイルの補助ダウンロードリンクがOCR後PDFを指す**
+- [ ] **最適化済みPDFのメインダウンロードリンクが最適化版を指す**
+- [ ] **最適化済みPDFの補助ダウンロードリンクが元PDFを指す**
+- [ ] ダウンロードリンクが正常に動作する（`direct-download-link` クラス）
 - [ ] サムネイル表示が画像ファイルで正常動作する
 - [ ] 「もっと見る」ボタンが正常動作する
 - [ ] エラー状態のファイルでエラーメッセージが表示される
@@ -337,34 +733,102 @@ Phase 3完了時に以下の項目を全て満たすことを確認します。
 ### 5.2. テスト確認
 - [ ] `ColumnHtmlServiceTest.php` の全テストが成功する
 - [ ] 新規追加の統合テストが成功する
-- [ ] RPA互換性テストが成功する
+- [ ] **`MimeTypeHelperTest.php` の全MIMEタイプ判定テストが成功する**
+- [ ] RPA互換性テストが成功する（`direct-download-link` セレクタ検証）
 - [ ] `./vendor/bin/sail pint` でコードスタイルエラーがない
 - [ ] N+1クエリが発生していない（Laravel Debugbarで確認）
+- [ ] **視覚的回帰テスト（手動またはツール）でUI崩れがない**
 
-### 5.3. ドキュメント確認
+### 5.3. パフォーマンス確認
+- [ ] **100件のレコード表示（一覧画面）で2秒以内に表示完了**
+- [ ] **Eager Loadingが適切に機能している（最小限のSELECT文）**
+- [ ] **ビューキャッシュが効率的に動作している**
+- [ ] **大容量ファイル（>100MB）の情報表示に遅延がない**
+
+### 5.4. アクセシビリティ確認
+- [ ] **スクリーンリーダーでファイル名とステータスが読み上げられる**
+- [ ] **キーボード操作（Tab, Enter, Space）で全操作が可能**
+- [ ] **ARIA属性（`role`, `aria-label`）が適切に設定されている**
+- [ ] **色覚多様性対応（アイコン形状でも識別可能）**
+
+### 5.5. ドキュメント確認
 - [ ] Phase 3 完了報告書を作成する
 - [ ] 移行した機能の一覧を文書化する
 - [ ] 後方互換性の維持事項を記録する
+- [ ] **`MimeTypeHelper` の使用方法をドキュメント化する**
+- [ ] **ダウンロードリンクのHTML構造とセレクタを `docs/function/Attachment.md` に明記する**
 - [ ] Phase 4への引き継ぎ事項を明確化する
 
 ---
 
 ## 6. 参考資料
 
-- **既存実装:**
-  - `app/Services/Ledger/ColumnHtmlService.php` (L260-438)
-  - `resources/views/components/ledger/attachment-list.blade.php`
-  - `app/Models/AttachedFile.php` (`getDisplayStatus()` メソッド)
-  - `app/Enums/AttachedFileStatus.php` (`icon()`, `colorClass()`, `tooltip()` メソッド)
+### 6.1. 既存実装
+- `app/Services/Ledger/ColumnHtmlService.php` (L260-438: getFileHtml メソッド)
+- `resources/views/components/ledger/attachment-list.blade.php` (既存Bladeコンポーネント)
+- `app/Models/AttachedFile.php` (`getDisplayStatus()`, `original_filename` 等のアクセサ)
+- `app/Enums/AttachedFileStatus.php` (`icon()`, `colorClass()`, `tooltip()`, `getDetailedTooltip()` メソッド)
 
-- **関連ドキュメント:**
-  - [Phase 2詳細計画: モデル拡張](/docs/work/ui-ux/attachment/2025-12-16_phase2_model_extension_plan.md)
-  - [FileInspector データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md)
-  - [添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md)
+### 6.2. 新規実装（Phase 3で追加）
+- `app/Helpers/MimeTypeHelper.php` (タスク3.0で新規作成)
+- `tests/Unit/Helpers/MimeTypeHelperTest.php` (タスク3.0で新規作成)
+- `x-ledger.attachment-list` の `icon-only` モード（タスク3.1）
+- ダウンロードリンクのデータ構造変更（タスク3.2）
 
-- **テスト参考:**
-  - `tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php`
-  - `tests/Unit/Models/AttachedFileTest.php` (`getDisplayStatus()` のテスト)
+### 6.3. 関連ドキュメント
+- [Phase 2詳細計画: モデル拡張](/docs/work/ui-ux/attachment/2025-12-16_phase2_model_extension_plan.md)
+- [FileInspector データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md)
+- [添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md)
+- [機能仕様書: 添付ファイル](/docs/function/Attachment.md) (Phase 3完了後に更新)
 
-- **Copilot指示書:**
-  - `.github/copilot-instructions.md` (セクション「重要な実装教訓」)
+### 6.4. テスト参考
+- `tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php`
+- `tests/Unit/Models/AttachedFileTest.php` (`getDisplayStatus()` のテスト)
+- `tests/Feature/Livewire/Ledger/ShowTest.php` (添付ファイル表示の統合テスト)
+
+### 6.5. Copilot指示書
+- `.github/copilot-instructions.md` (セクション「重要な実装教訓」「VLM/OCR/Tika処理フロー」)
+
+### 6.6. 外部ライブラリとリソース
+- **Font Awesome 6**: アイコンライブラリ（https://fontawesome.com/icons）
+  - ファイルタイプアイコン一覧: https://fontawesome.com/search?q=file&o=r
+- **Tailwind CSS**: カラークラス（https://tailwindcss.com/docs/customizing-colors）
+  - 色覚多様性対応: https://tailwindcss.com/docs/customizing-colors#color-palette
+- **Laravel Number**: ファイルサイズフォーマット（https://laravel.com/docs/12.x/helpers#method-number-file-size）
+- **Carbon**: 日時処理（https://carbon.nesbot.com/docs/）
+  - `diffForHumans()`: https://carbon.nesbot.com/docs/#api-humandiff
+
+---
+
+## 7. Phase 4への引き継ぎ事項
+
+Phase 3完了後、以下の項目をPhase 4（ドロワー実装）に引き継ぎます。
+
+### 7.1. 実装済み機能
+- `x-ledger.attachment-list` コンポーネントの3モード（`full`, `compact`, `icon-only`）
+- `MimeTypeHelper` による包括的なMIMEタイプ対応
+- `Number::fileSize()` による人間可読なファイルサイズ表示
+- Carbon による相対時刻表示（`diffForHumans()`）
+- ダウンロードリンクの整理（メイン/補助リンク）
+
+### 7.2. 未実装機能（Phase 4で対応）
+- FileInspector ドロワーの実装
+- タブ切り替え（Content, Details, History, Permissions, Actions）
+- VLMテキストプレビューのドロワー統合
+- 再処理（リトライ）UIのドロワー統合
+- ファイル削除UIのドロワー統合
+
+### 7.3. 技術的課題
+- **パフォーマンス最適化**: 一覧画面での表示速度が目標（2秒以内）を達成しているか検証
+- **N+1クエリ**: Eager Loading が適切に機能しているか継続的に監視
+- **視覚的回帰**: UI変更による既存機能への影響を最小化
+
+### 7.4. ドキュメント更新
+- `docs/function/Attachment.md` の更新（ダウンロードリンクのHTML構造）
+- `MimeTypeHelper` の使用方法ドキュメント化
+- Phase 3完了報告書の作成
+
+---
+
+**Phase 3 詳細計画 - 終了**
+
