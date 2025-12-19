@@ -184,7 +184,7 @@
                         x-on:click="handleFileClick({{ $fileId }})"
                         aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
                         {{-- ステータスインジケータ --}}
-                        <div class="relative flex-shrink-0">
+                        <div class="relative shrink-0">
                             @if ($isProcessing)
                                 <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10">
                                     <span
@@ -285,7 +285,7 @@
                     </figure>
 
                     {{-- Footer --}}
-                    <div class="px-3 py-2 bg-base-100 flex-grow relative">
+                    <div class="px-3 py-2 bg-base-100 grow relative">
                         <div class="flex justify-between items-start gap-2">
                             <div class="min-w-0 flex-1">
                                 <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1"
@@ -352,7 +352,7 @@
                 {{-- Icon Only モードの「+N」 --}}
                 <button type="button" x-on:click="toggleShowAll()"
                     class="badge badge-ghost badge-md cursor-pointer hover:bg-base-300 font-bold"
-                    :class="{ '!badge-primary !text-primary-content': showAll }" role="button"
+                    :class="{ '!badge-primary text-primary-content!': showAll }" role="button"
                     aria-label="{{ __('ledger.show_more') }}">
                     <span x-show="!showAll">+{{ $hiddenCount }}</span>
                     <i x-show="showAll" class="fa-solid fa-chevron-left text-[10px]"></i>

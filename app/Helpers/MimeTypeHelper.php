@@ -43,7 +43,9 @@ class MimeTypeHelper
             // Text
             Str::startsWith($mime, 'text/') => 'fa-solid fa-file-lines',
             // CAD
-            Str::contains($mime, 'autocad') || Str::contains($mime, 'dwg') || Str::contains($mime, 'dxf') => 'fa-solid fa-file-image',
+            Str::contains($mime, 'autocad') ||
+            Str::contains($mime, 'dwg') ||
+            Str::contains($mime, 'dxf') => 'fa-solid fa-file-image',
             // Default
             default => 'fa-solid fa-file',
         };
@@ -86,7 +88,9 @@ class MimeTypeHelper
             // Text
             Str::startsWith($mime, 'text/') => 'text-gray-600',
             // CAD
-            Str::contains($mime, 'autocad') || Str::contains($mime, 'dwg') || Str::contains($mime, 'dxf') => 'text-teal-600',
+            Str::contains($mime, 'autocad') ||
+            Str::contains($mime, 'dwg') ||
+            Str::contains($mime, 'dxf') => 'text-teal-600',
             // Default
             default => 'text-gray-400',
         };

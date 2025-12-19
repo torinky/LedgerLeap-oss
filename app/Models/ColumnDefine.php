@@ -30,6 +30,14 @@ class ColumnDefine
 
     public ?int $sort_index;    // ソート順位
 
+    public $hint;               // ヒント（動的プロパティを明示的に宣言）
+
+    public $file;               // ファイル（動的プロパティを明示的に宣言）
+
+    public $display_level;      // 表示レベル（動的プロパティを明示的に宣言）
+
+    public $group;              // グループ（動的プロパティを明示的に宣言）
+
     /**
      * コンストラクタ
      *
