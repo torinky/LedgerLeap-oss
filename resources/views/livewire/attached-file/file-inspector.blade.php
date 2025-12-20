@@ -81,11 +81,19 @@
                                         <i class="fa-solid fa-file-lines mr-2 text-primary"></i>
                                         {{ \Illuminate\Support\Str::limit($file?->original_filename ?? ($file?->filename ?? __('ledger.file_inspector.title')), 30) }}
                                     </h2>
-                                    @if ($file && ($file->mock_ledger_title ?? ($file->ledger ?? null)))
+                                    @php
+                                        $mockLedgerTitle = !empty($mockData)
+                                            ? $mockData['mock_ledger_title'] ?? null
+                                            : null;
+                                        $mockFolderPath = !empty($mockData)
+                                            ? $mockData['mock_folder_path'] ?? null
+                                            : null;
+                                    @endphp
+                                    @if ($file && ($mockLedgerTitle || ($file->ledger ?? null)))
                                         <div class="text-xs text-base-content/60 flex items-center gap-2">
                                             <i class="fa-solid fa-folder text-warning text-[10px]"></i>
                                             <span
-                                                class="truncate">{{ \Illuminate\Support\Str::limit($file->mock_folder_path ?? ($file->ledger?->folder?->title ?? ''), 40) }}</span>
+                                                class="truncate">{{ \Illuminate\Support\Str::limit($mockFolderPath ?? ($file->ledger?->folder?->title ?? ''), 40) }}</span>
                                         </div>
                                     @endif
                                 </div>
@@ -197,24 +205,77 @@
                                     {{-- Content Tab --}}
                                     <div class="p-4 space-y-4">
                                         @php
-                                            $hasPreviewText =
-                                                $file &&
-                                                ((method_exists($file, 'hasPreviewableText') &&
-                                                    $file->hasPreviewableText()) ||
-                                                    !empty($file->mock_preview_text));
-                                            $previewText =
-                                                $file->mock_preview_text ?? ($file->previewable_text ?? null);
-                                            $confidence = $file->mock_confidence ?? null;
-                                            $source = $file->mock_source ?? null;
-                                            $isProcessing =
-                                                $file &&
-                                                ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
-                                            $isError = $file && $file->mock_source === null;
+                                            $previewText = $this->getPreviewText(true);
+                                            $previewTextRaw = $this->getPreviewText(false);
+                                            $hasPreviewText = $file && !empty($previewTextRaw);
+                                            $confidence =
+                                                (!empty($mockData) ? $mockData['mock_confidence'] ?? null : null) ??
+                                                ($file->vlm_confidence ?? null);
+                                            $source = $activeSource;
+                                            $activeStatus = $this->getSourceStatus($source);
+                                            $isProcessing = $activeStatus === 'processing';
+                                            $isError =
+                                                $activeStatus === 'error' ||
+                                                ($file &&
+                                                    empty($mockData) &&
+                                                    !$file->finalized_source &&
+                                                    $activeStatus === 'missing' &&
+                                                    $source === 'vlm');
+                                            // 補足: 初期表示でソースが全くない場合（ID 7など）も考慮
+
+                                            $limit = 10000;
+                                            $canExpand = mb_strlen($previewTextRaw) > $limit;
                                         @endphp
+
+                                        {{-- Search & Source Selector (Always visible if loaded) --}}
+                                        <div
+                                            class="flex flex-col sm:flex-row gap-2 mb-4 bg-base-200 p-2 rounded-lg border border-base-300">
+                                            <div class="flex-1">
+                                                <div class="relative">
+                                                    <i
+                                                        class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40"></i>
+                                                    <input type="text" wire:model.live="searchKeyword"
+                                                        placeholder="{{ __('ledger.file_inspector.actions.search_placeholder') }}"
+                                                        class="input input-bordered input-sm w-full pl-9">
+                                                </div>
+                                            </div>
+                                            <div
+                                                class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0">
+                                                @foreach (['vlm', 'ocr', 'tika'] as $src)
+                                                    @php
+                                                        $status = $this->getSourceStatus($src);
+                                                        $isActive = $activeSource === $src;
+                                                        $isDisabled = $status === 'missing' || $status === 'error';
+                                                        $isProcessingNow = $status === 'processing';
+
+                                                        $tooltip = match ($status) {
+                                                            'processing' => __(
+                                                                'ledger.file_inspector.status.processing',
+                                                            ),
+                                                            'missing' => __('ledger.file_inspector.status.no_text'),
+                                                            'error' => __('ledger.file_inspector.status.error'),
+                                                            default => '',
+                                                        };
+                                                    @endphp
+                                                    <div class="{{ $tooltip ? 'tooltip tooltip-bottom' : '' }}"
+                                                        data-tip="{{ $tooltip }}">
+                                                        <button
+                                                            wire:click="$set('activeSource', '{{ $src }}')"
+                                                            @if ($isDisabled || $isProcessingNow) disabled @endif
+                                                            class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1">
+                                                            @if ($isProcessingNow)
+                                                                <i class="fa-solid fa-spinner fa-spin text-[10px]"></i>
+                                                            @endif
+                                                            {{ __('ledger.file_inspector.source.' . $src) }}
+                                                        </button>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
 
                                         @if ($isProcessing)
                                             <div class="alert alert-warning shadow-lg">
-                                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                                <i class="fa-solid fa-spinner fa-spin text-xl"></i>
                                                 <div>
                                                     <div class="font-semibold text-sm">
                                                         {{ __('ledger.file_inspector.status.processing') }}</div>
@@ -227,7 +288,7 @@
                                             </div>
                                         @elseif($isError)
                                             <div class="alert alert-error shadow-lg">
-                                                <i class="fa-solid fa-exclamation-triangle"></i>
+                                                <i class="fa-solid fa-exclamation-triangle text-xl"></i>
                                                 <div>
                                                     <div class="font-semibold text-sm">
                                                         {{ __('ledger.file_inspector.status.error') }}</div>
@@ -236,41 +297,31 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        @elseif($hasPreviewText)
-                                            {{-- OCR処理後のファイルダウンロードUI --}}
-                                            @php
-                                                $isImageFile = str_starts_with(
-                                                    $file?->original_mime_type ?? '',
-                                                    'image/',
-                                                );
-                                                $isPdfFile =
-                                                    ($file?->original_mime_type ?? ($file?->mime ?? '')) ===
-                                                    'application/pdf';
-                                                $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
+                                        @else
+                                            @if ($hasPreviewText)
+                                                {{-- OCR処理後のファイルダウンロードUI --}}
+                                                @php
+                                                    $isImageFile = str_starts_with(
+                                                        $file?->original_mime_type ?? '',
+                                                        'image/',
+                                                    );
+                                                    $isPdfFile =
+                                                        ($file?->original_mime_type ?? ($file?->mime ?? '')) ===
+                                                        'application/pdf';
+                                                    $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
 
-                                                // デバッグ情報をログに出力
-                                                \Log::info('OCR Debug', [
-                                                    'file_id' => $file?->id,
-                                                    'original_mime_type' => $file?->original_mime_type,
-                                                    'mime' => $file?->mime,
-                                                    'isImageFile' => $isImageFile,
-                                                    'isPdfFile' => $isPdfFile,
-                                                    'ocr_processed_at' => $file?->ocr_processed_at,
-                                                    'hasOcrProcessed' => $hasOcrProcessed,
-                                                ]);
-
-                                                $ocrPdfUrl = null;
-                                                if ($hasOcrProcessed) {
-                                                    if ($isImageFile) {
-                                                        $ocrPdfUrl = '#ocr-pdf-' . ($file->id ?? 0);
-                                                    } elseif ($isPdfFile) {
-                                                        $ocrPdfUrl = '#optimized-pdf-' . ($file->id ?? 0);
+                                                    $ocrPdfUrl = null;
+                                                    if ($hasOcrProcessed) {
+                                                        if ($isImageFile) {
+                                                            $ocrPdfUrl = '#ocr-pdf-' . ($file->id ?? 0);
+                                                        } elseif ($isPdfFile) {
+                                                            $ocrPdfUrl = '#optimized-pdf-' . ($file->id ?? 0);
+                                                        }
                                                     }
-                                                }
-                                            @endphp
+                                                @endphp
 
-                                            {{-- デバッグ用: 変数の内容を表示 --}}
-                                            {{--
+                                                {{-- デバッグ用: 変数の内容を表示 --}}
+                                                {{--
                                     @if (config('app.debug'))
                                         <div class="alert alert-warning text-xs">
                                             <div class="font-mono">
@@ -287,109 +338,159 @@
                                     @endif
 --}}
 
-                                            @if ($hasOcrProcessed && $ocrPdfUrl)
-                                                <div class="alert alert-info shadow-lg">
-                                                    <i class="fa-solid fa-file-pdf text-2xl"></i>
-                                                    <div class="flex-1">
-                                                        <h3 class="font-semibold text-sm">
-                                                            @if ($isImageFile)
-                                                                {{ __('ledger.file_inspector.ocr.image_to_pdf_title') }}
-                                                            @else
-                                                                {{ __('ledger.file_inspector.ocr.optimized_pdf_title') }}
-                                                            @endif
-                                                        </h3>
-                                                        <div class="text-xs text-base-content/70 mt-1">
-                                                            @if ($isImageFile)
-                                                                {{ __('ledger.file_inspector.ocr.image_to_pdf_desc') }}
-                                                            @else
-                                                                {{ __('ledger.file_inspector.ocr.optimized_pdf_desc') }}
-                                                            @endif
+
+                                                @if ($hasOcrProcessed && $ocrPdfUrl)
+                                                    <div class="alert alert-info shadow-sm py-2 px-4 mb-4">
+                                                        <i class="fa-solid fa-file-pdf text-xl"></i>
+                                                        <div class="flex-1">
+                                                            <h3 class="font-semibold text-xs">
+                                                                @if ($isImageFile)
+                                                                    {{ __('ledger.file_inspector.ocr.image_to_pdf_title') }}
+                                                                @else
+                                                                    {{ __('ledger.file_inspector.ocr.optimized_pdf_title') }}
+                                                                @endif
+                                                            </h3>
+                                                        </div>
+                                                        <a href="{{ $ocrPdfUrl }}"
+                                                            class="btn btn-xs btn-primary gap-1" download>
+                                                            <i class="fa-solid fa-download"></i>
+                                                            <span>{{ __('ledger.file_inspector.actions.download') }}</span>
+                                                        </a>
+                                                    </div>
+                                                @endif
+
+                                                {{-- Source Selector --}}
+                                                {{-- The old source selector was here and has been replaced by the new combined search/source selector above --}}
+
+                                                @if ($confidence !== null && $confidence > 0)
+                                                    <div class="stats shadow w-full">
+                                                        <div class="stat p-3">
+                                                            <div class="stat-title text-xs">
+                                                                {{ __('ledger.file_inspector.info.last_extraction') }}
+                                                            </div>
+                                                            <div class="stat-value text-lg flex items-center gap-2">
+                                                                @if ($source === 'vlm')
+                                                                    <span
+                                                                        class="badge badge-success">{{ __('ledger.file_inspector.source.vlm') }}</span>
+                                                                @elseif($source === 'ocr')
+                                                                    <span
+                                                                        class="badge badge-info">{{ __('ledger.file_inspector.source.ocr') }}</span>
+                                                                @else
+                                                                    <span
+                                                                        class="badge badge-primary">{{ __('ledger.file_inspector.source.tika') }}</span>
+                                                                @endif
+                                                                <span
+                                                                    class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
+                                                            </div>
+                                                            <div class="stat-desc flex items-center gap-1">
+                                                                @if ($confidence >= 0.9)
+                                                                    <i
+                                                                        class="fa-solid fa-check-circle text-success"></i>
+                                                                    <span
+                                                                        class="text-success">{{ __('ledger.attached_file.badge.vlm_high_quality') }}</span>
+                                                                @elseif($confidence >= 0.7)
+                                                                    <i class="fa-solid fa-shield-check text-info"></i>
+                                                                    <span
+                                                                        class="text-info">{{ __('ledger.attached_file.badge.vlm_medium_quality') }}</span>
+                                                                @else
+                                                                    <i
+                                                                        class="fa-solid fa-exclamation-triangle text-warning"></i>
+                                                                    <span
+                                                                        class="text-warning">{{ __('ledger.attached_file.badge.vlm_low_quality') }}</span>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <a href="{{ $ocrPdfUrl }}"
-                                                        class="btn btn-sm btn-primary gap-2" download>
-                                                        <i class="fa-solid fa-download"></i>
-                                                        <span class="hidden sm:inline">
-                                                            @if ($isImageFile)
-                                                                {{ __('ledger.file_inspector.ocr.download_pdf') }}
-                                                            @else
-                                                                {{ __('ledger.file_inspector.ocr.download_optimized') }}
-                                                            @endif
-                                                        </span>
-                                                    </a>
-                                                </div>
-                                            @endif
+                                                @endif
 
-                                            @if ($confidence !== null && $confidence > 0)
-                                                <div class="stats shadow w-full">
-                                                    <div class="stat p-3">
-                                                        <div class="stat-title text-xs">
-                                                            {{ __('ledger.file_inspector.info.last_extraction') }}
+                                                <div class="form-control" x-data="{
+                                                    copyText() {
+                                                            const text = this.$refs.rawContent.value;
+                                                            navigator.clipboard.writeText(text).then(() => {
+                                                                $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
+                                                            });
+                                                        },
+                                                        downloadFile(type) {
+                                                            const text = this.$refs.rawContent.value;
+                                                            const blob = new Blob([text], { type: 'text/plain' });
+                                                            const url = window.URL.createObjectURL(blob);
+                                                            const a = document.createElement('a');
+                                                            a.href = url;
+                                                            a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'markdown' ? '.md' : '.txt');
+                                                            document.body.appendChild(a);
+                                                            a.click();
+                                                            window.URL.revokeObjectURL(url);
+                                                            document.body.removeChild(a);
+                                                        }
+                                                }">
+                                                    <label class="label">
+                                                        <span
+                                                            class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
+                                                    </label>
+
+                                                    {{-- Raw text for copy/download --}}
+                                                    <textarea x-ref="rawContent" class="hidden">{{ $previewTextRaw }}</textarea>
+
+                                                    <div x-ref="previewContent"
+                                                        class="bg-base-100 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative">
+                                                        @if ($activeSource === 'vlm')
+                                                            <div class="prose prose-sm max-w-none">
+                                                                {!! Str::markdown($previewText ?? '') !!}
+                                                            </div>
+                                                        @else
+                                                            <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content">{!! $previewText !!}</pre>
+                                                        @endif
+
+                                                        @if ($canExpand && !$isExpanded)
+                                                            <div
+                                                                class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-base-100 to-transparent flex items-end justify-center pb-4">
+                                                                <button wire:click="toggleExpand"
+                                                                    class="btn btn-sm btn-primary shadow-lg">
+                                                                    <i class="fa-solid fa-arrows-up-down"></i>
+                                                                    {{ __('ledger.file_inspector.actions.show_all') }}
+                                                                </button>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+
+                                                    @if ($isExpanded)
+                                                        <div class="flex justify-center mt-2">
+                                                            <button wire:click="toggleExpand"
+                                                                class="btn btn-xs btn-ghost gap-1">
+                                                                <i class="fa-solid fa-compress"></i>
+                                                                {{ __('ledger.file_inspector.actions.show_less') }}
+                                                            </button>
                                                         </div>
-                                                        <div class="stat-value text-lg flex items-center gap-2">
-                                                            @if ($source === 'VLM')
-                                                                <span class="badge badge-success">VLM</span>
-                                                            @elseif($source === 'OCR')
-                                                                <span class="badge badge-info">OCR</span>
-                                                            @else
-                                                                <span class="badge badge-primary">Tika</span>
-                                                            @endif
-                                                            <span
-                                                                class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
-                                                        </div>
-                                                        <div class="stat-desc flex items-center gap-1">
-                                                            @if ($confidence >= 0.9)
-                                                                <i class="fa-solid fa-check-circle text-success"></i>
-                                                                <span class="text-success">高信頼度</span>
-                                                            @elseif($confidence >= 0.7)
-                                                                <i class="fa-solid fa-shield-check text-info"></i>
-                                                                <span class="text-info">中信頼度</span>
-                                                            @else
-                                                                <i
-                                                                    class="fa-solid fa-exclamation-triangle text-warning"></i>
-                                                                <span class="text-warning">低信頼度</span>
-                                                            @endif
-                                                        </div>
+                                                    @endif
+
+                                                    <div class="flex flex-wrap gap-2 mt-4">
+                                                        <button @click="copyText()"
+                                                            class="btn btn-sm btn-outline gap-2">
+                                                            <i class="fa-solid fa-copy"></i>
+                                                            <span>{{ __('ledger.file_inspector.actions.copy_text') }}</span>
+                                                        </button>
+                                                        <button @click="downloadFile('text')"
+                                                            class="btn btn-sm btn-outline gap-2">
+                                                            <i class="fa-solid fa-download"></i>
+                                                            <span>{{ __('ledger.file_inspector.actions.download_text') }}</span>
+                                                        </button>
+                                                        @if ($activeSource === 'vlm')
+                                                            <button @click="downloadFile('markdown')"
+                                                                class="btn btn-sm btn-outline gap-2">
+                                                                <i class="fa-brands fa-markdown"></i>
+                                                                <span>Markdown</span>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="alert shadow-lg">
+                                                    <i class="fa-solid fa-info-circle"></i>
+                                                    <div class="text-sm">
+                                                        {{ __('ledger.file_inspector.status.no_text') }}
                                                     </div>
                                                 </div>
                                             @endif
-
-                                            <div class="form-control">
-                                                <label class="label">
-                                                    <span
-                                                        class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
-                                                </label>
-                                                <textarea id="preview-text-{{ $file?->id ?? 0 }}"
-                                                    class="textarea textarea-bordered w-full h-64 text-xs font-mono leading-relaxed" readonly>{{ str_replace('\n', "\n", $previewText) }}</textarea>
-                                            </div>
-
-                                            <div class="flex flex-col sm:flex-row gap-2">
-                                                <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                    x-data="{}"
-                                                    @click="navigator.clipboard.writeText(document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value).then(() => alert('{{ __('ledger.file_inspector.messages.text_copied') }}'))">
-                                                    <i class="fa-solid fa-copy"></i>
-                                                    <span
-                                                        class="hidden sm:inline">{{ __('ledger.file_inspector.actions.copy_text') }}</span>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                    x-data="{}"
-                                                    @click="navigator.clipboard.writeText('```\n' + document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value + '\n```').then(() => alert('{{ __('ledger.file_inspector.messages.markdown_copied') }}'))">
-                                                    <i class="fa-brands fa-markdown"></i>
-                                                    <span class="hidden sm:inline">Markdown</span>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                    x-data="{}"
-                                                    @click="navigator.clipboard.writeText(JSON.stringify({filename: '{{ $file?->original_filename ?? '' }}', content: document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value, source: '{{ $source }}', confidence: {{ $confidence ?? 0 }}}, null, 2)).then(() => alert('{{ __('ledger.file_inspector.messages.structured_copied') }}'))">
-                                                    <i class="fa-solid fa-code"></i>
-                                                    <span class="hidden sm:inline">JSON</span>
-                                                </button>
-                                            </div>
-                                        @else
-                                            <div class="alert shadow-lg">
-                                                <i class="fa-solid fa-info-circle"></i>
-                                                <div class="text-sm">{{ __('ledger.file_inspector.status.no_text') }}
-                                                </div>
-                                            </div>
                                         @endif
                                     </div>
 
@@ -523,10 +624,13 @@
                                                 {{ __('ledger.file_inspector.info.processing_status') }}
                                             </h3>
                                             @php
-                                                $isProcessing =
-                                                    $file &&
-                                                    ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
-                                                $isError = $file && $file->mock_source === null;
+                                                // ここの $activeStatus は activeSource（現在選択中）のもの
+                                                // 全体的な状態を表示したい場合は activeSource ではなく 'tika' や 'vlm' などを固定するか、
+                                                // 現在選択中のものの状態を表示する。ここでは「現在選択中の抽出ステータス」として整合性を取る。
+                                                $isProcessing = $activeStatus === 'processing';
+                                                $isError =
+                                                    $activeStatus === 'error' ||
+                                                    (empty($mockData) && $file && !$file->finalized_source);
                                             @endphp
                                             <div class="overflow-x-auto">
                                                 <table class="table table-xs">
@@ -555,15 +659,20 @@
                                                                 @endif
                                                             </td>
                                                         </tr>
-                                                        @if ($file && $file->mock_source)
+                                                        @php
+                                                            $currentMockSource = !empty($mockData)
+                                                                ? $mockData['mock_source'] ?? null
+                                                                : null;
+                                                        @endphp
+                                                        @if ($currentMockSource)
                                                             <tr>
                                                                 <th>{{ __('ledger.file_inspector.info.last_extraction') }}
                                                                 </th>
                                                                 <td>
-                                                                    @if ($file->mock_source === 'VLM')
+                                                                    @if (strtolower($currentMockSource) === 'vlm')
                                                                         <span
                                                                             class="badge badge-success badge-sm">VLM</span>
-                                                                    @elseif($file->mock_source === 'OCR')
+                                                                    @elseif(strtolower($currentMockSource) === 'ocr')
                                                                         <span
                                                                             class="badge badge-info badge-sm">OCR</span>
                                                                     @else

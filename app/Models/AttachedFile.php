@@ -350,23 +350,33 @@ class AttachedFile extends Model
 
         return match ($this->finalized_source) {
             'vlm' => $this->vlm_markdown,
-            'ocr', 'tika' => $this->getOcrTikaFormattedText(),
+            'ocr', 'tika' => $this->getOcrTikaFormattedText($this->finalized_source),
             default => null,
         };
     }
 
-    private function getOcrTikaFormattedText(): ?string
+    /**
+     * OCRまたはTikaの抽出テキストを取得
+     * 
+     * @param string|null $source 指定のソース ('ocr' または 'tika')。省略時は finalized_source を使用。
+     */
+    public function getOcrTikaFormattedText(?string $source = null): ?string
     {
         // content_attachedからテキスト取得（Eager Loading推奨）
         if (! $this->relationLoaded('ledger') || ! $this->ledger) {
             return null; // N+1防止のため、Eager Loading必須
         }
 
+        $source = $source ?? $this->finalized_source;
+        if (!in_array($source, ['ocr', 'tika'])) {
+            return null;
+        }
+
         $columnId = $this->column_id;
         $hashedbasename = $this->hashedbasename;
 
         // OCRの場合は .pdf キーもチェック
-        if ($this->finalized_source === 'ocr') {
+        if ($source === 'ocr') {
             $originalExt = pathinfo($hashedbasename, PATHINFO_EXTENSION);
             if ($originalExt !== 'pdf') {
                 // 画像ファイル（.jpg → .pdf）の場合
@@ -379,8 +389,6 @@ class AttachedFile extends Model
         }
 
         // 元のキーをチェック（Tika、またはPDFのOCR）
-        // AsColumnArrayJsonキャストのシリアライゼーションにより、
-        // data_get()が正しく動作しないため、直接配列アクセスを使用
         $text = $this->ledger->content_attached[$columnId][$hashedbasename]['meta']['content'] ?? null;
 
         return $text ? "```\n{$text}\n```" : null;

@@ -440,11 +440,15 @@
                     'copy_link' => 'リンクをコピー',
                     'copy_markdown' => 'Markdownをコピー',
                     'copy_structured' => '構造化データをコピー',
-                    'copy_text' => 'コピー',
+                    'copy_text' => 'テキストをコピー',
                     'delete' => '削除',
                     'download' => 'ダウンロード',
+                    'download_text' => 'テキストをダウンロード',
                     'open_new_tab' => '新しいタブで開く',
                     'reprocess' => '再処理',
+                    'search_placeholder' => 'テキスト内を検索...',
+                    'show_all' => '全文を表示',
+                    'show_less' => '一部を表示',
                     'zoom' => '拡大表示',
                 ],
             'close' => '閉じる',
@@ -513,6 +517,12 @@
                     'no_text' => 'テキスト解析結果がありません',
                     'processing' => '処理中',
                     'processing_message' => 'OCR処理を実行しています...',
+                ],
+            'source' =>
+                [
+                    'ocr' => '文字認識',
+                    'tika' => 'テキスト抽出',
+                    'vlm' => 'AI解析',
                 ],
             'tabs' =>
                 [
