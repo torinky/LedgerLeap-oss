@@ -116,6 +116,7 @@ class LedgerContentProcessor
 
                 $displayGroup['columns'][] = [
                     'id' => $columnDefine->id,
+                    'type' => $columnDefine->type,
                     'name' => $columnDefine->name,
                     'hint' => $columnDefine->hint,
                     'is_required' => $columnDefine->required,
