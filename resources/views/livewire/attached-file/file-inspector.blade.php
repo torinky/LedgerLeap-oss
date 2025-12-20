@@ -1,7 +1,5 @@
-<div
-        x-data="{ open: @entangle('open') }"
-        @keydown.escape.window="open = false; $wire.close()"
-        @keydown.tab.prevent="
+<div x-data="{ open: @entangle('open') }" @keydown.escape.window="open = false; $wire.close()"
+    @keydown.tab.prevent="
             if (open) {
                 let focusable = $el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex=\'-1\'])');
                 let first = focusable[0];
@@ -17,20 +15,16 @@
                 }
             }
         "
-        x-init="$watch('open', value => { if(value) $nextTick(() => $refs.closeButton.focus()) })"
-        @open-file-inspector.window="console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)"
->
+    x-init="$watch('open', value => { if (value) $nextTick(() => $refs.closeButton.focus()) })"
+    @open-file-inspector.window="console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)">
     {{-- DaisyUI Drawer --}}
-    <div class="drawer drawer-end z-50"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="drawer-title">
-        <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open"/>
+    <div class="drawer drawer-end z-50" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open" />
 
         {{-- Overlay --}}
         <div class="drawer-side">
             <label for="file-inspector-drawer" aria-label="close sidebar" class="drawer-overlay"
-                   @click="open = false; $wire.close()"></label>
+                @click="open = false; $wire.close()"></label>
 
             {{-- Drawer content --}}
             <div class="min-h-full w-full md:w-[28rem] lg:w-[32rem] bg-base-100 flex flex-col shadow-2xl">
@@ -40,21 +34,22 @@
                     <div class="flex-1">
                         <div class="flex flex-col gap-1">
                             <h2 id="drawer-title" class="text-base font-bold truncate line-clamp-1"
-                                title="{{ $file?->original_filename ?? $file?->filename ?? __('ledger.file_inspector.title') }}">
+                                title="{{ $file?->original_filename ?? ($file?->filename ?? __('ledger.file_inspector.title')) }}">
                                 <i class="fa-solid fa-file-lines mr-2 text-primary"></i>
-                                {{ \Illuminate\Support\Str::limit($file?->original_filename ?? $file?->filename ?? __('ledger.file_inspector.title'), 30) }}
+                                {{ \Illuminate\Support\Str::limit($file?->original_filename ?? ($file?->filename ?? __('ledger.file_inspector.title')), 30) }}
                             </h2>
-                            @if($file && ($file->mock_ledger_title ?? $file->ledger ?? null))
+                            @if ($file && ($file->mock_ledger_title ?? ($file->ledger ?? null)))
                                 <div class="text-xs text-base-content/60 flex items-center gap-2">
                                     <i class="fa-solid fa-folder text-warning text-[10px]"></i>
-                                    <span class="truncate">{{ \Illuminate\Support\Str::limit($file->mock_folder_path ?? $file->ledger?->folder?->title ?? '', 40) }}</span>
+                                    <span
+                                        class="truncate">{{ \Illuminate\Support\Str::limit($file->mock_folder_path ?? ($file->ledger?->folder?->title ?? ''), 40) }}</span>
                                 </div>
                             @endif
                         </div>
                     </div>
                     <div class="flex-none">
-                        <button x-ref="closeButton" class="btn btn-ghost btn-sm btn-circle" @click="open = false; $wire.close()"
-                                aria-label="{{ __('ledger.file_inspector.close') }}">
+                        <button x-ref="closeButton" class="btn btn-ghost btn-sm btn-circle"
+                            @click="open = false; $wire.close()" aria-label="{{ __('ledger.file_inspector.close') }}">
                             <i class="fa-solid fa-xmark text-lg"></i>
                         </button>
                     </div>
@@ -63,81 +58,84 @@
                 {{-- Quick actions bar --}}
                 <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none">
                     @php
-                        $downloadUrl = $file && $file->id >= 1 && $file->id <= 12
-                            ? '#download-' . $file->id
-                            : route('file.download', ['tenant' => tenant()?->id, 'attachedFile' => $file?->id ?? 0]);
+                        $downloadUrl =
+                            $file && $file->id >= 1 && $file->id <= 12
+                                ? '#download-' . $file->id
+                                : route('file.download', [
+                                    'tenant' => tenant()?->id,
+                                    'attachedFile' => $file?->id ?? 0,
+                                ]);
                     @endphp
-                    <a href="{{ $downloadUrl }}"
-                       class="btn btn-primary btn-sm flex-1 gap-2"
-                       download>
+                    <a href="{{ $downloadUrl }}" class="btn btn-primary btn-sm flex-1 gap-2" download>
                         <i class="fa-solid fa-download"></i>
                         <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.download') }}</span>
                     </a>
                     <button class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                            data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}"
-                            x-data="{}"
-                            @click="navigator.clipboard.writeText('{{ $downloadUrl }}').then(() => alert('{{ __('ledger.file_inspector.messages.link_copied') }}'))">
+                        data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}" x-data="{}"
+                        @click="navigator.clipboard.writeText('{{ $downloadUrl }}').then(() => alert('{{ __('ledger.file_inspector.messages.link_copied') }}'))">
                         <i class="fa-solid fa-link"></i>
                     </button>
-                    <a href="{{ $downloadUrl }}"
-                       class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                       data-tip="{{ __('ledger.file_inspector.actions.open_new_tab') }}"
-                       target="_blank">
+                    <a href="{{ $downloadUrl }}" class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
+                        data-tip="{{ __('ledger.file_inspector.actions.open_new_tab') }}" target="_blank">
                         <i class="fa-solid fa-external-link-alt"></i>
                     </a>
                 </div>
 
                 {{-- Preview Area --}}
                 @php
-                    $mime = $file?->original_mime_type ?? $file?->mime ?? '';
+                    $mime = $file?->original_mime_type ?? ($file?->mime ?? '');
                     $isImage = str_starts_with($mime, 'image/');
                     $isPdf = $mime === 'application/pdf';
                     $showPreview = $isImage || $isPdf;
                     $previewUrl = null;
                     if ($file && $file->id >= 1 && $file->id <= 12) {
                         if ($isImage) {
-                            $previewUrl = 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' . urlencode($file->original_filename ?? 'Image');
+                            $previewUrl =
+                                'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' .
+                                urlencode($file->original_filename ?? 'Image');
                         } elseif ($isPdf) {
                             $previewUrl = '#pdf-preview';
                         }
                     }
                 @endphp
 
-                @if($showPreview)
+                @if ($showPreview)
                     <div class="bg-base-200/50 border-b border-base-300 flex-none">
-                        @if($isImage)
+                        @if ($isImage)
                             <div class="relative aspect-video bg-base-300">
-                                <img src="{{ $previewUrl }}"
-                                     alt="{{ $file?->original_filename ?? 'Preview' }}"
-                                     class="w-full h-full object-contain"
-                                     loading="lazy">
+                                <img src="{{ $previewUrl }}" alt="{{ $file?->original_filename ?? 'Preview' }}"
+                                    class="w-full h-full object-contain" loading="lazy">
                                 <div class="absolute top-2 right-2">
-                                    <button class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
-                                            data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
-                                            @click="window.open('{{ $previewUrl }}', '_blank')">
+                                    <button
+                                        class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
+                                        data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
+                                        @click="window.open('{{ $previewUrl }}', '_blank')">
                                         <i class="fa-solid fa-magnifying-glass-plus"></i>
                                     </button>
                                 </div>
                             </div>
                         @elseif($isPdf)
                             <div class="relative aspect-video bg-base-300 flex items-center justify-center">
-                                @if($file && $file->id >= 1 && $file->id <= 12)
+                                @if ($file && $file->id >= 1 && $file->id <= 12)
                                     <div class="text-center p-6">
-                                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-error/10 mb-4">
+                                        <div
+                                            class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-error/10 mb-4">
                                             <i class="fa-solid fa-file-pdf text-4xl text-error"></i>
                                         </div>
-                                        <p class="text-sm font-medium text-base-content mb-1">{{ __('ledger.file_inspector.preview.pdf_preview') }}</p>
-                                        <p class="text-xs text-base-content/60 mb-4">{{ number_format(($file->size ?? 0)/1024, 1) }}
+                                        <p class="text-sm font-medium text-base-content mb-1">
+                                            {{ __('ledger.file_inspector.preview.pdf_preview') }}</p>
+                                        <p class="text-xs text-base-content/60 mb-4">
+                                            {{ number_format(($file->size ?? 0) / 1024, 1) }}
                                             KB</p>
                                         <button class="btn btn-sm btn-outline gap-2"
-                                                @click="window.open('{{ $previewUrl }}', '_blank')">
+                                            @click="window.open('{{ $previewUrl }}', '_blank')">
                                             <i class="fa-solid fa-external-link-alt"></i>
                                             {{ __('ledger.file_inspector.preview.open_new_tab') }}
                                         </button>
                                     </div>
                                 @else
                                     <iframe src="{{ $previewUrl }}" class="w-full h-full border-0"
-                                            title="PDF Preview"></iframe>
+                                        title="PDF Preview"></iframe>
                                 @endif
                             </div>
                         @endif
@@ -147,46 +145,52 @@
                 {{-- Tabs & Content --}}
                 <div class="flex-1 overflow-hidden flex flex-col">
                     <x-mary-tabs wire:model="selectedTab"
-                                 class="tabs tabs-boxed bg-base-200 m-0 p-1 rounded-none border-b border-base-300 flex-none">
+                        class="tabs tabs-boxed bg-base-200 m-0 p-1 rounded-none border-b border-base-300 flex-none">
                         <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
-                                    icon="o-document-text" class="tab-lg gap-2">
+                            icon="o-document-text" class="tab-lg gap-2">
                             {{-- Content Tab --}}
                             <div class="p-4 space-y-4">
                                 @php
-                                    $hasPreviewText = $file && (
-                                        (method_exists($file, 'hasPreviewableText') && $file->hasPreviewableText()) ||
-                                        (!empty($file->mock_preview_text))
-                                    );
+                                    $hasPreviewText =
+                                        $file &&
+                                        ((method_exists($file, 'hasPreviewableText') && $file->hasPreviewableText()) ||
+                                            !empty($file->mock_preview_text));
                                     $previewText = $file->mock_preview_text ?? ($file->previewable_text ?? null);
                                     $confidence = $file->mock_confidence ?? null;
                                     $source = $file->mock_source ?? null;
-                                    $isProcessing = $file && ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
-                                    $isError = $file && ($file->mock_source === null);
+                                    $isProcessing =
+                                        $file && ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
+                                    $isError = $file && $file->mock_source === null;
                                 @endphp
 
-                                @if($isProcessing)
+                                @if ($isProcessing)
                                     <div class="alert alert-warning shadow-lg">
                                         <i class="fa-solid fa-spinner fa-spin"></i>
                                         <div>
-                                            <div class="font-semibold text-sm">{{ __('ledger.file_inspector.status.processing') }}</div>
-                                            <div class="text-xs">{{ __('ledger.file_inspector.status.processing_message') }}</div>
+                                            <div class="font-semibold text-sm">
+                                                {{ __('ledger.file_inspector.status.processing') }}</div>
+                                            <div class="text-xs">
+                                                {{ __('ledger.file_inspector.status.processing_message') }}</div>
                                             <progress class="progress progress-warning w-full mt-2" value="65"
-                                                      max="100"></progress>
+                                                max="100"></progress>
                                         </div>
                                     </div>
                                 @elseif($isError)
                                     <div class="alert alert-error shadow-lg">
                                         <i class="fa-solid fa-exclamation-triangle"></i>
                                         <div>
-                                            <div class="font-semibold text-sm">{{ __('ledger.file_inspector.status.error') }}</div>
-                                            <div class="text-xs">{{ __('ledger.file_inspector.status.error_message') }}</div>
+                                            <div class="font-semibold text-sm">
+                                                {{ __('ledger.file_inspector.status.error') }}</div>
+                                            <div class="text-xs">{{ __('ledger.file_inspector.status.error_message') }}
+                                            </div>
                                         </div>
                                     </div>
                                 @elseif($hasPreviewText)
                                     {{-- OCR処理後のファイルダウンロードUI --}}
                                     @php
                                         $isImageFile = str_starts_with($file?->original_mime_type ?? '', 'image/');
-                                        $isPdfFile = ($file?->original_mime_type ?? $file?->mime ?? '') === 'application/pdf';
+                                        $isPdfFile =
+                                            ($file?->original_mime_type ?? ($file?->mime ?? '')) === 'application/pdf';
                                         $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
 
                                         // デバッグ情報をログに出力
@@ -211,8 +215,8 @@
                                     @endphp
 
                                     {{-- デバッグ用: 変数の内容を表示 --}}
-{{--
-                                    @if(config('app.debug'))
+                                    {{--
+                                    @if (config('app.debug'))
                                         <div class="alert alert-warning text-xs">
                                             <div class="font-mono">
                                                 <strong>デバッグ情報:</strong><br>
@@ -228,31 +232,30 @@
                                     @endif
 --}}
 
-                                    @if($hasOcrProcessed && $ocrPdfUrl)
+                                    @if ($hasOcrProcessed && $ocrPdfUrl)
                                         <div class="alert alert-info shadow-lg">
                                             <i class="fa-solid fa-file-pdf text-2xl"></i>
                                             <div class="flex-1">
                                                 <h3 class="font-semibold text-sm">
-                                                    @if($isImageFile)
+                                                    @if ($isImageFile)
                                                         {{ __('ledger.file_inspector.ocr.image_to_pdf_title') }}
                                                     @else
                                                         {{ __('ledger.file_inspector.ocr.optimized_pdf_title') }}
                                                     @endif
                                                 </h3>
                                                 <div class="text-xs text-base-content/70 mt-1">
-                                                    @if($isImageFile)
+                                                    @if ($isImageFile)
                                                         {{ __('ledger.file_inspector.ocr.image_to_pdf_desc') }}
                                                     @else
                                                         {{ __('ledger.file_inspector.ocr.optimized_pdf_desc') }}
                                                     @endif
                                                 </div>
                                             </div>
-                                            <a href="{{ $ocrPdfUrl }}"
-                                               class="btn btn-sm btn-primary gap-2"
-                                               download>
+                                            <a href="{{ $ocrPdfUrl }}" class="btn btn-sm btn-primary gap-2"
+                                                download>
                                                 <i class="fa-solid fa-download"></i>
                                                 <span class="hidden sm:inline">
-                                                    @if($isImageFile)
+                                                    @if ($isImageFile)
                                                         {{ __('ledger.file_inspector.ocr.download_pdf') }}
                                                     @else
                                                         {{ __('ledger.file_inspector.ocr.download_optimized') }}
@@ -262,22 +265,24 @@
                                         </div>
                                     @endif
 
-                                    @if($confidence !== null && $confidence > 0)
+                                    @if ($confidence !== null && $confidence > 0)
                                         <div class="stats shadow w-full">
                                             <div class="stat p-3">
-                                                <div class="stat-title text-xs">{{ __('ledger.file_inspector.info.last_extraction') }}</div>
+                                                <div class="stat-title text-xs">
+                                                    {{ __('ledger.file_inspector.info.last_extraction') }}</div>
                                                 <div class="stat-value text-lg flex items-center gap-2">
-                                                    @if($source === 'VLM')
+                                                    @if ($source === 'VLM')
                                                         <span class="badge badge-success">VLM</span>
                                                     @elseif($source === 'OCR')
                                                         <span class="badge badge-info">OCR</span>
                                                     @else
                                                         <span class="badge badge-primary">Tika</span>
                                                     @endif
-                                                    <span class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
+                                                    <span
+                                                        class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
                                                 </div>
                                                 <div class="stat-desc flex items-center gap-1">
-                                                    @if($confidence >= 0.9)
+                                                    @if ($confidence >= 0.9)
                                                         <i class="fa-solid fa-check-circle text-success"></i>
                                                         <span class="text-success">高信頼度</span>
                                                     @elseif($confidence >= 0.7)
@@ -294,29 +299,27 @@
 
                                     <div class="form-control">
                                         <label class="label">
-                                            <span class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
+                                            <span
+                                                class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
                                         </label>
                                         <textarea id="preview-text-{{ $file?->id ?? 0 }}"
-                                                  class="textarea textarea-bordered w-full h-64 text-xs font-mono leading-relaxed"
-                                                  readonly>{{ $previewText }}</textarea>
+                                            class="textarea textarea-bordered w-full h-64 text-xs font-mono leading-relaxed" readonly>{{ $previewText }}</textarea>
                                     </div>
 
                                     <div class="flex flex-col sm:flex-row gap-2">
-                                        <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                x-data="{}"
-                                                @click="navigator.clipboard.writeText(document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value).then(() => alert('{{ __('ledger.file_inspector.messages.text_copied') }}'))">
+                                        <button class="btn btn-sm btn-outline flex-1 gap-2" x-data="{}"
+                                            @click="navigator.clipboard.writeText(document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value).then(() => alert('{{ __('ledger.file_inspector.messages.text_copied') }}'))">
                                             <i class="fa-solid fa-copy"></i>
-                                            <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.copy_text') }}</span>
+                                            <span
+                                                class="hidden sm:inline">{{ __('ledger.file_inspector.actions.copy_text') }}</span>
                                         </button>
-                                        <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                x-data="{}"
-                                                @click="navigator.clipboard.writeText('```\n' + document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value + '\n```').then(() => alert('{{ __('ledger.file_inspector.messages.markdown_copied') }}'))">
+                                        <button class="btn btn-sm btn-outline flex-1 gap-2" x-data="{}"
+                                            @click="navigator.clipboard.writeText('```\n' + document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value + '\n```').then(() => alert('{{ __('ledger.file_inspector.messages.markdown_copied') }}'))">
                                             <i class="fa-brands fa-markdown"></i>
                                             <span class="hidden sm:inline">Markdown</span>
                                         </button>
-                                        <button class="btn btn-sm btn-outline flex-1 gap-2"
-                                                x-data="{}"
-                                                @click="navigator.clipboard.writeText(JSON.stringify({filename: '{{ $file?->original_filename ?? '' }}', content: document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value, source: '{{ $source }}', confidence: {{ $confidence ?? 0 }}}, null, 2)).then(() => alert('{{ __('ledger.file_inspector.messages.structured_copied') }}'))">
+                                        <button class="btn btn-sm btn-outline flex-1 gap-2" x-data="{}"
+                                            @click="navigator.clipboard.writeText(JSON.stringify({filename: '{{ $file?->original_filename ?? '' }}', content: document.getElementById('preview-text-{{ $file?->id ?? 0 }}').value, source: '{{ $source }}', confidence: {{ $confidence ?? 0 }}}, null, 2)).then(() => alert('{{ __('ledger.file_inspector.messages.structured_copied') }}'))">
                                             <i class="fa-solid fa-code"></i>
                                             <span class="hidden sm:inline">JSON</span>
                                         </button>
@@ -331,7 +334,7 @@
 
                         </x-mary-tab>
                         <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
-                                    icon="o-information-circle" class="tab-lg gap-2">
+                            icon="o-information-circle" class="tab-lg gap-2">
                             {{-- Details Tab --}}
                             <div class="p-4 space-y-4">
                                 <div>
@@ -342,24 +345,27 @@
                                     <div class="overflow-x-auto">
                                         <table class="table table-xs">
                                             <tbody>
-                                            <tr>
-                                                <th class="w-1/3">{{ __('ledger.file_inspector.info.size') }}</th>
-                                                <td>{{ number_format(($file?->size ?? 0)/1024, 1) }} KB</td>
-                                            </tr>
-                                            <tr>
-                                                <th>{{ __('ledger.file_inspector.info.format') }}</th>
-                                                <td>
-                                                    <code class="text-xs">{{ $file?->original_mime_type ?? $file?->mime ?? 'N/A' }}</code>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th>{{ __('ledger.file_inspector.info.uploaded') }}</th>
-                                                <td>{{ $file?->created_at?->format('Y/m/d H:i') ?? 'N/A' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>{{ __('ledger.file_inspector.info.uploaded_by') }}</th>
-                                                <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 12 ? '山田太郎' : 'N/A') }}</td>
-                                            </tr>
+                                                <tr>
+                                                    <th class="w-1/3">{{ __('ledger.file_inspector.info.size') }}
+                                                    </th>
+                                                    <td>{{ number_format(($file?->size ?? 0) / 1024, 1) }} KB</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>{{ __('ledger.file_inspector.info.format') }}</th>
+                                                    <td>
+                                                        <code
+                                                            class="text-xs">{{ $file?->original_mime_type ?? ($file?->mime ?? 'N/A') }}</code>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>{{ __('ledger.file_inspector.info.uploaded') }}</th>
+                                                    <td>{{ $file?->created_at?->format('Y/m/d H:i') ?? 'N/A' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>{{ __('ledger.file_inspector.info.uploaded_by') }}</th>
+                                                    <td>{{ $file?->creator?->name ?? ($file && $file->id >= 1 && $file->id <= 12 ? '山田太郎' : 'N/A') }}
+                                                    </td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -370,15 +376,16 @@
                                 {{-- OCR処理後のファイル情報 --}}
                                 @php
                                     $isImageFile = str_starts_with($file?->original_mime_type ?? '', 'image/');
-                                    $isPdfFile = ($file?->original_mime_type ?? $file?->mime ?? '') === 'application/pdf';
+                                    $isPdfFile =
+                                        ($file?->original_mime_type ?? ($file?->mime ?? '')) === 'application/pdf';
                                     $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
                                 @endphp
 
-                                @if($hasOcrProcessed && ($isImageFile || $isPdfFile))
+                                @if ($hasOcrProcessed && ($isImageFile || $isPdfFile))
                                     <div>
                                         <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
                                             <i class="fa-solid fa-file-pdf text-error"></i>
-                                            @if($isImageFile)
+                                            @if ($isImageFile)
                                                 {{ __('ledger.file_inspector.ocr.converted_pdf') }}
                                             @else
                                                 {{ __('ledger.file_inspector.ocr.optimized_pdf') }}
@@ -388,18 +395,20 @@
                                             <div class="card-body p-4">
                                                 <div class="flex items-center justify-between">
                                                     <div class="flex items-center gap-3">
-                                                        <div class="w-12 h-12 bg-error/10 rounded-lg flex items-center justify-center">
+                                                        <div
+                                                            class="w-12 h-12 bg-error/10 rounded-lg flex items-center justify-center">
                                                             <i class="fa-solid fa-file-pdf text-2xl text-error"></i>
                                                         </div>
                                                         <div>
                                                             <p class="font-medium text-sm">
-                                                                @if($isImageFile)
+                                                                @if ($isImageFile)
                                                                     {{ pathinfo($file?->original_filename ?? '', PATHINFO_FILENAME) }}.pdf
                                                                 @else
                                                                     {{ $file?->original_filename ?? 'document.pdf' }}
                                                                 @endif
                                                             </p>
-                                                            <p class="text-xs text-base-content/60 flex items-center gap-2 mt-1">
+                                                            <p
+                                                                class="text-xs text-base-content/60 flex items-center gap-2 mt-1">
                                                                 <span class="badge badge-xs badge-info">OCR済み</span>
                                                                 <span>{{ $file?->ocr_processed_at?->diffForHumans() ?? '' }}</span>
                                                             </p>
@@ -412,13 +421,12 @@
                                                                 : '#optimized-pdf-' . ($file->id ?? 0);
                                                         @endphp
                                                         <a href="{{ $ocrPdfUrl }}"
-                                                           class="btn btn-sm btn-primary gap-2"
-                                                           download>
+                                                            class="btn btn-sm btn-primary gap-2" download>
                                                             <i class="fa-solid fa-download"></i>
                                                             {{ __('ledger.file_inspector.actions.download') }}
                                                         </a>
                                                         <button class="btn btn-sm btn-ghost gap-2"
-                                                                @click="window.open('{{ $ocrPdfUrl }}', '_blank')">
+                                                            @click="window.open('{{ $ocrPdfUrl }}', '_blank')">
                                                             <i class="fa-solid fa-external-link-alt"></i>
                                                             {{ __('ledger.file_inspector.ocr.preview') }}
                                                         </button>
@@ -426,7 +434,7 @@
                                                 </div>
                                                 <div class="mt-3 pt-3 border-t border-base-300">
                                                     <p class="text-xs text-base-content/70">
-                                                        @if($isImageFile)
+                                                        @if ($isImageFile)
                                                             <i class="fa-solid fa-info-circle mr-1"></i>
                                                             {{ __('ledger.file_inspector.ocr.image_info') }}
                                                         @else
@@ -448,47 +456,49 @@
                                         {{ __('ledger.file_inspector.info.processing_status') }}
                                     </h3>
                                     @php
-                                        $isProcessing = $file && ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
-                                        $isError = $file && ($file->mock_source === null);
+                                        $isProcessing =
+                                            $file && ($file->mock_confidence === 0.0 && $file->mock_source === 'OCR');
+                                        $isError = $file && $file->mock_source === null;
                                     @endphp
                                     <div class="overflow-x-auto">
                                         <table class="table table-xs">
                                             <tbody>
-                                            <tr>
-                                                <th class="w-1/3">{{ __('ledger.file_inspector.info.status') }}</th>
-                                                <td>
-                                                    @if($isProcessing)
-                                                        <span class="badge badge-warning badge-sm gap-1">
+                                                <tr>
+                                                    <th class="w-1/3">{{ __('ledger.file_inspector.info.status') }}
+                                                    </th>
+                                                    <td>
+                                                        @if ($isProcessing)
+                                                            <span class="badge badge-warning badge-sm gap-1">
                                                                 <i class="fa-solid fa-spinner fa-spin"></i>
                                                                 {{ __('ledger.file_inspector.status.processing') }}
                                                             </span>
-                                                    @elseif($isError)
-                                                        <span class="badge badge-error badge-sm gap-1">
+                                                        @elseif($isError)
+                                                            <span class="badge badge-error badge-sm gap-1">
                                                                 <i class="fa-solid fa-exclamation-triangle"></i>
                                                                 {{ __('ledger.file_inspector.status.error') }}
                                                             </span>
-                                                    @else
-                                                        <span class="badge badge-success badge-sm gap-1">
+                                                        @else
+                                                            <span class="badge badge-success badge-sm gap-1">
                                                                 <i class="fa-solid fa-check"></i>
                                                                 {{ __('ledger.file_inspector.status.completed') }}
                                                             </span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            @if($file && $file->mock_source)
-                                                <tr>
-                                                    <th>{{ __('ledger.file_inspector.info.last_extraction') }}</th>
-                                                    <td>
-                                                        @if($file->mock_source === 'VLM')
-                                                            <span class="badge badge-success badge-sm">VLM</span>
-                                                        @elseif($file->mock_source === 'OCR')
-                                                            <span class="badge badge-info badge-sm">OCR</span>
-                                                        @else
-                                                            <span class="badge badge-primary badge-sm">Tika</span>
                                                         @endif
                                                     </td>
                                                 </tr>
-                                            @endif
+                                                @if ($file && $file->mock_source)
+                                                    <tr>
+                                                        <th>{{ __('ledger.file_inspector.info.last_extraction') }}</th>
+                                                        <td>
+                                                            @if ($file->mock_source === 'VLM')
+                                                                <span class="badge badge-success badge-sm">VLM</span>
+                                                            @elseif($file->mock_source === 'OCR')
+                                                                <span class="badge badge-info badge-sm">OCR</span>
+                                                            @else
+                                                                <span class="badge badge-primary badge-sm">Tika</span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endif
                                             </tbody>
                                         </table>
                                     </div>
@@ -496,7 +506,7 @@
                             </div>
                         </x-mary-tab>
                         <x-mary-tab name="access" label="{{ __('ledger.file_inspector.tabs.access') }}"
-                                    icon="o-shield-check" class="tab-lg gap-2">
+                            icon="o-shield-check" class="tab-lg gap-2">
                             {{-- Access Tab --}}
                             <div class="p-4 space-y-4">
                                 <div class="card bg-primary/5 border border-primary/20">
@@ -541,12 +551,16 @@
                                                         <i class="fa-solid fa-building text-info"></i>
                                                         <span class="font-medium text-sm">総務部</span>
                                                     </div>
-                                                    <span class="badge badge-sm">{{ __('ledger.file_inspector.access.organization') }}</span>
+                                                    <span
+                                                        class="badge badge-sm">{{ __('ledger.file_inspector.access.organization') }}</span>
                                                 </div>
                                                 <div class="flex flex-wrap gap-1">
-                                                    <span class="badge badge-success badge-sm">{{ __('ledger.file_inspector.access.admin') }}</span>
-                                                    <span class="badge badge-primary badge-sm">{{ __('ledger.file_inspector.access.write') }}</span>
-                                                    <span class="badge badge-info badge-sm">{{ __('ledger.file_inspector.access.read') }}</span>
+                                                    <span
+                                                        class="badge badge-success badge-sm">{{ __('ledger.file_inspector.access.admin') }}</span>
+                                                    <span
+                                                        class="badge badge-primary badge-sm">{{ __('ledger.file_inspector.access.write') }}</span>
+                                                    <span
+                                                        class="badge badge-info badge-sm">{{ __('ledger.file_inspector.access.read') }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -554,16 +568,15 @@
                                 </div>
                             </div>
                         </x-mary-tab>
-                        <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}" icon="o-clock"
-                                    class="tab-lg gap-2">
+                        <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
+                            icon="o-clock" class="tab-lg gap-2">
                             {{-- History Tab --}}
-                            <div class="p-4 space-y-4"
-                                 x-data="{
-                                    showAllLogs: false,
-                                    showAllActivity: false,
-                                    maxInitialLogs: 3,
-                                    maxInitialActivity: 5
-                                 }">
+                            <div class="p-4 space-y-4" x-data="{
+                                showAllLogs: false,
+                                showAllActivity: false,
+                                maxInitialLogs: 3,
+                                maxInitialActivity: 5
+                            }">
                                 <div>
                                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
                                         <i class="fa-solid fa-list-check text-success"></i>
@@ -572,37 +585,48 @@
 
                                     {{-- スクロール可能なログエリア --}}
                                     <div class="relative">
-                                        <div class="overflow-y-auto"
-                                             :class="showAllLogs ? 'max-h-96' : 'max-h-64'"
-                                             style="scrollbar-width: thin;">
+                                        <div class="overflow-y-auto" :class="showAllLogs ? 'max-h-96' : 'max-h-64'"
+                                            style="scrollbar-width: thin;">
                                             <ul class="steps steps-vertical text-sm">
                                                 <li class="step step-success">
                                                     <div class="text-left ml-3">
-                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.vlm_analysis') }}</div>
-                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:23</div>
-                                                        <div class="text-xs text-base-content/70">{{ __('ledger.file_inspector.info.confidence') }}
+                                                        <div class="font-semibold">
+                                                            {{ __('ledger.file_inspector.history.vlm_analysis') }}
+                                                        </div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:23
+                                                        </div>
+                                                        <div class="text-xs text-base-content/70">
+                                                            {{ __('ledger.file_inspector.info.confidence') }}
                                                             92.5% | 3.2秒
                                                         </div>
                                                     </div>
                                                 </li>
                                                 <li class="step step-success">
                                                     <div class="text-left ml-3">
-                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.ocr_processing') }}</div>
-                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:20</div>
+                                                        <div class="font-semibold">
+                                                            {{ __('ledger.file_inspector.history.ocr_processing') }}
+                                                        </div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:20
+                                                        </div>
                                                         <div class="text-xs text-base-content/70">2.8秒</div>
                                                     </div>
                                                 </li>
                                                 <li class="step step-success">
                                                     <div class="text-left ml-3">
-                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.tika_extraction') }}</div>
-                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:17</div>
+                                                        <div class="font-semibold">
+                                                            {{ __('ledger.file_inspector.history.tika_extraction') }}
+                                                        </div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:17
+                                                        </div>
                                                         <div class="text-xs text-base-content/70">1.5秒</div>
                                                     </div>
                                                 </li>
                                                 <li class="step step-success">
                                                     <div class="text-left ml-3">
-                                                        <div class="font-semibold">{{ __('ledger.file_inspector.history.uploaded') }}</div>
-                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:15</div>
+                                                        <div class="font-semibold">
+                                                            {{ __('ledger.file_inspector.history.uploaded') }}</div>
+                                                        <div class="text-xs text-base-content/60">2025-12-13 10:45:15
+                                                        </div>
                                                         <div class="text-xs text-base-content/70">山田太郎</div>
                                                     </div>
                                                 </li>
@@ -612,22 +636,32 @@
                                                     <div>
                                                         <li class="step step-info">
                                                             <div class="text-left ml-3">
-                                                                <div class="font-semibold">再処理実行</div>
-                                                                <div class="text-xs text-base-content/60">2025-12-12 15:30:12</div>
+                                                                <div class="font-semibold">
+                                                                    {{ __('ledger.file_inspector.history.reprocess_log') }}
+                                                                </div>
+                                                                <div class="text-xs text-base-content/60">2025-12-12
+                                                                    15:30:12</div>
                                                                 <div class="text-xs text-base-content/70">管理者</div>
                                                             </div>
                                                         </li>
                                                         <li class="step step-warning">
                                                             <div class="text-left ml-3">
-                                                                <div class="font-semibold">VLM処理リトライ</div>
-                                                                <div class="text-xs text-base-content/60">2025-12-12 15:29:45</div>
-                                                                <div class="text-xs text-base-content/70">信頼度低下により再実行</div>
+                                                                <div class="font-semibold">
+                                                                    {{ __('ledger.file_inspector.history.retry') }}
+                                                                </div>
+                                                                <div class="text-xs text-base-content/60">2025-12-12
+                                                                    15:29:45</div>
+                                                                <div class="text-xs text-base-content/70">信頼度低下により再実行
+                                                                </div>
                                                             </div>
                                                         </li>
                                                         <li class="step step-success">
                                                             <div class="text-left ml-3">
-                                                                <div class="font-semibold">メタデータ更新</div>
-                                                                <div class="text-xs text-base-content/60">2025-12-10 09:15:33</div>
+                                                                <div class="font-semibold">
+                                                                    {{ __('ledger.file_inspector.history.metadata_updated') }}
+                                                                </div>
+                                                                <div class="text-xs text-base-content/60">2025-12-10
+                                                                    09:15:33</div>
                                                                 <div class="text-xs text-base-content/70">システム</div>
                                                             </div>
                                                         </li>
@@ -638,13 +672,13 @@
 
                                         {{-- グラデーションオーバーレイ（スクロール可能を示す） --}}
                                         <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
-                                             x-show="!showAllLogs"></div>
+                                            x-show="!showAllLogs"></div>
                                     </div>
 
                                     {{-- もっと見るボタン --}}
                                     <div class="mt-3 text-center">
                                         <button @click="showAllLogs = !showAllLogs"
-                                                class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
+                                            class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
                                             <template x-if="!showAllLogs">
                                                 <span>
                                                     <i class="fa-solid fa-chevron-down"></i>
@@ -669,32 +703,37 @@
                                             <i class="fa-solid fa-clock-rotate-left text-primary"></i>
                                             {{ __('ledger.file_inspector.history.activity') }}
                                         </h3>
-                                        <span class="text-xs text-base-content/50">{{ __('ledger.file_inspector.history.recent_30days') }}</span>
+                                        <span
+                                            class="text-xs text-base-content/50">{{ __('ledger.file_inspector.history.recent_30days') }}</span>
                                     </div>
 
                                     {{-- スクロール可能なアクティビティエリア --}}
                                     <div class="relative">
                                         <div class="space-y-2 overflow-y-auto"
-                                             :class="showAllActivity ? 'max-h-96' : 'max-h-64'"
-                                             style="scrollbar-width: thin;">
-                                            <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                            :class="showAllActivity ? 'max-h-96' : 'max-h-64'"
+                                            style="scrollbar-width: thin;">
+                                            <div
+                                                class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                 <div class="card-body">
                                                     <div class="flex items-center justify-between">
                                                         <div class="flex items-center gap-2">
                                                             <i class="fa-solid fa-download text-primary"></i>
-                                                            <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                            <span
+                                                                class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
                                                         </div>
                                                         <span class="text-xs text-base-content/60">11:30</span>
                                                     </div>
                                                     <div class="text-xs text-base-content/70 mt-1">田中花子</div>
                                                 </div>
                                             </div>
-                                            <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                            <div
+                                                class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                 <div class="card-body">
                                                     <div class="flex items-center justify-between">
                                                         <div class="flex items-center gap-2">
                                                             <i class="fa-solid fa-eye text-info"></i>
-                                                            <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
+                                                            <span
+                                                                class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
                                                         </div>
                                                         <span class="text-xs text-base-content/60">11:15</span>
                                                     </div>
@@ -705,62 +744,78 @@
                                             {{-- 追加のモックアクティビティ --}}
                                             <template x-if="showAllActivity">
                                                 <div class="space-y-2">
-                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                    <div
+                                                        class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                         <div class="card-body">
                                                             <div class="flex items-center justify-between">
                                                                 <div class="flex items-center gap-2">
-                                                                    <i class="fa-solid fa-share-nodes text-success"></i>
-                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.shared') }}</span>
+                                                                    <i
+                                                                        class="fa-solid fa-share-nodes text-success"></i>
+                                                                    <span
+                                                                        class="font-medium text-sm">{{ __('ledger.file_inspector.history.shared') }}</span>
                                                                 </div>
                                                                 <span class="text-xs text-base-content/60">10:45</span>
                                                             </div>
                                                             <div class="text-xs text-base-content/70 mt-1">鈴木一郎</div>
                                                         </div>
                                                     </div>
-                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                    <div
+                                                        class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                         <div class="card-body">
                                                             <div class="flex items-center justify-between">
                                                                 <div class="flex items-center gap-2">
                                                                     <i class="fa-solid fa-download text-primary"></i>
-                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                                    <span
+                                                                        class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
                                                                 </div>
                                                                 <span class="text-xs text-base-content/60">09:20</span>
                                                             </div>
                                                             <div class="text-xs text-base-content/70 mt-1">高橋美咲</div>
                                                         </div>
                                                     </div>
-                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                    <div
+                                                        class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                         <div class="card-body">
                                                             <div class="flex items-center justify-between">
                                                                 <div class="flex items-center gap-2">
                                                                     <i class="fa-solid fa-eye text-info"></i>
-                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
+                                                                    <span
+                                                                        class="font-medium text-sm">{{ __('ledger.file_inspector.history.viewed') }}</span>
                                                                 </div>
-                                                                <span class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }} 16:45</span>
+                                                                <span
+                                                                    class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }}
+                                                                    16:45</span>
                                                             </div>
                                                             <div class="text-xs text-base-content/70 mt-1">伊藤健太</div>
                                                         </div>
                                                     </div>
-                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                    <div
+                                                        class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                         <div class="card-body">
                                                             <div class="flex items-center justify-between">
                                                                 <div class="flex items-center gap-2">
                                                                     <i class="fa-solid fa-pen text-warning"></i>
-                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.edited') }}</span>
+                                                                    <span
+                                                                        class="font-medium text-sm">{{ __('ledger.file_inspector.history.edited') }}</span>
                                                                 </div>
-                                                                <span class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }} 14:30</span>
+                                                                <span
+                                                                    class="text-xs text-base-content/60">{{ __('ledger.file_inspector.history.yesterday') }}
+                                                                    14:30</span>
                                                             </div>
                                                             <div class="text-xs text-base-content/70 mt-1">渡辺明子</div>
                                                         </div>
                                                     </div>
-                                                    <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
+                                                    <div
+                                                        class="card card-compact bg-base-200 hover:bg-base-300 transition-colors">
                                                         <div class="card-body">
                                                             <div class="flex items-center justify-between">
                                                                 <div class="flex items-center gap-2">
                                                                     <i class="fa-solid fa-download text-primary"></i>
-                                                                    <span class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
+                                                                    <span
+                                                                        class="font-medium text-sm">{{ __('ledger.file_inspector.history.downloaded') }}</span>
                                                                 </div>
-                                                                <span class="text-xs text-base-content/60">2025-12-13</span>
+                                                                <span
+                                                                    class="text-xs text-base-content/60">2025-12-13</span>
                                                             </div>
                                                             <div class="text-xs text-base-content/70 mt-1">中村春樹</div>
                                                         </div>
@@ -771,13 +826,13 @@
 
                                         {{-- グラデーションオーバーレイ --}}
                                         <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
-                                             x-show="!showAllActivity"></div>
+                                            x-show="!showAllActivity"></div>
                                     </div>
 
                                     {{-- もっと見るボタン --}}
                                     <div class="mt-3 text-center">
                                         <button @click="showAllActivity = !showAllActivity"
-                                                class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
+                                            class="btn btn-ghost btn-sm gap-2 text-primary hover:text-primary-focus">
                                             <template x-if="!showAllActivity">
                                                 <span>
                                                     <i class="fa-solid fa-chevron-down"></i>
@@ -806,13 +861,13 @@
                     </div>
                     <div class="navbar-end gap-2">
                         <button class="btn btn-warning btn-sm btn-square tooltip"
-                                data-tip="{{ __('ledger.file_inspector.actions.reprocess') }}"
-                                @if(!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif >
+                            data-tip="{{ __('ledger.file_inspector.actions.reprocess') }}"
+                            @if (!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif>
                             <i class="fa-solid fa-refresh"></i>
                         </button>
                         <button class="btn btn-error btn-sm btn-square tooltip"
-                                data-tip="{{ __('ledger.file_inspector.actions.delete') }}"
-                                @if(!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif >
+                            data-tip="{{ __('ledger.file_inspector.actions.delete') }}"
+                            @if (!($file && ($file->id >= 1 && $file->id <= 12))) disabled @endif>
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -821,4 +876,3 @@
         </div>
     </div>
 </div>
-

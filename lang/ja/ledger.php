@@ -454,6 +454,13 @@
                     'uploaded' => 'アップロード',
                     'viewed' => '閲覧',
                     'vlm_analysis' => 'VLM解析完了',
+                    'shared' => '共有',
+                    'edited' => '編集',
+                    'yesterday' => '昨日',
+                    'recent_30days' => '直近30日間',
+                    'retry' => 'リトライ',
+                    'metadata_updated' => 'メタデータ更新',
+                    'reprocess_log' => '再処理実行',
                 ],
             'info' =>
                 [

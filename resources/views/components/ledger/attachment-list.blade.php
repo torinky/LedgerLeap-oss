@@ -156,23 +156,25 @@
                         aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                     <button type="button"
-                        class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center transition-all duration-200 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none"
+                        class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border border-base-300 bg-base-100/30 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
                         aria-hidden="true">
-                        <span class="relative">
+                        <div class="indicator">
                             @if ($isProcessing)
-                                <span class="absolute -top-1 -right-1 flex h-2 w-2">
-                                    <span
-                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                <span class="indicator-item">
+                                    <span class="flex h-2 w-2">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                    </span>
                                 </span>
                             @elseif($isError)
-                                <span class="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-error"></span>
+                                <span class="indicator-item badge badge-error badge-xs p-0 h-2 w-2 border-none"></span>
                             @elseif($isOptimized)
                                 <span
-                                    class="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5 rounded-full bg-success opacity-80 shadow-sm"></span>
+                                    class="indicator-item badge badge-success badge-xs p-0 h-1.5 w-1.5 opacity-80 border-none"></span>
                             @endif
                             <i class="{{ $iconClass }} text-lg"></i>
-                        </span>
+                        </div>
                     </button>
                 </div>
             @elseif($isCompact)
@@ -190,20 +192,22 @@
                         x-on:click="handleFileClick({{ $fileId }})"
                         aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
                         {{-- ステータスインジケータ --}}
-                        <div class="relative shrink-0">
+                        <div class="indicator shrink-0">
                             @if ($isProcessing)
-                                <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10">
-                                    <span
-                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                    <span
-                                        class="relative inline-flex rounded-full h-2.5 w-2.5 bg-warning border border-base-100"></span>
+                                <span class="indicator-item">
+                                    <span class="flex h-2.5 w-2.5">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                        <span
+                                            class="relative inline-flex rounded-full h-2.5 w-2.5 bg-warning border border-base-100"></span>
+                                    </span>
                                 </span>
                             @elseif($isError)
                                 <span
-                                    class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10 rounded-full bg-error border border-base-100 text-[6px] items-center justify-center text-white font-bold">!</span>
+                                    class="indicator-item badge badge-error badge-xs p-0 h-2.5 w-2.5 border-base-100 text-[6px] font-bold">!</span>
                             @elseif($isOptimized)
                                 <span
-                                    class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10 rounded-full bg-success border border-base-100 items-center justify-center shadow-sm">
+                                    class="indicator-item badge badge-success badge-xs p-0 h-2.5 w-2.5 border-base-100 items-center justify-center shadow-sm">
                                     <i class="fa-solid fa-check text-[7px] text-white"></i>
                                 </span>
                             @endif
@@ -216,113 +220,111 @@
                         </div>
                     </button>
 
-                    {{-- ダウンロードボタン（ホバー時または常時表示） --}}
+                    {{-- ダウンロードボタン --}}
                     <a href="{{ $downloadUrl }}"
-                        class="btn btn-ghost btn-xs btn-circle ml-1 text-base-content/50 hover:text-primary hover:bg-base-200"
+                        class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all"
                         onclick="event.stopPropagation()" title="{{ __('ledger.download') }}" download>
-                        <i class="fa-solid fa-download text-xs"></i>
+                        <i class="fa-solid fa-download text-[10px]"></i>
                     </a>
                 </div>
             @else
                 {{-- Full モード: 詳細画面用のカード表示 --}}
-                <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-300 border border-base-200 hover:border-primary/30 group cursor-pointer h-full"
-                    role="listitem" x-data="{ imageLoading: true, imageError: false }" x-on:click="handleFileClick({{ $fileId }})"
-                    tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
-                    {{-- RPA用: 透過的ダウンロードリンク --}}
-                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
-                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
-
-                    {{-- ステータスバッジ（右上） --}}
+                <div class="indicator w-full h-full">
                     @if ($isOptimized)
-                        {{-- 最適化済みインジケータ（控えめなチェックマーク） --}}
-                        <div class="absolute right-2 top-2 z-10 badge badge-xs badge-success gap-1 shadow-sm opacity-80"
-                            title="Optimized">
+                        <span class="indicator-item badge badge-success badge-xs gap-1 shadow-sm opacity-80 mt-2 mr-2">
                             <i class="fa-solid fa-check text-[8px]"></i>
-                        </div>
+                        </span>
                     @endif
+                    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-300 border border-base-200 hover:border-primary/30 group cursor-pointer h-full"
+                        role="listitem" x-data="{ imageLoading: true, imageError: false }" x-on:click="handleFileClick({{ $fileId }})"
+                        tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
+                        {{-- RPA用: 透過的ダウンロードリンク --}}
+                        <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                            aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
-                    {{-- コンテンツエリア（プレビュー/アイコン） --}}
-                    <figure
-                        class="aspect-video bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
-                        @if ($isProcessing)
-                            {{-- Processing --}}
-                            <div class="flex flex-col items-center gap-2">
-                                <span class="loading loading-spinner loading-md text-warning"></span>
-                                <span
-                                    class="text-xs text-base-content/60">{{ __('ledger.file_status.processing') }}</span>
-                            </div>
-                        @elseif($isError)
-                            {{-- Error --}}
-                            <div class="text-error flex flex-col items-center gap-1">
-                                <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-                                <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
-                            </div>
-                        @else
-                            {{-- Normal --}}
-                            @if (Str::startsWith($mime, 'image/') && isset($file['thumbnailUrl']))
-                                <div x-show="imageLoading"
-                                    class="absolute inset-0 flex items-center justify-center bg-base-200">
-                                    <span class="loading loading-dots loading-sm text-base-content/30"></span>
+                        {{-- コンテンツエリア（プレビュー/アイコン） --}}
+                        <figure
+                            class="aspect-video bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
+                            @if ($isProcessing)
+                                {{-- Processing --}}
+                                <div class="flex flex-col items-center gap-2">
+                                    <span class="loading loading-spinner loading-md text-warning"></span>
+                                    <span
+                                        class="text-xs text-base-content/60">{{ __('ledger.file_status.processing') }}</span>
                                 </div>
-                                <img src="{{ $file['thumbnailUrl'] }}" alt="{{ $label }}"
-                                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
-                                    x-on:error="imageLoading = false; imageError = true">
-                                {{-- Fallback if image fails --}}
-                                <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
-                                    <i class="fa-regular fa-image text-3xl mb-1"></i>
-                                    <span class="text-[10px]">No Preview</span>
+                            @elseif($isError)
+                                {{-- Error --}}
+                                <div class="text-error flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                                    <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
                                 </div>
                             @else
-                                <div
-                                    class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
-                                    <i class="{{ $iconClass }} text-5xl opacity-80"></i>
-                                </div>
+                                {{-- Normal --}}
+                                @if (Str::startsWith($mime, 'image/') && isset($file['thumbnailUrl']))
+                                    <div x-show="imageLoading"
+                                        class="absolute inset-0 flex items-center justify-center bg-base-200">
+                                        <span class="loading loading-dots loading-sm text-base-content/30"></span>
+                                    </div>
+                                    <img src="{{ $file['thumbnailUrl'] }}" alt="{{ $label }}"
+                                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
+                                        x-on:error="imageLoading = false; imageError = true">
+                                    {{-- Fallback if image fails --}}
+                                    <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
+                                        <i class="fa-regular fa-image text-3xl mb-1"></i>
+                                        <span class="text-[10px]">No Preview</span>
+                                    </div>
+                                @else
+                                    <div
+                                        class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+                                        <i class="{{ $iconClass }} text-5xl opacity-80"></i>
+                                    </div>
+                                @endif
                             @endif
-                        @endif
-                    </figure>
+                        </figure>
 
-                    {{-- Footer --}}
-                    <div class="px-3 py-2 bg-base-100 grow relative">
-                        <div class="flex justify-between items-start gap-2">
-                            <div class="min-w-0 flex-1">
-                                <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1"
-                                    title="{{ $label }}">
-                                    {{ $label }}
-                                </h3>
-                                <div class="flex items-center gap-2 text-[10px] text-base-content/60">
-                                    @if ($formattedSize)
-                                        <span>{{ $formattedSize }}</span>
-                                    @endif
-                                    @if (isset($file['created_at']))
-                                        <span>•</span>
-                                        <span>{{ \Carbon\Carbon::parse($file['created_at'])->diffForHumans() }}</span>
-                                    @endif
+                        {{-- Footer --}}
+                        <div class="px-3 py-2 bg-base-100 grow relative">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1"
+                                        title="{{ $label }}">
+                                        {{ $label }}
+                                    </h3>
+                                    <div class="flex items-center gap-2 text-[10px] text-base-content/60">
+                                        @if ($formattedSize)
+                                            <span>{{ $formattedSize }}</span>
+                                        @endif
+                                        @if (isset($file['created_at']))
+                                            <span>•</span>
+                                            <span>{{ \Carbon\Carbon::parse($file['created_at'])->diffForHumans() }}</span>
+                                        @endif
+                                    </div>
                                 </div>
-                            </div>
 
-                            {{-- Download Button (Primary) --}}
-                            <a href="{{ $downloadUrl }}"
-                                class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-primary hover:bg-primary/10 -mt-1 -mr-1"
-                                x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
-                                title="{{ __('ledger.download') }}" download>
-                                <i class="fa-solid fa-download"></i>
-                            </a>
-                        </div>
-
-                        {{-- Secondary Download (e.g. PDF for Images) --}}
-                        @if (isset($file['secondary_download']) && $file['secondary_download'])
-                            <div class="mt-2 pt-2 border-t border-base-200 flex justify-end">
-                                <a href="{{ $file['secondary_download']['url'] }}"
-                                    class="btn btn-xs btn-ghost gap-1 text-base-content/60 font-normal hover:text-primary"
-                                    x-on:click.stop download>
-                                    @if (isset($file['secondary_download']['icon']))
-                                        <i class="fa-solid {{ $file['secondary_download']['icon'] }}"></i>
-                                    @endif
-                                    {{ $file['secondary_download']['label'] ?? 'PDF' }}
+                                {{-- Download Button (Primary) --}}
+                                <a href="{{ $downloadUrl }}"
+                                    class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
+                                    x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
+                                    title="{{ __('ledger.download') }}" download>
+                                    <i class="fa-solid fa-download text-xs"></i>
                                 </a>
                             </div>
-                        @endif
+
+                            {{-- Secondary Download (e.g. PDF for Images) --}}
+                            @if (isset($file['secondary_download']) && $file['secondary_download'])
+                                <div class="mt-2 pt-2 border-t border-base-200 flex justify-end">
+                                    <a href="{{ $file['secondary_download']['url'] }}"
+                                        class="btn btn-xs btn-ghost gap-1 text-base-content/60 font-normal hover:text-primary"
+                                        x-on:click.stop download>
+                                        @if (isset($file['secondary_download']['icon']))
+                                            <i class="fa-solid {{ $file['secondary_download']['icon'] }}"></i>
+                                        @endif
+                                        {{ $file['secondary_download']['label'] ?? 'PDF' }}
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @endif
