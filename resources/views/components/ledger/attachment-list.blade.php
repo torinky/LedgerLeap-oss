@@ -99,7 +99,7 @@
                 'optimizing',
                 'extracting',
                 'extracting_and_saved'
-                    => __('ledger.status.processing'),
+                    => __('ledger.file_status.processing'),
                 'error',
                 'tika_failed',
                 'ocr_failed',
@@ -108,8 +108,8 @@
                 'processing_failed',
                 'optimize_failed',
                 'extraction_failed'
-                    => __('ledger.status.error'),
-                default => __('ledger.status.completed'),
+                    => __('ledger.file_status.error'),
+                default => __('ledger.file_status.completed'),
             };
 
             $isProcessing = in_array($status, [
@@ -136,6 +136,9 @@
                 'optimize_failed',
                 'extraction_failed',
             ]);
+
+            $isOptimized =
+                $status === 'completed' && (isset($file['ocr_processed_at']) || isset($file['secondary_download']));
         @endphp
 
         <div x-show="{{ $index }} < displayLimit || showAll" x-transition:enter="transition ease-out duration-200"
@@ -144,10 +147,10 @@
 
             @if ($isIconOnly)
                 {{-- Icon Only モード: 一覧画面用極小表示 --}}
-                <div class="relative group inline-flex items-center" role="listitem"
+                <div class="relative group inline-flex items-center tooltip" role="listitem"
                     x-on:click="handleFileClick({{ $fileId }})" tabindex="0"
-                    aria-label="{{ $label }} ({{ $statusLabel }})" data-tip="{{ $label }}"
-                    class="tooltip">
+                    aria-label="{{ $label }} ({{ $statusLabel }})"
+                    data-tip="{{ $label }} @if ($formattedSize) ({{ $formattedSize }}) @endif">
                     {{-- RPA用: 透過的ダウンロードリンク --}}
                     <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
                         aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
@@ -164,6 +167,9 @@
                                 </span>
                             @elseif($isError)
                                 <span class="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-error"></span>
+                            @elseif($isOptimized)
+                                <span
+                                    class="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5 rounded-full bg-success opacity-80 shadow-sm"></span>
                             @endif
                             <i class="{{ $iconClass }} text-lg"></i>
                         </span>
@@ -195,6 +201,11 @@
                             @elseif($isError)
                                 <span
                                     class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10 rounded-full bg-error border border-base-100 text-[6px] items-center justify-center text-white font-bold">!</span>
+                            @elseif($isOptimized)
+                                <span
+                                    class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 z-10 rounded-full bg-success border border-base-100 items-center justify-center shadow-sm">
+                                    <i class="fa-solid fa-check text-[7px] text-white"></i>
+                                </span>
                             @endif
                             <i class="{{ $iconClass }} text-xl"></i>
                         </div>
@@ -222,24 +233,11 @@
                         aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                     {{-- ステータスバッジ（右上） --}}
-                    @php
-                        $badgeClass = match (true) {
-                            $isProcessing => 'badge-warning',
-                            $isError => 'badge-error',
-                            default => 'badge-success',
-                        };
-                        $badgeIcon = match (true) {
-                            $isProcessing => 'fa-spinner fa-spin',
-                            $isError => 'fa-exclamation',
-                            default => 'fa-check',
-                        };
-                    @endphp
-                    @if (!$isProcessing && !$isError)
-                        {{-- 正常完了時はバッジを控えめに（または表示しない） --}}
-                    @else
-                        <div class="absolute right-2 top-2 z-10 badge badge-sm {{ $badgeClass }} gap-1 shadow-sm">
-                            <i class="fa-solid {{ $badgeIcon }} text-[10px]"></i>
-                            <span class="text-[10px] uppercase">{{ $statusLabel }}</span>
+                    @if ($isOptimized)
+                        {{-- 最適化済みインジケータ（控えめなチェックマーク） --}}
+                        <div class="absolute right-2 top-2 z-10 badge badge-xs badge-success gap-1 shadow-sm opacity-80"
+                            title="Optimized">
+                            <i class="fa-solid fa-check text-[8px]"></i>
                         </div>
                     @endif
 
@@ -251,13 +249,13 @@
                             <div class="flex flex-col items-center gap-2">
                                 <span class="loading loading-spinner loading-md text-warning"></span>
                                 <span
-                                    class="text-xs text-base-content/60">{{ __('ledger.status.processing_short') }}</span>
+                                    class="text-xs text-base-content/60">{{ __('ledger.file_status.processing') }}</span>
                             </div>
                         @elseif($isError)
                             {{-- Error --}}
                             <div class="text-error flex flex-col items-center gap-1">
                                 <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-                                <span class="text-xs font-bold">{{ __('ledger.status.error_short') }}</span>
+                                <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
                             </div>
                         @else
                             {{-- Normal --}}
@@ -361,7 +359,7 @@
                 <button type="button" x-on:click="toggleShowAll()"
                     class="btn btn-ghost btn-xs text-xs font-normal text-base-content/60 gap-1">
                     <span
-                        x-text="showAll ? '{{ __('ledger.collapse') }}' : '+{{ $hiddenCount }} {{ __('ledger.more') }}'"></span>
+                        x-text="showAll ? '{{ __('ledger.collapse') }}' : '+{{ $hiddenCount }} {{ __('ledger.records') }}'"></span>
                 </button>
             @else
                 {{-- Full モード --}}
