@@ -466,6 +466,7 @@
                     'metadata_updated' => 'メタデータ更新',
                     'reprocess_log' => '再処理実行',
                 ],
+            'loading' => '読み込み中...',
             'info' =>
                 [
                     'confidence' => '信頼度',

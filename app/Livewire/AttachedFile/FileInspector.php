@@ -50,6 +50,10 @@ class FileInspector extends Component
 
         // モックデータの場合（id=1-12）は即座にロード
         if ($id >= 1 && $id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+            // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
+            if (app()->environment('local')) {
+                usleep(800000); // 0.8秒
+            }
             $this->loadMockData($id);
             $this->open = true;
             $this->isLoading = false;
