@@ -98,6 +98,19 @@ class ColumnHtmlService
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
         $this->tenantId = $tenantId ?? $record?->define?->tenant_id ?? null;
 
+        // Mock Attachment Column Support
+        $colId = $this->getColumnDefineProperty('id');
+        if (\App\Services\Ledger\MockAttachmentService::isMockColumn($colId) && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+             $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+             $mode = $this->attrs['mode'] ?? 'full';
+             $html = view('components.ledger.attachment-list', [
+                 'files' => $mockFiles,
+                 'mode' => $mode,
+                 'tenantId' => $this->tenantId,
+             ])->render();
+             return new HtmlString($html);
+        }
+
         $type = $this->getColumnDefineProperty('type');
         $html = '';
 

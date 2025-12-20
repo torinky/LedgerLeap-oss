@@ -44,6 +44,11 @@ class LedgerContentProcessor
                 return $columnDisplayLevel <= $displayLevel;
             });
 
+        // Mock Attachment Column Injection
+        if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
+            $filteredColumns->push(\App\Services\Ledger\MockAttachmentService::getMockColumnDefine());
+        }
+
         // 3. カラムのグルーピングとソート
         $groupedColumns = $filteredColumns->groupBy(function ($column) {
             $group = is_array($column) ? ($column['group'] ?? '') : ($column->group ?? '');
@@ -72,6 +77,16 @@ class LedgerContentProcessor
 
             foreach ($columnObjectsInGroup as $columnDefine) {
                 $change = $contentChanges[$columnDefine->id] ?? null;
+                
+                // Mock Attachment Column: Force display even if no diff exists
+                if (! $change && \App\Services\Ledger\MockAttachmentService::isMockColumn($columnDefine->id) && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+                    $change = [
+                        'status' => 'unchanged',
+                        'current_value' => [],
+                        'old_value' => [],
+                    ];
+                }
+
                 if (! $change) {
                     continue;
                 }
