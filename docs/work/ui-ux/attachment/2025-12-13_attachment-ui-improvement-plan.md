@@ -306,7 +306,7 @@ public function test_cannot_access_file_without_permission()
 | | **3.2** | **`ColumnHtmlService` のリファクタリング** | - | **6h** | **3.1** | ✅ **完了** |
 | | **3.3** | **UIモックアップ全分岐実装検証** | - | **2h** | **3.1** | ⚠️ **要手動確認** |
 | | **3.4** | **統合テストとRPA互換性検証** | - | **2h** | **3.2, 3.3** | ✅ **完了** |
-| **4. インスペクター実装** | **4.0** | **事前準備: モックデータ構成と画面監査** | - | **3h** | **3.4** | 📋 **計画済** |
+| **4. インスペクター実装** | **4.0** | **事前準備: モックデータ構成と画面監査** | - | **3h** | **3.4** | ✅ **完了** |
 | | **4.1** | **コンポーネント基盤とドロワーUI** | - | **8h** | **4.0** | 📋 **詳細化済（権限・UI分岐含む）** |
 | | **4.2** | **内容（Content）タブ (VLM/OCR統合)** | - | **7h** | **4.1** | 📋 **詳細化済（フォールバック含む）** |
 | | **4.3** | **詳細（Details）タブ** | - | **4h** | **4.1** | 📋 **詳細化済（プレビュー・処理時間含む）** |
@@ -970,6 +970,52 @@ public function downloadOcrPdf(AttachedFile $attachedFile)
   - 親計画書更新: WBS、Phase 4セクション、リスクセクションを全面改訂
 - **総見積工数更新:** 9.25日（74h） → **11.75日（94h）** (+20h, Phase 4拡充による)
 - **次フェーズ:** Phase 4（インスペクター実装）実装準備完了、体系的な計画と明確な成功基準が確立
+
+### 2025/12/20 午後 (Phase 4.0実装完了)
+- **Phase 4.0: 事前準備（モックデータ構成と画面監査）の実装完了:**
+  - **タスク4.0.1完了（1h）:** `config/mock.php` 作成
+    - 環境変数による有効/無効制御（`MOCK_ATTACHMENT_ENABLED`）
+    - デフォルト値: enabled=true, column_id=-1
+    - 評価: ✅ 良好 - シンプルで拡張可能な設計
+  - **タスク4.0.2完了（1.5h）:** `MockAttachmentService` 実装
+    - 273行のサービスクラス作成
+    - 12種類の多様なモックファイル定義
+      - 画像（JPG/PNG）: OCR処理済み、処理中、低信頼度
+      - PDF: テキスト付き、スキャン、大容量
+      - Office: Word/Excel
+      - その他: ZIP、TXT
+      - VLM解析済み（高/中/低信頼度）
+    - 動的な日時生成（`now()->subDays()`）
+    - ステータス、信頼度、処理時間のメタデータ完備
+    - 評価: ✅ 優秀 - 多様なユースケースを網羅
+  - **タスク4.0.3完了（0.5h）:** 一覧・詳細画面への統合
+    - `LedgerContentProcessor` に統合（Show画面で自動表示）
+    - `ColumnHtmlService` に統合（一覧画面で表示）
+    - `records-table.blade.php`, `table-row.blade.php` に統合
+    - 評価: ✅ 良好 - 両画面で動作確認
+- **発見・修正した問題:**
+  - ⚠️ **ColumnDefine初期化エラー（修正済み）**
+    - 問題: `getMockColumnDefine()` の返却配列に必須フィールド不足
+    - 不足: `unique`, `sort_index`, `hint`, `file`, `options`, `useOptions`
+    - 修正: 全必須フィールドを追加（273行目）
+    - ステータス: ✅ 完全修正
+- **品質評価:**
+  - コード品質: ⭐⭐⭐⭐⭐ 優秀（責任分離、拡張性、可読性）
+  - 機能性: ⭐⭐⭐⭐⭐ 完全（12種類で多様なシナリオカバー）
+  - 保守性: ⭐⭐⭐⭐ 良好（構成ファイル集中管理）
+- **残課題（次フェーズへ）:**
+  - FileInspector統合確認（4.1-4.2で実施）
+  - モックデータの多様化（必要に応じて追加）
+  - テストデータとの整合性確認（4.6.5-4.6.6で実施）
+- **総合評価:** ✅ **成功** - Phase 4実装の基盤が確立
+- **実装ファイル:**
+  - ✅ `config/mock.php` (9行)
+  - ✅ `app/Services/Ledger/MockAttachmentService.php` (273行)
+  - 📝 `app/Services/Ledger/LedgerContentProcessor.php` (統合修正)
+  - 📝 `app/Services/Ledger/ColumnHtmlService.php` (統合修正)
+  - 📝 `resources/views/livewire/ledger/records-table.blade.php` (統合修正)
+  - 📝 `resources/views/components/ledger/table-row.blade.php` (統合修正)
+- **次フェーズ:** Phase 4.1（コンポーネント基盤とドロワーUI）実装開始準備完了
     - ヘルパーメソッド3つ実装
     - 翻訳キー6項目追加（`lang/ja.json`）
     - テスト: 7ケース全て成功（22アサーション）

@@ -262,11 +262,17 @@ class MockAttachmentService
         return [
             'id' => config('mock.attachment.column_id', -1),
             'type' => 'files',
-            'name' => 'Attachments',
+            'name' => 'Attachments (Mock)',
             'group' => 'Mock',
             'display_level' => 1,
             'order' => 9999,
             'required' => false,
+            'unique' => false,
+            'sort_index' => null,
+            'hint' => 'モックデータ表示用の添付ファイルカラム',
+            'file' => [],
+            'options' => [],
+            'useOptions' => false,
         ];
     }
 }
