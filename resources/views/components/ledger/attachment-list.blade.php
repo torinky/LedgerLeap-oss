@@ -147,35 +147,38 @@
 
             @if ($isIconOnly)
                 {{-- Icon Only モード: 一覧画面用極小表示 --}}
-                <div class="relative group inline-flex items-center tooltip" role="listitem"
+                <div class="relative group inline-flex items-center" role="listitem"
                     x-on:click="handleFileClick({{ $fileId }})" tabindex="0"
-                    aria-label="{{ $label }} ({{ $statusLabel }})"
-                    data-tip="{{ $label }} @if ($formattedSize) ({{ $formattedSize }}) @endif">
+                    aria-label="{{ $label }} ({{ $statusLabel }})">
                     {{-- RPA用: 透過的ダウンロードリンク --}}
                     <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
                         aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
-                    <button type="button"
-                        class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border border-base-300 bg-base-100/30 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
-                        aria-hidden="true">
-                        <div class="indicator">
-                            @if ($isProcessing)
-                                <span class="indicator-item">
-                                    <span class="flex h-2 w-2">
-                                        <span
-                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                    <div class="tooltip tooltip-bottom"
+                        data-tip="{{ $label }} @if ($formattedSize) ({{ $formattedSize }}) @endif">
+                        <button type="button"
+                            class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border border-base-300 bg-base-100/30 hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
+                            aria-hidden="true">
+                            <div class="indicator">
+                                @if ($isProcessing)
+                                    <span class="indicator-item">
+                                        <span class="flex h-2 w-2">
+                                            <span
+                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                        </span>
                                     </span>
-                                </span>
-                            @elseif($isError)
-                                <span class="indicator-item badge badge-error badge-xs p-0 h-2 w-2 border-none"></span>
-                            @elseif($isOptimized)
-                                <span
-                                    class="indicator-item badge badge-success badge-xs p-0 h-1.5 w-1.5 opacity-80 border-none"></span>
-                            @endif
-                            <i class="{{ $iconClass }} text-lg"></i>
-                        </div>
-                    </button>
+                                @elseif($isError)
+                                    <span
+                                        class="indicator-item badge badge-error badge-xs p-0 h-2 w-2 border-none"></span>
+                                @elseif($isOptimized)
+                                    <span
+                                        class="indicator-item badge badge-success badge-xs p-0 h-1.5 w-1.5 opacity-80 border-none"></span>
+                                @endif
+                                <i class="{{ $iconClass }} text-lg"></i>
+                            </div>
+                        </button>
+                    </div>
                 </div>
             @elseif($isCompact)
                 {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
@@ -221,11 +224,13 @@
                     </button>
 
                     {{-- ダウンロードボタン --}}
-                    <a href="{{ $downloadUrl }}"
-                        class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all"
-                        onclick="event.stopPropagation()" title="{{ __('ledger.download') }}" download>
-                        <i class="fa-solid fa-download text-[10px]"></i>
-                    </a>
+                    <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download') }}">
+                        <a href="{{ $downloadUrl }}"
+                            class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all"
+                            onclick="event.stopPropagation()" download>
+                            <i class="fa-solid fa-download text-[10px]"></i>
+                        </a>
+                    </div>
                 </div>
             @else
                 {{-- Full モード: 詳細画面用のカード表示 --}}
@@ -242,9 +247,8 @@
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
                             aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
-                        {{-- コンテンツエリア（プレビュー/アイコン） --}}
                         <figure
-                            class="aspect-video bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
+                            class="h-40 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
                             @if ($isProcessing)
                                 {{-- Processing --}}
                                 <div class="flex flex-col items-center gap-2">
@@ -303,25 +307,41 @@
                                 </div>
 
                                 {{-- Download Button (Primary) --}}
-                                <a href="{{ $downloadUrl }}"
-                                    class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
-                                    x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
-                                    title="{{ __('ledger.download') }}" download>
-                                    <i class="fa-solid fa-download text-xs"></i>
-                                </a>
+                                <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download_original') }}">
+                                    <a href="{{ $downloadUrl }}"
+                                        class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
+                                        x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
+                                        download>
+                                        <i class="fa-solid fa-download text-xs"></i>
+                                    </a>
+                                </div>
                             </div>
 
                             {{-- Secondary Download (e.g. PDF for Images) --}}
                             @if (isset($file['secondary_download']) && $file['secondary_download'])
+                                @php
+                                    $isOptimizedSecondary =
+                                        Str::contains($file['secondary_download']['label'] ?? '', 'PDF') ||
+                                        Str::contains($file['secondary_download']['icon'] ?? '', 'pdf');
+                                    $secondaryLabel = $isOptimizedSecondary
+                                        ? __('ledger.optimized_pdf')
+                                        : __('ledger.original_file');
+                                    $secondaryTooltip = $isOptimizedSecondary
+                                        ? __('ledger.download_optimized')
+                                        : __('ledger.download_original');
+                                @endphp
                                 <div class="mt-2 pt-2 border-t border-base-200 flex justify-end">
-                                    <a href="{{ $file['secondary_download']['url'] }}"
-                                        class="btn btn-xs btn-ghost gap-1 text-base-content/60 font-normal hover:text-primary"
-                                        x-on:click.stop download>
-                                        @if (isset($file['secondary_download']['icon']))
-                                            <i class="fa-solid {{ $file['secondary_download']['icon'] }}"></i>
-                                        @endif
-                                        {{ $file['secondary_download']['label'] ?? 'PDF' }}
-                                    </a>
+                                    <div class="tooltip tooltip-left" data-tip="{{ $secondaryTooltip }}">
+                                        <a href="{{ $file['secondary_download']['url'] }}"
+                                            class="btn btn-xs bg-base-100 border border-base-300 shadow-sm gap-1 text-base-content/60 font-medium hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all"
+                                            x-on:click.stop download>
+                                            @if (isset($file['secondary_download']['icon']))
+                                                <i
+                                                    class="fa-solid {{ $file['secondary_download']['icon'] }} text-[10px]"></i>
+                                            @endif
+                                            {{ $secondaryLabel }}
+                                        </a>
+                                    </div>
                                 </div>
                             @endif
                         </div>
