@@ -234,6 +234,11 @@
                 </div>
             @else
                 {{-- Full モード: 詳細画面用のカード表示 --}}
+                @php
+                    $hasSecondary = isset($file['secondary_download']) && $file['secondary_download'];
+                    $finalDownloadUrl = $hasSecondary ? $file['secondary_download']['url'] : $downloadUrl;
+                    $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
+                @endphp
                 <div class="indicator w-full h-full">
                     @if ($isOptimized)
                         <span class="indicator-item badge badge-success badge-xs gap-1 shadow-sm opacity-80 mt-2 mr-2">
@@ -307,43 +312,16 @@
                                 </div>
 
                                 {{-- Download Button (Primary) --}}
-                                <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download_original') }}">
-                                    <a href="{{ $downloadUrl }}"
+                                <div class="tooltip tooltip-left" data-tip="{{ $downloadTooltip }}">
+                                    <a href="{{ $finalDownloadUrl }}"
                                         class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
-                                        x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')"
+                                        x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $finalDownloadUrl }}')"
                                         download>
                                         <i class="fa-solid fa-download text-xs"></i>
                                     </a>
                                 </div>
                             </div>
 
-                            {{-- Secondary Download (e.g. PDF for Images) --}}
-                            @if (isset($file['secondary_download']) && $file['secondary_download'])
-                                @php
-                                    $isOptimizedSecondary =
-                                        Str::contains($file['secondary_download']['label'] ?? '', 'PDF') ||
-                                        Str::contains($file['secondary_download']['icon'] ?? '', 'pdf');
-                                    $secondaryLabel = $isOptimizedSecondary
-                                        ? __('ledger.optimized_pdf')
-                                        : __('ledger.original_file');
-                                    $secondaryTooltip = $isOptimizedSecondary
-                                        ? __('ledger.download_optimized')
-                                        : __('ledger.download_original');
-                                @endphp
-                                <div class="mt-2 pt-2 border-t border-base-200 flex justify-end">
-                                    <div class="tooltip tooltip-left" data-tip="{{ $secondaryTooltip }}">
-                                        <a href="{{ $file['secondary_download']['url'] }}"
-                                            class="btn btn-xs bg-base-100 border border-base-300 shadow-sm gap-1 text-base-content/60 font-medium hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all"
-                                            x-on:click.stop download>
-                                            @if (isset($file['secondary_download']['icon']))
-                                                <i
-                                                    class="fa-solid {{ $file['secondary_download']['icon'] }} text-[10px]"></i>
-                                            @endif
-                                            {{ $secondaryLabel }}
-                                        </a>
-                                    </div>
-                                </div>
-                            @endif
                         </div>
                     </div>
                 </div>
