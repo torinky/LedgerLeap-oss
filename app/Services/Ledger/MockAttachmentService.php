@@ -247,9 +247,9 @@ class MockAttachmentService
         ];
     }
 
-    public static function isMockColumn(?string $columnId): bool
+    public static function isMockColumn(int|string|null $columnId): bool
     {
-        return $columnId === config('mock.attachment.column_id', '__mock_files');
+        return $columnId == config('mock.attachment.column_id', -1);
     }
 
     public static function isEnabled(): bool
@@ -260,9 +260,9 @@ class MockAttachmentService
     public static function getMockColumnDefine(): array
     {
         return [
-            'id' => config('mock.attachment.column_id', '__mock_files'),
+            'id' => config('mock.attachment.column_id', -1),
             'type' => 'files',
-            'name' => 'Mock Attachments',
+            'name' => 'Attachments',
             'group' => 'Mock',
             'display_level' => 1,
             'order' => 9999,
