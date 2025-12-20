@@ -303,7 +303,7 @@
                                                 class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
                                         </label>
                                         <textarea id="preview-text-{{ $file?->id ?? 0 }}"
-                                            class="textarea textarea-bordered w-full h-64 text-xs font-mono leading-relaxed" readonly>{{ $previewText }}</textarea>
+                                            class="textarea textarea-bordered w-full h-64 text-xs font-mono leading-relaxed" readonly>{{ str_replace('\n', "\n", $previewText) }}</textarea>
                                     </div>
 
                                     <div class="flex flex-col sm:flex-row gap-2">
