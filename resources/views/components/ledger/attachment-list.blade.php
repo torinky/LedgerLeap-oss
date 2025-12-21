@@ -219,7 +219,12 @@
                         aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                     {{-- ファイル表示エリア（クリックでドロワー） --}}
-                    <div class="tooltip tooltip-bottom flex items-center" data-tip="{{ $fullTooltip }}">
+                    <div class="indicator tooltip tooltip-bottom flex items-center" data-tip="{{ $fullTooltip }}">
+                        @if ($isHit)
+                            <span class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
+                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                            </span>
+                        @endif
                         <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
                             x-on:click="handleFileClick({{ $fileId }})"
                             aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
@@ -249,7 +254,8 @@
                             <div class="flex flex-col min-w-0">
                                 <div class="flex items-center gap-1">
                                     <span
-                                        class="truncate text-sm font-medium {{ $isHit ? 'text-success font-bold' : 'text-base-content/90' }}">{{ $displayLabel }}</span>
+{{--                                        class="truncate text-sm font-medium {{ $isHit ? 'text-success font-bold' : 'text-base-content/90' }}">{{ $displayLabel }}</span>--}}
+                                        class="truncate text-sm font-medium text-base-content/90">{{ $displayLabel }}</span>
                                     <span class="text-[10px] text-base-content/60">{{ $formattedSize }}</span>
                                 </div>
                         </button>
@@ -273,10 +279,18 @@
                 @endphp
                 <div class="block w-full h-full tooltip tooltip-bottom text-left" data-tip="{{ $fullTooltip }}">
                     <div class="indicator w-full h-full">
+                        @if ($isHit)
+                            <span class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
+                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                            </span>
+                        @endif
                         @if ($isOptimized)
+{{--
                             <span
                                 class="indicator-item badge badge-success badge-xs gap-1 shadow-sm opacity-80 mt-2 mr-2">
-                                <i class="fa-solid fa-check text-[8px]"></i>
+--}}
+                            <span class="indicator-item indicator-middle indicator-center inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/50 text-base-100 mr-1.5 align-middle">
+                                <i class="fa-solid fa-check text-[10px]"></i>
                             </span>
                         @endif
                         <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full"
@@ -334,12 +348,14 @@
                                     <div class="min-w-0 flex-1">
                                         <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1 break-all overflow-hidden"
                                             title="{{ $label }}">
+{{--
                                             @if ($isHit)
                                                 <span
                                                     class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/20 text-success mr-1.5 align-middle">
                                                     <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
                                                 </span>
                                             @endif
+--}}
                                             {{ $displayLabel }}
                                         </h3>
                                         <div class="flex items-center gap-2 text-[10px] text-base-content/60">
