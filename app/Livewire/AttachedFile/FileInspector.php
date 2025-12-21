@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use App\Helpers\SearchHelper;
 
 class FileInspector extends Component
 {
@@ -127,7 +128,7 @@ class FileInspector extends Component
 
             // 権限チェック: LedgerPolicy::view を使用
             // AttachedFilePolicyが空実装のため、親である台帳の権限を確認する
-            if (! Gate::allows('view', $this->file->ledger)) {
+            if (!Gate::allows('view', $this->file->ledger)) {
                 $this->error(__('ledger.no_view_permission'));
                 $this->dispatch('mary-toast', type: 'error', title: __('ledger.no_view_permission'));
                 $this->close();
@@ -138,9 +139,9 @@ class FileInspector extends Component
             $this->activeSource = $this->file->finalized_source ?? 'tika';
             $this->open = true;
             $this->isLoading = false;
-            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully for file id='.$id);
+            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully for file id=' . $id);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed: ' . $e->getMessage());
             $this->error(__('ledger.vlm.result_not_found'));
             $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
             $this->close();
@@ -224,45 +225,18 @@ class FileInspector extends Component
 
         // 3. ハイライト処理 (HTML出力用のみ)
         if ($withHighlight && !empty($this->searchKeyword)) {
-            $keywords = $this->extractKeywords($this->searchKeyword);
+            $keywords = SearchHelper::extractKeywords($this->searchKeyword);
 
             if (!empty($keywords)) {
-                // 文Markdownの場合はエスケープを Markdown レンダラーに任せるが、
-                // ハイライトタグを挿入するために一旦エスケープが必要な場合がある。
-                // ここでは「非Markdown」時のみ安全にエスケープしてハイライトする。
-                if ($this->activeSource !== 'vlm') {
-                    $text = e($text);
-                }
-
-                foreach ($keywords as $word) {
-                    $quoted = preg_quote($word, '/');
-                    // ヒットしたかどうかを確認（簡易版：置換が発生したか）
-                    $processed = preg_replace('/(' . $quoted . ')/iu', '<mark class="bg-yellow-200 text-black px-0.5 rounded">$1</mark>', $text);
-                    if ($processed !== $text) {
-                        $text = $processed;
-                    }
-                }
+                // vlm (Markdown) の場合はエスケープせず、それ以外はエスケープしてハイライト
+                $shouldEscape = ($this->activeSource !== 'vlm');
+                $text = SearchHelper::highlight($text, $keywords, 'bg-yellow-200 text-black px-0.5 rounded', $shouldEscape);
             }
         }
 
         return $text;
     }
 
-    /**
-     * Mroonga の検索クエリから強調すべき実質的なキーワードを抽出する
-     */
-    private function extractKeywords(string $query): array
-    {
-        // 1. Mroonga 特有の演算子と記号を除去
-        // OR, AND, NOT, +, -, *, "(", ")", "*D+", "*D", "D+" など
-        $clean = preg_replace('/\b(OR|AND|NOT)\b/i', ' ', $query);
-        $clean = preg_replace('/[\+\-\*\(\)]/', ' ', $clean);
-        $clean = preg_replace('/\*D\+?/', ' ', $clean);
-
-        // 2. 空白で分割して重複を排除
-        $words = preg_split('/[\s　]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
-        return array_unique($words);
-    }
 
     /**
      * 各抽出ソースの状態を取得する（UI用）
@@ -313,15 +287,8 @@ class FileInspector extends Component
             return false;
         }
 
-        $keywords = $this->extractKeywords($this->searchKeyword);
-        foreach ($keywords as $word) {
-            $quoted = preg_quote($word, '/');
-            if (preg_match('/' . $quoted . '/iu', $text)) {
-                return true;
-            }
-        }
-
-        return false;
+        $keywords = SearchHelper::extractKeywords($this->searchKeyword);
+        return SearchHelper::hasHit($text, $keywords);
     }
 
     public function toggleExpand(): void

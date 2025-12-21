@@ -7,6 +7,29 @@
     'filteredColumnDefines' => [],
     'currentTenantId' => null,
 ])
+@php
+    use App\Helpers\SearchHelper;
+    $searchKeywords = SearchHelper::extractKeywords($highlightKeyword);
+    $hitHashes = [];
+    if (!empty($searchKeywords) && !empty($ledgerRecord->content_attached)) {
+        foreach ($ledgerRecord->content_attached as $colId => $colFiles) {
+            if (!is_array($colFiles)) {
+                continue;
+            }
+            foreach ($colFiles as $hash => $fileData) {
+                // RecordsTable.php で既に計算されている hit フラグがあればそれを採用
+                if (!empty($fileData['hit'])) {
+                    $hitHashes[$hash] = true;
+                    continue;
+                }
+                // なければ新しく判定（より広範なキーをチェック）
+                if (SearchHelper::isFileDataHit($fileData, $searchKeywords)) {
+                    $hitHashes[$hash] = true;
+                }
+            }
+        }
+    }
+@endphp
 <tr class="hover group hover:bg-accent/20">
     <th class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
@@ -51,6 +74,10 @@
             @elseif($isMockAttachmentColumn && \App\Services\Ledger\MockAttachmentService::isEnabled())
                 @php
                     $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+                    // モックファイルに対してもヒット判定を行う
+                    foreach ($mockFiles as &$mf) {
+                        $mf['is_hit'] = SearchHelper::isFileDataHit($mf, $searchKeywords);
+                    }
                 @endphp
                 <x-ledger.attachment-list :files="$mockFiles" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
@@ -141,6 +168,7 @@
                             'primary_download' => $primaryDownload,
                             'secondary_download' => $secondaryDownload,
                             'created_at' => $af->created_at,
+                            'is_hit' => isset($hitHashes[$af->hashedbasename]),
                         ];
                     }
                     if (
@@ -169,6 +197,7 @@
                                 'status' => 'completed',
                                 'thumbnailUrl' => null,
                                 'downloadUrl' => '#',
+                                'is_hit' => isset($hitHashes[$hashed]),
                             ];
                         }
                     }
