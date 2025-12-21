@@ -64,25 +64,32 @@ class FileInspector extends Component
             'vlm_markdown' => $data['mock_preview_text'] ?? $data['preview_text'] ?? null,
             'finalized_source' => strtolower($data['mock_source'] ?? $data['source'] ?? 'tika'),
             'ocr_processed_at' => $data['ocr_processed_at'] ?? null,
+            'processing_finalized_at' => now()->subDays(1), // モックでもバッジ表示を有効にするため
         ]);
         $this->file->id = $this->fileId;
         $this->file->exists = false;
     }
 
-    #[On('open-file-inspector')]
-    public function openInspector(int|array $id): void
+    public function openInspector($payload): void
     {
-        if (is_array($id)) {
-            $id = $id['id'] ?? null;
+        $id = null;
+        $search = null;
+
+        if (is_array($payload)) {
+            $id = $payload['id'] ?? null;
+            $search = $payload['search'] ?? null;
+        } else {
+            $id = $payload;
         }
 
         if (!$id) {
             return;
         }
 
-        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called with id='.$id);
+        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', ['id' => $id, 'search' => $search]);
 
         $this->fileId = $id;
+        $this->searchKeyword = $search ?? '';
         $this->file = null;
         $this->isLoading = true;
 
@@ -216,51 +223,106 @@ class FileInspector extends Component
         }
 
         // 3. ハイライト処理 (HTML出力用のみ)
-        if ($withHighlight) {
-            // Markdownの場合はエスケープを Markdown レンダラーに任せるが、
-            // ハイライトタグを挿入するために一旦エスケープが必要な場合がある。
-            // ここでは「非Markdown」時のみ安全にエスケープしてハイライトする。
-            if ($this->activeSource !== 'vlm') {
-                $text = e($text);
-            }
+        if ($withHighlight && !empty($this->searchKeyword)) {
+            $keywords = $this->extractKeywords($this->searchKeyword);
 
-            if (!empty($this->searchKeyword)) {
-                $quoted = preg_quote($this->searchKeyword, '/');
-                $text = preg_replace('/(' . $quoted . ')/iu', '<mark class="bg-yellow-200 text-black px-0.5 rounded">$1</mark>', $text);
+            if (!empty($keywords)) {
+                // 文Markdownの場合はエスケープを Markdown レンダラーに任せるが、
+                // ハイライトタグを挿入するために一旦エスケープが必要な場合がある。
+                // ここでは「非Markdown」時のみ安全にエスケープしてハイライトする。
+                if ($this->activeSource !== 'vlm') {
+                    $text = e($text);
+                }
+
+                foreach ($keywords as $word) {
+                    $quoted = preg_quote($word, '/');
+                    // ヒットしたかどうかを確認（簡易版：置換が発生したか）
+                    $processed = preg_replace('/(' . $quoted . ')/iu', '<mark class="bg-yellow-200 text-black px-0.5 rounded">$1</mark>', $text);
+                    if ($processed !== $text) {
+                        $text = $processed;
+                    }
+                }
             }
         }
 
         return $text;
     }
 
-/**
- * 各抽出ソースの状態を取得する（UI用）
- * @return string available|processing|missing|error
- */
-public function getSourceStatus(string $source): string
-{
-    if (!$this->file) return 'missing';
+    /**
+     * Mroonga の検索クエリから強調すべき実質的なキーワードを抽出する
+     */
+    private function extractKeywords(string $query): array
+    {
+        // 1. Mroonga 特有の演算子と記号を除去
+        // OR, AND, NOT, +, -, *, "(", ")", "*D+", "*D", "D+" など
+        $clean = preg_replace('/\b(OR|AND|NOT)\b/i', ' ', $query);
+        $clean = preg_replace('/[\+\-\*\(\)]/', ' ', $clean);
+        $clean = preg_replace('/\*D\+?/', ' ', $clean);
 
-    // モックデータの場合
-    if ($this->file->id >= 1 && $this->file->id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
-        if (empty($this->mockData)) return 'missing';
+        // 2. 空白で分割して重複を排除
+        $words = preg_split('/[\s　]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
+        return array_unique($words);
+    }
 
+    /**
+     * 各抽出ソースの状態を取得する（UI用）
+     * @return string available|processing|missing|error
+     */
+    public function getSourceStatus(string $source): string
+    {
+        if (!$this->file) {
+            return 'missing';
+        }
+
+        // モックデータの場合
+        if ($this->file->id >= 1 && $this->file->id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+            if (empty($this->mockData)) {
+                return 'missing';
+            }
+
+            return match ($source) {
+                'vlm' => $this->mockData['mock_vlm_status'] ?? (($this->mockData['mock_vlm_text'] ?? null) ? 'completed' : 'missing'),
+                'ocr' => $this->mockData['mock_ocr_status'] ?? (($this->mockData['mock_ocr_text'] ?? null) ? 'completed' : 'missing'),
+                'tika' => $this->mockData['mock_tika_status'] ?? (($this->mockData['mock_tika_text'] ?? null) ? 'completed' : 'missing'),
+                default => 'missing',
+            };
+        }
+
+        // 本番データの場合
         return match ($source) {
-            'vlm' => $this->mockData['mock_vlm_status'] ?? ($this->mockData['mock_vlm_text'] ? 'completed' : 'missing'),
-            'ocr' => $this->mockData['mock_ocr_status'] ?? ($this->mockData['mock_ocr_text'] ? 'completed' : 'missing'),
-            'tika' => $this->mockData['mock_tika_status'] ?? ($this->mockData['mock_tika_text'] ? 'completed' : 'missing'),
+            'vlm' => $this->file->vlm_markdown ? 'completed' : ($this->file->vlm_confidence === null ? 'processing' : 'missing'),
+            'ocr' => $this->file->ocr_processed_at ? 'completed' : 'processing',
+            'tika' => 'completed', // Tikaは基本常に利用可能とする予定
             default => 'missing',
         };
     }
 
-    // 本番データの場合
-    return match ($source) {
-        'vlm' => $this->file->vlm_markdown ? 'completed' : ($this->file->vlm_confidence === null ? 'processing' : 'missing'),
-        'ocr' => $this->file->ocr_processed_at ? 'completed' : 'processing',
-        'tika' => 'completed', // Tikaは基本常に利用可能とする予定
-        default => 'missing',
-    };
-}
+    /**
+     * 現在表示中のテキストに検索キーワードが含まれているか
+     */
+    #[\Livewire\Attributes\Computed]
+    public function hasKeywordHit(): bool
+    {
+        if (empty($this->searchKeyword)) {
+            return false;
+        }
+
+        // ハイライトなし（生テキスト）を取得してチェック
+        $text = $this->getPreviewText(false);
+        if (!$text) {
+            return false;
+        }
+
+        $keywords = $this->extractKeywords($this->searchKeyword);
+        foreach ($keywords as $word) {
+            $quoted = preg_quote($word, '/');
+            if (preg_match('/' . $quoted . '/iu', $text)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public function toggleExpand(): void
     {

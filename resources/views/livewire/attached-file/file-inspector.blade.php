@@ -19,7 +19,7 @@
             }
         "
     x-init="$watch('open', value => { if (value) $nextTick(() => $refs.closeButton.focus()) })"
-    @open-file-inspector.window="open = true; isLoading = true; console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail.id)">
+    @open-file-inspector.window="open = true; isLoading = true; console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail)">
     {{-- DaisyUI Drawer --}}
     <div class="drawer drawer-end z-50" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
         <input type="checkbox" id="file-inspector-drawer" class="drawer-toggle" x-model="open" />
@@ -231,13 +231,10 @@
                                         <div
                                             class="flex flex-col sm:flex-row gap-2 mb-4 bg-base-200 p-2 rounded-lg border border-base-300">
                                             <div class="flex-1">
-                                                <div class="relative">
-                                                    <i
-                                                        class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40"></i>
-                                                    <input type="text" wire:model.live="searchKeyword"
-                                                        placeholder="{{ __('ledger.file_inspector.actions.search_placeholder') }}"
-                                                        class="input input-bordered input-sm w-full pl-9">
-                                                </div>
+                                                <x-mary-input wire:model.live.debounce.300ms="searchKeyword"
+                                                    icon="o-magnifying-glass"
+                                                    placeholder="{{ __('ledger.file_inspector.search.placeholder') }}"
+                                                    class="input-sm" clearable />
                                             </div>
                                             <div
                                                 class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0">
@@ -350,6 +347,13 @@
                                                                     {{ __('ledger.file_inspector.ocr.optimized_pdf_title') }}
                                                                 @endif
                                                             </h3>
+                                                            <p class="text-[10px] opacity-70 leading-tight">
+                                                                @if ($isImageFile)
+                                                                    {{ __('ledger.file_inspector.ocr.image_info') }}
+                                                                @else
+                                                                    {{ __('ledger.file_inspector.ocr.pdf_info') }}
+                                                                @endif
+                                                            </p>
                                                         </div>
                                                         <a href="{{ $ocrPdfUrl }}"
                                                             class="btn btn-xs btn-primary gap-1" download>
@@ -362,77 +366,121 @@
                                                 {{-- Source Selector --}}
                                                 {{-- The old source selector was here and has been replaced by the new combined search/source selector above --}}
 
-                                                @if ($confidence !== null && $confidence > 0)
+                                                @php
+                                                    $badge = $file?->getConfidenceBadgeInfo();
+                                                @endphp
+                                                @if ($badge)
                                                     <div class="stats shadow w-full">
                                                         <div class="stat p-3">
                                                             <div class="stat-title text-xs">
                                                                 {{ __('ledger.file_inspector.info.last_extraction') }}
                                                             </div>
                                                             <div class="stat-value text-lg flex items-center gap-2">
-                                                                @if ($source === 'vlm')
-                                                                    <span
-                                                                        class="badge badge-success">{{ __('ledger.file_inspector.source.vlm') }}</span>
-                                                                @elseif($source === 'ocr')
-                                                                    <span
-                                                                        class="badge badge-info">{{ __('ledger.file_inspector.source.ocr') }}</span>
-                                                                @else
-                                                                    <span
-                                                                        class="badge badge-primary">{{ __('ledger.file_inspector.source.tika') }}</span>
+                                                                <span class="badge badge-{{ $badge['color'] }}">
+                                                                    {{ $badge['label'] }}
+                                                                </span>
+                                                                @if ($badge['score'])
+                                                                    <span class="text-sm">{{ $badge['score'] }}</span>
                                                                 @endif
-                                                                <span
-                                                                    class="text-sm">{{ number_format($confidence * 100, 1) }}%</span>
                                                             </div>
                                                             <div class="stat-desc flex items-center gap-1">
-                                                                @if ($confidence >= 0.9)
+                                                                @if ($badge['color'] === 'success')
                                                                     <i
                                                                         class="fa-solid fa-check-circle text-success"></i>
-                                                                    <span
-                                                                        class="text-success">{{ __('ledger.attached_file.badge.vlm_high_quality') }}</span>
-                                                                @elseif($confidence >= 0.7)
+                                                                @elseif($badge['color'] === 'warning')
                                                                     <i class="fa-solid fa-shield-check text-info"></i>
-                                                                    <span
-                                                                        class="text-info">{{ __('ledger.attached_file.badge.vlm_medium_quality') }}</span>
                                                                 @else
                                                                     <i
                                                                         class="fa-solid fa-exclamation-triangle text-warning"></i>
-                                                                    <span
-                                                                        class="text-warning">{{ __('ledger.attached_file.badge.vlm_low_quality') }}</span>
                                                                 @endif
+                                                                <span
+                                                                    class="text-{{ $badge['color'] }}">{{ $badge['tooltip'] }}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 @endif
 
                                                 <div class="form-control" x-data="{
+                                                    copied: false,
                                                     copyText() {
-                                                            const text = this.$refs.rawContent.value;
-                                                            navigator.clipboard.writeText(text).then(() => {
-                                                                $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
-                                                            });
-                                                        },
-                                                        downloadFile(type) {
-                                                            const text = this.$refs.rawContent.value;
-                                                            const blob = new Blob([text], { type: 'text/plain' });
-                                                            const url = window.URL.createObjectURL(blob);
-                                                            const a = document.createElement('a');
-                                                            a.href = url;
-                                                            a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'markdown' ? '.md' : '.txt');
-                                                            document.body.appendChild(a);
-                                                            a.click();
-                                                            window.URL.revokeObjectURL(url);
-                                                            document.body.removeChild(a);
+                                                        const text = this.$refs.rawContent.value;
+                                                        if (!text) return;
+                                                
+                                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                            navigator.clipboard.writeText(text)
+                                                                .then(() => this.onCopySuccess())
+                                                                .catch(() => this.fallbackCopy(text));
+                                                        } else {
+                                                            this.fallbackCopy(text);
                                                         }
+                                                    },
+                                                    fallbackCopy(text) {
+                                                        const textarea = document.createElement('textarea');
+                                                        textarea.value = text;
+                                                        textarea.style.position = 'fixed';
+                                                        textarea.style.opacity = '0';
+                                                        document.body.appendChild(textarea);
+                                                        textarea.select();
+                                                        try {
+                                                            document.execCommand('copy');
+                                                            this.onCopySuccess();
+                                                        } catch (err) {
+                                                            console.error('Copy failed', err);
+                                                        }
+                                                        document.body.removeChild(textarea);
+                                                    },
+                                                    onCopySuccess() {
+                                                        this.copied = true;
+                                                        setTimeout(() => { this.copied = false; }, 2000);
+                                                        $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
+                                                    },
+                                                    downloadFile(type) {
+                                                        const text = this.$refs.rawContent.value;
+                                                        const blob = new Blob([text], { type: 'text/plain' });
+                                                        const url = window.URL.createObjectURL(blob);
+                                                        const a = document.createElement('a');
+                                                        a.href = url;
+                                                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'markdown' ? '.md' : '.txt');
+                                                        document.body.appendChild(a);
+                                                        a.click();
+                                                        window.URL.revokeObjectURL(url);
+                                                        document.body.removeChild(a);
+                                                    }
                                                 }">
                                                     <label class="label">
-                                                        <span
-                                                            class="label-text font-semibold">{{ __('ledger.file_inspector.tabs.content') }}</span>
+                                                        <span class="label-text font-semibold flex items-center gap-2">
+                                                            <i class="fa-solid fa-align-left text-primary/50"></i>
+                                                            {{ __('ledger.file_inspector.tabs.content') }}
+                                                        </span>
+                                                        @if ($activeSource === 'vlm')
+                                                            <span
+                                                                class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.vlm') }}</span>
+                                                        @elseif($activeSource === 'ocr')
+                                                            <span
+                                                                class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.ocr') }}</span>
+                                                        @endif
                                                     </label>
 
-                                                    {{-- Raw text for copy/download --}}
-                                                    <textarea x-ref="rawContent" class="hidden">{{ $previewTextRaw }}</textarea>
+                                                    {{-- Search hit feedback --}}
+                                                    @if ($searchKeyword)
+                                                        <div class="mb-2 flex items-center gap-2">
+                                                            @if ($this->hasKeywordHit)
+                                                                <span
+                                                                    class="badge badge-success badge-sm gap-1 text-white">
+                                                                    <i class="fa-solid fa-check"></i>
+                                                                    {{ __('ledger.file_inspector.search.hit') }}
+                                                                </span>
+                                                            @else
+                                                                <span class="badge badge-warning badge-sm gap-1">
+                                                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                                                    {{ __('ledger.file_inspector.search.no_hit') }}
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
 
                                                     <div x-ref="previewContent"
-                                                        class="bg-base-100 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative">
+                                                        class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
                                                         @if ($activeSource === 'vlm')
                                                             <div class="prose prose-sm max-w-none">
                                                                 {!! Str::markdown($previewText ?? '') !!}
@@ -465,9 +513,12 @@
 
                                                     <div class="flex flex-wrap gap-2 mt-4">
                                                         <button @click="copyText()"
-                                                            class="btn btn-sm btn-outline gap-2">
-                                                            <i class="fa-solid fa-copy"></i>
-                                                            <span>{{ __('ledger.file_inspector.actions.copy_text') }}</span>
+                                                            class="btn btn-sm transition-all duration-300"
+                                                            :class="copied ? 'btn-success text-white' : 'btn-outline gap-2'">
+                                                            <i class="fa-solid"
+                                                                :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                                                            <span
+                                                                x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.copy_text') }}'"></span>
                                                         </button>
                                                         <button @click="downloadFile('text')"
                                                             class="btn btn-sm btn-outline gap-2">
@@ -475,11 +526,27 @@
                                                             <span>{{ __('ledger.file_inspector.actions.download_text') }}</span>
                                                         </button>
                                                         @if ($activeSource === 'vlm')
-                                                            <button @click="downloadFile('markdown')"
-                                                                class="btn btn-sm btn-outline gap-2">
-                                                                <i class="fa-brands fa-markdown"></i>
-                                                                <span>Markdown</span>
-                                                            </button>
+                                                            @if ($tenantId && $file && $file->exists)
+                                                                <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) }}"
+                                                                    class="btn btn-sm btn-outline gap-2"
+                                                                    target="_blank">
+                                                                    <i class="fa-brands fa-markdown"></i>
+                                                                    <span>Markdown</span>
+                                                                </a>
+                                                                <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) }}"
+                                                                    class="btn btn-sm btn-outline gap-2"
+                                                                    target="_blank">
+                                                                    <i class="fa-solid fa-code"></i>
+                                                                    <span>JSON</span>
+                                                                </a>
+                                                            @else
+                                                                {{-- モックまたはID未確定時はクライアントサイド生成で代替 --}}
+                                                                <button @click="downloadFile('markdown')"
+                                                                    class="btn btn-sm btn-outline gap-2">
+                                                                    <i class="fa-brands fa-markdown"></i>
+                                                                    <span>Markdown</span>
+                                                                </button>
+                                                            @endif
                                                         @endif
                                                     </div>
                                                 </div>

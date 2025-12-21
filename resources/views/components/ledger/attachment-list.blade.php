@@ -2,6 +2,7 @@
     'files' => [],
     'mode' => 'compact', // 'full' | 'compact' | 'icon-only'
     'tenantId' => null,
+    'search' => null,
 ])
 
 @php
@@ -33,9 +34,10 @@
     showAll: false,
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
+    search: {{ json_encode($search) }},
     handleFileClick(fileId) {
         // console.log('handleFileClick called with fileId:', fileId);
-        this.$dispatch('open-file-inspector', { id: fileId });
+        this.$dispatch('open-file-inspector', { id: fileId, search: this.search });
     },
     handleDownload(event, fileId, url) {
         event.stopPropagation();

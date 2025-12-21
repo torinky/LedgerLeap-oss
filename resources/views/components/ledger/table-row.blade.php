@@ -52,9 +52,9 @@
                 @php
                     $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
                 @endphp
-                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="full" :tenant-id="$currentTenantId ?? tenant()?->id" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="full" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
             @elseif($isAttachmentColumn)
                 @php
                     $files = [];
@@ -174,7 +174,7 @@
                     }
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" />
+                    <x-ledger.attachment-list :files="$files" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
                 @else
                     <x-ledger.empty-message />
                 @endif
