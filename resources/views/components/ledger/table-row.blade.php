@@ -74,14 +74,16 @@
             @elseif($isMockAttachmentColumn && \App\Services\Ledger\MockAttachmentService::isEnabled())
                 @php
                     $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+                    $mockColumnId = config('mock.attachment.column_id', -1);
                     // モックファイルに対してもヒット判定を行う
                     foreach ($mockFiles as &$mf) {
                         $mf['is_hit'] = SearchHelper::isFileDataHit($mf, $searchKeywords);
                     }
+                    unset($mf); // 参照を解除してサイドエフェクトを防ぐ
                 @endphp
-                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="full" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
             @elseif($isAttachmentColumn)
                 @php
                     $files = [];
@@ -203,7 +205,7 @@
                     }
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
                 @else
                     <x-ledger.empty-message />
                 @endif

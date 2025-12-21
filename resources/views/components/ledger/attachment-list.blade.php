@@ -3,6 +3,7 @@
     'mode' => 'compact', // 'full' | 'compact' | 'icon-only'
     'tenantId' => null,
     'search' => null,
+    'columnId' => null, // カラムID
 ])
 
 @php
@@ -36,9 +37,14 @@
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
     search: {{ json_encode($search) }},
-    handleFileClick(fileId) {
-        // console.log('handleFileClick called with fileId:', fileId);
-        this.$dispatch('open-file-inspector', { id: fileId, search: this.search });
+    columnId: {{ json_encode($columnId) }},
+    handleFileClick(fileId, fileColumnId) {
+        // console.log('handleFileClick called with fileId:', fileId, 'columnId:', fileColumnId);
+        this.$dispatch('open-file-inspector', {
+            id: fileId,
+            column_id: fileColumnId || this.columnId,
+            search: this.search
+        });
     },
     handleDownload(event, fileId, url) {
         event.stopPropagation();
@@ -78,6 +84,7 @@
 
             $label = $file['filename'] ?? 'file';
             $fileId = (int) ($file['id'] ?? 0);
+            $fileColumnId = $file['column_id'] ?? $columnId ?? null;
             $fileSize = $file['size'] ?? null;
 
             // ファイルサイズフォーマット (Laravel 10+ Number::fileSize 対応)
@@ -164,11 +171,8 @@
             {{-- Icon Only モード: 一覧画面用極小表示 --}}
             <div class="relative group inline-flex items-center" role="listitem"
                 x-show="{{ $index }} < displayLimit || showAll"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
                 style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
-                    x-on:click="handleFileClick({{ $fileId }})" tabindex="0"
+                    x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
                     aria-label="{{ $label }} ({{ $statusLabel }})">
                     {{-- RPA用: 透過的ダウンロードリンク --}}
                     <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
@@ -214,9 +218,6 @@
                 <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
                     role="listitem"
                     x-show="{{ $index }} < displayLimit || showAll"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100"
                     style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
                     x-on:mouseenter="hoveredFile = {{ $fileId }}"
                     x-on:mouseleave="hoveredFile = null">
@@ -233,7 +234,7 @@
                             </span>
                         @endif
                         <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
-                            x-on:click="handleFileClick({{ $fileId }})"
+                            x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
                             aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
                             {{-- ステータスインジケータ --}}
                             <div class="indicator shrink-0">
@@ -324,7 +325,8 @@
                 <button type="button" x-on:click="toggleShowAll()" class="btn btn-ghost btn-sm gap-2">
                     <span
                         x-text="showAll ? '{{ __('ledger.collapse') }}' : '{{ __('ledger.show_more') }} (+{{ $hiddenCount }})'"></span>
-                    <i class="fa-solid" :class="showAll ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    <i class="fa-solid fa-chevron-down" x-show="!showAll"></i>
+                    <i class="fa-solid fa-chevron-up" x-show="showAll" style="display: none;"></i>
                 </button>
             @endif
         </div>

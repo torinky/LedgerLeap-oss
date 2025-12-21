@@ -121,6 +121,7 @@ class FileInspector extends Component
         if (is_array($payload)) {
             $id = $payload['id'] ?? null;
             $search = $payload['search'] ?? null;
+            // column_idは送信されても使用しない（AttachedFile IDは一意のため）
         } else {
             $id = $payload;
         }
@@ -129,7 +130,10 @@ class FileInspector extends Component
             return;
         }
 
-        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', ['id' => $id, 'search' => $search]);
+        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', [
+            'id' => $id,
+            'search' => $search
+        ]);
 
         $this->fileId = $id;
         $this->searchKeyword = $search ?? '';
@@ -140,7 +144,7 @@ class FileInspector extends Component
         $realFileExists = AttachedFile::where('id', $id)->exists();
 
         // 実データが存在する場合は実データを優先、存在しない場合でモックモードが有効なら場合モックデータを使用
-        if (! $realFileExists && $id >= 1 && $id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        if (! $realFileExists && $id >= 10001 && $id <= 10012 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
             // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
             if (app()->environment('local')) {
                 usleep(800000); // 0.8秒

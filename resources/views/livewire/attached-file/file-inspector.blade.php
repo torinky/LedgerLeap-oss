@@ -590,7 +590,7 @@
                                                                 class="opacity-60 whitespace-nowrap font-normal border-0 pl-0">
                                                             {{ __('ledger.file_inspector.info.size') }}</th>
                                                         <td class="font-mono text-right border-0 pr-0">
-                                                            {{ \Illuminate\Support\Number::fileSize($file->size, precision: 2) }}
+                                                            {{ \Illuminate\Support\Number::fileSize($file->size ?? 0, precision: 2) }}
                                                         </td>
                                                     </tr>
                                                     <tr>

@@ -380,6 +380,7 @@ class ColumnHtmlService
 
             $files[] = [
                 'id' => $attachment->id,
+                'column_id' => $attachment->column_id,
                 'filename' => $originalFilename,
                 'mime' => $attachment->original_mime_type ?? $attachment->mime,
                 'status' => $attachment->status instanceof \App\Enums\AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得

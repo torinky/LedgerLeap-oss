@@ -9,10 +9,13 @@ class MockAttachmentService
      */
     public static function getMockFiles(): array
     {
+        $mockColumnId = config('mock.attachment.column_id', -1);
+
         return [
             // 画像ファイル（JPG）- OCR処理済み、PDF変換済み
             [
-                'id' => 1,
+                'id' => 10001,
+                'column_id' => $mockColumnId,
                 'filename' => '領収書_2025-12-01.jpg',
                 'mime' => 'image/jpeg',
                 'status' => 'completed',
@@ -48,7 +51,8 @@ class MockAttachmentService
             ],
             // PDF（テキスト付き）- OCRmyPDF最適化済み
             [
-                'id' => 2,
+                'id' => 10002,
+                'column_id' => $mockColumnId,
                 'filename' => '契約書_2025年度.pdf',
                 'mime' => 'application/pdf',
                 'status' => 'completed',
@@ -84,7 +88,8 @@ class MockAttachmentService
             ],
             // 画像ファイル（PNG）- OCR処理中
             [
-                'id' => 3,
+                'id' => 10003,
+                'column_id' => $mockColumnId,
                 'filename' => 'スクリーンショット.png',
                 'mime' => 'image/png',
                 'status' => 'processing',
@@ -110,7 +115,8 @@ class MockAttachmentService
             ],
             // Office文書（Word）- 完了（OCR不要）
             [
-                'id' => 4,
+                'id' => 10004,
+                'column_id' => $mockColumnId,
                 'filename' => '報告書_第4四半期.docx',
                 'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'status' => 'completed',
@@ -129,7 +135,8 @@ class MockAttachmentService
             ],
             // PDF（スキャン画像のみ）- OCR処理済み
             [
-                'id' => 5,
+                'id' => 10005,
+                'column_id' => $mockColumnId,
                 'filename' => 'スキャン文書_20251213.pdf',
                 'mime' => 'application/pdf',
                 'status' => 'completed',
@@ -148,7 +155,8 @@ class MockAttachmentService
             ],
             // Office文書（Excel）- 完了（OCR不要）
             [
-                'id' => 6,
+                'id' => 10006,
+                'column_id' => $mockColumnId,
                 'filename' => '売上集計表_12月.xlsx',
                 'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'status' => 'completed',
@@ -167,7 +175,8 @@ class MockAttachmentService
             ],
             // その他ファイル（ZIP）- エラー（OCR対象外）
             [
-                'id' => 7,
+                'id' => 10007,
+                'column_id' => $mockColumnId,
                 'filename' => '資料一式.zip',
                 'mime' => 'application/zip',
                 'status' => 'error',
@@ -192,7 +201,8 @@ class MockAttachmentService
             ],
             // テキストファイル - 完了（OCR不要）
             [
-                'id' => 8,
+                'id' => 10008,
+                'column_id' => $mockColumnId,
                 'filename' => '議事録_20251213.txt',
                 'mime' => 'text/plain',
                 'status' => 'completed',
@@ -211,7 +221,8 @@ class MockAttachmentService
             ],
             // 画像ファイル（JPEG）- VLM解析済み、高信頼度
             [
-                'id' => 9,
+                'id' => 10009,
+                'column_id' => $mockColumnId,
                 'filename' => '名刺_田中様.jpg',
                 'mime' => 'image/jpeg',
                 'status' => 'completed',
@@ -230,7 +241,8 @@ class MockAttachmentService
             ],
             // PDF（複合）- VLM + OCR処理済み
             [
-                'id' => 10,
+                'id' => 10010,
+                'column_id' => $mockColumnId,
                 'filename' => '見積書_202512.pdf',
                 'mime' => 'application/pdf',
                 'status' => 'completed',
@@ -265,7 +277,8 @@ class MockAttachmentService
             ],
             // 画像ファイル（PNG）- OCR低信頼度（手書き）
             [
-                'id' => 11,
+                'id' => 10011,
+                'column_id' => $mockColumnId,
                 'filename' => '手書きメモ.png',
                 'mime' => 'image/png',
                 'status' => 'completed',
@@ -284,7 +297,8 @@ class MockAttachmentService
             ],
             // PDF（大容量）- OCRmyPDF最適化で大幅サイズ削減
             [
-                'id' => 12,
+                'id' => 10012,
+                'column_id' => $mockColumnId,
                 'filename' => 'カタログ_2025.pdf',
                 'mime' => 'application/pdf',
                 'status' => 'completed',

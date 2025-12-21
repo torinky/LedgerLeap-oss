@@ -28,6 +28,7 @@
 
     $label = $file['filename'] ?? 'file';
     $fileId = (int) ($file['id'] ?? 0);
+    $fileColumnId = $file['column_id'] ?? null;
     $fileSize = $file['size'] ?? null;
 
     $formattedSize = '';
@@ -106,15 +107,12 @@
 
 <div class="relative"
     x-show="{{ $index }} < displayLimit || showAll"
-    x-transition:enter="transition ease-out duration-200"
-    x-transition:enter-start="opacity-0 scale-95"
-    x-transition:enter-end="opacity-100 scale-100"
     style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
 
     <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col tooltip tooltip-bottom"
         role="listitem"
         x-data="{ imageLoading: true, imageError: false }"
-        x-on:click="handleFileClick({{ $fileId }})"
+        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
         tabindex="0"
         aria-label="{{ $label }} ({{ $statusLabel }})"
         data-tip="{{ $fullTooltip }}">
