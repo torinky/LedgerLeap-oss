@@ -55,7 +55,7 @@
         }
     }
 }"
-    class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3' }}"
+    class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4' }}"
     role="list" aria-label="{{ __('ledger.file_list') }}" id="{{ $componentId }}">
 
     @forelse($files as $index => $file)
@@ -160,13 +160,14 @@
                 : e($label);
         @endphp
 
-        <div x-show="{{ $index }} < displayLimit || showAll" x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-            style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
-
-            @if ($isIconOnly)
-                {{-- Icon Only モード: 一覧画面用極小表示 --}}
-                <div class="relative group inline-flex items-center" role="listitem"
+        @if ($isIconOnly)
+            {{-- Icon Only モード: 一覧画面用極小表示 --}}
+            <div class="relative group inline-flex items-center" role="listitem"
+                x-show="{{ $index }} < displayLimit || showAll"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
                     x-on:click="handleFileClick({{ $fileId }})" tabindex="0"
                     aria-label="{{ $label }} ({{ $statusLabel }})">
                     {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -211,7 +212,13 @@
             @elseif($isCompact)
                 {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
                 <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                    role="listitem" x-on:mouseenter="hoveredFile = {{ $fileId }}"
+                    role="listitem"
+                    x-show="{{ $index }} < displayLimit || showAll"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
+                    x-on:mouseenter="hoveredFile = {{ $fileId }}"
                     x-on:mouseleave="hoveredFile = null">
 
                     {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -258,6 +265,7 @@
                                         class="truncate text-sm font-medium text-base-content/90">{{ $displayLabel }}</span>
                                     <span class="text-[10px] text-base-content/60">{{ $formattedSize }}</span>
                                 </div>
+                            </div>
                         </button>
                     </div>
 
@@ -272,119 +280,12 @@
                 </div>
             @else
                 {{-- Full モード: 詳細画面用のカード表示 --}}
-                @php
-                    $hasSecondary = isset($file['secondary_download']) && $file['secondary_download'];
-                    $finalDownloadUrl = $hasSecondary ? $file['secondary_download']['url'] : $downloadUrl;
-                    $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
-                @endphp
-                <div class="tooltip tooltip-bottom text-left indicator" data-tip="{{ $fullTooltip }}">
-                        @if ($isHit)
-                            <span class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
-                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
-                            </span>
-                        @endif
-                        @if ($isOptimized)
-{{--
-                            <span
-                                class="indicator-item badge badge-success badge-xs gap-1 shadow-sm opacity-80 mt-2 mr-2">
---}}
-                            <span class="indicator-item indicator-middle indicator-center inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/50 text-base-100 mr-1.5 align-middle">
-                                <i class="fa-solid fa-check text-[10px]"></i>
-                            </span>
-                        @endif
-                        <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full"
-                            role="listitem" x-data="{ imageLoading: true, imageError: false }" x-on:click="handleFileClick({{ $fileId }})"
-                            tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
-                            {{-- RPA用: 透過的ダウンロードリンク --}}
-                            <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
-                                aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1"
-                                download></a>
-
-                            <figure
-                                class="h-40 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
-                                @if ($isProcessing)
-                                    {{-- Processing --}}
-                                    <div class="flex flex-col items-center gap-2">
-                                        <span class="loading loading-spinner loading-md text-warning"></span>
-                                        <span
-                                            class="text-xs text-base-content/60">{{ __('ledger.file_status.processing') }}</span>
-                                    </div>
-                                @elseif($isError)
-                                    {{-- Error --}}
-                                    <div class="text-error flex flex-col items-center gap-1">
-                                        <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-                                        <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
-                                    </div>
-                                @else
-                                    {{-- Normal --}}
-                                    @if (Str::startsWith($mime, 'image/') && isset($file['thumbnailUrl']))
-                                        <div x-show="imageLoading"
-                                            class="absolute inset-0 flex items-center justify-center bg-base-200">
-                                            <span class="loading loading-dots loading-sm text-base-content/30"></span>
-                                        </div>
-                                        <img src="{{ $file['thumbnailUrl'] }}" alt="{{ $label }}"
-                                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
-                                            x-on:error="imageLoading = false; imageError = true">
-                                        {{-- Fallback if image fails --}}
-                                        <div x-show="imageError"
-                                            class="flex flex-col items-center text-base-content/40">
-                                            <i class="fa-regular fa-image text-3xl mb-1"></i>
-                                            <span class="text-[10px]">No Preview</span>
-                                        </div>
-                                    @else
-                                        <div
-                                            class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
-                                            <i class="{{ $iconClass }} text-5xl opacity-80"></i>
-                                        </div>
-                                    @endif
-                                @endif
-                            </figure>
-
-                            {{-- Footer --}}
-                            <div class="px-3 py-2 grow relative">
-                                <div class="flex justify-between items-start gap-2">
-                                    <div class="min-w-0 flex-1">
-                                        <h3 class="text-sm font-semibold text-base-content/90 line-clamp-2 leading-tight mb-1 break-all overflow-hidden"
-                                            title="{{ $label }}">
-{{--
-                                            @if ($isHit)
-                                                <span
-                                                    class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/20 text-success mr-1.5 align-middle">
-                                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
-                                                </span>
-                                            @endif
---}}
-                                            {{ $displayLabel }}
-                                        </h3>
-                                        <div class="flex items-center gap-2 text-[10px] text-base-content/60">
-                                            @if ($formattedSize)
-                                                <span>{{ $formattedSize }}</span>
-                                            @endif
-                                            @if (isset($file['created_at']))
-                                                <span>•</span>
-                                                <span>{{ \Carbon\Carbon::parse($file['created_at'])->diffForHumans() }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    {{-- Download Button (Primary) --}}
-                                    <div class="tooltip tooltip-left" data-tip="{{ $downloadTooltip }}">
-                                        <a href="{{ $finalDownloadUrl }}"
-                                            class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
-                                            x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $finalDownloadUrl }}')"
-                                            download>
-                                            <i class="fa-solid fa-download text-xs"></i>
-                                        </a>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                </div>
+                <x-ledger.attachment-card
+                    :file="$file"
+                    :index="$index"
+                    :displayLimit="$displayLimit"
+                    :search="$search" />
             @endif
-
-        </div>{{-- x-show wrapper end --}}
 
     @empty
         @if (!$isIconOnly)
