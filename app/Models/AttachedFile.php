@@ -51,6 +51,58 @@ class AttachedFile extends Model
         return null;
     }
 
+    /**
+     * Tikaから抽出されたメタデータを取得
+     */
+    public function getTikaMetadataAttribute(): array
+    {
+        if (! $this->ledger || ! $this->ledger->content_attached) {
+            return [];
+        }
+
+        $allAttached = $this->ledger->content_attached;
+
+        // 1. まず column_id で直接引いてみる
+        if (isset($allAttached[$this->column_id])) {
+            $columnContent = $allAttached[$this->column_id];
+            if (isset($columnContent[$this->hashedbasename])) {
+                return $columnContent[$this->hashedbasename]['meta'] ?? [];
+            }
+        }
+
+        // 2. 見つからない場合は全カラムを走査（AsColumnArrayJsonでキーが失われている可能性を考慮）
+        // 備考: getOriginalFilenameAttribute() と同様のロジック
+        foreach ($allAttached as $columnContent) {
+            if (is_array($columnContent) && isset($columnContent[$this->hashedbasename])) {
+                return $columnContent[$this->hashedbasename]['meta'] ?? [];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * メタデータから作成日時を取得
+     */
+    public function getMetadataDateAttribute(): ?\Carbon\Carbon
+    {
+        $meta = $this->tika_metadata;
+
+        // Tikaの一般的な日付キーをチェック
+        $dateKey = collect(['dcterms:created', 'Creation-Date', 'created', 'date'])
+            ->first(fn ($key) => isset($meta[$key]));
+
+        if (! $dateKey) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($meta[$dateKey]);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
     public function ledger(): BelongsTo
     {
         return $this->belongsTo(Ledger::class, 'ledger_id');
@@ -357,8 +409,8 @@ class AttachedFile extends Model
 
     /**
      * OCRまたはTikaの抽出テキストを取得
-     * 
-     * @param string|null $source 指定のソース ('ocr' または 'tika')。省略時は finalized_source を使用。
+     *
+     * @param  string|null  $source  指定のソース ('ocr' または 'tika')。省略時は finalized_source を使用。
      */
     public function getOcrTikaFormattedText(?string $source = null): ?string
     {
@@ -368,7 +420,7 @@ class AttachedFile extends Model
         }
 
         $source = $source ?? $this->finalized_source;
-        if (!in_array($source, ['ocr', 'tika'])) {
+        if (! in_array($source, ['ocr', 'tika'])) {
             return null;
         }
 
@@ -588,7 +640,10 @@ class AttachedFile extends Model
     /**
      * 処理時間を計算（ヘルパーメソッド）
      */
-    private function calculateProcessingDuration(string $step): ?int
+    /**
+     * 各処理ステップの所要時間を計算（ミリ秒）
+     */
+    public function calculateProcessingDuration(string $step): ?int
     {
         // 簡易実装: 実際のジョブログから取得する場合はHorizonのAPIを使用
         return match ($step) {
@@ -596,6 +651,7 @@ class AttachedFile extends Model
                 $this->created_at->diffInMilliseconds($this->tika_processed_at) : null,
             'ocr' => $this->ocr_processed_at && $this->tika_processed_at ?
                 $this->tika_processed_at->diffInMilliseconds($this->ocr_processed_at) : null,
+            'vlm' => $this->vlm_processing_time_ms ? (int) $this->vlm_processing_time_ms : null,
             'finalization' => $this->processing_finalized_at && $this->tika_processed_at ?
                 $this->tika_processed_at->diffInMilliseconds($this->processing_finalized_at) : null,
             default => null,

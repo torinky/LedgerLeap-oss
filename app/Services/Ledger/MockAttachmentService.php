@@ -6,8 +6,6 @@ class MockAttachmentService
 {
     /**
      * Get the defined mock files with dynamic dates.
-     *
-     * @return array
      */
     public static function getMockFiles(): array
     {
@@ -43,6 +41,10 @@ class MockAttachmentService
                 'original_mime_type' => 'image/jpeg',
                 'size' => 1024 * 1500, // 1.5MB
                 'created_at' => now()->subDays(2),
+                'mock_metadata' => ['dcterms:created' => '2025-12-01T10:30:00Z', 'dc:creator' => 'Camera'],
+                'mock_ledger_title' => '2025年12月分 経費精算',
+                'mock_folder_path' => '経理 / 2025年度 / 12月',
+                'mock_creator_name' => '田中 太郎',
             ],
             // PDF（テキスト付き）- OCRmyPDF最適化済み
             [
@@ -75,6 +77,10 @@ class MockAttachmentService
                 'original_mime_type' => 'application/pdf',
                 'size' => 1024 * 500, // 500KB
                 'created_at' => now()->subDays(5),
+                'mock_metadata' => ['dcterms:created' => '2024-11-20T14:15:00Z', 'pdf:PDFVersion' => '1.7'],
+                'mock_ledger_title' => '2025年度 業務委託契約',
+                'mock_folder_path' => '法務 / 契約書 / 2025',
+                'mock_creator_name' => '佐藤 次郎',
             ],
             // 画像ファイル（PNG）- OCR処理中
             [
@@ -86,7 +92,7 @@ class MockAttachmentService
                 'downloadUrl' => '#',
                 'mock_vlm_text' => null,
                 'mock_ocr_text' => null,
-                'mock_tika_text' => "PNG screenshot file binary data...",
+                'mock_tika_text' => 'PNG screenshot file binary data...',
                 'mock_vlm_status' => 'processing',
                 'mock_ocr_status' => 'processing',
                 'mock_tika_status' => 'completed',
@@ -97,6 +103,10 @@ class MockAttachmentService
                 'original_mime_type' => 'image/png',
                 'size' => 1024 * 2000, // 2MB
                 'created_at' => now()->subMinutes(5),
+                'mock_metadata' => ['dcterms:created' => now()->subMinutes(6)->toIso8601String()],
+                'mock_ledger_title' => '作業メモ',
+                'mock_folder_path' => '個人 / 下書き',
+                'mock_creator_name' => '鈴木 花子',
             ],
             // Office文書（Word）- 完了（OCR不要）
             [
@@ -113,6 +123,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'size' => 1024 * 300, // 300KB
                 'created_at' => now()->subDays(10),
+                'mock_metadata' => ['dcterms:created' => '2025-10-15T09:00:00Z', 'meta:last-author' => 'Yamada'],
+                'mock_ledger_title' => '四半期報告',
+                'mock_folder_path' => '営業 / 報告書 / 2025',
             ],
             // PDF（スキャン画像のみ）- OCR処理済み
             [
@@ -129,6 +142,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/pdf',
                 'size' => 1024 * 2500, // 2.5MB
                 'created_at' => now()->subDays(1),
+                'mock_metadata' => ['dcterms:created' => '2025-12-13T16:45:00Z', 'pdf:PDFVersion' => '1.4'],
+                'mock_ledger_title' => '社内掲示板',
+                'mock_folder_path' => '総務 / 内規・通達',
             ],
             // Office文書（Excel）- 完了（OCR不要）
             [
@@ -145,6 +161,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'size' => 1024 * 50, // 50KB
                 'created_at' => now()->subDays(3),
+                'mock_metadata' => ['dcterms:created' => '2025-12-18T11:20:00Z', 'meta:last-author' => 'Sato'],
+                'mock_ledger_title' => '営業成績',
+                'mock_folder_path' => '営業 / 週次報告',
             ],
             // その他ファイル（ZIP）- エラー（OCR対象外）
             [
@@ -167,6 +186,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/zip',
                 'size' => 1024 * 1024 * 10, // 10MB
                 'created_at' => now()->subHours(1),
+                'mock_metadata' => [],
+                'mock_ledger_title' => 'プロジェクト共有',
+                'mock_folder_path' => '開発 / プロジェクトX',
             ],
             // テキストファイル - 完了（OCR不要）
             [
@@ -183,6 +205,9 @@ class MockAttachmentService
                 'original_mime_type' => 'text/plain',
                 'size' => 1024 * 2, // 2KB
                 'created_at' => now()->subDays(7),
+                'mock_metadata' => ['dc:title' => 'Meeting Minutes'],
+                'mock_ledger_title' => '定例会議',
+                'mock_folder_path' => '一般 / 議事録',
             ],
             // 画像ファイル（JPEG）- VLM解析済み、高信頼度
             [
@@ -199,6 +224,9 @@ class MockAttachmentService
                 'original_mime_type' => 'image/jpeg',
                 'size' => 1024 * 800, // 800KB
                 'created_at' => now()->subHours(3),
+                'mock_metadata' => ['dc:format' => 'image/jpeg'],
+                'mock_ledger_title' => '名刺管理',
+                'mock_folder_path' => '営業 / 顧客',
             ],
             // PDF（複合）- VLM + OCR処理済み
             [
@@ -231,6 +259,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/pdf',
                 'size' => 1024 * 1200, // 1.2MB
                 'created_at' => now()->subDays(3),
+                'mock_metadata' => ['dcterms:created' => '2025-11-28T10:00:00Z', 'pdf:PDFVersion' => '1.5'],
+                'mock_ledger_title' => '案件見積',
+                'mock_folder_path' => '営業 / 見積 / 2025',
             ],
             // 画像ファイル（PNG）- OCR低信頼度（手書き）
             [
@@ -247,6 +278,9 @@ class MockAttachmentService
                 'original_mime_type' => 'image/png',
                 'size' => 1024 * 400, // 400KB
                 'created_at' => now()->subHours(12),
+                'mock_metadata' => [],
+                'mock_ledger_title' => 'アイデアメモ',
+                'mock_folder_path' => '個人 / メモ',
             ],
             // PDF（大容量）- OCRmyPDF最適化で大幅サイズ削減
             [
@@ -273,6 +307,9 @@ class MockAttachmentService
                 'original_mime_type' => 'application/pdf',
                 'size' => 1024 * 1024 * 15, // 15MB
                 'created_at' => now()->subDays(7),
+                'mock_metadata' => ['dcterms:created' => '2025-01-10T12:00:00Z'],
+                'mock_ledger_title' => '製品資料',
+                'mock_folder_path' => 'マーケティング / カタログ',
             ],
         ];
     }

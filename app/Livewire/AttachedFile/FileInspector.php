@@ -2,13 +2,12 @@
 
 namespace App\Livewire\AttachedFile;
 
+use App\Helpers\SearchHelper;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use App\Helpers\SearchHelper;
 
 class FileInspector extends Component
 {
@@ -23,10 +22,19 @@ class FileInspector extends Component
     public ?AttachedFile $file = null;
 
     public string $selectedTab = 'content';
+
     public ?string $activeSource = null;
+
     public string $searchKeyword = '';
+
     public bool $isExpanded = false; // 大規模テキストの全表示フラグ
+
     public array $mockData = []; // モックデータ保持用
+
+    public ?string $mockLedgerTitle = null;
+
+    public ?string $mockFolderPath = null;
+    public ?string $mockCreatorName = null;
 
     public function mount(): void
     {
@@ -42,7 +50,7 @@ class FileInspector extends Component
      */
     public function hydrate(): void
     {
-        if ($this->fileId >= 1 && $this->fileId <= 12 && !empty($this->mockData)) {
+        if ($this->fileId >= 1 && $this->fileId <= 12 && ! empty($this->mockData)) {
             $this->reconstructMockFile();
         }
     }
@@ -53,11 +61,10 @@ class FileInspector extends Component
     private function reconstructMockFile(): void
     {
         $data = $this->mockData;
-        $this->file = new AttachedFile([
-            'filename' => $data['filename'],
-            'original_filename' => $data['filename'],
-            'mime' => $data['mime'],
-            'original_mime_type' => $data['original_mime_type'] ?? $data['mime'],
+        $this->file = (new AttachedFile)->forceFill([
+            'filename' => $data['filename'] ?? '',
+            'mime' => $data['mime'] ?? '',
+            'original_mime_type' => $data['original_mime_type'] ?? $data['mime'] ?? '',
             'size' => $data['size'] ?? 0,
             'created_at' => $data['created_at'] ?? now()->subDays(10),
             'updated_at' => now()->subDays(2),
@@ -65,10 +72,30 @@ class FileInspector extends Component
             'vlm_markdown' => $data['mock_preview_text'] ?? $data['preview_text'] ?? null,
             'finalized_source' => strtolower($data['mock_source'] ?? $data['source'] ?? 'tika'),
             'ocr_processed_at' => $data['ocr_processed_at'] ?? null,
-            'processing_finalized_at' => now()->subDays(1), // モックでもバッジ表示を有効にするため
+            'tika_processed_at' => ($data['created_at'] ?? now()->subDays(10))->addSeconds(5),
+            'vlm_processing_time_ms' => $data['vlm_processing_time_ms'] ?? (($data['mock_source'] ?? '') === 'VLM' ? 3500 : null),
+            'processing_finalized_at' => now()->subDays(1),
         ]);
         $this->file->id = $this->fileId;
         $this->file->exists = false;
+
+        // モック用の追加情報をセット
+        $this->mockLedgerTitle = $data['mock_ledger_title'] ?? null;
+        $this->mockFolderPath = $data['mock_folder_path'] ?? null;
+        $this->mockCreatorName = $data['mock_creator_name'] ?? null;
+
+        // Tikaメタデータをモックとしてシミュレート
+        if (isset($data['mock_metadata'])) {
+            $this->file->setRelation('ledger', (new \App\Models\Ledger)->forceFill([
+                'content_attached' => [
+                    $this->file->column_id => [
+                        $this->file->hashedbasename => [
+                            'meta' => $data['mock_metadata'],
+                        ],
+                    ],
+                ],
+            ]));
+        }
     }
 
     public function openInspector($payload): void
@@ -83,7 +110,7 @@ class FileInspector extends Component
             $id = $payload;
         }
 
-        if (!$id) {
+        if (! $id) {
             return;
         }
 
@@ -128,7 +155,7 @@ class FileInspector extends Component
 
             // 権限チェック: LedgerPolicy::view を使用
             // AttachedFilePolicyが空実装のため、親である台帳の権限を確認する
-            if (!Gate::allows('view', $this->file->ledger)) {
+            if (! Gate::allows('view', $this->file->ledger)) {
                 $this->error(__('ledger.no_view_permission'));
                 $this->dispatch('mary-toast', type: 'error', title: __('ledger.no_view_permission'));
                 $this->close();
@@ -139,9 +166,9 @@ class FileInspector extends Component
             $this->activeSource = $this->file->finalized_source ?? 'tika';
             $this->open = true;
             $this->isLoading = false;
-            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully for file id=' . $id);
+            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully for file id='.$id);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed: '.$e->getMessage());
             $this->error(__('ledger.vlm.result_not_found'));
             $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
             $this->close();
@@ -162,7 +189,7 @@ class FileInspector extends Component
             }
         }
 
-        if (!$data) {
+        if (! $data) {
             $data = $mockFiles[0];
         }
 
@@ -190,7 +217,7 @@ class FileInspector extends Component
 
     public function getPreviewText(bool $withHighlight = true): ?string
     {
-        if (!$this->file) {
+        if (! $this->file) {
             return null;
         }
 
@@ -199,9 +226,9 @@ class FileInspector extends Component
             // モックデータの場合はソース固有のテキストがあれば優先
             $baseText = $this->mockData['mock_preview_text'] ?? '';
             $text = match ($this->activeSource) {
-                'vlm' => $this->mockData['mock_vlm_text'] ?? ("【AI解析結果】\n" . $baseText . "\n\n※この内容はVLMによって生成された要約です。"),
-                'ocr' => $this->mockData['mock_ocr_text'] ?? ("【文字認識結果】\n" . $baseText),
-                'tika' => $this->mockData['mock_tika_text'] ?? ("【システム抽出結果】\n" . $baseText),
+                'vlm' => $this->mockData['mock_vlm_text'] ?? ("【AI解析結果】\n".$baseText."\n\n※この内容はVLMによって生成された要約です。"),
+                'ocr' => $this->mockData['mock_ocr_text'] ?? ("【文字認識結果】\n".$baseText),
+                'tika' => $this->mockData['mock_tika_text'] ?? ("【システム抽出結果】\n".$baseText),
                 default => $baseText,
             };
         } else {
@@ -212,22 +239,22 @@ class FileInspector extends Component
             };
         }
 
-        if (!$text) {
+        if (! $text) {
             return null;
         }
 
         // 2. 段階的ロード（大規模テキスト対応）: とりあえず先頭10,000文字で制限
         $limit = 10000;
-        $isTruncated = !$this->isExpanded && mb_strlen($text) > $limit;
+        $isTruncated = ! $this->isExpanded && mb_strlen($text) > $limit;
         if ($isTruncated && $withHighlight) {
-            $text = mb_substr($text, 0, $limit) . "\n\n... (テキストが長いため省略されました。全表示ボタンで確認できます) ...";
+            $text = mb_substr($text, 0, $limit)."\n\n... (テキストが長いため省略されました。全表示ボタンで確認できます) ...";
         }
 
         // 3. ハイライト処理 (HTML出力用のみ)
-        if ($withHighlight && !empty($this->searchKeyword)) {
+        if ($withHighlight && ! empty($this->searchKeyword)) {
             $keywords = SearchHelper::extractKeywords($this->searchKeyword);
 
-            if (!empty($keywords)) {
+            if (! empty($keywords)) {
                 // vlm (Markdown) の場合はエスケープせず、それ以外はエスケープしてハイライト
                 $shouldEscape = ($this->activeSource !== 'vlm');
                 $text = SearchHelper::highlight($text, $keywords, 'bg-yellow-200 text-black px-0.5 rounded', $shouldEscape);
@@ -237,14 +264,14 @@ class FileInspector extends Component
         return $text;
     }
 
-
     /**
      * 各抽出ソースの状態を取得する（UI用）
+     *
      * @return string available|processing|missing|error
      */
     public function getSourceStatus(string $source): string
     {
-        if (!$this->file) {
+        if (! $this->file) {
             return 'missing';
         }
 
@@ -283,17 +310,18 @@ class FileInspector extends Component
 
         // ハイライトなし（生テキスト）を取得してチェック
         $text = $this->getPreviewText(false);
-        if (!$text) {
+        if (! $text) {
             return false;
         }
 
         $keywords = SearchHelper::extractKeywords($this->searchKeyword);
+
         return SearchHelper::hasHit($text, $keywords);
     }
 
     public function toggleExpand(): void
     {
-        $this->isExpanded = !$this->isExpanded;
+        $this->isExpanded = ! $this->isExpanded;
     }
 
     public function render()
