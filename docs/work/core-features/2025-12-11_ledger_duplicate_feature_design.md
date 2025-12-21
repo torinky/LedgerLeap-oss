@@ -162,7 +162,7 @@ Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
 // ↓ ここに追加（詳細表示と台帳定義別リストの間）
 Route::get('/ledger/duplicate/{ledgerId}', ...)->name('ledger.duplicate');
 
-Route::get('/ledger/define/{defineId}', ...)->name('ledgerByDefineId');
+Route::get('/ledger/define/{defineId}', ...)->name('ledgersByDefineId');
 // ...
 ```
 

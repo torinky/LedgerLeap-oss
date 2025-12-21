@@ -34,6 +34,7 @@ class FileInspector extends Component
     public ?string $mockLedgerTitle = null;
 
     public ?string $mockFolderPath = null;
+
     public ?string $mockCreatorName = null;
 
     public function mount(): void
@@ -45,12 +46,26 @@ class FileInspector extends Component
     }
 
     /**
+     * 現在のファイルがモックデータかどうかを判定
+     */
+    private function isMockFile(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+
+        // モックデータの場合は exists が false かつ mockData が存在する
+        return ! $this->file->exists && ! empty($this->mockData);
+    }
+
+    /**
      * Livewireのハイドレーション時（リクエスト間）の処理
      * モックデータの場合はモデルがDBにないため、手動で再構築する
      */
     public function hydrate(): void
     {
-        if ($this->fileId >= 1 && $this->fileId <= 12 && ! empty($this->mockData)) {
+        // mockDataが存在し、かつfileIdが設定されている場合にのみ再構築
+        if (! empty($this->mockData) && $this->fileId) {
             $this->reconstructMockFile();
         }
     }
@@ -121,8 +136,11 @@ class FileInspector extends Component
         $this->file = null;
         $this->isLoading = true;
 
-        // モックデータの場合（id=1-12）は即座にロード
-        if ($id >= 1 && $id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        // 実データが存在するかチェック
+        $realFileExists = AttachedFile::where('id', $id)->exists();
+
+        // 実データが存在する場合は実データを優先、存在しない場合でモックモードが有効なら場合モックデータを使用
+        if (! $realFileExists && $id >= 1 && $id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
             // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
             if (app()->environment('local')) {
                 usleep(800000); // 0.8秒
@@ -144,20 +162,64 @@ class FileInspector extends Component
     public function loadData(int $id): void
     {
         try {
+            $currentUser = auth()->user();
+            $currentTenant = tenant();
+
+            \Illuminate\Support\Facades\Log::info('FileInspector: loadData started', [
+                'id' => $id,
+                'user_id' => $currentUser?->id,
+                'user_email' => $currentUser?->email,
+                'tenant_id' => $currentTenant?->id ?? tenant('id'),
+                'tenancy_initialized' => app(\Stancl\Tenancy\Tenancy::class)->initialized,
+            ]);
+
             $this->file = AttachedFile::with([
                 'ledger:id,content,content_attached,ledger_define_id',
                 'ledger.define:id,folder_id,title,workflow_enabled',
-                'ledger.define.folder:id,title',
+                'ledger.define.folder:id,title,tenant_id,parent_id',
                 'creator:id,name',
                 'modifier:id,name',
                 'activities.causer:id,name',
             ])->findOrFail($id);
 
+            \Illuminate\Support\Facades\Log::info('FileInspector: File loaded', [
+                'file_id' => $this->file->id,
+                'has_ledger' => $this->file->ledger !== null,
+            ]);
+
             // 権限チェック: LedgerPolicy::view を使用
             // AttachedFilePolicyが空実装のため、親である台帳の権限を確認する
+            if (! $this->file->ledger) {
+                \Illuminate\Support\Facades\Log::error('FileInspector: Ledger relation is null');
+                $this->error(__('ledger.vlm.result_not_found'));
+                $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
+                $this->close();
+
+                return;
+            }
+
             if (! Gate::allows('view', $this->file->ledger)) {
-                $this->error(__('ledger.no_view_permission'));
-                $this->dispatch('mary-toast', type: 'error', title: __('ledger.no_view_permission'));
+                $user = auth()->user();
+                $ledger = $this->file->ledger;
+                $folder = $ledger->define->folder ?? null;
+
+                \Illuminate\Support\Facades\Log::warning('FileInspector: Permission denied', [
+                    'user_id' => $user?->id,
+                    'user_email' => $user?->email,
+                    'user_roles' => $user?->roles->pluck('name')->toArray(),
+                    'ledger_id' => $ledger->id,
+                    'folder_id' => $folder?->id,
+                    'folder_title' => $folder?->title,
+                    'folder_tenant_id' => $folder?->tenant_id,
+                    'folder_parent_id' => $folder?->parent_id,
+                    'current_tenant_id' => tenant('id'),
+                    'tenancy_initialized' => app(\Stancl\Tenancy\Tenancy::class)->initialized,
+                    'gate_raw_result' => Gate::inspect('view', $ledger)->message(),
+                ]);
+                $this->error(
+                    title: __('ledger.file_inspector.messages.permission_denied_title'),
+                    description: __('ledger.file_inspector.messages.permission_denied_description')
+                );
                 $this->close();
 
                 return;
@@ -166,9 +228,16 @@ class FileInspector extends Component
             $this->activeSource = $this->file->finalized_source ?? 'tika';
             $this->open = true;
             $this->isLoading = false;
-            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully for file id='.$id);
+            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully', [
+                'file_id' => $id,
+                'active_source' => $this->activeSource,
+            ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $this->error(__('ledger.vlm.result_not_found'));
             $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
             $this->close();
@@ -222,7 +291,7 @@ class FileInspector extends Component
         }
 
         // 1. テキスト取得
-        if ($this->file->id >= 1 && $this->file->id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        if ($this->isMockFile()) {
             // モックデータの場合はソース固有のテキストがあれば優先
             $baseText = $this->mockData['mock_preview_text'] ?? '';
             $text = match ($this->activeSource) {
@@ -276,7 +345,7 @@ class FileInspector extends Component
         }
 
         // モックデータの場合
-        if ($this->file->id >= 1 && $this->file->id <= 12 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        if ($this->isMockFile()) {
             if (empty($this->mockData)) {
                 return 'missing';
             }
@@ -322,6 +391,26 @@ class FileInspector extends Component
     public function toggleExpand(): void
     {
         $this->isExpanded = ! $this->isExpanded;
+    }
+
+    /**
+     * プレビューテキストを取得（computed property）
+     */
+    #[\Livewire\Attributes\Computed]
+    public function previewText(): ?string
+    {
+        return $this->getPreviewText(true);
+    }
+
+    /**
+     * テキストが長すぎて展開ボタンが必要か判定
+     */
+    #[\Livewire\Attributes\Computed]
+    public function canExpand(): bool
+    {
+        $plainText = $this->getPreviewText(false);
+
+        return $plainText && mb_strlen($plainText) > 10000;
     }
 
     public function render()

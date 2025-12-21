@@ -77,7 +77,7 @@
                             <div class="flex-1">
                                 <div class="flex flex-col gap-1">
                                     <h2 id="drawer-title" class="text-base font-bold truncate line-clamp-1"
-                                        title="{{ $file?->original_filename ?? ($file?->filename ?? __('ledger.file_inspector.title')) }}">
+                                        title="{{ $file->original_filename ?? ($file->filename ?? __('ledger.file_inspector.title')) }}">
                                         <i class="fa-solid fa-file-lines mr-2 text-primary"></i>
                                         {{ \Illuminate\Support\Str::limit($file?->original_filename ?? ($file?->filename ?? __('ledger.file_inspector.title')), 30) }}
                                     </h2>
@@ -205,7 +205,7 @@
                                     {{-- Content Tab --}}
                                     <div class="p-4 space-y-4">
                                         @php
-                                            $previewText = $this->getPreviewText(true);
+                                            $previewText = $this->getPreviewText();
                                             $previewTextRaw = $this->getPreviewText(false);
                                             $hasPreviewText = $file && !empty($previewTextRaw);
                                             $confidence =
@@ -403,8 +403,13 @@
                                                 <div class="form-control" x-data="{
                                                     copied: false,
                                                     copyText() {
-                                                        const text = this.$refs.rawContent.value;
-                                                        if (!text) return;
+                                                        const contentEl = this.$refs.previewContent;
+                                                        const text = contentEl?.dataset?.text || '';
+
+                                                        if (!text) {
+                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
+                                                            return;
+                                                        }
 
                                                         if (navigator.clipboard && navigator.clipboard.writeText) {
                                                             navigator.clipboard.writeText(text)
@@ -426,6 +431,7 @@
                                                             this.onCopySuccess();
                                                         } catch (err) {
                                                             console.error('Copy failed', err);
+                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
                                                         }
                                                         document.body.removeChild(textarea);
                                                     },
@@ -435,7 +441,14 @@
                                                         $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
                                                     },
                                                     downloadFile(type) {
-                                                        const text = this.$refs.rawContent.value;
+                                                        const contentEl = this.$refs.previewContent;
+                                                        const text = contentEl?.dataset?.text || '';
+
+                                                        if (!text) {
+                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.download_failed') }}' });
+                                                            return;
+                                                        }
+
                                                         const blob = new Blob([text], { type: 'text/plain' });
                                                         const url = window.URL.createObjectURL(blob);
                                                         const a = document.createElement('a');
@@ -479,19 +492,25 @@
                                                         </div>
                                                     @endif
 
+                                                    @php
+                                                        // プレーンテキスト（ハイライトなし）を取得
+                                                        $plainText = $this->getPreviewText(false);
+                                                    @endphp
+
                                                     <div x-ref="previewContent"
+                                                         data-text="{{ $plainText }}"
                                                          class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
                                                         @if ($activeSource === 'vlm')
                                                             <div class="prose prose-sm max-w-none">
-                                                                {!! Str::markdown($previewText ?? '') !!}
+                                                                {!! Str::markdown($this->previewText ?? '') !!}
                                                             </div>
                                                         @else
-                                                            <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content">{!! $previewText !!}</pre>
+                                                            <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content">{!! $this->previewText !!}</pre>
                                                         @endif
 
-                                                        @if ($canExpand && !$isExpanded)
+                                                        @if ($this->canExpand && !$isExpanded)
                                                             <div
-                                                                    class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-base-100 to-transparent flex items-end justify-center pb-4">
+                                                                    class="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-base-100 to-transparent flex items-end justify-center pb-4">
                                                                 <button wire:click="toggleExpand"
                                                                         class="btn btn-sm btn-primary shadow-lg">
                                                                     <i class="fa-solid fa-arrows-up-down"></i>
@@ -642,12 +661,12 @@
                                                                     class="flex items-center justify-end gap-1.5 font-medium text-[11px]">
                                                                 @if ($mockCreatorName)
                                                                     <x-mary-avatar :title="$mockCreatorName"
-                                                                                   class="!w-4 !h-4"/>
+                                                                                   class="w-4! h-4!"/>
                                                                     <span>{{ $mockCreatorName }}</span>
                                                                 @else
                                                                     <x-mary-avatar
                                                                             :title="$file->creator?->name ?: 'System'"
-                                                                            class="!w-4 !h-4"/>
+                                                                            class="w-4! h-4!"/>
                                                                     <span>{{ $file->creator?->name ?: 'System' }}</span>
                                                                 @endif
                                                             </div>
@@ -664,11 +683,11 @@
                                                                         class="flex items-center justify-end gap-1.5 font-medium text-[11px]">
                                                                     @if ($mockCreatorName)
                                                                         <x-mary-avatar :title="$mockCreatorName"
-                                                                                       class="!w-4 !h-4"/>
+                                                                                       class="w-4! h-4!"/>
                                                                         <span>{{ $mockCreatorName }}</span>
                                                                     @else
                                                                         <x-mary-avatar :title="$file->modifier->name"
-                                                                                       class="!w-4 !h-4"/>
+                                                                                       class="w-4! h-4!"/>
                                                                         <span>{{ $file->modifier->name }}</span>
                                                                     @endif
                                                                 </div>
@@ -819,8 +838,8 @@
                                                         <div class="flex-none">
                                                             @if (!$mockData && $file->ledger_id)
                                                                 <x-mary-button
-                                                                        icon="fa-solid fa-arrow-up-right-from-square"
-                                                                        link="{{ route('ledgers.show', ['tenant' => tenant('id'), 'ledger' => $file->ledger_id]) }}"
+                                                                        icon="o-arrow-top-right-on-square"
+                                                                        link="{{ route('ledgersByDefineId', ['tenant' => tenant('id'), 'defineId' => $file->ledger?->define?->id]) }}"
                                                                         class="btn-xs btn-ghost btn-circle"
                                                                         target="_blank"/>
                                                             @endif
@@ -1013,7 +1032,7 @@
                                                 </div>
 
                                                 {{-- グラデーションオーバーレイ（スクロール可能を示す） --}}
-                                                <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                                                <div class="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-base-100 to-transparent pointer-events-none"
                                                      x-show="!showAllLogs"></div>
                                             </div>
 
@@ -1174,7 +1193,7 @@
                                                 </div>
 
                                                 {{-- グラデーションオーバーレイ --}}
-                                                <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                                                <div class="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-base-100 to-transparent pointer-events-none"
                                                      x-show="!showAllActivity"></div>
                                             </div>
 

@@ -442,8 +442,12 @@ return [
         ],
         'loading' => '読み込み中...',
         'messages' => [
+            'copy_failed' => 'コピーに失敗しました',
+            'download_failed' => 'ダウンロードに失敗しました',
             'link_copied' => 'リンクをコピーしました',
             'markdown_copied' => 'Markdownをコピーしました',
+            'permission_denied_title' => 'アクセス権限がありません',
+            'permission_denied_description' => 'このファイルが属する台帳を閲覧する権限がありません。フォルダの権限設定を確認してください。',
             'structured_copied' => '構造化データをコピーしました',
             'text_copied' => 'テキストをコピーしました',
         ],

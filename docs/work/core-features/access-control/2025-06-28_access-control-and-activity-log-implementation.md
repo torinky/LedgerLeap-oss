@@ -28,7 +28,7 @@
        `text-error` など) を適用し、変更を視覚的に分かりやすく表現。**JSONカラムの変更は「コンテンツ変更あり」と表示。
     10. `getSubjectDisplay()`、`getCauserDisplayName()`、`formatComment()` メソッドを実装し、表示内容を整形。
     11. `getSubjectDetailLink()` メソッドで、`Ledger` は `ledger.show` へ、`Folder` は `ledgersByFolderId` へリンクするように設定。
-        `LedgerDefine` は `ledgerByDefineId` へリンクするように設定。その他の管理系モデルへのリンクは `null` (
+        `LedgerDefine` は `ledgersByDefineId` へリンクするように設定。その他の管理系モデルへのリンクは `null` (
         一般ユーザー向け画面では表示しない)。
     12. `render()` メソッドの冒頭で `auth()->user()->can('viewAny', \App\Models\CustomActivity::class)`
         を使ってログ閲覧権限をチェックし、権限がない場合は

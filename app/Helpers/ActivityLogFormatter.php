@@ -410,7 +410,7 @@ class ActivityLogFormatter
             return route('ledger.show', $subject);
         }
         if ($subject instanceof LedgerDefine) {
-            return route('ledgerByDefineId', $subject);
+            return route('ledgersByDefineId', $subject);
         }
         if ($subject instanceof Folder) {
             return route('ledgersByFolderId', ['tenant' => tenant()?->id, 'folderId' => $subject->id]);

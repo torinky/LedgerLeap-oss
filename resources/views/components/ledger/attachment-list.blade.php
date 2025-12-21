@@ -277,8 +277,7 @@
                     $finalDownloadUrl = $hasSecondary ? $file['secondary_download']['url'] : $downloadUrl;
                     $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
                 @endphp
-                <div class="block w-full h-full tooltip tooltip-bottom text-left" data-tip="{{ $fullTooltip }}">
-                    <div class="indicator w-full h-full">
+                <div class="tooltip tooltip-bottom text-left indicator" data-tip="{{ $fullTooltip }}">
                         @if ($isHit)
                             <span class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
                                     <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
@@ -382,7 +381,6 @@
 
                             </div>
                         </div>
-                    </div>
                 </div>
             @endif
 
