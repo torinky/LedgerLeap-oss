@@ -1,16 +1,15 @@
 <?php
 
 use App\Models\Organization;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
-use LdapRecord\Models\ActiveDirectory\User as LdapUser;
 
 beforeEach(function () {
     // DirectoryEmulator::setup('default'); // 実際のコンテナを使うため削除
     $this->tenant = Tenant::create();
     // tenancy()->initialize($this->tenant); // ログインはセントラルコンテキストで行われるため、テナント初期化は不要
-    
+
     // テスト用の検索ベースDNを設定 (OpenLDAPコンテナに合わせて)
     config()->set('ldap_sync.login_search_base_dns', ['dc=planetexpress,dc=com']);
     // テスト用のLDAPユーザーモデルを設定 (OpenLDAPスキーマに合わせて)
@@ -24,17 +23,17 @@ afterEach(function () {
 test('ad user can login and auto-register (hybrid auth)', function () {
     // テスト用に階層属性を 'sn' (姓) に変更 (fryユーザーは ou 属性を持っていない可能性があるため)
     config()->set('ldap_sync.hierarchy_attributes', ['sn']);
-    
+
     // DB上の組織を作成
     $org = Organization::create(['name' => 'Fry', 'org_id' => 'Fry']);
 
     // テストに必要なロール、フォルダ、ロールフォルダ権限を設定
     // ユーザー作成後に紐付けるため、ロールとフォルダを先に作成
     $role = \Spatie\Permission\Models\Role::create(['name' => 'test-ad-role']);
-    
+
     // ユーザーを作成する前に仮のユーザーIDを用意 (Folderのcreator/modifier用)
     // 自動登録されるユーザーが作成された後に、改めてそのユーザーにロールを割り当てる
-    $tempUserId = User::factory()->create()->id; 
+    $tempUserId = User::factory()->create()->id;
 
     $folder = \App\Models\Folder::create([
         'title' => 'AD Sync Test Folder',
@@ -64,7 +63,7 @@ test('ad user can login and auto-register (hybrid auth)', function () {
     expect($user)->not->toBeNull()
         ->and($user->ad_last_synced_at)->not->toBeNull()
         ->and($user->primaryOrganization()->id)->toBe($org->id);
-    
+
     // 作成されたユーザーにロールを割り当てる
     $user->assignRole($role);
 
@@ -91,7 +90,7 @@ test('local user fallback works when ad user not found', function () {
 test('ad user rejected if organization mismatch (strict check)', function () {
     // テスト用に階層属性を 'sn' に変更
     config()->set('ldap_sync.hierarchy_attributes', ['sn']);
-    
+
     // DB上の組織を作成しない (不一致状態を作る)
     // $org = Organization::create(['name' => 'Fry', 'org_id' => 'Fry']);
 

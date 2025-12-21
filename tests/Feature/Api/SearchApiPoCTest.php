@@ -175,7 +175,7 @@ class SearchApiPoCTest extends TestCase
         $data = $response->json('data', []);
         echo 'Data count: '.count($data)."\n";
 
-//        dump($response->json());
+        //        dump($response->json());
 
         // アサーション
         $response->assertStatus(200);

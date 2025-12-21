@@ -135,40 +135,23 @@
                         </div>
 
                         {{-- Preview Area --}}
-                        @php
-                            $mime = $file?->original_mime_type ?? ($file?->mime ?? '');
-                            $isImage = str_starts_with($mime, 'image/');
-                            $isPdf = $mime === 'application/pdf';
-                            $showPreview = $isImage || $isPdf;
-                            $previewUrl = null;
-                            if ($file && $file->id >= 1 && $file->id <= 12) {
-                                if ($isImage) {
-                                    $previewUrl =
-                                        'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' .
-                                        urlencode($file->original_filename ?? 'Image');
-                                } elseif ($isPdf) {
-                                    $previewUrl = '#pdf-preview';
-                                }
-                            }
-                        @endphp
-
-                        @if ($showPreview)
+                        @if ($this->showPreview)
                             <div class="bg-base-200/50 border-b border-base-300 flex-none">
-                                @if ($isImage)
+                                @if ($this->isImage)
                                     <div class="relative aspect-video bg-base-300">
-                                        <img src="{{ $previewUrl }}"
+                                        <img src="{{ $this->previewUrl }}"
                                              alt="{{ $file?->original_filename ?? 'Preview' }}"
                                              class="w-full h-full object-contain" loading="lazy">
                                         <div class="absolute top-2 right-2">
                                             <button
                                                     class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
                                                     data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
-                                                    @click="window.open('{{ $previewUrl }}', '_blank')">
+                                                    @click="window.open('{{ $this->previewUrl }}', '_blank')">
                                                 <i class="fa-solid fa-magnifying-glass-plus"></i>
                                             </button>
                                         </div>
                                     </div>
-                                @elseif($isPdf)
+                                @elseif($this->isPdf)
                                     <div class="relative aspect-video bg-base-300 flex items-center justify-center">
                                         @if ($file && $file->id >= 1 && $file->id <= 12)
                                             <div class="text-center p-6">
@@ -182,13 +165,13 @@
                                                     {{ number_format(($file->size ?? 0) / 1024, 1) }}
                                                     KB</p>
                                                 <button class="btn btn-sm btn-outline gap-2"
-                                                        @click="window.open('{{ $previewUrl }}', '_blank')">
+                                                        @click="window.open('{{ $this->previewUrl }}', '_blank')">
                                                     <i class="fa-solid fa-external-link-alt"></i>
                                                     {{ __('ledger.file_inspector.preview.open_new_tab') }}
                                                 </button>
                                             </div>
                                         @else
-                                            <iframe src="{{ $previewUrl }}" class="w-full h-full border-0"
+                                            <iframe src="{{ $this->previewUrl }}" class="w-full h-full border-0"
                                                     title="PDF Preview"></iframe>
                                         @endif
                                     </div>

@@ -21,8 +21,11 @@ class DefaultSortTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Folder $folder;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void

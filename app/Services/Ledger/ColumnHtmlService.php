@@ -53,11 +53,10 @@ class ColumnHtmlService
     private array $attachmentContents;
 
     public function __construct(
-        AutoLinkService      $autoLinkService,
-        MarkdownRenderer     $markdownRenderer,
+        AutoLinkService $autoLinkService,
+        MarkdownRenderer $markdownRenderer,
         HtmlProcessorService $htmlProcessorService
-    )
-    {
+    ) {
         $this->autoLinkService = $autoLinkService;
         $this->markdownRenderer = $markdownRenderer;
         $this->htmlProcessorService = $htmlProcessorService;
@@ -66,29 +65,28 @@ class ColumnHtmlService
     /**
      * カラム定義データをもとに値をHTMLとして表示する
      *
-     * @param object|array $columnDefineData ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
-     * @param mixed $initialValue 初期値（カラムの値）
-     * @param bool $canView 閲覧権限があるかどうか（falseの場合は空文字を返す）
-     * @param array $attrs 追加属性（HTML属性など）
-     * @param string $idPrefix id属性のプレフィックス
-     * @param bool $asCreate 新規作成モードかどうか
-     * @param Ledger|null $record 現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
-     * @param string|null $highlight ハイライトするキーワード
+     * @param  object|array  $columnDefineData  ColumnDefineのオブジェクト、またはカラム定義情報を持つ配列
+     * @param  mixed  $initialValue  初期値（カラムの値）
+     * @param  bool  $canView  閲覧権限があるかどうか（falseの場合は空文字を返す）
+     * @param  array  $attrs  追加属性（HTML属性など）
+     * @param  string  $idPrefix  id属性のプレフィックス
+     * @param  bool  $asCreate  新規作成モードかどうか
+     * @param  Ledger|null  $record  現在の台帳レコード（AutoLinkServiceのコンテキストとして使用）
+     * @param  string|null  $highlight  ハイライトするキーワード
      * @return HtmlString 生成されたHTML文字列
      */
     public function show(
         object|array $columnDefineData,
-                     $initialValue,
-        bool         $canView = true,
-        array        $attrs = [],
-        string       $idPrefix = '',
-        bool         $asCreate = false,
-        ?Ledger      $record = null,
-        ?string      $highlight = null,
-        ?string      $tenantId = null
-    ): HtmlString
-    {
-        if (!$canView) {
+        $initialValue,
+        bool $canView = true,
+        array $attrs = [],
+        string $idPrefix = '',
+        bool $asCreate = false,
+        ?Ledger $record = null,
+        ?string $highlight = null,
+        ?string $tenantId = null
+    ): HtmlString {
+        if (! $canView) {
             return new HtmlString('');
         }
 
@@ -132,31 +130,31 @@ class ColumnHtmlService
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
         } elseif ($type === 'select') {
-            $html = '<span class="' . self::SELECT_BADGE_CLASS_NAME . '">' . e($this->initialValue) . '</span>';
+            $html = '<span class="'.self::SELECT_BADGE_CLASS_NAME.'">'.e($this->initialValue).'</span>';
         } elseif ($type === 'textarea') {
             // 1. MarkdownをHTMLに変換
-            $convertedHtml = $this->markdownRenderer->toHtml((string)$this->initialValue);
+            $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
 
             // 2. 自動リンクを適用
             $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
 
             // 3. 展開可能なコンテンツ用のマーカーを追加
-            $html = '<div class="expandable-textarea-content">' . $processedHtml . '</div>';
+            $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
-            $html = $this->initialValue . ' ' . $unit;
-            $html = $this->autoLinkService->convert(htmlspecialchars((string)$html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $html = $this->initialValue.' '.$unit;
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
-            $html = $this->autoLinkService->convert(htmlspecialchars((string)$this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
 
         }
 
         // ハイライト処理
         if ($highlight) {
             $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
-            if (!empty($keywords)) {
+            if (! empty($keywords)) {
                 $html = $this->htmlProcessorService->processTextNodes(
                     $html,
                     function (\DOMText $textNode, \DOMDocument $dom) use ($keywords) {
@@ -167,9 +165,9 @@ class ColumnHtmlService
                         $highlightedHtml = \App\Helpers\SearchHelper::highlight($textNode->nodeValue, $keywords, self::HIGHLIGHT_CLASS_NAME);
 
                         // HTMLを含む文字列をDOMノードに変換
-                        $tempDom = new \DOMDocument();
+                        $tempDom = new \DOMDocument;
                         // UTF-8エンコーディングを明示
-                        @$tempDom->loadHTML('<?xml encoding="UTF-8"><div>' . $highlightedHtml . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+                        @$tempDom->loadHTML('<?xml encoding="UTF-8"><div>'.$highlightedHtml.'</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
                         $container = $tempDom->getElementsByTagName('div')->item(0);
 
                         if ($container) {
@@ -189,7 +187,7 @@ class ColumnHtmlService
 
         // 最終的なHTMLをラップ
         if ($type === 'textarea') {
-            $html = '<div class="prose dark:prose-invert max-w-none">' . $html . '</div>';
+            $html = '<div class="prose dark:prose-invert max-w-none">'.$html.'</div>';
         }
 
         return new HtmlString($html ?? '');
@@ -200,7 +198,7 @@ class ColumnHtmlService
      */
     private function renderArrayValue($type, $values, $options): string
     {
-        if ($type === 'chk' && !empty($options)) {
+        if ($type === 'chk' && ! empty($options)) {
             $displayLabels = [];
             foreach ($values as $key => $value) {
                 if ($value === true && isset($options[$key])) {
@@ -210,15 +208,15 @@ class ColumnHtmlService
                 }
             }
 
-            return !empty($displayLabels)
-                ? '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayLabels)) . '</span>'
+            return ! empty($displayLabels)
+                ? '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayLabels)).'</span>'
                 : '';
         }
 
         if ($type !== 'files') {
             $displayValues = array_filter($values);
 
-            return '<span class="' . self::BADGE_CLASS_NAME . '">' . implode('</span><span class="' . self::BADGE_CLASS_NAME . '">', array_map('e', $displayValues)) . '</span>';
+            return '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayValues)).'</span>';
         }
 
         return empty($values) ? '' : '';
@@ -229,11 +227,11 @@ class ColumnHtmlService
         $this->attrs = $attrs;
         $this->columnDefineData = $columnDefineData;
         $id = $this->getColumnDefineProperty('id');
-        $this->nameBase = 'content[' . $id . ']';
+        $this->nameBase = 'content['.$id.']';
         $this->valueNameBase = $this->nameBase;
         $this->initialValue = $initialValue;
         $this->asCreate = $asCreate;
-        $this->id = $idPrefix . $this->valueNameBase;
+        $this->id = $idPrefix.$this->valueNameBase;
     }
 
     private function getColumnDefineProperty(string $key, $default = null)
@@ -292,7 +290,7 @@ class ColumnHtmlService
 
     public function getFileHtml(string $mode = 'full'): string
     {
-        if (!is_array($this->initialValue) || !isset($this->attachments)) {
+        if (! is_array($this->initialValue) || ! isset($this->attachments)) {
             return '';
         }
 
@@ -312,12 +310,12 @@ class ColumnHtmlService
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
             $attachment = $this->attachments->get($hashedFilename);
 
-            if (!$attachment) {
+            if (! $attachment) {
                 continue;
             }
 
             // ダウンロードURLの構築
-            if (!$this->tenantId) {
+            if (! $this->tenantId) {
                 Log::error('Tenant ID is not provided to ColumnHtmlService.');
                 $mainDownloadUrl = '#';
                 $thumbnailUrl = null;

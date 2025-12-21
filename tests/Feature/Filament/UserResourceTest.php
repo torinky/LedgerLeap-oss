@@ -2,10 +2,9 @@
 
 namespace Tests\Feature\Filament;
 
-use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -16,6 +15,7 @@ class UserResourceTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $adminUser;
 
     protected function setUp(): void
@@ -43,8 +43,6 @@ class UserResourceTest extends TestCase
         $this->actingAs($this->adminUser);
     }
 
-
-
     #[Test]
     public function manual_sync_status_filter_works_correctly(): void
     {
@@ -59,13 +57,13 @@ class UserResourceTest extends TestCase
             ->assertSee('Active User')
             ->assertDontSee('Expired User')
             ->assertDontSee('Normal User')
-            
+
             // フィルタ適用: Expired
             ->set('tableFilters.manual_sync_status.status', 'expired')
             ->assertSee('Expired User')
             ->assertDontSee('Active User')
             ->assertDontSee('Normal User')
-            
+
             // フィルタ適用: None
             ->set('tableFilters.manual_sync_status.status', 'none')
             ->assertSee('Normal User')
@@ -80,6 +78,6 @@ class UserResourceTest extends TestCase
 
         Livewire::test(ListUsers::class)
             ->assertSuccessful();
-            // 通知の詳細は確認しないが、エラーなく動作することを確認
+        // 通知の詳細は確認しないが、エラーなく動作することを確認
     }
 }

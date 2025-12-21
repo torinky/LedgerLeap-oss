@@ -8,8 +8,6 @@ class OpenLdapUser extends LdapRecordUser
 {
     /**
      * The object classes of the LDAP model.
-     *
-     * @var array
      */
     public static array $objectClasses = [
         'top',
@@ -21,8 +19,6 @@ class OpenLdapUser extends LdapRecordUser
     /**
      * The GUID key of the model.
      * OpenLDAP uses entryuuid.
-     *
-     * @var string
      */
     protected string $guidKey = 'entryuuid';
 }

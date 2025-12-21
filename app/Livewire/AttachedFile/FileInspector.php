@@ -413,6 +413,79 @@ class FileInspector extends Component
         return $plainText && mb_strlen($plainText) > 10000;
     }
 
+    /**
+     * ファイルがプレビュー可能か判定
+     */
+    #[\Livewire\Attributes\Computed]
+    public function showPreview(): bool
+    {
+        return $this->isImage() || $this->isPdf();
+    }
+
+    /**
+     * ファイルが画像か判定
+     */
+    #[\Livewire\Attributes\Computed]
+    public function isImage(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+
+        return str_starts_with($mime, 'image/');
+    }
+
+    /**
+     * ファイルがPDFか判定
+     */
+    #[\Livewire\Attributes\Computed]
+    public function isPdf(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+
+        return $mime === 'application/pdf';
+    }
+
+    /**
+     * プレビュー用のURLを取得
+     */
+    #[\Livewire\Attributes\Computed]
+    public function previewUrl(): ?string
+    {
+        if (! $this->file) {
+            return null;
+        }
+
+        // プレビュー不可のファイルはnullを返す
+        if (! $this->showPreview()) {
+            return null;
+        }
+
+        // モックデータの場合
+        if ($this->isMockFile()) {
+            if ($this->isImage()) {
+                return 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.
+                    urlencode($this->file->original_filename ?? 'Image');
+            } elseif ($this->isPdf()) {
+                return '#pdf-preview';
+            }
+
+            return null;
+        }
+
+        // 実ファイルの場合
+        if (! $this->file->path) {
+            return null;
+        }
+
+        // Storage::disk('public')->url() を使用してURLを生成
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+    }
+
     public function render()
     {
         return \view('livewire.attached-file.file-inspector');

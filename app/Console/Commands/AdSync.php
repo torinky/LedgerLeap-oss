@@ -37,7 +37,7 @@ class AdSync extends Command
     {
         $dryRun = $this->option('dry-run');
 
-        $this->info("Starting AD Sync (Dry Run: ".($dryRun ? 'Yes' : 'No').")...");
+        $this->info('Starting AD Sync (Dry Run: '.($dryRun ? 'Yes' : 'No').')...');
 
         try {
             $result = $this->adSyncService->sync($dryRun);
@@ -46,8 +46,8 @@ class AdSync extends Command
 
             return 0;
         } catch (\Exception $e) {
-            $this->error("AD Sync failed: ".$e->getMessage());
-            Log::error("AD Sync command failed", ['exception' => $e]);
+            $this->error('AD Sync failed: '.$e->getMessage());
+            Log::error('AD Sync command failed', ['exception' => $e]);
 
             return 1;
         }

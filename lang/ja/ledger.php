@@ -1,4 +1,5 @@
 <?php
+
 return [
     'Impersonate' => 'なりすまし',
     'Impersonation' => 'なりすまし',

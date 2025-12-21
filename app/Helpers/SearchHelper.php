@@ -7,7 +7,7 @@ class SearchHelper
     /**
      * Mroonga の検索クエリから実質的なキーワードを抽出する
      *
-     * @param string|null $query 検索クエリ
+     * @param  string|null  $query  検索クエリ
      * @return array 抽出されたキーワードの配列
      */
     public static function extractKeywords(?string $query): array
@@ -24,14 +24,15 @@ class SearchHelper
 
         // 2. 空白で分割して重複を排除
         $words = preg_split('/[\s　]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY);
+
         return array_unique($words);
     }
 
     /**
      * テキスト内にキーワードが含まれているか判定する（大文字小文字無視、全角半角正規化なしの簡易版）
      *
-     * @param string|null $text 対象テキスト
-     * @param array $keywords キーワード配列
+     * @param  string|null  $text  対象テキスト
+     * @param  array  $keywords  キーワード配列
      * @return bool 含まれていれば true
      */
     public static function hasHit(?string $text, array $keywords): bool
@@ -52,9 +53,9 @@ class SearchHelper
     /**
      * テキスト内のキーワードを <mark> タグでハイライトする
      *
-     * @param string|null $text 対象テキスト
-     * @param array $keywords キーワード配列
-     * @param string $class ハイライトタグに付与するクラス
+     * @param  string|null  $text  対象テキスト
+     * @param  array  $keywords  キーワード配列
+     * @param  string  $class  ハイライトタグに付与するクラス
      * @return string ハイライト済みのHTML
      */
     public static function highlight(?string $text, array $keywords, string $class = 'bg-yellow-200 text-black px-0.5 rounded', bool $shouldEscape = true): string
@@ -81,8 +82,8 @@ class SearchHelper
 
         // 3. 一度の preg_replace で置換（再帰的なハイライトを防ぐ）
         // 単一の正規表現 (word1|word2|...) を使うことで、一度置換された部分は次のマッチング対象にならない
-        $pattern = '/(' . implode('|', $escapedKeywords) . ')/iu';
-        $highlighted = preg_replace($pattern, '<mark class="' . $class . '">$1</mark>', $highlighted);
+        $pattern = '/('.implode('|', $escapedKeywords).')/iu';
+        $highlighted = preg_replace($pattern, '<mark class="'.$class.'">$1</mark>', $highlighted);
 
         return $highlighted;
     }
@@ -90,8 +91,8 @@ class SearchHelper
     /**
      * 添付ファイルデータ（content_attachedの要素）にキーワードが含まれているか判定する
      *
-     * @param array|null $fileData ファイルデータ
-     * @param array $keywords キーワード配列
+     * @param  array|null  $fileData  ファイルデータ
+     * @param  array  $keywords  キーワード配列
      * @return bool ヒットすれば true
      */
     public static function isFileDataHit(?array $fileData, array $keywords): bool

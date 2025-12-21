@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Ldap\User as LdapUser;
 use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -22,14 +21,11 @@ class AdSyncService
 
     protected array $syncedUserIds = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Active Directoryから組織とユーザーを同期します。
      *
-     * @param  bool  $dryRun
      * @return array 同期結果の要約
      *
      * @throws \Exception
@@ -40,10 +36,10 @@ class AdSyncService
         $this->deleteMissing = config('ldap_sync.delete_missing', true);
         $this->deletionThresholdPercentage = config('ldap_sync.deletion_threshold_percentage', 20);
 
-        Log::info("Starting AD Sync (Dry Run: " . ($dryRun ? 'Yes' : 'No') . "). Hierarchy Attributes: " . json_encode($this->hierarchyAttributes));
+        Log::info('Starting AD Sync (Dry Run: '.($dryRun ? 'Yes' : 'No').'). Hierarchy Attributes: '.json_encode($this->hierarchyAttributes));
         if (empty($this->hierarchyAttributes)) {
-            Log::error("No hierarchy attributes defined in config/ldap_sync.php");
-            throw new \Exception("No hierarchy attributes defined for AD sync.");
+            Log::error('No hierarchy attributes defined in config/ldap_sync.php');
+            throw new \Exception('No hierarchy attributes defined for AD sync.');
         }
 
         $this->syncedOrganizationIds = []; // リセット
@@ -95,7 +91,7 @@ class AdSyncService
             if (! $dryRun) {
                 DB::rollBack();
             }
-            Log::error("AD Sync failed: ".$e->getMessage(), ['exception' => $e]);
+            Log::error('AD Sync failed: '.$e->getMessage(), ['exception' => $e]);
             throw $e;
         }
     }
@@ -103,9 +99,6 @@ class AdSyncService
     /**
      * LDAPユーザーの属性に基づいて、既存の組織を検索します。
      * 組織の作成や更新は行いません。
-     *
-     * @param  \LdapRecord\Models\Model  $ldapUser
-     * @return Organization|null
      */
     public function findMatchingOrganization(\LdapRecord\Models\Model $ldapUser): ?Organization
     {
@@ -129,7 +122,7 @@ class AdSyncService
             $nameValue = $ldapUser->getFirstAttribute($nameAttributeName);
 
             \Illuminate\Support\Facades\Log::info("findMatchingOrganization: Attr: {$codeAttributeName}, Value: {$codeValue}");
-            \Illuminate\Support\Facades\Log::info("Existing Orgs: " . \App\Models\Organization::all()->pluck('org_id', 'name'));
+            \Illuminate\Support\Facades\Log::info('Existing Orgs: '.\App\Models\Organization::all()->pluck('org_id', 'name'));
 
             if (empty($nameValue)) {
                 break;
@@ -145,7 +138,7 @@ class AdSyncService
             }
 
             // コードで見つからなければ、親IDと名前で検索 (Fallback)
-            if (!$currentOrg) {
+            if (! $currentOrg) {
                 $query = Organization::where('name', $nameValue);
                 if ($parentOrg) {
                     $query->where('parent_id', $parentOrg->id);
@@ -156,7 +149,7 @@ class AdSyncService
             }
 
             // 組織が見つからなければ、この時点で一旦中央DBでの検索を試みる（テストが中央DBにorgを作成する場合があるため）
-            if (!$currentOrg) {
+            if (! $currentOrg) {
                 $previousTenant = null;
                 try {
                     $previousTenant = tenancy()->tenant();
@@ -227,11 +220,6 @@ class AdSyncService
 
     /**
      * LDAPユーザーから組織階層を解決し、必要に応じて組織を作成/更新します。
-     *
-     * @param  LdapUser  $ldapUser
-     * @param  array  $organizationCache
-     * @param  bool  $dryRun
-     * @return Organization|null
      */
     protected function resolveOrganizationHierarchy(LdapUser $ldapUser, array &$organizationCache, bool $dryRun): ?Organization
     {
@@ -253,7 +241,7 @@ class AdSyncService
 
             $codeValue = $ldapUser->getFirstAttribute($codeAttributeName);
             $nameValue = $ldapUser->getFirstAttribute($nameAttributeName);
-            Log::info('Debug hierarchy values: codeAttr=' . $codeAttributeName . ', nameAttr=' . $nameAttributeName . ', codeValue=' . $codeValue . ', nameValue=' . $nameValue);
+            Log::info('Debug hierarchy values: codeAttr='.$codeAttributeName.', nameAttr='.$nameAttributeName.', codeValue='.$codeValue.', nameValue='.$nameValue);
             Log::info("    Hierarchy Level - CodeAttr: {$codeAttributeName}, NameAttr: {$nameAttributeName}, CodeValue: {$codeValue}, NameValue: {$nameValue}");
 
             if (empty($nameValue)) {
@@ -267,14 +255,14 @@ class AdSyncService
             Log::info("    Resolved Org ID Value: {$orgIdValue}");
 
             // キャッシュキーの生成
-            $cacheKey = "ORG:".($parentOrg ? $parentOrg->id : 'ROOT').":{$orgIdValue}";
+            $cacheKey = 'ORG:'.($parentOrg ? $parentOrg->id : 'ROOT').":{$orgIdValue}";
 
             if (isset($organizationCache[$cacheKey])) {
                 $currentOrg = $organizationCache[$cacheKey];
                 Log::info("    Found in cache: {$currentOrg->name} (ID: {$currentOrg->id})");
             } else {
                 if ($dryRun) {
-                    Log::info("  [Dry Run] Would find/create Org: {$nameValue} (Org ID: {$orgIdValue}, Parent: ".($parentOrg?->name ?? 'Root').")");
+                    Log::info("  [Dry Run] Would find/create Org: {$nameValue} (Org ID: {$orgIdValue}, Parent: ".($parentOrg?->name ?? 'Root').')');
                     $currentOrg = new Organization(['name' => $nameValue, 'org_id' => $orgIdValue]);
                 } else {
                     $currentOrg = null;
@@ -307,17 +295,17 @@ class AdSyncService
                             } else {
                                 $currentOrg->makeRoot();
                             }
-                            Log::info("    Org Moved: {$nameValue} to parent " . ($parentOrg?->name ?? 'Root'));
+                            Log::info("    Org Moved: {$nameValue} to parent ".($parentOrg?->name ?? 'Root'));
                             $currentOrg->save(); // Save after move
                             $moved = true;
-                        } else if (!$parentOrg) {
+                        } elseif (! $parentOrg) {
                             $currentOrg->saveAsRoot();
                             Log::info("    Org Moved: {$nameValue} to parent Root");
                             $currentOrg->save(); // Save after move
                             $moved = true;
                         }
 
-                        if ($nameChanged && !$moved) {
+                        if ($nameChanged && ! $moved) {
                             $currentOrg->save();
                         }
                     } else { // 新規組織の作成
@@ -334,7 +322,7 @@ class AdSyncService
                         $currentOrg->save();
                         // Refresh to ensure ID is loaded
                         $currentOrg = $currentOrg->fresh();
-                        Log::info("    Organization Created: {$nameValue} (Org ID: {$orgIdValue}, Parent ID: ".($parentOrg?->id ?? 'null').")");
+                        Log::info("    Organization Created: {$nameValue} (Org ID: {$orgIdValue}, Parent ID: ".($parentOrg?->id ?? 'null').')');
                     }
                     $this->syncedOrganizationIds[] = $currentOrg->id; // 同期済みリストに追加 (IDが確実にロードされた後)
                 }
@@ -348,11 +336,6 @@ class AdSyncService
 
     /**
      * LDAPユーザーをLedgerLeapユーザーと同期します。
-     *
-     * @param  LdapUser  $ldapUser
-     * @param  Organization  $organization
-     * @param  bool  $dryRun
-     * @return void
      */
     protected function syncUser(LdapUser $ldapUser, Organization $organization, bool $dryRun): void
     {
@@ -363,11 +346,13 @@ class AdSyncService
 
         if (empty($email)) {
             Log::warning("  Skipping user {$name} (No email attribute found in LDAP)");
+
             return;
         }
 
         if (empty($guid)) {
             Log::warning("  Skipping user {$name} (No objectGuid/entryuuid attribute found in LDAP)");
+
             return;
         }
 
@@ -439,7 +424,6 @@ class AdSyncService
     /**
      * 今回同期されなかった組織を論理削除します。
      *
-     * @return void
      *
      * @throws \Exception
      */
@@ -465,13 +449,14 @@ class AdSyncService
         $candidates = array_diff($allSyncableOrgIds, $protectedOrgIds);
 
         $orgsToSoftDeleteIds = array_diff($candidates, $this->syncedOrganizationIds);
-        Log::info("Cleanup: All syncable Org IDs: " . json_encode($allSyncableOrgIds));
-        Log::info("Cleanup: Protected Org IDs (manual sync): " . json_encode($protectedOrgIds));
-        Log::info("Cleanup: Synced Org IDs: " . json_encode($this->syncedOrganizationIds));
-        Log::info("Cleanup: Orgs to soft delete IDs: " . json_encode($orgsToSoftDeleteIds));
+        Log::info('Cleanup: All syncable Org IDs: '.json_encode($allSyncableOrgIds));
+        Log::info('Cleanup: Protected Org IDs (manual sync): '.json_encode($protectedOrgIds));
+        Log::info('Cleanup: Synced Org IDs: '.json_encode($this->syncedOrganizationIds));
+        Log::info('Cleanup: Orgs to soft delete IDs: '.json_encode($orgsToSoftDeleteIds));
 
         if (empty($orgsToSoftDeleteIds)) {
-            Log::info("No organizations to soft delete.");
+            Log::info('No organizations to soft delete.');
+
             return;
         }
 
@@ -485,11 +470,11 @@ class AdSyncService
             Log::warning("Organization deletion percentage ({$deletionPercentage}%) exceeds threshold ({$this->deletionThresholdPercentage}%).");
             // If everything would be deleted (100%), abort as a safety measure; otherwise skip deletion but continue.
             if ($deletionPercentage >= 100) {
-                Log::warning("Aborting organization cleanup: would delete 100% of organizations.");
-                throw new \Exception("Organization cleanup aborted due to exceeding deletion threshold.");
+                Log::warning('Aborting organization cleanup: would delete 100% of organizations.');
+                throw new \Exception('Organization cleanup aborted due to exceeding deletion threshold.');
             }
 
-            Log::warning("Skipping organization deletion due to exceeding threshold but continuing sync.");
+            Log::warning('Skipping organization deletion due to exceeding threshold but continuing sync.');
 
             return;
         }
@@ -501,7 +486,6 @@ class AdSyncService
     /**
      * 今回同期されなかったユーザーを論理削除します。
      *
-     * @return void
      *
      * @throws \Exception
      */
@@ -510,12 +494,13 @@ class AdSyncService
         // objectguidを持つユーザーをAD同期対象とみなす
         $allSyncableUserIds = User::whereNotNull('objectguid')->pluck('id')->toArray();
         $usersToSoftDeleteIds = array_diff($allSyncableUserIds, $this->syncedUserIds);
-        Log::info("Cleanup: All syncable User IDs: " . count($allSyncableUserIds));
-        Log::info("Cleanup: Synced User IDs: " . count($this->syncedUserIds));
-        Log::info("Cleanup: Users to soft delete IDs: " . count($usersToSoftDeleteIds));
+        Log::info('Cleanup: All syncable User IDs: '.count($allSyncableUserIds));
+        Log::info('Cleanup: Synced User IDs: '.count($this->syncedUserIds));
+        Log::info('Cleanup: Users to soft delete IDs: '.count($usersToSoftDeleteIds));
 
         if (empty($usersToSoftDeleteIds)) {
-            Log::info("No users to soft delete.");
+            Log::info('No users to soft delete.');
+
             return;
         }
 
@@ -527,7 +512,7 @@ class AdSyncService
 
         if ($this->deletionThresholdPercentage > 0 && $deletionPercentage > $this->deletionThresholdPercentage) {
             Log::warning("Aborting user cleanup: Deletion percentage ({$deletionPercentage}%) exceeds threshold ({$this->deletionThresholdPercentage}%).");
-            throw new \Exception("User cleanup aborted due to exceeding deletion threshold.");
+            throw new \Exception('User cleanup aborted due to exceeding deletion threshold.');
         }
 
         User::whereIn('id', $usersToSoftDeleteIds)->delete();

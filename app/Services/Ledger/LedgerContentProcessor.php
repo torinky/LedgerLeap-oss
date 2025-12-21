@@ -77,7 +77,7 @@ class LedgerContentProcessor
 
             foreach ($columnObjectsInGroup as $columnDefine) {
                 $change = $contentChanges[$columnDefine->id] ?? null;
-                
+
                 // Mock Attachment Column: Force display even if no diff exists
                 if (! $change && \App\Services\Ledger\MockAttachmentService::isMockColumn($columnDefine->id) && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
                     $change = [

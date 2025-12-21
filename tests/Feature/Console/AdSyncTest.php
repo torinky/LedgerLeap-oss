@@ -57,7 +57,7 @@ class AdSyncTest extends TestCase
             'company' => 'Planet Express',
             'department' => 'Accounting',
             'description' => 'The Bean Counters',
-            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=Planet Express,dc=local,dc=com'
+            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=Planet Express,dc=local,dc=com',
         ]);
 
         Artisan::call('ad:sync');
@@ -94,7 +94,7 @@ class AdSyncTest extends TestCase
             'objectguid' => 'uuid-1',
             'department' => 'Accounting',
             'description' => 'The Bean Counters',
-            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,dc=local,dc=com'
+            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,dc=local,dc=com',
         ]);
 
         Artisan::call('ad:sync');
@@ -113,7 +113,7 @@ class AdSyncTest extends TestCase
             'objectguid' => 'uuid-1',
             'department' => 'Accounting',
             'description' => 'Financial Department', // Changed Name
-            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,dc=local,dc=com'
+            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,dc=local,dc=com',
         ]);
 
         Artisan::call('ad:sync');
@@ -140,7 +140,7 @@ class AdSyncTest extends TestCase
             'company' => 'Planet Express',
             'department' => 'Accounting',
             'description' => 'The Bean Counters',
-            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=Planet Express,dc=local,dc=com'
+            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=Planet Express,dc=local,dc=com',
         ]);
 
         Artisan::call('ad:sync');
@@ -159,11 +159,11 @@ class AdSyncTest extends TestCase
             'company' => 'MomCorp', // New Parent
             'department' => 'Accounting',
             'description' => 'The Bean Counters',
-            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=MomCorp,dc=local,dc=com'
+            'distinguishedname' => 'cn=Philip J Fry,ou=Accounting,ou=MomCorp,dc=local,dc=com',
         ]);
 
         $exitCode = Artisan::call('ad:sync');
-        $this->assertEquals(0, $exitCode, 'AD Sync failed: ' . Artisan::output());
+        $this->assertEquals(0, $exitCode, 'AD Sync failed: '.Artisan::output());
 
         $momCorpOrg = Organization::where('org_id', 'MomCorp')->first();
         $accountingOrgUpdated = Organization::where('org_id', 'Accounting')->first();
@@ -237,7 +237,7 @@ class AdSyncTest extends TestCase
         LdapUser::create(['cn' => 'U', 'mail' => 'u@ex.com', 'objectguid' => 'u1', 'department' => 'CHILD', 'description' => 'Child']);
 
         $exitCode = Artisan::call('ad:sync');
-        $this->assertEquals(0, $exitCode, 'AD Sync failed: ' . Artisan::output());
+        $this->assertEquals(0, $exitCode, 'AD Sync failed: '.Artisan::output());
 
         $repaired = Organization::where('org_id', 'CHILD')->first();
         $this->assertNotEquals(0, $repaired->_lft);

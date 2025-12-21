@@ -42,7 +42,7 @@ return [
         ],
         // LDAPガードを追加
         'ldap' => [
-            'driver'   => 'session',
+            'driver' => 'session',
             'provider' => 'ldap',
         ],
     ],
@@ -72,7 +72,7 @@ return [
         // LDAPプロバイダを追加
         'ldap' => [
             'driver' => 'ldap',
-            'model'  => App\Ldap\User::class, // LdapRecordモデルを指定
+            'model' => App\Ldap\User::class, // LdapRecordモデルを指定
         ],
 
         // 'users' => [

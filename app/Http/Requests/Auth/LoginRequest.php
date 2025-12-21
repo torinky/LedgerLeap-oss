@@ -51,7 +51,7 @@ class LoginRequest extends FormRequest
         if (! is_array($baseDns)) {
             $baseDns = [$baseDns];
         }
-        \Illuminate\Support\Facades\Log::info("LoginRequest: Base DNs: " . json_encode($baseDns));
+        \Illuminate\Support\Facades\Log::info('LoginRequest: Base DNs: '.json_encode($baseDns));
 
         foreach ($baseDns as $dn) {
             try {
@@ -67,7 +67,7 @@ class LoginRequest extends FormRequest
                     \Illuminate\Support\Facades\Log::info("LDAP User found: {$email} in DN: {$dn}");
                     // Verify password
                     $isValid = auth()->guard('ldap')->getProvider()->validateCredentials($ldapUser, ['password' => $password]);
-                    \Illuminate\Support\Facades\Log::info("LDAP Password Validation Result for {$email}: " . ($isValid ? 'True' : 'False'));
+                    \Illuminate\Support\Facades\Log::info("LDAP Password Validation Result for {$email}: ".($isValid ? 'True' : 'False'));
 
                     if ($isValid) {
                         // Authentication Successful
@@ -121,17 +121,29 @@ class LoginRequest extends FormRequest
                             if ($firstAttr) {
                                 try {
                                     $prevTenant = null;
-                                    try { $prevTenant = tenancy()->tenant(); } catch (\Throwable $e) { $prevTenant = null; }
-                                    try { tenancy()->end(); } catch (\Throwable $e) { }
+                                    try {
+                                        $prevTenant = tenancy()->tenant();
+                                    } catch (\Throwable $e) {
+                                        $prevTenant = null;
+                                    }
+                                    try {
+                                        tenancy()->end();
+                                    } catch (\Throwable $e) {
+                                    }
 
                                     $val = $ldapUser->getFirstAttribute($firstAttr);
-                                    \Illuminate\Support\Facades\Log::info("LoginRequest: central pre-lookup using attr={$firstAttr}, val=" . ($val ?? 'null'));
+                                    \Illuminate\Support\Facades\Log::info("LoginRequest: central pre-lookup using attr={$firstAttr}, val=".($val ?? 'null'));
                                     if ($val) {
                                         $organization = \App\Models\Organization::where('org_id', $val)->orWhere('name', $val)->first();
-                                        \Illuminate\Support\Facades\Log::info("LoginRequest central lookup found=" . ($organization ? 'yes' : 'no'));
+                                        \Illuminate\Support\Facades\Log::info('LoginRequest central lookup found='.($organization ? 'yes' : 'no'));
                                     }
                                 } finally {
-                                    try { if (isset($prevTenant) && $prevTenant) tenancy()->initialize($prevTenant); } catch (\Throwable $e) { }
+                                    try {
+                                        if (isset($prevTenant) && $prevTenant) {
+                                            tenancy()->initialize($prevTenant);
+                                        }
+                                    } catch (\Throwable $e) {
+                                    }
                                 }
                             }
 
@@ -142,7 +154,7 @@ class LoginRequest extends FormRequest
                                 $organization = $adSyncService->findMatchingOrganization($ldapUser);
                             }
 
-                            \Illuminate\Support\Facades\Log::info("Organization Resolution Result: " . ($organization ? "Found ({$organization->id})" : "Not Found"));
+                            \Illuminate\Support\Facades\Log::info('Organization Resolution Result: '.($organization ? "Found ({$organization->id})" : 'Not Found'));
 
                             // d. Update organization or Reject
                             if ($organization) {
@@ -221,12 +233,24 @@ class LoginRequest extends FormRequest
                         // If organization not set by AD resolver, try central lookup by first hierarchy attribute in testing
                         if (app()->environment('testing') && empty($user->primaryOrganization())) {
                             $hier = config('ldap_sync.hierarchy_attributes', []);
-                            if (! is_array($hier)) { $hier = [$hier]; }
+                            if (! is_array($hier)) {
+                                $hier = [$hier];
+                            }
                             $firstAttr = null;
-                            foreach ($hier as $k => $v) { $firstAttr = is_string($k) ? $v : $v; break; }
+                            foreach ($hier as $k => $v) {
+                                $firstAttr = is_string($k) ? $v : $v;
+                                break;
+                            }
                             if ($firstAttr) {
-                                try { $prevTenant = tenancy()->tenant(); } catch (\Throwable $e) { $prevTenant = null; }
-                                try { tenancy()->end(); } catch (\Throwable $e) { }
+                                try {
+                                    $prevTenant = tenancy()->tenant();
+                                } catch (\Throwable $e) {
+                                    $prevTenant = null;
+                                }
+                                try {
+                                    tenancy()->end();
+                                } catch (\Throwable $e) {
+                                }
                                 $val = $ldapUser->getFirstAttribute($firstAttr);
                                 if ($val) {
                                     $centralOrg = \App\Models\Organization::where('org_id', $val)->orWhere('name', $val)->first();
@@ -234,7 +258,12 @@ class LoginRequest extends FormRequest
                                         $user->setPrimaryOrganization($centralOrg);
                                     }
                                 }
-                                try { if ($prevTenant) tenancy()->initialize($prevTenant); } catch (\Throwable $e) { }
+                                try {
+                                    if ($prevTenant) {
+                                        tenancy()->initialize($prevTenant);
+                                    }
+                                } catch (\Throwable $e) {
+                                }
                             }
                         }
 
@@ -249,7 +278,8 @@ class LoginRequest extends FormRequest
                 }
             } catch (\Exception $e) {
                 // Log LDAP errors but continue to next DN or fallback
-                \Illuminate\Support\Facades\Log::error("LDAP Login Error for DN {$dn}: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("LDAP Login Error for DN {$dn}: ".$e->getMessage());
+
                 continue;
             }
         }

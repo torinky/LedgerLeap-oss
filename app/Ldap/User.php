@@ -8,8 +8,6 @@ class User extends LdapRecordUser
 {
     /**
      * The object classes of the LDAP model.
-     *
-     * @var array
      */
     public static array $objectClasses = [
         'top',

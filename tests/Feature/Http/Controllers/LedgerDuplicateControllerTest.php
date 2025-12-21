@@ -601,4 +601,3 @@ class LedgerDuplicateControllerTest extends TestCase
         $response->assertStatus(404);
     }
 }
-

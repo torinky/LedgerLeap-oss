@@ -17,8 +17,8 @@ class LdapRealConnectionTest extends TestCase
         parent::tearDown();
     }
 
-    #[Group("ldap")]
-    #[Group("integration")]
+    #[Group('ldap')]
+    #[Group('integration')]
     #[Test]
     public function test_can_connect_to_real_ldap_server()
     {
@@ -26,7 +26,7 @@ class LdapRealConnectionTest extends TestCase
         try {
             $connection = Container::getConnection('default');
             if ($connection instanceof \LdapRecord\Testing\LdapFake) {
-                 DirectoryEmulator::tearDown();
+                DirectoryEmulator::tearDown();
             }
         } catch (\Exception $e) {
             // Connection might not exist yet, which is fine
@@ -34,26 +34,26 @@ class LdapRealConnectionTest extends TestCase
 
         try {
             $connection = Container::getConnection('default');
-            
+
             // 接続設定がテスト用コンテナを向いているか確認 (ローカル開発環境保護のため)
             $config = $connection->getConfiguration()->all();
             if ($config['hosts'][0] !== 'openldap' && $config['hosts'][0] !== '127.0.0.1') {
-                 $this->markTestSkipped('Skipping real LDAP test: Host is not openldap or localhost.');
+                $this->markTestSkipped('Skipping real LDAP test: Host is not openldap or localhost.');
             }
 
             $connection->connect();
-            
+
             $this->assertTrue($connection->isConnected(), 'Failed to connect to the LDAP server.');
         } catch (\LdapRecord\Auth\BindException $e) {
-            $this->fail('Failed to bind to LDAP server. Error: ' . $e->getMessage());
+            $this->fail('Failed to bind to LDAP server. Error: '.$e->getMessage());
         } catch (\LdapRecord\ConnectionException $e) {
-             // コンテナが起動していない、またはネットワークの問題がある場合はテストをスキップする
-            $this->fail('Could not connect to LDAP host. Error: ' . $e->getMessage());
+            // コンテナが起動していない、またはネットワークの問題がある場合はテストをスキップする
+            $this->fail('Could not connect to LDAP host. Error: '.$e->getMessage());
         }
     }
 
-    #[Group("integration")]
-    #[Group("ldap")]
+    #[Group('integration')]
+    #[Group('ldap')]
     #[Test]
     public function test_can_search_root_dse_in_real_ldap_server()
     {
@@ -62,7 +62,7 @@ class LdapRealConnectionTest extends TestCase
             $connection = Container::getConnection('default');
             $connection->connect();
         } catch (\Exception $e) {
-            $this->markTestSkipped('LDAP server is not available: ' . $e->getMessage());
+            $this->markTestSkipped('LDAP server is not available: '.$e->getMessage());
         }
 
         // Root DSE (ディレクトリサーバ自体の情報) は認証なしでも（設定によるが）またはBindユーザーなら確実に読めるはず
@@ -71,16 +71,16 @@ class LdapRealConnectionTest extends TestCase
             $rootDse = $connection->query()->read()->first();
             $this->assertNotNull($rootDse, 'Could not retrieve Root DSE from LDAP server.');
         } catch (\Exception $e) {
-             $this->fail('LDAP search failed: ' . $e->getMessage());
+            $this->fail('LDAP search failed: '.$e->getMessage());
         }
-        
+
         // Base DN のオブジェクトが存在するか確認
         $baseDn = config('ldap.connections.default.base_dn');
         try {
-             $entry = $connection->query()->in($baseDn)->read()->first();
-             $this->assertNotNull($entry, "Could not find entry at Base DN: $baseDn");
+            $entry = $connection->query()->in($baseDn)->read()->first();
+            $this->assertNotNull($entry, "Could not find entry at Base DN: $baseDn");
         } catch (\Exception $e) {
-            $this->fail("Search at Base DN ($baseDn) failed: " . $e->getMessage());
+            $this->fail("Search at Base DN ($baseDn) failed: ".$e->getMessage());
         }
     }
 }
