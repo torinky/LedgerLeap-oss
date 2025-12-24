@@ -1,5 +1,9 @@
 # File Inspector Phase 4.4 (履歴タブ) 実装計画書
 
+> **📢 実装担当者の方へ**  
+> **WBS実装順に整理した実装ガイドを作成しました: [`2025-12-24_phase4-4_implementation_guide.md`](./2025-12-24_phase4-4_implementation_guide.md)**  
+> 実装作業にはそちらをご利用ください。本ドキュメントは背景情報と技術分析の参考資料として保持します。
+
 **作成日:** 2025-12-24
 **対象フェーズ:** Phase 4.4 (History Tab Implementation)
 **関連計画:** `docs/work/ui-ux/attachment/2025-12-20_phase4_detailed_plan.md`
