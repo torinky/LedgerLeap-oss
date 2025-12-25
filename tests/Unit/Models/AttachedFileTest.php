@@ -409,4 +409,68 @@ class AttachedFileTest extends TestCase
         ]);
         $this->assertEquals('initial_processing', $file->processing_status);
     }
+
+    // Phase 4.4: Timeline Tests
+    #[Test]
+    public function get_system_timeline_attribute_returns_correct_events()
+    {
+        $file = AttachedFile::factory()->create([
+            'created_at' => now()->subMinutes(10),
+            'tika_processed_at' => now()->subMinutes(8),
+            'ocr_processed_at' => now()->subMinutes(5),
+            'vlm_processed_at' => now()->subMinutes(2),
+            'vlm_confidence' => 0.95,
+            'processing_finalized_at' => now()->subMinute(),
+            'finalized_source' => 'vlm',
+        ]);
+
+        $timeline = $file->system_timeline;
+
+        $this->assertCount(5, $timeline);
+
+        // Events should be sorted by asc timestamp (oldest first - chronological order)
+        $this->assertEquals(__('ledger.file_inspector.history.uploaded'), $timeline[0]['title']);
+        $this->assertEquals('system', $timeline[0]['type']);
+        $this->assertEquals('o-paper-clip', $timeline[0]['icon']);
+        $this->assertNotNull($timeline[0]['timestamp']);
+
+        $this->assertEquals(__('ledger.file_inspector.history.tika_extraction'), $timeline[1]['title']);
+        $this->assertEquals('system', $timeline[1]['type']);
+
+        // Last event should be processing_finalized
+        $this->assertEquals(__('ledger.file_inspector.history.processing_finalized'), $timeline[4]['title']);
+        $this->assertEquals('o-check-circle', $timeline[4]['icon']);
+    }
+
+    #[Test]
+    public function get_user_timeline_attribute_returns_correct_activities()
+    {
+        $user = \App\Models\User::factory()->create();
+        $file = AttachedFile::factory()->create();
+
+        // Create some activities
+        // Create some activities with explicit timestamps
+        $a1 = activity()
+            ->performedOn($file)
+            ->causedBy($user)
+            ->event('downloaded')
+            ->log('Downloaded file');
+        $a1->created_at = now()->subMinutes(5);
+        $a1->save();
+
+        $a2 = activity()
+            ->performedOn($file)
+            ->causedBy($user)
+            ->event('viewed_thumbnail')
+            ->log('Viewed thumbnail');
+        $a2->created_at = now()->subMinutes(1);
+        $a2->save();
+
+        $timeline = $file->user_timeline;
+
+        $this->assertCount(2, $timeline);
+        $this->assertEquals('user', $timeline[0]['type']);
+        $this->assertEquals('eye', $timeline[0]['icon']); // viewed_thumbnail is latest
+        $this->assertEquals('arrow-down-tray', $timeline[1]['icon']); // downloaded is older
+    }
 }
