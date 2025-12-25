@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\AttachedFile;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,6 +14,7 @@ use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\HtmlString;
+use Spatie\Activitylog\Models\Activity;
 
 /**
  * ActivityLogのデータを整形するためのヘルパークラス
@@ -35,10 +37,10 @@ class ActivityLogFormatter
      *
      * @param  CustomActivity|array  $activity  Activityモデルインスタンスまたはペイロード配列
      */
-    public static function getOperationDescription(CustomActivity|array $activity): string
+    public static function getOperationDescription(Activity|array $activity): string
     {
         // Activityモデルインスタンスの場合
-        if ($activity instanceof CustomActivity) {
+        if ($activity instanceof Activity) {
             $eventKey = $activity->event ?? $activity->description;
             $subjectType = $activity->subject_type;
             $properties = $activity->properties;
@@ -78,6 +80,10 @@ class ActivityLogFormatter
         if (in_array($eventKey, ['login', 'logout'])) {
             return __("ledger.activity.event.{$eventKey}", ['resource' => $subjectName]);
         }
+        // File operation events
+        if (in_array($eventKey, ['downloaded', 'downloaded_original', 'viewed_thumbnail', 'downloaded_vlm'])) {
+            return __("ledger.activity.event.{$eventKey}", ['resource' => $subjectName]);
+        }
         // リレーション操作 (attached/detached)
         if (in_array($eventKey, ['attached', 'detached'])) {
             $relationName = $properties->get('relation_name');
@@ -104,14 +110,14 @@ class ActivityLogFormatter
     /**
      * subject の表示名を取得するヘルパー
      */
-    public static function getSubjectNameForDisplay(CustomActivity|array $activity): string
+    public static function getSubjectNameForDisplay(Activity|array $activity): string
     {
-        $subject = ($activity instanceof CustomActivity) ? $activity->subject : null;
-        $subjectType = ($activity instanceof CustomActivity) ? $activity->subject_type : ($activity['subject_type'] ?? null);
-        $subjectId = ($activity instanceof CustomActivity) ? $activity->subject_id : ($activity['subject_id'] ?? null);
+        $subject = ($activity instanceof Activity) ? $activity->subject : null;
+        $subjectType = ($activity instanceof Activity) ? $activity->subject_type : ($activity['subject_type'] ?? null);
+        $subjectId = ($activity instanceof Activity) ? $activity->subject_id : ($activity['subject_id'] ?? null);
 
         // subject が null で causer が User の場合 (例: login/logout) は causer を subject のように扱う
-        $causer = ($activity instanceof CustomActivity) ? $activity->causer : null;
+        $causer = ($activity instanceof Activity) ? $activity->causer : null;
         if (! $subject) {
             if ($causer instanceof User) {
                 return $causer->name ?? __('ledger.activity.subject.unknown');
@@ -159,6 +165,9 @@ class ActivityLogFormatter
             } else {
                 $title = "{$roleName} / {$folderName}";
             }
+        } elseif ($subject instanceof AttachedFile) {
+            $title = $subject->original_filename ?? $subject->filename ?? ('ID: '.$subject->id);
+            $type = __('ledger.activity.model_name.attached_file');
         } else {
             // subject モデルが取得できなかった場合や不明なモデルタイプ
             $type = class_basename($subjectType);
@@ -171,9 +180,9 @@ class ActivityLogFormatter
     /**
      * リレーション操作時の関連エンティティ名を取得
      */
-    public static function getRelatedEntityNameForDisplay(CustomActivity|array $activity): string
+    public static function getRelatedEntityNameForDisplay(Activity|array $activity): string
     {
-        $properties = ($activity instanceof CustomActivity) ? $activity->properties : collect($activity['properties'] ?? []);
+        $properties = ($activity instanceof Activity) ? $activity->properties : collect($activity['properties'] ?? []);
 
         $relatedModelType = $properties->get('related_model_type');
         $relatedModelIds = $properties->get('related_model_ids', []);
@@ -210,10 +219,10 @@ class ActivityLogFormatter
      *
      * @param  CustomActivity|array  $activity  Activityモデルインスタンスまたはペイロード配列
      */
-    public static function formatChanges(CustomActivity|array $activity): string|HtmlString
+    public static function formatChanges(Activity|array $activity): string|HtmlString
     {
         // Activityモデルインスタンスの場合
-        if ($activity instanceof CustomActivity) {
+        if ($activity instanceof Activity) {
             $properties = $activity->properties;
             $event = $activity->event;
         } else { // array (通知ペイロードなど) の場合
@@ -360,9 +369,9 @@ class ActivityLogFormatter
     /**
      * コメントを表示するためのフォーマット
      */
-    public static function formatComment(CustomActivity|array $activity): string
+    public static function formatComment(Activity|array $activity): string
     {
-        $properties = ($activity instanceof CustomActivity) ? $activity->properties : collect($activity['properties'] ?? []);
+        $properties = ($activity instanceof Activity) ? $activity->properties : collect($activity['properties'] ?? []);
 
         return $properties->get('comments', '');
     }
@@ -370,9 +379,9 @@ class ActivityLogFormatter
     /**
      * 対象リソースの詳細画面へのリンクURLを取得
      */
-    public static function getSubjectDetailLink(CustomActivity|array $activity): ?string
+    public static function getSubjectDetailLink(Activity|array $activity): ?string
     {
-        $subject = ($activity instanceof CustomActivity) ? $activity->subject : null;
+        $subject = ($activity instanceof Activity) ? $activity->subject : null;
 
         // Add logging to inspect the subject
         /*        if ($subject) {
@@ -397,7 +406,7 @@ class ActivityLogFormatter
 
         if (! $subject) {
             // subject が null で causer が User の場合 (ログイン/ログアウト) は causer のリンクを返す
-            $causer = ($activity instanceof CustomActivity) ? $activity->causer : null;
+            $causer = ($activity instanceof Activity) ? $activity->causer : null;
             if ($causer instanceof User) {
                 // return route('filament.admin.resources.users.view', $causer);
                 return null; // 一般ユーザー向け画面ではFilamentリンクは表示しない
@@ -426,11 +435,11 @@ class ActivityLogFormatter
     /**
      * 操作者の表示名を取得
      */
-    public static function getCauserDisplayName(CustomActivity|array $activity): string
+    public static function getCauserDisplayName(Activity|array $activity): string
     {
-        $causer = ($activity instanceof CustomActivity) ? $activity->causer : null;
-        $causerType = ($activity instanceof CustomActivity) ? $activity->causer_type : ($activity['causer_type'] ?? null);
-        $causerId = ($activity instanceof CustomActivity) ? $activity->causer_id : ($activity['causer_id'] ?? null);
+        $causer = ($activity instanceof Activity) ? $activity->causer : null;
+        $causerType = ($activity instanceof Activity) ? $activity->causer_type : ($activity['causer_type'] ?? null);
+        $causerId = ($activity instanceof Activity) ? $activity->causer_id : ($activity['causer_id'] ?? null);
 
         if ($causer) {
             return $causer->name;
@@ -447,7 +456,7 @@ class ActivityLogFormatter
     /**
      * 対象リソースのタイトルとタイプを取得
      */
-    public static function getSubjectDisplay(CustomActivity $activity): string
+    public static function getSubjectDisplay(Activity $activity): string
     {
         if (! $activity->subject) {
             // subject が null で causer が User の場合 (例: login/logout) は causer を subject のように扱う
@@ -509,7 +518,7 @@ class ActivityLogFormatter
     /**
      * 操作者の詳細画面へのリンクURLを取得 (現状は使わないが定義しておく)
      */
-    public static function getCauserDetailLink(CustomActivity $activity): ?string
+    public static function getCauserDetailLink(Activity $activity): ?string
     {
         // 管理者向けリンクは表示しない
         return null;

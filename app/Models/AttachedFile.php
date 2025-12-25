@@ -144,6 +144,157 @@ class AttachedFile extends Model
             ->orderBy('created_at', 'desc');
     }
 
+    /**
+     * システム処理イベントのタイムラインを取得
+     */
+    public function getSystemTimelineAttribute(): \Illuminate\Support\Collection
+    {
+        $events = collect();
+
+        // 1. アップロード
+        if ($this->created_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-paper-clip',
+                'color' => 'neutral',
+                'title' => __('ledger.file_inspector.history.uploaded'),
+                'description' => $this->creator?->name ?? 'System',
+                'timestamp' => $this->created_at,
+                'user' => $this->creator?->name ?? 'System',
+            ]);
+        }
+
+        // 2. Tika処理完了
+        if ($this->tika_processed_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-document-text',
+                'color' => 'info',
+                'title' => __('ledger.file_inspector.history.tika_extraction'),
+                'description' => null,
+                'timestamp' => $this->tika_processed_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 3. OCR処理完了
+        if ($this->ocr_processed_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-eye',
+                'color' => 'secondary',
+                'title' => __('ledger.file_inspector.history.ocr_processing'),
+                'description' => null,
+                'timestamp' => $this->ocr_processed_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 4. VLM処理完了
+        if ($this->vlm_processed_at) {
+            $description = $this->vlm_confidence
+                ? sprintf('%s: %.1f%%', __('ledger.file_inspector.info.confidence'), $this->vlm_confidence * 100)
+                : null;
+            if ($this->vlm_processing_time_ms) {
+                $description .= sprintf(' | %.1f秒', $this->vlm_processing_time_ms / 1000);
+            }
+
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-cpu-chip',
+                'color' => 'primary',
+                'title' => __('ledger.file_inspector.history.vlm_analysis'),
+                'description' => $description,
+                'timestamp' => $this->vlm_processed_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 5. VLM処理失敗
+        if ($this->vlm_failed_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-exclamation-circle',
+                'color' => 'error',
+                'title' => __('ledger.file_inspector.history.vlm_failed'),
+                'description' => null,
+                'timestamp' => $this->vlm_failed_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 6. OCR処理失敗
+        if ($this->ocr_failed_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-exclamation-circle',
+                'color' => 'error',
+                'title' => __('ledger.file_inspector.history.ocr_failed'),
+                'description' => null,
+                'timestamp' => $this->ocr_failed_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 7. 処理確定
+        if ($this->processing_finalized_at) {
+            $events->push([
+                'type' => 'system',
+                'icon' => 'o-check-circle',
+                'color' => 'success',
+                'title' => __('ledger.file_inspector.history.processing_finalized'),
+                'description' => $this->finalized_source ? "Source: {$this->finalized_source}" : null,
+                'timestamp' => $this->processing_finalized_at,
+                'user' => 'System',
+            ]);
+        }
+
+        // 古い順にソート（時系列順：アップロード→処理→完了）
+        return $events->sortBy('timestamp')->values();
+    }
+
+    /**
+     * ユーザー操作のタイムラインを取得
+     */
+    public function getUserTimelineAttribute(): \Illuminate\Support\Collection
+    {
+        return $this->activities()
+            ->with(['causer' => function ($query) {
+                $query->select('id', 'name');
+            }])
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(function ($activity) {
+                // イベント名から表示情報を決定
+                $icon = match ($activity->event) {
+                    'downloaded', 'downloaded_original' => 'arrow-down-tray',
+                    'viewed_thumbnail' => 'eye',
+                    'downloaded_vlm' => 'cpu-chip',
+                    'deleted' => 'trash',
+                    default => 'clock',
+                };
+
+                $color = match ($activity->event) {
+                    'downloaded', 'downloaded_original', 'downloaded_vlm' => 'success',
+                    'viewed_thumbnail' => 'info',
+                    'deleted' => 'error',
+                    default => 'neutral',
+                };
+
+                return [
+                    'type' => 'user',
+                    'icon' => $icon,
+                    'color' => $color,
+                    'title' => \App\Helpers\ActivityLogFormatter::getOperationDescription($activity),
+                    'description' => null,
+                    'timestamp' => $activity->created_at,
+                    'user' => $activity->causer?->name ?? __('ledger.activity.subject.unknown'),
+                    'properties' => $activity->properties, // IP/UA等
+                ];
+            });
+    }
+
     public function optimize()
     {
         //        $this->status = AttachedFileStatus::OPTIMIZING->value;

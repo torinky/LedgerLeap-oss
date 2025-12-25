@@ -291,25 +291,39 @@ class ProcessAttachedFile implements ShouldQueue
 
         // VLMジョブをディスパッチ（vlmキュー）
         if ($vlmEnabled) {
-            ProcessVlmExtraction::dispatch($this->attachedFile)
-                ->onQueue('vlm');
-            Log::info('[Phase5] Dispatched VLM job to vlm queue for file: '.$this->attachedFile->id);
+            // ★ 追加: 既に処理済み（成功or失敗）ならスキップ
+            if ($this->attachedFile->vlm_processed_at === null && $this->attachedFile->vlm_failed_at === null) {
+                ProcessVlmExtraction::dispatch($this->attachedFile)
+                    ->onQueue('vlm');
+                Log::info('[Phase5] Dispatched VLM job to vlm queue for file: '.$this->attachedFile->id);
+            } else {
+                Log::info('[Phase5] VLM already processed/failed, skipping dispatch for file: '.$this->attachedFile->id);
+            }
         } else {
-            // VLMが無効な場合は即座に失敗マーク
-            $this->attachedFile->vlm_failed_at = now();
-            Log::info('[Phase5] VLM disabled, marking as failed for file: '.$this->attachedFile->id);
+            // VLMが無効な場合は即座に失敗マーク（まだ設定されていない場合のみ）
+            if ($this->attachedFile->vlm_failed_at === null) {
+                $this->attachedFile->vlm_failed_at = now();
+                Log::info('[Phase5] VLM disabled, marking as failed for file: '.$this->attachedFile->id);
+            }
         }
 
         // OCRジョブをディスパッチ（ocrキュー、2秒遅延）
         if ($ocrEnabled) {
-            OcrAndOptimizeFile::dispatch($this->attachedFile)
-                ->delay(now()->addSeconds(2))
-                ->onQueue('ocr');
-            Log::info('[Phase5] Dispatched OCR job to ocr queue (2s delay) for file: '.$this->attachedFile->id);
+            // ★ 追加: 既に処理済み（成功or失敗）ならスキップ
+            if ($this->attachedFile->ocr_processed_at === null && $this->attachedFile->ocr_failed_at === null) {
+                OcrAndOptimizeFile::dispatch($this->attachedFile)
+                    ->delay(now()->addSeconds(2))
+                    ->onQueue('ocr');
+                Log::info('[Phase5] Dispatched OCR job to ocr queue (2s delay) for file: '.$this->attachedFile->id);
+            } else {
+                Log::info('[Phase5] OCR already processed/failed, skipping dispatch for file: '.$this->attachedFile->id);
+            }
         } else {
             // OCRが無効な場合は即座に失敗マーク（通常ありえない）
-            $this->attachedFile->ocr_failed_at = now();
-            Log::info('[Phase5] OCR disabled, marking as failed for file: '.$this->attachedFile->id);
+            if ($this->attachedFile->ocr_failed_at === null) {
+                $this->attachedFile->ocr_failed_at = now();
+                Log::info('[Phase5] OCR disabled, marking as failed for file: '.$this->attachedFile->id);
+            }
         }
 
         // ステータスは変更しない（Phase4のステータスを保持）
