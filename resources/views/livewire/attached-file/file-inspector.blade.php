@@ -108,26 +108,82 @@
                         </div>
 
                         {{-- Quick actions bar --}}
-                        <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none">
+                        <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none"
+                            x-data="{
+                                downloadingOriginal: false,
+                                downloadingPdf: false,
+                                handleDownload(type) {
+                                    if (type === 'original') {
+                                        this.downloadingOriginal = true;
+                                        setTimeout(() => { this.downloadingOriginal = false; }, 3000);
+                                    } else {
+                                        this.downloadingPdf = true;
+                                        setTimeout(() => { this.downloadingPdf = false; }, 3000);
+                                    }
+                                }
+                            }">
                             @php
-                                $downloadUrl =
-                                    $file && $file->id >= 1 && $file->id <= 12
-                                        ? '#download-' . $file->id
-                                        : route('file.download', [
-                                            'tenant' => tenant()?->id,
-                                            'attachedFile' => $file?->id ?? 0,
+                                // ファイルタイプ判定
+                                $isImageFile = $file && str_starts_with($file->original_mime_type ?? $file->mime ?? '', 'image/');
+                                $isPdfFile = $file && ($file->original_mime_type ?? $file->mime ?? '') === 'application/pdf';
+                                $hasOcrProcessed = $file && $file->ocr_processed_at;
+                                $isMockFile = $file && $file->id >= 1 && $file->id <= 12;
+
+                                // オリジナルファイルのダウンロードURL
+                                $originalUrl = $isMockFile
+                                    ? '#download-original-' . $file->id
+                                    : route('file.download', [
+                                        'tenant' => tenant()?->id,
+                                        'attachedFile' => $file->id ?? 0,
+                                        'original' => true,
+                                    ]);
+
+                                // OCR PDF（変換/最適化PDF）のダウンロードURL
+                                $ocrPdfUrl = null;
+                                if ($hasOcrProcessed && ($isImageFile || $isPdfFile)) {
+                                    $ocrPdfUrl = $isMockFile
+                                        ? '#download-ocr-pdf-' . $file->id
+                                        : route('files.download-ocr-pdf', [
+                                            'tenant' => tenant('id'),
+                                            'attachedFile' => $file->id
                                         ]);
+                                }
                             @endphp
-                            <a href="{{ $downloadUrl }}" class="btn btn-primary btn-sm flex-1 gap-2" download>
-                                <i class="fa-solid fa-download"></i>
-                                <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.download') }}</span>
+
+                            {{-- オリジナルファイルダウンロードボタン --}}
+                            <a href="{{ $originalUrl }}"
+                                class="btn btn-sm gap-2 tooltip tooltip-bottom"
+                                :class="$ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1'"
+                                data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
+                                @click="handleDownload('original')"
+                                :disabled="downloadingOriginal">
+                                <span x-show="downloadingOriginal" class="loading loading-spinner loading-xs"></span>
+                                <i class="fa-solid fa-file-image" x-show="!downloadingOriginal && {{ $isImageFile ? 'true' : 'false' }}"></i>
+                                <i class="fa-solid fa-file-pdf" x-show="!downloadingOriginal && {{ $isPdfFile ? 'true' : 'false' }}"></i>
+                                <i class="fa-solid fa-file" x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
+                                <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
                             </a>
+
+                            {{-- OCR変換/最適化PDFダウンロードボタン（ある場合のみ） --}}
+                            @if ($ocrPdfUrl)
+                                <a href="{{ $ocrPdfUrl }}"
+                                    class="btn btn-primary btn-sm flex-1 gap-2 tooltip tooltip-bottom"
+                                    data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_converted_pdf') : __('ledger.file_inspector.actions.download_optimized_pdf') }}"
+                                    @click="handleDownload('pdf')"
+                                    :disabled="downloadingPdf">
+                                    <span x-show="downloadingPdf" class="loading loading-spinner loading-xs"></span>
+                                    <i class="fa-solid fa-file-pdf" x-show="!downloadingPdf"></i>
+                                    <span class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
+                                </a>
+                            @endif
+
+                            {{-- その他のアクションボタン --}}
                             <button class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
                                 data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}" x-data="{}"
-                                @click="navigator.clipboard.writeText('{{ $downloadUrl }}').then(() => alert('{{ __('ledger.file_inspector.messages.link_copied') }}'))">
+                                @click="navigator.clipboard.writeText('{{ $originalUrl }}').then(() => alert('{{ __('ledger.file_inspector.messages.link_copied') }}'))">
                                 <i class="fa-solid fa-link"></i>
                             </button>
-                            <a href="{{ $downloadUrl }}"
+                            <a href="{{ $originalUrl }}"
                                 class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
                                 data-tip="{{ __('ledger.file_inspector.actions.open_new_tab') }}" target="_blank">
                                 <i class="fa-solid fa-external-link-alt"></i>
@@ -291,11 +347,12 @@
                                                     $hasOcrProcessed = $file && ($file->ocr_processed_at ?? false);
 
                                                     $ocrPdfUrl = null;
-                                                    if ($hasOcrProcessed) {
-                                                        if ($isImageFile) {
-                                                            $ocrPdfUrl = '#ocr-pdf-' . ($file->id ?? 0);
-                                                        } elseif ($isPdfFile) {
-                                                            $ocrPdfUrl = '#optimized-pdf-' . ($file->id ?? 0);
+                                                    if ($hasOcrProcessed && $file) {
+                                                        if ($isImageFile || $isPdfFile) {
+                                                            $ocrPdfUrl = route('files.download-ocr-pdf', [
+                                                                'tenant' => tenant('id'),
+                                                                'attachedFile' => $file->id
+                                                            ]);
                                                         }
                                                     }
                                                 @endphp
@@ -320,7 +377,14 @@
 
 
                                                 @if ($hasOcrProcessed && $ocrPdfUrl)
-                                                    <div class="alert alert-info shadow-sm py-2 px-4 mb-4">
+                                                    <div class="alert alert-info shadow-sm py-2 px-4 mb-4"
+                                                        x-data="{
+                                                            downloading: false,
+                                                            handleDownload() {
+                                                                this.downloading = true;
+                                                                setTimeout(() => { this.downloading = false; }, 3000);
+                                                            }
+                                                        }">
                                                         <i class="fa-solid fa-file-pdf text-xl"></i>
                                                         <div class="flex-1">
                                                             <h3 class="font-semibold text-xs">
@@ -339,8 +403,11 @@
                                                             </p>
                                                         </div>
                                                         <a href="{{ $ocrPdfUrl }}"
-                                                            class="btn btn-xs btn-primary gap-1" download>
-                                                            <i class="fa-solid fa-download"></i>
+                                                            class="btn btn-xs btn-primary gap-1"
+                                                            @click="handleDownload()"
+                                                            :disabled="downloading">
+                                                            <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
+                                                            <i class="fa-solid fa-download" x-show="!downloading"></i>
                                                             <span>{{ __('ledger.file_inspector.actions.download') }}</span>
                                                         </a>
                                                     </div>
@@ -701,7 +768,14 @@
                                                     @endif
                                                 </h3>
                                                 <div class="card bg-base-200 border border-base-300">
-                                                    <div class="card-body p-4">
+                                                    <div class="card-body p-4"
+                                                        x-data="{
+                                                            downloading: false,
+                                                            handleDownload() {
+                                                                this.downloading = true;
+                                                                setTimeout(() => { this.downloading = false; }, 3000);
+                                                            }
+                                                        }">
                                                         <div class="flex items-center justify-between">
                                                             <div class="flex items-center gap-3">
                                                                 <div
@@ -727,14 +801,12 @@
                                                                 </div>
                                                             </div>
                                                             <div class="flex flex-col gap-1">
-                                                                @php
-                                                                    $ocrPdfUrl = $isImageFile
-                                                                        ? '#ocr-pdf-' . ($file->id ?? 0)
-                                                                        : '#optimized-pdf-' . ($file->id ?? 0);
-                                                                @endphp
-                                                                <a href="{{ $ocrPdfUrl }}"
-                                                                    class="btn btn-xs btn-primary gap-1" download>
-                                                                    <i class="fa-solid fa-download"></i>
+                                                                <a href="{{ route('files.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                                                                    class="btn btn-xs btn-primary gap-1"
+                                                                    @click="handleDownload()"
+                                                                    :disabled="downloading">
+                                                                    <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
+                                                                    <i class="fa-solid fa-download" x-show="!downloading"></i>
                                                                     {{ __('ledger.file_inspector.actions.download') }}
                                                                 </a>
                                                             </div>

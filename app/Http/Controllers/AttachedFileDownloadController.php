@@ -133,7 +133,14 @@ class AttachedFileDownloadController extends Controller
             ->log("User activity logged for file: {$fileNameToServe}");
 
         $mimeType = Storage::disk('public')->mimeType($filePath);
-        $disposition = in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']) ? 'inline' : 'attachment';
+
+        // original=trueの場合は必ずダウンロード（attachment）
+        if ($isOriginalRequest) {
+            $disposition = 'attachment';
+        } else {
+            // 通常のダウンロード: PDFや画像はinline、その他はattachment
+            $disposition = in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']) ? 'inline' : 'attachment';
+        }
 
         Log::info('[DownloadController@download] Returning file response.', ['mime' => $mimeType, 'disposition' => $disposition]);
 
@@ -199,6 +206,104 @@ class AttachedFileDownloadController extends Controller
         return response($content, 200, [
             'Content-Type' => $contentType,
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    /**
+     * OCR処理後のPDFファイルをダウンロード
+     * 画像ファイルの場合: 変換されたPDF
+     * PDFファイルの場合: OCR最適化されたPDF
+     */
+    public function downloadOcrPdf(Request $request, AttachedFile $attachedFile)
+    {
+        Log::info('[DownloadController@downloadOcrPdf] Started.', [
+            'attached_file_id' => $attachedFile->id,
+        ]);
+
+        // 1. 認可チェック
+        try {
+            Gate::authorize('view', $attachedFile->ledger);
+            Log::info('[DownloadController@downloadOcrPdf] Authorization successful.');
+        } catch (\Exception $e) {
+            Log::error('[DownloadController@downloadOcrPdf] Authorization failed.', ['error' => $e->getMessage()]);
+            abort(403, 'Forbidden');
+        }
+
+        // 2. OCR処理完了確認
+        if (! $attachedFile->ocr_processed_at) {
+            Log::error('[DownloadController@downloadOcrPdf] OCR not processed yet.', ['attached_file_id' => $attachedFile->id]);
+            abort(404, 'OCR PDF Not Found');
+        }
+
+        // 3. 画像ファイルかPDFファイルか判定
+        $isImageFile = str_starts_with($attachedFile->original_mime_type ?? '', 'image/');
+
+        Log::info('[DownloadController@downloadOcrPdf] File type determination.', [
+            'original_mime_type' => $attachedFile->original_mime_type,
+            'mime' => $attachedFile->mime,
+            'is_image_file' => $isImageFile,
+            'hashedbasename' => $attachedFile->hashedbasename,
+            'path' => $attachedFile->path,
+            'original_file_path' => $attachedFile->original_file_path,
+        ]);
+
+        // 4. ファイルパスとファイル名を決定
+        if ($isImageFile) {
+            // 画像ファイルの場合: .pdfに変換されたファイル
+            // pathから.pdfに変更（元のpathと同じディレクトリ）
+            $filePath = $attachedFile->path; // これがすでに正しいPDFパス
+            $downloadFileName = pathinfo($attachedFile->original_filename ?? $attachedFile->filename, PATHINFO_FILENAME).'.pdf';
+        } else {
+            // PDFファイルの場合: OCR最適化されたPDF（元のファイルパス）
+            $filePath = $attachedFile->path;
+            $downloadFileName = $attachedFile->original_filename ?? $attachedFile->filename;
+        }
+
+        Log::info('[DownloadController@downloadOcrPdf] Determined file path.', [
+            'is_image_file' => $isImageFile,
+            'path' => $filePath,
+            'filename' => $downloadFileName,
+        ]);
+
+        // 5. ファイルの物理的な存在を確認
+        if (! Storage::disk('public')->exists($filePath)) {
+            // デバッグ情報: attachmentsディレクトリの内容を確認
+            $attachmentsDir = 'attachments';
+            $filesInDir = Storage::disk('public')->exists($attachmentsDir)
+                ? Storage::disk('public')->files($attachmentsDir)
+                : [];
+
+            Log::error('[DownloadController@downloadOcrPdf] OCR PDF file not found in public disk.', [
+                'path' => $filePath,
+                'full_path' => Storage::disk('public')->path($filePath),
+                'attachments_dir_exists' => Storage::disk('public')->exists($attachmentsDir),
+                'files_in_attachments' => array_slice($filesInDir, 0, 10), // 最初の10件のみ
+                'total_files' => count($filesInDir),
+            ]);
+            abort(404, 'OCR PDF File Not Found');
+        }
+
+        // 6. アクティビティログの記録
+        activity()
+            ->performedOn($attachedFile)
+            ->causedBy(auth()->user())
+            ->event('downloaded_ocr_pdf')
+            ->withProperties([
+                'ledger_id' => $attachedFile->ledger->id,
+                'ledger_define_id' => $attachedFile->ledger->ledger_define_id,
+                'is_image_conversion' => $isImageFile,
+                'filename' => $downloadFileName,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ])
+            ->log("User downloaded OCR PDF: {$downloadFileName}");
+
+        Log::info('[DownloadController@downloadOcrPdf] Returning OCR PDF file response.');
+
+        // 7. レスポンス生成
+        return response()->file(Storage::disk('public')->path($filePath), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$downloadFileName.'"',
         ]);
     }
 }

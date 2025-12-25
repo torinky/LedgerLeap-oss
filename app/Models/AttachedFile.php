@@ -268,7 +268,7 @@ class AttachedFile extends Model
             ->map(function ($activity) {
                 // イベント名から表示情報を決定
                 $icon = match ($activity->event) {
-                    'downloaded', 'downloaded_original' => 'arrow-down-tray',
+                    'downloaded', 'downloaded_original', 'downloaded_ocr_pdf' => 'arrow-down-tray',
                     'viewed_thumbnail' => 'eye',
                     'downloaded_vlm' => 'cpu-chip',
                     'deleted' => 'trash',
@@ -276,7 +276,7 @@ class AttachedFile extends Model
                 };
 
                 $color = match ($activity->event) {
-                    'downloaded', 'downloaded_original', 'downloaded_vlm' => 'success',
+                    'downloaded', 'downloaded_original', 'downloaded_vlm', 'downloaded_ocr_pdf' => 'success',
                     'viewed_thumbnail' => 'info',
                     'deleted' => 'error',
                     default => 'neutral',

@@ -81,7 +81,7 @@ class ActivityLogFormatter
             return __("ledger.activity.event.{$eventKey}", ['resource' => $subjectName]);
         }
         // File operation events
-        if (in_array($eventKey, ['downloaded', 'downloaded_original', 'viewed_thumbnail', 'downloaded_vlm'])) {
+        if (in_array($eventKey, ['downloaded', 'downloaded_original', 'viewed_thumbnail', 'downloaded_vlm', 'downloaded_ocr_pdf'])) {
             return __("ledger.activity.event.{$eventKey}", ['resource' => $subjectName]);
         }
         // リレーション操作 (attached/detached)
