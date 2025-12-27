@@ -229,7 +229,8 @@ class FileInspector extends Component
                 return;
             }
 
-            $this->activeSource = $this->file->finalized_source ?? 'tika';
+            // 利用可能な最初のソースを自動選択
+            $this->activeSource = $this->selectFirstAvailableSource();
             $this->open = true;
             $this->isLoading = false;
             \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully', [
@@ -269,10 +270,12 @@ class FileInspector extends Component
         $this->mockData = $data;
         $this->reconstructMockFile();
 
-        $this->activeSource = $this->file->finalized_source;
+        // 利用可能な最初のソースを自動選択
+        $this->activeSource = $this->selectFirstAvailableSource();
         \Illuminate\Support\Facades\Log::info('FileInspector: Mock data loaded', [
             'id' => $this->file->id,
             'filename' => $this->file->filename,
+            'active_source' => $this->activeSource,
         ]);
     }
 
@@ -286,6 +289,37 @@ class FileInspector extends Component
         $this->activeSource = null;
         $this->searchKeyword = '';
         $this->isExpanded = false;
+    }
+
+    /**
+     * ソースを切り替える（ローディングUIを表示するため専用メソッド）
+     */
+    public function switchSource(string $source): void
+    {
+        $this->activeSource = $source;
+        $this->isExpanded = false; // ソース切り替え時は展開状態をリセット
+
+        // Alpine.jsの状態をリセットするイベントを発行
+        $this->dispatch('source-switched');
+    }
+
+    /**
+     * 利用可能な最初のソースを選択する
+     */
+    private function selectFirstAvailableSource(): string
+    {
+        // 優先順位: vlm -> ocr -> tika -> structured
+        $priority = ['vlm', 'ocr', 'tika', 'structured'];
+
+        foreach ($priority as $source) {
+            $status = $this->getSourceStatus($source);
+            if ($status === 'completed') {
+                return $source;
+            }
+        }
+
+        // どれもない場合はtikaをデフォルトとする
+        return 'tika';
     }
 
     public function getPreviewText(bool $withHighlight = true): ?string
@@ -371,12 +405,83 @@ class FileInspector extends Component
 
         // 本番データの場合
         return match ($source) {
-            'vlm' => $this->file->vlm_markdown ? 'completed' : ($this->file->vlm_confidence === null ? 'processing' : 'missing'),
-            'ocr' => $this->file->ocr_processed_at ? 'completed' : 'processing',
-            'tika' => 'completed', // Tikaは基本常に利用可能とする予定
+            'vlm' => $this->getVlmStatus(),
+            'ocr' => $this->getOcrStatus(),
+            'tika' => $this->getTikaStatus(),
             'structured' => ! empty($this->file->vlm_structured_data) ? 'completed' : 'missing',
             default => 'missing',
         };
+    }
+
+    /**
+     * VLMソースの状態を詳細に判定
+     */
+    private function getVlmStatus(): string
+    {
+        // VLMテキストが存在するか確認（空文字列やnullでない）
+        if (! empty($this->file->vlm_markdown)) {
+            return 'completed';
+        }
+
+        // VLM処理時間が記録されていれば処理は実行されたが結果がない = missing
+        if ($this->file->vlm_processing_time_ms !== null) {
+            return 'missing';
+        }
+
+        // 処理確定日時があり、VLM信頼度がnullなら処理中または未処理
+        if ($this->file->processing_finalized_at) {
+            // 最終化済みでVLMがないなら、VLM処理はスキップされた = missing
+            return 'missing';
+        }
+
+        // vlm_confidence が null = まだ処理されていない = processing
+        if ($this->file->vlm_confidence === null && ! $this->file->processing_finalized_at) {
+            return 'processing';
+        }
+
+        // その他の場合はmissing
+        return 'missing';
+    }
+
+    /**
+     * OCRソースの状態を判定
+     */
+    private function getOcrStatus(): string
+    {
+        // OCR処理日時があり、実際にテキストが抽出されているか確認
+        if ($this->file->ocr_processed_at) {
+            $ocrText = $this->file->getOcrTikaFormattedText('ocr');
+
+            return ! empty($ocrText) ? 'completed' : 'missing';
+        }
+
+        // 処理確定済みだがOCR日時がない場合はmissing
+        if ($this->file->processing_finalized_at) {
+            return 'missing';
+        }
+
+        return 'processing';
+    }
+
+    /**
+     * Tikaソースの状態を判定
+     */
+    private function getTikaStatus(): string
+    {
+        // Tika処理日時があり、実際にテキストが抽出されているか確認
+        if ($this->file->tika_processed_at) {
+            $tikaText = $this->file->getOcrTikaFormattedText('tika');
+
+            return ! empty($tikaText) ? 'completed' : 'missing';
+        }
+
+        // 処理確定済みだがTika日時がない場合はmissing
+        if ($this->file->processing_finalized_at) {
+            return 'missing';
+        }
+
+        // Tikaは基本的に常に処理されるはずだが、まだの場合はprocessing
+        return 'processing';
     }
 
     /**

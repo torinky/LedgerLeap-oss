@@ -276,12 +276,14 @@
                                                     class="input-sm" clearable />
                                             </div>
                                             <div
-                                                class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0">
+                                                class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0"
+                                                x-data="{ switchingSource: null }"
+                                                @source-switched.window="switchingSource = null">
                                                 @foreach (['vlm', 'ocr', 'tika', 'structured'] as $src)
                                                     @php
                                                         $status = $this->getSourceStatus($src);
                                                         $isActive = $activeSource === $src;
-                                                        $isDisabled = $status === 'missing' || $status === 'error';
+                                                        $hasContent = $status === 'completed';
                                                         $isProcessingNow = $status === 'processing';
 
                                                         $tooltip = match ($status) {
@@ -296,13 +298,23 @@
                                                     <div class="{{ $tooltip ? 'tooltip tooltip-bottom' : '' }}"
                                                         data-tip="{{ $tooltip }}">
                                                         <button
-                                                            wire:click="$set('activeSource', '{{ $src }}')"
-                                                            @if ($isDisabled || $isProcessingNow) disabled @endif
-                                                            class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1">
-                                                            @if ($isProcessingNow)
+                                                            wire:click="switchSource('{{ $src }}')"
+                                                            @click="switchingSource = '{{ $src }}'"
+                                                            class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1 relative"
+                                                            @if (!$hasContent || $isProcessingNow) disabled @endif
+                                                            x-bind:disabled="switchingSource === '{{ $src }}' || {{ !$hasContent || $isProcessingNow ? 'true' : 'false' }}">
+                                                            <span x-show="switchingSource !== '{{ $src }}'">
+                                                                @if ($isProcessingNow)
+                                                                    <i class="fa-solid fa-spinner fa-spin text-[10px] mr-1"></i>
+                                                                @endif
+                                                                {{ __('ledger.file_inspector.source.' . $src) }}
+                                                            </span>
+                                                            <span x-show="switchingSource === '{{ $src }}'"
+                                                                  x-cloak
+                                                                  class="flex items-center gap-1">
                                                                 <i class="fa-solid fa-spinner fa-spin text-[10px]"></i>
-                                                            @endif
-                                                            {{ __('ledger.file_inspector.source.' . $src) }}
+                                                                {{ __('ledger.file_inspector.source.' . $src) }}
+                                                            </span>
                                                         </button>
                                                     </div>
                                                 @endforeach
