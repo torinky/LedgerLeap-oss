@@ -90,14 +90,24 @@ class Show extends Component
     }
 
     #[On('retryProcessingEvent')]
-    public function retryProcessing(int $attachedFileId): void
+    #[On('retry-file-processing')]
+    public function retryProcessing(?int $attachedFileId = null, ?int $fileId = null): void
     {
+        // 両方のパラメータ名に対応
+        $id = $attachedFileId ?? $fileId;
+
+        if (! $id) {
+            $this->addError('retryProcessing', __('ledger.uploadedFile.retry_failed'));
+
+            return;
+        }
+
         try {
-            $attachedFile = AttachedFile::findOrFail($attachedFileId);
+            $attachedFile = AttachedFile::findOrFail($id);
             $attachedFile->retryProcessing();
             $this->success(__('ledger.uploadedFile.retry_success'));
         } catch (\Exception $e) {
-            Log::error("AttachedFile retryProcessing failed for ID: {$attachedFileId}. Error: ".$e->getMessage());
+            Log::error("AttachedFile retryProcessing failed for ID: {$id}. Error: ".$e->getMessage());
             $this->addError('retryProcessing', __('ledger.uploadedFile.retry_failed'));
         }
         $this->mount($this->ledgerRecord->id);

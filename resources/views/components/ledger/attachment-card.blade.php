@@ -142,25 +142,44 @@
                     <span class="text-xs text-base-content/60">{{ __('ledger.file_status.processing') }}</span>
                 </div>
             @elseif($isError)
-                <div class="text-error flex flex-col items-center gap-1">
+                <div class="text-error flex flex-col items-center gap-2" @click.stop>
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
                     <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
+                    @if ($fileId)
+                        <button
+                            wire:click="$dispatch('retry-file-processing', { fileId: {{ $fileId }} })"
+                            class="btn btn-xs btn-error btn-outline gap-1 mt-1"
+                            @click.stop>
+                            <i class="fa-solid fa-rotate-right text-[10px]"></i>
+                            <span>{{ __('ledger.file_inspector.actions.reprocess') }}</span>
+                        </button>
+                    @endif
                 </div>
             @else
-                @if (Str::startsWith($mime, 'image/') && isset($file['thumbnailUrl']))
-                    <div x-show="imageLoading" class="absolute inset-0 flex items-center justify-center bg-base-200">
-                        <span class="loading loading-dots loading-sm text-base-content/30"></span>
-                    </div>
-                    <img src="{{ $file['thumbnailUrl'] }}" alt="{{ $label }}"
-                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        x-show="!imageError"
-                        x-on:load="imageLoading = false"
-                        x-on:error="imageLoading = false; imageError = true">
-                    <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
-                        <i class="fa-regular fa-image text-3xl mb-1"></i>
-                        <span class="text-[10px]">No Preview</span>
-                    </div>
+                @if (Str::startsWith($mime, 'image/'))
+                    @php
+                        // サムネイルURLがない場合は、primary_downloadのURLを使用
+                        $imageUrl = $file['thumbnailUrl'] ?? ($file['primary_download']['url'] ?? null);
+                    @endphp
+                    @if ($imageUrl)
+                        <div x-show="imageLoading" class="absolute inset-0 flex items-center justify-center bg-base-200">
+                            <span class="loading loading-dots loading-sm text-base-content/30"></span>
+                        </div>
+                        <img src="{{ $imageUrl }}" alt="{{ $label }}"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            x-show="!imageError"
+                            x-on:load="imageLoading = false"
+                            x-on:error="imageLoading = false; imageError = true">
+                        <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
+                            <i class="fa-regular fa-image text-3xl mb-1"></i>
+                            <span class="text-[10px]">No Preview</span>
+                        </div>
+                    @else
+                        <div class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+                            <i class="{{ $iconClass }} text-5xl opacity-80"></i>
+                        </div>
+                    @endif
                 @else
                     <div class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                         <i class="{{ $iconClass }} text-5xl opacity-80"></i>

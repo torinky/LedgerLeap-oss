@@ -338,11 +338,14 @@ class ColumnHtmlService
             } else {
                 $mainDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
                 // サムネイルURL (画像かつサムネイルファイルが存在する場合)
-                if (str_starts_with($attachment->original_mime_type, 'image/') &&
-                    Storage::disk('public')->exists(AttachedFilePathHelper::getThumbnailStoragePath(basename($hashedFilename), $this->tenantId))) {
-                    $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
-                } else {
-                    $thumbnailUrl = null;
+                $thumbnailUrl = null;
+                if (str_starts_with($attachment->original_mime_type, 'image/') && $attachment->hashed_filename) {
+                    $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachment->hashed_filename, $this->tenantId);
+                    $thumbnailExists = Storage::disk('public')->exists($thumbnailPath);
+
+                    if ($thumbnailExists) {
+                        $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
+                    }
                 }
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);

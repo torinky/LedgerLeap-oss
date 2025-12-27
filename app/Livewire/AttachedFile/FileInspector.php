@@ -231,6 +231,10 @@ class FileInspector extends Component
 
             // 利用可能な最初のソースを自動選択
             $this->activeSource = $this->selectFirstAvailableSource();
+
+            // サムネイル生成チェック：画像ファイルでサムネイルがない場合は生成
+            $this->ensureThumbnailExists();
+
             $this->open = true;
             $this->isLoading = false;
             \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully', [
@@ -289,6 +293,40 @@ class FileInspector extends Component
         $this->activeSource = null;
         $this->searchKeyword = '';
         $this->isExpanded = false;
+    }
+
+    /**
+     * サムネイルの存在を確認し、なければ生成ジョブをディスパッチ
+     */
+    private function ensureThumbnailExists(): void
+    {
+        if (! $this->file || $this->isMockFile()) {
+            return;
+        }
+
+        // 画像ファイルでない場合はスキップ
+        if (! str_starts_with($this->file->original_mime_type ?? $this->file->mime, 'image/')) {
+            return;
+        }
+
+        // サムネイルパスをチェック
+        if (! $this->file->hashed_filename) {
+            return;
+        }
+
+        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+            $this->file->hashed_filename,
+            $this->file->tenant_id
+        );
+
+        // サムネイルが存在しない場合は生成ジョブをディスパッチ
+        if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+            \App\Jobs\Ledger\GenerateThumbnail::dispatch($this->file->id);
+            \Illuminate\Support\Facades\Log::info('FileInspector: Dispatched thumbnail generation job', [
+                'file_id' => $this->file->id,
+                'filename' => $this->file->filename,
+            ]);
+        }
     }
 
     /**

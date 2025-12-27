@@ -58,7 +58,7 @@ class GenerateThumbnail implements ShouldQueue
         // ▼▼▼ ソースファイルのパスではなく、コンテンツを取得するように変更 ▼▼▼
         $sourcePath = $attachedFile->path; // デフォルトは現在のパス
         $sourcePathForLog = $attachedFile->path; // ログ出力用にパスを保持
-        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
 
         // サムネイルが既に存在する場合はスキップ
         if (Storage::disk('public')->exists($thumbnailPath)) {

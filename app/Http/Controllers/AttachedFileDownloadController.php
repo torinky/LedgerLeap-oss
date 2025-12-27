@@ -37,7 +37,7 @@ class AttachedFileDownloadController extends Controller
         Log::info('[DownloadController@download] AttachedFile path: '.$attachedFile->path.', original_file_path: '.$attachedFile->original_file_path);
 
         if ($isThumbnailRequest) {
-            $filePath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
+            $filePath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
         } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
             $filePath = $attachedFile->original_file_path;
             $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
@@ -53,7 +53,7 @@ class AttachedFileDownloadController extends Controller
 
         // 5. レスポンス生成
         if ($isThumbnailRequest) {
-            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
+            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
             if (Storage::disk('public')->exists($thumbnailPath)) {
                 Log::info('[DownloadController@download] Returning actual thumbnail response with inline disposition.');
                 $mimeType = Storage::disk('public')->mimeType($thumbnailPath);
