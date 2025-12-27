@@ -241,4 +241,31 @@ class ShowTest extends TestCase
 
         $component->assertHasErrors(); // エラーが発生することを確認
     }
+
+    #[Test]
+    public function it_accepts_highlight_query_parameter_from_url()
+    {
+        $this->actingAs($this->user);
+
+        // URLクエリパラメータとしてhighlightを渡す
+        $component = Livewire::withQueryParams(['highlight' => 'test keyword'])
+            ->test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        // highlightプロパティが設定されていることを確認
+        $component->assertSet('highlight', 'test keyword');
+    }
+
+    #[Test]
+    public function it_passes_highlight_to_ledger_diff_viewer()
+    {
+        $this->actingAs($this->user);
+
+        // highlightパラメータ付きでコンポーネントをテスト
+        $component = Livewire::withQueryParams(['highlight' => 'search term'])
+            ->test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        // highlightがLedgerDiffViewerに渡されていることを確認
+        // Bladeテンプレートで :highlight="$highlight" が指定されている
+        $component->assertSee('search term', false);
+    }
 }

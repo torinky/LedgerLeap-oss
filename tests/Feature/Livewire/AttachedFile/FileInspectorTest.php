@@ -52,10 +52,10 @@ class FileInspectorTest extends TestCase
         config(['mock.attachment.enabled' => true]);
 
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
-            ->call('openInspector', ['id' => 1])
+            ->call('openInspector', ['id' => 10001])
             ->assertSet('open', true)
             ->assertSet('isLoading', false)
-            ->assertSet('fileId', 1)
+            ->assertSet('fileId', 10001)
             ->assertSee('領収書_2025-12-01.jpg');
     }
 

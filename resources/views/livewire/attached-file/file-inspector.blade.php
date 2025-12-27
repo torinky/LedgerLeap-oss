@@ -277,7 +277,7 @@
                                             </div>
                                             <div
                                                 class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0">
-                                                @foreach (['vlm', 'ocr', 'tika'] as $src)
+                                                @foreach (['vlm', 'ocr', 'tika', 'structured'] as $src)
                                                     @php
                                                         $status = $this->getSourceStatus($src);
                                                         $isActive = $activeSource === $src;
@@ -455,12 +455,12 @@
                                                     copyText() {
                                                         const contentEl = this.$refs.previewContent;
                                                         const text = contentEl?.dataset?.text || '';
-                                                
+
                                                         if (!text) {
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
                                                             return;
                                                         }
-                                                
+
                                                         if (navigator.clipboard && navigator.clipboard.writeText) {
                                                             navigator.clipboard.writeText(text)
                                                                 .then(() => this.onCopySuccess())
@@ -490,15 +490,43 @@
                                                         setTimeout(() => { this.copied = false; }, 2000);
                                                         $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
                                                     },
+                                                    copyAsJson() {
+                                                        const contentEl = this.$refs.previewContent;
+                                                        const text = contentEl?.dataset?.text || '';
+
+                                                        if (!text) {
+                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
+                                                            return;
+                                                        }
+
+                                                        const jsonData = {
+                                                            filename: '{{ $file?->original_filename ?? '' }}',
+                                                            source: '{{ $activeSource }}',
+                                                            content: text,
+                                                            confidence: {{ $file?->vlm_confidence ?? 0 }},
+                                                            model: '{{ $file?->vlm_model ?? '' }}',
+                                                            processed_at: '{{ $file?->vlm_processed_at ?? '' }}'
+                                                        };
+
+                                                        const jsonString = JSON.stringify(jsonData, null, 2);
+
+                                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                            navigator.clipboard.writeText(jsonString)
+                                                                .then(() => this.onCopySuccess())
+                                                                .catch(() => this.fallbackCopy(jsonString));
+                                                        } else {
+                                                            this.fallbackCopy(jsonString);
+                                                        }
+                                                    },
                                                     downloadFile(type) {
                                                         const contentEl = this.$refs.previewContent;
                                                         const text = contentEl?.dataset?.text || '';
-                                                
+
                                                         if (!text) {
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.download_failed') }}' });
                                                             return;
                                                         }
-                                                
+
                                                         const blob = new Blob([text], { type: 'text/plain' });
                                                         const url = window.URL.createObjectURL(blob);
                                                         const a = document.createElement('a');
@@ -549,7 +577,10 @@
 
                                                     <div x-ref="previewContent" data-text="{{ $plainText }}"
                                                         class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
-                                                        @if ($activeSource === 'vlm')
+                                                        @if ($activeSource === 'structured')
+                                                            {{-- 構造化データ表示 --}}
+                                                            <pre class="text-xs overflow-auto bg-base-300 p-3 rounded-lg"><code class="language-json">{!! $this->previewText !!}</code></pre>
+                                                        @elseif ($activeSource === 'vlm')
                                                             <div class="prose prose-sm max-w-none">
                                                                 {!! Str::markdown($this->previewText ?? '') !!}
                                                             </div>
@@ -588,6 +619,18 @@
                                                             <span
                                                                 x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.copy_text') }}'"></span>
                                                         </button>
+
+                                                        @if ($activeSource === 'vlm')
+                                                            <button @click="copyAsJson()"
+                                                                class="btn btn-sm transition-all duration-300"
+                                                                :class="copied ? 'btn-success text-white' : 'btn-outline gap-2'">
+                                                                <i class="fa-solid"
+                                                                    :class="copied ? 'fa-check' : 'fa-code'"></i>
+                                                                <span
+                                                                    x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : 'JSON'"></span>
+                                                            </button>
+                                                        @endif
+
                                                         <button @click="downloadFile('text')"
                                                             class="btn btn-sm btn-outline gap-2">
                                                             <i class="fa-solid fa-download"></i>
@@ -903,6 +946,7 @@
                                     </div>
 
                                 </x-mary-tab>
+
                                 <x-mary-tab name="access" label="{{ __('ledger.file_inspector.tabs.access') }}"
                                     icon="o-shield-check" class="tab-lg gap-2">
                                     {{-- Access Tab --}}

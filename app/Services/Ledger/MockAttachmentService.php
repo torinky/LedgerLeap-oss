@@ -32,6 +32,17 @@ class MockAttachmentService
                     'icon' => 'fa-file-pdf',
                 ],
                 'mock_vlm_text' => "# 株式会社サンプル商事 領収書要約\n\n2025年12月1日付の領収書です。金額は15,000円。書籍代としての支払いです。",
+                'mock_vlm_structured_data' => [
+                    'document_type' => 'receipt',
+                    'company_name' => '株式会社サンプル商事',
+                    'date' => '2025-12-01',
+                    'amount' => 15000,
+                    'currency' => 'JPY',
+                    'items' => [
+                        ['description' => '書籍代', 'amount' => 15000],
+                    ],
+                    'payment_method' => 'cash',
+                ],
                 'mock_ocr_text' => "株式会社サンプル商事\n領収書\n\n日付：2025年12月1日\n金額：¥15,000\n但書：書籍代として",
                 'mock_tika_text' => "Sample Corp Receipt\nDate: 2025-12-01\nAmount: 15,000 JPY\nMemo: Books",
                 'mock_vlm_status' => 'completed',
@@ -69,6 +80,20 @@ class MockAttachmentService
                     'icon' => 'fa-file',
                 ],
                 'mock_vlm_text' => "# 2025年度 業務委託契約書 要約\n\n甲乙間での業務委託に関する基本条項（目的、委託業務内容、契約期間など）を定めた文書です。",
+                'mock_vlm_structured_data' => [
+                    'document_type' => 'contract',
+                    'title' => '業務委託契約書',
+                    'fiscal_year' => 2025,
+                    'parties' => [
+                        ['role' => '甲', 'name' => '株式会社A'],
+                        ['role' => '乙', 'name' => '株式会社B'],
+                    ],
+                    'contract_period' => [
+                        'start' => '2025-04-01',
+                        'end' => '2026-03-31',
+                    ],
+                    'contract_amount' => 12000000,
+                ],
                 'mock_ocr_text' => "業務委託契約書\n第一条 ...",
                 'mock_tika_text' => "業務委託契約書\n\n第一条（目的）\n本契約は、甲と乙の間における業務委託に関する事項を定めることを目的とする。\n\n第二条（委託業務）\n甲は乙に対し、以下の業務を委託する...",
                 'mock_vlm_status' => 'missing',

@@ -35,6 +35,7 @@ class Show extends Component
     #[Url(as: 'refresh')]
     public bool $refresh = false;
 
+    #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
     public bool $showVlmModal = false;
@@ -43,7 +44,8 @@ class Show extends Component
 
     public function mount(int $ledgerId): void
     {
-        $this->highlight = request()->query('highlight');
+        // highlightは#[Url]属性により自動的にクエリパラメータから設定される
+        // 明示的に取得する必要はない
 
         $this->ledgerRecord = Ledger::with([
             'define',

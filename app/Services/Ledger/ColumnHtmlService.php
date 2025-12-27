@@ -125,7 +125,7 @@ class ColumnHtmlService
 
         if ($type === 'files' && is_array($this->initialValue)) {
             $mode = $this->attrs['mode'] ?? 'full';
-            $html = $this->getFileHtml($mode);
+            $html = $this->getFileHtml($mode, $highlight);
         } elseif (is_array($this->initialValue)) {
             $options = $this->getColumnDefineProperty('options', []);
             $html = $this->renderArrayValue($type, $this->initialValue, $options);
@@ -288,22 +288,36 @@ class ColumnHtmlService
         };
     }
 
-    public function getFileHtml(string $mode = 'full'): string
+    /**
+     * 「files」タイプのカラムに対して、添付ファイルリストのHTMLを生成する
+     *
+     * @param  string  $mode  表示モード (full | compact | icon-only)
+     * @param  string|null  $highlight  検索ハイライト用のキーワード
+     * @return string 生成されたHTML
+     */
+    public function getFileHtml(string $mode = 'full', ?string $highlight = null): string
     {
         if (! is_array($this->initialValue) || ! isset($this->attachments)) {
             return '';
         }
 
-        $files = $this->prepareFilesData();
+        $files = $this->prepareFilesData($highlight);
 
         return view('components.ledger.attachment-list', [
             'files' => $files,
             'mode' => $mode,
             'tenantId' => $this->tenantId,
+            'search' => $highlight,
         ])->render();
     }
 
-    private function prepareFilesData(): array
+    /**
+     * 添付ファイルのデータを準備する
+     *
+     * @param  string|null  $highlight  検索ハイライト用のキーワード
+     * @return array ファイルデータの配列
+     */
+    private function prepareFilesData(?string $highlight = null): array
     {
         $files = [];
 
@@ -378,7 +392,7 @@ class ColumnHtmlService
                 ];
             }
 
-            $files[] = [
+            $fileData = [
                 'id' => $attachment->id,
                 'column_id' => $attachment->column_id,
                 'filename' => $originalFilename,
@@ -392,6 +406,22 @@ class ColumnHtmlService
                 // エラーメッセージなどが必要ならここに追加
                 'error_message' => $attachment->error_message ?? null,
             ];
+
+            // 検索ヒット判定を追加
+            if ($highlight) {
+                $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+                // ファイル名、VLMテキスト、OCR/Tikaテキストで検索ヒット判定
+                $ocrText = $attachment->getOcrTikaFormattedText('ocr');
+                $tikaText = $attachment->getOcrTikaFormattedText('tika');
+                $fileData['is_hit'] = \App\Helpers\SearchHelper::hasHit($originalFilename, $keywords)
+                    || \App\Helpers\SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
+                    || \App\Helpers\SearchHelper::hasHit($ocrText, $keywords)
+                    || \App\Helpers\SearchHelper::hasHit($tikaText, $keywords);
+            } else {
+                $fileData['is_hit'] = false;
+            }
+
+            $files[] = $fileData;
         }
 
         return $files;

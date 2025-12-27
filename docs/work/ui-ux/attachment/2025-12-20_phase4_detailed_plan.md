@@ -1,13 +1,56 @@
 # 添付ファイルUI改善 Phase 4 詳細計画: インスペクター実装
 
 **作成日:** 2025年12月20日  
-**最終更新:** 2025年12月23日（Phase 4.3完了評価）  
+**最終更新:** 2025年12月27日（Phase 4.2 検索ハイライト修正）  
 **ステータス:** 🔄 実装中（WBS 4.0-4.3完了、54%達成）  
 **前提条件:** ✅ Phase 1完了, ✅ Phase 2完了, ✅ Phase 3完了  
 
 ---
 
 ## 更新履歴
+
+### 2025年12月27日 - Phase 4.2 検索ハイライト機能の修正
+**作業内容:** URLクエリパラメータ`highlight`が詳細ビューで正しく引き継がれない問題を修正。
+
+**発見された問題:**
+- **問題:** URL `http://localhost/demo-tenant/ledger/1?highlight=a+b` でアクセスしても、添付ファイルをクリックしてFileInspectorを開いた際に検索ハイライトが適用されない
+- **原因:** `ColumnHtmlService::getFileHtml()` メソッドが `attachment-list` コンポーネントに `search` パラメータを渡していなかった
+- **影響範囲:** 詳細ビュー（Show画面）からFileInspectorを開く際の検索ハイライト機能
+
+**修正内容:**
+1. ✅ **Show.php**: `highlight` プロパティに `#[Url(as: 'highlight')]` 属性を追加（既に実装済み）
+2. ✅ **ColumnHtmlService.php**:
+   - `getFileHtml()` メソッドに `$highlight` パラメータを追加
+   - `attachment-list` コンポーネントに `'search' => $highlight` を渡すように修正
+   - `show()` メソッドから `getFileHtml()` 呼び出し時に `$highlight` を渡すように修正
+3. ✅ **ShowTest.php**: 
+   - `it_accepts_highlight_query_parameter_from_url()` テスト追加
+   - `it_passes_highlight_to_ledger_diff_viewer()` テスト追加
+
+**修正後のフロー:**
+1. URL: `?highlight=a+b` → Livewireが `$highlight = "a b"` として取得
+2. `Show.php` → `LedgerDiffViewer` に `:highlight="$highlight"` で渡す
+3. `LedgerDiffViewer` → `LedgerContentProcessor` に `$highlight` を渡す
+4. `LedgerContentProcessor` → `ColumnHtmlService::show()` に `$highlight` を渡す
+5. `ColumnHtmlService::show()` → `getFileHtml($mode, $highlight)` を呼び出し
+6. `getFileHtml()` → `attachment-list` に `'search' => $highlight` を渡す
+7. `attachment-list` → Alpine.jsで `search: this.search` を `FileInspector` イベントに渡す
+8. `FileInspector` → `searchKeyword` プロパティに設定され、ハイライト処理実行
+
+**テスト結果:**
+```
+✅ PASS  Tests\Feature\Livewire\Ledger\ShowTest
+  ✓ it accepts highlight query parameter from url
+  ✓ it passes highlight to ledger diff viewer
+  
+  Tests: 8 passed (24 assertions)
+```
+
+**ステータス:** ✅ 完全修正
+**影響ファイル:** 
+- `app/Services/Ledger/ColumnHtmlService.php` (2箇所修正)
+- `app/Livewire/Ledger/Show.php` (1箇所修正)
+- `tests/Feature/Livewire/Ledger/ShowTest.php` (2テスト追加)
 
 ### 2025年12月23日 - WBS 4.3実装完了評価
 **作業内容:** 詳細（Details）タブの実装状態を調査し、評価結果を計画書に反映。
@@ -475,7 +518,7 @@ Duration: 18.43s
     - OCR処理済みPDFダウンロードUI（画像→PDF、最適化PDF）
   - **評価:** ⭐⭐⭐⭐ 良好 - コピー/ダウンロード実装済み、JSON形式は未実装
 
-- [ ] **4.2.7**: **大規模テキスト対応**: 文字数制限と「全文を表示」の動的ロード。[1h]
+- [x] **4.2.7**: **大規模テキスト対応**: 文字数制限と「全文を表示」の動的ロード。[1h]
   - **実装内容:**
     ```php
     // FileInspector.php L216-220

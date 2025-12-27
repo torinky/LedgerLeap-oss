@@ -132,7 +132,7 @@ class FileInspector extends Component
 
         \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', [
             'id' => $id,
-            'search' => $search
+            'search' => $search,
         ]);
 
         $this->fileId = $id;
@@ -302,12 +302,18 @@ class FileInspector extends Component
                 'vlm' => $this->mockData['mock_vlm_text'] ?? ("【AI解析結果】\n".$baseText."\n\n※この内容はVLMによって生成された要約です。"),
                 'ocr' => $this->mockData['mock_ocr_text'] ?? ("【文字認識結果】\n".$baseText),
                 'tika' => $this->mockData['mock_tika_text'] ?? ("【システム抽出結果】\n".$baseText),
+                'structured' => isset($this->mockData['mock_vlm_structured_data'])
+                    ? json_encode($this->mockData['mock_vlm_structured_data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    : null,
                 default => $baseText,
             };
         } else {
             $text = match ($this->activeSource) {
                 'vlm' => $this->file->vlm_markdown,
                 'ocr', 'tika' => $this->file->getOcrTikaFormattedText($this->activeSource),
+                'structured' => $this->file->vlm_structured_data
+                    ? json_encode($this->file->vlm_structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    : null,
                 default => null,
             };
         }
@@ -328,8 +334,8 @@ class FileInspector extends Component
             $keywords = SearchHelper::extractKeywords($this->searchKeyword);
 
             if (! empty($keywords)) {
-                // vlm (Markdown) の場合はエスケープせず、それ以外はエスケープしてハイライト
-                $shouldEscape = ($this->activeSource !== 'vlm');
+                // vlm (Markdown) と structured (JSON) の場合はエスケープせず、それ以外はエスケープしてハイライト
+                $shouldEscape = ! in_array($this->activeSource, ['vlm', 'structured']);
                 $text = SearchHelper::highlight($text, $keywords, 'bg-yellow-200 text-black px-0.5 rounded', $shouldEscape);
             }
         }
@@ -358,6 +364,7 @@ class FileInspector extends Component
                 'vlm' => $this->mockData['mock_vlm_status'] ?? (($this->mockData['mock_vlm_text'] ?? null) ? 'completed' : 'missing'),
                 'ocr' => $this->mockData['mock_ocr_status'] ?? (($this->mockData['mock_ocr_text'] ?? null) ? 'completed' : 'missing'),
                 'tika' => $this->mockData['mock_tika_status'] ?? (($this->mockData['mock_tika_text'] ?? null) ? 'completed' : 'missing'),
+                'structured' => ! empty($this->mockData['mock_vlm_structured_data']) ? 'completed' : 'missing',
                 default => 'missing',
             };
         }
@@ -367,6 +374,7 @@ class FileInspector extends Component
             'vlm' => $this->file->vlm_markdown ? 'completed' : ($this->file->vlm_confidence === null ? 'processing' : 'missing'),
             'ocr' => $this->file->ocr_processed_at ? 'completed' : 'processing',
             'tika' => 'completed', // Tikaは基本常に利用可能とする予定
+            'structured' => ! empty($this->file->vlm_structured_data) ? 'completed' : 'missing',
             default => 'missing',
         };
     }
