@@ -124,8 +124,11 @@
                             }">
                             @php
                                 // ファイルタイプ判定
-                                $isImageFile = $file && str_starts_with($file->original_mime_type ?? $file->mime ?? '', 'image/');
-                                $isPdfFile = $file && ($file->original_mime_type ?? $file->mime ?? '') === 'application/pdf';
+                                $isImageFile =
+                                    $file &&
+                                    str_starts_with($file->original_mime_type ?? ($file->mime ?? ''), 'image/');
+                                $isPdfFile =
+                                    $file && ($file->original_mime_type ?? ($file->mime ?? '')) === 'application/pdf';
                                 $hasOcrProcessed = $file && $file->ocr_processed_at;
                                 $isMockFile = $file && $file->id >= 1 && $file->id <= 12;
 
@@ -145,23 +148,25 @@
                                         ? '#download-ocr-pdf-' . $file->id
                                         : route('files.download-ocr-pdf', [
                                             'tenant' => tenant('id'),
-                                            'attachedFile' => $file->id
+                                            'attachedFile' => $file->id,
                                         ]);
                                 }
                             @endphp
 
                             {{-- オリジナルファイルダウンロードボタン --}}
-                            <a href="{{ $originalUrl }}"
-                                class="btn btn-sm gap-2 tooltip tooltip-bottom"
+                            <a href="{{ $originalUrl }}" class="btn btn-sm gap-2 tooltip tooltip-bottom"
                                 :class="$ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1'"
                                 data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
-                                @click="handleDownload('original')"
-                                :disabled="downloadingOriginal">
+                                @click="handleDownload('original')" :disabled="downloadingOriginal">
                                 <span x-show="downloadingOriginal" class="loading loading-spinner loading-xs"></span>
-                                <i class="fa-solid fa-file-image" x-show="!downloadingOriginal && {{ $isImageFile ? 'true' : 'false' }}"></i>
-                                <i class="fa-solid fa-file-pdf" x-show="!downloadingOriginal && {{ $isPdfFile ? 'true' : 'false' }}"></i>
-                                <i class="fa-solid fa-file" x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
-                                <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
+                                <i class="fa-solid fa-file-image"
+                                    x-show="!downloadingOriginal && {{ $isImageFile ? 'true' : 'false' }}"></i>
+                                <i class="fa-solid fa-file-pdf"
+                                    x-show="!downloadingOriginal && {{ $isPdfFile ? 'true' : 'false' }}"></i>
+                                <i class="fa-solid fa-file"
+                                    x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
+                                <span
+                                    class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
                             </a>
 
                             {{-- OCR変換/最適化PDFダウンロードボタン（ある場合のみ） --}}
@@ -169,11 +174,11 @@
                                 <a href="{{ $ocrPdfUrl }}"
                                     class="btn btn-primary btn-sm flex-1 gap-2 tooltip tooltip-bottom"
                                     data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_converted_pdf') : __('ledger.file_inspector.actions.download_optimized_pdf') }}"
-                                    @click="handleDownload('pdf')"
-                                    :disabled="downloadingPdf">
+                                    @click="handleDownload('pdf')" :disabled="downloadingPdf">
                                     <span x-show="downloadingPdf" class="loading loading-spinner loading-xs"></span>
                                     <i class="fa-solid fa-file-pdf" x-show="!downloadingPdf"></i>
-                                    <span class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
+                                    <span
+                                        class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
                                 </a>
                             @endif
 
@@ -238,7 +243,8 @@
                         {{-- Tabs & Content --}}
                         <div class="flex-1 overflow-hidden flex flex-col">
                             <x-mary-tabs wire:model="selectedTab"
-                                class="tabs tabs-boxed bg-base-200 m-0 p-1 rounded-none border-b border-base-300 flex-none">
+                            tabsClass="tabs tabs-lift tabs-xl mt-2"
+                            >
                                 <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
                                     icon="o-document-text" class="tab-lg gap-2">
                                     {{-- Content Tab --}}
@@ -275,8 +281,7 @@
                                                     placeholder="{{ __('ledger.file_inspector.search.placeholder') }}"
                                                     class="input-sm" clearable />
                                             </div>
-                                            <div
-                                                class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0"
+                                            <div class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0"
                                                 x-data="{ switchingSource: null }"
                                                 @source-switched.window="switchingSource = null">
                                                 @foreach (['vlm', 'ocr', 'tika', 'structured'] as $src)
@@ -297,21 +302,21 @@
                                                     @endphp
                                                     <div class="{{ $tooltip ? 'tooltip tooltip-bottom' : '' }}"
                                                         data-tip="{{ $tooltip }}">
-                                                        <button
-                                                            wire:click="switchSource('{{ $src }}')"
+                                                        <button wire:click="switchSource('{{ $src }}')"
                                                             @click="switchingSource = '{{ $src }}'"
                                                             class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1 relative"
                                                             @if (!$hasContent || $isProcessingNow) disabled @endif
-                                                            x-bind:disabled="switchingSource === '{{ $src }}' || {{ !$hasContent || $isProcessingNow ? 'true' : 'false' }}">
+                                                            x-bind:disabled="switchingSource === '{{ $src }}' ||
+                                                                {{ !$hasContent || $isProcessingNow ? 'true' : 'false' }}">
                                                             <span x-show="switchingSource !== '{{ $src }}'">
                                                                 @if ($isProcessingNow)
-                                                                    <i class="fa-solid fa-spinner fa-spin text-[10px] mr-1"></i>
+                                                                    <i
+                                                                        class="fa-solid fa-spinner fa-spin text-[10px] mr-1"></i>
                                                                 @endif
                                                                 {{ __('ledger.file_inspector.source.' . $src) }}
                                                             </span>
                                                             <span x-show="switchingSource === '{{ $src }}'"
-                                                                  x-cloak
-                                                                  class="flex items-center gap-1">
+                                                                x-cloak class="flex items-center gap-1">
                                                                 <i class="fa-solid fa-spinner fa-spin text-[10px]"></i>
                                                                 {{ __('ledger.file_inspector.source.' . $src) }}
                                                             </span>
@@ -363,7 +368,7 @@
                                                         if ($isImageFile || $isPdfFile) {
                                                             $ocrPdfUrl = route('files.download-ocr-pdf', [
                                                                 'tenant' => tenant('id'),
-                                                                'attachedFile' => $file->id
+                                                                'attachedFile' => $file->id,
                                                             ]);
                                                         }
                                                     }
@@ -416,9 +421,9 @@
                                                         </div>
                                                         <a href="{{ $ocrPdfUrl }}"
                                                             class="btn btn-xs btn-primary gap-1"
-                                                            @click="handleDownload()"
-                                                            :disabled="downloading">
-                                                            <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
+                                                            @click="handleDownload()" :disabled="downloading">
+                                                            <span x-show="downloading"
+                                                                class="loading loading-spinner loading-xs"></span>
                                                             <i class="fa-solid fa-download" x-show="!downloading"></i>
                                                             <span>{{ __('ledger.file_inspector.actions.download') }}</span>
                                                         </a>
@@ -463,25 +468,26 @@
                                                 @endif
 
                                                 <div class="form-control" x-data="{
-                                                    copied: false,
+                                                    copying: null,
+                                                    downloading: null,
                                                     copyText() {
                                                         const contentEl = this.$refs.previewContent;
                                                         const text = contentEl?.dataset?.text || '';
-
+                                                
                                                         if (!text) {
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
                                                             return;
                                                         }
-
+                                                
                                                         if (navigator.clipboard && navigator.clipboard.writeText) {
                                                             navigator.clipboard.writeText(text)
-                                                                .then(() => this.onCopySuccess())
-                                                                .catch(() => this.fallbackCopy(text));
+                                                                .then(() => this.onCopySuccess('text'))
+                                                                .catch(() => this.fallbackCopy(text, 'text'));
                                                         } else {
-                                                            this.fallbackCopy(text);
+                                                            this.fallbackCopy(text, 'text');
                                                         }
                                                     },
-                                                    fallbackCopy(text) {
+                                                    fallbackCopy(text, id) {
                                                         const textarea = document.createElement('textarea');
                                                         textarea.value = text;
                                                         textarea.style.position = 'fixed';
@@ -490,27 +496,30 @@
                                                         textarea.select();
                                                         try {
                                                             document.execCommand('copy');
-                                                            this.onCopySuccess();
+                                                            this.onCopySuccess(id);
                                                         } catch (err) {
                                                             console.error('Copy failed', err);
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
                                                         }
                                                         document.body.removeChild(textarea);
                                                     },
-                                                    onCopySuccess() {
-                                                        this.copied = true;
-                                                        setTimeout(() => { this.copied = false; }, 2000);
-                                                        $dispatch('mary-toast', { type: 'success', title: '{{ __('ledger.file_inspector.messages.text_copied') }}' });
+                                                    onCopySuccess(id) {
+                                                        this.copying = id;
+                                                        setTimeout(() => { this.copying = null; }, 2000);
+                                                        const toastTitle = id === 'json' ?
+                                                            '{{ __('ledger.file_inspector.messages.json_copied') }}' :
+                                                            '{{ __('ledger.file_inspector.messages.text_copied') }}';
+                                                        $dispatch('mary-toast', { type: 'success', title: toastTitle });
                                                     },
                                                     copyAsJson() {
                                                         const contentEl = this.$refs.previewContent;
                                                         const text = contentEl?.dataset?.text || '';
-
+                                                
                                                         if (!text) {
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
                                                             return;
                                                         }
-
+                                                
                                                         const jsonData = {
                                                             filename: '{{ $file?->original_filename ?? '' }}',
                                                             source: '{{ $activeSource }}',
@@ -519,31 +528,42 @@
                                                             model: '{{ $file?->vlm_model ?? '' }}',
                                                             processed_at: '{{ $file?->vlm_processed_at ?? '' }}'
                                                         };
-
+                                                
                                                         const jsonString = JSON.stringify(jsonData, null, 2);
-
+                                                
                                                         if (navigator.clipboard && navigator.clipboard.writeText) {
                                                             navigator.clipboard.writeText(jsonString)
-                                                                .then(() => this.onCopySuccess())
-                                                                .catch(() => this.fallbackCopy(jsonString));
+                                                                .then(() => this.onCopySuccess('json'))
+                                                                .catch(() => this.fallbackCopy(jsonString, 'json'));
                                                         } else {
-                                                            this.fallbackCopy(jsonString);
+                                                            this.fallbackCopy(jsonString, 'json');
                                                         }
                                                     },
                                                     downloadFile(type) {
                                                         const contentEl = this.$refs.previewContent;
-                                                        const text = contentEl?.dataset?.text || '';
-
+                                                        let text = contentEl?.dataset?.text || '';
+                                                
                                                         if (!text) {
                                                             $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.download_failed') }}' });
                                                             return;
                                                         }
-
-                                                        const blob = new Blob([text], { type: 'text/plain' });
+                                                
+                                                        if (type === 'json') {
+                                                            const jsonData = {
+                                                                filename: '{{ $file?->original_filename ?? '' }}',
+                                                                source: '{{ $activeSource }}',
+                                                                content: text,
+                                                                processed_at: new Date().toISOString()
+                                                            };
+                                                            text = JSON.stringify(jsonData, null, 2);
+                                                        }
+                                                
+                                                        const blob = new Blob([text], { type: type === 'json' ? 'application/json' : 'text/plain' });
                                                         const url = window.URL.createObjectURL(blob);
                                                         const a = document.createElement('a');
                                                         a.href = url;
-                                                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'markdown' ? '.md' : '.txt');
+                                                        const ext = type === 'json' ? '.json' : (type === 'markdown' ? '.md' : '.txt');
+                                                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + ext;
                                                         document.body.appendChild(a);
                                                         a.click();
                                                         window.URL.revokeObjectURL(url);
@@ -622,55 +642,111 @@
                                                         </div>
                                                     @endif
 
-                                                    <div class="flex flex-wrap gap-2 mt-4">
-                                                        <button @click="copyText()"
-                                                            class="btn btn-sm transition-all duration-300"
-                                                            :class="copied ? 'btn-success text-white' : 'btn-outline gap-2'">
-                                                            <i class="fa-solid"
-                                                                :class="copied ? 'fa-check' : 'fa-copy'"></i>
+                                                    <div class="flex flex-wrap gap-6 mt-6">
+                                                        {{-- Copy Actions Group --}}
+                                                        <div class="flex flex-col gap-1.5">
                                                             <span
-                                                                x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.copy_text') }}'"></span>
-                                                        </button>
-
-                                                        @if ($activeSource === 'vlm')
-                                                            <button @click="copyAsJson()"
-                                                                class="btn btn-sm transition-all duration-300"
-                                                                :class="copied ? 'btn-success text-white' : 'btn-outline gap-2'">
-                                                                <i class="fa-solid"
-                                                                    :class="copied ? 'fa-check' : 'fa-code'"></i>
-                                                                <span
-                                                                    x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : 'JSON'"></span>
-                                                            </button>
-                                                        @endif
-
-                                                        <button @click="downloadFile('text')"
-                                                            class="btn btn-sm btn-outline gap-2">
-                                                            <i class="fa-solid fa-download"></i>
-                                                            <span>{{ __('ledger.file_inspector.actions.download_text') }}</span>
-                                                        </button>
-                                                        @if ($activeSource === 'vlm')
-                                                            @if ($tenantId && $file && $file->exists)
-                                                                <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) }}"
-                                                                    class="btn btn-sm btn-outline gap-2"
-                                                                    target="_blank">
-                                                                    <i class="fa-brands fa-markdown"></i>
-                                                                    <span>Markdown</span>
-                                                                </a>
-                                                                <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) }}"
-                                                                    class="btn btn-sm btn-outline gap-2"
-                                                                    target="_blank">
-                                                                    <i class="fa-solid fa-code"></i>
-                                                                    <span>JSON</span>
-                                                                </a>
-                                                            @else
-                                                                {{-- モックまたはID未確定時はクライアントサイド生成で代替 --}}
-                                                                <button @click="downloadFile('markdown')"
-                                                                    class="btn btn-sm btn-outline gap-2">
-                                                                    <i class="fa-brands fa-markdown"></i>
-                                                                    <span>Markdown</span>
+                                                                class="text-[10px] font-bold opacity-60 px-1 flex items-center gap-1">
+                                                                <i
+                                                                    class="fa-solid fa-copy"></i>{{ __('ledger.file_inspector.actions.copy') }}
+                                                            </span>
+                                                            <div class="join border border-base-300">
+                                                                <button @click="copyText()"
+                                                                    class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[7.5rem]"
+                                                                    :class="copying === 'text' ? 'btn-success text-white' :
+                                                                        'btn-outline border-none'"
+                                                                    data-tip="{{ __('ledger.file_inspector.actions.copy_text') }}">
+                                                                    <i class="fa-solid"
+                                                                        :class="copying === 'text' ? 'fa-check' :
+                                                                            'fa-file-lines'"></i>
+                                                                    <span
+                                                                        x-text="copying === 'text' ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.text_format') }}'"></span>
                                                                 </button>
-                                                            @endif
-                                                        @endif
+
+                                                                @if ($activeSource === 'vlm')
+                                                                    <button @click="copyAsJson()"
+                                                                        class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[6.5rem]"
+                                                                        :class="copying === 'json' ?
+                                                                            'btn-success text-white' :
+                                                                            'btn-outline border-none'"
+                                                                        data-tip="{{ __('ledger.file_inspector.actions.copy_json') }}">
+                                                                        <i class="fa-solid"
+                                                                            :class="copying === 'json' ? 'fa-check' :
+                                                                                'fa-code'"></i>
+                                                                        <span
+                                                                            x-text="copying === 'json' ? '{{ __('ledger.vlm.copied_short') }}' : 'JSON'"></span>
+                                                                    </button>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+
+                                                        {{-- Download Actions Group --}}
+                                                        <div class="flex flex-col gap-1.5">
+                                                            <span
+                                                                class="text-[10px] font-bold opacity-60 px-1 flex items-center gap-1">
+                                                                <i
+                                                                    class="fa-solid fa-file-arrow-down"></i>{{ __('ledger.file_inspector.actions.download') }}
+                                                            </span>
+                                                            <div class="join">
+                                                                <button
+                                                                    @click="downloading = 'text'; downloadFile('text'); setTimeout(() => downloading = null, 1500)"
+                                                                    class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                                                    data-tip="{{ __('ledger.file_inspector.actions.download_text') }}">
+                                                                    <span x-show="downloading === 'text'"
+                                                                        class="loading loading-spinner loading-xs"></span>
+                                                                    <i x-show="downloading !== 'text'"
+                                                                        class="fa-solid fa-file-lines"></i>
+                                                                    <span>{{ __('ledger.file_inspector.actions.text_format') }}</span>
+                                                                </button>
+
+                                                                @if ($activeSource === 'vlm')
+                                                                    @php
+                                                                        $isSaved = $tenantId && $file && $file->exists;
+                                                                    @endphp
+                                                                    @if ($isSaved)
+                                                                        <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) }}"
+                                                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                                                            target="_blank"
+                                                                            data-attribute-downloading="false"
+                                                                            @click="this.dataset.downloading = 'true'; setTimeout(() => this.dataset.downloading = 'false', 2000)"
+                                                                            data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
+                                                                            <i
+                                                                                class="fa-brands fa-markdown opacity-70"></i>
+                                                                            <span>{{ __('ledger.file_inspector.actions.markdown_format') }}</span>
+                                                                        </a>
+                                                                        <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) }}"
+                                                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5rem]"
+                                                                            target="_blank"
+                                                                            data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
+                                                                            <i class="fa-solid fa-code opacity-70"></i>
+                                                                            <span>JSON</span>
+                                                                        </a>
+                                                                    @else
+                                                                        {{-- Fallback for mock or unsaved files --}}
+                                                                        <button
+                                                                            @click="downloading = 'markdown'; downloadFile('markdown'); setTimeout(() => downloading = null, 1500)"
+                                                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                                                            data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
+                                                                            <span x-show="downloading === 'markdown'"
+                                                                                class="loading loading-spinner loading-xs"></span>
+                                                                            <i x-show="downloading !== 'markdown'"
+                                                                                class="fa-brands fa-markdown opacity-70"></i>
+                                                                            <span>{{ __('ledger.file_inspector.actions.markdown_format') }}</span>
+                                                                        </button>
+                                                                        <button
+                                                                            @click="downloading = 'json'; downloadFile('json'); setTimeout(() => downloading = null, 1500)"
+                                                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5.5rem]"
+                                                                            data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
+                                                                            <span x-show="downloading === 'json'"
+                                                                                class="loading loading-spinner loading-xs"></span>
+                                                                            <i x-show="downloading !== 'json'"
+                                                                                class="fa-solid fa-code opacity-70"></i>
+                                                                            <span>JSON</span>
+                                                                        </button>
+                                                                    @endif
+                                                                @endif
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @else
@@ -729,7 +805,8 @@
                                                         <tr>
                                                             <th
                                                                 class="opacity-60 whitespace-nowrap font-normal border-0 pl-0">
-                                                                {{ __('ledger.file_inspector.info.uploaded_at') }}</th>
+                                                                {{ __('ledger.file_inspector.info.uploaded_at') }}
+                                                            </th>
                                                             <td class="text-right border-0 pr-0 text-[11px]">
                                                                 {{ $file->created_at?->format('Y/m/d H:i') ?: '-' }}
                                                             </td>
@@ -823,14 +900,13 @@
                                                     @endif
                                                 </h3>
                                                 <div class="card bg-base-200 border border-base-300">
-                                                    <div class="card-body p-4"
-                                                        x-data="{
-                                                            downloading: false,
-                                                            handleDownload() {
-                                                                this.downloading = true;
-                                                                setTimeout(() => { this.downloading = false; }, 3000);
-                                                            }
-                                                        }">
+                                                    <div class="card-body p-4" x-data="{
+                                                        downloading: false,
+                                                        handleDownload() {
+                                                            this.downloading = true;
+                                                            setTimeout(() => { this.downloading = false; }, 3000);
+                                                        }
+                                                    }">
                                                         <div class="flex items-center justify-between">
                                                             <div class="flex items-center gap-3">
                                                                 <div
@@ -858,10 +934,11 @@
                                                             <div class="flex flex-col gap-1">
                                                                 <a href="{{ route('files.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                                                                     class="btn btn-xs btn-primary gap-1"
-                                                                    @click="handleDownload()"
-                                                                    :disabled="downloading">
-                                                                    <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
-                                                                    <i class="fa-solid fa-download" x-show="!downloading"></i>
+                                                                    @click="handleDownload()" :disabled="downloading">
+                                                                    <span x-show="downloading"
+                                                                        class="loading loading-spinner loading-xs"></span>
+                                                                    <i class="fa-solid fa-download"
+                                                                        x-show="!downloading"></i>
                                                                     {{ __('ledger.file_inspector.actions.download') }}
                                                                 </a>
                                                             </div>
