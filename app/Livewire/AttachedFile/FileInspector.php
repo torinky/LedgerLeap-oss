@@ -5,7 +5,10 @@ namespace App\Livewire\AttachedFile;
 use App\Helpers\SearchHelper;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Mary\Traits\Toast;
 
@@ -113,7 +116,8 @@ class FileInspector extends Component
         }
     }
 
-    public function openInspector($payload): void
+    #[On('open-file-inspector')]
+    public function openInspector($payload = null): void
     {
         $id = null;
         $search = null;
@@ -166,6 +170,7 @@ class FileInspector extends Component
     public function loadData(int $id): void
     {
         try {
+            /** @var \App\Models\User|null $currentUser */
             $currentUser = auth()->user();
             $currentTenant = tenant();
 
@@ -186,6 +191,18 @@ class FileInspector extends Component
                 'activities.causer:id,name',
             ])->findOrFail($id);
 
+            // 権限チェック
+            if (! $this->canPerformAction('read')) {
+                $this->error(
+                    title: __('ledger.file_inspector.messages.permission_denied_title'),
+                    description: __('ledger.file_inspector.messages.permission_denied_description')
+                );
+                $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+                $this->close();
+
+                return;
+            }
+
             \Illuminate\Support\Facades\Log::info('FileInspector: File loaded', [
                 'file_id' => $this->file->id,
                 'has_ledger' => $this->file->ledger !== null,
@@ -197,33 +214,6 @@ class FileInspector extends Component
                 \Illuminate\Support\Facades\Log::error('FileInspector: Ledger relation is null');
                 $this->error(__('ledger.vlm.result_not_found'));
                 $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
-                $this->close();
-
-                return;
-            }
-
-            if (! Gate::allows('view', $this->file->ledger)) {
-                $user = auth()->user();
-                $ledger = $this->file->ledger;
-                $folder = $ledger->define->folder ?? null;
-
-                \Illuminate\Support\Facades\Log::warning('FileInspector: Permission denied', [
-                    'user_id' => $user?->id,
-                    'user_email' => $user?->email,
-                    'user_roles' => $user?->roles->pluck('name')->toArray(),
-                    'ledger_id' => $ledger->id,
-                    'folder_id' => $folder?->id,
-                    'folder_title' => $folder?->title,
-                    'folder_tenant_id' => $folder?->tenant_id,
-                    'folder_parent_id' => $folder?->parent_id,
-                    'current_tenant_id' => tenant('id'),
-                    'tenancy_initialized' => app(\Stancl\Tenancy\Tenancy::class)->initialized,
-                    'gate_raw_result' => Gate::inspect('view', $ledger)->message(),
-                ]);
-                $this->error(
-                    title: __('ledger.file_inspector.messages.permission_denied_title'),
-                    description: __('ledger.file_inspector.messages.permission_denied_description')
-                );
                 $this->close();
 
                 return;
@@ -339,6 +329,136 @@ class FileInspector extends Component
 
         // Alpine.jsの状態をリセットするイベントを発行
         $this->dispatch('source-switched');
+    }
+
+    /**
+     * 再処理を実行
+     */
+    public function retryProcessing(): void
+    {
+        if (! $this->canPerformAction('retry')) {
+            $this->error(__('file.inspector.no_permission'));
+            $this->dispatch('mary-toast', type: 'error', title: __('file.inspector.no_permission'));
+
+            return;
+        }
+
+        $this->file->retryProcessing();
+
+        $this->success(__('file.inspector.messages.retry_started'));
+        $this->dispatch('mary-toast', type: 'success', title: __('file.inspector.messages.retry_started'));
+        $this->dispatch('file-processing-started', fileId: $this->file->id);
+        $this->close();
+    }
+
+    /**
+     * VLM再処理を実行（管理者用）
+     */
+    public function retryVlmProcessing(): void
+    {
+        if (! $this->canPerformAction('admin_retry')) {
+            $this->error(__('file.inspector.no_permission'));
+            $this->dispatch('mary-toast', type: 'error', title: __('file.inspector.no_permission'));
+
+            return;
+        }
+
+        \App\Jobs\Ledger\RetryVlmProcessingJob::dispatch($this->file);
+
+        $this->success(__('file.inspector.messages.vlm_retry_started'));
+        $this->dispatch('mary-toast', type: 'success', title: __('file.inspector.messages.vlm_retry_started'));
+        $this->dispatch('file-processing-started', fileId: $this->file->id);
+        $this->close();
+    }
+
+    /**
+     * 現在のユーザーの権限を取得
+     */
+    #[Computed]
+    public function userPermissions(): array
+    {
+        if (! $this->file || $this->isMockFile()) {
+            return [
+                'read' => true,
+                'write' => false,
+                'delete' => false,
+                'download' => true,
+                'retry' => false,
+                'admin_retry' => false,
+                'is_admin' => false,
+                'folder_permission' => null,
+            ];
+        }
+
+        $ledger = $this->file->ledger;
+
+        // If ledger is null, we cannot determine permissions based on it.
+        if (! $ledger) {
+            return [
+                'read' => false,
+                'write' => false,
+                'delete' => false,
+                'download' => false,
+                'retry' => false,
+                'admin_retry' => false,
+                'is_admin' => false,
+                'folder_permission' => null,
+            ];
+        }
+
+        // 管理者権限（manage_attachments）
+        $hasManageAttachment = \Illuminate\Support\Facades\Gate::allows('manage_attachments');
+
+        return [
+            'read' => Gate::allows('view', $ledger),
+            'write' => Gate::allows('update', $ledger),
+            'delete' => false, // 履歴保持のため、ここからは削除させない仕様
+            'download' => Gate::allows('view', $ledger),
+            'retry' => (Gate::allows('update', $ledger) || $hasManageAttachment) && $this->file->canUserRequestRetry(),
+            'admin_retry' => $hasManageAttachment && $this->file->canAdminRetry(),
+            'is_admin' => $hasManageAttachment,
+            'folder_permission' => $this->getFolderPermission(),
+        ];
+    }
+
+    /**
+     * 指定されたアクションが実行可能か判定
+     */
+    public function canPerformAction(string $action): bool
+    {
+        $perms = $this->userPermissions();
+
+        return $perms[$action] ?? false;
+    }
+
+    public function getFolderPermission(): ?string
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+        if (! $user || ! $this->file || ! $this->file->ledger?->define?->folder || $this->isMockFile()) {
+            return null;
+        }
+        /** @var \App\Models\Folder|null $folder */
+        $folder = $this->file->ledger->define->folder;
+        $userService = app(\App\Services\UserService::class);
+
+        if ($userService->isManageableFolderForUser($user, $folder)) {
+            return 'admin';
+        }
+        if ($userService->canApproveInFolder($user, $folder)) {
+            return 'approve';
+        }
+        if ($userService->canInspectInFolder($user, $folder)) {
+            return 'inspect';
+        }
+        if ($userService->isWritableFolderForUser($user, $folder)) {
+            return 'write';
+        }
+        if ($userService->isReadableFolderForUser($user, $folder)) {
+            return 'read';
+        }
+
+        return null;
     }
 
     /**

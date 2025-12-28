@@ -231,6 +231,16 @@ class UserService
         return $this->hasFolderPermission($user, $folder, FolderPermissionType::READ);
     }
 
+    public function canInspectInFolder(User $user, Folder $folder): bool
+    {
+        return $this->hasFolderPermission($user, $folder, FolderPermissionType::INSPECT);
+    }
+
+    public function canApproveInFolder(User $user, Folder $folder): bool
+    {
+        return $this->hasFolderPermission($user, $folder, FolderPermissionType::APPROVE);
+    }
+
     //    public function isManageableFolderForUser(User $user, Folder $folder): bool
     //    {
     //        $manageableFolderIds = $this->writableFolderRepository->getManageableFolderIds($user, $folder);
@@ -474,14 +484,16 @@ class UserService
 
         // さらに、取得した各 Ledger が実際に引き継ぎ可能か（権限があるか）を最終確認
         return $claimableLedgers->filter(function (Ledger $ledger) use ($user) {
-            if (! $ledger->define?->folder) {
+            /** @var \App\Models\Folder|null $folder */
+            $folder = $ledger->define?->folder;
+            if (! $folder) {
                 return false;
             } // フォルダがなければ権限判定不可
             $requiredPermission = ($ledger->status === WorkflowStatus::PENDING_INSPECTION)
                 ? FolderPermissionType::INSPECT
                 : FolderPermissionType::APPROVE;
 
-            return $this->hasFolderPermission($user, $ledger->define->folder, $requiredPermission);
+            return $this->hasFolderPermission($user, $folder, $requiredPermission);
         });
     }
 

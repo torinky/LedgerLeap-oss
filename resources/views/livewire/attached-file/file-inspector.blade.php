@@ -18,7 +18,7 @@
                 }
             }
         "
-    x-init="$watch('open', value => { if (value) $nextTick(() => $refs.closeButton.focus()) })"
+    x-init="$watch('open', value => { if (value && $refs.closeButton) $nextTick(() => $refs.closeButton.focus()) })"
     @open-file-inspector.window="open = true; isLoading = true; console.log('FileInspector received event:', $event.detail); $wire.openInspector($event.detail)">
     {{-- DaisyUI Drawer --}}
     <div class="drawer drawer-end z-50" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -154,8 +154,8 @@
                             @endphp
 
                             {{-- オリジナルファイルダウンロードボタン --}}
-                            <a href="{{ $originalUrl }}" class="btn btn-sm gap-2 tooltip tooltip-bottom"
-                                :class="$ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1'"
+                            <a href="{{ $originalUrl }}"
+                                class="btn btn-sm gap-2 tooltip tooltip-bottom {{ $ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1' }}"
                                 data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
                                 @click="handleDownload('original')" :disabled="downloadingOriginal">
                                 <span x-show="downloadingOriginal" class="loading loading-spinner loading-xs"></span>
@@ -242,9 +242,7 @@
 
                         {{-- Tabs & Content --}}
                         <div class="flex-1 overflow-hidden flex flex-col">
-                            <x-mary-tabs wire:model="selectedTab"
-                            tabsClass="tabs tabs-lift tabs-xl mt-2"
-                            >
+                            <x-mary-tabs wire:model="selectedTab" tabsClass="tabs tabs-lift tabs-xl mt-2">
                                 <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
                                     icon="o-document-text" class="tab-lg gap-2">
                                     {{-- Content Tab --}}
@@ -1036,69 +1034,6 @@
 
                                 </x-mary-tab>
 
-                                <x-mary-tab name="access" label="{{ __('ledger.file_inspector.tabs.access') }}"
-                                    icon="o-shield-check" class="tab-lg gap-2">
-                                    {{-- Access Tab --}}
-                                    <div class="p-4 space-y-4">
-                                        <div class="card bg-primary/5 border border-primary/20">
-                                            <div class="card-body p-4">
-                                                <h3 class="card-title text-sm text-primary mb-2">
-                                                    <i class="fa-solid fa-user-shield"></i>
-                                                    {{ __('ledger.file_inspector.access.your_permissions') }}
-                                                </h3>
-                                                <div class="grid grid-cols-2 gap-3 text-sm">
-                                                    <div class="flex items-center gap-2">
-                                                        <i class="fa-solid fa-eye text-success"></i>
-                                                        <span>{{ __('ledger.file_inspector.access.view') }}</span>
-                                                    </div>
-                                                    <div class="flex items-center gap-2">
-                                                        <i class="fa-solid fa-download text-success"></i>
-                                                        <span>{{ __('ledger.file_inspector.access.download') }}</span>
-                                                    </div>
-                                                    <div class="flex items-center gap-2 opacity-40">
-                                                        <i class="fa-solid fa-pen"></i>
-                                                        <span>{{ __('ledger.file_inspector.access.edit') }}</span>
-                                                    </div>
-                                                    <div class="flex items-center gap-2 opacity-40">
-                                                        <i class="fa-solid fa-trash"></i>
-                                                        <span>{{ __('ledger.file_inspector.access.delete') }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="divider"></div>
-
-                                        <div>
-                                            <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-                                                <i class="fa-solid fa-sitemap text-info"></i>
-                                                {{ __('ledger.file_inspector.access.org_role_settings') }}
-                                            </h3>
-                                            <div class="space-y-2">
-                                                <div class="card card-compact bg-base-200">
-                                                    <div class="card-body">
-                                                        <div class="flex items-center justify-between mb-2">
-                                                            <div class="flex items-center gap-2">
-                                                                <i class="fa-solid fa-building text-info"></i>
-                                                                <span class="font-medium text-sm">総務部</span>
-                                                            </div>
-                                                            <span
-                                                                class="badge badge-sm">{{ __('ledger.file_inspector.access.organization') }}</span>
-                                                        </div>
-                                                        <div class="flex flex-wrap gap-1">
-                                                            <span
-                                                                class="badge badge-success badge-sm">{{ __('ledger.file_inspector.access.admin') }}</span>
-                                                            <span
-                                                                class="badge badge-primary badge-sm">{{ __('ledger.file_inspector.access.write') }}</span>
-                                                            <span
-                                                                class="badge badge-info badge-sm">{{ __('ledger.file_inspector.access.read') }}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </x-mary-tab>
                                 <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
                                     icon="o-clock" class="tab-lg gap-2">
                                     {{-- History Tab --}}
@@ -1266,6 +1201,146 @@
                                                 <span>{{ __('ledger.file_inspector.history.mock_notice') }}</span>
                                             </div>
                                         @endif
+                                    </div>
+                                </x-mary-tab>
+
+                                <x-mary-tab name="permissions" label="{{ __('file.inspector.tabs.permissions') }}"
+                                    icon="o-shield-check" class="tab-lg gap-2">
+                                    {{-- Permissions Tab --}}
+                                    <div class="px-6 py-4 space-y-6 pb-10">
+                                        {{-- 1. 権限概要 --}}
+                                        <section>
+                                            <h3
+                                                class="text-xs font-bold mb-3 flex items-center gap-2 text-base-content/50 uppercase tracking-wider">
+                                                <i class="fa-solid fa-user-shield"></i>
+                                                {{ __('file.inspector.permissions.summary_title') }}
+                                            </h3>
+
+                                            <div
+                                                class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden">
+                                                <div
+                                                    class="p-4 flex items-center justify-between bg-primary/5 border-b border-primary/10">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="avatar placeholder">
+                                                            <div
+                                                                class="bg-primary text-primary-content rounded-full w-10">
+                                                                <span
+                                                                    class="text-xs font-bold">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-sm font-bold">{{ auth()->user()->name }}
+                                                            </p>
+                                                            <p class="text-[10px] opacity-60">
+                                                                {{ auth()->user()->email }}</p>
+                                                        </div>
+                                                    </div>
+                                                    @php
+                                                        $highestPerm =
+                                                            $this->userPermissions['folder_permission'] ?? 'none';
+                                                        $badgeColor = match ($highestPerm) {
+                                                            'admin' => 'error',
+                                                            'approve' => 'warning',
+                                                            'inspect' => 'info',
+                                                            'write' => 'primary',
+                                                            'read' => 'success',
+                                                            default => 'ghost',
+                                                        };
+                                                    @endphp
+                                                    <div class="badge badge-{{ $badgeColor }} font-bold p-3">
+                                                        {{ __('file.inspector.permissions.levels.' . $highestPerm) }}
+                                                    </div>
+                                                </div>
+
+                                                <div class="p-4 bg-base-100">
+                                                    <div class="grid grid-cols-2 gap-4">
+                                                        @foreach (['read', 'write', 'download', 'delete'] as $perm)
+                                                            <div class="flex items-center justify-between">
+                                                                <span
+                                                                    class="text-xs opacity-70">{{ __('file.inspector.permissions.' . $perm) }}</span>
+                                                                @if ($this->userPermissions[$perm])
+                                                                    <i
+                                                                        class="fa-solid fa-check-circle text-success text-xs"></i>
+                                                                @else
+                                                                    <i
+                                                                        class="fa-solid fa-times-circle text-base-content/20 text-xs"></i>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        {{-- 2. アクションセクション --}}
+                                        <section class="mt-8">
+                                            <h3
+                                                class="text-xs font-bold mb-3 flex items-center gap-2 text-base-content/50 uppercase tracking-wider">
+                                                <i class="fa-solid fa-bolt"></i>
+                                                {{ __('file.inspector.actions.title') }}
+                                            </h3>
+
+                                            <div class="space-y-3">
+                                                {{-- 全処理を再実行 --}}
+                                                <div class="card bg-base-200 border border-base-300">
+                                                    <div class="p-3 flex items-center justify-between">
+                                                        <div class="flex items-center gap-3">
+                                                            <div
+                                                                class="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                                                                <i class="fa-solid fa-rotate text-warning"></i>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-xs font-bold">
+                                                                    {{ __('file.inspector.actions.retry_all') }}</p>
+                                                                <p class="text-[10px] opacity-60">
+                                                                    {{ __('file.inspector.actions.retry_all_description') }}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <x-mary-button wire:click="retryProcessing"
+                                                            wire:confirm="{{ __('file.inspector.messages.retry_confirm') }}"
+                                                            class="btn-xs btn-outline btn-warning" :disabled="!$this->userPermissions['retry']">
+                                                            {{ __('file.inspector.actions.execute') }}
+                                                        </x-mary-button>
+                                                    </div>
+                                                </div>
+
+                                                {{-- VLM再処理 (管理者) --}}
+                                                @if ($this->userPermissions['is_admin'])
+                                                    <div class="card bg-base-200 border border-base-300">
+                                                        <div class="p-3 flex items-center justify-between">
+                                                            <div class="flex items-center gap-3">
+                                                                <div
+                                                                    class="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center">
+                                                                    <i class="fa-solid fa-robot text-error"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-xs font-bold">
+                                                                        {{ __('file.inspector.actions.vlm_retry') }}
+                                                                    </p>
+                                                                    <p class="text-[10px] opacity-60">
+                                                                        {{ __('file.inspector.actions.vlm_retry_description') }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <x-mary-button wire:click="retryVlmProcessing"
+                                                                wire:confirm="{{ __('file.inspector.messages.vlm_retry_confirm') }}"
+                                                                class="btn-xs btn-outline btn-error" :disabled="!$this->userPermissions['admin_retry']">
+                                                                {{ __('file.inspector.actions.execute') }}
+                                                            </x-mary-button>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </section>
+
+                                        {{-- 3. 注意事項 --}}
+                                        <div class="alert alert-ghost border border-base-300 bg-base-200/50 p-3 mt-4">
+                                            <i class="fa-solid fa-circle-info text-info"></i>
+                                            <div class="text-[10px] opacity-70">
+                                                {{ __('file.inspector.permissions.delete_notice') }}
+                                            </div>
+                                        </div>
                                     </div>
                                 </x-mary-tab>
                             </x-mary-tabs>

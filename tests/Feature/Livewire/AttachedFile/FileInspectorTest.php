@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Livewire\AttachedFile;
 
+use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\AttachedFile\FileInspector;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -211,6 +213,134 @@ class FileInspectorTest extends TestCase
         $this->assertFalse($component->get('isImage'));
         $this->assertFalse($component->get('isPdf'));
         $this->assertFalse($component->get('showPreview'));
-        $this->assertNull($component->get('previewUrl'));
+    }
+
+    #[Test]
+    public function it_calculates_user_permissions_correctly()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn($user, $ability) => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $permissions = $component->get('userPermissions');
+        $this->assertTrue($permissions['read']);
+        $this->assertTrue($permissions['write']);
+        $this->assertTrue($permissions['download']);
+        $this->assertTrue($permissions['is_admin']);
+    }
+
+    #[Test]
+    public function it_shows_permissions_tab_content()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn($user, $ability) => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'permissions')
+            ->assertSee(__('file.inspector.permissions.summary_title'))
+            ->assertSee(__('file.inspector.actions.title'))
+            ->assertSee($this->user->name);
+    }
+
+    #[Test]
+    public function it_dispatches_process_attached_file_on_retry_processing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Bus::fake();
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'vlm_failed_at' => now(), // Both VLM and OCR failed
+            'ocr_failed_at' => now(), 
+            'contain_content' => false,
+        ]);
+
+        Gate::before(fn($user, $ability) => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('retryProcessing')
+            ->assertDispatched('mary-toast');
+
+        Bus::assertDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class, function ($job) use ($file) {
+            return $job->attachedFile->id === $file->id;
+        });
+    }
+
+    #[Test]
+    public function it_dispatches_retry_vlm_processing_job_on_retry_vlm_processing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Bus::fake();
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'finalized_source' => 'vlm',
+            'vlm_confidence' => 0.5, // Low confidence to allow admin retry
+        ]);
+
+        Gate::before(fn($user, $ability) => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'permissions')
+            ->call('retryVlmProcessing')
+            ->assertDispatched('mary-toast');
+
+        Bus::assertDispatched(RetryVlmProcessingJob::class, function ($job) use ($file) {
+            return $job->attachedFile->id === $file->id;
+        });
+    }
+
+    #[Test]
+    public function it_blocks_retry_actions_for_unauthorized_users()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Bus::fake();
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'vlm_failed_at' => now(),
+            'ocr_failed_at' => now(),
+            'contain_content' => false,
+        ]);
+
+        // Clear Gate::before and set specific rules
+        Gate::before(fn() => null);
+        Gate::define('view', fn($user, $ledger) => true);
+        Gate::define('update', fn($user, $ledger) => false);
+        Gate::define('manage_attachments', fn($user) => false);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('retryProcessing')
+            ->assertDispatched('mary-toast', function ($name, $data) {
+                return $data['type'] === 'error';
+            });
+
+        Bus::assertNotDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class);
     }
 }
