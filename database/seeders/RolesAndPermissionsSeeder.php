@@ -76,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'receive_workflow_summary_email' => 'ワークフローの集約通知メールを受け取る', // ワークフロー通知グループ
             'receive_workflow_action_email' => 'ワークフローの個別アクション通知メールを受け取る', // ワークフロー通知グループ
 
+            'manage_attachments' => '添付ファイルの高度な管理（VLM再処理等）ができる', // 添付ファイル管理グループ
+
         ];
 
         // 権限を登録
@@ -112,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_folder_permissions', 'create_folder_permissions', 'update_folder_permissions', 'delete_folder_permissions',
                     'view_activity_logs',
                     'manage_auto_links',
+                    'manage_attachments', // 添付ファイルの高度な管理
                     'notify', // システム内通知も受け取る想定
                 ], $defaultEmailPermissions),
             ],
