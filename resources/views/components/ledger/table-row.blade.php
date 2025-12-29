@@ -64,7 +64,8 @@
         <td class="hover:bg-accent/20 border px-4 py-2">
             @php
                 $isAttachmentColumn =
-                    ($columnDefine->type ?? null) === 'file' || ($columnDefine->input_type ?? null) === 'file';
+                    in_array($columnDefine->type ?? null, ['file', 'files']) ||
+                    in_array($columnDefine->input_type ?? null, ['file', 'files']);
                 $isMockAttachmentColumn = \App\Services\Ledger\MockAttachmentService::isMockColumn(
                     $columnDefine->id ?? null,
                 );
@@ -81,14 +82,19 @@
                     }
                     unset($mf); // 参照を解除してサイドエフェクトを防ぐ
                 @endphp
-                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                    :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                    :search="$highlightKeyword" />
+                <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                    :search="$highlightKeyword" />
             @elseif($isAttachmentColumn)
                 @php
                     $files = [];
-                    $columnId = $columnDefine->id;
-                    $attached = $allAttachments[$columnId] ?? [];
+                    // ここでは、既に $allAttachments は親（RecordsTable）から渡されており、
+                    // [ledger_id => attachments[]] の形でグループ化されている。
+                    $columnId = $columnDefine->id ?? null;
+                    $attached = $allAttachments->get($ledgerRecord->id, collect())->where('column_id', $columnId);
                     foreach ($attached as $af) {
                         // Download Logic (Same as ColumnHtmlService)
                         $mainDownloadUrl = route('file.download', [
@@ -205,7 +211,8 @@
                     }
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId ?? tenant()?->id" :search="$highlightKeyword" />
+                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId ?? tenant()?->id"
+                        :search="$highlightKeyword" />
                 @else
                     <x-ledger.empty-message />
                 @endif
