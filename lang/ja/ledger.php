@@ -466,6 +466,7 @@
                     'copy_text' => 'テキストをコピー',
                     'delete' => '削除',
                     'download' => 'ダウンロード',
+                    'execute' => '実行',
                     'download_converted_pdf' => 'PDF変換版をダウンロード',
                     'download_json' => 'JSON形式でダウンロード',
                     'download_markdown' => 'Markdown形式でダウンロード',
@@ -479,10 +480,16 @@
                     'optimized' => '最適化版',
                     'original' => 'オリジナル',
                     'reprocess' => '再処理',
+                    'retry' => '再処理',
+                    'retry_all' => '全ての抽出処理を再実行',
+                    'retry_all_description' => 'Tika, OCR, VLMの全ての解析を最初からやり直します。',
                     'search_placeholder' => 'テキスト内を検索...',
                     'show_all' => '全文を表示',
                     'show_less' => '一部を表示',
                     'text_format' => 'テキスト',
+                    'title' => 'アクション',
+                    'vlm_retry' => 'AI解析（VLM）のみを再実行',
+                    'vlm_retry_description' => '構造化データと要約をAIで再生成します。',
                     'zoom' => '拡大表示',
                 ],
             'close' => '閉じる',
@@ -546,8 +553,12 @@
                     'markdown_copied' => 'Markdownをコピーしました',
                     'permission_denied_description' => 'このファイルが属する台帳を閲覧する権限がありません。フォルダの権限設定を確認してください。',
                     'permission_denied_title' => 'アクセス権限がありません',
+                    'retry_confirm' => '抽出処理を再実行しますか？既存の結果は上書きされます。',
+                    'retry_started' => '再処理を開始しました。完了までしばらくお待ちください。',
                     'structured_copied' => '構造化データをコピーしました',
                     'text_copied' => 'テキストをコピーしました',
+                    'vlm_retry_confirm' => 'AI解析（VLM）を再度実行しますか？',
+                    'vlm_retry_started' => 'AI解析の再処理を開始しました。完了までしばらくお待ちください。',
                 ],
             'ocr' =>
                 [
@@ -573,6 +584,10 @@
                     'hit' => 'ヒットしました',
                     'no_hit' => '一致なし',
                     'placeholder' => 'テキスト内を検索...',
+                ],
+            'permissions' =>
+                [
+                    'delete_notice' => 'ファイルの削除は台帳詳細画面から行ってください。履歴保持のため本画面からは削除できません。',
                 ],
             'source' =>
                 [

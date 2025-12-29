@@ -74,6 +74,12 @@ class Show extends Component
         $this->mount($this->ledgerRecord->id);
     }
 
+    #[On('navigate-to-ledger-tab')]
+    public function navigateToTab(string $tab): void
+    {
+        $this->selectedTab = $tab;
+    }
+
     public function updatedDisplayLevel(int $level): void
     {
         // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火

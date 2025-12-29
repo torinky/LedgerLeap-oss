@@ -5,6 +5,7 @@ namespace App\Livewire\AttachedFile;
 use App\Helpers\SearchHelper;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
+use App\Services\PermissionService;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
@@ -15,6 +16,13 @@ use Mary\Traits\Toast;
 class FileInspector extends Component
 {
     use InitializesTenantContext, Toast;
+
+    protected PermissionService $permissionService;
+
+    public function boot(PermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
 
     public bool $open = false;
 
@@ -337,16 +345,16 @@ class FileInspector extends Component
     public function retryProcessing(): void
     {
         if (! $this->canPerformAction('retry')) {
-            $this->error(__('file.inspector.no_permission'));
-            $this->dispatch('mary-toast', type: 'error', title: __('file.inspector.no_permission'));
+            $this->error(__('ledger.file_inspector.messages.permission_denied_title'));
+            $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
 
             return;
         }
 
         $this->file->retryProcessing();
 
-        $this->success(__('file.inspector.messages.retry_started'));
-        $this->dispatch('mary-toast', type: 'success', title: __('file.inspector.messages.retry_started'));
+        $this->success(__('ledger.file_inspector.messages.retry_started'));
+        $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.retry_started'));
         $this->dispatch('file-processing-started', fileId: $this->file->id);
         $this->close();
     }
@@ -357,17 +365,26 @@ class FileInspector extends Component
     public function retryVlmProcessing(): void
     {
         if (! $this->canPerformAction('admin_retry')) {
-            $this->error(__('file.inspector.no_permission'));
-            $this->dispatch('mary-toast', type: 'error', title: __('file.inspector.no_permission'));
+            $this->error(__('ledger.file_inspector.messages.permission_denied_title'));
+            $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
 
             return;
         }
 
         \App\Jobs\Ledger\RetryVlmProcessingJob::dispatch($this->file);
 
-        $this->success(__('file.inspector.messages.vlm_retry_started'));
-        $this->dispatch('mary-toast', type: 'success', title: __('file.inspector.messages.vlm_retry_started'));
+        $this->success(__('ledger.file_inspector.messages.vlm_retry_started'));
+        $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.vlm_retry_started'));
         $this->dispatch('file-processing-started', fileId: $this->file->id);
+        $this->close();
+    }
+
+    /**
+     * 台帳詳細画面の「アクセスと権限」タブにナビゲートし、インスペクタを閉じる
+     */
+    public function navigateToPermissionsTab(): void
+    {
+        $this->dispatch('navigate-to-ledger-tab', tab: 'permissions');
         $this->close();
     }
 
@@ -419,6 +436,54 @@ class FileInspector extends Component
             'is_admin' => $hasManageAttachment,
             'folder_permission' => $this->getFolderPermission(),
         ];
+    }
+ 
+    /**
+     * アクセス可能なロールと権限のリストを取得
+     */
+    #[Computed]
+    public function accessRoles(): \Illuminate\Support\Collection
+    {
+        if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
+            return collect();
+        }
+ 
+        return $this->permissionService->getAccessRolesWithPermissions(
+            $this->file->ledger_id,
+            'Ledger'
+        );
+    }
+ 
+    /**
+     * アクセス可能な組織と権限のリストを取得
+     */
+    #[Computed]
+    public function accessOrganizations(): \Illuminate\Support\Collection
+    {
+        if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
+            return collect();
+        }
+ 
+        return $this->permissionService->getAccessOrganizationsWithPermissions(
+            $this->file->ledger_id,
+            'Ledger'
+        );
+    }
+ 
+    #[Computed]
+    public function accessUsers(): \Illuminate\Support\Collection
+    {
+        if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
+            return collect();
+        }
+ 
+        $paginator = $this->permissionService->getAccessUsers(
+            $this->file->ledger_id,
+            'Ledger',
+            null
+        );
+ 
+        return collect($paginator->items());
     }
 
     /**
