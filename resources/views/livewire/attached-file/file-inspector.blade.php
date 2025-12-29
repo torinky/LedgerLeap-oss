@@ -1,6 +1,15 @@
 <div x-data="{
     open: @entangle('open'),
-    isLoading: @entangle('isLoading')
+    isLoading: @entangle('isLoading'),
+    showToast: false,
+    toastMessage: '',
+    toastType: 'success',
+    showNotice(message, type = 'success') {
+        this.toastMessage = message;
+        this.toastType = type;
+        this.showToast = true;
+        setTimeout(() => { this.showToast = false; }, 3000);
+    }
 }" @keydown.escape.window="open = false; $wire.close()"
     @keydown.tab.prevent="
             if (open) {
@@ -36,20 +45,30 @@
                     {{-- Skeleton UI Header --}}
                     <div class="navbar bg-base-200 border-b border-base-300 min-h-[4rem] px-4 flex-none animate-pulse">
                         <div class="flex-1">
-                            <div class="h-5 bg-base-300 rounded w-3/4 mb-2"></div>
-                            <div class="h-3 bg-base-300 rounded w-1/2"></div>
+                            <div class="flex flex-col gap-1">
+                                <div class="h-5 bg-base-300 rounded w-3/4"></div>
+                                <div class="h-3 bg-base-300 rounded w-1/2 mt-1"></div>
+                            </div>
                         </div>
                         <div class="flex-none">
-                            <div class="w-8 h-8 bg-base-300 rounded-circle"></div>
+                            <div class="w-8 h-8 bg-base-300 rounded-full"></div>
                         </div>
                     </div>
+
+                    {{-- Skeleton Quick Actions --}}
                     <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none animate-pulse">
-                        <div class="h-8 bg-base-300 rounded flex-1"></div>
-                        <div class="w-8 h-8 bg-base-300 rounded"></div>
-                        <div class="w-8 h-8 bg-base-300 rounded"></div>
+                        <div class="join flex-1">
+                            <div class="h-8 bg-base-300 rounded-l-lg flex-1"></div>
+                            <div class="h-8 bg-base-300 rounded-r-lg w-10 border-l border-base-100"></div>
+                        </div>
+                        <div class="join flex-1">
+                            <div class="h-8 bg-base-300 rounded-l-lg flex-1"></div>
+                            <div class="h-8 bg-base-300 rounded-r-lg w-10 border-l border-base-100"></div>
+                        </div>
                     </div>
+
                     {{-- Skeleton Main Content with Spinner --}}
-                    <div class="flex-1 p-4 space-y-4 animate-pulse relative overflow-hidden">
+                    <div class="flex-1 flex flex-col min-h-0 animate-pulse relative">
                         {{-- Central Spinner --}}
                         <div class="absolute inset-0 flex items-center justify-center bg-base-100/30 z-10">
                             <div class="flex flex-col items-center gap-2">
@@ -59,13 +78,28 @@
                             </div>
                         </div>
 
-                        <div class="h-48 bg-base-200 rounded w-full"></div>
-                        <div class="space-y-2">
-                            <div class="h-4 bg-base-200 rounded w-full"></div>
-                            <div class="h-4 bg-base-200 rounded w-5/6"></div>
-                            <div class="h-4 bg-base-200 rounded w-4/6"></div>
+                        {{-- Skeleton Preview Area --}}
+                        <div class="bg-base-200/50 border-b border-base-300 flex-none aspect-video bg-base-300"></div>
+
+                        {{-- Skeleton Tabs --}}
+                        <div class="flex gap-1 px-4 mt-2 border-b border-base-300">
+                            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+                            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+                            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+                            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
                         </div>
-                        <div class="h-32 bg-base-200 rounded w-full"></div>
+
+                        {{-- Skeleton Content Body --}}
+                        <div class="p-4 space-y-4 flex-1 overflow-hidden">
+                            <div class="h-8 bg-base-200 rounded w-full"></div>
+                            <div class="space-y-2">
+                                <div class="h-4 bg-base-200 rounded w-full"></div>
+                                <div class="h-4 bg-base-200 rounded w-5/6"></div>
+                                <div class="h-4 bg-base-200 rounded w-4/6"></div>
+                                <div class="h-4 bg-base-200 rounded w-full"></div>
+                                <div class="h-4 bg-base-200 rounded w-3/4"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -112,6 +146,8 @@
                             x-data="{
                                 downloadingOriginal: false,
                                 downloadingPdf: false,
+                                copyingOriginal: false,
+                                copyingPdf: false,
                                 handleDownload(type) {
                                     if (type === 'original') {
                                         this.downloadingOriginal = true;
@@ -120,6 +156,18 @@
                                         this.downloadingPdf = true;
                                         setTimeout(() => { this.downloadingPdf = false; }, 3000);
                                     }
+                                },
+                                handleCopy(url, type) {
+                                    navigator.clipboard.writeText(url).then(() => {
+                                        if (type === 'original') {
+                                            this.copyingOriginal = true;
+                                            setTimeout(() => { this.copyingOriginal = false; }, 2000);
+                                        } else {
+                                            this.copyingPdf = true;
+                                            setTimeout(() => { this.copyingPdf = false; }, 2000);
+                                        }
+                                        showNotice('{{ __('ledger.file_inspector.messages.link_copied') }}');
+                                    });
                                 }
                             }">
                             @php
@@ -135,64 +183,83 @@
                                 // オリジナルファイルのダウンロードURL
                                 $originalUrl = $isMockFile
                                     ? '#download-original-' . $file->id
-                                    : route('file.download', [
-                                        'tenant' => tenant()?->id,
-                                        'attachedFile' => $file->id ?? 0,
-                                        'original' => true,
-                                    ]);
+                                    : route(
+                                        'file.download',
+                                        [
+                                            'tenant' => tenant()?->id,
+                                            'attachedFile' => $file->id ?? 0,
+                                            'original' => true,
+                                        ],
+                                        true,
+                                    ); // true for absolute URL
 
                                 // OCR PDF（変換/最適化PDF）のダウンロードURL
                                 $ocrPdfUrl = null;
                                 if ($hasOcrProcessed && ($isImageFile || $isPdfFile)) {
                                     $ocrPdfUrl = $isMockFile
                                         ? '#download-ocr-pdf-' . $file->id
-                                        : route('files.download-ocr-pdf', [
-                                            'tenant' => tenant('id'),
-                                            'attachedFile' => $file->id,
-                                        ]);
+                                        : route(
+                                            'files.download-ocr-pdf',
+                                            [
+                                                'tenant' => tenant('id'),
+                                                'attachedFile' => $file->id,
+                                            ],
+                                            true,
+                                        ); // true for absolute URL
                                 }
                             @endphp
 
-                            {{-- オリジナルファイルダウンロードボタン --}}
-                            <a href="{{ $originalUrl }}"
-                                class="btn btn-sm gap-2 tooltip tooltip-bottom {{ $ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1' }}"
-                                data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
-                                @click="handleDownload('original')" :disabled="downloadingOriginal">
-                                <span x-show="downloadingOriginal" class="loading loading-spinner loading-xs"></span>
-                                <i class="fa-solid fa-file-image"
-                                    x-show="!downloadingOriginal && {{ $isImageFile ? 'true' : 'false' }}"></i>
-                                <i class="fa-solid fa-file-pdf"
-                                    x-show="!downloadingOriginal && {{ $isPdfFile ? 'true' : 'false' }}"></i>
-                                <i class="fa-solid fa-file"
-                                    x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
-                                <span
-                                    class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
-                            </a>
 
-                            {{-- OCR変換/最適化PDFダウンロードボタン（ある場合のみ） --}}
-                            @if ($ocrPdfUrl)
-                                <a href="{{ $ocrPdfUrl }}"
-                                    class="btn btn-primary btn-sm flex-1 gap-2 tooltip tooltip-bottom"
-                                    data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_converted_pdf') : __('ledger.file_inspector.actions.download_optimized_pdf') }}"
-                                    @click="handleDownload('pdf')" :disabled="downloadingPdf">
-                                    <span x-show="downloadingPdf" class="loading loading-spinner loading-xs"></span>
-                                    <i class="fa-solid fa-file-pdf" x-show="!downloadingPdf"></i>
+                            {{-- オリジナルファイルダウンロード & リンクコピー --}}
+                            <div class="join flex-1">
+                                <a href="{{ $originalUrl }}"
+                                    class="btn btn-sm join-item gap-2 tooltip tooltip-bottom {{ $ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1' }}"
+                                    data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
+                                    @click="handleDownload('original')" :disabled="downloadingOriginal">
+                                    <span x-show="downloadingOriginal"
+                                        class="loading loading-spinner loading-xs"></span>
+                                    <i class="fa-solid fa-file-image"
+                                        x-show="!downloadingOriginal && {{ $isImageFile ? 'true' : 'false' }}"></i>
+                                    <i class="fa-solid fa-file-pdf"
+                                        x-show="!downloadingOriginal && {{ $isPdfFile ? 'true' : 'false' }}"></i>
+                                    <i class="fa-solid fa-file"
+                                        x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
                                     <span
-                                        class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
+                                        class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
                                 </a>
-                            @endif
+                                <button
+                                    class="btn btn-sm join-item w-10 tooltip tooltip-bottom transition-all duration-300"
+                                    :class="copyingOriginal ? 'btn-success text-white' : 'btn-ghost'"
+                                    data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}"
+                                    @click="handleCopy('{{ $originalUrl }}', 'original')">
+                                    <i class="fa-solid fa-link" x-show="!copyingOriginal"></i>
+                                    <i class="fa-solid fa-check" x-show="copyingOriginal" x-cloak></i>
+                                </button>
+                            </div>
 
-                            {{-- その他のアクションボタン --}}
-                            <button class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                                data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}" x-data="{}"
-                                @click="navigator.clipboard.writeText('{{ $originalUrl }}').then(() => alert('{{ __('ledger.file_inspector.messages.link_copied') }}'))">
-                                <i class="fa-solid fa-link"></i>
-                            </button>
-                            <a href="{{ $originalUrl }}"
-                                class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
-                                data-tip="{{ __('ledger.file_inspector.actions.open_new_tab') }}" target="_blank">
-                                <i class="fa-solid fa-external-link-alt"></i>
-                            </a>
+                            {{-- OCR変換/最適化PDFダウンロード & リンクコピー（ある場合のみ） --}}
+                            @if ($ocrPdfUrl)
+                                <div class="join flex-1">
+                                    <a href="{{ $ocrPdfUrl }}"
+                                        class="btn btn-primary btn-sm join-item flex-1 gap-2 tooltip tooltip-bottom"
+                                        data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_converted_pdf') : __('ledger.file_inspector.actions.download_optimized_pdf') }}"
+                                        @click="handleDownload('pdf')" :disabled="downloadingPdf">
+                                        <span x-show="downloadingPdf"
+                                            class="loading loading-spinner loading-xs"></span>
+                                        <i class="fa-solid fa-file-pdf" x-show="!downloadingPdf"></i>
+                                        <span
+                                            class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
+                                    </a>
+                                    <button
+                                        class="btn btn-primary btn-sm join-item w-10 tooltip tooltip-bottom border-l-primary-focus/20 transition-all duration-300"
+                                        :class="copyingPdf ? 'btn-success text-white' : ''"
+                                        data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}"
+                                        @click="handleCopy('{{ $ocrPdfUrl }}', 'pdf')">
+                                        <i class="fa-solid fa-link" x-show="!copyingPdf"></i>
+                                        <i class="fa-solid fa-check" x-show="copyingPdf" x-cloak></i>
+                                    </button>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Preview Area --}}
@@ -497,7 +564,7 @@
                                                             this.onCopySuccess(id);
                                                         } catch (err) {
                                                             console.error('Copy failed', err);
-                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
+                                                            this.showNotice('{{ __('ledger.file_inspector.messages.copy_failed') }}', 'error');
                                                         }
                                                         document.body.removeChild(textarea);
                                                     },
@@ -507,7 +574,7 @@
                                                         const toastTitle = id === 'json' ?
                                                             '{{ __('ledger.file_inspector.messages.json_copied') }}' :
                                                             '{{ __('ledger.file_inspector.messages.text_copied') }}';
-                                                        $dispatch('mary-toast', { type: 'success', title: toastTitle });
+                                                        this.showNotice(toastTitle);
                                                     },
                                                     copyAsJson() {
                                                         const contentEl = this.$refs.previewContent;
@@ -542,7 +609,7 @@
                                                         let text = contentEl?.dataset?.text || '';
                                                 
                                                         if (!text) {
-                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.download_failed') }}' });
+                                                            this.showNotice('{{ __('ledger.file_inspector.messages.download_failed') }}', 'error');
                                                             return;
                                                         }
                                                 
@@ -1505,6 +1572,31 @@
                         </div>
                     @endif
                 </div> {{-- Added closing div for x-show="!isLoading" --}}
+            </div>
+        </div>
+    </div>
+
+    {{-- DaisyUI Toast (Controlled by Alpine) --}}
+    <div class="toast toast-bottom toast-center z-[100] pointer-events-none" x-show="showToast"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4"
+        x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" x-cloak>
+        <div class="alert shadow-lg pointer-events-auto"
+            :class="{
+                'alert-success text-white': toastType === 'success',
+                'alert-error text-white': toastType === 'error',
+                'alert-warning': toastType === 'warning',
+                'alert-info': toastType === 'info'
+            }">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid"
+                    :class="{
+                        'fa-check-circle': toastType === 'success',
+                        'fa-circle-xmark': toastType === 'error',
+                        'fa-triangle-exclamation': toastType === 'warning',
+                        'fa-circle-info': toastType === 'info'
+                    }"></i>
+                <span x-text="toastMessage" class="text-sm font-medium"></span>
             </div>
         </div>
     </div>

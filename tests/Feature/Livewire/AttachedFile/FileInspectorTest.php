@@ -254,8 +254,8 @@ class FileInspectorTest extends TestCase
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id])
             ->set('selectedTab', 'permissions')
-            ->assertSee(__('file.inspector.permissions.summary_title'))
-            ->assertSee(__('file.inspector.actions.title'))
+            ->assertSee(__('ledger.file_inspector.access.your_permissions'))
+            ->assertSee(__('ledger.file_inspector.actions.title'))
             ->assertSee($this->user->name);
     }
 
