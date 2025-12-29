@@ -2,6 +2,12 @@ import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
 import daisyui from 'daisyui';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const lightTheme = process.env.DAISYUI_THEME_LIGHT || 'corporate';
+const darkTheme = process.env.DAISYUI_THEME_DARK || 'coffee';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -52,8 +58,8 @@ export default {
     ],
 
     daisyui: {
-        themes: ["nord", "coffee"], // アプリケーションで使用するテーマを指定
-        darkTheme: "coffee", // ダークモード時のデフォルトテーマ
+        themes: [lightTheme, darkTheme], // アプリケーションで使用するテーマを指定
+        darkTheme: darkTheme, // ダークモード時のデフォルトテーマ
     },
 
 };

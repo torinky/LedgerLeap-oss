@@ -1,4 +1,4 @@
-@use '../css/tree.css';
+@use "../css/tree.css";
 
 // Tailwind CSS v4用のインポートに変更
 @use "tailwindcss";
@@ -9,9 +9,8 @@
 
 // daisyUI v5用のプラグイン読み込み
 @plugin "daisyui" {
-    themes: nord --default, coffee --prefersdark;
-    //themes: all;
-} ;
+    themes: #{$daisyui-light} --default, #{$daisyui-dark} --prefersdark;
+}
 
 // @tailwindcss/typography プラグインの有効化
 @plugin '@tailwindcss/typography';
@@ -22,29 +21,19 @@
 // @import 'filepond/dist/filepond.min.css';
 
 /* FontAwesomeのフォント読み込み */
-$fa-font-path: '@fortawesome/fontawesome-free/webfonts';
+$fa-font-path: "@fortawesome/fontawesome-free/webfonts";
 @font-face {
-    font-family: 'Font Awesome 6 Free';
+    font-family: "Font Awesome 6 Free";
     font-style: normal;
     font-display: block;
-    src: url('#{$fa-font-path}/fa-solid-900.woff2') format('woff2');
+    src: url("#{$fa-font-path}/fa-solid-900.woff2") format("woff2");
 }
 
 .icon-input {
-    font-family: 'Avenir',
-    'Helvetica Neue',
-    'Helvetica',
-    'Arial',
-    'Hiragino Sans',
-    'ヒラギノ角ゴシック',
-    'メイリオ',
-    'Meiryo',
-    'YuGothic',
-    'Yu Gothic',
-    'ＭＳ Ｐゴシック',
-    'MS PGothic',
-    'sans-serif',
-    'Font Awesome 6 Free';
+    font-family: "Avenir", "Helvetica Neue", "Helvetica", "Arial",
+        "Hiragino Sans", "ヒラギノ角ゴシック", "メイリオ", "Meiryo", "YuGothic",
+        "Yu Gothic", "ＭＳ Ｐゴシック", "MS PGothic", "sans-serif",
+        "Font Awesome 6 Free";
     font-weight: 400;
 }
 
@@ -54,7 +43,7 @@ input {
     &::-webkit-input-placeholder.icon-input,
     &:-ms-input-placeholder.icon-input,
     &::-moz-placeholder.icon-input {
-        font-family: 'Font Awesome 6 Free';
+        font-family: "Font Awesome 6 Free";
     }
 }
 
@@ -71,11 +60,11 @@ textarea {
 }
 
 .ttl_3d5::before {
-    content: '';
+    content: "";
     width: 100%;
     height: 100%;
     background-image: radial-gradient(var(--color-info) 8%, transparent 16%),
-    radial-gradient(var(--color-info), 8%, transparent 16%);
+        radial-gradient(var(--color-info), 8%, transparent 16%);
     background-position: 0 0, 7px 7px;
     background-size: 12px 12px;
     position: absolute;
@@ -87,44 +76,42 @@ textarea {
 .ttl_3d5.warn {
     border-color: var(--color-warning);
     //background-color: var(--color-base-100);
-
 }
 
 .ttl_3d5.warn::before {
     background-image: radial-gradient(var(--color-warning) 8%, transparent 16%),
-    radial-gradient(var(--color-warning), 8%, transparent 16%);
+        radial-gradient(var(--color-warning), 8%, transparent 16%);
 }
 
 .ttl_3d5.error {
     //border-color: var(--color-error);
     //background-color: var(--color-base-300);
-
 }
 
 .ttl_3d5.error::before {
     background-image: radial-gradient(var(--color-error) 8%, transparent 16%),
-    radial-gradient(var(--color-error) 8%, transparent 16%);
+        radial-gradient(var(--color-error) 8%, transparent 16%);
 }
 
 // EasyMDEスタイル
 .EasyMDEContainer {
     h1 {
-        @apply text-4xl font-bold mb-5
+        @apply text-4xl font-bold mb-5;
     }
 
     h2 {
-        @apply text-2xl font-bold mb-3
+        @apply text-2xl font-bold mb-3;
     }
 
     h3 {
-        @apply text-lg font-bold mb-3
+        @apply text-lg font-bold mb-3;
     }
 }
 
 .mary-table-pagination span[aria-current="page"] > span {
-    @apply bg-primary text-base-100
+    @apply bg-primary text-base-100;
 }
 
 .mary-table-pagination button {
-    @apply cursor-pointer
+    @apply cursor-pointer;
 }

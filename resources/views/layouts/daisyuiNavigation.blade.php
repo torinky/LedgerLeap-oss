@@ -5,20 +5,20 @@
             <div class="dropdown">
                 <label tabindex="0" class="btn btn-ghost lg:hidden">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                         stroke="currentColor">
+                        stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 6h16M4 12h8m-8 6h16"/>
+                            d="M4 6h16M4 12h8m-8 6h16" />
                     </svg>
                 </label>
                 {{-- ドロップダウンメニューの内容 --}}
                 <ul tabindex="0"
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     @if (tenant())
-                    <li>
-                        <x-daisyui-nav-link :href="route('ledger.index', ['tenant' => tenant()->id])" :active="request()->routeIs('ledger.index')">
-                            <i class="fas fa-book-open-reader w-4 mr-2"></i>{{ __('ledger.navigation.ledgers') }}
-                        </x-daisyui-nav-link>
-                    </li>
+                        <li>
+                            <x-daisyui-nav-link :href="route('ledger.index', ['tenant' => tenant()->id])" :active="request()->routeIs('ledger.index')">
+                                <i class="fas fa-book-open-reader w-4 mr-2"></i>{{ __('ledger.navigation.ledgers') }}
+                            </x-daisyui-nav-link>
+                        </li>
                     @endif
                     {{-- 他にメニューがあればここに追加 --}}
                 </ul>
@@ -26,22 +26,26 @@
 
             {{-- アプリロゴ/名称 (マイポータルへのリンク) --}}
             <a href="{{ tenant() ? route('my-portal', ['tenant' => tenant()->id]) : route('global.my-portal') }}"
-               data-tip="{{ __('ledger.navigation.go_to_my_portal') }}"
-                    @class(['btn btn-ghost tooltip tooltip-bottom text-xl', 'btn-active' => request()->routeIs('my-portal') || request()->routeIs('global.my-portal')])
-            >
+                data-tip="{{ __('ledger.navigation.go_to_my_portal') }}" @class([
+                    'btn btn-ghost tooltip tooltip-bottom text-xl',
+                    'btn-active' =>
+                        request()->routeIs('my-portal') ||
+                        request()->routeIs('global.my-portal'),
+                ])>
                 {{ config('app.name', 'Laravel') }}
             </a>
 
             {{-- 主要メニュー (lg以上でアイコンのみ表示) --}}
             <div class="hidden lg:flex items-center ml-4 space-x-1"> {{-- space-x を調整 --}}
                 @if (tenant())
-                {{-- 台帳リンク (アイコン + ツールチップ) --}}
-                <a href="{{ route('ledger.index', ['tenant' => tenant()->id]) }}"
-                   @class(['btn btn-ghost btn-square tooltip tooltip-bottom', 'btn-active' => request()->routeIs('ledger.index')]) {{-- アクティブ状態をクラスで表現 --}}
-                   data-tip="{{ __('ledger.navigation.ledgers') }}"
-                >
-                    <i class="fas fa-book-open-reader"></i>
-                </a>
+                    {{-- 台帳リンク (アイコン + ツールチップ) --}}
+                    <a href="{{ route('ledger.index', ['tenant' => tenant()->id]) }}" @class([
+                        'btn btn-ghost btn-square tooltip tooltip-bottom',
+                        'btn-active' => request()->routeIs('ledger.index'),
+                    ])
+                        {{-- アクティブ状態をクラスで表現 --}} data-tip="{{ __('ledger.navigation.ledgers') }}">
+                        <i class="fas fa-book-open-reader"></i>
+                    </a>
                 @endif
                 {{-- 他にアイコンメニューがあればここに追加 --}}
             </div>
@@ -49,9 +53,9 @@
 
         <div class="navbar-end space-x-1">
             {{-- フォルダツリー表示ボタン (xl未満で表示, Drawerレイアウト用) --}}
-            @if($showDrawerButton ?? false)
+            @if ($showDrawerButton ?? false)
                 <label for="app-drawer" class="btn btn-ghost xl:hidden btn-sm btn-square tooltip tooltip-bottom"
-                       data-tip="{{ __('ledger.navigation.open_folder_tree') }}">
+                    data-tip="{{ __('ledger.navigation.open_folder_tree') }}">
                     <i class="fa-solid fa-folder-tree"></i>
                 </label>
             @endif
@@ -60,19 +64,18 @@
 
             {{-- 通知アイコン --}}
             <div class="dropdown dropdown-end">
-                <livewire:notifications.icon/>
+                <livewire:notifications.icon />
             </div>
             {{-- 設定ドロップダウンメニュー --}}
             @inject('userService', 'App\Services\UserService') {{-- UserService を注入 --}}
-            @if($userService->canUserAccessSettings(Auth::user()))
+            @if ($userService->canUserAccessSettings(Auth::user()))
                 <x-mary-dropdown>
                     <x-slot:trigger>
                         <x-mary-button icon="o-cog-6-tooth" class="btn-ghost btn-sm btn-circle tooltip tooltip-bottom"
-                                       data-tip="{{ __('ledger.navigation.settings') }}"
-                        />
+                            data-tip="{{ __('ledger.navigation.settings') }}" />
                     </x-slot:trigger>
 
-                    @if(tenant())
+                    @if (tenant())
                         <li class="menu-title"><span>{{ __('ledger.tenant_settings') }}</span></li>
                         <x-mary-menu-item :title="__('ledger.ledger_define')" icon="o-document-plus" :link="route('ledgerDefine.index', ['tenant' => tenant()->id])" />
                         <x-mary-menu-item :title="__('ledger.folder.title')" icon="o-folder" :link="route('filament.admin.resources.folders.index', ['tenant' => tenant()->id])" />
@@ -97,24 +100,23 @@
                 <ul tabindex="2"
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
-                        <x-daisyui-nav-link :href="route('profile.edit')"
-                                            :active="request()->routeIs('profile.edit')"> {{-- active 状態を追加 --}}
+                        <x-daisyui-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')"> {{-- active 状態を追加 --}}
                             <i class="fas fa-user-edit w-4 mr-2"></i> {{ __('ledger.navigation.profile') }}
                         </x-daisyui-nav-link>
                     </li>
                     @if (tenant())
-                    <li>
-                        <x-daisyui-nav-link :href="route('notifications.settings', ['tenant' => tenant()->id])"
-                                            :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
-                            <i class="fas fa-bell w-4 mr-2"></i> {{ __('ledger.navigation.notification_settings') }}
-                        </x-daisyui-nav-link>
-                    </li>
+                        <li>
+                            <x-daisyui-nav-link :href="route('notifications.settings', ['tenant' => tenant()->id])" :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
+                                <i class="fas fa-bell w-4 mr-2"></i>
+                                {{ __('ledger.navigation.notification_settings') }}
+                            </x-daisyui-nav-link>
+                        </li>
                     @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <li>
                             <x-daisyui-nav-link :href="route('logout')"
-                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                onclick="event.preventDefault(); this.closest('form').submit();">
                                 <i class="fas fa-sign-out-alt w-4 mr-2"></i> {{ __('ledger.navigation.logout') }}
                             </x-daisyui-nav-link>
                         </li>
@@ -123,17 +125,14 @@
             </div>
 
             {{-- テーマ切り替え --}}
-            <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle"
-                   x-data="{
-                        isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-                   }"
-                   
-            >
+            <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle" x-data="{
+                isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            }">
                 <input type="checkbox"
-                       @change.prevent="
+                    @change.prevent="
                             isDark = !isDark;
                             const newFilamentTheme = isDark ? 'dark' : 'light';
-                            const newDaisyUiTheme = isDark ? 'coffee' : 'nord';
+                            const newDaisyUiTheme = isDark ? '{{ config('daisyui.themes.dark') }}' : '{{ config('daisyui.themes.light') }}';
 
                             // Filamentのテーマを更新
                             localStorage.setItem('theme', newFilamentTheme);
@@ -146,8 +145,7 @@
                             // DaisyUIのテーマを更新
                             document.documentElement.setAttribute('data-theme', newDaisyUiTheme);
                        "
-                       :checked="!isDark"
-                />
+                    :checked="!isDark" />
                 <i class="swap-on fas fa-sun"></i>
                 <i class="swap-off fas fa-moon"></i>
             </label>
