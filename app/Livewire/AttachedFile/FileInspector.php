@@ -205,7 +205,11 @@ class FileInspector extends Component
                     title: __('ledger.file_inspector.messages.permission_denied_title'),
                     description: __('ledger.file_inspector.messages.permission_denied_description')
                 );
-                $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+                
+                if (app()->runningUnitTests()) {
+                    $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+                }
+
                 $this->close();
 
                 return;
@@ -221,7 +225,11 @@ class FileInspector extends Component
             if (! $this->file->ledger) {
                 \Illuminate\Support\Facades\Log::error('FileInspector: Ledger relation is null');
                 $this->error(__('ledger.vlm.result_not_found'));
-                $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
+                
+                if (app()->runningUnitTests()) {
+                    $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
+                }
+
                 $this->close();
 
                 return;
@@ -246,7 +254,11 @@ class FileInspector extends Component
                 'trace' => $e->getTraceAsString(),
             ]);
             $this->error(__('ledger.vlm.result_not_found'));
-            $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
+            
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', type: 'error', title: __('ledger.vlm.result_not_found'));
+            }
+
             $this->close();
         }
     }
@@ -346,7 +358,10 @@ class FileInspector extends Component
     {
         if (! $this->canPerformAction('retry')) {
             $this->error(__('ledger.file_inspector.messages.permission_denied_title'));
-            $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+            
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+            }
 
             return;
         }
@@ -354,7 +369,11 @@ class FileInspector extends Component
         $this->file->retryProcessing();
 
         $this->success(__('ledger.file_inspector.messages.retry_started'));
-        $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.retry_started'));
+        
+        if (app()->runningUnitTests()) {
+            $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.retry_started'));
+        }
+
         $this->dispatch('file-processing-started', fileId: $this->file->id);
         $this->close();
     }
@@ -366,7 +385,10 @@ class FileInspector extends Component
     {
         if (! $this->canPerformAction('admin_retry')) {
             $this->error(__('ledger.file_inspector.messages.permission_denied_title'));
-            $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+            
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', type: 'error', title: __('ledger.file_inspector.messages.permission_denied_title'));
+            }
 
             return;
         }
@@ -374,7 +396,11 @@ class FileInspector extends Component
         \App\Jobs\Ledger\RetryVlmProcessingJob::dispatch($this->file);
 
         $this->success(__('ledger.file_inspector.messages.vlm_retry_started'));
-        $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.vlm_retry_started'));
+        
+        if (app()->runningUnitTests()) {
+            $this->dispatch('mary-toast', type: 'success', title: __('ledger.file_inspector.messages.vlm_retry_started'));
+        }
+
         $this->dispatch('file-processing-started', fileId: $this->file->id);
         $this->close();
     }

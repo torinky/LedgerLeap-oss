@@ -1,14 +1,19 @@
 <div x-data="{
     open: @entangle('open'),
     isLoading: @entangle('isLoading'),
-    showToast: false,
-    toastMessage: '',
-    toastType: 'success',
-    showNotice(message, type = 'success') {
-        this.toastMessage = message;
-        this.toastType = type;
-        this.showToast = true;
-        setTimeout(() => { this.showToast = false; }, 3000);
+    notify(title, type = 'success') {
+{{--        const icon = type === 'success' ? 'o-check-circle' : 'o-exclamation-circle';--}}
+        const icon = '';
+        const css = type === 'success' ? 'alert-success' : 'alert-error';
+        this.$dispatch('mary-toast', {
+            toast: {
+                type,
+                title,
+                description: '',
+                icon,
+                css
+            }
+        });
     }
 }" @keydown.escape.window="open = false; $wire.close()"
     @keydown.tab.prevent="
@@ -166,7 +171,7 @@
                                             this.copyingPdf = true;
                                             setTimeout(() => { this.copyingPdf = false; }, 2000);
                                         }
-                                        showNotice('{{ __('ledger.file_inspector.messages.link_copied') }}');
+                                        this.notify('{{ __('ledger.file_inspector.messages.link_copied') }}');
                                     });
                                 }
                             }">
@@ -540,7 +545,7 @@
                                                         const text = contentEl?.dataset?.text || '';
                                                 
                                                         if (!text) {
-                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
+                                                            this.notify('{{ __('ledger.file_inspector.messages.copy_failed') }}', 'error');
                                                             return;
                                                         }
                                                 
@@ -564,7 +569,7 @@
                                                             this.onCopySuccess(id);
                                                         } catch (err) {
                                                             console.error('Copy failed', err);
-                                                            this.showNotice('{{ __('ledger.file_inspector.messages.copy_failed') }}', 'error');
+                                                            this.notify('{{ __('ledger.file_inspector.messages.copy_failed') }}', 'error');
                                                         }
                                                         document.body.removeChild(textarea);
                                                     },
@@ -574,14 +579,14 @@
                                                         const toastTitle = id === 'json' ?
                                                             '{{ __('ledger.file_inspector.messages.json_copied') }}' :
                                                             '{{ __('ledger.file_inspector.messages.text_copied') }}';
-                                                        this.showNotice(toastTitle);
+                                                        this.notify(toastTitle);
                                                     },
                                                     copyAsJson() {
                                                         const contentEl = this.$refs.previewContent;
                                                         const text = contentEl?.dataset?.text || '';
                                                 
                                                         if (!text) {
-                                                            $dispatch('mary-toast', { type: 'error', title: '{{ __('ledger.file_inspector.messages.copy_failed') }}' });
+                                                            this.notify('{{ __('ledger.file_inspector.messages.copy_failed') }}', 'error');
                                                             return;
                                                         }
                                                 
@@ -609,7 +614,7 @@
                                                         let text = contentEl?.dataset?.text || '';
                                                 
                                                         if (!text) {
-                                                            this.showNotice('{{ __('ledger.file_inspector.messages.download_failed') }}', 'error');
+                                                            this.notify('{{ __('ledger.file_inspector.messages.download_failed') }}', 'error');
                                                             return;
                                                         }
                                                 
@@ -623,12 +628,17 @@
                                                             text = JSON.stringify(jsonData, null, 2);
                                                         }
                                                 
-                                                        const blob = new Blob([text], { type: type === 'json' ? 'application/json' : 'text/plain' });
+                                                        const blob = new Blob([text], {
+                                                            type: type === 'json' ?
+                                                                'application/json' : 'text/plain'
+                                                        });
                                                         const url = window.URL.createObjectURL(blob);
                                                         const a = document.createElement('a');
                                                         a.href = url;
-                                                        const ext = type === 'json' ? '.json' : (type === 'markdown' ? '.md' : '.txt');
-                                                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + ext;
+                                                        const ext = type === 'json' ? '.json' : (type === 'markdown' ?
+                                                            '.md' : '.txt');
+                                                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' +
+                                                            ext;
                                                         document.body.appendChild(a);
                                                         a.click();
                                                         window.URL.revokeObjectURL(url);
@@ -1571,32 +1581,7 @@
                             </div>
                         </div>
                     @endif
-                </div> {{-- Added closing div for x-show="!isLoading" --}}
-            </div>
-        </div>
-    </div>
-
-    {{-- DaisyUI Toast (Controlled by Alpine) --}}
-    <div class="toast toast-bottom toast-center z-[100] pointer-events-none" x-show="showToast"
-        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4"
-        x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" x-cloak>
-        <div class="alert shadow-lg pointer-events-auto"
-            :class="{
-                'alert-success text-white': toastType === 'success',
-                'alert-error text-white': toastType === 'error',
-                'alert-warning': toastType === 'warning',
-                'alert-info': toastType === 'info'
-            }">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid"
-                    :class="{
-                        'fa-check-circle': toastType === 'success',
-                        'fa-circle-xmark': toastType === 'error',
-                        'fa-triangle-exclamation': toastType === 'warning',
-                        'fa-circle-info': toastType === 'info'
-                    }"></i>
-                <span x-text="toastMessage" class="text-sm font-medium"></span>
+                </div>
             </div>
         </div>
     </div>
