@@ -608,7 +608,7 @@
                 ],
             'tabs' =>
                 [
-                    'access' => '権限',
+                    'permissions' => '権限',
                     'content' => '内容',
                     'details' => '詳細',
                     'history' => '履歴',

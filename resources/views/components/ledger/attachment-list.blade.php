@@ -39,7 +39,6 @@
     search: {{ json_encode($search) }},
     columnId: {{ json_encode($columnId) }},
     handleFileClick(fileId, fileColumnId) {
-        // console.log('handleFileClick called with fileId:', fileId, 'columnId:', fileColumnId);
         this.$dispatch('open-file-inspector', {
             id: fileId,
             column_id: fileColumnId || this.columnId,
