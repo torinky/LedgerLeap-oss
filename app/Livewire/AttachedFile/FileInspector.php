@@ -969,6 +969,44 @@ class FileInspector extends Component
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
     }
 
+    /**
+     * フロントエンドからのパフォーマンスログを記録
+     */
+    public function logPerformance(string $metric, float $duration, array $metadata = []): void
+    {
+        // パフォーマンス測定が無効な場合は何もしない
+        if (! config('ledgerleap.performance.enabled', false)) {
+            return;
+        }
+
+        // メトリクス種別ごとの有効/無効チェック
+        if (! config("ledgerleap.performance.metrics.{$metric}", true)) {
+            return;
+        }
+
+        $logData = array_merge([
+            'metric' => $metric,
+            'duration_ms' => round($duration, 2),
+            'file_id' => $this->fileId,
+            'tab' => $this->selectedTab,
+        ], $metadata);
+
+        $logDestination = config('ledgerleap.performance.log_destination', 'both');
+
+        // Laravel標準ログへの記録
+        if (in_array($logDestination, ['log', 'both'])) {
+            \Illuminate\Support\Facades\Log::info("[FileInspector Performance] {$metric}", $logData);
+        }
+
+        // JSON統計ファイルへの記録
+        if (in_array($logDestination, ['json', 'both'])) {
+            $statsFile = storage_path('logs/performance_stats.json');
+            $stats = file_exists($statsFile) ? json_decode(file_get_contents($statsFile), true) : [];
+            $stats[] = array_merge($logData, ['timestamp' => now()->toISOString()]);
+            file_put_contents($statsFile, json_encode($stats, JSON_PRETTY_PRINT));
+        }
+    }
+
     public function render()
     {
         return \view('livewire.attached-file.file-inspector');

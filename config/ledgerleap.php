@@ -91,4 +91,47 @@ return [
         */
         'schedule_frequency' => env('SCORING_SCHEDULE_FREQUENCY', 'daily'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance Monitoring Configuration
+    |--------------------------------------------------------------------------
+    |
+    | パフォーマンス測定機能の設定
+    | FileInspectorコンポーネントのパフォーマンスメトリクスを収集します
+    |
+    */
+    'performance' => [
+        /*
+        | パフォーマンス測定の有効化
+        |
+        | 環境別推奨値:
+        | - 開発環境: true - パフォーマンス測定・改善のため
+        | - ステージング: true - 本番環境前の検証のため
+        | - 本番環境: false - オーバーヘッド削減のため（必要に応じてtrue）
+        */
+        'enabled' => env('PERFORMANCE_MONITORING_ENABLED', env('APP_ENV') === 'local'),
+
+        /*
+        | パフォーマンスログの出力先
+        |
+        | 'log': Laravel標準ログ（storage/logs/laravel-*.log）
+        | 'json': JSON統計ファイル（storage/logs/performance_stats.json）
+        | 'both': 両方に出力
+        | 'none': ログ出力なし（コンソールのみ）
+        */
+        'log_destination' => env('PERFORMANCE_LOG_DESTINATION', 'both'),
+
+        /*
+        | パフォーマンスメトリクスの種類
+        |
+        | 測定する項目を選択（配列形式）
+        | 'drawer_open': ドロワー開閉時間
+        | 'tab_switch': タブ切り替え時間
+        */
+        'metrics' => [
+            'drawer_open' => env('PERFORMANCE_METRIC_DRAWER_OPEN', true),
+            'tab_switch' => env('PERFORMANCE_METRIC_TAB_SWITCH', true),
+        ],
+    ],
 ];

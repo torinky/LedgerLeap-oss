@@ -1,11 +1,21 @@
 @php
     $mockData = $this->mockData;
     $mockCreatorName = $this->mockCreatorName;
+    $performanceEnabled = config('ledgerleap.performance.enabled', false);
+    $drawerOpenMetricEnabled = config('ledgerleap.performance.metrics.drawer_open', true);
+    $tabSwitchMetricEnabled = config('ledgerleap.performance.metrics.tab_switch', true);
 @endphp
 
 <div x-data="{
     open: @entangle('open'),
     isLoading: @entangle('isLoading'),
+    @if($performanceEnabled)
+    performanceMetrics: {
+        drawerOpenStart: null,
+        drawerOpenEnd: null,
+        tabSwitchTimes: []
+    },
+    @endif
 
     {{-- Toast notification handled via Alpine --}}
     notify(title, type = 'success') {
@@ -20,9 +30,45 @@
                 css
             }
         });
-    }
-}" @keydown.escape.window="open = false; $wire.close()"
-     @open-file-inspector.window="open = true; isLoading = true; $wire.openInspector($event.detail)"
+    }@if($performanceEnabled && $drawerOpenMetricEnabled),
+
+    {{-- Performance measurement: Drawer open --}}
+    measureDrawerOpen() {
+        this.performanceMetrics.drawerOpenStart = performance.now();
+        console.log('[FileInspector Performance] Drawer open started at:', this.performanceMetrics.drawerOpenStart);
+    },
+    measureDrawerOpened() {
+        if (this.performanceMetrics.drawerOpenStart) {
+            this.performanceMetrics.drawerOpenEnd = performance.now();
+            const duration = this.performanceMetrics.drawerOpenEnd - this.performanceMetrics.drawerOpenStart;
+            console.log('[FileInspector Performance] Drawer open duration:', duration.toFixed(2), 'ms');
+            this.$wire.logPerformance('drawer_open', duration);
+            // リセット
+            this.performanceMetrics.drawerOpenStart = null;
+        }
+    }@endif@if($performanceEnabled && $tabSwitchMetricEnabled),
+    {{-- Performance measurement: Tab switch --}}
+    measureTabSwitch(fromTab, toTab) {
+        const start = performance.now();
+        requestAnimationFrame(() => {
+            const duration = performance.now() - start;
+            console.log('[FileInspector Performance] Tab switch:', fromTab, '->', toTab, duration.toFixed(2), 'ms');
+            this.performanceMetrics.tabSwitchTimes.push({ from: fromTab, to: toTab, duration });
+            this.$wire.logPerformance('tab_switch', duration, { from: fromTab, to: toTab });
+        });
+    }@endif
+
+}"
+     @if($performanceEnabled && $drawerOpenMetricEnabled)
+     x-init="$watch('isLoading', (value) => { if (!value && performanceMetrics.drawerOpenStart) { measureDrawerOpened(); } })"
+     @endif
+     @keydown.escape.window="open = false; $wire.close()"
+     @open-file-inspector.window="
+        open = true;
+        isLoading = true;
+        @if($performanceEnabled && $drawerOpenMetricEnabled)measureDrawerOpen();@endif
+        $wire.openInspector($event.detail)
+     "
      @open-in-new-tab.window="window.open($event.detail.url, '_blank')"
      class="relative z-50">
 
@@ -45,7 +91,12 @@
 
         {{-- Actual Content (shown when file is loaded) --}}
         @if ($file)
-            <div x-show="!isLoading" class="flex flex-col flex-1 h-full" x-cloak>
+            <div x-show="!isLoading"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 class="flex flex-col flex-1 h-full"
+                 x-cloak>
                 @include('livewire.attached-file.file-inspector.header')
 
                 {{-- Scrollable content area --}}
@@ -53,7 +104,28 @@
                     @include('livewire.attached-file.file-inspector.quick-actions')
                     @include('livewire.attached-file.file-inspector.preview')
 
+                    @if($performanceEnabled && $tabSwitchMetricEnabled)
+                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2"
+                         x-data="{
+                             previousTab: 'content',
+                             init() {
+                                 this.$watch('$wire.selectedTab', (value, oldValue) => {
+                                     if (oldValue && value !== oldValue) {
+                                         // タブ切り替え時間を測定
+                                         const start = performance.now();
+                                         requestAnimationFrame(() => {
+                                             const duration = performance.now() - start;
+                                             console.log('[FileInspector Performance] Tab switch:', oldValue, '->', value, duration.toFixed(2), 'ms');
+                                             $wire.logPerformance('tab_switch', duration, { from: oldValue, to: value });
+                                         });
+                                         this.previousTab = value;
+                                     }
+                                 });
+                             }
+                         }">
+                    @else
                     <div class="flex-1 flex flex-col min-h-0 px-2 pb-2">
+                    @endif
                         <x-mary-tabs wire:model="selectedTab"
                                      tabsClass="flex flex-col mt-2"
                                      activeClass="border-b-0"
