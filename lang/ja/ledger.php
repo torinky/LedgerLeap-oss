@@ -491,6 +491,7 @@
                     'vlm_retry' => 'AI解析（VLM）のみを再実行',
                     'vlm_retry_description' => '構造化データと要約をAIで再生成します。',
                     'zoom' => '拡大表示',
+                    'contact_support' => 'サポートに連絡',
                 ],
             'close' => '閉じる',
             'history' =>
@@ -516,6 +517,8 @@
                     'vlm_analysis' => 'VLM解析完了',
                     'vlm_failed' => 'VLM処理失敗',
                     'yesterday' => '昨日',
+                    'waiting_finalization' => '最終化待ち',
+                    'finalization_desc' => '全処理が完了しました。最終化処理を待っています。',
                 ],
             'info' =>
                 [
@@ -606,6 +609,12 @@
                     'no_text' => 'テキスト解析結果がありません',
                     'processing' => '処理中',
                     'processing_message' => 'OCR処理を実行しています...',
+                    'not_finalized' => '最終化前',
+                    'not_finalized_desc' => '処理は完了していますが、まだ最終化されていません。処理結果は確認できますが、変更される可能性があります。',
+                    'all_failed_title' => 'テキスト抽出に失敗しました',
+                    'all_failed_message' => 'このファイルからテキストを抽出できませんでした。ファイルが破損しているか、対応していない形式の可能性があります。',
+                    'timeout_suggestion' => '処理時間が制限を超えました。ファイルサイズが大きすぎる可能性があります。ファイルを分割するか、解像度を下げてください。',
+                    'tika_only_failed' => '基本的なテキスト抽出に失敗しましたが、VLM/OCR処理により代替のテキストが利用可能です。',
                 ],
             'tabs' =>
                 [
