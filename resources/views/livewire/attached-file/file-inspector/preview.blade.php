@@ -1,6 +1,6 @@
 {{-- Preview Area --}}
 @if ($this->showPreview)
-    <div class="bg-base-200/50 border-b border-base-300 flex-none">
+    <div class="bg-base-200/50 border-b border-base-300 flex-none relative z-0">
         @if ($this->isImage)
             <div class="relative aspect-video bg-base-300" x-data="{ imgLoaded: false }"
                 wire:key="img-preview-{{ $this->previewUrl ?? 'none' }}">
