@@ -2,19 +2,27 @@
     @php
         use App\Enums\WorkflowStatus;
     @endphp
-    <div class="p-0 bg-base-200 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
+    <div class="p-0 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
 
         {{-- タブ UI の導入 --}}
-        <x-mary-tabs wire:model="selectedTab" class="mb-10"> {{-- 下にマージン追加 --}}
+        <x-mary-tabs wire:model="selectedTab"
+                     activeClass="border-b-0"
+                     labelDivClass="tabs tabs-lift tabs-xl ml-4"
+                     tabsClass="flex flex-col mb-10"
+{{--                     labelDivClass="tabs tabs-lift tabs-xl border-b-[length:var(--border)] border-b-base-content/10"--}}
+                     class="w-full">
+            {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
-            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
-                class="shadow-lg space-y-4">
+            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}"
+                        icon="o-document-text"
+                        class="shadow-lg space-y-4"
+            >
                 {{--                <x-mary-header title="{{ __('ledger.tab.details') }}" icon="o-document-text"/> --}}
 
                 @if ($ledgerRecord->define->workflow_enabled)
                     <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
-                        wire:key="status-card-{{ $ledgerRecord->id }}" />
+                                                          wire:key="status-card-{{ $ledgerRecord->id }}"/>
                 @endif
 
                 <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
@@ -27,21 +35,23 @@
                             ];
                         @endphp
                         <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                            class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                            option-label="name" />
+                                      class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
+                                      option-label="name"/>
                     </x-slot:menu>
 
                     {{-- 新しい LedgerDiffViewer コンポーネント --}}
-                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :currentLedgerAttachments="$currentLedgerAttachments"
-                        :highlight="$highlight" :displayLevel="$displayLevel" wire:key="diff-viewer-{{ $ledgerRecord->id }}" lazy
-                        {{-- lazy 修飾子を追加 --}} />
+                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView"
+                                                        :currentLedgerAttachments="$currentLedgerAttachments"
+                                                        :highlight="$highlight" :displayLevel="$displayLevel"
+                                                        wire:key="diff-viewer-{{ $ledgerRecord->id }}" lazy
+                            {{-- lazy 修飾子を追加 --}} />
 
                     <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
                         <i class="fa-solid fa-user mr-2"></i>{{ $ledgerRecord->modifier->name }}
                         <span class="ml-3"><i
-                                class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.updated_at') . $ledgerRecord->updated_at->format('Y-m-d H:i:s') }}</span>
+                                    class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.updated_at') . $ledgerRecord->updated_at->format('Y-m-d H:i:s') }}</span>
                         <span class="ml-3"><i
-                                class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.created_at') . $ledgerRecord->created_at->format('Y-m-d H:i:s') }}</span>
+                                    class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.created_at') . $ledgerRecord->created_at->format('Y-m-d H:i:s') }}</span>
                     </div>
                 </x-mary-card>
 
@@ -56,25 +66,19 @@
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history" class="shadow-md" label="{{ $historyTabTitle }}" icon="o-list-bullet">
                 <livewire:ledger.workflow-history-list :ledgerRecord="$ledgerRecord"
-                    wire:key="history-list-{{ $ledgerRecord->id }}" />
+                                                       wire:key="history-list-{{ $ledgerRecord->id }}"/>
             </x-mary-tab>
 
 
             {{-- ★★★ 総合活動履歴タブ ★★★ --}}
             <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
-                class="shadow-md">
+                        class="shadow-md">
                 {{-- テスト実行時はレンダリングしない --}}
                 @if (app()->environment() !== 'testing')
-                    @livewire(
-                        'common.activity-history-display',
-                        [
-                            'resourceId' => $ledgerRecord->id,
-                            'resourceType' => 'Ledger',
-                            'includeRelatedResources' => true,
-                            'hiddenColumns' => ['subject'],
-                        ],
-                        key('activity-history-' . $ledgerRecord->id)
-                    )
+                    <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                                                              :includeRelatedResources="true"
+                                                              :hiddenColumns="['subject']"
+                                                              wire:key="activity-history-{{ $ledgerRecord->id }}"/>
                 @else
                     <div id="activity-history-placeholder-for-testing"></div>
                 @endif
@@ -82,17 +86,11 @@
 
             {{-- ★★★ アクセスと権限タブ ★★★ --}}
             <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
-                class="shadow-md">
+                        class="shadow-md">
                 {{-- テスト実行時はレンダリングしない --}}
                 @if (app()->environment() !== 'testing')
-                    @livewire(
-                        'common.permission-display',
-                        [
-                            'resourceId' => $ledgerRecord->id,
-                            'resourceType' => 'Ledger',
-                        ],
-                        key('permission-display-' . $ledgerRecord->id)
-                    )
+                    <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                                                        wire:key="permission-display-{{ $ledgerRecord->id }}"/>
                 @else
                     <div id="permission-display-placeholder-for-testing"></div>
                 @endif
@@ -106,7 +104,7 @@
                 {{-- 透明度調整 --}}
                 <div class="card-body p-4">
                     <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord"
-                        wire:key="action-buttons-{{ $ledgerRecord->id }}" />
+                                                             wire:key="action-buttons-{{ $ledgerRecord->id }}"/>
                     @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], key('workflow-comment-modal-show'))
 
 
@@ -147,22 +145,22 @@
                                 {{-- 抽出方法 --}}
                                 <div class="flex items-center gap-1 text-sm">
                                     {{--                            <span class="text-gray-500">{{ __('ledger.vlm.source.label') }}:</span> --}}
-                                    <x-mary-badge :value="__('ledger.vlm.source.vlm')" class="badge-info" />
+                                    <x-mary-badge :value="__('ledger.vlm.source.vlm')" class="badge-info"/>
                                 </div>
 
                                 {{-- 信頼度 --}}
                                 @if ($this->previewingFile->finalized_source === 'vlm' && $this->previewingFile->vlm_confidence)
                                     <div class="flex items-center gap-1 text-sm tooltip"
-                                        data-tip="{{ __('file.status.confidence') }} : {{ $this->previewingFile->VlmConfidenceFormatted }}">
+                                         data-tip="{{ __('file.status.confidence') }} : {{ $this->previewingFile->VlmConfidenceFormatted }}">
                                         <span
-                                            class="font-semibold">{{ $this->previewingFile->VlmConfidenceFormatted }}</span>
+                                                class="font-semibold">{{ $this->previewingFile->VlmConfidenceFormatted }}</span>
 
                                         @if ($this->previewingFile->vlm_confidence >= 0.9)
-                                            <x-heroicon-s-check-badge class="w-5 h-5 text-success" />
+                                            <x-heroicon-s-check-badge class="w-5 h-5 text-success"/>
                                         @elseif($this->previewingFile->vlm_confidence >= 0.7)
-                                            <x-heroicon-s-shield-check class="w-5 h-5 text-info" />
+                                            <x-heroicon-s-shield-check class="w-5 h-5 text-info"/>
                                         @else
-                                            <x-heroicon-s-exclamation-triangle class="w-5 h-5 text-warning" />
+                                            <x-heroicon-s-exclamation-triangle class="w-5 h-5 text-warning"/>
                                         @endif
                                     </div>
                                 @endif
@@ -172,11 +170,13 @@
 
                     @if ($this->previewingFile && $this->previewingFile->vlm_markdown)
                         <div class="prose max-w-none overflow-y-auto max-h-[70vh]" x-ref="markdownContent"
-                            data-markdown="{{ $this->previewingFile->vlm_markdown }}">
+                             data-markdown="{{ $this->previewingFile->vlm_markdown }}">
                             @php
                                 $renderedMarkdown = Illuminate\Support\Str::markdown(
                                     $this->previewingFile->vlm_markdown,
-                                    ['html_input' => 'strip'],
+                                    [
+                                        'html_input' => 'strip',
+                                    ],
                                 );
                                 // Remove Livewire/Blade comment artifacts
                                 $renderedMarkdown = preg_replace(
@@ -237,7 +237,7 @@
                                 <x-mary-button @click="copyToClipboard()" class="btn btn-primary ">
                                     <i class="fa-solid" :class="copied ? 'fa-check' : 'fa-copy'"></i>
                                     <span
-                                        x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.vlm.copy_to_clipboard') }}'"></span>
+                                            x-text="copied ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.vlm.copy_to_clipboard') }}'"></span>
                                 </x-mary-button>
 
                             </div>
@@ -256,12 +256,13 @@
 
 
                             <x-mary-button label="{{ __('ledger.vlm.download_markdown') }}"
-                                link="{{ $downloadMarkdownUrl }}" icon="o-arrow-down-on-square" external="true" />
+                                           link="{{ $downloadMarkdownUrl }}" icon="o-arrow-down-on-square"
+                                           external="true"/>
                             <x-mary-button label="{{ __('ledger.vlm.download_json') }}" link="{{ $downloadJsonUrl }}"
-                                icon="o-arrow-down-on-square" external="true" />
+                                           icon="o-arrow-down-on-square" external="true"/>
 
                             <x-mary-button label="{{ __('actions.close') }}" icon="o-x-circle"
-                                @click="$wire.showVlmModal = false" />
+                                           @click="$wire.showVlmModal = false"/>
                         </x-slot:actions>
                     @else
                         <div class="alert alert-warning">
@@ -272,6 +273,8 @@
                 </x-mary-modal>
             </div>
 
-            {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
-            <livewire:attached-file.file-inspector />
         </div>
+    </div>
+    {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
+    <livewire:attached-file.file-inspector/>
+</div>
