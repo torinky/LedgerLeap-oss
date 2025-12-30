@@ -872,6 +872,63 @@ class FileInspector extends Component
     }
 
     /**
+     * サムネイルを使用すべきか判定（1MB以上の場合）
+     */
+    #[\Livewire\Attributes\Computed]
+    public function shouldUseThumbnail(): bool
+    {
+        if (!$this->file || $this->isMockFile()) {
+            return false;
+        }
+
+        // 1MB (1,048,576 bytes) を閾値とする
+        return ($this->file->size ?? 0) >= 1048576;
+    }
+
+    /**
+     * サムネイル用のURLを取得
+     */
+    #[\Livewire\Attributes\Computed]
+    public function thumbnailUrl(): ?string
+    {
+        if (!$this->file || $this->isMockFile()) {
+            return null;
+        }
+
+        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+            $this->file->hashedbasename,
+            $this->file->tenant_id
+        );
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($thumbnailPath);
+        }
+
+        return null;
+    }
+
+    /**
+     * オリジナルファイルのURLを取得
+     */
+    #[\Livewire\Attributes\Computed]
+    public function originalUrl(): ?string
+    {
+        if (! $this->file) {
+            return null;
+        }
+
+        if ($this->isMockFile()) {
+            return $this->previewUrl;
+        }
+
+        if (! $this->file->path) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+    }
+
+    /**
      * プレビュー用のURLを取得
      */
     #[\Livewire\Attributes\Computed]
@@ -903,7 +960,12 @@ class FileInspector extends Component
             return null;
         }
 
-        // Storage::disk('public')->url() を使用してURLを生成
+        // 画像で、かつサムネイルを表示すべき条件を満たし、サムネイルが存在する場合
+        if ($this->isImage() && $this->shouldUseThumbnail() && $this->thumbnailUrl()) {
+            return $this->thumbnailUrl();
+        }
+
+        // 通常はオリジナルのURLを返す
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
     }
 
