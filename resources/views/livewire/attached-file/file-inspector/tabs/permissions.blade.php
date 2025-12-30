@@ -68,8 +68,15 @@
 
         <div class="grid grid-cols-1 gap-3">
             {{-- ロール --}}
+            @if($isInLedgerDetailPage)
             <div class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors"
                 wire:click="navigateToPermissionsTab">
+            @elseif($this->permissionsTabUrl)
+            <a href="{{ $this->permissionsTabUrl }}" target="_blank" rel="noopener noreferrer"
+                class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors block">
+            @else
+            <div class="card bg-base-200 border border-base-300 p-3 opacity-50">
+            @endif
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
@@ -101,11 +108,22 @@
                         </div>
                     @endif
                 </div>
+            @if($isInLedgerDetailPage || !$this->permissionsTabUrl)
             </div>
+            @else
+            </a>
+            @endif
 
             {{-- 組織 --}}
+            @if($isInLedgerDetailPage)
             <div class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors"
                 wire:click="navigateToPermissionsTab">
+            @elseif($this->permissionsTabUrl)
+            <a href="{{ $this->permissionsTabUrl }}" target="_blank" rel="noopener noreferrer"
+                class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors block">
+            @else
+            <div class="card bg-base-200 border border-base-300 p-3 opacity-50">
+            @endif
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-info/10 flex items-center justify-center text-info">
@@ -137,11 +155,22 @@
                         </div>
                     @endif
                 </div>
+            @if($isInLedgerDetailPage || !$this->permissionsTabUrl)
             </div>
+            @else
+            </a>
+            @endif
 
             {{-- ユーザー --}}
+            @if($isInLedgerDetailPage)
             <div class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors"
                 wire:click="navigateToPermissionsTab">
+            @elseif($this->permissionsTabUrl)
+            <a href="{{ $this->permissionsTabUrl }}" target="_blank" rel="noopener noreferrer"
+                class="card bg-base-200 border border-base-300 p-3 cursor-pointer hover:bg-base-300 transition-colors block">
+            @else
+            <div class="card bg-base-200 border border-base-300 p-3 opacity-50">
+            @endif
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded bg-success/10 flex items-center justify-center text-success">
@@ -178,7 +207,11 @@
                         </div>
                     @endif
                 </div>
+            @if($isInLedgerDetailPage || !$this->permissionsTabUrl)
             </div>
+            @else
+            </a>
+            @endif
         </div>
     </section>
 

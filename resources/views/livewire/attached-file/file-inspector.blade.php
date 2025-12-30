@@ -23,6 +23,7 @@
     }
 }" @keydown.escape.window="open = false; $wire.close()"
      @open-file-inspector.window="open = true; isLoading = true; $wire.openInspector($event.detail)"
+     @open-in-new-tab.window="window.open($event.detail.url, '_blank')"
      class="relative z-50">
 
     {{-- Drawer overlay --}}

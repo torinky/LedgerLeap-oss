@@ -226,7 +226,7 @@ class FileInspectorTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        Gate::before(fn($user, $ability) => true);
+        Gate::before(fn ($user, $ability) => true);
 
         $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id]);
@@ -249,7 +249,7 @@ class FileInspectorTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        Gate::before(fn($user, $ability) => true);
+        Gate::before(fn ($user, $ability) => true);
 
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id])
@@ -270,11 +270,11 @@ class FileInspectorTest extends TestCase
             'ledger_define_id' => $this->ledger->ledger_define_id,
             'tenant_id' => $this->tenant->id,
             'vlm_failed_at' => now(), // Both VLM and OCR failed
-            'ocr_failed_at' => now(), 
+            'ocr_failed_at' => now(),
             'contain_content' => false,
         ]);
 
-        Gate::before(fn($user, $ability) => true);
+        Gate::before(fn ($user, $ability) => true);
 
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id])
@@ -300,7 +300,7 @@ class FileInspectorTest extends TestCase
             'vlm_confidence' => 0.5, // Low confidence to allow admin retry
         ]);
 
-        Gate::before(fn($user, $ability) => true);
+        Gate::before(fn ($user, $ability) => true);
 
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id])
@@ -329,10 +329,10 @@ class FileInspectorTest extends TestCase
         ]);
 
         // Clear Gate::before and set specific rules
-        Gate::before(fn() => null);
-        Gate::define('view', fn($user, $ledger) => true);
-        Gate::define('update', fn($user, $ledger) => false);
-        Gate::define('manage_attachments', fn($user) => false);
+        Gate::before(fn () => null);
+        Gate::define('view', fn ($user, $ledger) => true);
+        Gate::define('update', fn ($user, $ledger) => false);
+        Gate::define('manage_attachments', fn ($user) => false);
 
         Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
             ->call('openInspector', ['id' => $file->id])
@@ -342,5 +342,41 @@ class FileInspectorTest extends TestCase
             });
 
         Bus::assertNotDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class);
+    }
+
+    #[Test]
+    public function it_navigates_to_permissions_tab()
+    {
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn () => true);
+
+        // 台帳詳細画面内からの場合（タブ切り替え）
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id, 'isInLedgerDetailPage' => true])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('navigateToPermissionsTab')
+            ->assertDispatched('navigate-to-ledger-tab', function ($name, $data) {
+                return $data['tab'] === 'permissions';
+            })
+            ->assertSet('open', false);
+
+        // その他の画面からの場合（別タブで開く）
+        $expectedUrl = route('ledger.show', [
+            'tenant' => $this->tenant->id,
+            'ledgerId' => $this->ledger->id,
+            'tab' => 'permissions',
+        ]);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id, 'isInLedgerDetailPage' => false])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('navigateToPermissionsTab')
+            ->assertDispatched('open-in-new-tab', function ($name, $data) use ($expectedUrl) {
+                return str_contains($data['url'], $expectedUrl);
+            })
+            ->assertSet('open', false);
     }
 }

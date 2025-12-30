@@ -27,6 +27,7 @@ class Show extends Component
 
     public ?Collection $currentLedgerAttachments = null;
 
+    #[Url(as: 'tab')]
     public string $selectedTab = 'details';
 
     #[Url(as: 'dl')]
