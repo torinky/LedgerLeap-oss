@@ -224,3 +224,6 @@
         @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], key('workflow-comment-modal-show'))
 
     </div>
+
+</div>
+
