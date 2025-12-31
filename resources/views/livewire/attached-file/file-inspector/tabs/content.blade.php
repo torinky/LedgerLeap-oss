@@ -27,25 +27,25 @@
     @if ($isUnknownMime)
         <div class="alert alert-warning">
             <div class="flex items-start gap-3 w-full">
-                <x-mary-icon name="o-question-mark-circle" class="w-5 h-5 shrink-0" />
+                <x-mary-icon name="o-question-mark-circle" class="w-5 h-5 shrink-0"/>
                 <div class="flex-1">
                     <h3 class="font-bold">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
                     <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.unsupported_format_message') }}</p>
                     <div class="mt-2">
                         <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                            class="btn btn-sm btn-primary" download>
-                            <x-mary-icon name="o-arrow-down-tray" class="w-4 h-4" />
+                            <x-mary-icon name="o-arrow-down-tray" class="w-4 h-4"/>
                             {{ __('ledger.file_inspector.actions.download') }}
                         </a>
                     </div>
                 </div>
             </div>
         </div>
-    {{-- 全処理失敗の警告 --}}
+        {{-- 全処理失敗の警告 --}}
     @elseif ($isAllFailed)
         <div class="alert alert-error">
             <div class="flex items-start gap-3 w-full">
-                <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6 shrink-0" />
+                <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6 shrink-0"/>
                 <div class="flex-1">
                     <h3 class="font-bold">{{ __('ledger.file_inspector.status.all_failed_title') }}</h3>
                     <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.all_failed_message') }}</p>
@@ -55,13 +55,13 @@
                     <div class="mt-3 flex gap-2">
                         @if ($this->canPerformAction('retry'))
                             <button class="btn btn-sm btn-outline" wire:click="retryProcessing">
-                                <x-mary-icon name="o-arrow-path" class="w-4 h-4" />
+                                <x-mary-icon name="o-arrow-path" class="w-4 h-4"/>
                                 {{ __('ledger.file_inspector.actions.retry_all') }}
                             </button>
                         @endif
                         <a href="mailto:{{ config('mail.support_address', 'support@example.com') }}"
                            class="btn btn-sm btn-ghost">
-                            <x-mary-icon name="o-envelope" class="w-4 h-4" />
+                            <x-mary-icon name="o-envelope" class="w-4 h-4"/>
                             {{ __('ledger.file_inspector.actions.contact_support') }}
                         </a>
                     </div>
@@ -72,7 +72,7 @@
         {{-- タイムアウト警告 --}}
         <div class="alert alert-warning">
             <div class="flex items-start gap-3 w-full">
-                <x-mary-icon name="o-clock" class="w-6 h-6 shrink-0" />
+                <x-mary-icon name="o-clock" class="w-6 h-6 shrink-0"/>
                 <div class="flex-1">
                     <h3 class="font-bold">{{ __('ledger.file_inspector.status.processing_timeout') }}</h3>
                     <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.timeout_suggestion') }}</p>
@@ -82,7 +82,7 @@
                     <div class="mt-3 flex gap-2">
                         @if ($this->canPerformAction('retry'))
                             <button class="btn btn-sm btn-warning btn-outline" wire:click="retryProcessing">
-                                <x-mary-icon name="o-arrow-path" class="w-4 h-4" />
+                                <x-mary-icon name="o-arrow-path" class="w-4 h-4"/>
                                 {{ __('ledger.file_inspector.actions.retry') }}
                             </button>
                         @endif
@@ -94,7 +94,7 @@
         {{-- Tika単独失敗の情報通知 --}}
         <div class="alert alert-info">
             <div class="flex items-start gap-3 w-full">
-                <x-mary-icon name="o-information-circle" class="w-5 h-5 shrink-0" />
+                <x-mary-icon name="o-information-circle" class="w-5 h-5 shrink-0"/>
                 <div class="flex-1">
                     <p class="text-sm">{{ __('ledger.file_inspector.status.tika_only_failed') }}</p>
                 </div>
@@ -106,14 +106,22 @@
     <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-base-200 p-2 rounded-lg border border-base-300">
         <div class="flex-1">
             <x-mary-input wire:model.change="searchKeyword" icon="o-magnifying-glass"
-                placeholder="{{ __('ledger.file_inspector.search.placeholder') }}" class="input-sm" clearable />
-            {{-- ローディングインジケーター --}}
-            <div x-show="searching" x-cloak class="absolute right-10 top-1/2 -translate-y-1/2">
-                <span class="loading loading-spinner loading-xs text-primary"></span>
-            </div>
+                          placeholder="{{ __('ledger.file_inspector.search.placeholder') }}" class="input-sm" clearable
+            >
+                {{-- ローディングインジケーター --}}
+                {{--
+                            <div x-show="searching" x-cloak class="absolute right-10 top-1/2 -translate-y-1/2">
+                                <span class="loading loading-spinner loading-xs text-primary"></span>
+                            </div>
+                --}}
+                <x-slot:sufix>
+                    <span wire:loading class="loading loading-spinner loading-xs text-primary"></span>
+                </x-slot:sufix>
+            </x-mary-input>
         </div>
-        <div class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0" x-data="{ switchingSource: null }"
-            @source-switched.window="switchingSource = null">
+        <div class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0"
+             x-data="{ switchingSource: null }"
+             @source-switched.window="switchingSource = null">
             @foreach (['vlm', 'ocr', 'tika', 'structured'] as $src)
                 @php
                     $status = $this->getSourceStatus($src);
@@ -130,10 +138,10 @@
                 @endphp
                 <div class="{{ $tooltip ? 'tooltip tooltip-bottom' : '' }}" data-tip="{{ $tooltip }}">
                     <button wire:click="switchSource('{{ $src }}')"
-                        @click="switchingSource = '{{ $src }}'"
-                        class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1 relative"
-                        @if (!$hasContent || $isProcessingNow) disabled @endif
-                        x-bind:disabled="switchingSource === '{{ $src }}' ||
+                            @click="switchingSource = '{{ $src }}'"
+                            class="btn btn-xs {{ $isActive ? 'btn-primary' : 'btn-ghost' }} gap-1 relative"
+                            @if (!$hasContent || $isProcessingNow) disabled @endif
+                            x-bind:disabled="switchingSource === '{{ $src }}' ||
                             {{ !$hasContent || $isProcessingNow ? 'true' : 'false' }}">
                         <span x-show="switchingSource !== '{{ $src }}'">
                             @if ($isProcessingNow)
@@ -142,7 +150,7 @@
                             {{ __('ledger.file_inspector.source.' . $src) }}
                         </span>
                         <span x-show="switchingSource === '{{ $src }}'" x-cloak
-                            class="flex items-center gap-1">
+                              class="flex items-center gap-1">
                             <i class="fa-solid fa-spinner fa-spin text-[10px]"></i>
                             {{ __('ledger.file_inspector.source.' . $src) }}
                         </span>
@@ -220,7 +228,7 @@
                         </p>
                     </div>
                     <a href="{{ $ocrPdfUrl }}" class="btn btn-xs btn-primary gap-1" @click="handleDownload()"
-                        :disabled="downloading">
+                       :disabled="downloading">
                         <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
                         <i class="fa-solid fa-download" x-show="!downloading"></i>
                         <span>{{ __('ledger.file_inspector.actions.download') }}</span>
@@ -374,10 +382,10 @@
                     </span>
                     @if ($activeSource === 'vlm')
                         <span
-                            class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.vlm') }}</span>
+                                class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.vlm') }}</span>
                     @elseif($activeSource === 'ocr')
                         <span
-                            class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.ocr') }}</span>
+                                class="badge badge-outline badge-xs opacity-50">{{ __('ledger.file_inspector.source.ocr') }}</span>
                     @endif
                 </label>
 
@@ -401,48 +409,25 @@
                 @php
                     // プレーンテキスト（ハイライトなし）を取得
                     $plainText = $this->getPreviewText(false);
-                    $highlightedText = $this->previewText; // ハイライト済み（サーバー側）
                 @endphp
 
-                <div wire:ignore
-                    x-data="{
-                        plainText: @js($plainText),
-                        highlightedTextServer: @js($highlightedText),
-                        keyword: @entangle('searchKeyword'),
-                        keywords: [],
-                        activeSource: @entangle('activeSource'),
-
-                        init() {
-                            this.$watch('keyword', (value) => {
-                                this.keywords = value.trim().split(/\s+/).filter(k => k);
-                            });
-                        },
-
-                        get displayText() {
-                            // キーワードがない場合はサーバー側のハイライトをそのまま使用
-                            if (!this.keywords.length) {
-                                return this.highlightedTextServer;
-                            }
-
-                            // 外部関数でハイライト処理
-                            return window.highlightKeywords(this.plainText, this.keywords);
-                        }
-                    }"
-                    x-ref="previewContent"
-                    class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
-                    <template x-if="activeSource === 'structured'">
-                        <pre class="text-xs overflow-auto bg-base-300 p-3 rounded-lg"><code class="language-json" x-html="displayText"></code></pre>
-                    </template>
-                    <template x-if="activeSource === 'vlm'">
-                        <div class="prose prose-sm max-w-none" x-html="displayText"></div>
-                    </template>
-                    <template x-if="activeSource !== 'structured' && activeSource !== 'vlm'">
-                        <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content" x-html="displayText"></pre>
-                    </template>
+                <div x-ref="previewContent" data-text="{{ $plainText }}"
+                     class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
+                    @if ($activeSource === 'structured')
+                        {{-- 構造化データ表示 --}}
+                        <pre class="text-xs overflow-auto bg-base-300 p-3 rounded-lg"><code
+                                    class="language-json">{!! $this->previewText !!}</code></pre>
+                    @elseif ($activeSource === 'vlm')
+                        <div class="prose prose-sm max-w-none">
+                            {!! Str::markdown($this->previewText ?? '') !!}
+                        </div>
+                    @else
+                        <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content">{!! $this->previewText !!}</pre>
+                    @endif
 
                     @if ($this->canExpand && !$isExpanded)
                         <div
-                            class="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-base-100 to-transparent flex items-end justify-center pb-4">
+                                class="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-base-100 to-transparent flex items-end justify-center pb-4">
                             <button wire:click="toggleExpand" class="btn btn-sm btn-primary shadow-lg">
                                 <i class="fa-solid fa-arrows-up-down"></i>
                                 {{ __('ledger.file_inspector.actions.show_all') }}
@@ -468,29 +453,29 @@
                         </span>
                         <div class="join border border-base-300">
                             <button @click="copyText()"
-                                class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[7.5rem]"
-                                :class="copying === 'text' ? 'btn-success text-white' :
+                                    class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[7.5rem]"
+                                    :class="copying === 'text' ? 'btn-success text-white' :
                                     'btn-outline border-none'"
-                                data-tip="{{ __('ledger.file_inspector.actions.copy_text') }}">
+                                    data-tip="{{ __('ledger.file_inspector.actions.copy_text') }}">
                                 <i class="fa-solid"
-                                    :class="copying === 'text' ? 'fa-check' :
+                                   :class="copying === 'text' ? 'fa-check' :
                                         'fa-file-lines'"></i>
                                 <span
-                                    x-text="copying === 'text' ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.text_format') }}'"></span>
+                                        x-text="copying === 'text' ? '{{ __('ledger.vlm.copied_short') }}' : '{{ __('ledger.file_inspector.actions.text_format') }}'"></span>
                             </button>
 
                             @if ($activeSource === 'vlm')
                                 <button @click="copyAsJson()"
-                                    class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[6.5rem]"
-                                    :class="copying === 'json' ?
+                                        class="btn btn-sm join-item gap-1 tooltip tooltip-bottom transition-all duration-300 min-w-[6.5rem]"
+                                        :class="copying === 'json' ?
                                         'btn-success text-white' :
                                         'btn-outline border-none'"
-                                    data-tip="{{ __('ledger.file_inspector.actions.copy_json') }}">
+                                        data-tip="{{ __('ledger.file_inspector.actions.copy_json') }}">
                                     <i class="fa-solid"
-                                        :class="copying === 'json' ? 'fa-check' :
+                                       :class="copying === 'json' ? 'fa-check' :
                                             'fa-code'"></i>
                                     <span
-                                        x-text="copying === 'json' ? '{{ __('ledger.vlm.copied_short') }}' : 'JSON'"></span>
+                                            x-text="copying === 'json' ? '{{ __('ledger.vlm.copied_short') }}' : 'JSON'"></span>
                                 </button>
                             @endif
                         </div>
@@ -500,15 +485,15 @@
                     <div class="flex flex-col gap-1.5">
                         <span class="text-[10px] font-bold opacity-60 px-1 flex items-center gap-1">
                             <i
-                                class="fa-solid fa-file-arrow-down"></i>{{ __('ledger.file_inspector.actions.download') }}
+                                    class="fa-solid fa-file-arrow-down"></i>{{ __('ledger.file_inspector.actions.download') }}
                         </span>
                         <div class="join">
                             <button
-                                @click="downloading = 'text'; downloadFile('text'); setTimeout(() => downloading = null, 1500)"
-                                class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
-                                data-tip="{{ __('ledger.file_inspector.actions.download_text') }}">
+                                    @click="downloading = 'text'; downloadFile('text'); setTimeout(() => downloading = null, 1500)"
+                                    class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                    data-tip="{{ __('ledger.file_inspector.actions.download_text') }}">
                                 <span x-show="downloading === 'text'"
-                                    class="loading loading-spinner loading-xs"></span>
+                                      class="loading loading-spinner loading-xs"></span>
                                 <i x-show="downloading !== 'text'" class="fa-solid fa-file-lines"></i>
                                 <span>{{ __('ledger.file_inspector.actions.text_format') }}</span>
                             </button>
@@ -519,38 +504,38 @@
                                 @endphp
                                 @if ($isSaved)
                                     <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) }}"
-                                        class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
-                                        target="_blank" data-attribute-downloading="false"
-                                        @click="this.dataset.downloading = 'true'; setTimeout(() => this.dataset.downloading = 'false', 2000)"
-                                        data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
+                                       class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                       target="_blank" data-attribute-downloading="false"
+                                       @click="this.dataset.downloading = 'true'; setTimeout(() => this.dataset.downloading = 'false', 2000)"
+                                       data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
                                         <i class="fa-brands fa-markdown opacity-70"></i>
                                         <span>{{ __('ledger.file_inspector.actions.markdown_format') }}</span>
                                     </a>
                                     <a href="{{ route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) }}"
-                                        class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5rem]"
-                                        target="_blank"
-                                        data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
+                                       class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5rem]"
+                                       target="_blank"
+                                       data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
                                         <i class="fa-solid fa-code opacity-70"></i>
                                         <span>JSON</span>
                                     </a>
                                 @else
                                     {{-- Fallback for mock or unsaved files --}}
                                     <button
-                                        @click="downloading = 'markdown'; downloadFile('markdown'); setTimeout(() => downloading = null, 1500)"
-                                        class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
-                                        data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
+                                            @click="downloading = 'markdown'; downloadFile('markdown'); setTimeout(() => downloading = null, 1500)"
+                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[7.5rem]"
+                                            data-tip="{{ __('ledger.file_inspector.actions.download_markdown') }}">
                                         <span x-show="downloading === 'markdown'"
-                                            class="loading loading-spinner loading-xs"></span>
+                                              class="loading loading-spinner loading-xs"></span>
                                         <i x-show="downloading !== 'markdown'"
-                                            class="fa-brands fa-markdown opacity-70"></i>
+                                           class="fa-brands fa-markdown opacity-70"></i>
                                         <span>{{ __('ledger.file_inspector.actions.markdown_format') }}</span>
                                     </button>
                                     <button
-                                        @click="downloading = 'json'; downloadFile('json'); setTimeout(() => downloading = null, 1500)"
-                                        class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5.5rem]"
-                                        data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
+                                            @click="downloading = 'json'; downloadFile('json'); setTimeout(() => downloading = null, 1500)"
+                                            class="btn btn-sm btn-primary join-item gap-1 tooltip tooltip-bottom min-w-[5.5rem]"
+                                            data-tip="{{ __('ledger.file_inspector.actions.download_json') }}">
                                         <span x-show="downloading === 'json'"
-                                            class="loading loading-spinner loading-xs"></span>
+                                              class="loading loading-spinner loading-xs"></span>
                                         <i x-show="downloading !== 'json'" class="fa-solid fa-code opacity-70"></i>
                                         <span>JSON</span>
                                     </button>
