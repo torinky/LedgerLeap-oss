@@ -467,6 +467,7 @@
                     'copy_text' => 'テキストをコピー',
                     'delete' => '削除',
                     'download' => 'ダウンロード',
+                    'download_complete' => 'ダウンロードが完了しました',
                     'download_converted_pdf' => 'PDF変換版をダウンロード',
                     'download_json' => 'JSON形式でダウンロード',
                     'download_markdown' => 'Markdown形式でダウンロード',
@@ -594,13 +595,23 @@
                     'no_hit' => '一致なし',
                     'placeholder' => 'テキスト内を検索...',
                 ],
+            'source_label' => '表示ソース',
             'source' =>
                 [
                     'ocr' => '文字認識',
-                    'structured' => '構造化データ',
+                    'markdown' => 'Markdown',
+                    'structured' => 'JSON',
                     'tika' => 'テキスト抽出',
                     'vlm' => 'AI解析',
                 ],
+            'tabs' =>
+                [
+                    'content' => '内容',
+                    'details' => '詳細',
+                    'history' => '履歴',
+                    'permissions' => '権限',
+                ],
+
             'status' =>
                 [
                     'all_failed_message' => 'このファイルからテキストを抽出できませんでした。ファイルが破損しているか、対応していない形式の可能性があります。',
@@ -612,20 +623,17 @@
                     'no_text' => 'テキスト解析結果がありません',
                     'not_finalized' => '最終化前',
                     'not_finalized_desc' => '処理は完了していますが、まだ最終化されていません。処理結果は確認できますが、変更される可能性があります。',
+                    'ocr_pdf_notice' => 'このファイルはOCR処理によりPDF化されており、テキスト検索が可能です。',
                     'processing' => '処理中',
                     'processing_message' => 'OCR処理を実行しています...',
                     'processing_timeout' => '処理がタイムアウトしました',
+                    'tika_failed' => '基本テキスト抽出失敗',
+                    'tika_failed_detail' => '基本的なテキスト抽出は失敗しましたが、AI解析/OCRにより代替のテキストが利用可能です。',
                     'tika_only_failed' => '基本的なテキスト抽出に失敗しましたが、VLM/OCR処理により代替のテキストが利用可能です。',
+                    'timeout_message' => '処理時間が制限を超えました。ファイルサイズが大きすぎる可能性があります。',
                     'timeout_suggestion' => '処理時間が制限を超えました。ファイルサイズが大きすぎる可能性があります。ファイルを分割するか、解像度を下げてください。',
                     'unsupported_format' => '非対応のファイル形式',
                     'unsupported_format_message' => 'このファイル形式はテキスト抽出に対応していません。ファイル名とダウンロードのみ可能です。',
-                ],
-            'tabs' =>
-                [
-                    'content' => '内容',
-                    'details' => '詳細',
-                    'history' => '履歴',
-                    'permissions' => '権限',
                 ],
             'title' => 'ファイル詳細',
         ],
