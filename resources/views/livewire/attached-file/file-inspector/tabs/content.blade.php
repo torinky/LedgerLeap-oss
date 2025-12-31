@@ -105,8 +105,12 @@
     {{-- Search & Source Selector (Always visible if loaded) --}}
     <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-base-200 p-2 rounded-lg border border-base-300">
         <div class="flex-1">
-            <x-mary-input wire:model.live.debounce.300ms="searchKeyword" icon="o-magnifying-glass"
+            <x-mary-input wire:model.change="searchKeyword" icon="o-magnifying-glass"
                 placeholder="{{ __('ledger.file_inspector.search.placeholder') }}" class="input-sm" clearable />
+            {{-- ローディングインジケーター --}}
+            <div x-show="searching" x-cloak class="absolute right-10 top-1/2 -translate-y-1/2">
+                <span class="loading loading-spinner loading-xs text-primary"></span>
+            </div>
         </div>
         <div class="flex items-center gap-1 p-1 bg-base-300 rounded-lg w-fit shrink-0" x-data="{ switchingSource: null }"
             @source-switched.window="switchingSource = null">
@@ -397,20 +401,44 @@
                 @php
                     // プレーンテキスト（ハイライトなし）を取得
                     $plainText = $this->getPreviewText(false);
+                    $highlightedText = $this->previewText; // ハイライト済み（サーバー側）
                 @endphp
 
-                <div x-ref="previewContent" data-text="{{ $plainText }}"
+                <div wire:ignore
+                    x-data="{
+                        plainText: @js($plainText),
+                        highlightedTextServer: @js($highlightedText),
+                        keyword: @entangle('searchKeyword'),
+                        keywords: [],
+                        activeSource: @entangle('activeSource'),
+
+                        init() {
+                            this.$watch('keyword', (value) => {
+                                this.keywords = value.trim().split(/\s+/).filter(k => k);
+                            });
+                        },
+
+                        get displayText() {
+                            // キーワードがない場合はサーバー側のハイライトをそのまま使用
+                            if (!this.keywords.length) {
+                                return this.highlightedTextServer;
+                            }
+
+                            // 外部関数でハイライト処理
+                            return window.highlightKeywords(this.plainText, this.keywords);
+                        }
+                    }"
+                    x-ref="previewContent"
                     class="bg-base-200/50 p-4 rounded-lg border border-base-300 overflow-y-auto max-h-[500px] min-h-[256px] relative shadow-inner">
-                    @if ($activeSource === 'structured')
-                        {{-- 構造化データ表示 --}}
-                        <pre class="text-xs overflow-auto bg-base-300 p-3 rounded-lg"><code class="language-json">{!! $this->previewText !!}</code></pre>
-                    @elseif ($activeSource === 'vlm')
-                        <div class="prose prose-sm max-w-none">
-                            {!! Str::markdown($this->previewText ?? '') !!}
-                        </div>
-                    @else
-                        <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content">{!! $this->previewText !!}</pre>
-                    @endif
+                    <template x-if="activeSource === 'structured'">
+                        <pre class="text-xs overflow-auto bg-base-300 p-3 rounded-lg"><code class="language-json" x-html="displayText"></code></pre>
+                    </template>
+                    <template x-if="activeSource === 'vlm'">
+                        <div class="prose prose-sm max-w-none" x-html="displayText"></div>
+                    </template>
+                    <template x-if="activeSource !== 'structured' && activeSource !== 'vlm'">
+                        <pre class="text-xs font-mono leading-relaxed whitespace-pre-wrap text-base-content" x-html="displayText"></pre>
+                    </template>
 
                     @if ($this->canExpand && !$isExpanded)
                         <div

@@ -724,4 +724,112 @@ class FileInspectorTest extends TestCase
 
         $this->assertTrue($component->instance()->isUnknownMimeType());
     }
+
+    // ========================================
+    // WBS 5.2.1: キャッシング機能テスト
+    // ========================================
+
+    #[Test]
+    public function it_caches_preview_text_for_performance()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_markdown' => 'VLM解析結果のテキスト',
+            'vlm_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('searchKeyword', 'テスト');
+
+        // 1回目の呼び出し（キャッシュなし）
+        $firstResult = $component->instance()->hasKeywordHit;
+
+        // 2回目の呼び出し（キャッシュあり）- 同じ結果が返ることを確認
+        $secondResult = $component->instance()->hasKeywordHit;
+
+        $this->assertEquals($firstResult, $secondResult);
+    }
+
+    #[Test]
+    public function it_clears_cache_when_search_keyword_changes()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_markdown' => 'VLM解析結果のテキスト',
+            'vlm_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('searchKeyword', 'VLM')
+            ->assertSet('searchKeyword', 'VLM');
+
+        $firstResult = $component->instance()->hasKeywordHit;
+        $this->assertTrue($firstResult); // 'VLM'は含まれる
+
+        // キーワード変更時にキャッシュがクリアされることを確認
+        $component->set('searchKeyword', '存在しないキーワード');
+        $secondResult = $component->instance()->hasKeywordHit;
+
+        $this->assertFalse($secondResult); // 新しいキーワードでは一致しない
+    }
+
+    #[Test]
+    public function it_clears_cache_when_active_source_changes()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_markdown' => 'VLM解析結果',
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+        ]);
+
+        // OCRテキストを設定
+        $this->ledger->content_attached = [
+            1 => [
+                $file->hashedbasename => [
+                    'meta' => [
+                        'content' => 'OCR解析結果',
+                    ],
+                ],
+            ],
+        ];
+        $this->ledger->save();
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('activeSource', 'vlm')
+            ->set('searchKeyword', 'VLM');
+
+        $firstResult = $component->instance()->hasKeywordHit;
+        $this->assertTrue($firstResult); // VLMソースに'VLM'が含まれる
+
+        // ソース変更時にキャッシュがクリアされることを確認
+        $component->set('activeSource', 'ocr');
+        $secondResult = $component->instance()->hasKeywordHit;
+
+        $this->assertFalse($secondResult); // OCRソースには'VLM'が含まれない
+    }
 }

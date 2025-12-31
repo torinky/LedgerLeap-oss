@@ -138,10 +138,16 @@ return [
         | 測定する項目を選択（配列形式）
         | 'drawer_open': ドロワー開閉時間
         | 'tab_switch': タブ切り替え時間
+        | 'search_keyword_update': キーワード検索更新時間（サーバー側）
+        | 'search_render': 検索結果のレンダリング時間（フロントエンド側）
+        | 'image_preview_load': 画像プレビュー読み込み時間
         */
         'metrics' => [
             'drawer_open' => env('PERFORMANCE_METRIC_DRAWER_OPEN', true),
             'tab_switch' => env('PERFORMANCE_METRIC_TAB_SWITCH', true),
+            'search_keyword_update' => env('PERFORMANCE_METRIC_SEARCH', true),
+            'search_render' => env('PERFORMANCE_METRIC_SEARCH', true),
+            'image_preview_load' => env('PERFORMANCE_METRIC_IMAGE_PREVIEW', true),
         ],
     ],
 ];

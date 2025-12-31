@@ -39,6 +39,15 @@ class FileInspector extends Component
 
     public bool $isExpanded = false; // 大規模テキストの全表示フラグ
 
+    // キャッシュ用プロパティ（WBS 5.2.1）
+    protected ?string $cachedPreviewText = null;
+
+    protected ?bool $cachedHasKeywordHit = null;
+
+    protected ?string $cachedSearchKeyword = null;
+
+    protected ?string $cachedActiveSource = null;
+
     public array $mockData = []; // モックデータ保持用
 
     public ?string $mockLedgerTitle = null;
@@ -55,6 +64,51 @@ class FileInspector extends Component
         $this->open = false;
         $this->isLoading = false;
         $this->selectedTab = 'content'; // デフォルトは「内容」タブ
+    }
+
+    /**
+     * searchKeyword更新時のフック（キャッシュクリア + パフォーマンス測定）
+     */
+    public function updatedSearchKeyword(): void
+    {
+        $startTime = microtime(true);
+
+        $this->clearPreviewCache();
+
+        $duration = (microtime(true) - $startTime) * 1000;
+
+        // 既存のlogPerformanceメソッドを使用
+        $this->logPerformance('search_keyword_update', $duration, [
+            'keyword' => $this->searchKeyword,
+            'keyword_length' => mb_strlen($this->searchKeyword),
+        ]);
+    }
+
+    /**
+     * activeSource更新時のフック（WBS 5.2.1: キャッシュクリア）
+     */
+    public function updatedActiveSource(): void
+    {
+        $this->clearPreviewCache();
+    }
+
+    /**
+     * isExpanded更新時のフック（WBS 5.2.1: キャッシュクリア）
+     */
+    public function updatedIsExpanded(): void
+    {
+        $this->clearPreviewCache();
+    }
+
+    /**
+     * プレビューキャッシュをクリア（WBS 5.2.1）
+     */
+    protected function clearPreviewCache(): void
+    {
+        $this->cachedPreviewText = null;
+        $this->cachedHasKeywordHit = null;
+        $this->cachedSearchKeyword = null;
+        $this->cachedActiveSource = null;
     }
 
     /**
@@ -304,6 +358,7 @@ class FileInspector extends Component
         $this->activeSource = null;
         $this->searchKeyword = '';
         $this->isExpanded = false;
+        $this->clearPreviewCache(); // WBS 5.2.1: キャッシュクリア
     }
 
     /**
@@ -628,6 +683,8 @@ class FileInspector extends Component
 
     public function getPreviewText(bool $withHighlight = true): ?string
     {
+        $startTime = microtime(true);
+
         if (! $this->file) {
             return null;
         }
@@ -657,6 +714,11 @@ class FileInspector extends Component
         }
 
         if (! $text) {
+            $duration = (microtime(true) - $startTime) * 1000;
+            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] getPreviewText (no text)', [
+                'duration_ms' => round($duration, 2),
+                'source' => $this->activeSource,
+            ]);
             return null;
         }
 
@@ -789,24 +851,59 @@ class FileInspector extends Component
     }
 
     /**
-     * 現在表示中のテキストに検索キーワードが含まれているか
+     * 現在表示中のテキストに検索キーワードが含まれているか（キャッシング対応 WBS 5.2.1）
      */
     #[\Livewire\Attributes\Computed]
     public function hasKeywordHit(): bool
     {
+        $startTime = microtime(true);
+
         if (empty($this->searchKeyword)) {
             return false;
+        }
+
+        // キャッシュチェック
+        if ($this->cachedHasKeywordHit !== null &&
+            $this->cachedSearchKeyword === $this->searchKeyword &&
+            $this->cachedActiveSource === $this->activeSource) {
+
+            $duration = (microtime(true) - $startTime) * 1000;
+            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache hit)', [
+                'duration_ms' => round($duration, 2),
+                'result' => $this->cachedHasKeywordHit,
+            ]);
+
+            return $this->cachedHasKeywordHit;
         }
 
         // ハイライトなし（生テキスト）を取得してチェック
         $text = $this->getPreviewText(false);
         if (! $text) {
+            $this->cachedHasKeywordHit = false;
+            $this->cachedSearchKeyword = $this->searchKeyword;
+            $this->cachedActiveSource = $this->activeSource;
+
             return false;
         }
 
         $keywords = SearchHelper::extractKeywords($this->searchKeyword);
 
-        return SearchHelper::hasHit($text, $keywords);
+        $result = SearchHelper::hasHit($text, $keywords);
+
+        // キャッシュに保存
+        $this->cachedHasKeywordHit = $result;
+        $this->cachedSearchKeyword = $this->searchKeyword;
+        $this->cachedActiveSource = $this->activeSource;
+
+        $duration = (microtime(true) - $startTime) * 1000;
+        \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache miss)', [
+            'duration_ms' => round($duration, 2),
+            'text_length' => mb_strlen($text),
+            'keywords_count' => count($keywords),
+            'result' => $result,
+        ]);
+
+        return $result;
     }
 
     public function toggleExpand(): void

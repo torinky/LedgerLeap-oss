@@ -2,7 +2,53 @@
 @if ($this->showPreview)
     <div class="bg-base-200/50 border-b border-base-300 flex-none relative z-0">
         @if ($this->isImage)
-            <div class="relative aspect-video bg-base-300" x-data="{ imgLoaded: false }"
+            <div class="relative aspect-video bg-base-300"
+                x-data="{
+                    imgLoaded: false,
+                    cacheKey: 'img-loaded-{{ $this->previewUrl ?? 'none' }}',
+                    loadStartTime: null,
+                    init() {
+                        // セッションストレージから読み込み済み状態を復元
+                        const cached = sessionStorage.getItem(this.cacheKey);
+                        if (cached === 'true') {
+                            this.imgLoaded = true;
+                            // キャッシュヒット時のログ
+                            console.log('[FileInspector Performance] Image preview (cache hit)', {
+                                url: '{{ $this->previewUrl }}',
+                                cached: true
+                            });
+                        } else {
+                            // 読み込み開始時刻を記録
+                            this.loadStartTime = performance.now();
+                            console.log('[FileInspector Performance] Image preview started', {
+                                url: '{{ $this->previewUrl }}'
+                            });
+                        }
+                    },
+                    markLoaded() {
+                        const wasLoaded = this.imgLoaded;
+                        this.imgLoaded = true;
+
+                        // セッションストレージに保存
+                        sessionStorage.setItem(this.cacheKey, 'true');
+
+                        // パフォーマンス測定（初回読み込みのみ）
+                        if (!wasLoaded && this.loadStartTime) {
+                            const duration = performance.now() - this.loadStartTime;
+                            console.log('[FileInspector Performance] Image preview loaded', {
+                                duration_ms: duration.toFixed(2),
+                                url: '{{ $this->previewUrl }}',
+                                cached: false
+                            });
+
+                            // Livewireコンポーネントのメソッドを呼び出し
+                            $wire.logPerformance('image_preview_load', duration, {
+                                url: '{{ $this->previewUrl }}',
+                                from_cache: false
+                            });
+                        }
+                    }
+                }"
                 wire:key="img-preview-{{ $this->previewUrl ?? 'none' }}">
                 {{-- Loading Spinner --}}
                 <div x-show="!imgLoaded" class="absolute inset-0 flex items-center justify-center bg-base-300/50">
@@ -12,8 +58,11 @@
                 @if ($this->previewUrl)
                     <img src="{{ $this->previewUrl }}" alt="{{ $file?->original_filename ?? 'Preview' }}"
                         class="w-full h-full object-contain transition-opacity duration-500"
-                        :class="imgLoaded ? 'opacity-100' : 'opacity-0'" x-on:load="imgLoaded = true"
-                        x-on:error="imgLoaded = true" x-init="if ($el.complete) imgLoaded = true" loading="lazy">
+                        :class="imgLoaded ? 'opacity-100' : 'opacity-0'"
+                        x-on:load="markLoaded()"
+                        x-on:error="markLoaded()"
+                        x-init="if ($el.complete) markLoaded()"
+                        loading="lazy">
                 @endif
 
                 <div class="absolute top-2 right-2 flex gap-2">
