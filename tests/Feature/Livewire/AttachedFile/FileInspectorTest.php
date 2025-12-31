@@ -379,4 +379,349 @@ class FileInspectorTest extends TestCase
             })
             ->assertSet('open', false);
     }
+
+    // ========================================
+    // WBS 5.1.1: 未最終化ファイル表示テスト
+    // ========================================
+
+    #[Test]
+    public function it_shows_not_finalized_badge_for_unfinalized_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => null, // 未最終化
+            'tika_processed_at' => now(),
+            'ocr_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'details')
+            ->assertSee('最終化前')
+            ->assertSee('最終化されていません');
+    }
+
+    #[Test]
+    public function it_shows_finalization_waiting_in_history_tab()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => null, // 未最終化
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'tika_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'history')
+            ->assertSee('最終化待ち')
+            ->assertSee('最終化処理を待っています');
+    }
+
+    #[Test]
+    public function it_does_not_show_not_finalized_badge_for_finalized_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(), // 最終化済み
+            'tika_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'details')
+            ->assertDontSee('最終化前');
+    }
+
+    // ========================================
+    // WBS 5.1.2: 全処理失敗ケーステスト
+    // ========================================
+
+    #[Test]
+    public function it_shows_all_failed_error_message()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'tika_processed_at' => now(),
+            // 全てのテキストがnullまたは空 = 失敗
+            'vlm_markdown' => null,
+            'finalized_source' => null,
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'content')
+            ->assertSee('テキスト抽出に失敗しました')
+            ->assertSee('サポートに連絡');
+    }
+
+    #[Test]
+    public function it_shows_retry_button_for_failed_files_with_permission()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'tika_processed_at' => now(),
+            'vlm_markdown' => null,
+            'finalized_source' => null,
+            'contain_content' => false,
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'content')
+            ->assertSee('全ての抽出処理を再実行'); // retry_allの翻訳
+    }
+
+    #[Test]
+    public function it_detects_all_processing_failed_correctly()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'tika_processed_at' => now(),
+            'vlm_markdown' => null,
+            'finalized_source' => null,
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertTrue($component->instance()->isAllProcessingFailed());
+    }
+
+    // ========================================
+    // WBS 5.1.3: 処理タイムアウト表示テスト
+    // ========================================
+
+    #[Test]
+    public function it_shows_timeout_warning_for_long_running_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+        config(['ledgerleap.processing_timeout_hours' => 24]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => null, // 未最終化
+            'created_at' => now()->subHours(25), // 24時間以上経過
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'content')
+            ->assertSee('タイムアウト')
+            ->assertSee('処理時間が制限を超えました');
+    }
+
+    #[Test]
+    public function it_detects_timeout_correctly()
+    {
+        config(['mock.attachment.enabled' => false]);
+        config(['ledgerleap.processing_timeout_hours' => 24]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => null,
+            'created_at' => now()->subHours(25),
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertTrue($component->instance()->isProcessingTimedOut());
+    }
+
+    #[Test]
+    public function it_does_not_show_timeout_for_finalized_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(), // 最終化済み
+            'created_at' => now()->subHours(25),
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertFalse($component->instance()->isProcessingTimedOut());
+    }
+
+    // ========================================
+    // WBS 5.1.4: Tika単独失敗テスト
+    // ========================================
+
+    #[Test]
+    public function it_shows_tika_only_failed_info()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_markdown' => 'VLM解析結果があります',
+            'vlm_processed_at' => now(),
+            'ocr_processed_at' => now(),
+            'tika_processed_at' => now(),
+            'finalized_source' => 'vlm',
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'content')
+            ->assertSee('代替のテキストが利用可能');
+    }
+
+    #[Test]
+    public function it_detects_tika_only_failed_correctly()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'processing_finalized_at' => now(),
+            'vlm_markdown' => 'VLM解析結果',
+            'vlm_processed_at' => now(),
+            'tika_processed_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertTrue($component->instance()->isTikaOnlyFailed());
+    }
+
+    // ========================================
+    // WBS 5.1.5: MIMEタイプ不明テスト
+    // ========================================
+
+    #[Test]
+    public function it_shows_unsupported_format_warning_for_zip_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'mime' => 'application/zip',
+            'original_mime_type' => 'application/zip',
+            'processing_finalized_at' => now(),
+        ]);
+
+        Gate::before(fn () => true);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'content')
+            ->assertSee('非対応のファイル形式')
+            ->assertSee('テキスト抽出に対応していません');
+    }
+
+    #[Test]
+    public function it_detects_unknown_mime_type_correctly()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'mime' => 'application/zip',
+            'original_mime_type' => 'application/zip',
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertTrue($component->instance()->isUnknownMimeType());
+    }
+
+    #[Test]
+    public function it_detects_video_files_as_unknown()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+            'mime' => 'video/mp4',
+            'original_mime_type' => 'video/mp4',
+        ]);
+
+        Gate::before(fn () => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertTrue($component->instance()->isUnknownMimeType());
+    }
 }

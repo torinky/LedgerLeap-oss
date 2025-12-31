@@ -547,7 +547,7 @@ class RecordsTable extends Component
 
             // ページネーション実行
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
-//            Log::info('RecordsTable render: ledgerRecords after simplePaginate', ['ledgerRecords' => $ledgerRecords->toArray()]);
+            //            Log::info('RecordsTable render: ledgerRecords after simplePaginate', ['ledgerRecords' => $ledgerRecords->toArray()]);
         }
 
         // 表示される台帳レコードIDリストを取得

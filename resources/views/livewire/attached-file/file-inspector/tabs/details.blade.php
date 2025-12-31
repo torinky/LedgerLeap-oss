@@ -1,5 +1,15 @@
 {{-- Details Tab --}}
 <div class="px-6 py-4 space-y-8 pb-10">
+    {{-- 0. 未最終化ファイル警告 --}}
+    @if ($file && !$file->processing_finalized_at)
+        <x-mary-alert icon="o-clock" class="alert-warning">
+            <span class="font-semibold">{{ __('ledger.file_inspector.status.not_finalized') }}</span>
+            <p class="text-sm mt-1">
+                {{ __('ledger.file_inspector.status.not_finalized_desc') }}
+            </p>
+        </x-mary-alert>
+    @endif
+
     {{-- 1. ファイル基本情報 --}}
     <section>
         <h3 class="text-sm font-semibold mb-3 flex items-center gap-2 text-base-content/70">

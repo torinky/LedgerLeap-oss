@@ -46,7 +46,8 @@
             // リセット
             this.performanceMetrics.drawerOpenStart = null;
         }
-    }@endif@if($performanceEnabled && $tabSwitchMetricEnabled),
+    }@endif
+    @if($performanceEnabled && $tabSwitchMetricEnabled),
     {{-- Performance measurement: Tab switch --}}
     measureTabSwitch(fromTab, toTab) {
         const start = performance.now();
@@ -56,7 +57,8 @@
             this.performanceMetrics.tabSwitchTimes.push({ from: fromTab, to: toTab, duration });
             this.$wire.logPerformance('tab_switch', duration, { from: fromTab, to: toTab });
         });
-    }@endif
+    }
+    @endif
 
 }"
      @if($performanceEnabled && $drawerOpenMetricEnabled)

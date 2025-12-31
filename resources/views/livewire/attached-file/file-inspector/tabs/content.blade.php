@@ -14,9 +14,93 @@
             ($file && empty($mockData) && !$file->finalized_source && $activeStatus === 'missing' && $source === 'vlm');
         // 補足: 初期表示でソースが全くない場合（ID 7など）も考慮
 
+        $isAllFailed = $this->isAllProcessingFailed();
+        $isTimedOut = $this->isProcessingTimedOut();
+        $isTikaOnlyFailed = $this->isTikaOnlyFailed();
+        $isUnknownMime = $this->isUnknownMimeType();
+
         $limit = 10000;
         $canExpand = mb_strlen($previewTextRaw) > $limit;
     @endphp
+
+    {{-- MIMEタイプ不明/非対応（最優先） --}}
+    @if ($isUnknownMime)
+        <div class="alert alert-warning">
+            <div class="flex items-start gap-3 w-full">
+                <x-mary-icon name="o-question-mark-circle" class="w-5 h-5 shrink-0" />
+                <div class="flex-1">
+                    <h3 class="font-bold">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
+                    <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.unsupported_format_message') }}</p>
+                    <div class="mt-2">
+                        <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                           class="btn btn-sm btn-primary" download>
+                            <x-mary-icon name="o-arrow-down-tray" class="w-4 h-4" />
+                            {{ __('ledger.file_inspector.actions.download') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {{-- 全処理失敗の警告 --}}
+    @elseif ($isAllFailed)
+        <div class="alert alert-error">
+            <div class="flex items-start gap-3 w-full">
+                <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6 shrink-0" />
+                <div class="flex-1">
+                    <h3 class="font-bold">{{ __('ledger.file_inspector.status.all_failed_title') }}</h3>
+                    <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.all_failed_message') }}</p>
+                    @if (!empty($mockData) && !empty($mockData['mock_error_message']))
+                        <p class="text-xs mt-2 opacity-80">{{ $mockData['mock_error_message'] }}</p>
+                    @endif
+                    <div class="mt-3 flex gap-2">
+                        @if ($this->canPerformAction('retry'))
+                            <button class="btn btn-sm btn-outline" wire:click="retryProcessing">
+                                <x-mary-icon name="o-arrow-path" class="w-4 h-4" />
+                                {{ __('ledger.file_inspector.actions.retry_all') }}
+                            </button>
+                        @endif
+                        <a href="mailto:{{ config('mail.support_address', 'support@example.com') }}"
+                           class="btn btn-sm btn-ghost">
+                            <x-mary-icon name="o-envelope" class="w-4 h-4" />
+                            {{ __('ledger.file_inspector.actions.contact_support') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @elseif ($isTimedOut)
+        {{-- タイムアウト警告 --}}
+        <div class="alert alert-warning">
+            <div class="flex items-start gap-3 w-full">
+                <x-mary-icon name="o-clock" class="w-6 h-6 shrink-0" />
+                <div class="flex-1">
+                    <h3 class="font-bold">{{ __('ledger.file_inspector.status.processing_timeout') }}</h3>
+                    <p class="text-sm mt-1">{{ __('ledger.file_inspector.status.timeout_suggestion') }}</p>
+                    @if (!empty($mockData) && !empty($mockData['mock_error_message']))
+                        <p class="text-xs mt-2 opacity-80">{{ $mockData['mock_error_message'] }}</p>
+                    @endif
+                    <div class="mt-3 flex gap-2">
+                        @if ($this->canPerformAction('retry'))
+                            <button class="btn btn-sm btn-warning btn-outline" wire:click="retryProcessing">
+                                <x-mary-icon name="o-arrow-path" class="w-4 h-4" />
+                                {{ __('ledger.file_inspector.actions.retry') }}
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @elseif ($isTikaOnlyFailed)
+        {{-- Tika単独失敗の情報通知 --}}
+        <div class="alert alert-info">
+            <div class="flex items-start gap-3 w-full">
+                <x-mary-icon name="o-information-circle" class="w-5 h-5 shrink-0" />
+                <div class="flex-1">
+                    <p class="text-sm">{{ __('ledger.file_inspector.status.tika_only_failed') }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Search & Source Selector (Always visible if loaded) --}}
     <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-base-200 p-2 rounded-lg border border-base-300">

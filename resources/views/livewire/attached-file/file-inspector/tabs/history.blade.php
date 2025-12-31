@@ -15,6 +15,22 @@
             @php
                 $sysEvents = $file->system_timeline ?? collect();
             @endphp
+
+            {{-- 未最終化警告 --}}
+            @if ($file && !$file->processing_finalized_at)
+                <div class="alert alert-warning text-xs shadow-sm border border-warning mb-3">
+                    <div class="flex items-start gap-2">
+                        <x-mary-icon name="o-clock" class="w-5 h-5 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 class="font-semibold">{{ __('ledger.file_inspector.history.waiting_finalization') }}</h4>
+                            <p class="text-xs text-base-content/70 mt-1">
+                                {{ __('ledger.file_inspector.history.finalization_desc') }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if ($sysEvents->isEmpty())
                 <div class="alert alert-ghost text-xs shadow-sm border border-base-200">
                     <i class="fa-solid fa-circle-info text-info"></i>

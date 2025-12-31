@@ -877,7 +877,7 @@ class FileInspector extends Component
     #[\Livewire\Attributes\Computed]
     public function shouldUseThumbnail(): bool
     {
-        if (!$this->file || $this->isMockFile()) {
+        if (! $this->file || $this->isMockFile()) {
             return false;
         }
 
@@ -891,7 +891,7 @@ class FileInspector extends Component
     #[\Livewire\Attributes\Computed]
     public function thumbnailUrl(): ?string
     {
-        if (!$this->file || $this->isMockFile()) {
+        if (! $this->file || $this->isMockFile()) {
             return null;
         }
 
@@ -1005,6 +1005,111 @@ class FileInspector extends Component
             $stats[] = array_merge($logData, ['timestamp' => now()->toISOString()]);
             file_put_contents($statsFile, json_encode($stats, JSON_PRETTY_PRINT));
         }
+    }
+
+    /**
+     * 全ての処理（VLM/OCR/Tika）が失敗したかを判定
+     */
+    public function isAllProcessingFailed(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+
+        $vlmFailed = $this->getSourceStatus('vlm') === 'error' ||
+                     ($this->file->processing_finalized_at && $this->getSourceStatus('vlm') === 'missing');
+        $ocrFailed = $this->getSourceStatus('ocr') === 'error' ||
+                     ($this->file->processing_finalized_at && $this->getSourceStatus('ocr') === 'missing');
+        $tikaFailed = $this->getSourceStatus('tika') === 'error' ||
+                      ($this->file->processing_finalized_at && $this->getSourceStatus('tika') === 'missing');
+
+        return $vlmFailed && $ocrFailed && $tikaFailed;
+    }
+
+    /**
+     * 処理タイムアウトが発生したかを判定
+     */
+    public function isProcessingTimedOut(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+
+        // モックデータのタイムアウト判定
+        if ($this->isMockFile() && ! empty($this->mockData)) {
+            $ocrStatus = $this->mockData['mock_ocr_status'] ?? null;
+            $vlmStatus = $this->mockData['mock_vlm_status'] ?? null;
+
+            return $ocrStatus === 'timeout' || $vlmStatus === 'timeout';
+        }
+
+        // タイムアウト閾値（デフォルト24時間）
+        $timeoutHours = config('ledgerleap.processing_timeout_hours', 24);
+
+        // 最終化されていない かつ 作成から閾値以上経過
+        if (! $this->file->processing_finalized_at) {
+            $hoursElapsed = $this->file->created_at?->diffInHours(now()) ?? 0;
+
+            return $hoursElapsed >= $timeoutHours;
+        }
+
+        return false;
+    }
+
+    /**
+     * Tika処理のみ失敗し、VLM/OCRは成功したかを判定
+     */
+    public function isTikaOnlyFailed(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+
+        $vlmStatus = $this->getSourceStatus('vlm');
+        $ocrStatus = $this->getSourceStatus('ocr');
+        $tikaStatus = $this->getSourceStatus('tika');
+
+        $vlmOrOcrSuccess = ($vlmStatus === 'completed') || ($ocrStatus === 'completed');
+        $tikaFailed = $tikaStatus === 'error' ||
+                      ($this->file->processing_finalized_at && $tikaStatus === 'missing');
+
+        return $vlmOrOcrSuccess && $tikaFailed;
+    }
+
+    /**
+     * MIMEタイプが不明または対応していないかを判定
+     */
+    public function isUnknownMimeType(): bool
+    {
+        if (! $this->file) {
+            return false;
+        }
+
+        $mime = $this->file->original_mime_type ?? $this->file->mime;
+
+        // MIMEタイプがない
+        if (empty($mime)) {
+            return true;
+        }
+
+        // 処理対象外のMIMEタイプ
+        $unsupportedTypes = [
+            'application/zip',
+            'application/x-rar-compressed',
+            'application/x-7z-compressed',
+            'application/x-tar',
+            'application/x-gzip',
+            'video/',
+            'audio/',
+        ];
+
+        foreach ($unsupportedTypes as $type) {
+            if (str_starts_with($mime, $type)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function render()
