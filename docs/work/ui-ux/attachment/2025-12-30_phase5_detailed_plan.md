@@ -118,8 +118,8 @@
 - ✅ 5.1.3: 処理タイムアウト表示（テスト3件成功）
 - ✅ 5.1.4: Tika単独失敗（テスト2件成功）
 - ✅ 5.1.5: MIMEタイプ不明（テスト3件成功）
-- ✅ 5.2.0: 問題の実測と原因特定 - [分析レポート](./2025-12-31_drawer_event_flow_analysis.md)
-- ✅ 5.2.1: **npm run buildによる劇的な改善** - [改善レポート](./2025-12-31_npm_build_improvement_analysis.md)
+- ✅ 5.2.0: 問題の実測と原因特定 - [分析レポート](./wbs5.2-performance-improvement/2025-12-31_drawer_event_flow_analysis.md)
+- ✅ 5.2.1: **npm run buildによる劇的な改善** - [改善レポート](./wbs5.2-performance-improvement/2025-12-31_npm_build_improvement_analysis.md)
 
 **重要な成果（2025-12-31）:**
 - 🎉 **フォーカス遅延: 完全に解消**（npm run build）
@@ -136,6 +136,8 @@
 **次のタスク:**
 1. WBS 5.2.2: 検索のwire:ignore実装（残る唯一の問題、1500ms → <50ms）
 2. WBS 5.2.3: 改善効果の最終確認
+
+**WBS 5.2関連ドキュメント:** [wbs5.2-performance-improvement/](./wbs5.2-performance-improvement/) - 全14ドキュメント整理済み
 
 ---
 
