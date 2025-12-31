@@ -1,10 +1,11 @@
 # Phase 5 詳細計画: 未実装分岐と最適化
 
 **作成日:** 2025年12月30日  
-**最終更新:** 2025年12月30日  
+**最終更新:** 2025年12月31日（WBS 5.1完了）  
 **Phase 4完了時点:** WBS 4.6完了  
-**Phase 5目標:** 未実装分岐の実装、パフォーマンス改善、検証完了  
-**予定工数:** 14時間  
+**Phase 5.1完了時点:** WBS 5.1完了（UI分岐実装）  
+**予定工数:** 14.5時間  
+**実績工数:** 7.0時間（48%完了）  
 **親ドキュメント:** [添付ファイルUI改善計画](/docs/work/ui-ux/attachment/2025-12-13_attachment-ui-improvement-plan.md)
 
 ---
@@ -19,8 +20,8 @@
 | Phase 2 | モデル拡張 | 7h | ✅ 完了 | 100% |
 | Phase 3 | 基盤改修 | 18h | ✅ 完了 | 100% |
 | **Phase 4** | **インスペクター実装** | **41h** | **✅ 完了** | **100%** |
-| **Phase 5** | **最終調整・未実装分岐** | **14h** | **📋 本計画** | **0%** |
-| **合計** | **全5フェーズ** | **87h** | **🔄 進行中** | **91%** |
+| **Phase 5** | **最終調整・未実装分岐** | **14h** | **🔄 進行中** | **48%** |
+| **合計** | **全5フェーズ** | **87h** | **🔄 進行中** | **94%** |
 
 ### 0.2 Phase 4の主要成果
 
@@ -84,12 +85,12 @@
 | **5.0** | **準備作業** | **0.5h** | 🔴 高 | - | **✅ 完了** | **2025-12-30** |
 | 5.0.1 | モックデータ追加（未最終化2種類） | 0.3h | 🔴 高 | Dev | ✅ 完了 | 2025-12-30 |
 | 5.0.2 | 翻訳キー追加 | 0.2h | 🔴 高 | Dev | ✅ 完了 | 2025-12-30 |
-| **5.1** | **未実装UI分岐の実装** | **6.5h** | 🔴 高 | - | **🔄 進行中** | - |
-| 5.1.1 | 未最終化ファイル表示 | 2h | 🔴 高 | Dev | 🔄 進行中 | - |
-| 5.1.2 | 全処理失敗ケース | 2h | 🔴 高 | Dev | 📋 未着手 | - |
-| 5.1.3 | 処理タイムアウト表示 | 1.5h | 🟡 中 | Dev | 📋 未着手 | - |
-| 5.1.4 | Tika単独失敗 | 0.5h | 🟡 中 | Dev | 📋 未着手 | - |
-| 5.1.5 | MIMEタイプ不明 | 0.5h | 🟢 低 | Dev | 📋 未着手 | - |
+| **5.1** | **未実装UI分岐の実装** | **6.5h** | 🔴 高 | - | **✅ 完了** | **2025-12-31** |
+| 5.1.1 | 未最終化ファイル表示 | 2h | 🔴 高 | Dev | ✅ 完了 | 2025-12-31 |
+| 5.1.2 | 全処理失敗ケース | 2h | 🔴 高 | Dev | ✅ 完了 | 2025-12-31 |
+| 5.1.3 | 処理タイムアウト表示 | 1.5h | 🟡 中 | Dev | ✅ 完了 | 2025-12-31 |
+| 5.1.4 | Tika単独失敗 | 0.5h | 🟡 中 | Dev | ✅ 完了 | 2025-12-31 |
+| 5.1.5 | MIMEタイプ不明 | 0.5h | 🟢 低 | Dev | ✅ 完了 | 2025-12-31 |
 | **5.2** | **パフォーマンス改善** | **4.5h** | 🔴 高 | - | **📋 未着手** | - |
 | 5.2.1 | キャッシング実装 | 2h | 🔴 高 | Dev | 📋 未着手 | - |
 | 5.2.2 | activitiesの遅延ロード | 1h | 🟡 中 | Dev | 📋 未着手 | - |
@@ -105,17 +106,21 @@
 
 ### 2.2 進捗状況
 
-**全体進捗:** 5%（0.5h / 14.5h完了）
+**全体進捗:** 48%（7.0h / 14.5h完了）
 
 **完了タスク:**
 - ✅ 5.0.1: モックデータ追加（未最終化2種類）
 - ✅ 5.0.2: 翻訳キー追加（ledger.php）
-
-**進行中タスク:**
-- 🔄 5.1.1: 未最終化ファイル表示（UI実装待ち）
+- ✅ 5.1.1: 未最終化ファイル表示（テスト3件成功）
+- ✅ 5.1.2: 全処理失敗ケース（テスト3件成功）
+- ✅ 5.1.3: 処理タイムアウト表示（テスト3件成功）
+- ✅ 5.1.4: Tika単独失敗（テスト2件成功）
+- ✅ 5.1.5: MIMEタイプ不明（テスト3件成功）
 
 **次のタスク:**
-- 📋 5.1.1: Detailsタブ・Historyタブへの未最終化警告表示実装
+- 📋 5.2.1: パフォーマンス改善（キャッシング実装）
+- 📋 5.2.2: activitiesの遅延ロード
+- 📋 5.4.1: 統合テストとリグレッション
 
 ---
 
@@ -123,13 +128,22 @@
 
 ### 🔴 優先度: 高
 
-#### 3.1 未最終化ファイル表示（WBS 5.1.1）
+#### 3.1 未最終化ファイル表示（WBS 5.1.1） ✅ 完了
 
-**現状の問題:**
-- `finalized_at`がnullのファイルは表示が不完全
-- 処理中と未最終化の区別が不明確
+**実装状況:** ✅ 完了（2025-12-31）
 
-**必要な実装:**
+**実装内容:**
+- ✅ Detailsタブに未最終化警告表示（[details.blade.php L5-10](../../resources/views/livewire/attached-file/file-inspector/tabs/details.blade.php#L5-L10)）
+- ✅ Historyタブに最終化待ちステータス表示（[history.blade.php L24-30](../../resources/views/livewire/attached-file/file-inspector/tabs/history.blade.php#L24-L30)）
+- ✅ 翻訳キー追加（lang/ja/ledger.php L574-575）
+- ✅ テスト3件実装（FileInspectorTest.php L387-455）
+  - `it_shows_not_finalized_badge_for_unfinalized_files`
+  - `it_shows_finalization_waiting_in_history_tab`
+  - `it_does_not_show_not_finalized_badge_for_finalized_files`
+
+**テスト結果:** ✅ 全3件成功
+
+---
 
 **A. モックデータ追加（2種類）**
 ```php
@@ -222,13 +236,23 @@ public function test_it_shows_not_finalized_badge_for_unfinalized_files(): void
 
 ---
 
-#### 3.2 全処理失敗ケース（WBS 5.1.2）
+#### 3.2 全処理失敗ケース（WBS 5.1.2） ✅ 完了
 
-**現状の問題:**
-- 全ソースが失敗した場合のエラー表示が不明確
-- ユーザーが次のアクションを理解できない
+**実装状況:** ✅ 完了（2025-12-31）
 
-**必要な実装:**
+**実装内容:**
+- ✅ Contentタブにエラー表示UI（[content.blade.php L49-58](../../resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php#L49-L58)）
+- ✅ `isAllProcessingFailed()`メソッド実装（[FileInspector.php L304-318](../../app/Livewire/AttachedFile/FileInspector.php#L304-L318)）
+- ✅ 再処理ボタン実装済み（既存の`retryProcessing()`使用）
+- ✅ 翻訳キー追加（lang/ja/ledger.php L576-577）
+- ✅ テスト3件実装（FileInspectorTest.php L460-537）
+  - `it_shows_all_failed_error_message`
+  - `it_shows_retry_button_for_failed_files_with_permission`
+  - `it_detects_all_processing_failed_correctly`
+
+**テスト結果:** ✅ 全3件成功
+
+---
 
 **A. モックデータ追加**
 ```php
@@ -327,13 +351,23 @@ public function test_it_shows_all_failed_error_message(): void
 
 ### 🟡 優先度: 中
 
-#### 3.3 処理タイムアウト表示（WBS 5.1.3）
+#### 3.3 処理タイムアウト表示（WBS 5.1.3） ✅ 完了
 
-**現状の問題:**
-- タイムアウトとエラーの区別がない
-- 大容量ファイルの対処方法が不明確
+**実装状況:** ✅ 完了（2025-12-31）
 
-**必要な実装:**
+**実装内容:**
+- ✅ Contentタブにタイムアウト警告表示（[content.blade.php L61-69](../../resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php#L61-L69)）
+- ✅ `isProcessingTimedOut()`メソッド実装（[FileInspector.php L320-331](../../app/Livewire/AttachedFile/FileInspector.php#L320-L331)）
+- ✅ タイムアウト設定（config/ledgerleap.php `processing_timeout_hours`）
+- ✅ 翻訳キー追加（lang/ja/ledger.php L578-579）
+- ✅ テスト3件実装（FileInspectorTest.php L542-605）
+  - `it_shows_timeout_warning_for_long_running_files`
+  - `it_detects_timeout_correctly`
+  - `it_does_not_show_timeout_for_finalized_files`
+
+**テスト結果:** ✅ 全3件成功
+
+---
 
 **A. モックデータ追加**
 ```php
@@ -369,59 +403,36 @@ public function test_it_shows_all_failed_error_message(): void
 
 ---
 
-#### 3.4 Tika単独失敗（WBS 5.1.4）
+#### 3.4 Tika単独失敗（WBS 5.1.4） ✅ 完了
 
-**現状の問題:**
-- Tika失敗時の表示が一般的なエラーと同じ
+**実装状況:** ✅ 完了（2025-12-31）
 
-**必要な実装:**
+**実装内容:**
+- ✅ Contentタブに情報メッセージ表示（[content.blade.php L72-78](../../resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php#L72-L78)）
+- ✅ `isTikaOnlyFailed()`メソッド実装（[FileInspector.php L333-346](../../app/Livewire/AttachedFile/FileInspector.php#L333-L346)）
+- ✅ 翻訳キー追加（lang/ja/ledger.php L580）
+- ✅ テスト2件実装（FileInspectorTest.php L612-658）
+  - `it_shows_tika_only_failed_info`
+  - `it_detects_tika_only_failed_correctly`
 
-**A. Contentタブ メッセージ改善**
-```blade
-@if ($tikaFailed && !$vlmFailed && !$ocrFailed)
-    <x-mary-alert icon="o-information-circle" class="alert-info">
-        {{ __('ledger.file_inspector.info.tika_only_failed') }}
-    </x-mary-alert>
-@endif
-```
-
-**B. 翻訳キー追加**
-```json
-{
-    "ledger.file_inspector.info.tika_only_failed": "基本的なテキスト抽出に失敗しましたが、VLM/OCR処理により代替のテキストが利用可能です。"
-}
-```
-
-**工数見積:** 0.5h
+**テスト結果:** ✅ 全2件成功
 
 ---
 
-### 🟢 優先度: 低
+#### 3.5 MIMEタイプ不明ファイル（WBS 5.1.5） ✅ 完了
 
-#### 3.5 MIMEタイプ不明ファイル（WBS 5.1.5）
+**実装状況:** ✅ 完了（2025-12-31）
 
-**現状の問題:**
-- Phase 3で40種類以上のMIMEタイプを定義済み
-- 未定義の場合のフォールバック表示が必要
+**実装内容:**
+- ✅ Contentタブに非対応形式警告表示（[content.blade.php L81-87](../../resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php#L81-L87)）
+- ✅ `isUnknownMimeType()`メソッド実装（[FileInspector.php L348-367](../../app/Livewire/AttachedFile/FileInspector.php#L348-L367)）
+- ✅ 翻訳キー追加（lang/ja/ledger.php L581-582）
+- ✅ テスト3件実装（FileInspectorTest.php L664-728）
+  - `it_shows_unsupported_format_warning_for_zip_files`
+  - `it_detects_unknown_mime_type_correctly`
+  - `it_detects_video_files_as_unknown`
 
-**必要な実装:**
-
-**A. MimeTypeHelper.php フォールバック追加**
-```php
-public static function getIconClass(string $mimeType): string
-{
-    return self::MIME_TYPE_MAP[$mimeType]['icon'] 
-        ?? 'fa-file'; // フォールバック
-}
-
-public static function getCategoryColor(string $mimeType): string
-{
-    return self::MIME_TYPE_MAP[$mimeType]['color'] 
-        ?? 'text-base-content/50'; // フォールバック
-}
-```
-
-**工数見積:** 0.5h
+**テスト結果:** ✅ 全3件成功
 
 ---
 
@@ -689,37 +700,153 @@ public function activities()
 
 ---
 
-## 10. Phase 5完了後の状態
+---
 
-### 10.1 達成される品質
+## 9. WBS 5.1 実装完了サマリー（2025-12-31）
 
-- ✅ FileInspector完全実装（全UI分岐対応、17/17パターン）
-- ✅ パフォーマンス最適化（ドロワー開閉1秒以下、クエリ数5回）
-- ✅ アクセシビリティWCAG 2.1 AA準拠（Lighthouse 90点以上）
-- ✅ 31テスト全て成功（既存21+新規10）
-- ✅ 本番環境デプロイ準備完了
+### 9.1 実装状況
 
-### 10.2 残存課題（Phase 6以降）
+**完了タスク:** 5/5（100%）
 
-**機能拡張（優先度: 低）:**
-1. 大量ファイル（100件以上）のパフォーマンス検証
-2. 仮想スクロール・ページネーション検討
-3. 多言語対応（i18n）
+| WBS | タスク | 実装内容 | テスト | 状態 |
+|-----|--------|----------|--------|------|
+| 5.1.1 | 未最終化ファイル表示 | Details/Historyタブに警告表示 | 3件成功 | ✅ 完了 |
+| 5.1.2 | 全処理失敗ケース | Contentタブにエラー表示+再処理 | 3件成功 | ✅ 完了 |
+| 5.1.3 | 処理タイムアウト | Contentタブに警告+設定参照 | 3件成功 | ✅ 完了 |
+| 5.1.4 | Tika単独失敗 | Contentタブに情報表示 | 2件成功 | ✅ 完了 |
+| 5.1.5 | MIMEタイプ不明 | Contentタブに警告表示 | 3件成功 | ✅ 完了 |
 
-**UI改善提案（UI検証チェックリストより）:**
-1. 検索機能の強化（正規表現サポート、検索履歴）
-2. タイムラインのフィルタリング（エラーのみ、完了のみ表示）
-3. 信頼度閾値の調整UI（管理画面で変更可能に、現状0.7固定）
+### 9.2 テスト結果
 
-**パフォーマンス最適化（オプション）:**
-1. キャッシュ無効化タイミングの実装（ファイル更新時に自動クリア）
-2. activitiesの遅延ロード時のローディング表示追加
+**FileInspectorTest.php:** 27件全成功（実行時間: 80.35秒）
+
+```bash
+./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php
+
+Tests:    27 passed (63 assertions)
+Duration: 80.35s
+```
+
+**新規追加テスト（14件）:**
+- ✅ `it_shows_not_finalized_badge_for_unfinalized_files`
+- ✅ `it_shows_finalization_waiting_in_history_tab`
+- ✅ `it_does_not_show_not_finalized_badge_for_finalized_files`
+- ✅ `it_shows_all_failed_error_message`
+- ✅ `it_shows_retry_button_for_failed_files_with_permission`
+- ✅ `it_detects_all_processing_failed_correctly`
+- ✅ `it_shows_timeout_warning_for_long_running_files`
+- ✅ `it_detects_timeout_correctly`
+- ✅ `it_does_not_show_timeout_for_finalized_files`
+- ✅ `it_shows_tika_only_failed_info`
+- ✅ `it_detects_tika_only_failed_correctly`
+- ✅ `it_shows_unsupported_format_warning_for_zip_files`
+- ✅ `it_detects_unknown_mime_type_correctly`
+- ✅ `it_detects_video_files_as_unknown`
+
+### 9.3 実装ファイル
+
+**Livewire Component:**
+- [FileInspector.php](../../app/Livewire/AttachedFile/FileInspector.php)
+  - `isAllProcessingFailed()` (L304-318)
+  - `isProcessingTimedOut()` (L320-331)
+  - `isTikaOnlyFailed()` (L333-346)
+  - `isUnknownMimeType()` (L348-367)
+
+**Blade Templates:**
+- [tabs/content.blade.php](../../resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php)
+  - 全処理失敗エラー表示 (L49-58)
+  - タイムアウト警告 (L61-69)
+  - Tika単独失敗情報 (L72-78)
+  - 非対応形式警告 (L81-87)
+- [tabs/details.blade.php](../../resources/views/livewire/attached-file/file-inspector/tabs/details.blade.php)
+  - 未最終化警告 (L5-10)
+- [tabs/history.blade.php](../../resources/views/livewire/attached-file/file-inspector/tabs/history.blade.php)
+  - 最終化待ちステータス (L24-30)
+
+**翻訳ファイル:**
+- lang/ja/ledger.php (L574-582)
+
+**テストファイル:**
+- [FileInspectorTest.php](../../tests/Feature/Livewire/AttachedFile/FileInspectorTest.php) (L387-728)
+
+### 9.4 実装の特徴
+
+**条件分岐ロジック:**
+- 各状態判定メソッドは明確な条件で実装
+- `processing_finalized_at`の有無で未最終化を判定
+- タイムアウトは設定値（`config('ledgerleap.processing_timeout_hours')`）と比較
+- MIMEタイプは既知のリストと照合（画像/PDF/Office/テキスト以外）
+
+**UI表示:**
+- 各エラー状態に適切なアイコンとメッセージ
+- アクション可能な場合はボタンを表示
+- 警告レベル（error/warning/info）を使い分け
+
+**テストカバレッジ:**
+- 各機能に対して3種類のテスト
+  1. UI表示テスト（`assertSee`）
+  2. 状態判定メソッドテスト
+  3. 境界条件テスト（最終化済みの場合など）
 
 ---
 
-## 11. 参考資料
+## 10. 残タスク（WBS 5.2以降）
 
-### 11.1 関連ドキュメント
+**未実施タスク:**
+- 📋 5.2.1: キャッシング実装（工数: 2h）
+- 📋 5.2.2: activitiesの遅延ロード（工数: 1h）
+- 📋 5.2.3: プリロード機能（工数: 1.5h、優先度: 低）
+- 📋 5.3.1-5.3.3: アクセシビリティ実検証（工数: 1.5h、優先度: 中）
+- 📋 5.4.1: 統合テストとリグレッション（工数: 0.5h）
+
+**残工数:** 7.5h / 14.5h（52%完了）
+
+**次のステップ:**
+1. WBS 5.2.1: キャッシング実装（パフォーマンス改善の要）
+2. WBS 5.2.2: activitiesの遅延ロード（クエリ数削減）
+3. WBS 5.4.1: 統合テスト実施（全体動作確認）
+4. WBS 5.3.1-5.3.3: アクセシビリティ実検証（オプション）
+
+---
+
+## 11. Phase 5完了後の状態
+
+### 11.1 達成される品質（WBS 5.1完了時点）
+
+- ✅ FileInspector UI分岐完全実装（14件テスト成功）
+  - 未最終化ファイル表示
+  - 全処理失敗ケース
+  - 処理タイムアウト
+  - Tika単独失敗
+  - MIMEタイプ不明
+- ✅ 27テスト全て成功（既存13件+新規14件）
+- 🔄 パフォーマンス改善は未実施（WBS 5.2）
+- 🔄 アクセシビリティ実検証は未実施（WBS 5.3）
+
+### 11.2 残存課題（WBS 5.2以降）
+
+**Phase 5残タスク（優先度: 高）:**
+1. キャッシング実装（WBS 5.2.1、2h）
+2. activitiesの遅延ロード（WBS 5.2.2、1h）
+3. 統合テスト実施（WBS 5.4.1、0.5h）
+
+**Phase 5オプション（優先度: 中〜低）:**
+1. プリロード機能（WBS 5.2.3、1.5h）
+2. アクセシビリティ実検証（WBS 5.3、1.5h）
+
+**Phase 6以降（機能拡張）:**
+1. 大量ファイル（100件以上）のパフォーマンス検証
+2. 仮想スクロール・ページネーション検討
+3. 多言語対応（i18n）
+4. 検索機能の強化（正規表現サポート、検索履歴）
+5. タイムラインのフィルタリング（エラーのみ、完了のみ表示）
+6. 信頼度閾値の調整UI（管理画面で変更可能に、現状0.7固定）
+
+---
+
+## 12. 参考資料
+
+### 12.1 関連ドキュメント
 - [Phase 4.6 実装ガイド](/docs/work/ui-ux/attachment/2025-12-30_phase4-6_implementation_guide.md)
 - [UI分岐検証チェックリスト](/docs/work/ui-ux/attachment/2025-12-30_phase4-6-4_ui_verification_checklist.md)
 - [FileInspector データ構造設計書](/docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md)
@@ -727,18 +854,43 @@ public function activities()
 - [パフォーマンス測定レポート](/docs/work/ui-ux/attachment/2025-12-30_phase4-6-5_performance_report.md)
 - [アクセシビリティ検証レポート](/docs/work/ui-ux/attachment/2025-12-30_phase4-6-6_accessibility_report.md)
 
-### 11.2 実装パターン参考
+### 12.2 実装パターン参考
 - 既存の処理中表示（ID: 10003）
 - 既存のエラー表示（ID: 10007）
 - 既存の信頼度バッジ（ID: 10001, 10011）
 
 ---
 
-## 12. Phase 5開始前確認事項
+## 13. Phase 5.1完了確認（2025-12-31）
 
-1. [ ] Phase 4.6が完全に完了していること
-2. [ ] 全テスト（Phase 4まで）が成功していること
-3. [ ] 本ドキュメントをレビュー済み
+### 13.1 完了チェックリスト
+
+- [x] Phase 4.6が完全に完了していること
+- [x] 全テスト（Phase 4まで）が成功していること（21件→27件）
+- [x] 本ドキュメントをレビュー済み
+- [x] WBS 5.0.1: モックデータ追加完了
+- [x] WBS 5.0.2: 翻訳キー追加完了
+- [x] WBS 5.1.1: 未最終化ファイル表示実装完了（テスト3件成功）
+- [x] WBS 5.1.2: 全処理失敗ケース実装完了（テスト3件成功）
+- [x] WBS 5.1.3: 処理タイムアウト表示実装完了（テスト3件成功）
+- [x] WBS 5.1.4: Tika単独失敗実装完了（テスト2件成功）
+- [x] WBS 5.1.5: MIMEタイプ不明実装完了（テスト3件成功）
+- [x] FileInspectorTest.phpの全27テストが成功
+
+### 13.2 次のステップ（WBS 5.2）
+
+**即実施推奨:**
+1. WBS 5.2.1: キャッシング実装（パフォーマンス改善）
+2. WBS 5.2.2: activitiesの遅延ロード（クエリ数削減）
+3. WBS 5.4.1: 統合テストとリグレッション
+
+**オプション:**
+- WBS 5.2.3: プリロード機能
+- WBS 5.3: アクセシビリティ実検証
+
+---
+
+**Phase 5詳細計画 - WBS 5.1完了（2025-12-31更新）**
 4. [ ] 実装担当者がアサイン済み
 5. [ ] UI検証チェックリストの未実装分岐を確認済み
 
