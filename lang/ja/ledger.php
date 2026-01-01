@@ -603,6 +603,7 @@
                     'structured' => 'JSON',
                     'tika' => 'テキスト抽出',
                     'vlm' => 'AI解析',
+                    'tooltip' => "生成AIと従来AIで抽出します。出力内容を切り替えできます。",
                 ],
             'tabs' =>
                 [

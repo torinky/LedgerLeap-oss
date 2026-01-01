@@ -71,8 +71,10 @@
             </div>
 
             {{-- Source Selector (Explicit Tabs) --}}
-            <div class="flex flex-wrap items-center justify-between gap-y-2">
-                <div class="join bg-base-200 p-1 rounded-lg overflow-x-auto max-w-full">
+            <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip"
+                data-tip="{{ __('ledger.file_inspector.source.tooltip') }}"
+            >
+                <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full">
                     {{-- 1. AI Analysis (VLM Rendered) --}}
                     @php
                         $vlmStatus = $this->getSourceStatus('vlm');
@@ -99,6 +101,7 @@
                     </button>
 
                     {{-- 3. OCR --}}
+{{--
                     @php
                         $ocrStatus = $this->getSourceStatus('ocr');
                         $isOcrActive = $activeSource === 'ocr';
@@ -113,6 +116,7 @@
                         @endif
                         {{ __('ledger.file_inspector.source.ocr') }}
                     </button>
+--}}
 
                     {{-- 4. Tika --}}
                     @php
@@ -148,7 +152,7 @@
                     <div class="flex items-center gap-1.5 text-xs bg-base-100 border border-base-200 px-2 py-1 rounded-full shadow-xs tooltip tooltip-left cursor-help ml-auto"
                         data-tip="{{ $badge['tooltip'] }}">
                         <i
-                            class="fa-solid {{ $badge['color'] === 'success' ? 'fa-check-circle text-success' : ($badge['color'] === 'warning' ? 'fa-shield-check text-warning' : 'fa-exclamation-circle text-error') }}"></i>
+                            class="fa-solid {{ $badge['color'] === 'success' ? 'fa-check-circle text-success' : ($badge['color'] === 'warning' ? 'fa-shield-halved text-warning' : 'fa-exclamation-circle text-error') }}"></i>
                         <span class="font-medium opacity-80">{{ $badge['label'] }}</span>
                         @if ($badge['score'])
                             <span class="opacity-60 font-mono text-[10px] ml-0.5">{{ $badge['score'] }}</span>
@@ -167,7 +171,7 @@
                     <h3 class="font-bold text-sm">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
                     <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                         class="btn btn-xs btn-primary mt-2" download>
-                        {{ __('ledger.actions.download') }}
+                        {{ __('ledger.file_inspector.actions.download') }}
                     </a>
                 </div>
             </x-mary-alert>
@@ -178,7 +182,7 @@
                     <p class="text-xs mt-1">{{ __('ledger.file_inspector.status.all_failed_message') }}</p>
                     @if ($this->canPerformAction('retry'))
                         <button class="btn btn-xs btn-outline mt-2" wire:click="retryProcessing">
-                            {{ __('ledger.actions.retry_all') }}
+                            {{ __('ledger.file_inspector.actions.retry_all') }}
                         </button>
                     @endif
                 </div>
@@ -219,7 +223,7 @@
                             <a href="{{ route('file.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                                 class="btn btn-xs btn-ghost gap-1 self-start" download>
                                 <i class="fa-solid fa-file-pdf text-error"></i>
-                                {{ __('ledger.actions.download_optimized_pdf') }}
+                                {{ __('ledger.file_inspector.actions.download_optimized_pdf') }}
                             </a>
                         @endif
                     </div>
@@ -253,7 +257,7 @@
                         this.notify(
                             type === 'copy' ?
                             '{{ __('ledger.vlm.copied_short') }}' :
-                            '{{ __('ledger.actions.download_complete') }}'
+                            '{{ __('ledger.file_inspector.actions.download_complete') }}'
                         );
             
                         setTimeout(() => {
@@ -340,7 +344,7 @@
                         class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-base-100 via-base-100/90 to-transparent flex items-end justify-center pb-6 z-10">
                         <button wire:click="toggleExpand" class="btn btn-primary shadow-lg gap-2 animate-bounce">
                             <i class="fa-solid fa-arrows-down-to-line"></i>
-                            {{ __('ledger.actions.show_all') }}
+                            {{ __('ledger.file_inspector.actions.show_all') }}
                         </button>
                     </div>
                 @endif
@@ -352,7 +356,7 @@
                     @if ($isExpanded)
                         <button wire:click="toggleExpand" class="btn btn-xs btn-ghost gap-1">
                             <i class="fa-solid fa-chevron-up"></i>
-                            {{ __('ledger.actions.show_less') }}
+                            {{ __('ledger.file_inspector.actions.show_less') }}
                         </button>
                     @endif
                 </div>
@@ -368,7 +372,7 @@
                         <i x-show="!actionState.copy.loading && !actionState.copy.success"
                             class="fa-solid fa-copy"></i>
 
-                        <span class="hidden sm:inline">{{ __('ledger.actions.copy') }}</span>
+                        <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.copy') }}</span>
                     </button>
 
                     <div class="w-px bg-base-300 h-6"></div>
@@ -384,7 +388,7 @@
                         <i x-show="!actionState.download.loading && !actionState.download.success"
                             class="fa-solid fa-download"></i>
 
-                        <span class="hidden sm:inline">Download</span>
+                        <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.download') }}</span>
                     </button>
                 </div>
             </div>
