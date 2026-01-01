@@ -72,8 +72,7 @@
 
             {{-- Source Selector (Explicit Tabs) --}}
             <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip"
-                data-tip="{{ __('ledger.file_inspector.source.tooltip') }}"
-            >
+                data-tip="{{ __('ledger.file_inspector.source.tooltip') }}">
                 <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full">
                     {{-- 1. AI Analysis (VLM Rendered) --}}
                     @php
@@ -101,7 +100,7 @@
                     </button>
 
                     {{-- 3. OCR --}}
-{{--
+                    {{--
                     @php
                         $ocrStatus = $this->getSourceStatus('ocr');
                         $isOcrActive = $activeSource === 'ocr';
@@ -273,7 +272,7 @@
             
                 copyText(targetId) {
                     this.performAction('copy', async () => {
-                        const text = $refs.rawContent.innerText;
+                        const text = $refs.rawContent.textContent;
                         if (!text) throw new Error('No text');
             
                         if (navigator.clipboard) {
@@ -297,7 +296,7 @@
             
                 downloadFile(type) {
                     this.performAction('download', async () => {
-                        const text = $refs.rawContent.innerText;
+                        const text = $refs.rawContent.textContent;
                         if (!text) throw new Error('No text');
             
                         const blob = new Blob([text], { type: type === 'json' ? 'application/json' : 'text/plain' });
@@ -315,28 +314,29 @@
                 style="scrollbar-width: thin;" id="{{ $contentAreaId }}">
 
                 {{-- Raw Text Holder for Copy (Hidden) --}}
-                <div x-ref="rawContent" class="hidden">{!! $previewTextRaw !!}</div>
+                <div x-ref="rawContent" class="hidden" wire:key="raw-content-{{ $activeSource }}-{{ $this->fileId }}">
+                    {{ $previewTextRaw }}</div>
 
                 @if ($activeSource === 'structured')
-                    <pre class="bg-base-100 p-4 rounded-lg border border-base-200 overflow-x-auto"><code class="language-json text-xs font-mono">{!! $this->previewText !!}</code></pre>
+                    <pre class="bg-base-100 p-4 rounded-lg border border-base-200 overflow-x-auto"><code class="language-json text-xs font-mono">{!! $previewText !!}</code></pre>
                 @elseif ($activeSource === 'vlm')
                     @if (!empty($previewText))
                         {{-- Rendered View --}}
                         <div x-show="viewMode === 'rendered'"
                             class="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-headings:text-base prose-p:my-2 prose-pre:bg-base-300 prose-pre:text-base-content">
-                            {!! Str::markdown($this->previewTextRaw ?? $this->previewText) !!}
+                            {!! Str::markdown($previewText) !!}
                         </div>
                         {{-- Raw Markdown View --}}
                         <div x-show="viewMode === 'raw'" x-cloak>
                             <pre
-                                class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs bg-base-100 p-4 rounded border border-base-300">{!! $this->previewTextRaw ?? $this->previewText !!}</pre>
+                                class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs bg-base-100 p-4 rounded border border-base-300">{!! $previewText !!}</pre>
                         </div>
                     @else
                         <div class="text-base-content/50 italic text-center py-10">
                             {{ __('ledger.file_inspector.status.no_text') }}</div>
                     @endif
                 @else
-                    <pre class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs">{!! $this->previewText !!}</pre>
+                    <pre class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs">{!! $previewText !!}</pre>
                 @endif
 
                 @if ($this->canExpand && !$isExpanded)
@@ -351,7 +351,8 @@
             </div>
 
             {{-- Actions Footer --}}
-            <div class="bg-base-100/50 p-2 border-t border-base-200 flex justify-between items-center backdrop-blur-sm">
+            <div class="bg-base-100/50 p-2 border-t border-base-200 flex justify-between items-center backdrop-blur-sm"
+                wire:key="actions-footer-{{ $activeSource }}-{{ $this->fileId }}">
                 <div class="flex gap-2">
                     @if ($isExpanded)
                         <button wire:click="toggleExpand" class="btn btn-xs btn-ghost gap-1">
