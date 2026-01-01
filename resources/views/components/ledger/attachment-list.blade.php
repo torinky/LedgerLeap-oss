@@ -32,6 +32,7 @@
 <div x-data="{
     hoveredFile: null,
     loadingFiles: {},
+    successFiles: {},
     errorFiles: {},
     showAll: false,
     displayLimit: {{ $displayLimit }},
@@ -46,9 +47,31 @@
         });
     },
     handleDownload(event, fileId, url) {
-        event.stopPropagation();
+        event.preventDefault(); // Stop native link
+        event.stopPropagation(); // Stop drawer opening
+
+        if (this.loadingFiles[fileId]) return;
+
         this.loadingFiles[fileId] = true;
-        setTimeout(() => { this.loadingFiles[fileId] = false; }, 1000);
+        this.successFiles[fileId] = false;
+
+        // Explicitly create and click a link to force download without bubbling issues
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Simulate UI feedback
+        setTimeout(() => {
+            this.loadingFiles[fileId] = false;
+            this.successFiles[fileId] = true;
+
+            setTimeout(() => {
+                this.successFiles[fileId] = false;
+            }, 2000);
+        }, 1000);
     },
     toggleShowAll() {
         this.showAll = !this.showAll;
@@ -83,7 +106,7 @@
 
             $label = $file['filename'] ?? 'file';
             $fileId = (int) ($file['id'] ?? 0);
-            $fileColumnId = $file['column_id'] ?? $columnId ?? null;
+            $fileColumnId = $file['column_id'] ?? ($columnId ?? null);
             $fileSize = $file['size'] ?? null;
 
             // ファイルサイズフォーマット (Laravel 10+ Number::fileSize 対応)
@@ -171,121 +194,119 @@
             <div class="relative group inline-flex items-center" role="listitem"
                 x-show="{{ $index }} < displayLimit || showAll"
                 style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
-                    x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
-                    aria-label="{{ $label }} ({{ $statusLabel }})">
-                    {{-- RPA用: 透過的ダウンロードリンク --}}
-                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
-                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
+                x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
+                aria-label="{{ $label }} ({{ $statusLabel }})">
+                {{-- RPA用: 透過的ダウンロードリンク --}}
+                <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                    aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
-                    <div class="tooltip tooltip-bottom" data-tip="{{ $fullTooltip }}">
-                        <button type="button"
-                            class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border {{ $isHit ? 'border-success bg-success/10' : 'border-base-300 bg-base-100/30' }} hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
-                            aria-hidden="true">
-                            <div class="indicator">
-                                @if ($isProcessing)
-                                    <span class="indicator-item">
-                                        <span class="flex h-2 w-2">
-                                            <span
-                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                            <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
-                                        </span>
-                                    </span>
-                                @elseif($isError)
-                                    <span
-                                        class="indicator-item badge badge-error badge-xs p-0 h-2 w-2 border-none"></span>
-                                @elseif($isOptimized && !$isHit)
-                                    <span
-                                        class="indicator-item badge badge-success badge-xs p-0 h-1.5 w-1.5 opacity-80 border-none"></span>
-                                @elseif($isHit)
-                                    <span class="indicator-item flex h-3 w-3 shadow-md">
+                <div class="tooltip tooltip-bottom" data-tip="{{ $fullTooltip }}">
+                    <button type="button"
+                        class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border {{ $isHit ? 'border-success bg-success/10' : 'border-base-300 bg-base-100/30' }} hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
+                        aria-hidden="true">
+                        <div class="indicator">
+                            @if ($isProcessing)
+                                <span class="indicator-item">
+                                    <span class="flex h-2 w-2">
                                         <span
-                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-40"></span>
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                    </span>
+                                </span>
+                            @elseif($isError)
+                                <span class="indicator-item badge badge-error badge-xs p-0 h-2 w-2 border-none"></span>
+                            @elseif($isOptimized && !$isHit)
+                                <span
+                                    class="indicator-item badge badge-success badge-xs p-0 h-1.5 w-1.5 opacity-80 border-none"></span>
+                            @elseif($isHit)
+                                <span class="indicator-item flex h-3 w-3 shadow-md">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-40"></span>
+                                    <span
+                                        class="relative inline-flex rounded-full h-3 w-3 bg-success items-center justify-center border border-base-100">
+                                        <i class="fa-solid fa-magnifying-glass text-[6px] text-white"></i>
+                                    </span>
+                                </span>
+                            @endif
+                            <i
+                                class="{{ $iconClass }} text-lg {{ $isHit ? 'text-success drop-shadow-[0_0_5px_rgba(34,197,94,0.6)]' : '' }}"></i>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        @elseif($isCompact)
+            {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
+            <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
+                role="listitem" x-show="{{ $index }} < displayLimit || showAll"
+                style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
+                x-on:mouseenter="hoveredFile = {{ $fileId }}" x-on:mouseleave="hoveredFile = null">
+
+                {{-- RPA用: 透過的ダウンロードリンク --}}
+                <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
+                    aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
+
+                {{-- ファイル表示エリア（クリックでドロワー） --}}
+                <div class="indicator tooltip tooltip-bottom flex items-center" data-tip="{{ $fullTooltip }}">
+                    @if ($isHit)
+                        <span
+                            class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
+                            <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                        </span>
+                    @endif
+                    <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
+                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
+                        aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
+                        {{-- ステータスインジケータ --}}
+                        <div class="indicator shrink-0">
+                            @if ($isProcessing)
+                                <span class="indicator-item">
+                                    <span class="flex h-2.5 w-2.5">
                                         <span
-                                            class="relative inline-flex rounded-full h-3 w-3 bg-success items-center justify-center border border-base-100">
-                                            <i class="fa-solid fa-magnifying-glass text-[6px] text-white"></i>
-                                        </span>
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                        <span
+                                            class="relative inline-flex rounded-full h-2.5 w-2.5 bg-warning border border-base-100"></span>
                                     </span>
-                                @endif
-                                <i
-                                    class="{{ $iconClass }} text-lg {{ $isHit ? 'text-success drop-shadow-[0_0_5px_rgba(34,197,94,0.6)]' : '' }}"></i>
+                                </span>
+                            @elseif($isError)
+                                <span
+                                    class="indicator-item badge badge-error badge-xs p-0 h-2.5 w-2.5 border-base-100 text-[6px] font-bold">!</span>
+                            @elseif($isOptimized)
+                                <span
+                                    class="indicator-item badge badge-success badge-xs p-0 h-2.5 w-2.5 border-base-100 items-center justify-center shadow-sm">
+                                    <i class="fa-solid fa-check text-[7px] text-white"></i>
+                                </span>
+                            @endif
+                            <i class="{{ $iconClass }} text-xl"></i>
+                        </div>
+
+                        <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-1">
+                                <span {{--                                        class="truncate text-sm font-medium {{ $isHit ? 'text-success font-bold' : 'text-base-content/90' }}">{{ $displayLabel }}</span> --}}
+                                    class="truncate text-sm font-medium text-base-content/90">{{ $displayLabel }}</span>
+                                <span class="text-[10px] text-base-content/60">{{ $formattedSize }}</span>
                             </div>
-                        </button>
-                    </div>
+                        </div>
+                    </button>
                 </div>
-            @elseif($isCompact)
-                {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
-                <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                    role="listitem"
-                    x-show="{{ $index }} < displayLimit || showAll"
-                    style="display: {{ $index < $displayLimit ? 'inline-flex' : 'none' }};"
-                    x-on:mouseenter="hoveredFile = {{ $fileId }}"
-                    x-on:mouseleave="hoveredFile = null">
 
-                    {{-- RPA用: 透過的ダウンロードリンク --}}
-                    <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
-                        aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
-
-                    {{-- ファイル表示エリア（クリックでドロワー） --}}
-                    <div class="indicator tooltip tooltip-bottom flex items-center" data-tip="{{ $fullTooltip }}">
-                        @if ($isHit)
-                            <span class="indicator-item indicator-start inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/80 text-base-100 mr-1.5 align-middle">
-                                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
-                            </span>
-                        @endif
-                        <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
-                            x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
-                            aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
-                            {{-- ステータスインジケータ --}}
-                            <div class="indicator shrink-0">
-                                @if ($isProcessing)
-                                    <span class="indicator-item">
-                                        <span class="flex h-2.5 w-2.5">
-                                            <span
-                                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                            <span
-                                                class="relative inline-flex rounded-full h-2.5 w-2.5 bg-warning border border-base-100"></span>
-                                        </span>
-                                    </span>
-                                @elseif($isError)
-                                    <span
-                                        class="indicator-item badge badge-error badge-xs p-0 h-2.5 w-2.5 border-base-100 text-[6px] font-bold">!</span>
-                                @elseif($isOptimized)
-                                    <span
-                                        class="indicator-item badge badge-success badge-xs p-0 h-2.5 w-2.5 border-base-100 items-center justify-center shadow-sm">
-                                        <i class="fa-solid fa-check text-[7px] text-white"></i>
-                                    </span>
-                                @endif
-                                <i class="{{ $iconClass }} text-xl"></i>
-                            </div>
-
-                            <div class="flex flex-col min-w-0">
-                                <div class="flex items-center gap-1">
-                                    <span
-{{--                                        class="truncate text-sm font-medium {{ $isHit ? 'text-success font-bold' : 'text-base-content/90' }}">{{ $displayLabel }}</span>--}}
-                                        class="truncate text-sm font-medium text-base-content/90">{{ $displayLabel }}</span>
-                                    <span class="text-[10px] text-base-content/60">{{ $formattedSize }}</span>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-
-                    {{-- ダウンロードボタン --}}
-                    <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download') }}">
-                        <a href="{{ $downloadUrl }}"
-                            class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all"
-                            onclick="event.stopPropagation()" download>
-                            <i class="fa-solid fa-download text-[10px]"></i>
-                        </a>
-                    </div>
+                {{-- ダウンロードボタン --}}
+                <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download') }}">
+                    <a href="{{ $downloadUrl }}"
+                        class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all relative overflow-hidden"
+                        x-on:click="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')" download>
+                        <span x-show="loadingFiles[{{ $fileId }}]"
+                            class="loading loading-spinner loading-xs text-primary scale-75"></span>
+                        <i x-show="successFiles[{{ $fileId }}]"
+                            class="fa-solid fa-check text-[10px] text-success"></i>
+                        <i x-show="!loadingFiles[{{ $fileId }}] && !successFiles[{{ $fileId }}]"
+                            class="fa-solid fa-download text-[10px]"></i>
+                    </a>
                 </div>
-            @else
-                {{-- Full モード: 詳細画面用のカード表示 --}}
-                <x-ledger.attachment-card
-                    :file="$file"
-                    :index="$index"
-                    :displayLimit="$displayLimit"
-                    :search="$search" />
-            @endif
+            </div>
+        @else
+            {{-- Full モード: 詳細画面用のカード表示 --}}
+            <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" />
+        @endif
 
     @empty
         @if (!$isIconOnly)

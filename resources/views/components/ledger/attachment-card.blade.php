@@ -110,32 +110,35 @@
 @endphp
 
 <div class="relative" x-show="{{ $index }} < displayLimit || showAll"
-     style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
+    style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
 
     <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col tooltip tooltip-bottom overflow-hidden"
-         role="listitem" x-data="{ imageLoading: true, imageError: false }"
-         x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
-         aria-label="{{ $label }} ({{ $statusLabel }})" data-tip="{{ $fullTooltip }}">
+        role="listitem" x-data="{ imageLoading: true, imageError: false }"
+        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
+        aria-label="{{ $label }} ({{ $statusLabel }})" data-tip="{{ $fullTooltip }}">
 
         {{-- バッジインジケーター --}}
         @if ($isHit)
-            <div class="absolute top-2 left-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/90 text-base-100 shadow-lg">
+            <div
+                class="absolute top-2 left-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/90 text-base-100 shadow-lg">
                 <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
             </div>
         @endif
 
         @if ($isOptimized)
-            <div class="absolute top-2 right-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/70 text-base-100 shadow-md">
+            <div
+                class="absolute top-2 right-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/70 text-base-100 shadow-md">
                 <i class="fa-solid fa-check text-[10px]"></i>
             </div>
         @endif
 
         {{-- RPA用: 透過的ダウンロードリンク --}}
         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
-           aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
+            aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
         {{-- 画像/アイコンエリア --}}
-        <figure class="h-40 shrink-0 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
+        <figure
+            class="h-40 shrink-0 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
             @if ($isProcessing)
                 <div class="flex flex-col items-center gap-2">
                     <span class="loading loading-spinner loading-md text-warning"></span>
@@ -146,7 +149,8 @@
                     <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
                     <span class="text-xs font-bold">{{ __('ledger.file_status.error') }}</span>
                     @if ($fileId)
-                        <button wire:click="$dispatch('retry-file-processing', { fileId: {{ $fileId }} })" class="btn btn-xs btn-error btn-outline gap-1 mt-1" @click.stop>
+                        <button wire:click="$dispatch('retry-file-processing', { fileId: {{ $fileId }} })"
+                            class="btn btn-xs btn-error btn-outline gap-1 mt-1" @click.stop>
                             <i class="fa-solid fa-rotate-right text-[10px]"></i>
                             <span>{{ __('ledger.file_inspector.actions.reprocess') }}</span>
                         </button>
@@ -159,24 +163,27 @@
                         $imageUrl = $file['thumbnailUrl'] ?? ($file['primary_download']['url'] ?? null);
                     @endphp
                     @if ($imageUrl)
-                        <div x-show="imageLoading" class="absolute inset-0 flex items-center justify-center bg-base-200">
+                        <div x-show="imageLoading"
+                            class="absolute inset-0 flex items-center justify-center bg-base-200">
                             <span class="loading loading-dots loading-sm text-base-content/30"></span>
                         </div>
                         <img src="{{ $imageUrl }}" alt="{{ $label }}"
-                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                             loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
-                             x-on:error="imageLoading = false; imageError = true">
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy" x-show="!imageError" x-on:load="imageLoading = false"
+                            x-on:error="imageLoading = false; imageError = true">
                         <div x-show="imageError" class="flex flex-col items-center text-base-content/40">
                             <i class="fa-regular fa-image text-3xl mb-1"></i>
                             <span class="text-[10px]">No Preview</span>
                         </div>
                     @else
-                        <div class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+                        <div
+                            class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                             <i class="{{ $iconClass }} text-5xl opacity-80"></i>
                         </div>
                     @endif
                 @else
-                    <div class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+                    <div
+                        class="transform transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                         <i class="{{ $iconClass }} text-5xl opacity-80"></i>
                     </div>
                 @endif
@@ -205,10 +212,14 @@
                 {{-- ダウンロードボタン --}}
                 <div class="tooltip tooltip-left flex-none" data-tip="{{ $downloadTooltip }}">
                     <a href="{{ $finalDownloadUrl }}"
-                       class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1"
-                       x-on:click.stop="handleDownload($event, {{ $fileId }}, '{{ $finalDownloadUrl }}')"
-                        download>
-                        <i class="fa-solid fa-download text-xs"></i>
+                        class="btn btn-circle btn-sm bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all -mt-1 -mr-1 relative overflow-hidden"
+                        x-on:click="handleDownload($event, {{ $fileId }}, '{{ $finalDownloadUrl }}')" download>
+                        <span x-show="loadingFiles[{{ $fileId }}]"
+                            class="loading loading-spinner loading-xs text-primary scale-75"></span>
+                        <i x-show="successFiles[{{ $fileId }}]"
+                            class="fa-solid fa-check text-xs text-success"></i>
+                        <i x-show="!loadingFiles[{{ $fileId }}] && !successFiles[{{ $fileId }}]"
+                            class="fa-solid fa-download text-xs"></i>
                     </a>
                 </div>
             </div>
