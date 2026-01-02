@@ -61,3 +61,12 @@ Backendの変更は行わず、BladeテンプレートとJavaScript (Alpine.js) 
 
 ---
 このドキュメントは、2025年12月31日時点での「内容タブ」の仕様と実装状態を反映しています。今後のメンテナンスや機能追加の際の基礎資料として活用してください。
+
+---
+
+## 関連ドキュメント
+
+*   **[Phase 5詳細計画](./2025-12-30_phase5_detailed_plan.md)**: Phase 5で実装された全機能の詳細
+*   **[Phase 5機能比較レポート](./2026-01-02_phase5_feature_comparison_report.md)**: このUI改善後のPhase 5機能保持状況の検証レポート
+*   **[添付ファイルUI改善計画](./2025-12-13_attachment-ui-improvement-plan.md)**: 全体計画の親ドキュメント
+
