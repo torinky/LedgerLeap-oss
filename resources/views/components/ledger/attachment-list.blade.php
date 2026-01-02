@@ -187,6 +187,10 @@
                     ),
                 )
                 : e($label);
+
+            $hasSecondary = isset($file['secondary_download']) && $file['secondary_download'];
+            $finalDownloadUrl = $hasSecondary ? $file['secondary_download']['url'] : $downloadUrl;
+            $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
         @endphp
 
         @if ($isIconOnly)
@@ -290,10 +294,10 @@
                 </div>
 
                 {{-- ダウンロードボタン --}}
-                <div class="tooltip tooltip-left" data-tip="{{ __('ledger.download') }}">
-                    <a href="{{ $downloadUrl }}"
+                <div class="tooltip tooltip-left" data-tip="{{ $downloadTooltip }}">
+                    <a href="{{ $finalDownloadUrl }}"
                         class="btn btn-xs btn-circle ml-1 bg-base-100 border border-base-300 text-base-content/60 hover:text-primary hover:border-primary/50 hover:bg-primary/5 shadow-sm transition-all relative overflow-hidden"
-                        x-on:click="handleDownload($event, {{ $fileId }}, '{{ $downloadUrl }}')" download>
+                        x-on:click="handleDownload($event, {{ $fileId }}, '{{ $finalDownloadUrl }}')" download>
                         <span x-show="loadingFiles[{{ $fileId }}]"
                             class="loading loading-spinner loading-xs text-primary scale-75"></span>
                         <i x-show="successFiles[{{ $fileId }}]"
