@@ -109,13 +109,13 @@
     $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
 @endphp
 
-<div class="relative" x-show="{{ $index }} < displayLimit || showAll"
-    style="display: {{ $index < $displayLimit ? 'block' : 'none' }};">
+<div class="relative tooltip tooltip-bottom h-full" x-show="{{ $index }} < displayLimit || showAll"
+    style="display: {{ $index < $displayLimit ? 'block' : 'none' }};" data-tip="{{ $fullTooltip }}">
 
-    <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col tooltip tooltip-bottom overflow-hidden"
+    <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col"
         role="listitem" x-data="{ imageLoading: true, imageError: false }"
         x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
-        aria-label="{{ $label }} ({{ $statusLabel }})" data-tip="{{ $fullTooltip }}">
+        aria-label="{{ $label }} ({{ $statusLabel }})">
 
         {{-- バッジインジケーター --}}
         @if ($isHit)
@@ -138,7 +138,7 @@
 
         {{-- 画像/アイコンエリア --}}
         <figure
-            class="h-40 shrink-0 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors">
+            class="h-40 shrink-0 bg-base-200/50 flex items-center justify-center relative overflow-hidden group-hover:bg-base-200 transition-colors rounded-t-box">
             @if ($isProcessing)
                 <div class="flex flex-col items-center gap-2">
                     <span class="loading loading-spinner loading-md text-warning"></span>
