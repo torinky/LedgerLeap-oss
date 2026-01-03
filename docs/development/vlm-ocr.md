@@ -1,153 +1,419 @@
-# VLM/OCR実装 完了記録
+# VLM/OCR開発者ガイド
 
-**最終更新:** 2025年10月26日 午前2時  
-**ステータス:** ✅ **実装完了・テスト成功・本番環境使用可能**
-
----
-
-## 📚 ドキュメント構成
-
-### 🎯 メインドキュメント（必読）
-
-**[PaddleOCRVL API実装完了記録](../work/vlm-implementation/2025-10-26_paddleocrvl-implementation-log.md)**
-- 実装の全詳細
-- テスト結果（5/5成功）
-- 日本語OCR精度検証
-- API仕様とエンドポイント
-- トラブルシューティング
-
-### 📋 関連ドキュメント
-
-1. **[Phase 0: VLM追加調査計画書](../work/vlm-implementation/2025-10-26_phase0-vlm-additional-investigation-plan.md)**
-   - 調査の経緯と結果
-   - 技術選定の根拠
-   - 最終実装結果
-
-2. **[PaddleOCR最新版実装ガイド](../work/vlm-implementation/2025-10-26_paddleocr-latest-impl-guide.md)**
-   - 初期設計案
-   - 実装完了への参照
+**最終更新:** 2026年1月3日  
+**ステータス:** ✅ **Phase 1-5実装完了（添付ファイル機能統合、2025年12月-2026年1月）**
 
 ---
 
-## 🚀 クイックスタート
+## 1. 概要
 
-### 1. コンテナの起動
+LedgerLeapは、添付ファイルからのテキスト抽出に3つのエンジンを統合し、高精度かつ堅牢な処理を実現しています。
+
+**3エンジン統合:**
+- **VLM (Visual Language Model)**: PaddleOCR-VL 0.9B - Markdown生成、構造化データ抽出
+- **OCR**: OcrMyPDF - 画像・PDFのOCR処理とPDF最適化
+- **Tika**: Apache Tika - Office文書等の汎用テキスト抽出
+
+**エンジン選択優先順位:** VLM（最優先） > OCR（次点） > Tika（フォールバック）
+
+**本ドキュメントの対象:**
+- VLM/OCR機能の開発・拡張を行う開発者
+- トラブルシューティングが必要な運用担当者
+
+**記載しない内容:**
+- ユーザー向け機能説明 → `docs/function/Attachment.md`
+- アーキテクチャ設計 → `docs/architecture/vlm-ocr-technology-selection.md`
+- 非同期処理詳細 → `docs/architecture/QueueProcessing.md`
+
+---
+
+## 2. 開発環境のセットアップ
+
+### 2.1. 環境変数の設定
+
+`.env`ファイルに以下を設定：
+
+```env
+# VLM設定
+VLM_ENABLED=true
+VLM_URL=http://vlm:8000
+VLM_DEFAULT_MODEL=PaddleOCR-VL-0.9B
+VLM_TIMEOUT=600
+VLM_RETRY_TIMES=2
+VLM_RETRY_BACKOFF=300
+
+# OCR設定
+OCR_ENABLED=true
+
+# Tika設定
+TIKA_ENABLED=true
+TIKA_URL=http://tika:9998
+```
+
+### 2.2. VLMコンテナの起動
 
 ```bash
 # VLMコンテナの起動
 docker-compose up -d vlm
 
 # ヘルスチェック
-curl http://localhost:8001/health
+curl http://localhost:8001/health | jq .
 ```
 
 **期待される出力:**
 ```json
 {
   "status": "healthy",
-  "model": "PaddleOCR"
+  "model": "PaddleOCR-VL-0.9B",
+  "version": "2.8.1"
 }
 ```
 
-### 2. OCR処理の実行
+### 2.3. GPU環境のセットアップ
+
+GPU環境で実行する場合：
 
 ```bash
-# PDFファイルの処理
-curl -X POST http://localhost:8001/extract/structured \
-  -F "file=@your_document.pdf" | jq .
+# .envでGPUを有効化
+PADDLEOCR_DEVICE=gpu
 
-# 画像ファイルの処理
-curl -X POST http://localhost:8001/extract/structured \
-  -F "file=@your_image.png" | jq .
-```
-
-### 3. テストの実行
-
-```bash
-# 全テストの実行
-./vendor/bin/sail test tests/Feature/Vlm/PaddleOcrVlmTest.php
-
-# 個別テストの実行
-./vendor/bin/sail test tests/Feature/Vlm/PaddleOcrVlmTest.php \
-  --filter=test_health_check
+# GPU用コンテナの起動
+docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d vlm
 ```
 
 ---
 
-## 📊 実装サマリー
+## 3. 主要コンポーネント
 
-### ✅ 達成事項
+### 3.1. VLM処理ジョブ
 
-| 項目 | 状態 |
-|------|------|
-| コンテナビルド | ✅ 成功 |
-| API実装 | ✅ 完了 |
-| テスト成功率 | ✅ 100% (5/5) |
-| 日本語OCR | ✅ 高精度 |
-| 手書き認識 | ⚠️ 中程度 |
-| PDF処理 | ✅ 動作確認済 |
+**ファイル:** `app/Jobs/Ledger/ProcessVlmExtraction.php`
 
-### 🔧 技術スタック
+**役割:** PaddleOCR-VL APIを呼び出し、Markdown抽出と構造化データ生成を実行
 
-- **OCRエンジン:** PaddleOCR 2.7.3（安定版）
-- **言語モデル:** 日本語（japan）
-- **PDF処理:** PyMuPDF 1.19.0
-- **画像処理:** OpenCV + Pillow
-- **APIフレームワーク:** FastAPI 0.104.1
-- **Pythonバージョン:** 3.10
+**キュー:** `vlm-processing`（専用キュー）
 
-### 📈 性能指標
+**リトライ設定:**
+- 試行回数: 2回（設定可能）
+- バックオフ: 300秒（設定可能）
+- タイムアウト: 600秒（設定可能）
 
-| 処理タイプ | 処理時間 |
-|-----------|---------|
-| PDF（1ページ） | 6-8秒 |
-| 画像（PNG/JPG） | 1-2秒 |
-| 手書き画像 | 1.5-2秒 |
+**処理フロー:**
+```php
+1. ステータスを VLM_PROCESSING に更新
+2. VlmClientService::extract() を呼び出し
+3. 成功時:
+   - vlm_markdown, vlm_structured_data, vlm_confidence を保存
+   - vlm_processed_at タイムスタンプを設定
+4. 失敗時:
+   - vlm_failed_at タイムスタンプを設定
+   - エラーログを記録
+```
+
+### 3.2. VLM APIクライアント
+
+**ファイル:** `app/Services/VlmClientService.php`
+
+**役割:** VLM APIとの通信を抽象化
+
+**主要メソッド:**
+
+```php
+// ファイルからテキストを抽出
+public function extract(AttachedFile $file): array
+
+// 戻り値:
+[
+    'markdown' => string,        // Markdown形式テキスト
+    'structured_data' => array,  // 構造化データ（JSON）
+    'confidence' => float,       // 信頼度スコア（0-1）
+    'model' => string,          // 使用モデル名
+    'processing_time_ms' => int // 処理時間（ミリ秒）
+]
+```
+
+### 3.3. OCR処理ジョブ
+
+**ファイル:** `app/Jobs/Ledger/OcrAndOptimizeFile.php`
+
+**役割:** OcrMyPDFを使用した OCR処理とPDF最適化
+
+**処理フロー:**
+```
+1. 画像ファイル: PDF化してOCR処理
+2. PDF（テキスト付き）: --skip-text で最適化のみ
+3. PDF（画像のみ）: OCR処理でテキスト抽出
+4. 処理完了後、Tika再抽出をディスパッチ
+```
+
+### 3.4. 最終化コマンド
+
+**ファイル:** `app/Console/Commands/Ledger/FinalizeAttachedFileProcessing.php`
+
+**役割:** VLM/OCR/Tikaの結果から最適なテキストソースを選択
+
+**実行タイミング:** スケジューラーで5分ごと
+
+**選択ロジック:**
+```
+1. VLM結果が存在 → vlm_markdown を採用
+2. VLM失敗、OCR成功 → OCR結果を採用
+3. 両方失敗 → Tika結果を採用
+```
 
 ---
 
-## 💡 使用例
+## 4. API仕様
 
-### 請求書の処理
+### 4.1. VLM API
 
-```bash
-curl -X POST http://localhost:8001/extract/structured \
-  -F "file=@invoice.pdf" \
-  | jq -r '.markdown'
+**エンドポイント:** `http://vlm:8000/extract/structured`
+
+**リクエスト:**
+```http
+POST /extract/structured HTTP/1.1
+Content-Type: multipart/form-data
+
+file: (binary data)
 ```
 
-**出力例:**
-```
-請求書番号:00000000
-発行日：0000年00月00日
-株式会社 御中
-
-請求金額
-20,158円
-
-振込先:OO銀行
-```
-
-### 手書きメモの処理
-
-```bash
-curl -X POST http://localhost:8001/extract/structured \
-  -F "file=@handwriting.png" \
-  | jq -r '.html'
+**レスポンス:**
+```json
+{
+  "success": true,
+  "markdown": "# タイトル\n\n本文...",
+  "html": "<html>...</html>",
+  "structured_data": {
+    "tables": [...],
+    "images": [...]
+  },
+  "confidence": 0.95,
+  "processing_time_s": 12.5
+}
 ```
 
-**出力例:**
-```html
-<html><body>
-<p>うちゥオカンがや・好き与朝ジはんが</p>
-<p>あるらレいんやけど・その希前をうしたらして</p>
-...
-</body></html>
+### 4.2. ヘルスチェック
+
+**エンドポイント:** `http://vlm:8000/health`
+
+**レスポンス:**
+```json
+{
+  "status": "healthy",
+  "model": "PaddleOCR-VL-0.9B",
+  "version": "2.8.1",
+  "gpu_available": false
+}
 ```
 
 ---
 
-## ⚠️ 既知の制限事項
+## 5. テスト
+
+### 5.1. テストの実行
+
+```bash
+# VLM統合テスト
+./vendor/bin/sail test tests/Feature/Vlm/
+
+# 特定のテスト
+./vendor/bin/sail test --filter=test_vlm_extraction_success
+
+# カバレッジ付き実行
+./vendor/bin/sail test --coverage
+```
+
+### 5.2. テストデータの準備
+
+テストファイルは `tests/fixtures/files/` に配置：
+
+```
+tests/fixtures/files/
+├── test_invoice.pdf      # 請求書サンプル
+├── test_handwriting.png  # 手書きメモ
+├── test_receipt.jpg      # 領収書
+└── test_document.docx    # Office文書
+```
+
+### 5.3. モックの使用
+
+VLM APIをモックする例：
+
+```php
+use App\Services\VlmClientService;
+
+$mock = Mockery::mock(VlmClientService::class);
+$mock->shouldReceive('extract')
+    ->once()
+    ->andReturn([
+        'markdown' => 'テストテキスト',
+        'structured_data' => [],
+        'confidence' => 0.95,
+        'model' => 'PaddleOCR-VL-0.9B',
+        'processing_time_ms' => 5000,
+    ]);
+
+$this->app->instance(VlmClientService::class, $mock);
+```
+
+---
+
+## 6. トラブルシューティング
+
+### 6.1. VLMコンテナが起動しない
+
+**症状:** VLMコンテナが即座に停止する
+
+**確認手順:**
+```bash
+# ログの確認
+docker logs ledgerleap_vlm
+
+# コンテナの再ビルド
+docker-compose build vlm --no-cache
+docker-compose up -d vlm
+```
+
+**よくある原因:**
+- メモリ不足（最低4GB必要）
+- ポート8001が既に使用されている
+- Dockerイメージのビルドエラー
+
+### 6.2. VLM処理が失敗する
+
+**症状:** `vlm_failed_at`タイムスタンプが設定される
+
+**確認手順:**
+```bash
+# VLM APIの動作確認
+curl -X POST http://localhost:8001/extract/structured \
+  -F "file=@tests/fixtures/files/test_invoice.pdf" | jq .
+
+# ログの確認
+tail -f storage/logs/laravel.log | grep VLM
+```
+
+**よくある原因:**
+- VLMコンテナが停止している
+- タイムアウト（大きいファイルの場合、VLM_TIMEOUTを増やす）
+- ファイル形式が非対応（現在はPDF、PNG、JPGのみ対応）
+
+### 6.3. OCR処理が遅い
+
+**症状:** OCR処理に2分以上かかる
+
+**対策:**
+1. GPU環境に切り替え
+2. OCR処理の並列数を調整（`config/queue.php`）
+3. ファイルサイズを確認（10MB以上は処理時間が長い）
+
+### 6.4. 最終化処理が実行されない
+
+**症状:** `processing_finalized_at`が設定されない
+
+**確認手順:**
+```bash
+# スケジューラーの動作確認
+./vendor/bin/sail artisan schedule:list
+
+# 手動で最終化処理を実行
+./vendor/bin/sail artisan ledger:finalize-processing --limit=10
+```
+
+**よくある原因:**
+- スケジューラーが動作していない
+- VLM/OCR処理が完了していない
+- タイムアウト設定が短すぎる（300秒以上推奨）
+
+---
+
+## 7. パフォーマンス最適化
+
+### 7.1. 処理時間の目安
+
+| エンジン | ファイルタイプ | CPU環境 | GPU環境 |
+|---------|--------------|---------|---------|
+| VLM | 画像（1MB） | 8-15秒 | 2-5秒 |
+| VLM | PDF（1ページ） | 10-18秒 | 3-8秒 |
+| OCR | 画像（1MB） | 30-60秒 | 10-20秒 |
+| Tika | Office文書 | 3-5秒 | 3-5秒 |
+
+### 7.2. 並列処理の調整
+
+`config/queue.php`でキューワーカー数を調整：
+
+```php
+'connections' => [
+    'vlm-processing' => [
+        'driver' => 'redis',
+        'connection' => 'default',
+        'queue' => 'vlm-processing',
+        'retry_after' => 600,
+        'block_for' => null,
+        'after_commit' => false,
+        'processes' => 2, // 並列処理数
+    ],
+],
+```
+
+### 7.3. メモリ使用量の監視
+
+```bash
+# VLMコンテナのメモリ使用量
+docker stats ledgerleap_vlm --no-stream
+```
+
+---
+
+## 8. モデルの切り替え
+
+### 8.1. 利用可能なモデル
+
+| モデル | 特徴 | 用途 |
+|--------|------|------|
+| PaddleOCR-VL 0.9B | 高精度、Markdown生成 | 本番環境推奨 |
+| PaddleOCR 2.7.3 | 軽量、安定 | 開発環境、リソース制限時 |
+| Marker | PDF特化 | PDF→Markdown変換 |
+
+### 8.2. 切り替え手順
+
+```bash
+# 現在のモデルを確認
+./bin/vlm-switch.sh status
+
+# モデルを切り替え
+./bin/vlm-switch.sh paddleocr-vl  # または paddleocr, marker
+
+# コンテナを再起動
+docker-compose down vlm
+docker-compose build vlm --no-cache
+docker-compose up -d vlm
+```
+
+---
+
+## 9. 関連ドキュメント
+
+### アーキテクチャ
+- **[VLM-OCR技術選定](../architecture/vlm-ocr-technology-selection.md)** - 技術選定理由と実測ベンチマーク
+- **[非同期処理](../architecture/QueueProcessing.md)** - ジョブフローとエラーハンドリング
+
+### 機能仕様
+- **[添付ファイル機能](../function/Attachment.md)** - ユーザー向け機能説明
+- **[AttachedFileモデル](../models/AttachedFile.md)** - データモデル仕様
+
+### 運用ガイド
+- **[モデル切り替えガイド](../operations/model-switching-guide.md)** - 運用時のモデル切り替え手順
+- **[パフォーマンス監視](../operations/fileinspector-performance-monitoring.md)** - 運用監視設定
+
+### 作業ドキュメント（実装記録）
+- **Phase 1-5実装計画:** `docs/work/ui-ux/attachment/` - 添付ファイル機能統合の詳細計画
+- **VLM実装記録:** `docs/work/vlm-implementation/` - 2025年10月時点の初期実装記録
+
+---
+
+**実装完了:** Phase 1-5（2025年12月-2026年1月）  
+**最終更新:** 2026年1月3日
 
 | 項目 | 状況 | 対応 |
 |------|------|------|
