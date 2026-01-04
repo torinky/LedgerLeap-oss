@@ -28,10 +28,13 @@
 |--- |--- |--- |
 | `baseData` | 比較基準データ（現在のバージョン または 選択された `LedgerDiff`）。配列形式。 | Yes |
 | `targetData` | 比較対象データ（過去の `LedgerDiff`）。`null` ならスナップショットモード。配列形式。 | No |
+| `baseMeta` | 基準データのメタ情報（更新者、更新日時、バージョン等）。`Ledger` または `LedgerDiff` モデル、あるいは配列。 | Yes |
+| `targetMeta` | 対象データのメタ情報。`LedgerDiff` モデル、あるいは配列。 | No |
 | `displayLevel` | 表示レベル (1-3)。表示カラムのフィルタリングに使用。 | Yes |
-| `collapsedStates` | グループ開閉状態。 | Yes |
+| `collapsedStates` | グループ開閉状態（Phase 1では初期値として利用、管理はAlpine）。 | Yes |
 | `columnDefines` | カラム定義情報（`Ledger` または `LedgerDiff` から取得）。 | Yes |
 | `allAttachments` | 添付ファイル参照用コレクション。 | Yes |
+| `highlight` | 検索キーワード等、ハイライト表示する文字列。 | No |
 
 ---
 
