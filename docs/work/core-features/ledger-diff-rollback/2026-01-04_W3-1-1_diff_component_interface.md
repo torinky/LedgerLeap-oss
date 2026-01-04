@@ -38,7 +38,7 @@
 
 ---
 
-## 2. サービスレイヤー改修 (`LedgerDiffProcessor`)
+## 2. サービスレイヤー改修方針（LedgerDiffProcessor）
 
 現状の `prepareContentDiff` メソッドは `Ledger` モデルに依存しており、`LedgerDiff` 同士の比較に対応できない。これを汎用化する。
 
@@ -60,40 +60,122 @@ public function prepareGenericDiff(
 ```
 ※ 既存の `prepareContentDiff` は、この `prepareGenericDiff` をラップする形に変更し、後方互換を維持しつつリファクタリングする。
 
+### 2.3 Diff DTO 構造定義（Phase 1 / Cycle 1）
+
+> [!NOTE]
+> Phase 1 / Cycle 1 では「最新状態（または現在詳細ビューで表示中の状態）」と「1つの履歴スナップショット」の 1 対 1 比較のみを扱う。任意 2 バージョン比較は Cycle 2 以降のスコープとし、ここでは「将来拡張を阻害しない DTO 形」を定義する。
+
+1. DTO の目的と前提
+   - 目的
+     - ビュー（`LedgerDiffViewer`）から差分計算ロジックを切り離し、`LedgerDiffProcessor` 側に責務を集約する。
+     - 基本情報タブと更新履歴タブで同一の差分DTOを利用し、表示レベル・グループ開閉などの UI ロジックを共有しやすくする。
+   - 前提
+     - 比較対象は「Base（基準）」と「Target（比較対象）」の 2 つのみ。
+     - Phase 1 / Cycle 1 では Base = 現在、Target = 1つの履歴 `ledger_diff` を想定する。
+
+2. フィールド単位 DTO（FieldDiffDTO）
+   - 構造（連想配列として表現）
+     - `field_key` (string)
+       - カラム ID または論理キー。例: `column_1`, `status`, `tags`, `attachments.1.abc123.pdf` など。
+     - `field_type` (string)
+       - 表示ロジックで利用する型。例: `text` / `number` / `date` / `select` / `status` / `attachment` など。
+     - `label` (string)
+       - 画面表示用ラベル。`column_define` / 内部定義から解決する。
+     - `base_value` (mixed|null)
+       - 基準側（Base）の値。AsColumnArrayJson の制約上、呼び出し元で配列アクセス済みの値を渡す前提。
+     - `target_value` (mixed|null)
+       - 比較対象側（Target）の値。存在しない場合は `null`。
+     - `change_type` (string)
+       - `added` / `removed` / `updated` / `unchanged` のいずれか。
+     - `highlight` (bool)
+       - Phase 1 では `change_type !== 'unchanged'` を基本ルールとし、将来の検索ハイライト拡張に備えて boolean として保持する。
+     - `meta` (array)
+       - 型別の追加情報を格納するための拡張用フィールド。例: 数値フォーマット、日付タイムゾーン、ステータス色名、添付ファイルの MIME、アイコン種別など。
+
+3. レコード全体 DTO（DiffResultDTO）
+   - 構造
+     - `fields` (array<FieldDiffDTO>)
+       - 各フィールドの差分リスト。
+     - `summary` (array)
+       - `changed_count` (int)
+       - `added_count` (int)
+       - `removed_count` (int)
+       - `unchanged_count` (int)
+     - `groups` (array)
+       - キー: グループ ID（セクション識別子など）
+       - 値: `['label' => string, 'field_keys' => string[]]`
+       - 表示レベル・グループ開閉（`collapsedStates`）と連携するため、フィールドをグループ単位に束ねるためのメタ情報とする。
+
+4. 型別ルール（Phase 1 の扱い）
+   - テキスト型 (`text`)
+     - 差分表現は「変更有無のフラグ + 全文表示」とし、単語単位の差分ハイライトは行わない（Cycle 2 の候補）。
+   - 数値型 (`number`)
+     - `base_value` / `target_value` に数値（または数値文字列）を保持し、ビュー側でフォーマットする。
+     - `change_type` は `null → 非 null` なら `added`、逆なら `removed`、両方非 null かつ値変更なら `updated`。
+   - 日付型 (`date`)
+     - DTO 上は ISO8601 ストリング（`YYYY-MM-DD` / `YYYY-MM-DDTHH:MM:SS`）として扱い、タイムゾーン情報は `meta['timezone']` などに格納する。
+   - ステータス (`status`)
+     - 現行の `status` 表現に合わせ、`meta['status_color']`, `meta['status_label_key']` などを付加する。
+   - 添付ファイル (`attachment`)
+     - キー解決ルール:
+       - 画像: OCR 後の `.pdf` キー（例: `original.jpg` → `original.pdf`）を優先し、Phase 1-5 の添付仕様に従う。
+       - PDF: 元のキーを使用（`document.pdf` → `document.pdf`）。
+     - DTO 単位:
+       - Phase 1 ではファイル単位の追加/削除/更新のみを扱う。
+       - プレビュー内容や抽出テキストの差分は扱わない（将来拡張に備えて `meta['content_digest']` などを持たせる余地を残す）。
+
 ---
 
-## 3. インターフェース詳細
+## 3. `prepareGenericDiff` インターフェース詳細（Phase 1 / Cycle 1）
 
-### 3.1 `LedgerHistoryManager` (Parent)
+### 3.1 入力パラメータ
 
-#### Inputs (Mount)
-- `ledgerId`: int
+- `array $baseContent`
+  - 構造: `['field_key' => mixed]` 形式の連想配列。
+  - AsColumnArrayJson キャストにより `data_get()` が利用できないため、呼び出し側で `$ledger->content[$id]` / `$ledger->content_attached[$id][$file]` のように配列アクセス済みのデータを組み立てて渡す前提とする。
+- `?array $targetContent`
+  - 構造は `$baseContent` と同様。
+  - `null` の場合は「スナップショット表示専用モード」として扱い、`change_type` はすべて `unchanged` とする（Phase 1 では主に比較モードで利用）。
+- `Collection $columnDefines`
+  - 各 `column_define` を含む Eloquent コレクション。
+  - `field_key` 解決、`field_type` / `label` / グループ情報などのメタ取得に利用する。
 
-#### Events (Listeners)
-- `displayLevelUpdated`: `Show` コンポーネントからのイベントを受信し、自身の `$displayLevel` を更新。`LedgerDiffViewer` へダウンプロパゲートする。
+### 3.2 戻り値
 
-#### Outputs (View)
-- `<livewire:ledger.ledger-diff-viewer ... />` を条件付きで呼び出し。
-- 承認履歴テーブル (Table UI)。
+- 返り値: `array` 型の DiffResultDTO
+  - 上記「2.3 Diff DTO 構造定義」で定義した構造を満たす連想配列。
+- エラー処理方針:
+  - DTO レベルでは原則として例外をスローせず、`meta['error']` にエラー種別を格納してビュー側に伝える。
+  - 型不整合や未知の `field_key` は `change_type = 'unchanged'` とし、`meta['error'] = 'incompatible_column_define'` などで原因を識別可能にする。
 
-### 3.2 `LedgerDiffViewer` (Child)
+### 3.3 Phase 1 のスコープ明示
 
-#### Render Logic
-- `LedgerContentProcessor` を使用して、`baseData` と `targetData` の差異を計算済みHTMLとして `displayData` プロパティにセット。
-- `showChanges` トグル: `targetData` が存在する場合のみ有効化。
+- サポートするもの（Phase 1 / Cycle 1）
+  - 現在状態 vs 1 履歴スナップショットの差分生成。
+  - 変更有無と種別（追加/削除/更新/変更なし）の判定。
+  - グループ単位のフィールド束ねと `displayLevel` / `collapsedStates` との連携。
+- サポートしないが将来拡張を想定するもの
+  - 任意 2 履歴同士の比較（Cycle 2）。
+  - 検索キーワードに連動したハイライト（`highlight` の細分化）。
+  - テキスト差分の部分強調（Diff ビュー的な表現）。
 
 ---
 
-## 4. 既存 `ShowDiff` (専用履歴画面) との整合性
+## 5. PM 判断が必要な事項（Diff DTO レベル）
 
-- `ShowDiff` コンポーネントも、内部的にリファクタリング後の `LedgerDiffViewer` を使用するように修正することを推奨（今回は必須スコープ外だが、共通化のメリットあり）。
-- 当面は `ShowDiff` は既存の `<x-ledger.detail.table>` (スナップショット表示) を維持してもよいが、ロジック一貫性の観点から `LedgerContentProcessor` の汎用化は必須。
+1. 変更なしフィールドの DTO への含め方
+   - 案A: 変更なしフィールドもすべて DTO に含める（Phase 1 のデフォルト案）
+     - メリット: `displayLevel` 変更時にサーバー再計算なしで表示レベルを切り替えられる。
+     - メリット: 「すべてのフィールドを 1 画面で俯瞰する」ユースケースに対応しやすい。
+     - デメリット: DTO サイズが増え、通信量・レンダリングコストが増大する可能性がある（ただし履歴件数 100 件程度を前提に許容範囲と見込む）。
+   - 案B: 変更ありフィールドのみを DTO に含める
+     - メリット: データ量が減り、ネットワーク/描画の負荷が軽い。
+     - デメリット: 「詳細表示に切り替えたが何も増えない」といった UX 上の違和感が出る可能性がある。
 
-## 5. 懸念点と対応策 (Updated)
-
-| 懸念事項 | 詳細 | 対応策 |
-|---|---|---|
-| **1. 添付ファイル情報の肥大化** | 添付ファイルを表示するために `allAttachments` (Ledgerに紐づく全ての`AttachedFile`) をコンポーネントに渡す必要があるが、長期運用でファイル数が数千件になった場合、メモリと通信量を圧迫する恐れがある。 | **Phase 1での対応:** 現状の想定（最大100履歴×50ファイル=5000レコード）の範囲ならメモリ内処理で許容可能と判断。<br>**将来的な対応:** `allAttachments` として全件渡すのをやめ、表示対象の `attachmentIds` リストのみを受け取り、必要な分だけ取得する「遅延ロード型」または「バッチ取得型」に変更する。 |
-| **2. カラム定義の不整合** | 比較する2つのバージョン間で `column_define`（カラム定義）が大きく変更されている場合（例: テキスト型から数値型へ変更、カラム削除など）、差分計算やHTML生成がエラーになる可能性がある。 | **対応策:** `LedgerDiffProcessor` 内で、**新しい方のバージョンのカラム定義**を「主（Master）」として採用し、古いデータをその定義に合わせて正規化（または表示可能な形式に変換）するロジックを実装する。削除されたカラムは「削除済み」として明示的に扱う。 |
-| **3. 表示状態 (displayLevel) の同期ラグ** | `Show` (親) → `LedgerHistoryManager` (子) → `LedgerDiffViewer` (孫) とプロパティが伝播するため、ユーザー操作から反映までにタイムラグや同期ズレが発生し、UIのちらつき（FOUC）が起きる可能性がある。 | **対応策:** Livewire の `Reactive` プロパティや `#[Modelable]` を活用し、親子間のデータバインディングを強化する。また、Alpine.js の `Entangle` を併用し、クライアントサイドでの即時反映も検討する。 |
-| **4. `LedgerHistoryManager` の責務過多** | 履歴管理、ページネーション、任意比較の選択、権限チェック、表示制御など、多くの機能が集約され、コンポーネントが肥大化しやすい。 | **対応策:** ビジネスロジック（差分計算、権限判定）は徹底してサービスクラス (`LedgerDiffProcessor`, Policy) に切り出す。コンポーネントは「入力を受け取り、サービスを呼び出し、結果を表示する」だけのコントローラ的な役割に徹する。 |
+2. テキスト型の差分粒度
+   - 案A: 値全体の変更有無のみを扱う（Phase 1 のデフォルト案）
+     - メリット: 実装がシンプルで、パフォーマンスへの影響も小さい。
+     - デメリット: 長文フィールドで「どこが変わったか」が分かりづらい。
+   - 案B: 将来の語単位ハイライトに備え、`meta['diff_chunks']` などのフィールドだけ先に定義しておく
+     - メリット: Cycle 2 以降に UI を強化しやすくなる。
+     - デメリット: Phase 1 の時点では未使用フィールドが増え、仕様として複雑に見える。
