@@ -376,12 +376,12 @@ class FileInspector extends Component
         }
 
         // サムネイルパスをチェック
-        if (! $this->file->hashed_filename) {
+        if (! $this->file->hashedbasename) {
             return;
         }
 
         $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-            $this->file->hashed_filename,
+            $this->file->hashedbasename,
             $this->file->tenant_id
         );
 

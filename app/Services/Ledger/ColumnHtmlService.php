@@ -339,8 +339,8 @@ class ColumnHtmlService
                 $mainDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
                 // サムネイルURL (画像かつサムネイルファイルが存在する場合)
                 $thumbnailUrl = null;
-                if (str_starts_with($attachment->original_mime_type, 'image/') && $attachment->hashed_filename) {
-                    $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachment->hashed_filename, $this->tenantId);
+                if (str_starts_with($attachment->original_mime_type, 'image/') && $attachment->hashedbasename) {
+                    $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachment->hashedbasename, $this->tenantId);
                     $thumbnailExists = Storage::disk('public')->exists($thumbnailPath);
 
                     if ($thumbnailExists) {

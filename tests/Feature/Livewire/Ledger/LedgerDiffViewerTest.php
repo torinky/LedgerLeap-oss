@@ -180,7 +180,7 @@ class LedgerDiffViewerTest extends TestCase
         // 2. Livewire コンポーネントをテスト (showChanges はデフォルトで false)
         Livewire::test(LedgerDiffViewer::class, ['ledgerRecord' => $this->ledger])
             ->assertSet('showChanges', false)
-            ->assertDontSeeHtml('Version.');
+            ->assertDontSeeHtml('Ver.');
     }
 
     #[Test]
@@ -245,7 +245,7 @@ class LedgerDiffViewerTest extends TestCase
         ])
             ->set('hasChangedColumns', true) // ->set() を使ってプロパティを有効化
             ->set('showChanges', true) // ->set() を使ってプロパティを有効化
-            ->assertSeeHtml('Version. 1'); // 比較対象の version 1 が表示されることを確認
+            ->assertSeeHtml('Ver.1'); // 比較対象の version 1 が表示されることを確認
     }
 
     #[Test]

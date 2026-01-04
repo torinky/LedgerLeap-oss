@@ -35,6 +35,12 @@ class Show extends Component
     #[Url(as: 'refresh')]
     public bool $refresh = false;
 
+    #[Url(as: 'sc')]
+    public bool $showChanges = false;
+
+    #[Url(as: 'td')]
+    public ?int $targetDiffId = null;
+
     #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
@@ -89,6 +95,20 @@ class Show extends Component
             // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
             $this->dispatch('displayLevelUpdated', displayLevel: $level);
         }
+    }
+
+    public function updatedShowChanges(bool $value): void
+    {
+        $this->dispatch('showChangesUpdated', showChanges: $value);
+    }
+
+    #[On('versionsSelected')]
+    public function updateVersions(?int $baseId, ?int $targetId): void
+    {
+        // $baseId は通常最新(最新のdiffId)を想定しているが、
+        // 詳細タブで表示するのは基本的に「現在」との比較なので、targetId を反映する。
+        $this->targetDiffId = $targetId;
+        $this->dispatch('targetDiffIdUpdated', targetDiffId: $targetId);
     }
 
     #[On('retryProcessingEvent')]

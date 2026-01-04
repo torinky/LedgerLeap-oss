@@ -19,13 +19,26 @@ class LedgerDiffProcessor
             return null;
         }
 
-        return LedgerDiff::where('ledger_id', $ledgerRecord->id)
+        // まずは内容が異なる直近のDiffを探す
+        $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
             ->whereNotNull('content')
             ->where('content', '<>', '[]')
             ->where('id', '<', $latestDiffId)
             ->whereRaw('content != ?', [$currentRawContent])
             ->orderBy('id', 'desc')
             ->first();
+
+        // 見つからない場合は、内容が同じでもIDが手前のものを探す（ステータス変更のみの場合など）
+        if (! $target) {
+            $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->where('id', '<', $latestDiffId)
+                ->orderBy('id', 'desc')
+                ->first();
+        }
+
+        return $target;
     }
 
     /**
@@ -34,14 +47,14 @@ class LedgerDiffProcessor
     public function prepareContentDiff(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff): array
     {
         $currentContent = $ledgerRecord->content ?? [];
-        $currentColumnDefines = collect($ledgerRecord->define->column_define ?? [])->keyBy('id');
+        $currentColumnDefines = collect(optional($ledgerRecord->define)->column_define ?? [])->keyBy('id');
         //        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
         if (! $comparisonTargetDiff) {
             // 比較対象がない場合は、現在の内容のみを整形して返す
             $contentChanges = $currentColumnDefines->map(function ($colDef) use ($currentContent, $ledgerRecord) {
-                $normalizedContent = $ledgerRecord->define->normalizeByColumnDefine($currentContent);
-                $sortedIds = collect($ledgerRecord->define->column_define)->sortBy('id')->pluck('id')->values();
+                $normalizedContent = optional($ledgerRecord->define)->normalizeByColumnDefine($currentContent) ?? [];
+                $sortedIds = collect(optional($ledgerRecord->define)->column_define ?? [])->sortBy('id')->pluck('id')->values();
                 $contentIndex = $sortedIds->search($colDef->id);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
