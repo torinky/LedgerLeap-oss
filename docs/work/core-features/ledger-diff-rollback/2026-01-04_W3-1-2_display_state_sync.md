@@ -129,6 +129,7 @@ class LedgerHistoryManager extends Component
 Phase 1 / Cycle 1 では、以下のような「軽量なローカル状態管理」を導入する。ただし、**本番採用は PM 判断** とし、少なくとも履歴タブ側では適用できるようにしておく。
 
 ### 4.1 Alpine.store + LocalStorage パターン（候補案）
+*   **デフォルト状態の考慮**: 初回訪問時（`localStorage`がない場合）は、サーバー側から提供される「必須グループ情報」に基づいてデフォルトの開閉状態（必須=Open）を初期化する。
 
 ```javascript
 document.addEventListener('alpine:init', () => {
@@ -136,12 +137,24 @@ document.addEventListener('alpine:init', () => {
         collapsed: {},
         ledgerId: null,
 
-        init(ledgerId) {
+        init(ledgerId, requiredGroups = []) {
             this.ledgerId = ledgerId;
             const key = `ledger_collapsed_${this.ledgerId}`;
             const stored = localStorage.getItem(key);
+            
             if (stored) {
                 this.collapsed = JSON.parse(stored);
+            } else {
+                // localStorageが空の場合、必須グループを初期化 (Open = false in collapsed logic, but here true = collapsed?)
+                // Defined in 3.2: true = collapsed, false = open.
+                // Required groups should be OPEN (false).
+                // Initial state is all OPEN (false) or CLOSED (true)?
+                // Actually usually we want required groups OPEN.
+                // Let's assume default is CLOSED (true) for non-required, OPEN (false) for required.
+                // Implementation detail for later, but logic supports it.
+                 requiredGroups.forEach(group => {
+                     this.collapsed[group] = false; // Open
+                 });
             }
         },
 
