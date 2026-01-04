@@ -1,8 +1,8 @@
 # W1.4 ペルソナ別シナリオ検討（履歴/差分・ロールバック）
 
-**最終更新:** 2026-01-03  
-**対象:** LedgerLeap v12.0 / Branch: `feature/LLM-integration`  
-**ステータス:** Draft（検討中）
+**最終更新:** 2026-01-04  
+**対象:** LedgerLeap v12.0 / Branch: `feature/ledger-rollback`  
+**ステータス:** Done
 
 ---
 
