@@ -82,6 +82,14 @@ class Show extends Component
         $this->selectedTab = $tab;
     }
 
+    #[On('displayLevelUpdated')]
+    public function updateDisplayLevel(int $displayLevel): void
+    {
+        if ($this->displayLevel !== $displayLevel) {
+            $this->displayLevel = $displayLevel;
+        }
+    }
+
     public function updatedDisplayLevel(int $level): void
     {
         // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火

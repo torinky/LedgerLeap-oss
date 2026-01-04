@@ -107,7 +107,11 @@
                                     <td class="align-top py-3 text-sm prose-sm max-w-none">
                                         <div
                                             class="break-words {{ $showChanges && $column['status'] !== 'unchanged' ? 'font-medium' : '' }}">
-                                            {!! $column['current_value_html'] !!}
+                                            @if (in_array($column['type'] ?? '', ['file', 'files']))
+                                                {!! $column['current_value_html'] !!}
+                                            @else
+                                                <x-expandable-content :content="$column['current_value_html']" max-height="6rem" />
+                                            @endif
                                         </div>
                                     </td>
 
@@ -115,7 +119,11 @@
                                     @if ($showChanges)
                                         <td class="align-top py-3 text-sm prose-sm max-w-none">
                                             <div class="break-words">
-                                                {!! $column['old_value_html'] !!}
+                                                @if (in_array($column['type'] ?? '', ['file', 'files']))
+                                                    {!! $column['old_value_html'] !!}
+                                                @else
+                                                    <x-expandable-content :content="$column['old_value_html']" max-height="6rem" />
+                                                @endif
                                             </div>
                                         </td>
                                     @endif

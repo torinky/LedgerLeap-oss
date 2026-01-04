@@ -30,13 +30,13 @@
                         @endphp
                         <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
                             class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                            option-label="name" />
+                            option-label="name" wire:key="details-display-level-group" />
                         <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
                             class="text-xs" />
                     </x-slot:menu>
 
                     {{-- 新しい LedgerDiffViewer コンポーネント --}}
-                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :currentLedgerAttachments="$currentLedgerAttachments"
+                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
                         :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId"
                         wire:key="diff-viewer-{{ $ledgerRecord->id }}" lazy />
 

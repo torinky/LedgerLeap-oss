@@ -2,7 +2,7 @@
 
 **最終更新:** 2026-01-04
 **対象:** LedgerLeap v12.0 / Branch: `feature/ledger-rollback`
-**ステータス:** Draft
+**ステータス:** Finalized
 
 ## 1. 目的
 
@@ -19,48 +19,25 @@
 
 ## 2. 表示レベル (`displayLevel`) の同期
 
-### 2.1 データフロー（Phase 1 / Cycle 1）
+### 2.1 データフロー
 
-`Show` (Parent) → `LedgerHistoryManager` (履歴タブの Livewire Root) → `LedgerDiffViewer` (差分表示コンポーネント)
+`Show` (Parent) ↔ `LedgerHistoryManager` (履歴タブ) ↔ `LedgerDiffViewer` (差分ビューア)
 
-- `Show` が唯一の **Single Source of Truth** として `displayLevel` を持つ。
-- 履歴タブ・差分コンポーネントは、`Show` から渡された値を参照する **読み取り専用** の立場とする。
+- **イベントベースの双方向同期**: どのコンポーネントで変更が発生しても、`displayLevelUpdated` イベントを通じて全コンポーネントが同期される。
+- **ラジオボタンの隔離**: MaryUI の仕様（`name` 属性がプロパティ名で固定される）による衝突を避けるため、各コンポーネントで独立したプロパティ名を使用する。
 
 ### 2.2 実装方針（単方向同期）
 
 #### 2.2.1 Parent (`Show.php`)
-- プロパティ:
-  - `public int $displayLevel = 2; // 1=最小, 2=標準, 3=詳細`
-- 基本情報タブ上の UI 操作で `$displayLevel` を更新する。
-- 更新履歴タブの Livewire コンポーネント呼び出し時に、常に最新の `$displayLevel` を渡す。
-
-**Show.blade.php（イメージ）**
-```blade
-<livewire:ledger.ledger-history-manager
-    :ledgerId="$ledgerRecord->id"
-    :displayLevel="$displayLevel"
-    wire:key="history-manager-{{ $ledgerRecord->id }}"
-/>
-```
+- プロパティ: `public int $displayLevel`
+- イベント発火: プロパティ更新時に `displayLevelUpdated` を dispatch する。
+- イベント購読: 同イベントを購読し、自身のプロパティを更新する。
 
 #### 2.2.2 Child (`LedgerHistoryManager.php`)
-- 公開プロパティ:
-  - `public int $displayLevel;`
-- マウント時に `displayLevel` を受け取り、その値を自身および子コンポーネントへ伝搬する。
-- Phase 1 / Cycle 1 では、**Show → History の単方向同期** とし、履歴タブ側から `displayLevel` を変更しない。
-
-**LedgerHistoryManager.php（イメージ）**
-```php
-class LedgerHistoryManager extends Component
-{
-    public int $ledgerId;
-    public int $displayLevel;
-
-    public function mount(int $ledgerId, int $displayLevel): void
-    {
-        $this->ledgerId = $ledgerId;
-        $this->displayLevel = $displayLevel;
-    }
+- プロパティ: `public int $historyDisplayLevel`
+- **隔離の理由**: `Show.php` の `displayLevel` と名前を分けることで、HTML ラジオボタンの `name` 属性衝突を回避し、タブ切り替え時にハイライトが解除される問題を解決した。
+- イベント発火: `updatedHistoryDisplayLevel` 時、`displayLevelUpdated` を dispatch する。
+- イベント購読: 同イベントを購読し、`$historyDisplayLevel` を更新する。
 
     public function render()
     {

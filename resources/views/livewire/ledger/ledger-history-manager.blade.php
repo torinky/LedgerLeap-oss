@@ -3,7 +3,7 @@
     <div
         class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
         <div
-            class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex items-center justify-between gap-4">
+            class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
             <h3 class="font-bold flex items-center gap-2 whitespace-nowrap">
                 <x-mary-icon name="o-clock" class="w-5 h-5" />
                 {{ __('ledger.history_list') }}
@@ -16,9 +16,11 @@
                     ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
                 ];
             @endphp
-            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary whitespace-nowrap"
-                option-value="id" option-label="name" />
+            <div class="flex flex-wrap items-center gap-2">
+                <x-mary-group wire:model.live="historyDisplayLevel" :options="$displayLevelOptions"
+                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                    option-label="name" wire:key="history-display-level-group" />
+            </div>
         </div>
 
         <div class="divide-y divide-base-200">
@@ -29,8 +31,7 @@
                     $isSelected = $isBase || $isTarget;
                 @endphp
                 <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }}"
-                    wire:click="selectVersions({{ $isBase ? 'null' : $diff->id }}, {{ $isSelected ? ($isBase ? $targetDiffId : 'null') : $baseDiffId }})"
-                    wire:key="history-row-{{ $diff->id }}">
+                    wire:click="toggleSelection({{ $diff->id }})" wire:key="history-row-{{ $diff->id }}">
 
                     @if ($isBase)
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
@@ -99,8 +100,9 @@
         @if ($baseDiff)
             <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
                 <div class="card-body p-0">
-                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$displayLevel"
+                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
                         :showChanges="true" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
+                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId"
                         wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
                 </div>
             </div>

@@ -5,6 +5,7 @@ namespace App\Livewire\Ledger;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\Attributes\On;
 
@@ -12,7 +13,7 @@ class LedgerHistoryManager extends Component
 {
     public int $ledgerId;
 
-    public int $displayLevel = 3;
+    public int $historyDisplayLevel = 3;
 
     // ページング用
     public int $perPage = 10;
@@ -27,29 +28,42 @@ class LedgerHistoryManager extends Component
     public ?Ledger $ledgerRecord = null;
     
     // 表示状態の維持用
-    public string $highlight = '';
+    public ?string $highlight = '';
 
     public function mount(int $ledgerId, int $displayLevel = 3, ?string $highlight = null, ?int $targetDiffId = null): void
     {
         $this->ledgerId = $ledgerId;
-        $this->displayLevel = $displayLevel;
+        $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
         $this->targetDiffId = $targetDiffId;
         
         $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
         
-        // 初期状態では最新を表示（targetDiffId は最新の1つ前、またはなし）
         // 最新の diff ID を取得
         $latestDiff = $this->ledgerRecord->ledgerDiff()->latest('id')->first();
         if ($latestDiff) {
             $this->baseDiffId = $latestDiff->id;
+        }
+
+        // 比較対象が指定されている場合、新しい方を base にする
+        if ($this->baseDiffId && $this->targetDiffId && $this->baseDiffId < $this->targetDiffId) {
+            $tmp = $this->baseDiffId;
+            $this->baseDiffId = $this->targetDiffId;
+            $this->targetDiffId = $tmp;
         }
     }
 
     #[On('displayLevelUpdated')]
     public function updateDisplayLevel(int $displayLevel): void
     {
-        $this->displayLevel = $displayLevel;
+        if ($this->historyDisplayLevel !== $displayLevel) {
+            $this->historyDisplayLevel = $displayLevel;
+        }
+    }
+
+    public function updatedHistoryDisplayLevel(int $level): void
+    {
+        $this->dispatch('displayLevelUpdated', displayLevel: $level);
     }
 
     public function loadMore(): void
@@ -59,13 +73,32 @@ class LedgerHistoryManager extends Component
         $this->pageCount++;
     }
 
-    // 比較対象を選択する
-    public function selectVersions(?int $baseId = null, ?int $targetId = null): void
+    // 比較対象を選択（トグル）する
+    public function toggleSelection(int $id): void
     {
-        $this->baseDiffId = $baseId;
-        $this->targetDiffId = $targetId;
+        if ($this->baseDiffId === $id) {
+            $this->baseDiffId = null;
+        } elseif ($this->targetDiffId === $id) {
+            $this->targetDiffId = null;
+        } else {
+            // 新しく選択する場合
+            if ($this->baseDiffId === null) {
+                $this->baseDiffId = $id;
+            } elseif ($this->targetDiffId === null) {
+                $this->targetDiffId = $id;
+            } else {
+                // 両方埋まっている場合、targetDiffId を追い出して新しく選択
+                $this->targetDiffId = $id;
+            }
+        }
+
+        // ソート処理（常に大きい方を baseDiffId に、1つだけなら baseDiffId に寄せる）
+        $ids = collect([$this->baseDiffId, $this->targetDiffId])->filter()->sortDesc()->values();
         
-        $this->dispatch('versionsSelected', baseId: $baseId, targetId: $targetId);
+        $this->baseDiffId = $ids->get(0);
+        $this->targetDiffId = $ids->get(1);
+
+        $this->dispatch('versionsSelected', baseId: $this->baseDiffId, targetId: $this->targetDiffId);
     }
 
     public function render()
@@ -105,6 +138,7 @@ class LedgerHistoryManager extends Component
             'targetDiff' => $targetDiff,
             'baseMeta' => $baseMeta,
             'targetMeta' => $targetMeta,
+            'historyDisplayLevel' => $this->historyDisplayLevel,
         ]);
     }
 }

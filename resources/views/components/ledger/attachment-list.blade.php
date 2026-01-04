@@ -83,7 +83,7 @@
         }
     }
 }"
-    class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4' }}"
+    class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4' }} not-prose"
     role="list" aria-label="{{ __('ledger.file_list') }}" id="{{ $componentId }}">
 
     @forelse($files as $index => $file)

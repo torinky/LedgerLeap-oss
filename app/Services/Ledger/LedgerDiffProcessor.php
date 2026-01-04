@@ -44,10 +44,15 @@ class LedgerDiffProcessor
     /**
      * 差分表示のためのデータを準備する
      */
-    public function prepareContentDiff(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff): array
+    public function prepareContentDiff(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff, ?int $baseDiffId = null): array
     {
-        $currentContent = $ledgerRecord->content ?? [];
-        $currentColumnDefines = collect(optional($ledgerRecord->define)->column_define ?? [])->keyBy('id');
+        $baseDiff = null;
+        if ($baseDiffId) {
+            $baseDiff = LedgerDiff::find($baseDiffId);
+        }
+
+        $currentContent = $baseDiff ? ($baseDiff->content ?? []) : ($ledgerRecord->content ?? []);
+        $currentColumnDefines = collect($baseDiff ? ($baseDiff->column_define ?? []) : (optional($ledgerRecord->define)->column_define ?? []))->keyBy('id');
         //        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
         if (! $comparisonTargetDiff) {

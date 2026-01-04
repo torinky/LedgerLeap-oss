@@ -29,11 +29,12 @@ class LedgerContentProcessor
         Ledger $ledgerRecord,
         ?LedgerDiff $comparisonTargetDiff,
         int $displayLevel,
-        EloquentCollection $allAttachments,
-        ?string $highlight = null
+        \Illuminate\Support\Collection $allAttachments,
+        ?string $highlight = null,
+        ?int $baseDiffId = null
     ): array {
         // 1. 差分データを取得
-        $diffResult = $this->ledgerDiffProcessor->prepareContentDiff($ledgerRecord, $comparisonTargetDiff);
+        $diffResult = $this->ledgerDiffProcessor->prepareContentDiff($ledgerRecord, $comparisonTargetDiff, $baseDiffId);
         $contentChanges = $diffResult['contentChanges'];
 
         // 2. カラムのフィルタリング
