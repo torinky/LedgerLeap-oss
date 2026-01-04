@@ -201,35 +201,113 @@ document.addEventListener('alpine:init', () => {
 
 ### 6.1 `displayLevel` の同期方向
 
-- 案A: 親（Show）→ 子（履歴タブ/差分ビュー）の単方向同期 〔**Phase 1 / Cycle 1 のデフォルト案**〕
+> [!NOTE]
+> **実装方針:** Phase 1 / Cycle 1 では、まず「案B: 初期値はサーバー値、操作中の変更はフロント内で完結」を採用し、UIテスト・パフォーマンステストの結果に応じて「案A: 完全にShow主導の単方向同期」へ撤退できるように実装を分離する。
+
+- 案A: 親（Show）→ 子（履歴タブ/差分ビュー）の単方向同期
+  - 想定される実装:
+    - `Show` から `displayLevel` を prop で渡すのみ。
+    - 履歴タブ側では `displayLevel` を**表示専用**として扱い、変更UIは持たない（もしくは持ってもフロントローカルに閉じる）。
   - メリット:
     - 実装がシンプルで、`Show` を単一の真の状態源として扱える。
     - 予期せぬイベントループやちらつきのリスクが小さい。
   - デメリット:
-    - 履歴タブ側で `displayLevel` を変更しても、基本情報タブには反映されない。
+    - 履歴タブ側から表示レベルを柔軟に切り替えることができない。
 
-- 案B: Show ↔ 履歴タブの双方向同期
+- 案B: 初期値はサーバー値、操作中の変更はフロントエンド内で完結（**Phase 1 / Cycle 1 の初期採用案**）
+  - 想定される実装:
+    - `LedgerHistoryManager` に `displayLevelLocal` を追加する。
+      ```php
+      public int $displayLevel;      // サーバーからの初期値
+      public int $displayLevelLocal; // 画面内で利用するローカル値
+
+      public function mount(int $ledgerId, int $displayLevel): void
+      {
+          $this->ledgerId = $ledgerId;
+          $this->displayLevel = $displayLevel;
+          $this->displayLevelLocal = $displayLevel;
+      }
+
+      public function setDisplayLevelLocal(int $level): void
+      {
+          $this->displayLevelLocal = $level;
+      }
+      ```
+    - Blade では `displayLevelLocal` を UI バインドおよび `LedgerDiffViewer` への入力に使用する。
+      ```blade
+      <select wire:model="displayLevelLocal">
+          <option value="1">最小</option>
+          <option value="2">標準</option>
+          <option value="3">詳細</option>
+      </select>
+
+      <livewire:ledger.diff-viewer
+          :displayLevel="$displayLevelLocal"
+          ...
+      />
+      ```
+    - `Show` 側へイベントは送らず、画面表示中の変更は履歴タブ内で完結させる。
   - メリット:
-    - どのタブから見ても常に同じ表示レベルになる。
+    - 初期状態は `Show` と揃えつつ、履歴タブ内で柔軟に表示レベルを切り替えられる。
+    - 差分ビューの描画は常に `displayLevelLocal` を見るだけでよく、シンプル。
   - デメリット:
-    - Livewire イベント往復による実装・デバッグコスト増。
-    - タイミングによって表示が一瞬ずれる可能性がある。
+    - 基本情報タブと履歴タブで表示レベルが一時的にズレることを許容する前提になる。
+
+#### 6.1.1 撤退戦略（B→A のロールバックパス）
+
+- 実装分離の方針:
+  - `displayLevelLocal` とそれを操作するメソッド（例: `setDisplayLevelLocal()`）を1か所に集約し、フラグで有効/無効を切り替えられるようにする。
+  - Blade 側も `displayLevelLocal` を使うUI部分をコンポーネント・セクションにまとめ、案Aに戻す際はこのUIを無効化または非表示にするだけで済むようにする。
+- コンフィグ/フラグ:
+  - `config/ledgerleap.php` などに `ledger_diff.display_level_local_control` （bool）を用意し、履歴タブ内でのローカル制御の ON/OFF を切り替え可能にする。
+  - フラグOFF時は `displayLevelLocal` を廃止し、常に `$displayLevel`（Show 由来）だけを使う実装に切り替える。
+- テスト計画:
+  - UIテストで以下を確認:
+    - ローカル制御ON時: 履歴タブ内の表示レベル切り替えが差分ビューに即反映されるが、基本情報タブの表示レベルは変わらないこと。
+    - ローカル制御OFF時: 基本情報タブでの設定がそのまま履歴タブにも反映され、履歴タブ側の切り替えUIは無効/非表示になっていること。
 
 ### 6.2 `collapsedStates` の扱いレベル
 
-- 案A: 初期値共有のみ（Phase 1 / Cycle 1 推奨）
+> [!NOTE]
+> **実装方針:** Phase 1 / Cycle 1 では、「案B: 初期値はサーバー値、操作中の変更はフロント内（Alpine.store/LocalStorage）で完結」を採用し、必要に応じて「案A: 初期値共有のみ」に戻せるように実装を分離する。
+
+- 案A: 初期値共有のみ
+  - 想定される実装:
+    - `Show` → `LedgerHistoryManager` → `LedgerDiffViewer` への初期 `collapsedStates` 渡しのみ。
+    - その後の開閉操作は、各ビュー内の Alpine ローカル状態で完結させ、Livewire プロパティは更新しない。
   - メリット:
     - Livewire のシリアライズ負荷を抑えつつ、「おおよその見え方」を履歴タブにも引き継げる。
     - 実装負荷が低く、既存コードへの影響も小さい。
   - デメリット:
-    - タブ間で折りたたみ状態を完全には同期できない。
+    - タブ間で折りたたみ状態を完全には同期できない（同一ブラウザ内でさえ）。
 
-- 案B: 折りたたみ操作もイベントで親に伝播し、Show 側と双方向同期
+- 案B: 初期値はサーバー値、開閉操作はフロント内で共有（Alpine.store/LocalStorage）
+  - 想定される実装:
+    - 初期表示時に `Show` から受け取った `collapsedStates` をもとに、Alpine.store (`ledgerState.collapsed`) の初期値を構成する（必要に応じてマージ）。
+    - 以降の開閉操作はすべて `ledgerState.toggle(groupName)` を通じて行い、その状態を LocalStorage に保存する（4.1〜4.2 参照）。
+    - 履歴タブや `ShowDiff` など、同一ブラウザ・同一 `ledgerId` のコンポーネントは、`ledgerState.init(ledgerId)` を通じて同じ状態を再利用する。
+    - 開閉状態の変更はサーバーに送信せず、`Show` 側の `$collapsedStates` は画面表示中には更新しない（サーバーの「正」は持たない）。
   - メリット:
-    - 基本情報タブと履歴タブで常に同じ開閉状態が維持される。
+    - 同一ブラウザ内では、基本情報タブ→履歴タブ→専用履歴画面の間で、自然な開閉状態の引き継ぎが実現できる。
+    - サーバーイベントが発生しないため、パフォーマンス面のリスクが小さい。
   - デメリット:
-    - 開閉頻度が高い場合、イベント回数とサーバー負荷が増える。
-    - Phase 1 の範囲としてはオーバーエンジニアリングになる可能性がある。
+    - 別ブラウザ・別端末間では開閉状態が同期されない（LocalStorageベースのため）。
+    - サーバー側に「正」の開閉状態を持たない前提になる。
+
+#### 6.2.1 撤退戦略（B→A のロールバックパス）
+
+- 実装分離の方針:
+  - Alpine.store/LocalStorage を利用するコード（`ledgerState.init`/`toggle`/`isCollapsed`）を明確に切り出し、Blade 側での使用箇所を限定する。
+  - 案Aに戻す際は、Alpine.store を利用せず、`collapsedStates` をそのままローカル x-data にコピーして使うシンプルな実装に差し替えられるようにしておく。
+- コンフィグ/フラグ:
+  - `config/ledgerleap.php` 等に `ledger_diff.collapsed_states_frontend_store` （bool）を追加し、Alpine.store/LocalStorage を使うかどうかを切り替えられるようにする。
+  - フラグOFF時は、4.1/4.2 のストア初期化をスキップし、各ビューが単純な `x-data="{ collapsed: @js($collapsedStates) }"` のようなローカル状態だけを持つようにする。
+- テスト計画:
+  - UIテストで確認するポイント:
+    - フロントストアON時: 同一ブラウザ内でタブ/画面を行き来しても、開閉状態が引き継がれること。
+    - フロントストアOFF時: 初回表示時にはShowの状態が反映されるが、以降は各ビューごとに独立していること。
+  - パフォーマンス・負荷テスト:
+    - LocalStorage 読み書きがパフォーマンスに与える影響を測定し、問題があれば案A固定に戻す判断材料とする。
 
 ---
 
@@ -237,7 +315,7 @@ document.addEventListener('alpine:init', () => {
 
 | 状態 | 同期元 | 同期先 | 手法 | 備考 |
 |---|---|---|---|---|
-| `displayLevel` | `Show` (Parent) | `LedgerHistoryManager` → `LedgerDiffViewer` | Prop（単方向） | Show を Single Source of Truth とする。 |
-| `collapsedStates` | `Show` (初期状態) | `LedgerHistoryManager` → `LedgerDiffViewer` | 初期値渡し + Alpine ローカル状態 | リアルタイム双方向同期は行わない。 |
+| `displayLevel` | `Show` (Parent) | `LedgerHistoryManager` → `LedgerDiffViewer` | 初期値: Prop（単方向） / 操作中: 履歴タブ内のローカル値 (`displayLevelLocal`) | フラグでローカル制御のON/OFFを切り替え可能。 |
+| `collapsedStates` | `Show` (初期状態) | `LedgerHistoryManager` → `LedgerDiffViewer` | 初期値: Prop / 操作中: Alpine.store + LocalStorage でフロント内共有（ON時） | フラグでAlpine.store利用のON/OFFを切り替え、単純なローカル状態に戻せる。 |
 
-この設計により、Phase 1 / Cycle 1 の範囲で **実装リスクを抑えつつ、基本情報タブと履歴タブの見え方の一貫性** を確保する。Cycle 2 以降は、本ドキュメントをベースに `DisplayStateDTO` やフィルタ状態の同期などへ拡張していく。
+この設計により、Phase 1 / Cycle 1 では **「初期値はサーバー値」「操作中の変更はフロント内で完結」** という案Bを試しつつ、問題があれば即座に案A（完全にShow主導の単方向同期/初期値共有のみ）へ切り替えられる。Cycle 2 以降は、実際の利用状況とテスト結果に基づき、どちらを正式採用するかを再評価する。
