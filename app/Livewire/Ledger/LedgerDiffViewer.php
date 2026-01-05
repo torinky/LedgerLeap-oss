@@ -44,22 +44,25 @@ class LedgerDiffViewer extends Component
 
     public ?int $baseDiffId = null;
 
-    public function mount(?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null): void
+    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null): void
     {
+        $this->ledgerRecord = $ledgerRecord;
+        
         $this->baseMeta = $baseMeta;
         $this->targetMeta = $targetMeta;
         $this->targetDiffId = $targetDiffId;
         $this->baseDiffId = $baseDiffId;
 
         // 差分比較対象を準備
+        // Livewire 3 の DI により空のインスタンスが渡されることがあるため exists を確認
         if ($this->targetDiffId) {
             $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
-        } elseif ($comparisonTargetDiff) {
+        } elseif ($comparisonTargetDiff && $comparisonTargetDiff->exists) {
             $this->comparisonTargetDiff = $comparisonTargetDiff;
         } else {
             $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord);
         }
-
+        
         if ($this->comparisonTargetDiff && ! $this->targetMeta) {
             $this->targetMeta = [
                 'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',

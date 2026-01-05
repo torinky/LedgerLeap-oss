@@ -10,6 +10,7 @@ use App\Models\LedgerDefine;
 use App\Models\Folder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LedgerHistoryManagerTest extends TestCase
@@ -82,7 +83,7 @@ class LedgerHistoryManagerTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_initial_history_list()
     {
         Livewire::actingAs($this->user)
@@ -95,20 +96,30 @@ class LedgerHistoryManagerTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_selects_versions_for_comparison()
     {
         $diff1 = LedgerDiff::where('version', 1)->first();
         $diff2 = LedgerDiff::where('version', 2)->first();
 
-        Livewire::actingAs($this->user)
-            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
-            ->call('selectVersions', $diff2->id, $diff1->id)
+        // テスト開始
+        $component = Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
+
+        // 初期状態で選択されている baseDiffId を取得して解除
+        $initialBaseId = $component->get('baseDiffId');
+        if ($initialBaseId) {
+            $component->call('toggleSelection', $initialBaseId);
+        }
+
+        $component
+            ->call('toggleSelection', $diff2->id)
+            ->call('toggleSelection', $diff1->id)
             ->assertSet('baseDiffId', $diff2->id)
             ->assertSet('targetDiffId', $diff1->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_more_history_on_infinite_scroll()
     {
         // さらに履歴を作成

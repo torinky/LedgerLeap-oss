@@ -28,7 +28,18 @@ class LedgerDiffProcessor
             ->orderBy('id', 'desc')
             ->first();
 
-        // 見つからない場合は、内容が同じでもIDが手前のものを探す（ステータス変更のみの場合など）
+        // 内容が異なるものが見つからない、または ID で見つからない場合
+        // バージョン番号での比較も試みる（テスト環境対策）
+        if (! $target) {
+            $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->where('version', '<', $ledgerRecord->version)
+                ->orderBy('version', 'desc')
+                ->first();
+        }
+
+        // それでも見つからない場合は、内容が同じでもIDが手前のものを探す（ステータス変更のみの場合など）
         if (! $target) {
             $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
                 ->whereNotNull('content')

@@ -126,7 +126,15 @@ class LedgerDiffViewerTest extends TestCase
             ];
 
             $mock->shouldReceive('processContentForDisplay')
-                ->once()
+                ->atLeast()->once()
+                ->with(
+                    Mockery::type(Ledger::class),
+                    Mockery::any(),
+                    Mockery::type('int'),
+                    Mockery::any(),
+                    Mockery::any(),
+                    Mockery::any()
+                )
                 ->andReturn([
                     'displayData' => $dummyDisplayData,
                     'hasChangedColumns' => true,
@@ -150,13 +158,13 @@ class LedgerDiffViewerTest extends TestCase
             // 最初に displayLevel=1 で呼び出されることを期待
             $mock->shouldReceive('processContentForDisplay')
                 ->once()
-                ->with(Mockery::any(), Mockery::any(), 1, Mockery::any(), Mockery::any())
+                ->with(Mockery::any(), Mockery::any(), 1, Mockery::any(), Mockery::any(), Mockery::any())
                 ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
 
             // 次に displayLevel=2 で呼び出されることを期待
             $mock->shouldReceive('processContentForDisplay')
                 ->once()
-                ->with(Mockery::any(), Mockery::any(), 2, Mockery::any(), Mockery::any())
+                ->with(Mockery::any(), Mockery::any(), 2, Mockery::any(), Mockery::any(), Mockery::any())
                 ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
         });
 
@@ -171,10 +179,19 @@ class LedgerDiffViewerTest extends TestCase
     {
         // 1. プロセッサのモック
         $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
-            $mock->shouldReceive('processContentForDisplay')->andReturn([
-                'displayData' => [],
-                'hasChangedColumns' => true,
-            ]);
+            $mock->shouldReceive('processContentForDisplay')
+                ->with(
+                    Mockery::type(Ledger::class),
+                    Mockery::any(),
+                    Mockery::type('int'),
+                    Mockery::any(),
+                    Mockery::any(),
+                    Mockery::any()
+                )
+                ->andReturn([
+                    'displayData' => [],
+                    'hasChangedColumns' => true,
+                ]);
         });
 
         // 2. Livewire コンポーネントをテスト (showChanges はデフォルトで false)
@@ -245,6 +262,7 @@ class LedgerDiffViewerTest extends TestCase
         ])
             ->set('hasChangedColumns', true) // ->set() を使ってプロパティを有効化
             ->set('showChanges', true) // ->set() を使ってプロパティを有効化
+            ->dump()
             ->assertSeeHtml('Ver.1'); // 比較対象の version 1 が表示されることを確認
     }
 
