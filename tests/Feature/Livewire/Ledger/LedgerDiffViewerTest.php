@@ -120,6 +120,7 @@ class LedgerDiffViewerTest extends TestCase
                             'status' => 'modified',
                             'current_value_html' => '<div>Current Value</div>',
                             'old_value_html' => '<div>Old Value</div>',
+                            'is_omitted' => false,
                         ],
                     ],
                 ],
@@ -148,6 +149,116 @@ class LedgerDiffViewerTest extends TestCase
             ->assertSee('Test Group')
             ->assertSee('Test Column')
             ->assertSeeHtml('<div>Current Value</div>');
+    }
+
+    #[Test]
+    public function it_renders_omitted_indicator_when_columns_are_filtered_by_level(): void
+    {
+        // 1. LedgerContentProcessor のモックを作成
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            $dummyDisplayData = [
+                [
+                    'group_name' => 'Omitted Group',
+                    'is_required_group' => false,
+                    'columns' => [
+                        [
+                            'is_omitted' => true,
+                            'omitted_count' => 2,
+                        ],
+                        [
+                            'id' => 'col_visible',
+                            'name' => 'Visible Column',
+                            'hint' => '',
+                            'is_required' => false,
+                            'status' => 'unchanged',
+                            'current_value_html' => '<div>Visible</div>',
+                            'old_value_html' => '<div>Visible</div>',
+                            'is_omitted' => false,
+                        ],
+                    ],
+                ],
+            ];
+
+            $mock->shouldReceive('processContentForDisplay')
+                ->andReturn([
+                    'displayData' => $dummyDisplayData,
+                    'hasChangedColumns' => false,
+                ]);
+        });
+
+        // 2. Livewire コンポーネントをテスト
+        Livewire::test(LedgerDiffViewer::class, ['ledgerRecord' => $this->ledger])
+            ->assertSee('2項目の非表示項目があります');
+    }
+
+    #[Test]
+    public function it_renders_omitted_indicator_with_real_processor(): void
+    {
+        // 1. カラム定義を作成 (Lv1とLv3を混ぜる)
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                [
+                    'id' => 'col1',
+                    'name' => 'Visible Col',
+                    'type' => 'text',
+                    'display_level' => 1,
+                    'order' => 1,
+                    'group' => 'Group 1',
+                    'required' => false,
+                ],
+                [
+                    'id' => 'col2',
+                    'name' => 'Omitted Col 1',
+                    'type' => 'text',
+                    'display_level' => 3,
+                    'order' => 2,
+                    'group' => 'Group 1',
+                    'required' => false,
+                ],
+                [
+                    'id' => 'col3',
+                    'name' => 'Omitted Col 2',
+                    'type' => 'text',
+                    'display_level' => 3,
+                    'order' => 3,
+                    'group' => 'Group 1',
+                    'required' => false,
+                ],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()
+            ->for($ledgerDefine, 'define')
+            ->for($this->user, 'creator')
+            ->create([
+                'tenant_id' => $this->tenant->id,
+                'content' => [
+                    'col1' => 'Value 1',
+                    'col2' => 'Value 2',
+                    'col3' => 'Value 3',
+                ],
+            ]);
+
+        // 2. 表示レベル 1 でテスト
+        Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'displayLevel' => 1,
+        ])
+            ->assertSee('Visible Col')
+            ->assertDontSee('Omitted Col 1')
+            ->assertSee('2項目の非表示項目があります');
+
+        // 3. 表示レベル 3 に切り替え
+        Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'displayLevel' => 3,
+        ])
+            ->assertSee('Visible Col')
+            ->assertSee('Omitted Col 1')
+            ->assertSee('Omitted Col 2')
+            ->assertDontSee('項目の非表示項目があります');
     }
 
     #[Test]

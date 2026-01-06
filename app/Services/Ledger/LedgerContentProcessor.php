@@ -37,21 +37,16 @@ class LedgerContentProcessor
         $diffResult = $this->ledgerDiffProcessor->prepareContentDiff($ledgerRecord, $comparisonTargetDiff, $baseDiffId);
         $contentChanges = $diffResult['contentChanges'];
 
-        // 2. カラムのフィルタリング
-        $filteredColumns = collect($ledgerRecord->define->column_define)
-            ->filter(function ($column) use ($displayLevel) {
-                $columnDisplayLevel = is_array($column) ? ($column['display_level'] ?? 3) : ($column->display_level ?? 3);
-
-                return $columnDisplayLevel <= $displayLevel;
-            });
+        // 2. 全てのカラムを取得 (フィルタリングは後のループで行い、省略を検知する)
+        $allColumns = collect(optional($ledgerRecord->define)->column_define ?? []);
 
         // Mock Attachment Column Injection
         if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
-            $filteredColumns->push(\App\Services\Ledger\MockAttachmentService::getMockColumnDefine());
+            $allColumns->push(\App\Services\Ledger\MockAttachmentService::getMockColumnDefine());
         }
 
         // 3. カラムのグルーピングとソート
-        $groupedColumns = $filteredColumns->groupBy(function ($column) {
+        $groupedColumns = $allColumns->groupBy(function ($column) {
             $group = is_array($column) ? ($column['group'] ?? '') : ($column->group ?? '');
 
             return $group === '' ? __('ledger.form.group_default') : $group;
@@ -76,7 +71,23 @@ class LedgerContentProcessor
                 'columns' => [],
             ];
 
+            $omittedCount = 0;
             foreach ($columnObjectsInGroup as $columnDefine) {
+                $columnDisplayLevel = $columnDefine->display_level ?? 3;
+                if ($columnDisplayLevel > $displayLevel) {
+                    $omittedCount++;
+                    continue;
+                }
+
+                // 省略されたカラムがあった場合、履歴として挿入
+                if ($omittedCount > 0) {
+                    $displayGroup['columns'][] = [
+                        'is_omitted' => true,
+                        'omitted_count' => $omittedCount,
+                    ];
+                    $omittedCount = 0;
+                }
+
                 $change = $contentChanges[$columnDefine->id] ?? null;
 
                 // Mock Attachment Column: Force display even if no diff exists
@@ -124,6 +135,15 @@ class LedgerContentProcessor
                     'status' => $change['status'],
                     'current_value_html' => $currentValueHtml,
                     'old_value_html' => $oldValueHtml,
+                    'is_omitted' => false,
+                ];
+            }
+
+            // 最後に省略されたカラムがあった場合
+            if ($omittedCount > 0) {
+                $displayGroup['columns'][] = [
+                    'is_omitted' => true,
+                    'omitted_count' => $omittedCount,
                 ];
             }
 
