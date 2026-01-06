@@ -69,7 +69,7 @@ class LedgerHistoryManagerTest extends TestCase
             'created_at' => now()->subDay()
         ]);
 
-        LedgerDiff::create([
+        $diff3 = LedgerDiff::create([
             'ledger_id' => $this->ledger->id,
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 3,
@@ -81,6 +81,8 @@ class LedgerHistoryManagerTest extends TestCase
             'creator_id' => $this->user->id,
             'created_at' => now()
         ]);
+
+        $this->ledger->update(['latest_diff_id' => $diff3->id]);
     }
 
     #[Test]
@@ -93,7 +95,9 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertSee('Ver.3')
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 3;
-            });
+            })
+            ->assertSet('baseDiffId', LedgerDiff::where('version', 3)->first()->id)
+            ->assertSet('targetDiffId', LedgerDiff::where('version', 2)->first()->id);
     }
 
     #[Test]
@@ -101,21 +105,31 @@ class LedgerHistoryManagerTest extends TestCase
     {
         $diff1 = LedgerDiff::where('version', 1)->first();
         $diff2 = LedgerDiff::where('version', 2)->first();
-
+        $diff3 = LedgerDiff::where('version', 3)->first();
+        
         // テスト開始
         $component = Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
 
-        // 初期状態で選択されている baseDiffId を取得して解除
-        $initialBaseId = $component->get('baseDiffId');
-        if ($initialBaseId) {
-            $component->call('toggleSelection', $initialBaseId);
-        }
 
-        $component
-            ->call('toggleSelection', $diff2->id)
-            ->call('toggleSelection', $diff1->id)
-            ->assertSet('baseDiffId', $diff2->id)
+        // 初期状態で $diff3 (base) と $diff2 (target) が選択されているはず
+        $component->assertSet('baseDiffId', $diff3->id)
+            ->assertSet('targetDiffId', $diff2->id);
+
+        // $diff2 を解除
+        $component->call('toggleSelection', $diff2->id);
+        $component->assertSet('baseDiffId', $diff3->id)
+            ->assertSet('targetDiffId', null);
+
+        // $diff3 を解除
+        $component->call('toggleSelection', $diff3->id);
+        $component->assertSet('baseDiffId', null)
+            ->assertSet('targetDiffId', null);
+
+        // $diff2 と $diff1 を選択
+        $component->call('toggleSelection', $diff2->id)
+            ->call('toggleSelection', $diff1->id);
+        $component->assertSet('baseDiffId', $diff2->id)
             ->assertSet('targetDiffId', $diff1->id);
     }
 
