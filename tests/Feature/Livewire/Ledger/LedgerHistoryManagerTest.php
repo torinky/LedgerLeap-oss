@@ -20,6 +20,9 @@ class LedgerHistoryManagerTest extends TestCase
     protected User $user;
     protected Ledger $ledger;
     protected LedgerDefine $ledgerDefine;
+    protected LedgerDiff $diff1;
+    protected LedgerDiff $diff2;
+    protected LedgerDiff $diff3;
 
     protected function setUp(): void
     {
@@ -43,7 +46,7 @@ class LedgerHistoryManagerTest extends TestCase
         ]);
 
         // 作成された履歴（Diff）をシミュレート
-        LedgerDiff::create([
+        $this->diff1 = LedgerDiff::create([
             'ledger_id' => $this->ledger->id,
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 1,
@@ -56,7 +59,7 @@ class LedgerHistoryManagerTest extends TestCase
             'created_at' => now()->subDays(2)
         ]);
 
-        LedgerDiff::create([
+        $this->diff2 = LedgerDiff::create([
             'ledger_id' => $this->ledger->id,
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 2,
@@ -69,7 +72,7 @@ class LedgerHistoryManagerTest extends TestCase
             'created_at' => now()->subDay()
         ]);
 
-        $diff3 = LedgerDiff::create([
+        $this->diff3 = LedgerDiff::create([
             'ledger_id' => $this->ledger->id,
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 3,
@@ -82,7 +85,8 @@ class LedgerHistoryManagerTest extends TestCase
             'created_at' => now()
         ]);
 
-        $this->ledger->update(['latest_diff_id' => $diff3->id]);
+        $this->ledger->update(['latest_diff_id' => $this->diff3->id]);
+        $this->ledger->setRelation('ledgerDiff', collect([$this->diff3, $this->diff2, $this->diff1]));
     }
 
     #[Test]
@@ -96,41 +100,42 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 3;
             })
-            ->assertSet('baseDiffId', LedgerDiff::where('version', 3)->first()->id)
-            ->assertSet('targetDiffId', LedgerDiff::where('version', 2)->first()->id);
+            ->assertSet('baseDiffId', $this->diff3->id)
+            ->assertSet('targetDiffId', null);
     }
 
     #[Test]
     public function it_selects_versions_for_comparison()
     {
-        $diff1 = LedgerDiff::where('version', 1)->first();
-        $diff2 = LedgerDiff::where('version', 2)->first();
-        $diff3 = LedgerDiff::where('version', 3)->first();
-        
         // テスト開始
         $component = Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
 
 
-        // 初期状態で $diff3 (base) と $diff2 (target) が選択されているはず
-        $component->assertSet('baseDiffId', $diff3->id)
-            ->assertSet('targetDiffId', $diff2->id);
+        // 初期状態で $diff3 (base) のみが選択されているはず（target は null）
+        $component->assertSet('baseDiffId', $this->diff3->id)
+            ->assertSet('targetDiffId', null);
+
+        // $diff2 を追加選択
+        $component->call('toggleSelection', $this->diff2->id);
+        $component->assertSet('baseDiffId', $this->diff3->id)
+            ->assertSet('targetDiffId', $this->diff2->id);
 
         // $diff2 を解除
-        $component->call('toggleSelection', $diff2->id);
-        $component->assertSet('baseDiffId', $diff3->id)
+        $component->call('toggleSelection', $this->diff2->id);
+        $component->assertSet('baseDiffId', $this->diff3->id)
             ->assertSet('targetDiffId', null);
 
         // $diff3 を解除
-        $component->call('toggleSelection', $diff3->id);
+        $component->call('toggleSelection', $this->diff3->id);
         $component->assertSet('baseDiffId', null)
             ->assertSet('targetDiffId', null);
 
         // $diff2 と $diff1 を選択
-        $component->call('toggleSelection', $diff2->id)
-            ->call('toggleSelection', $diff1->id);
-        $component->assertSet('baseDiffId', $diff2->id)
-            ->assertSet('targetDiffId', $diff1->id);
+        $component->call('toggleSelection', $this->diff2->id)
+            ->call('toggleSelection', $this->diff1->id);
+        $component->assertSet('baseDiffId', $this->diff2->id)
+            ->assertSet('targetDiffId', $this->diff1->id);
     }
 
     #[Test]

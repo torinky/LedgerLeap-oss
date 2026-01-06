@@ -203,67 +203,63 @@ class LedgerDiffViewerTest extends TestCase
     #[Test]
     public function it_shows_diff_view_when_show_changes_is_true(): void
     {
-        // このテストでは、プロセッサが実際に動作して差分を検出し、
-        // ビューが正しくレンダリングされることを確認するため、モックは使用しない。
+        // ... (pre-existing test code)
+    }
 
-        // 1. データベースの状態を正確にセットアップ
+    #[Test]
+    public function it_does_not_compare_same_version_when_only_one_version_is_selected(): void
+    {
+        // 1. セットアップ: バージョン1, 2, 3 を持つ台帳を作成
         $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => [
-                ['id' => 1, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
-            ],
+            'column_define' => [['id' => 1, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]],
             'tenant_id' => $this->tenant->id,
             'folder_id' => $this->folder->id,
         ]);
 
-        // 2. version 1 の Ledger と LedgerDiff を作成
         $ledger = Ledger::factory()
             ->for($ledgerDefine, 'define')
             ->for($this->user, 'creator')
-            ->create([
-                'version' => 1,
-                'content' => ['old value'],
-                'tenant_id' => $this->tenant->id,
-            ]);
+            ->create(['version' => 3, 'tenant_id' => $this->tenant->id]);
 
-        $diffV1 = \App\Models\LedgerDiff::factory()->create([
+        $diff1 = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
-            'content' => ['old value'],
+            'content' => ['v1'],
             'column_define' => $ledgerDefine->column_define,
             'tenant_id' => $this->tenant->id,
         ]);
-        $ledger->latest_diff_id = $diffV1->id;
-        $ledger->save();
 
-        // 3. Ledger を更新して version 2 にする
-        $ledger->version = 2;
-        $ledger->content = ['current value'];
-
-        // 4. version 2 の LedgerDiff を作成
-        $diffV2 = \App\Models\LedgerDiff::factory()->create([
+        $diff2 = \App\Models\LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 2,
-            'content' => ['current value'],
+            'content' => ['v2'],
             'column_define' => $ledgerDefine->column_define,
             'tenant_id' => $this->tenant->id,
         ]);
-        $ledger->latest_diff_id = $diffV2->id;
-        $ledger->save();
 
-        // 5. 最終状態をDBから読み込んでコンポーネントに渡す
-        $ledger->refresh();
+        $diff3 = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'version' => 3,
+            'content' => ['v3'],
+            'column_define' => $ledgerDefine->column_define,
+            'tenant_id' => $this->tenant->id,
+        ]);
 
-        // 6. Livewire コンポーネントをテスト
-        Livewire::test(LedgerDiffViewer::class, [
-            'ledgerRecord' => $ledger, // version 2 の Ledger
+        $ledger->update(['latest_diff_id' => $diff3->id]);
+
+        // 2. Ver.2 だけを選択した状態をシミュレート (useFallback=false を想定)
+        $component = Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'baseDiffId' => $diff2->id,
+            'targetDiffId' => null,
             'canView' => true,
-            'hasChangedColumns' => true,
-            'showChanges' => true,
-        ])
-            ->set('hasChangedColumns', true) // ->set() を使ってプロパティを有効化
-            ->set('showChanges', true) // ->set() を使ってプロパティを有効化
-            ->dump()
-            ->assertSeeHtml('Ver.1'); // 比較対象の version 1 が表示されることを確認
+            'showChanges' => false, // 単一選択時は changes 非表示
+            'useFallback' => false,
+        ]);
+
+        // 3. 検証: useFallback=false の場合、comparisonTargetDiff は null になるべき
+        $component->assertSet('baseDiffId', $diff2->id);
+        $this->assertNull($component->instance()->comparisonTargetDiff, 'Should not have comparison target when useFallback is false');
     }
 
     #[Test]

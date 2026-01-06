@@ -44,7 +44,9 @@ class LedgerDiffViewer extends Component
 
     public ?int $baseDiffId = null;
 
-    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null): void
+    public bool $useFallback = true;
+
+    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null, bool $useFallback = true): void
     {
         $this->ledgerRecord = $ledgerRecord;
         
@@ -52,6 +54,7 @@ class LedgerDiffViewer extends Component
         $this->targetMeta = $targetMeta;
         $this->targetDiffId = $targetDiffId;
         $this->baseDiffId = $baseDiffId;
+        $this->useFallback = $useFallback;
 
         // 差分比較対象を準備
         // Livewire 3 の DI により空のインスタンスが渡されることがあるため exists を確認
@@ -59,8 +62,8 @@ class LedgerDiffViewer extends Component
             $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
         } elseif ($comparisonTargetDiff && $comparisonTargetDiff->exists) {
             $this->comparisonTargetDiff = $comparisonTargetDiff;
-        } else {
-            $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord);
+        } elseif ($this->useFallback) {
+            $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
         }
         
         if ($this->comparisonTargetDiff && ! $this->targetMeta) {
@@ -108,7 +111,11 @@ class LedgerDiffViewer extends Component
                 ];
             }
         } else {
-            $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord);
+            if ($this->useFallback) {
+                $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
+            } else {
+                $this->comparisonTargetDiff = null;
+            }
             $this->targetMeta = null;
         }
     }

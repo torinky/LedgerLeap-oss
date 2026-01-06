@@ -101,8 +101,8 @@
             <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
                 <div class="card-body p-0">
                     <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
-                        :showChanges="true" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
-                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId"
+                        :showChanges="isset($targetDiffId)" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
+                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false"
                         wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
                 </div>
             </div>

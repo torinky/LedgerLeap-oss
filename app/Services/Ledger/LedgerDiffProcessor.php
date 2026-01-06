@@ -10,12 +10,23 @@ class LedgerDiffProcessor
     /**
      * 比較対象となる過去のLedgerDiffを特定するロジック
      */
-    public function findComparisonTargetDiff(Ledger $ledgerRecord): ?LedgerDiff
+    public function findComparisonTargetDiff(Ledger $ledgerRecord, ?int $referenceDiffId = null): ?LedgerDiff
     {
-        $latestDiffId = $ledgerRecord->latest_diff_id;
+        $baseId = $referenceDiffId ?? $ledgerRecord->latest_diff_id;
         $currentRawContent = $ledgerRecord->getRawOriginal('content');
+        
+        // もし referenceDiffId が指定されている場合は、そのレコードの内容を基準にする
+        if ($referenceDiffId) {
+            $refDiff = LedgerDiff::find($referenceDiffId);
+            if ($refDiff) {
+                $currentRawContent = $refDiff->getRawOriginal('content');
+                // バージョンも基準に合わせる
+                $referenceVersion = $refDiff->version;
+            }
+        }
+        $referenceVersion = $referenceVersion ?? $ledgerRecord->version;
 
-        if (! $latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
+        if (! $baseId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
             return null;
         }
 
@@ -23,7 +34,7 @@ class LedgerDiffProcessor
         $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
             ->whereNotNull('content')
             ->where('content', '<>', '[]')
-            ->where('id', '<', $latestDiffId)
+            ->where('id', '<', $baseId)
             ->whereRaw('content != ?', [$currentRawContent])
             ->orderBy('id', 'desc')
             ->first();
@@ -34,7 +45,7 @@ class LedgerDiffProcessor
             $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
                 ->whereNotNull('content')
                 ->where('content', '<>', '[]')
-                ->where('version', '<', $ledgerRecord->version)
+                ->where('version', '<', $referenceVersion)
                 ->orderBy('version', 'desc')
                 ->first();
         }
@@ -44,7 +55,7 @@ class LedgerDiffProcessor
             $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
                 ->whereNotNull('content')
                 ->where('content', '<>', '[]')
-                ->where('id', '<', $latestDiffId)
+                ->where('id', '<', $baseId)
                 ->orderBy('id', 'desc')
                 ->first();
         }

@@ -45,15 +45,6 @@ class LedgerHistoryManager extends Component
             $this->baseDiffId = $latestDiff->id;
         }
 
-        // 比較対象が明示されていない場合、プロセッサを使用してフォールバック先（直前など）を特定する
-        if ($this->targetDiffId === null) {
-            $target = app(\App\Services\Ledger\LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord);
-            if ($target) {
-                $this->targetDiffId = $target->id;
-            }
-        }
-
-
         // 比較対象が指定されている場合、新しい方を base にする
         if ($this->baseDiffId && $this->targetDiffId && $this->baseDiffId < $this->targetDiffId) {
             $tmp = $this->baseDiffId;
@@ -80,9 +71,9 @@ class LedgerHistoryManager extends Component
         if (!$this->hasMore) return;
         
         $this->pageCount++;
+        Log::debug("HistoryManager mount finished. base: $this->baseDiffId, target: $this->targetDiffId");
     }
 
-    // 比較対象を選択（トグル）する
     public function toggleSelection(int $id): void
     {
         if ($this->baseDiffId === $id) {
