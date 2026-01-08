@@ -5,7 +5,6 @@ namespace App\Services\Ledger;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
 class LedgerContentProcessor
 {
@@ -31,7 +30,8 @@ class LedgerContentProcessor
         int $displayLevel,
         \Illuminate\Support\Collection $allAttachments,
         ?string $highlight = null,
-        ?int $baseDiffId = null
+        ?int $baseDiffId = null,
+        bool $showChanges = false
     ): array {
         // 1. 差分データを取得
         $diffResult = $this->ledgerDiffProcessor->prepareContentDiff($ledgerRecord, $comparisonTargetDiff, $baseDiffId);
@@ -76,6 +76,7 @@ class LedgerContentProcessor
                 $columnDisplayLevel = $columnDefine->display_level ?? 3;
                 if ($columnDisplayLevel > $displayLevel) {
                     $omittedCount++;
+
                     continue;
                 }
 
@@ -99,8 +100,20 @@ class LedgerContentProcessor
                     ];
                 }
 
+                // changeがない場合の処理
                 if (! $change) {
-                    continue;
+                    // showChangesがtrueの場合（差分表示モード）は、変更のないカラムをスキップ
+                    if ($showChanges) {
+                        continue;
+                    }
+
+                    // showChangesがfalseの場合（通常表示モード）は、現在の値を表示
+                    $currentValue = $ledgerRecord->content[$columnDefine->id] ?? null;
+                    $change = [
+                        'status' => 'unchanged',
+                        'current_value' => $currentValue,
+                        'old_value' => $currentValue,
+                    ];
                 }
 
                 // 5. HTMLの生成

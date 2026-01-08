@@ -14,7 +14,7 @@ class LedgerDiffProcessor
     {
         $baseId = $referenceDiffId ?? $ledgerRecord->latest_diff_id;
         $currentRawContent = $ledgerRecord->getRawOriginal('content');
-        
+
         // もし referenceDiffId が指定されている場合は、そのレコードの内容を基準にする
         if ($referenceDiffId) {
             $refDiff = LedgerDiff::find($referenceDiffId);
@@ -85,15 +85,13 @@ class LedgerDiffProcessor
                 $contentIndex = $sortedIds->search($colDef->id);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
-                $status = 'added';
-                if (empty($value)) {
-                    $status = 'empty';
-                }
+                // 通常表示時（比較なし）は、すべてunchangedとする
+                $status = 'unchanged';
 
                 return [
                     'column_define' => $colDef->toArray(),
                     'current_value' => $value,
-                    'old_value' => null,
+                    'old_value' => $value, // 比較がない場合は同じ値
                     'status' => $status,
                 ];
             })->all();
@@ -107,10 +105,8 @@ class LedgerDiffProcessor
         // 比較対象がある場合
         $oldContent = $comparisonTargetDiff->content ?? [];
         $oldColumnDefines = collect($comparisonTargetDiff->column_define ?? [])->keyBy('id');
-        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - oldColumnDefines:', $oldColumnDefines->toArray());
 
         $allColumnIds = $currentColumnDefines->keys()->merge($oldColumnDefines->keys())->unique()->values();
-        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - allColumnIds:', $allColumnIds->toArray());
 
         $currentSortedIds = $currentColumnDefines->sortBy('id')->pluck('id')->values();
         $oldSortedIds = $oldColumnDefines->sortBy('id')->pluck('id')->values();
