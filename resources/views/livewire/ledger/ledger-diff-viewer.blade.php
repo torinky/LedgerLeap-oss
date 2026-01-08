@@ -29,22 +29,33 @@
     <div class="space-y-4">
         @foreach ($displayData as $group)
             <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm"
+                x-data="{ isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }} }"
+                x-init="
+                    // Alpine Store と連携
+                    $watch('isOpen', value => {
+                        if ($store.ledgerState.currentLedgerId) {
+                            $store.ledgerState.states[$store.ledgerState.currentLedgerId]['{{ $group['group_name'] }}'] = !value;
+                            localStorage.setItem('ledger_collapsed_states', JSON.stringify($store.ledgerState.states));
+                        }
+                    });
+                    // 初期状態をストアから取得
+                    if ($store.ledgerState.currentLedgerId) {
+                        const stored = $store.ledgerState.isCollapsed('{{ $group['group_name'] }}', {{ $group['is_required_group'] ? 'true' : 'false' }});
+                        isOpen = !stored;
+                    }
+                "
                 :class="{
-                    'collapse-open': !$store.ledgerState.isCollapsed('{{ $group['group_name'] }}',
-                        {{ $group['is_required_group'] ? 'true' : 'false' }}),
-                    'collapse-close': $store.ledgerState
-                        .isCollapsed('{{ $group['group_name'] }}',
-                            {{ $group['is_required_group'] ? 'true' : 'false' }})
+                    'collapse-open': isOpen,
+                    'collapse-close': !isOpen
                 }"
                 wire:key="group-{{ md5($group['group_name']) }}">
 
                 <input type="checkbox" class="hidden" />
 
                 <div class="collapse-title text-sm font-bold flex items-center justify-between cursor-pointer"
-                    @click.stop="$store.ledgerState.toggle('{{ $group['group_name'] }}', {{ $group['is_required_group'] ? 'true' : 'false' }})"
+                    @click.stop="isOpen = !isOpen"
                     role="button"
-                    :aria-expanded="!$store.ledgerState.isCollapsed('{{ $group['group_name'] }}',
-                        {{ $group['is_required_group'] ? 'true' : 'false' }})">
+                    :aria-expanded="isOpen">
                     <div class="flex items-center gap-2">
                         @if ($group['is_required_group'])
                             <span class="badge badge-ghost badge-sm text-error">必須</span>

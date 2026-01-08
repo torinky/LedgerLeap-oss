@@ -126,9 +126,19 @@
 
             {{-- テーマ切り替え --}}
             <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle" x-data="{
-                isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+                init() {
+                    // 初期化時に現在のテーマを確認して、DOMを更新
+                    const theme = localStorage.getItem('theme');
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    this.isDark = theme === 'dark' || (!theme && prefersDark);
+
+                    // チェックボックスの状態を設定
+                    this.$refs.themeToggle.checked = !this.isDark;
+                }
             }">
                 <input type="checkbox"
+                    x-ref="themeToggle"
                     @change.prevent="
                             isDark = !isDark;
                             const newFilamentTheme = isDark ? 'dark' : 'light';

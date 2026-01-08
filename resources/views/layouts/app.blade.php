@@ -64,6 +64,25 @@
     </fooer>
     @vite(['resources/js/app.js'])
     @stack('scripts')
+    <script>
+        // テーマを適用する関数
+        function applyTheme() {
+            const theme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = theme === 'dark' || (!theme && prefersDark);
+
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.dark') }}');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.light') }}');
+            }
+        }
+
+        // Livewireのページ遷移後にテーマを再適用
+        document.addEventListener('livewire:navigated', applyTheme);
+    </script>
     @livewire('attached-file.text-preview-modal')
 </body>
 
