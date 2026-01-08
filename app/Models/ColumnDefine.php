@@ -7,7 +7,7 @@ use App\Models\ColumnTypes\InputTypeFactory;
 
 // Keep for potential other runtime exceptions, though type validation is now in factory
 
-class ColumnDefine
+class ColumnDefine implements \JsonSerializable
 {
     // プロパティの定義
     public int $id;                 // ID
@@ -267,6 +267,11 @@ class ColumnDefine
             'display_level' => $this->display_level,
             'group' => $this->group,
         ];
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return $this->toArray();
     }
 
     public static function normalizeArrayOrCollection($columnDefinesSource): array

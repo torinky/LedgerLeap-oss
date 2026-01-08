@@ -20,7 +20,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 /**
  * @property array $content_attached
  * @property array $content
- * @property BelongsTo $define
+ * @property LedgerDefine $define
  *
  * @method static create(array $array)
  * @method static find(string $ledgerId)

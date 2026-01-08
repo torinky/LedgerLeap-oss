@@ -13,6 +13,7 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
+ * @property \Illuminate\Support\Collection<int, \App\Models\ColumnDefine> $column_define
  * @method static find(Route|object|string|null $route)
  * @method maxColumnId()
  */
