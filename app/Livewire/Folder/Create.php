@@ -7,9 +7,8 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Livewire\Component;
 
-class Create extends Component
+class Create extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

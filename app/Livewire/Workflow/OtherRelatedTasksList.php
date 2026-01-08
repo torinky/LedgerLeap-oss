@@ -4,6 +4,7 @@ namespace App\Livewire\Workflow;
 
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\User;
@@ -14,12 +15,11 @@ use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 // Eloquent Collection
-use Livewire\Component;
 // Support Collection
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
-class OtherRelatedTasksList extends Component
+class OtherRelatedTasksList extends BaseLivewireComponent
 {
     use Toast, WithPagination;
 

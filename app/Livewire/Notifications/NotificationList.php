@@ -3,15 +3,15 @@
 namespace App\Livewire\Notifications;
 
 use App\Helpers\ActivityLogFormatter;
+use App\Livewire\BaseLivewireComponent;
 use App\Models\CustomActivity;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Livewire\Component;
 use Livewire\WithPagination;
 
-class NotificationList extends Component
+class NotificationList extends BaseLivewireComponent
 {
     use WithPagination;
 

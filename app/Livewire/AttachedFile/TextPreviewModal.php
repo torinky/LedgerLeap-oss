@@ -2,14 +2,14 @@
 
 namespace App\Livewire\AttachedFile;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class TextPreviewModal extends Component
+class TextPreviewModal extends BaseLivewireComponent
 {
     use Toast;
 

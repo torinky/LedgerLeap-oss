@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\AutoNumberType;
@@ -15,11 +16,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
-use Livewire\Component;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Mary\Traits\Toast;
 
-class ModifyColumn extends Component
+class ModifyColumn extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast, WithFileUploads;
 

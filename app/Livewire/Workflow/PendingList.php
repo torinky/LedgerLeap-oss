@@ -3,6 +3,7 @@
 namespace App\Livewire\Workflow;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
@@ -13,11 +14,10 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
-class PendingList extends Component
+class PendingList extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast, WithPagination;
 

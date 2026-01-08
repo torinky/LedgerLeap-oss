@@ -4,17 +4,17 @@ namespace App\Livewire\Ledger;
 
 use App\Exports\LedgerExport;
 use App\Jobs\Ledger\ExportJob;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
 /**
  * Ledgerのエクスポートを管理するLivewireコンポーネント
  */
-class Export extends Component
+class Export extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

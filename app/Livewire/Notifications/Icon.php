@@ -2,12 +2,12 @@
 
 namespace App\Livewire\Notifications;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 
-class Icon extends Component
+class Icon extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

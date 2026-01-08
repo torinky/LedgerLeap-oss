@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -11,10 +12,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class Show extends Component
+class Show extends BaseLivewireComponent
 {
     use AuthorizesRequests, InitializesTenantContext, Toast;
 

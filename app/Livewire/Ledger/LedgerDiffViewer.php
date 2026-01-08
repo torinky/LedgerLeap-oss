@@ -2,16 +2,15 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class LedgerDiffViewer extends Component
+class LedgerDiffViewer extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 
@@ -49,7 +48,7 @@ class LedgerDiffViewer extends Component
     public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null, bool $useFallback = true): void
     {
         $this->ledgerRecord = $ledgerRecord;
-        
+
         $this->baseMeta = $baseMeta;
         $this->targetMeta = $targetMeta;
         $this->targetDiffId = $targetDiffId;
@@ -65,7 +64,7 @@ class LedgerDiffViewer extends Component
         } elseif ($this->useFallback) {
             $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
         }
-        
+
         if ($this->comparisonTargetDiff && ! $this->targetMeta) {
             $this->targetMeta = [
                 'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',
@@ -78,9 +77,9 @@ class LedgerDiffViewer extends Component
             $this->allAttachments = $this->ledgerRecord->attachedFiles;
         }
 
-        if ($this->allAttachments !== null && !($this->allAttachments instanceof \Illuminate\Support\Collection && $this->allAttachments->hasAny($this->allAttachments->keys()->toArray()))) {
-             // すでにキーイングされているかチェックするのは難しいので、単純にキーイングする
-             $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
+        if ($this->allAttachments !== null && ! ($this->allAttachments instanceof \Illuminate\Support\Collection && $this->allAttachments->hasAny($this->allAttachments->keys()->toArray()))) {
+            // すでにキーイングされているかチェックするのは難しいので、単純にキーイングする
+            $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
         }
     }
 
@@ -128,7 +127,7 @@ class LedgerDiffViewer extends Component
     {
         $this->baseDiffId = $baseId;
         $this->targetDiffId = $targetId;
-        
+
         // メタ情報のリセット（renderで再生成されるか、あるいはここで取得）
         // シンプルにするため、render時に ID があれば取得するように調整する
         $this->baseMeta = null;
@@ -150,7 +149,7 @@ class LedgerDiffViewer extends Component
     public function render()
     {
         // データの準備（ID が指定されているがモデルがない場合）
-        if ($this->baseDiffId && (!isset($this->baseMeta) || $this->baseMeta === null)) {
+        if ($this->baseDiffId && (! isset($this->baseMeta) || $this->baseMeta === null)) {
             $baseDiff = LedgerDiff::with(['modifier:id,name'])->find($this->baseDiffId);
             if ($baseDiff) {
                 $this->baseMeta = [
@@ -161,7 +160,7 @@ class LedgerDiffViewer extends Component
             }
         }
 
-        if ($this->targetDiffId && (!$this->comparisonTargetDiff || $this->comparisonTargetDiff->id !== $this->targetDiffId)) {
+        if ($this->targetDiffId && (! $this->comparisonTargetDiff || $this->comparisonTargetDiff->id !== $this->targetDiffId)) {
             $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
             if ($this->comparisonTargetDiff) {
                 $this->targetMeta = [
@@ -175,7 +174,7 @@ class LedgerDiffViewer extends Component
         // attachments が準備されていない場合のフォールバック（履歴タブなど）
         if ($this->allAttachments === null || $this->allAttachments->isEmpty()) {
             $this->allAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get()->keyBy('hashedbasename');
-        } elseif (!$this->allAttachments->first() instanceof \App\Models\AttachedFile || !is_string($this->allAttachments->keys()->first())) {
+        } elseif (! $this->allAttachments->first() instanceof \App\Models\AttachedFile || ! is_string($this->allAttachments->keys()->first())) {
             // キーイングされていない可能性があるため、強制的に再キーイング
             $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
         }
@@ -184,14 +183,15 @@ class LedgerDiffViewer extends Component
         // もし baseDiffId が指定されている場合は、その時点の内容を base とする必要があるが、
         // 現状の processContentForDisplay は $ledgerRecord (最新) を前提としている。
         // LedgerDiffProcessor を介して、任意の2つの Diff を比較するロジックが必要。
-        
+
         $result = app(LedgerContentProcessor::class)->processContentForDisplay(
             $this->ledgerRecord,
             $this->comparisonTargetDiff,
             $this->displayLevel,
             $this->allAttachments,
             $this->highlight,
-            $this->baseDiffId // 第6引数として追加（後で processor も修正する）
+            $this->baseDiffId, // 第6引数として追加（後で processor も修正する）
+            $this->showChanges // 第7引数として追加
         );
 
         $this->displayData = $result['displayData'];

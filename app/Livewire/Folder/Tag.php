@@ -2,9 +2,7 @@
 
 namespace App\Livewire\Folder;
 
-use Livewire\Component;
-
-class Tag extends Component
+class Tag extends BaseLivewireComponent
 {
     public $folderId;
 

@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Folder;
@@ -18,13 +19,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
-use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
-class RecordsTable extends Component
+class RecordsTable extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast,withPagination;
 
@@ -81,9 +81,9 @@ class RecordsTable extends Component
     // セマンティック検索ON前の同義語トグル状態を保存
     private $savedUseSynonymState = null;
 
-    protected SynonymService $synonymService;
+    private SynonymService $synonymService;
 
-    protected SearchContext $searchContext;
+    private SearchContext $searchContext;
 
     private $synonymServiceConfig;
 
@@ -359,11 +359,8 @@ class RecordsTable extends Component
     }
 
     #[On('ledgerStored')]
-    public function render(SearchContext $searchContext)
+    public function render()
     {
-        Log::info('RecordsTable render method called.', [
-            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
-        ]);
         // $this->authorize('viewAny', LedgerDefine::class);
         $this->initSearchContext();
 
@@ -543,7 +540,6 @@ class RecordsTable extends Component
 
             // 総数を取得
             $this->totalRecords = $ledgerRecordsQuery->count();
-            Log::info('RecordsTable render: totalRecords', ['totalRecords' => $this->totalRecords]);
 
             // ページネーション実行
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);

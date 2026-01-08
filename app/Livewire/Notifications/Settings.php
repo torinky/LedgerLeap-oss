@@ -2,18 +2,18 @@
 
 namespace App\Livewire\Notifications;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
 // Filament 通知を use
 
-class Settings extends Component
+class Settings extends BaseLivewireComponent
 {
     use Toast;
 

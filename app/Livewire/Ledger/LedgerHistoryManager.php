@@ -2,14 +2,13 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
-use Livewire\Component;
 use Livewire\Attributes\On;
 
-class LedgerHistoryManager extends Component
+class LedgerHistoryManager extends BaseLivewireComponent
 {
     public int $ledgerId;
 
@@ -17,16 +16,19 @@ class LedgerHistoryManager extends Component
 
     // ページング用
     public int $perPage = 10;
+
     public int $pageCount = 1;
+
     public bool $hasMore = true;
 
     // 比較対象
     public ?int $baseDiffId = null; // 基準（新しい方、通常は最新）
+
     public ?int $targetDiffId = null; // 比較対象（古い方）
 
     // 表示用データ
     public ?Ledger $ledgerRecord = null;
-    
+
     // 表示状態の維持用
     public ?string $highlight = '';
 
@@ -36,9 +38,9 @@ class LedgerHistoryManager extends Component
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
         $this->targetDiffId = $targetDiffId;
-        
+
         $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
-        
+
         // 最新の diff ID を取得
         $latestDiff = $this->ledgerRecord->ledgerDiff()->latest('id')->first();
         if ($latestDiff) {
@@ -68,8 +70,10 @@ class LedgerHistoryManager extends Component
 
     public function loadMore(): void
     {
-        if (!$this->hasMore) return;
-        
+        if (! $this->hasMore) {
+            return;
+        }
+
         $this->pageCount++;
         Log::debug("HistoryManager mount finished. base: $this->baseDiffId, target: $this->targetDiffId");
     }
@@ -94,7 +98,7 @@ class LedgerHistoryManager extends Component
 
         // ソート処理（常に大きい方を baseDiffId に、1つだけなら baseDiffId に寄せる）
         $ids = collect([$this->baseDiffId, $this->targetDiffId])->filter()->sortDesc()->values();
-        
+
         $this->baseDiffId = $ids->get(0);
         $this->targetDiffId = $ids->get(1);
 
@@ -110,7 +114,7 @@ class LedgerHistoryManager extends Component
 
         $totalCount = $diffsQuery->count();
         $diffs = $diffsQuery->take($this->perPage * $this->pageCount)->get();
-        
+
         $this->hasMore = $diffs->count() < $totalCount;
 
         // 比較対象のデータを取得

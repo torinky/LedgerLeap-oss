@@ -6,6 +6,7 @@ use App\Enums\AttachedFileStatus;
 use App\Enums\WorkflowStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\ProcessAttachedFile;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -29,16 +30,15 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
-use PHPUnit\Event\Code\Throwable; // 追加
+use Throwable;
 
 /**
  * @method syncInput(string $name, array|mixed[] $files)
  */
-class CreateColumn extends Component
+class CreateColumn extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast, WithFileUploads; // 追加
 
@@ -105,6 +105,14 @@ class CreateColumn extends Component
     protected NumberingService $numberingService; // NumberingService をインジェクト
 
     public array $collapsedStates = [];
+
+    /**
+     * Bladeの wire:submit="store" から呼び出される
+     */
+    public function store(): void
+    {
+        $this->saveDirectly();
+    }
 
     // WorkflowService をインジェクト
     public function boot(WorkflowService $workflowService, NumberingService $numberingService): void

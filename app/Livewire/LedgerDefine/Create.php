@@ -3,13 +3,13 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class Create extends Component
+class Create extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast;
 

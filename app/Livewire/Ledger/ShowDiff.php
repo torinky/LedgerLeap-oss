@@ -2,15 +2,15 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerContentProcessor;
 use Illuminate\Contracts\View\View; // 追加
 use Illuminate\Http\Request;
-use Livewire\Component;
 
-class ShowDiff extends Component
+class ShowDiff extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 
@@ -158,7 +158,9 @@ class ShowDiff extends Component
             null, // 履歴表示では差分比較はしない
             3,    // 全ての項目を表示
             $this->allAttachments,
-            null  // ハイライトなし
+            null,  // ハイライトなし
+            null,  // baseDiffId なし
+            false  // showChanges: 通常表示モード
         );
         $this->displayColumns = $result['displayData'];
     }

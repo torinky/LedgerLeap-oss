@@ -2,15 +2,15 @@
 
 namespace App\Livewire\Workflow;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Ledger\CreateColumn;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Livewire\Ledger\Show;
 use App\Livewire\Traits\InitializesTenantContext;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class WorkflowCommentModal extends Component
+class WorkflowCommentModal extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast;
 

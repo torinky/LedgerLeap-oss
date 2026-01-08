@@ -4,6 +4,7 @@ namespace App\Livewire\Workflow;
 
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -16,9 +17,8 @@ use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Modelable;
-use Livewire\Component;
 
-class WorkflowAssigneeSelect extends Component
+class WorkflowAssigneeSelect extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

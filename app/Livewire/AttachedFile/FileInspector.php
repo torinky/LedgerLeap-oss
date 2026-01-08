@@ -3,16 +3,16 @@
 namespace App\Livewire\AttachedFile;
 
 use App\Helpers\SearchHelper;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Services\PermissionService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class FileInspector extends Component
+class FileInspector extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast;
 
@@ -719,6 +719,7 @@ class FileInspector extends Component
                 'duration_ms' => round($duration, 2),
                 'source' => $this->activeSource,
             ]);
+
             return null;
         }
 

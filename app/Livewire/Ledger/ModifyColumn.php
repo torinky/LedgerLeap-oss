@@ -63,16 +63,6 @@ class ModifyColumn extends CreateColumn
             // 権限チェックのために、LedgerDefineもテナントスコープを無視して取得
             $ledgerDefineRecord = LedgerDefine::withoutTenancy()->find($ledgerRecord->ledger_define_id);
 
-            \Illuminate\Support\Facades\Log::info('ModifyColumn: Debug Permission Check', [
-                'user_id' => Auth::id(),
-                'ledger_id' => $ledgerRecord->id,
-                'ledger_define_id' => $ledgerRecord->ledger_define_id,
-                'define_found' => (bool) $ledgerDefineRecord,
-                'current_tenant' => tenancy()->tenant?->id,
-                'folder_id' => $ledgerDefineRecord?->folder_id,
-                'folder_exists' => $ledgerDefineRecord?->folder ? 'yes' : 'no',
-            ]);
-
             // 権限チェック: ユーザーがこの台帳を閲覧できるか確認
             if (! $ledgerDefineRecord || ! $ledgerDefinePolicy->ledgerView(Auth::user(), $ledgerDefineRecord)) {
                 throw new ModelNotFoundException('Ledger not found or user does not have permission.');

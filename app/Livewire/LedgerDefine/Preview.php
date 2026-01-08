@@ -2,13 +2,13 @@
 
 namespace App\Livewire\LedgerDefine;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class Preview extends Component
+class Preview extends BaseLivewireComponent
 {
     public $ledgerDefineRecord;
 

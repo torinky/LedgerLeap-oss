@@ -3,13 +3,13 @@
 namespace App\Livewire\Folder;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class Tree extends Component
+class Tree extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

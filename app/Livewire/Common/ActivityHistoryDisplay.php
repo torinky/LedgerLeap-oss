@@ -3,6 +3,7 @@
 namespace App\Livewire\Common;
 
 use App\Helpers\ActivityLogFormatter;
+use App\Livewire\BaseLivewireComponent;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,10 +14,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Computed;
-use Livewire\Component;
 use Livewire\WithPagination;
 
-class ActivityHistoryDisplay extends Component
+class ActivityHistoryDisplay extends BaseLivewireComponent
 {
     use WithPagination;
 

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Folder;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Role;
@@ -11,10 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class FolderForm extends Component
+class FolderForm extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast;
 

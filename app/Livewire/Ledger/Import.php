@@ -3,15 +3,15 @@
 namespace App\Livewire\Ledger;
 
 use App\Imports\LedgerImport;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 
-class Import extends Component
+class Import extends BaseLivewireComponent
 {
     use InitializesTenantContext, WithFileUploads;
 

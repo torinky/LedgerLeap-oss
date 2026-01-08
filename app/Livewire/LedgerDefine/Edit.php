@@ -3,16 +3,16 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class Edit extends Component
+class Edit extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast;
 

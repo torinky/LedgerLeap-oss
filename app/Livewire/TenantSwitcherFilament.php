@@ -9,9 +9,8 @@ use App\Services\TenantAccessService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class TenantSwitcherFilament extends Component
+class TenantSwitcherFilament extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

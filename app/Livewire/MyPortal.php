@@ -10,10 +10,9 @@ use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Livewire\Component;
 use Log;
 
-class MyPortal extends Component
+class MyPortal extends BaseLivewireComponent
 {
     public User $user;
 

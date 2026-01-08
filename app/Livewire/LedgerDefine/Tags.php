@@ -2,12 +2,12 @@
 
 namespace App\Livewire\LedgerDefine;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 
-class Tags extends Component
+class Tags extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 

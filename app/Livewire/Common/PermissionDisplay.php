@@ -3,6 +3,7 @@
 namespace App\Livewire\Common;
 
 use App\Enums\FolderPermissionType;
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -14,10 +15,9 @@ use App\Services\PermissionService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
-use Livewire\Component;
 use Livewire\WithPagination;
 
-class PermissionDisplay extends Component
+class PermissionDisplay extends BaseLivewireComponent
 {
     use WithPagination;
 

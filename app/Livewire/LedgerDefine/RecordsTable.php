@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\IndexRequest;
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -10,9 +11,8 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class RecordsTable extends Component
+class RecordsTable extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 
