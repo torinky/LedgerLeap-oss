@@ -1,4 +1,12 @@
-<div class="space-y-6" x-data x-init="$store.ledgerState.init({{ $ledgerRecord->id }})">
+<div class="space-y-6" x-data x-init="
+    console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
+    if ($store.ledgerState) {
+        console.log('[LedgerDiffViewer] Alpine store found, calling init()');
+        $store.ledgerState.init({{ $ledgerRecord->id }});
+    } else {
+        console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
+    }
+">
     @if ($showChanges && $hasChangedColumns)
         <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 rounded-lg border border-base-300">
             <div class="flex items-center gap-4 text-sm">
@@ -29,20 +37,87 @@
     <div class="space-y-4">
         @foreach ($displayData as $group)
             <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm"
-                x-data="{ isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }} }"
+                x-data="{
+                    isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }},
+                    initialized: false,
+                    groupName: '{{ $group['group_name'] }}',
+                    isRequired: {{ $group['is_required_group'] ? 'true' : 'false' }},
+                    ledgerId: {{ $ledgerRecord->id }}
+                }"
                 x-init="
-                    // Alpine Store と連携
+                    console.log('[Group: {{ $group['group_name'] }}] Initializing, isRequired:', {{ $group['is_required_group'] ? 'true' : 'false' }});
+
+                    // 初期状態をストアから取得
+                    const loadFromStore = () => {
+                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                            const stored = $store.ledgerState.isCollapsed(groupName, isRequired);
+                            isOpen = !stored;
+                            console.log('[Group: {{ $group['group_name'] }}] Loaded from store, isOpen:', isOpen);
+                        } else {
+                            console.error('[Group: {{ $group['group_name'] }}] Store not available for initial load');
+                        }
+                    };
+
+                    loadFromStore();
+
+                    // 初期化完了フラグを立てる
+                    initialized = true;
+
+                    // Alpine Store と連携（初期化後のみ保存）
                     $watch('isOpen', value => {
-                        if ($store.ledgerState.currentLedgerId) {
-                            $store.ledgerState.states[$store.ledgerState.currentLedgerId]['{{ $group['group_name'] }}'] = !value;
+                        if (!initialized) {
+                            console.log('[Group: {{ $group['group_name'] }}] Skipping save during initialization');
+                            return;
+                        }
+
+                        console.log('[Group: {{ $group['group_name'] }}] isOpen changed to:', value);
+                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                            $store.ledgerState.states[$store.ledgerState.currentLedgerId][groupName] = !value;
                             localStorage.setItem('ledger_collapsed_states', JSON.stringify($store.ledgerState.states));
+                            console.log('[Group: {{ $group['group_name'] }}] Saved to localStorage, collapsed:', !value);
+                        } else {
+                            console.error('[Group: {{ $group['group_name'] }}] Cannot save state - store not available');
                         }
                     });
-                    // 初期状態をストアから取得
-                    if ($store.ledgerState.currentLedgerId) {
-                        const stored = $store.ledgerState.isCollapsed('{{ $group['group_name'] }}', {{ $group['is_required_group'] ? 'true' : 'false' }});
-                        isOpen = !stored;
-                    }
+
+                    // localStorageの変更を監視
+                    window.addEventListener('storage', (e) => {
+                        if (e.key === 'ledger_collapsed_states' && e.newValue) {
+                            console.log('[Group: {{ $group['group_name'] }}] localStorage changed, reloading');
+                            const states = JSON.parse(e.newValue);
+                            if (states[ledgerId] && states[ledgerId][groupName] !== undefined) {
+                                initialized = false;
+                                isOpen = !states[ledgerId][groupName];
+                                console.log('[Group: {{ $group['group_name'] }}] Updated from localStorage, isOpen:', isOpen);
+                                $nextTick(() => { initialized = true; });
+                            }
+                        }
+                    });
+
+                    // 同一ページ内での変更検知（storageイベントは別タブでしか発火しない）
+                    const checkStorage = setInterval(() => {
+                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                            // ストアから最新の状態を取得
+                            const ledgerStates = $store.ledgerState.states[$store.ledgerState.currentLedgerId];
+                            if (ledgerStates && ledgerStates[groupName] !== undefined) {
+                                const storedCollapsed = ledgerStates[groupName];
+                                const storedIsOpen = !storedCollapsed;
+
+                                // 現在のUIの状態と異なる場合のみ更新
+                                if (storedIsOpen !== isOpen && initialized) {
+                                    console.log('[Group: ' + groupName + '] Detected change in store, current:', isOpen, 'stored:', storedIsOpen);
+                                    initialized = false;
+                                    isOpen = storedIsOpen;
+                                    $nextTick(() => { initialized = true; });
+                                }
+                            }
+                        }
+                    }, 200);
+
+                    // クリーンアップ
+                    $el.addEventListener('destroy', () => {
+                        clearInterval(checkStorage);
+                    });
                 "
                 :class="{
                     'collapse-open': isOpen,

@@ -76,7 +76,6 @@
     @livewire('attached-file.text-preview-modal')
 
     @vite(['resources/js/app.js'])
-    @stack('scripts')
     <script>
         // テーマを適用する関数
         function applyTheme() {
@@ -103,6 +102,7 @@
             }
         });
     </script>
+    @stack('scripts')
 </body>
 
 </html>

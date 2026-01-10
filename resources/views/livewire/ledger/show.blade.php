@@ -2,11 +2,82 @@
     @php
         use App\Enums\WorkflowStatus;
     @endphp
+
+    {{-- Alpine.store を確実に初期化するためのスクリプト --}}
+    <script>
+        // Alpine.jsの初期化イベント内でストアを登録
+        document.addEventListener('alpine:init', () => {
+            console.log('[LedgerState] alpine:init event fired, registering store...');
+
+            // 既に登録済みかチェック
+            try {
+                if (Alpine.store('ledgerState')) {
+                    console.log('[LedgerState] Store already exists, skipping');
+                    return;
+                }
+            } catch (e) {
+                // ストアが存在しない場合は登録を続行
+            }
+
+            Alpine.store('ledgerState', {
+                states: JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}'),
+                currentLedgerId: null,
+
+                init(ledgerId) {
+                    console.log('[LedgerState] init() called with ledgerId:', ledgerId);
+                    this.currentLedgerId = ledgerId;
+                    if (!this.states[ledgerId]) {
+                        this.states[ledgerId] = {};
+                        console.log('[LedgerState] Created new state for ledgerId:', ledgerId);
+                    } else {
+                        console.log('[LedgerState] Loaded existing state for ledgerId:', ledgerId, this.states[ledgerId]);
+                    }
+                },
+
+                reload() {
+                    console.log('[LedgerState] reload() called, refreshing from localStorage');
+                    this.states = JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}');
+                    if (this.currentLedgerId) {
+                        console.log('[LedgerState] Reloaded state for ledgerId:', this.currentLedgerId, this.states[this.currentLedgerId]);
+                    }
+                },
+
+                isCollapsed(groupName, isRequired = false) {
+                    if (!this.currentLedgerId) {
+                        console.log('[LedgerState] isCollapsed() called but currentLedgerId is null');
+                        return false;
+                    }
+                    const ledgerStates = this.states[this.currentLedgerId];
+                    if (ledgerStates[groupName] !== undefined) {
+                        console.log('[LedgerState] isCollapsed(' + groupName + '):', ledgerStates[groupName]);
+                        return ledgerStates[groupName];
+                    }
+                    const defaultValue = !isRequired;
+                    console.log('[LedgerState] isCollapsed(' + groupName + ') using default:', defaultValue, '(isRequired=' + isRequired + ')');
+                    return defaultValue;
+                },
+
+                toggle(groupName, isRequired = false) {
+                    if (!this.currentLedgerId) {
+                        console.log('[LedgerState] toggle() called but currentLedgerId is null');
+                        return;
+                    }
+                    const newValue = !this.isCollapsed(groupName, isRequired);
+                    this.states[this.currentLedgerId][groupName] = newValue;
+                    localStorage.setItem('ledger_collapsed_states', JSON.stringify(this.states));
+                    console.log('[LedgerState] toggle(' + groupName + ') to:', newValue, 'Saved to localStorage');
+                }
+            });
+
+            console.log('[LedgerState] Alpine.store registered successfully');
+        });
+    </script>
+
     <div class="p-0 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
 
         {{-- タブ UI の導入 --}}
         <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
-            tabsClass="flex flex-col mb-10" {{--                     labelDivClass="tabs tabs-lift tabs-xl border-b-[length:var(--border)] border-b-base-content/10" --}} class="w-full">
+            tabsClass="flex flex-col mb-10" class="w-full">
             {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
@@ -124,38 +195,4 @@
     </div>
     {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
     <livewire:attached-file.file-inspector :isInLedgerDetailPage="true" />
-
-    @push('scripts')
-        <script>
-            document.addEventListener('alpine:init', () => {
-                Alpine.store('ledgerState', {
-                    states: JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}'),
-                    currentLedgerId: null,
-
-                    init(ledgerId) {
-                        this.currentLedgerId = ledgerId;
-                        if (!this.states[ledgerId]) {
-                            this.states[ledgerId] = {};
-                        }
-                    },
-
-                    isCollapsed(groupName, isRequired = false) {
-                        if (!this.currentLedgerId) return false;
-                        const ledgerStates = this.states[this.currentLedgerId];
-                        if (ledgerStates[groupName] !== undefined) {
-                            return ledgerStates[groupName];
-                        }
-                        // 初期値: 必須項目があるグループは開く (isCollapsed=false), そうでなければ閉じる (isCollapsed=true)
-                        return !isRequired;
-                    },
-
-                    toggle(groupName, isRequired = false) {
-                        if (!this.currentLedgerId) return;
-                        this.states[this.currentLedgerId][groupName] = !this.isCollapsed(groupName, isRequired);
-                        localStorage.setItem('ledger_collapsed_states', JSON.stringify(this.states));
-                    }
-                });
-            });
-        </script>
-    @endpush
 </div>
