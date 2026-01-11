@@ -80,7 +80,7 @@
                                     label="{{__('ledger.go_to')}}"
                                     icon="o-arrow-right-circle"
                                     class="btn btn-sm btn-neutral mr-4"
-                                    link="{{ route('ledger.index',['tenant' => tenant()?->id, 'l[0]'=>$ledgerDefineRecord->id]) }}"
+                                    link="{{ route('ledger.index', ['tenant' => tenant()?->id, 'l[0]' => $ledgerDefineRecord->id]) }}"
                             />
 
                             <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">
@@ -104,7 +104,7 @@
                         <div class="modal-action">
                             <div class="btnContainer">
                                 <form method="POST"
-                                      action="{{route('ledgerDefine.delete',['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id])}}">
+                                      action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-error"

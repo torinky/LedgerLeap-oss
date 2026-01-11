@@ -1051,7 +1051,7 @@ class CreateColumn extends BaseLivewireComponent
             $this->addAttachedFileRecordIfNecessary(); // これは saveDraft 内で呼ばれるべきか？
             $this->success(
                 __('ledger.workflow.inspection_requested_message'),
-                redirectTo: route('ledger.show', ['ledgerId' => $this->ledgerId])
+                redirectTo: route('ledger.show', ['tenant' => $this->tenantId, 'ledgerId' => $this->ledgerId])
             );
         } catch (\Exception $e) {
             Log::error('Inspection request with comment failed: '.$e->getMessage());

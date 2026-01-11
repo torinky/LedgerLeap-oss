@@ -36,7 +36,7 @@ class UpdateController extends Controller
         $ledgerDefineRecord->folder_id = $request->folderId();
         $ledgerDefineRecord->save();
 
-        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $request->id])
+        return redirect()->route('ledgerDefine.edit', ['tenant' => tenant()->id, 'ledgerDefineId' => $request->id])
             ->with('status', __('ledger define updated successfully !'));
 
     }

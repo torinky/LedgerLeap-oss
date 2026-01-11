@@ -62,7 +62,7 @@ class TaskClaimedMail extends Mailable implements ShouldQueue
         $this->subjectLine = __('ledger.mail.subject.task_claimed', ['appName' => $appName, 'title' => $ledgerTitle]);
         $this->line1 = __('ledger.mail.body.line1.task_claimed_common', ['ledgerTitle' => $ledgerTitle]);
         $this->actionText = __('ledger.mail.action.view_task_details');
-        $this->actionUrl = route('ledger.show', ['ledgerId' => $this->ledger->id]);
+        $this->actionUrl = route('ledger.show', ['tenant' => $this->ledger->tenant_id, 'ledgerId' => $this->ledger->id]);
 
         switch ($this->recipientType) {
             case 'new_assignee':

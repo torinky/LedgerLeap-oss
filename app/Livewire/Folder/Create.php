@@ -74,7 +74,7 @@ class Create extends BaseLivewireComponent
             'modifier_id' => auth()->id(),
         ]);
 
-        return redirect()->route('folder.edit', $folderRecord)
+        return redirect()->route('folder.edit', ['tenant' => tenant()->id, 'folder' => $folderRecord])
             ->with('status', __('ledger.folder.created'));
 
     }

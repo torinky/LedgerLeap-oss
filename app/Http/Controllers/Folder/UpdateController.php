@@ -34,7 +34,7 @@ class UpdateController extends Controller
         //        $folderRecord->appendTo($parentFolderRecord)->save();
         $folderRecord->save();
 
-        return redirect()->route('folder.edit', ['folderId' => $request->id])
+        return redirect()->route('folder.edit', ['tenant' => tenant()->id, 'folder' => $request->id])
             ->with('status', __('folder updated successfully !'));
     }
 

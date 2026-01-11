@@ -1,15 +1,25 @@
 {
   "mcpServers": {
     "laravel-boost": {
-      "command": "./vendor/bin/sail",
+      "type": "stdio",
+      "command": "docker",
       "args": [
-        "./artisan",
+        "exec",
+        "-i",
+        "ledgerleap-laravel-1",
+        "php",
+        "artisan",
         "boost:mcp"
       ]
     },
     "ledgerleap-api": {
-      "command": "./vendor/bin/sail",
+      "type": "stdio",
+      "command": "docker",
       "args": [
+        "exec",
+        "-i",
+        "ledgerleap-laravel-1",
+        "php",
         "artisan",
         "mcp:start",
         "ledgerleap:mcp"
