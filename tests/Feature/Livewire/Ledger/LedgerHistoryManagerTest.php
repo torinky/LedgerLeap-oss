@@ -3,11 +3,11 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\LedgerHistoryManager;
+use App\Models\Folder;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use App\Models\LedgerDefine;
-use App\Models\Folder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,10 +18,15 @@ class LedgerHistoryManagerTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Ledger $ledger;
+
     protected LedgerDefine $ledgerDefine;
+
     protected LedgerDiff $diff1;
+
     protected LedgerDiff $diff2;
+
     protected LedgerDiff $diff3;
 
     protected function setUp(): void
@@ -29,20 +34,20 @@ class LedgerHistoryManagerTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        
+
         $folder = Folder::factory()->create();
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $folder->id,
             'title' => 'Test Ledger',
             'column_define' => [
-                ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]
-            ]
+                ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
+            ],
         ]);
 
         $this->ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 3,
-            'content' => [['0' => 'Value 3']]
+            'content' => [['0' => 'Value 3']],
         ]);
 
         // 作成された履歴（Diff）をシミュレート
@@ -56,7 +61,7 @@ class LedgerHistoryManagerTest extends TestCase
             'completed_approver_role_ids' => [],
             'modifier_id' => $this->user->id,
             'creator_id' => $this->user->id,
-            'created_at' => now()->subDays(2)
+            'created_at' => now()->subDays(2),
         ]);
 
         $this->diff2 = LedgerDiff::create([
@@ -69,7 +74,7 @@ class LedgerHistoryManagerTest extends TestCase
             'completed_approver_role_ids' => [],
             'modifier_id' => $this->user->id,
             'creator_id' => $this->user->id,
-            'created_at' => now()->subDay()
+            'created_at' => now()->subDay(),
         ]);
 
         $this->diff3 = LedgerDiff::create([
@@ -82,7 +87,7 @@ class LedgerHistoryManagerTest extends TestCase
             'completed_approver_role_ids' => [],
             'modifier_id' => $this->user->id,
             'creator_id' => $this->user->id,
-            'created_at' => now()
+            'created_at' => now(),
         ]);
 
         $this->ledger->update(['latest_diff_id' => $this->diff3->id]);
@@ -111,7 +116,6 @@ class LedgerHistoryManagerTest extends TestCase
         $component = Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
 
-
         // 初期状態で $diff3 (base) のみが選択されているはず（target は null）
         $component->assertSet('baseDiffId', $this->diff3->id)
             ->assertSet('targetDiffId', null);
@@ -131,11 +135,24 @@ class LedgerHistoryManagerTest extends TestCase
         $component->assertSet('baseDiffId', null)
             ->assertSet('targetDiffId', null);
 
-        // $diff2 と $diff1 を選択
-        $component->call('toggleSelection', $this->diff2->id)
-            ->call('toggleSelection', $this->diff1->id);
+        // $diff2 と $diff1 を選択（任意2バージョン比較の検証）
+        $component->call('toggleSelection', $this->diff2->id) // base
+            ->call('toggleSelection', $this->diff1->id); // target
+
         $component->assertSet('baseDiffId', $this->diff2->id)
-            ->assertSet('targetDiffId', $this->diff1->id);
+            ->assertSet('targetDiffId', $this->diff1->id)
+            ->assertViewHas('baseDiff', function ($diff) {
+                return $diff->id === $this->diff2->id;
+            })
+            ->assertViewHas('targetDiff', function ($diff) {
+                return $diff->id === $this->diff1->id;
+            })
+            ->assertViewHas('baseMeta', function ($meta) {
+                return $meta['version'] === 2 && $meta['modifier_name'] === $this->user->name;
+            })
+            ->assertViewHas('targetMeta', function ($meta) {
+                return $meta['version'] === 1 && $meta['modifier_name'] === $this->user->name;
+            });
     }
 
     #[Test]
@@ -153,7 +170,7 @@ class LedgerHistoryManagerTest extends TestCase
                 'completed_approver_role_ids' => [],
                 'modifier_id' => $this->user->id,
                 'creator_id' => $this->user->id,
-                'created_at' => now()->subSeconds($i)
+                'created_at' => now()->subSeconds($i),
             ]);
         }
 
@@ -170,5 +187,17 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 25; // 20 + 5
             });
+    }
+
+    #[Test]
+    public function it_propagates_highlight_to_view()
+    {
+        Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, [
+                'ledgerId' => $this->ledger->id,
+                'highlight' => 'Value',
+            ])
+            ->assertSet('highlight', 'Value')
+            ->assertSee('Value'); // 検索ハイライトが存在する場合、ビューに反映されることを確認
     }
 }
