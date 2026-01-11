@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +11,8 @@ use Livewire\Attributes\On;
 
 class LedgerHistoryManager extends BaseLivewireComponent
 {
+    use LogPerformance;
+
     public int $ledgerId;
 
     public int $historyDisplayLevel = 3;
@@ -34,6 +37,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
     public function mount(int $ledgerId, int $displayLevel = 3, ?string $highlight = null, ?int $targetDiffId = null): void
     {
+        $startTime = microtime(true);
+
         $this->ledgerId = $ledgerId;
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
@@ -53,6 +58,15 @@ class LedgerHistoryManager extends BaseLivewireComponent
             $this->baseDiffId = $this->targetDiffId;
             $this->targetDiffId = $tmp;
         }
+
+        $this->logPerformance('ledger_mount', (microtime(true) - $startTime) * 1000);
+    }
+
+    protected function getPerformanceContext(): array
+    {
+        return [
+            'ledger_id' => $this->ledgerId,
+        ];
     }
 
     #[On('displayLevelUpdated')]
@@ -70,16 +84,22 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
     public function loadMore(): void
     {
+        $startTime = microtime(true);
+
         if (! $this->hasMore) {
             return;
         }
 
         $this->pageCount++;
         Log::debug("HistoryManager mount finished. base: $this->baseDiffId, target: $this->targetDiffId");
+
+        $this->logPerformance('ledger_load_more', (microtime(true) - $startTime) * 1000);
     }
 
     public function toggleSelection(int $id): void
     {
+        $startTime = microtime(true);
+
         if ($this->baseDiffId === $id) {
             $this->baseDiffId = null;
         } elseif ($this->targetDiffId === $id) {
@@ -103,10 +123,14 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->targetDiffId = $ids->get(1);
 
         $this->dispatch('versionsSelected', baseId: $this->baseDiffId, targetId: $this->targetDiffId);
+
+        $this->logPerformance('ledger_toggle_selection', (microtime(true) - $startTime) * 1000);
     }
 
     public function render()
     {
+        $startTime = microtime(true);
+
         $diffsQuery = $this->ledgerRecord->ledgerDiff()
             ->with(['modifier:id,name', 'inspector:id,name', 'approver:id,name'])
             ->orderBy('created_at', 'desc')
@@ -135,6 +159,11 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'version' => $targetDiff->version,
             'comment' => $targetDiff->comment,
         ] : null;
+
+        $this->logPerformance('ledger_diff_render', (microtime(true) - $startTime) * 1000, [
+            'diffs_count' => $diffs->count(),
+            'has_more' => $this->hasMore,
+        ]);
 
         return view('livewire.ledger.ledger-history-manager', [
             'history' => $diffs,

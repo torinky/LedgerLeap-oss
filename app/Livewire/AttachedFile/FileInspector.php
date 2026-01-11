@@ -8,15 +8,27 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Services\PermissionService;
 use Illuminate\Support\Facades\Gate;
+use App\Livewire\Traits\LogPerformance;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Mary\Traits\Toast;
 
 class FileInspector extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast;
+    use InitializesTenantContext, Toast, LogPerformance;
 
     protected PermissionService $permissionService;
+// ... (skip unchanged lines) ...
+    /**
+     * コンポーネント固有のパフォーマンスコンテキスト
+     */
+    protected function getPerformanceContext(): array
+    {
+        return [
+            'file_id' => $this->fileId,
+            'tab' => $this->selectedTab,
+        ];
+    }
 
     public function boot(PermissionService $permissionService)
     {
@@ -1067,43 +1079,7 @@ class FileInspector extends BaseLivewireComponent
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
     }
 
-    /**
-     * フロントエンドからのパフォーマンスログを記録
-     */
-    public function logPerformance(string $metric, float $duration, array $metadata = []): void
-    {
-        // パフォーマンス測定が無効な場合は何もしない
-        if (! config('ledgerleap.performance.enabled', false)) {
-            return;
-        }
 
-        // メトリクス種別ごとの有効/無効チェック
-        if (! config("ledgerleap.performance.metrics.{$metric}", true)) {
-            return;
-        }
-
-        $logData = array_merge([
-            'metric' => $metric,
-            'duration_ms' => round($duration, 2),
-            'file_id' => $this->fileId,
-            'tab' => $this->selectedTab,
-        ], $metadata);
-
-        $logDestination = config('ledgerleap.performance.log_destination', 'both');
-
-        // Laravel標準ログへの記録
-        if (in_array($logDestination, ['log', 'both'])) {
-            \Illuminate\Support\Facades\Log::info("[FileInspector Performance] {$metric}", $logData);
-        }
-
-        // JSON統計ファイルへの記録
-        if (in_array($logDestination, ['json', 'both'])) {
-            $statsFile = storage_path('logs/performance_stats.json');
-            $stats = file_exists($statsFile) ? json_decode(file_get_contents($statsFile), true) : [];
-            $stats[] = array_merge($logData, ['timestamp' => now()->toISOString()]);
-            file_put_contents($statsFile, json_encode($stats, JSON_PRETTY_PRINT));
-        }
-    }
 
     /**
      * 全ての処理（VLM/OCR/Tika）が失敗したかを判定

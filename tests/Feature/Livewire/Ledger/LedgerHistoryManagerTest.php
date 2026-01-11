@@ -200,4 +200,42 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertSet('highlight', 'Value')
             ->assertSee('Value'); // 検索ハイライトが存在する場合、ビューに反映されることを確認
     }
+
+    #[Test]
+    public function it_logs_performance_metrics_when_enabled()
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
+
+        \Illuminate\Support\Facades\Log::spy();
+
+        $component = Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
+            ->set('perPage', 1);
+
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+            ->withArgs(function ($message, $context) {
+                return $message === '[Performance] ledger_mount'
+                    && isset($context['duration_ms'])
+                    && $context['ledger_id'] === $this->ledger->id;
+            });
+
+        // Toggle selection logic check
+        $component->call('toggleSelection', $this->diff2->id);
+
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+            ->withArgs(function ($message, $context) {
+                return $message === '[Performance] ledger_toggle_selection'
+                    && isset($context['duration_ms']);
+            });
+
+        // Load more logic check
+        $component->call('loadMore');
+
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+            ->withArgs(function ($message, $context) {
+                return $message === '[Performance] ledger_load_more'
+                    && isset($context['duration_ms']);
+            });
+    }
 }

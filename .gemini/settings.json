@@ -3,19 +3,18 @@
     "previewFeatures": true
   },
   "mcpServers": {
-    "sail-laravel-boost": {
-      "command": "./vendor/bin/sail",
+    "laravel-boost": {
+      "command": "/bin/sh",
       "args": [
-        "artisan",
-        "boost:mcp"
+        "-c",
+        "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && vendor/bin/sail artisan boost:mcp"
       ]
     },
     "ledgerleap-api": {
-      "command": "./vendor/bin/sail",
+      "command": "/bin/sh",
       "args": [
-        "artisan",
-        "mcp:start",
-        "ledgerleap:mcp"
+        "-c",
+        "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && vendor/bin/sail artisan mcp:start ledgerleap:mcp"
       ]
     },
     "serena": {
@@ -23,7 +22,7 @@
       "args": [
         "run",
         "--directory",
-        "../../serena",
+        "/Users/kazutaka/serena",
         "serena-mcp-server",
         "--transport",
         "stdio",
@@ -38,8 +37,7 @@
         "SERENA_ROOT": "${SERENA_ROOT}",
         "PROJECT_ROOT": "${PROJECT_ROOT}"
       }
-    }
-  },
+    },
   "ui": {
     "theme": "Default"
   }

@@ -168,6 +168,7 @@
             <x-mary-alert icon="o-question-mark-circle" class="alert-warning shadow-sm">
                 <div>
                     <h3 class="font-bold text-sm">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
+                    <p class="text-xs mt-1">{{ __('ledger.file_inspector.status.unsupported_format_message') }}</p>
                     <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                         class="btn btn-xs btn-primary mt-2" download>
                         {{ __('ledger.file_inspector.actions.download') }}
@@ -180,8 +181,17 @@
                     <h3 class="font-bold text-sm">{{ __('ledger.file_inspector.status.all_failed_title') }}</h3>
                     <p class="text-xs mt-1">{{ __('ledger.file_inspector.status.all_failed_message') }}</p>
                     @if ($this->canPerformAction('retry'))
-                        <button class="btn btn-xs btn-outline mt-2" wire:click="retryProcessing">
-                            {{ __('ledger.file_inspector.actions.retry_all') }}
+                        <div class="flex gap-2 mt-2">
+                            <button class="btn btn-xs btn-outline" wire:click="retryProcessing">
+                                {{ __('ledger.file_inspector.actions.retry_all') }}
+                            </button>
+                            <button class="btn btn-xs btn-ghost text-base-content/70">
+                                {{ __('ledger.file_inspector.actions.contact_support') }}
+                            </button>
+                        </div>
+                    @else
+                        <button class="btn btn-xs btn-ghost text-base-content/70 mt-2">
+                            {{ __('ledger.file_inspector.actions.contact_support') }}
                         </button>
                     @endif
                 </div>

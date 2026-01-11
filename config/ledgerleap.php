@@ -148,6 +148,10 @@ return [
             'search_keyword_update' => env('PERFORMANCE_METRIC_SEARCH', true),
             'search_render' => env('PERFORMANCE_METRIC_SEARCH', true),
             'image_preview_load' => env('PERFORMANCE_METRIC_IMAGE_PREVIEW', true),
+            'ledger_diff_render' => env('PERFORMANCE_METRIC_LEDGER_DIFF', true),
+            'ledger_load_more' => env('PERFORMANCE_METRIC_LEDGER_LOAD_MORE', true),
+            'ledger_mount' => env('PERFORMANCE_METRIC_LEDGER_MOUNT', true),
+            'ledger_toggle_selection' => env('PERFORMANCE_METRIC_LEDGER_TOGGLE', true),
         ],
     ],
 ];

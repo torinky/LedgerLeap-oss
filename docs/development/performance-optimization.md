@@ -361,17 +361,51 @@ Schema::table('ledgers', function (Blueprint $table) {
 ">
 ```
 
-#### Livewireコンポーネントでの測定
+#### Livewireコンポーネントでの測定 (`LogPerformance`トレイト)
+
+統一された測定のため、`App\Livewire\Traits\LogPerformance`トレイトを使用してください。
 
 ```php
-public function logPerformance($action, $duration)
+use App\Livewire\Traits\LogPerformance;
+
+class LedgerHistoryManager extends Component
 {
-    Log::info("Performance: {$action}", [
-        'duration_ms' => round($duration, 2),
-        'user_id' => auth()->id(),
-        'timestamp' => now()->toIso8601String(),
-    ]);
+    use LogPerformance;
+
+    public function mount()
+    {
+        $startTime = microtime(true);
+        
+        // ...処理...
+
+        // 測定結果をログ記録
+        $this->logPerformance('ledger_mount', (microtime(true) - $startTime) * 1000);
+    }
+    
+    // オプション: コンテキスト情報の追加
+    protected function getPerformanceContext(): array
+    {
+        return ['ledger_id' => $this->ledgerId];
+    }
 }
+```
+
+#### 設定 (`config/ledgerleap.php`)
+
+パフォーマンス測定の有効化と出力先を設定できます。
+
+```php
+'performance' => [
+    'enabled' => env('PERFORMANCE_LOGGING_ENABLED', false),
+    'log_destination' => 'log', // 'log', 'json', 'both'
+    'metrics' => [
+        'ledger_mount' => true,
+        'ledger_diff_render' => true,
+        'ledger_load_more' => true,
+        'ledger_toggle_selection' => true,
+        // ...
+    ],
+],
 ```
 
 ### 5.2. Laravel Debugbarの活用
