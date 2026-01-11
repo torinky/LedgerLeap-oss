@@ -1,5 +1,38 @@
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="{
+    focusedIndex: 0,
+    historyCount: {{ count($history) }},
+    selectionAnnouncement: '',
+    focusRow(index) {
+        this.focusedIndex = index;
+        const row = this.$refs['history-row-' + index];
+        if (row) row.focus();
+    },
+    announceSelection(isSelected, version) {
+        if (isSelected) {
+            this.selectionAnnouncement = `{{ __('ledger.diff.selection_added', ['version' => '__VERSION__']) }}`.replace('__VERSION__', version);
+        } else {
+            this.selectionAnnouncement = `{{ __('ledger.diff.selection_removed', ['version' => '__VERSION__']) }}`.replace('__VERSION__', version);
+        }
+        setTimeout(() => { this.selectionAnnouncement = ''; }, 1000);
+    },
+    handleKeyDown(event, diffId, index, isCurrentlySelected, version) {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (index < this.historyCount - 1) this.focusRow(index + 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (index > 0) this.focusRow(index - 1);
+        } else if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            $wire.toggleSelection(diffId).then(() => {
+                this.announceSelection(!isCurrentlySelected, version);
+            });
+        }
+    }
+}">
     {{-- 左側: 承認履歴テーブル (4/12 or 5/12) --}}
+    <!-- スクリーンリーダー用の選択状態通知 -->
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" x-text="selectionAnnouncement"></div>
     <div
         class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
         <div
@@ -23,15 +56,20 @@
             </div>
         </div>
 
-        <div class="divide-y divide-base-200">
-            @foreach ($history as $diff)
+        <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
+            @foreach ($history as $index => $diff)
                 @php
                     $isBase = $baseDiffId === $diff->id;
                     $isTarget = $targetDiffId === $diff->id;
                     $isSelected = $isBase || $isTarget;
                 @endphp
-                <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }}"
-                    wire:click="toggleSelection({{ $diff->id }})" wire:key="history-row-{{ $diff->id }}">
+                <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    role="listitem" tabindex="0" aria-selected="{{ $isSelected ? 'true' : 'false' }}"
+                    aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? '不明']) }}{{ $isSelected ? '、選択済み' : '' }}"
+                    x-ref="history-row-{{ $index }}"
+                    @click="$wire.toggleSelection({{ $diff->id }}).then(() => announceSelection({{ $isSelected ? 'false' : 'true' }}, {{ $diff->version }}))"
+                    @keydown="handleKeyDown($event, {{ $diff->id }}, {{ $index }}, {{ $isSelected ? 'true' : 'false' }}, {{ $diff->version }})"
+                    wire:key="history-row-{{ $diff->id }}">
 
                     @if ($isBase)
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
@@ -55,7 +93,8 @@
                         <div class="flex items-center gap-2 text-xs">
                             <div class="avatar placeholder">
                                 <div class="bg-neutral text-neutral-content rounded-full w-5 h-5">
-                                    <span class="text-[8px]">{{ mb_substr($diff->modifier?->name ?? '?', 0, 1) }}</span>
+                                    <span
+                                        class="text-[8px]">{{ mb_substr($diff->modifier?->name ?? '?', 0, 1) }}</span>
                                 </div>
                             </div>
                             <span class="truncate">{{ $diff->modifier?->name }}</span>

@@ -365,7 +365,10 @@ return [
         'modified' => '変更',
         'no_changes' => '変更はありません',
         'previous_value' => '以前の値',
-        'omitted_items' => ':count項目の非表示項目があります',
+        'version_label' => 'バージョン :version、:date、:user',
+        // Selection announcement messages for VoiceOver
+        'selection_added' => 'バージョン :version を選択しました',
+        'selection_removed' => 'バージョン :version の選択を解除しました',
     ],
     'disable' => '無効にする',
     'disable_notification' => '通知を無効にする',
