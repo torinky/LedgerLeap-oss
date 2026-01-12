@@ -12,7 +12,7 @@
                 </label>
                 {{-- ドロップダウンメニューの内容 --}}
                 <ul tabindex="0"
-                    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    class="menu menu-sm dropdown-content mt-3 z-[30] p-2 shadow bg-base-100 rounded-box w-52">
                     @if (tenant())
                         <li>
                             <x-daisyui-nav-link :href="route('ledger.index', ['tenant' => tenant()->id])" :active="request()->routeIs('ledger.index')">
@@ -98,7 +98,7 @@
                     <i class="fas fa-chevron-down ml-1 text-xs"></i>
                 </label>
                 <ul tabindex="2"
-                    class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    class="menu menu-sm dropdown-content mt-3 z-[30] p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
                         <x-daisyui-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.edit')"> {{-- active 状態を追加 --}}
                             <i class="fas fa-user-edit w-4 mr-2"></i> {{ __('ledger.navigation.profile') }}
@@ -132,13 +132,12 @@
                     const theme = localStorage.getItem('theme');
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                     this.isDark = theme === 'dark' || (!theme && prefersDark);
-
+            
                     // チェックボックスの状態を設定
                     this.$refs.themeToggle.checked = !this.isDark;
                 }
             }">
-                <input type="checkbox"
-                    x-ref="themeToggle"
+                <input type="checkbox" x-ref="themeToggle"
                     @change.prevent="
                             isDark = !isDark;
                             const newFilamentTheme = isDark ? 'dark' : 'light';
