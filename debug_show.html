@@ -1,0 +1,1242 @@
+<div wire:snapshot="{&quot;data&quot;:{&quot;canView&quot;:true,&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;canUpdate&quot;:false,&quot;currentLedgerAttachments&quot;:[null,{&quot;keys&quot;:[],&quot;class&quot;:&quot;Illuminate\\Database\\Eloquent\\Collection&quot;,&quot;modelClass&quot;:null,&quot;s&quot;:&quot;elcln&quot;}],&quot;selectedTab&quot;:&quot;details&quot;,&quot;displayLevel&quot;:3,&quot;refresh&quot;:false,&quot;showChanges&quot;:false,&quot;targetDiffId&quot;:null,&quot;highlight&quot;:null,&quot;comparisonTargetDiffModel&quot;:null,&quot;tenantId&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;jy3PmRSBLAVvhuXK44VD&quot;,&quot;name&quot;:&quot;ledger.show&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:{&quot;status-card-12&quot;:[&quot;div&quot;,&quot;62QSHUT7ChAMJkut4NoF&quot;],&quot;diff-viewer-12&quot;:[&quot;div&quot;,&quot;NZRahUlNwPOc9YsogEXV&quot;],&quot;history-manager-12&quot;:[&quot;div&quot;,&quot;AyCvSjvloxMM8UgrTIUE&quot;],&quot;action-buttons-12&quot;:[&quot;div&quot;,&quot;7y5dwPNFZHZh5xJtQKiw&quot;],&quot;workflow-comment-modal-show&quot;:[&quot;div&quot;,&quot;PNQL1Ry76JxaEV6rbMki&quot;],&quot;lw-3499286601-7&quot;:[&quot;div&quot;,&quot;sva1Hh8rPlO3XSZkxuMS&quot;]},&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;709755ef768f7f01ce0495f4ffd3356ca168f8c3aa6cf6bdfdbe25599edd2d0c&quot;}" wire:effects="{&quot;url&quot;:{&quot;selectedTab&quot;:{&quot;as&quot;:&quot;tab&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;displayLevel&quot;:{&quot;as&quot;:&quot;dl&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;refresh&quot;:{&quot;as&quot;:&quot;refresh&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;showChanges&quot;:{&quot;as&quot;:&quot;sc&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;targetDiffId&quot;:{&quot;as&quot;:&quot;td&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;highlight&quot;:{&quot;as&quot;:&quot;highlight&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null}},&quot;listeners&quot;:[&quot;workflowUpdated&quot;,&quot;navigate-to-ledger-tab&quot;,&quot;displayLevelUpdated&quot;,&quot;versionsSelected&quot;,&quot;switchToHistoryTab&quot;,&quot;retryProcessingEvent&quot;,&quot;retry-file-processing&quot;]}" wire:id="jy3PmRSBLAVvhuXK44VD">
+    
+    
+    <script>
+        // Alpine.jsの初期化イベント内でストアを登録
+        document.addEventListener('alpine:init', () => {
+            console.log('[LedgerState] alpine:init event fired, registering store...');
+
+            // 既に登録済みかチェック
+            try {
+                if (Alpine.store('ledgerState')) {
+                    console.log('[LedgerState] Store already exists, skipping');
+                    return;
+                }
+            } catch (e) {
+                // ストアが存在しない場合は登録を続行
+            }
+
+            Alpine.store('ledgerState', {
+                states: JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}'),
+                currentLedgerId: null,
+
+                init(ledgerId) {
+                    console.log('[LedgerState] init() called with ledgerId:', ledgerId);
+                    this.currentLedgerId = ledgerId;
+                    if (!this.states[ledgerId]) {
+                        this.states[ledgerId] = {};
+                        console.log('[LedgerState] Created new state for ledgerId:', ledgerId);
+                    } else {
+                        console.log('[LedgerState] Loaded existing state for ledgerId:', ledgerId, this
+                            .states[ledgerId]);
+                    }
+                },
+
+                reload() {
+                    console.log('[LedgerState] reload() called, refreshing from localStorage');
+                    this.states = JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}');
+                    if (this.currentLedgerId) {
+                        console.log('[LedgerState] Reloaded state for ledgerId:', this.currentLedgerId, this
+                            .states[this.currentLedgerId]);
+                    }
+                },
+
+                isCollapsed(groupName, isRequired = false) {
+                    if (!this.currentLedgerId) {
+                        console.log('[LedgerState] isCollapsed() called but currentLedgerId is null');
+                        return false;
+                    }
+                    const ledgerStates = this.states[this.currentLedgerId];
+                    if (ledgerStates[groupName] !== undefined) {
+                        console.log('[LedgerState] isCollapsed(' + groupName + '):', ledgerStates[
+                            groupName]);
+                        return ledgerStates[groupName];
+                    }
+                    const defaultValue = !isRequired;
+                    console.log('[LedgerState] isCollapsed(' + groupName + ') using default:', defaultValue,
+                        '(isRequired=' + isRequired + ')');
+                    return defaultValue;
+                },
+
+                toggle(groupName, isRequired = false) {
+                    if (!this.currentLedgerId) {
+                        console.log('[LedgerState] toggle() called but currentLedgerId is null');
+                        return;
+                    }
+                    const newValue = !this.isCollapsed(groupName, isRequired);
+                    this.states[this.currentLedgerId][groupName] = newValue;
+                    localStorage.setItem('ledger_collapsed_states', JSON.stringify(this.states));
+                    console.log('[LedgerState] toggle(' + groupName + ') to:', newValue,
+                        'Saved to localStorage');
+                }
+            });
+
+            console.log('[LedgerState] Alpine.store registered successfully');
+        });
+    </script>
+
+    <div class="p-0 rounded-b-xl sm:w-full"> 
+
+        
+        <div
+        x-data="{
+                tabs: [],
+                selected:
+                                            window.Livewire.find('jy3PmRSBLAVvhuXK44VD').entangle('selectedTab')                            }"
+        class="flex flex-col mb-10"
+        x-class="font-semibold pb-1 border-b-[length:var(--border)] border-b-base-content/50 border-b-base-content/10 flex overflow-x-auto scrollbar-hide relative w-full"
+    >
+        <!-- TAB LABELS -->
+        <div class="tabs tabs-lift tabs-xl ml-4">
+            <template x-for="tab in tabs">
+                <a
+                    role="tab"
+                    x-html="tab.label"
+                     @click="tab.disabled ? null: selected = tab.name"
+                    :class="{ 'border-b-0 tab-active': selected === tab.name, 'hidden': tab.hidden }"
+                    class="tab font-semibold pb-1"></a>
+            </template>
+        </div>
+
+        <!-- TAB CONTENT -->
+        <div role="tablist" class="block w-full">
+            <a
+        class="hidden tab"
+        :class="{ 'tab-active': selected === 'details' }"
+        data-name="details"
+        x-init="
+                const newItem = { name: 'details', label: &quot;&lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;        &lt;div class=\&quot;inline-flex items-center gap-1\&quot;&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;        &lt;svg class=\&quot;inline flex-shrink-0 w-5 h-5 me-2 whitespace-nowrap\&quot; xmlns=\&quot;http:\/\/www.w3.org\/2000\/svg\&quot; fill=\&quot;none\&quot; viewBox=\&quot;0 0 24 24\&quot; stroke-width=\&quot;1.5\&quot; stroke=\&quot;currentColor\&quot; aria-hidden=\&quot;true\&quot; data-slot=\&quot;icon\&quot;&gt;\n  &lt;path stroke-linecap=\&quot;round\&quot; stroke-linejoin=\&quot;round\&quot; d=\&quot;M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z\&quot;\/&gt;\n&lt;\/svg&gt;\n    &lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;            &lt;div class=\&quot;me-2 whitespace-nowrap\&quot; &gt;\n                \u57fa\u672c\u60c5\u5831\n            &lt;\/div&gt;\n        &lt;\/div&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;            &quot;, disabled: false, hidden: false };
+                const index = tabs.findIndex(item => item.name === 'details');
+                index !== -1 ? tabs[index] = newItem : tabs.push(newItem);
+
+                Livewire.hook('morph.removed', ({el}) => {
+                    if (el.getAttribute('data-name') == 'details'){
+                        tabs = tabs.filter(i => i.name !== 'details')
+                    }
+                })
+            "
+    ></a>
+
+    <div x-show="selected === 'details'" role="tabpanel" class="tab-content py-5 px-1 shadow-lg space-y-4">
+        <!--[if BLOCK]><![endif]-->                    <div wire:snapshot="{&quot;data&quot;:{&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;approvalRequestModal&quot;:false,&quot;returnToDraftModal&quot;:false,&quot;selectedApproverId&quot;:null,&quot;showAssigneeModalForNext&quot;:false,&quot;nextAssigneeRoleType&quot;:&quot;approver&quot;,&quot;approverOptions&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;returnComment&quot;:&quot;&quot;,&quot;showCommentModal&quot;:false,&quot;actionTypeForModal&quot;:&quot;&quot;,&quot;commentForModal&quot;:&quot;&quot;,&quot;showAssigneeModal&quot;:false},&quot;memo&quot;:{&quot;id&quot;:&quot;62QSHUT7ChAMJkut4NoF&quot;,&quot;name&quot;:&quot;ledger.workflow-status-card&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;03f2bf5710bfae34790d0657275ffa22d3eeaa9d3e8a3f187e237ceebb2872ac&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;assignee-selected&quot;,&quot;workflow-action-with-comment&quot;]}" wire:id="62QSHUT7ChAMJkut4NoF">
+
+<div
+        class="card bg-base-100 p-5 shadow-xs" wire:key="mary7fdf6e7c771e765f630f487ef679226d"
+    >
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!--[if BLOCK]><![endif]-->            <div class="pb-5">
+                <div class="flex gap-3 justify-between items-center w-full">
+                    <div class="grow-1">
+                        <!--[if BLOCK]><![endif]-->                            <div class="text-xl font-bold " >
+                                現在のステータス
+                            </div>
+                        <!--[if ENDBLOCK]><![endif]-->                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    </div>
+
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </div>
+
+                <!--[if BLOCK]><![endif]-->                    <hr class="mt-3 border-t-[length:var(--border)] border-base-content/10" />
+
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                <!--[if ENDBLOCK]><![endif]-->            </div>
+        <!--[if ENDBLOCK]><![endif]-->
+        <div class="grow-1 null">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center"> 
+        
+        <div class="flex items-center w-full justify-center">
+            <div class="badge badge-ghost text-lg p-2">
+        作成中/編集中
+    </div>
+        </div>
+
+        <div>
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        </div>
+
+        
+
+        <div class="join flex flex-wrap items-center justify-end w-full">
+
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        </div>
+
+    </div>
+        </div>
+
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div></div>                <!--[if ENDBLOCK]><![endif]-->
+                <div
+        class="card bg-base-100 p-5 shadow-xs" wire:key="mary1cf1adb0cff57418299e41522dfa7572" icon="o-document-text"
+    >
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!--[if BLOCK]><![endif]-->            <div class="pb-5">
+                <div class="flex gap-3 justify-between items-center w-full">
+                    <div class="grow-1">
+                        <!--[if BLOCK]><![endif]-->                            <div class="text-xl font-bold " >
+                                詳細
+                            </div>
+                        <!--[if ENDBLOCK]><![endif]-->                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    </div>
+
+                    <!--[if BLOCK]><![endif]-->                        <div class="flex items-center gap-2"> <div>
+        <fieldset class="fieldset py-0">
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            <div class="join">
+                <!--[if BLOCK]><![endif]-->                    <input
+                        type="radio"
+                        name="displayLevel"
+                        value="1"
+                        aria-label="Lv1: 概要"
+                        
+                        wire:model.live="displayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_input:checked+label]:!btn-primary" wire:model.live="displayLevel" wire:key="details-display-level-group"
+                    />
+                                    <input
+                        type="radio"
+                        name="displayLevel"
+                        value="2"
+                        aria-label="Lv2: 詳細"
+                        
+                        wire:model.live="displayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_input:checked+label]:!btn-primary" wire:model.live="displayLevel" wire:key="details-display-level-group"
+                    />
+                                    <input
+                        type="radio"
+                        name="displayLevel"
+                        value="3"
+                        aria-label="Lv3: 全項目"
+                        
+                        wire:model.live="displayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_input:checked+label]:!btn-primary" wire:model.live="displayLevel" wire:key="details-display-level-group"
+                    />
+                <!--[if ENDBLOCK]><![endif]-->            </div>
+
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        </fieldset>
+    </div>                        <div class="flex items-center gap-1">
+                            <div>
+    <fieldset class="fieldset">
+        <div class="w-full">
+            <label class="flex gap-3 items-center cursor-pointer">
+
+                
+                <input
+                    id="mary2d694c27d8750c8f2c92855c3f657d38"
+                    type="checkbox"
+
+                    class="toggle text-xs" wire:model.live="showChanges" tight="tight"
+                />
+
+                
+                 <div class="">
+                    <div class="text-sm font-medium">
+                        変更内容を表示する
+
+                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    </div>
+
+                    
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </div>
+            </label>
+        </div>
+
+        
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </fieldset>
+</div>                            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg x-tooltip="直前または『更新履歴』タブで選択した過去バージョンと内容を比較表示します。" class="inline flex-shrink-0 w-4 h-4 text-base-content/40 cursor-help" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        </div> </div>
+                    <!--[if ENDBLOCK]><![endif]-->                </div>
+
+                <!--[if BLOCK]><![endif]-->                    <hr class="mt-3 border-t-[length:var(--border)] border-base-content/10" />
+
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                <!--[if ENDBLOCK]><![endif]-->            </div>
+        <!--[if ENDBLOCK]><![endif]-->
+        <div class="grow-1 null">
+            <div wire:snapshot="{&quot;data&quot;:{&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;comparisonTargetDiff&quot;:null,&quot;hasChangedColumns&quot;:false,&quot;showChanges&quot;:false,&quot;canView&quot;:true,&quot;allAttachments&quot;:[null,{&quot;keys&quot;:[],&quot;class&quot;:&quot;Illuminate\\Database\\Eloquent\\Collection&quot;,&quot;modelClass&quot;:null,&quot;s&quot;:&quot;elcln&quot;}],&quot;highlight&quot;:null,&quot;displayLevel&quot;:3,&quot;displayData&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;baseMeta&quot;:null,&quot;targetMeta&quot;:null,&quot;targetDiffId&quot;:null,&quot;baseDiffId&quot;:null,&quot;useFallback&quot;:true,&quot;showInduction&quot;:true,&quot;tenantId&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;NZRahUlNwPOc9YsogEXV&quot;,&quot;name&quot;:&quot;ledger.ledger-diff-viewer&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;lazyLoaded&quot;:false,&quot;lazyIsolated&quot;:true,&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;02d1ca9b6e983a7953c33204937b7439ad9a73d893b123ba441fd9385b23aeba&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;displayLevelUpdated&quot;,&quot;showChangesUpdated&quot;,&quot;targetDiffIdUpdated&quot;,&quot;versionsSelected&quot;]}" wire:id="NZRahUlNwPOc9YsogEXV" x-intersect="$wire.__lazyLoad(&#039;eyJkYXRhIjp7ImZvck1vdW50IjpbeyJsZWRnZXJSZWNvcmQiOltudWxsLHsiY2xhc3MiOiJBcHBcXE1vZGVsc1xcTGVkZ2VyIiwia2V5IjoxMiwicyI6Im1kbCJ9XSwiY2FuVmlldyI6dHJ1ZSwiYWxsQXR0YWNobWVudHMiOltudWxsLHsia2V5cyI6W10sImNsYXNzIjoiSWxsdW1pbmF0ZVxcRGF0YWJhc2VcXEVsb3F1ZW50XFxDb2xsZWN0aW9uIiwibW9kZWxDbGFzcyI6bnVsbCwicyI6ImVsY2xuIn1dLCJoaWdobGlnaHQiOm51bGwsImRpc3BsYXlMZXZlbCI6Mywic2hvd0NoYW5nZXMiOmZhbHNlLCJ0YXJnZXREaWZmSWQiOm51bGx9LHsicyI6ImFyciJ9XX0sIm1lbW8iOnsiaWQiOiJwdndYVm1RSW5EREg2cnVQZm1WTyIsIm5hbWUiOiJfX21vdW50UGFyYW1zQ29udGFpbmVyIiwicGF0aCI6ImxpdmV3aXJlLXVuaXQtdGVzdC1lbmRwb2ludFwvWkF5ZFBWZzFtNzRic3NBemtLeTgiLCJtZXRob2QiOiJHRVQiLCJyZWxlYXNlIjoiYS1hLWEifSwiY2hlY2tzdW0iOiI1ZjBmMmZlNmNiNDM0YTg4Nzc5YTkyNTA4Y2ViZThkM2E0NjE3MjMxOWVhYTAxZDE4ZjhkNGJjYjNmZjVjMjIzIn0=&#039;)"  class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
+        <div class="flex h-screen justify-center items-center">
+            <span class="loading loading-dots loading-lg"></span>
+        </div>
+    </div>
+
+                    
+                    <div class="mt-6 pt-4 border-t border-base-200">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
+                            <div class="space-y-2">
+                                
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="badge badge-outline badge-xs">最新</span>
+                                    <span class="font-semibold text-success">Ver.1</span>
+                                    <span class="text-base-content/50">|</span>
+                                    <div x-data="{ open: false, copying: false }" @click.outside="open = false" class="relative inline-block">
+    <!-- Trigger -->
+    <button type="button" @click="open = !open"
+        class="link link-primary font-medium hover:underline focus:outline-none flex items-center gap-1">
+        田中 充
+    </button>
+
+    <!-- Popover Content -->
+    <div x-show="open" x-transition
+        class="absolute left-0 top-full mt-2 z-50 w-72 bg-base-100 rounded-lg shadow-xl border border-base-200 p-4 text-left"
+        style="display: none;">
+        <!-- Header: Avatar & Name -->
+        <div class="flex items-center gap-3 mb-3">
+            <div class="flex items-center gap-3">
+    <div class="avatar  avatar-placeholder ">
+        <div class="w-7 rounded-full bg-neutral text-neutral-content !w-12 !h-12">
+            <!--[if BLOCK]><![endif]-->                <span class="text-xs" alt=""></span>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    </div>
+    <!--[if BLOCK]><![endif]-->    <div>
+        <!--[if BLOCK]><![endif]-->            <div class="font-semibold font-lg " >
+                田中 充
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+    <!--[if ENDBLOCK]><![endif]--></div>            <div>
+                <div class="font-bold text-lg leading-tight">田中 充</div>
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+
+        <div class="divider my-1"></div>
+
+        <!-- Email Copy -->
+        <div class="flex items-center justify-between text-sm py-2">
+            <span class="text-gray-500 font-medium">メールアドレス</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs truncate max-w-[120px]" title="01kerxagvq23ezamgttwmvff92@example.test">01kerxagvq23ezamgttwmvff92@example.test</span>
+                <button type="button" class="btn btn-ghost btn-xs btn-square text-gray-500 tooltip tooltip-left"
+                    :class="copying ? 'text-success' : ''"
+                    :data-tip="copying ? 'コピー完了' :
+                        'クリップボードにコピー'"
+                    @click="
+                        navigator.clipboard.writeText('01kerxagvq23ezamgttwmvff92@example.test').then(() => {
+                            copying = true;
+                            $dispatch('mary-toast', {type: 'success', title: 'テキストをコピーしました'});
+                            setTimeout(() => copying = false, 2000);
+                        });
+                    ">
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg x-show="!copying" class="inline flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg x-show="copying" x-cloak="1" class="inline flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </button>
+            </div>
+        </div>
+
+        <!-- Chat Link -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+</div>
+                                    <span
+                                        class="text-xs text-base-content/50">(2026-01-12 10:51)</span>
+                                </div>
+
+                                
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                
+                                <!--[if BLOCK]><![endif]-->                                    <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="mary5f708ab8137880066a2ff7a9fdbdf14d"
+        type="button" wire:click="activateCompareWithPrevious"
+        class="btn btn-sm btn-ghost text-primary hover:bg-primary/10" wire:click="activateCompareWithPrevious"
+
+        
+        
+        
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            <span class="">
+                直前の内容と比較する
+            </span>
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]-->                                <!--[if ENDBLOCK]><![endif]-->
+                                
+                                <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="mary269cb4153f6ac192cd532cebda1e4388"
+        type="button" wire:click="switchToHistoryTab"
+        class="btn btn-sm btn-ghost text-base-content/60" wire:click="switchToHistoryTab"
+
+        
+        
+        
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            <span class="">
+                すべての履歴・他のバージョンと比較
+            </span>
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]-->                            </div>
+                        </div>
+                    </div>
+        </div>
+
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+    </div>
+
+                        
+            <a
+        class="hidden tab"
+        :class="{ 'tab-active': selected === 'history' }"
+        data-name="history"
+        x-init="
+                const newItem = { name: 'history', label: &quot;&lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;        &lt;div class=\&quot;inline-flex items-center gap-1\&quot;&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;        &lt;svg class=\&quot;inline flex-shrink-0 w-5 h-5 me-2 whitespace-nowrap\&quot; xmlns=\&quot;http:\/\/www.w3.org\/2000\/svg\&quot; fill=\&quot;none\&quot; viewBox=\&quot;0 0 24 24\&quot; stroke-width=\&quot;1.5\&quot; stroke=\&quot;currentColor\&quot; aria-hidden=\&quot;true\&quot; data-slot=\&quot;icon\&quot;&gt;\n  &lt;path stroke-linecap=\&quot;round\&quot; stroke-linejoin=\&quot;round\&quot; d=\&quot;M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z\&quot;\/&gt;\n&lt;\/svg&gt;\n    &lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;            &lt;div class=\&quot;me-2 whitespace-nowrap\&quot; &gt;\n                \u30ef\u30fc\u30af\u30d5\u30ed\u30fc\u5c65\u6b74\n            &lt;\/div&gt;\n        &lt;\/div&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;            &quot;, disabled: false, hidden: false };
+                const index = tabs.findIndex(item => item.name === 'history');
+                index !== -1 ? tabs[index] = newItem : tabs.push(newItem);
+
+                Livewire.hook('morph.removed', ({el}) => {
+                    if (el.getAttribute('data-name') == 'history'){
+                        tabs = tabs.filter(i => i.name !== 'history')
+                    }
+                })
+            "
+    ></a>
+
+    <div x-show="selected === 'history'" role="tabpanel" class="tab-content py-5 px-1 shadow-md">
+        <div wire:snapshot="{&quot;data&quot;:{&quot;ledgerId&quot;:12,&quot;historyDisplayLevel&quot;:3,&quot;perPage&quot;:10,&quot;pageCount&quot;:1,&quot;hasMore&quot;:false,&quot;baseDiffId&quot;:14,&quot;targetDiffId&quot;:null,&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;highlight&quot;:&quot;&quot;},&quot;memo&quot;:{&quot;id&quot;:&quot;AyCvSjvloxMM8UgrTIUE&quot;,&quot;name&quot;:&quot;ledger.ledger-history-manager&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:{&quot;history-viewer-14-&quot;:[&quot;div&quot;,&quot;YcbJCjtJiZiHS32Dr4KM&quot;]},&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;6a2298854fe5c57feffe2a91d1a580480abebcef780b17f4634857e92b24413e&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;displayLevelUpdated&quot;,&quot;versionsSelected&quot;,&quot;targetDiffIdUpdated&quot;]}" wire:id="AyCvSjvloxMM8UgrTIUE" class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="{
+    focusedIndex: 0,
+    historyCount: 1,
+    selectionAnnouncement: '',
+    focusRow(index) {
+        this.focusedIndex = index;
+        const row = this.$refs['history-row-' + index];
+        if (row) row.focus();
+    },
+    announceSelection(isSelected, version) {
+        if (isSelected) {
+            this.selectionAnnouncement = `バージョン __VERSION__ を選択しました`.replace('__VERSION__', version);
+        } else {
+            this.selectionAnnouncement = `バージョン __VERSION__ の選択を解除しました`.replace('__VERSION__', version);
+        }
+        setTimeout(() => { this.selectionAnnouncement = ''; }, 1000);
+    },
+    handleKeyDown(event, diffId, index, isCurrentlySelected, version) {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (index < this.historyCount - 1) this.focusRow(index + 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (index > 0) this.focusRow(index - 1);
+        } else if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            $wire.toggleSelection(diffId).then(() => {
+                this.announceSelection(!isCurrentlySelected, version);
+            });
+        }
+    }
+}">
+    
+    <!-- スクリーンリーダー用の選択状態通知 -->
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" x-text="selectionAnnouncement"></div>
+    <div
+        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
+        <div
+            class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+            <h3 class="font-bold flex items-center gap-2 whitespace-nowrap">
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                変更履歴リスト
+            </h3>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                <div>
+        <fieldset class="fieldset py-0">
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            <div class="join">
+                <!--[if BLOCK]><![endif]-->                    <input
+                        type="radio"
+                        name="historyDisplayLevel"
+                        value="1"
+                        aria-label="Lv1: 概要"
+                        
+                        wire:model.live="historyDisplayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" wire:model.live="historyDisplayLevel" wire:key="history-display-level-group"
+                    />
+                                    <input
+                        type="radio"
+                        name="historyDisplayLevel"
+                        value="2"
+                        aria-label="Lv2: 詳細"
+                        
+                        wire:model.live="historyDisplayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" wire:model.live="historyDisplayLevel" wire:key="history-display-level-group"
+                    />
+                                    <input
+                        type="radio"
+                        name="historyDisplayLevel"
+                        value="3"
+                        aria-label="Lv3: 全項目"
+                        
+                        wire:model.live="historyDisplayLevel"
+                        class="join-item btn [&amp;:checked]:btn-neutral [&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" wire:model.live="historyDisplayLevel" wire:key="history-display-level-group"
+                    />
+                <!--[if ENDBLOCK]><![endif]-->            </div>
+
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        </fieldset>
+    </div>            </div>
+        </div>
+
+        <div class="divide-y divide-base-200" role="list" aria-label="変更履歴リスト">
+            <!--[if BLOCK]><![endif]-->                                <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    role="listitem" tabindex="0" aria-selected="true"
+                    aria-label="バージョン 5、2026-01-12 10:51、廣川 花子、選択済み"
+                    x-ref="history-row-0"
+                    @click="$wire.toggleSelection(14).then(() => announceSelection(false, 5))"
+                    @keydown="handleKeyDown($event, 14, 0, true, 5)"
+                    wire:key="history-row-14">
+
+                    <!--[if BLOCK]><![endif]-->                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                    <!--[if ENDBLOCK]><![endif]-->
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-bold flex items-center gap-1">
+                                Ver.5
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                            </span>
+                            <span
+                                class="text-[10px] text-base-content/50">2026-01-12 10:51</span>
+                        </div>
+
+                        
+                        <div class="flex flex-col gap-1.5 mt-2 pl-1 border-l-2 border-base-200">
+                            
+                            <!--[if BLOCK]><![endif]-->                                <div>
+                                    <span class="badge badge-xs badge-warning gap-1">
+                                        点検待ち
+                                    </span>
+                                </div>
+                            <!--[if ENDBLOCK]><![endif]-->
+                            
+                            <!--[if BLOCK]><![endif]-->                                <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-3 h-3 text-base-content/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                                    <span
+                                        class="text-[10px] text-base-content/50">編集者:</span>
+                                    <div x-data="{ open: false, copying: false }" @click.outside="open = false" class="relative inline-block">
+    <!-- Trigger -->
+    <button type="button" @click="open = !open"
+        class="link link-primary font-medium hover:underline focus:outline-none flex items-center gap-1">
+        廣川 花子
+    </button>
+
+    <!-- Popover Content -->
+    <div x-show="open" x-transition
+        class="absolute left-0 top-full mt-2 z-50 w-72 bg-base-100 rounded-lg shadow-xl border border-base-200 p-4 text-left"
+        style="display: none;">
+        <!-- Header: Avatar & Name -->
+        <div class="flex items-center gap-3 mb-3">
+            <div class="flex items-center gap-3">
+    <div class="avatar  avatar-placeholder ">
+        <div class="w-7 rounded-full bg-neutral text-neutral-content !w-12 !h-12">
+            <!--[if BLOCK]><![endif]-->                <span class="text-xs" alt=""></span>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    </div>
+    <!--[if BLOCK]><![endif]-->    <div>
+        <!--[if BLOCK]><![endif]-->            <div class="font-semibold font-lg " >
+                廣川 花子
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+    <!--[if ENDBLOCK]><![endif]--></div>            <div>
+                <div class="font-bold text-lg leading-tight">廣川 花子</div>
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+
+        <div class="divider my-1"></div>
+
+        <!-- Email Copy -->
+        <div class="flex items-center justify-between text-sm py-2">
+            <span class="text-gray-500 font-medium">メールアドレス</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs truncate max-w-[120px]" title="01kerxahpj14cv7qwxxp7ya037@example.test">01kerxahpj14cv7qwxxp7ya037@example.test</span>
+                <button type="button" class="btn btn-ghost btn-xs btn-square text-gray-500 tooltip tooltip-left"
+                    :class="copying ? 'text-success' : ''"
+                    :data-tip="copying ? 'コピー完了' :
+                        'クリップボードにコピー'"
+                    @click="
+                        navigator.clipboard.writeText('01kerxahpj14cv7qwxxp7ya037@example.test').then(() => {
+                            copying = true;
+                            $dispatch('mary-toast', {type: 'success', title: 'テキストをコピーしました'});
+                            setTimeout(() => copying = false, 2000);
+                        });
+                    ">
+                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg x-show="!copying" class="inline flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg x-show="copying" x-cloak="1" class="inline flex-shrink-0 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                </button>
+            </div>
+        </div>
+
+        <!-- Chat Link -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+</div>
+                                </div>
+                            <!--[if ENDBLOCK]><![endif]-->
+                            
+                            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        </div>
+
+                        
+                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+                        <div class="flex gap-1 mt-1">
+                            <!--[if BLOCK]><![endif]-->                                <span
+                                    class="badge badge-primary badge-outline badge-xs">基準</span>
+                            <!--[if ENDBLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        </div>
+                    </div>
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+            
+            <!--[if BLOCK]><![endif]-->                <div class="p-8 text-center text-xs text-base-content/30 italic">
+                    これ以上の履歴はありません。
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    </div>
+
+    
+    <div class="lg:col-span-8 xl:col-span-9 space-y-6">
+        <!--[if BLOCK]><![endif]-->            <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+                <div class="card-body p-0">
+                    <div wire:snapshot="{&quot;data&quot;:{&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;comparisonTargetDiff&quot;:null,&quot;hasChangedColumns&quot;:false,&quot;showChanges&quot;:false,&quot;canView&quot;:true,&quot;allAttachments&quot;:[null,{&quot;keys&quot;:[],&quot;class&quot;:&quot;Illuminate\\Database\\Eloquent\\Collection&quot;,&quot;modelClass&quot;:null,&quot;s&quot;:&quot;elcln&quot;}],&quot;highlight&quot;:&quot;&quot;,&quot;displayLevel&quot;:3,&quot;displayData&quot;:[[[{&quot;group_name&quot;:&quot;\u305d\u306e\u4ed6&quot;,&quot;is_required_group&quot;:false,&quot;columns&quot;:[[[{&quot;id&quot;:0,&quot;type&quot;:&quot;text&quot;,&quot;name&quot;:&quot;test_field&quot;,&quot;hint&quot;:&quot;&quot;,&quot;is_required&quot;:false,&quot;status&quot;:&quot;unchanged&quot;,&quot;current_value_html&quot;:&quot;et&quot;,&quot;old_value_html&quot;:&quot;et&quot;,&quot;is_omitted&quot;:false},{&quot;s&quot;:&quot;arr&quot;}]],{&quot;s&quot;:&quot;arr&quot;}]},{&quot;s&quot;:&quot;arr&quot;}]],{&quot;s&quot;:&quot;arr&quot;}],&quot;baseMeta&quot;:[{&quot;modifier_name&quot;:&quot;\u5ee3\u5ddd \u82b1\u5b50&quot;,&quot;updated_at&quot;:&quot;2026-01-12 10:51:43&quot;,&quot;version&quot;:5,&quot;comment&quot;:null},{&quot;s&quot;:&quot;arr&quot;}],&quot;targetMeta&quot;:null,&quot;targetDiffId&quot;:null,&quot;baseDiffId&quot;:14,&quot;useFallback&quot;:false,&quot;showInduction&quot;:false,&quot;tenantId&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;YcbJCjtJiZiHS32Dr4KM&quot;,&quot;name&quot;:&quot;ledger.ledger-diff-viewer&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;1fc96b8a8a161c2970e3b2801127b9fef76984eb3fa5b9c82491d7add45f8c67&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;displayLevelUpdated&quot;,&quot;showChangesUpdated&quot;,&quot;targetDiffIdUpdated&quot;,&quot;versionsSelected&quot;]}" wire:id="YcbJCjtJiZiHS32Dr4KM" class="space-y-6" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', 12);
+if ($store.ledgerState) {
+    console.log('[LedgerDiffViewer] Alpine store found, calling init()');
+    $store.ledgerState.init(12);
+} else {
+    console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
+}">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <div class="space-y-4">
+        <!--[if BLOCK]><![endif]-->            <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm" x-data="{
+                isOpen: false,
+                initialized: false,
+                groupName: 'その他',
+                isRequired: false,
+                ledgerId: 12
+            }"
+                x-init="console.log('[Group: その他] Initializing, isRequired:', false);
+                
+                // 初期状態をストアから取得
+                const loadFromStore = () => {
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        const stored = $store.ledgerState.isCollapsed(groupName, isRequired);
+                        isOpen = !stored;
+                        console.log('[Group: その他] Loaded from store, isOpen:', isOpen);
+                    } else {
+                        console.error('[Group: その他] Store not available for initial load');
+                    }
+                };
+                
+                loadFromStore();
+                
+                // 初期化完了フラグを立てる
+                initialized = true;
+                
+                // Alpine Store と連携（初期化後のみ保存）
+                $watch('isOpen', value => {
+                    if (!initialized) {
+                        console.log('[Group: その他] Skipping save during initialization');
+                        return;
+                    }
+                
+                    console.log('[Group: その他] isOpen changed to:', value);
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        $store.ledgerState.states[$store.ledgerState.currentLedgerId][groupName] = !value;
+                        localStorage.setItem('ledger_collapsed_states', JSON.stringify($store.ledgerState.states));
+                        console.log('[Group: その他] Saved to localStorage, collapsed:', !value);
+                    } else {
+                        console.error('[Group: その他] Cannot save state - store not available');
+                    }
+                });
+                
+                // localStorageの変更を監視
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'ledger_collapsed_states' && e.newValue) {
+                        console.log('[Group: その他] localStorage changed, reloading');
+                        const states = JSON.parse(e.newValue);
+                        if (states[ledgerId] && states[ledgerId][groupName] !== undefined) {
+                            initialized = false;
+                            isOpen = !states[ledgerId][groupName];
+                            console.log('[Group: その他] Updated from localStorage, isOpen:', isOpen);
+                            $nextTick(() => { initialized = true; });
+                        }
+                    }
+                });
+                
+                // 同一ページ内での変更検知（storageイベントは別タブでしか発火しない）
+                const checkStorage = setInterval(() => {
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        // ストアから最新の状態を取得
+                        const ledgerStates = $store.ledgerState.states[$store.ledgerState.currentLedgerId];
+                        if (ledgerStates && ledgerStates[groupName] !== undefined) {
+                            const storedCollapsed = ledgerStates[groupName];
+                            const storedIsOpen = !storedCollapsed;
+                
+                            // 現在のUIの状態と異なる場合のみ更新
+                            if (storedIsOpen !== isOpen && initialized) {
+                                console.log('[Group: ' + groupName + '] Detected change in store, current:', isOpen, 'stored:', storedIsOpen);
+                                initialized = false;
+                                isOpen = storedIsOpen;
+                                $nextTick(() => { initialized = true; });
+                            }
+                        }
+                    }
+                }, 200);
+                
+                // クリーンアップ
+                $el.addEventListener('destroy', () => {
+                    clearInterval(checkStorage);
+                });"
+                :class="{
+                    'collapse-open': isOpen,
+                    'collapse-close': !isOpen
+                }"
+                wire:key="group-02e915b7b24f12938773a12ba5fc2fbb">
+
+                <input type="checkbox" class="hidden" />
+
+                <div class="collapse-title text-sm font-bold flex items-center justify-between cursor-pointer"
+                    @click.stop="isOpen = !isOpen" role="button" :aria-expanded="isOpen">
+                    <div class="flex items-center gap-2">
+                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        その他
+                    </div>
+                </div>
+
+                <div class="collapse-content overflow-x-auto p-0">
+                    <table class="table table-sm w-full border-t border-base-200">
+                        <thead class="bg-base-200/30">
+                            <tr>
+                                <th class="w-1/3 min-w-[150px]">
+                                    項目名</th>
+                                <th class="w-2/3 min-w-[250px]">
+                                    Ver.5</th>
+                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-base-100">
+                            <!--[if BLOCK]><![endif]-->                                <!--[if BLOCK]><![endif]-->                                    <tr class="hover:bg-base-200/20 transition-colors "
+                                        wire:key="col-0">
+                                        <td class="align-top py-3">
+                                            <div class="flex flex-col gap-1">
+                                                <div class="flex items-center gap-2">
+                                                    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                                                    <span
+                                                        class="text-sm font-semibold text-base-content/80">test_field</span>
+                                                </div>
+                                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+                                                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                                            </div>
+                                        </td>
+
+                                        
+                                        <td class="align-top py-3 text-sm prose-sm max-w-none">
+                                            <div
+                                                class="break-words ">
+                                                <!--[if BLOCK]><![endif]-->                                                    <div
+    x-data="expandableContent({ maxHeight: '6rem' })"
+    class="relative"
+>
+    <div
+        x-ref="content"
+        :class="{ 'overflow-hidden': !expanded }"
+        :style="contentStyle"
+        class="transition-all duration-300"
+    >
+        et
+    </div>
+
+    <button
+        x-show="showToggle"
+        @click="toggle()"
+        type="button"
+        class="btn btn-sm btn-ghost w-full mt-2 gap-2"
+    >
+        <span x-text="expanded ? '少なく表示' : 'もっと見る'"></span>
+        <i class="fas text-sm transition-transform duration-200"
+           :class="{
+               'fa-chevron-up': expanded,
+               'fa-chevron-down': !expanded
+           }"></i>
+    </button>
+</div>
+                                                <!--[if ENDBLOCK]><![endif]-->                                            </div>
+                                        </td>
+
+                                        
+                                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                                    </tr>
+                                <!--[if ENDBLOCK]><![endif]-->                            <!--[if ENDBLOCK]><![endif]-->                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>                </div>
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</div>
+    </div>
+
+            
+            <a
+        class="hidden tab"
+        :class="{ 'tab-active': selected === 'activity' }"
+        data-name="activity"
+        x-init="
+                const newItem = { name: 'activity', label: &quot;&lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;        &lt;div class=\&quot;inline-flex items-center gap-1\&quot;&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;        &lt;svg class=\&quot;inline flex-shrink-0 w-5 h-5 me-2 whitespace-nowrap\&quot; xmlns=\&quot;http:\/\/www.w3.org\/2000\/svg\&quot; fill=\&quot;none\&quot; viewBox=\&quot;0 0 24 24\&quot; stroke-width=\&quot;1.5\&quot; stroke=\&quot;currentColor\&quot; aria-hidden=\&quot;true\&quot; data-slot=\&quot;icon\&quot;&gt;\n  &lt;path stroke-linecap=\&quot;round\&quot; stroke-linejoin=\&quot;round\&quot; d=\&quot;M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z\&quot;\/&gt;\n&lt;\/svg&gt;\n    &lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;            &lt;div class=\&quot;me-2 whitespace-nowrap\&quot; &gt;\n                \u6d3b\u52d5\u5c65\u6b74\n            &lt;\/div&gt;\n        &lt;\/div&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;            &quot;, disabled: false, hidden: false };
+                const index = tabs.findIndex(item => item.name === 'activity');
+                index !== -1 ? tabs[index] = newItem : tabs.push(newItem);
+
+                Livewire.hook('morph.removed', ({el}) => {
+                    if (el.getAttribute('data-name') == 'activity'){
+                        tabs = tabs.filter(i => i.name !== 'activity')
+                    }
+                })
+            "
+    ></a>
+
+    <div x-show="selected === 'activity'" role="tabpanel" class="tab-content py-5 px-1 shadow-md">
+        <!--[if BLOCK]><![endif]-->                    <div id="activity-history-placeholder-for-testing"></div>
+                <!--[if ENDBLOCK]><![endif]-->
+    </div>
+            
+            <a
+        class="hidden tab"
+        :class="{ 'tab-active': selected === 'permissions' }"
+        data-name="permissions"
+        x-init="
+                const newItem = { name: 'permissions', label: &quot;&lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;        &lt;div class=\&quot;inline-flex items-center gap-1\&quot;&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;        &lt;svg class=\&quot;inline flex-shrink-0 w-5 h-5 me-2 whitespace-nowrap\&quot; xmlns=\&quot;http:\/\/www.w3.org\/2000\/svg\&quot; fill=\&quot;none\&quot; viewBox=\&quot;0 0 24 24\&quot; stroke-width=\&quot;1.5\&quot; stroke=\&quot;currentColor\&quot; aria-hidden=\&quot;true\&quot; data-slot=\&quot;icon\&quot;&gt;\n  &lt;path stroke-linecap=\&quot;round\&quot; stroke-linejoin=\&quot;round\&quot; d=\&quot;M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z\&quot;\/&gt;\n&lt;\/svg&gt;\n    &lt;!--[if BLOCK]&gt;&lt;![endif]--&gt;            &lt;div class=\&quot;me-2 whitespace-nowrap\&quot; &gt;\n                \u30a2\u30af\u30bb\u30b9\u3068\u6a29\u9650\n            &lt;\/div&gt;\n        &lt;\/div&gt;\n    &lt;!--[if ENDBLOCK]&gt;&lt;![endif]--&gt;            &quot;, disabled: false, hidden: false };
+                const index = tabs.findIndex(item => item.name === 'permissions');
+                index !== -1 ? tabs[index] = newItem : tabs.push(newItem);
+
+                Livewire.hook('morph.removed', ({el}) => {
+                    if (el.getAttribute('data-name') == 'permissions'){
+                        tabs = tabs.filter(i => i.name !== 'permissions')
+                    }
+                })
+            "
+    ></a>
+
+    <div x-show="selected === 'permissions'" role="tabpanel" class="tab-content py-5 px-1 shadow-md">
+        <!--[if BLOCK]><![endif]-->                    <div id="permission-display-placeholder-for-testing"></div>
+                <!--[if ENDBLOCK]><![endif]-->
+    </div>
+        </div>
+    </div>
+        
+        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
+            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                
+                <div class="card-body p-4">
+                    <div wire:snapshot="{&quot;data&quot;:{&quot;ledgerRecord&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Ledger&quot;,&quot;key&quot;:12,&quot;s&quot;:&quot;mdl&quot;}],&quot;tenantId&quot;:null,&quot;approvalRequestModal&quot;:false,&quot;returnToDraftModal&quot;:false,&quot;selectedApproverId&quot;:null,&quot;showAssigneeModalForNext&quot;:false,&quot;nextAssigneeRoleType&quot;:&quot;approver&quot;,&quot;approverOptions&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;returnComment&quot;:&quot;&quot;,&quot;showCommentModal&quot;:false,&quot;actionTypeForModal&quot;:&quot;&quot;,&quot;commentForModal&quot;:&quot;&quot;,&quot;showAssigneeModal&quot;:false},&quot;memo&quot;:{&quot;id&quot;:&quot;7y5dwPNFZHZh5xJtQKiw&quot;,&quot;name&quot;:&quot;ledger.workflow-action-buttons&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;dc50ef47c6a6857c317a8348434ce4bb4614fdb8af453be428494d1ed64d21bd&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;assignee-selected&quot;,&quot;workflow-action-with-comment&quot;]}" wire:id="7y5dwPNFZHZh5xJtQKiw">
+        <div class="flex flex-wrap items-center justify-center gap-4">
+        <div class="join flex flex-wrap items-center justify-center w-full">
+
+            
+                        <!--[if BLOCK]><![endif]-->                <div class="tooltip"
+                     data-tip="編集権限がありません">
+                    <button class="join-item btn btn-primary btn-wide" disabled><i
+                                class="fa-solid fa-pencil mr-2"></i>編集する</button>
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+            
+                        <!--[if BLOCK]><![endif]-->                <div class="tooltip" data-tip="新規作成の権限がありません">
+                    <button class="join-item btn btn-outline btn-sm md:btn-md" disabled>
+                        <i class="fa-solid fa-copy mr-2"></i>この内容で新規作成
+                    </button>
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+            
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        </div>
+
+        
+        <!--[if BLOCK]><![endif]-->            
+            <a href="http://localhost/test-6964d23e4ede3-5261/ledgerDiff/12"
+               class="btn btn-outline btn-info btn-wide"
+            ><i class="fa-solid fa-clock-rotate-left mr-2"></i>変更履歴を見る
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </a>
+        <!--[if ENDBLOCK]><![endif]-->
+        
+        <div class="flex gap-2 items-center justify-center">
+            <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="mary66e5408fd715687aff548f272a21f0e3"
+        type="button" onclick="window.open('http://localhost/test-6964d23e4ede3-5261/ledger?l%5B0%5D=12&amp;cf=12', 'ledger-list');"
+        class="btn btn-sm btn-outline" onclick="window.open('http://localhost/test-6964d23e4ede3-5261/ledger?l%5B0%5D=12&amp;cf=12', 'ledger-list');"
+
+        
+        
+        
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            <span class="">
+                リストに戻る
+            </span>
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]-->            <label for="window_close_modal"
+       class="btn btn-outline btn-info ml-10 btn-sm justify-self-end">
+    <i class="fa-solid fa-close mr-2"></i>ウィンドウを閉じる</label>
+
+<input type="checkbox" id="window_close_modal" class="modal-toggle"/>
+<div class="modal" role="dialog">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg"><i
+                class="fa-solid fa-close mr-2"></i>閉じようとしています
+        </h3>
+        <p class="py-4">編集内容を破棄してウィンドウを閉じますか？</p>
+        <div class="modal-action">
+            <a href="#" class="btn btn-error" onclick="window.close();"><i
+                    class="fa-solid fa-close mr-2"></i>ウィンドウを閉じる</a>
+            <label for="window_close_modal" class="btn"><i
+                    class="fa-solid fa-pencil mr-2"></i>編集を続ける
+            </label>
+        </div>
+    </div>
+</div>
+        </div>
+
+    </div>
+    
+    <div class="text-center text-xs text-base-content/70 mt-2">
+        現在のステータス :
+        <div class="badge badge-xs badge-ghost">
+        作成中/編集中
+    </div>        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+</div>                    <div wire:snapshot="{&quot;data&quot;:{&quot;showCommentModal&quot;:false,&quot;modalTitle&quot;:&quot;&quot;,&quot;actionButtonLabel&quot;:&quot;&quot;,&quot;actionButtonClass&quot;:&quot;btn-primary&quot;,&quot;actionType&quot;:&quot;&quot;,&quot;targetLedgerId&quot;:null,&quot;comment&quot;:&quot;&quot;,&quot;text&quot;:&quot;&quot;,&quot;tenantId&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;PNQL1Ry76JxaEV6rbMki&quot;,&quot;name&quot;:&quot;workflow.workflow-comment-modal&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;0fc8e865eeab066f7bc646eebc54672943b055f8f285d62b5b47c062cb106194&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;open-workflow-comment-modal&quot;]}" wire:id="PNQL1Ry76JxaEV6rbMki">
+
+    <dialog
+    class="modal" icon="o-chat-bubble-bottom-center-text"
+
+            x-data="{open: window.Livewire.find('PNQL1Ry76JxaEV6rbMki').entangle('showCommentModal').live }"
+        x-init="$watch('open', value => { if (!value){ $dispatch('close') }else{ $dispatch('open') } })"
+        :class="{'modal-open !animate-none': open}"
+        :open="open"
+                    @keydown.escape.window = "$wire.showCommentModal = false"
+            
+            x-trap="open" x-bind:inert="!open"
+    >
+    <div class="modal-box ">
+        <!--[if BLOCK]><![endif]-->            <form method="dialog" tabindex="-1">
+                <!--[if BLOCK]><![endif]-->                    <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="maryeb7dfc4cd6dac92d14eead70d278ee4b"
+        type="button" @click="$wire.showCommentModal = false" tabindex="-1"
+        class="btn btn-circle btn-sm btn-ghost absolute end-2 top-2 z-[999]" @click="$wire.showCommentModal = false" tabindex="-1"
+
+        
+        
+        
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]-->                <!--[if ENDBLOCK]><![endif]-->            </form>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <div>
+            <div>
+    
+    <fieldset class="fieldset py-0">
+        
+        <!--[if BLOCK]><![endif]-->            <legend class="fieldset-legend mb-0.5">
+                コメント/理由
+
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </legend>
+        <!--[if ENDBLOCK]><![endif]-->
+        <label class="">
+            
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+            <div class="w-full">
+                
+                <textarea
+                    placeholder="コメントを入力してください... "
+
+                   class="textarea w-full" id="mary42dcc011f87937e3cd04141c74e82b30comment" wire:model="comment" placeholder="コメントを入力してください..." rows="4"
+                ></textarea>
+            </div>
+        </label>
+
+        
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        
+        <!--[if BLOCK]><![endif]-->            <div class="fieldset-label" x-classes="fieldset-label">（知らせるべきコメントがあれば記載してください）</div>
+        <!--[if ENDBLOCK]><![endif]-->    </fieldset>
+</div>        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        </div>
+
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!--[if BLOCK]><![endif]-->            <div class="modal-action">
+                <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="mary4fb5759d7c73d81e961d67373c517c4d"
+        type="button" @click="$wire.closeModal()"
+        class="btn" @click="$wire.closeModal()"
+
+        
+        
+        
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            <span class="">
+                キャンセル
+            </span>
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]--> 
+            <!--[if BLOCK]><![endif]-->        <button
+    
+        wire:key="mary2383ac371ba0655f4d0e8c5c9bbd5ed9"
+        type="button" wire:click="executeAction"
+        class="btn btn-primary" wire:click="executeAction"
+
+        
+        
+        
+                    wire:target="executeAction"
+            wire:loading.attr="disabled"
+            >
+
+        <!-- SPINNER LEFT -->
+        <!--[if BLOCK]><![endif]-->            <span wire:loading wire:target="executeAction" class="loading loading-spinner w-5 h-5"></span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON -->
+        <!--[if BLOCK]><![endif]-->            <span class="block"  wire:loading.class="hidden" wire:target="executeAction" >
+                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <svg class="inline flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+</svg>
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            </span>
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- LABEL / SLOT -->
+        <!--[if BLOCK]><![endif]-->            
+        <!--[if ENDBLOCK]><![endif]-->
+        <!-- ICON RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+        <!-- SPINNER RIGHT -->
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->
+    <!--[if BLOCK]><![endif]-->        </button>
+    <!--[if ENDBLOCK]><![endif]-->
+            </div>
+        <!--[if ENDBLOCK]><![endif]-->    </div>
+
+    <!--[if BLOCK]><![endif]-->        <form class="modal-backdrop" method="dialog">
+            <!--[if BLOCK]><![endif]-->                <button @click="$wire.showCommentModal = false" type="button">close</button>
+            <!--[if ENDBLOCK]><![endif]-->        </form>
+    <!--[if ENDBLOCK]><![endif]--></dialog></div>
+
+                    
+                    
+
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+    
+    <div wire:snapshot="{&quot;data&quot;:{&quot;open&quot;:false,&quot;isLoading&quot;:false,&quot;fileId&quot;:null,&quot;file&quot;:null,&quot;selectedTab&quot;:&quot;content&quot;,&quot;activeSource&quot;:null,&quot;searchKeyword&quot;:&quot;&quot;,&quot;isExpanded&quot;:false,&quot;mockData&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;mockLedgerTitle&quot;:null,&quot;mockFolderPath&quot;:null,&quot;mockCreatorName&quot;:null,&quot;isInLedgerDetailPage&quot;:true,&quot;tenantId&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;sva1Hh8rPlO3XSZkxuMS&quot;,&quot;name&quot;:&quot;attached-file.file-inspector&quot;,&quot;path&quot;:&quot;livewire-unit-test-endpoint\/ZAydPVg1m74bssAzkKy8&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;ja&quot;},&quot;checksum&quot;:&quot;ce46cd7ca0e02077ccf8f404f6c983ce4bfa5aa04b96ee5e3d4524f5b6590295&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;open-file-inspector&quot;]}" wire:id="sva1Hh8rPlO3XSZkxuMS" x-data="{
+    open: window.Livewire.find('sva1Hh8rPlO3XSZkxuMS').entangle('open'),
+    isLoading: window.Livewire.find('sva1Hh8rPlO3XSZkxuMS').entangle('isLoading'),
+    
+    
+    notify(title, type = 'success') {
+        const icon = '';
+        const css = type === 'success' ? 'alert-success' : 'alert-error';
+        this.$dispatch('mary-toast', {
+            toast: {
+                type,
+                title,
+                description: '',
+                icon,
+                css
+            }
+        });
+    }    
+}"
+          @keydown.escape.window="open = false; $wire.close()"
+     @open-file-inspector.window="
+        open = true;
+        isLoading = true;
+                $wire.openInspector($event.detail)
+     "
+     @open-in-new-tab.window="window.open($event.detail.url, '_blank')"
+     class="relative z-50">
+
+    
+    <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="open = false; $wire.close()"
+         class="fixed inset-0 bg-base-content/20 backdrop-blur-xs z-[55]" aria-hidden="true"></div>
+
+    
+    <div x-show="open" x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="translate-x-full"
+         class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-base-100 shadow-2xl flex flex-col focus:outline-hidden z-[60]"
+         role="dialog" aria-modal="true" aria-labelledby="drawer-title" x-cloak>
+
+        
+        <div x-show="isLoading" class="flex flex-col flex-1 h-full">
+    
+    <div class="navbar bg-base-200 border-b border-base-300 min-h-[4rem] px-4 flex-none animate-pulse">
+        <div class="flex-1">
+            <div class="flex flex-col gap-1">
+                <div class="h-5 bg-base-300 rounded w-3/4"></div>
+                <div class="h-3 bg-base-300 rounded w-1/2 mt-1"></div>
+            </div>
+        </div>
+        <div class="flex-none">
+            <div class="w-8 h-8 bg-base-300 rounded-full"></div>
+        </div>
+    </div>
+
+    
+    <div class="bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none animate-pulse">
+        <div class="join flex-1">
+            <div class="h-8 bg-base-300 rounded-l-lg flex-1"></div>
+            <div class="h-8 bg-base-300 rounded-r-lg w-10 border-l border-base-100"></div>
+        </div>
+        <div class="join flex-1">
+            <div class="h-8 bg-base-300 rounded-l-lg flex-1"></div>
+            <div class="h-8 bg-base-300 rounded-r-lg w-10 border-l border-base-100"></div>
+        </div>
+    </div>
+
+    
+    <div class="flex-1 flex flex-col min-h-0 animate-pulse relative">
+        
+        <div class="absolute inset-0 flex items-center justify-center bg-base-100/30 z-10">
+            <div class="flex flex-col items-center gap-2">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+                <span class="text-xs font-bold text-base-content/60">読み込み中...</span>
+            </div>
+        </div>
+
+        
+        <div class="bg-base-200/50 border-b border-base-300 flex-none aspect-video bg-base-300"></div>
+
+        
+        <div class="flex gap-1 px-4 mt-2 border-b border-base-300">
+            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+            <div class="h-10 bg-base-200 rounded-t-lg w-20"></div>
+        </div>
+
+        
+        <div class="p-4 space-y-4 flex-1 overflow-hidden">
+            <div class="h-8 bg-base-200 rounded w-full"></div>
+            <div class="space-y-2">
+                <div class="h-4 bg-base-200 rounded w-full"></div>
+                <div class="h-4 bg-base-200 rounded w-5/6"></div>
+                <div class="h-4 bg-base-200 rounded w-4/6"></div>
+                <div class="h-4 bg-base-200 rounded w-full"></div>
+                <div class="h-4 bg-base-200 rounded w-3/4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+        
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </div>
+</div></div>

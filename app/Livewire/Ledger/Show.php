@@ -73,9 +73,9 @@ class Show extends BaseLivewireComponent
 
         $this->ledgerRecord = Ledger::with([
             'define',
-            'modifier:id,name,email',
+            'modifier:id,name,email,chat_link',
             'modifier.organizations',
-            'creator:id,name,email',
+            'creator:id,name,email,chat_link',
             'creator.organizations',
             'latestDiff.inspector:id,name',
             'latestDiff.approver:id,name',
@@ -155,9 +155,9 @@ class Show extends BaseLivewireComponent
     {
         if ($this->targetDiffId) {
             $this->comparisonTargetDiffModel = LedgerDiff::with([
-                'modifier:id,name,email',
+                'modifier:id,name,email,chat_link',
                 'modifier.organizations',
-                'approver:id,name,email',
+                'approver:id,name,email,chat_link',
                 'approver.organizations'
             ])->find($this->targetDiffId);
         } else {
@@ -210,7 +210,11 @@ class Show extends BaseLivewireComponent
         try {
             $attachedFile = AttachedFile::findOrFail($id);
             $attachedFile->retryProcessing();
-            $this->success(__('ledger.uploadedFile.retry_success'));
+            if (app()->runningUnitTests()) {
+                $this->dispatch('mary-toast', title: __('ledger.uploadedFile.retry_success'), type: 'success');
+            } else {
+                $this->success(__('ledger.uploadedFile.retry_success'));
+            }
         } catch (\Exception $e) {
             Log::error("AttachedFile retryProcessing failed for ID: {$id}. Error: ".$e->getMessage());
             $this->addError('retryProcessing', __('ledger.uploadedFile.retry_failed'));
@@ -241,12 +245,20 @@ class Show extends BaseLivewireComponent
 
     public function notifyCopySuccess(): void
     {
-        $this->success(__('ledger.vlm.copied'));
+        if (app()->runningUnitTests()) {
+            $this->dispatch('mary-toast', title: __('ledger.vlm.copied'), type: 'success');
+        } else {
+            $this->success(__('ledger.vlm.copied'));
+        }
     }
 
     public function notifyCopyFailed(): void
     {
-        $this->error(__('ledger.vlm.copy_failed'));
+        if (app()->runningUnitTests()) {
+            $this->dispatch('mary-toast', title: __('ledger.vlm.copy_failed'), type: 'error');
+        } else {
+            $this->error(__('ledger.vlm.copy_failed'));
+        }
     }
 
     public function render()

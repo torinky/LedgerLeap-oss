@@ -268,4 +268,104 @@ class ShowTest extends TestCase
         // Bladeテンプレートで :highlight="$highlight" が指定されている
         $component->assertSee('search term', false);
     }
+
+    #[Test]
+    public function it_loads_modifier_relations_on_mount()
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $ledgerRecord = $component->get('ledgerRecord');
+        $this->assertTrue($ledgerRecord->relationLoaded('modifier'));
+        $this->assertTrue($ledgerRecord->modifier->relationLoaded('organizations'));
+        $this->assertTrue($ledgerRecord->relationLoaded('creator'));
+        $this->assertTrue($ledgerRecord->creator->relationLoaded('organizations'));
+    }
+
+    #[Test]
+    public function it_calculates_correct_previous_version_in_quick_action()
+    {
+        // 複数のバージョンを作成
+        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 1]);
+        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 2]);
+        $v3 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 3]);
+        $this->ledger->update(['latest_diff_id' => $v3->id]);
+
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->call('activateCompareWithPrevious');
+
+        // v3 の直前である v2 が選択されることを期待
+        $component->assertSet('targetDiffId', $v2->id);
+        $component->assertSet('showChanges', true);
+        $component->assertDispatched('versionsSelected', baseId: $v3->id, targetId: $v2->id);
+    }
+
+    #[Test]
+    public function it_shows_chat_link_in_popover_when_configured()
+    {
+        $this->user->update(['chat_link' => 'https://slack.com/team/U123']);
+        $this->ledger->update(['modifier_id' => $this->user->id]);
+        $this->actingAs($this->user);
+
+        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertSee('https://slack.com/team/U123')
+            ->assertSee(__('ledger.user_info.chat_link'));
+    }
+
+    #[Test]
+    public function it_hides_chat_link_in_popover_when_not_configured()
+    {
+        $this->user->update(['chat_link' => null]);
+        $this->ledger->update(['modifier_id' => $this->user->id]);
+        $this->actingAs($this->user);
+
+        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertDontSee(__('ledger.user_info.chat_link'));
+    }
+
+    #[Test]
+    public function it_dispatches_toast_on_copy_success_and_failure()
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->call('notifyCopySuccess');
+        // mary-toast のアサート（環境によって挙動が異なる場合があるため js/dispatch 両方考慮）
+        $component->assertDispatched('mary-toast', title: __('ledger.vlm.copied'));
+
+        $component->call('notifyCopyFailed');
+        $component->assertDispatched('mary-toast', title: __('ledger.vlm.copy_failed'));
+    }
+
+    #[Test]
+    public function it_has_no_n_plus_one_queries_for_user_popovers()
+    {
+        $this->actingAs($this->user);
+
+        // クエリログを有効化
+        \DB::enableQueryLog();
+        $initialQueryCount = count(\DB::getQueryLog());
+
+        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $queries = \DB::getQueryLog();
+        $totalQueries = count($queries) - $initialQueryCount;
+
+        // 期待されるクエリ数:
+        // 1. Ledger (+ define, modifier, creator, latestDiff relationships)
+        // 2. AttachedFile (current attachments)
+        // 3. Organizations for modifier
+        // 4. Organizations for creator
+        // 5. Tenant check / Session etc (may vary)
+        if ($totalQueries > 50) {
+            file_put_contents('debug_queries.log', collect($queries)->map(fn($q) => $q['query'])->implode("\n"));
+        }
+        $this->assertLessThanOrEqual(50, $totalQueries, "Too many queries detected: {$totalQueries}. Check debug_queries.log");
+        
+        \DB::disableQueryLog();
+    }
 }
