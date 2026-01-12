@@ -104,14 +104,22 @@
                                 ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
                             ];
                         @endphp
-                        <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                            class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                            option-label="name" wire:key="details-display-level-group" />
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1 mr-2">
+                            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
+                                class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
+                                option-label="name" wire:key="details-display-level-group" />
+                            <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
+                                <x-mary-icon name="o-question-mark-circle"
+                                    class="w-4 h-4 text-base-content/40 cursor-help" />
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 border-l border-base-300 pl-3">
                             <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
                                 class="text-xs" />
-                            <x-mary-icon name="o-question-mark-circle" class="w-4 h-4 text-base-content/40 cursor-help"
-                                x-tooltip="{{ __('ledger.workflow.guide.details_compare') }}" />
+                            <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
+                                <x-mary-icon name="o-question-mark-circle"
+                                    class="w-4 h-4 text-base-content/40 cursor-help" />
+                            </div>
                         </div>
                     </x-slot:menu>
 
@@ -123,33 +131,58 @@
                     {{-- フッター集約情報（編集者情報・ナッジ） --}}
                     <div class="mt-6 pt-4 border-t border-base-200">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
-                            <div class="space-y-2">
+                            <div class="space-y-3 bg-base-200/30 p-3 rounded-lg border border-base-300/50">
                                 {{-- 本バージョンの情報 --}}
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="badge badge-outline badge-xs">{{ __('ledger.diff.current_version') }}</span>
-                                    <span class="font-semibold text-success">Ver.{{ $ledgerRecord->version }}</span>
-                                    <span class="text-base-content/50">|</span>
-                                    <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
-                                    <span
-                                        class="text-xs text-base-content/50">({{ $ledgerRecord->updated_at->format('Y-m-d H:i') }})</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-28 shrink-0">
+                                        <span
+                                            class="badge badge-success badge-outline badge-sm w-full font-bold whitespace-nowrap">
+                                            {{ __('ledger.diff.current_version') }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="font-bold text-success min-w-[3.5rem]">Ver.{{ $ledgerRecord->version }}</span>
+                                        <span class="text-base-content/30">|</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <x-mary-icon name="o-user" class="w-3.5 h-3.5 text-base-content/50" />
+                                            <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
+                                        </div>
+                                        <div class="flex items-center gap-1.5 text-base-content/50">
+                                            <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
+                                            <span
+                                                class="text-xs">({{ $ledgerRecord->updated_at->format('Y-m-d H:i') }})</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {{-- 比較対象（過去バージョン）の情報 --}}
                                 @if ($showChanges && $comparisonTargetDiffModel)
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="badge badge-outline badge-xs">{{ __('ledger.diff.comparison_target') }}</span>
-                                        <span
-                                            class="font-semibold text-error">Ver.{{ $comparisonTargetDiffModel->version }}</span>
-                                        <span class="text-base-content/50">|</span>
-                                        @if ($comparisonTargetDiffModel->modifier)
-                                            <x-ledger.user-card-popover :user="$comparisonTargetDiffModel->modifier" />
-                                        @else
-                                            <span class="text-base-content/50">?</span>
-                                        @endif
-                                        <span
-                                            class="text-xs text-base-content/50">({{ $comparisonTargetDiffModel->created_at->format('Y-m-d H:i') }})</span>
+                                    <div class="flex items-center gap-3 pt-2 border-t border-base-300/30">
+                                        <div class="w-28 shrink-0">
+                                            <span
+                                                class="badge badge-error badge-outline badge-sm w-full font-bold whitespace-nowrap">
+                                                {{ __('ledger.diff.comparison_target') }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="font-bold text-error min-w-[3.5rem]">Ver.{{ $comparisonTargetDiffModel->version }}</span>
+                                            <span class="text-base-content/30">|</span>
+                                            <div class="flex items-center gap-1.5 text-base-content/50">
+                                                <x-mary-icon name="o-user" class="w-3.5 h-3.5" />
+                                                @if ($comparisonTargetDiffModel->modifier)
+                                                    <x-ledger.user-card-popover :user="$comparisonTargetDiffModel->modifier" />
+                                                @else
+                                                    <span>?</span>
+                                                @endif
+                                            </div>
+                                            <div class="flex items-center gap-1.5 text-base-content/50">
+                                                <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
+                                                <span
+                                                    class="text-xs">({{ $comparisonTargetDiffModel->created_at->format('Y-m-d H:i') }})</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 @endif
                             </div>
