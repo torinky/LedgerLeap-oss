@@ -90,20 +90,44 @@
                                 class="text-[10px] text-base-content/50">{{ $diff->created_at->format('Y-m-d H:i') }}</span>
                         </div>
 
-                        <div class="flex items-center gap-2 text-xs">
-                            <div class="avatar placeholder">
-                                <div class="bg-neutral text-neutral-content rounded-full w-5 h-5">
-                                    <span
-                                        class="text-[8px]">{{ mb_substr($diff->modifier?->name ?? '?', 0, 1) }}</span>
+                        {{-- 詳細情報エリア --}}
+                        <div class="flex flex-col gap-1.5 mt-2 pl-1 border-l-2 border-base-200">
+                            {{-- ワークフロー状態 --}}
+                            @if ($diff->status)
+                                <div>
+                                    <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
+                                        {{ $diff->status->label() }}
+                                    </span>
                                 </div>
-                            </div>
-                            <span class="truncate">{{ $diff->modifier?->name }}</span>
+                            @endif
+
+                            {{-- 編集者 (Editor) --}}
+                            @if ($diff->modifier)
+                                <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                    <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
+                                    <span
+                                        class="text-[10px] text-base-content/50">{{ __('ledger.workflow.label.editor') }}:</span>
+                                    <x-ledger.user-card-popover :user="$diff->modifier" />
+                                </div>
+                            @endif
+
+                            {{-- 承認者 (Approver) - 承認済みの場合のみ --}}
+                            @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
+                                <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                    <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
+                                    <span
+                                        class="text-[10px] text-base-content/50">{{ __('ledger.workflow.approved_by') }}:</span>
+                                    <x-ledger.user-card-popover :user="$diff->approver" />
+                                </div>
+                            @endif
                         </div>
 
+                        {{-- コメント (ツールチップ付き) --}}
                         @if ($diff->comment)
                             <div
-                                class="text-[10px] text-base-content/70 italic line-clamp-2 bg-base-200/50 p-1.5 rounded">
-                                {{ $diff->comment }}
+                                class="mt-2 text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex items-start gap-1">
+                                <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
+                                <span class="line-clamp-2" title="{{ $diff->comment }}">{{ $diff->comment }}</span>
                             </div>
                         @endif
 
@@ -141,7 +165,7 @@
                 <div class="card-body p-0">
                     <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
                         :showChanges="isset($targetDiffId)" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
-                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false"
+                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false" :showInduction="false"
                         wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
                 </div>
             </div>

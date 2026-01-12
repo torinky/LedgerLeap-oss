@@ -6,6 +6,7 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
+use App\Models\LedgerDiff;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
@@ -44,6 +45,27 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
+    public ?LedgerDiff $comparisonTargetDiffModel = null;
+
+    public function isComparingWithPrevious(): bool
+    {
+        if (! $this->showChanges || ! $this->targetDiffId) {
+            return false;
+        }
+
+        $currentDiff = $this->ledgerRecord->latestDiff;
+        if (! $currentDiff) {
+            return false;
+        }
+
+        $previousDiff = LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+            ->where('version', '<', $currentDiff->version)
+            ->orderByDesc('version')
+            ->first();
+
+        return $previousDiff && $this->targetDiffId === $previousDiff->id;
+    }
+
     public function mount(int $ledgerId): void
     {
         // highlightは#[Url]属性により自動的にクエリパラメータから設定される
@@ -51,8 +73,10 @@ class Show extends BaseLivewireComponent
 
         $this->ledgerRecord = Ledger::with([
             'define',
-            'modifier:id,name',
-            'creator:id,name',
+            'modifier:id,name,email',
+            'modifier.organizations',
+            'creator:id,name,email',
+            'creator.organizations',
             'latestDiff.inspector:id,name',
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
@@ -67,6 +91,10 @@ class Show extends BaseLivewireComponent
 
         if ($this->refresh) {
             $this->js("localStorage.setItem('ledger_list_needs_refresh', Date.now());");
+        }
+
+        if ($this->targetDiffId) {
+            $this->loadComparisonTarget();
         }
     }
 
@@ -107,6 +135,9 @@ class Show extends BaseLivewireComponent
 
     public function updatedShowChanges(bool $value): void
     {
+        if ($value && ! $this->targetDiffId) {
+            $this->activateCompareWithPrevious();
+        }
         $this->dispatch('showChangesUpdated', showChanges: $value);
     }
 
@@ -116,7 +147,51 @@ class Show extends BaseLivewireComponent
         // $baseId は通常最新(最新のdiffId)を想定しているが、
         // 詳細タブで表示するのは基本的に「現在」との比較なので、targetId を反映する。
         $this->targetDiffId = $targetId;
+        $this->loadComparisonTarget();
         $this->dispatch('targetDiffIdUpdated', targetDiffId: $targetId);
+    }
+
+    private function loadComparisonTarget(): void
+    {
+        if ($this->targetDiffId) {
+            $this->comparisonTargetDiffModel = LedgerDiff::with([
+                'modifier:id,name,email',
+                'modifier.organizations',
+                'approver:id,name,email',
+                'approver.organizations'
+            ])->find($this->targetDiffId);
+        } else {
+            $this->comparisonTargetDiffModel = null;
+        }
+    }
+
+    public function activateCompareWithPrevious(): void
+    {
+        $this->showChanges = true;
+
+        // 現在表示中のデータ（最新または選択中）の直前を特定する
+        $currentDiff = $this->ledgerRecord->latestDiff;
+        if ($currentDiff) {
+            $previousDiff = LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
+                ->where('version', '<', $currentDiff->version)
+                ->orderByDesc('version')
+                ->first();
+
+            if ($previousDiff) {
+                $this->targetDiffId = $previousDiff->id;
+                $this->loadComparisonTarget();
+                $this->dispatch('targetDiffIdUpdated', targetDiffId: $this->targetDiffId);
+                // 履歴タブのステートと同期させるため、baseIdとtargetIdをディスパッチ
+                $this->dispatch('versionsSelected', baseId: $currentDiff->id, targetId: $previousDiff->id);
+            }
+        }
+        $this->dispatch('showChangesUpdated', showChanges: true);
+    }
+
+    #[On('switchToHistoryTab')]
+    public function switchToHistoryTab(): void
+    {
+        $this->selectedTab = 'history';
     }
 
     #[On('retryProcessingEvent')]

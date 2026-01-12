@@ -79,17 +79,19 @@ class LedgerDiffProcessor
 
         if (! $comparisonTargetDiff) {
             // 比較対象がない場合は、現在の内容のみを整形して返す
-            $contentChanges = $currentColumnDefines->map(function ($colDef) use ($currentContent, $ledgerRecord) {
-                $normalizedContent = optional($ledgerRecord->define)->normalizeByColumnDefine($currentContent) ?? [];
-                $sortedIds = collect(optional($ledgerRecord->define)->column_define ?? [])->sortBy('id')->pluck('id')->values();
-                $contentIndex = $sortedIds->search($colDef->id);
+            $normalizedContent = optional($ledgerRecord->define)->normalizeByColumnDefine($currentContent) ?? [];
+            $sortedIds = collect(optional($ledgerRecord->define)->column_define ?? [])->sortBy('id')->pluck('id')->values();
+
+            $contentChanges = $currentColumnDefines->map(function ($colDef) use ($currentContent, $ledgerRecord, $normalizedContent, $sortedIds) {
+                $columnId = data_get($colDef, 'id');
+                $contentIndex = $sortedIds->search($columnId);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
                 // 通常表示時（比較なし）は、すべてunchangedとする
                 $status = 'unchanged';
 
                 return [
-                    'column_define' => $colDef->toArray(),
+                    'column_define' => is_array($colDef) ? $colDef : $colDef->toArray(),
                     'current_value' => $value,
                     'old_value' => $value, // 比較がない場合は同じ値
                     'status' => $status,

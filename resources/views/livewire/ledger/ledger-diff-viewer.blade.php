@@ -1,34 +1,42 @@
-<div class="space-y-6" x-data x-init="
-    console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
-    if ($store.ledgerState) {
-        console.log('[LedgerDiffViewer] Alpine store found, calling init()');
-        $store.ledgerState.init({{ $ledgerRecord->id }});
-    } else {
-        console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
-    }
-">
+<div class="space-y-6" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
+if ($store.ledgerState) {
+    console.log('[LedgerDiffViewer] Alpine store found, calling init()');
+    $store.ledgerState.init({{ $ledgerRecord->id }});
+} else {
+    console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
+}">
     @if ($showChanges && $hasChangedColumns)
         <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 rounded-lg border border-base-300">
             <div class="flex items-center gap-4 text-sm">
-                <div class="flex items-center gap-2">
-                    <span class="badge badge-outline badge-sm">{{ __('ledger.diff.comparing') }}</span>
-                    <span class="font-bold text-success">Ver.{{ $currentVersion }}</span>
-                    <x-mary-icon name="o-arrow-long-left" class="w-4 h-4" />
-                    @if ($pastVersion)
-                        <span class="font-bold text-error">Ver.{{ $pastVersion }}</span>
-                    @else
-                        <span class="font-bold text-success">{{ __('ledger.diff.not_exist') }}</span>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="badge badge-outline badge-sm">{{ __('ledger.diff.comparing') }}</span>
+                        <span class="font-bold text-success">Ver.{{ $currentVersion }}</span>
+                        <x-mary-icon name="o-arrow-long-left" class="w-4 h-4" />
+                        @if ($pastVersion)
+                            <span class="font-bold text-error">Ver.{{ $pastVersion }}</span>
+                        @else
+                            <span class="font-bold text-success">{{ __('ledger.diff.not_exist') }}</span>
+                        @endif
+                    </div>
+
+                    {{-- 比較対象（過去バージョン）のステータスを表示 --}}
+                    @if ($targetMeta && isset($targetMeta['status']))
+                        @php
+                            $status = $targetMeta['status'];
+                        @endphp
+                        <span class="badge badge-sm {{ $status->colorClass() }} gap-1">
+                            {{ $status->label() }}
+                        </span>
                     @endif
                 </div>
             </div>
 
-            @if ($baseMeta || $targetMeta)
+            @if ($showInduction)
                 <div class="flex items-center gap-2">
-                    @if ($currentVersion && $baseMeta)
-                        <div class="text-xs text-base-content/70">
-                            {{ $baseMeta['modifier_name'] ?? '' }} ({{ $baseMeta['updated_at'] ?? '' }})
-                        </div>
-                    @endif
+                    {{-- 履歴タブへの誘導リンク --}}
+                    <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="$dispatch('switchToHistoryTab')"
+                        class="btn-xs btn-ghost text-base-content/60 hover:text-primary" />
                 </div>
             @endif
         </div>
@@ -36,89 +44,86 @@
 
     <div class="space-y-4">
         @foreach ($displayData as $group)
-            <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm"
-                x-data="{
-                    isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }},
-                    initialized: false,
-                    groupName: '{{ $group['group_name'] }}',
-                    isRequired: {{ $group['is_required_group'] ? 'true' : 'false' }},
-                    ledgerId: {{ $ledgerRecord->id }}
-                }"
-                x-init="
-                    console.log('[Group: {{ $group['group_name'] }}] Initializing, isRequired:', {{ $group['is_required_group'] ? 'true' : 'false' }});
-
-                    // 初期状態をストアから取得
-                    const loadFromStore = () => {
-                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
-                            const stored = $store.ledgerState.isCollapsed(groupName, isRequired);
-                            isOpen = !stored;
-                            console.log('[Group: {{ $group['group_name'] }}] Loaded from store, isOpen:', isOpen);
-                        } else {
-                            console.error('[Group: {{ $group['group_name'] }}] Store not available for initial load');
+            <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm" x-data="{
+                isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }},
+                initialized: false,
+                groupName: '{{ $group['group_name'] }}',
+                isRequired: {{ $group['is_required_group'] ? 'true' : 'false' }},
+                ledgerId: {{ $ledgerRecord->id }}
+            }"
+                x-init="console.log('[Group: {{ $group['group_name'] }}] Initializing, isRequired:', {{ $group['is_required_group'] ? 'true' : 'false' }});
+                
+                // 初期状態をストアから取得
+                const loadFromStore = () => {
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        const stored = $store.ledgerState.isCollapsed(groupName, isRequired);
+                        isOpen = !stored;
+                        console.log('[Group: {{ $group['group_name'] }}] Loaded from store, isOpen:', isOpen);
+                    } else {
+                        console.error('[Group: {{ $group['group_name'] }}] Store not available for initial load');
+                    }
+                };
+                
+                loadFromStore();
+                
+                // 初期化完了フラグを立てる
+                initialized = true;
+                
+                // Alpine Store と連携（初期化後のみ保存）
+                $watch('isOpen', value => {
+                    if (!initialized) {
+                        console.log('[Group: {{ $group['group_name'] }}] Skipping save during initialization');
+                        return;
+                    }
+                
+                    console.log('[Group: {{ $group['group_name'] }}] isOpen changed to:', value);
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        $store.ledgerState.states[$store.ledgerState.currentLedgerId][groupName] = !value;
+                        localStorage.setItem('ledger_collapsed_states', JSON.stringify($store.ledgerState.states));
+                        console.log('[Group: {{ $group['group_name'] }}] Saved to localStorage, collapsed:', !value);
+                    } else {
+                        console.error('[Group: {{ $group['group_name'] }}] Cannot save state - store not available');
+                    }
+                });
+                
+                // localStorageの変更を監視
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'ledger_collapsed_states' && e.newValue) {
+                        console.log('[Group: {{ $group['group_name'] }}] localStorage changed, reloading');
+                        const states = JSON.parse(e.newValue);
+                        if (states[ledgerId] && states[ledgerId][groupName] !== undefined) {
+                            initialized = false;
+                            isOpen = !states[ledgerId][groupName];
+                            console.log('[Group: {{ $group['group_name'] }}] Updated from localStorage, isOpen:', isOpen);
+                            $nextTick(() => { initialized = true; });
                         }
-                    };
-
-                    loadFromStore();
-
-                    // 初期化完了フラグを立てる
-                    initialized = true;
-
-                    // Alpine Store と連携（初期化後のみ保存）
-                    $watch('isOpen', value => {
-                        if (!initialized) {
-                            console.log('[Group: {{ $group['group_name'] }}] Skipping save during initialization');
-                            return;
-                        }
-
-                        console.log('[Group: {{ $group['group_name'] }}] isOpen changed to:', value);
-                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
-                            $store.ledgerState.states[$store.ledgerState.currentLedgerId][groupName] = !value;
-                            localStorage.setItem('ledger_collapsed_states', JSON.stringify($store.ledgerState.states));
-                            console.log('[Group: {{ $group['group_name'] }}] Saved to localStorage, collapsed:', !value);
-                        } else {
-                            console.error('[Group: {{ $group['group_name'] }}] Cannot save state - store not available');
-                        }
-                    });
-
-                    // localStorageの変更を監視
-                    window.addEventListener('storage', (e) => {
-                        if (e.key === 'ledger_collapsed_states' && e.newValue) {
-                            console.log('[Group: {{ $group['group_name'] }}] localStorage changed, reloading');
-                            const states = JSON.parse(e.newValue);
-                            if (states[ledgerId] && states[ledgerId][groupName] !== undefined) {
+                    }
+                });
+                
+                // 同一ページ内での変更検知（storageイベントは別タブでしか発火しない）
+                const checkStorage = setInterval(() => {
+                    if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
+                        // ストアから最新の状態を取得
+                        const ledgerStates = $store.ledgerState.states[$store.ledgerState.currentLedgerId];
+                        if (ledgerStates && ledgerStates[groupName] !== undefined) {
+                            const storedCollapsed = ledgerStates[groupName];
+                            const storedIsOpen = !storedCollapsed;
+                
+                            // 現在のUIの状態と異なる場合のみ更新
+                            if (storedIsOpen !== isOpen && initialized) {
+                                console.log('[Group: ' + groupName + '] Detected change in store, current:', isOpen, 'stored:', storedIsOpen);
                                 initialized = false;
-                                isOpen = !states[ledgerId][groupName];
-                                console.log('[Group: {{ $group['group_name'] }}] Updated from localStorage, isOpen:', isOpen);
+                                isOpen = storedIsOpen;
                                 $nextTick(() => { initialized = true; });
                             }
                         }
-                    });
-
-                    // 同一ページ内での変更検知（storageイベントは別タブでしか発火しない）
-                    const checkStorage = setInterval(() => {
-                        if ($store.ledgerState && $store.ledgerState.currentLedgerId) {
-                            // ストアから最新の状態を取得
-                            const ledgerStates = $store.ledgerState.states[$store.ledgerState.currentLedgerId];
-                            if (ledgerStates && ledgerStates[groupName] !== undefined) {
-                                const storedCollapsed = ledgerStates[groupName];
-                                const storedIsOpen = !storedCollapsed;
-
-                                // 現在のUIの状態と異なる場合のみ更新
-                                if (storedIsOpen !== isOpen && initialized) {
-                                    console.log('[Group: ' + groupName + '] Detected change in store, current:', isOpen, 'stored:', storedIsOpen);
-                                    initialized = false;
-                                    isOpen = storedIsOpen;
-                                    $nextTick(() => { initialized = true; });
-                                }
-                            }
-                        }
-                    }, 200);
-
-                    // クリーンアップ
-                    $el.addEventListener('destroy', () => {
-                        clearInterval(checkStorage);
-                    });
-                "
+                    }
+                }, 200);
+                
+                // クリーンアップ
+                $el.addEventListener('destroy', () => {
+                    clearInterval(checkStorage);
+                });"
                 :class="{
                     'collapse-open': isOpen,
                     'collapse-close': !isOpen
@@ -128,9 +133,7 @@
                 <input type="checkbox" class="hidden" />
 
                 <div class="collapse-title text-sm font-bold flex items-center justify-between cursor-pointer"
-                    @click.stop="isOpen = !isOpen"
-                    role="button"
-                    :aria-expanded="isOpen">
+                    @click.stop="isOpen = !isOpen" role="button" :aria-expanded="isOpen">
                     <div class="flex items-center gap-2">
                         @if ($group['is_required_group'])
                             <span class="badge badge-ghost badge-sm text-error">必須</span>

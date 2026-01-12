@@ -134,6 +134,7 @@ class LedgerDiffViewerTest extends TestCase
                     Mockery::type('int'),
                     Mockery::any(),
                     Mockery::any(),
+                    Mockery::any(),
                     Mockery::any()
                 )
                 ->andReturn([
@@ -200,7 +201,7 @@ class LedgerDiffViewerTest extends TestCase
             'folder_id' => $this->folder->id,
             'column_define' => [
                 [
-                    'id' => 'col1',
+                    'id' => 1,
                     'name' => 'Visible Col',
                     'type' => 'text',
                     'display_level' => 1,
@@ -209,7 +210,7 @@ class LedgerDiffViewerTest extends TestCase
                     'required' => false,
                 ],
                 [
-                    'id' => 'col2',
+                    'id' => 2,
                     'name' => 'Omitted Col 1',
                     'type' => 'text',
                     'display_level' => 3,
@@ -218,7 +219,7 @@ class LedgerDiffViewerTest extends TestCase
                     'required' => false,
                 ],
                 [
-                    'id' => 'col3',
+                    'id' => 3,
                     'name' => 'Omitted Col 2',
                     'type' => 'text',
                     'display_level' => 3,
@@ -235,9 +236,9 @@ class LedgerDiffViewerTest extends TestCase
             ->create([
                 'tenant_id' => $this->tenant->id,
                 'content' => [
-                    'col1' => 'Value 1',
-                    'col2' => 'Value 2',
-                    'col3' => 'Value 3',
+                    1 => 'Value 1',
+                    2 => 'Value 2',
+                    3 => 'Value 3',
                 ],
             ]);
 
@@ -269,13 +270,13 @@ class LedgerDiffViewerTest extends TestCase
             // 最初に displayLevel=1 で呼び出されることを期待
             $mock->shouldReceive('processContentForDisplay')
                 ->once()
-                ->with(Mockery::any(), Mockery::any(), 1, Mockery::any(), Mockery::any(), Mockery::any())
+                ->with(Mockery::any(), Mockery::any(), 1, Mockery::any(), Mockery::any(), Mockery::any(), Mockery::any())
                 ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
 
             // 次に displayLevel=2 で呼び出されることを期待
             $mock->shouldReceive('processContentForDisplay')
                 ->once()
-                ->with(Mockery::any(), Mockery::any(), 2, Mockery::any(), Mockery::any(), Mockery::any())
+                ->with(Mockery::any(), Mockery::any(), 2, Mockery::any(), Mockery::any(), Mockery::any(), Mockery::any())
                 ->andReturn(['displayData' => [], 'hasChangedColumns' => false]);
         });
 
@@ -295,6 +296,7 @@ class LedgerDiffViewerTest extends TestCase
                     Mockery::type(Ledger::class),
                     Mockery::any(),
                     Mockery::type('int'),
+                    Mockery::any(),
                     Mockery::any(),
                     Mockery::any(),
                     Mockery::any()

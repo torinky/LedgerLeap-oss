@@ -43,6 +43,7 @@ class User extends Authenticatable implements FilamentUser
         'ignore_ad_org_sync_until',
         'manual_sync_reason',
         'ad_last_synced_at',
+        'chat_link',
     ];
 
     /**

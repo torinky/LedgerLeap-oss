@@ -369,6 +369,10 @@ return [
         // Selection announcement messages for VoiceOver
         'selection_added' => 'バージョン :version を選択しました',
         'selection_removed' => 'バージョン :version の選択を解除しました',
+        'nudge_view_changes' => '直前の内容と比較する',
+        'nudge_view_history' => 'すべての履歴・他のバージョンと比較',
+        'omitted_items' => ':count項目の非表示項目があります',
+        'comparison_target' => '比較対象バージョン',
     ],
     'disable' => '無効にする',
     'disable_notification' => '通知を無効にする',
@@ -1475,7 +1479,19 @@ return [
         'tooltip_conditions_not_met_inspection' => '必須点検ロールの処理が完了していません。',
         'view_content_at_this_point' => 'この時点の内容を見る',
         'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
+        'label' => [
+            'approver' => '承認者',
+            'editor' => '編集者',
+        ],
+        'guide' => [
+            'details_compare' => '直前または『更新履歴』タブで選択した過去バージョンと内容を比較表示します。',
+        ],
     ],
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'user_info' => [
+        'chat' => 'チャット',
+        'chat_link' => 'チャットリンク',
+    ],
+
 ];

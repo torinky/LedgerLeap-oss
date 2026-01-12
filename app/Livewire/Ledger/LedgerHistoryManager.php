@@ -96,6 +96,19 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->logPerformance('ledger_load_more', (microtime(true) - $startTime) * 1000);
     }
 
+    #[On('versionsSelected')]
+    public function updateVersions(?int $baseId, ?int $targetId): void
+    {
+        $this->baseDiffId = $baseId;
+        $this->targetDiffId = $targetId;
+    }
+
+    #[On('targetDiffIdUpdated')]
+    public function updateTargetDiffId(?int $targetDiffId): void
+    {
+        $this->targetDiffId = $targetDiffId;
+    }
+
     public function toggleSelection(int $id): void
     {
         $startTime = microtime(true);
@@ -132,7 +145,11 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $startTime = microtime(true);
 
         $diffsQuery = $this->ledgerRecord->ledgerDiff()
-            ->with(['modifier:id,name', 'inspector:id,name', 'approver:id,name'])
+            ->with([
+                'modifier.organizations',
+                'inspector.organizations',
+                'approver.organizations'
+            ])
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc');
 

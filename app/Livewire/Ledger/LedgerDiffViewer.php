@@ -45,7 +45,9 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
     public bool $useFallback = true;
 
-    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null, bool $useFallback = true): void
+    public bool $showInduction = true;
+
+    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null, bool $useFallback = true, bool $showInduction = true): void
     {
         $this->ledgerRecord = $ledgerRecord;
 
@@ -54,11 +56,12 @@ class LedgerDiffViewer extends BaseLivewireComponent
         $this->targetDiffId = $targetDiffId;
         $this->baseDiffId = $baseDiffId;
         $this->useFallback = $useFallback;
+        $this->showInduction = $showInduction;
 
         // 差分比較対象を準備
         // Livewire 3 の DI により空のインスタンスが渡されることがあるため exists を確認
         if ($this->targetDiffId) {
-            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
+            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name', 'approver:id,name'])->find($this->targetDiffId);
         } elseif ($comparisonTargetDiff && $comparisonTargetDiff->exists) {
             $this->comparisonTargetDiff = $comparisonTargetDiff;
         } elseif ($this->useFallback) {
@@ -70,6 +73,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',
                 'updated_at' => $this->comparisonTargetDiff->created_at?->format('Y-m-d H:i:s') ?? '',
                 'version' => $this->comparisonTargetDiff->version,
+                'status' => $this->comparisonTargetDiff->status,
             ];
         }
 
@@ -101,12 +105,13 @@ class LedgerDiffViewer extends BaseLivewireComponent
     {
         $this->targetDiffId = $targetDiffId;
         if ($this->targetDiffId) {
-            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
+            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name', 'approver:id,name'])->find($this->targetDiffId);
             if ($this->comparisonTargetDiff) {
                 $this->targetMeta = [
                     'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',
                     'updated_at' => $this->comparisonTargetDiff->created_at?->format('Y-m-d H:i:s') ?? '',
                     'version' => $this->comparisonTargetDiff->version,
+                    'status' => $this->comparisonTargetDiff->status,
                 ];
             }
         } else {
@@ -150,23 +155,25 @@ class LedgerDiffViewer extends BaseLivewireComponent
     {
         // データの準備（ID が指定されているがモデルがない場合）
         if ($this->baseDiffId && (! isset($this->baseMeta) || $this->baseMeta === null)) {
-            $baseDiff = LedgerDiff::with(['modifier:id,name'])->find($this->baseDiffId);
+            $baseDiff = LedgerDiff::with(['modifier:id,name', 'approver:id,name'])->find($this->baseDiffId);
             if ($baseDiff) {
                 $this->baseMeta = [
                     'modifier_name' => $baseDiff->modifier?->name ?? '?',
                     'updated_at' => $baseDiff->created_at?->format('Y-m-d H:i:s') ?? '',
                     'version' => $baseDiff->version,
+                    'status' => $baseDiff->status,
                 ];
             }
         }
 
         if ($this->targetDiffId && (! $this->comparisonTargetDiff || $this->comparisonTargetDiff->id !== $this->targetDiffId)) {
-            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name'])->find($this->targetDiffId);
+            $this->comparisonTargetDiff = LedgerDiff::with(['modifier:id,name', 'approver:id,name'])->find($this->targetDiffId);
             if ($this->comparisonTargetDiff) {
                 $this->targetMeta = [
                     'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',
                     'updated_at' => $this->comparisonTargetDiff->created_at?->format('Y-m-d H:i:s') ?? '',
                     'version' => $this->comparisonTargetDiff->version,
+                    'status' => $this->comparisonTargetDiff->status,
                 ];
             }
         }
@@ -216,6 +223,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
             'requiredGroups' => $this->getRequiredGroups(),
         ]);
     }
+
 
     public function placeholder(): string
     {

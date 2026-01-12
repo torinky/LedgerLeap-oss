@@ -30,7 +30,8 @@
                         this.states[ledgerId] = {};
                         console.log('[LedgerState] Created new state for ledgerId:', ledgerId);
                     } else {
-                        console.log('[LedgerState] Loaded existing state for ledgerId:', ledgerId, this.states[ledgerId]);
+                        console.log('[LedgerState] Loaded existing state for ledgerId:', ledgerId, this
+                            .states[ledgerId]);
                     }
                 },
 
@@ -38,7 +39,8 @@
                     console.log('[LedgerState] reload() called, refreshing from localStorage');
                     this.states = JSON.parse(localStorage.getItem('ledger_collapsed_states') || '{}');
                     if (this.currentLedgerId) {
-                        console.log('[LedgerState] Reloaded state for ledgerId:', this.currentLedgerId, this.states[this.currentLedgerId]);
+                        console.log('[LedgerState] Reloaded state for ledgerId:', this.currentLedgerId, this
+                            .states[this.currentLedgerId]);
                     }
                 },
 
@@ -49,11 +51,13 @@
                     }
                     const ledgerStates = this.states[this.currentLedgerId];
                     if (ledgerStates[groupName] !== undefined) {
-                        console.log('[LedgerState] isCollapsed(' + groupName + '):', ledgerStates[groupName]);
+                        console.log('[LedgerState] isCollapsed(' + groupName + '):', ledgerStates[
+                            groupName]);
                         return ledgerStates[groupName];
                     }
                     const defaultValue = !isRequired;
-                    console.log('[LedgerState] isCollapsed(' + groupName + ') using default:', defaultValue, '(isRequired=' + isRequired + ')');
+                    console.log('[LedgerState] isCollapsed(' + groupName + ') using default:', defaultValue,
+                        '(isRequired=' + isRequired + ')');
                     return defaultValue;
                 },
 
@@ -65,7 +69,8 @@
                     const newValue = !this.isCollapsed(groupName, isRequired);
                     this.states[this.currentLedgerId][groupName] = newValue;
                     localStorage.setItem('ledger_collapsed_states', JSON.stringify(this.states));
-                    console.log('[LedgerState] toggle(' + groupName + ') to:', newValue, 'Saved to localStorage');
+                    console.log('[LedgerState] toggle(' + groupName + ') to:', newValue,
+                        'Saved to localStorage');
                 }
             });
 
@@ -102,8 +107,12 @@
                         <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
                             class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
                             option-label="name" wire:key="details-display-level-group" />
-                        <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
-                            class="text-xs" />
+                        <div class="flex items-center gap-1">
+                            <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
+                                class="text-xs" />
+                            <x-mary-icon name="o-question-mark-circle" class="w-4 h-4 text-base-content/40 cursor-help"
+                                x-tooltip="{{ __('ledger.workflow.guide.details_compare') }}" />
+                        </div>
                     </x-slot:menu>
 
                     {{-- 新しい LedgerDiffViewer コンポーネント --}}
@@ -111,12 +120,53 @@
                         :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId"
                         wire:key="diff-viewer-{{ $ledgerRecord->id }}" lazy />
 
-                    <div class="container mx-auto mt-4 items-center text-sm text-gray-500 flex justify-end">
-                        <i class="fa-solid fa-user mr-2"></i>{{ $ledgerRecord->modifier->name }}
-                        <span class="ml-3"><i
-                                class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.updated_at') . $ledgerRecord->updated_at->format('Y-m-d H:i:s') }}</span>
-                        <span class="ml-3"><i
-                                class="fa-solid fa-clock mr-2"></i>{{ __('ledger.named.created_at') . $ledgerRecord->created_at->format('Y-m-d H:i:s') }}</span>
+                    {{-- フッター集約情報（編集者情報・ナッジ） --}}
+                    <div class="mt-6 pt-4 border-t border-base-200">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
+                            <div class="space-y-2">
+                                {{-- 本バージョンの情報 --}}
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="badge badge-outline badge-xs">{{ __('ledger.diff.current_version') }}</span>
+                                    <span class="font-semibold text-success">Ver.{{ $ledgerRecord->version }}</span>
+                                    <span class="text-base-content/50">|</span>
+                                    <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
+                                    <span
+                                        class="text-xs text-base-content/50">({{ $ledgerRecord->updated_at->format('Y-m-d H:i') }})</span>
+                                </div>
+
+                                {{-- 比較対象（過去バージョン）の情報 --}}
+                                @if ($showChanges && $comparisonTargetDiffModel)
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="badge badge-outline badge-xs">{{ __('ledger.diff.comparison_target') }}</span>
+                                        <span
+                                            class="font-semibold text-error">Ver.{{ $comparisonTargetDiffModel->version }}</span>
+                                        <span class="text-base-content/50">|</span>
+                                        @if ($comparisonTargetDiffModel->modifier)
+                                            <x-ledger.user-card-popover :user="$comparisonTargetDiffModel->modifier" />
+                                        @else
+                                            <span class="text-base-content/50">?</span>
+                                        @endif
+                                        <span
+                                            class="text-xs text-base-content/50">({{ $comparisonTargetDiffModel->created_at->format('Y-m-d H:i') }})</span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                {{-- ナッジリンク: 直前比較 --}}
+                                @if (!$this->isComparingWithPrevious())
+                                    <x-mary-button icon="o-arrow-path" :label="__('ledger.diff.nudge_view_changes')"
+                                        wire:click="activateCompareWithPrevious"
+                                        class="btn-sm btn-ghost text-primary hover:bg-primary/10" />
+                                @endif
+
+                                {{-- ナッジリンク: 履歴タブへ --}}
+                                <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="switchToHistoryTab"
+                                    class="btn-sm btn-ghost text-base-content/60" />
+                            </div>
+                        </div>
                     </div>
                 </x-mary-card>
 
