@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Illuminate\Support\Facades\DB;
 
 class ShowTest extends TestCase
 {
@@ -96,6 +97,7 @@ class ShowTest extends TestCase
         $this->ledger = Ledger::factory()
             ->for($ledgerDefine, 'define')
             ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
             ->create(['status' => WorkflowStatus::DRAFT]);
 
         // 最新のDiffを作成
@@ -367,5 +369,30 @@ class ShowTest extends TestCase
         $this->assertLessThanOrEqual(50, $totalQueries, "Too many queries detected: {$totalQueries}. Check debug_queries.log");
         
         \DB::disableQueryLog();
+    }
+
+    #[Test]
+    public function it_shows_guide_tooltips_and_nudge_links_to_regular_user()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertSee(__('ledger.show_diff'))
+            ->assertSeeHtml('data-tip="' . __('ledger.workflow.guide.display_level'))
+            ->assertSeeHtml('data-tip="' . __('ledger.workflow.guide.details_compare'))
+            ->assertSee(__('ledger.diff.nudge_view_changes'))
+            ->assertSee(__('ledger.diff.nudge_view_history'));
+    }
+
+    #[Test]
+    public function it_renders_editor_info_with_popover_and_icons_in_footer()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertSee(__('ledger.diff.current_version'))
+            ->assertSee("Ver.{$this->ledger->version}")
+            ->assertSee($this->user->name)
+            ->assertSee($this->ledger->updated_at->format('Y-m-d H:i'));
     }
 }
