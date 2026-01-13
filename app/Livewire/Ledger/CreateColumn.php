@@ -88,6 +88,13 @@ class CreateColumn extends BaseLivewireComponent
      */
     public $totalRequireColumnCount = 0;
 
+    // --- Validation UX (Issue #13) ---
+    public array $validationErrors = [];
+
+    public array $errorsByGroup = [];
+
+    public array $errorsByField = [];
+
     // --- 担当者選択モーダル制御用 ---
     public bool $showAssigneeModal = false;
 
@@ -431,30 +438,63 @@ class CreateColumn extends BaseLivewireComponent
         if (count($propertyPath) < 2) {
             return;
         }
-        $columnId = $propertyPath[1];
+        $columnId = (int) $propertyPath[1];
+        $column = $this->getColumnById($columnId);
 
-        $column = $this->ledgerDefineRecord->column_define[$columnId];
+        if (! $column) {
+            return;
+        }
 
         try {
             $this->validateOnly($propertyName);
 
             $this->updateProgress();
-
             $this->updateContentStatusLabel($column, true);
+            $this->updateValidationState();
 
         } catch (ValidationException $e) {
-            // リアルタイムバリデーションのエラーは通常の動作なので、ログレベルは warning にする
-            // また、テスト実行中はログがノイズになるため出力しない
-            if (! app()->runningUnitTests()) {
-                Log::warning('Livewire real-time validation failed.', [
-                    'message' => $e->getMessage(),
-                    'property' => $propertyName,
-                ]);
-            }
-            $this->error(__('ledger.validation.failed'), $e->getMessage());
-            // ★ Toastと同じタイミングでラベルの色を'error'に設定
-            $this->labelColor[$columnId] = 'error';
+            // 例外から直接エラーを取得して状態を更新
+            $this->updateValidationState($e->errors());
 
+            // テスト環境では例外を投げ直して Livewire の assertHasErrors が機能するようにする
+            if (app()->runningUnitTests()) {
+                throw $e;
+            }
+
+            $this->error(__('ledger.validation.failed'), $e->getMessage());
+            $this->labelColor[$columnId] = 'error';
+        }
+    }
+
+    /**
+     * バリデーション状態を一元管理するプロパティを更新します
+     *
+     * @param  array|null  $errors  引数を指定した場合はそのエラー配列を使用し、指定しない場合は現在のエラーバッグから取得します
+     */
+    public function updateValidationState(?array $errors = null): void
+    {
+        if ($errors === null) {
+            $errorBag = $this->getErrorBag();
+            $this->validationErrors = $errorBag->toArray();
+        } else {
+            $this->validationErrors = $errors;
+        }
+
+        $this->errorsByField = [];
+        $this->errorsByGroup = [];
+
+        foreach ($this->validationErrors as $key => $messages) {
+            $this->errorsByField[$key] = true;
+
+            // フィールドがどのグループに属するか特定
+            if (str_starts_with($key, 'content.')) {
+                $columnId = (int) str_replace('content.', '', $key);
+                $column = $this->getColumnById($columnId);
+                if ($column) {
+                    $groupName = $column->group ?? __('ledger.form.group_default');
+                    $this->errorsByGroup[$groupName] = ($this->errorsByGroup[$groupName] ?? 0) + 1;
+                }
+            }
         }
     }
 
@@ -492,7 +532,12 @@ class CreateColumn extends BaseLivewireComponent
         // 承認済みロックチェック (ModifyColumn でオーバーライドされるためここでは不要かも)
         // if ($this->ledgerRecord?->isLocked()) { ... }
         // バリデーション
-        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        try {
+            $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        } catch (ValidationException $e) {
+            $this->updateValidationState($e->errors());
+            throw $e;
+        }
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -659,6 +704,10 @@ class CreateColumn extends BaseLivewireComponent
     {
         $validationRules = [];
 
+        if (! $this->ledgerDefineRecord) {
+            return [];
+        }
+
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             $columnId = $column->id;
             $columnName = 'content.'.$columnId;
@@ -756,7 +805,12 @@ class CreateColumn extends BaseLivewireComponent
     // 下書き保存
     public function saveDraft(): void
     {
-        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY)); // content のみバリデーション
+        try {
+            $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY)); // content のみバリデーション
+        } catch (ValidationException $e) {
+            $this->updateValidationState();
+            throw $e;
+        }
         $userId = Auth::id();
         $this->processFilesForSave(); // ファイル処理
 
@@ -1067,7 +1121,12 @@ class CreateColumn extends BaseLivewireComponent
     public function requestInspection(): void
     {
         // 1. Content のバリデーション
-        $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        try {
+            $this->validate(array_filter($this->rules(), fn ($key) => str_starts_with($key, 'content.'), ARRAY_FILTER_USE_KEY));
+        } catch (ValidationException $e) {
+            $this->updateValidationState();
+            throw $e;
+        }
 
         // 2. 下書き保存を実行 (ファイル処理含む)
         try {
