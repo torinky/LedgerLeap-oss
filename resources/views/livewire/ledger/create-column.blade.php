@@ -46,6 +46,10 @@
                 <div class="card-body space-y-3 pt-2">
                     <x-mary-progress value="{{$progress}}" max="100"
                                      class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10"/>
+
+                    {{-- バリデーションエラーサマリー (Issue #13-2) --}}
+                    <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord" />
+
                     @foreach($groupedColumns as $groupName => $columnsInGroup)
                         <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20  mb-2" wire:key="group-{{ $groupName }}"
                              @if(!($collapsedStates[$groupName] ?? true)) open @endif> {{-- falseの時にopen --}}
@@ -193,10 +197,9 @@
 
     {{-- 担当者選択モーダルコンポーネントを呼び出し --}}
     {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
-    @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+    @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal'])
     {{-- コメント入力モーダル --}}
-    @livewire('workflow.workflow-comment-modal', ['ledgerId' => null],
-    key('workflow-comment-modal-create'))
+    @livewire('workflow.workflow-comment-modal', ['ledgerId' => null], ['key' => 'workflow-comment-modal-create'])
 
     {{-- 事前入力リンクモーダル --}}
     <x-mary-modal wire:model="showPrefillModal" class="backdrop-blur" title="">
@@ -233,20 +236,20 @@
             <div x-show="showSuccess" 
                  x-transition
                  @prefill-copy-success.window="showSuccess = true; showWarning = false; setTimeout(() => showSuccess = false, 3000)"
-                 class="alert alert-success break-words">
+                 class="alert alert-success wrap-break-word">
                 <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="break-words">{{ __('ledger.prefill.copy_success') }}</span>
+                <span class="wrap-break-word">{{ __('ledger.prefill.copy_success') }}</span>
             </div>
             
             {{-- コピー失敗メッセージ --}}
             <div x-show="showWarning" 
                  x-transition
                  @prefill-copy-failed.window="showWarning = true; showSuccess = false; setTimeout(() => { const textarea = document.getElementById('prefill-url-textarea'); if (textarea) textarea.select(); }, 100)"
-                 class="alert alert-warning break-words">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <div class="break-words overflow-hidden">
-                    <div class="font-bold break-words">{{ __('ledger.prefill.auto_copy_failed_title') }}</div>
-                    <div class="text-xs break-words">{{ __('ledger.prefill.auto_copy_failed_description') }}</div>
+                 class="alert alert-warning wrap-break-word">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <div class="wrap-break-word overflow-hidden">
+                    <div class="font-bold wrap-break-word">{{ __('ledger.prefill.auto_copy_failed_title') }}</div>
+                    <div class="text-xs wrap-break-word">{{ __('ledger.prefill.auto_copy_failed_description') }}</div>
                 </div>
             </div>
             
@@ -254,7 +257,7 @@
             <div>
 {{--
                 <label class="label">
-                    <span class="label-text text-xs text-base-content/70 break-words whitespace-normal">
+                    <span class="label-text text-xs text-base-content/70 wrap-break-word whitespace-normal">
                         {{ __('ledger.prefill.manual_copy_instruction') }}
                     </span>
                 </label>
@@ -370,4 +373,8 @@
     @endscript
 
 </div>
+
+
+
+
 

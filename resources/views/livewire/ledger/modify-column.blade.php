@@ -38,6 +38,10 @@
                 <div class="card-body space-y-3 ">
                     <x-mary-progress value="{{ $progress }}" max="100"
                         class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10" />
+
+                    {{-- バリデーションエラーサマリー (Issue #13-2) --}}
+                    <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord" />
+
                     @foreach ($groupedColumns as $groupName => $columnsInGroup)
                         <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2"
                             wire:key="group-{{ $groupName }}" @if (!($collapsedStates[$groupName] ?? true)) open @endif>
@@ -167,7 +171,7 @@
             </x-mary-form>
 
             {{-- 担当者選択モーダルコンポーネント呼び出し --}}
-            @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+            @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-workflow'])
 
             {{-- 編集確認モーダル --}}
             <x-mary-modal wire:model="confirmingEdit"
@@ -218,10 +222,10 @@
         @endif
 
         {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
-        @livewire('workflow.workflow-assignee-modal', key('assignee-modal'))
+        @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-bottom'])
 
         {{-- コメント入力モーダル --}}
-        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], key('workflow-comment-modal-show'))
+        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord?->id], ['key' => 'workflow-comment-modal-show'])
 
     </div>
 
