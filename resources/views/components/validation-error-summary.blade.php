@@ -49,43 +49,43 @@
                 open = !open;
             }
          "
-         class="mb-6 w-full"
+         class="mb-6 w-full sticky top-[108px] md:top-[92px] z-[35]"
          wire:key="validation-error-summary-wrapper">
         {{-- メインカード --}}
-        <div class="card bg-base-100 border-2 border-error shadow-xl overflow-hidden" x-show="open" x-cloak x-transition>
+        <div class="card bg-base-100 border-2 border-error shadow-xl overflow-hidden shadow-error/20" x-show="open" x-cloak x-transition>
             {{-- ヘッダー：背景エラー色 --}}
-            <div class="bg-error text-error-content px-4 py-3 flex items-center justify-between">
+            <div class="bg-error text-error-content px-4 py-2 flex items-center justify-between sticky top-0 z-10">
                 <div class="flex items-center gap-3">
-                    <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6 animate-pulse" />
-                    <h2 class="font-black text-lg tracking-tight">
+                    <x-mary-icon name="o-exclamation-triangle" class="w-5 h-5 animate-pulse" />
+                    <h2 class="font-black text-sm md:text-base tracking-tight">
                         {{ __('ledger.validation.summary_title', ['count' => $errorCount]) }}
                     </h2>
                 </div>
 
                 {{-- エラー間ナビゲーションボタン (Issue #23) --}}
-                <div class="flex items-center gap-1 ml-auto mr-4">
+                <div class="flex items-center gap-1 ml-auto mr-4 bg-black/10 rounded-full px-2 py-0.5">
                     <button type="button"
                             x-on:click="$dispatch('navigate-error', { direction: 'prev' })"
-                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/10"
+                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/20"
                             title="{{ __('ledger.validation.nav_prev') }}">
                         <x-mary-icon name="o-chevron-up" class="w-4 h-4" />
                     </button>
-                    <span class="text-[10px] font-black opacity-50 px-1">NAV</span>
+                    <span class="text-[9px] font-black opacity-70 px-1 select-none">NAV</span>
                     <button type="button"
                             x-on:click="$dispatch('navigate-error', { direction: 'next' })"
-                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/10"
+                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/20"
                             title="{{ __('ledger.validation.nav_next') }}">
                         <x-mary-icon name="o-chevron-down" class="w-4 h-4" />
                     </button>
                 </div>
 
                 <button x-on:click="open = false" type="button" class="btn btn-ghost btn-xs btn-circle text-current opacity-70 hover:opacity-100 hover:bg-black/10" title="{{ __('ledger.validation.hide_summary') }}">
-                    <x-mary-icon name="o-x-mark" class="" />
+                    <x-mary-icon name="o-x-mark" class="w-4 h-4" />
                 </button>
             </div>
 
-            <div class="card-body p-4 gap-6 bg-error/5">
-                {{-- 1. 必須系統のエラー --}}
+            <div class="card-body p-4 space-y-4 max-h-[40vh] overflow-y-auto overscroll-contain bg-base-100/95 backdrop-blur-sm">
+                {{-- 必須入力エラー --}}
                 @if(count($requiredErrorsList) > 0)
                     <div class="space-y-3">
                         <div class="flex items-center gap-2 text-error font-black uppercase tracking-wider">
@@ -162,11 +162,11 @@
         </div>
 
         {{-- 折りたたみ時のコンパクト表示 --}}
-        <div x-show="!open" x-cloak class="flex justify-start">
-             <button x-on:click="open = true" type="button" class="btn btn-error items-center gap-2 shadow-lg border-2 border-white/20 animate-bounce">
-                 <x-mary-icon name="o-exclamation-triangle" class="" />
-                 <span class="font-black">{{ __('ledger.validation.show_summary') }}</span>
-                 <div class="badge badge-ghost font-mono opacity-80">{{ $errorCount }}</div>
+        <div x-show="!open" x-cloak class="flex justify-start sticky top-[108px] md:top-[92px] z-[35]">
+             <button x-on:click="open = true" type="button" class="btn btn-error btn-sm items-center gap-2 shadow-lg border-2 border-white/20 animate-bounce">
+                 <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4" />
+                 <span class="font-black text-xs">{{ __('ledger.validation.show_summary') }}</span>
+                 <div class="badge badge-ghost badge-xs font-mono opacity-80">{{ $errorCount }}</div>
              </button>
         </div>
     </div>

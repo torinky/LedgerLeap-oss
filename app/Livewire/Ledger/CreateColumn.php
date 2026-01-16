@@ -153,10 +153,10 @@ class CreateColumn extends BaseLivewireComponent
         $this->initializeGroups();
     }
 
-    public function toggleGroup(string $groupName): void
+    public function toggleGroup(string $groupName, ?bool $force = null): void
     {
         if (isset($this->collapsedStates[$groupName])) {
-            $this->collapsedStates[$groupName] = ! $this->collapsedStates[$groupName];
+            $this->collapsedStates[$groupName] = $force ?? ! $this->collapsedStates[$groupName];
         }
     }
 

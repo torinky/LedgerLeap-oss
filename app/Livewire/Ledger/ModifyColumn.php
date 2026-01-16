@@ -547,4 +547,24 @@ class ModifyColumn extends CreateColumn
             }
         }
     }
+
+    public function toggleGroup(string $groupName, ?bool $force = null): void
+    {
+        if (isset($this->collapsedStates[$groupName])) {
+            $this->collapsedStates[$groupName] = $force ?? ! $this->collapsedStates[$groupName];
+        }
+    }
+
+    protected function initializeGroups(): void
+    {
+        $allGroups = collect($this->ledgerDefineRecord->column_define)
+            ->pluck('group')
+            ->map(fn ($group) => $group ?? __('ledger.form.group_default'))
+            ->unique()
+            ->all();
+
+        foreach ($allGroups as $groupName) {
+            $this->collapsedStates[$groupName] = $this->collapsedStates[$groupName] ?? true;
+        }
+    }
 }
