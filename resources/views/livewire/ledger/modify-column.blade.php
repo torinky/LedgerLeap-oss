@@ -44,18 +44,27 @@
 
                     @foreach ($groupedColumns as $groupName => $columnsInGroup)
                         <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2"
-                            wire:key="group-{{ $groupName }}" @if (!($collapsedStates[$groupName] ?? true)) open @endif>
+                            wire:key="group-{{ $groupName }}" @if (!($collapsedStates[$groupName] ?? true)) open @endif
+                            x-data="groupErrorBadge" data-group-name="{{ $groupName }}">
                             {{-- falseの時にopen --}}
                             <div class="collapse-title text-xl font-medium"
                                 wire:click="toggleGroup('{{ $groupName }}')">
-                                <h3 class="text-lg font-bold flex items-center">
-                                    @if (collect($columnsInGroup)->contains(fn($col) => $col->required))
-                                        <div class="tooltip tooltip-right mr-2"
-                                            data-tip="{{ __('ledger.form.required_group_indicator') }}">
-                                            <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error" />
-                                        </div>
-                                    @endif
-                                    {{ $groupName }}
+                                <h3 class="text-lg font-bold flex items-center pr-10">
+                                    <div class="flex items-center">
+                                        @if (collect($columnsInGroup)->contains(fn($col) => $col->required))
+                                            <div class="tooltip tooltip-right mr-2"
+                                                data-tip="{{ __('ledger.form.required_group_indicator') }}">
+                                                <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error" />
+                                            </div>
+                                        @endif
+                                        {{ $groupName }}
+                                    </div>
+
+                                    {{-- エラーバッジ表示 (Issue #17) --}}
+                                    <div x-show="errorCount > 0" x-cloak class="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-error/10 text-error rounded-full border border-error/20 animate-pulse">
+                                        <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4" />
+                                        <span class="text-sm font-black font-mono leading-none" x-text="errorCount"></span>
+                                    </div>
                                 </h3>
                             </div>
                             <div class="collapse-content">
@@ -225,9 +234,15 @@
         @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-bottom'])
 
         {{-- コメント入力モーダル --}}
-        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord?->id], ['key' => 'workflow-comment-modal-show'])
-
+        @endscript
     </div>
 
 </div>
+
+
+
+
+
+
+
 

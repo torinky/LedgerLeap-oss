@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => {
                     'resources/css/tree.css',
                     'resources/js/app.js',
                     'resources/js/ledgerEdit.js',
-                    'resources/js/ledgerDefineEdit.js',
+                    'resources/js/ledgerIndex.js',
                     'resources/js/ledgerShow.js',
-                    'resources/js/ledgerIndex.js'
+                    'resources/sass/app.scss',
                 ],
                 refresh: true,
             }),
