@@ -80,12 +80,19 @@
                                                 wire:key="content-{{$columnDefine->id}}"
                                                 x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
                                                 x-on:focusin="updateBackground('{{ $columnDefine->id }}')"
-                                                class="w-full opacity-control-block opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }}"
+                                                class="w-full opacity-control-block opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }} {{ isset($validationErrors['content.'.$columnDefine->id]) ? 'validation-error-highlight' : '' }}"
                                                 @if($loop->parent->first && $loop->first)
                                                     x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
                                                     x-init="updateBackground('{{ $columnDefine->id }}')"
                                                 @endif
                                         >
+                                            {{-- エラーアイコン (Issue #18) --}}
+                                            @if(isset($validationErrors['content.'.$columnDefine->id]))
+                                                <div class="validation-error-icon-wrapper tooltip tooltip-left" data-tip="{{ collect($validationErrors['content.'.$columnDefine->id])->first() }}">
+                                                    <x-mary-icon name="o-x-circle" class="w-5 h-5 text-error" />
+                                                </div>
+                                            @endif
+
                                             @if($columnDefine->type==='files')
                                                 <x-ledger.form.files
                                                         :columnDefine="$columnDefine"
@@ -382,6 +389,8 @@
     @endscript
 
 </div>
+
+
 
 
 

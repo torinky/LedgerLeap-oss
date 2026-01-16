@@ -1,0 +1,49 @@
+/* Validation Highlight Styles */
+.validation-error-highlight {
+    border: 2px solid rgb(239, 68, 68) !important; /* border-error */
+    background-color: rgba(239, 68, 68, 0.05) !important; /* bg-error/5 */
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+    border-radius: 0.5rem;
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Animation when error appears */
+.validation-error-highlight {
+    animation: field-error-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes field-error-shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+    40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+
+/* Error icon positioning */
+.validation-field-container {
+    position: relative;
+}
+
+.validation-error-icon-wrapper {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    color: rgb(239, 68, 68);
+    background: white;
+    border-radius: 50%;
+    z-index: 10;
+    line-height: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Inline error message adjustment */
+.validation-error-highlight .label-text-alt.text-error {
+    font-weight: 800;
+    font-style: italic;
+    background-color: rgba(239, 68, 68, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 4px;
+}
