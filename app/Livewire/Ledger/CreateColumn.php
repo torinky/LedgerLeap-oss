@@ -528,8 +528,10 @@ class CreateColumn extends BaseLivewireComponent
             return ! empty($value) && in_array($key, $this->requredColumnIds);
         })->count();
 
-        if ($rawCount > 0) {
-            $this->progress = $rawCount / $this->totalRequireColumnCount * 100;
+        if ($this->totalRequireColumnCount > 0) {
+            $this->progress = ($rawCount / $this->totalRequireColumnCount) * 100;
+        } else {
+            $this->progress = 100; // 必須項目がない場合は100%とする
         }
     }
 

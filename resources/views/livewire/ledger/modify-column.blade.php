@@ -37,7 +37,7 @@
 
                 <div class="card-body space-y-3 ">
                     <x-mary-progress value="{{ $progress }}" max="100"
-                        class="progress-warning h-3 w-full sticky top-24 md:top-20 z-10" />
+                        class="{{ !empty($validationErrors) ? 'progress-error' : 'progress-success' }} h-3 w-full sticky top-24 md:top-20 z-10" />
 
                     {{-- バリデーションエラーサマリー (Issue #13-2) --}}
                     <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord" />
