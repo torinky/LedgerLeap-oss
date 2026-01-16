@@ -41,7 +41,16 @@
 @endphp
 
 @if($errorCount > 0)
-    <div x-data="{ open: true }" class="mb-6 w-full" wire:key="validation-error-summary-wrapper">
+    <div x-data="{ open: true }"
+         @toggle-validation-summary.window="open = !open"
+         @keydown.window.ctrl.e="
+            if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                $event.preventDefault();
+                open = !open;
+            }
+         "
+         class="mb-6 w-full"
+         wire:key="validation-error-summary-wrapper">
         {{-- メインカード --}}
         <div class="card bg-base-100 border-2 border-error shadow-xl overflow-hidden" x-show="open" x-cloak x-transition>
             {{-- ヘッダー：背景エラー色 --}}
