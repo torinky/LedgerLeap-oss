@@ -83,38 +83,86 @@ $(document).ready(function () {
 });
 */
 
-// エラー箇所への自動スクロール機能 (Issue #20)
+// エラー箇所への自動スクロール機能 (Issue #20, #23)
 function registerValidationErrorNavigator() {
     if (window.Alpine && !window.Alpine.data('validationErrorNavigator')) {
         window.Alpine.data('validationErrorNavigator', () => ({
+            errorFields: [],
+            currentIndex: -1,
+
             init() {
                 // スクロールイベントの待機 (windowレベルでリッスン)
                 window.addEventListener('scroll-to-error', (event) => {
-                    const fieldName = event.detail.field;
-                    if (!fieldName) return;
+                    this.scrollToField(event.detail.field);
+                });
 
-                    // フィールド要素の特定（id: field-content-123 形式）
-                    // content.123 -> field-content-123
-                    const elementId = fieldName.replace('.', '-');
-                    const targetId = `field-${elementId}`;
-                    const element = document.getElementById(targetId);
+                // 前後へのナビゲーションイベント
+                window.addEventListener('navigate-error', (event) => {
+                    this.navigate(event.detail.direction);
+                });
 
-                    if (element) {
-                        // スムーズスクロール実行
-                        element.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
+                // エラーリストの更新を待機（Livewireからの通知などを想定）
+                // ただし、現在はボタンクリック時にDOMから最新のリストを取得するほうが確実
+            },
 
-                    // 要素を一時的に強調
+            updateErrorList() {
+                // 画面上のエラーハイライトがある要素を取得してソート（上から順）
+                const elements = Array.from(document.querySelectorAll('.validation-error-highlight'))
+                    .map(el => ({
+                        id: el.closest('[id^="field-content-"]').id,
+                        top: el.getBoundingClientRect().top + window.scrollY
+                    }))
+                    .sort((a, b) => a.top - b.top);
+
+                this.errorFields = elements.map(e => e.id);
+            },
+
+            scrollToField(fieldName) {
+                if (!fieldName) return;
+                const elementId = fieldName.replace('.', '-');
+                const targetId = `field-${elementId}`;
+                const element = document.getElementById(targetId);
+
+                if (element) {
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+
                     element.classList.add('field-arrival-highlight');
                     setTimeout(() => {
                         element.classList.remove('field-arrival-highlight');
                     }, 1500);
-                    } else {
-                        console.warn(`Validation target element not found: ${targetId}`);
-                    }
-                });
+
+                    // 現在のインデックスを更新
+                    this.updateErrorList();
+                    this.currentIndex = this.errorFields.indexOf(targetId);
+                }
+            },
+
+            navigate(direction) {
+                this.updateErrorList();
+                if (this.errorFields.length === 0) return;
+
+                if (direction === 'next') {
+                    this.currentIndex = (this.currentIndex + 1) % this.errorFields.length;
+                } else if (direction === 'prev') {
+                    this.currentIndex = (this.currentIndex - 1 + this.errorFields.length) % this.errorFields.length;
+                }
+
+                const targetId = this.errorFields[this.currentIndex];
+                const element = document.getElementById(targetId);
+                if (element) {
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+
+                    element.classList.add('field-arrival-highlight');
+                    setTimeout(() => {
+                        element.classList.remove('field-arrival-highlight');
+                    }, 1500);
+                }
             }
         }));
     }

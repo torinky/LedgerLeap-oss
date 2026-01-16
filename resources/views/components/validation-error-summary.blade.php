@@ -61,6 +61,24 @@
                         {{ __('ledger.validation.summary_title', ['count' => $errorCount]) }}
                     </h2>
                 </div>
+
+                {{-- エラー間ナビゲーションボタン (Issue #23) --}}
+                <div class="flex items-center gap-1 ml-auto mr-4">
+                    <button type="button"
+                            x-on:click="$dispatch('navigate-error', { direction: 'prev' })"
+                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/10"
+                            title="{{ __('ledger.validation.nav_prev') }}">
+                        <x-mary-icon name="o-chevron-up" class="w-4 h-4" />
+                    </button>
+                    <span class="text-[10px] font-black opacity-50 px-1">NAV</span>
+                    <button type="button"
+                            x-on:click="$dispatch('navigate-error', { direction: 'next' })"
+                            class="btn btn-xs btn-circle btn-ghost text-current hover:bg-black/10"
+                            title="{{ __('ledger.validation.nav_next') }}">
+                        <x-mary-icon name="o-chevron-down" class="w-4 h-4" />
+                    </button>
+                </div>
+
                 <button x-on:click="open = false" type="button" class="btn btn-ghost btn-xs btn-circle text-current opacity-70 hover:opacity-100 hover:bg-black/10" title="{{ __('ledger.validation.hide_summary') }}">
                     <x-mary-icon name="o-x-mark" class="" />
                 </button>
