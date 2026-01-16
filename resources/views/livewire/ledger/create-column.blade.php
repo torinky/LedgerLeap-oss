@@ -1,7 +1,7 @@
 <div>
     <div
             class="background-image-change"
-            x-data="{
+            x-data="Object.assign(validationErrorNavigator(), {
             currentBg: null,
             updateBackground(columnId) {
                 this.currentBg = $wire.backgroundImages[columnId] || null;
@@ -21,7 +21,7 @@
                     firstInput.focus();
                 }
             }
-        }"
+        })"
             x-init="focusFirstInput()"
     >
 
@@ -74,7 +74,7 @@
                             </div>
                             <div class="collapse-content">
                                 @foreach($columnsInGroup as $columnDefine)
-                                    <div class="flex mt-2">
+                                    <div class="flex mt-2" id="field-content-{{$columnDefine->id}}">
                                         <div class="w-1 bg-{{$labelColor[$columnDefine->id]}}"></div>
                                         <div
                                                 wire:key="content-{{$columnDefine->id}}"
@@ -389,10 +389,4 @@
     @endscript
 
 </div>
-
-
-
-
-
-
 

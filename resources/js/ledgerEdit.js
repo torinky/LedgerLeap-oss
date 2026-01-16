@@ -82,3 +82,47 @@ $(document).ready(function () {
     });
 });
 */
+
+// エラー箇所への自動スクロール機能 (Issue #20)
+function registerValidationErrorNavigator() {
+    if (window.Alpine && !window.Alpine.data('validationErrorNavigator')) {
+        window.Alpine.data('validationErrorNavigator', () => ({
+            init() {
+                // スクロールイベントの待機 (windowレベルでリッスン)
+                window.addEventListener('scroll-to-error', (event) => {
+                    const fieldName = event.detail.field;
+                    if (!fieldName) return;
+
+                    // フィールド要素の特定（id: field-content-123 形式）
+                    // content.123 -> field-content-123
+                    const elementId = fieldName.replace('.', '-');
+                    const targetId = `field-${elementId}`;
+                    const element = document.getElementById(targetId);
+
+                    if (element) {
+                        // スムーズスクロール実行
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+
+                        // 要素を一時的に強調
+                        element.classList.add('ring-4', 'ring-error/30');
+                        setTimeout(() => {
+                            element.classList.remove('ring-4', 'ring-error/30');
+                        }, 2000);
+                    } else {
+                        console.warn(`Validation target element not found: ${targetId}`);
+                    }
+                });
+            }
+        }));
+    }
+}
+
+if (window.Alpine) {
+    registerValidationErrorNavigator();
+} else {
+    document.addEventListener('alpine:init', registerValidationErrorNavigator);
+}
+
