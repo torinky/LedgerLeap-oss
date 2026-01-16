@@ -496,6 +496,21 @@ class CreateColumn extends BaseLivewireComponent
                 }
             }
         }
+
+        // エラーグループの自動展開 (Issue #16)
+        $this->expandErrorGroups();
+    }
+
+    /**
+     * エラーが含まれるグループを自動的に展開します (Issue #16)
+     */
+    protected function expandErrorGroups(): void
+    {
+        foreach (array_keys($this->errorsByGroup) as $groupName) {
+            if (isset($this->collapsedStates[$groupName])) {
+                $this->collapsedStates[$groupName] = false; // 展開
+            }
+        }
     }
 
     public function updateProgress(): void
