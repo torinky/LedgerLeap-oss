@@ -106,11 +106,11 @@ function registerValidationErrorNavigator() {
                             block: 'center'
                         });
 
-                        // 要素を一時的に強調
-                        element.classList.add('ring-4', 'ring-error/30');
-                        setTimeout(() => {
-                            element.classList.remove('ring-4', 'ring-error/30');
-                        }, 2000);
+                    // 要素を一時的に強調
+                    element.classList.add('field-arrival-highlight');
+                    setTimeout(() => {
+                        element.classList.remove('field-arrival-highlight');
+                    }, 1500);
                     } else {
                         console.warn(`Validation target element not found: ${targetId}`);
                     }
