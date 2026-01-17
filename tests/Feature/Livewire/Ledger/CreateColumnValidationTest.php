@@ -157,4 +157,76 @@ class CreateColumnValidationTest extends TestCase
 
         $this->assertArrayNotHasKey('content.1', $test->get('fixedFields'));
     }
+
+    #[Test]
+    public function it_dispatches_toast_notification_when_errors_are_fixed()
+    {
+        $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+        $this->assignFolderPermission($folder);
+
+        $columnDefineArray = [
+            [
+                'id' => 1,
+                'name' => 'Field 1',
+                'type' => 'text',
+                'order' => 1,
+                'required' => true,
+            ],
+            [
+                'id' => 2,
+                'name' => 'Field 2',
+                'type' => 'text',
+                'order' => 2,
+                'required' => true,
+            ],
+            [
+                'id' => 3,
+                'name' => 'Field 3',
+                'type' => 'text',
+                'order' => 3,
+                'required' => true,
+            ],
+        ];
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->tenant->id,
+            'workflow_enabled' => false,
+            'column_define' => $columnDefineArray,
+        ]);
+
+        $test = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id]);
+
+        // 1. 最初は空なのでエラーを発生させる (3つ)
+        $test->set('content.1', '')
+            ->set('content.2', '')
+            ->set('content.3', '')
+            ->assertHasErrors(['content.1', 'content.2', 'content.3']);
+
+        $this->assertEquals(3, $test->get('previousErrorCount'));
+
+        // 2. 1つだけ解消する -> トーストは出ないはず (Issue #25 改良)
+        $test->set('content.1', 'Value 1')
+            ->assertHasNoErrors('content.1')
+            ->assertHasErrors(['content.2', 'content.3'])
+            ->assertNotDispatched('mary-toast');
+
+        $this->assertEquals(2, $test->get('previousErrorCount'));
+
+        // 3. 残りの2つを同時に解消する (例えば Save 時に全バリデーションが走るケースを想定して個別にセットした後に状態更新)
+        // ここでは set したものから updated フックが走るので、内部的に updateValidationState が呼ばれる。
+        // content.2 をセットすると 2->1 になる。この時、他にもエラー(content.3)が残っているのでトーストは出ない。
+        $test->set('content.2', 'Value 2')
+            ->assertNotDispatched('mary-toast');
+
+        // content.3 をセットすると 1->0 になる。この時は「すべて解消」トーストが出る。
+        $test->set('content.3', 'Value 3');
+
+        $test->assertDispatched('mary-toast', function ($name, $data) {
+            return $data['type'] === 'success' &&
+                   $data['title'] === 'すべてのバリデーションエラーが解消されました！';
+        });
+
+        $this->assertEquals(0, $test->get('previousErrorCount'));
+    }
 }

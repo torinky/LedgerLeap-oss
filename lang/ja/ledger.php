@@ -1310,6 +1310,8 @@ return [
         'show_summary' => 'エラーを確認',
         'summary_hint' => '項目をクリックすると該当箇所へ移動します。Ctrl+E でこのパネルを開閉できます。',
         'summary_title' => 'バリデーションエラー (:count件)',
+        'errors_fixed' => ':count 個のエラーを修正しました！',
+        'all_errors_fixed' => 'すべてのバリデーションエラーが解消されました！',
     ],
     'workflow' => [
         'action_at' => '操作日時',
