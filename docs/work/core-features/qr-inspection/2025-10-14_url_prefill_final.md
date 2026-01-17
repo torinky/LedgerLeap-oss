@@ -359,61 +359,28 @@ public function copyToClipboard(): void
 
 ---
 
-## 5. テスト計画
+## 5. QRコード生成ライブラリの選定とトレードオフ
 
-### 5.1 機能テスト
+本機能の実装にあたり、候補となったPHP用QRコード生成ライブラリの比較調査結果を以下に示します。
 
-```php
-// prefillパラメータが正しく適用されるか
-public function test_prefill_params_are_validated_and_applied()
+### 5.1 候補ライブラリの比較
 
-// 不正なカラムIDは無視されるか
-public function test_invalid_column_id_is_ignored()
+| ライブラリ名 | 特徴 | メリット | デメリット |
+| :--- | :--- | :--- | :--- |
+| **SimpleSoftwareIO/simple-qrcode** | BaconQrCodeのLaravelラッパー (採用) | ・LaravelのFacade/サービスプロバイダが標準提供<br>・SVG/PNG/EPS等主要形式に対応<br>・導入が容易 (composer一本) | ・BaconQrCodeに依存<br>・細かなカスタマイズにはBaconQrCodeの直接操作が必要な場合がある |
+| **endroid/qr-code** | モダンで多機能なスタンドアロンライブラリ | ・クリーンなオブジェクト指向設計<br>・ドキュメントが非常に充実<br>・多彩なWriter (SVG, PNG, WebP等) | ・Laravel専用ではないためインテグレーションコードが少々必要 |
+| **chillerlan/php-qrcode** | 純粋PHP実装、高速・軽量 | ・外部依存が少なく軽量<br>・非常に多くの出力形式とECCレベルをサポート<br>・カスタマイズ性が極めて高い | ・APIがやや複雑で学習コストが少し高い |
 
-// XSS攻撃が防がれるか
-public function test_xss_attack_is_prevented()
-```
+### 5.2 選定理由：SimpleSoftwareIO/simple-qrcode
 
-### 5.2 UserNameType テスト
+本プロジェクトでは、以下の理由から **SimpleSoftwareIO/simple-qrcode** を採用しました。
 
-```php
-// フルネーム生成
-public function test_generate_value_with_full_name()
+1. **Laravel Integration:** 本プロジェクトの基盤であるLaravelと密結合しており、開発効率が最も高い。
+2. **SVG Support:** ベクター形式での出力が容易であり、UI上でのスケーラビリティとダウンロード機能の要件を満たす。
+3. **Maturity:** 多くのLaravelプロジェクトでの採用実績があり、信頼性が高い。
 
-// 苗字のみ生成
-public function test_generate_value_with_family_name_only()
-
-// 組織名プレフィックス（最下層のみ）
-public function test_generate_value_with_org_prefix_bottom_only()
-
-// 組織名プレフィックス（3階層）
-public function test_generate_value_with_org_prefix_bottom_3_levels()
-
-// 編集時の上書きモード
-public function test_generate_edit_value_with_overwrite_mode()
-
-// 編集時の追加モード
-public function test_generate_edit_value_with_append_mode()
-
-// 重複防止
-public function test_generate_edit_value_with_append_mode_prevents_duplicate()
-```
-
-### 5.3 URL生成テスト
-
-```php
-// 通常の値はURLに含まれる
-public function test_generate_url_includes_normal_values()
-
-// 自動生成値が初期値と同じ場合はURLに含まれない
-public function test_generate_url_excludes_auto_generated_default_values()
-
-// 自動生成値が初期値と異なる場合はURLに含まれる
-public function test_generate_url_includes_auto_generated_modified_values()
-
-// 空の値はURLに含まれない
-public function test_generate_url_excludes_empty_values()
-```
+### 5.3 関連イシュー
+- GitHub Issue: [#48](https://github.com/torinky/LedgerLeap/issues/48)
 
 ---
 
@@ -510,6 +477,7 @@ public function test_generate_url_excludes_empty_values()
   - `prefill.manual_copy_instruction`: "以下のURLを選択してコピーできます（クリックで全選択）"
   - `prefill.select_url`: "URLを選択"
   - `prefill.info_qr_or_share`: "このURLをQRコード化したり、メールで送信して共有できます。"
+  - `prefill.qr_code_hint`: "※モバイル端末での利用に最適化されています" (Issue [#47](https://github.com/torinky/LedgerLeap/issues/47) に対応)
 
 #### テスト実装
 
