@@ -148,7 +148,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
             ->with([
                 'modifier.organizations',
                 'inspector.organizations',
-                'approver.organizations'
+                'approver.organizations',
             ])
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc');

@@ -158,7 +158,7 @@ class Show extends BaseLivewireComponent
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
                 'approver:id,name,email,chat_link',
-                'approver.organizations'
+                'approver.organizations',
             ])->find($this->targetDiffId);
         } else {
             $this->comparisonTargetDiffModel = null;

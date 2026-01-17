@@ -65,7 +65,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
                 'approver:id,name,email,chat_link',
-                'approver.organizations'
+                'approver.organizations',
             ])->find($this->targetDiffId);
         } elseif ($comparisonTargetDiff && $comparisonTargetDiff->exists) {
             $this->comparisonTargetDiff = $comparisonTargetDiff;
@@ -114,7 +114,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
                 'approver:id,name,email,chat_link',
-                'approver.organizations'
+                'approver.organizations',
             ])->find($this->targetDiffId);
             if ($this->comparisonTargetDiff) {
                 $this->targetMeta = [
@@ -169,7 +169,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
                 'approver:id,name,email,chat_link',
-                'approver.organizations'
+                'approver.organizations',
             ])->find($this->baseDiffId);
             if ($baseDiff) {
                 $this->baseMeta = [
@@ -186,7 +186,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
                 'approver:id,name,email,chat_link',
-                'approver.organizations'
+                'approver.organizations',
             ])->find($this->targetDiffId);
             if ($this->comparisonTargetDiff) {
                 $this->targetMeta = [
@@ -243,7 +243,6 @@ class LedgerDiffViewer extends BaseLivewireComponent
             'requiredGroups' => $this->getRequiredGroups(),
         ]);
     }
-
 
     public function placeholder(): string
     {

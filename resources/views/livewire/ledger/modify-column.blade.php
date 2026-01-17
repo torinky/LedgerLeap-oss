@@ -72,9 +72,15 @@
                                     <div class="flex mt-2" id="field-content-{{$columnDefine->id}}">
                                         <div class="w-1 bg-{{ $labelColor[$columnDefine->id] }}"></div>
                                         <div wire:key="content-{{ $columnDefine->id }}"
+                                            x-data="{ showFixed: false }"
+                                            @field-fixed.window="if ($event.detail.field === 'content.{{$columnDefine->id}}') { showFixed = true; setTimeout(() => showFixed = false, 2000); }"
                                             x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
                                             x-on:focusin="updateBackground('{{ $columnDefine->id }}')"
-                                            class="w-full opacity-control-block opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }} {{ isset($validationErrors['content.'.$columnDefine->id]) ? 'validation-error-highlight' : '' }}"
+                                            class="w-full opacity-control-block opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80 {{ $loop->parent->first && $loop->first ? 'initial-opacity-100' : '' }}"
+                                            :class="{
+                                                'validation-error-highlight': {{ isset($validationErrors['content.'.$columnDefine->id]) ? 'true' : 'false' }},
+                                                'validation-success-highlight': showFixed && !{{ isset($validationErrors['content.'.$columnDefine->id]) ? 'true' : 'false' }}
+                                            }"
                                             @if ($loop->parent->first && $loop->first) x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
                                                     x-init="updateBackground('{{ $columnDefine->id }}')" @endif>
 
@@ -84,6 +90,19 @@
                                                     <x-mary-icon name="o-x-circle" class="w-5 h-5 text-error" />
                                                 </div>
                                             @endif
+
+                                            {{-- 修正成功アイコン (Issue #24) --}}
+                                            <div x-show="showFixed && !{{ isset($validationErrors['content.'.$columnDefine->id]) ? 'true' : 'false' }}"
+                                                 class="validation-success-icon-wrapper"
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 scale-90"
+                                                 x-transition:enter-end="opacity-100 scale-100"
+                                                 x-transition:leave="transition ease-in duration-500"
+                                                 x-transition:leave-start="opacity-100"
+                                                 x-transition:leave-end="opacity-0"
+                                                 x-cloak>
+                                                <x-mary-icon name="o-check-circle" class="w-5 h-5 text-success" />
+                                            </div>
 
                                             @if ($columnDefine->type === 'files')
                                                 <x-ledger.form.files :columnDefine="$columnDefine" :ledgerDefineId="$ledgerDefineId"
@@ -251,4 +270,7 @@
     </div>
 
 </div>
+
+
+
 

@@ -24,7 +24,7 @@ class LedgerHistoryManagerApprovalTest extends TestCase
 
         // 1. Setup User and Organization
         $org = Organization::factory()->create(['name' => 'Test Org']);
-        
+
         $modifier = User::factory()->create([
             'name' => 'Editor User',
             'email' => 'editor@example.com',
@@ -41,10 +41,10 @@ class LedgerHistoryManagerApprovalTest extends TestCase
 
         // 2. Setup Ledger and LedgerDiff (Explicitly)
         $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
-             'tenant_id' => $tenant->id,
-             'column_define' => [
-                 ['id' => 0, 'name' => 'Col1', 'type' => 'text', 'order' => 1]
-             ], 
+            'tenant_id' => $tenant->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Col1', 'type' => 'text', 'order' => 1],
+            ],
         ]);
 
         $ledger = Ledger::factory()->create([
@@ -53,7 +53,7 @@ class LedgerHistoryManagerApprovalTest extends TestCase
             'version' => 2,
             'content' => [0 => 'Content'], // Explicit zero-indexed content (Best Practice #2)
         ]);
-        
+
         $diff = LedgerDiff::create([
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledgerDefine->id,
@@ -69,15 +69,15 @@ class LedgerHistoryManagerApprovalTest extends TestCase
             'comment' => 'Approved version',
             'created_at' => now()->subDay(),
         ]);
-        
+
         // Set latest diff
         $ledger->update(['latest_diff_id' => $diff->id]);
 
         // 3. Test Component Rendering
         Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
-            ->assertSee($modifier->name) 
-            ->assertSee($approver->name) 
-            ->assertSee($org->name) 
+            ->assertSee($modifier->name)
+            ->assertSee($approver->name)
+            ->assertSee($org->name)
             ->assertSee('Test Org')
             ->assertSee('https://chat.example.com/editor')
             ->assertSee('https://chat.example.com/approver')

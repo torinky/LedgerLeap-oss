@@ -2,14 +2,14 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Livewire\Ledger\LedgerHistoryManager;
+use App\Livewire\Ledger\Show;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use App\Livewire\Ledger\Show;
-use App\Livewire\Ledger\LedgerHistoryManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class SelectionSyncTest extends TestCase
 {
@@ -23,7 +23,7 @@ class SelectionSyncTest extends TestCase
 
         $user = User::factory()->create();
         $ledger = Ledger::factory()->create();
-        
+
         // Create 2 versions
         $diff1 = LedgerDiff::factory()->create(['ledger_id' => $ledger->id, 'version' => 1]);
         $diff2 = LedgerDiff::factory()->create(['ledger_id' => $ledger->id, 'version' => 2]);

@@ -7,9 +7,9 @@ trait LogPerformance
     /**
      * パフォーマンスログを記録
      *
-     * @param string $metric メトリクス名 (config/ledgerleap.php参照)
-     * @param float $duration 処理時間 (ms)
-     * @param array $metadata 追加のメタデータ
+     * @param  string  $metric  メトリクス名 (config/ledgerleap.php参照)
+     * @param  float  $duration  処理時間 (ms)
+     * @param  array  $metadata  追加のメタデータ
      */
     public function logPerformance(string $metric, float $duration, array $metadata = []): void
     {

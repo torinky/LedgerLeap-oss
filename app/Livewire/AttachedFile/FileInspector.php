@@ -5,20 +5,21 @@ namespace App\Livewire\AttachedFile;
 use App\Helpers\SearchHelper;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\AttachedFile;
 use App\Services\PermissionService;
 use Illuminate\Support\Facades\Gate;
-use App\Livewire\Traits\LogPerformance;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Mary\Traits\Toast;
 
 class FileInspector extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast, LogPerformance;
+    use InitializesTenantContext, LogPerformance, Toast;
 
     protected PermissionService $permissionService;
-// ... (skip unchanged lines) ...
+
+    // ... (skip unchanged lines) ...
     /**
      * コンポーネント固有のパフォーマンスコンテキスト
      */
@@ -1078,8 +1079,6 @@ class FileInspector extends BaseLivewireComponent
         // 通常はオリジナルのURLを返す
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
     }
-
-
 
     /**
      * 全ての処理（VLM/OCR/Tika）が失敗したかを判定

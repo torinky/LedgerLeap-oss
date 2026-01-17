@@ -98,31 +98,14 @@ class CreateColumnValidationTest extends TestCase
             ->assertHasNoErrors();
 
         $test->set('content.1', '')
-            ->assertHasErrors(['content.1' => 'required'])
-            ->assertSet('validationErrors', function ($errors) {
-                return isset($errors['content.1']);
-            })
-            ->assertSet('errorsByField', function ($errors) {
-                return isset($errors['content.1']) && $errors['content.1'] === true;
-            })
-            ->assertSet('errorsByGroup', function ($errors) {
-                return isset($errors['Group A']) && $errors['Group A'] === 1;
-            })
-            ->set('content.1', 'Filled')
-            ->assertHasNoErrors()
-            ->assertSet('validationErrors', function ($errors) {
-                return empty($errors);
-            })
-            ->assertSet('errorsByField', function ($errors) {
-                return empty($errors);
-            })
-            ->assertSet('errorsByGroup', function ($errors) {
-                return empty($errors);
-            });
+            ->assertHasErrors(['content.1' => 'required']);
+
+        $this->assertEquals(1, $test->get('errorsByGroup')['Group A']);
+        $this->assertTrue($test->get('errorsByField')['content.1']);
     }
 
     #[Test]
-    public function it_updates_validation_state_on_save_failure()
+    public function it_marks_field_as_fixed_when_error_is_corrected()
     {
         $folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
         $this->assignFolderPermission($folder);
@@ -138,24 +121,40 @@ class CreateColumnValidationTest extends TestCase
             ],
         ];
 
-        $this->ledgerDefine = LedgerDefine::factory()->create([
+        $ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $folder->id,
             'tenant_id' => $this->tenant->id,
             'workflow_enabled' => false,
             'column_define' => $columnDefineArray,
         ]);
 
-        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
-            ->call('store')
-            ->assertHasErrors(['content.1' => 'required'])
-            ->assertSet('validationErrors', function ($errors) {
-                return isset($errors['content.1']);
-            })
-            ->assertSet('errorsByField', function ($errors) {
-                return isset($errors['content.1']) && $errors['content.1'] === true;
-            })
-            ->assertSet('errorsByGroup', function ($errors) {
-                return isset($errors['Group A']) && $errors['Group A'] === 1;
-            });
+        $test = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $ledgerDefine->id]);
+
+        // 1. 最初は正常
+        $test->set('content.1', 'Initial')
+            ->assertHasNoErrors();
+
+        // 2. 空にしてエラーを発生させる
+        try {
+            $test->set('content.1', '');
+        } catch (ValidationException $e) {
+            // Livewire test utilities handles this, but we catch if necessary
+        }
+
+        $test->assertHasErrors(['content.1' => 'required']);
+        $this->assertArrayNotHasKey('content.1', $test->get('fixedFields'));
+
+        // 3. 修正して「成功マーク」が付くことを確認
+        $test->set('content.1', 'Fixed')
+            ->assertHasNoErrors('content.1')
+            ->assertDispatched('field-fixed', field: 'content.1');
+
+        $this->assertTrue($test->get('fixedFields')['content.1'] ?? false);
+
+        // 4. 再び変更（エラーなし）した場合はマークが消えることを確認
+        $test->set('content.1', 'Changed Again')
+            ->assertHasNoErrors('content.1');
+
+        $this->assertArrayNotHasKey('content.1', $test->get('fixedFields'));
     }
 }

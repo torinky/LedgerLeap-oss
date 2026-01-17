@@ -95,6 +95,11 @@ class CreateColumn extends BaseLivewireComponent
 
     public array $errorsByField = [];
 
+    /**
+     * バリデーションエラーが解消されたフィールドの追跡 (Issue #24)
+     */
+    public array $fixedFields = [];
+
     // --- 担当者選択モーダル制御用 ---
     public bool $showAssigneeModal = false;
 
@@ -446,13 +451,28 @@ class CreateColumn extends BaseLivewireComponent
         }
 
         try {
+            // 前の状態を確認 (Issue #24)
+            $wasInvalid = isset($this->errorsByField[$propertyName]);
+
             $this->validateOnly($propertyName);
+
+            // 成功した場合: 前がエラーなら「修正成功」としてマーク
+            if ($wasInvalid) {
+                $this->fixedFields[$propertyName] = true;
+                $this->dispatch('field-fixed', field: $propertyName);
+            } else {
+                // エラーがなく、もともと成功していた場合はマークを外す（再入力時など）
+                unset($this->fixedFields[$propertyName]);
+            }
 
             $this->updateProgress();
             $this->updateContentStatusLabel($column, true);
             $this->updateValidationState();
 
         } catch (ValidationException $e) {
+            // エラーが発生した場合は成功マークを外す
+            unset($this->fixedFields[$propertyName]);
+
             // 例外から直接エラーを取得して状態を更新
             $this->updateValidationState($e->errors());
 

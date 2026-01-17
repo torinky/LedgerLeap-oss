@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
-use Illuminate\Support\Facades\DB;
 
 class ShowTest extends TestCase
 {
@@ -364,10 +363,10 @@ class ShowTest extends TestCase
         // 4. Organizations for creator
         // 5. Tenant check / Session etc (may vary)
         if ($totalQueries > 50) {
-            file_put_contents('debug_queries.log', collect($queries)->map(fn($q) => $q['query'])->implode("\n"));
+            file_put_contents('debug_queries.log', collect($queries)->map(fn ($q) => $q['query'])->implode("\n"));
         }
         $this->assertLessThanOrEqual(50, $totalQueries, "Too many queries detected: {$totalQueries}. Check debug_queries.log");
-        
+
         \DB::disableQueryLog();
     }
 
@@ -378,8 +377,8 @@ class ShowTest extends TestCase
 
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->assertSee(__('ledger.show_diff'))
-            ->assertSeeHtml('data-tip="' . __('ledger.workflow.guide.display_level'))
-            ->assertSeeHtml('data-tip="' . __('ledger.workflow.guide.details_compare'))
+            ->assertSeeHtml('data-tip="'.__('ledger.workflow.guide.display_level'))
+            ->assertSeeHtml('data-tip="'.__('ledger.workflow.guide.details_compare'))
             ->assertSee(__('ledger.diff.nudge_view_changes'))
             ->assertSee(__('ledger.diff.nudge_view_history'));
     }

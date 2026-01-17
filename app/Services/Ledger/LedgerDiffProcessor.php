@@ -82,7 +82,7 @@ class LedgerDiffProcessor
             $normalizedContent = optional($ledgerRecord->define)->normalizeByColumnDefine($currentContent) ?? [];
             $sortedIds = collect(optional($ledgerRecord->define)->column_define ?? [])->sortBy('id')->pluck('id')->values();
 
-            $contentChanges = $currentColumnDefines->map(function ($colDef) use ($currentContent, $ledgerRecord, $normalizedContent, $sortedIds) {
+            $contentChanges = $currentColumnDefines->map(function ($colDef) use ($normalizedContent, $sortedIds) {
                 $columnId = data_get($colDef, 'id');
                 $contentIndex = $sortedIds->search($columnId);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
