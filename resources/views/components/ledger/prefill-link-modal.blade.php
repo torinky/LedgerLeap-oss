@@ -112,86 +112,113 @@
         });
     }
 }">
-    <x-mary-modal wire:model="showPrefillModal" class="backdrop-blur" title="">
-        <div class="space-y-4">
+    <x-mary-modal wire:model="showPrefillModal" class="backdrop-blur" title="" box-class="max-w-4xl">
+        <div class="space-y-6">
             {{-- カスタムタイトル --}}
-            <h3 class="font-bold text-lg flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                </svg>
-                <span>{{ __('ledger.prefill.modal_title') }}</span>
-            </h3>
-            <p class="text-sm">{{ __('ledger.prefill.description') }}</p>
-
-            {{-- コピー失敗メッセージ (手動コピー誘導) --}}
-            <div x-show="showWarning"
-                 x-transition
-                 class="alert alert-warning wrap-break-word">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <div class="wrap-break-word overflow-hidden">
-                    <div class="font-bold wrap-break-word">{{ __('ledger.prefill.auto_copy_failed_title') }}</div>
-                    <div class="text-xs wrap-break-word">{{ __('ledger.prefill.auto_copy_failed_description') }}</div>
+            <div class="flex items-center gap-4 border-b pb-4">
+                <div class="p-3 bg-primary/10 rounded-xl">
+                    <x-mary-icon name="o-link" class="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                    <h3 class="font-bold text-2xl tracking-tight">{{ __('ledger.prefill.modal_title') }}</h3>
+                    <p class="text-sm text-base-content/60">{{ __('ledger.prefill.description') }}</p>
                 </div>
             </div>
 
-            {{-- URLを選択可能なテキストエリアとして表示（Safari対応） --}}
-            <div>
-                <textarea
-                    id="prefill-url-textarea"
-                    readonly
-                    class="textarea textarea-bordered w-full font-mono text-xs"
-                    rows="3"
-                    @click="$el.select()"
-                >{{ $generatedPrefillURL }}</textarea>
-            </div>
+            {{-- メインコンテンツエリア --}}
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                {{-- 左側: URL (3/5) --}}
+                <div class="lg:col-span-3 space-y-4 flex flex-col">
+                    <div class="flex items-center gap-2 text-sm font-bold opacity-80">
+                        <x-mary-icon name="o-document-text" class="w-4 h-4" />
+                        {{ __('ledger.prefill.url_label') ?? '事前入力URL' }}
+                    </div>
 
-            <x-mary-alert icon="o-information-circle" class="alert-info">
-                {{ __('ledger.prefill.info_qr_or_share') }}
-            </x-mary-alert>
+                    {{-- コピー失敗メッセージ (手動コピー誘導) --}}
+                    <div x-show="showWarning"
+                         x-transition
+                         class="alert alert-warning py-2 px-3 text-xs">
+                        <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 shrink-0" />
+                        <span>{{ __('ledger.prefill.auto_copy_failed_description') }}</span>
+                    </div>
 
-            {{-- QRコード表示エリア --}}
-            <div class="flex flex-col items-center justify-center space-y-2 border rounded-lg p-4 bg-white dark:bg-gray-800">
-                <div class="text-sm font-bold text-gray-700 dark:text-gray-200">
-                    {{ __('ledger.prefill.qr_code_title') }}
+                    <div class="relative group grow">
+                        <textarea
+                            id="prefill-url-textarea"
+                            readonly
+                            class="textarea textarea-bordered w-full font-mono text-xs bg-base-200/50 focus:bg-base-100 transition-all h-full min-h-[180px] resize-none leading-relaxed"
+                            @click="$el.select()"
+                        >{{ $generatedPrefillURL }}</textarea>
+                        <div class="absolute bottom-3 right-3 opacity-20 group-hover:opacity-100 transition-opacity">
+                            <x-mary-icon name="o-cursor-arrow-rays" class="w-5 h-5 text-primary" />
+                        </div>
+                    </div>
+
+                    <x-mary-alert icon="o-information-circle" class="alert-info text-xs py-3 border-none bg-info/10">
+                        {{ __('ledger.prefill.info_qr_or_share') }}
+                    </x-mary-alert>
                 </div>
-                <div id="prefill-qr-svg" class="bg-white p-2 rounded shadow-inner">
-                    {!! $this->prefillQRCode !!}
+
+                {{-- 右側: QRコード (2/5) --}}
+                <div class="lg:col-span-2 flex flex-col items-center justify-center p-6 bg-base-200/50 rounded-2xl border border-base-300/50">
+                    <div class="text-sm font-bold mb-6 text-base-content/70">
+                        {{ __('ledger.prefill.qr_code_title') }}
+                    </div>
+
+                    <div id="prefill-qr-svg" class="bg-white p-5 rounded-2xl shadow-xl mb-6 transform transition-transform hover:scale-105">
+                        {!! $this->prefillQRCode !!}
+                    </div>
+
+                    <div class="text-xs text-base-content/50 text-center max-w-[200px] leading-relaxed">
+                        {{ __('ledger.prefill.qr_code_description') }}
+                    </div>
                 </div>
-                <div class="text-xs text-gray-500 text-center">
-                    {{ __('ledger.prefill.qr_code_description') }}
-                </div>
-                <x-mary-button
-                    type="button"
-                    class="btn-sm btn-ghost"
-                    @click="downloadQRCode()"
-                    x-bind:disabled="actionState.download.loading"
-                >
-                    <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
-                    <i x-show="!actionState.download.loading" class="fa-solid fa-download"></i>
-                    <span>{{ __('ledger.prefill.download_qr') }}</span>
-                </x-mary-button>
             </div>
         </div>
 
         <x-slot:actions>
-            <x-mary-button
-                class="btn-primary"
-                @click="copyToClipboard()"
-                x-bind:disabled="actionState.copy.loading"
-            >
-                <span x-show="actionState.copy.loading" class="loading loading-spinner loading-xs" x-cloak></span>
-                <span x-show="actionState.copy.success" x-cloak>
-                    <i class="fa-solid fa-check text-success"></i>
-                </span>
-                <span x-show="!actionState.copy.loading && !actionState.copy.success" x-cloak>
-                    <i class="fa-solid fa-copy"></i>
-                </span>
-                <span>{{ __('ledger.prefill.copy_to_clipboard') }}</span>
-            </x-mary-button>
-            <x-mary-button
-                label="{{ __('ledger.close') }}"
-                @click="$wire.showPrefillModal = false"
-            />
+            <div class="flex flex-col sm:flex-row gap-4 w-full justify-between items-center bg-base-100 pt-2">
+                <div class="text-xs text-base-content/40 italic flex items-center gap-2">
+                    <x-mary-icon name="o-device-phone-mobile" class="w-4 h-4" />
+                    {{ __('ledger.prefill.qr_code_hint') ?? '※モバイル端末での利用に最適化されています' }}
+                </div>
+
+                <div class="flex flex-wrap justify-center sm:justify-end gap-3 w-full sm:w-auto">
+                    <x-mary-button
+                        type="button"
+                        class="btn-ghost btn-sm border border-base-300 hover:bg-base-200"
+                        @click="downloadQRCode()"
+                        x-bind:disabled="actionState.download.loading"
+                    >
+                        <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
+                        <x-mary-icon x-show="!actionState.download.loading" name="o-arrow-down-tray" class="w-4 h-4" />
+                        <span>{{ __('ledger.prefill.download_qr') }}</span>
+                    </x-mary-button>
+
+                    <x-mary-button
+                        class="btn-primary btn-sm px-6 shadow-md"
+                        @click="copyToClipboard()"
+                        x-bind:disabled="actionState.copy.loading"
+                    >
+                        <span x-show="actionState.copy.loading" class="loading loading-spinner loading-xs" x-cloak></span>
+                        <template x-if="actionState.copy.success">
+                            <x-mary-icon name="o-check" class="w-4 h-4" />
+                        </template>
+                        <template x-if="!actionState.copy.loading && !actionState.copy.success">
+                            <x-mary-icon name="o-clipboard-document" class="w-4 h-4" />
+                        </template>
+                        <span>{{ __('ledger.prefill.copy_to_clipboard') }}</span>
+                    </x-mary-button>
+
+                    <div class="hidden sm:block border-l border-base-300 h-8"></div>
+
+                    <x-mary-button
+                        label="{{ __('ledger.close') }}"
+                        class="btn-sm px-6"
+                        @click="$wire.showPrefillModal = false"
+                    />
+                </div>
+            </div>
         </x-slot:actions>
     </x-mary-modal>
 </div>
