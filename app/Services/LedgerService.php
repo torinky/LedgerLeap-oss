@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
+use App\Models\LedgerDiff;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -17,6 +19,68 @@ class LedgerService
     public function __construct(WritableFolderRepository $writableFolderRepository)
     {
         $this->writableFolderRepository = $writableFolderRepository;
+    }
+
+    /**
+     * ワークフロー無効時の保存処理 (LedgerDiff 作成を含む)
+     *
+     * @param  int|null  $ledgerId  既存レコードID (新規なら null)
+     * @param  int  $ledgerDefineId  台帳定義ID
+     * @param  array  $content  フォームの入力内容
+     * @param  array  $contentAttached  添付ファイルの検索用インデックス
+     * @param  int  $userId  操作者ID
+     *
+     * @throws \Throwable
+     */
+    public function saveDirectly(?int $ledgerId, int $ledgerDefineId, array $content, array $contentAttached, int $userId): Ledger
+    {
+        return \DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $userId) {
+            $ledger = null;
+
+            if ($ledgerId) {
+                $ledger = Ledger::findOrFail($ledgerId);
+                if ($ledger->isLocked()) {
+                    throw new \Exception(__('ledger.workflow.cannot_edit_approved'));
+                }
+                $ledger->update([
+                    'content' => $content,
+                    'content_attached' => $contentAttached,
+                    'modifier_id' => $userId,
+                    'status' => WorkflowStatus::NONE,
+                    'version' => $ledger->version + 1,
+                ]);
+                $ledger->refresh();
+            } else {
+                $ledger = Ledger::create([
+                    'ledger_define_id' => $ledgerDefineId,
+                    'content' => $content,
+                    'content_attached' => $contentAttached,
+                    'creator_id' => $userId,
+                    'modifier_id' => $userId,
+                    'status' => WorkflowStatus::NONE,
+                    'version' => 1,
+                ]);
+            }
+
+            // LedgerDiff 作成
+            $ledgerDiff = LedgerDiff::create([
+                'ledger_id' => $ledger->id,
+                'content' => $ledger->content,
+                'content_attached' => $ledger->content_attached,
+                'column_define' => $ledger->define->column_define,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $userId,
+                'status' => WorkflowStatus::NONE,
+                'version' => $ledger->version,
+                'completed_inspector_role_ids' => [],
+                'completed_approver_role_ids' => [],
+            ]);
+
+            $ledger->update(['latest_diff_id' => $ledgerDiff->id]);
+
+            return $ledger;
+        });
     }
 
     /**

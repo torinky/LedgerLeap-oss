@@ -28,6 +28,9 @@ class SelectionSyncTest extends TestCase
         $diff1 = LedgerDiff::factory()->create(['ledger_id' => $ledger->id, 'version' => 1]);
         $diff2 = LedgerDiff::factory()->create(['ledger_id' => $ledger->id, 'version' => 2]);
 
+        // 最新の diff を Ledger に紐付ける
+        $ledger->update(['latest_diff_id' => $diff2->id, 'version' => 2]);
+
         $historyManager = Livewire::actingAs($user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id]);
 

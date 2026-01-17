@@ -3,17 +3,20 @@
 namespace App\Models;
 
 use App\Casts\AsColumnDefinesArrayJson;
+use App\Rules\UniqueAutoNumber;
+use App\Rules\UniqueColumnValue;
 use App\Traits\HasModelRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
- * @property \Illuminate\Support\Collection<int, \App\Models\ColumnDefine> $column_define
+ * @property Collection<int, \App\Models\ColumnDefine> $column_define
  *
  * @method static find(Route|object|string|null $route)
  * @method maxColumnId()
@@ -66,6 +69,66 @@ class LedgerDefine extends Model
     public function modifier()
     {
         return $this->belongsTo(User::class, 'modifier_id');
+    }
+
+    /**
+     * バリデーションルールを取得します。
+     */
+    public function getValidationRules(?int $ledgerId = null): array
+    {
+        $validationRules = [];
+
+        foreach ($this->column_define as $column) {
+            $columnId = $column->id;
+            $columnName = 'content.'.$columnId;
+            $inputType = $column->getInputType();
+
+            // 1. InputTypeから型固有のルールを取得
+            $rules = $inputType->getValidationRules();
+
+            // 2. 共通のルールをマージ
+            if ($column->type === 'chk') {
+                $rules[] = \Illuminate\Validation\Rule::array();
+                // 必須項目の場合、少なくとも1つ選択されていることを検証
+                if ($column->required) {
+                    $rules[] = new \App\Rules\RequiredCheckbox;
+                }
+            } else {
+                // その他の型
+                if ($column->required) {
+                    array_unshift($rules, 'required');
+                }
+            }
+
+            if ($column->unique) {
+                if ($column->type === 'auto_number') {
+                    $rules[] = new UniqueAutoNumber($this->id, $column, $ledgerId);
+                } else {
+                    // UniqueColumnValue 側に処理を集約（カスタム + 標準 unique のペアを返す）
+                    $customUnique = new UniqueColumnValue($this->id, $columnId, $ledgerId);
+                    $rules = array_merge($rules, $customUnique->toRules());
+                }
+            }
+
+            // カラムごとのバリデーションルールを配列に追加
+            $validationRules[$columnName] = $rules;
+        }
+
+        return $validationRules;
+    }
+
+    /**
+     * バリデーション属性名を取得します。
+     */
+    public function getValidationAttributes(): array
+    {
+        $attributes = [];
+
+        foreach ($this->column_define as $column) {
+            $attributes["content.{$column->id}"] = $column->name;
+        }
+
+        return $attributes;
     }
 
     public function scopeSearchTags($query, $keywords)
