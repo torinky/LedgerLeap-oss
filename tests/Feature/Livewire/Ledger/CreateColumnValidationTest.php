@@ -94,11 +94,23 @@ class CreateColumnValidationTest extends TestCase
 
         $test = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id]);
 
+        // 初期状態では Group A, Group B は閉じられている（初期化ロジックによるが、必須がある場合は展開される設計か確認）
+        // initializeGroups() では必須項目を含むグループを展開する
+        $this->assertFalse($test->get('collapsedStates')['Group A']); // 必須項目があるので展開されているはず
+
+        // 手動で一度閉じる
+        $test->call('toggleGroup', 'Group A', true);
+        $this->assertTrue($test->get('collapsedStates')['Group A']);
+
         $test->set('content.1', 'Initial')
             ->assertHasNoErrors();
 
+        // エラーを発生させる
         $test->set('content.1', '')
             ->assertHasErrors(['content.1' => 'required']);
+
+        // 自動展開されていることを確認 (Issue #16)
+        $this->assertFalse($test->get('collapsedStates')['Group A']);
 
         $this->assertEquals(1, $test->get('errorsByGroup')['Group A']);
         $this->assertTrue($test->get('errorsByField')['content.1']);
