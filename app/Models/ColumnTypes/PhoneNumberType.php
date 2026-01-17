@@ -51,13 +51,16 @@ class PhoneNumberType implements InputType
 
     public function convertToText($value)
     {
+        // 全角数字を半角に変換
+        $value = mb_convert_kana((string) $value, 'n', 'UTF-8');
+
         if ($this->normalize) {
             // 数字のみ抽出
-            return preg_replace('/[^0-9]/', '', (string) $value);
+            return preg_replace('/[^0-9]/', '', $value);
         }
 
         // そのまま返す（または最小限のトリム）
-        return trim((string) $value);
+        return trim($value);
     }
 
     public function restoreFromString($value)
@@ -74,11 +77,11 @@ class PhoneNumberType implements InputType
     {
         if ($this->allowExtension) {
             // 内線やカッコ、スペース、+ を許容する緩やかなルール
-            // 文字列として最低限の長さを持ち、電話番号として不適切な文字が含まれていないこと
-            return ['string', 'max:50', 'regex:/^[0-9+\-\(\)\s内線]+$/u'];
+            // 全角数字や全角記号も入力される可能性があるため、利便性のために許容する
+            return ['string', 'max:50', 'regex:/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u'];
         }
 
-        // 従来の厳格なルール（数字とハイフンのみ）
-        return ['string', 'regex:/^[0-9\-]+$/'];
+        // 従来の厳格なルール（数字とハイフンのみ、全角数字・ハイフンも許容）
+        return ['string', 'regex:/^[0-9０-９\-－−]+$/u'];
     }
 }

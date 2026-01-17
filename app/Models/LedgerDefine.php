@@ -201,7 +201,7 @@ class LedgerDefine extends Model
             $columnId = $column->id;
             $inputType = $column->getInputType();
 
-            // 日付項目の自動入力ロジック (default_offset と overwrite_existing に統合)
+            // 1. 自動入力ロジック (default_offset と overwrite_existing に統合)
             if ($inputType instanceof \App\Models\ColumnTypes\DateType) {
                 $offset = $inputType->default_offset;
                 $overwrite = $inputType->overwrite_existing;
@@ -210,12 +210,18 @@ class LedgerDefine extends Model
                     // オフセットがある場合は自動入力対象
                     if ($overwrite) {
                         // 「既存値を上書き」が ON の場合は常にセット（更新時含む）
-                        $currentContent[$columnId] = $inputType->getDefaultDate();
-                    } elseif (! $isUpdating) {
-                        // 「既存値を上書き」が OFF の場合は新規作成時のみセット
+                        $currentContent[$columnId] = $inputType->getDefaultDate($currentContent[$columnId] ?? null);
+                    } elseif (! $isUpdating && empty($currentContent[$columnId])) {
+                        // 「既存値を上書き」が OFF の場合は新規作成時かつ未設定の場合のみセット
                         $currentContent[$columnId] = $inputType->getDefaultDate();
                     }
                 }
+            }
+
+            // 2. 正規化・クレンジング処理 (全カラム共通)
+            // phone の全角変換や、number の半角変換などを保存直前に実行する
+            if (isset($currentContent[$columnId])) {
+                $currentContent[$columnId] = $column->convertColumnValue2Text($currentContent[$columnId]);
             }
         }
 

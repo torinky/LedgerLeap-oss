@@ -158,10 +158,18 @@ class DateType implements InputType
 
     public function restoreFromString($value)
     {
-        // Logic from ColumnDefine::restoreColumnValueFromText for 'YMD'
         if (empty($value)) {
             return null;
         }
+
+        // 全角数字・記号を半角に変換 (日付パースの堅牢性向上)
+        $value = mb_convert_kana((string) $value, 'nas', 'UTF-8');
+
+        // Unixタイムスタンプ（数値）として渡された場合
+        if (is_numeric($value)) {
+            return (int) $value; // 数値として返す
+        }
+
         $time = strtotime($value);
         if ($time === false) {
             // Consider how to handle invalid date strings.

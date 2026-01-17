@@ -171,4 +171,32 @@ class DateTypeTest extends TestCase
         $this->assertNull($dateType->getDefaultDate());
         $this->assertNull($dateType->getDefaultDate('2025-01-01'));
     }
+
+    #[Test]
+    public function test_date_type_with_full_width_digits()
+    {
+        $dateType = new DateType([]);
+
+        // Full-width digits should be restored correctly (converted to half-width then parsed)
+        $fullWidth = '２０２６−０１−１７';
+        $restored = $dateType->restoreFromString($fullWidth);
+        $this->assertEquals(strtotime('2026-01-17'), $restored);
+    }
+
+    #[Test]
+    public function test_ymdhm_format_conversion()
+    {
+        $dateType = new DateType([], 'YMDHM');
+
+        $now = time();
+        $dateStr = date('Y-m-d H:i', $now);
+
+        // Convert to text
+        $text = $dateType->convertToText($now);
+        $this->assertEquals($dateStr, $text);
+
+        // Restore from string
+        $restored = $dateType->restoreFromString($text);
+        $this->assertEquals(strtotime($dateStr), $restored);
+    }
 }
