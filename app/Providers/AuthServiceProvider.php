@@ -55,7 +55,12 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('inherit-permissions', function (User $user, $permission, Organization $organization) {
             $ancestors = $organization->ancestors;
             foreach ($ancestors as $ancestor) {
-                if ($user->hasPermissionTo($permission, $ancestor)) {
+                // $ancestor は Organization モデル。 hasPermissionTo の 第2引数は guard 名である必要がある。
+                // もし、その組織がそのパーミッションを持っているかをチェックしたいのであれば、
+                // $ancestor->hasPermissionTo($permission) を使うべき。
+                // もし、ユーザーがその組織経由でパーミッションを持っているかをチェックしたいのであれば、
+                // 別のロジックが必要。
+                if ($ancestor->hasPermissionTo($permission)) {
                     return true;
                 }
             }

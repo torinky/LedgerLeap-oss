@@ -34,6 +34,10 @@ class InputTypeFactory
 
         $className = self::$typeMap[$typeIdentifier];
 
+        if ($className === DateType::class) {
+            return new $className($options, $typeIdentifier);
+        }
+
         return new $className($options);
     }
 
@@ -41,7 +45,11 @@ class InputTypeFactory
     {
         $types = [];
         foreach (self::$typeMap as $identifier => $className) {
-            $types[$identifier] = new $className;
+            if ($className === DateType::class) {
+                $types[$identifier] = new $className([], $identifier);
+            } else {
+                $types[$identifier] = new $className;
+            }
         }
 
         return $types;

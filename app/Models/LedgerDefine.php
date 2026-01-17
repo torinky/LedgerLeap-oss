@@ -188,9 +188,38 @@ class LedgerDefine extends Model
         return $sortedContentArray->values()->toArray();
     }
 
-    public function hasPermissionTo($permission, ?string $guardName): bool
+    /**
+     * 自動入力項目の値を計算する
+     *
+     * @param  array  $currentContent  既存の内容
+     * @param  bool  $isUpdating  更新かどうか(falseなら新規作成)
+     * @return array 更新された内容
+     */
+    public function calculateAutoFillValues(array $currentContent, bool $isUpdating = false): array
     {
-        return $this->roles->flatMap->permissions->contains('name', $permission);
+        foreach ($this->column_define as $column) {
+            $columnId = $column->id;
+            $inputType = $column->getInputType();
+
+            // 日付項目の自動入力ロジック (default_offset と overwrite_existing に統合)
+            if ($inputType instanceof \App\Models\ColumnTypes\DateType) {
+                $offset = $inputType->default_offset;
+                $overwrite = $inputType->overwrite_existing;
+
+                if (! empty($offset)) {
+                    // オフセットがある場合は自動入力対象
+                    if ($overwrite) {
+                        // 「既存値を上書き」が ON の場合は常にセット（更新時含む）
+                        $currentContent[$columnId] = $inputType->getDefaultDate();
+                    } elseif (! $isUpdating) {
+                        // 「既存値を上書き」が OFF の場合は新規作成時のみセット
+                        $currentContent[$columnId] = $inputType->getDefaultDate();
+                    }
+                }
+            }
+        }
+
+        return $currentContent;
     }
 
     /**

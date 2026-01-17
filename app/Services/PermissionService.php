@@ -99,9 +99,10 @@ class PermissionService
             $ledgerDefineRoles = $targetLedgerDefine->roles;
             foreach ($ledgerDefineRoles as $role) {
                 $directPermissions = collect();
-                // HasModelRoles トレイトの hasPermissionTo() を使用して、台帳定義に直接紐づく権限をチェック
+                /** @var Role $role */
+                // ロール自体が持っている権限をチェック
                 foreach (FolderPermissionType::accessPermissions() as $permType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permType->value, $role->name)) {
+                    if ($role->hasPermissionTo($permType->value)) {
                         $directPermissions->push($permType);
                     }
                 }
@@ -440,13 +441,18 @@ class PermissionService
 
         // 2. 台帳定義の直接権限 (LedgerDefine または Ledger が対象の場合のみ)
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
-            // 台帳定義に直接割り当てられたロール経由の権限
+            // 台帳定義に直接割り当てられたロールを取得
+            $definedRoles = $targetLedgerDefine->roles;
             $userRoles = $this->userService->getAllUniqueRolesForUser($user);
-            foreach ($userRoles as $userRole) {
-                // hasPermissionTo は Spatie の permission system を使う
-                // HasModelRoles トレイトの hasPermissionTo() は role name を受け取る
+
+            // ユーザーのロールのうち、この台帳定義に割り当てられているものを抽出
+            $relevantRoles = $userRoles->intersect($definedRoles);
+
+            foreach ($relevantRoles as $role) {
                 foreach (FolderPermissionType::accessPermissions() as $permissionType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permissionType->value, $userRole->name)) {
+                    // ロール自体がその権限（read, write等）を持っているかチェック
+                    // SpatieのRoleモデルはHasPermissionsをトレイトとして持っているため hasPermissionTo が使える
+                    if ($role->hasPermissionTo($permissionType->value)) {
                         if (! $highestPermission || $permissionType->getOrder() > $highestPermission->getOrder()) {
                             $highestPermission = $permissionType;
                         }
@@ -492,10 +498,16 @@ class PermissionService
 
         // 2. 台帳定義の直接権限 (LedgerDefine または Ledger が対象の場合のみ)
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
+            // 台帳定義に直接割り当てられたロールを取得
+            $definedRoles = $targetLedgerDefine->roles;
             $userRoles = $this->userService->getAllUniqueRolesForUser($user);
-            foreach ($userRoles as $userRole) {
+
+            // ユーザーのロールのうち、この台帳定義に割り当てられているものを抽出
+            $relevantRoles = $userRoles->intersect($definedRoles);
+
+            foreach ($relevantRoles as $role) {
                 foreach (FolderPermissionType::cases() as $permissionType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permissionType->value, $userRole->name)) {
+                    if ($role->hasPermissionTo($permissionType->value)) {
                         $permissions[$permissionType->value] = $permissionType;
                     }
                 }

@@ -153,7 +153,9 @@ class CreateColumn extends BaseLivewireComponent
     public function render(): View
     {
         foreach ($this->ledgerDefineRecord->column_define as $column) {
-            $this->updateContentStatusLabel($column);
+            if (! $column->isHidden()) {
+                $this->updateContentStatusLabel($column);
+            }
         }
 
         return view('livewire.ledger.create-column', [
@@ -164,6 +166,7 @@ class CreateColumn extends BaseLivewireComponent
     protected function getGroupedColumns(): \Illuminate\Support\Collection
     {
         return collect($this->ledgerDefineRecord->column_define)
+            ->reject(fn ($column) => $column->isHidden())
             ->groupBy(fn ($column) => $column->group ?? __('ledger.form.group_default'))
             ->sortBy(fn ($columnsInGroup) => $columnsInGroup->first()->order ?? PHP_INT_MAX);
     }

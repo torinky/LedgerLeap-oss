@@ -143,19 +143,19 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         // 2. Verify its properties
         $this->assertEquals('phone', $phoneColumn->getType());
         $this->assertInstanceOf(\App\Models\ColumnTypes\PhoneNumberType::class, $phoneColumn->getInputType());
-        $this->assertEquals('Phone Number', $phoneColumn->getInputType()->getLabel());
-        $this->assertFalse($phoneColumn->useOptions);
-        $this->assertFalse($phoneColumn->getInputType()->hasOptions()); // Double check via inputType
+        $this->assertEquals(__('ledger.form.phone'), $phoneColumn->getInputType()->getLabel());
+        $this->assertTrue($phoneColumn->useOptions);
+        $this->assertTrue($phoneColumn->getInputType()->hasOptions()); // Double check via inputType
 
         // 3. Test its convertToText and restoreFromString methods
         $originalPhone = '(123) 456-7890 ext. 123';
         $converted = $phoneColumn->convertColumnValue2Text($originalPhone);
-        // PhoneNumberType's convertToText removes non-numeric characters
-        $this->assertEquals('1234567890123', $converted);
+        // PhoneNumberType's convertToText keeps the string by default (normalize=false)
+        $this->assertEquals('(123) 456-7890 ext. 123', $converted);
 
         $restored = $phoneColumn->restoreColumnValueFromText($converted);
-        // PhoneNumberType's restoreFromString currently returns the string as is
-        $this->assertEquals('1234567890123', $restored);
+        // PhoneNumberType's restoreFromString returns the string as is
+        $this->assertEquals('(123) 456-7890 ext. 123', $restored);
 
         // Test with a phone number that is already just digits
         $originalCleanPhone = '0987654321';
@@ -201,8 +201,8 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
         // Test the conversion methods on the retrieved column as well
         $retrievedConverted = $retrievedPhoneColumn->convertColumnValue2Text('(987) 654-3210');
-        $this->assertEquals('9876543210', $retrievedConverted);
+        $this->assertEquals('(987) 654-3210', $retrievedConverted);
         $retrievedRestored = $retrievedPhoneColumn->restoreColumnValueFromText($retrievedConverted);
-        $this->assertEquals('9876543210', $retrievedRestored);
+        $this->assertEquals('(987) 654-3210', $retrievedRestored);
     }
 }

@@ -25,6 +25,9 @@
                 locale: 'ja', 
                 showMonths: 3, 
                 wrap: true,
+                enableTime: {{ $columnDefine->type === 'YMDHM' ? 'true' : 'false' }},
+                time_24hr: true,
+                dateFormat: '{{ $columnDefine->type === 'YMDHM' ? 'Y-m-d H:i' : 'Y-m-d' }}',
                 defaultDate: this.dateValue || null,
                 onChange: (selectedDates, dateStr) => {
                     this.dateValue = dateStr;
@@ -76,6 +79,9 @@
                     locale: 'ja', 
                     showMonths: 3, 
                     wrap: true,
+                    enableTime: {{ $columnDefine->type === 'YMDHM' ? 'true' : 'false' }},
+                    time_24hr: true,
+                    dateFormat: '{{ $columnDefine->type === 'YMDHM' ? 'Y-m-d H:i' : 'Y-m-d' }}',
                     defaultDate: this.dateValue || null,
                     onChange: (selectedDates, dateStr) => {
                         this.dateValue = dateStr;
@@ -124,6 +130,9 @@
                     locale: 'ja', 
                     showMonths: 3, 
                     wrap: true,
+                    enableTime: {{ $columnDefine->type === 'YMDHM' ? 'true' : 'false' }},
+                    time_24hr: true,
+                    dateFormat: '{{ $columnDefine->type === 'YMDHM' ? 'Y-m-d H:i' : 'Y-m-d' }}',
                     defaultDate: this.dateValue || null,
                     onChange: (selectedDates, dateStr) => {
                         this.dateValue = dateStr;

@@ -90,52 +90,57 @@
 
         <div class=" space-y-3 mt-5 h-fit">
             @foreach($ledgerDefineRecord->column_define as $cKey => $columnDefine)
-                <div
-                        x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
-                        class="opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80  {{ $loop->first ? 'initial-opacity-100' : '' }}"
-                        @if($loop->first)
-                            x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
-                        x-init="updateBackground('{{ $columnDefine->id }}')"
-                        @endif
-                >
-                    @if($columnDefine->type=='files')
-                        <div class="form-control">
-                            <div class="pt-0 label label-text font-semibold">
+                @if(!$columnDefine->isHidden())
+                    <div
+                            x-on:mouseenter="updateBackground('{{ $columnDefine->id }}')"
+                            class="opacity-control-block opacity-50 hover:opacity-100 transition-opacity duration-500 ease-in-out p-2 rounded hover:bg-base-100/80  {{ $loop->first ? 'initial-opacity-100' : '' }}"
+                            @if($loop->first)
+                                x-on:mouseleave="event.target.classList.remove('initial-opacity-100')"
+                            x-init="updateBackground('{{ $columnDefine->id }}')"
+                            @endif
+                    >
+                        @if($columnDefine->type === 'files')
+                            <div class="form-control">
+                                <div class="pt-0 label label-text font-semibold">
                         <span>
                              {{$columnDefine->name}}
                             @if($columnDefine->required)
                                 <span class="text-error">*</span>
                             @endif
                         </span>
+                                </div>
+
+                                <button class="btn btn-lg w-full">{{__('ledger.column.file.upload')}}</button>
+                                @if($columnDefine->hint)
+                                    <div class="label-text-alt text-gray-400 ps-1 mt-2"
+                                         x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
+                                @endif
+
                             </div>
-
-                            <button class="btn btn-lg w-full">{{__('ledger.column.file.upload')}}</button>
-                            @if($columnDefine->hint)
-                                <div class="label-text-alt text-gray-400 ps-1 mt-2"
-                                     x-classes="label-text-alt text-gray-400 ps-1 mt-2">{{ $columnDefine->hint }}</div>
-                            @endif
-
-                        </div>
-                    @else
-                        @php
-                            // コンポーネント名を生成（アンダースコアをハイフンに変換）
-                            $typeName = str_replace('_', '-', $columnDefine->type);
-                            $componentName = 'ledger.form.'. $typeName;
-                            // auto_number タイプの場合、text コンポーネントを使用
-                            if ($columnDefine->type === 'auto_number') {
-                                $componentName = 'ledger.form.text';
-                            }
-                        @endphp
-                        <x-dynamic-component
-                                :component="$componentName"
-                                wire:model.live="content"
-                                :columnDefine="$columnDefine"
-                                :ledgerRecord="$ledgerRecord??[]"
-                                :isDemo="true"
-                        />
-                    @endif
-                </div>
+                        @else
+                            @php
+                                // コンポーネント名を生成（アンダースコアをハイフンに変換）
+                                $typeName = str_replace('_', '-', $columnDefine->type);
+                                $componentName = 'ledger.form.'. $typeName;
+                                // auto_number タイプの場合、text コンポーネントを使用
+                                if ($columnDefine->type === 'auto_number') {
+                                    $componentName = 'ledger.form.text';
+                                }
+                            @endphp
+                            <x-dynamic-component
+                                    :component="$componentName"
+                                    wire:model.live="content"
+                                    :columnDefine="$columnDefine"
+                                    :ledgerRecord="$ledgerRecord??[]"
+                                    :isDemo="true"
+                            />
+                        @endif
+                    </div>
+                @endif
             @endforeach
         </div>
     </div>
 </div>
+
+
+

@@ -47,6 +47,11 @@ class UserNameType implements InputType
         return (string) $value;
     }
 
+    public function isHidden(): bool
+    {
+        return false;
+    }
+
     public function getValidationRules(): array
     {
         return ['string', 'max:255'];

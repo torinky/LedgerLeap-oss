@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,10 +35,16 @@ class LedgerService
      */
     public function saveDirectly(?int $ledgerId, int $ledgerDefineId, array $content, array $contentAttached, int $userId): Ledger
     {
-        return \DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $userId) {
-            $ledger = null;
+        $ledgerDefine = LedgerDefine::findOrFail($ledgerDefineId);
 
-            if ($ledgerId) {
+        return \DB::transaction(function () use ($ledgerId, $ledgerDefine, $content, $contentAttached, $userId) {
+            $ledger = null;
+            $isUpdating = ! is_null($ledgerId);
+
+            // 自動入力項目の計算
+            $content = $ledgerDefine->calculateAutoFillValues($content, $isUpdating);
+
+            if ($isUpdating) {
                 $ledger = Ledger::findOrFail($ledgerId);
                 if ($ledger->isLocked()) {
                     throw new \Exception(__('ledger.workflow.cannot_edit_approved'));
@@ -52,7 +59,7 @@ class LedgerService
                 $ledger->refresh();
             } else {
                 $ledger = Ledger::create([
-                    'ledger_define_id' => $ledgerDefineId,
+                    'ledger_define_id' => $ledgerDefine->id,
                     'content' => $content,
                     'content_attached' => $contentAttached,
                     'creator_id' => $userId,
@@ -66,7 +73,6 @@ class LedgerService
             $ledgerDiff = LedgerDiff::create([
                 'ledger_id' => $ledger->id,
                 'content' => $ledger->content,
-                'content_attached' => $ledger->content_attached,
                 'column_define' => $ledger->define->column_define,
                 'ledger_define_id' => $ledger->ledger_define_id,
                 'creator_id' => $ledger->creator_id,

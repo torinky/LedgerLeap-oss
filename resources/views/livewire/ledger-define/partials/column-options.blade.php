@@ -11,7 +11,7 @@
     </label>
     {{-- 背景画像削除確認モーダル --}}
     <input type="checkbox" id="delete-file-modal-{{$column['id']}}" class="modal-toggle hidden"/>
-    <div class="modal" role="dialog" class="z-50">
+    <div class="modal z-50" role="dialog">
         <div class="modal-box">
             <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
             <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>
@@ -32,7 +32,7 @@
 @endif
 
 {{-- Type-specific Options --}}
-@if($columns[$index]['useOptions'])
+@if($column['useOptions'])
     @if($column['type'] === 'auto_number')
         <x-mary-input label="{{__('ledger.column.auto_number.prefix')}}"
                       wire:model.live="columns.{{$index}}.options.prefix"
@@ -47,16 +47,25 @@
                       wire:model.live="columns.{{$index}}.options.revision"
                       wire:key="revision-{{$column['id']}}"
                       hint="{{__('ledger.column.auto_number.revision_hint')}}"/>
-    @elseif($column['type'] === 'YMD')
+    @elseif($column['type'] === 'YMD' || $column['type'] === 'YMDHM')
         <x-mary-input label="{{__('ledger.column.date.default_offset')}}"
                       wire:model.live="columns.{{$index}}.options.default_offset"
                       wire:key="default-offset-{{$column['id']}}"
                       placeholder="0d"
-                      hint="{{__('ledger.column.date.default_offset_hint')}}"/>
+                      hint="{{__('ledger.column.date.default_offset_combined_hint')}}"/>
         <x-mary-checkbox label="{{__('ledger.column.date.overwrite_existing')}}"
                          wire:model.live="columns.{{$index}}.options.overwrite_existing"
                          wire:key="overwrite-existing-{{$column['id']}}"
                          hint="{{__('ledger.column.date.overwrite_existing_hint')}}"/>
+    @elseif($column['type'] === 'phone')
+        <x-mary-checkbox label="{{__('ledger.column.phone.allow_extension')}}"
+                         wire:model.live="columns.{{$index}}.options.allow_extension"
+                         wire:key="allow-extension-{{$column['id']}}"
+                         hint="{{__('ledger.column.phone.allow_extension_hint')}}"/>
+        <x-mary-checkbox label="{{__('ledger.column.phone.normalize')}}"
+                         wire:model.live="columns.{{$index}}.options.normalize"
+                         wire:key="normalize-{{$column['id']}}"
+                         hint="{{__('ledger.column.phone.normalize_hint')}}"/>
     @elseif($column['type'] === 'user_name')
         <x-mary-select label="{{__('ledger.column.user_name.format')}}"
                        wire:model.live="columns.{{$index}}.options.format"

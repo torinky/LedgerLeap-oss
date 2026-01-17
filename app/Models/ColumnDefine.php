@@ -250,6 +250,11 @@ class ColumnDefine implements \JsonSerializable
         return $this->inputType;
     }
 
+    public function isHidden(): bool
+    {
+        return $this->inputType->isHidden();
+    }
+
     public function toArray(): array
     {
         return [

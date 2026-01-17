@@ -47,7 +47,7 @@ trait HandlesFormInitialization
      */
     public function initRequireColumns(): void
     {
-        $columns = collect($this->ledgerDefineRecord->column_define);
+        $columns = collect($this->ledgerDefineRecord->column_define)->reject(fn ($column) => $column->isHidden());
         $this->totalRequireColumnCount = $columns->filter(fn ($column) => $column->required)->count();
         $this->requredColumnIds = $columns->filter(fn ($column) => $column->required)->pluck('id')->toArray();
     }

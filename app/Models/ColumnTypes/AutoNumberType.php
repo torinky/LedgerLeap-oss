@@ -47,6 +47,11 @@ class AutoNumberType implements InputType
         return $value;
     }
 
+    public function isHidden(): bool
+    {
+        return false;
+    }
+
     public function getValidationRules(): array
     {
         $prefixLength = strlen($this->prefix ?? '');

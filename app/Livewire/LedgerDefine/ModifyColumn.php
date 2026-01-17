@@ -10,14 +10,18 @@ use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\ColumnTypes\DateType;
 use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\ColumnTypes\NumberType;
+use App\Models\ColumnTypes\PhoneNumberType;
+use App\Models\ColumnTypes\UserNameType;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
+use Livewire\Attributes\Locked;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Mary\Traits\Toast;
+use RuntimeException;
 
 class ModifyColumn extends BaseLivewireComponent
 {
@@ -75,12 +79,17 @@ class ModifyColumn extends BaseLivewireComponent
                         'revision' => $columnDefineObject->getInputType()->revision,
                     ] : [],
                     $columnDefineObject->getInputType() instanceof DateType ? [
-                        'default_offset' => $columnDefineObject->getInputType()->default_offset,
+                        'default_offset' => $columnDefineObject->getInputType()->default_offset ?? '0d',
+                        'overwrite_existing' => (bool) $columnDefineObject->getInputType()->overwrite_existing,
                     ] : [],
                     $columnDefineObject->getInputType() instanceof UserNameType ? [
                         'format' => $columnDefineObject->getInputType()->format,
                         'organization_prefix' => $columnDefineObject->getInputType()->organization_prefix,
                         'edit_mode' => $columnDefineObject->getInputType()->edit_mode,
+                    ] : [],
+                    $columnDefineObject->getInputType() instanceof PhoneNumberType ? [
+                        'normalize' => (bool) $columnDefineObject->getInputType()->normalize,
+                        'allow_extension' => (bool) $columnDefineObject->getInputType()->allow_extension,
                     ] : []
                 ),
             ];
@@ -102,7 +111,7 @@ class ModifyColumn extends BaseLivewireComponent
         $this->isDirty = false; // 初期化時にダーティフラグをリセット
     }
 
-    public function render(request $request)
+    public function render()
     {
         return view('livewire.ledger-define.modify-column', [
             'columnInputTypes' => ColumnDefine::typeLabels(),
@@ -203,13 +212,47 @@ class ModifyColumn extends BaseLivewireComponent
 
         if (isset($this->columns[$columnIndex]) && $propertyName === 'type') {
             // Determine if the new type has options
-            $hasOptions = InputTypeFactory::make(['type' => $value])->hasOptions();
+            $inputType = InputTypeFactory::make(['type' => $value]);
+            $hasOptions = $inputType->hasOptions();
 
             // Update the useOptions property for the specific column
             $this->columns[$columnIndex]['useOptions'] = $hasOptions;
 
-            // If the new type does not use options, clear any existing options
-            if (! $hasOptions) {
+            // Initialize default options for the new type if it has options
+            if ($hasOptions) {
+                if ($value === 'YMD' || $value === 'YMDHM') {
+                    $this->columns[$columnIndex]['options'] = [
+                        'default_offset' => '0d',
+                        'overwrite_existing' => false,
+                    ];
+                } elseif ($value === 'phone') {
+                    $this->columns[$columnIndex]['options'] = [
+                        'normalize' => false,
+                        'allow_extension' => true,
+                    ];
+                } elseif ($value === 'number') {
+                    $this->columns[$columnIndex]['options'] = [
+                        'min' => 0,
+                        'max' => 100,
+                        'step' => 1,
+                        'unit' => '',
+                    ];
+                } elseif ($value === 'auto_number') {
+                    $this->columns[$columnIndex]['options'] = [
+                        'prefix' => '',
+                        'digits' => 3,
+                        'revision' => '',
+                    ];
+                } elseif ($value === 'user_name') {
+                    $this->columns[$columnIndex]['options'] = [
+                        'format' => 'full_name',
+                        'organization_prefix' => 'none',
+                        'edit_mode' => 'overwrite',
+                    ];
+                } else {
+                    $this->columns[$columnIndex]['options'] = [];
+                }
+            } else {
                 $this->columns[$columnIndex]['options'] = [];
             }
             $this->isDirty = true; // フォームが変更された
@@ -256,8 +299,12 @@ class ModifyColumn extends BaseLivewireComponent
             $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
             $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
             $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
-        } elseif ($column['type'] === 'YMD') {
-            $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
+        } elseif ($column['type'] === 'phone') {
+            $rules["columns.{$index}.options.normalize"] = 'boolean';
+            $rules["columns.{$index}.options.allow_extension"] = 'boolean';
+        } elseif ($column['type'] === 'YMD' || $column['type'] === 'YMDHM') {
+            $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMyhm]$/'];
+            $rules["columns.{$index}.options.overwrite_existing"] = 'boolean';
         }
 
         $this->validate($rules);
@@ -371,8 +418,12 @@ class ModifyColumn extends BaseLivewireComponent
                 $rules["columns.{$index}.options.prefix"] = 'nullable|string|max:255';
                 $rules["columns.{$index}.options.digits"] = 'required|integer|min:1';
                 $rules["columns.{$index}.options.revision"] = 'nullable|string|max:255';
-            } elseif ($column['type'] === 'YMD') {
-                $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMy]$/'];
+            } elseif ($column['type'] === 'phone') {
+                $rules["columns.{$index}.options.normalize"] = 'boolean';
+                $rules["columns.{$index}.options.allow_extension"] = 'boolean';
+            } elseif ($column['type'] === 'YMD' || $column['type'] === 'YMDHM') {
+                $rules["columns.{$index}.options.default_offset"] = ['nullable', 'string', 'regex:/^-?\d+[dwMyhm]$/'];
+                $rules["columns.{$index}.options.overwrite_existing"] = 'boolean';
             }
         }
 
@@ -500,5 +551,3 @@ class ModifyColumn extends BaseLivewireComponent
         }
     }
 }
-
-use App\Models\ColumnTypes\UserNameType;

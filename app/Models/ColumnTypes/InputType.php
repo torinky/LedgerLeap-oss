@@ -16,5 +16,7 @@ interface InputType
 
     public function restoreFromString($value);
 
+    public function isHidden(): bool;
+
     public function getValidationRules(): array;
 }

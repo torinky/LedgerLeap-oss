@@ -65,7 +65,11 @@ class AsColumnArrayJson extends AsJson
             $decodedContent = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
-            Log::alert('AsColumnArrayJson: JSON decode error: '.$e->getMessage().' for value: '.Str::limit($content, 500));
+            Log::alert(sprintf(
+                'AsColumnArrayJson: JSON decode error: %s for value: %s',
+                $e->getMessage(),
+                Str::limit($content, 500)
+            ));
 
             return null; // または空配列 [] を返す？
         }
@@ -162,12 +166,9 @@ class AsColumnArrayJson extends AsJson
             }
             // 処理された配列で content を更新します。
             $content = $processedContent;
-
         } elseif ($content === null || $content === '') {
-
             // 入力値自体が null または空文字列の場合も空のJSON配列を返します。
             return [$key => '[]']; // Changed from '' to '[]'
-        } else {
         }
 
         // $content が配列でなかった場合、または空でない要素を含む配列だった場合、
@@ -187,9 +188,7 @@ class AsColumnArrayJson extends AsJson
             Log::warning('AsColumnArrayJson: set: Input value: '.Str::limit($value, 200));
         }
 
-        $result = [$key => $jsonString];
-
-        return $result;
+        return [$key => $jsonString];
     }
 
     /**

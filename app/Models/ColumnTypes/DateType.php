@@ -8,16 +8,16 @@ class DateType implements InputType
 
     private bool $overwriteExisting = false;
 
-    public function __construct($options = [])
+    private string $typeIdentifier;
+
+    public function __construct($options = [], ?string $typeIdentifier = 'YMD')
     {
+        $this->typeIdentifier = $typeIdentifier;
+
         // optionsがarrayの場合、default_offset と overwrite_existing を取得
         if (is_array($options)) {
-            if (isset($options['default_offset'])) {
-                $this->defaultOffset = $options['default_offset'];
-            }
-            if (isset($options['overwrite_existing'])) {
-                $this->overwriteExisting = (bool) $options['overwrite_existing'];
-            }
+            $this->defaultOffset = $options['default_offset'] ?? null;
+            $this->overwriteExisting = (bool) ($options['overwrite_existing'] ?? false);
         }
     }
 
@@ -38,24 +38,31 @@ class DateType implements InputType
 
     public function getName(): string
     {
-        return 'YMD';
+        return $this->typeIdentifier;
     }
 
     public function getLabel(): string
     {
-        return __('ledger.form.date');
+        return $this->typeIdentifier === 'YMDHM'
+            ? __('ledger.form.datetime')
+            : __('ledger.form.date');
     }
 
     public function hasOptions(): bool
     {
-        // DateType now uses options for default_offset configuration
+        // DateType now uses options for default_offset and overwrite_existing configuration
         return true;
     }
 
     public function shouldConvertToJson(): bool
     {
-        // Based on old $shouldConvert2JsonTypes, 'YMD' does not convert to JSON.
         return false;
+    }
+
+    public function isHidden(): bool
+    {
+        // デフォルトオフセットが設定されている場合は、自動入力項目とみなしてUI上では非表示とする
+        return ! empty($this->defaultOffset);
     }
 
     /**
@@ -89,8 +96,8 @@ class DateType implements InputType
      */
     private function calculateDateFromOffset(string $offset): ?string
     {
-        // オフセット形式: 数値 + 単位 (d=日, w=週, M=月, y=年)
-        if (! preg_match('/^([+-]?\d+)([dwMy])$/', $offset, $matches)) {
+        // オフセット形式: 数値 + 単位 (d=日, w=週, M=月, y=年, h=時, m=分)
+        if (! preg_match('/^([+-]?\d+)([dwMyhm])$/', $offset, $matches)) {
             return null;
         }
 
@@ -113,11 +120,19 @@ class DateType implements InputType
                 case 'y': // 年
                     $date->modify("{$amount} years");
                     break;
+                case 'h': // 時
+                    $date->modify("{$amount} hours");
+                    break;
+                case 'm': // 分
+                    $date->modify("{$amount} minutes");
+                    break;
                 default:
                     return null;
             }
 
-            return $date->format('Y-m-d');
+            return $this->typeIdentifier === 'YMDHM'
+                ? $date->format('Y-m-d H:i')
+                : $date->format('Y-m-d');
         } catch (\Exception $e) {
             return null;
         }
@@ -125,16 +140,17 @@ class DateType implements InputType
 
     public function convertToText($value)
     {
-        // Logic from ColumnDefine::convertColumnValue2Text for 'YMD'
+        $format = $this->typeIdentifier === 'YMDHM' ? 'Y-m-d H:i' : 'Y-m-d';
+
         if (is_numeric($value)) {
-            return date('Y-m-d', (int) $value);
+            return date($format, (int) $value);
         } elseif (is_string($value)) {
             $time = strtotime($value);
             if ($time === false) {
-                return (string) $value; // Or handle error
+                return (string) $value;
             }
 
-            return date('Y-m-d', $time);
+            return date($format, $time);
         }
 
         return (string) $value;
@@ -164,6 +180,8 @@ class DateType implements InputType
 
     public function getValidationRules(): array
     {
-        return ['date_format:Y-m-d'];
+        return $this->typeIdentifier === 'YMDHM'
+            ? ['date_format:Y-m-d H:i']
+            : ['date_format:Y-m-d'];
     }
 }

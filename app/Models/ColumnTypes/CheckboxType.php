@@ -28,7 +28,7 @@ class CheckboxType implements InputType
 
     public function convertToText($value)
     {
-        if ($this->shouldConvertToJson()) {
+        if (is_array($value)) {
             return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
@@ -37,11 +37,28 @@ class CheckboxType implements InputType
 
     public function restoreFromString($value)
     {
-        if ($this->shouldConvertToJson()) {
-            return json_decode($value, true);
+        if (empty($value)) {
+            return null;
         }
 
-        return $value;
+        if (is_string($value) && (str_starts_with($value, '[') || str_starts_with($value, '{'))) {
+            try {
+                return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                return [$value];
+            }
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return [$value];
+    }
+
+    public function isHidden(): bool
+    {
+        return false;
     }
 
     public function getValidationRules(): array

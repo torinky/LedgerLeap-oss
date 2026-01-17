@@ -48,10 +48,15 @@ class NumberType implements InputType
     public function restoreFromString($value)
     {
         if (is_numeric($value)) {
-            return $value + 0; // Converts to int or float
+            return (float) $value;
         }
 
         return $value;
+    }
+
+    public function isHidden(): bool
+    {
+        return false;
     }
 
     public function getValidationRules(): array

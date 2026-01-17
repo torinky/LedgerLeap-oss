@@ -34,8 +34,6 @@
                                              @toggle-collapse.window="is_collapsed = $event.detail.is_collapsed"
                                              class="bg-base-200 opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out"
                                              wire:key="collapse-{{ $column['id'] }}"
-                                             x-on:mouseenter="updateBackground('{{ $column['id'] }}')"
-                                             x-on:focusin="updateBackground('{{ $column['id'] }}')"
                             >
                                 <x-slot name="heading">
                                     <h3 class="text-lg font-semibold">

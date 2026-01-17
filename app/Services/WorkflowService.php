@@ -93,11 +93,16 @@ class WorkflowService
         // Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached);
         // ToDo: 権限チェック (modifierId が下書き保存できるか？)
 
-        return DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $modifierId) {
-            $ledger = null;
-            $isNewLedger = false;
+        $ledgerDefine = \App\Models\LedgerDefine::findOrFail($ledgerDefineId);
 
-            if ($ledgerId) {
+        return DB::transaction(function () use ($ledgerId, $ledgerDefine, $content, $contentAttached, $modifierId) {
+            $ledger = null;
+            $isUpdating = ! is_null($ledgerId);
+
+            // 自動入力項目の計算
+            $content = $ledgerDefine->calculateAutoFillValues($content, $isUpdating);
+
+            if ($isUpdating) {
                 $ledger = Ledger::findOrFail($ledgerId);
                 // 承認済みなら編集できない
                 if ($ledger->isLocked()) {
