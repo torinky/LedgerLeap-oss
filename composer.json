@@ -37,6 +37,7 @@
     "predis/predis": "^3.0",
     "robsontenorio/mary": "^2",
     "sebastian/diff": "^6.0",
+    "simplesoftwareio/simple-qrcode": "^4.2",
     "spatie/laravel-activitylog": "^4",
     "spatie/laravel-markdown": "^2.7",
     "spatie/laravel-permission": "^6",

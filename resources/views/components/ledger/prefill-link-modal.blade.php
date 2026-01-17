@@ -2,7 +2,8 @@
 
 <div x-data="{
     actionState: {
-        copy: { loading: false, success: false }
+        copy: { loading: false, success: false },
+        download: { loading: false, success: false }
     },
     showWarning: false,
 
@@ -18,12 +19,11 @@
         });
     },
 
-    async performAction(type, actionFn) {
+    async performAction(type, actionFn, successMessage = '{{ __('ledger.prefill.copy_success') }}') {
         if (this.actionState[type].loading) return;
 
         this.actionState[type].loading = true;
         this.actionState[type].success = false;
-        this.showWarning = false;
 
         try {
             // ファイルインスペクターの挙動に合わせた一貫性のための遅延
@@ -31,16 +31,16 @@
             await actionFn();
 
             this.actionState[type].success = true;
-            this.notify('{{ __('ledger.prefill.copy_success') }}');
+            this.notify(successMessage);
 
             setTimeout(() => {
                 this.actionState[type].success = false;
             }, 2000);
 
         } catch (e) {
-            console.error('Copy failed:', e);
-            this.showWarning = true;
-            this.notify('{{ __('ledger.prefill.copy_failed') }}', 'error');
+            console.error(`${type} failed:`, e);
+            if (type === 'copy') this.showWarning = true;
+            this.notify(e.message || 'Error occurred', 'error');
         } finally {
             this.actionState[type].loading = false;
         }
@@ -61,6 +61,24 @@
                 if (!successful) throw new Error('Copy failed');
             }
         });
+    },
+
+    async downloadQRCode() {
+        await this.performAction('download', async () => {
+            const svgElement = document.querySelector('#prefill-qr-svg svg');
+            if (!svgElement) throw new Error('QR Code not found');
+
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'prefill-qr-code.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, '{{ __('ledger.prefill.download_qr') }}');
     },
 
     fallbackCopy(text) {
@@ -130,6 +148,29 @@
             <x-mary-alert icon="o-information-circle" class="alert-info">
                 {{ __('ledger.prefill.info_qr_or_share') }}
             </x-mary-alert>
+
+            {{-- QRコード表示エリア --}}
+            <div class="flex flex-col items-center justify-center space-y-2 border rounded-lg p-4 bg-white dark:bg-gray-800">
+                <div class="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {{ __('ledger.prefill.qr_code_title') }}
+                </div>
+                <div id="prefill-qr-svg" class="bg-white p-2 rounded shadow-inner">
+                    {!! $this->prefillQRCode !!}
+                </div>
+                <div class="text-xs text-gray-500 text-center">
+                    {{ __('ledger.prefill.qr_code_description') }}
+                </div>
+                <x-mary-button
+                    type="button"
+                    class="btn-sm btn-ghost"
+                    @click="downloadQRCode()"
+                    x-bind:disabled="actionState.download.loading"
+                >
+                    <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
+                    <i x-show="!actionState.download.loading" class="fa-solid fa-download"></i>
+                    <span>{{ __('ledger.prefill.download_qr') }}</span>
+                </x-mary-button>
+            </div>
         </div>
 
         <x-slot:actions>

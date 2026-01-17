@@ -19,7 +19,9 @@ class CreateColumnInputTypeValidationTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Folder $folder;
 
     protected function setUp(): void

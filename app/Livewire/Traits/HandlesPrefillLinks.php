@@ -2,8 +2,6 @@
 
 namespace App\Livewire\Traits;
 
-use Illuminate\Support\Facades\Auth;
-
 trait HandlesPrefillLinks
 {
     /**
@@ -103,65 +101,28 @@ trait HandlesPrefillLinks
     /**
      * カラムの初期値を取得
      */
-    protected function getInitialValue(object $column)
+    public function getInitialValue(object $column)
     {
-        $inputType = $column->getInputType();
-
-        if ($column->type === 'user_name' && $inputType instanceof \App\Models\ColumnTypes\UserNameType) {
-            return $inputType->generateValue(Auth::user());
-        }
-
-        if (in_array($column->type, ['YMD', 'YMDHM'])) {
-            // 日付カラムの初期値を計算
-            return $this->calculateDateDefault($column);
-        }
-
-        return '';
-    }
-
-    /**
-     * 日付カラムの初期値を計算
-     */
-    protected function calculateDateDefault(object $column): string
-    {
-        $options = $column->options ?? [];
-        $defaultOffset = $options['default_offset'] ?? '0d';
-
-        if ($defaultOffset === '0d' || empty($defaultOffset)) {
-            return now()->format($column->type === 'YMD' ? 'Y-m-d' : 'Y-m-d\TH:i');
-        }
-
-        // オフセット計算ロジック
-        preg_match('/^([+-]?\d+)([dwMy])$/', $defaultOffset, $matches);
-        if (! $matches) {
-            return now()->format($column->type === 'YMD' ? 'Y-m-d' : 'Y-m-d\TH:i');
-        }
-
-        $amount = (int) $matches[1];
-        $unit = $matches[2];
-
-        $date = now();
-        match ($unit) {
-            'd' => $date->addDays($amount),
-            'w' => $date->addWeeks($amount),
-            'M' => $date->addMonths($amount),
-            'y' => $date->addYears($amount),
-            default => null,
+        return match ($column->type) {
+            'user_name' => method_exists($column, 'getInputType') && $column->getInputType() instanceof \App\Models\ColumnTypes\UserNameType
+                ? $column->getInputType()->generateValue(\Illuminate\Support\Facades\Auth::user())
+                : '',
+            'YMD' => now()->format('Y-m-d'),
+            'YMDHM' => now()->format('Y-m-d H:i'),
+            default => '',
         };
-
-        return $date->format($column->type === 'YMD' ? 'Y-m-d' : 'Y-m-d\TH:i');
     }
 
     /**
-     * クリップボードにコピー（Alpine.jsでイベント発行）
+     * クリップボードにコピー（テスト用イベント発行）
      */
     public function copyPrefillLinkToClipboard(): void
     {
-        $this->dispatch('copy-to-clipboard', url: $this->generatedPrefillURL);
+        $this->dispatch('copy-to-clipboard', text: $this->generatedPrefillURL);
     }
 
     /**
-     * クリップボードコピー成功時の通知
+     * コピー成功通知（テスト用）
      */
     public function notifyCopySuccess(): void
     {
@@ -169,10 +130,24 @@ trait HandlesPrefillLinks
     }
 
     /**
-     * クリップボードコピー失敗時の通知
+     * コピー失敗通知（テスト用）
      */
     public function notifyCopyFailed(): void
     {
         $this->dispatch('prefill-copy-failed');
+    }
+
+    /**
+     * QRコード（SVG）を取得
+     */
+    public function getPrefillQRCodeProperty(): string
+    {
+        if (empty($this->generatedPrefillURL)) {
+            return '';
+        }
+
+        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)
+            ->margin(1)
+            ->generate($this->generatedPrefillURL);
     }
 }

@@ -323,4 +323,21 @@ class PrefillParametersTest extends TestCase
             ->call('notifyCopyFailed')
             ->assertDispatched('prefill-copy-failed');
     }
+
+    #[Test]
+    public function it_can_generate_prefill_qr_code()
+    {
+        Livewire::test(CreateColumn::class, [
+            'tenantId' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'folderId' => $this->folder->id,
+        ])
+            ->set('content.1', 'QRテスト')
+            ->call('generatePrefillLink')
+            ->assertSet('showPrefillModal', true)
+            ->assertSeeHtml('svg') // SVGタグが含まれていることを確認
+            ->assertSet('prefillQRCode', function ($value) {
+                return str_contains($value, '<svg') && str_contains($value, '</svg>');
+            });
+    }
 }
