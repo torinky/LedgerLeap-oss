@@ -162,17 +162,14 @@
 
                                     @endif
                                 </div>
-                                <div class="flex flex-wrap items-center justify-center w-full">
-
-                                    {{-- 既存の削除ボタン --}}
-                                    @if ($ledgerRecord?->id && !$ledgerRecord?->isLocked())
-                                        {{-- 承認済みは削除も不可？ --}}
-                                        <label for="delete-modal" class="btn btn-outline btn-sm btn-error"><i
-                                                class="fa-solid fa-trash mr-2"></i>{{ __('ledger.delete') }}</label>
-                                    @endif
-
+                                <div class="flex flex-wrap items-center justify-center w-full gap-2">
+                                    <x-mary-button
+                                        label="{{ __('ledger.prefill.generate_link') }}"
+                                        icon="o-link"
+                                        class="btn-outline btn-info"
+                                        wire:click.prevent="generatePrefillLink"
+                                    />
                                     <x-ledger.close-window-button />
-
                                 </div>
                             </div>
                             {{-- 現在のステータス表示 --}}
@@ -272,6 +269,9 @@
         @assets
             @vite(['resources/js/components/group-error-badge.js'])
         @endassets
+
+        {{-- 事前入力リンクモーダル --}}
+        <x-ledger.prefill-link-modal :generated-prefill-u-r-l="$generatedPrefillURL" />
     </div>
 
 </div>
