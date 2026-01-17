@@ -9,20 +9,26 @@
            data-tip="{{__('ledger.column.delete_file')}}">
         <i class="fa-solid fa-trash"></i>
     </label>
-    {{-- 背景画像削除確認モーダル --}}
-    <input type="checkbox" id="delete-file-modal-{{$column['id']}}" class="modal-toggle hidden"/>
-    <div class="modal z-50" role="dialog">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
-            <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>
-            <div class="modal-action">
-                <label for="delete-file-modal-{{$column['id']}}"
-                       wire:click.prevent="deleteFile({{$column['id']}})"
-                       class="btn btn-error">{{__('actions.delete')}}</label>
-                <label for="delete-file-modal-{{$column['id']}}"
-                       class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+    <div x-data>
+        <template x-teleport="body">
+            <div>
+                {{-- 背景画像削除確認モーダル --}}
+                <input type="checkbox" id="delete-file-modal-{{$column['id']}}" class="modal-toggle hidden"/>
+                <div class="modal !z-[9999]" role="dialog">
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
+                        <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>
+                        <div class="modal-action">
+                            <label for="delete-file-modal-{{$column['id']}}"
+                                   wire:click.prevent="deleteFile({{$column['id']}})"
+                                   class="btn btn-error">{{__('ledger.delete')}}</label>
+                            <label for="delete-file-modal-{{$column['id']}}" class="btn">{{__('ledger.cancel')}}</label>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </template>
+    </div>
     </div>
 @else
     <x-mary-file label="{{__('ledger.column.bg_file')}}"

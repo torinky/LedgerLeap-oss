@@ -35,7 +35,7 @@
         {{--        </div>--}}
     </div>
     <div
-        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-[100]">
         <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
             <div class="card-body">
                 <div class="card-actions justify-center items-center">
