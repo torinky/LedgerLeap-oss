@@ -41,7 +41,11 @@
 </head>
 
 <body class="font-sans antialiased {{ $attributes->get('class') ?? 'bg-base-200' }}">
-    <x-mary-toast />
+    <div x-data>
+        <template x-teleport="body">
+            <x-mary-toast />
+        </template>
+    </div>
     <div class="min-h-screen">
         @include('layouts.daisyuiNavigation')
 

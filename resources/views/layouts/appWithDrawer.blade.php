@@ -40,7 +40,11 @@
 </head>
 
 <body class="font-sans antialiased {{ $attributes->get('class') }}">
-    <x-mary-toast />
+    <div x-data>
+        <template x-teleport="body">
+            <x-mary-toast />
+        </template>
+    </div>
 
     <div class="fixed w-full z-10 top-0">
         @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])

@@ -51,6 +51,11 @@ textarea {
     field-sizing: content;
 }
 
+// トースト通知を最前面に表示
+.toast {
+    z-index: 10000 !important;
+}
+
 // タイトルスタイルの修正
 .ttl_3d5 {
     border: 3px solid var(--color-info);
