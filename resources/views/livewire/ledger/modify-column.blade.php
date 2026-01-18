@@ -181,6 +181,7 @@
                                         icon="o-link"
                                         class="btn-outline btn-info"
                                         wire:click.prevent="generatePrefillLink"
+                                        spinner="generatePrefillLink"
                                     />
                                     <x-ledger.close-window-button />
                                 </div>
