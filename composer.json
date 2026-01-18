@@ -27,7 +27,7 @@
     "intervention/image": "^2",
     "kalnoy/nestedset": "^6",
     "laravel/framework": "^12",
-    "laravel/mcp": "^0.3",
+    "laravel/mcp": "^0.5",
     "laravel/sanctum": "^4",
     "laravel/tinker": "^2",
     "livewire/livewire": "^3",
@@ -105,9 +105,6 @@
     "patches": {
       "laravel/boost": {
         "Fix MCP tools schema": "patches/fix_mcp_tools_schema.patch"
-      },
-      "laravel/mcp": {
-        "Fix MCP server protocol versions": "patches/fix_mcp_server_protocol_versions.patch"
       },
       "stancl/tenancy": {
         "PHP 8.4 compatibility - Fix deprecated trait static property access": "patches/fix_tenancy_php84_trait_property.patch"
