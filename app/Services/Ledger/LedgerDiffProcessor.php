@@ -41,7 +41,7 @@ class LedgerDiffProcessor
 
         // 内容が異なるものが見つからない、または ID で見つからない場合
         // バージョン番号での比較も試みる（テスト環境対策）
-        if (! $target) {
+        if (! $target && $referenceVersion !== null) {
             $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
                 ->whereNotNull('content')
                 ->where('content', '<>', '[]')
@@ -87,8 +87,8 @@ class LedgerDiffProcessor
                 $contentIndex = $sortedIds->search($columnId);
                 $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
-                // 通常表示時（比較なし）は、すべてunchangedとする
-                $status = 'unchanged';
+                // 比較対象がない場合は、最初のバージョンの全カラムが追加されたものとみなす
+                $status = 'added';
 
                 return [
                     'column_define' => is_array($colDef) ? $colDef : $colDef->toArray(),

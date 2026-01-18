@@ -21,4 +21,9 @@ class OpenLdapUser extends LdapRecordUser
      * OpenLDAP uses entryuuid.
      */
     protected string $guidKey = 'entryuuid';
+
+    /**
+     * The password hashing method.
+     */
+    protected string $passwordHashMethod = 'none';
 }

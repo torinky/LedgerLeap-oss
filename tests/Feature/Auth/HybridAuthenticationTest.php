@@ -6,7 +6,6 @@ use App\Models\User;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
 
 beforeEach(function () {
-    // DirectoryEmulator::setup('default'); // 実際のコンテナを使うため削除
     $this->tenant = Tenant::create();
     // tenancy()->initialize($this->tenant); // ログインはセントラルコンテキストで行われるため、テナント初期化は不要
 
@@ -14,10 +13,14 @@ beforeEach(function () {
     config()->set('ldap_sync.login_search_base_dns', ['dc=planetexpress,dc=com']);
     // テスト用のLDAPユーザーモデルを設定 (OpenLDAPスキーマに合わせて)
     config()->set('ldap.auth.user_model', \Tests\Ldap\OpenLdapUser::class);
+    config()->set('auth.providers.ldap.model', \Tests\Ldap\OpenLdapUser::class);
+
+    DirectoryEmulator::setup('default');
+    \LdapRecord\Container::getConnection('default')->getLdapConnection()->shouldAllowAnyBind();
 });
 
 afterEach(function () {
-    // DirectoryEmulator::tearDown(); // 削除
+    DirectoryEmulator::tearDown();
 });
 
 test('ad user can login and auto-register (hybrid auth)', function () {
@@ -49,11 +52,25 @@ test('ad user can login and auto-register (hybrid auth)', function () {
         'modifier_id' => $tempUserId,
     ]);
 
+    // LDAPユーザーの作成
+    $ldapUser = \Tests\Ldap\OpenLdapUser::create([
+        'dn' => 'uid=fry,dc=planetexpress,dc=com',
+        'uid' => 'fry',
+        'cn' => 'Philip J. Fry',
+        'sn' => 'Fry',
+        'mail' => 'fry@planetexpress.com',
+        'objectguid' => 'uuid-fry',
+        'entryuuid' => 'uuid-fry',
+        'userpassword' => 'fry',
+    ]);
+
+
     // 既存ユーザーでのログイン試行
     $response = $this->post('/login', [
         'email' => 'fry@planetexpress.com',
         'password' => 'fry',
     ]);
+
 
     $this->assertAuthenticated();
     $response->assertRedirect('/'.$this->tenant->getTenantKey().'/my-portal'); // テナント付きリダイレクトを期待
@@ -93,6 +110,18 @@ test('ad user rejected if organization mismatch (strict check)', function () {
 
     // DB上の組織を作成しない (不一致状態を作る)
     // $org = Organization::create(['name' => 'Fry', 'org_id' => 'Fry']);
+
+    // LDAPユーザーの作成 (SN=Fry)
+    \Tests\Ldap\OpenLdapUser::create([
+        'dn' => 'uid=fry,dc=planetexpress,dc=com',
+        'uid' => 'fry',
+        'cn' => 'Philip J. Fry',
+        'sn' => 'Fry',
+        'mail' => 'fry@planetexpress.com',
+        'objectguid' => 'uuid-fry',
+        'entryuuid' => 'uuid-fry',
+        'userpassword' => 'fry',
+    ]);
 
     // 既存ユーザーでのログイン試行 -> 組織不一致で拒否されるはず
     $response = $this->post('/login', [
