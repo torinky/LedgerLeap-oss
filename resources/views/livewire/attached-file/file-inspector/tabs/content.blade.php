@@ -320,7 +320,8 @@
                 }
             }">
             {{-- Content Body --}}
-            <div class="overflow-y-auto max-h-[500px] min-h-[300px] p-4 text-sm leading-relaxed relative"
+            <div class="overflow-y-auto min-h-[300px] p-4 text-sm leading-relaxed relative transition-all duration-700 ease-in-out"
+                :class="[$wire.isExpanded ? 'max-h-[5000px]' : 'max-h-[500px]']"
                 style="scrollbar-width: thin;" id="{{ $contentAreaId }}">
 
                 {{-- Raw Text Holder for Copy (Hidden) --}}

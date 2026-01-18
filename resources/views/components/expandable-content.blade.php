@@ -13,7 +13,7 @@
         x-ref="content"
         :class="{ 'overflow-hidden': !expanded }"
         :style="contentStyle"
-        {{ $attributes->merge(['class' => 'transition-all duration-300']) }}
+        {{ $attributes->merge(['class' => 'transition-all duration-500']) }}
     >
         {!! $content !!}
     </div>

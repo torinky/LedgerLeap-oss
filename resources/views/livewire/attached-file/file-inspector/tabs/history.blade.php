@@ -39,12 +39,21 @@
             @else
                 {{-- System Logs List --}}
                 <div class="relative">
-                    <div class="overflow-y-auto" :class="showAllLogs ? 'max-h-96' : 'max-h-64'"
+                    <div class="overflow-y-auto transition-all duration-500 ease-in-out" :class="showAllLogs ? 'max-h-[80vh]' : 'max-h-64'"
                         style="scrollbar-width: thin;">
                         <ul class="steps steps-vertical text-sm w-full">
                             @foreach ($sysEvents as $index => $event)
                                 <li class="step step-{{ $event['color'] }} min-h-[4rem]"
-                                    @if ($index >= 3) x-show="showAllLogs" x-cloak @endif>
+                                    @if ($index >= 3)
+                                        x-show="showAllLogs"
+                                        x-cloak
+                                        x-transition:enter="transition ease-out duration-500"
+                                        x-transition:enter-start="opacity-0 -translate-y-4"
+                                        x-transition:enter-end="opacity-100 translate-y-0"
+                                        x-transition:leave="transition ease-in duration-300"
+                                        x-transition:leave-start="opacity-100 translate-y-0"
+                                        x-transition:leave-end="opacity-0 -translate-y-4"
+                                    @endif>
                                     <div class="text-left ml-3 w-full">
                                         <div class="font-semibold flex items-center gap-2">
                                             <x-mary-icon name="{{ $event['icon'] }}" class="w-4 h-4 opacity-70" />
@@ -112,11 +121,20 @@
                 </div>
             @else
                 <div class="relative">
-                    <div class="space-y-2 overflow-y-auto" :class="showAllActivity ? 'max-h-96' : 'max-h-64'"
+                    <div class="space-y-2 overflow-y-auto transition-all duration-500 ease-in-out" :class="showAllActivity ? 'max-h-[80vh]' : 'max-h-64'"
                         style="scrollbar-width: thin;">
                         @foreach ($usrEvents as $index => $activity)
                             <div class="card card-compact bg-base-200 hover:bg-base-300 transition-colors"
-                                @if ($index >= 5) x-show="showAllActivity" x-cloak @endif>
+                                @if ($index >= 5)
+                                    x-show="showAllActivity"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-500"
+                                    x-transition:enter-start="opacity-0 translate-y-4"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    x-transition:leave="transition ease-in duration-300"
+                                    x-transition:leave-start="opacity-100 translate-y-0"
+                                    x-transition:leave-end="opacity-0 translate-y-4"
+                                @endif>
                                 <div class="card-body">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-2">

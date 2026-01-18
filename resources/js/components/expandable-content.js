@@ -28,7 +28,8 @@ export default (options) => ({
 
     get contentStyle() {
         if (this.expanded) {
-            return '';
+            const content = this.$refs.content;
+            return `max-height: ${content ? content.scrollHeight : 2000}px`;
         }
 
         const baseStyle = `max-height: ${this.maxHeight}`;

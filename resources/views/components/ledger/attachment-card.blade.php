@@ -109,8 +109,14 @@
     $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
 @endphp
 
-<div class="relative tooltip tooltip-bottom h-full" x-show="{{ $index }} < displayLimit || showAll"
-    style="display: {{ $index < $displayLimit ? 'block' : 'none' }};" data-tip="{{ $fullTooltip }}">
+<div class="relative tooltip tooltip-bottom h-full"
+    x-transition:enter="transition ease-out duration-500"
+    x-transition:enter-start="opacity-0 scale-95"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-95"
+    data-tip="{{ $fullTooltip }}">
 
     <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col"
         role="listitem" x-data="{ imageLoading: true, imageError: false }"
