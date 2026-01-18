@@ -67,9 +67,20 @@ class NumberType implements InputType
 
     public function getValidationRules(): array
     {
-        // 数値としてのバリデーション。全角数字はサーバーサイドでのバリデーション（numeric）前に変換されている必要がある。
-        // または、カスタムバリデーションルールで変換を伴うチェックを行う。
-        // ここでは基本的な数値バリデーションを維持
-        return ['numeric'];
+        $rules = ['numeric'];
+
+        if (! is_null($this->min)) {
+            $rules[] = "min:{$this->min}";
+        }
+
+        if (! is_null($this->max)) {
+            $rules[] = "max:{$this->max}";
+        }
+
+        if (! is_null($this->step) && $this->step > 0) {
+            $rules[] = "multiple_of:{$this->step}";
+        }
+
+        return $rules;
     }
 }
