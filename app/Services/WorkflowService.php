@@ -95,9 +95,10 @@ class WorkflowService
 
         $ledgerDefine = \App\Models\LedgerDefine::findOrFail($ledgerDefineId);
 
-        return DB::transaction(function () use ($ledgerId, $ledgerDefine, $content, $contentAttached, $modifierId) {
+        return DB::transaction(function () use ($ledgerId, $ledgerDefine, $ledgerDefineId, $content, $contentAttached, $modifierId) {
             $ledger = null;
             $isUpdating = ! is_null($ledgerId);
+            $isNewLedger = false;
 
             // 自動入力項目の計算
             $content = $ledgerDefine->calculateAutoFillValues($content, $isUpdating);
