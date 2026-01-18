@@ -6,6 +6,9 @@ use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
 use App\Services\Util\HtmlProcessorService;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
+use Tests\TestCase;
+
+uses(TestCase::class);
 
 it('column value is array', function () {
     $columnDefine = new ColumnDefine(

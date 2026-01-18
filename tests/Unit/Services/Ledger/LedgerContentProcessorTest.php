@@ -96,8 +96,12 @@ class LedgerContentProcessorTest extends TestCase
 
         // Group B の検証
         $this->assertEquals('Group B', $displayData[1]['group_name']);
-        $this->assertCount(1, $displayData[1]['columns']); // 1つのカラムがあるか
+        $this->assertCount(2, $displayData[1]['columns']); // Col 3 + 省略インジケータ
         $this->assertEquals('Col 3', $displayData[1]['columns'][0]['name']);
+
+        // 省略インジケータの検証
+        $this->assertTrue($displayData[1]['columns'][1]['is_omitted']);
+        $this->assertEquals(1, $displayData[1]['columns'][1]['omitted_count']);
 
         // displayLevel = 3 の Col 4 が表示されないことを確認
         $this->assertFalse(collect($displayData[1]['columns'])->contains('name', 'Col 4'));

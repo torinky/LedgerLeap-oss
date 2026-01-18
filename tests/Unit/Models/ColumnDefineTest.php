@@ -400,7 +400,7 @@ class ColumnDefineTest extends TestCase
         // Test invalid JSON
         $invalidJsonValue = '["option1","option2"';
         $restoredInvalid = $column->restoreColumnValueFromText($invalidJsonValue);
-        $this->assertNull($restoredInvalid);
+        $this->assertEquals([$invalidJsonValue], $restoredInvalid);
     }
 
     #[Test]
@@ -460,7 +460,7 @@ class ColumnDefineTest extends TestCase
         // Test invalid JSON
         $invalidJsonValue = '[{"name":"file1.jpg"';
         $restoredInvalid = $column->restoreColumnValueFromText($invalidJsonValue);
-        $this->assertNull($restoredInvalid);
+        $this->assertEquals([$invalidJsonValue], $restoredInvalid);
 
         // Test already array (should pass through)
         $arrayValue = [['name' => 'file3.txt']];
