@@ -1328,6 +1328,7 @@ return [
             2 => '選択してください',
         ],
         'show_summary' => 'エラーを確認',
+        'show_summary_with_count' => 'エラーを確認 (:count)',
         'summary_hint' => '項目をクリックすると該当箇所へ移動します。Ctrl+E でこのパネルを開閉できます。',
         'summary_title' => 'バリデーションエラー (:count件)',
     ],

@@ -50,12 +50,19 @@
         }
     }"
      x-init="
+        // 状態変化を外部（フッター等）に通知
+        $watch('open', value => {
+            $dispatch('validation-summary-status', { open: value, errorCount: errorCount });
+        });
+
         // errorCount (getter) の変更を監視
         $watch('errorCount', (newVal, oldVal) => {
             if (newVal > 0) {
                 isResolving = false;
                 if (!userClosed) open = true;
             }
+            $dispatch('validation-summary-status', { open: open, errorCount: newVal });
+
             if (newVal === 0 && oldVal > 0) {
                 // Issue #26 改良: 成功状態を視覚的に示し、トーストに合わせて長く滞在させる
                 isResolving = true;
@@ -78,6 +85,11 @@
                 }, 3500);
             }
         });
+
+        // 初期状態通知
+        $nextTick(() => {
+            $dispatch('validation-summary-status', { open: open, errorCount: errorCount });
+        });
      "
      @toggle-validation-summary.window="open = !open; if(open) userClosed = false;"
      @keydown.window.ctrl.e="
@@ -91,14 +103,20 @@
      wire:key="validation-error-summary-wrapper">
 
     {{-- メインカード --}}
-    <div class="card bg-base-100 border-2 shadow-xl overflow-hidden transition-all duration-700"
-         x-bind:class="isResolving ? 'border-success shadow-success/20' : 'border-error shadow-error/20'"
+    <div class="card bg-base-100 border-2 shadow-xl overflow-hidden transition-all"
+         x-bind:class="{
+            'border-success shadow-success/20': isResolving,
+            'border-error shadow-error/20': !isResolving,
+            'duration-200': userClosed,
+            'duration-700': !userClosed && open,
+            'duration-[1500ms]': !userClosed && !open
+         }"
          x-show="open && (errorCount > 0 || isResolving)"
          x-cloak
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 -translate-y-4"
          x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-[1500ms]"
+         x-transition:leave="transition ease-in"
          x-transition:leave-start="opacity-100 scale-100"
          x-transition:leave-end="opacity-0 scale-95 -translate-y-10">
         {{-- ヘッダー：状態に応じて色を切り替え --}}
@@ -226,24 +244,5 @@
                 {{ __('ledger.validation.all_errors_fixed') }}
             </div>
         </div>
-    </div>
-
-    {{-- 再表示オプション (Issue #26): 閉じられたがエラーがある場合に表示されるフローティングバッジ --}}
-    <div x-show="!open && errorCount > 0"
-         class="fixed bottom-24 right-6 z-[50]"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 scale-90 translate-y-4"
-         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-         x-cloak>
-        <button type="button"
-                @click="open = true; userClosed = false"
-                class="btn btn-error btn-circle shadow-2xl shadow-error/40 hover:scale-110 transition-transform group animate-bounce-slow">
-            <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6 rotate-12 group-hover:rotate-0 transition-transform" />
-            <div class="badge badge-sm badge-white font-black text-error absolute -top-1 -right-1 border-2 border-error" x-text="errorCount"></div>
-            {{-- ラベル（ホバー時） --}}
-            <span class="absolute right-14 whitespace-nowrap bg-error text-error-content px-3 py-1.5 rounded-lg text-xs font-black shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {{ __('ledger.validation.show_summary') }}
-            </span>
-        </button>
     </div>
 </div>

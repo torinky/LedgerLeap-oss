@@ -1,7 +1,11 @@
 <div>
-    <div class="background-image-change" x-data="Object.assign(validationErrorNavigator(), {
-        currentBg: null,
-        updateBackground(columnId) {
+    <div class="background-image-change"
+        @validation-summary-status.window="validationSummaryOpen = $event.detail.open; validationErrorCount = $event.detail.errorCount;"
+        x-data="Object.assign(validationErrorNavigator(), {
+            currentBg: null,
+            validationSummaryOpen: true,
+            validationErrorCount: 0,
+            updateBackground(columnId) {
             this.currentBg = $wire.backgroundImages[columnId] || null;
     
             //                console.log($wire.backgroundImages);
@@ -137,31 +141,40 @@
                     <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
                         <div class="card-body p-4">
                             <div class="flex flex-wrap items-center justify-center gap-4">
-                                <div class="join flex flex-wrap items-center justify-center w-full">
+                                {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
+                                <x-mary-button
+                                    x-show="!validationSummaryOpen && validationErrorCount > 0"
+                                    x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
+                                    x-transition:enter-start="opacity-0 scale-0 translate-y-12"
+                                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                    x-cloak
+                                    icon="o-exclamation-triangle"
+                                    class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
+                                    @click="$dispatch('toggle-validation-summary')"
+                                >
+                                    <span>{{ __('ledger.validation.show_summary') }}</span>
+                                    <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm" x-text="validationErrorCount"></div>
+                                </x-mary-button>
 
-                                    @if ($ledgerDefineRecord->workflow_enabled)
-                                        {{-- 保存ボタン (常に表示、クリック時のアクションは saveChanges) --}}
-                                        {{-- 承認済み (isLocked) の場合は無効化 --}}
-                                        <x-mary-button label="{{ __('ledger.save_changes') }}" icon="o-pencil"
-                                            class="btn-primary btn-wide join-item" wire:click.prevent="saveChanges"
-                                            spinner="saveChanges" :disabled="$ledgerRecord?->isLocked()" />
+                                @if ($ledgerDefineRecord->workflow_enabled)
+                                    {{-- 保存ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.save_changes') }}" icon="o-pencil"
+                                        class="btn-primary btn-wide" wire:click.prevent="saveChanges"
+                                        spinner="saveChanges" :disabled="$ledgerRecord?->isLocked()" />
 
-                                        {{-- 点検者選択 UI (DRAFT 状態の場合に表示) --}}
-                                        @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
-                                            <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                                icon="o-paper-airplane" class="btn-success btn-wide join-item"
-                                                {{-- 色変更 --}} {{-- モーダルを開くメソッドを呼び出す --}}
-                                                wire:click.prevent="requestInspection" spinner="requestInspection"
-                                                {{-- disabled は不要 --}} />
-                                        @endif
-                                    @else
-                                        {{-- 直接保存ボタン --}}
-                                        <x-mary-button label="{{ __('ledger.save') }}" icon="o-pencil"
-                                            class="btn-primary btn-wide join-item" wire:click.prevent="saveDirectly"
-                                            spinner="saveDirectly" :disabled="$ledgerRecord?->isLocked()" {{-- 承認済み(通常はNONEになるはずだが念のため) --}} />
-
+                                    {{-- 点検者選択 UI --}}
+                                    @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
+                                        <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                            icon="o-paper-airplane" class="btn-success btn-wide"
+                                            wire:click.prevent="requestInspection" spinner="requestInspection" />
                                     @endif
-                                </div>
+                                @else
+                                    {{-- 直接保存ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.save') }}" icon="o-pencil"
+                                        class="btn-primary btn-wide" wire:click.prevent="saveDirectly"
+                                        spinner="saveDirectly" :disabled="$ledgerRecord?->isLocked()" />
+                                @endif
+
                                 <div class="flex flex-wrap items-center justify-center w-full gap-2">
                                     <x-mary-button
                                         label="{{ __('ledger.prefill.generate_link') }}"
@@ -275,7 +288,6 @@
     </div>
 
 </div>
-
 
 
 

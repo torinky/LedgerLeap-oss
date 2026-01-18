@@ -1,8 +1,11 @@
 <div>
     <div
             class="background-image-change"
+            @validation-summary-status.window="validationSummaryOpen = $event.detail.open; validationErrorCount = $event.detail.errorCount;"
             x-data="Object.assign(validationErrorNavigator(), {
             currentBg: null,
+            validationSummaryOpen: true,
+            validationErrorCount: 0,
             updateBackground(columnId) {
                 this.currentBg = $wire.backgroundImages[columnId] || null;
 
@@ -166,51 +169,42 @@
                     <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
                         <div class="card-body p-4"> {{-- パディング調整 --}}
                             <div class="flex flex-wrap items-center justify-center gap-4 w-full"> {{-- gap で間隔調整 --}}
+
+                                {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
+                                <x-mary-button
+                                    x-show="!validationSummaryOpen && validationErrorCount > 0"
+                                    x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
+                                    x-transition:enter-start="opacity-0 scale-0 translate-y-12"
+                                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                    x-cloak
+                                    icon="o-exclamation-triangle"
+                                    class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
+                                    @click="$dispatch('toggle-validation-summary')"
+                                >
+                                    <span>{{ __('ledger.validation.show_summary') }}</span>
+                                    <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
+                                        x-text="validationErrorCount"></div>
+                                </x-mary-button>
+
                                 @if ($ledgerDefineRecord->workflow_enabled)
-                                    <div class="join flex flex-wrap items-center justify-center w-full">
+                                    {{-- 下書き保存ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
+                                        class="btn-secondary btn-wide" wire:click.prevent="saveDraft" spinner="saveDraft"
+                                        wire:key="save-draft-button-{{ $ledgerId ?? $ledgerDefineId ?? 'new' }}" />
 
-                                        {{-- 下書き保存ボタン --}}
-                                        <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil"
-                                                       class="btn-secondary btn-wide join-item"
-                                                       wire:click.prevent="saveDraft"
-                                                       spinner="saveDraft"
-                                                       wire:key="save-draft-button-{{$ledgerId ?? $ledgerDefineId ??'new'}}"
-                                        />
+                                    {{-- ToDo: 将来的に Role 選択も可能にする --}}
+                                    {{-- 点検依頼ボタン (モーダルを開く) --}}
+                                    {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
 
-                                        {{-- ToDo: 将来的に Role 選択も可能にする --}}
-                                        {{-- 点検依頼ボタン (モーダルを開く) --}}
-                                        {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
-
-                                        <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                                       icon="o-paper-airplane"
-                                                       class="btn-success btn-wide join-item"
-                                                       {{-- モーダルを開くメソッドを呼び出す --}}
-                                                       wire:click.prevent="requestInspection"
-                                                       spinner="requestInspection"
-                                        />
-                                    </div>
-
-                                    {{-- (ステップ2以降で追加) 点検完了（承認申請）ボタン --}}
-                                    {{-- @if($this->canRequestApproval()) --}}
-                                    {{-- <x-mary-button label="{{ __('ledger.workflow.request_approval') }}" ... /> --}}
-                                    {{-- @endif --}}
-
-                                    {{-- (ステップ2以降で追加) 承認ボタン --}}
-                                    {{-- @if($this->canApprove()) --}}
-                                    {{-- <x-mary-button label="{{ __('ledger.workflow.approve') }}" ... /> --}}
-                                    {{-- @endif --}}
-
+                                    <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                        icon="o-paper-airplane" class="btn-success btn-wide"
+                                        {{-- モーダルを開くメソッドを呼び出す --}} wire:click.prevent="requestInspection"
+                                        spinner="requestInspection" />
                                 @else
-
                                     {{-- 直接保存ボタン --}}
-                                    <div class="flex flex-wrap items-center justify-center w-full">
-                                        <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
-                                        icon="o-pencil"
-                                                       class="btn-primary btn-wide join-item"
-                                                       wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
-                                                       spinner="saveDirectly"
-                                        />
-                                    </div>
+                                    <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}}
+                                        icon="o-pencil" class="btn-primary btn-wide" wire:click.prevent="saveDirectly"
+                                        {{-- 直接保存メソッド呼び出し --}} spinner="saveDirectly" />
                                 @endif
                             </div>
                             <div class="flex flex-wrap items-center justify-center w-full gap-2">
@@ -246,7 +240,6 @@
 
 
 </div>
-
 
 
 
