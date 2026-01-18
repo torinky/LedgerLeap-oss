@@ -20,11 +20,12 @@ class PhoneNumberTypeTest extends TestCase
         $type = new PhoneNumberType(['allow_extension' => true]);
         $rules = $type->getValidationRules();
 
-        $this->assertContains('regex:/^[0-9０-９+\-\(\)\s内線]+$/u', $rules);
+        $this->assertContains('regex:/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', $rules);
 
         // Validation check (manual regex test)
-        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-\(\)\s内線]+$/u', '03-1234-5678 (内線123)'));
-        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-\(\)\s内線]+$/u', '+81 90 1234 5678'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', '03-1234-5678 (内線123)'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', '+81 90 1234 5678'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', '03（1234）5678　内線１２３'));
     }
 
     public function test_phone_number_validation_rules_strict()
@@ -32,11 +33,12 @@ class PhoneNumberTypeTest extends TestCase
         $type = new PhoneNumberType(['allow_extension' => false]);
         $rules = $type->getValidationRules();
 
-        $this->assertContains('regex:/^[0-9０-９\-]+$/u', $rules);
+        $this->assertContains('regex:/^[0-9０-９\-－−]+$/u', $rules);
 
         // Validation check (manual regex test)
-        $this->assertTrue((bool) preg_match('/^[0-9０-９\-]+$/u', '03-1234-5678'));
-        $this->assertFalse((bool) preg_match('/^[0-9０-９\-]+$/u', '03-1234-5678 (内線123)'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９\-－−]+$/u', '03-1234-5678'));
+        $this->assertFalse((bool) preg_match('/^[0-9０-９\-－−]+$/u', '03-1234-5678 (内線123)'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９\-－−]+$/u', '０３−１２３４−５６７８'));
     }
 
     public function test_phone_number_normalization()
@@ -59,8 +61,8 @@ class PhoneNumberTypeTest extends TestCase
         $type = new PhoneNumberType(['allow_extension' => true]);
         $rules = $type->getValidationRules();
 
-        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-\(\)\s内線]+$/u', '０９０-１２３４-５６７８'));
-        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-\(\)\s内線]+$/u', '090-1234-5678 (内線１２３)'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', '０９０-１２３４-５６７８'));
+        $this->assertTrue((bool) preg_match('/^[0-9０-９+\-＋\(\)（）\s　内線ー－−]+$/u', '090-1234-5678 (内線１２３)'));
     }
 
     public function test_phone_number_has_options()

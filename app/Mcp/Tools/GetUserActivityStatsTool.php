@@ -219,9 +219,9 @@ MARKDOWN;
     /**
      * Get the tool's input schema.
      *
-     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
+     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
      */
-    public function schema(\Illuminate\JsonSchema\JsonSchema $schema): array
+    public function schema(\Illuminate\Contracts\JsonSchema\JsonSchema $schema): array
     {
         return [
             'period' => $schema->string()

@@ -7,7 +7,7 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
-use Illuminate\JsonSchema\JsonSchema;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;

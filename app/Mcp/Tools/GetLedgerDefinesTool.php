@@ -6,7 +6,7 @@ use App\Http\Resources\LedgerDefineResource;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\LedgerDefine;
 use App\Repositories\WritableFolderRepository;
-use Illuminate\JsonSchema\JsonSchema;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
