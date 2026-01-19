@@ -104,7 +104,7 @@
     },
     "patches": {
       "laravel/boost": {
-        "Fix MCP tools schema": "patches/fix_mcp_tools_schema.patch"
+        "Fix MCP tools schema for Laravel 12": "patches/fix_mcp_tools_schema.patch"
       },
       "stancl/tenancy": {
         "PHP 8.4 compatibility - Fix deprecated trait static property access": "patches/fix_tenancy_php84_trait_property.patch"

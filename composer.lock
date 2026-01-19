@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "edea7fc0f92e7be9dbcbf04f8d408b1f",
+    "content-hash": "db6fd2a9ed7889b223b0666ee72c2bb5",
     "packages": [
         {
             "name": "15web/filament-tree",

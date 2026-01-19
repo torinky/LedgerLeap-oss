@@ -5,7 +5,7 @@
  
  namespace Laravel\Boost\Mcp\Tools;
  
-+use Illuminate\JsonSchema\JsonSchema;
++use Illuminate\Contracts\JsonSchema\JsonSchema;
  use Illuminate\Support\Facades\Config;
  use Laravel\Mcp\Request;
  use Laravel\Mcp\Response;
@@ -28,7 +28,7 @@
      /**
 +     * Get the tool's input schema.
 +     *
-+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
 +     */
 +    public function schema(JsonSchema $schema): array
 +    {
@@ -54,7 +54,7 @@
  
  namespace Laravel\Boost\Mcp\Tools;
  
-+use Illuminate\JsonSchema\JsonSchema;
++use Illuminate\Contracts\JsonSchema\JsonSchema;
  use Laravel\Boost\Install\GuidelineAssist;
  use Laravel\Mcp\Request;
  use Laravel\Mcp\Response;
@@ -67,7 +67,7 @@
 +    /**
 +     * Get the tool's input schema.
 +     *
-+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
 +     */
 +    public function schema(JsonSchema $schema): array
 +    {
@@ -83,7 +83,7 @@
  
  namespace Laravel\Boost\Mcp\Tools;
  
-+use Illuminate\JsonSchema\JsonSchema;
++use Illuminate\Contracts\JsonSchema\JsonSchema;
  use Laravel\Mcp\Request;
  use Laravel\Mcp\Response;
  use Laravel\Mcp\Server\Tool;
@@ -96,7 +96,7 @@
 +    /**
 +     * Get the tool's input schema.
 +     *
-+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
 +     */
 +    public function schema(JsonSchema $schema): array
 +    {
@@ -112,7 +112,7 @@
  namespace Laravel\Boost\Mcp\Tools;
  
  use Illuminate\Console\Command;
-+use Illuminate\JsonSchema\JsonSchema;
++use Illuminate\Contracts\JsonSchema\JsonSchema;
  use Illuminate\Support\Facades\Artisan;
  use Laravel\Mcp\Request;
  use Laravel\Mcp\Response;
@@ -125,7 +125,7 @@
 +    /**
 +     * Get the tool's input schema.
 +     *
-+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
 +     */
 +    public function schema(JsonSchema $schema): array
 +    {
@@ -141,7 +141,7 @@
  
  namespace Laravel\Boost\Mcp\Tools;
  
-+use Illuminate\JsonSchema\JsonSchema;
++use Illuminate\Contracts\JsonSchema\JsonSchema;
  use Illuminate\Log\Events\MessageLogged;
  use Illuminate\Support\Facades\Cache;
  use Illuminate\Support\Facades\Log;
@@ -154,7 +154,7 @@
 +    /**
 +     * Get the tool's input schema.
 +     *
-+     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
++     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
 +     */
 +    public function schema(JsonSchema $schema): array
 +    {

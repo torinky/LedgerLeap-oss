@@ -1,12 +1,12 @@
 {
-    "_hash": "833017f6078da82dbbf6e07c4409c4e87c6f41d81b2807dfdd2c55497c9eb15a",
+    "_hash": "9c5e0332589fa14c05ae37e12a55519098f3df85fecb59c33f85e313677ed720",
     "patches": {
         "laravel/boost": [
             {
                 "package": "laravel/boost",
-                "description": "Fix MCP tools schema",
+                "description": "Fix MCP tools schema for Laravel 12",
                 "url": "patches/fix_mcp_tools_schema.patch",
-                "sha256": "333934a59a66b9787505f3de2e1b8273d5dcfe1d40c1569b9045451871f3a4d2",
+                "sha256": "7f3b8736ca9ac821ce56effedc4fd8753c86bcb8cc69c0e1e9dbeb04dcd28196",
                 "depth": 1,
                 "extra": {
                     "provenance": "root"
@@ -18,7 +18,7 @@
                 "package": "stancl/tenancy",
                 "description": "PHP 8.4 compatibility - Fix deprecated trait static property access",
                 "url": "patches/fix_tenancy_php84_trait_property.patch",
-                "sha256": "manual",
+                "sha256": "7d252f8fb13ee5a9d45de3e6c50aa08b988cfed8e6afc29f00851c65aa867774",
                 "depth": 1,
                 "extra": {
                     "provenance": "root"
