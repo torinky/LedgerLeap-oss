@@ -173,7 +173,7 @@
                     $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
                     $canView = auth()->user()->can('ledgerView', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
                 @endphp
-                <div class="card bg-base100 shadow-xl my-10" wire:key="ledger_record_{{ $ledgerDefineId }}">
+                <div class="card bg-base-100 shadow-xl my-10" wire:key="ledger_record_{{ $ledgerDefineId }}">
                     <div class="card-body pt-0 px-0">
                         <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
                             :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"

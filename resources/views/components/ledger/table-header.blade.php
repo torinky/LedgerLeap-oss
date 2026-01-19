@@ -9,7 +9,7 @@
     wire:key="ledger_table_header_{{$ledgerDefine->id}}"
 >
     {{-- アクションボタン用の列 --}}
-    <th class="w-10 text-center px-4 py-2 tracking-wider bg-accent bg-opacity-30">
+    <th class="w-10 text-center px-4 py-2 tracking-wider bg-accent/30 bg-opacity-30">
         @if(!empty($defaultSortColumns) && $orderBy !== 'default')
             {{-- デフォルト順に戻すボタン --}}
             <x-mary-button
@@ -29,10 +29,10 @@
     </th>
 
     @foreach($filteredColumnDefines as $cKey=>$column_define)
-        <th class="px-4 py-2 space-y-1 text-center bg-accent bg-opacity-30"
+        <th class="px-4 py-2 space-y-1 text-center bg-accent/30 bg-opacity-30"
             wire:key="ledger_table_header_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
         >
-            <span class=" text-base font-bold">
+            <span class=" text-accent-content font-bold">
                 {{$column_define->name}}
             </span>
             <button class="btn btn-xs"
@@ -59,8 +59,8 @@
         </th>
     @endforeach
 
-    <th class="px-4 py-2 text-center bg-accent bg-opacity-30">
-        <span class="text-sm font-bold">
+    <th class="px-4 py-2 text-center bg-accent/30 bg-opacity-30">
+        <span class="text-sm font-bold text-accent-content">
             {{__('ledger.updated_at')}}
         </span>
         <button href="#" class="btn btn-xs" wire:click="sort('updated_at', '{{ __('ledger.updated_at') }}')">
