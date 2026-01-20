@@ -1,5 +1,8 @@
 # LedgerLeap API仕様概要
 
+**詳細仕様:**
+- [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
+
 **関連ドキュメント:**
 - [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
 - [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
