@@ -415,14 +415,20 @@ class ActivityLogFormatter
             return null;
         }
 
+        $tenantId = tenant()?->id;
+
+        if (! $tenantId) {
+            return null;
+        }
+
         if ($subject instanceof Ledger) {
-            return route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $subject->id]);
+            return route('ledger.show', ['tenant' => $tenantId, 'ledgerId' => $subject->id]);
         }
         if ($subject instanceof LedgerDefine) {
-            return route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $subject->id]);
+            return route('ledgersByDefineId', ['tenant' => $tenantId, 'defineId' => $subject->id]);
         }
         if ($subject instanceof Folder) {
-            return route('ledgersByFolderId', ['tenant' => tenant()?->id, 'folderId' => $subject->id]);
+            return route('ledgersByFolderId', ['tenant' => $tenantId, 'folderId' => $subject->id]);
         }
         // 以下、Filament 管理画面へのリンクは一般ユーザー向けではないため null を返す
         if ($subject instanceof User || $subject instanceof Role || $subject instanceof Organization || $subject instanceof Permission || $subject instanceof RoleFolderPermission) {
