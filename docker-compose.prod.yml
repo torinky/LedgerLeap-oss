@@ -83,7 +83,7 @@ services:
     image: sail-8.4/app
     volumes:
       - .:/var/www/html
-    command: /bin/sh -c "php /var/www/html/artisan schedule:work --no-interaction >> /var/www/html/storage/logs/schedule.log 2>&1"
+    command: /bin/sh -c "php /var/www/html/artisan schedule:work --no-interaction >> /var/www/html/storage/logs/scheduler.log 2>&1"
     environment:
       WWWUSER: '${WWWUSER}'
       LARAVEL_SAIL: 1
