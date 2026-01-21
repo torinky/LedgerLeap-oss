@@ -331,7 +331,7 @@ class FinalizeAttachedFileProcessing extends Command
 
         // 保存（イベント発火を抑制）
         $ledger->content_attached = $contentAttached;
-        Ledger::withoutEvents(fn () => $ledger->save());
+        Ledger::withoutEvents(fn () => Ledger::withoutTimestamps(fn () => $ledger->save()));
 
         Log::info('Updated content_attached for file', [
             'ledger_id' => $ledger->id,

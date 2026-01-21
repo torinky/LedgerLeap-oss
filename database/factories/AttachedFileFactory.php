@@ -37,7 +37,7 @@ class AttachedFileFactory extends Factory
 
         $filename = $this->faker->word().'.pdf';
         $hashedbasename = Str::random(40).'.pdf';
-        $path = 'public/Ledger/Attachments/'.$ledgerDefine->id.'/'.$hashedbasename;
+        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($ledgerDefine->id, $hashedbasename);
 
         return [
             'filename' => $filename,
@@ -64,7 +64,7 @@ class AttachedFileFactory extends Factory
         return $this->state(function (array $attributes) {
             $filename = $this->faker->word().'.jpg';
             $hashedbasename = Str::random(40).'.jpg';
-            $path = 'public/Ledger/Attachments/'.$attributes['ledger_define_id'].'/'.$hashedbasename;
+            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'filename' => $filename,
@@ -80,7 +80,8 @@ class AttachedFileFactory extends Factory
         return $this->state(function (array $attributes) {
             $originalFilename = $this->faker->word().'.png';
             $originalMimeType = 'image/png';
-            $originalPath = 'public/Ledger/Attachments/'.$attributes['ledger_define_id'].'/Originals/'.Str::random(40).'.png';
+            $hashedbasename = Str::random(40).'.png';
+            $originalPath = \App\Helpers\AttachedFilePathHelper::getOriginalAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'original_file_path' => $originalPath,

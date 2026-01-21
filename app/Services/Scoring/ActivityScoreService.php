@@ -68,6 +68,7 @@ class ActivityScoreService
             foreach ($ledgers as $ledger) {
                 $score = $this->calculateForLedger($ledger);
                 $ledger->activity_score = $score;
+                $ledger->timestamps = false;
                 // saveQuietly()を使用してアクティビティログを記録しない
                 $ledger->saveQuietly();
                 $updatedCount++;

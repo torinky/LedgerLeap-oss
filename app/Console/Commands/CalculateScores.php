@@ -73,6 +73,7 @@ class CalculateScores extends Command
                 $ledger->composite_score = $compositeResult['composite_score'];
 
                 // saveQuietly()を使用してアクティビティログを記録しない
+                $ledger->timestamps = false;
                 $ledger->saveQuietly();
                 $progressBar->advance();
             }

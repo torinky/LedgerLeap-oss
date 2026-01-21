@@ -238,6 +238,7 @@ class ProcessAttachedFile implements ShouldQueue
             }
             Log::info('ProcessAttachedFile: Ledger->content_attached before save (content truncated): '.json_encode($loggableContent));
 
+            $ledger->timestamps = false;
             $ledger->save();
 
         }); // ★ トランザクション終了
