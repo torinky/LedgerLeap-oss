@@ -1,4 +1,4 @@
-@props(['hasWorkflowEnabled', 'orderBy', 'orderByLabel', 'useSemanticSearch'])
+@props(['hasWorkflowEnabled', 'orderBy', 'orderByLabel', 'useSemanticSearch', 'defaultSortColumns' => []])
 
 <div class="flex flex-col md:flex-row gap-4 mt-5 pb-10 items-center justify-center">
 
@@ -56,6 +56,9 @@
                         <select wire:model.change="orderBy" class="select select-primary select-sm w-full">
                             @if ($orderByLabel !== '')
                                 <option value="{{ $orderBy }}" selected>{{ $orderByLabel }}</option>
+                            @endif
+                            @if (!empty($defaultSortColumns) && $orderBy !== 'default')
+                                <option value="default">{{ __('ledger.default_sort_order') }}</option>
                             @endif
                             <option value="composite_score">{{ __('ledger.scoring.score') }}</option>
                             <option value="created_at">{{ __('ledger.created_at') }}</option>

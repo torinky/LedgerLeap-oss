@@ -238,4 +238,43 @@ class DefaultSortTest extends TestCase
         $this->assertEquals('2023-01-02', $ledgers[2]->content[0]);
         $this->assertEquals('500', $ledgers[2]->content[1]);
     }
+    #[Test]
+    public function it_sorts_auto_number_with_prefix_correctly(): void
+    {
+        // プレフィックス付きの自動採番をソート項目に設定
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'tenant_id' => $this->tenant->id,
+            'column_define' => [
+                new ColumnDefine(0, '日報番号', 'auto_number', 1, ['prefix' => 'DAILY-', 'digits' => 4], false, false, 1, '', [], 3, null),
+            ],
+        ]);
+
+        // テストデータを作成
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'DAILY-0005'],
+        ]);
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'DAILY-0001'],
+        ]);
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'DAILY-0003'],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(RecordsTable::class, [
+                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+            ]);
+
+        $ledgers = $component->viewData('ledgerRecords')->items();
+
+        // 期待されるソート順: DAILY-0001, DAILY-0003, DAILY-0005
+        $this->assertCount(3, $ledgers);
+        $this->assertEquals('DAILY-0001', $ledgers[0]->content[0]);
+        $this->assertEquals('DAILY-0003', $ledgers[1]->content[0]);
+        $this->assertEquals('DAILY-0005', $ledgers[2]->content[0]);
+    }
 }

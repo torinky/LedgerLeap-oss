@@ -304,8 +304,26 @@ class RecordsTable extends BaseLivewireComponent
             'created_at' => __('ledger.created_at'),
             'updated_at' => __('ledger.updated_at'),
             'semantic_score' => __('ledger.semantic_score_sort'),
+            'default' => $this->getDefaultSortLabel(),
             default => '', // 標準ソート以外の場合は空文字列を返す
         };
+    }
+
+    /**
+     * デフォルトソートのラベルを取得する
+     *
+     * @return string
+     */
+    private function getDefaultSortLabel(): string
+    {
+        $label = __('ledger.default_sort_order');
+
+        if (! empty($this->defaultSortColumns)) {
+            $columnNames = collect($this->defaultSortColumns)->pluck('name')->implode(', ');
+            $label .= " ({$columnNames})";
+        }
+
+        return $label;
     }
 
     /**
@@ -514,9 +532,12 @@ class RecordsTable extends BaseLivewireComponent
 
                         // 型に応じたキャスト
                         $expression = match ($columnType) {
-                            'number', 'auto_number' => "CAST({$jsonPath} AS DECIMAL(20, 6))",
+                            'number' => "CAST({$jsonPath} AS DECIMAL(20, 6))",
+                            'auto_number' => $this->isPurelyNumericAutoNumber($column)
+                                ? "CAST({$jsonPath} AS DECIMAL(20, 6))"
+                                : "JSON_UNQUOTE({$jsonPath})",
                             'date', 'YMD' => "CAST({$jsonPath} AS DATE)",
-                            default => $jsonPath,
+                            default => "JSON_UNQUOTE({$jsonPath})",
                         };
 
                         $query->orderByRaw("{$expression} ".($this->orderAsc ? 'ASC' : 'DESC'));
@@ -860,5 +881,24 @@ class RecordsTable extends BaseLivewireComponent
         } catch (\Exception $e) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.processing_retry_failed', ['error' => $e->getMessage()]));
         }
+    }
+
+    /**
+     * 自動採番型が純粋な数値のみ（プレフィックスやリビジョンなし）であるか判定
+     *
+     * @param  array  $column
+     * @return bool
+     */
+    private function isPurelyNumericAutoNumber(array $column): bool
+    {
+        if (($column['type'] ?? '') !== 'auto_number') {
+            return false;
+        }
+
+        $options = $column['options'] ?? [];
+        $prefix = $options['prefix'] ?? '';
+        $revision = $options['revision'] ?? '';
+
+        return empty($prefix) && empty($revision);
     }
 }
