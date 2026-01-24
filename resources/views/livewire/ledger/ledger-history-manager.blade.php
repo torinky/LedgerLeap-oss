@@ -85,61 +85,83 @@
                                     <span
                                         class="badge badge-primary badge-xs">{{ __('ledger.diff.current_version') }}</span>
                                 @endif
+                                @if ($isBase)
+                                    <span class="badge badge-primary badge-outline badge-xs gap-1 pl-1.5">
+                                        <x-mary-icon name="o-check-circle" class="w-3 h-3" />
+                                        {{ __('ledger.diff.base') }}
+                                    </span>
+                                @endif
+                                @if ($isTarget)
+                                    <span class="badge badge-error badge-outline badge-xs gap-1 pl-1.5">
+                                        <x-mary-icon name="o-arrows-right-left" class="w-3 h-3" />
+                                        {{ __('ledger.diff.compare_to') }}
+                                    </span>
+                                @endif
                             </span>
                             <span
                                 class="text-[10px] text-base-content/50">{{ $diff->created_at->format('Y-m-d H:i') }}</span>
                         </div>
 
-                        {{-- 詳細情報エリア --}}
-                        <div class="flex flex-col gap-1.5 mt-2 pl-1 border-l-2 border-base-200">
-                            {{-- ワークフロー状態 --}}
-                            @if ($diff->status)
-                                <div>
-                                    <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
-                                        {{ $diff->status->label() }}
-                                    </span>
-                                </div>
-                            @endif
+                        <div class="flex flex-col md:flex-row gap-2 mt-1">
+                            {{-- 左側: ステータス・編集者 --}}
+                            <div class="flex flex-col gap-1.5 min-w-[120px] shrink-0">
+                                {{-- ワークフロー状態 --}}
+                                @if ($diff->status)
+                                    <div>
+                                        <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
+                                            {{ $diff->status->label() }}
+                                        </span>
+                                    </div>
+                                @endif
 
-                            {{-- 編集者 (Editor) --}}
-                            @if ($diff->modifier)
-                                <div class="flex items-center gap-1.5 text-xs text-base-content/80">
-                                    <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
-                                    <span
-                                        class="text-[10px] text-base-content/50">{{ __('ledger.workflow.label.editor') }}:</span>
-                                    <x-ledger.user-card-popover :user="$diff->modifier" />
-                                </div>
-                            @endif
+                                {{-- 編集者 (Editor) --}}
+                                @if ($diff->modifier)
+                                    <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                        <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
+                                        <x-ledger.user-card-popover :user="$diff->modifier" />
+                                    </div>
+                                @endif
 
-                            {{-- 承認者 (Approver) - 承認済みの場合のみ --}}
-                            @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
-                                <div class="flex items-center gap-1.5 text-xs text-base-content/80">
-                                    <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
-                                    <span
-                                        class="text-[10px] text-base-content/50">{{ __('ledger.workflow.approved_by') }}:</span>
-                                    <x-ledger.user-card-popover :user="$diff->approver" />
-                                </div>
-                            @endif
-                        </div>
-
-                        {{-- コメント (ツールチップ付き) --}}
-                        @if ($diff->comment)
-                            <div
-                                class="mt-2 text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex items-start gap-1">
-                                <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
-                                <span class="line-clamp-2" title="{{ $diff->comment }}">{{ $diff->comment }}</span>
+                                {{-- 承認者 (Approver) --}}
+                                @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
+                                    <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                        <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
+                                        <x-ledger.user-card-popover :user="$diff->approver" />
+                                    </div>
+                                @endif
                             </div>
-                        @endif
 
-                        <div class="flex gap-1 mt-1">
-                            @if ($isBase)
-                                <span
-                                    class="badge badge-primary badge-outline badge-xs">{{ __('ledger.diff.base') }}</span>
-                            @endif
-                            @if ($isTarget)
-                                <span
-                                    class="badge badge-error badge-outline badge-xs">{{ __('ledger.diff.compare_to') }}</span>
-                            @endif
+                            {{-- 右側: コメント & アクション --}}
+                            <div class="flex-1 flex flex-col justify-between gap-2 min-w-0">
+                                @if ($diff->comments)
+                                    <div
+                                        class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex items-start gap-1 h-full">
+                                        <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
+                                        <span class="line-clamp-2 break-all"
+                                            title="{{ $diff->comments }}">{{ $diff->comments }}</span>
+                                    </div>
+                                @else
+                                    {{-- コメントがない場合のスペース確保（レイアウト崩れ防止）または非表示 --}}
+                                @endif
+
+                                {{-- アクションボタンエリア --}}
+                                <div class="flex justify-end gap-2 mt-auto">
+                                    @if ($isTarget && $canRollback && $diff->version !== $ledgerRecord->version)
+                                        @if ($isContentIdentical ?? false)
+                                            <span class="badge badge-ghost badge-xs gap-1 opacity-50 cursor-help"
+                                                title="{{ __('ledger.diff.identical_content_hint') }}">
+                                                <x-mary-icon name="o-check" class="w-3 h-3" />
+                                                {{ __('ledger.diff.identical_content') }}
+                                            </span>
+                                        @else
+                                            <x-mary-button label="{{ __('ledger.rollback.button_label') }}"
+                                                class="btn-xs btn-outline btn-error" icon="o-arrow-uturn-left"
+                                                @click.stop="$wire.rollback({{ $diff->id }})"
+                                                wire:key="rollback-btn-{{ $diff->id }}" />
+                                        @endif
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

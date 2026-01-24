@@ -51,6 +51,9 @@ class RollbackConfirmModal extends Component
         $this->ledger = Ledger::findOrFail($ledgerId);
         $this->targetDiff = LedgerDiff::findOrFail($targetDiffId);
 
+        // デフォルトコメントの設定
+        $this->comments = __('ledger.rollback.default_comment', ['version' => $this->targetDiff->version]);
+
         // 実行可能性の事前チェック
         try {
             if (! $this->rollbackService->canExecute(auth()->user(), $this->ledger)) {
@@ -103,7 +106,10 @@ class RollbackConfirmModal extends Component
             $this->showModal = false;
 
             // 完了イベントを発火（Showコンポーネント等が捕捉して詳細タブへ遷移させる）
-            $this->dispatch('ledger.rollback.completed', ledgerId: $this->ledgerId);
+            $this->dispatch('ledger.rollback.completed', 
+                ledgerId: $this->ledgerId,
+                targetDiffId: $this->targetDiffId
+            );
 
         } catch (WorkflowConditionException $e) {
             $this->error($e->getMessage());

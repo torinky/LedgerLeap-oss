@@ -35,6 +35,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
     // 表示状態の維持用
     public ?string $highlight = '';
 
+    public bool $canRollback = false;
+
     public function mount(int $ledgerId, int $displayLevel = 3, ?string $highlight = null, ?int $targetDiffId = null): void
     {
         $startTime = microtime(true);
@@ -45,6 +47,16 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->targetDiffId = $targetDiffId;
 
         $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
+
+        // ロールバック権限の事前チェック (WRITE権限があればUIを表示)
+        $folder = $this->ledgerRecord->define?->folder;
+        $this->canRollback = false;
+        if ($folder) {
+            $userService = app(\App\Services\UserService::class);
+            if ($userService) {
+                $this->canRollback = $userService->hasFolderPermission(auth()->user(), $folder, \App\Enums\FolderPermissionType::WRITE);
+            }
+        }
 
         // 最新の diff ID を取得
         $latestDiff = $this->ledgerRecord->ledgerDiff()->latest('id')->first();
@@ -109,6 +121,16 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->targetDiffId = $targetDiffId;
     }
 
+    public function rollback(int $diffId): void
+    {
+        // 確認モーダルを開くイベントをディスパッチ
+        $this->dispatch('ledger.rollback.open-modal',
+            ledgerId: $this->ledgerId,
+            targetDiffId: $diffId,
+            expectedVersion: $this->ledgerRecord->version
+        );
+    }
+
     public function toggleSelection(int $id): void
     {
         $startTime = microtime(true);
@@ -167,15 +189,29 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'modifier_name' => $baseDiff->modifier?->name ?? '?',
             'updated_at' => $baseDiff->created_at?->format('Y-m-d H:i:s') ?? '',
             'version' => $baseDiff->version,
-            'comment' => $baseDiff->comment,
+            'comment' => $baseDiff->comments,
         ] : null;
 
         $targetMeta = $targetDiff ? [
             'modifier_name' => $targetDiff->modifier?->name ?? '?',
             'updated_at' => $targetDiff->created_at?->format('Y-m-d H:i:s') ?? '',
             'version' => $targetDiff->version,
-            'comment' => $targetDiff->comment,
+            'comment' => $targetDiff->comments,
         ] : null;
+
+        // コンテンツが完全に一致するかチェック
+        $isContentIdentical = false;
+        if ($targetDiff && $this->ledgerRecord) {
+            $processor = app(\App\Services\Ledger\LedgerDiffProcessor::class);
+            // 現在のレコード($this->ledgerRecord) と 比較対象($targetDiff) の差分を計算
+            // prepareContentDiff は $ledgerRecord と $comparisonTargetDiff を比較する
+            // ここでは「現在のレコード」と「ロールバック対象(targetDiff)」を比較したい
+            // ロールバック対象の内容に「戻す」ということは、
+            // 「現在のレコード」が「ロールバック対象」と同じになるということ。
+            // つまり、diff がない = hasChangedColumns が false であれば一致している。
+            $diffResult = $processor->prepareContentDiff($this->ledgerRecord, $targetDiff);
+            $isContentIdentical = ! ($diffResult['hasChangedColumns'] ?? true);
+        }
 
         $this->logPerformance('ledger_diff_render', (microtime(true) - $startTime) * 1000, [
             'diffs_count' => $diffs->count(),
@@ -189,6 +225,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'baseMeta' => $baseMeta,
             'targetMeta' => $targetMeta,
             'historyDisplayLevel' => $this->historyDisplayLevel,
+            'canRollback' => $this->canRollback,
+            'isContentIdentical' => $isContentIdentical,
         ]);
     }
 }
