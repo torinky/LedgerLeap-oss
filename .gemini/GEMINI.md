@@ -208,4 +208,5 @@
    - 公式ドキュメントから削除する情報は必ずdocs/workに保持
    - docs全体で情報量を落とさない
 
+serena,laravel-boostを積極的に利用してください
 read Serena's initial instructions
