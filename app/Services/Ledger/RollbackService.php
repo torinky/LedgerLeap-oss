@@ -156,10 +156,34 @@ class RollbackService
                             ->first();
 
                         if ($attachedFile) {
+                            $meta = $attachedFile->tika_metadata;
+
+                            // Auto-healing: データ消失の検知と復旧
+                            // 現在の台帳からメタデータ(テキスト本文)が失われている場合、再処理をトリガーする
+                            $isTextMissing = empty($meta['content']) && $attachedFile->isVlmOrOcrTarget();
+                            
+                            if ($isTextMissing) {
+                                Log::warning("RollbackService: Tika/OCR content missing for file ID {$attachedFile->id}. Triggering reprocessing.", [
+                                    'ledger_id' => $ledger->id,
+                                    'hashedbasename' => $hashedBasename
+                                ]);
+
+                                // ステータスをリセットして再処理を予約
+                                // トランザクション内での実行だが、ジョブ投入(非同期)なので問題ないはず
+                                // ただし、モデル更新はここで行う
+                                $attachedFile->update([
+                                    'status' => \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING,
+                                    'tika_processed_at' => null,
+                                    'processing_finalized_at' => null,
+                                ]);
+                                
+                                \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
+                            }
+
                             // Tika/OCR等の解析情報も含めた完全な構造を再構築
                             $columnReconstructed[$hashedBasename] = [
                                 'filename' => $attachedFile->filename,
-                                'meta' => $attachedFile->tika_metadata,
+                                'meta' => $meta,
                             ];
                         }
                     }
