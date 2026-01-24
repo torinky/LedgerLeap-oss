@@ -135,10 +135,29 @@
                             <div class="flex-1 flex flex-col justify-between gap-2 min-w-0">
                                 @if ($diff->comments)
                                     <div
-                                        class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex items-start gap-1 h-full">
-                                        <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
-                                        <span class="line-clamp-2 break-all"
-                                            title="{{ $diff->comments }}">{{ $diff->comments }}</span>
+                                        class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex flex-col gap-1 h-full">
+                                        @php
+                                            $commentParts = explode("\n--- system-info ---\n", $diff->comments);
+                                            $userComment = $commentParts[0] ?? '';
+                                            $systemInfo = $commentParts[1] ?? null;
+                                        @endphp
+
+                                        <div class="flex items-start gap-1">
+                                            <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
+                                            <span class="line-clamp-2 break-all"
+                                                title="{{ $userComment }}">{{ $userComment }}</span>
+                                        </div>
+
+                                        @if ($systemInfo)
+                                            <div class="mt-auto pt-1 border-t border-base-content/5 w-full">
+                                                <span
+                                                    class="badge badge-ghost badge-xs text-xs opacity-70 font-normal w-full justify-start h-auto py-0.5">
+                                                    <x-mary-icon name="o-information-circle"
+                                                        class="w-3 h-3 mr-1 opacity-50" />
+                                                    {{ $systemInfo }}
+                                                </span>
+                                            </div>
+                                        @endif
                                     </div>
                                 @else
                                     {{-- コメントがない場合のスペース確保（レイアウト崩れ防止）または非表示 --}}

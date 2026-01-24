@@ -121,6 +121,27 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->targetDiffId = $targetDiffId;
     }
 
+    #[On('ledger.rollback.completed')]
+    public function onRollbackCompleted(): void
+    {
+        // ページネーションをリセットして最新を表示
+        $this->pageCount = 1;
+        $this->hasMore = true;
+
+        // モデルをリフレッシュして最新情報を取得
+        $this->ledgerRecord->refresh();
+
+        // 最新のdiffを選択状態にする
+        $latestDiff = $this->ledgerRecord->ledgerDiff()->latest('id')->first();
+        if ($latestDiff) {
+            $this->baseDiffId = $latestDiff->id;
+            // 比較対象はリセット（または直前のバージョンにする？）
+            $this->targetDiffId = null;
+        }
+        
+        $this->dispatch('targetDiffIdUpdated', targetDiffId: null); // 他のコンポーネント（DiffViewer等）とも同期
+    }
+
     public function rollback(int $diffId): void
     {
         // 確認モーダルを開くイベントをディスパッチ

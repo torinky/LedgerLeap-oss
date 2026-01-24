@@ -217,15 +217,38 @@ if ($store.ledgerState) {
 
                                         {{-- 旧データ (比較対象) --}}
                                         @if ($showChanges)
-                                            <td class="align-top py-3 text-sm prose-sm max-w-none">
-                                                <div class="break-words">
-                                                    @if (in_array($column['type'] ?? '', ['file', 'files']))
-                                                        {!! $column['old_value_html'] !!}
-                                                    @else
-                                                        <x-expandable-content :content="$column['old_value_html']" max-height="6rem" />
-                                                    @endif
-                                                </div>
-                                            </td>
+                                            @php
+                                                $showIdenticalPlaceholder =
+                                                    !$hasChangedColumns &&
+                                                    !collect($group['columns'])->contains('is_omitted', true);
+                                            @endphp
+
+                                            @if ($showIdenticalPlaceholder)
+                                                @if ($loop->first)
+                                                    <td class="align-middle py-3 px-0 bg-base-200/20 text-center relative p-0"
+                                                        rowspan="{{ count($group['columns']) }}">
+                                                        <div
+                                                            class="absolute inset-0 flex flex-col items-center justify-center text-base-content/40 font-bold select-none pointer-events-none p-4">
+                                                            <x-mary-icon name="o-document-check"
+                                                                class="w-16 h-16 opacity-20 mb-2" />
+                                                            <div class="text-lg opacity-70">
+                                                                {{ __('ledger.diff.identical_content') }}</div>
+                                                            <div class="text-xs font-normal opacity-50 mt-1">
+                                                                Ver.{{ $pastVersion }}</div>
+                                                        </div>
+                                                    </td>
+                                                @endif
+                                            @else
+                                                <td class="align-top py-3 text-sm prose-sm max-w-none">
+                                                    <div class="break-words">
+                                                        @if (in_array($column['type'] ?? '', ['file', 'files']))
+                                                            {!! $column['old_value_html'] !!}
+                                                        @else
+                                                            <x-expandable-content :content="$column['old_value_html']" max-height="6rem" />
+                                                        @endif
+                                                    </div>
+                                                </td>
+                                            @endif
                                         @endif
                                     </tr>
                                 @endif

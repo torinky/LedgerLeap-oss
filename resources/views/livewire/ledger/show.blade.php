@@ -92,7 +92,7 @@
 
                 @if ($ledgerRecord->define->workflow_enabled)
                     <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
-                        wire:key="status-card-{{ $ledgerRecord->id }}" />
+                        wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
                 @endif
 
                 <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
@@ -126,7 +126,8 @@
                     {{-- 新しい LedgerDiffViewer コンポーネント --}}
                     <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
                         :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId"
-                        wire:key="diff-viewer-{{ $ledgerRecord->id }}" lazy />
+                        wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
+                        lazy />
 
                     {{-- フッター集約情報（編集者情報・ナッジ） --}}
                     <div class="mt-6 pt-4 border-t border-base-200">
@@ -250,7 +251,7 @@
                 {{-- 透明度調整 --}}
                 <div class="card-body p-4">
                     <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord"
-                        wire:key="action-buttons-{{ $ledgerRecord->id }}" />
+                        wire:key="action-buttons-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
                     @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], key('workflow-comment-modal-show'))
 
 

@@ -51,8 +51,8 @@ class RollbackConfirmModal extends Component
         $this->ledger = Ledger::findOrFail($ledgerId);
         $this->targetDiff = LedgerDiff::findOrFail($targetDiffId);
 
-        // デフォルトコメントの設定
-        $this->comments = __('ledger.rollback.default_comment', ['version' => $this->targetDiff->version]);
+        // デフォルトコメントの設定（ユーザー要望により空にする）
+        $this->comments = '';
 
         // 実行可能性の事前チェック
         try {
@@ -94,11 +94,15 @@ class RollbackConfirmModal extends Component
         ]);
 
         try {
+            // システム情報を追記（表示用デリミタ付き）
+            $systemInfo = __('ledger.rollback.source_info', ['version' => $this->targetDiff->version]);
+            $finalComments = $this->comments . "\n--- system-info ---\n" . $systemInfo;
+
             $this->rollbackService->execute(
                 $this->ledger,
                 $this->targetDiff,
                 auth()->user(),
-                $this->comments,
+                $finalComments,
                 $this->expectedVersion
             );
 
