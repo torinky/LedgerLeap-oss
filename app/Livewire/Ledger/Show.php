@@ -261,6 +261,38 @@ class Show extends BaseLivewireComponent
         }
     }
 
+    #[On('ledger.rollback.completed')]
+    public function handleRollbackCompleted(int $ledgerId, ?int $targetDiffId = null): void
+    {
+        if ($this->ledgerRecord->id !== $ledgerId) {
+            return;
+        }
+
+        // 最新情報を再読み込み
+        $this->mount($ledgerId);
+
+        // UI状態の自動更新: 詳細タブへ戻り、差分表示を有効化する
+        $this->selectedTab = 'details';
+        $this->showChanges = true;
+
+        if ($targetDiffId) {
+            // ロールバック元のバージョンとの比較を設定
+            $this->targetDiffId = $targetDiffId;
+            $this->loadComparisonTarget();
+            $this->dispatch('targetDiffIdUpdated', targetDiffId: $this->targetDiffId);
+            
+            $currentDiff = $this->ledgerRecord->latestDiff;
+            if ($currentDiff) {
+                 $this->dispatch('versionsSelected', baseId: $currentDiff->id, targetId: $this->targetDiffId);
+            }
+        } else {
+            // 直前バージョンとの比較を自動設定 (フォールバック)
+            $this->activateCompareWithPrevious();
+        }
+
+        $this->dispatch('showChangesUpdated', showChanges: true);
+    }
+
     public function render()
     {
         return view('livewire.ledger.show', [

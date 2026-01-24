@@ -278,4 +278,7 @@
     </div>
     {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
     <livewire:attached-file.file-inspector :isInLedgerDetailPage="true" />
+
+    {{-- ロールバック確認モーダル --}}
+    <livewire:ledger.rollback-confirm-modal />
 </div>

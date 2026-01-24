@@ -64,13 +64,11 @@ test('ad user can login and auto-register (hybrid auth)', function () {
         'userpassword' => 'fry',
     ]);
 
-
     // 既存ユーザーでのログイン試行
     $response = $this->post('/login', [
         'email' => 'fry@planetexpress.com',
         'password' => 'fry',
     ]);
-
 
     $this->assertAuthenticated();
     $response->assertRedirect('/'.$this->tenant->getTenantKey().'/my-portal'); // テナント付きリダイレクトを期待

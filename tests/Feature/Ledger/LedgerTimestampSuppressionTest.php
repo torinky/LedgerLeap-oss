@@ -2,15 +2,12 @@
 
 namespace Tests\Feature\Ledger;
 
-use App\Console\Commands\CalculateScores;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Tenant;
-use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Services\Scoring\ActivityScoreService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -54,7 +51,7 @@ class LedgerTimestampSuppressionTest extends TestCase
             'activity_score' => 0,
             'updated_at' => now()->subDay(), // 過去のタイムスタンプ
         ]);
-        
+
         $originalUpdatedAt = $ledger->updated_at->toDateTimeString();
 
         // アクティビティを作成してスコアが確実に変化するようにする
@@ -80,7 +77,7 @@ class LedgerTimestampSuppressionTest extends TestCase
             'activity_score' => 0,
             'updated_at' => now()->subDay(),
         ]);
-        
+
         $originalUpdatedAt = $ledger->updated_at->toDateTimeString();
         activity()->performedOn($ledger)->log('updated');
 
@@ -129,9 +126,9 @@ class LedgerTimestampSuppressionTest extends TestCase
         $ledger->content_attached = [
             0 => [
                 'test.txt' => [
-                    'meta' => ['content' => 'Old content', 'source' => 'tika']
-                ]
-            ]
+                    'meta' => ['content' => 'Old content', 'source' => 'tika'],
+                ],
+            ],
         ];
         $ledger->timestamps = false;
         $ledger->save();

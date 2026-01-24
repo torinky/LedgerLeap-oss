@@ -171,7 +171,7 @@ if ($store.ledgerState) {
                                     </tr>
                                 @else
                                     <tr class="hover:bg-base-200/20 transition-colors {{ $showChanges && $column['status'] !== 'unchanged' ? 'bg-warning/5' : '' }}"
-                                        wire:key="col-{{ $column['id'] }}">
+                                        wire:key="col-{{ $column['id'] }}-{{ $currentVersion }}-{{ $pastVersion }}">
                                         <td class="align-top py-3">
                                             <div class="flex flex-col gap-1">
                                                 <div class="flex items-center gap-2">
@@ -238,9 +238,12 @@ if ($store.ledgerState) {
     </div>
 
     @if (!$hasChangedColumns && $showChanges)
-        <div class="flex flex-col items-center justify-center py-12 text-base-content/40">
-            <x-mary-icon name="o-check-circle" class="w-12 h-12 mb-2" />
-            <p>{{ __('ledger.diff.no_changes') }}</p>
+        <div class="alert alert-success shadow-sm mt-4">
+            <x-mary-icon name="o-check-circle" class="w-6 h-6" />
+            <div>
+                <h3 class="font-bold">{{ __('ledger.diff.no_changes') }}</h3>
+                <div class="text-xs">{{ __('ledger.diff.identical_content') }}</div>
+            </div>
         </div>
     @endif
 </div>

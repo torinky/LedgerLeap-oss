@@ -757,7 +757,7 @@ class WorkflowService
      * @param  int  $userId  対象ユーザーID
      * @param  string  $type  'inspection' または 'approval'
      */
-    protected function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
+    public function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
     {
         try {
             $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';
@@ -776,7 +776,7 @@ class WorkflowService
      * @param  int  $userId  対象ユーザーID
      * @param  string  $type  'inspection' または 'approval'
      */
-    protected function decrementPendingTaskCount(int $userId, string $type): void
+    public function decrementPendingTaskCount(int $userId, string $type): void
     {
         try {
             $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';

@@ -238,6 +238,7 @@ class DefaultSortTest extends TestCase
         $this->assertEquals('2023-01-02', $ledgers[2]->content[0]);
         $this->assertEquals('500', $ledgers[2]->content[1]);
     }
+
     #[Test]
     public function it_sorts_auto_number_with_prefix_correctly(): void
     {

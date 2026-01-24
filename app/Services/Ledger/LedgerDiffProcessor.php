@@ -141,7 +141,10 @@ class LedgerDiffProcessor
                 $status = 'empty';
             }
             if (! $oldColDef) {
-                $status = 'added';
+                // 古い定義に存在しない（追加された）カラムの場合
+                // 現在の値が空であれば「変更なし」とみなす（スキーマ追加による差分を無視）
+                $isEmpty = $currentValue === null || $currentValue === '' || $currentValue === [];
+                $status = $isEmpty ? 'unchanged' : 'added';
             } elseif (! $currentColDef) {
                 $status = 'deleted';
             } elseif (json_encode($currentValue) !== json_encode($oldValue)) {
@@ -153,7 +156,7 @@ class LedgerDiffProcessor
             }
 
             $colDefForInfo = $currentColDef ?? $oldColDef;
-            $colDefArray = $colDefForInfo ? $colDefForInfo->toArray() : [];
+            $colDefArray = $colDefForInfo ? (is_array($colDefForInfo) ? $colDefForInfo : $colDefForInfo->toArray()) : [];
 
             $contentChanges[$columnId] = [
                 'column_define' => $colDefArray,

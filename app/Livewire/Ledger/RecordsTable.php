@@ -311,8 +311,6 @@ class RecordsTable extends BaseLivewireComponent
 
     /**
      * デフォルトソートのラベルを取得する
-     *
-     * @return string
      */
     private function getDefaultSortLabel(): string
     {
@@ -885,9 +883,6 @@ class RecordsTable extends BaseLivewireComponent
 
     /**
      * 自動採番型が純粋な数値のみ（プレフィックスやリビジョンなし）であるか判定
-     *
-     * @param  array  $column
-     * @return bool
      */
     private function isPurelyNumericAutoNumber(array $column): bool
     {
