@@ -1,23 +1,23 @@
-@props(['rows' => 5, 'cols' => 4])
+@props(['rows' => 5, 'cols' => 10])
 
-<div {{ $attributes->merge(['class' => 'w-full animate-pulse border border-base-200 rounded-xl overflow-hidden bg-base-100 shadow-sm']) }}>
-    <div class="overflow-x-auto">
-        <table class="table table-compact w-full">
+<div {{ $attributes->merge(['class' => 'w-full shimmer overflow-hidden bg-base-100 rounded-b-box']) }}>
+    <div class="overflow-x-auto w-full">
+        <table class="table table-zebra table-compact table-auto w-full border-separate border-spacing-0">
             <thead>
                 <tr>
                     @foreach (range(1, $cols) as $i)
-                        <th class="bg-base-200/50 py-4">
-                            <div class="h-4 bg-base-300 rounded w-2/3"></div>
+                        <th class="bg-base-200/50 py-4 px-2 border-b border-base-300">
+                            <div class="h-4 bg-base-content/10 rounded w-full mx-auto"></div>
                         </th>
                     @endforeach
                 </tr>
             </thead>
             <tbody>
                 @foreach (range(1, $rows) as $i)
-                    <tr class="border-b border-base-100 last:border-0">
+                    <tr class="hover:bg-base-200/5">
                         @foreach (range(1, $cols) as $j)
-                            <td class="py-4">
-                                <div class="h-3 bg-base-200 rounded w-full"></div>
+                            <td class="py-4 px-2 border-b border-base-200/30">
+                                <div class="h-3 bg-base-content/5 rounded w-full"></div>
                             </td>
                         @endforeach
                     </tr>

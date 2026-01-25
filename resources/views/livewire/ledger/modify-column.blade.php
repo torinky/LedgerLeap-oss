@@ -3,7 +3,7 @@
         <x-element.loading-overlay tier="1" target="store,toggleGroup" />
 
         {{-- Tier 1 Skeleton --}}
-        <div wire:loading.delay target="store,toggleGroup" class="p-8">
+        <div wire:loading.delay target="store,toggleGroup" class="p-8 shimmer">
             <x-element.skeleton-input-form rows="6" />
         </div>
 
@@ -39,7 +39,6 @@
                     <x-mary-input label="Name" placeholder="Your name" icon="o-user" hint="Your full name"/>
                 </div>
                 @if ($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-                    {{--            <form action="{{ route('ledger.store',$ledgerDefineRecord->id) }}" --}}
                     <x-mary-form wire:submit="store" method="post" class="card mb-32 w-full bg-neutral-500/10 shadow-xl">
                         @csrf
 
@@ -150,157 +149,130 @@
                                                     @endif
                                                 </div>
                                             </div>
-                                        @endforeach
-                                    </div>
+                                        @endif
                                 </div>
                             @endforeach
-                        </div>
-                        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-                            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                                <div class="card-body p-4">
-                                    <div class="flex flex-wrap items-center justify-center gap-4">
-                                        {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
-                                        <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
-                                                       x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
-                                                       x-transition:enter-start="opacity-0 scale-0 translate-y-12"
-                                                       x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak
-                                                       icon="o-exclamation-triangle"
-                                                       class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
-                                                       @click="$dispatch('toggle-validation-summary')">
-                                        <span>{{ __('ledger.validation.show_summary') }}</span>
-                                        <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
-                                             x-text="validationErrorCount"></div>
-                                        </x-mary-button>
+                        @endforeach
+                    </div>
+                    <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                            <div class="card-body p-4">
+                                <div class="flex flex-wrap items-center justify-center gap-4">
+                                    {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
+                                    <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
+                                                   x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
+                                                   x-transition:enter-start="opacity-0 scale-0 translate-y-12"
+                                                   x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak
+                                                   icon="o-exclamation-triangle"
+                                                   class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
+                                                   @click="$dispatch('toggle-validation-summary')">
+                                    <span>{{ __('ledger.validation.show_summary') }}</span>
+                                    <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
+                                         x-text="validationErrorCount"></div>
+                                    </x-mary-button>
 
-                                        @if ($ledgerDefineRecord->workflow_enabled)
-                                            {{-- 保存ボタン --}}
-                                            <x-mary-button label="{{ __('ledger.save_changes') }}" icon="o-pencil"
-                                                           class="btn-primary btn-wide"
-                                                           wire:click.prevent="saveChanges" spinner="saveChanges"
-                                                           :disabled="$ledgerRecord?->isLocked()"/>
+                                    @if ($ledgerDefineRecord->workflow_enabled)
+                                        {{-- 保存ボタン --}}
+                                        <x-mary-button label="{{ __('ledger.save_changes') }}" icon="o-pencil"
+                                                       class="btn-primary btn-wide"
+                                                       wire:click.prevent="saveChanges" spinner="saveChanges"
+                                                       :disabled="$ledgerRecord?->isLocked()"/>
 
-                                            {{-- 点検者選択 UI --}}
-                                            @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
-                                                <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
-                                                               icon="o-paper-airplane"
-                                                               class="btn-success btn-wide"
-                                                               wire:click.prevent="requestInspection"
-                                                               spinner="requestInspection"/>
-                                            @endif
-                                        @else
-                                            {{-- 直接保存ボタン --}}
-                                            <x-mary-button label="{{ __('ledger.save') }}" icon="o-pencil"
-                                                           class="btn-primary btn-wide"
-                                                           wire:click.prevent="saveDirectly" spinner="saveDirectly"
-                                                           :disabled="$ledgerRecord?->isLocked()"/>
+                                        {{-- 点検者選択 UI --}}
+                                        @if ($ledgerRecord?->status === \App\Enums\WorkflowStatus::DRAFT)
+                                            <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}"
+                                                           icon="o-paper-airplane"
+                                                           class="btn-success btn-wide"
+                                                           wire:click.prevent="requestInspection"
+                                                           spinner="requestInspection"/>
                                         @endif
+                                    @else
+                                        {{-- 直接保存ボタン --}}
+                                        <x-mary-button label="{{ __('ledger.save') }}" icon="o-pencil"
+                                                       class="btn-primary btn-wide"
+                                                       wire:click.prevent="saveDirectly" spinner="saveDirectly"
+                                                       :disabled="$ledgerRecord?->isLocked()"/>
+                                    @endif
 
-                                        <div class="flex flex-wrap items-center justify-center w-full gap-2">
-                                            <x-mary-button label="{{ __('ledger.prefill.generate_link') }}" icon="o-link"
-                                                           class="btn-outline btn-info" wire:click.prevent="generatePrefillLink"
-                                                           spinner="generatePrefillLink"/>
-                                            <x-ledger.close-window-button/>
-                                        </div>
+                                    <div class="flex flex-wrap items-center justify-center w-full gap-2">
+                                        <x-mary-button label="{{ __('ledger.prefill.generate_link') }}" icon="o-link"
+                                                       class="btn-outline btn-info" wire:click.prevent="generatePrefillLink"
+                                                       spinner="generatePrefillLink"/>
+                                        <x-ledger.close-window-button/>
                                     </div>
-                                    {{-- 現在のステータス表示 --}}
-                                    <div class="text-center text-xs text-base-content/70 mt-2">
-                                        {{ __('ledger.workflow.current_status') }}
-                                        : {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
-                                    </div>
+                                </div>
+                                {{-- 現在のステータス表示 --}}
+                                <div class="text-center text-xs text-base-content/70 mt-2">
+                                    {{ __('ledger.workflow.current_status') }}
+                                    : {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
                                 </div>
                             </div>
                         </div>
-                        {{--
-                                                <div
-                                                    class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-                                                    <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                                                        <div class="card-body flex flex-row justify-center items-center">
-                                                            <div class="card-actions justify-center place-items-center">
-                                                                <x-mary-button label="{{__('ledger.modify_message')}}" icon="o-pencil-square"
-                                                                               class="btn btn-lg btn-warning btn-wide mr-4" type="submit" spinner="store"/>
-                                                                --}}
-                        {{--
-                                                                                    <button type="submit" class="btn btn-lg btn-warning btn-wide"><i
-                                                                                            class="fa-solid fa-pencil mr-2"></i>{{__('ledger.modify_message')}}</button>
-                                                                --}}{{--
+                    </div>
 
-                                                                @if (isset($ledgerRecord->id))
-                                                                    <label for="delete-modal" class="btn btn-outline btn-sm btn-error ml-10"><i
-                                                                            class="fa-solid fa-trash mr-2"></i>{{__('ledger.delete')}}</label>
-                                                                @endif
-                                                                <x-ledger.close-window-button/>
+                </x-mary-form>
 
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                        --}}
+                {{-- 担当者選択モーダルコンポーネント呼び出し --}}
+                @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-workflow'])
 
-                    </x-mary-form>
+                {{-- 編集確認モーダル --}}
+                <x-mary-modal wire:model="confirmingEdit"
+                              title="{{ __('ledger.workflow.confirm_edit_while_pending_title') }}"
+                              persistent icon="o-exclamation-triangle">
+                    {{ __('ledger.workflow.confirm_edit_while_pending_text') }}
 
-                    {{-- 担当者選択モーダルコンポーネント呼び出し --}}
-                    @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-workflow'])
+                    <div class="mt-4">
+                        <x-mary-textarea label="{{ __('ledger.workflow.edit_reason_label') }}"
+                                         hint="{{ __('ledger.workflow.edit_reason_hint') }}" wire:model="editReason"
+                                         rows="3"/>
+                    </div>
 
-                    {{-- 編集確認モーダル --}}
-                    <x-mary-modal wire:model="confirmingEdit"
-                                  title="{{ __('ledger.workflow.confirm_edit_while_pending_title') }}"
-                                  persistent icon="o-exclamation-triangle">
-                        {{ __('ledger.workflow.confirm_edit_while_pending_text') }}
+                    <x-slot:actions>
+                        <x-mary-button label="{{ __('Cancel') }}" @click="$wire.confirmingEdit = false" icon="o-x-circle"/>
+                        <x-mary-button label="{{ __('ledger.save_and_return_to_draft') }}" icon="o-arrow-uturn-left"
+                                       class="btn-warning" wire:click="saveChangesAndReturnToDraft"
+                                       spinner="saveChangesAndReturnToDraft"/>
+                    </x-slot:actions>
+                </x-mary-modal>
 
-                        <div class="mt-4">
-                            <x-mary-textarea label="{{ __('ledger.workflow.edit_reason_label') }}"
-                                             hint="{{ __('ledger.workflow.edit_reason_hint') }}" wire:model="editReason"
-                                             rows="3"/>
-                        </div>
-
-                        <x-slot:actions>
-                            <x-mary-button label="{{ __('Cancel') }}" @click="$wire.confirmingEdit = false" icon="o-x-circle"/>
-                            <x-mary-button label="{{ __('ledger.save_and_return_to_draft') }}" icon="o-arrow-uturn-left"
-                                           class="btn-warning" wire:click="saveChangesAndReturnToDraft"
-                                           spinner="saveChangesAndReturnToDraft"/>
-                        </x-slot:actions>
-                    </x-mary-modal>
-
-                    @if (isset($ledgerRecord->id))
-                        <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-                        <div class="modal">
-                            <div class="modal-box bg-warning text-warning-content">
-                                <h3 class="font-bold text-lg space-x-2"><i
-                                            class="fas fa-trash-alt"></i><span>{{ __('ledger.remove_title') }}</span></h3>
-                                <p class="py-4">{{ __('ledger.remove_message') }}</p>
-                                <div class="modal-action">
-                                    <div class="btnContainer">
-                                        <form method="POST"
-                                              action="{{ route('ledger.destroy', ['tenant' => $this->tenantId, 'ledger' => $ledgerRecord]) }}">
-                                            {{--                                @dd($tenantId); --}}
-                                            {{--                                <form method="POST" action="{{route('ledger.destroy',['tenant' => $tenantId, 'ledger' => $ledgerRecord])}}"> --}}
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-error space-x-2" name="deleteLedgerDefine"><i
-                                                        class="fas fa-trash-alt"></i>{{ __('ledger.delete') }}
-                                            </button>
-                                        </form>
-                                    </div>
-                                    <label for="delete-modal" class="btn btn-outline ml-5">{{ __('actions.cancel') }}</label>
+                @if (isset($ledgerRecord->id))
+                    <input type="checkbox" id="delete-modal" class="modal-toggle"/>
+                    <div class="modal">
+                        <div class="modal-box bg-warning text-warning-content">
+                            <h3 class="font-bold text-lg space-x-2"><i
+                                        class="fas fa-trash-alt"></i><span>{{ __('ledger.remove_title') }}</span></h3>
+                            <p class="py-4">{{ __('ledger.remove_message') }}</p>
+                            <div class="modal-action">
+                                <div class="btnContainer">
+                                    <form method="POST"
+                                          action="{{ route('ledger.destroy', ['tenant' => $this->tenantId, 'ledger' => $ledgerRecord]) }}">
+                                        {{--                                @dd($tenantId); --}}
+                                        {{--                                <form method="POST" action="{{route('ledger.destroy',['tenant' => $tenantId, 'ledger' => $ledgerRecord])}}"> --}}
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-error space-x-2" name="deleteLedgerDefine"><i
+                                                    class="fas fa-trash-alt"></i>{{ __('ledger.delete') }}
+                                        </button>
+                                    </form>
                                 </div>
+                                <label for="delete-modal" class="btn btn-outline ml-5">{{ __('actions.cancel') }}</label>
                             </div>
                         </div>
-                    @endif
-
+                    </div>
                 @endif
 
-                {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
-                @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-bottom'])
+            @endif
 
-                {{-- コメント入力モーダル --}}
-                @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord?->id], ['key' => 'workflow-comment-modal-show'])
+            {{-- このコンポーネントは $showAssigneeModal に応じて表示/非表示が切り替わる --}}
+            @livewire('workflow.workflow-assignee-modal', [], ['key' => 'assignee-modal-bottom'])
 
+            {{-- コメント入力モーダル --}}
+            @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord?->id], ['key' => 'workflow-comment-modal-show'])
 
-
-                {{-- 事前入力リンクモーダル --}}
-                <x-ledger.prefill-link-modal :generated-prefill-u-r-l="$generatedPrefillURL"/>
-            </div>
+            {{-- 事前入力リンクモーダル --}}
+            <x-ledger.prefill-link-modal :generated-prefill-u-r-l="$generatedPrefillURL"/>
         </div>
     </div>
-
 </div>
+</div>
+

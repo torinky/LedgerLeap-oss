@@ -1,4 +1,4 @@
-<div {{ $attributes->merge(['class' => 'flex items-center space-x-5 w-full animate-pulse px-4 py-5 border-b border-base-200 last:border-b-0']) }}>
+<div {{ $attributes->merge(['class' => 'flex items-center space-x-5 w-full shimmer px-4 py-5 border-b border-base-200 last:border-b-0']) }}>
     <div class="h-5 w-5 bg-base-300 rounded shrink-0"></div>
     <div class="flex-1 space-y-3">
         <div class="h-3.5 bg-base-300 rounded-md w-1/4"></div>

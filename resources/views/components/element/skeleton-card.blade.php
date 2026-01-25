@@ -1,4 +1,4 @@
-<div {{ $attributes->merge(['class' => 'card bg-base-100 shadow-sm animate-pulse overflow-hidden rounded-xl border border-base-200']) }}>
+<div {{ $attributes->merge(['class' => 'card bg-base-100 shadow-sm shimmer overflow-hidden rounded-xl border border-base-200']) }}>
     <div class="card-body p-6 space-y-6">
         <div class="flex items-center space-x-4">
             <div class="h-14 w-14 rounded-2xl bg-base-300"></div>

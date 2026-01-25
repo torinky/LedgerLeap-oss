@@ -1,6 +1,6 @@
 @props(['rows' => 3])
 
-<div {{ $attributes->merge(['class' => 'w-full space-y-8 animate-pulse bg-base-100 p-8 rounded-2xl border border-base-200 shadow-sm']) }}>
+<div {{ $attributes->merge(['class' => 'w-full space-y-8 shimmer bg-base-100 p-8 rounded-2xl border border-base-200 shadow-sm']) }}>
     @foreach (range(1, $rows) as $i)
         <div class="space-y-4">
             <div class="h-4 bg-base-300 rounded w-1/4"></div>

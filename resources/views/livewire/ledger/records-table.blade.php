@@ -9,14 +9,15 @@
         $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,setDisplayLevel';
         $navTargets = 'selectedFolderIds,selectedLedgerDefineIds,currentFolderId,changeCurrentFolder,changeCurrentFolderByTree,toggleFolderId,toggleLedgerDefineId';
         $pageTargets = 'gotoPage,nextPage,previousPage';
-        $allTargets = "$searchTargets,$filterTargets,$navTargets,$pageTargets";
+        $dataTargets = $searchTargets . ',' . $filterTargets . ',' . $pageTargets;
+        $allTargets = $searchTargets . ',' . $filterTargets . ',' . $navTargets . ',' . $pageTargets;
     @endphp
 
-    {{-- Breadcrumbs & Navigation Panels Section --}}
-    <div class="px-4 mt-4 relative group/nav">
-        <x-element.loading-overlay tier="2" :target="$navTargets" />
+    {{-- Breadcrumbs & Navigation Panels Section (Target: navTargets) --}}
+    <div class="px-4 mt-4 relative group/nav min-h-[100px]">
+        <x-element.loading-overlay tier="2" target="{{ $navTargets }}" />
 
-        <div wire:loading.delay.remove :target="$navTargets">
+        <div wire:loading.delay.remove wire:target="{{ $navTargets }}">
             <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
                 <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
             </div>
@@ -60,19 +61,22 @@
                 :currentTenantId="$currentTenantId" />
         </div>
 
-        {{-- Nav Skeleton --}}
-        <div wire:loading.delay :target="$navTargets">
+        {{-- Nav Skeleton (Includes Breadcrumb placeholder) --}}
+        <div wire:loading.delay wire:target="{{ $navTargets }}" class="space-y-4 pb-4">
+            <div class="h-10 bg-base-300 rounded-box w-full shimmer"></div>
+            {{-- Folder Summary Panel Skeleton --}}
+            <div class="card bg-base-300 h-24 w-full shadow-sm shimmer"></div>
             <x-element.skeleton-grid items="12" />
         </div>
     </div>
 
     <div class="divider px-4 opacity-50"></div>
 
-    {{-- Info & Results Section --}}
+    {{-- Info & Results Section (Target: dataTargets) --}}
     <div class="px-4 relative min-h-[400px]">
-        <x-element.loading-overlay tier="2" :target="$allTargets" />
+        <x-element.loading-overlay tier="2" target="{{ $dataTargets }}" />
 
-        <div wire:loading.delay.remove :target="$allTargets" class="space-y-6">
+        <div wire:loading.delay.remove wire:target="{{ $dataTargets }}" class="space-y-6">
             <div class="info-block sticky top-24 z-40 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30">
                 @php
                     $displayLevelOptions = [
@@ -210,24 +214,39 @@
             </div>
         </div>
 
-    {{-- Results Skeleton Loader --}}
-        <div wire:loading.delay :target="$allTargets" class="space-y-12">
-            <div class="card bg-base-100/50 border border-base-300 shadow-inner">
-                <div class="card-body p-4 flex flex-row justify-between items-center animate-pulse">
-                    <div class="h-8 bg-base-300 rounded-lg w-1/4"></div>
-                    <div class="h-8 bg-base-300 rounded-lg w-1/6"></div>
+    {{-- Results Skeleton Loader (Only for dataTargets) --}}
+        <div wire:loading.delay wire:target="{{ $dataTargets }}">
+            <div class="space-y-6">
+                {{-- info-block matching skeleton --}}
+                <div class="sticky top-24 z-40 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 shimmer">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="h-6 bg-base-300 rounded-lg w-1/4"></div>
+                        <div class="h-6 bg-base-300 rounded-lg w-1/6"></div>
+                    </div>
+                    <div class="flex justify-center gap-6 mt-4">
+                        <div class="h-4 bg-base-200 rounded w-12"></div>
+                        <div class="h-4 bg-base-200 rounded w-12"></div>
+                        <div class="h-4 bg-base-200 rounded w-12"></div>
+                    </div>
+                </div>
+
+                <div class="records-list-container">
+                    @foreach (range(1, 2) as $i)
+                        {{-- Matching Card structure exactly --}}
+                        <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden">
+                            <div class="card-body pt-0 px-0">
+                                {{-- Matching Header exactly (bg-base-300 + padding) --}}
+                                <div class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
+                                    <div class="h-8 w-8 bg-base-content/10 rounded-full"></div>
+                                    <div class="h-6 bg-base-content/10 rounded-lg w-1/3"></div>
+                                </div>
+
+                                <x-element.skeleton-table rows="8" cols="10" />
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-
-            @foreach (range(1, 2) as $i)
-                <div class="space-y-4">
-                    <div class="flex items-center gap-4 ml-2">
-                        <div class="h-8 w-8 bg-base-300 rounded-full animate-pulse"></div>
-                        <div class="h-6 bg-base-300 rounded-lg w-1/3 animate-pulse"></div>
-                    </div>
-                    <x-element.skeleton-table rows="5" cols="6" />
-                </div>
-            @endforeach
         </div>
     </div>
 
