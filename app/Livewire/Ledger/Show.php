@@ -42,10 +42,16 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'td')]
     public ?int $targetDiffId = null;
 
+    #[Url(as: 'bd')]
+    public ?int $baseDiffId = null;
+
     #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
+
+
     public ?LedgerDiff $comparisonTargetDiffModel = null;
+
 
     public function isComparingWithPrevious(): bool
     {
@@ -144,8 +150,7 @@ class Show extends BaseLivewireComponent
     #[On('versionsSelected')]
     public function updateVersions(?int $baseId, ?int $targetId): void
     {
-        // $baseId は通常最新(最新のdiffId)を想定しているが、
-        // 詳細タブで表示するのは基本的に「現在」との比較なので、targetId を反映する。
+        $this->baseDiffId = $baseId;
         $this->targetDiffId = $targetId;
         $this->loadComparisonTarget();
         $this->dispatch('targetDiffIdUpdated', targetDiffId: $targetId);
@@ -178,15 +183,17 @@ class Show extends BaseLivewireComponent
                 ->first();
 
             if ($previousDiff) {
+                $this->baseDiffId = $currentDiff->id;
                 $this->targetDiffId = $previousDiff->id;
                 $this->loadComparisonTarget();
                 $this->dispatch('targetDiffIdUpdated', targetDiffId: $this->targetDiffId);
                 // 履歴タブのステートと同期させるため、baseIdとtargetIdをディスパッチ
-                $this->dispatch('versionsSelected', baseId: $currentDiff->id, targetId: $previousDiff->id);
+                $this->dispatch('versionsSelected', baseId: $this->baseDiffId, targetId: $this->targetDiffId);
             }
         }
         $this->dispatch('showChangesUpdated', showChanges: true);
     }
+
 
     #[On('switchToHistoryTab')]
     public function switchToHistoryTab(): void

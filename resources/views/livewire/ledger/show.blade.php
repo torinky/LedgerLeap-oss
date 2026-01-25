@@ -215,8 +215,10 @@
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history" class="shadow-md" label="{{ $historyTabTitle }}" icon="o-list-bullet">
                 <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
-                    :targetDiffId="$targetDiffId" wire:key="history-manager-{{ $ledgerRecord->id }}" />
+                    wire:key="history-manager-{{ $ledgerRecord->id }}" />
             </x-mary-tab>
+
+
 
 
             {{-- ★★★ 総合活動履歴タブ ★★★ --}}

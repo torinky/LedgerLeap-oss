@@ -8,6 +8,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 
 class LedgerHistoryManager extends BaseLivewireComponent
 {
@@ -25,9 +26,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
     public bool $hasMore = true;
 
     // 比較対象
+    #[Url(as: 'bd')]
     public ?int $baseDiffId = null; // 基準（新しい方、通常は最新）
 
+    #[Url(as: 'td')]
     public ?int $targetDiffId = null; // 比較対象（古い方）
+
 
     // 表示用データ
     public ?Ledger $ledgerRecord = null;
@@ -37,14 +41,16 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
     public bool $canRollback = false;
 
-    public function mount(int $ledgerId, int $displayLevel = 3, ?string $highlight = null, ?int $targetDiffId = null): void
-    {
+    public function mount(
+        int $ledgerId,
+        int $displayLevel = 3,
+        ?string $highlight = null
+    ): void {
         $startTime = microtime(true);
 
         $this->ledgerId = $ledgerId;
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
-        $this->targetDiffId = $targetDiffId;
 
         $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
 
@@ -58,18 +64,23 @@ class LedgerHistoryManager extends BaseLivewireComponent
             }
         }
 
-        // 最新の diff ID を取得
-        $latestDiff = $this->ledgerRecord->ledgerDiff()->latest('id')->first();
-        if ($latestDiff) {
-            $this->baseDiffId = $latestDiff->id;
+        // 基準バージョンの決定
+        // URL パラメータ (bd) から既にセットされている場合は何もしない
+        if (! $this->baseDiffId) {
+            // 指定がない場合、最新の diff ID を取得
+            $latestDiff = $this->ledgerRecord->latestDiff;
+            if ($latestDiff) {
+                $this->baseDiffId = $latestDiff->id;
+            }
         }
 
-        // 比較対象が指定されている場合、新しい方を base にする
+        // 比較対象が指定されている場合、新しい方を base にする（整合性維持のためのソート）
         if ($this->baseDiffId && $this->targetDiffId && $this->baseDiffId < $this->targetDiffId) {
             $tmp = $this->baseDiffId;
             $this->baseDiffId = $this->targetDiffId;
             $this->targetDiffId = $tmp;
         }
+
 
         $this->logPerformance('ledger_mount', (microtime(true) - $startTime) * 1000);
     }
@@ -108,20 +119,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->logPerformance('ledger_load_more', (microtime(true) - $startTime) * 1000);
     }
 
-    #[On('versionsSelected')]
-    public function updateVersions(?int $baseId, ?int $targetId): void
-    {
-        $this->baseDiffId = $baseId;
-        $this->targetDiffId = $targetId;
-    }
-
-    #[On('targetDiffIdUpdated')]
-    public function updateTargetDiffId(?int $targetDiffId): void
-    {
-        $this->targetDiffId = $targetDiffId;
-    }
-
     #[On('ledger.rollback.completed')]
+
     public function onRollbackCompleted(): void
     {
         // ページネーションをリセットして最新を表示
