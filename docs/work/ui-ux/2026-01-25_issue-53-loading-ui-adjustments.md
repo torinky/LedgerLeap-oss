@@ -24,8 +24,10 @@
 - **パンくずリストの維持**: 台帳選択・解除時のローディング中にパンくずリストが消えないよう、コンテナ構造を分離。
 - **バッジ表示の復元**: `develop` ブランチのデザインに基づき、検索結果件数（フォルダ、台帳、レコード）をバッジ形式 (`badge-info`) に戻し、視認性を向上。
 
-### 4. コンポーネント間連携の試行
-- `wire:target` にイベント名 (`currentFolderChangedByTree`) や、起点となる他コンポーネントのメソッド名を指定するなどの試行。
+### 4. 新規登録・編集画面のアコーディオン最適化
+- **Alpine.js + @entangle への移行**: `ModifyColumn`, `CreateColumn`, および `LedgerDefine/Edit` の各アコーディオンを Alpine.js 制御に刷新。
+- **グローバルローディングの抑制**: サーバー側のメソッド (`toggleGroup`, `toggleDescriptionGroup`) に `#[Renderless]` 属性を付与し、かつ `@entangle` を用いることで、単なる開閉操作での Tier 0 プログレスバー発生を完全に排除。
+- **スムーズなアニメーション**: DaisyUI の `collapse-open` / `collapse-close` クラスを利用し、CSS ベースの滑らかな展開・折りたたみアニメーションを実現。
 
 ## 未解決の課題・継続案件
 

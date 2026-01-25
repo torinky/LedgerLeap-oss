@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Traits;
 
+use Livewire\Attributes\Renderless;
+
 trait HandlesFormGroups
 {
     /**
@@ -12,6 +14,7 @@ trait HandlesFormGroups
     /**
      * グループの開閉を切り替える
      */
+    #[Renderless]
     public function toggleGroup(string $groupName, ?bool $force = null): void
     {
         if (isset($this->collapsedStates[$groupName])) {

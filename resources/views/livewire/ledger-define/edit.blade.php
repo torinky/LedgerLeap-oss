@@ -16,47 +16,48 @@
         <x-mary-toggle wire:model="workflow_enabled" label="{{ __('ledger.define.enable_workflow') }}"
                        hint="{{ __('ledger.define.enable_workflow_hint') }}" right tight/>
 
-        <x-mary-accordion wire:model="descriptionGroup" class="rounded-lg bg-base-200 border-base-300 border">
-            <x-mary-collapse name="createDescription">
-                <x-slot:heading>
-                    {{--                                        {{__('ledger.define.create_description')}}--}}
-                    <button
-                            wire:click.prevent="toggleDescriptionGroup('createDescription')">{{__('ledger.define.create_description')}}</button>
-                </x-slot:heading>
-                <x-slot:content>
-                    <x-mary-markdown
-                            {{--                        label="{{__('ledger.define.create_description')}}"--}}
-                            wire:model="createDescription"
-                    />
-                </x-slot:content>
-            </x-mary-collapse>
-            <x-mary-collapse name="listDescription">
-                <x-slot:heading>
-                    {{--                                        {{__('ledger.define.list_description')}}--}}
-                    <button
-                            wire:click.prevent="toggleDescriptionGroup('listDescription')">{{__('ledger.define.list_description')}}</button>
-                </x-slot:heading>
-                <x-slot:content>
-                    <x-mary-markdown
-                            {{--                        label="{{__('ledger.define.list_description')}}"--}}
-                            wire:model="listDescription"
-                    />
-                </x-slot:content>
-            </x-mary-collapse>
-            <x-mary-collapse name="detailDescription">
-                <x-slot:heading>
-                    {{--                                        {{__('ledger.define.detail_description')}}--}}
-                    <button
-                            wire:click.prevent="toggleDescriptionGroup('detailDescription')">{{__('ledger.define.detail_description')}}</button>
-                </x-slot:heading>
-                <x-slot:content>
-                    <x-mary-markdown
-                            {{--                        label="{{__('ledger.define.detail_description')}}"--}}
-                            wire:model="detailDescription"
-                    />
-                </x-slot:content>
-            </x-mary-collapse>
-        </x-mary-accordion>
+        {{-- Alpine.js controlled accordion for instantaneous feedback --}}
+        <div class="rounded-lg bg-base-200 border-base-300 border overflow-hidden"
+             x-data="{
+                 descriptionGroup: @entangle('descriptionGroup'),
+                 toggle(name) {
+                     this.descriptionGroup = (this.descriptionGroup === name) ? '' : name;
+                 }
+             }">
+
+            {{-- Create Description --}}
+            <div class="collapse collapse-arrow border-b border-base-300 rounded-none"
+                 :class="{ 'collapse-open': descriptionGroup === 'createDescription' }">
+                <div class="collapse-title text-base font-bold cursor-pointer" @click="toggle('createDescription')">
+                    {{__('ledger.define.create_description')}}
+                </div>
+                <div class="collapse-content">
+                    <x-mary-markdown wire:model="createDescription" />
+                </div>
+            </div>
+
+            {{-- List Description --}}
+            <div class="collapse collapse-arrow border-b border-base-300 rounded-none"
+                 :class="{ 'collapse-open': descriptionGroup === 'listDescription' }">
+                <div class="collapse-title text-base font-bold cursor-pointer" @click="toggle('listDescription')">
+                    {{__('ledger.define.list_description')}}
+                </div>
+                <div class="collapse-content">
+                    <x-mary-markdown wire:model="listDescription" />
+                </div>
+            </div>
+
+            {{-- Detail Description --}}
+            <div class="collapse collapse-arrow rounded-none"
+                 :class="{ 'collapse-open': descriptionGroup === 'detailDescription' }">
+                <div class="collapse-title text-base font-bold cursor-pointer" @click="toggle('detailDescription')">
+                    {{__('ledger.define.detail_description')}}
+                </div>
+                <div class="collapse-content">
+                    <x-mary-markdown wire:model="detailDescription" />
+                </div>
+            </div>
+        </div>
 
         <x-slot:actions>
             <x-mary-button label="{{__('ledger.save')}}"

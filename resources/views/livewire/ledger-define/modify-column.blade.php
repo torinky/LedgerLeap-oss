@@ -28,26 +28,30 @@
                 @foreach($columns as $index => $column)
                     <li wire:sortable.item="{{ $column['id'] }}" wire:key="column-{{ $column['id'] }}" class="z-20">
                         <div class="flex items-center">
-                            {{-- ドラッグハンドルをx-mary-collapseの外に配置 --}}
+                            {{-- ドラッグハンドル --}}
                             <button wire:sortable.handle class="btn btn-sm tooltip tooltip-left mr-2"
                                     data-tip="{{__('ledger.column.drag2sort')}}">
                                 <i class="fa-solid fa-grip-lines"></i>
                             </button>
 
-                            <x-mary-collapse x-data="{ is_collapsed: @js($column['is_collapsed']) }"
-                                             x-bind:open="is_collapsed"
-                                             x-on:toggle-collapse.window="is_collapsed = $event.detail.is_collapsed"
-                                             class="bg-base-200 opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out"
-                                             wire:key="collapse-{{ $column['id'] }}"
-                            >
-                                <x-slot name="heading">
-                                    <h3 class="text-lg font-semibold">
-                                        {{ $column['id'] }}: {{ $column['name'] }}
-                                        : {{ $columnInputTypes[$column['type']] ?? $column['type'] }}
-                                    </h3>
-                                </x-slot>
+                            {{-- DaisyUI Collapse with Alpine integration for instantaneous feedback --}}
+                            <div class="collapse collapse-arrow bg-base-200 opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out w-full"
+                                 wire:key="collapse-{{ $column['id'] }}"
+                                 x-data="{
+                                     isOpen: @js(!$column['is_collapsed']),
+                                     toggle() {
+                                         this.isOpen = !this.isOpen;
+                                     }
+                                 }"
+                                 :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen }">
 
-                                <x-slot name="content">
+                                <div class="collapse-title text-lg font-semibold cursor-pointer flex items-center pr-10"
+                                     @click="toggle()">
+                                    {{ $column['id'] }}: {{ $column['name'] }}
+                                    : {{ $columnInputTypes[$column['type']] ?? $column['type'] }}
+                                </div>
+
+                                <div class="collapse-content">
                                     <div class="p-4">
                                         <div class="items-center flex flex-row space-x-10">
                                             <div class="basis-1/2 space-y-4">
@@ -146,8 +150,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                </x-slot>
-                            </x-mary-collapse>
+                                </div>
+                            </div>
                         </div>
                     </li>
                 @endforeach

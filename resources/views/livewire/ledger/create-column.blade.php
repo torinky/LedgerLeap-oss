@@ -56,13 +56,24 @@
                     <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord" />
 
                     @foreach($groupedColumns as $groupName => $columnsInGroup)
-                        <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20  mb-2" wire:key="group-{{ $groupName }}"
-                             @if(!($collapsedStates[$groupName] ?? true)) open @endif
-                             x-data="groupErrorBadge" data-group-name="{{ $groupName }}"> {{-- falseの時にopen --}}
-                            <div class="collapse-title text-xl font-medium" wire:click="toggleGroup('{{ $groupName }}')">
+                        @php
+                            $isGroupRequired = collect($columnsInGroup)->contains(fn($col) => $col->required);
+                        @endphp
+                        <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20  mb-2 transition-all duration-300"
+                             wire:key="group-{{ $groupName }}"
+                             x-data="Object.assign(groupErrorBadge, {
+                                 isOpen: @entangle('collapsedStates.' . $groupName),
+                                 toggle() {
+                                     this.isOpen = !this.isOpen;
+                                 }
+                             })"
+                             :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen }"
+                             data-group-name="{{ $groupName }}">
+                            {{-- checkboxを使わずにJSで制御することで、瞬時の開閉アニメーションを実現 --}}
+                            <div class="collapse-title text-xl font-medium cursor-pointer" @click="toggle()">
                                 <h3 class="text-lg font-bold flex items-center pr-10">
                                     <div class="flex items-center">
-                                        @if(collect($columnsInGroup)->contains(fn($col) => $col->required))
+                                        @if($isGroupRequired)
                                             <div class="tooltip tooltip-right mr-2" data-tip="{{ __('ledger.form.required_group_indicator') }}">
                                                 <x-mary-icon name="o-check-circle" class="w-6 h-6 text-error" />
                                             </div>

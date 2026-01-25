@@ -10,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Renderless;
 use Mary\Traits\Toast;
 
 class Edit extends BaseLivewireComponent
@@ -151,6 +152,7 @@ class Edit extends BaseLivewireComponent
         //        $this->dispatch('ledgerDefineRecordStored');
     }
 
+    #[Renderless]
     public function toggleDescriptionGroup($name)
     {
         $this->descriptionGroup = $name;
