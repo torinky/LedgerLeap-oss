@@ -798,6 +798,54 @@ tests/Unit/Mcp/
 └── Traits/                          # 共通トレイトの内部ロジック
     └── AuthenticatedMcpToolTest.php     # 【内部】トレイト単体テスト (15テスト)
 
+---
+
+## 🛡️ データ整合性テスト (2026-01-25 追加)
+
+マルチテナント環境において、`tenant_id` の欠落は致命的なセキュリティリスク（またはデータのサイレントな消失）を招きます。
+
+### 1. DatabaseIntegrityTest の運用
+モデル単体のテストだけでなく、データベース全体の「不備」を検知するテストスイートを維持してください。
+
+```php
+// tests/Feature/DatabaseIntegrityTest.php
+public function test_tenant_tables_have_no_missing_tenant_id()
+{
+    $tables = ['ledgers', 'ledger_diffs', 'folders', ...];
+    foreach ($tables as $table) {
+        $count = DB::table($table)->whereNull('tenant_id')->count();
+        $this->assertEquals(0, $count, "Table {$table} has records with NULL tenant_id");
+    }
+}
+```
+
+### 2. バックグラウンド生成レコードの注意
+`LedgerDiff` のように、ユーザー操作の副産物としてバックグラウンドで作成されるレコードは `tenant_id` を忘れやすいため、必ず生成サービス (`RollbackService` 等) のテストで `tenant_id` が継承されているかを検証してください。
+
+---
+
+## 🔗 Livewire 3 URL 同期のベストプラクティス (2026-01-25 追加)
+
+親子コンポーネント間で URL パラメータを共有する場合の設計指針です。
+
+### 1. #[Url] 属性の共有
+親と子の両方で同じプロパティを `#[Url]` として定義することで、Livewire 3 はそれらが同一の URL クエリを指していることを自動認識します。
+
+### 2. 明示的なパラメータ渡しの回避 (リロード対策)
+Blade で `<livewire:child :param="$param" />` のように明示的に渡すと、ページリロード時に「親の初期値(null)」が「URL から復元された子の値」を上書きしてしまう競合が発生します。
+- **推奨**: URL と同期するプロパティは、親子間で明示的に渡さず、それぞれのコンポーネントが URL から独立して復元するように設計します。
+
+### 3. 初期化時のガード
+`mount` 内でデフォルト値をセットする際は、既に URL から値が復元されていないかを確認してください。
+```php
+public function mount() {
+    if (! $this->myParam) {
+        $this->myParam = 'default';
+    }
+}
+```
+
+
 総計: 36テスト / 113アサーション / 100%通過率
 ```
 
