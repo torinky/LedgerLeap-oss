@@ -82,13 +82,22 @@
             </x-mary-card>
             <div class="divider"></div>
 
-            <x-mary-table
-                    class="table-sm w-full overflow-x-auto bg-base-100"
-                    :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
-                    :rows="$activities"
-                    striped
-                    hover
-            >
+            @php
+                $activityTargets = 'filterByUserId,filterByEvent,filterByDescription,filterStartDate,filterEndDate,gotoPage,nextPage,previousPage';
+            @endphp
+
+            <div wire:loading.delay :target="$activityTargets">
+                <x-element.skeleton-table rows="10" cols="5" />
+            </div>
+
+            <div wire:loading.delay.remove :target="$activityTargets">
+                <x-mary-table
+                        class="table-sm w-full overflow-x-auto bg-base-100"
+                        :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
+                        :rows="$activities"
+                        striped
+                        hover
+                >
 
                 @scope('cell_time', $activity)
                 {{ $activity->created_at->format('Y/m/d H:i') }}<br>
@@ -147,9 +156,11 @@
             <div class="mt-4">
                 {{ $activities->links() }}
             </div>
+            </div>
             </div> {{-- End of relative container for loading-overlay --}}
         @endif
 
 
 
 </div>
+

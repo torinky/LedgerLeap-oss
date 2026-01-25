@@ -45,14 +45,14 @@
             </div>
 
             {{-- Skeleton Content Body --}}
-            <div class="p-6 space-y-6 flex-1 overflow-hidden">
-                <div class="h-10 bg-base-200 rounded-xl w-full"></div>
+            <div class="p-6 space-y-8 flex-1 overflow-hidden">
                 <div class="space-y-4">
-                    <div class="h-4 bg-base-200 rounded-lg w-full"></div>
-                    <div class="h-4 bg-base-200 rounded-lg w-11/12"></div>
-                    <div class="h-4 bg-base-200 rounded-lg w-4/5"></div>
-                    <div class="h-4 bg-base-200 rounded-lg w-full"></div>
-                    <div class="h-4 bg-base-200 rounded-lg w-3/4"></div>
+                    <x-element.skeleton-stats items="1" class="lg:grid-cols-1 md:grid-cols-1" />
+                    <x-element.skeleton-table rows="6" cols="2" />
+                </div>
+
+                <div class="pt-4 border-t border-base-200">
+                    <x-element.skeleton-list items="3" />
                 </div>
             </div>
         </div>

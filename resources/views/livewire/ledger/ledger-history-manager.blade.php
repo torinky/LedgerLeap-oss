@@ -57,145 +57,150 @@
         </div>
 
         <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
-            @foreach ($history as $index => $diff)
-                @php
-                    $isBase = $baseDiffId === $diff->id;
-                    $isTarget = $targetDiffId === $diff->id;
-                    $isSelected = $isBase || $isTarget;
-                @endphp
-                <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    role="listitem" tabindex="0" aria-selected="{{ $isSelected ? 'true' : 'false' }}"
-                    aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? '不明']) }}{{ $isSelected ? '、選択済み' : '' }}"
-                    x-ref="history-row-{{ $index }}"
-                    @click="$wire.toggleSelection({{ $diff->id }}).then(() => announceSelection({{ $isSelected ? 'false' : 'true' }}, {{ $diff->version }}))"
-                    @keydown="handleKeyDown($event, {{ $diff->id }}, {{ $index }}, {{ $isSelected ? 'true' : 'false' }}, {{ $diff->version }})"
-                    wire:loading.class="opacity-50 pointer-events-none" wire:key="history-row-{{ $diff->id }}">
+            <div wire:loading.delay target="toggleSelection,historyDisplayLevel">
+                <x-element.skeleton-list items="10" />
+            </div>
+            <div wire:loading.delay.remove target="toggleSelection,historyDisplayLevel">
+                @foreach ($history as $index => $diff)
+                    @php
+                        $isBase = $baseDiffId === $diff->id;
+                        $isTarget = $targetDiffId === $diff->id;
+                        $isSelected = $isBase || $isTarget;
+                    @endphp
+                    <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        role="listitem" tabindex="0" aria-selected="{{ $isSelected ? 'true' : 'false' }}"
+                        aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? '不明']) }}{{ $isSelected ? '、選択済み' : '' }}"
+                        x-ref="history-row-{{ $index }}"
+                        @click="$wire.toggleSelection({{ $diff->id }}).then(() => announceSelection({{ $isSelected ? 'false' : 'true' }}, {{ $diff->version }}))"
+                        @keydown="handleKeyDown($event, {{ $diff->id }}, {{ $index }}, {{ $isSelected ? 'true' : 'false' }}, {{ $diff->version }})"
+                        wire:loading.class="opacity-50 pointer-events-none" wire:key="history-row-{{ $diff->id }}">
 
-                    @if ($isBase)
-                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-                    @elseif($isTarget)
-                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
-                    @endif
+                        @if ($isBase)
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                        @elseif($isTarget)
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+                        @endif
 
-                    <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-bold flex items-center gap-1">
-                                Ver.{{ $diff->version }}
-                                @if ($diff->version === $ledgerRecord->version)
-                                    <span
-                                        class="badge badge-primary badge-xs">{{ __('ledger.diff.current_version') }}</span>
-                                @endif
-                                @if ($isBase)
-                                    <span class="badge badge-primary badge-outline badge-xs gap-1 pl-1.5">
-                                        <x-mary-icon name="o-check-circle" class="w-3 h-3" />
-                                        {{ __('ledger.diff.base') }}
-                                    </span>
-                                @endif
-                                @if ($isTarget)
-                                    <span class="badge badge-error badge-outline badge-xs gap-1 pl-1.5">
-                                        <x-mary-icon name="o-arrows-right-left" class="w-3 h-3" />
-                                        {{ __('ledger.diff.compare_to') }}
-                                    </span>
-                                @endif
-                            </span>
-                            <span
-                                class="text-[10px] text-base-content/50">{{ $diff->created_at->format('Y-m-d H:i') }}</span>
-                        </div>
-
-                        <div class="flex flex-col md:flex-row gap-2 mt-1">
-                            {{-- 左側: ステータス・編集者 --}}
-                            <div class="flex flex-col gap-1.5 min-w-[120px] shrink-0">
-                                {{-- ワークフロー状態 --}}
-                                @if ($diff->status)
-                                    <div>
-                                        <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
-                                            {{ $diff->status->label() }}
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold flex items-center gap-1">
+                                    Ver.{{ $diff->version }}
+                                    @if ($diff->version === $ledgerRecord->version)
+                                        <span
+                                            class="badge badge-primary badge-xs">{{ __('ledger.diff.current_version') }}</span>
+                                    @endif
+                                    @if ($isBase)
+                                        <span class="badge badge-primary badge-outline badge-xs gap-1 pl-1.5">
+                                            <x-mary-icon name="o-check-circle" class="w-3 h-3" />
+                                            {{ __('ledger.diff.base') }}
                                         </span>
-                                    </div>
-                                @endif
-
-                                {{-- 編集者 (Editor) --}}
-                                @if ($diff->modifier)
-                                    <div class="flex items-center gap-1.5 text-xs text-base-content/80">
-                                        <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
-                                        <x-ledger.user-card-popover :user="$diff->modifier" />
-                                    </div>
-                                @endif
-
-                                {{-- 承認者 (Approver) --}}
-                                @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
-                                    <div class="flex items-center gap-1.5 text-xs text-base-content/80">
-                                        <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
-                                        <x-ledger.user-card-popover :user="$diff->approver" />
-                                    </div>
-                                @endif
+                                    @endif
+                                    @if ($isTarget)
+                                        <span class="badge badge-error badge-outline badge-xs gap-1 pl-1.5">
+                                            <x-mary-icon name="o-arrows-right-left" class="w-3 h-3" />
+                                            {{ __('ledger.diff.compare_to') }}
+                                        </span>
+                                    @endif
+                                </span>
+                                <span
+                                    class="text-[10px] text-base-content/50">{{ $diff->created_at->format('Y-m-d H:i') }}</span>
                             </div>
 
-                            {{-- 右側: コメント & アクション --}}
-                            <div class="flex-1 flex flex-col justify-between gap-2 min-w-0">
-                                @if ($diff->comments)
-                                    <div
-                                        class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex flex-col gap-1 h-full">
-                                        @php
-                                            $commentParts = explode("\n--- system-info ---\n", $diff->comments);
-                                            $userComment = $commentParts[0] ?? '';
-                                            $systemInfo = $commentParts[1] ?? null;
-                                        @endphp
-
-                                        <div class="flex items-start gap-1">
-                                            <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
-                                            <span class="line-clamp-2 break-all"
-                                                title="{{ $userComment }}">{{ $userComment }}</span>
+                            <div class="flex flex-col md:flex-row gap-2 mt-1">
+                                {{-- 左側: ステータス・編集者 --}}
+                                <div class="flex flex-col gap-1.5 min-w-[120px] shrink-0">
+                                    {{-- ワークフロー状態 --}}
+                                    @if ($diff->status)
+                                        <div>
+                                            <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
+                                                {{ $diff->status->label() }}
+                                            </span>
                                         </div>
+                                    @endif
 
-                                        @if ($systemInfo)
-                                            <div class="mt-auto pt-1 border-t border-base-content/5 w-full">
-                                                <span
-                                                    class="badge badge-ghost badge-xs text-xs opacity-70 font-normal w-full justify-start h-auto py-0.5">
-                                                    <x-mary-icon name="o-information-circle"
-                                                        class="w-3 h-3 mr-1 opacity-50" />
-                                                    {{ $systemInfo }}
-                                                </span>
+                                    {{-- 編集者 (Editor) --}}
+                                    @if ($diff->modifier)
+                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                            <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
+                                            <x-ledger.user-card-popover :user="$diff->modifier" />
+                                        </div>
+                                    @endif
+
+                                    {{-- 承認者 (Approver) --}}
+                                    @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
+                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                            <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
+                                            <x-ledger.user-card-popover :user="$diff->approver" />
+                                        </div>
+                                    @endif
+                                </div>
+
+                                {{-- 右側: コメント & アクション --}}
+                                <div class="flex-1 flex flex-col justify-between gap-2 min-w-0">
+                                    @if ($diff->comments)
+                                        <div
+                                            class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex flex-col gap-1 h-full">
+                                            @php
+                                                $commentParts = explode("\n--- system-info ---\n", $diff->comments);
+                                                $userComment = $commentParts[0] ?? '';
+                                                $systemInfo = $commentParts[1] ?? null;
+                                            @endphp
+
+                                            <div class="flex items-start gap-1">
+                                                <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
+                                                <span class="line-clamp-2 break-all"
+                                                    title="{{ $userComment }}">{{ $userComment }}</span>
                                             </div>
+
+                                            @if ($systemInfo)
+                                                <div class="mt-auto pt-1 border-t border-base-content/5 w-full">
+                                                    <span
+                                                        class="badge badge-ghost badge-xs text-xs opacity-70 font-normal w-full justify-start h-auto py-0.5">
+                                                        <x-mary-icon name="o-information-circle"
+                                                            class="w-3 h-3 mr-1 opacity-50" />
+                                                        {{ $systemInfo }}
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @else
+                                        {{-- コメントがない場合のスペース確保（レイアウト崩れ防止）または非表示 --}}
+                                    @endif
+
+                                    {{-- アクションボタンエリア --}}
+                                    <div class="flex justify-end gap-2 mt-auto">
+                                        @if ($isTarget && $canRollback && $diff->version !== $ledgerRecord->version)
+                                            @if ($isContentIdentical ?? false)
+                                                <span class="badge badge-ghost badge-xs gap-1 opacity-50 cursor-help"
+                                                    title="{{ __('ledger.diff.identical_content_hint') }}">
+                                                    <x-mary-icon name="o-check" class="w-3 h-3" />
+                                                    {{ __('ledger.diff.identical_content') }}
+                                                </span>
+                                            @else
+                                                <x-mary-button label="{{ __('ledger.rollback.button_label') }}"
+                                                    class="btn-xs btn-outline btn-error" icon="o-arrow-uturn-left"
+                                                    @click.stop="$wire.rollback({{ $diff->id }})"
+                                                    wire:key="rollback-btn-{{ $diff->id }}" />
+                                            @endif
                                         @endif
                                     </div>
-                                @else
-                                    {{-- コメントがない場合のスペース確保（レイアウト崩れ防止）または非表示 --}}
-                                @endif
-
-                                {{-- アクションボタンエリア --}}
-                                <div class="flex justify-end gap-2 mt-auto">
-                                    @if ($isTarget && $canRollback && $diff->version !== $ledgerRecord->version)
-                                        @if ($isContentIdentical ?? false)
-                                            <span class="badge badge-ghost badge-xs gap-1 opacity-50 cursor-help"
-                                                title="{{ __('ledger.diff.identical_content_hint') }}">
-                                                <x-mary-icon name="o-check" class="w-3 h-3" />
-                                                {{ __('ledger.diff.identical_content') }}
-                                            </span>
-                                        @else
-                                            <x-mary-button label="{{ __('ledger.rollback.button_label') }}"
-                                                class="btn-xs btn-outline btn-error" icon="o-arrow-uturn-left"
-                                                @click.stop="$wire.rollback({{ $diff->id }})"
-                                                wire:key="rollback-btn-{{ $diff->id }}" />
-                                        @endif
-                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
 
-            {{-- 無限スクロールトリガー --}}
-            @if ($hasMore)
-                <div x-intersect="$wire.loadMore()" class="p-8 flex justify-center">
-                    <span wire:loading class="loading loading-spinner loading-md text-primary"></span>
-                </div>
-            @else
-                <div class="p-8 text-center text-xs text-base-content/30 italic">
-                    {{ __('ledger.history_end') }}
-                </div>
-            @endif
+                {{-- 無限スクロールトリガー --}}
+                @if ($hasMore)
+                    <div x-intersect="$wire.loadMore()" class="p-8 flex justify-center">
+                        <span wire:loading class="loading loading-spinner loading-md text-primary"></span>
+                    </div>
+                @else
+                    <div class="p-8 text-center text-xs text-base-content/30 italic">
+                        {{ __('ledger.history_end') }}
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 

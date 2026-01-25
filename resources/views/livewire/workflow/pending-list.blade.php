@@ -3,14 +3,9 @@
     <x-element.loading-overlay tier="1" />
 
     {{-- Tier 1 Skeleton --}}
-    <div wire:loading.delay class="space-y-4">
-        <div class="card bg-base-100 shadow-sm border border-base-200">
-            <div class="card-body p-0">
-                @foreach (range(1, 10) as $i)
-                    <x-element.skeleton-row />
-                @endforeach
-            </div>
-        </div>
+    <div wire:loading.delay class="space-y-6">
+        <div class="h-10 bg-base-300 rounded-lg w-1/4 animate-pulse ml-2"></div>
+        <x-element.skeleton-list items="8" />
     </div>
 
     <div wire:loading.delay.remove>

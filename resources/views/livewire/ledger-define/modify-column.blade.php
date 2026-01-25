@@ -3,9 +3,12 @@
 
     {{-- Tier 1 Skeleton Loader --}}
     <div wire:loading.delay wire:target="save,addColumn,removeColumn" class="flex-col gap-4 mt-4 w-full px-4">
-        @foreach (range(1, 3) as $i)
+        <x-element.skeleton-input-form rows="4" />
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <x-element.skeleton-card />
-        @endforeach
+            <x-element.skeleton-card />
+            <x-element.skeleton-card />
+        </div>
     </div>
 
     <div wire:loading.delay.remove wire:target="save,addColumn,removeColumn">
@@ -19,9 +22,9 @@
     </script>
 
     <form wire:submit.prevent="save" x-data="{ isDirty: @js($isDirty) }"
-          @is-dirty-changed.window="isDirty = $event.detail.isDirty">
+          x-on:is-dirty-changed.window="isDirty = $event.detail.isDirty">
         @if(!empty($columns))
-            <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ animation: 500 }" class="space-y-3">
+            <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ 'animation': 500 }" class="space-y-3">
                 @foreach($columns as $index => $column)
                     <li wire:sortable.item="{{ $column['id'] }}" wire:key="column-{{ $column['id'] }}" class="z-20">
                         <div class="flex items-center">
@@ -33,7 +36,7 @@
 
                             <x-mary-collapse x-data="{ is_collapsed: @js($column['is_collapsed']) }"
                                              x-bind:open="is_collapsed"
-                                             @toggle-collapse.window="is_collapsed = $event.detail.is_collapsed"
+                                             x-on:toggle-collapse.window="is_collapsed = $event.detail.is_collapsed"
                                              class="bg-base-200 opacity-50 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-500 ease-in-out"
                                              wire:key="collapse-{{ $column['id'] }}"
                             >
@@ -99,17 +102,17 @@
                                                 <x-mary-checkbox label="{{__('ledger.column.required')}}"
                                                                  wire:model.live="columns.{{$index}}.required"
                                                                  wire:key="required-{{$column['id']}}"/>
-                                                                                                 <x-mary-checkbox label="{{__('ledger.column.unique')}}"
-                                                                                                                 wire:model.live="columns.{{$index}}.unique"
-                                                                                                                 wire:key="unique-{{$column['id']}}"/>
-                                                                                                <x-mary-input label="{{__('ledger.column.sort_index')}}"
-                                                                                                              placeholder="1 ({{__('ledger.column.sort_priority_example')}})"
-                                                                                                              icon="o-arrows-up-down"
-                                                                                                              type="number"
-                                                                                                              min="1"
-                                                                                                              wire:model.live="columns.{{$index}}.sort_index"
-                                                                                                              wire:key="sortIndex-{{$column['id']}}" class="input-accent"/>
-                                                                                            </div>
+                                                <x-mary-checkbox label="{{__('ledger.column.unique')}}"
+                                                                 wire:model.live="columns.{{$index}}.unique"
+                                                                 wire:key="unique-{{$column['id']}}"/>
+                                                <x-mary-input label="{{__('ledger.column.sort_index')}}"
+                                                              placeholder="1 ({{__('ledger.column.sort_priority_example')}})"
+                                                              icon="o-arrows-up-down"
+                                                              type="number"
+                                                              min="1"
+                                                              wire:model.live="columns.{{$index}}.sort_index"
+                                                              wire:key="sortIndex-{{$column['id']}}" class="input-accent"/>
+                                            </div>
                                             <div class="basis-1/2 space-y-4 m-3">
                                                 <x-mary-textarea label="{{__('ledger.column.hint')}}"
                                                                  wire:model.live="columns.{{$index}}.hint"

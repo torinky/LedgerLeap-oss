@@ -1,255 +1,235 @@
 <div>
-    <x-element.loading-overlay tier="1" />
+    {{-- Always visible search section (Interactive even during updates) --}}
+    <div class="px-4 pt-4 sticky top-0 z-50 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
+        <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch" :defaultSortColumns="$defaultSortColumns" />
+    </div>
 
-    {{-- Tier 1 Skeleton Loader (displayed while loading) --}}
-    <div wire:loading.delay class="flex-col gap-8 mt-4 w-full">
-        @foreach (range(1, 2) as $i)
-            <div class="space-y-4 animate-pulse">
-                <div class="h-10 bg-base-300 rounded-lg w-1/3 ml-4"></div>
-                <div class="card bg-base-100 shadow-xl overflow-hidden">
-                    <div class="card-body p-0">
-                        @foreach (range(1, 5) as $j)
-                            <x-element.skeleton-row />
+    @php
+        $searchTargets = 'search,useTechnicalTerm,useSynonym,useSemanticSearch';
+        $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,setDisplayLevel';
+        $navTargets = 'selectedFolderIds,selectedLedgerDefineIds,currentFolderId,changeCurrentFolder,changeCurrentFolderByTree,toggleFolderId,toggleLedgerDefineId';
+        $pageTargets = 'gotoPage,nextPage,previousPage';
+        $allTargets = "$searchTargets,$filterTargets,$navTargets,$pageTargets";
+    @endphp
+
+    {{-- Breadcrumbs & Navigation Panels Section --}}
+    <div class="px-4 mt-4 relative group/nav">
+        <x-element.loading-overlay tier="2" :target="$navTargets" />
+
+        <div wire:loading.delay.remove :target="$navTargets">
+            <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
+                <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
+            </div>
+
+            {{-- ★★★ 新規追加: フォルダ概要パネル ★★★ --}}
+            @if ($currentFolder)
+                <div class="card bg-base-200/50 shadow-sm mb-4">
+                    <div class="card-body p-4 flex flex-row items-center justify-between">
+                        <div>
+                            <h2 class="card-title text-base-content text-lg">
+                                <i class="fas fa-folder text-warning"></i>
+                                {{ $currentFolder->title }}
+                            </h2>
+                            <p class="text-sm text-base-content/70">
+                                {{ __('ledger.access_and_permissions.your_access_level') }}:
+                                @if ($currentUserPermissionForFolder)
+                                    <span
+                                        class="badge badge-sm badge-{{ $currentUserPermissionForFolder->getColor() }} text-{{ $currentUserPermissionForFolder->getColor() }}-content font-bold">
+                                        {{ $currentUserPermissionForFolder->getLabel() }}
+                                    </span>
+                                @else
+                                    <span
+                                        class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="card-actions">
+                            <x-mary-button
+                                wire:click="openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                label="{{ __('ledger.access_and_permissions.title') }}" icon="o-shield-check"
+                                class="btn-sm btn-outline btn-ghost" spinner />
+                            <x-mary-button
+                                wire:click="openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline btn-ghost" spinner />
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+                :currentTenantId="$currentTenantId" />
+        </div>
+
+        {{-- Nav Skeleton --}}
+        <div wire:loading.delay :target="$navTargets">
+            <x-element.skeleton-grid items="12" />
+        </div>
+    </div>
+
+    <div class="divider px-4 opacity-50"></div>
+
+    {{-- Info & Results Section --}}
+    <div class="px-4 relative min-h-[400px]">
+        <x-element.loading-overlay tier="2" :target="$allTargets" />
+
+        <div wire:loading.delay.remove :target="$allTargets" class="space-y-6">
+            <div class="info-block sticky top-24 z-40 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30">
+                @php
+                    $displayLevelOptions = [
+                        ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                        ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                        ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                    ];
+                @endphp
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        @if ($orderBy !== 'default' && !empty($defaultSortColumns))
+                            <x-mary-button wire:click="sort('default')" label="{{ __('ledger.actions.reset_sort') }}"
+                                icon="o-arrow-path" class="btn-xs btn-outline btn-info" spinner />
+                        @endif
+                        @if ($orderBy === 'composite_score' && !empty($search))
+                            <div class="badge badge-primary badge-sm gap-1 py-3"
+                                title="{{ __('ledger.scoring.sorted_by_score') }}">
+                                <i class="fas fa-sort-amount-down text-[10px]"></i>
+                                <span class="text-xs font-bold">{{ __('ledger.scoring.score_order') }}</span>
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold opacity-50 uppercase tracking-widest">{{ __('ledger.form.display_level') }}</span>
+                        <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
+                            class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                            option-label="name" />
+                    </div>
+                </div>
+
+                @if (!empty($highlights))
+                    <div class="flex flex-wrap gap-2 items-center justify-center pt-2">
+                        <span class="text-xs"><i class="fas fa-search mr-1 opacity-50"></i>{{ __('ledger.searched') }}</span>
+                        @foreach ($keywords as $keyword)
+                            <div class="badge {{ empty($synonyms[$keyword]) ? 'badge-neutral' : 'badge-primary' }} badge-md gap-2 py-3 shadow-sm border-none">
+                                <span class="font-bold">{{ $keyword }}</span>
+                                @if (!empty($synonyms[$keyword]))
+                                    <div class="tooltip tooltip-bottom" data-tip="{{ implode(' / ', $synonyms[$keyword]) }}">
+                                        <i class="fas fa-layer-group text-[10px] opacity-70"></i>
+                                    </div>
+                                @endif
+                            </div>
                         @endforeach
                     </div>
-                </div>
-            </div>
-        @endforeach
-    </div>
+                @endif
 
-    {{-- Main Content Container --}}
-    <div wire:loading.delay.remove>
-        {{--   Dummy for CSS Build --}}
-        <div class="hidden">
-        <span class="badge badge-secondary bg-secondary/50 py-4 mx-1 my-1">dummy</span>
-        <span class="badge badge-error  py-4 mx-1 my-1">dummy</span>
-    </div>
-    {{--   Dummy for CSS Build --}}
-
-    <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch" :defaultSortColumns="$defaultSortColumns" />
-
-    <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
-        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
-    </div>
-
-    {{-- ★★★ 新規追加: フォルダ概要パネル ★★★ --}}
-    @if ($currentFolder)
-        <div class="card bg-base-200/50 shadow-sm mb-4">
-            <div class="card-body p-4 flex flex-row items-center justify-between">
-                <div>
-                    <h2 class="card-title text-base-content">
-                        <i class="fas fa-folder text-warning"></i>
-                        {{ $currentFolder->title }}
-                    </h2>
-                    <p class="text-sm text-base-content/70">
-                        {{ __('ledger.access_and_permissions.your_access_level') }}:
-                        @if ($currentUserPermissionForFolder)
-                            <span
-                                class="badge badge-sm badge-{{ $currentUserPermissionForFolder->getColor() }} text-{{ $currentUserPermissionForFolder->getColor() }}-content">
-                                {{ $currentUserPermissionForFolder->getLabel() }}
-                            </span>
-                        @else
-                            <span
-                                class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
-                        @endif
-                    </p>
-                </div>
-                <div class="card-actions">
-                    <x-mary-button
-                        wire:click="openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
-                        label="{{ __('ledger.access_and_permissions.title') }}" icon="o-shield-check"
-                        class="btn-sm btn-outline" spinner />
-                    <x-mary-button
-                        wire:click="openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
-                        label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline" spinner />
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{--
-        <div class="flex flex-row">
-            <livewire:folder.tag :folderId="$currentFolderId" :wire:key="$currentFolderId"/>
-        </div>
-    --}}
-
-    <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
-        :currentTenantId="$currentTenantId" />
-
-
-    <div class="divider"></div>
-    <div class="info-block  sticky top-20 z-40 space-y-2">
-        @php
-            $displayLevelOptions = [
-                ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-            ];
-        @endphp
-        <div class="mb-4 flex justify-end">
-            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                option-label="name" />
-        </div>
-        @if (!empty($highlights))
-            <div class="space-x-2 flex  mr-10 rounded-box bg-base-100/80 px-2 justify-center">
-                <span class="self-center"><i
-                        class="fas fa-search mr-2"></i>{{ __('ledger.searched') }}</span><span>...</span>
-                @foreach ($keywords as $keyword)
-                    @if (empty($synonyms[$keyword]))
-                        <div class="badge badge-neutral opacity-70 badge-lg h-8 flex items-stretch tooltip"
-                            data-tip="{{ __('ledger.no_synonyms') }}">
-                            <div class="self-center space-x-2 font-bold">
-                                {{ $keyword }}
-                            </div>
-                        </div>
-                    @else
-                        <div class="stack z-0">
-                            <div class="badge badge-primary opacity-70 badge-lg h-8 flex items-stretch tooltip"
-                                data-tip="{{ implode(' / ', $synonyms[$keyword]) }}">
-                                <div class="self-center space-x-2 font-bold">
-                                    {{ $keyword }}
-                                </div>
-                            </div>
-                            <div class="badge badge-primary opacity-50 badge-lg h-8 flex items-stretch shadow">
-                                <div class="self-center space-x-2 font-bold">
-                                    {{ $keyword }}
-                                </div>
-                            </div>
-
-
+                <div class="flex justify-center gap-6 items-center pt-1">
+                    @if (!empty($selectedFolderIds))
+                        <div class="flex items-center gap-1.5 text-info" title="{{ __('ledger.folder.opened_count') }}">
+                            <i class="fas fa-folder-open opacity-70"></i>
+                            <span class="font-bold text-sm">{{ count($selectedFolderIds) }}</span>
                         </div>
                     @endif
-                @endforeach
-            </div>
-        @endif
-
-        <div class="flex justify-center space-x-4 items-center">
-
-            @if (!empty($selectedFolderIds))
-                <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16"
-                    data-tip="{{ __('ledger.folder.opened_count') }}">
-                    <div class="self-center space-x-2">
-                        <i class="fas fa-folder-open text-info-content/50"></i><span
-                            class="font-bold">@php echo count($selectedFolderIds) @endphp</span>
-                    </div>
-                </div>
-                <i class="fas fa-filter text-info-content/50 fa-rotate-270"></i>
-            @endif
-            @if (!empty($selectedLedgerDefineIds))
-                <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16"
-                    data-tip="{{ __('ledger.define.opened_count') }}">
-                    <div class="self-center space-x-2">
-                        <i class="fas fa-book-open text-info-content/50"></i><span
-                            class="font-bold">@php echo count($selectedLedgerDefineIds) @endphp</span>
-                    </div>
-                </div>
-                <i class="fas fa-filter text-info-content/50 fa-rotate-270"></i>
-            @endif
-            @if (!empty($totalRecords))
-                <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16"
-                    data-tip="{{ __('ledger.opened_count') }}">
-                    <div class="self-center space-x-2">
-                        <i class="fas fa-list"></i><span class="font-bold">@php echo $totalRecords @endphp</span>
-                    </div>
-                </div>
-            @endif
-            @if ($orderBy === 'composite_score' && !empty($search))
-                <div class="badge badge-primary badge-sm tooltip h-8 flex items-stretch"
-                    data-tip="{{ __('ledger.scoring.sorted_by_score') }}">
-                    <div class="self-center space-x-2">
-                        <i class="fas fa-sort-amount-down"></i>
-                        <span class="text-xs">{{ __('ledger.scoring.score_order') }}</span>
-                    </div>
-                </div>
-            @endif
-            @if ($orderBy !== 'default' && !empty($defaultSortColumns))
-                <x-mary-button wire:click="sort('default')" label="{{ __('ledger.actions.reset_sort') }}"
-                    icon="o-arrow-path" class="btn-sm btn-outline btn-info" spinner />
-            @endif
-        </div>
-    </div>
-
-    <div class="">
-        @if ($totalRecords > 0)
-            <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
-                <div class="card bg-base-300 opacity-70 transition-opacity hover:opacity-100 shadow-lg">
-                    <div class="card-body">
-                        {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'top']) !!}
-                    </div>
-                </div>
-            </div>
-
-
-            @foreach ($ledgerRecordsGroupByDefineIds as $ledgerDefineId => $ledgerDefineAndRecords)
-                @php
-                    $canManage = auth()->user()->can('update', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                    $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                    $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                    $canView = auth()->user()->can('ledgerView', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                @endphp
-                <div class="card bg-base-100 shadow-xl my-10" wire:key="ledger_record_{{ $ledgerDefineId }}">
-                    <div class="card-body pt-0 px-0">
-                        <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
-                            :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"
-                            :canView="$canView" :ledgerDefineId="$ledgerDefineId" :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById" :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
-                            :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null" :currentTenantId="$currentTenantId" />
-
-                        <div class="overflow-x-auto max-h-screen" wire:key="ledgerDefine_block-{{ $ledgerDefineId }}">
-                            @php
-                                // フロント表示用のモック添付ファイル列を追加
-                                $displayColumns = $filteredColumnDefines[$ledgerDefineId] ?? [];
-                                if ($displayColumns instanceof \Illuminate\Support\Collection) {
-                                    $displayColumns = $displayColumns->toArray();
-                                }
-
-                                $displayColumnsWithMock = $displayColumns;
-                                if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
-                                    $mockDef = (object) \App\Services\Ledger\MockAttachmentService::getMockColumnDefine();
-                                    // ビュー側で必要なプロパティがあればここで追加
-                                    $mockDef->label = '添付(モック)';
-                                    $displayColumnsWithMock = array_merge($displayColumns, [$mockDef]);
-                                }
-                            @endphp
-                            <table
-                                class="relative table table-zebra table-compact table-auto table-pin-rows table-pin-cols max-h-fit">
-                                <thead>
-                                    <x-ledger.table-header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :orderBy="$orderBy" :orderAsc="$orderAsc"
-                                        :filteredColumnDefines="$displayColumnsWithMock" :defaultSortColumns="$defaultSortColumns" />
-                                </thead>
-                                <tbody>
-                                    @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
-                                        <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search" :canUpdate="$canUpdate"
-                                            :canView="$canView" :allAttachments="$allAttachments" :filteredColumnDefines="$displayColumnsWithMock"
-                                            :currentTenantId="$currentTenantId" />
-                                    @endforeach
-                                </tbody>
-                            </table>
+                    @if (!empty($selectedLedgerDefineIds))
+                        <div class="flex items-center gap-1.5 text-info" title="{{ __('ledger.define.opened_count') }}">
+                            <i class="fas fa-book-open opacity-70"></i>
+                            <span class="font-bold text-sm">{{ count($selectedLedgerDefineIds) }}</span>
                         </div>
+                    @endif
+                    @if (!empty($totalRecords))
+                        <div class="flex items-center gap-1.5 text-base-content/70" title="{{ __('ledger.opened_count') }}">
+                            <i class="fas fa-list opacity-50"></i>
+                            <span class="font-bold text-sm">{{ $totalRecords }}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
 
+            <div class="records-list-container">
+                @if ($totalRecords > 0)
+                    <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center pointer-events-none">
+                        <div class="card bg-base-300 opacity-70 transition-all hover:opacity-100 shadow-xl pointer-events-auto ring-1 ring-base-content/5">
+                            <div class="card-body p-2">
+                                {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'top']) !!}
+                            </div>
+                        </div>
                     </div>
+
+                    @foreach ($ledgerRecordsGroupByDefineIds as $ledgerDefineId => $ledgerDefineAndRecords)
+                        @php
+                            $canManage = auth()->user()->can('update', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
+                            $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
+                            $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
+                            $canView = auth()->user()->can('ledgerView', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
+                        @endphp
+                        <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden" wire:key="ledger_record_{{ $ledgerDefineId }}">
+                            <div class="card-body pt-0 px-0">
+                                <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
+                                    :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"
+                                    :canView="$canView" :ledgerDefineId="$ledgerDefineId" :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById" :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                                    :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null" :currentTenantId="$currentTenantId" />
+
+                                <div class="overflow-x-auto" wire:key="ledgerDefine_block-{{ $ledgerDefineId }}">
+                                    @php
+                                        $displayColumns = $filteredColumnDefines[$ledgerDefineId] ?? [];
+                                        if ($displayColumns instanceof \Illuminate\Support\Collection) {
+                                            $displayColumns = $displayColumns->toArray();
+                                        }
+                                        $displayColumnsWithMock = $displayColumns;
+                                        if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
+                                            $mockDef = (object) \App\Services\Ledger\MockAttachmentService::getMockColumnDefine();
+                                            $mockDef->label = '添付(モック)';
+                                            $displayColumnsWithMock = array_merge($displayColumns, [$mockDef]);
+                                        }
+                                    @endphp
+                                    <table class="table table-zebra table-compact table-auto table-pin-rows table-pin-cols w-full">
+                                        <thead>
+                                            <x-ledger.table-header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :orderBy="$orderBy" :orderAsc="$orderAsc"
+                                                :filteredColumnDefines="$displayColumnsWithMock" :defaultSortColumns="$defaultSortColumns" />
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
+                                                <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search" :canUpdate="$canUpdate"
+                                                    :canView="$canView" :allAttachments="$allAttachments" :filteredColumnDefines="$displayColumnsWithMock"
+                                                    :currentTenantId="$currentTenantId" />
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                    <div class="mt-8">
+                        {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'bottom']) !!}
+                    </div>
+                @else
+                    @include('components.ledger.alert', [
+                        'message' => __('ledger.select_message'),
+                        'icon' => 'cursor-arrow-ripple',
+                        'type' => 'warning',
+                        'refreshParentWindow' => false,
+                    ])
+                @endif
+            </div>
+        </div>
+
+    {{-- Results Skeleton Loader --}}
+        <div wire:loading.delay :target="$allTargets" class="space-y-12">
+            <div class="card bg-base-100/50 border border-base-300 shadow-inner">
+                <div class="card-body p-4 flex flex-row justify-between items-center animate-pulse">
+                    <div class="h-8 bg-base-300 rounded-lg w-1/4"></div>
+                    <div class="h-8 bg-base-300 rounded-lg w-1/6"></div>
+                </div>
+            </div>
+
+            @foreach (range(1, 2) as $i)
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 ml-2">
+                        <div class="h-8 w-8 bg-base-300 rounded-full animate-pulse"></div>
+                        <div class="h-6 bg-base-300 rounded-lg w-1/3 animate-pulse"></div>
+                    </div>
+                    <x-element.skeleton-table rows="5" cols="6" />
                 </div>
             @endforeach
-
+        </div>
     </div>
-    {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'bottom']) !!}
-@else
-    {{--
-                        <x-ledger.alert
-                            message="{{__('Select Ledger or Folder')}}"
-                            icon="fa-circle-info"
-                            type="warning"
-                            refreshParentWindow ={{false}}
-                        />
-        --}}
-    @include('components.ledger.alert', [
-        'message' => __('ledger.select_message'),
-        'icon' => 'cursor-arrow-ripple',
-        'type' => 'warning',
-        'refreshParentWindow' => false,
-    ])
-
-    @endif
 
     {{-- ★★★ モーダル定義 ★★★ --}}
     <x-mary-modal wire:model="showPermissionModal" class="backdrop-blur" boxClass="w-11/12 max-w-5xl my-4">
@@ -282,5 +262,4 @@
 
     {{-- 添付ファイルのドロワーを一覧ページにも常駐配置 --}}
     <livewire:attached-file.file-inspector />
-    </div> {{-- End of wire:loading.delay.remove --}}
 </div>

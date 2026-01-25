@@ -26,7 +26,7 @@
         @if(tenant())
         {{-- ★承認待ちタスク カード ★ --}}
         <div wire:loading class="w-full">
-            <div class="card bg-base-300 shadow-lg animate-pulse h-24"></div>
+            <x-element.skeleton-stats items="1" class="md:grid-cols-1 lg:grid-cols-1" />
         </div>
         <div wire:loading.remove class="w-full">
             <a href="{{ route('workflow.pending', ['tenant' => tenant()?->id]) }}" _target="LedgerLeap_PendingList"
