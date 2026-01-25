@@ -150,7 +150,7 @@ class Show extends BaseLivewireComponent
     #[On('versionsSelected')]
     public function updateVersions(?int $baseId, ?int $targetId): void
     {
-        $this->baseDiffId = $baseId;
+        // 基本情報タブの基準(base)は常に最新(null)を維持するため、baseId は無視する
         $this->targetDiffId = $targetId;
         $this->loadComparisonTarget();
         $this->dispatch('targetDiffIdUpdated', targetDiffId: $targetId);

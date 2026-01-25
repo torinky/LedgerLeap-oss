@@ -69,7 +69,7 @@
                     x-ref="history-row-{{ $index }}"
                     @click="$wire.toggleSelection({{ $diff->id }}).then(() => announceSelection({{ $isSelected ? 'false' : 'true' }}, {{ $diff->version }}))"
                     @keydown="handleKeyDown($event, {{ $diff->id }}, {{ $index }}, {{ $isSelected ? 'true' : 'false' }}, {{ $diff->version }})"
-                    wire:key="history-row-{{ $diff->id }}">
+                    wire:loading.class="opacity-50 pointer-events-none" wire:key="history-row-{{ $diff->id }}">
 
                     @if ($isBase)
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
@@ -200,23 +200,77 @@
     </div>
 
     {{-- 右側: 差分ビューア (8/12 or 7/12) --}}
-    <div class="lg:col-span-8 xl:col-span-9 space-y-6">
-        @if ($baseDiff)
-            <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
-                <div class="card-body p-0">
-                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
-                        :showChanges="isset($targetDiffId)" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
-                        :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false" :showInduction="false"
-                        wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
+    <div class="lg:col-span-8 xl:col-span-9 space-y-6 relative min-h-[400px]">
+        {{-- 計算中のスケルトン表示 --}}
+        <div wire:loading class="w-full space-y-6 animate-pulse">
+            <div class="card bg-base-100 border border-base-300 shadow-sm">
+                <div class="card-body p-6 space-y-8">
+                    {{-- ヘッダー部分のスケルトン --}}
+                    <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-base-200">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-8 bg-base-300 rounded-lg"></div>
+                            <div class="w-32 h-6 bg-base-200 rounded"></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="w-24 h-8 bg-base-200 rounded-full"></div>
+                            <div class="w-24 h-8 bg-base-200 rounded-full"></div>
+                        </div>
+                    </div>
+
+                    {{-- 比較情報のスケルトン --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-base-200/30 rounded-xl">
+                        <div class="space-y-2">
+                            <div class="w-20 h-4 bg-base-300 rounded"></div>
+                            <div class="w-full h-12 bg-base-100 rounded-lg border border-base-200"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="w-20 h-4 bg-base-300 rounded"></div>
+                            <div class="w-full h-12 bg-base-100 rounded-lg border border-base-200"></div>
+                        </div>
+                    </div>
+
+                    {{-- コンテンツ部分のスケルトン（複数項目） --}}
+                    <div class="space-y-6">
+                        @foreach (range(1, 4) as $i)
+                            <div class="space-y-3">
+                                <div class="w-32 h-5 bg-base-300 rounded"></div>
+                                <div class="w-full h-20 bg-base-200/50 rounded-xl"></div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
-        @else
-            <div
-                class="flex flex-col items-center justify-center h-[400px] border-2 border-dashed border-base-300 rounded-2xl bg-base-200/30 text-base-content/30">
-                <x-mary-icon name="o-arrow-left" class="w-12 h-12 mb-4 animate-pulse" />
-                <p class="font-medium">{{ __('ledger.diff.select_version_hint') }}</p>
+
+            {{-- 読み込み中メッセージとスピナーをスケルトンの上に透過的に配置 --}}
+            <div class="absolute inset-0 z-20 flex flex-col items-center justify-start pt-40 pointer-events-none">
+                <div class="flex flex-col items-center gap-6">
+                    <span class="loading loading-spinner w-16 h-16 text-primary/60"></span>
+                    <p class="text-lg font-bold text-base-content/40 tracking-widest animate-pulse">
+                        {{ __('ledger.loading') }}
+                    </p>
+                </div>
             </div>
-        @endif
+        </div>
+
+        {{-- 通常コンテンツ（読み込み中は非表示） --}}
+        <div wire:loading.remove>
+            @if ($baseDiff)
+                <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+                    <div class="card-body p-0">
+                        <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
+                            :showChanges="isset($targetDiffId)" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
+                            :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false" :showInduction="false"
+                            wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
+                    </div>
+                </div>
+            @else
+                <div
+                    class="flex flex-col items-center justify-center h-[400px] border-2 border-dashed border-base-300 rounded-2xl bg-base-200/30 text-base-content/30">
+                    <x-mary-icon name="o-arrow-left" class="w-12 h-12 mb-4 animate-pulse" />
+                    <p class="font-medium">{{ __('ledger.diff.select_version_hint') }}</p>
+                </div>
+            @endif
+        </div>
     </div>
     <style>
         .custom-scrollbar::-webkit-scrollbar {

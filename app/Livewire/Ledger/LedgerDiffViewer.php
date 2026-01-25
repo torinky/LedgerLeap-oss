@@ -105,7 +105,6 @@ class LedgerDiffViewer extends BaseLivewireComponent
         $this->showChanges = $showChanges;
     }
 
-    #[On('targetDiffIdUpdated')]
     public function updateTargetDiffIdFromParent(?int $targetDiffId): void
     {
         $this->targetDiffId = $targetDiffId;
@@ -137,7 +136,6 @@ class LedgerDiffViewer extends BaseLivewireComponent
     // グループの開閉状態をトグルする (Alpine 移行のため PHP 側は廃止検討だが、暫定維持または削除)
     // 今回は Alpine に移行するため削除し、ビュー側で Alpine.store を使う方式にする
 
-    #[On('versionsSelected')]
     public function updateBaseAndTargetFromParent(?int $baseId, ?int $targetId): void
     {
         $this->baseDiffId = $baseId;

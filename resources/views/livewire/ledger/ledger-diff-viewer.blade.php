@@ -5,38 +5,51 @@ if ($store.ledgerState) {
 } else {
     console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
 }">
-    @if ($showChanges && $hasChangedColumns)
-        <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 rounded-lg border border-base-300">
-            <div class="flex items-center gap-4 text-sm">
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <span class="badge badge-outline badge-sm">{{ __('ledger.diff.comparing') }}</span>
-                        <span class="font-bold text-success">Ver.{{ $currentVersion }}</span>
-                        <x-mary-icon name="o-arrow-long-left" class="w-4 h-4" />
-                        @if ($pastVersion)
-                            <span class="font-bold text-error">Ver.{{ $pastVersion }}</span>
-                        @else
-                            <span class="font-bold text-success">{{ __('ledger.diff.not_exist') }}</span>
+    @if ($showChanges)
+        <div class="space-y-3">
+            <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 rounded-lg border border-base-300">
+                <div class="flex items-center gap-4 text-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-outline badge-sm">{{ __('ledger.diff.comparing') }}</span>
+                            <span class="font-bold text-success">Ver.{{ $currentVersion }}</span>
+                            <x-mary-icon name="o-arrow-long-left" class="w-4 h-4" />
+                            @if ($pastVersion)
+                                <span class="font-bold text-error">Ver.{{ $pastVersion }}</span>
+                            @else
+                                <span class="font-bold text-success">{{ __('ledger.diff.not_exist') }}</span>
+                            @endif
+                        </div>
+
+                        {{-- 比較対象（過去バージョン）のステータスを表示 --}}
+                        @if ($targetMeta && isset($targetMeta['status']))
+                            @php
+                                $status = $targetMeta['status'];
+                            @endphp
+                            <span class="badge badge-sm {{ $status->colorClass() }} gap-1">
+                                {{ $status->label() }}
+                            </span>
                         @endif
                     </div>
-
-                    {{-- 比較対象（過去バージョン）のステータスを表示 --}}
-                    @if ($targetMeta && isset($targetMeta['status']))
-                        @php
-                            $status = $targetMeta['status'];
-                        @endphp
-                        <span class="badge badge-sm {{ $status->colorClass() }} gap-1">
-                            {{ $status->label() }}
-                        </span>
-                    @endif
                 </div>
+
+                @if ($showInduction)
+                    <div class="flex items-center gap-2">
+                        {{-- 履歴タブへの誘導リンク --}}
+                        <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="$dispatch('switchToHistoryTab')"
+                            class="btn-xs btn-ghost text-base-content/60 hover:text-primary" />
+                    </div>
+                @endif
             </div>
 
-            @if ($showInduction)
-                <div class="flex items-center gap-2">
-                    {{-- 履歴タブへの誘導リンク --}}
-                    <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="$dispatch('switchToHistoryTab')"
-                        class="btn-xs btn-ghost text-base-content/60 hover:text-primary" />
+            {{-- 変更がない場合の通知（上部に配置） --}}
+            @if (!$hasChangedColumns)
+                <div class="alert alert-success shadow-sm py-3 px-4 flex items-center gap-3">
+                    <x-mary-icon name="o-check-circle" class="w-5 h-5" />
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold">{{ __('ledger.diff.no_changes') }}</span>
+                        <span class="text-[10px] opacity-70">{{ __('ledger.diff.identical_content') }}</span>
+                    </div>
                 </div>
             @endif
         </div>
@@ -260,13 +273,4 @@ if ($store.ledgerState) {
         @endforeach
     </div>
 
-    @if (!$hasChangedColumns && $showChanges)
-        <div class="alert alert-success shadow-sm mt-4">
-            <x-mary-icon name="o-check-circle" class="w-6 h-6" />
-            <div>
-                <h3 class="font-bold">{{ __('ledger.diff.no_changes') }}</h3>
-                <div class="text-xs">{{ __('ledger.diff.identical_content') }}</div>
-            </div>
-        </div>
-    @endif
 </div>

@@ -123,9 +123,9 @@
                         </div>
                     </x-slot:menu>
 
-                    {{-- 新しい LedgerDiffViewer コンポーネント --}}
                     <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
-                        :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId"
+                        :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
+                        {{-- 基本情報タブは常に最新(null)を基準とする --}}
                         wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
                         lazy />
 
