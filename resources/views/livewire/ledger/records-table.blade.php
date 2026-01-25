@@ -1,11 +1,26 @@
 <div>
-    <div wire:loading class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
-        <div class="flex h-screen justify-center items-center">
-            <span class="loading loading-dots loading-lg"></span>
-        </div>
+    <x-element.loading-overlay tier="1" />
+
+    {{-- Tier 1 Skeleton Loader (displayed while loading) --}}
+    <div wire:loading.delay class="flex-col gap-8 mt-4 w-full">
+        @foreach (range(1, 2) as $i)
+            <div class="space-y-4 animate-pulse">
+                <div class="h-10 bg-base-300 rounded-lg w-1/3 ml-4"></div>
+                <div class="card bg-base-100 shadow-xl overflow-hidden">
+                    <div class="card-body p-0">
+                        @foreach (range(1, 5) as $j)
+                            <x-element.skeleton-row />
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endforeach
     </div>
-    {{--   Dummy for CSS Build --}}
-    <div class="hidden">
+
+    {{-- Main Content Container --}}
+    <div wire:loading.delay.remove>
+        {{--   Dummy for CSS Build --}}
+        <div class="hidden">
         <span class="badge badge-secondary bg-secondary/50 py-4 mx-1 my-1">dummy</span>
         <span class="badge badge-error  py-4 mx-1 my-1">dummy</span>
     </div>
@@ -267,4 +282,5 @@
 
     {{-- 添付ファイルのドロワーを一覧ページにも常駐配置 --}}
     <livewire:attached-file.file-inspector />
+    </div> {{-- End of wire:loading.delay.remove --}}
 </div>

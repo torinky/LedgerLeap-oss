@@ -9,7 +9,6 @@ use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Tag;
 use App\Models\Tenant;
-use App\Models\User;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -53,16 +52,16 @@ class DatabaseIntegrityTest extends TestCase
                 if ($modelClass === Ledger::class) {
                     $attributes = ['version' => 1, 'status' => \App\Enums\WorkflowStatus::DRAFT];
                 }
-                
+
                 $model = $modelClass::factory()->create($attributes);
             } catch (\Exception $e) {
-                $this->fail("Failed to create factory for {$modelClass}: " . $e->getMessage());
+                $this->fail("Failed to create factory for {$modelClass}: ".$e->getMessage());
             }
-            
+
             // 手動作成でも自動的に tenant_id が入っているはず
             $this->assertNotNull($model->tenant_id, "Model {$modelClass} has NULL tenant_id");
             $this->assertEquals($tenantId, $model->tenant_id, "Model {$modelClass} has incorrect tenant_id: Expected {$tenantId}, Got {$model->tenant_id}");
-            
+
             // データベースから再取得してフィルタリングされないことを確認
             $fetched = $modelClass::find($model->id);
             $this->assertNotNull($fetched, "Model {$modelClass} with ID {$model->id} could not be found within tenant context (possibly filtered out due to missing/incorrect tenant_id)");
@@ -78,7 +77,7 @@ class DatabaseIntegrityTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 1,
-            'status' => \App\Enums\WorkflowStatus::DRAFT
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
         ]);
         $this->assertEquals($tenantId, $ledger->tenant_id);
 
@@ -95,18 +94,17 @@ class DatabaseIntegrityTest extends TestCase
             'completed_approver_role_ids' => [],
         ]);
 
-        $this->assertEquals($tenantId, $diff->tenant_id, "LedgerDiff failed to inherit tenant_id from context/parent during manual creation");
-        
+        $this->assertEquals($tenantId, $diff->tenant_id, 'LedgerDiff failed to inherit tenant_id from context/parent during manual creation');
+
         // 別のテナントに切り替えて、取得できないことを確認
         $otherTenant = Tenant::factory()->create(['id' => 'other-tenant']);
         // ドメインも必要
         $otherTenant->domains()->create(['domain' => 'other.localhost']);
-        
-        tenancy()->initialize($otherTenant);
-        
-        $this->assertNull(LedgerDiff::find($diff->id), "LedgerDiff was visible in wrong tenant context");
-    }
 
+        tenancy()->initialize($otherTenant);
+
+        $this->assertNull(LedgerDiff::find($diff->id), 'LedgerDiff was visible in wrong tenant context');
+    }
 
     /**
      * 不整合データの検知テスト
@@ -121,7 +119,7 @@ class DatabaseIntegrityTest extends TestCase
                 ->orWhere('tenant_id', '')
                 ->get();
 
-            $this->assertCount(0, $inconsistent, "Found " . $inconsistent->count() . " records of {$modelClass} with missing tenant_id");
+            $this->assertCount(0, $inconsistent, 'Found '.$inconsistent->count()." records of {$modelClass} with missing tenant_id");
         }
     }
 }

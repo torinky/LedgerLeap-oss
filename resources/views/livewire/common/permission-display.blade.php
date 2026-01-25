@@ -1,4 +1,5 @@
-<div>
+<div class="relative">
+    <x-element.loading-overlay tier="2" target="filterByRoleId,filterByOrganizationId,filterByPermissionType,gotoPage" />
 
     {{--
         <x-mary-header :title="__('ledger.access_and_permissions.title')"
@@ -265,10 +266,6 @@
                     icon="o-magnifying-glass"
                     class="bg-base-200 text-base-content placeholder-base-content/50"
             >
-                <x-slot:append>
-                    {{-- ローディングインジケーター --}}
-                    <x-mary-loading wire:loading class="my-4"/>
-                </x-slot:append>
             </x-mary-input>
         </div>
 
@@ -365,4 +362,4 @@
             </div>
         @endif
     </div>
-</div>
+</div> {{-- End of relative container for loading-overlay --}}

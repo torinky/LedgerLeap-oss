@@ -32,7 +32,6 @@ class LedgerHistoryManager extends BaseLivewireComponent
     #[Url(as: 'td')]
     public ?int $targetDiffId = null; // 比較対象（古い方）
 
-
     // 表示用データ
     public ?Ledger $ledgerRecord = null;
 
@@ -81,7 +80,6 @@ class LedgerHistoryManager extends BaseLivewireComponent
             $this->targetDiffId = $tmp;
         }
 
-
         $this->logPerformance('ledger_mount', (microtime(true) - $startTime) * 1000);
     }
 
@@ -120,7 +118,6 @@ class LedgerHistoryManager extends BaseLivewireComponent
     }
 
     #[On('ledger.rollback.completed')]
-
     public function onRollbackCompleted(): void
     {
         // ページネーションをリセットして最新を表示
@@ -137,7 +134,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
             // 比較対象はリセット（または直前のバージョンにする？）
             $this->targetDiffId = null;
         }
-        
+
         $this->dispatch('targetDiffIdUpdated', targetDiffId: null); // 他のコンポーネント（DiffViewer等）とも同期
     }
 

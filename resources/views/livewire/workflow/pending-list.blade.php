@@ -1,7 +1,20 @@
 @php use App\Enums\WorkflowStatus; @endphp
-<div>
+<div class="relative">
+    <x-element.loading-overlay tier="1" />
 
-    <x-mary-card :title="__('ledger.workflow.pending_tasks')">
+    {{-- Tier 1 Skeleton --}}
+    <div wire:loading.delay class="space-y-4">
+        <div class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body p-0">
+                @foreach (range(1, 10) as $i)
+                    <x-element.skeleton-row />
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <div wire:loading.delay.remove>
+        <x-mary-card :title="__('ledger.workflow.pending_tasks')">
         {{-- テーブルヘッダーのラベルを翻訳キーに --}}
         {{--        // 修正: 申請日時は latestDiff から取得 or updated_at を使う？ -> updated_at が現実的か--}}
         <x-mary-table class="table-sm w-full table-zebra overflow-x-auto"
@@ -186,4 +199,5 @@
         <div class="mt-4"> {{ $pendingTasks->links() }} </div>
 
     </x-mary-card>
+    </div> {{-- End of wire:loading.delay.remove --}}
 </div>

@@ -110,7 +110,7 @@ test('[W5-2.5.3] Rollback modal successfully executes and dispatches events', fu
         ->assertHasNoErrors()
         ->assertSet('showModal', false)
         ->assertDispatched('mary-toast') // Trait Toast uses this or similar
-        ->assertDispatched('ledger.rollback.completed', 
+        ->assertDispatched('ledger.rollback.completed',
             ledgerId: $ledger->id,
             targetDiffId: $diffV1->id
         );

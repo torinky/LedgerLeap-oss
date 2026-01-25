@@ -162,11 +162,11 @@ class RollbackService
                             // Auto-healing: データ消失の検知と復旧
                             // 現在の台帳からメタデータ(テキスト本文)が失われている場合、再処理をトリガーする
                             $isTextMissing = empty($meta['content']) && $attachedFile->isVlmOrOcrTarget();
-                            
+
                             if ($isTextMissing) {
                                 Log::warning("RollbackService: Tika/OCR content missing for file ID {$attachedFile->id}. Triggering reprocessing.", [
                                     'ledger_id' => $ledger->id,
-                                    'hashedbasename' => $hashedBasename
+                                    'hashedbasename' => $hashedBasename,
                                 ]);
 
                                 // ステータスをリセットして再処理を予約
@@ -177,7 +177,7 @@ class RollbackService
                                     'tika_processed_at' => null,
                                     'processing_finalized_at' => null,
                                 ]);
-                                
+
                                 \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
                             }
 

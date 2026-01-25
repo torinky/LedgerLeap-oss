@@ -4,6 +4,7 @@ use App\Enums\AttachedFileStatus;
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\Workflow\WorkflowConditionException;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -12,10 +13,9 @@ use App\Models\LedgerDiff;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use App\Services\UserService;
 use App\Services\Ledger\RollbackService;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Bus;
-use App\Jobs\Ledger\ProcessAttachedFile;
 
 beforeEach(function () {
     // Manually initialize tenancy
@@ -61,7 +61,7 @@ beforeEach(function () {
 
 /**
  * [W5-2.5.6] リスクシナリオ：Auto-healing
- * 
+ *
  * 添付ファイルの中身（Tikaメタデータ）が欠落している状態でロールバックした場合、
  * RollbackService が異常を検知し、再処理ジョブを投入することを検証する。
  */
@@ -69,7 +69,7 @@ test('[Risk] Rollback triggers Auto-healing for missing attached file content', 
     Bus::fake();
 
     $hashedName = 'deadbeef12345678.pdf';
-    
+
     // 1. Ver.1 作成（ファイル付き）
     // Ledger::content は [column_id => [hashed => original_name]] の形式で正規化されている必要がある
     $ledger = Ledger::create([
@@ -108,7 +108,7 @@ test('[Risk] Rollback triggers Auto-healing for missing attached file content', 
 
     // 2. Ver.2 （更新）
     $ledger->increment('version');
-    
+
     // 3. ロールバック実行
     $service = app(RollbackService::class);
     $service->execute($ledger, $diffV1, $this->user, 'Healing test', 2);
@@ -126,7 +126,7 @@ test('[Risk] Rollback triggers Auto-healing for missing attached file content', 
 
 /**
  * [W5-2.5.6] リスクシナリオ：楽観的ロック競合
- * 
+ *
  * 期待されるバージョンと現在のバージョンが異なる場合、ロールバックが拒否されることを検証する。
  */
 test('[Risk] Rollback fails when expected version mismatches', function () {
@@ -158,6 +158,6 @@ test('[Risk] Rollback fails when expected version mismatches', function () {
     $service = app(RollbackService::class);
 
     // 期待バージョンを 1 と指定して実行（現在は 2 なので失敗すべき）
-    expect(fn() => $service->execute($ledger, $diffV1, $this->user, 'Mismatch test', 1))
+    expect(fn () => $service->execute($ledger, $diffV1, $this->user, 'Mismatch test', 1))
         ->toThrow(WorkflowConditionException::class);
 });

@@ -78,11 +78,18 @@
         });
     </script>
 
-    <div class="p-0 rounded-b-xl sm:w-full"> {{-- パディング調整 --}}
+    <div class="p-0 rounded-b-xl sm:w-full relative"> {{-- パディング調整 + relative --}}
+        <x-element.loading-overlay tier="2" target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab" />
+
+        {{-- Tier 2 Skeleton for Content Area --}}
+        <div wire:loading.delay target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab" class="w-full space-y-4 mb-10">
+            <x-element.skeleton-card />
+        </div>
 
         {{-- タブ UI の導入 --}}
-        <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
-            tabsClass="flex flex-col mb-10" class="w-full">
+        <div wire:loading.delay.remove target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab">
+            <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
+                tabsClass="flex flex-col mb-10" class="w-full">
             {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
@@ -246,6 +253,7 @@
             </x-mary-tab>
 
         </x-mary-tabs>
+        </div> {{-- End of wire:loading.delay.remove for tabs --}}
 
         {{-- フッターパネル (アクションボタン集約) --}}
         <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">

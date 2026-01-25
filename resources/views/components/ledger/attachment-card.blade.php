@@ -171,7 +171,7 @@
                     @if ($imageUrl)
                         <div x-show="imageLoading"
                             class="absolute inset-0 flex items-center justify-center bg-base-200">
-                            <span class="loading loading-dots loading-sm text-base-content/30"></span>
+                            <span class="loading loading-spinner loading-xs text-primary/40"></span>
                         </div>
                         <img src="{{ $imageUrl }}" alt="{{ $label }}"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

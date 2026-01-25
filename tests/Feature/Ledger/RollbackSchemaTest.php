@@ -18,7 +18,7 @@ beforeEach(function () {
     $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test-tenant']);
     $this->tenant->domains()->firstOrCreate(['domain' => 'test.localhost']);
     tenancy()->initialize($this->tenant);
-    
+
     // Create User (Tenant connection assumed or global)
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
@@ -92,7 +92,7 @@ test('Rollback with schema change results in identical content detection', funct
     // 3. Update to V2 (with value for new column)
     $ledger->update([
         'content' => ['Value 1 Updated', 'Value 2'],
-        'version' => 2
+        'version' => 2,
     ]);
     $diffV2 = LedgerDiff::create([
         'ledger_id' => $ledger->id,
@@ -113,10 +113,10 @@ test('Rollback with schema change results in identical content detection', funct
     // RollbackService takes diffV1 content and puts it into Ledger status.
     // Ledger now has V1 content BUT current Schema (with col2).
     // Ledger content for col2 will be missing (or normalized to null/empty).
-    
+
     // We mock RollbackService execution or verify logic manually if service is heavy.
     // Here we use the service.
-    
+
     // Ensure permission check passes
     // (Already set WRITE permission in beforeEach)
 
@@ -130,12 +130,12 @@ test('Rollback with schema change results in identical content detection', funct
     // col2 is not in DiffV1 schema => Added.
     // Content for col2 in V3 is empty.
     // Logic should say: Added but empty => Unchanged.
-    
+
     $processor = app(LedgerDiffProcessor::class);
     $diffResult = $processor->prepareContentDiff($ledger, $diffV1);
 
     if ($diffResult['hasChangedColumns']) {
-         dump($diffResult['contentChanges']);
+        dump($diffResult['contentChanges']);
     }
 
     expect($diffResult['hasChangedColumns'])->toBeFalse('Expected no changed columns after rollback to identical content');

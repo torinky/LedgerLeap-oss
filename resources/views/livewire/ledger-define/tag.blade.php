@@ -22,8 +22,10 @@
             </div>
         </span>
     @endforeach
-    <form wire:submit="addTag">
-        <span wire:loading class="fixed h-10 loading loading-ball loading-xs justify"></span>
+    <form wire:submit="addTag" class="relative">
+        <div wire:loading class="absolute right-2 top-1/2 -translate-y-1/2">
+            <span class="loading loading-spinner loading-xs text-primary/60"></span>
+        </div>
         <input type="text" placeholder="&#xf02b; {{__('ledger.tag.add')}}"
                class="input input-bordered input-xs w-full max-w-xs ml-5 icon-input"
                id="newTag-{{$ledgerDefineId}}"

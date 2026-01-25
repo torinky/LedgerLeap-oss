@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Ledger;
 
+use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use App\Livewire\Ledger\LedgerHistoryManager;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -29,7 +29,7 @@ class LedgerHistoryListTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 10, // 意図的に進める
-            'status' => \App\Enums\WorkflowStatus::DRAFT
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
         ]);
 
         // 10件の履歴を作成
@@ -66,7 +66,7 @@ class LedgerHistoryListTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
         ]);
 
         // 正当な履歴

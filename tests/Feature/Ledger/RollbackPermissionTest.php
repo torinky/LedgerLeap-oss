@@ -152,8 +152,8 @@ test('[TC-SV-04] Rollback is rejected for approved ledger', function () {
 
     // Attempt rollback should throw exception
     $service = app(RollbackService::class);
-    
-    expect(fn() => $service->execute($ledger, $diffV1, $user, 'Test rollback', 1))
+
+    expect(fn () => $service->execute($ledger, $diffV1, $user, 'Test rollback', 1))
         ->toThrow(WorkflowConditionException::class);
 });
 
@@ -201,8 +201,8 @@ test('[TC-SV-05] Rollback detects version mismatch (optimistic lock)', function 
 
     // Attempt rollback with wrong expected version
     $service = app(RollbackService::class);
-    
-    expect(fn() => $service->execute($ledger, $diffV1, $user, 'Test rollback', 1)) // Expected version 1, but actual is 2
+
+    expect(fn () => $service->execute($ledger, $diffV1, $user, 'Test rollback', 1)) // Expected version 1, but actual is 2
         ->toThrow(WorkflowConditionException::class);
 });
 
@@ -248,6 +248,6 @@ test('[TC-SV-06] Rollback is rejected for user without WRITE permission', functi
 
     // Attempt rollback should fail
     $service = app(RollbackService::class);
-    
+
     expect($service->canExecute($user, $ledger))->toBeFalse();
 });

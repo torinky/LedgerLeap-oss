@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Services\Ledger\RollbackService;
 use App\Services\UserService;
 
-
 beforeEach(function () {
     // Manually initialize tenancy
     $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test-tenant']);
@@ -29,7 +28,7 @@ beforeEach(function () {
 
     // フォルダと権限の設定
     $this->rootFolder = Folder::whereNull('parent_id')->first();
-    if (!$this->rootFolder) {
+    if (! $this->rootFolder) {
         $this->rootFolder = Folder::factory()->create([
             'title' => 'Root',
             'tenant_id' => $this->tenant->id,
@@ -186,4 +185,3 @@ test('[W5-2.5.1] Rollback creates LedgerDiff with correct metadata', function ()
     // コンテンツがV1に戻っていることを確認
     expect($diffV3->content[0])->toBe('V1 Data');
 });
-

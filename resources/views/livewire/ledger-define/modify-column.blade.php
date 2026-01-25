@@ -1,13 +1,15 @@
 <div>
-    {{-- Loading indicator --}}
-    <div wire:loading wire:target="save,addColumn,removeColumn"
-         class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
-        <div class="flex h-screen justify-center items-center">
-            <span class="loading loading-dots loading-lg"></span>
-        </div>
+    <x-element.loading-overlay tier="1" target="save,addColumn,removeColumn" />
+
+    {{-- Tier 1 Skeleton Loader --}}
+    <div wire:loading.delay wire:target="save,addColumn,removeColumn" class="flex-col gap-4 mt-4 w-full px-4">
+        @foreach (range(1, 3) as $i)
+            <x-element.skeleton-card />
+        @endforeach
     </div>
 
-    {{-- Parent window reload script (no changes needed) --}}
+    <div wire:loading.delay.remove wire:target="save,addColumn,removeColumn">
+        {{-- Parent window reload script (no changes needed) --}}
     <script>
         window.addEventListener('reloadParentWindow', () => {
             if (window.opener && !window.opener.closed) {
@@ -161,4 +163,5 @@
             'type' => 'button'
         ])
     </div>
+    </div> {{-- End of wire:loading.delay.remove --}}
 </div>

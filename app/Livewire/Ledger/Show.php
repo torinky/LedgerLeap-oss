@@ -48,10 +48,7 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
-
-
     public ?LedgerDiff $comparisonTargetDiffModel = null;
-
 
     public function isComparingWithPrevious(): bool
     {
@@ -194,7 +191,6 @@ class Show extends BaseLivewireComponent
         $this->dispatch('showChangesUpdated', showChanges: true);
     }
 
-
     #[On('switchToHistoryTab')]
     public function switchToHistoryTab(): void
     {
@@ -287,10 +283,10 @@ class Show extends BaseLivewireComponent
             $this->targetDiffId = $targetDiffId;
             $this->loadComparisonTarget();
             $this->dispatch('targetDiffIdUpdated', targetDiffId: $this->targetDiffId);
-            
+
             $currentDiff = $this->ledgerRecord->latestDiff;
             if ($currentDiff) {
-                 $this->dispatch('versionsSelected', baseId: $currentDiff->id, targetId: $this->targetDiffId);
+                $this->dispatch('versionsSelected', baseId: $currentDiff->id, targetId: $this->targetDiffId);
             }
         } else {
             // 直前バージョンとの比較を自動設定 (フォールバック)

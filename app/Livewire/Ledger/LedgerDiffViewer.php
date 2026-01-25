@@ -245,9 +245,9 @@ class LedgerDiffViewer extends BaseLivewireComponent
     public function placeholder(): string
     {
         return <<<'HTML'
-    <div  class="z-50 fixed inset-0 bg-base-300/50 transition-opacity">
-        <div class="flex h-screen justify-center items-center">
-            <span class="loading loading-dots loading-lg"></span>
+    <div class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base-100/50 backdrop-blur-[2px] transition-all">
+        <div class="flex flex-col items-center p-6 bg-base-100/80 rounded-2xl shadow-xl ring-1 ring-base-content/5">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
         </div>
     </div>
 

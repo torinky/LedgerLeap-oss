@@ -8,7 +8,10 @@
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
             {{-- ★★★ フィルタリングUI ★★★ --}}
-            <x-mary-card  class="pt-0" shadow>
+            <div class="relative">
+                <x-element.loading-overlay tier="2" target="filterByUserId,filterByEvent,filterByDescription,gotoPage" />
+
+                <x-mary-card  class="pt-0" shadow>
 
 {{--
                 <x-mary-header
@@ -142,9 +145,9 @@
                 </x-slot:empty>
             </x-mary-table>
             <div class="mt-4">
-                <x-mary-loading wire:loading class=""/>
                 {{ $activities->links() }}
             </div>
+            </div> {{-- End of relative container for loading-overlay --}}
         @endif
 
 

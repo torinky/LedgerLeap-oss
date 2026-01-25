@@ -96,7 +96,7 @@ class RollbackConfirmModal extends Component
         try {
             // システム情報を追記（表示用デリミタ付き）
             $systemInfo = __('ledger.rollback.source_info', ['version' => $this->targetDiff->version]);
-            $finalComments = $this->comments . "\n--- system-info ---\n" . $systemInfo;
+            $finalComments = $this->comments."\n--- system-info ---\n".$systemInfo;
 
             $this->rollbackService->execute(
                 $this->ledger,
@@ -112,7 +112,7 @@ class RollbackConfirmModal extends Component
             $this->showModal = false;
 
             // 完了イベントを発火（Showコンポーネント等が捕捉して詳細タブへ遷移させる）
-            $this->dispatch('ledger.rollback.completed', 
+            $this->dispatch('ledger.rollback.completed',
                 ledgerId: $this->ledgerId,
                 targetDiffId: $this->targetDiffId
             );

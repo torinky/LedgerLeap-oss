@@ -9,8 +9,8 @@ use App\Models\LedgerDiff;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use App\Services\UserService;
 use App\Services\Ledger\RollbackService;
+use App\Services\UserService;
 use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function () {
@@ -59,7 +59,7 @@ beforeEach(function () {
 
 /**
  * [W5-2.5.5] シナリオG: 管理者の監査シナリオ
- * 
+ *
  * 1. ユーザーによってロールバックが実行される
  * 2. 管理者が LedgerDiff 履歴を確認し、ロールバックイベントとコメントを特定できる
  * 3. 管理者が activity_log を確認し、ロールバックに関連するメタ情報を確認できる
@@ -109,7 +109,6 @@ test('[Scenario G] Admin audits rollback events via LedgerDiff and ActivityLog',
     $auditComment = 'Auditor rolling back for testing purposes';
     $service->execute($ledger, $diffV1, $this->admin, $auditComment, 2);
 
-
     // 3. 監査：LedgerDiff の確認
     $diffV3 = LedgerDiff::where('ledger_id', $ledger->id)->where('version', 3)->first();
     expect($diffV3->comments)->toBe($auditComment);
@@ -120,14 +119,14 @@ test('[Scenario G] Admin audits rollback events via LedgerDiff and ActivityLog',
     // RollbackService が activity_log を明示的に記録しているか、あるいは Ledger の updated イベントにより自動記録されているか
     // (通常、ロールバックは Ledger への update を伴うため、自動的に記録されるはず)
     $latestActivity = Activity::all()->last();
-    
+
     expect($latestActivity->subject_id)->toBe($ledger->id);
     expect($latestActivity->causer_id)->toBe($this->admin->id);
-    
+
     // ロールバック専用のメタ情報が properties に含まれているか（W3-2.1設計に基づく）
     // 現状の実装で properties に何が入っているか確認する
     $properties = $latestActivity->properties;
-    
+
     // LedgerObserver 等で記録されている場合の内容を検証
     // 設計書 W3-2.1 によると、RollbackService で特別なプロパティを追加する記載があったが
     // 実際のコードでどうなっているか

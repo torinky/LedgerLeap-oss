@@ -201,6 +201,8 @@
 
     {{-- 右側: 差分ビューア (8/12 or 7/12) --}}
     <div class="lg:col-span-8 xl:col-span-9 space-y-6 relative min-h-[400px]">
+        <x-element.loading-overlay tier="2" message="{{ __('ledger.loading') }}" />
+
         {{-- 計算中のスケルトン表示 --}}
         <div wire:loading class="w-full space-y-6 animate-pulse">
             <div class="card bg-base-100 border border-base-300 shadow-sm">
@@ -238,16 +240,6 @@
                             </div>
                         @endforeach
                     </div>
-                </div>
-            </div>
-
-            {{-- 読み込み中メッセージとスピナーをスケルトンの上に透過的に配置 --}}
-            <div class="absolute inset-0 z-20 flex flex-col items-center justify-start pt-40 pointer-events-none">
-                <div class="flex flex-col items-center gap-6">
-                    <span class="loading loading-spinner w-16 h-16 text-primary/60"></span>
-                    <p class="text-lg font-bold text-base-content/40 tracking-widest animate-pulse">
-                        {{ __('ledger.loading') }}
-                    </p>
                 </div>
             </div>
         </div>

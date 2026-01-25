@@ -61,7 +61,7 @@ beforeEach(function () {
 
 /**
  * [W5-2.5.4] シナリオE: 現場リーダーの誤更新ロールバック
- * 
+ *
  * 1. 実務担当者が「Ver.1: 正しいデータ」を作成
  * 2. 実務担当者が「Ver.2: 誤ったデータ」に更新してしまった
  * 3. 現場リーダーが台帳を開き、履歴を確認
@@ -111,7 +111,6 @@ test('[Scenario E] Field leader rolls back an erroneous update by a subordinate'
         'completed_approver_role_ids' => [],
     ]);
     $ledger->update(['latest_diff_id' => $diffV2->id]);
-
 
     // 3. 現場リーダーが操作を開始
     Livewire::actingAs($this->leader);

@@ -102,7 +102,9 @@
                 @include('livewire.attached-file.file-inspector.header')
 
                 {{-- Scrollable content area --}}
-                <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin;">
+                <div class="flex-1 overflow-y-auto relative" style="scrollbar-width: thin;">
+                    <x-element.loading-overlay tier="2" target="selectedTab,switchSource,searchKeyword" />
+
                     @include('livewire.attached-file.file-inspector.quick-actions')
                     @include('livewire.attached-file.file-inspector.preview')
 

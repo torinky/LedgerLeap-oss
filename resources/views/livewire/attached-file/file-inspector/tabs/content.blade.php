@@ -46,10 +46,6 @@
                     <x-mary-input wire:model.live.debounce.300ms="searchKeyword" icon="o-magnifying-glass"
                         placeholder="{{ __('ledger.file_inspector.search.placeholder') }}"
                         class="input-sm w-full font-normal" clearable />
-                    {{-- Search Loading Indicator --}}
-                    <div wire:loading.delay wire:target="searchKeyword" class="absolute right-9 top-1.5">
-                        <span class="loading loading-spinner loading-xs text-primary"></span>
-                    </div>
                 </div>
 
                 {{-- Search Hit Badge --}}

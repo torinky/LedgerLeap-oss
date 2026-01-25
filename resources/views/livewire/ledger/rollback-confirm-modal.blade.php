@@ -1,4 +1,5 @@
-<x-mary-modal wire:model="showModal" title="{{ __('ledger.rollback.modal_title') }}" separator>
+<x-mary-modal wire:model="showModal" title="{{ __('ledger.rollback.modal_title') }}" separator class="relative">
+    <x-element.loading-overlay tier="2" target="executeRollback" />
     @if ($ledger && $targetDiff)
         <div class="space-y-4">
             {{-- ヘッダー情報 --}}

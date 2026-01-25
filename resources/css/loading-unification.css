@@ -1,0 +1,53 @@
+/* Loading Unification Styles */
+
+/**
+ * 1. チラツキ防止 (Flicker Prevention)
+ * 短時間の通信でローディング要素が「一瞬だけ」表示されるのを防ぎます。
+ * 150msの待機時間を経てから0.3秒かけてフェードインさせます。
+ */
+[wire\:loading],
+[wire\:loading\.delay],
+[wire\:loading\.flex] {
+    opacity: 0;
+    animation: fadeInLoading 0.3s ease-in forwards;
+    animation-delay: 150ms;
+}
+
+@keyframes fadeInLoading {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/**
+ * 2. スケルトンアニメーションの洗練
+ * 標準の pulse (2s) よりもわずかに緩やかにすることで、
+ * ユーザーに「システムが落ち着いて処理している」という安心感を与えます。
+ */
+.animate-pulse {
+    animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/**
+ * 3. 透過オーバーレイの Glassmorphism 補完
+ * Safari等のブラウザで背景ぼかしをより美しく表示します。
+ */
+.backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-\[1px\] {
+    -webkit-backdrop-filter: blur(1px);
+}
+
+.backdrop-blur-\[2px\] {
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/**
+ * 4. Tier 0 グローバル・プログレスバーの強化
+ * バーの下にぼんやりとした光彩（Glow）を追加し、視認性を高めます。
+ */
+.fixed.top-0.w-full.h-1.z-\[110\] {
+    box-shadow: 0 1px 8px -1px var(--color-primary);
+    transition: width 0.4s ease-out;
+}
