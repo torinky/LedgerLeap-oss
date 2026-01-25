@@ -41,31 +41,35 @@ window.flatpickr.localize(flatpickr.l10ns.ja);
 window.EasyMDE = EasyMDE;
 
 // エラーバッジ用のAlpineデータ登録 (Issue #17)
+window.groupErrorBadge = function () {
+    return {
+        errorCount: 0,
+
+        init() {
+            // Livewireプロパティの errorsByGroup が存在する場合のみ有効化
+            if (typeof this.$wire === 'undefined' || this.$wire.errorsByGroup === undefined) {
+                return;
+            }
+
+            const groupName = this.$root.dataset.groupName;
+            if (!groupName) return;
+
+            // 初期値の同期
+            this.errorCount = this.$wire.errorsByGroup[groupName] || 0;
+
+            // Livewireプロパティの変更を監視してエラー数をリアルタイム更新
+            this.$watch('$wire.errorsByGroup', (value) => {
+                if (value) {
+                    this.errorCount = value[groupName] || 0;
+                }
+            });
+        }
+    };
+};
+
 function registerGroupErrorBadge() {
     if (window.Alpine && !window.Alpine.data('groupErrorBadge')) {
-        window.Alpine.data('groupErrorBadge', () => ({
-            errorCount: 0,
-
-            init() {
-                // Livewireプロパティの errorsByGroup が存在する場合のみ有効化
-                if (typeof this.$wire === 'undefined' || this.$wire.errorsByGroup === undefined) {
-                    return;
-                }
-
-                const groupName = this.$root.dataset.groupName;
-                if (!groupName) return;
-
-                // 初期値の同期
-                this.errorCount = this.$wire.errorsByGroup[groupName] || 0;
-
-                // Livewireプロパティの変更を監視してエラー数をリアルタイム更新
-                this.$watch('$wire.errorsByGroup', (value) => {
-                    if (value) {
-                        this.errorCount = value[groupName] || 0;
-                    }
-                });
-            }
-        }));
+        window.Alpine.data('groupErrorBadge', window.groupErrorBadge);
     }
 }
 

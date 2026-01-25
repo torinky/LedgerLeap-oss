@@ -28,6 +28,7 @@
 - **Alpine.js + @entangle への移行**: `ModifyColumn`, `CreateColumn`, および `LedgerDefine/Edit` の各アコーディオンを Alpine.js 制御に刷新。
 - **グローバルローディングの抑制**: サーバー側のメソッド (`toggleGroup`, `toggleDescriptionGroup`) に `#[Renderless]` 属性を付与し、かつ `@entangle` を用いることで、単なる開閉操作での Tier 0 プログレスバー発生を完全に排除。
 - **スムーズなアニメーション**: DaisyUI の `collapse-open` / `collapse-close` クラスを利用し、CSS ベースの滑らかな展開・折りたたみアニメーションを実現。
+- **(修正済み) JavaScript エラーと論理の不整合の解消**: Alpine 移行時に発生した `groupErrorBadge` 未定義エラーと、`isCollapsed` 真偽値の不整合（逆転）を修正。`ledgerEdit.js` にて関数を共通化し、堅牢性を向上。
 
 ## 未解決の課題・継続案件
 

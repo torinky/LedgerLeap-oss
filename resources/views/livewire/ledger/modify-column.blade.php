@@ -63,13 +63,14 @@
                                 @endphp
                                 <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2 transition-all duration-300"
                                      wire:key="group-{{ $groupName }}"
-                                     x-data="Object.assign(groupErrorBadge, {
-                                         isOpen: @entangle('collapsedStates.' . $groupName),
+                                     x-data="{
+                                         ...groupErrorBadge(),
+                                         isCollapsed: @entangle('collapsedStates.' . $groupName),
                                          toggle() {
-                                             this.isOpen = !this.isOpen;
+                                             this.isCollapsed = !this.isCollapsed;
                                          }
-                                     })"
-                                     :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen }"
+                                     }"
+                                     :class="{ 'collapse-open': !isCollapsed, 'collapse-close': isCollapsed }"
                                      data-group-name="{{ $groupName }}">
                                     {{-- checkboxを使わずにJSで制御することで、瞬時の開閉アニメーションを実現 --}}
                                     <div class="collapse-title text-xl font-medium cursor-pointer"
