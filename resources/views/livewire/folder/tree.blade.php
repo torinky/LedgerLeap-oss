@@ -1,13 +1,9 @@
 <div>
-    <div class="card bg-base-300 shadow-bg-300 relative"> {{-- Added relative for overlay --}}
-        <div class="card-body">
+    <div class="card bg-base-300 shadow-sm relative"> {{-- Added relative for overlay --}}
+        <div class="card-body p-2"> {{-- Reduced padding --}}
             <x-element.loading-overlay tier="2" target="changeCurrentFolder" />
 
-            <div wire:loading.delay target="changeCurrentFolder">
-                <x-element.skeleton-list items="12" />
-            </div>
-
-            <div wire:loading.delay.remove target="changeCurrentFolder">
+            <div>
                 <x-folder.tree
                     :folders="$folders"
                     :writableFolderIds="$writableFolderIds"

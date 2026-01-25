@@ -7,8 +7,8 @@
 
 @php
     $overlayClasses = match((int)$tier) {
-        1 => 'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base-300/40 backdrop-blur-md transition-all duration-500 pointer-events-none',
-        default => 'absolute inset-0 z-40 flex flex-col items-center justify-center bg-base-100/30 backdrop-blur-[2px] transition-all duration-300 rounded-box pointer-events-none',
+        1 => 'fixed inset-0 z-[110] flex items-center justify-center bg-base-300/60 backdrop-blur-md transition-all duration-500 pointer-events-none min-h-screen w-full',
+        default => 'absolute inset-0 z-30 flex items-center justify-center bg-base-100/30 backdrop-blur-[2px] transition-all duration-300 rounded-box pointer-events-none h-full w-full',
     };
 
     $spinnerClasses = match((int)$tier) {
@@ -22,12 +22,12 @@
     @if($target) wire:target="{{ $target }}" @endif
     {{ $attributes->merge(['class' => $overlayClasses]) }}
 >
-    {{-- 中央に配置し、不必要に広がらないように抑制 --}}
-    <div class="flex flex-col items-center justify-center">
+    {{-- Content centered by parent flex container --}}
+    <div class="flex flex-col items-center justify-center space-y-4 m-auto">
         {{-- スピナーを強調するための Glow 効果 --}}
-        <div class="relative flex items-center justify-center">
-            <div class="absolute inset-0 bg-primary/30 blur-2xl rounded-full scale-150 animate-pulse"></div>
-            <span class="{{ $spinnerClasses }} relative z-10 drop-shadow-lg"></span>
+        <div class="relative inline-flex items-center justify-center">
+            <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-[3.0] animate-pulse"></div>
+            <span class="{{ $spinnerClasses }} relative z-10 drop-shadow-2xl"></span>
         </div>
 
         @if($message)
