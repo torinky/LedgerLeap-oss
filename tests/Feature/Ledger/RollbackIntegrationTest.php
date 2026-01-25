@@ -179,6 +179,11 @@ test('[W5-2.5.1] Rollback creates LedgerDiff with correct metadata', function ()
     expect($diffV3->creator_id)->toBe($this->user->id);
     expect($diffV3->modifier_id)->toBe($this->user->id);
 
+    // tenant_id が正しく設定されていることを検証
+    expect($diffV3->tenant_id)->not->toBeNull();
+    expect($diffV3->tenant_id)->toBe($this->tenant->id);
+
     // コンテンツがV1に戻っていることを確認
     expect($diffV3->content[0])->toBe('V1 Data');
 });
+
