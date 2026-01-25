@@ -45,7 +45,9 @@ class ModifyColumn extends BaseLivewireComponent
         }
 
         $ledgerDefineId = (int) $request->route('ledgerDefineId');
-        $this->ledgerDefineRecord = LedgerDefine::findOrNew($ledgerDefineId);
+        /** @var LedgerDefine $ledgerDefine */
+        $ledgerDefine = LedgerDefine::findOrNew($ledgerDefineId);
+        $this->ledgerDefineRecord = $ledgerDefine;
 
         // Ensure $this->columns is initialized as an array of associative arrays.
         $this->columns = collect($this->ledgerDefineRecord->column_define)->map(function ($columnDefineObject) {
@@ -64,7 +66,7 @@ class ModifyColumn extends BaseLivewireComponent
                 'file' => (array) $columnDefineObject->file,
                 'display_level' => $columnDefineObject->display_level,
                 'group' => $columnDefineObject->group,
-                'is_collapsed' => false, // 初期状態で折りたたむ
+                'is_collapsed' => true, // デフォルトで折りたたむ
                 'options' => array_merge(
                     (array) $columnDefineObject->options,
                     $columnDefineObject->getInputType() instanceof NumberType ? [
@@ -345,19 +347,20 @@ class ModifyColumn extends BaseLivewireComponent
             'name' => 'no name',
             'type' => 'text',
             'order' => count($this->columns) + 1,
-            'useOptions' => false, // Default value
-            'options' => [], // Default value
-            'required' => false, // Default value
-            'unique' => false, // Default value
-            'sort_index' => null, // sortBy を sort_index に変更し、デフォルト値を null に
-            'hint' => '', // Default value
-            'file' => [], // Default value
-            'display_level' => 3, // 追加: デフォルトの表示レベル
-            'group' => null,      // 追加: デフォルトのグループ名
-            'is_collapsed' => true, // 新規追加時は開いた状態にする
+            'useOptions' => false,
+            'options' => [],
+            'required' => false,
+            'unique' => false,
+            'sort_index' => null,
+            'hint' => '',
+            'file' => [],
+            'display_level' => 3,
+            'group' => null,
+            'is_collapsed' => false, // ユーザー要望により基本は畳むが、追加直後は編集のため展開する
         ];
 
         $this->columns[] = $newColumn;
+        $this->isDirty = true;
     }
 
     public function save()

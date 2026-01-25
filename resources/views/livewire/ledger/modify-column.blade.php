@@ -57,16 +57,14 @@
                             {{-- バリデーションエラーサマリー (Issue #13-2) --}}
                             <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord"/>
 
-                            {{-- 全て展開・折りたたみボタン --}}
-                            <div class="flex justify-end gap-2 mb-2">
-                                <x-mary-button label="{{ __('ledger.column.expand_all') }}"
-                                               icon="o-arrows-pointing-out"
-                                               class="btn-ghost btn-xs text-base-content/60"
-                                               wire:click.prevent="expandAllGroups" />
-                                <x-mary-button label="{{ __('ledger.column.collapse_all') }}"
-                                               icon="o-arrows-pointing-in"
-                                               class="btn-ghost btn-xs text-base-content/60"
-                                               wire:click.prevent="collapseAllGroups" />
+                            {{-- 全て展開・折りたたみトグル (Issue #53) --}}
+                            <div class="flex justify-end items-center gap-3 bg-base-200/30 px-4 py-2 rounded-full border border-base-300 mb-4 self-end transition-all hover:bg-base-200/50"
+                                 x-data="{ allExpanded: false }">
+                                <span class="text-[10px] font-black text-base-content/40 uppercase tracking-widest">{{ __('ledger.column.expand_all') }}</span>
+                                <x-mary-toggle
+                                    x-model="allExpanded"
+                                    @change="allExpanded ? $wire.expandAllGroups() : $wire.collapseAllGroups()"
+                                    right tight class="toggle-xs toggle-primary" />
                             </div>
 
                             @foreach ($groupedColumns as $groupName => $columnsInGroup)

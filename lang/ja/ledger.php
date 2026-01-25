@@ -223,6 +223,7 @@ return [
     'column' => [
         'add' => '列を追加',
         'collapse_all' => 'すべて折りたたむ',
+        'count_unit' => '項目',
         'expand_all' => 'すべて展開',
         'auto_number' => [
             'digits' => '桁数',
