@@ -23,6 +23,28 @@ trait HandlesFormGroups
     }
 
     /**
+     * すべてのグループを折りたたむ
+     */
+    #[Renderless]
+    public function collapseAllGroups(): void
+    {
+        foreach ($this->collapsedStates as $groupName => $value) {
+            $this->collapsedStates[$groupName] = true;
+        }
+    }
+
+    /**
+     * すべてのグループを展開する
+     */
+    #[Renderless]
+    public function expandAllGroups(): void
+    {
+        foreach ($this->collapsedStates as $groupName => $value) {
+            $this->collapsedStates[$groupName] = false;
+        }
+    }
+
+    /**
      * グループの状態を初期化する
      */
     protected function initializeGroups(): void
@@ -33,16 +55,15 @@ trait HandlesFormGroups
             ->unique()
             ->all();
 
-        $this->collapsedStates = array_fill_keys($allGroups, true); // まず全てを折りたたむ
+        $this->collapsedStates = array_fill_keys($allGroups, true); // 全てを折りたたむ
 
-        // 必須項目を含むグループを展開する
+        // 以前は推奨で必須グループを展開していたが、ユーザー要望によりデフォルトは全折りたたみとする
+        /*
         foreach ($this->ledgerDefineRecord->column_define as $column) {
             if ($column->required) {
-                $groupName = $column->group ?? __('ledger.form.group_default');
-                if (isset($this->collapsedStates[$groupName])) {
-                    $this->collapsedStates[$groupName] = false; // 展開
-                }
+                ...
             }
         }
+        */
     }
 }

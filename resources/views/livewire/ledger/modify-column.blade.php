@@ -57,6 +57,18 @@
                             {{-- バリデーションエラーサマリー (Issue #13-2) --}}
                             <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord"/>
 
+                            {{-- 全て展開・折りたたみボタン --}}
+                            <div class="flex justify-end gap-2 mb-2">
+                                <x-mary-button label="{{ __('ledger.column.expand_all') }}"
+                                               icon="o-arrows-pointing-out"
+                                               class="btn-ghost btn-xs text-base-content/60"
+                                               wire:click.prevent="expandAllGroups" />
+                                <x-mary-button label="{{ __('ledger.column.collapse_all') }}"
+                                               icon="o-arrows-pointing-in"
+                                               class="btn-ghost btn-xs text-base-content/60"
+                                               wire:click.prevent="collapseAllGroups" />
+                            </div>
+
                             @foreach ($groupedColumns as $groupName => $columnsInGroup)
                                 @php
                                     $isGroupRequired = collect($columnsInGroup)->contains(fn($col) => $col->required);

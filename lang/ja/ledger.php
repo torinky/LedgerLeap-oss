@@ -222,6 +222,8 @@ return [
     'collapse_all' => 'すべて折りたたむ',
     'column' => [
         'add' => '列を追加',
+        'collapse_all' => 'すべて折りたたむ',
+        'expand_all' => 'すべて展開',
         'auto_number' => [
             'digits' => '桁数',
             'digits_hint' => '連番の桁数 (例: 3の場合 001, 010, 100)',
@@ -1212,7 +1214,7 @@ return [
         'self' => '現在のウィンドウで開く',
         'top' => '一番上のフレームで開く',
     ],
-    'technical_term' => '技術用語',
+   'technical_term' => '技術用語',
     'tenant' => 'テナント',
     'tenant_context_notification_body' => 'テナント「:name」のコンテキストで中央管理画面を表示しています。',
     'tenant_context_notification_title' => '管理画面のコンテキスト表示',
