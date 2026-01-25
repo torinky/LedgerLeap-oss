@@ -1,4 +1,6 @@
 <div>
+    <x-element.loading-overlay tier="1" target="store" :delay="false" />
+
     <div
             class="background-image-change"
             @validation-summary-status.window="validationSummaryOpen = $event.detail.open; validationErrorCount = $event.detail.errorCount;"

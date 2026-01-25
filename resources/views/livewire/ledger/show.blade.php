@@ -1,6 +1,10 @@
 <div>
     @php
         use App\Enums\WorkflowStatus;
+        // Navigation targets that should affect the entire tab content area
+        $tabNavTargets = 'selectedTab,switchToHistoryTab,activateCompareWithPrevious';
+        // Detail-specific filter targets that should only affect the record content
+        $recordFilterTargets = 'displayLevel,showChanges';
     @endphp
 
     {{-- Alpine.store を確実に初期化するためのスクリプト --}}
@@ -78,24 +82,21 @@
         });
     </script>
 
-    <div class="p-0 rounded-b-xl sm:w-full relative"> {{-- パディング調整 + relative --}}
-        <x-element.loading-overlay tier="2" target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab" />
+    {{-- Tier 1: Global Loading removed to keep tab headers interactive during transitions --}}
 
-        {{-- Tier 2 Skeleton for Content Area --}}
-        <div wire:loading.delay target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab" class="w-full space-y-4 mb-10">
-            <x-element.skeleton-card />
-        </div>
+    <div class="p-0 rounded-b-xl sm:w-full relative"> {{-- パディング調整 + relative --}}
+        {{-- Skeletons/Overlays move inside tab components for more granular feedback --}}
 
         {{-- タブ UI の導入 --}}
-        <div wire:loading.delay.remove target="selectedTab,displayLevel,showChanges,activateCompareWithPrevious,switchToHistoryTab">
-            <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
-                tabsClass="flex flex-col mb-10" class="w-full">
+        <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
+            tabsClass="flex flex-col mb-10" class="w-full">
             {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}
             <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
-                class="shadow-lg space-y-4">
-                {{--                <x-mary-header title="{{ __('ledger.tab.details') }}" icon="o-document-text"/> --}}
+                class="shadow-lg space-y-4 relative min-h-[400px]">
+                {{-- Overall tab loading --}}
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
 
                 @if ($ledgerRecord->define->workflow_enabled)
                     <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
@@ -130,11 +131,15 @@
                         </div>
                     </x-slot:menu>
 
-                    <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
-                        :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                        {{-- 基本情報タブは常に最新(null)を基準とする --}}
-                        wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
-                        lazy />
+                    <div class="relative min-h-[300px]">
+                        {{-- Record content only loading is now handled inside ledger-diff-viewer.blade.php --}}
+
+                        <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
+                            :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
+                            {{-- 基本情報タブは常に最新(null)を基準とする --}}
+                            wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
+                            lazy />
+                    </div>
 
                     {{-- フッター集約情報（編集者情報・ナッジ） --}}
                     <div class="mt-6 pt-4 border-t border-base-200">
@@ -220,7 +225,8 @@
                     : __('ledger.history_title');
             @endphp
             {{-- ワークフロー履歴タブ --}}
-            <x-mary-tab name="history" class="shadow-md" label="{{ $historyTabTitle }}" icon="o-list-bullet">
+            <x-mary-tab name="history" class="shadow-md relative min-h-[400px]" label="{{ $historyTabTitle }}" icon="o-list-bullet">
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
                 <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
                     wire:key="history-manager-{{ $ledgerRecord->id }}" />
             </x-mary-tab>
@@ -230,7 +236,8 @@
 
             {{-- ★★★ 総合活動履歴タブ ★★★ --}}
             <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
-                class="shadow-md">
+                class="shadow-md relative min-h-[400px]">
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
                 {{-- テスト実行時はレンダリングしない --}}
                 @if (app()->environment() !== 'testing')
                     <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
@@ -242,7 +249,8 @@
 
             {{-- ★★★ アクセスと権限タブ ★★★ --}}
             <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
-                class="shadow-md">
+                class="shadow-md relative min-h-[400px]">
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
                 {{-- テスト実行時はレンダリングしない --}}
                 @if (app()->environment() !== 'testing')
                     <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
@@ -253,7 +261,6 @@
             </x-mary-tab>
 
         </x-mary-tabs>
-        </div> {{-- End of wire:loading.delay.remove for tabs --}}
 
         {{-- フッターパネル (アクションボタン集約) --}}
         <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
@@ -262,7 +269,7 @@
                 <div class="card-body p-4">
                     <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord"
                         wire:key="action-buttons-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
-                    @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], key('workflow-comment-modal-show'))
+                    @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], 'workflow-comment-modal-show')
 
 
                     {{-- 戻し理由入力モーダル --}}

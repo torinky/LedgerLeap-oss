@@ -106,3 +106,19 @@
         @endif
     </div>
 @endif
+
+{{-- Loading State during source switching --}}
+<div
+    wire:loading
+    wire:target="switchSource"
+    class="absolute inset-0 z-10 flex items-center justify-center bg-transparent backdrop-blur-[1px]"
+>
+    <span class="loading loading-spinner loading-lg text-primary/40 drop-shadow-md"></span>
+</div>
+
+@if($sourceType === 'original')
+    {{-- Original Source UI --}}
+@else
+    {{-- Alternative Source UI --}}
+@endif
+

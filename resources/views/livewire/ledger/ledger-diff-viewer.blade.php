@@ -1,10 +1,13 @@
-<div class="space-y-6" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
+<div class="space-y-6 relative" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
 if ($store.ledgerState) {
     console.log('[LedgerDiffViewer] Alpine store found, calling init()');
     $store.ledgerState.init({{ $ledgerRecord->id }});
 } else {
     console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
 }">
+    {{-- Tier 2 loading for internal updates (displayLevel, showChanges, etc.) --}}
+    <x-element.loading-overlay tier="2" :delay="false" />
+
     @if ($showChanges)
         <div class="space-y-3">
             <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 rounded-lg border border-base-300">

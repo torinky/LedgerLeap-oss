@@ -1,4 +1,6 @@
 <div>
+    <x-element.loading-overlay tier="1" target="store" :delay="false" />
+
     <div class="relative">
         {{-- Temporarily disabled to debug button click issues --}}
         {{-- <x-element.loading-overlay tier="1" target="store,toggleGroup" /> --}}
@@ -106,67 +108,68 @@
                                                          x-init="updateBackground('{{ $columnDefine->id }}')"
                                                          @endif>
 
-                                                    {{-- エラーアイコン (Issue #18) --}}
-                                                    @if (isset($validationErrors[$validationKey]))
-                                                        <div class="validation-error-icon-wrapper tooltip tooltip-left"
-                                                             data-tip="{{ collect($validationErrors[$validationKey])->first() }}">
-                                                            <x-mary-icon name="o-x-circle" class="w-5 h-5 text-error"/>
+                                                        {{-- エラーアイコン (Issue #18) --}}
+                                                        @if (isset($validationErrors[$validationKey]))
+                                                            <div class="validation-error-icon-wrapper tooltip tooltip-left"
+                                                                 data-tip="{{ collect($validationErrors[$validationKey])->first() }}">
+                                                                <x-mary-icon name="o-x-circle" class="w-5 h-5 text-error"/>
+                                                            </div>
+                                                        @endif
+
+                                                        {{-- 修正成功アイコン (Issue #24) --}}
+                                                        <div x-show="showFixed && !{{ isset($validationErrors[$validationKey]) ? 'true' : 'false' }}"
+                                                             class="validation-success-icon-wrapper"
+                                                             x-transition:enter="transition ease-out duration-300"
+                                                             x-transition:enter-start="opacity-0 scale-90"
+                                                             x-transition:enter-end="opacity-100 scale-100"
+                                                             x-transition:leave="transition ease-in duration-500"
+                                                             x-transition:leave-start="opacity-100"
+                                                             x-transition:leave-end="opacity-0"
+                                                             x-cloak>
+                                                            <x-mary-icon name="o-check-circle" class="w-5 h-5 text-success"/>
                                                         </div>
-                                                    @endif
 
-                                                    {{-- 修正成功アイコン (Issue #24) --}}
-                                                    <div x-show="showFixed && !{{ isset($validationErrors[$validationKey]) ? 'true' : 'false' }}"
-                                                         class="validation-success-icon-wrapper"
-                                                         x-transition:enter="transition ease-out duration-300"
-                                                         x-transition:enter-start="opacity-0 scale-90"
-                                                         x-transition:enter-end="opacity-100 scale-100"
-                                                         x-transition:leave="transition ease-in duration-500"
-                                                         x-transition:leave-start="opacity-100"
-                                                         x-transition:leave-end="opacity-0"
-                                                         x-cloak>
-                                                        <x-mary-icon name="o-check-circle" class="w-5 h-5 text-success"/>
+                                                        @if ($columnDefine->type === 'files')
+                                                            <x-ledger.form.files :columnDefine="$columnDefine"
+                                                                                 :ledgerDefineId="$ledgerDefineId"
+                                                                                 :initialFiles="$filePondInitialFiles[$columnDefine->id] ?? []"
+                                                                                 multiple allowImagePreview
+                                                                                 imagePreviewMaxHeight="200"/>
+                                                        @else
+                                                            @php
+                                                                $componentName =
+                                                                    'ledger.form.' . str_replace('_', '-', $columnDefine->type);
+                                                                // auto_number タイプの場合、text コンポーネントを使用
+                                                                if ($columnDefine->type === 'auto_number') {
+                                                                    $componentName = 'ledger.form.text';
+                                                                }
+                                                            @endphp
+                                                            <x-dynamic-component :component="$componentName"
+                                                                                 wire:model.live="content"
+                                                                                 wire:key="content-input-{{ $columnDefine->id }}"
+                                                                                 :columnDefine="$columnDefine"
+                                                                                 :ledgerRecord="$ledgerRecord ?? []"/>
+                                                        @endif
                                                     </div>
-
-                                                    @if ($columnDefine->type === 'files')
-                                                        <x-ledger.form.files :columnDefine="$columnDefine"
-                                                                             :ledgerDefineId="$ledgerDefineId"
-                                                                             :initialFiles="$filePondInitialFiles[$columnDefine->id] ?? []"
-                                                                             multiple allowImagePreview
-                                                                             imagePreviewMaxHeight="200"/>
-                                                    @else
-                                                        @php
-                                                            $componentName =
-                                                                'ledger.form.' . str_replace('_', '-', $columnDefine->type);
-                                                            // auto_number タイプの場合、text コンポーネントを使用
-                                                            if ($columnDefine->type === 'auto_number') {
-                                                                $componentName = 'ledger.form.text';
-                                                            }
-                                                        @endphp
-                                                        <x-dynamic-component :component="$componentName"
-                                                                             wire:model.live="content"
-                                                                             wire:key="content-input-{{ $columnDefine->id }}"
-                                                                             :columnDefine="$columnDefine"
-                                                                             :ledgerRecord="$ledgerRecord ?? []"/>
-                                                    @endif
                                                 </div>
-                                            </div>
-                                        @endif
+                                            @endif
+                                        @endforeach
+                                    </div>
                                 </div>
                             @endforeach
-                        @endforeach
-                    </div>
-                    <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-                        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                            <div class="card-body p-4">
-                                <div class="flex flex-wrap items-center justify-center gap-4">
-                                    {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
-                                    <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
-                                                   x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
-                                                   x-transition:enter-start="opacity-0 scale-0 translate-y-12"
-                                                   x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak
-                                                   icon="o-exclamation-triangle"
-                                                   class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
-                                                   @click="$dispatch('toggle-validation-summary')">
+                        </div>
+                        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
+                            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
+                                <div class="card-body p-4">
+                                    <div class="flex flex-wrap items-center justify-center gap-4">
+                                        {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
+                                        <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
+                                                       x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
+                                                       x-transition:enter-start="opacity-0 scale-0 translate-y-12"
+                                                       x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak
+                                                       icon="o-exclamation-triangle"
+                                                       class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
+                                                       @click="$dispatch('toggle-validation-summary')">
                                     <span>{{ __('ledger.validation.show_summary') }}</span>
                                     <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
                                          x-text="validationErrorCount"></div>

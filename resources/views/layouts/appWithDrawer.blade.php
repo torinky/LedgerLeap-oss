@@ -41,7 +41,7 @@
 
 <body class="font-sans antialiased {{ $attributes->get('class') }}">
     {{-- Tier 0: Global Progress Bar --}}
-    <x-mary-loading class="text-primary fixed top-0 w-full h-1 z-[110]" />
+    <x-mary-loading class="text-primary fixed top-0 w-full h-1 z-110" />
 
     <div x-data>
         <template x-teleport="body">
@@ -49,7 +49,7 @@
         </template>
     </div>
 
-    <div class="fixed w-full z-10 top-0">
+    <div class="fixed w-full z-30 top-0">
         @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])
 
         @if (isset($header))
@@ -71,7 +71,7 @@
         <main class="drawer-content h-screen">
             {{ $slot }}
         </main>
-        <div class="drawer-side z-10 h-screen">
+        <div class="drawer-side z-40 h-screen">
             <label for="app-drawer" class="drawer-overlay w-full"></label>
             <ul class="menu">
                 {{ $drawer ?? '' }}

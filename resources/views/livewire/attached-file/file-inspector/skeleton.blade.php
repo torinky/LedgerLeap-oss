@@ -22,13 +22,11 @@
 
     {{-- Skeleton Loading Overlay (Tier 1 style but Alpine controlled) --}}
     <div class="flex-1 flex flex-col min-h-0 relative">
-        <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-base-100/40 backdrop-blur-sm">
-            <div class="flex flex-col items-center p-6 bg-base-100/80 rounded-2xl shadow-xl ring-1 ring-base-content/5">
-                <span class="loading loading-spinner loading-lg text-primary"></span>
-                <span class="mt-4 text-sm font-semibold tracking-wide text-base-content/80 animate-pulse">
-                    {{ __('ledger.file_inspector.loading') }}
-                </span>
-            </div>
+        <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-transparent backdrop-blur-[1px]">
+            <span class="loading loading-spinner loading-lg text-primary drop-shadow-2xl"></span>
+            <span class="mt-4 text-xs font-black tracking-widest text-primary uppercase animate-pulse">
+                {{ __('ledger.file_inspector.loading') }}
+            </span>
         </div>
 
         {{-- Skeleton Main Content pulse --}}

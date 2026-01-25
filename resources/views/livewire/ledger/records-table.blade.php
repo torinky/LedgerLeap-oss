@@ -1,12 +1,14 @@
 @php
     $searchTargets = 'search,useTechnicalTerm,useSynonym,useSemanticSearch';
-    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,displayLevel,setDisplayLevel'; // displayLevelを追加
+    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc'; // displayLevel,setDisplayLevelを分離
+    $recordFilterTargets = 'displayLevel,setDisplayLevel';
     // $folderNavTargets: Target methods in this component and the event being listened to.
     $folderNavTargets = 'changeCurrentFolder,changeCurrentFolderByTree,currentFolderChangedByTree';
     $selectionTargets = 'selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId';
     $navTargets = $folderNavTargets . ',' . $selectionTargets;
     $pageTargets = 'gotoPage,nextPage,previousPage';
     $dataTargets = $searchTargets . ',' . $filterTargets . ',' . $pageTargets . ',' . $selectionTargets;
+    // allTargetsからはレコードのみのフィルターを除外して、スケルトン表示の対象を限定する
     $allTargets = $searchTargets . ',' . $filterTargets . ',' . $navTargets . ',' . $pageTargets;
 @endphp
 
@@ -88,8 +90,11 @@
 
     <div class="divider px-4 opacity-50"></div>
 
-    {{-- Info & Results Section (Target: allTargets) --}}
+    {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
+        {{-- Record level overlay for granular filters like displayLevel --}}
+        <x-element.loading-overlay tier="2" :target="$recordFilterTargets" />
+
         {{-- Always show info-block --}}
         <div class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6">
             @php
