@@ -1,6 +1,6 @@
 <div>
     {{-- Always visible search section (Interactive even during updates) --}}
-    <div class="px-4 pt-4 sticky top-0 z-50 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
+    <div class="px-4 pt-4 sticky top-0 Z-40 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
         <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch" :defaultSortColumns="$defaultSortColumns" />
     </div>
 
@@ -15,7 +15,8 @@
 
     {{-- Breadcrumbs & Navigation Panels Section (Target: navTargets) --}}
     <div class="px-4 mt-4 relative group/nav min-h-[100px]">
-        <x-element.loading-overlay tier="2" target="{{ $navTargets }}" />
+        {{-- Temporarily disabled to debug button click issues --}}
+        {{-- <x-element.loading-overlay tier="2" target="{{ $navTargets }}" /> --}}
 
         <div wire:loading.delay.remove wire:target="{{ $navTargets }}">
             <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold ">
@@ -62,7 +63,7 @@
         </div>
 
         {{-- Nav Skeleton (Includes Breadcrumb placeholder) --}}
-        <div wire:loading.delay wire:target="{{ $navTargets }}" class="space-y-4 pb-4">
+        <div wire:loading.delay wire:target="{{ $navTargets }}" class="space-y-4 pb-4 w-full">
             <div class="h-10 bg-base-300 rounded-box w-full shimmer"></div>
             {{-- Folder Summary Panel Skeleton --}}
             <div class="card bg-base-300 h-24 w-full shadow-sm shimmer"></div>
@@ -74,7 +75,8 @@
 
     {{-- Info & Results Section (Target: dataTargets) --}}
     <div class="px-4 relative min-h-[400px]">
-        <x-element.loading-overlay tier="2" target="{{ $dataTargets }}" />
+        {{-- Temporarily disabled to debug button click issues --}}
+        {{-- <x-element.loading-overlay tier="2" target="{{ $dataTargets }}" /> --}}
 
         <div wire:loading.delay.remove wire:target="{{ $dataTargets }}" class="space-y-6">
             <div class="info-block sticky top-24 z-40 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30">

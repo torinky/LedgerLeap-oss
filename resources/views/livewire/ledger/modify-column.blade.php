@@ -1,6 +1,7 @@
 <div>
     <div class="relative">
-        <x-element.loading-overlay tier="1" target="store,toggleGroup" />
+        {{-- Temporarily disabled to debug button click issues --}}
+        {{-- <x-element.loading-overlay tier="1" target="store,toggleGroup" /> --}}
 
         {{-- Tier 1 Skeleton --}}
         <div wire:loading.delay target="store,toggleGroup" class="p-8 shimmer">
