@@ -29,7 +29,7 @@ beforeEach(function () {
 
     // フォルダと権限の設定
     $this->rootFolder = Folder::whereNull('parent_id')->first();
-    if (! $this->rootFolder) {
+    if (!$this->rootFolder) {
         $this->rootFolder = Folder::factory()->create([
             'title' => 'Root',
             'tenant_id' => $this->tenant->id,
@@ -109,4 +109,76 @@ test('RollbackService performs a basic rollback correctly', function () {
     $ledger->refresh();
     expect($ledger->version)->toBe(3);
     expect($ledger->content[0])->toBe('V1 Data');
+});
+
+// W5-2.5.1: LedgerDiff詳細検証テスト
+test('[W5-2.5.1] Rollback creates LedgerDiff with correct metadata', function () {
+    $ledger = Ledger::create([
+        'ledger_define_id' => $this->define->id,
+        'content' => ['V1 Data', []],
+        'creator_id' => $this->user->id,
+        'modifier_id' => $this->user->id,
+        'status' => WorkflowStatus::DRAFT,
+        'version' => 1,
+    ]);
+
+    $diffV1 = LedgerDiff::create([
+        'ledger_id' => $ledger->id,
+        'ledger_define_id' => $this->define->id,
+        'content' => $ledger->content,
+        'column_define' => $this->define->column_define,
+        'version' => 1,
+        'status' => WorkflowStatus::DRAFT,
+        'creator_id' => $this->user->id,
+        'modifier_id' => $this->user->id,
+        'completed_inspector_role_ids' => [],
+        'completed_approver_role_ids' => [],
+    ]);
+    $ledger->update(['latest_diff_id' => $diffV1->id]);
+
+    // 更新 (Ver.2)
+    $ledger->update(['content' => ['V2 Data', []], 'version' => 2]);
+    $diffV2 = LedgerDiff::create([
+        'ledger_id' => $ledger->id,
+        'ledger_define_id' => $this->define->id,
+        'content' => $ledger->content,
+        'column_define' => $this->define->column_define,
+        'version' => 2,
+        'status' => WorkflowStatus::DRAFT,
+        'creator_id' => $this->user->id,
+        'modifier_id' => $this->user->id,
+        'completed_inspector_role_ids' => [],
+        'completed_approver_role_ids' => [],
+    ]);
+    $ledger->update(['latest_diff_id' => $diffV2->id]);
+
+    // ロールバック実行
+    $service = app(RollbackService::class);
+    $testComment = 'Test rollback comment for verification';
+    $service->execute($ledger, $diffV1, $this->user, $testComment, 2);
+
+    // 新しいLedgerDiff（V3）を取得
+    $diffV3 = LedgerDiff::where('ledger_id', $ledger->id)
+        ->where('version', 3)
+        ->first();
+
+    // LedgerDiffの詳細検証
+    expect($diffV3)->not->toBeNull();
+
+    // status = DRAFTであることを検証
+    expect($diffV3->status)->toBe(WorkflowStatus::DRAFT);
+
+    // commentsが正しく記録されることを検証
+    expect($diffV3->comments)->toContain($testComment);
+
+    // returned_atが設定されることを検証（ロールバック時刻）
+    expect($diffV3->returned_at)->not->toBeNull();
+    expect($diffV3->returned_at)->toBeInstanceOf(\Carbon\Carbon::class);
+
+    // 担当者情報が引き継がれることを検証
+    expect($diffV3->creator_id)->toBe($this->user->id);
+    expect($diffV3->modifier_id)->toBe($this->user->id);
+
+    // コンテンツがV1に戻っていることを確認
+    expect($diffV3->content[0])->toBe('V1 Data');
 });

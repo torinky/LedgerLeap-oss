@@ -106,7 +106,9 @@ class RollbackConfirmModal extends Component
                 $this->expectedVersion
             );
 
-            $this->success(__('ledger.rollback.success_message'));
+            $message = __('ledger.rollback.success_message');
+            $this->success($message);
+            $this->dispatch('mary-toast', type: 'success', title: $message);
             $this->showModal = false;
 
             // 完了イベントを発火（Showコンポーネント等が捕捉して詳細タブへ遷移させる）
@@ -117,10 +119,13 @@ class RollbackConfirmModal extends Component
 
         } catch (WorkflowConditionException $e) {
             $this->error($e->getMessage());
+            $this->dispatch('mary-toast', type: 'error', title: $e->getMessage());
         } catch (\Throwable $e) {
             Log::error('Rollback failed: '.$e->getMessage());
             $this->error(__('ledger.error.operation_failed'));
+            $this->dispatch('mary-toast', type: 'error', title: __('ledger.error.operation_failed'));
         }
+
     }
 
     public function render()

@@ -143,8 +143,9 @@ class RollbackService
 
         // 台帳定義のカラムを走査してファイルを抽出
         foreach ($ledger->define->column_define as $column) {
-            if ($column->type === 'file') {
+            if ($column->type === 'files') {
                 $columnId = $column->id;
+
                 $filesData = $targetContent[$columnId] ?? [];
 
                 if (is_array($filesData)) {
