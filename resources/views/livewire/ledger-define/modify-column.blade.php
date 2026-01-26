@@ -32,30 +32,30 @@
         <form wire:submit.prevent="save">
             {{-- 操作ツールバー (Issue #53) --}}
             @if(!empty($columns))
-                <div class="flex flex-wrap justify-between items-center mb-8 gap-4 bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm sticky top-0 z-30 backdrop-blur-md bg-opacity-90">
-                    <div class="flex items-center gap-4">
-                        <div class="badge badge-lg py-4 gap-2 bg-primary/5 text-primary border-primary/20">
-                            <x-mary-icon name="o-queue-list" class="w-5 h-5" />
-                            <span class="font-bold">{{ count($columns) }}</span>
-                            <span class="text-xs opacity-70">{{ __('ledger.column.count_unit') ?? '項目' }}</span>
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-2 bg-base-100 p-2 rounded-xl border border-base-300 shadow-sm sticky top-0 z-20 backdrop-blur-md bg-opacity-90">
+                    <div class="flex items-center gap-2 px-1">
+                        <div class="badge badge-md py-3 gap-1 bg-primary/5 text-primary border-primary/20">
+                            <x-mary-icon name="o-queue-list" class="w-3 h-3" />
+                            <span class="font-bold ">{{ count($columns) }}</span>
+                            <span class="text-xs opacity-90">{{ __('ledger.column.count_unit')  }}</span>
                         </div>
 
                         @if($isDirty)
-                            <div class="flex items-center gap-1 text-warning font-black text-xs animate-pulse bg-warning/5 px-3 py-1.5 rounded-full border border-warning/20">
-                                <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4" />
+                            <div class="flex items-center gap-1 text-warning font-black text-xs animate-pulse bg-warning/5 px-2 py-1 rounded-full border border-warning/20">
+                                <x-mary-icon name="o-exclamation-triangle" class="w-3 h-3" />
                                 {{ __('ledger.changed') }}
                             </div>
                         @endif
                     </div>
 
-                    <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2">
                         {{-- 追加ボタン (ツールバー) --}}
-                        <x-mary-button wire:click="addColumn" icon="o-plus" class="btn-ghost btn-sm text-primary font-bold" label="{{__('ledger.column.add')}}" />
+                        <x-mary-button wire:click="addColumn" icon="o-plus" class="btn-ghost  text-primary font-bold" label="{{__('ledger.column.add')}}" />
 
                         {{-- 一括開閉管理トグル --}}
-                        <div class="flex items-center gap-3 bg-base-200/50 px-4 py-2 rounded-xl border border-base-300">
-                            <span class="text-[10px] font-black text-base-content/40 uppercase tracking-widest">{{ __('ledger.column.expand_all') }}</span>
-                            <x-mary-toggle x-model="allExpanded" right tight class="toggle-sm toggle-primary" />
+                        <div class="flex items-center gap-2 bg-base-200/50 px-2 py-1 rounded-lg border border-base-300">
+                            <span class="font-black text-xs text-base-content/40 uppercase tracking-widest">{{ __('ledger.column.expand_all') }}</span>
+                            <x-mary-toggle x-model="allExpanded" right tight class="toggle-xs toggle-primary" />
                         </div>
 
                         {{-- メイン保存ボタン (フロー可能) --}}
@@ -63,56 +63,59 @@
                             'isDirty' => $isDirty,
                             'label' => __('actions.save'),
                             'type' => 'button',
-                            'class' => 'btn-primary btn-sm px-8 shadow-md'
+                            'class' => 'btn-primary px-4 shadow-md'
                         ])
                     </div>
                 </div>
 
-                <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ 'animation': 500 }" class="space-y-4">
+                <ul wire:sortable="updateColumnOrder" wire:sortable.options="{ 'animation': 500 }" class="space-y-3">
                     @foreach($columns as $index => $column)
-                        <li wire:sortable.item="{{ $column['id'] }}" wire:key="column-{{ $column['id'] }}" class="z-20">
-                            <div class="flex items-start gap-2">
+                        <li wire:sortable.item="{{ $column['id'] }}" wire:key="column-{{ $column['id'] }}" class="z-10">
+                            <div class="flex items-start gap-1">
                                 {{-- ドラッグハンドル --}}
-                                <button wire:sortable.handle class="btn btn-ghost btn-sm text-base-content/30 hover:text-primary cursor-grab active:cursor-grabbing mt-2"
+                                <button wire:sortable.handle class="btn btn-ghost btn-sm text-base-content/30 hover:text-primary cursor-grab active:cursor-grabbing mt-[13px]"
                                         data-tip="{{__('ledger.column.drag2sort')}}">
                                     <x-mary-icon name="o-bars-3" class="w-5 h-5" />
                                 </button>
 
                                 {{-- DaisyUI Collapse with Alpine integration --}}
-                                <div class="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-xl overflow-hidden group"
+                                <div class="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-all duration-300 w-full rounded-lg overflow-hidden group"
                                      wire:key="collapse-{{ $column['id'] }}"
                                      x-data="{
-                                         isOpen: @js(!$column['is_collapsed']),
+                                         isOpen: false,
                                          toggle() {
                                              this.isOpen = !this.isOpen;
                                          }
                                      }"
                                      x-on:toggle-columns.window="isOpen = $event.detail.open"
-                                     :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen, 'border-primary/30 ring-1 ring-primary/5': isOpen }">
+                                     :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen, 'border-primary/20 ring-1 ring-primary/5': isOpen }">
 
-                                    <div class="collapse-title text-base font-bold cursor-pointer flex items-center gap-3 py-4 pr-12 min-h-0"
+                                    <div class="collapse-title text-base font-bold cursor-pointer flex items-center gap-2 py-3 pr-10 min-h-0 bg-base-100 group-hover:bg-base-200/20"
                                          @click="toggle()">
-                                        <span class="badge badge-outline badge-sm font-mono text-base-content/40 border-base-300 group-hover:border-primary/30 transition-colors">{{ $column['id'] }}</span>
-                                        <span class="flex-grow truncate">{{ $column['name'] }}</span>
+                                        <span class="badge badge-outline badge-sm font-mono text-base-content/40 border-base-300 group-hover:border-primary/20 transition-colors">{{ $column['id'] }}</span>
+                                        <span class="grow truncate">{{ $column['name'] }}</span>
                                         <div class="hidden sm:flex items-center gap-2">
-                                            <span class="badge badge-ghost badge-sm py-2 px-3 text-xs opacity-70 group-hover:opacity-100 transition-opacity">
+                                            <span class="badge badge-ghost badge-sm py-1 px-2 opacity-70 group-hover:opacity-100 transition-opacity">
                                                 {{ $columnInputTypes[$column['type']] ?? $column['type'] }}
                                             </span>
                                             @if($column['required'])
-                                                <span class="badge badge-error badge-xs p-1" title="{{ __('ledger.column.required') }}"></span>
+                                                <span class="badge badge-primary badge-xs p-1 tooltip tooltip-left" data-tip="{{ __('ledger.column.required') }}"></span>
+                                            @endif
+                                            @if($column['unique'])
+                                                <span class="badge badge-secondary badge-xs p-1 tooltip tooltip-left" data-tip="{{ __('ledger.column.unique') }}"></span>
                                             @endif
                                         </div>
                                     </div>
 
-                                    <div class="collapse-content border-t border-base-200/50 bg-base-200/10">
-                                        <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                            <div class="space-y-5">
+                                    <div class="collapse-content border-t border-base-200/50 bg-base-200/5 px-3 pb-3">
+                                        <div class="pt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div class="space-y-4">
                                                 <div class="form-section">
-                                                    <h4 class="text-xs font-black text-base-content/40 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <h4 class="text-xs font-black text-base-content/30 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                                                         <x-mary-icon name="o-cog-6-tooth" class="w-3 h-3" />
                                                         {{ __('ledger.define.basic_setting') }}
                                                     </h4>
-                                                    <div class="space-y-4">
+                                                    <div class="space-y-3/4">
                                                         <x-mary-input label="{{__('ledger.column.title')}}"
                                                                       placeholder="{{__('ledger.column.title')}}"
                                                                       icon="o-pencil-square"
@@ -255,4 +258,5 @@
             </div>
         </div>
     </div> {{-- End of x-data div --}}
+</div>
 </div>

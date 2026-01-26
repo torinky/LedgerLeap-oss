@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\HandlesFormGroups;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -10,6 +11,8 @@ use Livewire\Attributes\On;
 
 class Preview extends BaseLivewireComponent
 {
+    use HandlesFormGroups;
+
     public $ledgerDefineRecord;
 
     public int $ledgerDefineId;
@@ -25,7 +28,7 @@ class Preview extends BaseLivewireComponent
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
         $this->initBackgroundImages();
-
+        $this->initializeGroups();
     }
 
     #[On('toggleDescriptionGroup')]
@@ -41,16 +44,18 @@ class Preview extends BaseLivewireComponent
         $ledgerDefine = new LedgerDefine;
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
         //        session()->flash('status', __('ledger.define.saved'));
+        $this->initializeGroups();
         $this->render();
     }
 
     public function render()
     {
-        /*        Log::debug('LedgerDefine Preview: create_description', ['content' => $this->ledgerDefineRecord->create_description]);
-                Log::debug('LedgerDefine Preview: list_description', ['content' => $this->ledgerDefineRecord->list_description]);
-                Log::debug('LedgerDefine Preview: detail_description', ['content' => $this->ledgerDefineRecord->detail_description]);*/
+        $groupedColumns = collect($this->ledgerDefineRecord->column_define ?? [])
+            ->groupBy(fn($column) => $column->group ?? __('ledger.form.group_default'));
 
-        return view('livewire.ledger-define.preview');
+        return view('livewire.ledger-define.preview', [
+            'groupedColumns' => $groupedColumns
+        ]);
     }
 
     #[On('applyBackgroundImages')]

@@ -23,7 +23,7 @@
     {{ $attributes->merge(['class' => $overlayClasses]) }}
 >
     {{-- Content centered by parent flex container --}}
-    <div class="flex flex-col items-center justify-center space-y-4 m-auto">
+    <div class="flex flex-col items-center justify-center space-y-4">
         {{-- スピナーのみを表示 (Glow効果を削除) --}}
         <div class="relative inline-flex items-center justify-center">
             <span class="{{ $spinnerClasses }} relative z-10 drop-shadow-xl"></span>
