@@ -1387,6 +1387,7 @@ return [
         'approved_by' => '承認者',
         'approved_message' => '承認しました。',
         'approver' => '承認者',
+        'enable_description' => '有効にすると、この台帳の登録・更新時に承認フローが必須となります。',
         'assignee_search_placeholder' => '担当者を検索または選択...',
         'assignee_select_placeholder' => '選択してください',
         'can_request_inspection_only_from_draft' => '点検依頼は作成中の状態からのみ可能です。',

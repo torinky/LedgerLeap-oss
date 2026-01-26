@@ -27,8 +27,8 @@
                 {{-- 上段: 基本設定 (常に全幅) --}}
                 <div class="lg:col-span-2">
                     <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
-                        <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/10 text-base flex items-center gap-3 uppercase tracking-tighter">
-                            <x-mary-icon name="o-cog-6-tooth" class="w-5 h-5"/>
+                        <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                            <x-mary-icon name="o-cog-6-tooth" />
                             {{__('ledger.define.basic_setting')}}
                         </h2>
                         <div class="card-body p-6 md:p-8">
@@ -39,7 +39,7 @@
 
                 {{-- 下段左: 項目設定 --}}
                 <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden h-fit">
-                    <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/10 text-base flex items-center gap-3 uppercase tracking-tighter">
+                    <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/50 text-base flex items-center gap-3 uppercase tracking-tighter">
                         <x-mary-icon name="o-queue-list" class="w-5 h-5"/>
                         {{__('ledger.column.group_title')}}
                     </h2>
@@ -50,7 +50,7 @@
 
                 {{-- 下段右: プレビュー (追従) --}}
                 <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden lg:sticky lg:top-24 h-fit">
-                    <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/10 text-base flex items-center gap-3 uppercase tracking-tighter">
+                    <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
                         <x-mary-icon name="o-magnifying-glass" class="w-5 h-5"/>
                         {{__('ledger.define.preview')}}
                     </h2>

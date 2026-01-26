@@ -25,25 +25,17 @@
                     <div class="bg-base-200/30 p-3 rounded-lg border border-base-200">
                         <x-mary-toggle wire:model="workflow_enabled"
                                        label="{{ __('ledger.define.enable_workflow') }}"
-                                       right tight class="toggle-sm toggle-primary" />
+                                       right tight class="toggle-sm toggle-primary"
+                                       hint="{{ __('ledger.workflow.enable_description') }}"
+                        />
                     </div>
 
-                    <div class="text-[10px] text-base-content/50 leading-relaxed italic px-1">
-                        {{ __('ledger.workflow.enable_description') ?? '有効にすると、この台帳の登録・更新時に承認フローが必須となります。' }}
-                    </div>
                 </div>
             </div>
         </div>
 
         {{-- 説明文セクション --}}
         <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden transition-all hover:border-primary/20">
-            <div class="px-4 py-2 border-b border-base-200 flex justify-between items-center bg-base-200/10">
-                <h3 class="text-xs font-black text-base-content/40 uppercase tracking-widest flex items-center gap-2">
-                    <x-mary-icon name="o-document-text" class="w-3.5 h-3.5" />
-                    {{ __('ledger.explanation') }}
-                </h3>
-            </div>
-
             <div x-data="{
                      descriptionGroup: @entangle('descriptionGroup'),
                      toggle(name) {
@@ -54,9 +46,9 @@
                 {{-- Create Description --}}
                 <div class="collapse collapse-arrow rounded-none"
                      :class="{ 'collapse-open': descriptionGroup === 'createDescription' }">
-                    <div class="collapse-title text-xs font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-2 min-h-0" @click="toggle('createDescription')">
-                        <div class="flex items-center gap-2">
-                            <x-mary-icon name="o-plus-circle" class="w-3.5 h-3.5 text-primary" />
+                    <div class="collapse-title text-base font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-3 min-h-0" @click="toggle('createDescription')">
+                        <div class="flex items-center gap-3">
+                            <x-mary-icon name="o-plus-circle" class="w-5 h-5 text-primary" />
                             {{__('ledger.define.create_description')}}
                         </div>
                     </div>
@@ -70,9 +62,9 @@
                 {{-- List Description --}}
                 <div class="collapse collapse-arrow rounded-none"
                      :class="{ 'collapse-open': descriptionGroup === 'listDescription' }">
-                    <div class="collapse-title text-xs font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-2 min-h-0" @click="toggle('listDescription')">
-                        <div class="flex items-center gap-2">
-                            <x-mary-icon name="o-list-bullet" class="w-3.5 h-3.5 text-success" />
+                    <div class="collapse-title text-base font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-3 min-h-0" @click="toggle('listDescription')">
+                        <div class="flex items-center gap-3">
+                            <x-mary-icon name="o-list-bullet" class="w-5 h-5 text-success" />
                             {{__('ledger.define.list_description')}}
                         </div>
                     </div>
@@ -86,9 +78,9 @@
                 {{-- Detail Description --}}
                 <div class="collapse collapse-arrow rounded-none"
                      :class="{ 'collapse-open': descriptionGroup === 'detailDescription' }">
-                    <div class="collapse-title text-xs font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-2 min-h-0" @click="toggle('detailDescription')">
-                        <div class="flex items-center gap-2">
-                            <x-mary-icon name="o-magnifying-glass-circle" class="w-3.5 h-3.5 text-secondary" />
+                    <div class="collapse-title text-base font-bold cursor-pointer hover:bg-base-200/30 transition-colors py-3 min-h-0" @click="toggle('detailDescription')">
+                        <div class="flex items-center gap-3">
+                            <x-mary-icon name="o-magnifying-glass-circle" class="w-5 h-5 text-secondary" />
                             {{__('ledger.define.detail_description')}}
                         </div>
                     </div>
