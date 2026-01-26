@@ -116,7 +116,7 @@
     <span class="loading loading-spinner loading-lg text-primary/40 drop-shadow-md"></span>
 </div>
 
-@if($sourceType === 'original')
+@if($activeSource === 'original')
     {{-- Original Source UI --}}
 @else
     {{-- Alternative Source UI --}}

@@ -22,7 +22,7 @@
 
     <div class="mx-auto px-4 py-6 max-w-[1600px]">
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-20">
 
                 {{-- 上段: 基本設定 (常に全幅) --}}
                 <div class="lg:col-span-2">
@@ -62,8 +62,8 @@
 
             {{-- 画面下部アクションツールバー --}}
             <div class="mx-auto md:w-full inset-x-0 fixed bottom-6 z-50 px-4 pointer-events-none">
-                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                    <div class="card-body">
+                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity pointer-events-auto">
+                    <div class="card-body p-4">
                         <div class="card-actions justify-center items-center">
 
                             <x-mary-button
@@ -82,33 +82,39 @@
                 </div>
             </div>
 
-            <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-            <div class="modal">
-                <div class="modal-box bg-error/70 text-error-content">
-                    <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
-                    </h3>
-                    <p class="py-4">{{__('ledger.define.remove_message')}}
-                        <br/>{{__('ledger.remove_records_message')}}
-                    </p>
-                    @can('delete_ledger_defines')
-                        <div class="modal-action">
-                            <div class="btnContainer">
-                                <form method="POST"
-                                      action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-error"
-                                            name="deleteLedgerDefine"><i
-                                                class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
-                                </form>
+            <div x-data>
+                <template x-teleport="body">
+                    <div>
+                        <input type="checkbox" id="delete-modal" class="modal-toggle"/>
+                        <div class="modal !z-[9999]" role="dialog">
+                            <div class="modal-box bg-error/70 text-error-content">
+                                <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
+                                </h3>
+                                <p class="py-4">{{__('ledger.define.remove_message')}}
+                                    <br/>{{__('ledger.remove_records_message')}}
+                                </p>
+                                @can('delete_ledger_defines')
+                                    <div class="modal-action">
+                                        <div class="btnContainer">
+                                            <form method="POST"
+                                                  action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-error"
+                                                        name="deleteLedgerDefine"><i
+                                                            class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
+                                            </form>
+                                        </div>
+                                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+                                    </div>
+                                @else
+                                    <!-- 権限がない場合の表示 -->
+                                    <span class="text-error">削除する権限がありません</span>
+                                @endcan
                             </div>
-                            <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
                         </div>
-                    @else
-                        <!-- 権限がない場合の表示 -->
-                        <span class="text-error">削除する権限がありません</span>
-                    @endcan
-                </div>
+                    </div>
+                </template>
             </div>
         @endif
     </div>

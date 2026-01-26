@@ -4,6 +4,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="card bg-base-100 border border-base-300 shadow-sm transition-all hover:border-primary/30">
                 <div class="card-body p-4 space-y-3">
+                    <h3 class="text-sm font-black text-base-content/40 uppercase tracking-widest flex items-center gap-2 mb-2">
+                        <x-mary-icon name="o-cog-6-tooth" class="w-4 h-4" />
+                        {{__('ledger.define.basic_setting')}}
+                    </h3>
+
                     <x-mary-input label="{{__('ledger.define.title')}}"
                                   wire:model="title"
                                   placeholder="{{$title}}" icon="o-pencil-square"
@@ -22,6 +27,11 @@
 
             <div class="card bg-base-100 border border-base-300 shadow-sm transition-all hover:border-primary/30">
                 <div class="card-body p-4 space-y-3">
+                    <h3 class="text-sm font-black text-base-content/40 uppercase tracking-widest flex items-center gap-2 mb-2">
+                        <x-mary-icon name="o-arrow-path" class="w-4 h-4" />
+                        {{ __('ledger.workflow.title') }}
+                    </h3>
+
                     <div class="bg-base-200/30 p-3 rounded-lg border border-base-200">
                         <x-mary-toggle wire:model="workflow_enabled"
                                        label="{{ __('ledger.define.enable_workflow') }}"
