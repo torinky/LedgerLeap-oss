@@ -89,7 +89,7 @@
 
         {{-- タブ UI の導入 --}}
         <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
-            tabsClass="flex flex-col mb-10" class="w-full">
+            tabsClass="flex flex-col mb-40" class="w-full">
             {{-- 下にマージン追加 --}}
 
             {{-- 基本情報タブ --}}

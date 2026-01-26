@@ -179,7 +179,7 @@
                                             @else
                                                 <x-mary-button label="{{ __('ledger.rollback.button_label') }}"
                                                     class="btn-xs btn-outline btn-error" icon="o-arrow-uturn-left"
-                                                    @click.stop="$wire.rollback({{ $diff->id }})"
+                                                    @click.stop="$dispatch('ledger.rollback.open-modal', { ledgerId: {{ $ledgerId }}, targetDiffId: {{ $diff->id }}, expectedVersion: {{ $ledgerRecord->version }} })"
                                                     wire:key="rollback-btn-{{ $diff->id }}" />
                                             @endif
                                         @endif
