@@ -94,3 +94,10 @@
         rgba(255, 255, 255, 0) 100%
     );
 }
+
+/**
+ * 6. Alpine.js の x-cloak 対応
+ */
+[x-cloak] {
+    display: none !important;
+}

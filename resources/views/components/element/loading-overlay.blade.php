@@ -3,6 +3,7 @@
     'tier' => 2,
     'message' => null,
     'delay' => true,
+    'manual' => false, // New prop to disable wire:loading
 ])
 
 @php
@@ -18,8 +19,10 @@
 @endphp
 
 <div
-    @if($delay) wire:loading.delay @else wire:loading @endif
-    @if($target) wire:target="{{ $target }}" @endif
+    @if(!$manual)
+        @if($delay) wire:loading.delay @else wire:loading @endif
+        @if($target) wire:target="{{ $target }}" @endif
+    @endif
     {{ $attributes->merge(['class' => $overlayClasses]) }}
 >
     {{-- Content centered by parent flex container --}}

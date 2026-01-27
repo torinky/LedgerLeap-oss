@@ -39,7 +39,16 @@
 
 </head>
 
-<body class="font-sans antialiased {{ $attributes->get('class') }}">
+<body class="font-sans antialiased {{ $attributes->get('class') }}"
+      x-data="{ showGlobalLoader: false }"
+      @navigation-start.window="showGlobalLoader = true"
+      @navigation-end.window="showGlobalLoader = false"
+>
+    {{-- Tier 1: Global Loading Overlay (Manual control via Alpine) --}}
+    <div x-show="showGlobalLoader" x-cloak>
+        <x-element.loading-overlay tier="1" :delay="false" manual />
+    </div>
+
     {{-- Tier 0: Global Progress Bar --}}
     <x-mary-loading class="text-primary fixed top-0 w-full h-1 z-110" />
 

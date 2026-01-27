@@ -59,7 +59,7 @@
                             @endif
 
                             <a href="#" class="btn btn-ghost"
-                               wire:click="changeCurrentFolder({{$folderRecord->id}})">
+                               wire:click="changeCurrentFolder({{$folderRecord->id}})" @click="$dispatch('navigation-start')">
                                 <i class="text-3xl fa-solid fa-right-to-bracket"></i></a>
                         </div>
                     </div>

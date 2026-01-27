@@ -99,6 +99,7 @@ class RecordsTable extends BaseLivewireComponent
             ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
             ->get();
 
+        $this->dispatch('navigation-end');
     }
 
     public function fixFolderTree()

@@ -776,6 +776,8 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->folderRecords = $currentFolder->children()->get();
         $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
+
+        $this->dispatch('navigation-end');
     }
 
     /**
