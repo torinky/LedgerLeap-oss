@@ -1,6 +1,5 @@
 @php use App\Models\LedgerDefine; @endphp
 <div class="card bg-warning/50 h-full relative overflow-hidden">
-    <x-element.loading-overlay tier="2" target="changeCurrentFolder" />
     <div class="bg-warning text-warning-content/70 rounded-t-box px-4 mb-4 font-bold ">
         <x-ledger.livewire-breadcrumbs
             :breadcrumbs="$breadcrumbs"

@@ -8,8 +8,8 @@
 
 @php
     $overlayClasses = match((int)$tier) {
-        1 => 'fixed inset-0 z-[110] flex items-center justify-center bg-base-300/60 backdrop-blur-md transition-all duration-500 pointer-events-none min-h-screen w-full',
-        default => 'absolute inset-0 z-30 flex items-center justify-center bg-transparent backdrop-blur-[1px] transition-all duration-300 pointer-events-none h-full w-full',
+        1 => 'fixed inset-0 z-[110] flex items-center justify-center bg-base-300/60 backdrop-blur-sm transition-all duration-500 pointer-events-none min-h-screen w-full',
+        default => 'absolute inset-0 z-30 flex items-center justify-center bg-transparent backdrop-blur-sm transition-all duration-300 pointer-events-none h-full w-full',
     };
 
     $spinnerClasses = match((int)$tier) {

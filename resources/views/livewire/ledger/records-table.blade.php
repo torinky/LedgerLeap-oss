@@ -13,9 +13,6 @@
 @endphp
 
 <div>
-    {{-- Tier 1: Global Loading (Large Spinner) --}}
-    {{-- $navTargets を指定することで、表示レベル変更などの軽いフィルター時には表示されないように制限 --}}
-    <x-element.loading-overlay tier="1" :target="$folderNavTargets" :delay="false" />
 
     {{-- Always visible search section --}}
     <div class="px-4 pt-4 sticky top-0 z-10 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
