@@ -137,6 +137,7 @@ class PermissionDisplay extends BaseLivewireComponent
      *
      * @return Collection<object{...}>
      */
+    #[Computed]
     public function getAccessRolesProperty(): Collection
     {
         $allRoles = $this->permissionService->getAccessRolesWithPermissions($this->resourceId, $this->resourceType);
@@ -167,6 +168,7 @@ class PermissionDisplay extends BaseLivewireComponent
      *
      * @return Collection<object{...}>
      */
+    #[Computed]
     public function getAccessOrganizationsProperty(): Collection
     {
         $allOrganizations = $this->permissionService->getAccessOrganizationsWithPermissions($this->resourceId, $this->resourceType);
@@ -218,6 +220,17 @@ class PermissionDisplay extends BaseLivewireComponent
     public function getCurrentUserAllPermissionsProperty(): ?array
     {
         return $this->permissionService->getCurrentUserAllPermissions($this->resourceId, $this->resourceType);
+    }
+
+    /**
+     * 指定された条件に合致する権限情報の総数を取得
+     */
+    #[Computed]
+    public function getTotalPermissionsCountProperty(): int
+    {
+        return $this->getAccessRolesProperty()->count()
+            + $this->getAccessOrganizationsProperty()->count()
+            + $this->getAccessUsersProperty()->total();
     }
 
     public function render()

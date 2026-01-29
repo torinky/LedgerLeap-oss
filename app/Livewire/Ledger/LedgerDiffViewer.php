@@ -47,8 +47,16 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
     public bool $showInduction = true;
 
-    public function mount(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff = null, ?array $baseMeta = null, ?array $targetMeta = null, ?int $targetDiffId = null, ?int $baseDiffId = null, bool $useFallback = true, bool $showInduction = true): void
-    {
+    public function mount(
+        Ledger $ledgerRecord,
+        ?LedgerDiff $comparisonTargetDiff = null,
+        ?array $baseMeta = null,
+        ?array $targetMeta = null,
+        ?int $targetDiffId = null,
+        ?int $baseDiffId = null,
+        bool $useFallback = true,
+        bool $showInduction = true
+    ): void {
         $this->ledgerRecord = $ledgerRecord;
 
         $this->baseMeta = $baseMeta;
@@ -70,7 +78,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
         } elseif ($comparisonTargetDiff && $comparisonTargetDiff->exists) {
             $this->comparisonTargetDiff = $comparisonTargetDiff;
         } elseif ($this->useFallback) {
-            $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
+            $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)
+                ->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
         }
 
         if ($this->comparisonTargetDiff && ! $this->targetMeta) {
@@ -86,7 +95,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
             $this->allAttachments = $this->ledgerRecord->attachedFiles;
         }
 
-        if ($this->allAttachments !== null && ! ($this->allAttachments instanceof \Illuminate\Support\Collection && $this->allAttachments->hasAny($this->allAttachments->keys()->toArray()))) {
+        if ($this->allAttachments !== null && ! ($this->allAttachments instanceof \Illuminate\Support\Collection
+            && $this->allAttachments->hasAny($this->allAttachments->keys()->toArray()))) {
             // すでにキーイングされているかチェックするのは難しいので、単純にキーイングする
             $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
         }
@@ -125,7 +135,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
             }
         } else {
             if ($this->useFallback) {
-                $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
+                $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)
+                    ->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
             } else {
                 $this->comparisonTargetDiff = null;
             }
@@ -153,7 +164,9 @@ class LedgerDiffViewer extends BaseLivewireComponent
     {
         return collect(optional($this->ledgerRecord->define)->column_define ?? [])
             ->filter(fn ($column) => is_array($column) ? ($column['required'] ?? false) : ($column->required ?? false))
-            ->map(fn ($column) => is_array($column) ? ($column['group'] ?? __('ledger.form.group_default')) : ($column->group ?? __('ledger.form.group_default')))
+            ->map(fn ($column) => is_array($column)
+                ? ($column['group'] ?? __('ledger.form.group_default'))
+                : ($column->group ?? __('ledger.form.group_default')))
             ->unique()
             ->values()
             ->toArray();
@@ -179,7 +192,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
             }
         }
 
-        if ($this->targetDiffId && (! $this->comparisonTargetDiff || $this->comparisonTargetDiff->id !== $this->targetDiffId)) {
+        if ($this->targetDiffId && (! $this->comparisonTargetDiff
+            || $this->comparisonTargetDiff->id !== $this->targetDiffId)) {
             $this->comparisonTargetDiff = LedgerDiff::with([
                 'modifier:id,name,email,chat_link',
                 'modifier.organizations',
@@ -198,8 +212,9 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
         // attachments が準備されていない場合のフォールバック（履歴タブなど）
         if ($this->allAttachments === null || $this->allAttachments->isEmpty()) {
-            $this->allAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get()->keyBy('hashedbasename');
-        } elseif (! $this->allAttachments->first() instanceof \App\Models\AttachedFile || ! is_string($this->allAttachments->keys()->first())) {
+            $this->allAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
+        } elseif (! $this->allAttachments->first() instanceof \App\Models\AttachedFile
+            || ! is_string($this->allAttachments->keys()->first())) {
             // キーイングされていない可能性があるため、強制的に再キーイング
             $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
         }
@@ -231,7 +246,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
         $targetMeta = $this->targetMeta;
 
         $currentVersion = $baseMeta['version'];
-        $pastVersion = $targetMeta['version'] ?? ($this->comparisonTargetDiff ? $this->comparisonTargetDiff->version : null);
+        $pastVersion = $targetMeta['version']
+            ?? ($this->comparisonTargetDiff ? $this->comparisonTargetDiff->version : null);
 
         return view('livewire.ledger.ledger-diff-viewer', [
             'currentVersion' => $currentVersion,
@@ -242,13 +258,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
         ]);
     }
 
-    public function placeholder(): string
+    public function placeholder()
     {
-        return <<<'HTML'
-    <div class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-transparent backdrop-blur-[1px] transition-all">
-        <span class="loading loading-spinner loading-lg text-primary"></span>
-    </div>
-
-HTML;
+        return view('livewire.ledger.ledger-diff-viewer-placeholder');
     }
 }

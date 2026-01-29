@@ -96,10 +96,10 @@
             <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
                 class="shadow-lg space-y-4 relative min-h-[400px]">
                 {{-- Overall tab loading --}}
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets . ',' . $recordFilterTargets" />
 
-                {{-- Skeleton for tab switching and lazy loading --}}
-                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                {{-- Skeleton for tab switching, internal filters and lazy loading placeholder gap --}}
+                <div wire:loading wire:target="{{ $tabNavTargets }},{{ $recordFilterTargets }}">
                     @if ($ledgerRecord->define->workflow_enabled)
                         {{-- Workflow status card skeleton --}}
                         <div class="card bg-base-100 shadow-xl mb-4">
@@ -145,7 +145,7 @@
                 </div>
 
                 {{-- Actual content --}}
-                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                <div wire:loading.remove wire:target="{{ $tabNavTargets }},{{ $recordFilterTargets }}">
                     @if ($ledgerRecord->define->workflow_enabled)
                         <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
                             wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
@@ -289,7 +289,7 @@
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
 
                 {{-- Skeleton for tab switching --}}
-                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                <div wire:loading wire:target="{{ $tabNavTargets }}">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="h-8 bg-base-300 rounded-lg w-48 shimmer"></div>
@@ -300,7 +300,7 @@
                 </div>
 
                 {{-- Actual content --}}
-                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
                     {{-- テスト実行時はレンダリングしない --}}
                     @if (app()->environment() !== 'testing')
                         <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
@@ -317,7 +317,7 @@
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
 
                 {{-- Skeleton for tab switching --}}
-                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                <div wire:loading wire:target="{{ $tabNavTargets }}">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="h-8 bg-base-300 rounded-lg w-56 shimmer"></div>
@@ -331,7 +331,7 @@
                 </div>
 
                 {{-- Actual content --}}
-                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
                     {{-- テスト実行時はレンダリングしない --}}
                     @if (app()->environment() !== 'testing')
                         <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"

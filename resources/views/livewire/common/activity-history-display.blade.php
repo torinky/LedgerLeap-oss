@@ -86,11 +86,11 @@
                 $activityTargets = 'filterByUserId,filterByEvent,filterByDescription,filterStartDate,filterEndDate,gotoPage,nextPage,previousPage';
             @endphp
 
-            <div wire:loading.delay :target="$activityTargets">
+            <div wire:loading :target="$activityTargets">
                 <x-element.skeleton-table rows="10" cols="5" />
             </div>
 
-            <div wire:loading.delay.remove :target="$activityTargets">
+            <div wire:loading.remove :target="$activityTargets">
                 <x-mary-table
                         class="table-sm w-full overflow-x-auto bg-base-100"
                         :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}

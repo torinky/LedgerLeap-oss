@@ -57,11 +57,12 @@
         </div>
 
         <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
-            <div wire:loading.delay target="toggleSelection,historyDisplayLevel" class="w-full">
+            <div wire:loading target="toggleSelection,historyDisplayLevel" class="w-full">
                 <x-element.skeleton-list items="10" />
             </div>
-            <div wire:loading.delay.remove target="toggleSelection,historyDisplayLevel">
-                @foreach ($history as $index => $diff)
+
+            <div wire:loading.remove target="toggleSelection,historyDisplayLevel">
+                @forelse($history as $index => $diff)
                     @php
                         $isBase = $baseDiffId === $diff->id;
                         $isTarget = $targetDiffId === $diff->id;
@@ -188,7 +189,11 @@
                             </div>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="p-8 text-center text-xs text-base-content/30 italic">
+                        {{ __('ledger.history_empty') }}
+                    </div>
+                @endforelse
 
                 {{-- 無限スクロールトリガー --}}
                 @if ($hasMore)
