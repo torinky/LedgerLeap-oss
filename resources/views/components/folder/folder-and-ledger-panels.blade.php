@@ -27,8 +27,10 @@
                                           style="font-weight:900">{{$folderRecord->descendantCount()}}</span>
                                 </span>
                         </button>
+                        {{-- 階層移動ボタン: セクションローディングを適用するため、navigation-start ではなく folder-loading-start を発火 --}}
                         <button class="btn btn-ghost"
-                                wire:click="changeCurrentFolder({{$folderRecord->id}})" @click="$dispatch('navigation-start')"
+                                @click.prevent="$dispatch('folder-loading-start'); $wire.changeCurrentFolder({{$folderRecord->id}}); "
+                                wire:click.prevent="changeCurrentFolder({{$folderRecord->id}})"
                                 wire:key="enter_folder_{{$folderRecord->id}}"><i
                                 class="text-3xl fa-solid fa-right-to-bracket"></i></button>
                     </div>

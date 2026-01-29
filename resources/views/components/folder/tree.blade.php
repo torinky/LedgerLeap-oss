@@ -21,7 +21,10 @@
                         >
             --}}
             {{-- interactive が true の場合のみ wire:click を付与 --}}
-            <a @if($interactive) wire:click="changeCurrentFolder({{$folder->id}})" @click="$dispatch('navigation-start')" @endif
+            <a @if($interactive)
+                   @click.prevent="$dispatch('folder-loading-start'); $wire.changeCurrentFolder({{$folder->id}})"
+                   wire:click.prevent="changeCurrentFolder({{$folder->id}})"
+               @endif
             @class([
                  'cursor-pointer' => $interactive, // クリック可能な場合にポインターを表示
                  'cursor-default' => !$interactive, // クリック不可な場合にデフォルトカーソル

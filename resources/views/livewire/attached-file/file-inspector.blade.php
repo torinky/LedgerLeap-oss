@@ -129,12 +129,10 @@
                                  });
                              }
                          }">
-                        {{-- Tier 2: Tab switching loading overlay --}}
-                        <x-element.loading-overlay tier="2" target="selectedTab" />
+                        {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
                     @else
                     <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]">
-                        {{-- Tier 2: Tab switching loading overlay --}}
-                        <x-element.loading-overlay tier="2" target="selectedTab" />
+                        {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
                     @endif
                         <x-mary-tabs wire:model="selectedTab"
                                      tabsClass="flex flex-col mt-2"

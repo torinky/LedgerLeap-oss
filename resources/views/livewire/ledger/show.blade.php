@@ -98,123 +98,172 @@
                 {{-- Overall tab loading --}}
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
 
-                @if ($ledgerRecord->define->workflow_enabled)
-                    <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
-                        wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
-                @endif
-
-                <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
-                    <x-slot:menu>
-                        @php
-                            $displayLevelOptions = [
-                                ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                                ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                                ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                            ];
-                        @endphp
-                        <div class="flex items-center gap-1 mr-2">
-                            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                                class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                                option-label="name" wire:key="details-display-level-group" />
-                            <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
-                                <x-mary-icon name="o-question-mark-circle"
-                                    class="w-4 h-4 text-base-content/40 cursor-help" />
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1 border-l border-base-300 pl-3">
-                            <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
-                                class="text-xs" />
-                            <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
-                                <x-mary-icon name="o-question-mark-circle"
-                                    class="w-4 h-4 text-base-content/40 cursor-help" />
-                            </div>
-                        </div>
-                    </x-slot:menu>
-
-                    <div class="relative min-h-[300px]">
-                        {{-- Record content only loading is now handled inside ledger-diff-viewer.blade.php --}}
-
-                        <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
-                            :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                            {{-- 基本情報タブは常に最新(null)を基準とする --}}
-                            wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
-                            lazy />
-                    </div>
-
-                    {{-- フッター集約情報（編集者情報・ナッジ） --}}
-                    <div class="mt-6 pt-4 border-t border-base-200">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
-                            <div class="space-y-3 bg-base-200/30 p-3 rounded-lg border border-base-300/50">
-                                {{-- 本バージョンの情報 --}}
-                                <div class="flex items-center gap-3">
-                                    <div class="w-28 shrink-0">
-                                        <span
-                                            class="badge badge-success badge-outline badge-sm w-full font-bold whitespace-nowrap">
-                                            {{ __('ledger.diff.current_version') }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="font-bold text-success min-w-[3.5rem]">Ver.{{ $ledgerRecord->version }}</span>
-                                        <span class="text-base-content/30">|</span>
-                                        <div class="flex items-center gap-1.5">
-                                            <x-mary-icon name="o-user" class="w-3.5 h-3.5 text-base-content/50" />
-                                            <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
-                                        </div>
-                                        <div class="flex items-center gap-1.5 text-base-content/50">
-                                            <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
-                                            <span
-                                                class="text-xs">({{ $ledgerRecord->updated_at->format('Y-m-d H:i') }})</span>
-                                        </div>
+                {{-- Skeleton for tab switching and lazy loading --}}
+                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                    @if ($ledgerRecord->define->workflow_enabled)
+                        {{-- Workflow status card skeleton --}}
+                        <div class="card bg-base-100 shadow-xl mb-4">
+                            <div class="card-body p-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-10 w-10 bg-base-300 rounded-full shimmer"></div>
+                                    <div class="flex-1 space-y-2">
+                                        <div class="h-4 bg-base-300 rounded w-1/3 shimmer"></div>
+                                        <div class="h-3 bg-base-200 rounded w-1/2 shimmer"></div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    @endif
 
-                                {{-- 比較対象（過去バージョン）の情報 --}}
-                                @if ($showChanges && $comparisonTargetDiffModel)
-                                    <div class="flex items-center gap-3 pt-2 border-t border-base-300/30">
+                    {{-- Main content skeleton --}}
+                    <div class="card bg-base-100 shadow-xl">
+                        <div class="card-body">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="h-6 bg-base-300 rounded w-32 shimmer"></div>
+                                <div class="flex gap-2">
+                                    <div class="h-8 bg-base-200 rounded w-24 shimmer"></div>
+                                    <div class="h-8 bg-base-200 rounded w-24 shimmer"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-6">
+                                @foreach(range(1, 3) as $group)
+                                    <div class="space-y-3">
+                                        <div class="h-5 bg-base-300 rounded w-40 shimmer"></div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            @foreach(range(1, 4) as $field)
+                                                <div class="space-y-2">
+                                                    <div class="h-4 bg-base-200 rounded w-24 shimmer"></div>
+                                                    <div class="h-10 bg-base-100 border border-base-300 rounded shimmer"></div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Actual content --}}
+                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                    @if ($ledgerRecord->define->workflow_enabled)
+                        <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
+                            wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
+                    @endif
+
+                    <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
+                        <x-slot:menu>
+                            @php
+                                $displayLevelOptions = [
+                                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                                ];
+                            @endphp
+                            <div class="flex items-center gap-1 mr-2">
+                                <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
+                                    class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
+                                    option-label="name" wire:key="details-display-level-group" />
+                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
+                                    <x-mary-icon name="o-question-mark-circle"
+                                        class="w-4 h-4 text-base-content/40 cursor-help" />
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 border-l border-base-300 pl-3">
+                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
+                                    class="text-xs" />
+                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
+                                    <x-mary-icon name="o-question-mark-circle"
+                                        class="w-4 h-4 text-base-content/40 cursor-help" />
+                                </div>
+                            </div>
+                        </x-slot:menu>
+
+                        <div class="relative min-h-[300px]">
+                            {{-- Record content only loading is now handled inside ledger-diff-viewer.blade.php --}}
+
+                            <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
+                                :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
+                                {{-- 基本情報タブは常に最新(null)を基準とする --}}
+                                wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
+                                lazy />
+                        </div>
+
+                        {{-- フッター集約情報（編集者情報・ナッジ） --}}
+                        <div class="mt-6 pt-4 border-t border-base-200">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
+                                <div class="space-y-3 bg-base-200/30 p-3 rounded-lg border border-base-300/50">
+                                    {{-- 本バージョンの情報 --}}
+                                    <div class="flex items-center gap-3">
                                         <div class="w-28 shrink-0">
                                             <span
-                                                class="badge badge-error badge-outline badge-sm w-full font-bold whitespace-nowrap">
-                                                {{ __('ledger.diff.comparison_target') }}
+                                                class="badge badge-success badge-outline badge-sm w-full font-bold whitespace-nowrap">
+                                                {{ __('ledger.diff.current_version') }}
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <span
-                                                class="font-bold text-error min-w-[3.5rem]">Ver.{{ $comparisonTargetDiffModel->version }}</span>
+                                                class="font-bold text-success min-w-[3.5rem]">Ver.{{ $ledgerRecord->version }}</span>
                                             <span class="text-base-content/30">|</span>
-                                            <div class="flex items-center gap-1.5 text-base-content/50">
-                                                <x-mary-icon name="o-user" class="w-3.5 h-3.5" />
-                                                @if ($comparisonTargetDiffModel->modifier)
-                                                    <x-ledger.user-card-popover :user="$comparisonTargetDiffModel->modifier" />
-                                                @else
-                                                    <span>?</span>
-                                                @endif
+                                            <div class="flex items-center gap-1.5">
+                                                <x-mary-icon name="o-user" class="w-3.5 h-3.5 text-base-content/50" />
+                                                <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
                                             </div>
                                             <div class="flex items-center gap-1.5 text-base-content/50">
                                                 <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
                                                 <span
-                                                    class="text-xs">({{ $comparisonTargetDiffModel->created_at->format('Y-m-d H:i') }})</span>
+                                                    class="text-xs">({{ $ledgerRecord->updated_at->format('Y-m-d H:i') }})</span>
                                             </div>
                                         </div>
                                     </div>
-                                @endif
-                            </div>
 
-                            <div class="flex flex-wrap items-center gap-3">
-                                {{-- ナッジリンク: 直前比較 --}}
-                                @if (!$this->isComparingWithPrevious())
-                                    <x-mary-button icon="o-arrow-path" :label="__('ledger.diff.nudge_view_changes')"
-                                        wire:click="activateCompareWithPrevious"
-                                        class="btn-sm btn-ghost text-primary hover:bg-primary/10" />
-                                @endif
+                                    {{-- 比較対象（過去バージョン）の情報 --}}
+                                    @if ($showChanges && $comparisonTargetDiffModel)
+                                        <div class="flex items-center gap-3 pt-2 border-t border-base-300/30">
+                                            <div class="w-28 shrink-0">
+                                                <span
+                                                    class="badge badge-error badge-outline badge-sm w-full font-bold whitespace-nowrap">
+                                                    {{ __('ledger.diff.comparison_target') }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span
+                                                    class="font-bold text-error min-w-[3.5rem]">Ver.{{ $comparisonTargetDiffModel->version }}</span>
+                                                <span class="text-base-content/30">|</span>
+                                                <div class="flex items-center gap-1.5 text-base-content/50">
+                                                    <x-mary-icon name="o-user" class="w-3.5 h-3.5" />
+                                                    @if ($comparisonTargetDiffModel->modifier)
+                                                        <x-ledger.user-card-popover :user="$comparisonTargetDiffModel->modifier" />
+                                                    @else
+                                                        <span>?</span>
+                                                    @endif
+                                                </div>
+                                                <div class="flex items-center gap-1.5 text-base-content/50">
+                                                    <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
+                                                    <span
+                                                        class="text-xs">({{ $comparisonTargetDiffModel->created_at->format('Y-m-d H:i') }})</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
 
-                                {{-- ナッジリンク: 履歴タブへ --}}
-                                <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="switchToHistoryTab"
-                                    class="btn-sm btn-ghost text-base-content/60" />
+                                <div class="flex flex-wrap items-center gap-3">
+                                    {{-- ナッジリンク: 直前比較 --}}
+                                    @if (!$this->isComparingWithPrevious())
+                                        <x-mary-button icon="o-arrow-path" :label="__('ledger.diff.nudge_view_changes')"
+                                            wire:click="activateCompareWithPrevious"
+                                            class="btn-sm btn-ghost text-primary hover:bg-primary/10" />
+                                    @endif
+
+                                    {{-- ナッジリンク: 履歴タブへ --}}
+                                    <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="switchToHistoryTab"
+                                        class="btn-sm btn-ghost text-base-content/60" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </x-mary-card>
+                    </x-mary-card>
+                </div>
 
             </x-mary-tab>
 
