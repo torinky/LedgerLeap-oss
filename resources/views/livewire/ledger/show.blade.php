@@ -238,26 +238,59 @@
             <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
                 class="shadow-md relative min-h-[400px]">
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-                {{-- テスト実行時はレンダリングしない --}}
-                @if (app()->environment() !== 'testing')
-                    <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
-                        :includeRelatedResources="true" :hiddenColumns="['subject']" wire:key="activity-history-{{ $ledgerRecord->id }}" />
-                @else
-                    <div id="activity-history-placeholder-for-testing"></div>
-                @endif
+
+                {{-- Skeleton for tab switching --}}
+                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="h-8 bg-base-300 rounded-lg w-48 shimmer"></div>
+                            <div class="h-8 bg-base-200 rounded-lg w-32 shimmer"></div>
+                        </div>
+                        <x-element.skeleton-list items="8" />
+                    </div>
+                </div>
+
+                {{-- Actual content --}}
+                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                    {{-- テスト実行時はレンダリングしない --}}
+                    @if (app()->environment() !== 'testing')
+                        <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                            :includeRelatedResources="true" :hiddenColumns="['subject']" wire:key="activity-history-{{ $ledgerRecord->id }}" />
+                    @else
+                        <div id="activity-history-placeholder-for-testing"></div>
+                    @endif
+                </div>
             </x-mary-tab>
 
             {{-- ★★★ アクセスと権限タブ ★★★ --}}
             <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
                 class="shadow-md relative min-h-[400px]">
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-                {{-- テスト実行時はレンダリングしない --}}
-                @if (app()->environment() !== 'testing')
-                    <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
-                        wire:key="permission-display-{{ $ledgerRecord->id }}" />
-                @else
-                    <div id="permission-display-placeholder-for-testing"></div>
-                @endif
+
+                {{-- Skeleton for tab switching --}}
+                <div wire:loading.delay wire:target="{{ $tabNavTargets }}">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="h-8 bg-base-300 rounded-lg w-56 shimmer"></div>
+                            <div class="flex gap-2">
+                                <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
+                                <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
+                            </div>
+                        </div>
+                        <x-element.skeleton-table rows="6" cols="4" />
+                    </div>
+                </div>
+
+                {{-- Actual content --}}
+                <div wire:loading.delay.remove wire:target="{{ $tabNavTargets }}">
+                    {{-- テスト実行時はレンダリングしない --}}
+                    @if (app()->environment() !== 'testing')
+                        <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                            wire:key="permission-display-{{ $ledgerRecord->id }}" />
+                    @else
+                        <div id="permission-display-placeholder-for-testing"></div>
+                    @endif
+                </div>
             </x-mary-tab>
 
         </x-mary-tabs>

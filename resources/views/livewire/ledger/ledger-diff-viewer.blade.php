@@ -1,4 +1,4 @@
-<div class="space-y-6 relative" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
+<div class="space-y-6 relative min-h-[300px]" x-data x-init="console.log('[LedgerDiffViewer] Initializing with ledgerId:', {{ $ledgerRecord->id }});
 if ($store.ledgerState) {
     console.log('[LedgerDiffViewer] Alpine store found, calling init()');
     $store.ledgerState.init({{ $ledgerRecord->id }});

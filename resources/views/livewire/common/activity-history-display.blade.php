@@ -1,4 +1,4 @@
-<div>
+<div class="min-h-[400px]">
     @php use App\Helpers\ActivityLogFormatter; @endphp
     {{--    <x-mary-header title="{{ __('ledger.activity.title') }}" icon="o-clock" />--}}
 

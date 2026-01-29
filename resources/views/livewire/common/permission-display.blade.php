@@ -1,4 +1,4 @@
-<div class="relative">
+<div class="relative min-h-[400px]">
     <x-element.loading-overlay tier="2" target="filterByRoleId,filterByOrganizationId,filterByPermissionType,gotoPage" />
 
     {{--

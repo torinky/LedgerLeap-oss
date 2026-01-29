@@ -1,6 +1,9 @@
 {{-- Preview Area --}}
 @if ($this->showPreview)
     <div class="bg-base-200/50 border-b border-base-300 flex-none relative z-0">
+        {{-- Tier 2: Loading overlay for source switching --}}
+        <x-element.loading-overlay tier="2" target="switchSource" />
+
         @if ($this->isImage)
             <div class="relative aspect-video bg-base-300"
                 x-data="{
@@ -107,14 +110,6 @@
     </div>
 @endif
 
-{{-- Loading State during source switching --}}
-<div
-    wire:loading
-    wire:target="switchSource"
-    class="absolute inset-0 z-10 flex items-center justify-center bg-transparent backdrop-blur-[1px]"
->
-    <span class="loading loading-spinner loading-lg text-primary/40 drop-shadow-md"></span>
-</div>
 
 @if($activeSource === 'original')
     {{-- Original Source UI --}}

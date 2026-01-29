@@ -48,9 +48,91 @@
 - **Renderless 同期**: サーバー側との状態同期 (`collapsedStates`) に `#[Renderless]` を利用し、かつ Alpine.js のイベントディスパッチを併用することで、画面の再描画（チラつき）やグローバル・プログレスバーの発生を抑えたスムーズな操作を実現。
 - **翻訳の整備**: `ledger.column.expand_all`, `ledger.column.collapse_all`, `ledger.column.count_unit` 等の翻訳キーを `lang/ja/ledger.php` に追加。
 
+### 7. Phase 6: 是正作業（2026-01-29）
+
+#### 7.1 発見された問題
+フェーズ1-5の実装完了後、実際の動作確認において以下の重大な不具合が発見された：
+
+1. **Tier 2 ローディングの適用漏れ**
+   - ファイルインスペクターのタブ切り替え時にローディングが表示されない
+   - 原因: `target="selectedTab,switchSource,searchKeyword"` が広範囲すぎて、タブ切り替え専用のローディングが機能していない
+
+2. **不自然なローディング動作**
+   - ファイルインスペクターで内容が準備できているのにローディングが動作し続ける
+   - 原因: Alpine.js の `isLoading` 状態とスケルトン表示、オーバーレイ表示の制御ロジックが不整合
+
+3. **プレビューローディングの欠如**
+   - ファイルインスペクターのプレビュー領域でLivewire側の状態変更時にローディングが表示されない
+   - 現状: Alpine.js制御の画像読み込み中スピナーのみで、`switchSource` 等のアクションに対応していない
+
+4. **スケルトンの要素サイズ問題**
+   - スケルトン表示時に元のエリアの大きさを引き継がず、レイアウトシフトが発生
+   - 原因: コンテンツエリアに `min-h` が設定されておらず、スケルトンの高さが実際のコンテンツと異なる
+
+5. **詳細画面タブ内の不統一**
+   - `history` タブにはスケルトンがあるが、`activity`, `permissions` タブにはスケルトンがない
+   - 結果: タブ切り替え時に一部のタブでは滑らかだが、他のタブでは空白が表示される
+
+#### 7.2 是正作業の実施項目
+
+**RF-6.1: ファイルインスペクターの修正**
+- [x] タブ切り替え専用の Tier 2 ローディングを適切な位置に配置
+- [x] プレビュー領域に `wire:target="switchSource"` の Tier 2 オーバーレイを追加
+- [x] スケルトンとオーバーレイの重複表示を防止（`isLoading` 状態管理の最適化）
+
+**RF-6.2: 詳細画面タブのスケルトン統一**
+- [x] `activity` タブに `<x-element.skeleton-list>` を追加
+- [x] `permissions` タブに `<x-element.skeleton-table>` を追加
+- [x] 各タブで `wire:loading` + スケルトンのパターンを統一
+
+**RF-6.3: スケルトンの要素サイズ引き継ぎ改善**
+- [x] 詳細画面の各タブコンテンツに `min-h-[400px]` を追加
+- [x] ファイルインスペクターのメインコンテンツエリアに適切な `min-h` を設定
+- [x] 台帳履歴管理、差分ビューアにも同様の対応を実施
+- [x] activity-history-display と permission-display にも `min-h` を追加
+
+**RF-6.4: Tier 2 適用の最終確認**
+- [x] `records-table.blade.php` の全ローディングオーバーレイを検証
+- [x] Tier 1 使用箇所が計画通りであることを確認
+
+#### 7.3 修正方針の詳細
+
+##### ファイルインスペクターのローディング構造
+```
+1. ドロワー初回オープン時（isLoading = true）
+   → skeleton.blade.php の全画面スケルトンを表示
+   
+2. タブ切り替え時（isLoading = false）
+   → メインコンテンツエリアに Tier 2 オーバーレイ（wire:target="selectedTab"）
+   
+3. プレビュー更新時
+   → プレビューコンテナに Tier 2 オーバーレイ（wire:target="switchSource"）
+   
+4. 検索・フィルタ操作時
+   → コンテンツエリアに Tier 2 オーバーレイ（wire:target="searchKeyword"）
+```
+
+##### スケルトンサイズの引き継ぎパターン
+```html
+<!-- 修正前: レイアウトシフトが発生 -->
+<div class="space-y-4">
+    <div wire:loading.remove>実際のコンテンツ</div>
+    <div wire:loading><x-element.skeleton-list /></div>
+</div>
+
+<!-- 修正後: 最小高さを保持 -->
+<div class="space-y-4 min-h-[400px]">
+    <div wire:loading.remove>実際のコンテンツ</div>
+    <div wire:loading><x-element.skeleton-list /></div>
+</div>
+```
+
 ## 未解決の課題・継続案件
 
 ### 1. スピナーの挙動
 - 特定の操作条件下で、スピナーが垂直中央からずれて上方に張り付くケースが依然として報告されている（CSSのさらなる堅牢化が必要）。
+
+### 2. Phase 6 是正作業の完了（進行中）
+- 上記の是正項目を完了させることで、計画通りの洗練されたローディングUXが実現される予定
 
 ---

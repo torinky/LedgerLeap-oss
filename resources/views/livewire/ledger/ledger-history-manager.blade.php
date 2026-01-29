@@ -34,7 +34,7 @@
     <!-- スクリーンリーダー用の選択状態通知 -->
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" x-text="selectionAnnouncement"></div>
     <div
-        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
+        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] min-h-[400px] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
         <div
             class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
             <h3 class="font-bold flex items-center gap-2 whitespace-nowrap">

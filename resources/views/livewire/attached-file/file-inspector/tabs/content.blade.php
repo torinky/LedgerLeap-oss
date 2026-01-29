@@ -1,11 +1,14 @@
 {{-- Content Tab --}}
-<div class="space-y-4" x-data="{
+<div class="space-y-4 relative" x-data="{
     viewMode: 'rendered', // 'rendered' or 'raw' (only relevant for VLM)
     switchTab(source, mode = 'rendered') {
         $wire.switchSource(source);
         this.viewMode = mode;
     }
 }">
+    {{-- Tier 2: Loading overlay for search --}}
+    <x-element.loading-overlay tier="2" target="searchKeyword" />
+
     @php
         $previewText = $this->getPreviewText();
         // プレーンテキスト（ハイライトなし）を確実に取得

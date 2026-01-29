@@ -1,5 +1,13 @@
 {{-- Skeleton UI (Alpine controlled) --}}
-<div x-show="isLoading" class="flex flex-col flex-1 h-full bg-base-100">
+<div x-show="isLoading"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="flex flex-col flex-1 h-full bg-base-100"
+     x-cloak>
     {{-- Skeleton UI Header --}}
     <div class="navbar bg-base-100 border-b border-base-200 min-h-[4rem] px-4 flex-none animate-pulse">
         <div class="flex-1">

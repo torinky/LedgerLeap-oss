@@ -94,22 +94,24 @@
         {{-- Actual Content (shown when file is loaded) --}}
         @if ($file)
             <div x-show="!isLoading"
-                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter="transition ease-out duration-200 delay-100"
                  x-transition:enter-start="opacity-0"
                  x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
                  class="flex flex-col flex-1 h-full"
                  x-cloak>
                 @include('livewire.attached-file.file-inspector.header')
 
                 {{-- Scrollable content area --}}
                 <div class="flex-1 overflow-y-auto relative" style="scrollbar-width: thin;">
-                    <x-element.loading-overlay tier="2" target="selectedTab,switchSource,searchKeyword" />
 
                     @include('livewire.attached-file.file-inspector.quick-actions')
                     @include('livewire.attached-file.file-inspector.preview')
 
                     @if($performanceEnabled && $tabSwitchMetricEnabled)
-                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2"
+                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]"
                          x-data="{
                              previousTab: 'content',
                              init() {
@@ -127,8 +129,12 @@
                                  });
                              }
                          }">
+                        {{-- Tier 2: Tab switching loading overlay --}}
+                        <x-element.loading-overlay tier="2" target="selectedTab" />
                     @else
-                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2">
+                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]">
+                        {{-- Tier 2: Tab switching loading overlay --}}
+                        <x-element.loading-overlay tier="2" target="selectedTab" />
                     @endif
                         <x-mary-tabs wire:model="selectedTab"
                                      tabsClass="flex flex-col mt-2"
