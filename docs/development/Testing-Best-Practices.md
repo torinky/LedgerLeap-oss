@@ -232,148 +232,69 @@ class SearchTest extends TestCase
 
 ---
 
-## 📊 パフォーマンス監視
+## ⚡ Livewire 3 & リアクティブコンポーネントのテスト (Phase 6/7 追加)
 
-### 1. テスト実行時間の目標値
-| テストタイプ | 目標時間 | 最大許容時間 |
-|--------------|----------|--------------|
-| Unit Test | 1秒以内 | 3秒 |
-| Feature Test (単純) | 5秒以内 | 10秒 |
-| Feature Test (DB含む) | 12秒以内 | 20秒 |
-| API Test Suite全体 | 6分以内 | 10分 |
+### 1. リアクティブプロパティの同期テスト
 
-### 2. パフォーマンス劣化の兆候
-- 個別テストが20秒を超える
-- 全体実行時間が10分を超える
-- メモリ使用量が1GB を超える
+子コンポーネント（例: `LedgerDiffViewer`）が `#[Reactive]` プロパティを持つ場合、テストは親コンポーネントの視点から行います。
 
-### 3. 最適化手法
 ```php
-// ✅ Eager Loading でN+1問題回避
-$ledgers = Ledger::with(['define', 'define.folder', 'tags'])->get();
-
-// ✅ ファクトリでの最小限データ生成
-Ledger::factory()->minimal()->count(10)->create();
-
-// ✅ 不要なフィールド計算の回避
-Ledger::select(['id', 'content', 'created_at'])->get();
+// ✅ 推奨: 親子統合テスト
+public function test_child_reacts_to_parent_state_change()
+{
+    Livewire::test(Show::class, ['ledgerId' => $ledger->id])
+        ->set('displayLevel', 2) // 親の状態を変更
+        ->assertSeeHtml('...') // 子がリアクティブに更新された結果を確認
+        ->assertDispatched('displayLevelUpdated'); // 必要に応じてイベントも確認
+}
 ```
+
+### 2. `#[Url]` プロパティの同期テスト
+
+検索やフィルタなどの状態を URL に持たせる場合、初期状態の復元と変更時の URL 同期を確認します。
+
+```php
+// ✅ URLパラメータからの初期化テスト
+public function test_it_initializes_from_url_parameters()
+{
+    Livewire::withQueryParams(['q' => '検索ワード', 'l' => [1, 2]])
+        ->test(RecordsTable::class)
+        ->assertSet('search', '検索ワード')
+        ->assertSet('selectedLedgerDefineIds', [1, 2]);
+}
+
+// ✅ 状態変更時の URL 同期テスト
+public function test_it_updates_url_when_state_changes()
+{
+    Livewire::test(RecordsTable::class)
+        ->set('search', 'new-word')
+        ->assertUrl(['q' => 'new-word']);
+}
+```
+
+### 3. `CannotMutateReactivePropException` の回避
+
+子コンポーネント内で `#[Reactive]` プロパティを書き換えるとランタイムエラーが発生します。
+テストコードでも、子コンポーネントに対して直接 `set()` を行うのではなく、親の状態を変更する、または子コンポーネントがプロパティを「変異」させていないかを厳格にチェックします。
+
+**注意点**: コレクションなどを渡す際、サービス内でリレーションをロード（`loadMissing`等）すると変異とみなされる場合があります。テストでは `clone` や `Collection::make()` で防御的にコピーを渡す実装が正しく機能しているか確認してください。
+
+### 4. 通信の単一化（リクエスト集約）の検証
+
+`#[Reactive]` の最大の利点は通信の集約ですが、これを PHPUnit で直接検証するのは困難です。
+代わりに、以下の点を確認します：
+- 子コンポーネントが `#[On]` によるイベントリスナーで独自の `render` を走らせていないか（冗長なリクエストの原因）。
+- 親の `set()` 後のレスポンスに、期待される子の HTML 差分が含まれているか。
 
 ---
 
-## 🧪 テストケース設計パターン
+## 🛠 テスト時のトラブルシューティング
 
-### 1. 権限テストパターン
-```php
-// ✅ 権限レベル別のテスト分離
-public function test_admin_can_access_all_data()
-{
-    $this->actingAs($this->adminUser, 'sanctum')
-        ->getJson('/api/v1/ledgers')
-        ->assertOk()
-        ->assertJsonCount(3, 'data');
-}
+### Q: テストで `wire:loading` が確認できない
+**A:** `wire:loading` はフロントエンドの挙動ですが、`assertSeeHtml` で `wire:loading` 属性を持つ要素が存在するか、または Livewire 内部の状態を確認することで一部検証可能です。基本的には `LedgerDiffViewer::placeholder()` のようなプレースホルダー自体の出力をテストします。
 
-public function test_writer_can_access_writable_data_only()
-{
-    $this->actingAs($this->writerUser, 'sanctum')
-        ->getJson('/api/v1/ledgers')
-        ->assertOk()
-        ->assertJsonCount(1, 'data');
-}
-
-public function test_viewer_cannot_create_ledger()
-{
-    $this->actingAs($this->viewerUser, 'sanctum')
-        ->postJson('/api/v1/ledgers', $this->validData)
-        ->assertForbidden();
-}
-```
-
-### 2. エラーハンドリングテストパターン
-```php
-// ✅ バリデーションエラーのテスト
-public function test_validation_error_for_missing_required_field()
-{
-    $invalidData = ['content' => '']; // required fieldが空
-
-    $this->actingAs($this->writerUser, 'sanctum')
-        ->postJson('/api/v1/ledgers', $invalidData)
-        ->assertStatus(422)
-        ->assertJsonValidationErrors(['content']);
-}
-
-// ✅ 認証エラーのテスト
-public function test_unauthenticated_access_returns_401()
-{
-    $this->getJson('/api/v1/ledgers')
-        ->assertStatus(401);
-}
-```
-
-### 3. 検索・フィルタテストパターン
-```php
-// ✅ 正常ケース
-public function test_search_returns_matching_results()
-{
-    $this->actingAs($this->user, 'sanctum')
-        ->getJson('/api/v1/search?q=keyword')
-        ->assertOk()
-        ->assertJsonStructure(['data', 'meta']);
-}
-
-// ✅ エッジケース
-public function test_search_with_no_results()
-{
-    $this->actingAs($this->user, 'sanctum')
-        ->getJson('/api/v1/search?q=nonexistent')
-        ->assertOk()
-        ->assertJsonCount(0, 'data');
-}
-
-// ✅ 複雑な条件
-public function test_search_with_multiple_filters()
-{
-    $this->actingAs($this->user, 'sanctum')
-        ->getJson('/api/v1/search?q=keyword&tags=tag1,tag2&created_from=2025-01-01')
-        ->assertOk();
-}
-```
-
----
-
-## 🔄 CI/CD環境での注意点
-
-### 1. 並列実行の制限
-```bash
-# Mroongaテストは並列実行不可
-./vendor/bin/sail test tests/Feature/Api/SearchApiTest.php --process-isolation
-```
-
-### 2. タイムアウト設定
-```php
-// 長時間実行が予想される場合
-/**
- * @timeout 60
- */
-public function test_complex_search_operation()
-{
-    // 複雑な検索処理
-}
-```
-
-### 3. 環境固有の設定
-```php
-// CI環境でのスキップ
-public function test_requires_specific_environment()
-{
-    if (app()->environment('testing-ci')) {
-        $this->markTestSkipped('CI環境では実行不可');
-    }
-    
-    // テスト処理
-}
-```
+### Q: ファイルアップロードのテストが通らない
+**A:** `Livewire::test()->set('file', UploadedFile::fake()->image('test.jpg'))` を使用してください。また、`AsColumnArrayJson` 等のキャストが介在する場合、データのパッキング形式（0始まりの連番配列など）が正しいかを確認してください。
 
 ---
 
@@ -847,449 +768,3 @@ public function mount() {
 
 
 総計: 36テスト / 113アサーション / 100%通過率
-```
-
-**責任分担の原則**:
-- **統合テスト**: 複数コンポーネント間の一貫性
-- **詳細テスト**: 個別機能のビジネスロジック  
-- **内部テスト**: トレイト・ヘルパーの単体動作
-
-### 2. MCPテストの品質指標
-
-**Phase 0で達成した指標** (2025-10-01):
-- **テスト数**: 36テスト
-- **アサーション数**: 113件  
-- **テスト通過率**: 100%
-- **実行時間**: 18.99秒
-- **カバレッジ項目**: 認証・権限・機能・エラーハンドリング・エッジケース
-
-**パフォーマンス目標** (MCPツール専用):
-| テストタイプ | 目標時間 | 達成時間 |
-|--------------|----------|---------|
-| MCPツール統合テスト | 3秒以内 | 1.41秒 |
-| MCPツール詳細テスト | 2秒以内 | 0.96秒 |
-| MCPトレイトテスト | 5秒以内 | 3.29秒 |
-
----
-
-## 🧪 ファクトリとテストデータ作成の高度なパターン
-
-### 1. ファクトリの副作用に注意
-
-**Phase5 Hotfix実装時の教訓** (2025-11-09):
-
-Eloquentファクトリは便利だが、`definition()`メソッド内で多くの依存データを自動作成する場合、テストで意図しないデータ構造が作られる可能性がある。
-
-#### 問題例: AttachedFileFactory
-
-```php
-// database/factories/AttachedFileFactory.php
-public function definition(): array
-{
-    // ❌ 問題: 自動的に新しいTenant、Ledger、LedgerDefine、Userを作成
-    $tenant = \App\Models\Tenant::factory()->create();
-    tenancy()->initialize($tenant);
-    
-    $ledgerDefine = LedgerDefine::factory()->create();
-    $ledger = Ledger::factory()->create();
-    $user = User::factory()->create();
-    
-    return [
-        'ledger_id' => $ledger->id,  // ← テストで指定した値が無視される
-        'ledger_define_id' => $ledgerDefine->id,
-        'creator_id' => $user->id,
-        // ...
-    ];
-}
-```
-
-#### 問題点
-
-```php
-// テストコード
-$ledger = Ledger::factory()->create(['id' => 100]);
-$file = AttachedFile::factory()->create([
-    'ledger_id' => $ledger->id,  // 100を指定
-]);
-
-// 実際の動作:
-// AttachedFileFactoryが新しいLedgerを作成してしまい、
-// $file->ledger_id は 100 ではなく、新しく作成されたLedgerのIDになる
-```
-
-#### 解決策
-
-**重要なテストでは、ファクトリを使わず`Model::create()`を使用:**
-
-```php
-// ✅ 推奨: 明示的な依存データ作成とフィールド指定
-public function test_finalize_command()
-{
-    // 依存データを明示的に作成
-    $folder = Folder::factory()->create();
-    $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-    $user = User::factory()->create();
-    $ledger = Ledger::factory()->create([
-        'ledger_define_id' => $ledgerDefine->id,
-        'creator_id' => $user->id,
-        'modifier_id' => $user->id,
-    ]);
-
-    // AttachedFileを全フィールド明示で作成（ファクトリを使わない）
-    $file = AttachedFile::create([
-        'ledger_id' => $ledger->id,  // ← 確実に指定した値が使われる
-        'ledger_define_id' => $ledgerDefine->id,
-        'column_id' => 1,
-        'filename' => 'test.jpg',
-        'hashedbasename' => 'test.jpg',
-        'mime' => 'image/jpeg',
-        'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
-        'size' => 1000,
-        'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
-        'contain_content' => false,
-        'optimized' => false,
-        'tika_processed_at' => now()->subMinutes(2),
-        'vlm_processed_at' => now()->subMinute(),
-        'vlm_markdown' => '# Test VLM Result',
-        'ocr_processed_at' => now()->subMinute(),
-        'processing_finalized_at' => null,
-        'creator_id' => $user->id,
-        'modifier_id' => $user->id,
-    ]);
-}
-```
-
-### 2. データベース必須フィールドの完全指定
-
-テストデータ作成時は、マイグレーションとモデルの`$fillable`を確認し、**必須フィールドを全て指定**する。
-
-#### チェックすべき項目
-
-```php
-// 1. マイグレーションで NOT NULL のカラム
-// database/migrations/xxx_create_attached_files_table.php
-$table->string('filename');           // NOT NULL
-$table->string('mime');               // NOT NULL
-$table->string('path');               // NOT NULL
-$table->integer('size');              // NOT NULL
-$table->boolean('contain_content');   // NOT NULL (default なし)
-$table->boolean('optimized');         // NOT NULL (default なし)
-
-// 2. 外部キー
-$table->foreignId('ledger_id');
-$table->foreignId('ledger_define_id');
-$table->foreignId('creator_id');
-$table->foreignId('modifier_id');
-
-// 3. Enum型
-$table->string('status');  // AttachedFileStatus enum
-```
-
-#### エラーパターンと対策
-
-```bash
-# エラー例
-SQLSTATE[HY000]: General error: 1364 Field 'contain_content' doesn't have a default value
-
-# 原因: フィールドの指定漏れ
-$file = AttachedFile::create([
-    'ledger_id' => $ledger->id,
-    'filename' => 'test.jpg',
-    // contain_content が指定されていない ← エラー
-]);
-
-# ✅ 修正: 全必須フィールドを指定
-$file = AttachedFile::create([
-    'ledger_id' => $ledger->id,
-    'ledger_define_id' => $ledgerDefine->id,
-    'column_id' => 1,
-    'filename' => 'test.jpg',
-    'hashedbasename' => 'test.jpg',
-    'mime' => 'image/jpeg',
-    'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
-    'size' => 1000,
-    'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
-    'contain_content' => false,  // ← 追加
-    'optimized' => false,         // ← 追加
-    'creator_id' => $user->id,
-    'modifier_id' => $user->id,
-]);
-```
-
-### 3. カスタムキャストの動作理解
-
-Laravelのカスタムキャスト（`AsColumnArrayJson`など）は、保存時・読み込み時に配列を変換する。この動作を理解していないと、予期しないインデックスのずれが発生する。
-
-#### content_attachedの配列構造問題
-
-**問題:**
-```php
-// ❌ 誤り - カラムID 1を直接使用
-$ledger = Ledger::factory()->create([
-    'content_attached' => [
-        1 => [
-            'test.jpg' => ['meta' => ['content' => 'OCR text']],
-        ],
-    ],
-]);
-
-// DBに保存される: [["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
-// 読み込まれる:   [0 => ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
-//                  ↑ カラムID 1 ではなく 0 になる！
-```
-
-**原因:**  
-`AsColumnArrayJson`カスタムキャストは、保存時に`array_values()`で連番に変換する。
-
-**正しい方法:**
-```php
-// ✅ 正解 - カラムID 0も含める
-$ledger = Ledger::factory()->create([
-    'content_attached' => [
-        0 => [],  // カラムID 0（空でも必要）
-        1 => [
-            'test.jpg' => ['meta' => ['content' => 'OCR text']],
-        ],
-    ],
-]);
-
-// DBに保存される: [[], ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
-// 読み込まれる:   [0 => [], 1 => ["test.jpg" => ["meta" => ["content" => "OCR text"]]]]
-//                  ↑ カラムID 1 が正しく保持される
-```
-
-#### 対策
-
-1. **カスタムキャストのコードを確認**
-2. **配列のインデックスが保持されるか検証**
-3. **必要に応じて、欠番を空配列で埋める**
-
-```php
-// テストヘルパー関数の例
-protected function createLedgerWithContent(
-    LedgerDefine $define,
-    array $content,
-    array $contentAttached = []
-): Ledger {
-    // maxColumnIdまでの配列を作成
-    $maxId = collect($define->column_define)->max('id');
-    
-    $normalizedContent = array_fill(0, $maxId + 1, '');
-    foreach ($content as $columnId => $value) {
-        $normalizedContent[$columnId] = $value;
-    }
-    
-    $normalizedAttached = array_fill(0, $maxId + 1, []);
-    foreach ($contentAttached as $columnId => $value) {
-        $normalizedAttached[$columnId] = $value;
-    }
-    
-    return Ledger::factory()->create([
-        'ledger_define_id' => $define->id,
-        'content' => $normalizedContent,
-        'content_attached' => $normalizedAttached,
-    ]);
-}
-```
-
-### 4. 処理フローに沿ったテストデータ設計
-
-実際の処理フロー（Tika → OCR → VLM → 最終化）を理解し、各段階でのデータ構造の変化を考慮する。
-
-#### OCR処理のファイル名変換
-
-**問題:**  
-OCR処理は画像ファイルをPDFに変換するため、`content_attached`内のキーも変更される。
-
-```php
-// ❌ 誤り: OCR結果がtest.jpgに格納されると仮定
-$ledger = Ledger::factory()->create([
-    'content_attached' => [
-        0 => [],
-        1 => [
-            'test.jpg' => ['meta' => ['content' => 'OCR extracted text']],
-        ],
-    ],
-]);
-
-$file = AttachedFile::create([
-    'hashedbasename' => 'test.jpg',  // 元のファイル名
-    'ocr_processed_at' => now(),
-]);
-
-// コマンド実行
-$this->artisan('ledger:finalize-processing');
-
-// ✗ OCRテキストが見つからない（test.pdfを探すため）
-```
-
-**正しい方法:**
-```php
-// ✅ 正解: TikaとOCRの結果を分離
-$ledger = Ledger::factory()->create([
-    'content_attached' => [
-        0 => [],
-        1 => [
-            'test.jpg' => [
-                'meta' => ['content' => 'Tika extracted text'],  // Tika結果
-            ],
-            'test.pdf' => [
-                'meta' => ['content' => 'OCR extracted text'],   // OCR結果（PDF変換後）
-            ],
-        ],
-    ],
-]);
-
-$file = AttachedFile::create([
-    'hashedbasename' => 'test.jpg',  // 元のファイル名
-    'ocr_processed_at' => now(),
-]);
-
-// FinalizeAttachedFileProcessingコマンドは:
-// 1. test.jpg でTikaテキストを探す
-// 2. test.pdf でOCRテキストを探す（拡張子を変換して試す）
-```
-
-### 5. テストの独立性を保つ
-
-グローバルなデータカウントではなく、テストで作成した特定のデータに限定してアサーションを行う。
-
-```php
-// ❌ 間違い: グローバルカウント（他のテストの影響を受ける）
-public function test_respects_limit_parameter()
-{
-    // ... 3つのファイルを作成 ...
-    
-    $this->artisan('ledger:finalize-processing', ['--limit' => 2]);
-    
-    $finalized = AttachedFile::whereNotNull('processing_finalized_at')->count();
-    $this->assertEquals(2, $finalized);  // 前のテストで作成されたファイルも含まれる
-}
-
-// ✅ 正しい: 特定Ledgerにスコープ
-public function test_respects_limit_parameter()
-{
-    $ledger = Ledger::factory()->create();
-    // ... $ledgerに関連する3つのファイルを作成 ...
-    
-    $this->artisan('ledger:finalize-processing', ['--limit' => 2]);
-    
-    $finalized = AttachedFile::where('ledger_id', $ledger->id)
-        ->whereNotNull('processing_finalized_at')
-        ->count();
-    $this->assertEquals(2, $finalized);  // このテストのファイルのみ
-}
-```
-
-### 6. テストデータ作成のチェックリスト
-
-#### 作成前の確認事項
-- [ ] マイグレーションで NOT NULL のカラムをリスト化
-- [ ] 外部キー制約をリスト化
-- [ ] Enum型のフィールドを確認
-- [ ] カスタムキャストの動作を理解
-
-#### 作成時の注意事項
-- [ ] ファクトリの自動作成を確認（意図しない副作用がないか）
-- [ ] 全必須フィールドを明示的に指定
-- [ ] 配列フィールドは正規化された形式で作成
-- [ ] 処理フローに沿ったデータ構造（ファイル名変換など）
-
-#### テスト実行後の確認
-- [ ] `Undefined array key` エラーがないか
-- [ ] `Field 'xxx' doesn't have a default value` エラーがないか
-- [ ] 他のテストに影響を与えていないか（独立性）
-
-### 7. トラブルシューティング
-
-#### よくあるエラーと対処法
-
-**エラー1: Undefined array key**
-```php
-// 症状
-$component->assertSet('content.1', 'value');
-// Error: Undefined array key 1
-
-// チェックポイント
-// 1. カラムID 0 を含めているか？
-// 2. maxColumnIdまでの配列を作成しているか？
-$ledger = Ledger::factory()->create([
-    'content' => [0 => '', 1 => 'value'],  // ← 0を追加
-]);
-```
-
-**エラー2: Field doesn't have a default value**
-```php
-// 症状
-SQLSTATE[HY000]: General error: 1364 Field 'contain_content' doesn't have a default value
-
-// チェックポイント
-// マイグレーションで NOT NULL かつ default なしのカラムを全て指定
-$file = AttachedFile::create([
-    // ...
-    'contain_content' => false,  // ← 追加
-    'optimized' => false,        // ← 追加
-]);
-```
-
-**エラー3: ファクトリが指定値を無視**
-```php
-// 症状
-$file->ledger_id !== $expectedLedgerId
-
-// 原因
-// ファクトリのdefinition()で新しいLedgerを作成している
-
-// 対策
-// ファクトリを使わず、Model::create()で全フィールド指定
-```
-
-### 8. 関連ドキュメント
-
-- [FinalizeAttachedFileProcessingTest修正記録](../work/vlm-rag-integration/2025-11-09_phase5-hotfix-ledger-updated-at.md#追加修正-finalizeattachedfileprocessingtest-テストの修正) - 実際の修正事例
-- [Ledgerモデル](../models/Ledger.md) - content_attached構造の詳細
-- [AttachedFileモデル](../models/AttachedFile.md) - 必須フィールドの一覧
-
----
-
-## 📋 チェックリスト
-
-### テスト作成時のチェックポイント
-- [ ] 1テストメソッド = 1HTTPリクエストを守っているか
-- [ ] テスト名が内容を明確に表現しているか
-- [ ] 適切なデータベーストレイトを使用しているか
-- [ ] ファクトリは最小限のデータで設計されているか
-- [ ] 権限テストが適切に分離されているか
-- [ ] エラーケースも含めてテストされているか
-
-### MCPツール専用チェックポイント (2025-10-01追加)
-- [ ] 統合テストと詳細テストの責任分担が明確か
-- [ ] Userモデルのイベントリスナー用のデフォルトモックが設定されているか
-- [ ] Resourceクラスの出力形式でアサーションを行っているか
-- [ ] enum定数名（大文字）で参照しているか
-- [ ] ファクトリ属性名がデータベースカラム名と一致しているか
-
-### レビュー時のチェックポイント
-- [ ] 複数HTTPリクエストを含むテストがないか
-- [ ] テストの責任分担が明確か
-- [ ] spatie/laravel-query-builderの使用が適切か
-- [ ] パフォーマンスに問題がないか（実行時間）
-- [ ] テストデータの生成が軽量か
-
-### リファクタリング時のチェックポイント
-- [ ] 既存テストが破綻していないか
-- [ ] 新しい実装が全てのテストケースでカバーされているか
-- [ ] パフォーマンスが向上しているか
-- [ ] テストの可読性が向上しているか
-
-### MCPツール実装時の追加チェックポイント (2025-10-01追加)
-- [ ] 認証の重複テストが発生していないか
-- [ ] モックの設定でイベントリスナーが考慮されているか
-- [ ] 共通トレイトの内部テストが適切に分離されているか
-- [ ] MCPレスポンス形式の検証が正しく行われているか
-
----
-
-**このベストプラクティスに従うことで、安定性・実行速度・保守性を兼ね備えたテストスートを構築できます。**
-
-**Phase 0 (2025-10-01完了) では、MCPツール専用のテストパターンを確立し、36テスト/113アサーション/100%通過率を達成しました。これらの知見はPhase 1以降のワークフロー管理機能実装で直接活用できます。**
