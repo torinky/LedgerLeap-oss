@@ -13,7 +13,7 @@
             @foreach($breadcrumbs as $bKey => $folder)
                 @if(is_null($folder->parent_id))
                     <li>
-                        <a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
+                        <a href="#" wire:click.prevent="changeCurrentFolder({{$folder->id}}); window.dispatchEvent(new CustomEvent('navigation-start'))"
                            wire:key="bread_folder_{{$folder->id}}"
                            class="flex items-center">
                             <i class="fas fa-home"></i>Top
@@ -21,7 +21,7 @@
                     </li>
                 @else
                     <li>
-                        <a href="#" wire:click.self="changeCurrentFolder({{$folder->id}})"
+                        <a href="#" wire:click.prevent="changeCurrentFolder({{$folder->id}}); window.dispatchEvent(new CustomEvent('navigation-start'))"
                            wire:key="bread_folder_{{$folder->id}}"
                            class="flex items-center">
                             <i class="fas fa-folder-open"></i>{{$folder->title}}

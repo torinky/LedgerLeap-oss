@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $attributes->get('title') ?? 'page' }} | {{ config('app.name', 'Laravel') }}</title>
+    <title>{{ $title ?? $attributes->get('title') ?? 'page' }} | {{ config('app.name', 'Laravel') }}</title>
 
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC.
@@ -93,6 +93,34 @@
 
     @vite(['resources/js/app.js'])
     <script>
+        document.addEventListener('livewire:init', () => {
+            let pendingRequests = 0;
+
+            Livewire.hook('request', ({ component, onSucceed, onFail }) => {
+                pendingRequests++;
+
+                const decrementAndCheck = () => {
+                    pendingRequests--;
+                    if (pendingRequests <= 0) {
+                        // 次のリクエストが開始されるまでわずかに待機（イベント連鎖対応）
+                        setTimeout(() => {
+                            if (pendingRequests <= 0) {
+                                window.dispatchEvent(new CustomEvent('navigation-end'));
+                                pendingRequests = 0;
+                            }
+                        }, 100);
+                    }
+                };
+
+                onSucceed(({ response }) => {
+                    decrementAndCheck();
+                });
+                onFail(({ response }) => {
+                    decrementAndCheck();
+                });
+            });
+        });
+
         // テーマを適用する関数
         function applyTheme() {
             const theme = localStorage.getItem('theme');

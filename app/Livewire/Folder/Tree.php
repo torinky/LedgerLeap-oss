@@ -2,12 +2,12 @@
 
 namespace App\Livewire\Folder;
 
-use App\Http\Requests\Ledger\SearchRequest;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive; // 追加
 
 class Tree extends BaseLivewireComponent
 {
@@ -15,8 +15,10 @@ class Tree extends BaseLivewireComponent
 
     public \Illuminate\Database\Eloquent\Collection $folders;
 
-    public int $currentFolderId;
+    #[Reactive]
+    public $currentFolderId;
 
+    #[Reactive]
     public array $selectedFolderIds;
 
     public array $manageableFolderIds;
@@ -25,10 +27,11 @@ class Tree extends BaseLivewireComponent
 
     public array $readableFolderIds;
 
-    public function mount(SearchRequest $request, WritableFolderRepository $writableFolderRepository)
+    public function mount(WritableFolderRepository $writableFolderRepository)
     {
-        $this->currentFolderId = $request->currentFolderId();
-        $this->selectedFolderIds = $request->folderId();
+        // currentFolderId と selectedFolderIds は親 (IndexManager) から Reactive プロパティとして
+        // 渡されるため、ここでの再初期化は不要。また、Reactive プロパティを子で書き換えると
+        // CannotMutateReactivePropException の原因になる。
         $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();
 
         $this->initializePermissions($writableFolderRepository);
@@ -47,36 +50,17 @@ class Tree extends BaseLivewireComponent
         $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
     }
 
-    #[On('currentFolderChangedByMain')]
-    public function changeCurrentFolderByMain($newFolderId, $newSelectedFolderIds)
-    {
-        $this->currentFolderId = $newFolderId;
-        $this->selectedFolderIds = $newSelectedFolderIds;
-    }
-
-    #[On('selectedFolderChangedByMain')]
-    public function selectedFolderByMain($newSelectedFolderIds)
-    {
-        $this->selectedFolderIds = $newSelectedFolderIds;
-    }
-
     public function changeCurrentFolder($newFolderId)
     {
-        if ($newFolderId == 1) {
-            $this->selectedFolderIds = [];
-        } else {
-            if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
-                $this->selectedFolderIds = [];
-            } else {
-                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
-            }
-        }
-        $this->currentFolderId = $newFolderId;
-        $this->dispatch('currentFolderChangedByTree', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+        $this->dispatch('currentFolderChangeRequested', newFolderId: $newFolderId);
     }
 
     public function render()
     {
+        \Log::info('[Folder\Tree] rendering', [
+            'currentFolderId' => $this->currentFolderId,
+            'selectedFolderIds' => $this->selectedFolderIds
+        ]);
         return view('livewire.folder.tree');
     }
 }

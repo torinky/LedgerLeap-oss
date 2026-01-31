@@ -34,7 +34,7 @@
     <th class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
             @if ($canUpdate && !$ledgerRecord->isLocked())
-                <a href="{{ route('ledger.edit', ['tenant' => tenant()?->id, 'ledgerId' => $ledgerRecord->id]) }}"
+                <a href="{{ route('ledger.edit', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id]) }}"
                     class="btn btn-neutral opacity-70 hover:opacity-100 btn-sm my-1 btn-square"
                     target="ledgerEdit_{{ $ledgerRecord->define->id }}}}">
                     <i class="fas fa-pencil"></i>
@@ -51,7 +51,7 @@
 
 
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.show_details') }}">
-            <a href="{{ route('ledger.show', ['tenant' => $ledgerRecord->tenant_id ?? tenant()?->id, 'ledgerId' => $ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
+            <a href="{{ route('ledger.show', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
                 class="btn btn-outline btn-info btn-sm my-1 btn-square opacity-70 hover:opacity-100"
                 target="ledgerShow_{{ $ledgerRecord->define->id }}}}">
                 <i class="fas fa-table-list"></i>
@@ -82,11 +82,11 @@
                     }
                     unset($mf); // 参照を解除してサイドエフェクトを防ぐ
                 @endphp
-                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
                     :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
                     :search="$highlightKeyword" />
-                <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId ?? tenant()?->id"
+                <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
                     :search="$highlightKeyword" />
             @elseif($isAttachmentColumn)
                 @php
@@ -98,7 +98,7 @@
                     foreach ($attached as $af) {
                         // Download Logic (Same as ColumnHtmlService)
                         $mainDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId ?? tenant()?->id,
+                            'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
                         ]);
                         $thumbnailUrl = null;
@@ -107,23 +107,23 @@
                             \Illuminate\Support\Facades\Storage::disk('public')->exists(
                                 \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
                                     basename($af->filename),
-                                    $currentTenantId ?? tenant()?->id,
+                                    $currentTenantId,
                                 ),
                             )
                         ) {
                             $thumbnailUrl = route('file.download', [
-                                'tenant' => $currentTenantId ?? tenant()?->id,
+                                'tenant' => $currentTenantId,
                                 'attachedFile' => $af->id,
                                 'thumbnail' => 'true',
                             ]);
                         }
                         $originalDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId ?? tenant()?->id,
+                            'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
                             'original' => true,
                         ]);
                         $optimizedPdfDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId ?? tenant()?->id,
+                            'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
                         ]);
 
@@ -211,7 +211,7 @@
                     }
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId ?? tenant()?->id"
+                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId"
                         :search="$highlightKeyword" />
                 @else
                     <x-ledger.empty-message />
@@ -235,7 +235,7 @@
                                 false,
                                 $ledgerRecord,
                                 $highlightKeyword,
-                                $currentTenantId ?? tenant()?->id,
+                                $currentTenantId,
                             );
                         $columnHtmlString = $columnHtml->toHtml();
                     @endphp

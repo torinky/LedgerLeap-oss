@@ -18,6 +18,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive; // 追加
 use Livewire\Attributes\Url;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -28,20 +29,24 @@ class RecordsTable extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast,withPagination;
 
+    #[Reactive]
     public $perPage = 100;
 
     public string|int|null $currentTenantId = null;
 
-    #[Url(as: 'q')]
+    #[Reactive]
     public $search = '';
 
+    #[Reactive]
     public $orderBy = 'composite_score';
 
+    #[Reactive]
     public $orderAsc = false;
 
+    #[Reactive]
     public $filterStatus = '';
 
-    #[Url(as: 'fi')]
+    #[Reactive]
     public $filter = [];
 
     public $defineId = null;
@@ -52,16 +57,16 @@ class RecordsTable extends BaseLivewireComponent
 
     public $breadcrumbs = [];
 
-    #[Url(as: 'l')]
+    #[Reactive]
     public $selectedLedgerDefineIds = [];
 
-    #[Url(as: 'f')]
+    #[Reactive]
     public $selectedFolderIds = [];
 
-    #[Url(as: 'cf')]
+    #[Reactive]
     public $currentFolderId;
 
-    #[Url(as: 'dl')]
+    #[Reactive]
     public int $displayLevel = 1;
 
     private $tags = [];
@@ -74,8 +79,13 @@ class RecordsTable extends BaseLivewireComponent
 
     public array $synonyms;
 
+    #[Reactive]
+    public bool $useSemanticSearch = false;
+
+    #[Reactive]
     public $useSynonym = true;
 
+    #[Reactive]
     public $useTechnicalTerm = true;
 
     // セマンティック検索ON前の同義語トグル状態を保存
@@ -103,9 +113,6 @@ class RecordsTable extends BaseLivewireComponent
 
     public array $defaultSortColumns = []; // 追加: デフォルトソートカラムを保持
 
-    #[Url(as: 'sem', history: true)]
-    public bool $useSemanticSearch = false;
-
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -122,41 +129,11 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->currentTenantId = tenant()?->id;
 
-        // 検索キーワードの初期化
-        $search = $request->keyword();
-        if (empty($this->search) && ! empty($search)) {
-            $this->search = $search;
-        } elseif (empty($this->search)) {
-            $this->search = session()->get('search', '');
-        }
+        // 状態初期化の多くは IndexManager (親) に移行したため、
+        // RecordsTable では計算が必要なプロパティの初期化のみを行う。
+
         $this->synonymServiceConfig = $synonymServiceConfig;
-        $this->filter = $request->filter ?? [];
         $this->initSearchContext();
-
-        // 現在のフォルダーIDを初期化
-        // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
-        if (empty($this->selectedFolderIds) && $request->folderId()) {
-            $this->selectedFolderIds = [$request->folderId()];
-        } elseif (empty($this->selectedFolderIds)) {
-            $this->selectedFolderIds = []; // デフォルトは空
-        }
-
-        $this->currentFolderId = $request->currentFolderId();
-
-        // もし台帳IDが指定されていれば、選択済みリストに追加
-        // URLパラメータ 'l' (selectedLedgerDefineIds) が存在する場合はそれを優先
-        if (empty($this->selectedLedgerDefineIds) && $request->ledgerDefineId()) {
-            $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
-            $this->defineId = $request->ledgerDefineId();
-        } elseif (empty($this->selectedLedgerDefineIds)) {
-            $this->selectedLedgerDefineIds = []; // デフォルトは空
-        }
-
-        // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
-        // そうでない場合、または不正な値の場合はデフォルトの1を使用
-        if (! in_array($this->displayLevel, [1, 2, 3])) {
-            $this->displayLevel = 1;
-        }
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
@@ -176,18 +153,10 @@ class RecordsTable extends BaseLivewireComponent
                     ->values() // キーをリセット
                     ->toArray();
 
-                if (! empty($this->defaultSortColumns)) {
-                    // デフォルトソートカラムが設定されている場合、orderByを'default'に設定
-                    $this->orderBy = 'default';
-                    $this->orderAsc = true; // デフォルトソートは常に昇順
-                }
+                // 親がデフォルトソートに設定していれば、ここでも反映される。
+                // ただし、Reactiveプロパティ（$orderBy等）をここで変更すると
+                // CannotMutateReactivePropException が発生するため、表示用ラベルの更新等にとどめる。
             }
-        }
-
-        // composite_scoreカラムの存在確認 (デフォルトソート設定がない場合にのみ適用)
-        if ($this->orderBy !== 'default' && ! Schema::hasColumn('ledgers', 'composite_score')) {
-            // マイグレーション未適用時のフォールバック
-            $this->orderBy = 'id';
         }
 
         // 初期orderByLabelの設定
@@ -232,15 +201,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function sort($columnName, $columnLabel = null)
     {
-        $this->orderBy = $columnName;
-
-        // 現在のソート順をトグル
-        $this->orderAsc = ! $this->orderAsc;
-
-        // ★ 追加: orderByLabelの設定
-        $this->orderByLabel = $columnLabel ?? $this->getStandardSortLabel($columnName);
-
-        $this->initSearchContext();
+        $this->dispatch('sortRequested', columnName: $columnName, columnLabel: $columnLabel);
     }
 
     /**
@@ -248,14 +209,6 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedOrderBy($value)
     {
-        // ユーザーがカスタムソートのオプションを再度選択した場合、デフォルトのソートに戻す
-        if ($this->getStandardSortLabel($value) === '' && $value === $this->orderBy) {
-            $this->orderBy = 'composite_score'; // デフォルトのソートに戻す
-            $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
-
-            return; // これ以上処理しない
-        }
-
         $this->orderByLabel = $this->getStandardSortLabel($value);
     }
 
@@ -265,6 +218,48 @@ class RecordsTable extends BaseLivewireComponent
     public function updatedSearch($value)
     {
         $this->initSearchContext();
+        $this->resetPage();
+    }
+
+    /**
+     * フィルターが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedFilter($value)
+    {
+        $this->initSearchContext();
+        $this->resetPage();
+    }
+
+    /**
+     * 表示フォルダが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedCurrentFolderId($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 選択フォルダが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedSelectedFolderIds($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 選択台帳が変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedSelectedLedgerDefineIds($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * ソート順が変更された際に SearchContext を再初期化
+     */
+    public function updatedOrderAsc($value)
+    {
+        $this->initSearchContext();
     }
 
     /**
@@ -272,25 +267,22 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedUseSemanticSearch($value)
     {
-        if ($value) {
-            // セマンティック検索ON: 同義語の状態を保存してOFFにする
-            $this->savedUseSynonymState = $this->useSynonym;
-            $this->useSynonym = false;
-        } else {
-            // セマンティック検索OFF: 同義語の状態を復元
-            if ($this->savedUseSynonymState !== null) {
-                $this->useSynonym = $this->savedUseSynonymState;
-                $this->savedUseSynonymState = null;
-            }
+        $this->initSearchContext();
+    }
 
-            // semantic_scoreが選択されていたらcomposite_scoreに戻す
-            if ($this->orderBy === 'semantic_score') {
-                $this->orderBy = 'composite_score';
-                $this->orderByLabel = $this->getStandardSortLabel('composite_score');
-            }
-        }
+    /**
+     * 同義語トグルが変更された際に SearchContext を再初期化
+     */
+    public function updatedUseSynonym($value)
+    {
+        $this->initSearchContext();
+    }
 
-        // SearchContextを再初期化
+    /**
+     * 専門用語トグルが変更された際に SearchContext を再初期化
+     */
+    public function updatedUseTechnicalTerm($value)
+    {
         $this->initSearchContext();
     }
 
@@ -326,40 +318,27 @@ class RecordsTable extends BaseLivewireComponent
 
     /**
      * コレクションに対してソートを適用する
-     * セマンティック検索時に使用
      *
      * @param  \Illuminate\Support\Collection  $collection
+     * @param  string  $sortBy
+     * @param  bool  $orderAsc
      * @return \Illuminate\Support\Collection
      */
-    private function applySorting($collection, string $orderBy, bool $orderAsc)
+    private function applySorting($collection, $sortBy, $orderAsc)
     {
-        return match ($orderBy) {
-            'semantic_score' => $orderAsc
-                ? $collection->sortBy('semantic_score')
-                : $collection->sortByDesc('semantic_score'),
-            'composite_score' => $orderAsc
-                ? $collection->sortBy(fn ($ledger) => $ledger->composite_score ?: 0)
-                : $collection->sortByDesc(fn ($ledger) => $ledger->composite_score ?: 0),
-            'created_at' => $orderAsc
-                ? $collection->sortBy('created_at')
-                : $collection->sortByDesc('created_at'),
-            'updated_at' => $orderAsc
-                ? $collection->sortBy('updated_at')
-                : $collection->sortByDesc('updated_at'),
-            default => $collection // フォールバック: ソートしない
-        };
+        return $collection->sortBy($sortBy, SORT_REGULAR, ! $orderAsc);
     }
+
+    /**
+     * ページネーションのリセット（親側での変更を検知してリセットが必要な場合に使用する hooks があれば）
+     */
 
     /**
      * 表示レベルを設定する
      */
     public function setDisplayLevel(int $level): void
     {
-        if (! in_array($level, [1, 2, 3])) {
-            // 不正なレベルが指定された場合は何もしないか、エラーをログに記録
-            return;
-        }
-        $this->displayLevel = $level;
+        $this->dispatch('displayLevelRequested', level: $level);
     }
 
     /**
@@ -379,6 +358,9 @@ class RecordsTable extends BaseLivewireComponent
     {
         // $this->authorize('viewAny', LedgerDefine::class);
         $this->initSearchContext();
+
+        // Reactiveプロパティの変更に伴い、フォルダーアセット（パンくず、子フォルダ等）を再取得
+        $this->prepareFolderAsset();
 
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
@@ -673,11 +655,9 @@ class RecordsTable extends BaseLivewireComponent
      * @param  int  $defineId
      * @return void
      */
-    #[On('focusLedgerDefine')]
     public function focusLedgerDefine($defineId)
     {
-        $this->defineId = $defineId;
-        $this->selectedLedgerDefineIds = [$defineId];
+        $this->dispatch('focusLedgerDefineRequested', defineId: $defineId);
     }
 
     /**
@@ -688,39 +668,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function changeCurrentFolder($newFolderId)
     {
-        if ($newFolderId == 1) {
-            $this->selectedFolderIds = [];
-            $this->selectedLedgerDefineIds = [];
-        } else {
-            if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
-                $this->selectedFolderIds = [];
-            } else {
-                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
-                $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
-            }
-        }
-        $this->currentFolderId = $newFolderId;
-
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
-
-        $this->prepareFolderAsset();
-    }
-
-    #[On('currentFolderChangedByTree')]
-    public function changeCurrentFolderByTree($newFolderId, $newSelectedFolderIds)
-    {
-        if ($newFolderId == 1) {
-            $this->selectedLedgerDefineIds = [];
-        }
-        // フォルダーIDを更新
-        $this->currentFolderId = $newFolderId;
-
-        $this->selectedFolderIds = $newSelectedFolderIds;
-        $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
-
-        // フォルダーアセットを再準備
-        $this->prepareFolderAsset();
-
+        $this->dispatch('currentFolderChangeRequested', newFolderId: $newFolderId);
     }
 
     /**
@@ -753,14 +701,9 @@ class RecordsTable extends BaseLivewireComponent
             $currentFolder = Folder::find($this->currentFolderId);
         }
 
-        // 指定IDで見つからない場合はテナントのルートフォルダを試す
-        if (! $currentFolder) {
-            $currentFolder = Folder::root()->first();
-
-            if ($currentFolder) {
-                $this->currentFolderId = $currentFolder->id;
-            }
-        }
+        // 指定IDで見つからない場合、子コンポーネント側で勝手にIDを書き換えてはいけない（CannotMutateReactivePropException 回避）
+        // 親コンポーネント（IndexManager）側で初期化時にルートフォルダを保証すべき。
+        // ここでは見つからない場合は単にアセットを空にするだけにとどめる。
 
         // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
         if (! $currentFolder) {
@@ -776,8 +719,6 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->folderRecords = $currentFolder->children()->get();
         $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
-
-        $this->dispatch('navigation-end');
     }
 
     /**
@@ -788,24 +729,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function toggleFolderId($folderId)
     {
-        if ($folderId == 1) {
-            $this->selectedFolderIds = [];
-            $this->selectedLedgerDefineIds = [];
-        } elseif (in_array($folderId, $this->selectedFolderIds)) {
-            $removeFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
-            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderIds));
-
-            $removeLedgerRecordIds = LedgerDefine::whereIn('folder_id', $removeFolderIds)->pluck('id')->toArray();
-            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, $removeLedgerRecordIds));
-        } else {
-            $mergingFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
-            $this->selectedFolderIds = array_merge($this->selectedFolderIds, $mergingFolderIds);
-            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->pluck('id')->toArray());
-        }
-
-        $this->dispatch('selectedFolderChangedByMain', newSelectedFolderIds: $this->selectedFolderIds);
-
-        $this->resetPage();
+        $this->dispatch('folderIdToggled', folderId: $folderId);
     }
 
     /**
@@ -816,14 +740,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function toggleLedgerDefineId($ledgerDefineId)
     {
-        if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
-            // 選択済みの場合、リストから削除
-            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
-        } else {
-            // 選択されていない場合、リストに追加
-            $this->selectedLedgerDefineIds[] = $ledgerDefineId;
-        }
-        $this->resetPage();
+        $this->dispatch('ledgerDefineIdToggled', ledgerDefineId: $ledgerDefineId);
     }
 
     /**
@@ -833,7 +750,11 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function lastPage()
     {
-        return ceil($this->totalRecords / $this->perPage);
+        if (empty($this->perPage) || $this->perPage == 0) {
+            return 1;
+        }
+
+        return ceil(($this->totalRecords ?? 0) / $this->perPage);
     }
 
     /**

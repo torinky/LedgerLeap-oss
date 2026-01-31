@@ -22,8 +22,7 @@
             --}}
             {{-- interactive が true の場合のみ wire:click を付与 --}}
             <a @if($interactive)
-                   @click.prevent="$dispatch('folder-loading-start'); $wire.changeCurrentFolder({{$folder->id}})"
-                   wire:click.prevent="changeCurrentFolder({{$folder->id}})"
+                   wire:click.prevent="changeCurrentFolder({{$folder->id}}); window.dispatchEvent(new CustomEvent('navigation-start'))"
                @endif
             @class([
                  'cursor-pointer' => $interactive, // クリック可能な場合にポインターを表示

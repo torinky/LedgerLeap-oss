@@ -12,37 +12,8 @@
     $allTargets = $searchTargets . ',' . $filterTargets . ',' . $navTargets . ',' . $pageTargets;
 @endphp
 
-<div class="relative"
-     x-data="{ isFolderLoading: false }"
-     @folder-loading-start.window="isFolderLoading = true"
-     @navigation-end.window="isFolderLoading = false">
-    {{-- Tier 2: Loading overlay for folder navigation (covers main content area) --}}
-    {{-- Livewire controlled overlay --}}
-    <div wire:loading wire:target="{{ $folderNavTargets }}"
-         class="absolute inset-0 z-40 flex items-center justify-center bg-base-100/10 backdrop-blur-[1px] transition-all duration-300 pointer-events-none">
-        <div class="flex flex-col items-center justify-center space-y-4">
-            <span class="loading loading-spinner loading-md text-primary/80 drop-shadow-xl"></span>
-            <span class="text-xs font-black tracking-widest text-primary uppercase animate-pulse">
-                {{ __('ledger.loading') }}
-            </span>
-        </div>
-    </div>
-
-    {{-- Alpine controlled overlay for seamless transition from Drawer --}}
-    <div x-show="isFolderLoading" x-transition x-cloak
-         class="absolute inset-0 z-40 flex items-center justify-center bg-base-100/10 backdrop-blur-[1px] pointer-events-none">
-        <div class="flex flex-col items-center justify-center space-y-4">
-            <span class="loading loading-spinner loading-md text-primary/80 drop-shadow-xl"></span>
-            <span class="text-xs font-black tracking-widest text-primary uppercase animate-pulse">
-                {{ __('ledger.loading') }}
-            </span>
-        </div>
-    </div>
-
-    {{-- Always visible search section --}}
-    <div class="px-4 pt-4 sticky top-0 z-10 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
-        <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch" :defaultSortColumns="$defaultSortColumns" />
-    </div>
+<div class="relative">
+    {{-- Search section was here, moved to IndexManager --}}
 
     {{-- Breadcrumbs Section (Always visible except during full folder transition) --}}
     <div class="px-4 mt-4">
