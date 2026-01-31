@@ -5,8 +5,7 @@ if ($store.ledgerState) {
 } else {
     console.error('[LedgerDiffViewer] Alpine.store(ledgerState) is not available!');
 }">
-    {{-- Tier 2 loading for internal updates (displayLevel, showChanges, etc.) --}}
-    <x-element.loading-overlay tier="2" :delay="false" />
+    {{-- Tier 2 loading is handled by parent (Show.php) to use skeleton --}}
 
     @if ($showChanges)
         <div class="space-y-3">

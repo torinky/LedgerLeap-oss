@@ -9,6 +9,7 @@ use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive;
 
 class LedgerDiffViewer extends BaseLivewireComponent
 {
@@ -21,15 +22,19 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
     public bool $hasChangedColumns = false;
 
+    #[Reactive]
     public bool $showChanges = false;
 
     // Show.php から渡されるプロパティ
+    #[Reactive]
     public bool $canView = false;
 
     public ?\Illuminate\Support\Collection $allAttachments = null;
 
+    #[Reactive]
     public ?string $highlight = null;
 
+    #[Reactive]
     public int $displayLevel = 3;
 
     // 表示データ
@@ -39,8 +44,10 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
     public ?array $targetMeta = null;
 
+    #[Reactive]
     public ?int $targetDiffId = null;
 
+    #[Reactive]
     public ?int $baseDiffId = null;
 
     public bool $useFallback = true;
@@ -61,8 +68,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
         $this->baseMeta = $baseMeta;
         $this->targetMeta = $targetMeta;
-        $this->targetDiffId = $targetDiffId;
-        $this->baseDiffId = $baseDiffId;
+        // #[Reactive] プロパティへの代入を削除。これらは親から渡される値が自動設定されます。
         $this->useFallback = $useFallback;
         $this->showInduction = $showInduction;
 
@@ -90,74 +96,8 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'status' => $this->comparisonTargetDiff->status,
             ];
         }
-
-        if ($this->allAttachments === null && $this->ledgerRecord->relationLoaded('attachedFiles')) {
-            $this->allAttachments = $this->ledgerRecord->attachedFiles;
-        }
-
-        if ($this->allAttachments !== null && ! ($this->allAttachments instanceof \Illuminate\Support\Collection
-            && $this->allAttachments->hasAny($this->allAttachments->keys()->toArray()))) {
-            // すでにキーイングされているかチェックするのは難しいので、単純にキーイングする
-            $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
-        }
     }
 
-    // 親コンポーネントから displayLevel が更新されたときに呼ばれる
-    #[On('displayLevelUpdated')]
-    public function updateDisplayLevelFromParent(int $displayLevel): void
-    {
-        $this->displayLevel = $displayLevel;
-    }
-
-    #[On('showChangesUpdated')]
-    public function updateShowChangesFromParent(bool $showChanges): void
-    {
-        $this->showChanges = $showChanges;
-    }
-
-    public function updateTargetDiffIdFromParent(?int $targetDiffId): void
-    {
-        $this->targetDiffId = $targetDiffId;
-        if ($this->targetDiffId) {
-            $this->comparisonTargetDiff = LedgerDiff::with([
-                'modifier:id,name,email,chat_link',
-                'modifier.organizations',
-                'approver:id,name,email,chat_link',
-                'approver.organizations',
-            ])->find($this->targetDiffId);
-            if ($this->comparisonTargetDiff) {
-                $this->targetMeta = [
-                    'modifier_name' => $this->comparisonTargetDiff->modifier?->name ?? '?',
-                    'updated_at' => $this->comparisonTargetDiff->created_at?->format('Y-m-d H:i:s') ?? '',
-                    'version' => $this->comparisonTargetDiff->version,
-                    'status' => $this->comparisonTargetDiff->status,
-                ];
-            }
-        } else {
-            if ($this->useFallback) {
-                $this->comparisonTargetDiff = app(LedgerDiffProcessor::class)
-                    ->findComparisonTargetDiff($this->ledgerRecord, $this->baseDiffId);
-            } else {
-                $this->comparisonTargetDiff = null;
-            }
-            $this->targetMeta = null;
-        }
-    }
-
-    // グループの開閉状態をトグルする (Alpine 移行のため PHP 側は廃止検討だが、暫定維持または削除)
-    // 今回は Alpine に移行するため削除し、ビュー側で Alpine.store を使う方式にする
-
-    public function updateBaseAndTargetFromParent(?int $baseId, ?int $targetId): void
-    {
-        $this->baseDiffId = $baseId;
-        $this->targetDiffId = $targetId;
-
-        // メタ情報のリセット（renderで再生成されるか、あるいはここで取得）
-        // シンプルにするため、render時に ID があれば取得するように調整する
-        $this->baseMeta = null;
-        $this->targetMeta = null;
-        $this->comparisonTargetDiff = null;
-    }
 
     // グループの初期状態（必須項目があるかどうか）を取得する
     protected function getRequiredGroups(): array
@@ -210,13 +150,17 @@ class LedgerDiffViewer extends BaseLivewireComponent
             }
         }
 
+        // attachments プロパティを変更せず、ローカル変数を使用する（Reactive プロパティ変異エラー防止）
+        // 外部サービスでのコレクション操作による変異を防ぐため、必ずクローンを作成する
+        $resolvedAttachments = $this->allAttachments ? clone $this->allAttachments : null;
+
         // attachments が準備されていない場合のフォールバック（履歴タブなど）
-        if ($this->allAttachments === null || $this->allAttachments->isEmpty()) {
-            $this->allAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
-        } elseif (! $this->allAttachments->first() instanceof \App\Models\AttachedFile
-            || ! is_string($this->allAttachments->keys()->first())) {
+        if ($resolvedAttachments === null || $resolvedAttachments->isEmpty()) {
+            $resolvedAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
+        } elseif (! $resolvedAttachments->first() instanceof \App\Models\AttachedFile
+            || ! is_string($resolvedAttachments->keys()->first())) {
             // キーイングされていない可能性があるため、強制的に再キーイング
-            $this->allAttachments = $this->allAttachments->keyBy('hashedbasename');
+            $resolvedAttachments = $resolvedAttachments->keyBy('hashedbasename');
         }
 
         // LedgerContentProcessor を呼び出して表示データを取得
@@ -228,7 +172,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
             $this->ledgerRecord,
             $this->comparisonTargetDiff,
             $this->displayLevel,
-            $this->allAttachments,
+            $resolvedAttachments,
             $this->highlight,
             $this->baseDiffId, // 第6引数として追加（後で processor も修正する）
             $this->showChanges // 第7引数として追加

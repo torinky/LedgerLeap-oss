@@ -84,7 +84,7 @@ class Show extends BaseLivewireComponent
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
 
-        $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->get();
+        $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->with('ledger')->get();
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 
@@ -123,7 +123,7 @@ class Show extends BaseLivewireComponent
 
     public function updatedDisplayLevel(int $level): void
     {
-        // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
+        // 履歴マネージャなどの非リアクティブコンポーネントのためにイベントを通知します
         $this->dispatch('displayLevelUpdated', displayLevel: $level);
     }
 
@@ -131,7 +131,6 @@ class Show extends BaseLivewireComponent
     {
         if (in_array($level, [1, 2, 3])) {
             $this->displayLevel = $level;
-            // LedgerDiffViewer に displayLevel の変更を通知するイベントを発火
             $this->dispatch('displayLevelUpdated', displayLevel: $level);
         }
     }
@@ -141,7 +140,8 @@ class Show extends BaseLivewireComponent
         if ($value && ! $this->targetDiffId) {
             $this->activateCompareWithPrevious();
         }
-        $this->dispatch('showChangesUpdated', showChanges: $value);
+        // 他のコンポーネントとの同期が必要な場合は dispatch を検討しますが、
+        // 現状は Reactive または個別管理されているため最小限に留めます。
     }
 
     #[On('versionsSelected')]
@@ -150,6 +150,8 @@ class Show extends BaseLivewireComponent
         // 基本情報タブの基準(base)は常に最新(null)を維持するため、baseId は無視する
         $this->targetDiffId = $targetId;
         $this->loadComparisonTarget();
+
+        // 子コンポーネント（特に Reactive でない LedgerHistoryManager 等）との同期を確実にする
         $this->dispatch('targetDiffIdUpdated', targetDiffId: $targetId);
     }
 
@@ -183,12 +185,10 @@ class Show extends BaseLivewireComponent
                 $this->baseDiffId = $currentDiff->id;
                 $this->targetDiffId = $previousDiff->id;
                 $this->loadComparisonTarget();
-                $this->dispatch('targetDiffIdUpdated', targetDiffId: $this->targetDiffId);
-                // 履歴タブのステートと同期させるため、baseIdとtargetIdをディスパッチ
+                // 履歴タブのステートと同期させるため
                 $this->dispatch('versionsSelected', baseId: $this->baseDiffId, targetId: $this->targetDiffId);
             }
         }
-        $this->dispatch('showChangesUpdated', showChanges: true);
     }
 
     #[On('switchToHistoryTab')]

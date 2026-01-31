@@ -96,10 +96,9 @@
             <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
                 class="shadow-lg space-y-4 relative min-h-[400px]">
                 {{-- Overall tab loading --}}
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets . ',' . $recordFilterTargets" />
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets . ',' . $recordFilterTargets" :delay="false">
 
                 {{-- Skeleton for tab switching, internal filters and lazy loading placeholder gap --}}
-                <div wire:loading wire:target="{{ $tabNavTargets }},{{ $recordFilterTargets }}">
                     @if ($ledgerRecord->define->workflow_enabled)
                         {{-- Workflow status card skeleton --}}
                         <div class="card bg-base-100 shadow-xl mb-4">
@@ -142,10 +141,10 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </x-element.loading-overlay>
 
                 {{-- Actual content --}}
-                <div wire:loading.remove wire:target="{{ $tabNavTargets }},{{ $recordFilterTargets }}">
+                <div wire:loading.remove wire:target="{{ $tabNavTargets . ',' . $recordFilterTargets }}">
                     @if ($ledgerRecord->define->workflow_enabled)
                         <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
                             wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
@@ -180,11 +179,9 @@
                         </x-slot:menu>
 
                         <div class="relative min-h-[300px]">
-                            {{-- Record content only loading is now handled inside ledger-diff-viewer.blade.php --}}
-
+                            {{-- Record content only loading is now handled by the parent's skeleton --}}
                             <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
                                 :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                                {{-- 基本情報タブは常に最新(null)を基準とする --}}
                                 wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
                                 lazy />
                         </div>

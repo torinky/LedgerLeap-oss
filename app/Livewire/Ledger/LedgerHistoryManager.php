@@ -25,7 +25,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
     public bool $hasMore = true;
 
-    // 比較対象
+    // 比較対象 - これらは内部で変更されるため Reactive にはしません
     #[Url(as: 'bd')]
     public ?int $baseDiffId = null; // 基準（新しい方、通常は最新）
 
@@ -93,13 +93,14 @@ class LedgerHistoryManager extends BaseLivewireComponent
     #[On('displayLevelUpdated')]
     public function updateDisplayLevel(int $displayLevel): void
     {
-        if ($this->historyDisplayLevel !== $displayLevel) {
-            $this->historyDisplayLevel = $displayLevel;
-        }
+        // Reactive により不要になる可能性がありますが、
+        // 他のイベントソースがある場合のために最小限で残します。
+        $this->historyDisplayLevel = $displayLevel;
     }
 
     public function updatedHistoryDisplayLevel(int $level): void
     {
+        // 内部で変更された場合のみ必要
         $this->dispatch('displayLevelUpdated', displayLevel: $level);
     }
 
