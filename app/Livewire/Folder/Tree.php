@@ -50,11 +50,7 @@ class Tree extends BaseLivewireComponent
         $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
     }
 
-    public function changeCurrentFolder($newFolderId)
-    {
-        \Log::info('[Folder\Tree] changeCurrentFolder triggered', ['newFolderId' => $newFolderId]);
-        $this->dispatch('currentFolderChangeRequested', newFolderId: $newFolderId);
-    }
+
 
     public function render()
     {
