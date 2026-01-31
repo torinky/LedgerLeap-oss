@@ -52,6 +52,7 @@ class Tree extends BaseLivewireComponent
 
     public function changeCurrentFolder($newFolderId)
     {
+        \Log::info('[Folder\Tree] changeCurrentFolder triggered', ['newFolderId' => $newFolderId]);
         $this->dispatch('currentFolderChangeRequested', newFolderId: $newFolderId);
     }
 

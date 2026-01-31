@@ -228,6 +228,7 @@ class IndexManager extends BaseLivewireComponent
     #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
+        \Log::info('[IndexManager] Received currentFolderChangeRequested', ['newFolderId' => $newFolderId]);
         \Log::info('[IndexManager] changeCurrentFolder called', ['newFolderId' => $newFolderId]);
         if ($newFolderId == 1) {
             $this->selectedFolderIds = [];

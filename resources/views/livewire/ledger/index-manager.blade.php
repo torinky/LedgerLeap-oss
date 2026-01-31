@@ -8,18 +8,28 @@
 
     @php
         // IndexManager で監視すべき主要なアクションとプロパティ
-        $loadingTargets = 'changeCurrentFolder,search,orderBy,orderAsc,filterStatus,selectedLedgerDefineIds,selectedFolderIds,displayLevel,perPage,gotoPage,nextPage,previousPage,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,updateDisplayLevel,sort';
+        // メソッド名とイベント名の両方を網羅することで、どの起動経路でもローディングが表示されるようにする
+        $loadingMethods = 'changeCurrentFolder,search,orderBy,orderAsc,filterStatus,selectedLedgerDefineIds,selectedFolderIds,displayLevel,perPage,gotoPage,nextPage,previousPage,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,updateDisplayLevel,sort';
+        $loadingEvents = 'currentFolderChangeRequested,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,displayLevelRequested';
+        $loadingTargets = $loadingMethods . ',' . $loadingEvents;
     @endphp
 
     <div class="relative min-h-screen">
-        {{-- Tier 1: Global Loading Overlay (Blocking Spinner) --}}
-        {{-- .delay.long (1s) を追加し、通信が長引く場合のみ表示。ターゲットも限定。 --}}
-        <x-element.loading-overlay wire:target="{{ $loadingTargets }}" wire:loading.delay.long tier="1" message="{{ __('ledger.loading') }}" />
+        {{-- Tier 1: Global Loading Overlay --}}
+        {{-- .delay.longest (1秒) を使用し、非常に重い通信の時のみ中央にスピナーを表示する --}}
+        <div wire:loading.delay.longest wire:target="{{ $loadingTargets }}"
+             class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
+            {{-- 指定されたコンポーネントを使用。!static !inset-auto で確実に中央へ固定 --}}
+            <x-element.loading-overlay
+                tier="1"
+                manual
+                message="{{ __('ledger.loading') }}"
+                class="!static !inset-auto !m-0"
+            />
+        </div>
 
         <x-slot:drawer>
-            {{-- Tree Content: 以前のツリーを隠して Skeleton に切り替えるが、短時間は切り替えないよう .delay を検討したいが、 --}}
-            {{-- wire:loading.remove には .delay が無いため、即座に隠れてしまう。 --}}
-            {{-- 煩わしさを軽減するため、ツリー側は wire:loading.remove を外して、薄くするだけにする。 --}}
+            {{-- Tree Content: 瞬時に真っ白にならないよう opacity で制御。クリックを妨げない。 --}}
             <div wire:loading.class="opacity-50" wire:target="{{ $loadingTargets }}">
                 <livewire:folder.tree
                     :currentFolderId="$currentFolderId"
@@ -50,7 +60,7 @@
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">
-            {{-- Main Content: 瞬時の移動で画面が消えないよう、.remove ではなく opacity 制御か delay を併用 --}}
+            {{-- Main Content: 瞬時の表示切り替えでチラつかないよう、一定時間(200ms)経過後に隠す --}}
             <div wire:loading.remove.delay wire:target="{{ $loadingTargets }}">
                 <livewire:ledger.records-table
                     :search="$search"
@@ -70,8 +80,8 @@
                 />
             </div>
 
-            {{-- Mega Skeleton: 通信中（200ms〜）のみ表示。 --}}
-            <div wire:loading.delay wire:target="{{ $loadingTargets }}" class="w-full">
+            {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（.delayを削除） --}}
+            <div wire:loading wire:target="{{ $loadingTargets }}" class="w-full">
                 <div class="px-4">
                     {{-- Breadcrumb Skeleton --}}
                     <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>

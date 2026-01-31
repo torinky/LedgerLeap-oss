@@ -10,23 +10,20 @@
 ])
 <ul class="tree">
     @foreach($folders as $folder)
-        <li class="{{$folder->isRoot() ? 'root':''}}">
-            {{--
-                        <a wire:click="changeCurrentFolder({{$folder->id}})"
-                           @class([
-                                'bg-secondary/30' => $folder->id == $currentFolderId,
-                                'bg-info/20' => in_array($folder->id,$selectedFolderIds),
-                           ])
-                           wire:key="folder_tree_link_{{$folder->id}}"
-                        >
-            --}}
-            {{-- interactive が true の場合のみ wire:click を付与 --}}
+        <li class="{{$folder->isRoot() ? 'root':''}}" wire:key="f_li_{{$folder->id}}">
+            {{-- interactive が true の場合のみクリック動作を有効化。
+                 recursive include において Livewire の context が正しく解決されるよう、
+                 明示的に component 側の method を呼び出す。 --}}
             <a @if($interactive)
-                   wire:click.prevent="$parent.changeCurrentFolder({{$folder->id}})"
+                   wire:click.prevent="changeCurrentFolder({{$folder->id}})"
                @endif
-               class="flex items-center gap-2 p-1 rounded hover:bg-base-200 transition-colors {{ $currentFolderId == $folder->id ? 'bg-primary/10 text-primary font-bold shadow-sm' : '' }}
-               {{ in_array($folder->id, $selectedFolderIds) ? 'border-l-4 border-primary pl-2' : 'pl-3' }}
-            wire:key="folder_tree_link_{{$folder->id}}"
+               @class([
+                    'flex items-center gap-2 p-1 rounded hover:bg-base-200 transition-colors cursor-pointer',
+                    'bg-secondary/30 text-secondary-content font-bold shadow-inner' => $folder->id == $currentFolderId,
+                    'bg-info/10' => in_array($folder->id, $selectedFolderIds) && $folder->id != $currentFolderId,
+                    'pl-3'
+               ])
+               wire:key="f_lnk_{{$folder->id}}"
             >
                  <span
                     class="tooltip"
@@ -72,21 +69,15 @@
                 @endif
             </a>
             @if($folder->children->isNotEmpty())
-                {{--
-                                @include('components.folder.tree', [
-                    'folders' => $folder->children,
-                    ])
-                --}}
-                @include('components.folder.tree', [
-                     'folders' => $folder->children,
-                     'interactive' => $interactive, // interactive フラグを子にも渡す
-                     // 他の props も渡す
-                     'writableFolderIds' => $writableFolderIds,
-                     'readableFolderIds' => $readableFolderIds,
-                     'manageableFolderIds' => $manageableFolderIds,
-                     'currentFolderId' => $currentFolderId ?? null, // エラー回避のため null 合体演算子
-                     'selectedFolderIds' => $selectedFolderIds ?? [], // エラー回避のため空配列
-                 ])
+                <x-folder.tree
+                     :folders="$folder->children"
+                     :interactive="$interactive"
+                     :writableFolderIds="$writableFolderIds"
+                     :readableFolderIds="$readableFolderIds"
+                     :manageableFolderIds="$manageableFolderIds"
+                     :currentFolderId="$currentFolderId ?? null"
+                     :selectedFolderIds="$selectedFolderIds ?? []"
+                />
             @endif
         </li>
     @endforeach
