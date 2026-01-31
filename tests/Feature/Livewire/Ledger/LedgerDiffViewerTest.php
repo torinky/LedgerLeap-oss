@@ -316,7 +316,23 @@ class LedgerDiffViewerTest extends TestCase
     #[Test]
     public function it_shows_diff_view_when_show_changes_is_true(): void
     {
-        // ... (pre-existing test code)
+        // 1. プロセッサのモック
+        $this->mock(LedgerContentProcessor::class, function (Mockery\MockInterface $mock) {
+            $mock->shouldReceive('processContentForDisplay')
+                ->atLeast()->once()
+                ->andReturn([
+                    'displayData' => [],
+                    'hasChangedColumns' => true,
+                ]);
+        });
+
+        // 2. Livewire コンポーネントをテスト (showChanges を true で開始)
+        Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $this->ledger,
+            'showChanges' => true,
+        ])
+            ->assertSet('showChanges', true)
+            ->assertSeeHtml('Ver.');
     }
 
     #[Test]
@@ -398,14 +414,19 @@ class LedgerDiffViewerTest extends TestCase
 
         // ダミーの添付ファイルを作成し、ストレージに配置
         $file = \Illuminate\Http\UploadedFile::fake()->image('test_document.pdf', 100, 100);
-        $attachedFile = AttachedFile::factory()->for($ledgerWithFiles)->create([
+        $attachedFile = AttachedFile::factory()->create([
+            'ledger_id' => $ledgerWithFiles->id,
             'ledger_define_id' => $ledgerDefineWithFiles->id,
+            'tenant_id' => $this->tenant->id,
             'filename' => $file->getClientOriginalName(),
             'mime' => $file->getMimeType(),
             'size' => $file->getSize(),
             'hashedbasename' => 'test_hashed_basename.pdf',
             'original_mime_type' => 'image/jpeg',
         ]);
+
+        $this->assertEquals(1, AttachedFile::where('ledger_id', $ledgerWithFiles->id)->count(), 'File should be in DB for this ledger');
+
         Storage::disk('public')->putFileAs(
             'tenants/'.$this->tenant->id.'/Ledger/Attachments/'.$ledgerDefineWithFiles->id.'/',
             $file,
@@ -423,17 +444,21 @@ class LedgerDiffViewerTest extends TestCase
             ],
         ];
         $ledgerWithFiles->save();
+        $ledgerWithFiles->refresh();
 
         // Livewireコンポーネントをテスト
         $this->actingAs($this->user);
-        $livewire = Livewire::test(LedgerDiffViewer::class, [ // ★ここを変更
-            'ledgerRecord' => $ledgerWithFiles, // ★ここを変更
-            'displayLevel' => 3, // ★ここを変更
-            'highlight' => null, // ★ここを追加
+        $livewire = Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledgerWithFiles,
+            'allAttachments' => $ledgerWithFiles->attachedFiles()->get()->keyBy('hashedbasename'), // 明示的に渡す
+            'displayLevel' => 3,
+            'highlight' => null,
             'canView' => true,
+            'tenantId' => $this->tenant->id,
         ]);
 
-        $this->assertNotEmpty($livewire->instance()->allAttachments);
+        $this->assertNotNull($livewire->instance()->allAttachments, 'allAttachments should not be null');
+        $this->assertTrue($livewire->instance()->allAttachments->isNotEmpty(), 'allAttachments should not be empty');
         $this->assertArrayHasKey('test_hashed_basename.pdf', $livewire->instance()->allAttachments);
         $this->assertEquals($attachedFile->id, $livewire->instance()->allAttachments->get('test_hashed_basename.pdf')->id);
 

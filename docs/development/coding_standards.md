@@ -56,25 +56,27 @@
 *   **単一責任の原則**: 一つのコントローラメソッドは、一つの関心事に集中します。CRUD操作ごとにメソッドを分割することを基本とします (例: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`)。
 *   **ファットコントローラの回避**: コントローラ内にビジネスロジックを直接記述せず、サービスクラスやアクションクラスに処理を委譲します。
     ```php
-    // 悪い例
-    public function store(Request $request)
+    // Controller: 薄く保つ
+    class LedgerController
     {
-        $validated = $request->validate([...]);
-        // 大量のビジネスロジック...
-        $result = $validated['price'] * $validated['quantity'] * 1.10;
-        // ...
-        return response()->json(['data' => $result]);
+        public function store(StoreLedgerRequest $request)
+        {
+            $ledger = $this->ledgerService->createLedger(
+                $request->validated()
+            );
+            return new LedgerResource($ledger);
+        }
     }
 
-    // 良い例
-    public function store(StoreLedgerRequest $request) // FormRequestでバリデーション
+    // Service: ロジック集約
+    class LedgerService  
     {
-        try {
-            $ledger = $this->ledgerService->createLedger($request->validated());
-            return new LedgerResource($ledger);
-        } catch (\Exception $e) {
-            // エラーハンドリング
-            return response()->json(['message' => '作成に失敗しました。'], 500);
+        public function createLedger(array $data): Ledger
+        {
+            // 複雑な処理をカプセル化
+            DB::transaction(function () use ($data) {
+                // 台帳作成 + タグ関連付け + 権限チェック等
+            });
         }
     }
     ```
@@ -129,6 +131,43 @@
 ## Livewireコンポーネント
 
 LivewireはインタラクティブなUIをPHPで構築するためのフレームワークです。
+
+### 状態管理 (Single Source of Truth)
+
+パブリックプロパティは「シンプルな連想配列」に集約して管理します。DOM追跡を確実にするため `wire:key` を適切に使用してください。
+
+```php
+// ○ 良い例（単一配列に集約）
+public array $columns = [
+    ['type' => 'text', 'name' => 'title'],
+    ['type' => 'number', 'name' => 'amount']
+];
+
+// × 悪い例（プロパティが分散している）
+public array $columnTypes = ['text', 'number'];
+public array $columnNames = ['title', 'amount'];
+```
+
+### フックメソッドとAlpine.js連携
+
+```php
+// フックによる動的な状態変更
+public function updatedColumns($value, $key)
+{
+    // $key = "0.type" のような形式で変更箇所特定
+    if (str_contains($key, '.type')) {
+        $index = explode('.', $key)[0];
+        $this->columns[$index]['useOptions'] = 
+            $this->columns[$index]['type'] === 'select';
+    }
+}
+
+// Alpine.jsへのイベント通知
+// PHP側
+$this->dispatch('open-modal', ['data' => $data]);
+// Blade/Alpine.js側
+// @open-modal.window="modalOpen = true; modalData = $event.detail.data"
+```
 
 *   **コンポーネントの粒度**: 再利用可能で、かつ単一の関心事に集中するような適切な粒度でコンポーネントを作成します。大きすぎるコンポーネントは状態管理やパフォーマンスの問題を引き起こす可能性があります。
 *   **親子コンポーネント間のデータ受け渡し**:

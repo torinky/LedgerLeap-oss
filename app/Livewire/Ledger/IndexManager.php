@@ -85,9 +85,11 @@ class IndexManager extends BaseLivewireComponent
         // ルートパラメータ {folderId} を最優先
         if ($folderId) {
             $this->currentFolderId = $folderId;
-            $this->selectedFolderIds = [$folderId];
+            $this->selectedFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
+            $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
         } elseif (empty($this->selectedFolderIds) && $request->folderId()) {
-            $this->selectedFolderIds = [$request->folderId()];
+            $this->selectedFolderIds = Folder::descendantsAndSelf($request->folderId())->pluck('id')->toArray();
+            $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
         }
 
         if (empty($this->currentFolderId)) {

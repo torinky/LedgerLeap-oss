@@ -121,16 +121,18 @@
 
                                     {{-- 編集者 (Editor) --}}
                                     @if ($diff->modifier)
-                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80" title="{{ __('ledger.workflow.label.editor') }}">
                                             <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
+                                            <span class="sr-only">{{ __('ledger.workflow.label.editor') }}:</span>
                                             <x-ledger.user-card-popover :user="$diff->modifier" />
                                         </div>
                                     @endif
 
                                     {{-- 承認者 (Approver) --}}
                                     @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
-                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80">
+                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80" title="{{ __('ledger.workflow.approved_by') }}">
                                             <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
+                                            <span class="sr-only">{{ __('ledger.workflow.approved_by') }}:</span>
                                             <x-ledger.user-card-popover :user="$diff->approver" />
                                         </div>
                                     @endif

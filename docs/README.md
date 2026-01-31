@@ -22,6 +22,9 @@ LedgerLeap は、以下のようなユーザーと状況での利用を想定し
     * 組織/プロジェクト: 数百件規模。
     * 台帳の種類（定義）: 数千種類作成可能。
     * 台帳レコード総数: 数百万件規模（Mroongaによる高速検索）。
+* **URL**:
+    - アプリ: http://localhost
+    - メール: http://localhost:8025
 * **想定ユーザー層とITリテラシー**:
     * **実務担当者**: 日々の業務記録を入力・参照するユーザー（例: 製造現場、営業、事務）。ITリテラシーは不問。
     * **管理者**: 部門長、プロジェクトマネージャー、情報システム担当者。メンバー管理、フォルダ構成、権限設定、利用状況確認・監査などを行う。
@@ -44,6 +47,27 @@ LedgerLeap は、以下のようなユーザーと状況での利用を想定し
     * 日報や週報など、定期的に類似した内容を記録する場合に特に有用です。
     * 日付フィールドや添付ファイルは自動的に除外され、固定的な項目（担当者名、プロジェクト名等）のみが複製されます。
     * 詳細は [台帳レコード複製機能の設計](/docs/work/core-features/2025-12-11_ledger_duplicate_feature_design.md) を参照。
+
+## 4. 開発環境コマンド
+
+開発環境（Laravel Sail）での基本操作コマンドです。詳細は `/docs/development/environment-setup.md` を参照。
+
+```bash
+# 起動・停止
+./vendor/bin/sail up -d
+./vendor/bin/sail stop
+
+# テスト実行
+./vendor/bin/sail test
+./vendor/bin/sail artisan test
+
+# コード整形（コミット前必須）
+./vendor/bin/sail pint
+
+# Artisanコマンド
+./vendor/bin/sail artisan [command]
+```
+
 * **階層型フォルダ管理**: 直感的なフォルダ構造で情報を整理。
 * **強力な全文検索とVLM/OCR統合**: 
     * **MySQL/Mroonga**により、台帳データ・**添付ファイル**を高速に日本語全文検索。類義語検索にも対応。

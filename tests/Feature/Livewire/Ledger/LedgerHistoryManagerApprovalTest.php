@@ -39,6 +39,9 @@ class LedgerHistoryManagerApprovalTest extends TestCase
         ]);
         $approver->organizations()->attach($org, ['is_primary' => true]);
 
+        // ログイン状態にする
+        $this->actingAs($modifier);
+
         // 2. Setup Ledger and LedgerDiff (Explicitly)
         $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
             'tenant_id' => $tenant->id,

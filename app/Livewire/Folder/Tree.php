@@ -18,10 +18,10 @@ class Tree extends BaseLivewireComponent
     public \Illuminate\Database\Eloquent\Collection $folders;
 
     #[Reactive]
-    public $currentFolderId;
+    public $currentFolderId = null;
 
     #[Reactive]
-    public array $selectedFolderIds;
+    public array $selectedFolderIds = [];
 
     public array $writableFolderIds;
 

@@ -194,11 +194,13 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'composite_score' => 20.0,
         ]);
 
-        // search が空の場合は ID順 (A, B, C) で表示される想定
-        $component = Livewire::test(IndexManager::class)
-            ->set('search', '')
+        // folderId を明示的に渡して、そのフォルダーを表示している状態にする
+        $component = Livewire::test(IndexManager::class, ['folderId' => $this->folder->id])
             ->assertOk();
 
+        // 期待されるレコード（またはタイトル）が表示順通りにHTML内に存在するかを確認する。
+        // RecordsTable は台帳定義（LedgerDefine）ごとにカードを表示し、その中にレコードが並ぶ。
+        // search が空の場合は、選択された台帳定義 ID（作成順）で並ぶはず。
         $component->assertSeeInOrder([
             'Define A',
             'Define B',

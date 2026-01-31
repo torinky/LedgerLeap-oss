@@ -98,6 +98,13 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->historyDisplayLevel = $displayLevel;
     }
 
+    #[On('versionsSelected')]
+    public function onVersionsSelected(?int $baseId, ?int $targetId): void
+    {
+        $this->baseDiffId = $baseId;
+        $this->targetDiffId = $targetId;
+    }
+
     public function updatedHistoryDisplayLevel(int $level): void
     {
         // 内部で変更された場合のみ必要

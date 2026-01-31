@@ -40,7 +40,23 @@ class UserTest extends TestCase
 }
 ```
 
-### 3. テナント対応テストの必須セットアップ (Phase6で追加)
+### 3. Livewireテストと通知
+
+MaryUIなどのトースト通知をテストする場合、`assertDispatched` を使用します。
+
+```php
+public function test_toast_notification()
+{
+    Livewire::test(MyComponent::class)
+        ->call('saveData')
+        ->assertDispatched('mary-toast', [
+            'type' => 'success',
+            'title' => '保存完了'
+        ]);
+}
+```
+
+### 4. テナント対応テストの必須セットアップ (Phase6で追加)
 
 **重要:** LedgerLeapはマルチテナント対応のため、**全てのFeatureテストでテナント初期化が必須**です。
 
@@ -186,7 +202,6 @@ AllowedFilter::callback('with_tags', function ($query, $value) {
         $query->whereHas('define.tags', function ($q) use ($tagNames) {
             $q->whereIn('name', $tagNames);
         }, '=', count($tagNames)); // AND条件
-    }
 }),
 ```
 
@@ -781,6 +796,3 @@ public function mount() {
     }
 }
 ```
-
-
-総計: 36テスト / 113アサーション / 100%通過率

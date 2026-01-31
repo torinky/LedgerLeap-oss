@@ -66,9 +66,9 @@ class DefaultSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 3, null),
-                new ColumnDefine(1, '副番', 'number', 2, [], false, false, 2, '', [], 3, null),
-                new ColumnDefine(2, '備考', 'text', 3, [], false, false, null, '', [], 3, null),
+                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 1, null),
+                new ColumnDefine(1, '副番', 'number', 2, [], false, false, 2, '', [], 1, null),
+                new ColumnDefine(2, '備考', 'text', 3, [], false, false, null, '', [], 1, null),
             ],
         ]);
 
@@ -107,7 +107,7 @@ class DefaultSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 3, null),
+                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 1, null),
             ],
         ]);
 
@@ -188,8 +188,8 @@ class DefaultSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(0, '日付', 'YMD', 1, [], false, false, 1, '', [], 3, null),
-                new ColumnDefine(1, '金額', 'number', 2, [], false, false, 2, '', [], 3, null),
+                new ColumnDefine(0, '日付', 'YMD', 1, [], false, false, 1, '', [], 1, null),
+                new ColumnDefine(1, '金額', 'number', 2, [], false, false, 2, '', [], 1, null),
             ],
         ]);
 
@@ -226,7 +226,7 @@ class DefaultSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'tenant_id' => $this->tenant->id,
             'column_define' => [
-                new ColumnDefine(0, '日報番号', 'auto_number', 1, ['prefix' => 'DAILY-', 'digits' => 4], false, false, 1, '', [], 3, null),
+                new ColumnDefine(0, '日報番号', 'auto_number', 1, ['prefix' => 'DAILY-', 'digits' => 4], false, false, 1, '', [], 1, null),
             ],
         ]);
 

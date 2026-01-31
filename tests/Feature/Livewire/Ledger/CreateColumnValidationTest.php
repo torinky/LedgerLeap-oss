@@ -94,11 +94,14 @@ class CreateColumnValidationTest extends TestCase
 
         $test = Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id]);
 
-        // 初期状態では Group A, Group B は閉じられている（初期化ロジックによるが、必須がある場合は展開される設計か確認）
-        // initializeGroups() では必須項目を含むグループを展開する
-        $this->assertFalse($test->get('collapsedStates')['Group A']); // 必須項目があるので展開されているはず
+        // 初期状態では全グループが閉じられている（HandlesFormGroups trait の設計による）
+        $this->assertTrue($test->get('collapsedStates')['Group A']);
 
-        // 手動で一度閉じる
+        // 明示的に開いてみる（テストの一環として）
+        $test->call('toggleGroup', 'Group A', false);
+        $this->assertFalse($test->get('collapsedStates')['Group A']);
+
+        // 手動で再度閉じる
         $test->call('toggleGroup', 'Group A', true);
         $this->assertTrue($test->get('collapsedStates')['Group A']);
 

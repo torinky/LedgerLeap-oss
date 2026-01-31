@@ -34,7 +34,6 @@ class LedgerDiffViewer extends BaseLivewireComponent
     #[Reactive]
     public ?string $highlight = null;
 
-    #[Reactive]
     public int $displayLevel = 3;
 
     // 表示データ
@@ -62,9 +61,14 @@ class LedgerDiffViewer extends BaseLivewireComponent
         ?int $targetDiffId = null,
         ?int $baseDiffId = null,
         bool $useFallback = true,
-        bool $showInduction = true
+        bool $showInduction = true,
+        ?\Illuminate\Support\Collection $allAttachments = null
     ): void {
         $this->ledgerRecord = $ledgerRecord;
+        $this->allAttachments = $allAttachments;
+
+        // テナントIDの確実な設定
+        $this->tenantId = $this->tenantId ?? $this->ledgerRecord->tenant_id;
 
         $this->baseMeta = $baseMeta;
         $this->targetMeta = $targetMeta;
@@ -96,8 +100,18 @@ class LedgerDiffViewer extends BaseLivewireComponent
                 'status' => $this->comparisonTargetDiff->status,
             ];
         }
+
+        // attachments が準備されていない場合のフォールバック（履歴タブなど）
+        if (empty($this->allAttachments)) {
+            $this->allAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
+        }
     }
 
+    #[On('displayLevelUpdated')]
+    public function updateDisplayLevel(int $displayLevel): void
+    {
+        $this->displayLevel = $displayLevel;
+    }
 
     // グループの初期状態（必須項目があるかどうか）を取得する
     protected function getRequiredGroups(): array
@@ -152,14 +166,11 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
         // attachments プロパティを変更せず、ローカル変数を使用する（Reactive プロパティ変異エラー防止）
         // 外部サービスでのコレクション操作による変異を防ぐため、必ずクローンを作成する
-        $resolvedAttachments = $this->allAttachments ? clone $this->allAttachments : null;
+        $resolvedAttachments = $this->allAttachments ? clone $this->allAttachments : collect()->keyBy('hashedbasename');
 
-        // attachments が準備されていない場合のフォールバック（履歴タブなど）
-        if ($resolvedAttachments === null || $resolvedAttachments->isEmpty()) {
-            $resolvedAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
-        } elseif (! $resolvedAttachments->first() instanceof \App\Models\AttachedFile
-            || ! is_string($resolvedAttachments->keys()->first())) {
-            // キーイングされていない可能性があるため、強制的に再キーイング
+        // キーイングされていない可能性があるため、強制的に再キーイング
+        if (! $resolvedAttachments->isEmpty() && (! $resolvedAttachments->first() instanceof \App\Models\AttachedFile
+            || ! is_string($resolvedAttachments->keys()->first()))) {
             $resolvedAttachments = $resolvedAttachments->keyBy('hashedbasename');
         }
 

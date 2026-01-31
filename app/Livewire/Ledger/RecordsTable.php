@@ -639,6 +639,10 @@ class RecordsTable extends BaseLivewireComponent
             $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortByDesc(function ($records, $defineId) use ($scoreStatsByDefineId) {
                 return $scoreStatsByDefineId[$defineId]['avg_score'] ?? 0;
             });
+        } else {
+            // 検索していない場合は、台帳定義のID順（または本来意図した順序）でソートを固定する
+            // そうしないと、中のレコードの並び順（スコア順など）によって台帳カードの並びが変わってしまうため
+            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortKeys();
         }
 
         Log::info('RecordsTable render end, returning view');
