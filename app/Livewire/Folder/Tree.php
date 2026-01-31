@@ -7,7 +7,9 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive; // 追加
+use Livewire\Attributes\Reactive;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class Tree extends BaseLivewireComponent
 {
@@ -21,11 +23,13 @@ class Tree extends BaseLivewireComponent
     #[Reactive]
     public array $selectedFolderIds;
 
-    public array $manageableFolderIds;
-
     public array $writableFolderIds;
 
+    public array $manageableFolderIds;
+
     public array $readableFolderIds;
+
+    public $parentComponentId;
 
     public function mount(WritableFolderRepository $writableFolderRepository)
     {
@@ -45,16 +49,16 @@ class Tree extends BaseLivewireComponent
 
     private function initializePermissions(WritableFolderRepository $writableFolderRepository): void
     {
-        $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(auth()->user());
-        $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(auth()->user());
-        $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(auth()->user());
+        $this->manageableFolderIds = $writableFolderRepository->getManageableFolderIds(Auth::user());
+        $this->writableFolderIds = $writableFolderRepository->getWritableFolderIds(Auth::user());
+        $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(Auth::user());
     }
 
 
 
     public function render()
     {
-        \Log::info('[Folder\Tree] rendering', [
+        Log::info('[Folder\Tree] rendering', [
             'currentFolderId' => $this->currentFolderId,
             'selectedFolderIds' => $this->selectedFolderIds
         ]);

@@ -7,6 +7,7 @@
     'readableFolderIds' => [],
     'manageableFolderIds' => [],
     'interactive' => true, // true ならクリック動作を有効化
+    'parentComponentId' => null, // IndexManagerなどの親コンポーネントID
 ])
 <ul class="tree">
     @foreach ($folders as $folder)
@@ -14,7 +15,13 @@
             {{-- interactive が true の場合のみクリック動作を有効化。
                  recursive include において Livewire の context が正しく解決されるよう、
                  明示的に component 側の method を呼び出す。 --}}
-            <a @if ($interactive) x-on:click.prevent="Livewire.dispatch('currentFolderChangeRequested', { newFolderId: {{ $folder->id }} })" @endif
+            <a @if ($interactive) @if ($parentComponentId)
+                       {{-- 親コンポーネントIDがある場合は、親のメソッドを直接呼び出す（スケルトン表示のため） --}}
+                       x-on:click.prevent="Livewire.find('{{ $parentComponentId }}').call('changeCurrentFolder', {{ $folder->id }})"
+                   @else
+                       {{-- 親IDがない場合は、従来の dispatch 方式（汎用利用） --}}
+                       x-on:click.prevent="Livewire.dispatch('currentFolderChangeRequested', { newFolderId: {{ $folder->id }} })" @endif
+                @endif
                 @class([
                     'flex items-center gap-2 p-1 rounded hover:bg-base-200 transition-colors cursor-pointer',
                     'bg-secondary/30 text-secondary-content font-bold shadow-inner' =>
@@ -70,7 +77,7 @@
             </a>
             @if ($folder->children->isNotEmpty())
                 <x-folder.tree :folders="$folder->children" :interactive="$interactive" :writableFolderIds="$writableFolderIds" :readableFolderIds="$readableFolderIds" :manageableFolderIds="$manageableFolderIds"
-                    :currentFolderId="$currentFolderId ?? null" :selectedFolderIds="$selectedFolderIds ?? []" />
+                    :currentFolderId="$currentFolderId ?? null" :selectedFolderIds="$selectedFolderIds ?? []" :parentComponentId="$parentComponentId" />
             @endif
         </li>
     @endforeach
