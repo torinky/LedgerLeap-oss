@@ -2,38 +2,28 @@
     $searchTargets = 'search,useTechnicalTerm,useSynonym,useSemanticSearch';
     $filterTargets = 'filterStatus,perPage,orderBy,orderAsc'; // displayLevel,setDisplayLevelを分離
     $recordFilterTargets = 'displayLevel,setDisplayLevel';
-    // $folderNavTargets: Target methods in this component and the event being listened to.
-    $folderNavTargets = 'changeCurrentFolder,changeCurrentFolderByTree,currentFolderChangedByTree';
-    $selectionTargets = 'selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId';
-    $navTargets = $folderNavTargets . ',' . $selectionTargets;
-    $pageTargets = 'gotoPage,nextPage,previousPage';
-    $dataTargets = $searchTargets . ',' . $filterTargets . ',' . $pageTargets . ',' . $selectionTargets;
-    // allTargetsからはレコードのみのフィルターを除外して、スケルトン表示の対象を限定する
-    $allTargets = $searchTargets . ',' . $filterTargets . ',' . $navTargets . ',' . $pageTargets;
+    // $folderNavTargets: IndexManager側での $navTargets と同期させて RecordsTable 内の表示を制御
+    $folderNavTargets = 'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
+    // RecordsTable 内部で個別に隠蔽/表示を制御するための全ターゲット
+    $allTargets = $searchTargets . ',' . $filterTargets . ',' . $folderNavTargets;
 @endphp
 
 <div class="relative">
     {{-- Search section was here, moved to IndexManager --}}
 
-    {{-- Breadcrumbs Section (Always visible except during full folder transition) --}}
+    {{-- Breadcrumbs Section (Handled by parent skeleton but kept functional for deep updates) --}}
     <div class="px-4 mt-4">
-        <div wire:loading.remove wire:target="{{ $folderNavTargets }}">
-            <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-                <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
-            </div>
-        </div>
-        {{-- Skeleton for breadcrumbs during navigation --}}
-        <div wire:loading wire:target="{{ $folderNavTargets }}">
-            <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>
+        <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
+            <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
         </div>
     </div>
 
     {{-- Navigation Panels Section (Tier 2 loading targets selection activity) --}}
     <div class="px-4 relative group/nav min-h-[60px]">
-        {{-- Tier 2 overlay for selection toggles --}}
+        {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
         <x-element.loading-overlay tier="2" target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
 
-        <div wire:loading.remove wire:target="{{ $folderNavTargets }}">
+        <div>
             {{-- ★★★ 新規追加: フォルダ概要パネル ★★★ --}}
             @if ($currentFolder)
                 <div class="card bg-base-200/50 shadow-sm mb-4">
@@ -72,13 +62,6 @@
             <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
                 :currentTenantId="$currentTenantId" />
         </div>
-
-        {{-- Nav Skeleton - Only shown on full folder navigation --}}
-        <div wire:loading wire:target="{{ $folderNavTargets }}" class="space-y-4 pb-4 w-full">
-            {{-- Folder Summary Panel Skeleton --}}
-            <div class="card bg-base-300 h-24 w-full shadow-sm shimmer"></div>
-            <x-element.skeleton-grid items="12" />
-        </div>
     </div>
 
     <div class="divider px-4 opacity-50"></div>
@@ -100,9 +83,14 @@
             <div class="flex flex-wrap items-center justify-end gap-4">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold opacity-50 uppercase tracking-widest">{{ __('ledger.form.display_level') }}</span>
-                    <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                        class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
-                        option-label="name" />
+                    {{-- Reactive prop への直接 model binding を避けるため、Alpine.js で制御する --}}
+                    <div x-data="{ level: {{ $displayLevel }} }" x-init="$watch('level', value => $wire.$parent.updateDisplayLevel(value))">
+                        <x-mary-group
+                            x-model="level"
+                            :options="$displayLevelOptions"
+                            class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                            option-label="name" />
+                    </div>
                 </div>
             </div>
 
@@ -172,7 +160,7 @@
             </div>
         </div>
 
-        <div wire:loading.remove wire:target="{{ $allTargets }}">
+        <div>
             <div class="records-list-container">
                 @if ($totalRecords > 0)
                     <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center pointer-events-none">
@@ -238,26 +226,6 @@
                         'refreshParentWindow' => false,
                     ])
                 @endif
-            </div>
-        </div>
-
-    {{-- Results Skeleton Loader (Only for allTargets) --}}
-        <div wire:loading wire:target="{{ $allTargets }}" class=" w-full mt-6">
-            <div class="records-list-container">
-                @foreach (range(1, 2) as $i)
-                    {{-- Matching Card structure exactly --}}
-                    <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden">
-                        <div class="card-body pt-0 px-0">
-                            {{-- Matching Header exactly (bg-base-300 + padding) --}}
-                            <div class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
-                                <div class="h-8 w-8 bg-base-content/10 rounded-full"></div>
-                                <div class="h-6 bg-base-content/10 rounded-lg w-1/3"></div>
-                            </div>
-
-                            <x-element.skeleton-table rows="8" cols="10" />
-                        </div>
-                    </div>
-                @endforeach
             </div>
         </div>
     </div>

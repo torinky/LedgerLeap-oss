@@ -40,14 +40,7 @@
 </head>
 
 <body class="font-sans antialiased {{ $attributes->get('class') }}"
-      x-data="{ showGlobalLoader: false }"
-      @navigation-start.window="showGlobalLoader = true"
-      @navigation-end.window="showGlobalLoader = false"
 >
-    {{-- Tier 1: Global Loading Overlay (Manual control via Alpine) --}}
-    <div x-show="showGlobalLoader" x-cloak>
-        <x-element.loading-overlay tier="1" :delay="false" manual />
-    </div>
 
     {{-- Tier 0: Global Progress Bar --}}
     <x-mary-loading class="text-primary fixed top-0 w-full h-1 z-110" />
@@ -93,33 +86,6 @@
 
     @vite(['resources/js/app.js'])
     <script>
-        document.addEventListener('livewire:init', () => {
-            let pendingRequests = 0;
-
-            Livewire.hook('request', ({ component, onSucceed, onFail }) => {
-                pendingRequests++;
-
-                const decrementAndCheck = () => {
-                    pendingRequests--;
-                    if (pendingRequests <= 0) {
-                        // 次のリクエストが開始されるまでわずかに待機（イベント連鎖対応）
-                        setTimeout(() => {
-                            if (pendingRequests <= 0) {
-                                window.dispatchEvent(new CustomEvent('navigation-end'));
-                                pendingRequests = 0;
-                            }
-                        }, 100);
-                    }
-                };
-
-                onSucceed(({ response }) => {
-                    decrementAndCheck();
-                });
-                onFail(({ response }) => {
-                    decrementAndCheck();
-                });
-            });
-        });
 
         // テーマを適用する関数
         function applyTheme() {

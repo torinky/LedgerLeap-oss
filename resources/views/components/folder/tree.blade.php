@@ -22,14 +22,10 @@
             --}}
             {{-- interactive が true の場合のみ wire:click を付与 --}}
             <a @if($interactive)
-                   wire:click.prevent="changeCurrentFolder({{$folder->id}}); window.dispatchEvent(new CustomEvent('navigation-start'))"
+                   wire:click.prevent="$parent.changeCurrentFolder({{$folder->id}})"
                @endif
-            @class([
-                 'cursor-pointer' => $interactive, // クリック可能な場合にポインターを表示
-                 'cursor-default' => !$interactive, // クリック不可な場合にデフォルトカーソル
-                 'bg-secondary/30' => $interactive && $folder->id == $currentFolderId, // interactive な場合のみ背景色適用
-                 'bg-info/20' => $interactive && in_array($folder->id,$selectedFolderIds), // interactive な場合のみ背景色適用
-            ])
+               class="flex items-center gap-2 p-1 rounded hover:bg-base-200 transition-colors {{ $currentFolderId == $folder->id ? 'bg-primary/10 text-primary font-bold shadow-sm' : '' }}
+               {{ in_array($folder->id, $selectedFolderIds) ? 'border-l-4 border-primary pl-2' : 'pl-3' }}
             wire:key="folder_tree_link_{{$folder->id}}"
             >
                  <span

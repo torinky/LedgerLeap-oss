@@ -59,7 +59,7 @@
         />
         <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
            data-tip="{{__('ledger.close')}}"
-           wire:click="toggleLedgerDefineId({{ $ledgerDefine->id }})"
+           wire:click.prevent="$parent.toggleLedgerDefineId({{ $ledgerDefine->id }})"
         ><i class="fas fa-times"></i></a>
     </div>
 </div>
@@ -131,3 +131,4 @@
                                      key="{{Hash::make('ledger_define_tag-'. $ledgerDefine->id)}}"
         />
 {{--    </div>--}}
+

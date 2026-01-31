@@ -51,11 +51,16 @@ graph TD
 - **確認事項**: 
     - [x] ツリーをクリックした際、ツリーの選択ハイライトと右側のリスト更新が同時に発生し、通信が1回に集約されているか。
 
-### ブロック4: ローディングUXの完全化
-- [ ] **RF-7.10**: `IndexManager` のテンプレート（`index.blade.php` 相当）に、子全体を覆うスケルトンレイヤーを配置
-- [ ] **RF-7.11**: 手動の `navigation-start`, `navigation-end` イベントを完全に除去
+### ブロック4: ローディングUXの完全化 (2026-01-31 ✅ 完了)
+- [x] **RF-7.10**: `IndexManager` のテンプレート（`index-manager.blade.php`）に、子全体を覆うスケルトンレイヤーを配置し、通信中は旧データを確実に隠蔽
+- [x] **RF-7.11**: 手動の `navigation-start`, `navigation-end` イベントを完全に除去し、Livewire 3 正規の `wire:loading` 制御へ一本化
+- [x] **RF-7.19**: (追記) `IndexManager` 側の `$navTargets` にページネーション・フォーカス・全主要アクションを集約
+- [x] **RF-7.20**: (追記) ドロワー内の `Folder/Tree` にもスケルトンを導入し、階層移動中の動作を統一
+- [x] **RF-7.21**: (追記) `RecordsTable` の `wire:key` を固定し、コンポーネントの再生成によるフラッシュを防止
+- **成果物**: フォルダ移動、検索実行、表示レベル切り替え、ページめくりのすべてにおいて、スケルトンが途切れることなく表示され、レスポンスと同時に「パッ」と切り替わるスムーズな操作感
 - **確認事項**: 
-    - フォルダ移動、検索実行、表示レベル切り替えのすべてにおいて、スケルトンが途切れることなく表示され、レスポンスと同時に「パッ」と切り替わるか。
+    - [x] フォルダ遷移時、データが届くまで以前の階層のデータが表示され続けないか。
+    - [x] ツリーとメインリストのローディング状態が完全に同期しているか。
 
 ## 4. リスクと対策
 - **通信量の増大**: 親子のデータを一度に送るため、ペイロードが大きくなる可能性がある。
@@ -73,6 +78,7 @@ graph TD
 - **ページネーション**: `RecordsTable` 内の `resetPage()` 呼び出しタイミングを、親側の状態変更（検索語変更など）と連動させる必要がある。
 
 ### 5.2 影響を受けるテストファイル
+- `tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php`: 結合テストの中心。
 - `tests/Feature/Livewire/Ledger/RecordsTableQueryTest.php`: URLパラメータ同期のテストを `IndexManager` 対象に更新。
 - `tests/Feature/Livewire/Ledger/RecordsTableCompositeScoreSortTest.php`: 同上。
 - `tests/Feature/Livewire/Ledger/PrefillParametersTest.php`: 初期値設定の検証対象を親コンポーネントに移行。
@@ -88,6 +94,9 @@ graph TD
 - [ ] **RF-7.13**: `Folder/Tree` のスタンドアロン動作（IndexManager不在時）の保証テスト
 - [ ] **RF-7.14**: 画面遷移（`wire:navigate`）と URL パラメータ復元の整合性確認
 - [ ] **RF-7.15**: テストヘルパーの整備: `#[Reactive]` 経由で注入された値を安全にアサートするための共通メソッドの検討
+- [x] **RF-7.16**: `IndexManager` でのページタイトル反映の修正
+- [x] **RF-7.17**: パンくずリストのクリック無反応問題の修正
+- [x] **RF-7.18**: イベント連鎖によるローダちらつき防止
 
 ## 6. 成果の確認（定義）
 - フォルダ遷移時のネットワークリクエストが **1回** であること。
