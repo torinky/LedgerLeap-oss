@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\Ledger\IndexController as LedgerIndexController;
 use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
 use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateController;
 use App\Http\Controllers\LedgerDefine\IndexController as LedgerDefineIndexController;
 use App\Http\Controllers\LedgerDefine\UpdateController as LedgerDefineUpdateController;
 use App\Http\Controllers\LedgerDiff\ShowController as LedgerDiffShowController;
 use App\Http\Controllers\LedgerLookupController;
+use App\Livewire\Ledger\IndexManager; // 追加
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
@@ -35,7 +35,7 @@ Route::group([
     // ledger
     Route::get('/ledger/{ledgerId}', LedgerShowController::class)->name('ledger.show')
         ->where('ledgerId', '[0-9]+');
-    Route::get('/ledger', LedgerIndexController::class)->name('ledger.index');
+    Route::get('/ledger', IndexManager::class)->name('ledger.index'); // LedgerIndexController から変更
 
     // ledger duplicate
     Route::get('/ledger/duplicate/{ledgerId}', [\App\Http\Controllers\Ledger\DuplicateController::class, 'duplicate'])
@@ -64,9 +64,9 @@ Route::group([
         ->where('ledgerDefineId', '[0-9]+');
 
     //    ledger (残りのルート)
-    Route::get('/ledger/define/{defineId}', LedgerIndexController::class)->name('ledgersByDefineId')
+    Route::get('/ledger/define/{defineId}', IndexManager::class)->name('ledgersByDefineId') // LedgerIndexController から変更
         ->where('defineId', '[0-9]+');
-    Route::get('/ledger/folder/{folderId}', LedgerIndexController::class)->name('ledgersByFolderId')
+    Route::get('/ledger/folder/{folderId}', IndexManager::class)->name('ledgersByFolderId') // LedgerIndexController から変更
         ->where('folderId', '[0-9]+');
     Route::get('/ledger/create/{ledgerDefineId}', [\App\Http\Controllers\Ledger\CreateController::class, 'create'])->name('ledger.create')
         ->where('ledgerDefineId', '[0-9]+');

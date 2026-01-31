@@ -25,14 +25,15 @@ graph TD
 
 ## 3. WBS & 段階的確認項目
 
-### ブロック1: 親コンポーネント `IndexManager` の導入
-- [ ] **CP-7.1**: `App\Livewire\Ledger\IndexManager` の作成
-- [ ] **CP-7.2**: `RecordsTable` から以下の状態と `#[Url]` 定義を移行
+### ブロック1: 親コンポーネント `IndexManager` の導入 (2026-01-31 ✅ 完了)
+- [x] **CP-7.1**: `App\Livewire\Ledger\IndexManager` の作成
+- [x] **CP-7.2**: `RecordsTable` から以下の状態と `#[Url]` 定義を移行
     - `search`, `orderBy`, `orderAsc`, `filterStatus`, `filter`, `currentFolderId`, `selectedFolderIds`, `displayLevel`, `useSemanticSearch`
-- [ ] **CP-7.3**: ルートまたは `index.blade.php` で `IndexManager` を使用するように変更
+- [x] **CP-7.3**: ルートまたは `index.blade.php` で `IndexManager` を使用するように変更
 - **確認事項**: 
-    - URLパラメータ経由で初期状態が正しくロードされるか。
-    - 親コンポーネントがエラーなく描画されるか。
+    - [x] URLパラメータ経由で初期状態が正しくロードされるか。
+    - [x] 親コンポーネントがエラーなく描画されるか。
+    - [x] (修正) Livewire 3 ページコンポーネントとしての単一ルート制限への対応
 
 ### ブロック2: `RecordsTable` の受動的（Reactive）化
 - [ ] **RF-7.4**: `RecordsTable` のプロパティに `#[Reactive]` 属性を付与
