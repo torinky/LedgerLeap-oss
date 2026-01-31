@@ -61,20 +61,19 @@ class IndexManagerIntegrationTest extends TestCase
     {
         $ledger1 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['col1' => 'Match Me'],
+            'content' => ['col1' => 'TargetContent'],
         ]);
         $ledger2 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['col1' => 'No Match'],
+            'content' => ['col1' => 'No Search Match'],
         ]);
 
-        // 全文検索を有効にするために少し待つか、Mroongaなしのモック環境であれば即座に。
-        // ここでは selectedLedgerDefineIds をセットして対象を絞る。
         Livewire::test(IndexManager::class)
             ->set('selectedLedgerDefineIds', [$this->ledgerDefine->id])
-            ->set('search', 'Match')
-            ->assertSee('Match Me')
-            ->assertDontSee('No Match');
+            ->set('search', 'Target')
+            ->assertSee('Target')
+            ->assertSee('Content')
+            ->assertDontSee('No Search Match');
     }
 
     #[Test]
@@ -105,5 +104,16 @@ class IndexManagerIntegrationTest extends TestCase
             ->test(IndexManager::class)
             ->assertSet('search', 'search-term')
             ->assertSet('displayLevel', 2);
+    }
+
+    #[Test]
+    public function it_handles_current_folder_change_event()
+    {
+        $otherFolder = Folder::factory()->create(['title' => 'Event Folder', 'parent_id' => $this->rootFolder->id]);
+
+        Livewire::test(IndexManager::class)
+            ->dispatch('currentFolderChangeRequested', newFolderId: $otherFolder->id)
+            ->assertSet('currentFolderId', $otherFolder->id)
+            ->assertSet('selectedFolderIds', [$otherFolder->id]); // descendantsAndSelf includes the folder itself
     }
 }

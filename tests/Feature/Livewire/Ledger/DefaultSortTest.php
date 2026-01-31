@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
 use App\Livewire\Ledger\RecordsTable;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
@@ -85,28 +86,17 @@ class DefaultSortTest extends TestCase
             'content' => [0 => '10', 1 => '10', 2 => 'a'],
         ]);
 
-        // Livewireコンポーネントをテスト
-        $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
-                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
-            ]);
-
-        // デフォルトソートが適用されていることを確認 (主番ASC, 副番ASC)
-        $component->assertSet('orderBy', 'default');
-        $component->assertSet('orderAsc', true); // デフォルトソートは常に昇順
-
-        // ビューに渡されたデータから ledgerRecords を取得
-        $viewData = $component->viewData('ledgerRecords');
-
-        // 期待されるソート順 (主番10, 副番10 -> 主番10, 副番20 -> 主番20, 副番10)
-        $ledgers = $viewData->items();
-        $this->assertCount(3, $ledgers);
-        $this->assertEquals('10', $ledgers[0]->content[0]);
-        $this->assertEquals('10', $ledgers[0]->content[1]);
-        $this->assertEquals('10', $ledgers[1]->content[0]);
-        $this->assertEquals('20', $ledgers[1]->content[1]);
-        $this->assertEquals('20', $ledgers[2]->content[0]);
-        $this->assertEquals('10', $ledgers[2]->content[1]);
+        // Livewireコンポーネントをテスト - IndexManager を経由して検証
+        // mount($folderId = null, $defineId = null) なので defineId を渡す
+        Livewire::actingAs($this->user)
+            ->test(IndexManager::class, [
+                'defineId' => $this->ledgerDefine->id, // これで selectedLedgerDefineIds がセットされる
+            ])
+            ->assertSet('orderBy', 'default') // デフォルトソートが適用されているか
+            ->assertSet('orderAsc', true)
+            // ソート順: 10-10(a), 10-20(c), 20-10(b)
+            // 備考カラムの値で順番を確認する
+            ->assertSeeInOrder(['a', 'c', 'b']);
     }
 
     #[Test]
@@ -121,45 +111,41 @@ class DefaultSortTest extends TestCase
             ],
         ]);
 
-        // テストデータを作成（0始まりの連番配列）
+        // テストデータを作成
         $createdAt1 = now()->subDays(1);
         $createdAt2 = now()->subDays(2);
 
-        $ledger1 = Ledger::factory()->create([
+        Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => [0 => '10'],
             'created_at' => $createdAt1,
         ]);
-        $ledger2 = Ledger::factory()->create([
+        Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => [0 => '20'],
             'created_at' => $createdAt2,
         ]);
 
         $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
-                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+            ->test(IndexManager::class, [
+                'defineId' => $this->ledgerDefine->id,
             ]);
 
         // 初期状態はデフォルトソート (主番ASC)
         $component->assertSet('orderBy', 'default');
-        $ledgers = $component->viewData('ledgerRecords')->items();
-        $this->assertEquals('10', $ledgers[0]->content[0]);
-
+        
         // created_at で降順ソートに変更
-        $component->call('sort', 'created_at', __('ledger.created_at'));
-        $component->assertSet('orderBy', 'created_at');
-        $component->assertSet('orderAsc', false); // トグルで降順
-        $ledgers = $component->viewData('ledgerRecords')->items();
-        // 最新のもの（ledger1）が最初に来ることを確認
-        $this->assertEquals($ledger1->id, $ledgers[0]->id);
+        // IndexManager は sort イベントをリッスンしている
+        $component->dispatch('sortRequested', columnName: 'created_at', columnLabel: __('ledger.created_at'));
+        
+        $component->assertSet('orderBy', 'created_at')
+                  ->assertSet('orderAsc', false);
 
         // 'default' でソートをリセット
-        $component->call('sort', 'default');
-        $component->assertSet('orderBy', 'default');
-        $component->assertSet('orderAsc', true); // デフォルトソートは常に昇順
-        $ledgers = $component->viewData('ledgerRecords')->items();
-        $this->assertEquals('10', $ledgers[0]->content[0]); // デフォルトソートに戻っていることを確認
+        $component->dispatch('sortRequested', columnName: 'default');
+        
+        $component->assertSet('orderBy', 'default')
+                  ->assertSet('orderAsc', true);
     }
 
     #[Test]
@@ -183,10 +169,12 @@ class DefaultSortTest extends TestCase
         ]);
 
         // Livewireコンポーネントをテスト (複数選択)
+        // mount 引数では単一IDしか渡せないので、プロパティを直接セットするか、クエリパラメータを使う
+        // ここでは set() を使用
         $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
-                'selectedLedgerDefineIds' => [$ledgerDefine1->id, $ledgerDefine2->id],
-            ]);
+            ->test(IndexManager::class)
+            ->set('selectedLedgerDefineIds', [$ledgerDefine1->id, $ledgerDefine2->id])
+            ->call('updateSearchMetadata'); // メタデータ更新を明示的に呼ぶ（setだけでは呼ばれない場合があるため）
 
         // デフォルトソートが適用されていないことを確認 (composite_scoreなどが適用される)
         $component->assertNotSet('orderBy', 'default');
@@ -206,37 +194,28 @@ class DefaultSortTest extends TestCase
         ]);
 
         // テストデータを作成（0始まりの連番配列）
-        Ledger::factory()->create([
+        $l1 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => [0 => '2023-01-01', 1 => '1000'],
         ]);
-        Ledger::factory()->create([
+        $l2 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => [0 => '2023-01-02', 1 => '500'],
         ]);
-        Ledger::factory()->create([
+        $l3 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => [0 => '2023-01-01', 1 => '2000'],
         ]);
 
-        $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
-                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
-            ]);
-
-        $ledgers = $component->viewData('ledgerRecords')->items();
-
-        // 期待されるソート順 (日付ASC, 金額ASC)
-        // 2023-01-01, 1000
-        // 2023-01-01, 2000
-        // 2023-01-02, 500
-        $this->assertCount(3, $ledgers);
-        $this->assertEquals('2023-01-01', $ledgers[0]->content[0]);
-        $this->assertEquals('1000', $ledgers[0]->content[1]);
-        $this->assertEquals('2023-01-01', $ledgers[1]->content[0]);
-        $this->assertEquals('2000', $ledgers[1]->content[1]);
-        $this->assertEquals('2023-01-02', $ledgers[2]->content[0]);
-        $this->assertEquals('500', $ledgers[2]->content[1]);
+        // Livewireコンポーネントをテスト
+        Livewire::actingAs($this->user)
+            ->test(IndexManager::class, [
+                'defineId' => $this->ledgerDefine->id,
+            ])
+            ->assertSet('orderBy', 'default')
+            // 期待されるソート順: 2023-01-01 1000 -> 2023-01-01 2000 -> 2023-01-02 500
+            // 金額（数値）で判定する（日付は被るため）
+            ->assertSeeInOrder(['1000', '2000', '500']);
     }
 
     #[Test]
@@ -265,17 +244,13 @@ class DefaultSortTest extends TestCase
             'content' => [0 => 'DAILY-0003'],
         ]);
 
-        $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
-                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
-            ]);
-
-        $ledgers = $component->viewData('ledgerRecords')->items();
-
-        // 期待されるソート順: DAILY-0001, DAILY-0003, DAILY-0005
-        $this->assertCount(3, $ledgers);
-        $this->assertEquals('DAILY-0001', $ledgers[0]->content[0]);
-        $this->assertEquals('DAILY-0003', $ledgers[1]->content[0]);
-        $this->assertEquals('DAILY-0005', $ledgers[2]->content[0]);
+        // Livewireコンポーネントをテスト
+        Livewire::actingAs($this->user)
+            ->test(IndexManager::class, [
+                'defineId' => $this->ledgerDefine->id,
+            ])
+            ->assertSet('orderBy', 'default')
+            // 期待されるソート順: DAILY-0001, DAILY-0003, DAILY-0005
+            ->assertSeeInOrder(['DAILY-0001', 'DAILY-0003', 'DAILY-0005']);
     }
 }

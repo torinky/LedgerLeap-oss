@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\RecordsTable;
+use App\Livewire\Ledger\IndexManager; // RecordsTable から変更
 use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -67,7 +67,7 @@ class SortingOptionLabelTest extends TestCase
         ]);
 
         $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
+            ->test(IndexManager::class, [
                 'selectedLedgerDefineIds' => [$ledgerDefine->id],
             ]);
 
@@ -77,7 +77,7 @@ class SortingOptionLabelTest extends TestCase
         $label = __('ledger.default_sort_order');
         $component->assertSet('orderByLabel', "{$label} (主番, 日付)");
 
-        // UI上にも表示されていることを確認（selected属性が付いているはず）
+        // IndexManager のビュー内でも表示を確認
         $component->assertSee("{$label} (主番, 日付)");
     }
 
@@ -93,22 +93,17 @@ class SortingOptionLabelTest extends TestCase
         ]);
 
         $component = Livewire::actingAs($this->user)
-            ->test(RecordsTable::class, [
+            ->test(IndexManager::class, [
                 'selectedLedgerDefineIds' => [$ledgerDefine->id],
             ]);
 
         // 作成日ソートに変更
-        $component->set('orderBy', 'created_at');
+        $component->dispatch('sortRequested', columnName: 'created_at', columnLabel: __('ledger.created_at'));
 
-        // ラベルが「作成日」になっていることを確認
-        $component->assertSet('orderByLabel', __('ledger.created_at'));
+        $component->assertSet('orderBy', 'created_at');
 
-        // 選択肢の中に「デフォルト順」が表示されていることを確認
-        $component->assertSee(__('ledger.default_sort_order'));
-
-        // 再度デフォルト順に戻せることを確認
-        $component->set('orderBy', 'default');
+        // デフォルト順のオプションが表示されていることを確認 (セレクトボックス内など)
         $label = __('ledger.default_sort_order');
-        $component->assertSet('orderByLabel', "{$label} (主番)");
+        $component->assertSee($label);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\RecordsTable;
+use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -99,11 +99,41 @@ class RecordsTableCompositeScoreSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])
+            ->test(IndexManager::class); // IndexManager を対象に
 
         $component->assertOk()
             ->assertSet('orderBy', 'composite_score')
             ->assertSet('orderAsc', false);
+
+        // UI上の順番を確認
+        $component->assertSeeInOrder([
+            'High Score',
+            'Medium Score',
+            'Low Score',
+        ]);
+    }
+
+    #[Test]
+    public function it_toggles_composite_score_sort_order()
+    {
+        $component = Livewire::withQueryParams([
+            'f' => [$this->folder->id],
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->folder->id,
+        ])
+            ->test(IndexManager::class); // IndexManager を対象に
+
+        // 初期は降順
+        $component->assertSet('orderAsc', false);
+
+        // 昇順に切り替え
+        $component->call('sort', 'composite_score', __('ledger.scoring.score'));
+        $component->assertSet('orderAsc', true);
+
+        // 再度降順に切り替え
+        $component->call('sort', 'composite_score', __('ledger.scoring.score'));
+        $component->assertSet('orderAsc', false);
     }
 
     #[Test]
@@ -126,45 +156,12 @@ class RecordsTableCompositeScoreSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])->test(IndexManager::class); // IndexManager を対象に
 
         $component->assertOk();
 
         // "With Score" がビューに表示されることを確認（スコア順）
         $component->assertSeeInOrder(['With Score', 'Zero Score']);
-    }
-
-    #[Test]
-    public function it_can_toggle_sort_order()
-    {
-        $ledger1 = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['title' => 'Ledger 1'],
-            'composite_score' => 60.0,
-        ]);
-
-        $ledger2 = Ledger::factory()->create([
-            'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['title' => 'Ledger 2'],
-            'composite_score' => 40.0,
-        ]);
-
-        $component = Livewire::withQueryParams([
-            'f' => [$this->folder->id],
-            'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
-
-        // デフォルトは降順
-        $component->assertSet('orderAsc', false);
-
-        // ソートボタンをクリックして昇順に
-        $component->call('sort', 'composite_score')
-            ->assertSet('orderAsc', true);
-
-        // もう一度クリックして降順に戻す
-        $component->call('sort', 'composite_score')
-            ->assertSet('orderAsc', false);
     }
 
     #[Test]
@@ -193,7 +190,7 @@ class RecordsTableCompositeScoreSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])->test(IndexManager::class); // IndexManager を対象に
 
         $component->assertOk()
             ->assertSee('75.0')
@@ -217,7 +214,7 @@ class RecordsTableCompositeScoreSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])->test(IndexManager::class); // IndexManager を対象に
 
         // IDでソート
         $component->call('sort', 'id')

@@ -27,7 +27,7 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class RecordsTable extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast,withPagination;
+    use InitializesTenantContext, Toast, WithPagination;
 
     #[Reactive]
     public $perPage = 100;
@@ -111,6 +111,7 @@ class RecordsTable extends BaseLivewireComponent
 
     public string $orderByLabel = '';
 
+    #[Reactive]
     public array $defaultSortColumns = []; // 追加: デフォルトソートカラムを保持
 
     /**
@@ -353,9 +354,17 @@ class RecordsTable extends BaseLivewireComponent
         $this->prepareFolderAsset();
     }
 
-    #[On('ledgerStored')]
     public function render()
     {
+        Log::info('RecordsTable render start', [
+            'search' => $this->search,
+            'useSemanticSearch' => $this->useSemanticSearch,
+            'currentFolderId' => $this->currentFolderId,
+            'selectedFolderIds' => $this->selectedFolderIds,
+            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
+            'orderBy' => $this->orderBy,
+            'filterStatus' => $this->filterStatus,
+        ]);
         // $this->authorize('viewAny', LedgerDefine::class);
         $this->initSearchContext();
 
@@ -540,7 +549,13 @@ class RecordsTable extends BaseLivewireComponent
                 ->keyBy('id');
 
             // 総数を取得
-            $this->totalRecords = $ledgerRecordsQuery->count();
+            Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: ' . json_encode($searchTargetLedgerDefineIds));
+        Log::info('[MCP Debug] RecordsTable.render search: ' . $this->search);
+        
+        $this->totalRecords = $ledgerRecordsQuery->count();
+        Log::info('[MCP Debug] RecordsTable.render totalRecords: ' . $this->totalRecords);
+        Log::info('[MCP Debug] RecordsTable.render query SQL: ' . $ledgerRecordsQuery->toSql());
+        Log::info('[MCP Debug] RecordsTable.render query bindings: ' . json_encode($ledgerRecordsQuery->getBindings()));
 
             // ページネーション実行
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
@@ -626,6 +641,7 @@ class RecordsTable extends BaseLivewireComponent
             });
         }
 
+        Log::info('RecordsTable render end, returning view');
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）

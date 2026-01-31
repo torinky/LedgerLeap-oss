@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\RecordsTable;
+use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -130,22 +130,22 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         ]);
 
         // 検索時は平均スコア順（B > C > A）で表示されるはず
-        $component = Livewire::withQueryParams([
-            'q' => 'Test',
-            'f' => [$this->folder->id],
-            'l' => [$defineA->id, $defineB->id, $defineC->id],
-            'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        $component = Livewire::test(IndexManager::class)
+            ->set('search', 'Test')
+            ->assertOk();
 
-        $component->assertOk();
-
-        // ビューで台帳定義がスコア順に表示されることを確認
-        // Define B (40.0) が最初に表示されるべき
-        $component->assertSeeInOrder(['Define B', 'Define C', 'Define A']);
+        // IndexManager は RecordTable をレンダリングし、そこでの表示順を検証する。
+        // 子コンポーネントの内部データに直接アクセスするのは難しいため、
+        // 期待されるレコード（またはタイトル）が表示順通りにHTML内に存在するかを確認する。
+        $component->assertSeeInOrder([
+            'Define B',
+            'Define C',
+            'Define A',
+        ]);
     }
 
     #[Test]
-    public function it_sorts_ledger_defines_by_id_when_not_searching()
+    public function it_sorts_ledger_defines_by_custom_order_attribute()
     {
         // 3つの台帳定義を作成
         $defineA = LedgerDefine::factory()->create([
@@ -164,32 +164,46 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             ],
         ]);
 
-        // 各台帳定義にレコードを作成（スコアは逆順）
-        // Define A: 高スコア
+        $defineC = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'title' => 'Define C',
+            'column_define' => [
+                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        // 各台帳定義に異なるスコアのレコードを作成（検索しないのでスコアでのソートは行われないはず）
+        // Define A: スコア 10
         Ledger::factory()->create([
             'ledger_define_id' => $defineA->id,
             'content' => ['title' => 'Test A'],
-            'composite_score' => 50.0,
+            'composite_score' => 10.0,
         ]);
 
-        // Define B: 低スコア
+        // Define B: スコア 30
         Ledger::factory()->create([
             'ledger_define_id' => $defineB->id,
             'content' => ['title' => 'Test B'],
+            'composite_score' => 30.0,
+        ]);
+
+        // Define C: スコア 20
+        Ledger::factory()->create([
+            'ledger_define_id' => $defineC->id,
+            'content' => ['title' => 'Test C'],
             'composite_score' => 20.0,
         ]);
 
-        // 検索なしの場合はID順（A > B）で表示されるはず（スコアに関係なく）
-        $component = Livewire::withQueryParams([
-            'f' => [$this->folder->id],
-            'l' => [$defineA->id, $defineB->id],
-            'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        // search が空の場合は ID順 (A, B, C) で表示される想定
+        $component = Livewire::test(IndexManager::class)
+            ->set('search', '')
+            ->assertOk();
 
-        $component->assertOk();
-
-        // ビューで台帳定義がID順に表示されることを確認
-        $component->assertSeeInOrder(['Define A', 'Define B']);
+        $component->assertSeeInOrder([
+            'Define A',
+            'Define B',
+            'Define C',
+        ]);
     }
 
     #[Test]
@@ -215,7 +229,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$define->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])->test(IndexManager::class); // IndexManager を対象に
 
         $component->assertOk()
             ->assertSee('スコア順');
@@ -243,7 +257,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'f' => [$this->folder->id],
             'l' => [$define->id],
             'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        ])->test(IndexManager::class); // IndexManager を対象に
 
         $component->assertOk()
             ->assertDontSee('スコア順');

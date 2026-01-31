@@ -11,6 +11,7 @@ use Mary\Traits\Toast;
 use App\Models\LedgerDefine;
 use App\Models\Folder; // 追加
 use Illuminate\Support\Facades\Schema as FacadesSchema;
+use Illuminate\Support\Facades\Log;
 
 class IndexManager extends BaseLivewireComponent
 {
@@ -54,6 +55,8 @@ class IndexManager extends BaseLivewireComponent
     public array $defaultSortColumns = [];
 
     public bool $hasWorkflowEnabled = false;
+
+    public $currentTenantId;
 
     // セマンティック検索ON前の同義語トグル状態を保存
     private $savedUseSynonymState = null;
@@ -285,6 +288,15 @@ class IndexManager extends BaseLivewireComponent
 
     public function render()
     {
+        Log::info('IndexManager render', [
+            'search' => $this->search,
+            'useSemanticSearch' => $this->useSemanticSearch,
+            'currentFolderId' => $this->currentFolderId,
+            'selectedFolderIds' => $this->selectedFolderIds,
+            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
+            'orderBy' => $this->orderBy,
+            'filterStatus' => $this->filterStatus,
+        ]);
         return view('livewire.ledger.index-manager')
             ->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }

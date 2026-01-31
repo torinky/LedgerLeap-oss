@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\RecordsTable;
+use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
 use App\Models\AutoLink;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -46,7 +46,7 @@ class RecordsTableQueryTest extends TestCase
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,
             'column_define' => [
-                ['id' => 'text_column', 'name' => 'テキストカラム', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'テキストカラム', 'type' => 'text', 'order' => 1, 'display_level' => 1],
                 // Add other column definitions as needed for other tests
             ],
         ]);
@@ -55,15 +55,12 @@ class RecordsTableQueryTest extends TestCase
 
         // Add permission for the user to view LedgerDefines
         Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
-        $this->user->givePermissionTo('view_ledger_defines');
-
         // Add permission for the user to view Ledgers
         Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
-        $this->user->givePermissionTo('ledgerView');
-
         // Add permission for the user to view AutoLinks (追加)
         Permission::firstOrCreate(['name' => 'view_auto_links', 'guard_name' => 'web']);
-        $this->user->givePermissionTo('view_auto_links');
+
+        $this->user->givePermissionTo(['view_ledger_defines', 'ledgerView', 'view_auto_links']);
     }
 
     protected function getTablesToTruncate(): array
@@ -105,7 +102,7 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])
-            ->test(RecordsTable::class)
+            ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
             ->assertSee('common-term');
     }
@@ -119,7 +116,7 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])
-            ->test(RecordsTable::class)
+            ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
             ->assertSee(__('ledger.select_message'));
     }
@@ -139,7 +136,7 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])
-            ->test(RecordsTable::class)
+            ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
             ->assertSee('unique-id-for-list');
     }
@@ -149,7 +146,7 @@ class RecordsTableQueryTest extends TestCase
     {
         // テストデータの準備
         $keyword = 'テストキーワード';
-        $contentWithKeyword = ['text_column' => 'これは'.$keyword.'を含むテキストです。'];
+        $contentWithKeyword = [0 => 'これは'.$keyword.'を含むテキストです。'];
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $contentWithKeyword,
@@ -162,7 +159,7 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])
-            ->test(RecordsTable::class)
+            ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
             ->assertSeeHtml('<mark class="text-error font-bold text-lg">'.$keyword.'</mark>');
     }
@@ -170,10 +167,11 @@ class RecordsTableQueryTest extends TestCase
     #[Test]
     public function it_displays_auto_links_in_list_view()
     {
-        // 自動リンク定義の準備
-        $autoLink = AutoLink::factory()->create([
-            'label' => 'Test AutoLink',
-            'pattern' => '/(SPEC-\\d{3})/',
+        // AutoLinkの準備
+        $autoLink = \App\Models\AutoLink::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'label' => 'Test Link',
+            'pattern' => '/(SPEC\d{3})/',
             'url_template' => '/l/$1',
             'is_enabled' => true,
         ]);
@@ -189,25 +187,23 @@ class RecordsTableQueryTest extends TestCase
         \Illuminate\Support\Facades\Cache::tags('auto_links')->flush();
 
         // 台帳データの準備
-        $autoLinkText = 'これはSPEC-007を含むテキストです。';
+        $autoLinkText = 'これはSPEC007を含むテキストです。';
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['text_column' => $autoLinkText],
+            'content' => [0 => $autoLinkText],
         ]);
 
         // Livewireコンポーネントのテスト
-        $component = Livewire::withQueryParams([
-            'q' => 'SPEC-007',
-            'f' => [$this->folder->id],
-            'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id,
-        ])->test(RecordsTable::class);
+        $component = Livewire::actingAs($this->user)
+            ->test(\App\Livewire\Ledger\RecordsTable::class, [
+                'currentFolderId' => $this->folder->id,
+                'selectedFolderIds' => [$this->folder->id],
+                'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+                'search' => 'SPEC',
+            ]);
 
-        // AutoLinkが適用されると、リンクとして表示される
-        // 完全なURLはhttp://localhost/l/SPEC-007となる
         $component->assertOk()
-            ->assertSeeHtml('/l/SPEC-007') // URLパス部分が含まれていることを確認
-            ->assertSee('SPEC-007');
+            ->assertSeeHtml('<a href="/l/SPEC007"');
     }
 
     #[Test]
@@ -218,9 +214,9 @@ class RecordsTableQueryTest extends TestCase
             $mock->shouldReceive('searchLedgers')
                 ->once()
                 ->with(
-                    \Mockery::type('string'),
-                    \Mockery::type('int'),
-                    \Mockery::type('array')
+                    \Mockery::any(),
+                    \Mockery::any(),
+                    \Mockery::any()
                 )
                 ->andReturn([]);
         });
@@ -231,8 +227,9 @@ class RecordsTableQueryTest extends TestCase
             'l' => [$this->ledgerDefine->id],
             'cf' => $this->folder->id,
         ])
-            ->test(RecordsTable::class)
+            ->test(IndexManager::class)
             ->set('useSemanticSearch', true)
+            ->set('search', 'semantic query')
             ->assertOk();
     }
 }

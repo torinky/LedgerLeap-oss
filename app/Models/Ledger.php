@@ -85,12 +85,15 @@ class Ledger extends Model
         \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: '.$searchString);
 
         // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
+        \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
         $query->where(function (EloquentBuilder $q) use ($searchString) {
-            \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
             $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
                 ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
         });
 
+        // Debug: Log the count
+        $count = (clone $query)->count();
+        \Log::info("[MCP Search Debug] scopeSearch: found {$count} records");
         \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
     }
 

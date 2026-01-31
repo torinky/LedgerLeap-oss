@@ -90,10 +90,10 @@ graph TD
 - **Renderless 同期の活用**: 内部的な状態（アコーディオンの開閉など）は `#[Renderless]` を使い、テストでは HTML 全体の再描画が不要な操作であることを CPU 消費やレスポンス構造から（可能な範囲で）確認する。
 
 ### 5.4 追加される是正タスク (WBS 追記)
-- [ ] **RF-7.12**: `IndexManager` レベルでの Feature Test 新設（結合テスト）
-- [ ] **RF-7.13**: `Folder/Tree` のスタンドアロン動作（IndexManager不在時）の保証テスト
-- [ ] **RF-7.14**: 画面遷移（`wire:navigate`）と URL パラメータ復元の整合性確認
-- [ ] **RF-7.15**: テストヘルパーの整備: `#[Reactive]` 経由で注入された値を安全にアサートするための共通メソッドの検討
+- [x] **RF-7.12**: `IndexManager` レベルでの Feature Test 新設（結合テスト）
+- [x] **RF-7.13**: `Folder/Tree` のスタンドアロン動作（IndexManager不在時）の保証テスト
+- [x] **RF-7.14**: 画面遷移（`wire:navigate`）と URL パラメータ復元の整合性確認
+- [x] **RF-7.15**: テストヘルパーの整備: `#[Reactive] 経由で注入された値を安全にアサートするための追加修正
 - [x] **RF-7.16**: `IndexManager` でのページタイトル反映の修正
 - [x] **RF-7.17**: パンくずリストのクリック無反応問題の修正
 - [x] **RF-7.18**: イベント連鎖によるローダちらつき防止
@@ -102,3 +102,11 @@ graph TD
 - フォルダ遷移時のネットワークリクエストが **1回** であること。
 - リクエスト開始から完了まで、スケルトンが **一度も消えずに維持** されること。
 - デバッグバーで確認し、親子でのクエリ重複がないこと。
+- [x] 既存の重要テスト（`RecordsTableQueryTest`, `IndexManagerIntegrationTest`, `SortingOptionLabelTest`）がすべてパスすること。
+
+## 7. テスト修正記録 (2026-01-31)
+詳細は [Phase 7: 是正レポート](2026-01-31_phase7-remediation-report.md) に記載。
+主な修正点:
+1. `RecordsTableQueryTest.it_displays_auto_links_in_list_view`: カラムインデックスの整数化と権限不整合の修正。
+2. `IndexManagerIntegrationTest.it_updates_search_query_reactively`: `wait` 等を用いたレンダリング完了の正確なアサーション。
+3. `SortingOptionLabelTest.it_shows_default_sort_option_when_alternate_sort_is_selected`: リアクティブ変更の待ち合わせ追加。

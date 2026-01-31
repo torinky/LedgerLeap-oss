@@ -54,8 +54,9 @@
             <div wire:loading.remove.delay wire:target="{{ $loadingTargets }}">
                 <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
                     :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
-                    :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage"
-                    wire:key="records-table-stable" />
+                    :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
+                    :hasWorkflowEnabled="$hasWorkflowEnabled"
+                    :wire:key="'records-table-'.md5(json_encode([$search, $currentFolderId, $useSemanticSearch, $selectedLedgerDefineIds, $orderBy]))" />
             </div>
 
             {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（.delayを削除） --}}
