@@ -31,7 +31,7 @@ $fa-font-path: "@fortawesome/fontawesome-free/webfonts";
 }
 
 .icon-input {
-    font-family: "Font Awesome 6 Free", "Avenir", "Helvetica Neue", "Helvetica", "Arial",
+    font-family: "Font Awesome 7 Free", "Avenir", "Helvetica Neue", "Helvetica", "Arial",
         "Hiragino Sans", "ヒラギノ角ゴシック", "メイリオ", "Meiryo", "YuGothic",
         "Yu Gothic", "ＭＳ Ｐゴシック", "MS PGothic", "sans-serif";
     font-weight: 400;
@@ -39,7 +39,7 @@ $fa-font-path: "@fortawesome/fontawesome-free/webfonts";
 
 // プレースホルダーのスタイル修正: input.icon-input に対して適用
 input.icon-input::placeholder {
-    font-family: "Font Awesome 6 Free", "Avenir", "Helvetica Neue", "Helvetica", "Arial", "Hiragino Sans", "sans-serif";
+    font-family: "Font Awesome 7 Free", "Avenir", "Helvetica Neue", "Helvetica", "Arial", "Hiragino Sans", "sans-serif";
     font-weight: 900 !important;
 }
 

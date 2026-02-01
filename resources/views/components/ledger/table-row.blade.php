@@ -218,9 +218,11 @@
                 @endif
             @else
                 @if (empty($ledgerRecord->content[$columnDefine->id]))
+                    @php \Log::info('Debug table-row: content empty', ['id' => $columnDefine->id, 'content' => $ledgerRecord->content]); @endphp
                     <x-ledger.empty-message />
                 @else
                     @php
+                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
                         // ColumnHtmlServiceを使用してバッジ表示などを適切にレンダリング
                         $columnHtml = ColumnHtml::setAttachmentCollection(
                             $allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'),

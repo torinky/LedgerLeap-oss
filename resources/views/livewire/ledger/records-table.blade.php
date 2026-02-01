@@ -3,9 +3,15 @@
     $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,filter'; // sort, sortRequested を削除
     $recordFilterTargets = 'displayLevel,setDisplayLevel';
     // $folderNavTargets: IndexManager側での $navTargets と同期させて RecordsTable 内の表示を制御
-    $folderNavTargets = 'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
+    $folderNavTargets =
+        'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
     // RecordsTable 内部で個別に隠蔽/表示を制御するための全ターゲット
-    $allTargets = $searchTargets . ',' . $filterTargets . ',' . $folderNavTargets . ',sortRequested,filterUpdated';
+    // 子コンポーネント内での Tier 2 オーバーレイ（ぼかし）の対象となるアクション
+    // 頻繁な入力アクション（search, filter, filterUpdated）は、入力中に出ると邪魔なため除外し、親の透過（opacity-50）に任せる
+    $heavyNavTargets =
+        'gotoPage,nextPage,previousPage,perPage,changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine';
+    $itemActionTargets = 'sortRequested,displayLevel,setDisplayLevel,orderBy,orderAsc,filterStatus';
+    $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
 <div class="relative">
@@ -19,7 +25,8 @@
             <div class="records-list-container">
                 @if ($totalRecords > 0)
                     <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center pointer-events-none">
-                        <div class="card bg-base-300 opacity-70 transition-all hover:opacity-100 shadow-xl pointer-events-auto ring-1 ring-base-content/5">
+                        <div
+                            class="card bg-base-300 opacity-70 transition-all hover:opacity-100 shadow-xl pointer-events-auto ring-1 ring-base-content/5">
                             <div class="card-body p-2">
                                 {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'top']) !!}
                             </div>
@@ -28,12 +35,28 @@
 
                     @foreach ($ledgerRecordsGroupByDefineIds as $ledgerDefineId => $ledgerDefineAndRecords)
                         @php
-                            $canManage = auth()->user()->can('update', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                            $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                            $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
-                            $canView = auth()->user()->can('ledgerView', $ledgerDefineRecordsKeyById[$ledgerDefineId]);
+                            $ledgerDefine = $ledgerDefineRecordsKeyById[$ledgerDefineId] ?? null;
+                            if (!$ledgerDefine) {
+                                \Log::warning('RecordsTable: ledgerDefine not found for ID', ['id' => $ledgerDefineId]);
+                                continue;
+                            }
+                            $canManage = auth()->user()->can('update', $ledgerDefine);
+                            $canCreate = auth()
+                                ->user()
+                                ->can('ledgerCreate', $ledgerDefine);
+                            $canUpdate = auth()
+                                ->user()
+                                ->can('ledgerUpdate', $ledgerDefine);
+                            $canView = auth()->user()->can('ledgerView', $ledgerDefine);
+                            \Log::info('RecordsTable render loop: permissions', [
+                                'ledgerDefineId' => $ledgerDefineId,
+                                'canView' => $canView,
+                                'canUpdate' => $canUpdate,
+                                'user' => auth()->user()->email
+                            ]);
                         @endphp
-                        <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden" wire:key="ledger_record_{{ $ledgerDefineId }}">
+                        <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden"
+                            wire:key="ledger_record_{{ $ledgerDefineId }}">
                             <div class="card-body pt-0 px-0">
                                 <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
                                     :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"
@@ -53,16 +76,17 @@
                                             $displayColumnsWithMock = array_merge($displayColumns, [$mockDef]);
                                         }
                                     @endphp
-                                    <table class="table table-zebra table-compact table-auto table-pin-rows table-pin-cols w-full">
+                                    <table
+                                        class="table table-zebra table-compact table-auto table-pin-rows table-pin-cols w-full">
                                         <thead>
-                                            <x-ledger.table-header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :orderBy="$orderBy" :orderAsc="$orderAsc"
-                                                :filteredColumnDefines="$displayColumnsWithMock" :defaultSortColumns="$defaultSortColumns" />
+                                            <x-ledger.table-header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :orderBy="$orderBy"
+                                                :orderAsc="$orderAsc" :filteredColumnDefines="$displayColumnsWithMock" :defaultSortColumns="$defaultSortColumns" />
                                         </thead>
                                         <tbody>
                                             @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
-                                                <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search" :canUpdate="$canUpdate"
-                                                    :canView="$canView" :allAttachments="$allAttachments" :filteredColumnDefines="$displayColumnsWithMock"
-                                                    :currentTenantId="$currentTenantId" />
+                                                <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search"
+                                                    :canUpdate="$canUpdate" :canView="$canView" :allAttachments="$allAttachments"
+                                                    :filteredColumnDefines="$displayColumnsWithMock" :currentTenantId="$currentTenantId" />
                                             @endforeach
                                         </tbody>
                                     </table>

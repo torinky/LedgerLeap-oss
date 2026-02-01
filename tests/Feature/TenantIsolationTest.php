@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Ledger\IndexManager;
 use App\Livewire\Ledger\ModifyColumn;
-use App\Livewire\Ledger\RecordsTable;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -175,14 +175,9 @@ class TenantIsolationTest extends TestCase
         $this->actingAs(self::$adminUser);
 
         self::$tenant2->run(function () {
-            Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [self::$tenant2LedgerDefine->id])
-                ->assertViewHas('ledgerRecords', function ($ledgers) {
-                    $this->assertCount(1, $ledgers);
-                    $this->assertEquals(self::$tenant2Ledger->id, $ledgers->first()->id);
-
-                    return true;
-                });
+            Livewire::test(IndexManager::class, ['defineId' => self::$tenant2LedgerDefine->id])
+                ->assertSee('tenant2-data')
+                ->assertDontSee('tenant1-data');
         });
     }
 
@@ -252,26 +247,16 @@ class TenantIsolationTest extends TestCase
 
         // Context: tenant1
         self::$tenant1->run(function () {
-            Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [self::$tenant1LedgerDefine->id])
-                ->assertViewHas('ledgerRecords', function ($ledgers) {
-                    $this->assertCount(1, $ledgers);
-                    $this->assertEquals(self::$tenant1Ledger->id, $ledgers->first()->id);
-
-                    return true;
-                });
+            Livewire::test(IndexManager::class, ['defineId' => self::$tenant1LedgerDefine->id])
+                ->assertSee('tenant1-data')
+                ->assertDontSee('tenant2-data');
         });
 
         // Context: tenant2
         self::$tenant2->run(function () {
-            Livewire::test(RecordsTable::class)
-                ->set('selectedLedgerDefineIds', [self::$tenant2LedgerDefine->id])
-                ->assertViewHas('ledgerRecords', function ($ledgers) {
-                    $this->assertCount(1, $ledgers);
-                    $this->assertEquals(self::$tenant2Ledger->id, $ledgers->first()->id);
-
-                    return true;
-                });
+            Livewire::test(IndexManager::class, ['defineId' => self::$tenant2LedgerDefine->id])
+                ->assertSee('tenant2-data')
+                ->assertDontSee('tenant1-data');
         });
     }
 }

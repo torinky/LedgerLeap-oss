@@ -34,7 +34,10 @@ class LedgerDefineFactory extends Factory
             [],
             false,
             false,
-            null
+            null,
+            '',
+            [],
+            1
         );
 
         return [

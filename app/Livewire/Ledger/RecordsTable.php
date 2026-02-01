@@ -141,24 +141,6 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
 
-        // ★★★ デフォルトソートカラムのロードとorderByの初期化 ★★★
-        if (count($this->selectedLedgerDefineIds) === 1) {
-            $singleLedgerDefineId = head($this->selectedLedgerDefineIds);
-            $singleLedgerDefine = LedgerDefine::find($singleLedgerDefineId);
-
-            if ($singleLedgerDefine) {
-                $this->defaultSortColumns = collect($singleLedgerDefine->column_define)
-                    ->filter(fn ($column) => $column->sort_index !== null)
-                    ->sortBy('sort_index')
-                    ->map(fn ($column) => $column->toArray()) // ColumnDefineオブジェクトを配列に変換
-                    ->values() // キーをリセット
-                    ->toArray();
-
-                // 親がデフォルトソートに設定していれば、ここでも反映される。
-                // ただし、Reactiveプロパティ（$orderBy等）をここで変更すると
-                // CannotMutateReactivePropException が発生するため、表示用ラベルの更新等にとどめる。
-            }
-        }
 
         // 初期orderByLabelの設定
         $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);

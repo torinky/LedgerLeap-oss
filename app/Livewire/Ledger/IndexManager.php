@@ -403,6 +403,16 @@ class IndexManager extends BaseLivewireComponent
         $this->dispatch('openActivityModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
     }
 
+    /**
+     * 子コンポーネント (RecordsTable 等) からフィルタが更新された際の通知
+     */
+    #[On('filterUpdated')]
+    public function recordFilterUpdate($data)
+    {
+        $this->filter = $data;
+        $this->initSearchContext();
+    }
+
     public function render()
     {
         Log::info('IndexManager render', [
