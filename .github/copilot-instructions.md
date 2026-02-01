@@ -8,6 +8,7 @@
 - **テナント初期化:** 全てのFeatureテストの `setUp()` で `tenancy()->initialize($tenant)` が**必須**です。これを忘れるとリレーションが `null` を返します。
 - **AsColumnArrayJson Access:** シリアライゼーションの制約により `data_get()` は動作しません。必ず `$ledger->content[0]` のように直接配列アクセスを行ってください。
 - **Livewire State:** パブリックプロパティは「シンプルな連想配列」のみを使用してください。オブジェクトを直接持たせるとシリアライズエラーが発生します。
+- **Livewire Parent Access:** ソートやフィルタなどの高頻度な操作には `Livewire.dispatch()` を避け、`$parent.method()` または `$wire.$parent.method()` を使用してください。これにより `wire:loading` の追跡が安定し、レスポンスが向上します。
 - **Database Migrations:** 全文検索が絡むテストでは `RefreshDatabase` ではなく `DatabaseMigrations` トレイトを使用してください。
 
 ## 2. MCP & Data Access (行動原理)

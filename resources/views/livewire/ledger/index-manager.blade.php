@@ -9,14 +9,14 @@
     @php
         // IndexManager で監視すべき主要なアクションとプロパティ
         // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
-        $heavyMethods = 'changeCurrentFolder,search,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId';
-        $heavyEvents = 'currentFolderChangeRequested,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled';
+        $heavyMethods = 'changeCurrentFolder,search';
+        $heavyEvents = 'currentFolderChangeRequested';
         $heavyTargets = $heavyMethods . ',' . $heavyEvents;
 
-        // 軽い処理（表示レベル変更、ソート、フィルタなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
-        $lightMethods = 'displayLevel,updateDisplayLevel,sort,filter,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage';
+        // 軽い処理（表示レベル変更、ソート、フィルタ、箇別のトグルなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
+        $lightMethods = 'displayLevel,updateDisplayLevel,sort,filter,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,openPermissionModal,openActivityModal';
         // recordsUpdated を追加することで、子コンポーネントからの件数更新通知（二重レンダリング）中もローディング状態を維持する
-        $lightEvents = 'displayLevelRequested,sortRequested,filterUpdated,recordsUpdated,perPageUpdated';
+        $lightEvents = 'displayLevelRequested,sortRequested,filterUpdated,recordsUpdated,perPageUpdated,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,openPermissionModalRequested,openActivityModalRequested';
         $lightTargets = $lightMethods . ',' . $lightEvents;
 
         $allLoadingTargets = $heavyTargets . ',' . $lightTargets;
@@ -56,8 +56,8 @@
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">
-            {{-- ★★★ Info & Results Section (Loading 時に表示を維持) ★★★ --}}
-            <div class="px-4" wire:loading.class="opacity-50" wire:target="{{ $lightTargets }}">
+            {{-- ★★★ Info & Results Section (常に表示、Loading 時に透過) ★★★ --}}
+            <div class="px-4" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
                 <div class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6">
                     @php
                         $displayLevelOptions = [
@@ -144,22 +144,18 @@
                         @endif
                     </div>
                 </div>
-            </div>
 
-            {{-- Main Content: ヘビーな通信時は一定時間(200ms)経過後に隠す。ライトな通信時は表示を維持しつつ透明度だけ変える。 --}}
-            <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
-                <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
-
-                    {{-- Breadcrumbs Section --}}
-                    <div class="px-4 mt-4">
-                        <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-                            <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
-                        </div>
+                {{-- Breadcrumbs Section --}}
+                <div class="mt-4">
+                    <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
+                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
                     </div>
+                </div>
 
-                    {{-- Navigation Panels Section --}}
-                    <div class="px-4 relative group/nav min-h-[60px]">
-                        <x-element.loading-overlay tier="2" target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
+                {{-- Navigation Panels Section --}}
+                <div class="relative group/nav min-h-[60px]">
+                    {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
+                    <x-element.loading-overlay tier="2" target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
 
                         <div>
                             @if ($currentFolder)
@@ -196,49 +192,56 @@
                                 </div>
                             @endif
 
-                            <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
-                                :currentTenantId="$currentTenantId" />
-                        </div>
+                        <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+                            :currentTenantId="$currentTenantId" />
                     </div>
-
-                    <div class="divider px-4 opacity-50"></div>
-
-                    <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
-                        :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
-                        :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
-                        :hasWorkflowEnabled="$hasWorkflowEnabled"
-                        :keywords="$this->keywords" :highlights="$this->highlights" :synonyms="$this->synonyms"
-                        wire:key="ledger-records-table-stable" />
                 </div>
+
+                <div class="divider opacity-50"></div>
             </div>
 
-            {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（ヘビーな通信のみ） --}}
-            <div wire:loading wire:target="{{ $heavyTargets }}" class="w-full">
-                <div class="px-4">
-                    {{-- Breadcrumb Skeleton --}}
-                    <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>
-
-                    {{-- Folder Info Skeleton --}}
-                    <div class="card bg-base-200/50 shadow-sm mb-4">
-                        <div class="card-body p-4">
-                            <div class="h-8 bg-base-content/10 rounded-lg w-1/4 shimmer"></div>
-                        </div>
+            {{-- Result Area: heavy な時はスケルトン、light な時は透過 --}}
+            <div class="px-4">
+                {{-- Main Content: ヘビーな通信時は一定時間(200ms)経過後に隠す。ライトな通信時は表示を維持しつつ透明度だけ変える。 --}}
+                <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
+                    <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
+                        <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
+                            :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
+                            :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
+                            :hasWorkflowEnabled="$hasWorkflowEnabled"
+                            :keywords="$this->keywords" :highlights="$this->highlights" :synonyms="$this->synonyms"
+                            wire:key="ledger-records-table-stable" />
                     </div>
+                </div>
 
-                    {{-- Records Skeleton --}}
-                    <div class="records-list-container mt-6">
-                        @foreach (range(1, 2) as $i)
-                            <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden">
-                                <div class="card-body pt-0 px-0">
-                                    <div
-                                        class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
-                                        <div class="h-8 w-8 bg-base-content/10 rounded-full"></div>
-                                        <div class="h-6 bg-base-content/10 rounded-lg w-1/3"></div>
-                                    </div>
-                                    <x-element.skeleton-table rows="8" cols="10" />
-                                </div>
+                {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（ヘビーな通信のみ） --}}
+                <div wire:loading wire:target="{{ $heavyTargets }}" class="w-full">
+                    <div class="px-4">
+                        {{-- Breadcrumb Skeleton --}}
+                        <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>
+
+                        {{-- Folder Info Skeleton --}}
+                        <div class="card bg-base-200/50 shadow-sm mb-4">
+                            <div class="card-body p-4">
+                                <div class="h-8 bg-base-content/10 rounded-lg w-1/4 shimmer"></div>
                             </div>
-                        @endforeach
+                        </div>
+
+                        {{-- Records Skeleton --}}
+                        <div class="records-list-container mt-6">
+                            @foreach (range(1, 2) as $i)
+                                <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden">
+                                    <div class="card-body pt-0 px-0">
+                                        <div
+                                            class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
+                                            <div class="h-8 w-8 bg-base-content/10 rounded-full"></div>
+                                            <div class="h-6 bg-base-content/10 rounded-lg w-1/3"></div>
+                                        </div>
+                                        <x-element.skeleton-table rows="8" cols="10" />
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>

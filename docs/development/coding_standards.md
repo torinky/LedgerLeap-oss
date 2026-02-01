@@ -26,6 +26,10 @@
 *   **Livewireコンポーネントクラス名**: パスカルケース (例: `UserProfile`, `CreateLedgerEntry`)
 *   **Livewireコンポーネントビュー名**: ケバブケース (例: `user-profile.blade.php`, `create-ledger-entry.blade.php`)
 
+## Livewire & UI/UX 設計指針
+システム全体の操作性と一貫性を保つため、詳細なベストプラクティスを定義しています。
+詳細は [Livewire & UI/UX ベストプラクティス](./Livewire-Best-Practices.md) を参照してください。
+
 ## コメント
 
 コードの意図を明確にし、将来の自分や他の開発者が理解しやすくするためにコメントを記述します。

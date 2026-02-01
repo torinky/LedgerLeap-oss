@@ -44,23 +44,26 @@
         />
     <div class="flex-grow text-right">
         <x-mary-button
-                wire:click="$parent.openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                wire:click="openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
                 label="{{ __('ledger.access_and_permissions.title') }}"
                 icon="o-shield-check"
                 class="btn-xs btn-ghost"
-                spinner="$parent.openPermissionModal"
+                spinner
         />
         <x-mary-button
-                wire:click="$parent.openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                wire:click="openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
                 label="{{ __('ledger.activity.title') }}"
                 icon="o-clock"
                 class="btn-xs btn-ghost"
-                spinner="$parent.openActivityModal"
+                spinner
         />
-        <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
-           data-tip="{{__('ledger.close')}}"
-           wire:click.prevent="$parent.toggleLedgerDefineId({{ $ledgerDefine->id }})"
-        ><i class="fas fa-times"></i></a>
+        <x-mary-button
+                wire:click.prevent="$parent.toggleLedgerDefineId({{ $ledgerDefine->id }})"
+                icon="o-x-mark"
+                class="btn-xs btn-ghost btn-square tooltip"
+                data-tip="{{__('ledger.close')}}"
+                spinner="$parent.toggleLedgerDefineId"
+        />
     </div>
 </div>
 <div class="prose text-xs leading-relaxed w-full max-w-none px-4">

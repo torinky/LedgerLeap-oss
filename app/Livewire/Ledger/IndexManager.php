@@ -394,14 +394,12 @@ class IndexManager extends BaseLivewireComponent
     #[On('openPermissionModal')]
     public function openPermissionModal(string $resourceType, int $resourceId, string $title): void
     {
-        // 子コンポーネントのプロパティをセットし、イベントを発火
         $this->dispatch('openPermissionModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
     }
 
     #[On('openActivityModal')]
     public function openActivityModal(string $resourceType, int $resourceId, string $title): void
     {
-        // 子コンポーネントのプロパティをセットし、イベントを発火
         $this->dispatch('openActivityModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
     }
 
