@@ -413,6 +413,15 @@ class IndexManager extends BaseLivewireComponent
         $this->initSearchContext();
     }
 
+    /**
+     * 子コンポーネントからフィルタを直接更新する (パフォーマンス向上のため $parent.method() で呼ばれる)
+     */
+    public function updateFilterFromChild($columnId, $value, $defineId = null)
+    {
+        $this->filter[$columnId] = $value;
+        $this->initSearchContext();
+    }
+
     public function render()
     {
         Log::info('IndexManager render', [

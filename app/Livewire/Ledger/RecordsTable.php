@@ -661,12 +661,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * フィルターを更新する
+     * フィルターを更新する (IndexManager側で処理されるため、このメソッドは基本呼ばれない想定だが整理のために残す、または削除)
+     * 現在、Viewからは $parent.updateFilterFromChild が呼ばれている。
      */
-    public function updateFilterFromChild($columnId, $value, $defineId = null)
-    {
-        $this->dispatch('filterUpdated', columnId: $columnId, value: $value, defineId: $defineId);
-    }
+    // 削除
 
     /**
      * 現在のフォルダーを変更する

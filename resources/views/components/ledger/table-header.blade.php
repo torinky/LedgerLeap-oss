@@ -40,7 +40,7 @@
                     wire:loading.attr="disabled"
                     wire:target="$parent.sort"
             >
-                @if($orderBy == 'content->'.(string)$column_define->id)
+                @if($orderBy === 'content->'.(string)$column_define->id)
                     @if($orderAsc)
                         <i class="fas fa-sort-down" style="pointer-events: none;"></i>
                     @else
@@ -50,14 +50,15 @@
                     <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
                 @endif
             </button>
-            <input
-                    x-data
+            <x-mary-input
                     x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{$column_define->id}}', $event.target.value, {{$ledgerDefine->id}})"
                     value="{{ $this->filter[$column_define->id] ?? '' }}"
                     wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
                     type="search"
-                    class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
-                    placeholder="&#xf0b0; {{__('ledger.filter')}}...">
+                    class="input-xs w-full max-w-xs"
+                    icon="o-funnel"
+                    spinner="$wire.$parent.updateFilterFromChild"
+                    placeholder="{{__('ledger.filter')}}..." />
         </th>
     @endforeach
 
@@ -70,7 +71,7 @@
                 wire:loading.attr="disabled"
                 wire:target="$parent.sort"
         >
-            @if($orderBy == 'updated_at')
+            @if($orderBy === 'updated_at')
                 @if($orderAsc)
                     <i class="fas fa-sort-down" style="pointer-events: none;"></i>
                 @else
