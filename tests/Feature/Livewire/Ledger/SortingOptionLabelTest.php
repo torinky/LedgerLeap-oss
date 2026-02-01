@@ -106,4 +106,76 @@ class SortingOptionLabelTest extends TestCase
         $label = __('ledger.default_sort_order');
         $component->assertSee($label);
     }
+
+    #[Test]
+    public function it_shows_generic_label_for_default_sort_when_multiple_ledgers_are_selected(): void
+    {
+        $ledgerDefine1 = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'tenant_id' => $this->tenant->id,
+            'column_define' => [
+                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 3, null),
+            ],
+        ]);
+
+        $ledgerDefine2 = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'tenant_id' => $this->tenant->id,
+            'column_define' => [
+                new ColumnDefine(0, '金額', 'number', 1, [], false, false, 1, '', [], 3, null),
+            ],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(IndexManager::class, [
+                'selectedLedgerDefineIds' => [$ledgerDefine1->id],
+            ]);
+
+        $component->assertSet('orderBy', 'default');
+
+        // 2本目の台帳を追加
+        $component->dispatch('ledgerDefineIdToggled', ledgerDefineId: $ledgerDefine2->id);
+
+        $component->assertSet('orderBy', 'default');
+
+        // 複数選択時はカラム名が含まれないことを確認
+        $label = __('ledger.default_sort_order');
+        $component->assertSet('orderByLabel', $label);
+        $component->assertDontSee("({$label} (主番))");
+    }
+
+    #[Test]
+    public function it_shows_generic_label_for_dynamic_column_sort_when_multiple_ledgers_are_selected(): void
+    {
+        $ledgerDefine1 = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'tenant_id' => $this->tenant->id,
+            'column_define' => [
+                new ColumnDefine(0, '主番', 'number', 1, [], false, false, 1, '', [], 3, null),
+            ],
+        ]);
+
+        $ledgerDefine2 = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'tenant_id' => $this->tenant->id,
+            'column_define' => [
+                new ColumnDefine(0, '金額', 'number', 1, [], false, false, 1, '', [], 3, null),
+            ],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(IndexManager::class, [
+                'selectedLedgerDefineIds' => [$ledgerDefine1->id, $ledgerDefine2->id],
+            ]);
+
+        // content->0 でソート（「主番」または「金額」に対応する動的カラム）
+        $component->dispatch('sortRequested', columnName: 'content->0');
+
+        $component->assertSet('orderBy', 'content->0');
+
+        // 複数台帳選択時は「項目指定」と表示されることを確認
+        $genericLabel = __('ledger.column.custom_column_sort');
+        $component->assertSet('orderByLabel', $genericLabel);
+        $component->assertSee($genericLabel);
+    }
 }

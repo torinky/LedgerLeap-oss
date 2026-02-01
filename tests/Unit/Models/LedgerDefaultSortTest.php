@@ -17,7 +17,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 数値型の正規化テスト
      */
-    public function test_normalize_number()
+    public function testNormalizeNumber(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -62,7 +62,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 自動採番型の正規化テスト
      */
-    public function test_normalize_auto_number()
+    public function testNormalizeAutoNumber(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -86,7 +86,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 日付型の正規化テスト
      */
-    public function test_normalize_date()
+    public function testNormalizeDate(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -113,7 +113,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * テキスト型の正規化テスト
      */
-    public function test_normalize_text()
+    public function testNormalizeText(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -146,7 +146,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * ファイル型の正規化テスト
      */
-    public function test_normalize_files()
+    public function testNormalizeFiles(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -177,7 +177,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 複数カラムの連結テスト
      */
-    public function test_combine_multiple_columns()
+    public function testCombineMultipleColumns(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [

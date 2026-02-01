@@ -21,24 +21,21 @@ class DefaultSortTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected Tenant $tenant;
+    protected bool $tenancy = true;
 
     protected User $user;
-
     protected Folder $folder;
-
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->tenant = Tenant::factory()->create();
+        // TestCase::setUp で tenancy()->initialize($this->tenant) が実行済み
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
-        tenancy()->initialize($this->tenant);
 
-        // 権限設定
+        // 権限設定 (テナント初期化後に行う)
         Permission::findOrCreate('view_ledgers', 'web');
         $role = Role::firstOrCreate(['name' => 'test-viewer-role', 'guard_name' => 'web']);
         $role->givePermissionTo('view_ledgers');
@@ -58,8 +55,11 @@ class DefaultSortTest extends TestCase
         ]);
     }
 
+    /**
+     * デフォルトソート順序が定義されている場合に適用されることを確認
+     */
     #[Test]
-    public function it_applies_default_sort_order_when_defined(): void
+    public function testAppliesDefaultSortOrderWhenDefined(): void
     {
         // 台帳定義にデフォルトソートを設定
         $this->ledgerDefine = LedgerDefine::factory()->create([

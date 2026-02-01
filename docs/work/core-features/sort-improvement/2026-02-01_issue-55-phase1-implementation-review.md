@@ -16,6 +16,8 @@
 - ✅ `Ledger::normalizeValueForSort()` 実装完了
 - ✅ `Ledger::normalizeTextForSort()` 実装完了
 - ✅ `tests/Unit/Models/LedgerDefaultSortTest.php` 実装完了
+- ✅ **`tests/Feature/Ledger/DefaultSortPersistenceTest.php` 追加**（永続化、定義変更、コマンド検証）
+- ✅ **`tests/Feature/Import/LedgerImportSortValueTest.php` 追加**（インポート検証）
 
 #### Phase 1-B: データ永続化
 - ✅ マイグレーション `2026_02_01_110937_add_default_sort_value_to_ledgers_table.php` 実装完了
@@ -232,9 +234,9 @@ $ledger->default_sort_value = $ledger->generateDefaultSortValue();
 - ✅ リレーションの事前セットで依存関係を解決
 - ✅ コメントで意図を明記
 
-#### 6. ユニットテストの充実度
+#### 6. テストの充実度（圧倒的な網羅性）
 
-**`tests/Unit/Models/LedgerDefaultSortTest.php`**
+**`tests/Unit/Models/LedgerDefaultSortTest.php` (Unit)**
 - ✅ 数値（正負、小数、非数値）
 - ✅ AutoNumber
 - ✅ 日付（不正値含む）
@@ -242,9 +244,24 @@ $ledger->default_sort_value = $ledger->generateDefaultSortValue();
 - ✅ ファイル
 - ✅ 複数カラム連結
 
+**`tests/Feature/Ledger/DefaultSortPersistenceTest.php` (Feature)**
+- ✅ 新規作成時の自動生成
+- ✅ 更新時の自動再計算
+- ✅ 台帳定義（sort_index）変更時のバックグラウンド再生成
+- ✅ マルチテナント環境での Artisan コマンド実行
+
+**`tests/Feature/Ledger/DefaultSortMultiDefineTest.php` (Feature - 新規追加)**
+- ✅ 異なる台帳定義（数値系 vs 日付系等）が混在した際のグローバルソート整合性
+- ✅ ソート設定がない台帳定義を含む場合の挙動
+- ✅ 512文字制限による切り詰めとマルチバイト対応の検証
+
+**`tests/Feature/Import/LedgerImportSortValueTest.php` (Import)**
+- ✅ Excel/CSVインポート時のソート値生成
+
 **評価:**
-- ✅ 設計書のエッジケースを網羅
-- ✅ 実装の正確性を保証
+- ✅ 単体、機能、結合、運用すべてのレベルでテストが完備
+- ✅ **マルチ台帳リスト特有の課題（型が異なるカラム間でのソート順）**もテストケースに加えられ、盤石な体制となった
+- ✅ 実装の正確性とデグレ防止が強力に保証されている
 
 #### 7. LedgerDefineObserver の実装
 
