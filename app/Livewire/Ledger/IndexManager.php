@@ -277,14 +277,45 @@ class IndexManager extends BaseLivewireComponent
             'updated_at' => __('ledger.updated_at'),
             'semantic_score' => __('ledger.semantic_score_sort'),
             'default' => $this->getDefaultSortLabel(),
-            default => '',
+            default => $this->getColumnLabel($columnName),
         };
+    }
+
+    /**
+     * 動的なカラム名のラベルを取得する
+     */
+    private function getColumnLabel(string $columnName): string
+    {
+        // content->ID 形式のカラム名からラベルを解決
+        if (str_starts_with($columnName, 'content->')) {
+            // 単一台帳選択時のみ具体的な項目名を表示
+            if (count($this->selectedLedgerDefineIds) === 1) {
+                $columnId = str_replace('content->', '', $columnName);
+                $singleLedgerDefine = LedgerDefine::find(head($this->selectedLedgerDefineIds));
+
+                if ($singleLedgerDefine) {
+                    $column = collect($singleLedgerDefine->column_define)
+                        ->first(fn ($col) => (string) $col->id === (string) $columnId);
+
+                    if ($column) {
+                        return $column->name;
+                    }
+                }
+            }
+
+            // 複数台帳選択時や項目が見つからない場合は汎用的なラベルを表示
+            return __('ledger.column.custom_column_sort');
+        }
+
+        return '';
     }
 
     private function getDefaultSortLabel(): string
     {
         $label = __('ledger.default_sort_order');
-        if (! empty($this->defaultSortColumns)) {
+
+        // 単一台帳選択時のみ具体的な項目名を表示
+        if (count($this->selectedLedgerDefineIds) === 1 && ! empty($this->defaultSortColumns)) {
             $columnNames = collect($this->defaultSortColumns)->pluck('name')->implode(', ');
             $label .= " ({$columnNames})";
         }
@@ -305,6 +336,8 @@ class IndexManager extends BaseLivewireComponent
         $this->orderBy = $columnName;
         $this->orderAsc = ! $this->orderAsc;
 
+        // 手動でラベルが渡されない（ヘッダーからのソートなど）場合、
+        // getStandardSortLabel 内で台帳の選択状態に基づいたラベルを取得する
         $this->orderByLabel = $columnLabel ?? $this->getStandardSortLabel($columnName);
     }
 
@@ -322,8 +355,8 @@ class IndexManager extends BaseLivewireComponent
     #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
-        \Log::info('[IndexManager] Received currentFolderChangeRequested', ['newFolderId' => $newFolderId]);
-        \Log::info('[IndexManager] changeCurrentFolder called', ['newFolderId' => $newFolderId]);
+        Log::info('[IndexManager] Received currentFolderChangeRequested', ['newFolderId' => $newFolderId]);
+        Log::info('[IndexManager] changeCurrentFolder called', ['newFolderId' => $newFolderId]);
         if ($newFolderId == 1) {
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];

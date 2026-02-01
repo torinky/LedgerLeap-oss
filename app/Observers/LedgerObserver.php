@@ -11,6 +11,14 @@ use Illuminate\Support\Facades\DB;
 class LedgerObserver
 {
     /**
+     * Handle the Ledger "saving" event.
+     */
+    public function saving(Ledger $ledger): void
+    {
+        $ledger->default_sort_value = $ledger->generateDefaultSortValue();
+    }
+
+    /**
      * Handle the Ledger "created" event.
      */
     public function created(Ledger $ledger): void

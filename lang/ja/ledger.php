@@ -290,6 +290,7 @@ return [
         'sort_active_tooltip' => 'ツールバーの並び順に戻すには、検索を実行するかページを更新してください。',
         'sort_index' => 'ソート順位',
         'sort_priority_example' => '優先度',
+        'custom_column_sort' => '項目指定',
         'title' => '表示名',
         'title_input' => '列の表示名を入力',
         'type' => '入力形式',
