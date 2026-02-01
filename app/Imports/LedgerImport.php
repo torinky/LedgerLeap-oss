@@ -24,6 +24,8 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
 
     protected $columnDefines;
 
+    protected $id;
+
     private $currentRows = 0;
 
     private $updateRows = 0;
@@ -95,7 +97,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
             Cache::forever("update_rows_{$this->id}", $this->updateRows);
         }
 
-        return new Ledger([
+        $ledger = new Ledger([
             'id' => $id,
             'updated_at' => $row['[[[updated_at]]]'] ?? '',
             'created_at' => $row['[[[created_at]]]'] ?? '',
@@ -105,6 +107,11 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
             'content' => $this->generateLedgerContent($row),
         ]);
 
+        // generateDefaultSortValue() のためにリレーションをセット
+        $ledger->setRelation('define', $this->ledgerDefine);
+        $ledger->default_sort_value = $ledger->generateDefaultSortValue();
+
+        return $ledger;
     }
 
     /**

@@ -37,7 +37,7 @@ class Ledger extends Model
 
     protected $fillable = [
         'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version',
-        'activity_score', 'composite_score',
+        'activity_score', 'composite_score', 'default_sort_value',
     ];
 
     /**
@@ -578,5 +578,110 @@ class Ledger extends Model
         $progress = $this->getRequiredRolesProgressDetails(); // 内部で latestDiff を参照
 
         return $progress['inspection']['completed_count'] > 0;
+    }
+
+    /**
+     * デフォルトソート用正規化文字列を生成します。
+     * ColumnDefine の sort_index に基づき、優先順位に従ってカラム値を連結します。
+     */
+    public function generateDefaultSortValue(): ?string
+    {
+        $define = $this->define;
+        if (! $define || ! $define->column_define) {
+            return null;
+        }
+
+        // sort_index が設定されているカラムを優先順に取得
+        $columns = collect($define->column_define)
+            ->filter(fn ($col) => ! is_null($col->sort_index))
+            ->sortBy('sort_index');
+
+        if ($columns->isEmpty()) {
+            return null;
+        }
+
+        $normalizedValues = [];
+        foreach ($columns as $column) {
+            $value = $this->content[$column->id] ?? null;
+            $normalizedValues[] = $this->normalizeValueForSort($column, $value);
+        }
+
+        $result = implode('|', $normalizedValues);
+
+        // キー長制限(512文字)を考慮
+        return mb_strimwidth($result, 0, 512);
+    }
+
+    /**
+     * カラム型に応じた正規化処理
+     */
+    protected function normalizeValueForSort(ColumnDefine $column, $value): string
+    {
+        if (is_null($value) || $value === '') {
+            return '';
+        }
+
+        switch ($column->type) {
+            case 'number':
+                // 正負、整数20桁、小数10桁のゼロパディング
+                if (! is_numeric($value)) {
+                    return str_repeat(' ', 32);
+                }
+                $num = (float) $value;
+                $sign = $num >= 0 ? '+' : '-';
+                $abs = abs($num);
+                $parts = explode('.', sprintf('%.10f', $abs));
+                $intPart = str_pad($parts[0], 20, '0', STR_PAD_LEFT);
+                $decPart = str_pad($parts[1] ?? '', 10, '0', STR_PAD_RIGHT);
+
+                return "{$sign}{$intPart}.{$decPart}";
+
+            case 'auto_number':
+                // そのまま使用（既にパディング済み）
+                return (string) $value;
+
+            case 'YMD':
+            case 'YMDHM':
+                try {
+                    return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    return '0000-00-00';
+                }
+
+            case 'files':
+                // 最初のオリジナルファイル名を取得
+                if (is_array($value) && ! empty($value)) {
+                    $originalName = reset($value);
+
+                    return $this->normalizeTextForSort($originalName);
+                }
+
+                return '';
+
+            case 'chk':
+                return $value ? '1' : '0';
+
+            default:
+                // text, textarea, select, phone, user_name 等
+                return $this->normalizeTextForSort($value);
+        }
+    }
+
+    /**
+     * テキスト型の正規化
+     */
+    protected function normalizeTextForSort($value): string
+    {
+        $text = (string) $value;
+        $text = strip_tags($text);
+        // Markdown簡易除去（あくまでソート用なので厳密でなくて良い）
+        // _ はファイル名等で一般的かつソートに有用なため除外対象から外す
+        $text = preg_replace('/[#*`~\[\]]/', '', $text);
+        // 改行、タブを空白置換
+        $text = str_replace(["\r", "\n", "\t"], ' ', $text);
+        // 連続空白を1つに
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        return mb_substr(trim($text), 0, 50);
     }
 }

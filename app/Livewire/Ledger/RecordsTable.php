@@ -258,18 +258,45 @@ class RecordsTable extends BaseLivewireComponent
             'updated_at' => __('ledger.updated_at'),
             'semantic_score' => __('ledger.semantic_score_sort'),
             'default' => $this->getDefaultSortLabel(),
-            default => '', // 標準ソート以外の場合は空文字列を返す
+            default => $this->getColumnLabel($columnName),
         };
     }
 
     /**
-     * デフォルトソートのラベルを取得する
+     * 動的なカラム名のラベルを取得する
      */
+    private function getColumnLabel(string $columnName): string
+    {
+        // content->ID 形式のカラム名からラベルを解決
+        if (str_starts_with($columnName, 'content->')) {
+            // 単一台帳選択時のみ具体的な項目名を表示
+            if (count($this->selectedLedgerDefineIds) === 1) {
+                $columnId = str_replace('content->', '', $columnName);
+                $singleLedgerDefine = LedgerDefine::find(head($this->selectedLedgerDefineIds));
+
+                if ($singleLedgerDefine) {
+                    $column = collect($singleLedgerDefine->column_define)
+                        ->first(fn ($col) => (string) $col->id === (string) $columnId);
+
+                    if ($column) {
+                        return $column->name;
+                    }
+                }
+            }
+
+            // 複数台帳選択時や項目が見つからない場合は汎用的なラベルを表示
+            return __('ledger.column.custom_column_sort');
+        }
+
+        return '';
+    }
+
     private function getDefaultSortLabel(): string
     {
         $label = __('ledger.default_sort_order');
 
-        if (! empty($this->defaultSortColumns)) {
+        // 単一台帳選択時のみ具体的な項目名を表示
+        if (count($this->selectedLedgerDefineIds) === 1 && ! empty($this->defaultSortColumns)) {
             $columnNames = collect($this->defaultSortColumns)->pluck('name')->implode(', ');
             $label .= " ({$columnNames})";
         }
@@ -486,26 +513,8 @@ class RecordsTable extends BaseLivewireComponent
                 })
                 ->orderBy('ledger_define_id', 'asc')
                 ->when($this->orderBy === 'default', function ($query) {
-                    // defaultSortColumns を使用してソートを適用
-                    foreach ($this->defaultSortColumns as $column) {
-                        $columnId = $column['id'];
-                        $columnType = $column['type'];
-
-                        // JSON_EXTRACT を使ってパスを構築（$[0] 形式で配列インデックスアクセス）
-                        $jsonPath = "JSON_EXTRACT(`content`, '$[{$columnId}]')";
-
-                        // 型に応じたキャスト
-                        $expression = match ($columnType) {
-                            'number' => "CAST({$jsonPath} AS DECIMAL(20, 6))",
-                            'auto_number' => $this->isPurelyNumericAutoNumber($column)
-                                ? "CAST({$jsonPath} AS DECIMAL(20, 6))"
-                                : "JSON_UNQUOTE({$jsonPath})",
-                            'date', 'YMD' => "CAST({$jsonPath} AS DATE)",
-                            default => "JSON_UNQUOTE({$jsonPath})",
-                        };
-
-                        $query->orderByRaw("{$expression} ".($this->orderAsc ? 'ASC' : 'DESC'));
-                    }
+                    // 新設した denormalized カラムを使用して高速にソート
+                    return $query->orderBy('default_sort_value', $this->orderAsc ? 'asc' : 'desc');
                 })
                 ->when($this->orderBy === 'composite_score', function ($query) {
                     return $query->orderByRaw('composite_score = 0, composite_score '.
