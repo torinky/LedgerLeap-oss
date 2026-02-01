@@ -19,47 +19,84 @@ Enable correct global sorting and pagination for mixed ledger lists by introduci
 #### [MODIFY] [Ledger.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Models/Ledger.php)
 - Add `generateDefaultSortValue()` method:
   - Iterates through `ledger_define->column_define` sorted by `sort_index`.
-  - Concatenates values (e.g., pipe-separated) with normalization (padding numbers, formatting dates).
-- Update `$fillable` if necessary (though likely handled via observer).
+  - **Normalization**:
+    - Numbers: Zero-padding (e.g., `000000123.45`).
+    - Dates: `YYYY-MM-DD`.
+    - Text/Files: Truncate to 50 chars, remove newlines/control chars.
+  - Concatenates values (pipe-separated) and limits total length to 512 chars.
+- Update `$fillable` if necessary.
 
-#### [NEW] `app/Observers/LedgerObserver.php` (if not exists, or modify existing)
+#### [NEW] `app/Observers/LedgerObserver.php`
 - `saving` event: Call `generateDefaultSortValue()` and set `default_sort_value`.
-- `updated` event (optional): If we use a Job, dispatch here. For Phase 1, synchronous calculation in `saving` is simpler and likely sufficient unless generation is very heavy (OCR dependency?). *Decision: Synchronous for now as it's just string concatenation.*
+
+#### [MODIFY] [LedgerImport.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Imports/LedgerImport.php)
+- **Constraint**: Uses `WithUpserts`, bypassing observers.
+- **Change**: Manually call `generateDefaultSortValue()` inside the `model()` method when creating the `Ledger` instance to ensure `default_sort_value` is populated during import.
 
 #### [NEW] `app/Console/Commands/RegenerateLedgerDefaultSortValues.php`
 - Command `ledger:regenerate-default-sort {ledgerDefineId?}`.
-- Iterates ledgers and saves them to trigger the observer (or direct update).
+- Iterates ledgers and performs `save()` to trigger observer (or direct update for speed if needed).
 
-### Component & Query
+### UI & Query
 #### [MODIFY] [IndexManager.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Livewire/Ledger/IndexManager.php)
-- Logic to determine `orderBy`. If 'default', pass this intent to `RecordsTable`.
-- Remove the single-ledger restriction for default sorting.
+- Logic to determine `orderBy`. Always allow switching to 'default' if `defaultSortColumns` exist across any active ledger definitions.
 
 #### [MODIFY] [RecordsTable.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Livewire/Ledger/RecordsTable.php)
-- In `render()`/Query builder:
-  - If sorting by 'default', use `orderBy('default_sort_value', 'asc')`.
-  - Remove existing PHP-side collection sorting logic if it was added (or ensure we don't add it).
+- Query builder: If `orderBy === 'default'`, use `orderBy('default_sort_value', $asc)`.
 
-### UI
 #### [MODIFY] [table-header.blade.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/resources/views/components/ledger/table-header.blade.php)
-- Display badge/indicator for columns that are part of the sort key (using `sort_index`).
+- **Visual Feedback**:
+  - If sorting by a specific column: Highlight that header strongly.
+  - If sorting by 'default': Highlight columns based on `sort_index`:
+    - Priority 1: Stronger highlight (e.g., `bg-primary/20`).
+    - Priority 2: Milder highlight (e.g., `bg-primary/10`).
+    - Priority 3+: Faint highlight (e.g., `bg-primary/5`).
+  - Use tooltips (`data-tip`) to show "Sort Priority: 1", "2", etc.
+
+#### [MODIFY] [search.blade.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/resources/views/components/ledger/search.blade.php)
+- Ensure "Default Sort" option is always visible in the dropdown.
 
 ## Verification Plan
 
-### Automated Tests (**New Implementation**)
-#### [NEW] [MultiLedgerSortTest.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/tests/Feature/Livewire/Ledger/MultiLedgerSortTest.php)
-- **Test 1: Sorting consistency across pages.**
-  - Create 3 defined ledgers (Date sort, Number sort, Text sort).
-  - Create 100 records mixed.
-  - Assert that page 1 contains the "smallest" sort values globally, not just a random subset sorted locally.
-- **Test 2: Pagination integrity.**
-  - Navigate to page 2 and ensure record continuity (no duplicates or skips vs global list).
-- **Test 3: Sort Value Generation.**
-  - Create a ledger, verify `default_sort_value` is populated in DB.
-  - Update a ledger's column value, verify `default_sort_value` updates.
+### Automated Tests
+#### [NEW] [LedgerDefaultSortTest.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/tests/Unit/Models/LedgerDefaultSortTest.php) (Unit)
+- Verify `generateDefaultSortValue()` logic:
+  - Numeric padding.
+  - Date formatting.
+  - Text truncation (50 chars) and newline removal.
+  - Attachment filename handling.
 
-### Manual Verification
-1. **Migration:** Run `php artisan migrate`.
-2. **Data Gen:** Create sample ledgers with multiple definitions.
-3. **UI Check:** Go to "All Ledgers" (or root folder). Verify they appear sorted by their respective keys (e.g., Ledger A by Date, Ledger B by Serial).
-4. **Pagination:** Set per-page to small number (e.g., 5). Verify page 2 continues correctly.
+#### [NEW] [MultiLedgerSortTest.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/tests/Feature/Livewire/Ledger/MultiLedgerSortTest.php) (Feature)
+- **Test 1: Global Sort & Pagination**: Create multiple ledger types and records. Assert Page 1 has globally smallest values.
+#### [MODIFY] [LedgerDefine/Edit.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Livewire/LedgerDefine/Edit.php)
+- **Implement `regenerateDefaultSort` method**:
+    - Check if user has `Admin` role.
+    - Check lock status (Cache: `ledger_def:{id}:regenerating_sort`).
+    - Dispatch `RegenerateDefaultSortJob`.
+    - Set temp lock key.
+
+#### [NEW] [RegenerateDefaultSortJob.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/app/Jobs/RegenerateDefaultSortJob.php)
+- **Logic**:
+    - Acquire cache lock (atomic).
+    - Iterate all Ledgers for the definition.
+    - Call `generateDefaultSortValue()` and save (or mass update if optimized).
+    - Clear cache lock on completion/failure.
+
+#### [MODIFY] [edit.blade.php](file:///Users/kazutaka/PhpstormProjects/LedgerLeap/resources/views/livewire/ledger-define/edit.blade.php)
+- Add "Regenerate Default Sort" button (visible only to Admin).
+- Show "Processing..." state if lock key exists.
+
+### Verification Plan (Updated)
+
+#### Automated Tests
+- [ ] `LedgerDefaultSortTest`: Verify `default_sort_value` generation logic.
+- [ ] `RegenerateDefaultSortJobTest`: Verify job execution and locking mechanism.
+- [ ] `LedgerDefineEditTest`: Verify Admin check and method invocation.
+
+#### Manual Verification
+- [ ] **CSV Import**: Import data with mixed `auto_number` prefixes and verify correct sort order.
+- [ ] **UI Highlight**: Confirm gradients for multi-column default sort.
+- [ ] **Admin UI**:
+    - As Admin: Click "Regenerate", verify job runs, button shows "Processing", then re-enables.
+    - As Non-Admin: Verify button is hidden.
+    - Double Submit: Verify rapid clicks don't double dispatch (Cache lock).
