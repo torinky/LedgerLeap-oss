@@ -9,62 +9,6 @@
 @endphp
 
 <div class="relative">
-    {{-- Search section was here, moved to IndexManager --}}
-
-    {{-- Breadcrumbs Section (Handled by parent skeleton but kept functional for deep updates) --}}
-    <div class="px-4 mt-4">
-        <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-            <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
-        </div>
-    </div>
-
-    {{-- Navigation Panels Section (Tier 2 loading targets selection activity) --}}
-    <div class="px-4 relative group/nav min-h-[60px]">
-        {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
-        <x-element.loading-overlay tier="2" target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
-
-        <div>
-            {{-- ★★★ 新規追加: フォルダ概要パネル ★★★ --}}
-            @if ($currentFolder)
-                <div class="card bg-base-200/50 shadow-sm mb-4">
-                    <div class="card-body p-4 flex flex-row items-center justify-between">
-                        <div>
-                            <h2 class="card-title text-base-content text-lg">
-                                <i class="fas fa-folder text-warning"></i>
-                                {{ $currentFolder->title }}
-                            </h2>
-                            <p class="text-sm text-base-content/70">
-                                {{ __('ledger.access_and_permissions.your_access_level') }}:
-                                @if ($currentUserPermissionForFolder)
-                                    <span
-                                        class="badge badge-sm badge-{{ $currentUserPermissionForFolder->getColor() }} text-{{ $currentUserPermissionForFolder->getColor() }}-content font-bold">
-                                        {{ $currentUserPermissionForFolder->getLabel() }}
-                                    </span>
-                                @else
-                                    <span
-                                        class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
-                                @endif
-                            </p>
-                        </div>
-                        <div class="card-actions">
-                            <x-mary-button
-                                x-on:click.stop="$wire.$parent.openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
-                                label="{{ __('ledger.access_and_permissions.title') }}" icon="o-shield-check"
-                                class="btn-sm btn-outline btn-ghost" spinner="$parent.openPermissionModal" />
-                            <x-mary-button
-                                x-on:click.stop="$wire.$parent.openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
-                                label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline btn-ghost" spinner="$parent.openActivityModal" />
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
-                :currentTenantId="$currentTenantId" />
-        </div>
-    </div>
-
-    <div class="divider px-4 opacity-50"></div>
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">

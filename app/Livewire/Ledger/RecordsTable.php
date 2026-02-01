@@ -327,9 +327,22 @@ class RecordsTable extends BaseLivewireComponent
      */
     #[On('ledgerStored')]
     #[On('permissions-changed')]
+    #[On('recordsUpdated')]
     public function refresh()
     {
         $this->prepareFolderAsset();
+    }
+
+    #[On('openPermissionModalRequested')]
+    public function handleOpenPermissionModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->openPermissionModal($resourceType, $resourceId, $title);
+    }
+
+    #[On('openActivityModalRequested')]
+    public function handleOpenActivityModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->openActivityModal($resourceType, $resourceId, $title);
     }
 
     public function render()

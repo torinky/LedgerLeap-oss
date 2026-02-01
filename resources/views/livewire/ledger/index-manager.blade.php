@@ -149,6 +149,60 @@
             {{-- Main Content: ヘビーな通信時は一定時間(200ms)経過後に隠す。ライトな通信時は表示を維持しつつ透明度だけ変える。 --}}
             <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
                 <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
+
+                    {{-- Breadcrumbs Section --}}
+                    <div class="px-4 mt-4">
+                        <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
+                            <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
+                        </div>
+                    </div>
+
+                    {{-- Navigation Panels Section --}}
+                    <div class="px-4 relative group/nav min-h-[60px]">
+                        <x-element.loading-overlay tier="2" target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
+
+                        <div>
+                            @if ($currentFolder)
+                                <div class="card bg-base-200/50 shadow-sm mb-4">
+                                    <div class="card-body p-4 flex flex-row items-center justify-between">
+                                        <div>
+                                            <h2 class="card-title text-base-content text-lg">
+                                                <i class="fas fa-folder text-warning"></i>
+                                                {{ $currentFolder->title }}
+                                            </h2>
+                                            <p class="text-sm text-base-content/70">
+                                                {{ __('ledger.access_and_permissions.your_access_level') }}:
+                                                @if ($currentUserPermissionForFolder)
+                                                    <span
+                                                        class="badge badge-sm badge-{{ $currentUserPermissionForFolder->getColor() }} text-{{ $currentUserPermissionForFolder->getColor() }}-content font-bold">
+                                                        {{ $currentUserPermissionForFolder->getLabel() }}
+                                                    </span>
+                                                @else
+                                                    <span
+                                                        class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
+                                                @endif
+                                            </p>
+                                        </div>
+                                        <div class="card-actions">
+                                            <x-mary-button
+                                                wire:click="openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                                label="{{ __('ledger.access_and_permissions.title') }}" icon="o-shield-check"
+                                                class="btn-sm btn-outline btn-ghost" spinner />
+                                            <x-mary-button
+                                                wire:click="openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                                label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline btn-ghost" spinner />
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords" :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+                                :currentTenantId="$currentTenantId" />
+                        </div>
+                    </div>
+
+                    <div class="divider px-4 opacity-50"></div>
+
                     <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
                         :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
                         :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"

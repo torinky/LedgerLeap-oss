@@ -69,6 +69,17 @@ class IndexManager extends BaseLivewireComponent
 
     public $highlights = [];
 
+    // フォルダーアセット関連
+    public $breadcrumbs = [];
+
+    public $folderRecords;
+
+    public $ledgerDefineRecords;
+
+    public $currentFolder;
+
+    public $currentUserPermissionForFolder;
+
     // セマンティック検索ON前の同義語トグル状態を保存
     private $savedUseSynonymState = null;
 
@@ -123,8 +134,36 @@ class IndexManager extends BaseLivewireComponent
             }
         }
 
+        $this->prepareFolderAsset();
         $this->updateSearchMetadata();
         $this->initSearchContext();
+    }
+
+    public function prepareFolderAsset(): void
+    {
+        if (empty($this->currentFolderId)) {
+            return;
+        }
+
+        $this->currentFolder = Folder::find($this->currentFolderId);
+
+        if (! $this->currentFolder) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+            $this->currentUserPermissionForFolder = null;
+
+            return;
+        }
+
+        $this->breadcrumbs = $this->currentFolder->ancestors()->get()->all();
+        $this->breadcrumbs[] = $this->currentFolder;
+
+        $this->folderRecords = $this->currentFolder->children()->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
+
+        $this->currentUserPermissionForFolder = app(\App\Services\PermissionService::class)
+            ->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
     }
 
     public function initSearchContext()
@@ -297,6 +336,7 @@ class IndexManager extends BaseLivewireComponent
             }
         }
         $this->currentFolderId = $newFolderId;
+        $this->prepareFolderAsset();
         $this->updateSearchMetadata();
     }
 
@@ -351,15 +391,18 @@ class IndexManager extends BaseLivewireComponent
         $this->totalRecords = $total;
     }
 
-    #[On('filterUpdated')]
-    public function updateFilterFromChild($columnId, $value, $defineId = null)
+    #[On('openPermissionModal')]
+    public function openPermissionModal(string $resourceType, int $resourceId, string $title): void
     {
-        $this->filter[$columnId] = $value;
-        if ($defineId) {
-            $this->selectedLedgerDefineIds = [$defineId];
-        }
-        $this->initSearchContext();
-        $this->updateSearchMetadata();
+        // 子コンポーネントのプロパティをセットし、イベントを発火
+        $this->dispatch('openPermissionModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
+    }
+
+    #[On('openActivityModal')]
+    public function openActivityModal(string $resourceType, int $resourceId, string $title): void
+    {
+        // 子コンポーネントのプロパティをセットし、イベントを発火
+        $this->dispatch('openActivityModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
     }
 
     public function render()
@@ -382,6 +425,11 @@ class IndexManager extends BaseLivewireComponent
             'orderByLabel' => $this->orderByLabel,
             'defaultSortColumns' => $this->defaultSortColumns,
             'hasWorkflowEnabled' => $this->hasWorkflowEnabled,
+            'breadcrumbs' => $this->breadcrumbs,
+            'folderRecords' => $this->folderRecords,
+            'ledgerDefineRecords' => $this->ledgerDefineRecords,
+            'currentFolder' => $this->currentFolder,
+            'currentUserPermissionForFolder' => $this->currentUserPermissionForFolder,
         ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }
