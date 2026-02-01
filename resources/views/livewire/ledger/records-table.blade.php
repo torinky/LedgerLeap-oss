@@ -1,6 +1,6 @@
 @php
     $searchTargets = 'search,useTechnicalTerm,useSynonym,useSemanticSearch';
-    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc'; // displayLevel,setDisplayLevelを分離
+    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,filter,sort,sortRequested'; // displayLevel,setDisplayLevelを分離
     $recordFilterTargets = 'displayLevel,setDisplayLevel';
     // $folderNavTargets: IndexManager側での $navTargets と同期させて RecordsTable 内の表示を制御
     $folderNavTargets = 'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
@@ -68,97 +68,8 @@
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
-        {{-- Record level overlay for granular filters like displayLevel --}}
-        <x-element.loading-overlay tier="2" :target="$recordFilterTargets" />
-
-        {{-- Always show info-block --}}
-        <div class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6">
-            @php
-                $displayLevelOptions = [
-                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                ];
-            @endphp
-            <div class="flex flex-wrap items-center justify-end gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold opacity-50 uppercase tracking-widest">{{ __('ledger.form.display_level') }}</span>
-                    {{-- Reactive prop への直接 model binding を避けるため、Alpine.js で制御する --}}
-                    <div x-data="{ level: {{ $displayLevel }} }" x-init="$watch('level', value => $wire.$parent.updateDisplayLevel(value))">
-                        <x-mary-group
-                            x-model="level"
-                            :options="$displayLevelOptions"
-                            class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
-                            option-label="name" />
-                    </div>
-                </div>
-            </div>
-
-            @if (!empty($highlights))
-                <div class="flex flex-wrap gap-2 items-center justify-center pt-2">
-                    <span class="text-xs"><i class="fas fa-search mr-1 opacity-50"></i>{{ __('ledger.searched') }}</span>
-                    @foreach ($keywords as $keyword)
-                        <div class="badge {{ empty($synonyms[$keyword]) ? 'badge-neutral' : 'badge-primary' }} badge-md gap-2 py-3 shadow-sm border-none">
-                            <span class="font-bold">{{ $keyword }}</span>
-                            @if (!empty($synonyms[$keyword]))
-                                <div class="tooltip tooltip-bottom" data-tip="{{ implode(' / ', $synonyms[$keyword]) }}">
-                                    <i class="fas fa-layer-group text-[10px] opacity-70"></i>
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="flex justify-center flex-wrap gap-4 items-center pt-1" wire:loading.class="opacity-50" wire:target="{{ $allTargets }}">
-                @if (!empty($selectedFolderIds))
-                    <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                        data-tip="{{ __('ledger.folder.opened_count') }}">
-                        <div class="self-center flex items-center gap-2 text-info-content/80">
-                            <i class="fas fa-folder-open text-info-content/50"></i>
-                            <span class="font-bold">{{ count($selectedFolderIds) }}</span>
-                        </div>
-                    </div>
-                    <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
-                @endif
-
-                @if (!empty($selectedLedgerDefineIds))
-                    <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                        data-tip="{{ __('ledger.define.opened_count') }}">
-                        <div class="self-center flex items-center gap-2 text-info-content/80">
-                            <i class="fas fa-book-open text-info-content/50"></i>
-                            <span class="font-bold">{{ count($selectedLedgerDefineIds) }}</span>
-                        </div>
-                    </div>
-                    <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
-                @endif
-
-                @if (!empty($totalRecords))
-                    <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                        data-tip="{{ __('ledger.opened_count') }}">
-                        <div class="self-center flex items-center gap-2 text-info-content/80">
-                            <i class="fas fa-list opacity-50"></i>
-                            <span class="font-bold">{{ $totalRecords }}</span>
-                        </div>
-                    </div>
-                @endif
-
-                @if ($orderBy === 'composite_score' && !empty($search))
-                    <div class="badge badge-primary bg-primary/80 tooltip h-8 flex items-stretch shadow-sm border-none"
-                        data-tip="{{ __('ledger.scoring.sorted_by_score') }}">
-                        <div class="self-center flex items-center gap-2 text-primary-content/90">
-                            <i class="fas fa-sort-amount-down text-[10px]"></i>
-                            <span class="text-xs font-bold">{{ __('ledger.scoring.score_order') }}</span>
-                        </div>
-                    </div>
-                @endif
-
-                @if ($orderBy !== 'default' && !empty($defaultSortColumns))
-                    <x-mary-button wire:click="sort('default')" label="{{ __('ledger.actions.reset_sort') }}"
-                        icon="o-arrow-path" class="btn-xs btn-outline btn-info h-8" spinner />
-                @endif
-            </div>
-        </div>
+        {{-- Record level overlay for granular filters --}}
+        <x-element.loading-overlay tier="2" :target="$allTargets" />
 
         <div>
             <div class="records-list-container">

@@ -8,18 +8,23 @@
 
     @php
         // IndexManager で監視すべき主要なアクションとプロパティ
-        // メソッド名とイベント名の両方を網羅することで、どの起動経路でもローディングが表示されるようにする
-        $loadingMethods =
-            'changeCurrentFolder,search,orderBy,orderAsc,filterStatus,selectedLedgerDefineIds,selectedFolderIds,displayLevel,perPage,gotoPage,nextPage,previousPage,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,updateDisplayLevel,sort';
-        $loadingEvents =
-            'currentFolderChangeRequested,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,displayLevelRequested';
-        $loadingTargets = $loadingMethods . ',' . $loadingEvents;
+        // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
+        $heavyMethods = 'changeCurrentFolder,search,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId';
+        $heavyEvents = 'currentFolderChangeRequested,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled';
+        $heavyTargets = $heavyMethods . ',' . $heavyEvents;
+
+        // 軽い処理（表示レベル変更、ソート、フィルタなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
+        $lightMethods = 'displayLevel,updateDisplayLevel,sort,filter,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage';
+        $lightEvents = 'displayLevelRequested,sortRequested';
+        $lightTargets = $lightMethods . ',' . $lightEvents;
+
+        $allLoadingTargets = $heavyTargets . ',' . $lightTargets;
     @endphp
 
     <div class="relative min-h-screen">
         {{-- Tier 1: Global Loading Overlay --}}
         {{-- .delay.longest (1秒) を使用し、非常に重い通信の時のみ中央にスピナーを表示する --}}
-        <div wire:loading.delay.longest wire:target="{{ $loadingTargets }}"
+        <div wire:loading.delay.longest wire:target="{{ $allLoadingTargets }}"
             class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
             {{-- 指定されたコンポーネントを使用。!static !inset-auto で確実に中央へ固定 --}}
             <x-element.loading-overlay tier="1" manual message="{{ __('ledger.loading') }}"
@@ -28,12 +33,12 @@
 
         <x-slot:drawer>
             {{-- Tree Content: 瞬時に真っ白にならないよう opacity で制御。クリックを妨げない。 --}}
-            <div wire:loading.class="opacity-50" wire:target="{{ $loadingTargets }}">
+            <div wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
                 <livewire:folder.tree :currentFolderId="$currentFolderId" :selectedFolderIds="$selectedFolderIds" :parentComponentId="$this->getId()"
                     wire:key="folder-tree-stable" />
             </div>
-            {{-- Tree Skeleton: 通信中（200ms〜）のみ表示 --}}
-            <div wire:loading.delay wire:target="{{ $loadingTargets }}" class="p-4 space-y-3">
+            {{-- Tree Skeleton: ヘビーな通信中（200ms〜）のみ表示 --}}
+            <div wire:loading.delay wire:target="{{ $heavyTargets }}" class="p-4 space-y-3">
                 @foreach (range(1, 5) as $i)
                     <div class="flex items-center gap-2">
                         <div class="h-4 w-4 bg-base-content/10 rounded shimmer"></div>
@@ -50,17 +55,110 @@
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">
-            {{-- Main Content: 瞬時の表示切り替えでチラつかないよう、一定時間(200ms)経過後に隠す --}}
-            <div wire:loading.remove.delay wire:target="{{ $loadingTargets }}">
-                <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
-                    :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
-                    :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
-                    :hasWorkflowEnabled="$hasWorkflowEnabled"
-                    :wire:key="'records-table-'.md5(json_encode([$search, $currentFolderId, $useSemanticSearch, $selectedLedgerDefineIds, $orderBy]))" />
+            {{-- ★★★ Info & Results Section (Loading 時に表示を維持) ★★★ --}}
+            <div class="px-4" wire:loading.class="opacity-50" wire:target="{{ $lightTargets }}">
+                <div class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6">
+                    @php
+                        $displayLevelOptions = [
+                            ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                            ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                            ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                        ];
+                    @endphp
+                    <div class="flex flex-wrap items-center justify-end gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold opacity-50 uppercase tracking-widest">{{ __('ledger.form.display_level') }}</span>
+                            <div x-data="{ level: {{ $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
+                                <x-mary-group
+                                    x-model="level"
+                                    :options="$displayLevelOptions"
+                                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                                    option-label="name" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!empty($this->highlights))
+                        <div class="flex flex-wrap gap-2 items-center justify-center pt-2">
+                            <span class="text-xs"><i class="fas fa-search mr-1 opacity-50"></i>{{ __('ledger.searched') }}</span>
+                            @foreach ($this->keywords as $keyword)
+                                <div class="badge {{ empty($this->synonyms[$keyword]) ? 'badge-neutral' : 'badge-primary' }} badge-md gap-2 py-3 shadow-sm border-none">
+                                    <span class="font-bold">{{ $keyword }}</span>
+                                    @if (!empty($this->synonyms[$keyword]))
+                                        <div class="tooltip tooltip-bottom" data-tip="{{ implode(' / ', $this->synonyms[$keyword]) }}">
+                                            <i class="fas fa-layer-group text-[10px] opacity-70"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="flex justify-center flex-wrap gap-4 items-center pt-1" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
+                        @if (!empty($selectedFolderIds))
+                            <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                data-tip="{{ __('ledger.folder.opened_count') }}">
+                                <div class="self-center flex items-center gap-2 text-info-content/80">
+                                    <i class="fas fa-folder-open text-info-content/50"></i>
+                                    <span class="font-bold">{{ count($selectedFolderIds) }}</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
+                        @endif
+
+                        @if (!empty($selectedLedgerDefineIds))
+                            <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                data-tip="{{ __('ledger.define.opened_count') }}">
+                                <div class="self-center flex items-center gap-2 text-info-content/80">
+                                    <i class="fas fa-book-open text-info-content/50"></i>
+                                    <span class="font-bold">{{ count($selectedLedgerDefineIds) }}</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
+                        @endif
+
+                        @if (!empty($this->totalRecords))
+                            <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                data-tip="{{ __('ledger.opened_count') }}">
+                                <div class="self-center flex items-center gap-2 text-info-content/80">
+                                    <i class="fas fa-list opacity-50"></i>
+                                    <span class="font-bold">{{ $this->totalRecords }}</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($orderBy === 'composite_score' && !empty($search))
+                            <div class="badge badge-primary bg-primary/80 tooltip h-8 flex items-stretch shadow-sm border-none"
+                                data-tip="{{ __('ledger.scoring.sorted_by_score') }}">
+                                <div class="self-center flex items-center gap-2 text-primary-content/90">
+                                    <i class="fas fa-sort-amount-down text-[10px]"></i>
+                                    <span class="text-xs font-bold">{{ __('ledger.scoring.score_order') }}</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($orderBy !== 'default' && !empty($defaultSortColumns))
+                            <x-mary-button wire:click="sort('default')" label="{{ __('ledger.actions.reset_sort') }}"
+                                icon="o-arrow-path" class="btn-xs btn-outline btn-info h-8" spinner />
+                        @endif
+                    </div>
+                </div>
             </div>
 
-            {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（.delayを削除） --}}
-            <div wire:loading wire:target="{{ $loadingTargets }}" class="w-full">
+            {{-- Main Content: ヘビーな通信時は一定時間(200ms)経過後に隠す。ライトな通信時は表示を維持しつつ透明度だけ変える。 --}}
+            <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
+                <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
+                    <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
+                        :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds" :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
+                        :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
+                        :hasWorkflowEnabled="$hasWorkflowEnabled"
+                        :keywords="$this->keywords" :highlights="$this->highlights" :synonyms="$this->synonyms"
+                        :wire:key="'records-table-'.md5(json_encode([$search, $currentFolderId, $useSemanticSearch, $selectedLedgerDefineIds]))" />
+                </div>
+            </div>
+
+            {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（ヘビーな通信のみ） --}}
+            <div wire:loading wire:target="{{ $heavyTargets }}" class="w-full">
                 <div class="px-4">
                     {{-- Breadcrumb Skeleton --}}
                     <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>

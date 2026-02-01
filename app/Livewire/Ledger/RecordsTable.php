@@ -16,10 +16,8 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive; // 追加
-use Livewire\Attributes\Url;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
@@ -71,13 +69,16 @@ class RecordsTable extends BaseLivewireComponent
 
     private $tags = [];
 
+    #[Reactive]
     public $keywords = [];
 
     public $totalRecords;
 
+    #[Reactive]
     public $highlights = [];
 
-    public array $synonyms;
+    #[Reactive]
+    public $synonyms = [];
 
     #[Reactive]
     public bool $useSemanticSearch = false;
@@ -134,7 +135,6 @@ class RecordsTable extends BaseLivewireComponent
         // RecordsTable では計算が必要なプロパティの初期化のみを行う。
 
         $this->synonymServiceConfig = $synonymServiceConfig;
-        $this->initSearchContext();
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
@@ -167,30 +167,21 @@ class RecordsTable extends BaseLivewireComponent
     /**
      * 検索コンテキストを初期化
      *
-     * 検索コンテキストを作成し、検索キーワード、フィルター、タグ、キーワード、ハイライト、およびシノニムを設定します。
-     * また、検索コンテキストの構成に使用するシノニムサービスの設定も行います。
-     *
-     * @return void
+     * 親から Reactive プロパティとして受け取るため、ここではインスタンスの作成のみ行い、
+     * 計算済みの値をセットする。重い再計算（類義語展開など）は行わない。
      */
     protected function initSearchContext()
     {
-        if (! $this->synonymServiceConfig) {
-            $this->synonymServiceConfig = new SynonymServiceConfig([
-                'useSynonym' => $this->useSynonym,
-                'useTechnicalTerm' => $this->useTechnicalTerm,
-            ]);
-        }
-
         $synonymService = new SynonymService($this->synonymServiceConfig);
         $this->searchContext = new SearchContext($synonymService);
 
-        $this->searchContext->setSearch($this->search);
-        $this->searchContext->setFilter($this->filter);
-        $this->tags = $this->searchContext->tags;
-        $this->keywords = $this->searchContext->keywords;
-        $this->highlights = $this->searchContext->highlights;
-        $this->synonyms = $this->searchContext->synonyms;
-        //        dd($this->searchContext,$this->keywords);
+        // プロパティ値をセットして検索に備える
+        // 注意: setSearch() などを呼ぶと内部で再計算される可能性があるため、
+        // 必要なプロパティのみを直接セットするか、再計算を防ぐ構成にする。
+        $this->searchContext->keywords = $this->keywords ?? [];
+        $this->searchContext->highlights = $this->highlights ?? [];
+        $this->searchContext->synonyms = $this->synonyms ?? [];
+        $this->searchContext->filter = $this->filter ?? [];
     }
 
     /**
@@ -218,7 +209,6 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedSearch($value)
     {
-        $this->initSearchContext();
         $this->resetPage();
     }
 
@@ -227,7 +217,6 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedFilter($value)
     {
-        $this->initSearchContext();
         $this->resetPage();
     }
 
@@ -260,7 +249,8 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedOrderAsc($value)
     {
-        $this->initSearchContext();
+        // ページのリセットのみ
+        $this->resetPage();
     }
 
     /**
@@ -268,7 +258,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedUseSemanticSearch($value)
     {
-        $this->initSearchContext();
+        $this->resetPage();
     }
 
     /**
@@ -276,7 +266,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedUseSynonym($value)
     {
-        $this->initSearchContext();
+        $this->resetPage();
     }
 
     /**
@@ -284,7 +274,7 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function updatedUseTechnicalTerm($value)
     {
-        $this->initSearchContext();
+        $this->resetPage();
     }
 
     /**
@@ -365,15 +355,17 @@ class RecordsTable extends BaseLivewireComponent
             'orderBy' => $this->orderBy,
             'filterStatus' => $this->filterStatus,
         ]);
-        // $this->authorize('viewAny', LedgerDefine::class);
+
         $this->initSearchContext();
 
         // Reactiveプロパティの変更に伴い、フォルダーアセット（パンくず、子フォルダ等）を再取得
+        // render で毎回呼ぶのを避けるため、必要な時のみ実行されるように mount と updatedXXX で管理されるべきだが、
+        // 現状は安全のためここでの実行を維持（クエリキャッシュがあれば高速）。
         $this->prepareFolderAsset();
 
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
-            'keywords' => $this->searchContext->keywords,
+            'keywords' => $this->keywords,
             'filter' => $this->filter,
         ]);
 
@@ -549,13 +541,18 @@ class RecordsTable extends BaseLivewireComponent
                 ->keyBy('id');
 
             // 総数を取得
-            Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: ' . json_encode($searchTargetLedgerDefineIds));
-        Log::info('[MCP Debug] RecordsTable.render search: ' . $this->search);
-        
-        $this->totalRecords = $ledgerRecordsQuery->count();
-        Log::info('[MCP Debug] RecordsTable.render totalRecords: ' . $this->totalRecords);
-        Log::info('[MCP Debug] RecordsTable.render query SQL: ' . $ledgerRecordsQuery->toSql());
-        Log::info('[MCP Debug] RecordsTable.render query bindings: ' . json_encode($ledgerRecordsQuery->getBindings()));
+            Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: '.json_encode($searchTargetLedgerDefineIds));
+            Log::info('[MCP Debug] RecordsTable.render search: '.$this->search);
+
+            $newTotal = $ledgerRecordsQuery->count();
+            if ($this->totalRecords !== $newTotal) {
+                $this->totalRecords = $newTotal;
+                $this->dispatch('recordsUpdated', total: $this->totalRecords);
+            }
+
+            Log::info('[MCP Debug] RecordsTable.render totalRecords: '.$this->totalRecords);
+            Log::info('[MCP Debug] RecordsTable.render query SQL: '.$ledgerRecordsQuery->toSql());
+            Log::info('[MCP Debug] RecordsTable.render query bindings: '.json_encode($ledgerRecordsQuery->getBindings()));
 
             // ページネーション実行
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
@@ -646,19 +643,22 @@ class RecordsTable extends BaseLivewireComponent
         }
 
         Log::info('RecordsTable render end, returning view');
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
-            //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
             'ledgerRecordsGroupByDefineIds' => $ledgerRecordsGroupByDefineIds,
-            'allAttachments' => $allAttachments, // ★ ビューに渡す
-            'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
-            'totalRecords' => $this->totalRecords,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
+            'displayLevel' => $this->displayLevel,
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
-            'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
-            'scoreStatsByDefineId' => $scoreStatsByDefineId, // スコア統計
-            'currentTenantId' => $this->currentTenantId,
+            'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
+            'allAttachments' => $allAttachments,
+            'filteredColumnDefines' => $filteredColumnDefines,
+            'scoreStatsByDefineId' => $scoreStatsByDefineId,
+            'keywords' => $this->keywords,
+            'synonyms' => $this->synonyms,
+            'highlights' => $this->highlights,
+            'totalRecords' => $this->totalRecords,
         ]);
     }
 

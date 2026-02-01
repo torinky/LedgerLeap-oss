@@ -6,10 +6,10 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
-use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive;
 
 class Tree extends BaseLivewireComponent
 {
@@ -54,14 +54,13 @@ class Tree extends BaseLivewireComponent
         $this->readableFolderIds = $writableFolderRepository->getReadableFolderIds(Auth::user());
     }
 
-
-
     public function render()
     {
         Log::info('[Folder\Tree] rendering', [
             'currentFolderId' => $this->currentFolderId,
-            'selectedFolderIds' => $this->selectedFolderIds
+            'selectedFolderIds' => $this->selectedFolderIds,
         ]);
+
         return view('livewire.folder.tree');
     }
 }

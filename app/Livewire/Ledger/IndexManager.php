@@ -5,13 +5,16 @@ namespace App\Livewire\Ledger;
 use App\Http\Requests\Ledger\SearchRequest; // 追加
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Models\Folder;
+use App\Models\LedgerDefine;
+use App\Services\Config\SynonymServiceConfig;
+use App\Services\Ledger\SearchContext;
+use App\Services\SynonymService; // 追加
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema as FacadesSchema;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
-use App\Models\LedgerDefine;
-use App\Models\Folder; // 追加
-use Illuminate\Support\Facades\Schema as FacadesSchema;
-use Illuminate\Support\Facades\Log;
 
 class IndexManager extends BaseLivewireComponent
 {
@@ -57,6 +60,14 @@ class IndexManager extends BaseLivewireComponent
     public bool $hasWorkflowEnabled = false;
 
     public $currentTenantId;
+
+    public $keywords = [];
+
+    public $synonyms = [];
+
+    public $totalRecords = 0;
+
+    public $highlights = [];
 
     // セマンティック検索ON前の同義語トグル状態を保存
     private $savedUseSynonymState = null;
@@ -105,7 +116,7 @@ class IndexManager extends BaseLivewireComponent
         }
 
         // currentFolderId が未だに空（または不正）な場合の最終的なフォールバック
-        if (empty($this->currentFolderId) || !Folder::find($this->currentFolderId)) {
+        if (empty($this->currentFolderId) || ! Folder::find($this->currentFolderId)) {
             $rootFolder = Folder::root()->first();
             if ($rootFolder) {
                 $this->currentFolderId = $rootFolder->id;
@@ -113,6 +124,24 @@ class IndexManager extends BaseLivewireComponent
         }
 
         $this->updateSearchMetadata();
+        $this->initSearchContext();
+    }
+
+    public function initSearchContext()
+    {
+        $synonymServiceConfig = new SynonymServiceConfig([
+            'useSynonym' => $this->useSynonym,
+            'useTechnicalTerm' => $this->useTechnicalTerm,
+        ]);
+        $synonymService = new SynonymService($synonymServiceConfig);
+        $searchContext = new SearchContext($synonymService);
+
+        $searchContext->setSearch($this->search);
+        $searchContext->setFilter($this->filter);
+
+        $this->keywords = $searchContext->keywords ?? [];
+        $this->highlights = $searchContext->highlights ?? [];
+        $this->synonyms = $searchContext->synonyms ?? [];
     }
 
     public function updateSearchMetadata()
@@ -122,9 +151,9 @@ class IndexManager extends BaseLivewireComponent
             ->where('workflow_enabled', true)
             ->exists();
 
-        if (empty($this->selectedLedgerDefineIds) && !empty($this->currentFolderId)) {
-             // フォルダ内すべての台帳を対象にする場合のチェック (簡易実装)
-             $this->hasWorkflowEnabled = LedgerDefine::where('folder_id', $this->currentFolderId)
+        if (empty($this->selectedLedgerDefineIds) && ! empty($this->currentFolderId)) {
+            // フォルダ内すべての台帳を対象にする場合のチェック (簡易実装)
+            $this->hasWorkflowEnabled = LedgerDefine::where('folder_id', $this->currentFolderId)
                 ->where('workflow_enabled', true)
                 ->exists();
         }
@@ -164,6 +193,26 @@ class IndexManager extends BaseLivewireComponent
         $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
     }
 
+    public function updatedSearch()
+    {
+        $this->initSearchContext();
+    }
+
+    public function updatedFilter()
+    {
+        $this->initSearchContext();
+    }
+
+    public function updatedUseSynonym()
+    {
+        $this->initSearchContext();
+    }
+
+    public function updatedUseTechnicalTerm()
+    {
+        $this->initSearchContext();
+    }
+
     public function updatedUseSemanticSearch($value)
     {
         if ($value) {
@@ -200,6 +249,7 @@ class IndexManager extends BaseLivewireComponent
             $columnNames = collect($this->defaultSortColumns)->pluck('name')->implode(', ');
             $label .= " ({$columnNames})";
         }
+
         return $label;
     }
 
@@ -242,8 +292,8 @@ class IndexManager extends BaseLivewireComponent
             if ($newFolderId == $this->currentFolderId && ! empty($this->selectedFolderIds)) {
                 $this->selectedFolderIds = [];
             } else {
-                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
-                $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
+                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->sort()->values()->toArray();
+                $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->sort()->values()->toArray();
             }
         }
         $this->currentFolderId = $newFolderId;
@@ -274,6 +324,10 @@ class IndexManager extends BaseLivewireComponent
             $this->selectedFolderIds = array_merge($this->selectedFolderIds, $mergingFolderIds);
             $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->pluck('id')->toArray());
         }
+
+        sort($this->selectedFolderIds);
+        sort($this->selectedLedgerDefineIds);
+
         $this->updateSearchMetadata();
     }
 
@@ -285,7 +339,23 @@ class IndexManager extends BaseLivewireComponent
         } else {
             $this->selectedLedgerDefineIds[] = $ledgerDefineId;
         }
+
+        sort($this->selectedLedgerDefineIds);
+
         $this->updateSearchMetadata();
+    }
+
+    #[On('recordsUpdated')]
+    public function updateRecordCount($total)
+    {
+        $this->totalRecords = $total;
+    }
+
+    #[On('filterUpdated')]
+    public function updateFilterFromChild($columnId, $value)
+    {
+        $this->filter[$columnId] = $value;
+        $this->initSearchContext();
     }
 
     public function render()
@@ -299,7 +369,15 @@ class IndexManager extends BaseLivewireComponent
             'orderBy' => $this->orderBy,
             'filterStatus' => $this->filterStatus,
         ]);
-        return view('livewire.ledger.index-manager')
-            ->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
+
+        return view('livewire.ledger.index-manager', [
+            'keywords' => $this->keywords ?? [],
+            'synonyms' => $this->synonyms ?? [],
+            'totalRecords' => $this->totalRecords ?? 0,
+            'highlights' => $this->highlights ?? [],
+            'orderByLabel' => $this->orderByLabel,
+            'defaultSortColumns' => $this->defaultSortColumns,
+            'hasWorkflowEnabled' => $this->hasWorkflowEnabled,
+        ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }

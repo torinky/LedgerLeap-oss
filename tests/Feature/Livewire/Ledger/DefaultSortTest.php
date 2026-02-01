@@ -133,19 +133,19 @@ class DefaultSortTest extends TestCase
 
         // 初期状態はデフォルトソート (主番ASC)
         $component->assertSet('orderBy', 'default');
-        
+
         // created_at で降順ソートに変更
         // IndexManager は sort イベントをリッスンしている
         $component->dispatch('sortRequested', columnName: 'created_at', columnLabel: __('ledger.created_at'));
-        
+
         $component->assertSet('orderBy', 'created_at')
-                  ->assertSet('orderAsc', false);
+            ->assertSet('orderAsc', false);
 
         // 'default' でソートをリセット
         $component->dispatch('sortRequested', columnName: 'default');
-        
+
         $component->assertSet('orderBy', 'default')
-                  ->assertSet('orderAsc', true);
+            ->assertSet('orderAsc', true);
     }
 
     #[Test]

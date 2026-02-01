@@ -3,7 +3,6 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
-use App\Models\AutoLink;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;

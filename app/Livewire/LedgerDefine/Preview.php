@@ -6,7 +6,6 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HandlesFormGroups;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 
 class Preview extends BaseLivewireComponent
@@ -51,10 +50,10 @@ class Preview extends BaseLivewireComponent
     public function render()
     {
         $groupedColumns = collect($this->ledgerDefineRecord->column_define ?? [])
-            ->groupBy(fn($column) => $column->group ?? __('ledger.form.group_default'));
+            ->groupBy(fn ($column) => $column->group ?? __('ledger.form.group_default'));
 
         return view('livewire.ledger-define.preview', [
-            'groupedColumns' => $groupedColumns
+            'groupedColumns' => $groupedColumns,
         ]);
     }
 

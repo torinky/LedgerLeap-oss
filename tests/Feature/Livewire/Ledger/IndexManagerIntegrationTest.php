@@ -8,18 +8,22 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
-use PHPUnit\Framework\Attributes\Test;
 
 class IndexManagerIntegrationTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
     private User $user;
+
     private Folder $rootFolder;
+
     private Folder $subFolder;
+
     private LedgerDefine $ledgerDefine;
+
     protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
@@ -27,7 +31,7 @@ class IndexManagerIntegrationTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-index-manager-' . uniqid()]);
+        $this->tenant = \App\Models\Tenant::create(['id' => 'test-index-manager-'.uniqid()]);
         tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();
@@ -52,8 +56,8 @@ class IndexManagerIntegrationTest extends TestCase
         Livewire::test(IndexManager::class)
             ->assertStatus(200)
             ->assertSee('Root');
-            // 'Test Ledger' は Root フォルダ直下ではないので初期状態では見えない可能性がある。
-            // 確実に表示させるにはサブフォルダに移動するか、l パラメータで指定する。
+        // 'Test Ledger' は Root フォルダ直下ではないので初期状態では見えない可能性がある。
+        // 確実に表示させるにはサブフォルダに移動するか、l パラメータで指定する。
     }
 
     #[Test]

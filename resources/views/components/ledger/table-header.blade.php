@@ -38,6 +38,7 @@
             <button class="btn btn-xs"
                     wire:key="ledger_sort_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
                     wire:click.self="sort('content->{{ (string)$column_define->id }}', '{{ $column_define->name }}')"
+                    wire:loading.attr="disabled"
             >
                 @if($orderBy == 'content->'.(string)$column_define->id)
                     @if($orderAsc)
@@ -50,8 +51,10 @@
                 @endif
             </button>
             <input
+                    x-data
+                    x-on:input.debounce.500ms="$wire.dispatch('filterUpdated', { columnId: '{{$column_define->id}}', value: $event.target.value })"
                     wire:change="focusLedgerDefine({{$ledgerDefine->id}})"
-                    wire:model="filter.{{$column_define->id}}"
+                    value="{{ $this->filter[$column_define->id] ?? '' }}"
                     wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
                     type="search"
                     class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
