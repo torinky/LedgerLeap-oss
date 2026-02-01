@@ -15,7 +15,8 @@
 
         // 軽い処理（表示レベル変更、ソート、フィルタなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
         $lightMethods = 'displayLevel,updateDisplayLevel,sort,filter,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage';
-        $lightEvents = 'displayLevelRequested,sortRequested';
+        // recordsUpdated を追加することで、子コンポーネントからの件数更新通知（二重レンダリング）中もローディング状態を維持する
+        $lightEvents = 'displayLevelRequested,sortRequested,filterUpdated,recordsUpdated,perPageUpdated';
         $lightTargets = $lightMethods . ',' . $lightEvents;
 
         $allLoadingTargets = $heavyTargets . ',' . $lightTargets;
@@ -153,7 +154,7 @@
                         :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym" :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns"
                         :hasWorkflowEnabled="$hasWorkflowEnabled"
                         :keywords="$this->keywords" :highlights="$this->highlights" :synonyms="$this->synonyms"
-                        :wire:key="'records-table-'.md5(json_encode([$search, $currentFolderId, $useSemanticSearch, $selectedLedgerDefineIds]))" />
+                        wire:key="ledger-records-table-stable" />
                 </div>
             </div>
 

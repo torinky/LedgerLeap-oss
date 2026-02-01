@@ -352,10 +352,14 @@ class IndexManager extends BaseLivewireComponent
     }
 
     #[On('filterUpdated')]
-    public function updateFilterFromChild($columnId, $value)
+    public function updateFilterFromChild($columnId, $value, $defineId = null)
     {
         $this->filter[$columnId] = $value;
+        if ($defineId) {
+            $this->selectedLedgerDefineIds = [$defineId];
+        }
         $this->initSearchContext();
+        $this->updateSearchMetadata();
     }
 
     public function render()

@@ -19,7 +19,7 @@
                     </div>
                     <div class="flex justify-center items-center">
                         <button class="btn btn-ghost"
-                                wire:click.prevent="$parent.toggleFolderId({{ $folderRecord->id }})"
+                                x-on:click.prevent="Livewire.dispatch('folderIdToggled', { folderId: {{ $folderRecord->id }} })"
                                 wire:key="selected_folder_{{$folderRecord->id}}">
                                 <span class="fa-layers fa-fw text-3xl">
                                     <i class="fa-solid {{in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder'}} "></i>
@@ -27,11 +27,12 @@
                                           style="font-weight:900">{{$folderRecord->descendantCount()}}</span>
                                 </span>
                         </button>
-                        {{-- 階層移動ボタン: セクションローディングを適用するため、navigation-start ではなく folder-loading-start を発火 --}}
+                        {{-- 階層移動ボタン --}}
                         <button class="btn btn-ghost"
-                                wire:click.prevent="$parent.changeCurrentFolder({{$folderRecord->id}})"
-                                wire:key="enter_folder_{{$folderRecord->id}}"><i
-                                class="text-3xl fa-solid fa-right-to-bracket"></i></button>
+                                x-on:click.prevent="Livewire.dispatch('currentFolderChangeRequested', { newFolderId: {{$folderRecord->id}} })"
+                                wire:key="enter_folder_{{$folderRecord->id}}">
+                                <i class="text-3xl fa-solid fa-right-to-bracket"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -44,7 +45,7 @@
     @foreach($ledgerDefineRecords as $dKey => $ledgerDefineRecord)
         <div
             class="cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100 {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
-                wire:click.prevent="$parent.toggleLedgerDefineId({{ $ledgerDefineRecord->id }})"
+                x-on:click.prevent="Livewire.dispatch('ledgerDefineIdToggled', { ledgerDefineId: {{ $ledgerDefineRecord->id }} })"
                 wire:key="selected_ledger_{{$ledgerDefineRecord->id}}">
 
             <i class=" place-self-center fa-solid {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book'}} text-3xl "></i>

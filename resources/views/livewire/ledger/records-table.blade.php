@@ -1,11 +1,11 @@
 @php
     $searchTargets = 'search,useTechnicalTerm,useSynonym,useSemanticSearch';
-    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,filter,sort,sortRequested'; // displayLevel,setDisplayLevelを分離
+    $filterTargets = 'filterStatus,perPage,orderBy,orderAsc,filter'; // sort, sortRequested を削除
     $recordFilterTargets = 'displayLevel,setDisplayLevel';
     // $folderNavTargets: IndexManager側での $navTargets と同期させて RecordsTable 内の表示を制御
     $folderNavTargets = 'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
     // RecordsTable 内部で個別に隠蔽/表示を制御するための全ターゲット
-    $allTargets = $searchTargets . ',' . $filterTargets . ',' . $folderNavTargets;
+    $allTargets = $searchTargets . ',' . $filterTargets . ',' . $folderNavTargets . ',sortRequested,filterUpdated';
 @endphp
 
 <div class="relative">
@@ -48,12 +48,12 @@
                         </div>
                         <div class="card-actions">
                             <x-mary-button
-                                wire:click="openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                x-on:click.stop="$wire.$parent.openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
                                 label="{{ __('ledger.access_and_permissions.title') }}" icon="o-shield-check"
-                                class="btn-sm btn-outline btn-ghost" spinner />
+                                class="btn-sm btn-outline btn-ghost" spinner="$parent.openPermissionModal" />
                             <x-mary-button
-                                wire:click="openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
-                                label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline btn-ghost" spinner />
+                                x-on:click.stop="$wire.$parent.openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                label="{{ __('ledger.activity.title') }}" icon="o-clock" class="btn-sm btn-outline btn-ghost" spinner="$parent.openActivityModal" />
                         </div>
                     </div>
                 </div>

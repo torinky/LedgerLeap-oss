@@ -44,18 +44,18 @@
         />
     <div class="flex-grow text-right">
         <x-mary-button
-                wire:click="openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                wire:click="$parent.openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
                 label="{{ __('ledger.access_and_permissions.title') }}"
                 icon="o-shield-check"
                 class="btn-xs btn-ghost"
-                spinner
+                spinner="$parent.openPermissionModal"
         />
         <x-mary-button
-                wire:click="openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
+                wire:click="$parent.openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
                 label="{{ __('ledger.activity.title') }}"
                 icon="o-clock"
                 class="btn-xs btn-ghost"
-                spinner
+                spinner="$parent.openActivityModal"
         />
         <a href="#" class="btn btn-square btn-xs tooltip items-center pt-1"
            data-tip="{{__('ledger.close')}}"
@@ -99,7 +99,7 @@
                 <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
                                         :$keywords
                                         :$filter
-                                        key="{{Hash::make('ledger_export-'. $ledgerDefine->id)}}"
+                                        wire:key="ledger_export-{{ $ledgerDefine->id }}"
                 />
             @else
                 <div class="tooltip" data-tip="{{ __('ledger.not_allow_view') }}">
@@ -128,7 +128,6 @@
 </div>
 {{--    <div class="flex flex-row">--}}
         <livewire:ledger-define.tags :ledgerDefineId="$ledgerDefine->id"
-                                     key="{{Hash::make('ledger_define_tag-'. $ledgerDefine->id)}}"
+                                     wire:key="ledger_define_tag-{{ $ledgerDefine->id }}"
         />
 {{--    </div>--}}
-

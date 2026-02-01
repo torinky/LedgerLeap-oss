@@ -13,11 +13,10 @@
         @if(!empty($defaultSortColumns) && $orderBy !== 'default')
             {{-- デフォルト順に戻すボタン --}}
             <x-mary-button
-                    wire:click="sort('default')"
-{{--                    label="{{ __('ledger.actions.reset_sort') }}"--}}
+                    wire:click="$parent.sort('default')"
                     icon="o-arrow-path"
                     class="btn btn-square btn-warning"
-                    spinner
+                    spinner="$parent.sort"
             />
 
         @else
@@ -37,8 +36,9 @@
             </span>
             <button class="btn btn-xs"
                     wire:key="ledger_sort_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
-                    wire:click.self="sort('content->{{ (string)$column_define->id }}', '{{ $column_define->name }}')"
+                    wire:click.stop="$parent.sort('content->{{ (string)$column_define->id }}', '{{ $column_define->name }}')"
                     wire:loading.attr="disabled"
+                    wire:target="$parent.sort"
             >
                 @if($orderBy == 'content->'.(string)$column_define->id)
                     @if($orderAsc)
@@ -52,8 +52,7 @@
             </button>
             <input
                     x-data
-                    x-on:input.debounce.500ms="$wire.dispatch('filterUpdated', { columnId: '{{$column_define->id}}', value: $event.target.value })"
-                    wire:change="focusLedgerDefine({{$ledgerDefine->id}})"
+                    x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{$column_define->id}}', $event.target.value, {{$ledgerDefine->id}})"
                     value="{{ $this->filter[$column_define->id] ?? '' }}"
                     wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
                     type="search"
@@ -66,7 +65,11 @@
         <span class="text-sm font-bold text-accent-content">
             {{__('ledger.updated_at')}}
         </span>
-        <button href="#" class="btn btn-xs" wire:click="sort('updated_at', '{{ __('ledger.updated_at') }}')">
+        <button class="btn btn-xs"
+                wire:click.stop="$parent.sort('updated_at', '{{ __('ledger.updated_at') }}')"
+                wire:loading.attr="disabled"
+                wire:target="$parent.sort"
+        >
             @if($orderBy == 'updated_at')
                 @if($orderAsc)
                     <i class="fas fa-sort-down" style="pointer-events: none;"></i>

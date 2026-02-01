@@ -185,18 +185,6 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 列のソートを行う
-     *
-     * @param  string  $columnName
-     * @param  string|null  $columnLabel
-     * @return void
-     */
-    public function sort($columnName, $columnLabel = null)
-    {
-        $this->dispatch('sortRequested', columnName: $columnName, columnLabel: $columnLabel);
-    }
-
-    /**
      * orderByが変更されたときにorderByLabelを更新するライフサイクルフック
      */
     public function updatedOrderBy($value)
@@ -670,21 +658,23 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 選択する台帳を1つにする
-     *
-     * @param  int  $defineId
-     * @return void
+     * 列のソートを行う
      */
-    public function focusLedgerDefine($defineId)
+    public function sort($columnName, $columnLabel = null)
     {
-        $this->dispatch('focusLedgerDefineRequested', defineId: $defineId);
+        $this->dispatch('sortRequested', columnName: $columnName, columnLabel: $columnLabel);
+    }
+
+    /**
+     * フィルターを更新する
+     */
+    public function updateFilterFromChild($columnId, $value, $defineId = null)
+    {
+        $this->dispatch('filterUpdated', columnId: $columnId, value: $value, defineId: $defineId);
     }
 
     /**
      * 現在のフォルダーを変更する
-     *
-     * @param  int  $newFolderId
-     * @return void
      */
     public function changeCurrentFolder($newFolderId)
     {
@@ -692,22 +682,28 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 台帳を開閉する（コメントアウト済みのコード）
-     *
-     * @param  int  $targetLedgerDefineId
+     * フォルダの選択状態をトグルする
      */
-    /*
-    public function toggleLedgerDefineOpen($targetLedgerDefineId)
+    public function toggleFolderId($folderId)
     {
-        if (in_array($targetLedgerDefineId, $this->selectedLedgerDefineIds)) {
-            $this->selectedLedgerDefineIds = collect($this->selectedLedgerDefineIds)->reject(function ($item) use ($targetLedgerDefineId) {
-                return ($item === $targetLedgerDefineId) || ($item === false);
-            })->toArray();
-        } else {
-            $this->selectedLedgerDefineIds[] = $targetLedgerDefineId;
-        }
+        $this->dispatch('folderIdToggled', folderId: $folderId);
     }
-    */
+
+    /**
+     * 台帳の選択状態をトグルする
+     */
+    public function toggleLedgerDefineId($ledgerDefineId)
+    {
+        $this->dispatch('ledgerDefineIdToggled', ledgerDefineId: $ledgerDefineId);
+    }
+
+    /**
+     * 選択する台帳を1つにする
+     */
+    public function focusLedgerDefine($defineId)
+    {
+        $this->dispatch('focusLedgerDefineRequested', defineId: $defineId);
+    }
 
     /**
      * フォルダーアセットを準備する
@@ -739,28 +735,6 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->folderRecords = $currentFolder->children()->get();
         $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
-    }
-
-    /**
-     * フォルダの選択状態をトグルする
-     *
-     * @param  int  $folderId
-     * @return void
-     */
-    public function toggleFolderId($folderId)
-    {
-        $this->dispatch('folderIdToggled', folderId: $folderId);
-    }
-
-    /**
-     * 台帳の選択状態をトグルする
-     *
-     * @param  int  $ledgerDefineId
-     * @return void
-     */
-    public function toggleLedgerDefineId($ledgerDefineId)
-    {
-        $this->dispatch('ledgerDefineIdToggled', ledgerDefineId: $ledgerDefineId);
     }
 
     /**
