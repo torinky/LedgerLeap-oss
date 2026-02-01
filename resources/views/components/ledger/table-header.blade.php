@@ -61,12 +61,15 @@
                     @endif
                 </button>
             </div>
-            <input x-data
-                x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{ $column_define->id }}', $event.target.value, {{ $ledgerDefine->id }})"
-                value="{{ $this->filter[$column_define->id] ?? '' }}"
-                wire:key="ledger_filter_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}" type="search"
-                class="input input-bordered input-xs w-full max-w-xs flex flex-row icon-input"
-                placeholder="&#xf0b0; {{ __('ledger.filter') }}...">
+            <x-mary-input
+                    x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{$column_define->id}}', $event.target.value, {{$ledgerDefine->id}})"
+                    value="{{ $this->filter[$column_define->id] ?? '' }}"
+                    wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
+                    type="search"
+                    class="input-xs w-full max-w-xs"
+                    icon="o-funnel"
+                    spinner="$wire.$parent.updateFilterFromChild"
+                    placeholder="{{__('ledger.filter')}}..." />
         </th>
     @endforeach
 
