@@ -32,8 +32,9 @@ class RegenerateLedgerDefaultSort extends Command
         $ledgerDefineId = $this->argument('ledger_define_id');
         $force = $this->option('force');
 
-        if (!$ledgerDefineId && !$force && !$this->confirm('全台帳定義のレコードを再生成しますか？')) {
+        if (! $ledgerDefineId && ! $force && ! $this->confirm('全台帳定義のレコードを再生成しますか？')) {
             $this->info('Cancelled.');
+
             return 0;
         }
 
@@ -51,7 +52,8 @@ class RegenerateLedgerDefaultSort extends Command
 
             $defines = $query->get();
             if ($defines->isEmpty()) {
-                $this->info("  No LedgerDefine found for this tenant. Skipping.");
+                $this->info('  No LedgerDefine found for this tenant. Skipping.');
+
                 continue;
             }
 

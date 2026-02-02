@@ -53,15 +53,22 @@ class Export extends BaseLivewireComponent
      * @param  int  $ledgerDefineId  Ledger定義のID
      * @param  string  $keywords  キーワード情報（JSON形式）
      * @param  string  $filter  フィルター情報（JSON形式）
+     * @param  string|null  $ledgerDefineTitle  Ledger定義のタイトル（省略時はDB取得）
      */
-    public function mount($ledgerDefineId, $keywords, $filter)
+    public function mount($ledgerDefineId, $keywords, $filter, $ledgerDefineTitle = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
         //        $this->keywords = json_decode($keywords, true);
         $this->keywords = $keywords;
         //        $this->filter = json_decode($filter, true);
         $this->filter = $filter;
-        $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title.'.csv';
+
+        // 親から渡された場合はそれを使用、なければDB取得
+        if ($ledgerDefineTitle) {
+            $this->exportFilename = $ledgerDefineTitle.'.csv';
+        } else {
+            $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title.'.csv';
+        }
     }
 
     public function export()

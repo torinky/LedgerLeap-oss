@@ -141,7 +141,6 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
 
-
         // 初期orderByLabelの設定
         $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
     }
@@ -356,15 +355,6 @@ class RecordsTable extends BaseLivewireComponent
 
     public function render()
     {
-        Log::info('RecordsTable render start', [
-            'search' => $this->search,
-            'useSemanticSearch' => $this->useSemanticSearch,
-            'currentFolderId' => $this->currentFolderId,
-            'selectedFolderIds' => $this->selectedFolderIds,
-            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
-            'orderBy' => $this->orderBy,
-            'filterStatus' => $this->filterStatus,
-        ]);
 
         $this->initSearchContext();
 
@@ -386,14 +376,14 @@ class RecordsTable extends BaseLivewireComponent
             // グローバル検索の場合、すべての台帳定義を対象にする
             $displayLedgerDefines = LedgerDefine::query()
                 ->searchTags($this->searchContext->tags)
-                ->with('folder')
+                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
                 ->get();
             $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
         } else {
             // 通常の場合、選択された台帳定義のみを対象にする
             $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
-                ->searchTags($this->searchContext->tags)->with('folder')
-//            $displayLedgerDefines = $displayLedgerDefines->with('folder')
+                ->searchTags($this->searchContext->tags)
+                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
                 ->get();
             $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
         }
@@ -402,7 +392,8 @@ class RecordsTable extends BaseLivewireComponent
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
             // 台帳ごとのパンくずリストを準備
             if ($displayLedgerDefine->folder) {
-                $ancestors = $displayLedgerDefine->folder->ancestors()->get();
+                // with('folder.ancestors') により、ここでは追加クエリが発生しないはず
+                $ancestors = $displayLedgerDefine->folder->ancestors;
                 $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $ancestors->push($displayLedgerDefine->folder)->all();
             } else {
                 // フォルダが存在しない場合のフォールバック処理
@@ -424,15 +415,6 @@ class RecordsTable extends BaseLivewireComponent
                 ? implode(' ', $this->searchContext->keywords)
                 : $this->search;
 
-            Log::info('Semantic Search Query', [
-                'original' => $this->search,
-                'query_for_embedding' => $searchQuery,
-                'keywords' => $this->searchContext->keywords,
-                'useSynonym' => $this->useSynonym,
-                'useTechnicalTerm' => $this->useTechnicalTerm,
-                'note' => 'Semantic search uses keywords only, not synonyms',
-            ]);
-
             // Step 2: RAGで検索（スコア情報付きで全件取得）
             $ragResults = app(\App\Services\RagSearchService::class)->searchLedgers(
                 query: $searchQuery,
@@ -442,12 +424,6 @@ class RecordsTable extends BaseLivewireComponent
                     'ledger_define_ids' => $searchTargetLedgerDefineIds,
                 ])
             );
-
-            Log::info('Semantic Search Results', [
-                'query' => $searchQuery,
-                'results_count' => count($ragResults),
-                'first_result' => ! empty($ragResults) ? $ragResults[0] : null,
-            ]);
 
             if (empty($ragResults)) {
                 // 検索結果がない場合
@@ -469,7 +445,7 @@ class RecordsTable extends BaseLivewireComponent
                     ->when(! empty($this->filterStatus), function ($query) {
                         return $query->where('status', $this->filterStatus);
                     })
-                    ->with(['define', 'creator', 'modifier'])
+                    ->with(['define'])
                     ->get();
 
                 // Step 3: スコアを動的属性として付与
@@ -497,7 +473,7 @@ class RecordsTable extends BaseLivewireComponent
 
                 // 台帳定義情報を取得
                 $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->pluck('ledger_define_id')->unique()->toArray())
-                    ->with('folder')
+                    ->with(['folder.ancestors.roles', 'folder.roles', 'tags'])
                     ->get()
                     ->keyBy('id');
             }
@@ -511,6 +487,7 @@ class RecordsTable extends BaseLivewireComponent
                 ->when(! empty($this->filterStatus), function ($query) {
                     return $query->where('status', $this->filterStatus);
                 })
+                ->with(['define.folder'])
                 ->orderBy('ledger_define_id', 'asc')
                 ->when($this->orderBy === 'default', function ($query) {
                     // 新設した denormalized カラムを使用して高速にソート
@@ -527,10 +504,27 @@ class RecordsTable extends BaseLivewireComponent
                 });
 
             // 台帳定義とフォルダ情報を先に取得
-            $ledgerDefineRecords = LedgerDefine::whereIn('id', (clone $ledgerRecordsQuery)->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
-                ->with('folder')
-                ->get()
-                ->keyBy('id');
+            // $displayLedgerDefines を再利用して重複クエリを削減
+            $relatedLedgerDefineIds = (clone $ledgerRecordsQuery)
+                ->reorder()
+                ->distinct()
+                ->pluck('ledger_define_id')
+                ->toArray();
+
+            // 既に取得済みの$displayLedgerDefinesから必要なものを抽出
+            // 追加で必要なものがあれば取得
+            $displayDefineIds = $displayLedgerDefines->pluck('id')->toArray();
+            $missingDefineIds = array_diff($relatedLedgerDefineIds, $displayDefineIds);
+
+            if (! empty($missingDefineIds)) {
+                // 不足している台帳定義を追加取得
+                $additionalDefines = LedgerDefine::whereIn('id', $missingDefineIds)
+                    ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
+                    ->get();
+                $displayLedgerDefines = $displayLedgerDefines->merge($additionalDefines);
+            }
+
+            $ledgerDefineRecords = $displayLedgerDefines->whereIn('id', $relatedLedgerDefineIds)->keyBy('id');
 
             // 総数を取得
             Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: '.json_encode($searchTargetLedgerDefineIds));
@@ -585,7 +579,7 @@ class RecordsTable extends BaseLivewireComponent
             return $ledger;
         });
 
-        $currentFolder = Folder::find($this->currentFolderId);
+        $currentFolder = $this->currentFolder;
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
 
         // Filter column_define for each ledgerDefine based on displayLevel
@@ -712,16 +706,18 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function prepareFolderAsset(): void
     {
+        // 既に準備済みの場合はスキップ（重複実行を防ぐ）
+        if (isset($this->currentFolder) && $this->currentFolder && $this->currentFolder->id === $this->currentFolderId) {
+            return;
+        }
+
         // currentFolderId が未設定、または別テナントのID/存在しないIDの可能性があるためガードする
         $currentFolder = null;
 
         if (! empty($this->currentFolderId)) {
-            $currentFolder = Folder::find($this->currentFolderId);
+            // IndexManager と同様に、子フォルダや台帳定義の件数をカウントするために withCount を追加
+            $currentFolder = Folder::with(['ancestors'])->find($this->currentFolderId);
         }
-
-        // 指定IDで見つからない場合、子コンポーネント側で勝手にIDを書き換えてはいけない（CannotMutateReactivePropException 回避）
-        // 親コンポーネント（IndexManager）側で初期化時にルートフォルダを保証すべき。
-        // ここでは見つからない場合は単にアセットを空にするだけにとどめる。
 
         // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
         if (! $currentFolder) {
@@ -732,11 +728,18 @@ class RecordsTable extends BaseLivewireComponent
             return;
         }
 
-        $this->breadcrumbs = $currentFolder->ancestors()->get()->all();
+        // render() で再検索するのを避けるため、プロパティに保持
+        $this->currentFolder = $currentFolder;
+
+        $this->breadcrumbs = $currentFolder->ancestors->all();
         $this->breadcrumbs[] = $currentFolder;
 
-        $this->folderRecords = $currentFolder->children()->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
+        $this->folderRecords = $currentFolder->children()
+            ->withCount(['ledgerDefines']) // 追加
+            ->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)
+            ->withCount(['ledgers']) // 追加
+            ->get();
     }
 
     /**

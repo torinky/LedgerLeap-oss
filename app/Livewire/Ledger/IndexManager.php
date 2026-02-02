@@ -139,31 +139,29 @@ class IndexManager extends BaseLivewireComponent
         $this->initSearchContext();
     }
 
-    public function prepareFolderAsset(): void
+    public function prepareFolderAsset()
     {
-        if (empty($this->currentFolderId)) {
+        // 既に準備済みの場合はスキップ（重複実行を防ぐ）
+        if (isset($this->currentFolder) && $this->currentFolder && $this->currentFolder->id === $this->currentFolderId) {
             return;
         }
 
-        $this->currentFolder = Folder::find($this->currentFolderId);
-
+        $this->currentFolder = Folder::with('ancestors')->find($this->currentFolderId);
         if (! $this->currentFolder) {
-            $this->breadcrumbs = [];
-            $this->folderRecords = collect();
-            $this->ledgerDefineRecords = collect();
-            $this->currentUserPermissionForFolder = null;
-
             return;
         }
 
-        $this->breadcrumbs = $this->currentFolder->ancestors()->get()->all();
+        $this->currentUserPermissionForFolder = app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
+
+        $this->breadcrumbs = $this->currentFolder->ancestors->all();
         $this->breadcrumbs[] = $this->currentFolder;
 
-        $this->folderRecords = $this->currentFolder->children()->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
-
-        $this->currentUserPermissionForFolder = app(\App\Services\PermissionService::class)
-            ->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
+        $this->folderRecords = $this->currentFolder->children()
+            ->withCount(['ledgerDefines']) // 追加: 子フォルダごとの台帳定義数
+            ->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)
+            ->withCount(['ledgers']) // 追加: 台帳定義ごとの台帳レコード数
+            ->get();
     }
 
     public function initSearchContext()

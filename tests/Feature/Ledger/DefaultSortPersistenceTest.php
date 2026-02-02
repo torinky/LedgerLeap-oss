@@ -18,6 +18,7 @@ class DefaultSortPersistenceTest extends TestCase
     protected bool $tenancy = true;
 
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -41,7 +42,7 @@ class DefaultSortPersistenceTest extends TestCase
     /**
      * 新規作成時に default_sort_value が自動生成されることを確認
      */
-    public function testDefaultSortValueIsPopulatedOnCreation(): void
+    public function test_default_sort_value_is_populated_on_creation(): void
     {
         $ledger = Ledger::create([
             'ledger_define_id' => $this->ledgerDefine->id,
@@ -58,7 +59,7 @@ class DefaultSortPersistenceTest extends TestCase
     /**
      * 更新時に default_sort_value が再計算されることを確認
      */
-    public function testDefaultSortValueIsUpdatedOnSave(): void
+    public function test_default_sort_value_is_updated_on_save(): void
     {
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
@@ -74,7 +75,7 @@ class DefaultSortPersistenceTest extends TestCase
     /**
      * カラン定義の sort_index 変更時にジョブがディスパッチされ、再生成されることを確認
      */
-    public function testRegenerationTriggeredOnDefineChange(): void
+    public function test_regeneration_triggered_on_define_change(): void
     {
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
@@ -101,7 +102,7 @@ class DefaultSortPersistenceTest extends TestCase
     /**
      * 再生成コマンドが全テナントに対して動作することを確認
      */
-    public function testRegenerateCommandWorksAcrossTenants(): void
+    public function test_regenerate_command_works_across_tenants(): void
     {
         // 既存レコードのソート値を NULL にする
         $ledger1 = Ledger::factory()->create([

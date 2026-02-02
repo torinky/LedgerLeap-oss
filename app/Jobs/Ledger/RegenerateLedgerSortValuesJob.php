@@ -30,7 +30,7 @@ class RegenerateLedgerSortValuesJob implements ShouldQueue
     public function handle(): void
     {
         $define = LedgerDefine::find($this->ledgerDefineId);
-        if (!$define) {
+        if (! $define) {
             return;
         }
 

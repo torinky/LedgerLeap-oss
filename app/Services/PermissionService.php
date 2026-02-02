@@ -19,6 +19,12 @@ use Illuminate\Support\Facades\Auth;
  */
 class PermissionService
 {
+    /** @var array<string, ?FolderPermissionType> リクエスト内キャッシュ */
+    protected array $permissionCache = [];
+
+    /** @var array<string, array{folder: ?Folder, ledgerDefine: ?LedgerDefine}> */
+    protected static array $resolutionCache = [];
+
     protected UserService $userService;
 
     public function __construct(UserService $userService)
@@ -374,32 +380,38 @@ class PermissionService
      */
     private function resolveTargetFolderAndLedgerDefine(int $resourceId, string $resourceType): array
     {
+        $cacheKey = "{$resourceType}_{$resourceId}";
+
+        if (isset(self::$resolutionCache[$cacheKey])) {
+            return self::$resolutionCache[$cacheKey];
+        }
+
         $targetFolder = null;
         $targetLedgerDefine = null;
 
         switch ($resourceType) {
             case 'Ledger':
-                $ledger = Ledger::find($resourceId);
+                $ledger = Ledger::with('define.folder.ancestors.roles')->find($resourceId);
                 if ($ledger) {
                     $targetLedgerDefine = $ledger->define;
                     $targetFolder = $targetLedgerDefine->folder;
                 }
                 break;
             case 'LedgerDefine':
-                $targetLedgerDefine = LedgerDefine::find($resourceId);
+                $targetLedgerDefine = LedgerDefine::with('folder.ancestors.roles')->find($resourceId);
                 if ($targetLedgerDefine) {
                     $targetFolder = $targetLedgerDefine->folder;
                 }
                 break;
             case 'Folder':
-                $targetFolder = Folder::find($resourceId);
+                $targetFolder = Folder::with('ancestors.roles')->find($resourceId);
                 break;
             default:
                 // 何もしない
                 break;
         }
 
-        return [
+        return self::$resolutionCache[$cacheKey] = [
             'folder' => $targetFolder,
             'ledgerDefine' => $targetLedgerDefine,
         ];
@@ -407,13 +419,21 @@ class PermissionService
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
-     * (変更なし)
+     * リクエスト内キャッシュを使用してDB呼び出しを削減
      */
     public function getCurrentUserHighestPermission(int $resourceId, string $resourceType): ?FolderPermissionType
     {
         $user = Auth::user();
         if (! $user) {
             return null;
+        }
+
+        // リクエスト内キャッシュキー
+        $cacheKey = "permission:{$user->id}:{$resourceType}:{$resourceId}";
+
+        // キャッシュがあれば返す
+        if (isset($this->permissionCache[$cacheKey])) {
+            return $this->permissionCache[$cacheKey];
         }
 
         // スーパー管理者なら ADMIN を返す
@@ -460,6 +480,9 @@ class PermissionService
                 }
             }
         }
+
+        // キャッシュに保存
+        $this->permissionCache[$cacheKey] = $highestPermission;
 
         return $highestPermission;
     }

@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Cache;
 
 class AutoLinkService
 {
+    /** @var array<int, \Illuminate\Support\Collection> リクエスト内フォルダ子孫キャッシュ */
+    private array $folderDescendantsCache = [];
+
     public function __construct(private HtmlProcessorService $htmlProcessorService) {}
 
     /**
@@ -212,32 +215,41 @@ class AutoLinkService
     {
         $cacheKey = $this->getCacheKeyForContext($context);
 
-        return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context) {
+        // フォルダIDを事前に取得（リクエスト内キャッシュを使用）
+        $folder = null;
+        $folderIds = null;
+
+        if ($context) {
+            if ($context instanceof Folder) {
+                $folder = $context;
+            } elseif ($context instanceof LedgerDefine) {
+                $folder = $context->folder;
+            } elseif ($context instanceof Ledger) {
+                $folder = $context->define->folder;
+            }
+
+            if ($folder) {
+                // リクエスト内キャッシュを使用
+                if (! isset($this->folderDescendantsCache[$folder->id])) {
+                    $this->folderDescendantsCache[$folder->id] = $folder->descendantsAndSelf($folder)->pluck('id');
+                }
+                $folderIds = $this->folderDescendantsCache[$folder->id];
+            }
+        }
+
+        return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () use ($context, $folderIds) {
             // 仮想 auto_number リンクを取得
             $virtualLinks = $this->getVirtualAutoNumberLinks();
 
             // 既存のカスタム定義を取得
             $query = AutoLink::where('is_enabled', true);
 
-            if ($context) {
-                $query->where(function ($q) use ($context) {
+            if ($context && $folderIds) {
+                $query->where(function ($q) use ($folderIds) {
                     $q->whereDoesntHave('scopes');
-
-                    $folder = null;
-                    if ($context instanceof Folder) {
-                        $folder = $context;
-                    } elseif ($context instanceof LedgerDefine) {
-                        $folder = $context->folder;
-                    } elseif ($context instanceof Ledger) {
-                        $folder = $context->define->folder;
-                    }
-
-                    if ($folder) {
-                        $folderIds = $folder->descendantsAndSelf($folder)->pluck('id');
-                        $q->orWhereHas('scopes', function ($subQuery) use ($folderIds) {
-                            $subQuery->where('scopeable_type', (new Folder)->getMorphClass())->whereIn('scopeable_id', $folderIds);
-                        });
-                    }
+                    $q->orWhereHas('scopes', function ($subQuery) use ($folderIds) {
+                        $subQuery->where('scopeable_type', (new Folder)->getMorphClass())->whereIn('scopeable_id', $folderIds);
+                    });
                 });
             }
 
@@ -254,7 +266,11 @@ class AutoLinkService
             return 'auto_links_folder_'.$context->id;
         }
         if ($context instanceof LedgerDefine) {
-            return 'auto_links_ledger_define_'.$context->id;
+            // LedgerDefineの場合もフォルダベースのキャッシュキーを使用
+            // 同じフォルダに属する台帳定義は同じAutoLinkを共有
+            if ($context->folder) {
+                return 'auto_links_folder_'.$context->folder->id;
+            }
         }
         if ($context instanceof Ledger) {
             if ($context->define && $context->define->folder) {

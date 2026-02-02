@@ -115,25 +115,16 @@ class Folder extends Model
         return $this->hasMany(Tag::class, 'ledger_define_id');
     }
 
-    /**
-     * 子孫フォルダーのすべての`LedgerDefine`モデルの件数を取得します。
-     *
-     * @return int
-     */
     public function descendantLedgerDefinesCount()
     {
-        return $this->descendantsAndSelf($this->id)
-            ->reduce(fn ($carry, $folder) => $carry + $folder->ledgerDefines()->count(), 0);
+        // ループ内での ledgerDefines()->count() を避け、一括で集計
+        return LedgerDefine::whereIn('folder_id', $this->descendantsAndSelf($this->id)->pluck('id'))->count();
     }
 
-    /**
-     * 子孫フォルダーのすべての件数を取得します。
-     *
-     * @return int
-     */
     public function descendantCount()
     {
-        return $this->descendants()->count();
+        // NestedSet の lft, rgt プロパティを使用して高速に計算します
+        return ($this->rgt - $this->lft - 1) / 2;
     }
 
     /**

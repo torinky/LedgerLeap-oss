@@ -363,7 +363,14 @@ class UserService
             return false;
         }
 
-        $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
+        // Eager Loadingされたancestorsリレーションがあればそれを使用
+        // なければancestorsAndSelfでクエリ実行
+        if ($folder->relationLoaded('ancestors')) {
+            $folderIds = $folder->ancestors->pluck('id')->push($folder->id)->toArray();
+        } else {
+            $folderIds = $folder->ancestorsAndSelf($folder->id)->pluck('id')->toArray();
+        }
+
         if (! $folderIds) {
             $folderIds = [$folder->id];
         }

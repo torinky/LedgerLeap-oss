@@ -209,26 +209,77 @@ class RecordsTableQueryTest extends TestCase
     public function it_calls_rag_search_service_when_semantic_search_is_selected()
     {
         // RagSearchServiceをモック
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
-            $mock->shouldReceive('searchLedgers')
-                ->once()
-                ->with(
-                    \Mockery::any(),
-                    \Mockery::any(),
-                    \Mockery::any()
-                )
-                ->andReturn([]);
-        });
+        $mock = $this->mock(\App\Services\RagSearchService::class);
+        $mock->shouldReceive('searchLedgers')
+            ->once()
+            ->withArgs(function ($query, $limit, $filters) {
+                // query引数が渡されていることを確認
+                return is_string($query) &&
+                       is_int($limit) &&
+                       is_array($filters);
+            })
+            ->andReturn([
+                // 空配列を返すとセマンティック検索の空結果パスに入る
+            ]);
 
-        Livewire::withQueryParams([
-            'q' => 'semantic query',
-            'f' => [$this->folder->id],
-            'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id,
+        // RecordsTableを直接テスト
+        Livewire::test(\App\Livewire\Ledger\RecordsTable::class, [
+            'search' => 'semantic query',
+            'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+            'selectedFolderIds' => [$this->folder->id],
+            'currentFolderId' => $this->folder->id,
+            'useSemanticSearch' => true,
         ])
-            ->test(IndexManager::class)
-            ->set('useSemanticSearch', true)
-            ->set('search', 'semantic query')
+            ->assertOk()
+            ->assertViewHas('totalRecords', 0); // 空結果なので0件
+    }
+
+    #[Test]
+    public function it_executes_efficient_number_of_queries()
+    {
+        // 多数のレコードと台帳定義を作成
+        $ledgerDefines = LedgerDefine::factory()->count(3)->create(['folder_id' => $this->folder->id]);
+        foreach ($ledgerDefines as $ld) {
+            Ledger::factory()->count(10)->create(['ledger_define_id' => $ld->id]);
+        }
+
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+
+        Livewire::actingAs($this->user)
+            ->test(\App\Livewire\Ledger\RecordsTable::class, [
+                'currentFolderId' => $this->folder->id,
+                'selectedFolderIds' => [$this->folder->id],
+                'selectedLedgerDefineIds' => $ledgerDefines->pluck('id')->toArray(),
+            ])
             ->assertOk();
+
+        $queryLog = \Illuminate\Support\Facades\DB::getQueryLog();
+        $queryCount = count($queryLog);
+
+        // クエリをグループ化して重複を検出
+        $queryPatterns = [];
+        foreach ($queryLog as $query) {
+            $pattern = preg_replace('/\d+/', '?', $query['query']); // 数値をプレースホルダーに
+            $pattern = preg_replace('/\s+/', ' ', $pattern); // 空白を正規化
+            $queryPatterns[$pattern] = ($queryPatterns[$pattern] ?? 0) + 1;
+        }
+
+        // 3回以上発生しているクエリ（N+1の可能性）を出力
+        foreach ($queryPatterns as $pattern => $count) {
+            if ($count >= 3) {
+                error_log(sprintf('N+1 Detected [%dx]: %s', $count, substr($pattern, 0, 150)));
+            }
+        }
+
+        error_log("Total queries: {$queryCount}");
+
+        // Phase 1-3.5 実績: 52件 → 33件（37%改善）
+        // 主要なN+1は解消済み。残りの3件は以下の理由で許容範囲内:
+        // - AutoLinkキャッシュの二重構造（Laravelキャッシュ + リクエスト内キャッシュ）
+        // - フォルダ階層クエリの一部（テナント初期化やセキュリティチェックに必要）
+        // Phase 4では20件以下を目標とする（さらなるキャッシュ最適化）
+        $this->assertLessThanOrEqual(35, $queryCount, "Too many queries detected: {$queryCount}");
+
+        \Illuminate\Support\Facades\DB::disableQueryLog();
     }
 }

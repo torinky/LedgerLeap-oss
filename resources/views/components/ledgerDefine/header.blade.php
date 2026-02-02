@@ -100,6 +100,7 @@
         @endif
             @if($canView)
                 <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
+                                        :ledgerDefineTitle="$ledgerDefine->title"
                                         :$keywords
                                         :$filter
                                         wire:key="ledger_export-{{ $ledgerDefine->id }}"
@@ -131,6 +132,7 @@
 </div>
 {{--    <div class="flex flex-row">--}}
         <livewire:ledger-define.tags :ledgerDefineId="$ledgerDefine->id"
+                                     :tags="$ledgerDefine->tags"
                                      wire:key="ledger_define_tag-{{ $ledgerDefine->id }}"
         />
 {{--    </div>--}}

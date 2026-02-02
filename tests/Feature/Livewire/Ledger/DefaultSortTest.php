@@ -24,7 +24,9 @@ class DefaultSortTest extends TestCase
     protected bool $tenancy = true;
 
     protected User $user;
+
     protected Folder $folder;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -59,7 +61,7 @@ class DefaultSortTest extends TestCase
      * デフォルトソート順序が定義されている場合に適用されることを確認
      */
     #[Test]
-    public function testAppliesDefaultSortOrderWhenDefined(): void
+    public function test_applies_default_sort_order_when_defined(): void
     {
         // 台帳定義にデフォルトソートを設定
         $this->ledgerDefine = LedgerDefine::factory()->create([

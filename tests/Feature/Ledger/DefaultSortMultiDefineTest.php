@@ -7,8 +7,8 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class DefaultSortMultiDefineTest extends TestCase
 {
@@ -34,7 +34,7 @@ class DefaultSortMultiDefineTest extends TestCase
     /**
      * 異なる台帳定義間でのソート順序整合性をテスト
      */
-    public function testSortOrderConsistencyAcrossDifferentDefines(): void
+    public function test_sort_order_consistency_across_different_defines(): void
     {
         // 台帳定義1: 日付(優先度1)
         $define1 = LedgerDefine::factory()->create([
@@ -84,7 +84,7 @@ class DefaultSortMultiDefineTest extends TestCase
     /**
      * ソートインデックスが未設定の台帳を含む場合の挙動
      */
-    public function testHandlingLedgerWithoutSortIndex(): void
+    public function test_handling_ledger_without_sort_index(): void
     {
         // ソート設定あり
         $define1 = LedgerDefine::factory()->create([
@@ -113,7 +113,7 @@ class DefaultSortMultiDefineTest extends TestCase
     /**
      * 512文字制限による切り詰めテスト
      */
-    public function testSortValueTruncation(): void
+    public function test_sort_value_truncation(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -130,7 +130,7 @@ class DefaultSortMultiDefineTest extends TestCase
             'content' => [
                 0 => $longText1,
                 1 => $longText2,
-            ]
+            ],
         ]);
 
         $this->assertLessThanOrEqual(512, mb_strlen($ledger->default_sort_value));

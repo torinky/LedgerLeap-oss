@@ -9,7 +9,6 @@ use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Maatwebsite\Excel\Facades\Excel;
 use Tests\TestCase;
 
 class LedgerImportSortValueTest extends TestCase
@@ -19,6 +18,7 @@ class LedgerImportSortValueTest extends TestCase
     protected bool $tenancy = true;
 
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -42,7 +42,7 @@ class LedgerImportSortValueTest extends TestCase
     /**
      * インポートによって作成されたレコードに default_sort_value がセットされていることを確認
      */
-    public function testImportSetsDefaultSortValue(): void
+    public function test_import_sets_default_sort_value(): void
     {
         $import = new LedgerImport($this->ledgerDefine);
 

@@ -4,9 +4,8 @@ namespace Tests\Unit\Models;
 
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
+use Tests\TestCase;
 
 class LedgerDefaultSortTest extends TestCase
 {
@@ -17,7 +16,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 数値型の正規化テスト
      */
-    public function testNormalizeNumber(): void
+    public function test_normalize_number(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -27,11 +26,11 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'number',
                     'sort_index' => 1,
                     'order' => 1,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
 
         // 正の整数
@@ -62,7 +61,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 自動採番型の正規化テスト
      */
-    public function testNormalizeAutoNumber(): void
+    public function test_normalize_auto_number(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -72,21 +71,21 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'auto_number',
                     'sort_index' => 1,
                     'order' => 1,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
         $ledger->content = [0 => '', 1 => 'EXP-0001'];
-        
+
         $this->assertEquals('EXP-0001', $ledger->generateDefaultSortValue());
     }
 
     /**
      * 日付型の正規化テスト
      */
-    public function testNormalizeDate(): void
+    public function test_normalize_date(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -96,11 +95,11 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'YMD',
                     'sort_index' => 1,
                     'order' => 1,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
 
         $ledger->content = [0 => '', 1 => '2025/02/01'];
@@ -113,7 +112,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * テキスト型の正規化テスト
      */
-    public function testNormalizeText(): void
+    public function test_normalize_text(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -123,11 +122,11 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'text',
                     'sort_index' => 1,
                     'order' => 1,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
 
         // HTMLタグとMarkdown、改行の除去
@@ -139,14 +138,14 @@ class LedgerDefaultSortTest extends TestCase
         $this->assertEquals(str_repeat('あ', 50), $ledger->generateDefaultSortValue());
 
         // 空白の集約
-        $ledger->content = [0 => '', 1 => "  A    B  "];
+        $ledger->content = [0 => '', 1 => '  A    B  '];
         $this->assertEquals('A B', $ledger->generateDefaultSortValue());
     }
 
     /**
      * ファイル型の正規化テスト
      */
-    public function testNormalizeFiles(): void
+    public function test_normalize_files(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -156,11 +155,11 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'files',
                     'sort_index' => 1,
                     'order' => 1,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
 
         // 最初のファイル名が使用される
@@ -169,7 +168,7 @@ class LedgerDefaultSortTest extends TestCase
             1 => [
                 'hash1' => 'important_doc.pdf',
                 'hash2' => 'image.png',
-            ]
+            ],
         ];
         $this->assertEquals('important_doc.pdf', $ledger->generateDefaultSortValue());
     }
@@ -177,7 +176,7 @@ class LedgerDefaultSortTest extends TestCase
     /**
      * 複数カラムの連結テスト
      */
-    public function testCombineMultipleColumns(): void
+    public function test_combine_multiple_columns(): void
     {
         $define = LedgerDefine::factory()->create([
             'column_define' => [
@@ -194,11 +193,11 @@ class LedgerDefaultSortTest extends TestCase
                     'type' => 'number',
                     'sort_index' => 1,
                     'order' => 2,
-                ]
-            ]
+                ],
+            ],
         ]);
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->ledger_define_id = $define->id;
         $ledger->content = [
             0 => '',

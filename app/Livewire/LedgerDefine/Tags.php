@@ -17,10 +17,11 @@ class Tags extends BaseLivewireComponent
 
     public $newTag = '';
 
-    public function mount($ledgerDefineId)
+    public function mount($ledgerDefineId, $tags = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-        $this->tags = Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
+        // 親から渡された場合はそれを使用、なければクエリ実行
+        $this->tags = $tags ?? Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
     }
 
     public function addTag()
