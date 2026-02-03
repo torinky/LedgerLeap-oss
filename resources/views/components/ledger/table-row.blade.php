@@ -30,7 +30,7 @@
         }
     }
 @endphp
-<tr class="hover group hover:bg-accent/20">
+<tr class="hover group hover:bg-accent/20" wire:key="ledger-row-{{ $ledgerRecord->id }}">
     <th class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
             @if ($canUpdate && !$ledgerRecord->isLocked())
@@ -218,11 +218,11 @@
                 @endif
             @else
                 @if (empty($ledgerRecord->content[$columnDefine->id]))
-{{--                    @php \Log::info('Debug table-row: content empty', ['id' => $columnDefine->id, 'content' => $ledgerRecord->content]); @endphp--}}
+                    {{--                    @php \Log::info('Debug table-row: content empty', ['id' => $columnDefine->id, 'content' => $ledgerRecord->content]); @endphp --}}
                     <x-ledger.empty-message />
                 @else
                     @php
-//                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
+                        //                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
                         // ColumnHtmlServiceを使用してバッジ表示などを適切にレンダリング
                         $columnHtml = ColumnHtml::setAttachmentCollection(
                             $allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'),
