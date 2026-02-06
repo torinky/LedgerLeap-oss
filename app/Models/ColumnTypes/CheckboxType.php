@@ -38,7 +38,7 @@ class CheckboxType implements InputType
     public function restoreFromString($value)
     {
         if (empty($value)) {
-            return null;
+            return [];
         }
 
         if (is_string($value) && (str_starts_with($value, '[') || str_starts_with($value, '{'))) {

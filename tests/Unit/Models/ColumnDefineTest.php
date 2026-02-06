@@ -401,6 +401,11 @@ class ColumnDefineTest extends TestCase
         $invalidJsonValue = '["option1","option2"';
         $restoredInvalid = $column->restoreColumnValueFromText($invalidJsonValue);
         $this->assertEquals([$invalidJsonValue], $restoredInvalid);
+
+        // Test empty value
+        $this->assertEquals([], $column->restoreColumnValueFromText(null));
+        $this->assertEquals([], $column->restoreColumnValueFromText(''));
+        $this->assertEquals([], $column->restoreColumnValueFromText([]));
     }
 
     #[Test]
@@ -466,6 +471,11 @@ class ColumnDefineTest extends TestCase
         $arrayValue = [['name' => 'file3.txt']];
         $restoredArray = $column->restoreColumnValueFromText($arrayValue);
         $this->assertEquals($arrayValue, $restoredArray);
+
+        // Test empty value
+        $this->assertEquals([], $column->restoreColumnValueFromText(null));
+        $this->assertEquals([], $column->restoreColumnValueFromText(''));
+        $this->assertEquals([], $column->restoreColumnValueFromText([]));
     }
 
     #[Test]
