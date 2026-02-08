@@ -7,6 +7,7 @@ use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -40,10 +41,10 @@ class DoubleEncodingRegressionTest extends TestCase
     }
 
     /**
-     * @test
      * 添付ファイルやチェックボックスが二重エンコード（文字列化されたJSONをさらにエンコード）
      * されていないことを検証する。
      */
+    #[Test]
     public function it_does_not_double_encode_json_columns_in_database()
     {
         $content = [
@@ -85,9 +86,9 @@ class DoubleEncodingRegressionTest extends TestCase
     }
 
     /**
-     * @test
      * calculateAutoFillValues を経由しても二重エンコードが発生しないことを検証する。
      */
+    #[Test]
     public function it_prevents_double_encoding_via_calculate_auto_fill_values()
     {
         $content = [
@@ -120,9 +121,9 @@ class DoubleEncodingRegressionTest extends TestCase
     }
 
     /**
-     * @test
      * Mroonga 全文検索が機能しているか検証する。
      */
+    #[Test]
     public function it_can_search_ledger_content_using_mroonga()
     {
         $this->ledgerDefine = LedgerDefine::factory()->create([
