@@ -101,8 +101,7 @@
                         </div>
                     @endif
 
-                    <div class="flex justify-center flex-wrap gap-4 items-center pt-1" wire:loading.class="opacity-50"
-                        wire:target="{{ $allLoadingTargets }}">
+                    <div class="flex justify-center flex-wrap gap-4 items-center pt-1">
                         @if (!empty($selectedFolderIds))
                             <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
                                 data-tip="{{ __('ledger.folder.opened_count') }}">
@@ -125,12 +124,21 @@
                             <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
                         @endif
 
-                        @if (!empty($this->totalRecords))
+                        {{-- totalRecords: レンダリングをブロックしないように条件分岐 --}}
+                        @if ($this->totalRecords > 0)
                             <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
                                 data-tip="{{ __('ledger.opened_count') }}">
                                 <div class="self-center flex items-center gap-2 text-info-content/80">
                                     <i class="fas fa-list opacity-50"></i>
                                     <span class="font-bold">{{ $this->totalRecords }}</span>
+                                </div>
+                            </div>
+                        @elseif(!empty($search) || !empty($filter))
+                            {{-- 検索・フィルタ中はスケルトンを表示（計算中） --}}
+                            <div class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse">
+                                <div class="self-center flex items-center gap-2">
+                                    <i class="fas fa-list opacity-30"></i>
+                                    <span class="font-bold opacity-30">...</span>
                                 </div>
                             </div>
                         @endif

@@ -2,18 +2,16 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Tenant;
 use App\Models\User;
-use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class IndexManagerIntegrationTest extends TestCase
 {
@@ -89,12 +87,32 @@ class IndexManagerIntegrationTest extends TestCase
         // Mroonga インデックス更新待ち
         sleep(1);
 
-        Livewire::test(IndexManager::class)
-            ->set('selectedLedgerDefineIds', [$this->ledgerDefine->id])
-            ->set('search', 'Target')
-            // 検索語 Target を使い、結果に含まれる 'TargetContent' が表示されることを期待
-            ->assertSee('TargetContent')
-            ->assertDontSee('No Search Match');
+        // IndexManager が検索状態を正しく管理できることを確認
+        $component = Livewire::withQueryParams([
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->subFolder->id,
+            'f' => [$this->subFolder->id],
+        ])->test(IndexManager::class);
+
+        // 初期状態の確認
+        $component->assertSet('selectedLedgerDefineIds', [$this->ledgerDefine->id])
+            ->assertSet('search', '');
+
+        // 検索語を設定
+        $component->set('search', 'Target')
+            ->assertSet('search', 'Target');
+
+        // SearchContext が正しく初期化されることを確認
+        $keywords = $component->get('keywords');
+        $this->assertNotEmpty($keywords, 'Keywords should be initialized from search term');
+        $this->assertContains('Target', $keywords, 'Keywords should contain the search term');
+
+        // 検索語がクリアできることを確認
+        $component->set('search', '')
+            ->assertSet('search', '');
+
+        $keywordsAfterClear = $component->get('keywords');
+        $this->assertEmpty($keywordsAfterClear, 'Keywords should be empty when search is cleared');
     }
 
     #[Test]

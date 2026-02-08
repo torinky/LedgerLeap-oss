@@ -1,9 +1,10 @@
 # LedgerLeap テストベストプラクティス
 
-**最終更新:** 2026年02月08日  
+**最終更新:** 2026年02月09日  
 **適用対象:** LedgerLeap全体のテスト開発
 
 **更新履歴:**
+- 2026-02-09: Livewire 3 親子コンポーネント（IndexManager + RecordsTable）のテストベストプラクティスを追加（Issue #60対応）
 - 2026-02-08: Sail環境におけるモデルイベントの発火挙動（touch() vs update()）およびトレースログによるデバッグ手法を追加
 - 2026-01-31: Phase 7 リアクティブ統合の不具合是正に基づく知見を追加（データ型の厳密性、テナント初期化の重複回避、権限不足の盲点）
 - 2025-12-13: Phase 2（複製機能テスト）実装に基づく重要な知見を追加（連番配列の必須性）
@@ -691,7 +692,7 @@ $this->assertEquals('Test Title', $responseData['name']);
 // app/Http/Resources/LedgerDefineResource.php:
 // return ['name' => $this->title, ...];
 
-// ✅ 汎用的なResource出力テスト
+// ✅ 一般的なResource出力テスト
 public function test_resource_output_structure()
 {
     $responseData = json_decode($response->content(), true);
@@ -814,3 +815,184 @@ public function mount() {
     }
 }
 ```
+
+---
+
+## 🧪 Livewire 3 親子コンポーネントのテスト (2026-02-09 追加)
+
+Issue #53/60 の実装により、`IndexManager` + `RecordsTable` のような親子構造が導入されました。この構造のテストには特有の注意点があります。
+
+### 1. 基本原則
+
+#### 親コンポーネント（IndexManager）のテスト対象
+- ✅ 状態管理（search, selectedLedgerDefineIds, currentFolderId など）
+- ✅ URL パラメータとの同期
+- ✅ 子コンポーネントへのプロパティ伝播
+- ✅ イベントハンドリング（sortRequested, currentFolderChangeRequested など）
+
+#### 子コンポーネント（RecordsTable）のテスト対象
+- ✅ 受け取ったプロパティに基づく表示ロジック
+- ✅ データのフィルタリング・ソート
+- ✅ ページネーション
+- ✅ 個別のユーザーインタラクション
+
+### 2. 親コンポーネントテストの推奨パターン
+
+#### ❌ 避けるべきパターン
+```php
+// 悪い例: 子コンポーネントのレンダリングを考慮していない
+$component = Livewire::test(IndexManager::class)
+    ->set('search', 'term')  // ← wire:loading.remove.delay が発動
+    ->assertSee('ExpectedContent');  // ← 子が削除されている可能性
+```
+
+#### ✅ 推奨パターン1: withQueryParams() での初期化
+```php
+// 良い例: クエリパラメータで初期状態を設定
+$component = Livewire::withQueryParams([
+    'q' => 'search term',
+    'l' => [$ledgerDefineId],
+    'cf' => $folderId,
+])->test(IndexManager::class);
+
+$component->assertOk()
+    ->assertSet('search', 'search term')
+    ->assertSet('selectedLedgerDefineIds', [$ledgerDefineId]);
+```
+
+**メリット:**
+- 子コンポーネントが確実にマウントされる
+- `wire:loading.remove.delay` の影響を受けない
+- ページリロード後の状態を正確に再現
+
+#### ✅ 推奨パターン2: 具体的なマーカーによる順序検証
+```php
+// 良い例: wire:key を使った具体的なマーカー検証
+$html = $component->html();
+
+// 各要素の位置を取得
+$posB = strpos($html, 'wire:key="ledger_record_' . $defineB->id . '"');
+$posC = strpos($html, 'wire:key="ledger_record_' . $defineC->id . '"');
+$posA = strpos($html, 'wire:key="ledger_record_' . $defineA->id . '"');
+
+// 順序を検証
+$this->assertNotFalse($posB, 'Element B should exist');
+$this->assertNotFalse($posC, 'Element C should exist');
+$this->assertLessThan($posC, $posB, 'B should appear before C');
+```
+
+**メリット:**
+- テキストの重複による誤検出を回避
+- DOM構造の変更に強い
+- 正確な順序検証が可能
+
+#### ✅ 推奨パターン3: 状態管理に焦点を当てる
+```php
+// 良い例: IndexManager の状態管理を検証
+$component = Livewire::withQueryParams([
+    'l' => [$ledgerDefineId],
+    'cf' => $folderId,
+])->test(IndexManager::class);
+
+// 検索語を設定
+$component->set('search', 'Target')
+    ->assertSet('search', 'Target');
+
+// SearchContext の初期化を検証
+$keywords = $component->get('keywords');
+$this->assertNotEmpty($keywords, 'Keywords should be initialized');
+$this->assertContains('Target', $keywords);
+
+// 検索語をクリア
+$component->set('search', '')->assertSet('search', '');
+$this->assertEmpty($component->get('keywords'), 'Keywords should be cleared');
+```
+
+**メリット:**
+- テストの責務が明確
+- 親子間の非同期通信に依存しない
+- デバッグしやすい
+
+### 3. よくある落とし穴と対処法
+
+#### 問題1: 子コンポーネントの HTML が含まれない
+**原因:**
+- Livewire 3 では、子コンポーネントは初回マウント後、独立して更新される
+- 親の `html()` には子の内容が含まれない場合がある
+
+**対処法:**
+```php
+// ❌ 悪い: 子の内容に直接依存
+$component->assertSee('RecordTitle');
+
+// ✅ 良い: 親の状態管理を検証
+$component->assertSet('totalRecords', 10);
+
+// ✅ 良い: 子コンポーネントを直接テスト（別のテストファイル）
+Livewire::test(RecordsTable::class, [
+    'search' => 'term',
+    'selectedLedgerDefineIds' => [$id],
+])->assertSee('RecordTitle');
+```
+
+#### 問題2: wire:loading.remove.delay の影響
+**原因:**
+- 検索など「重い処理」では、`wire:loading.remove.delay` により子が一時的に削除される
+
+**対処法:**
+```php
+// ❌ 悪い: set() 後すぐに検証
+$component->set('search', 'term')
+    ->assertSee('Result');  // 子が削除されている可能性
+
+// ✅ 良い: クエリパラメータで初期化
+$component = Livewire::withQueryParams(['q' => 'term'])
+    ->test(IndexManager::class)
+    ->assertSet('search', 'term');
+```
+
+#### 問題3: totalRecords が 0 のまま
+**原因:**
+- `totalRecords` は子コンポーネントから `recordsUpdated` イベント経由で更新される
+- Livewire テスト環境では、このイベントが同期的に実行されない
+
+**対処法:**
+```php
+// ❌ 悪い: totalRecords に依存
+$this->assertGreaterThan(0, $component->get('totalRecords'));
+
+// ✅ 良い: IndexManager の責務（状態管理）のみ検証
+$component->assertSet('selectedLedgerDefineIds', [$id])
+    ->assertSet('search', 'term');
+
+// ✅ 良い: RecordsTable を直接テストして totalRecords を検証
+```
+
+### 4. テスト設計のチェックリスト
+
+#### 親コンポーネント（IndexManager）テスト
+- [ ] `withQueryParams()` で初期状態を設定しているか？
+- [ ] 状態管理（プロパティの更新）を検証しているか？
+- [ ] 子コンポーネントの表示内容に依存していないか？
+- [ ] イベントハンドリングを検証しているか？
+
+#### 子コンポーネント（RecordsTable）テスト
+- [ ] 必要なプロパティを全て渡しているか？
+- [ ] 表示ロジックを個別に検証しているか？
+- [ ] ページネーション・フィルタリングを検証しているか？
+
+#### 統合テスト（必要に応じて）
+- [ ] ブラウザテスト（Dusk等）で E2E を検証しているか？
+- [ ] 親子間の実際のインタラクションを検証しているか？
+
+### 5. 実装例
+
+詳細な実装例は以下を参照してください:
+- ✅ `tests/Feature/Livewire/Ledger/RecordsTableLedgerDefineSortTest.php`
+- ✅ `tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php`
+- ✅ `tests/Feature/Livewire/Ledger/RecordsTableCompositeScoreSortTest.php`
+
+関連ドキュメント:
+- 📄 `docs/work/testing/2026-02-09_issue-60-test-failure-investigation.md`
+- 📄 `docs/work/ui-ux/2026-02-01_issue-53-completion-report.md`
+

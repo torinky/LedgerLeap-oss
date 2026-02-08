@@ -30,7 +30,6 @@
 
 {{-- Alpine.js data for enhanced interactivity --}}
 <div x-data="{
-    initialized: false,
     loadingFiles: {},
     successFiles: {},
     showAll: false,
@@ -83,9 +82,7 @@
             });
         }
     }
-}"
-x-intersect.once="initialized = true"
-class="not-prose w-full flex flex-col" id="{{ $componentId }}">
+}" class="not-prose w-full flex flex-col" id="{{ $componentId }}">
 
     {{-- 高さ制限とフェードを実現するラッパー。ボタンをこの外に出すことで見切れを防止する --}}
     <div class="relative transition-all duration-500 ease-in-out overflow-hidden"

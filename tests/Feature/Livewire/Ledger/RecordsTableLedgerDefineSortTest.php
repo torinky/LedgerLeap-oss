@@ -6,14 +6,12 @@ use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Models\Tenant;
 use App\Models\User;
-use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class RecordsTableLedgerDefineSortTest extends TestCase
 {
@@ -127,18 +125,32 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         sleep(1);
 
         // 検索時は平均スコア順（B > C > A）で表示されるはず
-        $component = Livewire::test(IndexManager::class)
-            ->set('search', 'Test')
-            ->assertOk();
+        // withQueryParams() を使用して子コンポーネントが確実にマウントされるようにする
+        $component = Livewire::withQueryParams([
+            'q' => 'Test',  // 検索語
+            'f' => [$this->folder->id],
+            'l' => [$defineA->id, $defineB->id, $defineC->id],
+            'cf' => $this->folder->id,
+        ])->test(IndexManager::class);
 
-        // IndexManager は RecordTable をレンダリングし、そこでの表示順を検証する。
-        // 子コンポーネントの内部データに直接アクセスするのは難しいため、
-        // 期待されるレコード（またはタイトル）が表示順通りにHTML内に存在するかを確認する。
-        $component->assertSeeInOrder([
-            'Define B',
-            'Define C',
-            'Define A',
-        ]);
+        $component->assertOk();
+
+        // wire:key を使った台帳定義カードの順序検証
+        // RecordsTable では各台帳定義カードに wire:key="ledger_record_{{ $ledgerDefineId }}" が付与されている
+        $html = $component->html();
+
+        // 各台帳定義のカードマーカーの位置を取得
+        $posB = strpos($html, 'wire:key="ledger_record_'.$defineB->id.'"');
+        $posC = strpos($html, 'wire:key="ledger_record_'.$defineC->id.'"');
+        $posA = strpos($html, 'wire:key="ledger_record_'.$defineA->id.'"');
+
+        $this->assertNotFalse($posB, 'Define B card should be found in HTML');
+        $this->assertNotFalse($posC, 'Define C card should be found in HTML');
+        $this->assertNotFalse($posA, 'Define A card should be found in HTML');
+
+        // スコア順（B > C > A）で表示されていることを確認
+        $this->assertLessThan($posC, $posB, 'Define B (avg score 40) should appear before Define C (avg score 30)');
+        $this->assertLessThan($posA, $posC, 'Define C (avg score 30) should appear before Define A (avg score 20)');
     }
 
     #[Test]
