@@ -129,6 +129,13 @@
 - [Phase 5詳細計画](../2025-12-30_phase5_detailed_plan.md)
 - [Phase 5完了レポート](../2025-12-31_phase5_completion_report.md)
 
+### 関連パフォーマンス調査
+
+- **[Issue #59 Phase 2: 台帳リスト画面パフォーマンス深掘り調査](../../2026-02-08_issue-59-phase2-investigation-report.md)** (2026-02-08)
+  - attachment-list コンポーネントの Alpine.js 初期化コスト分析
+  - 「もっと見る」UIによる遅延問題の特定
+  - 本調査で得られた知見を継承した新たな最適化方針
+
 ### Phase 4関連
 
 - [Phase 4完了レポート](../2025-12-30_phase4-6_completion_summary.md)
