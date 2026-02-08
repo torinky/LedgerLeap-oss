@@ -115,7 +115,7 @@ class DemoMinimalSeeder extends Seeder
     {
         // ロールの取得または作成（RolesAndPermissionsSeederで作成済みの想定）
         $this->adminRole = Role::firstOrCreate(
-            ['name' => 'Super Admin'],
+            ['name' => Role::SUPER_ADMIN],
             ['guard_name' => 'web']
         );
 

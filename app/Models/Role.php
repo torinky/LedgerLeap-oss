@@ -29,6 +29,7 @@ class Role extends SpatieRole
     protected static function booted()
     {
         static::updated(function ($role) {
+            \Illuminate\Support\Facades\Log::info("App\\Models\\Role::booted updated closure fired for Role ID: " . $role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
@@ -36,6 +37,7 @@ class Role extends SpatieRole
         });
 
         static::deleted(function ($role) {
+            \Illuminate\Support\Facades\Log::info("App\\Models\\Role::booted deleted closure fired for Role ID: " . $role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);

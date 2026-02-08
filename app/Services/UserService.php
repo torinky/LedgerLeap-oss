@@ -180,7 +180,7 @@ class UserService
     {
         $cacheKey = "user:{$user->id}:all_permissions";
 
-        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($user) {
+        return Cache::tags(['user_permissions'])->remember($cacheKey, now()->addMinutes(60), function () use ($user) {
             return tenancy()->central(function () use ($user) {
                 return $user->permissions->merge(
                     $user->organizations->flatMap->getAllUniquePermissions()
@@ -196,7 +196,17 @@ class UserService
      */
     public function clearUserPermissionsCache(User $user): void
     {
-        Cache::forget("user:{$user->id}:all_permissions");
+        Cache::tags(['user_permissions'])->forget("user:{$user->id}:all_permissions");
+        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    /**
+     * すべてのユーザー権限キャッシュをクリアする
+     */
+    public function flushAllUserPermissionsCache(): void
+    {
+        \Illuminate\Support\Facades\Log::info("UserService: flushing all user permissions cache.");
+        Cache::tags(['user_permissions'])->flush();
         app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 

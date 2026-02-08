@@ -25,16 +25,20 @@ class RoleFolderPermissionObserver
     public function created(RoleFolderPermission $roleFolderPermission): void
     {
         $this->tenantAccessService->clearAllCache();
+        $this->userService->clearFolderPermissionCache();
     }
 
     public function updated(RoleFolderPermission $roleFolderPermission): void
     {
         $this->tenantAccessService->clearAllCache();
+        $this->userService->clearFolderPermissionCache();
     }
 
     public function deleted(RoleFolderPermission $roleFolderPermission): void
     {
         // LogsActivityトレイトがdeletedイベントを処理する際にキャッシュクリアが二重に発生するため、ここでは呼び出さない
         // $this->tenantAccessService->clearAllCache();
+        $this->tenantAccessService->clearAllCache();
+        $this->userService->clearFolderPermissionCache();
     }
 }

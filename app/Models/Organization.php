@@ -21,6 +21,8 @@ class Organization extends Model
 
     protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
 
+    public $guard_name = 'web';
+
     public static function getTreeLabelAttribute(): string
     {
         return 'name';  // 例：タイトル列が `name` の場合

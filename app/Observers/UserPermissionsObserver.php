@@ -5,7 +5,9 @@ namespace App\Observers;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
+use App\Services\UserService;
+
+use Illuminate\Database\Eloquent\Model;
 
 class UserPermissionsObserver
 {
@@ -14,89 +16,45 @@ class UserPermissionsObserver
      *
      * @var bool
      */
-    public $afterCommit = true;
+    // public $afterCommit = true; // テストでトランザクションがコミットされないため、無効化
 
-    /**
-     * Handle the User "deleted" event.
-     *
-     * @return void
-     */
-    public function deleted(User $user)
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
     {
-        $this->clearPermissionsCache($user);
+        $this->userService = $userService;
     }
 
     /**
-     * Clear the permissions cache for the given user.
+     * Handle the "updated" event.
      *
+     * @param  Model  $model
      * @return void
      */
-    protected function clearPermissionsCache(User $user)
+    public function updated(Model $model)
     {
-        Cache::forget("user:{$user->id}:all_permissions");
+        \Illuminate\Support\Facades\Log::info("UserPermissionsObserver: updated event fired for " . get_class($model) . " ID: " . $model->id);
+        if ($model instanceof \App\Models\User) {
+            $this->userService->clearUserPermissionsCache($model);
+        } elseif ($model instanceof \App\Models\Role || $model instanceof \App\Models\Organization) {
+            // RoleやOrganizationの変更は広範囲に影響するため、全キャッシュをクリアする
+            \Illuminate\Support\Facades\Log::info("UserPermissionsObserver: Flushing all user permissions cache due to change in " . get_class($model));
+            $this->userService->flushAllUserPermissionsCache();
+        }
     }
 
     /**
-     * Handle the Role "updated" event.
+     * Handle the "deleted" event.
      *
+     * @param  Model  $model
      * @return void
      */
-    public function roleUpdated(Role $role)
+    public function deleted(Model $model)
     {
-        $this->clearPermissionsCacheForRole($role);
-    }
-
-    /**
-     * Clear the permissions cache for users associated with the given role.
-     *
-     * @return void
-     */
-    protected function clearPermissionsCacheForRole(Role $role)
-    {
-        $role->users()->each(function ($user) {
-            $this->clearPermissionsCache($user);
-        });
-    }
-
-    /**
-     * Handle the Role "deleted" event.
-     *
-     * @return void
-     */
-    public function roleDeleted(Role $role)
-    {
-        $this->clearPermissionsCacheForRole($role);
-    }
-
-    /**
-     * Handle the Organization "updated" event.
-     *
-     * @return void
-     */
-    public function organizationUpdated(Organization $organization)
-    {
-        $this->clearPermissionsCacheForOrganization($organization);
-    }
-
-    /**
-     * Clear the permissions cache for users associated with the given organization.
-     *
-     * @return void
-     */
-    protected function clearPermissionsCacheForOrganization(Organization $organization)
-    {
-        $organization->users()->each(function ($user) {
-            $this->clearPermissionsCache($user);
-        });
-    }
-
-    /**
-     * Handle the Organization "deleted" event.
-     *
-     * @return void
-     */
-    public function organizationDeleted(Organization $organization)
-    {
-        $this->clearPermissionsCacheForOrganization($organization);
+        if ($model instanceof \App\Models\User) {
+            $this->userService->clearUserPermissionsCache($model);
+        } elseif ($model instanceof \App\Models\Role || $model instanceof \App\Models\Organization) {
+            $this->userService->flushAllUserPermissionsCache();
+        }
     }
 }

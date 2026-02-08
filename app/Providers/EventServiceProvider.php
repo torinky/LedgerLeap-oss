@@ -21,10 +21,10 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $observers = [
-        User::class => [UserPermissionsObserver::class, UserObserver::class],
-        Role::class => [UserPermissionsObserver::class],
-        Organization::class => [UserPermissionsObserver::class],
-        RoleFolderPermission::class => [RoleFolderPermissionObserver::class],
+        // User::class => [UserPermissionsObserver::class, UserObserver::class],
+        // Role::class => [UserPermissionsObserver::class],
+        // Organization::class => [UserPermissionsObserver::class],
+        // RoleFolderPermission::class => [RoleFolderPermissionObserver::class],
     ];
 
     /**
@@ -43,7 +43,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        parent::boot();
     }
 
     /**

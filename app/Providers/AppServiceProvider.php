@@ -6,13 +6,21 @@ use App\Database\MySqlConnection;
 use App\Models\AutoLink;
 use App\Models\Folder;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Models\Organization;
+use App\Models\Role;
+use App\Models\User;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
+use App\Models\RoleFolderPermission;
 use App\Observers\AutoLinkObserver;
 use App\Observers\FolderObserver;
+use App\Observers\LedgerDefineObserver;
 use App\Observers\LedgerDiffObserver;
 use App\Observers\LedgerObserver;
+use App\Observers\RoleFolderPermissionObserver;
+use App\Observers\UserPermissionsObserver;
 use App\Services\TenantAccessService;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Filament\Support\Facades\FilamentView;
@@ -87,11 +95,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Log::info("AppServiceProvider booting...");
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);
         Ledger::observe(LedgerObserver::class);
-        \App\Models\LedgerDefine::observe(\App\Observers\LedgerDefineObserver::class);
+        LedgerDefine::observe(LedgerDefineObserver::class);
+
+        User::observe(UserPermissionsObserver::class);
+        Role::observe(UserPermissionsObserver::class);
+        Organization::observe(UserPermissionsObserver::class);
+        RoleFolderPermission::observe(RoleFolderPermissionObserver::class);
 
         // Domain モデルが作成される際にUUIDを自動生成
         Domain::creating(function (Domain $domain) {
@@ -105,8 +119,8 @@ class AppServiceProvider extends ServiceProvider
                     }
                 });*/
 
-        $this->app->bind(InitializeTenancyByRequestData::class, function () {
-            return new InitializeTenancyByRequestData(header: null, queryParameter: 'snapshot.memo.tenant_id');
-        });
+        // InitializeTenancyByRequestData の設定を変更
+        InitializeTenancyByRequestData::$header = null;
+        InitializeTenancyByRequestData::$queryParameter = 'snapshot.memo.tenant_id';
     }
 }
