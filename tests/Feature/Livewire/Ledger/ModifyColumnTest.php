@@ -461,4 +461,26 @@ class ModifyColumnTest extends TestCase
         $this->assertNotNull($newAttachedFile);
         Storage::disk('public')->assertExists($newAttachedFile->path);
     }
+
+    #[Test]
+    public function it_displays_delete_button_for_existing_unlocked_ledger(): void
+    {
+        // 既存の台帳を作成
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => []],
+            'creator_id' => $this->user->id,
+        ]);
+
+        // コンポーネントをレンダリング
+        $component = Livewire::test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        // 削除ボタンが表示されていることを確認
+        $component->assertSee(__('ledger.delete'));
+        $component->assertSeeHtml('for="delete-modal"');
+
+        // 削除モーダルも存在することを確認
+        $component->assertSeeHtml('id="delete-modal"');
+    }
 }
