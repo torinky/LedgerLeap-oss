@@ -30,10 +30,9 @@
 
 {{-- Alpine.js data for enhanced interactivity --}}
 <div x-data="{
-    hoveredFile: null,
+    initialized: false,
     loadingFiles: {},
     successFiles: {},
-    errorFiles: {},
     showAll: false,
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
@@ -41,26 +40,6 @@
     columnId: {{ json_encode($columnId) }},
     isIconOnly: {{ $isIconOnly ? 'true' : 'false' }},
     isCompact: {{ $isCompact ? 'true' : 'false' }},
-    containerHeight: 'auto',
-    init() {
-        // 初期状態の高さ設定。各コンポーネントがwindow:resizeイベントを監視するのは高負荷なため削除。
-        // トグル時など必要なタイミングでのみ計算に限定する。
-        this.$nextTick(() => this.updateHeight());
-    },
-    updateHeight() {
-        if (!this.showAll) {
-            if (this.totalCount <= this.displayLimit) {
-                this.containerHeight = 'auto';
-            } else {
-                // アイコン・コンパクトは1行(約48px)、フルモードはカード1枚分(約200px)
-                this.containerHeight = (this.isIconOnly || this.isCompact ? 48 : 200) + 'px';
-            }
-        } else {
-            if (this.$refs.innerContainer) {
-                this.containerHeight = this.$refs.innerContainer.scrollHeight + 'px';
-            }
-        }
-    },
     handleFileClick(fileId, fileColumnId) {
         this.$dispatch('open-file-inspector', {
             id: fileId,
@@ -97,7 +76,6 @@
     },
     toggleShowAll() {
         this.showAll = !this.showAll;
-        this.updateHeight();
         if (this.showAll) {
             // スムーズにスクロール（コンテナの下部が見えるように）
             this.$nextTick(() => {
@@ -105,11 +83,17 @@
             });
         }
     }
-}" class="not-prose w-full flex flex-col" id="{{ $componentId }}">
+}"
+x-intersect.once="initialized = true"
+class="not-prose w-full flex flex-col" id="{{ $componentId }}">
 
     {{-- 高さ制限とフェードを実現するラッパー。ボタンをこの外に出すことで見切れを防止する --}}
     <div class="relative transition-all duration-500 ease-in-out overflow-hidden"
-        :style="{ maxHeight: containerHeight, minHeight: !showAll && totalCount > displayLimit ? containerHeight : 'auto' }">
+        :class="{
+            'max-h-12': !showAll && totalCount > displayLimit && (isIconOnly || isCompact),
+            'max-h-[200px]': !showAll && totalCount > displayLimit && !isIconOnly && !isCompact,
+            'max-h-[9999px]': showAll || totalCount <= displayLimit
+        }">
 
         <div x-ref="innerContainer"
             class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4' }} pb-2"
@@ -271,8 +255,7 @@
                 @elseif($isCompact)
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
                     <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                        role="listitem" x-on:mouseenter="hoveredFile = {{ $fileId }}"
-                        x-on:mouseleave="hoveredFile = null">
+                        role="listitem">
 
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
