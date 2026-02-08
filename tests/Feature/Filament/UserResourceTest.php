@@ -33,7 +33,7 @@ class UserResourceTest extends TestCase
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_users', 'guard_name' => 'web']);
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'delete_users', 'guard_name' => 'web']);
 
-        $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+        $adminRole = \App\Models\Role::firstOrCreate(['name' => \App\Models\Role::SUPER_ADMIN, 'guard_name' => 'web']);
         $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
 
         $this->adminUser = User::factory()->create([

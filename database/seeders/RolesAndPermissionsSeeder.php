@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -98,7 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ロールを定義し、権限を付与
         $roles = [
-            'Super Admin' => [
+            Role::SUPER_ADMIN => [
                 'description' => 'システム全体の管理者',
                 'permissions' => array_keys($permissions), // 全権限を持つ
             ],
@@ -186,7 +186,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // super_admin@ll.com に Super Admin ロールを付与
         $user = User::where('email', 'super_admin@ll.com')->first();
         if ($user) {
-            $superAdminRole = Role::where('name', 'Super Admin')->first();
+            $superAdminRole = Role::where('name', Role::SUPER_ADMIN)->first();
             if ($superAdminRole && ! $user->hasRole($superAdminRole)) {
                 $user->assignRole($superAdminRole);
             }

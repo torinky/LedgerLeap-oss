@@ -80,7 +80,7 @@ class UserService
 
     /**
      * ユーザーが組織に対して特定の権限を持っているかどうかを確認します。
-     * スーパー管理者、ユーザー自身の権限、ユーザーが所属する組織の権限も確認します。
+     * スーパー管理者であっても厳格に権限を確認します。
      *
      * @param  User  $user  権限を確認するユーザー。
      * @param  string  $permission  確認する権限。
@@ -89,9 +89,6 @@ class UserService
      */
     public function hasPermissionForOrganization(User $user, string $permission, Organization $organization): bool
     {
-        if ($user->hasRole('super-admin')) {
-            return true;
-        }
 
         if ($user->hasPermissionTo($permission)) {
             return true;
@@ -184,11 +181,13 @@ class UserService
         $cacheKey = "user:{$user->id}:all_permissions";
 
         return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($user) {
-            return $user->permissions->merge(
-                $user->organizations->flatMap->getAllUniquePermissions()
-            )->merge(
-                $this->getAllUniqueRolesForUser($user)->flatMap->permissions
-            )->unique('id');
+            return tenancy()->central(function () use ($user) {
+                return $user->permissions->merge(
+                    $user->organizations->flatMap->getAllUniquePermissions()
+                )->merge(
+                    $this->getAllUniqueRolesForUser($user)->flatMap->permissions
+                )->unique('id');
+            });
         });
     }
 
@@ -203,15 +202,18 @@ class UserService
 
     /**
      * ユーザーに関連するすべての一意の役割を取得し、組織からも役割を含めます。
+     * セントラルDBから情報を取得するように保証します。
      *
      * @param  User  $user  役割を取得するユーザー。
      * @return Collection 重複を取り除いた役割オブジェクトのコレクション。
      */
     public function getAllUniqueRolesForUser(User $user): Collection
     {
-        return $user->roles->merge(
-            $user->organizations->flatMap->getAllRoles()
-        )->unique('id');
+        return tenancy()->central(function () use ($user) {
+            return $user->roles->merge(
+                $user->organizations->flatMap->getAllRoles()
+            )->unique('id');
+        });
     }
 
     // isManageableFolderForUser, isWritableFolderForUser, isReadableFolderForUser は
@@ -460,7 +462,7 @@ class UserService
         // 1. ユーザーが INSPECT または APPROVE 権限を持つフォルダの ID リストを取得
         $privilegedFolderIds = $this->getPrivilegedFolderIdsForClaimable($user); // ヘルパーメソッド化
 
-        if ($privilegedFolderIds->isEmpty() && ! $user->hasRole('Super Admin')) {
+        if ($privilegedFolderIds->isEmpty()) {
             return collect();
         }
 
@@ -480,10 +482,8 @@ class UserService
                     ->orWhereDoesntHave('latestDiff'); // 最新Diffがない場合も考慮 (DRAFT直後など)
             })
             // 権限のあるフォルダに紐づく LedgerDefine を持つ Ledger を対象
-            ->when(! $user->hasRole('Super Admin'), function (Builder $query) use ($privilegedFolderIds) {
-                $query->whereHas('define', function (Builder $defineQuery) use ($privilegedFolderIds) {
-                    $defineQuery->whereIn('folder_id', $privilegedFolderIds);
-                });
+            ->whereHas('define', function (Builder $defineQuery) use ($privilegedFolderIds) {
+                $defineQuery->whereIn('folder_id', $privilegedFolderIds);
             })
             ->withNeededRelations() // Ledgerモデルのスコープを想定
             ->orderBy('updated_at', 'desc')
@@ -571,10 +571,6 @@ class UserService
      */
     public function getAccessibleRootFolderIdForUser(User $user): ?int
     {
-        // Super Admin は常にルートフォルダ (ID=1) にアクセス可能と仮定
-        if ($user->hasRole('Super Admin')) {
-            return 1; // または Folder::root()->first()->id; // 実際のルートフォルダIDを取得するロジック
-        }
 
         // ユーザーがアクセス可能なフォルダを全て取得
         $accessibleFolderIds = RoleFolderPermission::whereIn('role_id', $this->getAllUniqueRolesForUser($user)->pluck('id'))

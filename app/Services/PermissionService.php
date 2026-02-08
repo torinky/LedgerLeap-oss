@@ -436,10 +436,6 @@ class PermissionService
             return $this->permissionCache[$cacheKey];
         }
 
-        // スーパー管理者なら ADMIN を返す
-        if ($user->hasRole('super_admin')) {
-            //            return FolderPermissionType::ADMIN;
-        }
 
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];
@@ -499,10 +495,6 @@ class PermissionService
             return null;
         }
 
-        // スーパー管理者なら全権限を返す
-        if ($user->hasRole('super_admin')) {
-            //            return FolderPermissionType::cases();
-        }
 
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];

@@ -19,6 +19,8 @@ class Role extends SpatieRole
 {
     use HasFactory, LogsActivity, Notifiable;
 
+    public const string SUPER_ADMIN = 'Super Admin';
+
     protected $fillable = [
         'name', 'guard_name',
         'description',

@@ -47,9 +47,6 @@ class AuthServiceProvider extends ServiceProvider
     {
         //
         Gate::before(function (User $user, $ability) {
-            if ($user->hasRole('Super Admin')) {
-                //                return true;
-            }
         });
 
         Gate::define('inherit-permissions', function (User $user, $permission, Organization $organization) {
