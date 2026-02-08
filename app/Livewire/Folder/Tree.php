@@ -36,9 +36,36 @@ class Tree extends BaseLivewireComponent
         // currentFolderId と selectedFolderIds は親 (IndexManager) から Reactive プロパティとして
         // 渡されるため、ここでの再初期化は不要。また、Reactive プロパティを子で書き換えると
         // CannotMutateReactivePropException の原因になる。
-        $this->folders = Folder::whereIsRoot()->with('ledgerDefines')->get();
+
+        // 全てのフォルダーを階層構造でEager Loadし、各フォルダーの台帳定義もロード
+        // Nestedsetの機能を使って、ルートから全子孫を一度に取得
+        $this->folders = Folder::whereIsRoot()
+            ->with(['ledgerDefines', 'children' => function ($query) {
+                $query->with('ledgerDefines');
+            }])
+            ->get();
+
+        // 全フォルダーを取得して、再帰的にledgerDefinesをEager Load
+        // これにより、N+1問題を回避
+        $this->eagerLoadDescendants($this->folders);
 
         $this->initializePermissions($writableFolderRepository);
+    }
+
+    /**
+     * 全ての子孫フォルダーのledgerDefinesを再帰的にEager Load
+     */
+    private function eagerLoadDescendants($folders)
+    {
+        foreach ($folders as $folder) {
+            if ($folder->children && $folder->children->count() > 0) {
+                // 子フォルダーのledgerDefinesをロード
+                $folder->children->load('ledgerDefines');
+
+                // 再帰的に子孫を処理
+                $this->eagerLoadDescendants($folder->children);
+            }
+        }
     }
 
     #[On('permissions-changed')]

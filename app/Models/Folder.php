@@ -123,8 +123,12 @@ class Folder extends Model
 
     public function descendantCount()
     {
-        // NestedSet の lft, rgt プロパティを使用して高速に計算します
-        return ($this->rgt - $this->lft - 1) / 2;
+        // NestedSet の _lft, _rgt プロパティを使用して高速に計算します
+        // NodeTraitが提供するメソッドを使用して正しいカラム名でアクセス
+        $lft = $this->{$this->getLftName()};
+        $rgt = $this->{$this->getRgtName()};
+
+        return ($rgt - $lft - 1) / 2;
     }
 
     /**
