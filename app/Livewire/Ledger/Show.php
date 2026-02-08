@@ -84,7 +84,7 @@ class Show extends BaseLivewireComponent
             'latestDiff.approver:id,name',
         ])->findOrFail($ledgerId);
 
-        $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->with('ledger')->get();
+        $this->currentLedgerAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)->with('ledger')->withTrashed()->get();
 
         $this->canView = Gate::allows('view', [Ledger::class, $this->ledgerRecord]);
 

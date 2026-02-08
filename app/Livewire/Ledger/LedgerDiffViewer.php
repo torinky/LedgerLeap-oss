@@ -103,7 +103,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
 
         // attachments が準備されていない場合のフォールバック（履歴タブなど）
         if (empty($this->allAttachments)) {
-            $this->allAttachments = $this->ledgerRecord->attachedFiles()->get()->keyBy('hashedbasename');
+            $this->allAttachments = $this->ledgerRecord->attachedFiles()->withTrashed()->get()->keyBy('hashedbasename');
         }
     }
 
