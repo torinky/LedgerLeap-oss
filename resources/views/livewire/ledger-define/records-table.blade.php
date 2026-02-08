@@ -8,13 +8,13 @@
 
     <div class="card-body pt-0">
         {{-- Skeleton Grid during folder change --}}
-        <div wire:loading.delay target="changeCurrentFolder" class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 gap-4">
-            @foreach(range(1, 14) as $i)
-                <div class="h-28 bg-base-100/30 rounded-xl animate-pulse ring-1 ring-white/5"></div>
+        <div wire:loading.delay wire:target="changeCurrentFolder" class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 gap-4">
+            @foreach(range(1, 10) as $i)
+                <x-folder.folder-avatar-skeleton />
             @endforeach
         </div>
 
-        <div wire:loading.delay.remove target="changeCurrentFolder"
+        <div wire:loading.delay.remove wire:target="changeCurrentFolder"
             class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center ">
 
             @foreach($folderRecords as $fKey => $folderRecord)

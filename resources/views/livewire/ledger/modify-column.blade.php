@@ -6,11 +6,11 @@
         {{-- <x-element.loading-overlay tier="1" target="store" /> --}}
 
         {{-- Tier 1 Skeleton - Only for store (saving) --}}
-        <div wire:loading.delay target="store" class="p-8 shimmer">
+        <div wire:loading.delay wire:target="store" class="p-8 shimmer">
             <x-element.skeleton-input-form rows="6" />
         </div>
 
-        <div wire:loading.delay.remove target="store">
+        <div wire:loading.delay.remove wire:target="store">
             <div class="background-image-change"
                  @validation-summary-status.window="validationSummaryOpen = $event.detail.open; validationErrorCount = $event.detail.errorCount;"
                  x-data="Object.assign(validationErrorNavigator(), {

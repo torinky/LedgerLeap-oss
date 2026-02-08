@@ -369,14 +369,14 @@
         $permissionTargets = 'filterByRoleId,filterByOrganizationId,filterByPermissionValue,resetFilters,gotoPage,nextPage,previousPage,searchUserQuery';
     @endphp
 
-    <div wire:loading.delay :target="$permissionTargets" class="space-y-8">
+    <div wire:loading.delay wire:target="{{ $permissionTargets }}" class="space-y-8">
         <div class="h-20 bg-base-200 rounded-xl animate-pulse"></div>
         <x-element.skeleton-table rows="5" cols="3" />
         <x-element.skeleton-table rows="5" cols="4" />
         <x-element.skeleton-table rows="10" cols="5" />
     </div>
 
-    <div wire:loading.delay.remove :target="$permissionTargets">
+    <div wire:loading.delay.remove wire:target="{{ $permissionTargets }}">
         {{-- ログインユーザーの最高権限概要 --}}
         <div class="mb-6 p-4 rounded-lg bg-info/20 text-info-content border border-info/50">
             @if ($this->currentUserHighestPermission)
