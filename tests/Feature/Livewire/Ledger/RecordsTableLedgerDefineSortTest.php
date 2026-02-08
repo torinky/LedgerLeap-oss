@@ -2,34 +2,41 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
+use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
+use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 
 class RecordsTableLedgerDefineSortTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $tenancy = false; // RefreshDatabaseWithTenant で管理するため false に戻す
+
     private User $user;
 
     private Folder $folder;
-
-    protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
-        tenancy()->initialize($this->tenant);
+        // テナントを明示的に初期化
+        if ($this->getTenant()) {
+            tenancy()->initialize($this->getTenant());
+        }
+
+        // Mroongaテーブル明示的クリア
+        Ledger::query()->delete();
 
         $this->user = User::factory()->create([
             'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
@@ -46,21 +53,8 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         $this->user->givePermissionTo('ledgerView');
     }
 
-    protected function getTablesToTruncate(): array
-    {
-        return [
-            'folders',
-            'ledgers',
-            'ledger_defines',
-            'personal_access_tokens',
-        ];
-    }
-
     protected function tearDown(): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
         parent::tearDown();
     }
 
@@ -72,7 +66,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define A',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -80,7 +74,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define B',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -88,7 +82,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define C',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -96,38 +90,41 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         // Define A: 平均 20点
         Ledger::factory()->create([
             'ledger_define_id' => $defineA->id,
-            'content' => ['title' => 'Test A1'],
+            'content' => [0 => 'Test A1'],
             'composite_score' => 20.0,
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $defineA->id,
-            'content' => ['title' => 'Test A2'],
+            'content' => [0 => 'Test A2'],
             'composite_score' => 20.0,
         ]);
 
         // Define B: 平均 40点（最高）
         Ledger::factory()->create([
             'ledger_define_id' => $defineB->id,
-            'content' => ['title' => 'Test B1'],
+            'content' => [0 => 'Test B1'],
             'composite_score' => 40.0,
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $defineB->id,
-            'content' => ['title' => 'Test B2'],
+            'content' => [0 => 'Test B2'],
             'composite_score' => 40.0,
         ]);
 
         // Define C: 平均 30点
         Ledger::factory()->create([
             'ledger_define_id' => $defineC->id,
-            'content' => ['title' => 'Test C1'],
+            'content' => [0 => 'Test C1'],
             'composite_score' => 30.0,
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $defineC->id,
-            'content' => ['title' => 'Test C2'],
+            'content' => [0 => 'Test C2'],
             'composite_score' => 30.0,
         ]);
+
+        // Mroonga インデックス更新待ち
+        sleep(1);
 
         // 検索時は平均スコア順（B > C > A）で表示されるはず
         $component = Livewire::test(IndexManager::class)
@@ -152,7 +149,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define A',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -160,7 +157,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define B',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -168,7 +165,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Define C',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -176,21 +173,21 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         // Define A: スコア 10
         Ledger::factory()->create([
             'ledger_define_id' => $defineA->id,
-            'content' => ['title' => 'Test A'],
+            'content' => [0 => 'Test A'],
             'composite_score' => 10.0,
         ]);
 
         // Define B: スコア 30
         Ledger::factory()->create([
             'ledger_define_id' => $defineB->id,
-            'content' => ['title' => 'Test B'],
+            'content' => [0 => 'Test B'],
             'composite_score' => 30.0,
         ]);
 
         // Define C: スコア 20
         Ledger::factory()->create([
             'ledger_define_id' => $defineC->id,
-            'content' => ['title' => 'Test C'],
+            'content' => [0 => 'Test C'],
             'composite_score' => 20.0,
         ]);
 
@@ -215,15 +212,18 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Test Define',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
         Ledger::factory()->create([
             'ledger_define_id' => $define->id,
-            'content' => ['title' => 'Test'],
+            'content' => [0 => 'Test'],
             'composite_score' => 30.0,
         ]);
+
+        // Mroonga インデックス更新待ち
+        sleep(1);
 
         // 検索時は「スコア順」インジケーターが表示される
         $component = Livewire::withQueryParams([
@@ -244,15 +244,18 @@ class RecordsTableLedgerDefineSortTest extends TestCase
             'folder_id' => $this->folder->id,
             'title' => 'Test Define',
             'column_define' => [
-                ['id' => 'title', 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'タイトル', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
         Ledger::factory()->create([
             'ledger_define_id' => $define->id,
-            'content' => ['title' => 'Test'],
+            'content' => [0 => 'Test'],
             'composite_score' => 30.0,
         ]);
+
+        // Mroonga インデックス更新待ち
+        sleep(1);
 
         // 検索なしの場合は「スコア順」インジケーターが表示されない
         $component = Livewire::withQueryParams([

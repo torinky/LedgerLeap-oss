@@ -355,6 +355,14 @@ class RecordsTable extends BaseLivewireComponent
 
     public function render()
     {
+        $tenantId = tenancy()->tenant?->id ?? 'central';
+        $dbName = \DB::connection()->getDatabaseName();
+        Log::info('[MCP Debug] RecordsTable.render START', [
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+            'search' => $this->search,
+            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
+        ]);
 
         $this->initSearchContext();
 
@@ -531,6 +539,12 @@ class RecordsTable extends BaseLivewireComponent
             Log::info('[MCP Debug] RecordsTable.render search: '.$this->search);
 
             $newTotal = $ledgerRecordsQuery->count();
+            Log::info('[MCP Debug] RecordsTable.render count result', [
+                'count' => $newTotal,
+                'sql' => $ledgerRecordsQuery->toSql(),
+                'bindings' => $ledgerRecordsQuery->getBindings(),
+            ]);
+
             if ($this->totalRecords !== $newTotal) {
                 $this->totalRecords = $newTotal;
                 $this->dispatch('recordsUpdated', total: $this->totalRecords);
@@ -554,6 +568,11 @@ class RecordsTable extends BaseLivewireComponent
 
         // 検索結果のフラグを設定
         $ledgerRecords->getCollection()->transform(function ($ledger) {
+            // DBから取得したデータを正規化（二重エンコード等の破損データへの耐性を持たせる）
+            // これにより、content_attached が文字列（破損データ）の場合でも配列に復元される。
+            $ledger->content = $ledger->define->normalizeByColumnDefine($ledger->content ?? []);
+            $ledger->content_attached = $ledger->define->normalizeByColumnDefine($ledger->content_attached ?? []);
+
             if (empty($ledger->content_attached) || empty($this->search)) {
                 return $ledger;
             }

@@ -2,19 +2,24 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
+use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant;
 
 class IndexManagerIntegrationTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = false; // RefreshDatabaseWithTenant で管理するため false に戻す
 
     private User $user;
 
@@ -24,17 +29,26 @@ class IndexManagerIntegrationTest extends TestCase
 
     private LedgerDefine $ledgerDefine;
 
-    protected \App\Models\Tenant $tenant;
-
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-index-manager-'.uniqid()]);
-        tenancy()->initialize($this->tenant);
+        // テナントを明示的に初期化
+        if ($this->getTenant()) {
+            tenancy()->initialize($this->getTenant());
+        }
+
+        // Mroongaテーブル明示的クリア
+        Ledger::query()->delete();
 
         $this->user = User::factory()->create();
+
+        // 権限の付与
+        Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('ledgerView');
+        Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('view_ledger_defines');
 
         $this->rootFolder = Folder::factory()->create(['parent_id' => null, 'title' => 'Root']);
         $this->subFolder = Folder::factory()->create(['parent_id' => $this->rootFolder->id, 'title' => 'Sub']);
@@ -43,7 +57,7 @@ class IndexManagerIntegrationTest extends TestCase
             'folder_id' => $this->subFolder->id,
             'title' => 'Test Ledger',
             'column_define' => [
-                ['id' => 'col1', 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
             ],
         ]);
 
@@ -65,18 +79,21 @@ class IndexManagerIntegrationTest extends TestCase
     {
         $ledger1 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['col1' => 'TargetContent'],
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'TargetContent']),
         ]);
         $ledger2 = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => ['col1' => 'No Search Match'],
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'No Search Match']),
         ]);
+
+        // Mroonga インデックス更新待ち
+        sleep(1);
 
         Livewire::test(IndexManager::class)
             ->set('selectedLedgerDefineIds', [$this->ledgerDefine->id])
             ->set('search', 'Target')
-            ->assertSee('Target')
-            ->assertSee('Content')
+            // 検索語 Target を使い、結果に含まれる 'TargetContent' が表示されることを期待
+            ->assertSee('TargetContent')
             ->assertDontSee('No Search Match');
     }
 

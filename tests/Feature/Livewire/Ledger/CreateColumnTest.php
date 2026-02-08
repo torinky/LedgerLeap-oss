@@ -114,7 +114,9 @@ class CreateColumnTest extends TestCase
         // contentの内容も検証
         $ledger = \App\Models\Ledger::first();
         $this->assertNotNull($ledger);
-        $this->assertEquals('Test Value', $ledger->content[0]);
+        // normalizeByColumnDefine は 0..maxId で欠番を埋めるため、実際の保存時は元のカラムIDがそのまま
+        // 反映される（このテストではカラムID=1）。したがって content[1] に値が入る。
+        $this->assertEquals('Test Value', $ledger->content[1]);
     }
 
     #[Test]

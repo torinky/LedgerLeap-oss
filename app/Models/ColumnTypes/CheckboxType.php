@@ -28,8 +28,10 @@ class CheckboxType implements InputType
 
     public function convertToText($value)
     {
+        // プロジェクト規約（二重エンコード厳禁）に基づき、配列の場合はそのまま返す。
+        // キャスト (AsColumnArrayJson) がシリアライズを担当するため。
         if (is_array($value)) {
-            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return $value;
         }
 
         return (string) $value;

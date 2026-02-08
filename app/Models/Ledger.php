@@ -61,7 +61,16 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
-        \Log::info('[MCP Search Debug] scopeSearch called with freeWord: '.$freeWord);
+        $connection = $query->getConnection();
+        $dbName = $connection->getDatabaseName();
+        $tenantId = tenancy()->tenant?->id ?? 'central';
+
+        \Log::info('[MCP Search Debug] scopeSearch START', [
+            'freeWord' => $freeWord,
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+            'connection' => $connection->getName(),
+        ]);
 
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
@@ -93,7 +102,10 @@ class Ledger extends Model
 
         // Debug: Log the count
         $count = (clone $query)->count();
-        \Log::info("[MCP Search Debug] scopeSearch: found {$count} records");
+        \Log::info("[MCP Search Debug] scopeSearch: found {$count} records", [
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+        ]);
         \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
     }
 

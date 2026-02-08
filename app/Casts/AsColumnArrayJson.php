@@ -60,9 +60,8 @@ class AsColumnArrayJson extends AsJson
 
         try {
             // JSON文字列をデコードします。
-            // 必要であれば、set の動作により合わせるために連想配列 (true) を使用しますが、
-            // 現在のコードはオブジェクト (false) を使用しています。今のところ一貫性を保ちます。
-            $decodedContent = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+            // 常に連想配列 (true) として取得し、プロジェクト規約（$ledger->content[0] 形式のアクセス）を安定させます。
+            $decodedContent = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
             Log::alert(sprintf(
@@ -75,15 +74,10 @@ class AsColumnArrayJson extends AsJson
         }
 
         // デコードされた配列/オブジェクトの各要素を処理します。
-        if (is_array($decodedContent) || is_object($decodedContent)) {
-            // 配列/オブジェクトの要素を参照で変更するか、新しいものを作成する方法が必要です。
-            $processedContent = is_object($decodedContent) ? clone $decodedContent : $decodedContent;
+        if (is_array($decodedContent)) {
+            $processedContent = $decodedContent;
             foreach ($decodedContent as $index => $item) {
-                if (is_object($processedContent)) {
-                    $processedContent->{$index} = $this->getContent($item);
-                } else {
-                    $processedContent[$index] = $this->getContent($item);
-                }
+                $processedContent[$index] = $this->getContent($item);
             }
 
             return $processedContent;
@@ -138,57 +132,70 @@ class AsColumnArrayJson extends AsJson
     public function set($model, $key, $value, $attributes): array
     {
         // 利用可能であれば $value を直接使用します。
-        $content = $value ?? $attributes[$key];
+        $content = $value ?? $attributes[$key] ?? null;
+
+        // ----- 新規ガード: 入力が既に JSON 文字列の場合は再エンコードを行わない -----
+        // 文字列かつ '[' または '{' で始まる場合に JSON と仮定し、デコード可能か検証する。
+        if (is_string($content)) {
+            // BOMや前後空白を除去して判定
+            $trimmed = preg_replace('/^\x{FEFF}|\s+$/u', '', $content);
+            if (Str::startsWith($trimmed, '[') || Str::startsWith($trimmed, '{')) {
+                try {
+                    // JSON_THROW_ON_ERROR を使って厳密に検証
+                    $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                    // デコードに成功し配列またはオブジェクトとなる場合は、そのまま DB に保存する
+                    if (is_array($decoded) || is_object($decoded)) {
+                        // 既に JSON 文字列なのでそのまま戻す（再エンコードを防止）
+                        return [$key => $trimmed];
+                    }
+                    // 数値や文字列単体が返る場合は通常の処理にフォールスルー
+                } catch (\JsonException $e) {
+                    // 無効な JSON であれば通常の処理に進む（ログに警告を残す）
+                    Log::warning('AsColumnArrayJson: set: Input value appears to be invalid JSON despite starting with [ or {');
+                    Log::warning('AsColumnArrayJson: set: Input value: '.Str::limit($content, 200));
+                }
+            }
+        }
+        // ----- ガードここまで -----
 
         // 値が配列かどうかを確認します。
         if (is_array($content)) {
-            // 配列内のすべての要素が空配˚または空文字列であるかを確認します。
-            $allEmpty = true;
-            foreach ($content as $item) {
-                // 要素が空配列ではなく、かつ空文字列でもない場合、空でないとみなします。
-                if ($item !== [] && $item !== '') {
-                    $allEmpty = false;
-                    // 空でない要素が見つかったので、これ以上確認する必要はありません。
-                    break;
-                }
+            // Mroonga 用にトップレベルはインデックス配列であることが望まれるため、
+            // 数値キーが連続していない場合は reindex（0..n）して埋める。
+            $isIndexed = array_is_list($content);
+            if (! $isIndexed) {
+                // 数値キーのみを抽出して連続リスト化する場合と、そうでない場合の対応
+                // ここでは単純に値部分のみを取り出して再インデックスする
+                $content = array_values($content);
             }
 
-            // すべての要素が空だった場合、キーに対して空のJSON配列を返します。
-            if ($allEmpty) {
+            $processed = [];
+            foreach ($content as $index => $item) {
+                $processed[] = $this->setContent($item);
+            }
+
+            // JSON エンコード時のオプション
+            try {
+                $jsonString = json_encode(
+                    $processed,
+                    JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
+                );
+            } catch (\JsonException $e) {
+                Log::error('AsColumnArrayJson: set: Failed to json_encode content: '.$e->getMessage());
+                // エンコードに失敗した場合は安全側で空配列文字列を返す
                 return [$key => '[]'];
             }
 
-            // すべてが空ではなかった場合、元の処理ロジックに進みます。
-            // 1階層目はjson配列にする (強制的にインデックス配列にする)
-            $processedContent = array_values($content);
-            foreach ($processedContent as $index => $item) {
-                $processedContent[$index] = $this->setContent($item);
-            }
-            // 処理された配列で content を更新します。
-            $content = $processedContent;
-        } elseif ($content === null || $content === '') {
-            // 入力値自体が null または空文字列の場合も空のJSON配列を返します。
-            return [$key => '[]']; // Changed from '' to '[]'
+            return [$key => $jsonString];
         }
 
-        // $content が配列でなかった場合、または空でない要素を含む配列だった場合、
-        // またはその他の空でない値だった場合、JSON としてエンコードします。
-        // 注意: json_encode(null) は文字列 'null' になります。
-        // 上記の `elseif ($content === null)` チェックは、代わりに '' が必要な場合にこれを防ぎます。
-
-        $jsonString = json_encode(
-            // (処理された可能性のある) content をエンコードします。
-            $content,
-            JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
-        );
-
-        // Check if content is already JSON encoded (this check is before encoding, so should check $value instead)
-        if (is_string($value) && (Str::startsWith($value, '[') || Str::startsWith($value, '{'))) {
-            Log::warning('AsColumnArrayJson: set: Input value appears to be already JSON encoded!');
-            Log::warning('AsColumnArrayJson: set: Input value: '.Str::limit($value, 200));
+        // null / '' / 単一値の取り扱い
+        if (is_null($content) || $content === '') {
+            return [$key => '[]'];
         }
 
-        return [$key => $jsonString];
+        // それ以外（単一値が渡された場合）は既存ロジックに従い文字列化
+        return [$key => (string) $content];
     }
 
     /**

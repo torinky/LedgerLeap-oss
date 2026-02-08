@@ -80,12 +80,9 @@ class ModifyColumn extends CreateColumn
             $this->tenantId = $this->ledgerRecord->tenant_id; // tenant_id は define からではなく ledger から取得
             $this->ledgerDefineId = $this->ledgerRecord->ledger_define_id;
 
-            if (! empty($this->ledgerRecord->content)) {
-                $this->content = $this->ledgerRecord->content;
-            }
-            if (! empty($this->ledgerRecord->content_attached)) {
-                $this->contentAttached = $this->ledgerRecord->content_attached;
-            }
+            // DBから取得したデータを正規化（二重エンコード等の破損データへの耐性を持たせる）
+            $this->content = $this->ledgerDefineRecord->normalizeByColumnDefine($this->ledgerRecord->content ?? []);
+            $this->contentAttached = $this->ledgerDefineRecord->normalizeByColumnDefine($this->ledgerRecord->content_attached ?? []);
 
             // 親クラスの初期化メソッドを呼び出す
             $this->initColumns();

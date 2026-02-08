@@ -122,6 +122,8 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
                 if ($type === 'YMD' && $originalData === 'invalid-date-string') {
                     $this->assertNull($restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
+                } elseif (in_array($type, ['chk', 'files']) && $originalData === null) {
+                    $this->assertEquals([], $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 } elseif ($type === 'number' && $originalData === 'not-a-number-string') {
                     $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 } else {

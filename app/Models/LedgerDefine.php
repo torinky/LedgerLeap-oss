@@ -176,16 +176,19 @@ class LedgerDefine extends Model
         for ($i = 0; $i <= $maxId; $i++) {
             if (! $contentCollection->has($i)) {
                 if ($columnDefineKeyById->has($i)) {
-                    $contentCollection[$i] = $columnDefineKeyById[$i]->type === 'chk' ? [] : '';
+                    $contentCollection[$i] = in_array($columnDefineKeyById[$i]->type, ['chk', 'files']) ? [] : '';
+                } else {
+                    // 他の欠番（削除されたカラム等）も空文字で埋めてインデックスを維持する
+                    $contentCollection[$i] = '';
                 }
             }
         }
 
-        // キーで並び替え
-        $sortedContentArray = $contentCollection->sortKeys();
-
-        // 数字添字配列に作り直し
-        return $sortedContentArray->values()->toArray();
+        // キーで並び替え（ID順を維持）
+        // values() は呼び出さず、連想配列（ID => Value）の状態を維持する。
+        // これにより、後続の calculateAutoFillValues で ID ベースのアクセスが可能になる。
+        // 最終的な添字配列化はモデルのキャスト(AsColumnArrayJson)に任せる。
+        return $contentCollection->sortKeys()->toArray();
     }
 
     /**
@@ -220,7 +223,11 @@ class LedgerDefine extends Model
 
             // 2. 正規化・クレンジング処理 (全カラム共通)
             // phone の全角変換や、number の半角変換などを保存直前に実行する
-            if (isset($currentContent[$columnId])) {
+            // shouldConvertToJson が true の型（files, chk 等）は、キャスト側でシリアライズするため
+            // ここでの convertColumnValue2Text（JSON文字列化）をスキップする
+            // また、インデックス不整合を防ぐため、$currentContent 内に該当 $columnId が存在するか、
+            // または defaultValue が必要な場合のみ処理を行う
+            if (array_key_exists($columnId, $currentContent) && ! $inputType->shouldConvertToJson()) {
                 $currentContent[$columnId] = $column->convertColumnValue2Text($currentContent[$columnId]);
             }
         }
