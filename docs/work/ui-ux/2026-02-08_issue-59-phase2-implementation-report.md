@@ -87,9 +87,11 @@ x-intersect.once="initialized = true"  // ✅ 追加
 <div :class="{
     'max-h-12': !showAll && totalCount > displayLimit && (isIconOnly || isCompact),
     'max-h-[200px]': !showAll && totalCount > displayLimit && !isIconOnly && !isCompact,
-    'max-h-none': showAll || totalCount <= displayLimit
+    'max-h-[9999px]': showAll || totalCount <= displayLimit
 }">
 ```
+
+> **⚠️ アニメーション対応**: 当初 `max-h-none` を使用していましたが、CSS の `transition` が `max-height: none` から他の値への変化をアニメーションできないため、`max-h-[9999px]`（実質無制限）に変更しました。これにより、「もっと見る」UIの展開・折りたたみが滑らかにアニメーションするようになりました。
 
 **イベントハンドラーの削除:**
 
@@ -237,13 +239,20 @@ this.containerHeight = this.$refs.innerContainer.scrollHeight + 'px';
 ```css
 .max-h-12 { max-height: 3rem; }
 .max-h-[200px] { max-height: 200px; }
-.max-h-none { max-height: none; }
+.max-h-[9999px] { max-height: 9999px; }  /* アニメーション対応 */
 ```
 
 **利点:**
 1. **GPU アクセラレーション**: ブラウザが最適化を適用
 2. **ノンブロッキング**: メインスレッドをブロックしない
 3. **信頼性**: ブラウザのレイアウトエンジンが処理
+4. **滑らかなアニメーション**: 数値間の補間が可能（`none` では不可）
+
+**アニメーションの技術的詳細:**
+- CSS の `transition` は、数値から数値への変化のみアニメーション可能
+- `max-height: none` や `max-height: auto` はキーワード値のため補間不可
+- `9999px` は実用上無限大として機能し、コンテンツの高さを制限しない
+- `transition-all duration-500 ease-in-out` により 0.5秒の滑らかな展開・折りたたみを実現
 
 ---
 
@@ -275,7 +284,7 @@ this.containerHeight = this.$refs.innerContainer.scrollHeight + 'px';
 
 | コミット | 内容 | 日付 |
 |---------|------|------|
-| `[HASH]` | feat(ui-ux): Issue #59 Phase 2実装 - Alpine.js遅延初期化とCSS最適化 | 2026-02-08 |
+| `a9749b92` | feat(ui-ux): Issue #59 Phase 2実装 - Alpine.js遅延初期化とCSS最適化 | 2026-02-08 |
 
 ---
 
@@ -297,5 +306,6 @@ this.containerHeight = this.$refs.innerContainer.scrollHeight + 'px';
 **実装完了日**: 2026年2月8日  
 **実装担当**: GitHub Copilot (Agent)  
 **レビュー状況**: テスト済み・本番デプロイ待ち
+
 
 
