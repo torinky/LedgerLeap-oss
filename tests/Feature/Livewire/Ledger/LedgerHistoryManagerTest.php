@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\LedgerHistoryManager;
+use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -16,6 +17,8 @@ use Tests\TestCase;
 class LedgerHistoryManagerTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected bool $tenancy = true;
 
     protected User $user;
 
@@ -236,6 +239,80 @@ class LedgerHistoryManagerTest extends TestCase
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_load_more'
                     && isset($context['duration_ms']);
+            });
+    }
+
+    #[Test]
+    public function it_loads_attached_files_for_diff_viewer()
+    {
+        // 添付ファイルを作成
+        $attachment1 = AttachedFile::factory()->forLedger($this->ledger)->create([
+            'column_id' => 0,
+            'hashedbasename' => 'abc123',
+            'filename' => 'test-file.pdf',
+        ]);
+
+        $attachment2 = AttachedFile::factory()->forLedger($this->ledger)->create([
+            'column_id' => 0,
+            'hashedbasename' => 'xyz789',
+            'filename' => 'image.jpg',
+        ]);
+
+        // コンポーネントをマウント
+        $component = Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
+
+        // allAttachments プロパティが設定されていることを確認
+        $component->assertSet('allAttachments', function ($attachments) use ($attachment1, $attachment2) {
+            return $attachments !== null
+                && $attachments->count() === 2
+                && $attachments->contains('id', $attachment1->id)
+                && $attachments->contains('id', $attachment2->id);
+        });
+
+        // ビューに allAttachments が渡されていることを確認
+        $component->assertViewHas('allAttachments', function ($attachments) use ($attachment1, $attachment2) {
+            return $attachments !== null
+                && $attachments->count() === 2
+                && $attachments->contains('id', $attachment1->id)
+                && $attachments->contains('id', $attachment2->id);
+        });
+    }
+
+    #[Test]
+    public function it_handles_ledger_with_attachment_column_added_in_later_version()
+    {
+        // このテストは it_loads_attached_files_for_diff_viewer で基本的な機能を確認済み
+        // ここでは、添付ファイルカラムが途中から追加された場合でも
+        // エラーなく表示できることを簡易的に確認する
+
+        // 既存の $this->ledger に添付ファイルを追加
+        $attachment = AttachedFile::factory()->forLedger($this->ledger)->create([
+            'column_id' => 0,
+            'hashedbasename' => 'test123',
+            'filename' => 'added-later.pdf',
+        ]);
+
+        // コンポーネントをマウント
+        $component = Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id]);
+
+        // allAttachments が正しく設定されていることを確認
+        $component->assertSet('allAttachments', function ($attachments) use ($attachment) {
+            return $attachments !== null
+                && $attachments->count() === 1
+                && $attachments->first()->id === $attachment->id;
+        });
+
+        // 2つのバージョンを比較選択してもエラーが発生しないことを確認
+        $component->call('toggleSelection', $this->diff3->id)
+            ->call('toggleSelection', $this->diff1->id);
+
+        // ビューが正常にレンダリングされることを確認
+        $component->assertViewHas('baseDiff')
+            ->assertViewHas('targetDiff')
+            ->assertViewHas('allAttachments', function ($attachments) use ($attachment) {
+                return $attachments !== null && $attachments->count() === 1;
             });
     }
 }

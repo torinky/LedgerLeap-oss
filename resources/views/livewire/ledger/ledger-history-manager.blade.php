@@ -264,6 +264,7 @@
                         <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :comparisonTargetDiff="$targetDiff" :displayLevel="$historyDisplayLevel"
                             :showChanges="isset($targetDiffId)" :canView="true" :highlight="$highlight" :baseMeta="$baseMeta" :targetMeta="$targetMeta"
                             :baseDiffId="$baseDiffId" :targetDiffId="$targetDiffId" :useFallback="false" :showInduction="false"
+                            :allAttachments="$allAttachments"
                             wire:key="history-viewer-{{ $baseDiffId }}-{{ $targetDiffId }}" />
                     </div>
                 </div>

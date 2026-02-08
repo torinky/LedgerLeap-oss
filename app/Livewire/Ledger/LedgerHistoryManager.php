@@ -3,6 +3,7 @@
 namespace App\Livewire\Ledger;
 
 use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\LogPerformance;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
@@ -12,7 +13,7 @@ use Livewire\Attributes\Url;
 
 class LedgerHistoryManager extends BaseLivewireComponent
 {
-    use LogPerformance;
+    use InitializesTenantContext, LogPerformance;
 
     public int $ledgerId;
 
@@ -39,6 +40,9 @@ class LedgerHistoryManager extends BaseLivewireComponent
     public ?string $highlight = '';
 
     public bool $canRollback = false;
+
+    // 添付ファイル（LedgerDiffViewerに渡すため）
+    public ?\Illuminate\Database\Eloquent\Collection $allAttachments = null;
 
     public function mount(
         int $ledgerId,
@@ -79,6 +83,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
             $this->baseDiffId = $this->targetDiffId;
             $this->targetDiffId = $tmp;
         }
+
+        // 添付ファイルの取得（LedgerDiffViewerに渡すため）
+        $this->allAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)
+            ->with('ledger')
+            ->withTrashed()
+            ->get();
 
         $this->logPerformance('ledger_mount', (microtime(true) - $startTime) * 1000);
     }
@@ -252,6 +262,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'historyDisplayLevel' => $this->historyDisplayLevel,
             'canRollback' => $this->canRollback,
             'isContentIdentical' => $isContentIdentical,
+            'allAttachments' => $this->allAttachments,
         ]);
     }
 }
