@@ -224,6 +224,13 @@
                                                        class="btn-outline btn-info" wire:click.prevent="generatePrefillLink"
                                                        spinner="generatePrefillLink"/>
                                         <x-ledger.close-window-button/>
+
+                                        {{-- 削除ボタン --}}
+                                        @if ($ledgerRecord?->id && !$ledgerRecord?->isLocked())
+                                            <label for="delete-modal" class="btn btn-outline btn-error btn-sm">
+                                                <i class="fa-solid fa-trash mr-2"></i>{{ __('ledger.delete') }}
+                                            </label>
+                                        @endif
                                     </div>
                                 </div>
                                 {{-- 現在のステータス表示 --}}
