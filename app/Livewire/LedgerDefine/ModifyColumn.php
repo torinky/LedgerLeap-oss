@@ -38,13 +38,16 @@ class ModifyColumn extends BaseLivewireComponent
 
     public array $groupNames = [];
 
+    public ?int $ledgerDefineId = null;
+
     public function mount(Request $request): void
     {
         if ($request->isMethod('POST')) {
             return;
         }
 
-        $ledgerDefineId = (int) $request->route('ledgerDefineId');
+        $ledgerDefineId = $this->ledgerDefineId ?? (int) $request->route('ledgerDefineId');
+        $this->ledgerDefineId = $ledgerDefineId;
         /** @var LedgerDefine $ledgerDefine */
         $ledgerDefine = LedgerDefine::findOrNew($ledgerDefineId);
         $this->ledgerDefineRecord = $ledgerDefine;
@@ -330,8 +333,8 @@ class ModifyColumn extends BaseLivewireComponent
         $this->ledgerDefineRecord->save();
 
         $this->isDirty = false; // 保存後にダーティフラグをリセット
-
         $this->success(__('ledger.column.saved'));
+        $this->dispatch('ledgerDefineRecordStored');
     }
 
     public function addColumn()
@@ -384,8 +387,8 @@ class ModifyColumn extends BaseLivewireComponent
         $this->ledgerDefineRecord->save();
 
         $this->isDirty = false; // 保存後にダーティフラグをリセット
-
         $this->success(__('ledger.define.saved'));
+        $this->dispatch('ledgerDefineRecordStored');
     }
 
     protected function rules(): array

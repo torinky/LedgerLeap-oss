@@ -20,10 +20,10 @@ class Preview extends BaseLivewireComponent
 
     public $descriptionGroup = 'createDescription';
 
-    public function mount(request $request)
+    public function mount(Request $request)
     {
         $ledgerDefine = new LedgerDefine;
-        $this->ledgerDefineId = (int) $request->route('ledgerDefineId');
+        $this->ledgerDefineId = $this->ledgerDefineId ?? (int) $request->route('ledgerDefineId');
 
         $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
         $this->initBackgroundImages();
