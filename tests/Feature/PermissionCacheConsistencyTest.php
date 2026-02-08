@@ -112,6 +112,24 @@ class PermissionCacheConsistencyTest extends TestCase
 
         expect($this->userService->isWritableFolderForUser($user, $folder))->toBeTrue();
     }
+    #[Test]
+    public function it_clears_accessible_tenants_cache_when_user_is_updated()
+    {
+        $tenantAccessService = app(\App\Services\TenantAccessService::class);
+        $user = User::factory()->create();
+
+        // サービスにアクセスしてキャッシュを生成
+        $tenantAccessService->getAccessibleTenants($user);
+
+        $cacheKey = "user.{$user->id}.accessible_tenants";
+        expect(\Illuminate\Support\Facades\Cache::tags(['tenant_access'])->has($cacheKey))->toBeTrue();
+
+        // ユーザーを更新（Observer経由でキャッシュクリアされるはず）
+        $user->update(['name' => 'Updated Name']);
+
+        // キャッシュが消えていることを確認
+        expect(\Illuminate\Support\Facades\Cache::tags(['tenant_access'])->has($cacheKey))->toBeFalse();
+    }
 }
 
 

@@ -39,7 +39,7 @@ class TenantAccessService
      */
     public function clearUserCache(User $user): void
     {
-        Cache::forget($this->getCacheKey($user));
+        Cache::tags(['tenant_access'])->forget($this->getCacheKey($user));
     }
 
     /**
