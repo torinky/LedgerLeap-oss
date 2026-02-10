@@ -22,4 +22,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/l/{query}', [LedgerLookupController::class, 'searchAllTenants'])->name('ledger.shortcut_lookup');
 
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
+
+    // --- アイコン取得用ルート (FilePondプレビュー等で使用) ---
+    // MIMEタイプからアイコンを取得
+    Route::get('/icons/mime', [\App\Http\Controllers\FontAwesomeIconController::class, 'serveIconByMime'])
+        ->name('api.fontawesome.icon.by_mime');
+
+    // スタイルとアイコン名で直接アイコンを取得 (サムネイルのフォールバック用)
+    Route::get('/icons/{style}/{icon}', [\App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
+        ->whereIn('style', ['solid', 'regular', 'brands'])
+        ->name('api.fontawesome.icon');
 });

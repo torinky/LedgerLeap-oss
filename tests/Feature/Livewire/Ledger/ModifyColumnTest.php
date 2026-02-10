@@ -119,6 +119,7 @@ class ModifyColumnTest extends TestCase
             'filename' => $originalFilename,
             'column_id' => 0, // 1から0に変更
             'path' => $path, // 生成したパスを設定
+            'mime' => 'image/jpeg', // MIMEタイプを明示的に設定
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -153,6 +154,68 @@ class ModifyColumnTest extends TestCase
 
         $this->assertEquals($expectedSourceUrl, $firstFile['source'], 'The file source URL is incorrect.');
         $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'The file poster URL is incorrect.');
+    }
+
+    #[Test]
+    public function it_correctly_sets_icon_flag_for_non_image_files()
+    {
+        // ストレージをフェイク
+        Storage::fake('public');
+
+        // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
+        $hashedBasename = 'test_document.pdf';
+        $originalFilename = 'test_document.pdf';
+
+        // ダミーPDFファイルを作成
+        $dummyFile = UploadedFile::fake()->create($originalFilename, 100, 'application/pdf');
+        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        Storage::disk('public')->put($path, $dummyFile->get());
+
+        // 添付ファイル情報を持つLedgerレコードを作成
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $hashedBasename => $originalFilename,
+                ],
+            ],
+        ]);
+
+        // Ledgerに紐づくAttachedFileレコードを作成（非画像ファイル）
+        $attachedFile = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $hashedBasename,
+            'filename' => $originalFilename,
+            'column_id' => 0,
+            'path' => $path,
+            'mime' => 'application/pdf',
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        // 実行 (Act)
+        $livewireTest = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id);
+
+        // 検証 (Assert)
+        $filePondFiles = $livewireTest->get('filePondInitialFiles');
+        $filesForColumn = $filePondFiles[0] ?? null;
+        $this->assertNotNull($filesForColumn);
+        $this->assertCount(1, $filesForColumn);
+
+        $firstFile = $filesForColumn[0] ?? null;
+        $this->assertNotNull($firstFile);
+
+        // 1. is_iconフラグがtrueであることを確認（非画像ファイル）
+        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
+        $this->assertTrue($firstFile['options']['metadata']['is_icon'], 'is_icon should be true for non-image files.');
+
+        // 2. posterURLがアイコンAPIのルートを指していることを確認
+        $expectedPosterUrl = route('api.fontawesome.icon.by_mime', ['type' => 'application/pdf']);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to icon API for non-image files.');
     }
 
     #[Test]

@@ -27,14 +27,6 @@ Route::middleware('auth:sanctum')->group(function () {
         [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV']
     )->name('ledger.downloadExcelCSV');
 
-    // MIMEタイプからアイコンを取得
-    Route::get('/icons/mime', [FontAwesomeIconController::class, 'serveIconByMime'])
-        ->name('api.fontawesome.icon.by_mime');
-
-    // スタイルとアイコン名で直接アイコンを取得 (サムネイルのフォールバック用)
-    Route::get('/icons/{style}/{icon}', [FontAwesomeIconController::class, 'serveIcon'])
-        ->whereIn('style', ['solid', 'regular', 'brands'])
-        ->name('api.fontawesome.icon');
 
     // Ledger Search API (GET for simple queries, POST for complex/Japanese queries)
     Route::get('/v1/search', [SearchController::class, 'search'])->name('api.v1.search');

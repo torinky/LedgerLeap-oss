@@ -52,6 +52,34 @@
 
                 pond = FilePond.create($refs[`content_${columnId}`]);
 
+                // メタデータとDOM属性の同期ヘルパー
+                const syncIconAttribute = (file) => {
+                    // FilePondのDOM構造から該当するアイテムを検索
+                    const items = container.querySelectorAll('.filepond--item');
+                    let targetItem = null;
+
+                    // ファイル名で照合
+                    items.forEach(item => {
+                        const infoElement = item.querySelector('.filepond--file-info-main');
+                        if (infoElement && infoElement.textContent.trim() === file.filename) {
+                            targetItem = item;
+                        }
+                    });
+
+                    if (targetItem) {
+                        const isIcon = file.getMetadata('is_icon');
+                        if (isIcon) {
+                            targetItem.setAttribute('data-is-icon', 'true');
+                            console.log('Set data-is-icon=true for file:', file.filename);
+                        } else {
+                            targetItem.removeAttribute('data-is-icon');
+                            console.log('Removed data-is-icon for file:', file.filename);
+                        }
+                    } else {
+                        console.warn('Could not find DOM element for file:', file.filename);
+                    }
+                };
+
                 pond.setOptions({
                     allowPaste: true,
                     allowMultiple: {{ $attributes->has('multiple') ? 'true' : 'false' }},
@@ -62,7 +90,8 @@
                     allowFileSizeValidation: {{ $attributes->has('allowFileSizeValidation') ? 'true' : 'false' }},
                     maxFileSize: {{ Illuminate\Support\Js::from($attributes->get('maxFileSize')) }},
                     credits: false,
-                    filePosterMaxHeight: 100,
+                    // filePosterMaxHeightをimagePreviewMaxHeightと統一
+                    filePosterMaxHeight: {{ $attributes->get('imagePreviewMaxHeight', '256') }},
                     itemInsertInterval: initialFiles.length > 10 ? 0 : 10,
 
                     server: {
@@ -74,35 +103,55 @@
                             );
                         },
                         revert: (filename, load) => {
-                            // Livewireサーバーからテンポラリファイルを削除
                             window.Livewire.find(componentId).removeUpload(`content.${columnId}`, filename, () => {
-                                // removeUploadが成功したら、FilePondに完了を通知
                                 load();
-
-                                // サーバー側のメソッドを呼び出してラベルとプログレスバーを更新
                                 window.Livewire.find(componentId).call('handleNewFileRemoval', columnId);
                             });
                         }
                     },
 
-                    onprocessfile: (error, file) => {
-                        if (error) {
-                            return;
+                    onaddfile: (error, file) => {
+                        if (error) return;
+
+                        const metadata = file.getMetadata();
+                        const isIcon = !file.fileType || !file.fileType.startsWith('image/');
+
+                        // 既存ファイル（初期ロード時）はmetadataにis_iconが既にセットされている
+                        // 新規アップロードファイルは判定が必要
+                        if (metadata.is_icon === undefined) {
+                            file.setMetadata('is_icon', isIcon, true);
                         }
-                        // アップロード成功時にポスターを設定
-                        const posterUrl = createPosterUrlFromMime(file.fileType);
-                        if (posterUrl) {
-                            // file.setMetadata('poster', url, silent)
-                            // 第3引数をtrueにすると、更新イベントを発火させずにUIを更新します
-                            file.setMetadata('poster', posterUrl, true);
+
+                        // posterがまだ設定されていない、かつアイコン表示の場合
+                        if (!metadata.poster && (metadata.is_icon || isIcon)) {
+                            const posterUrl = createPosterUrlFromMime(file.fileType);
+                            if (posterUrl) {
+                                file.setMetadata('poster', posterUrl, true);
+                            }
+                        }
+
+                        // DOM属性を同期（少し遅延させてFilePondのDOM構築を待つ）
+                        setTimeout(() => syncIconAttribute(file), 300);
+                    },
+
+                    onprocessfile: (error, file) => {
+                        if (error) return;
+
+                        // アップロード完了後、is_iconフラグに基づいてposterを設定
+                        const metadata = file.getMetadata();
+                        if (metadata.is_icon) {
+                            const posterUrl = createPosterUrlFromMime(file.fileType);
+                            if (posterUrl) {
+                                file.setMetadata('poster', posterUrl, true);
+                                // 再度DOM属性を同期
+                                setTimeout(() => syncIconAttribute(file), 200);
+                            }
                         }
                     },
 
                     onremovefile: (error, file) => {
                         if (error) return;
                         const hashedBasename = file.getMetadata('hashedBasename');
-
-                        // 'handleFileRemoval' というサーバー側メソッドを直接呼び出す
                         if (hashedBasename) {
                             window.Livewire.find(componentId).call('handleFileRemoval', columnId, hashedBasename);
                         }
@@ -116,10 +165,28 @@
                     }
                 });
 
+                pond.on('setmetadata', (file) => {
+                    syncIconAttribute(file);
+                });
+
+                // ファイルリストが更新された際に全ファイルの属性を同期
+                pond.on('updatefiles', (files) => {
+                    files.forEach(file => {
+                        syncIconAttribute(file);
+                    });
+                });
+
                 // 初期ファイルの追加
                 initialFiles.forEach(file => {
                     pond.addFile(file.source, file.options);
                 });
+
+                // 初期ファイル追加後、遅延させて属性を同期（DOM構築を待つ）
+                setTimeout(() => {
+                    pond.getFiles().forEach(file => {
+                        syncIconAttribute(file);
+                    });
+                }, 500);
 
                 // クリーンアップ
                 $el._pond = pond;

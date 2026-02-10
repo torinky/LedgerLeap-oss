@@ -118,6 +118,7 @@ Route::group([
 
     // OCR PDF Download Route
     Route::get('/files/{attachedFile}/download-ocr-pdf', [\App\Http\Controllers\AttachedFileDownloadController::class, 'downloadOcrPdf'])
-        ->name('files.download-ocr-pdf')
+        ->name('file.download-ocr-pdf')
         ->where('attachedFile', '[0-9]+');
+
 });

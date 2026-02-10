@@ -63,52 +63,9 @@ class AttachedFileDownloadController extends Controller
                     'Content-Disposition' => 'inline; filename="'.$fileNameToServe.'"',
                 ]);
             } else {
-                Log::info('[DownloadController@download] Thumbnail not found, checking status for re-dispatch.');
-                // サムネイルが存在しない場合、ステータスがTHUMBNAIL_FAILEDであれば再ディスパッチを試みる
-                if ($attachedFile->status === \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED) {
-                    // ジョブの試行回数が最大試行回数未満の場合のみ再ディスパッチ
-                    // ここでは簡易的に、AttachedFileのstatusがTHUMBNAIL_FAILEDであれば再試行とみなす
-                    // より厳密な試行回数チェックはジョブ側で行う
-                    \Illuminate\Support\Facades\Bus::dispatch(new \App\Jobs\Ledger\GenerateThumbnail($attachedFile->id));
-                    Log::info('[DownloadController@download] Re-dispatched GenerateThumbnail job for ID: '.$attachedFile->id);
-                }
-                // 既存のフォールバックロジック（FontAwesomeアイコンへのリダイレクト）
-                $displayMimeType = $attachedFile->mime;
-                switch ($displayMimeType) {
-                    case 'application/pdf':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-pdf']);
-                    case 'application/zip':
-                    case 'application/x-zip-compressed':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-zipper']);
-                    case 'application/msword':
-                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-word']);
-                    case 'application/vnd.ms-excel':
-                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-excel']);
-                    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-powerpoint']);
-                    case 'text/plain':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-lines']);
-                    case 'text/html':
-                    case 'text/css':
-                    case 'application/javascript':
-                    case 'application/json':
-                    case 'application/xml':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-code']);
-                    case 'text/csv':
-                        return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-csv']);
-                    default:
-                        if (str_starts_with($displayMimeType, 'audio/')) {
-                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-audio']);
-                        } elseif (str_starts_with($displayMimeType, 'video/')) {
-                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-video']);
-                        } elseif (str_starts_with($displayMimeType, 'image/')) {
-                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file-image']);
-                        } else {
-                            return redirect()->route('api.fontawesome.icon', ['style' => 'solid', 'icon' => 'file']);
-                        }
-                }
+                Log::info('[DownloadController@download] Thumbnail not found, returning icon instead of redirecting.');
+                // FontAwesomeIconControllerを使用して直接アイコンを返す
+                return app(\App\Http\Controllers\FontAwesomeIconController::class)->serveIconByMime($request->merge(['type' => $attachedFile->mime]));
             }
         }
 

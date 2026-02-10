@@ -14,15 +14,94 @@
     }
 }
 
+/* FilePondアイテム全体に余白を追加 */
+.filepond--item {
+    padding: 0.25rem;
+}
+
 .filepond--panel-root {
     background: inherit;
 }
 
-/* FilePondのアイコン表示を調整 */
-.filepond--file-poster-wrapper svg {
-    color: oklch(var(--bc)); /* DaisyUIのbase-content色を変数で指定 */
-    width: 60%;              /* アイコンの幅をコンテナの60%に */
-    height: auto;            /* 高さは自動調整 */
-    max-height: 100px;       /* 最大の高さを100pxに制限 */
-    padding: 1rem;           /* 内側の余白を追加 */
+/* FilePondのポスター（プレビュー）表示の調整 */
+
+/* 1. 全てのファイルプレビューに統一された背景色を適用 */
+.filepond--file-poster {
+    background-size: cover !important;
+    background-position: center !important;
+    /* daisyUIのbase-200色を使用して統一感を出す */
+    background-color: oklch(var(--b2) / 1) !important;
+    border-radius: 0.5rem;
+    /* 子要素の絶対配置を可能にする */
+    position: relative !important;
 }
+
+/* 2. アイコン表示用（メタデータ data-is-icon="true" が付与された場合） */
+.filepond--item[data-is-icon="true"] .filepond--file-poster {
+    /* アイコンを中央に配置、containで縦横比を維持しつつカード内に収める */
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+
+    /* アイコンのサイズを制限（カード内に適切な余白を確保） */
+    background-size: 40% !important;
+
+    /* paddingを調整してimgの縦スペースを確保 */
+    padding: 1.5rem 2rem !important;
+    box-sizing: border-box;
+
+    /* 背景色を少し暗めに調整してアイコンが見やすくなるようにする */
+    background-color: oklch(var(--b3) / 1) !important;
+}
+
+/* アイコン表示時の<img>タグに対するスタイル（FilePond File Posterプラグイン使用時） */
+.filepond--item[data-is-icon="true"] .filepond--file-poster img {
+    /* プラグインのデフォルトheight:100%を完全に上書き */
+    height: auto !important;
+    width: auto !important;
+    /* max-widthとmax-heightを両方設定して、どちらかの制限内に収める */
+    max-width: 110px !important;
+    max-height: 120px !important;
+    min-height: 0 !important;
+
+    /* 中央配置 */
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+
+    /* display:blockで確実にサイズ計算を有効化 */
+    display: block !important;
+    margin: 0 !important;
+
+    /* オブジェクトフィットで縦横比を維持 */
+    object-fit: contain !important;
+
+    /* daisyUIのbase-content色（テキスト色）をマスクとして適用 */
+    filter: brightness(0) saturate(100%) invert(0.6);
+    opacity: 0.5;
+}
+
+/* ホバー時のインタラクション */
+.filepond--item[data-is-icon="true"]:hover .filepond--file-poster {
+    background-color: oklch(var(--b3) / 0.8) !important;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+/* ホバー時にアイコンを少し明るくする */
+.filepond--item[data-is-icon="true"]:hover .filepond--file-poster img {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+
+/* 既存の不要な設定をクリア */
+.filepond--file-poster-overlay {
+    background-color: transparent !important;
+}
+
+.filepond--file-poster-wrapper svg {
+    display: none;
+}
+

@@ -458,13 +458,29 @@ class ModifyColumn extends CreateColumn
 
                     $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
                     $posterUrl = '';
+                    $isIconFlag = false; // デフォルトはfalse（画像扱い）
 
                     if ($fileExists) {
-                        $posterUrl = route('file.download', [
-                            'tenant' => $this->tenantId,
-                            'attachedFile' => $attachmentId,
-                            'thumbnail' => true,
-                        ]);
+                        // MIMEタイプを取得（AttachedFileレコードまたはストレージから）
+                        $mimeType = $currentAttachedFile?->mime ?? Storage::disk('public')->mimeType($storagePath);
+
+                        // サムネイルが存在するか、または画像ファイル（ImagePreviewプラグインが処理）であるかを確認
+                        $isImage = str_starts_with($mimeType, 'image/');
+                        $thumbnailPath = $currentAttachedFile ? AttachedFilePathHelper::getThumbnailStoragePath($currentAttachedFile->hashedbasename, $currentAttachedFile->tenant_id) : '';
+                        $hasThumbnail = $thumbnailPath && Storage::disk('public')->exists($thumbnailPath);
+
+                        if ($isImage || $hasThumbnail) {
+                            $posterUrl = route('file.download', [
+                                'tenant' => $this->tenantId,
+                                'attachedFile' => $attachmentId,
+                                'thumbnail' => true,
+                            ]);
+                            $isIconFlag = false;
+                        } else {
+                            // サムネイルがない非画像ファイルについては、アイコンURLを直接セットしてリダイレクトを避ける
+                            $posterUrl = route('api.fontawesome.icon.by_mime', ['type' => $mimeType]);
+                            $isIconFlag = true;
+                        }
                     }
 
                     $fileObject = [
@@ -485,6 +501,7 @@ class ModifyColumn extends CreateColumn
                                 'filename' => $originalFilename,
                                 'hashedBasename' => $hashedBasename,
                                 'poster' => $posterUrl,
+                                'is_icon' => $isIconFlag,
                             ],
                         ],
                     ];
