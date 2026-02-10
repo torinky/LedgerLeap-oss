@@ -64,6 +64,7 @@ class AttachedFileDownloadController extends Controller
                 ]);
             } else {
                 Log::info('[DownloadController@download] Thumbnail not found, returning icon instead of redirecting.');
+
                 // FontAwesomeIconControllerを使用して直接アイコンを返す
                 return app(\App\Http\Controllers\FontAwesomeIconController::class)->serveIconByMime($request->merge(['type' => $attachedFile->mime]));
             }

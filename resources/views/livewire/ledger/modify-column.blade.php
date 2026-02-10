@@ -155,7 +155,7 @@
                                                                                  :ledgerDefineId="$ledgerDefineId"
                                                                                  :initialFiles="$filePondInitialFiles[$columnDefine->id] ?? []"
                                                                                  multiple allowImagePreview
-                                                                                 imagePreviewMaxHeight="256"/>
+                                                                                 imagePreviewMaxHeight="200"/>
                                                         @else
                                                             @php
                                                                 $componentName =
