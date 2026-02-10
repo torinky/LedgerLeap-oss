@@ -87,8 +87,8 @@
     {{-- 高さ制限とフェードを実現するラッパー。ボタンをこの外に出すことで見切れを防止する --}}
     <div class="relative transition-all duration-500 ease-in-out overflow-hidden"
         :class="{
-            'max-h-12': !showAll && totalCount > displayLimit && (isIconOnly || isCompact),
-            'max-h-[200px]': !showAll && totalCount > displayLimit && !isIconOnly && !isCompact,
+            'max-h-48': !showAll && totalCount > displayLimit && (isIconOnly || isCompact),
+            'max-h-[2000px]': !showAll && totalCount > displayLimit && !isIconOnly && !isCompact,
             'max-h-[9999px]': showAll || totalCount <= displayLimit
         }">
 
@@ -207,6 +207,7 @@
                 @if ($isIconOnly)
                     {{-- Icon Only モード: 一覧画面用極小表示 --}}
                     <div class="relative group inline-flex items-center" role="listitem"
+                        x-show="showAll || {{ $index }} < displayLimit"
                         x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
                         tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
                         {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -252,7 +253,7 @@
                 @elseif($isCompact)
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
                     <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                        role="listitem">
+                        role="listitem" x-show="showAll || {{ $index }} < displayLimit">
 
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
@@ -319,7 +320,9 @@
                     </div>
                 @else
                     {{-- Full モード: 詳細画面用のカード表示 --}}
-                    <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" />
+                    <div x-show="showAll || {{ $index }} < displayLimit">
+                        <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" />
+                    </div>
                 @endif
 
             @empty
