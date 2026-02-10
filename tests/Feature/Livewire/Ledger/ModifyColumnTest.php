@@ -546,4 +546,142 @@ class ModifyColumnTest extends TestCase
         // 削除モーダルも存在することを確認
         $component->assertSeeHtml('id="delete-modal"');
     }
+
+    /**
+     * 画像ファイルの場合、is_iconフラグがfalseであることを確認
+     * Issue #62: 台帳編集画面の添付ファイルプレビュー表示改善
+     */
+    #[Test]
+    public function it_does_not_set_icon_flag_for_image_files()
+    {
+        // ストレージをフェイク
+        Storage::fake('public');
+
+        // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
+        $hashedBasename = 'test_image.jpg';
+        $originalFilename = 'test_image.jpg';
+
+        // ダミー画像ファイルを作成
+        $dummyFile = UploadedFile::fake()->image($originalFilename);
+        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        Storage::disk('public')->put($path, $dummyFile->get());
+
+        // 添付ファイル情報を持つLedgerレコードを作成
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $hashedBasename => $originalFilename,
+                ],
+            ],
+        ]);
+
+        // Ledgerに紐づくAttachedFileレコードを作成（画像ファイル）
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $hashedBasename,
+            'filename' => $originalFilename,
+            'column_id' => 0,
+            'path' => $path,
+            'mime' => 'image/jpeg',
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        // 実行 (Act)
+        $livewireTest = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id);
+
+        // 検証 (Assert)
+        $filePondFiles = $livewireTest->get('filePondInitialFiles');
+        $filesForColumn = $filePondFiles[0] ?? null;
+        $this->assertNotNull($filesForColumn);
+
+        $firstFile = $filesForColumn[0] ?? null;
+        $this->assertNotNull($firstFile);
+
+        // 1. is_iconフラグがfalseであることを確認（画像ファイル）
+        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
+        $this->assertFalse($firstFile['options']['metadata']['is_icon'], 'is_icon should be false for image files.');
+
+        // 2. posterURLがサムネイルダウンロードAPIを指していることを確認
+        $attachedFile = AttachedFile::where('hashedbasename', $hashedBasename)->first();
+        $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to thumbnail API for image files.');
+    }
+
+    /**
+     * 複数のファイルタイプ（Word、Excel、PDF）のアイコン表示を確認
+     * Issue #62: 台帳編集画面の添付ファイルプレビュー表示改善
+     */
+    #[Test]
+    public function it_sets_icon_flag_for_various_document_types()
+    {
+        // ストレージをフェイク
+        Storage::fake('public');
+
+        // 準備 (Arrange)
+        tenancy()->initialize($this->tenant);
+
+        $documentTypes = [
+            ['basename' => 'document.pdf', 'mime' => 'application/pdf'],
+            ['basename' => 'document.docx', 'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            ['basename' => 'spreadsheet.xlsx', 'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        ];
+
+        $contentArray = [];
+        foreach ($documentTypes as $index => $docType) {
+            $dummyFile = UploadedFile::fake()->create($docType['basename'], 100, $docType['mime']);
+            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']);
+            Storage::disk('public')->put($path, $dummyFile->get());
+
+            $contentArray[$docType['basename']] = $docType['basename'];
+        }
+
+        // 添付ファイル情報を持つLedgerレコードを作成
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => $contentArray,
+            ],
+        ]);
+
+        // 各ファイルタイプのAttachedFileレコードを作成
+        foreach ($documentTypes as $docType) {
+            AttachedFile::factory()->create([
+                'ledger_id' => $ledger->id,
+                'hashedbasename' => $docType['basename'],
+                'filename' => $docType['basename'],
+                'column_id' => 0,
+                'path' => \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']),
+                'mime' => $docType['mime'],
+                'tenant_id' => $this->tenant->id,
+            ]);
+        }
+
+        // 実行 (Act)
+        $livewireTest = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id);
+
+        // 検証 (Assert)
+        $filePondFiles = $livewireTest->get('filePondInitialFiles');
+        $filesForColumn = $filePondFiles[0] ?? null;
+        $this->assertNotNull($filesForColumn);
+        $this->assertCount(3, $filesForColumn, 'Should have 3 files.');
+
+        // すべてのファイルでis_iconがtrueであることを確認
+        foreach ($filesForColumn as $file) {
+            $this->assertArrayHasKey('is_icon', $file['options']['metadata']);
+            $this->assertTrue($file['options']['metadata']['is_icon'], "is_icon should be true for {$file['options']['file']['name']}");
+
+            // posterURLがアイコンAPIを指していることを確認
+            $this->assertStringContainsString('/icons/mime?type=', $file['options']['metadata']['poster']);
+        }
+    }
 }
