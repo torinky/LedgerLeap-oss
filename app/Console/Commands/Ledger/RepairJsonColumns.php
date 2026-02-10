@@ -3,10 +3,7 @@
 namespace App\Console\Commands\Ledger;
 
 use App\Models\Ledger;
-use App\Models\LedgerDefine;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class RepairJsonColumns extends Command
 {
@@ -41,7 +38,9 @@ class RepairJsonColumns extends Command
         }
 
         foreach ($tenants as $tenant) {
-            if (!$tenant) continue;
+            if (! $tenant) {
+                continue;
+            }
 
             $this->info("テナント [{$tenant->id}] を処理中...");
             tenancy()->initialize($tenant);
@@ -64,7 +63,7 @@ class RepairJsonColumns extends Command
 
                 if ($needsUpdate) {
                     $repairedCount++;
-                    if (!$dryRun) {
+                    if (! $dryRun) {
                         // キャストを介さず保存すると整合性が壊れる可能性があるため、
                         // モデル経由で保存し、AsColumnArrayJson が正しく処理するようにする。
                         $ledger->content = $content;
@@ -75,7 +74,7 @@ class RepairJsonColumns extends Command
                 }
             }
 
-            $this->info("テナント [{$tenant->id}]: {$repairedCount} 件のレコードを" . ($dryRun ? "検知" : "修復") . "しました。");
+            $this->info("テナント [{$tenant->id}]: {$repairedCount} 件のレコードを".($dryRun ? '検知' : '修復').'しました。');
             tenancy()->end();
         }
 
@@ -85,12 +84,14 @@ class RepairJsonColumns extends Command
     /**
      * 配列内の要素がJSON文字列化されている場合、デコードして修復を試みる。
      *
-     * @param array &$array
+     * @param  array  &$array
      * @return bool 変更があったかどうか
      */
     private function repairArray(&$array): bool
     {
-        if (!is_array($array)) return false;
+        if (! is_array($array)) {
+            return false;
+        }
 
         $changed = false;
         foreach ($array as $key => $value) {
@@ -112,4 +113,3 @@ class RepairJsonColumns extends Command
         return $changed;
     }
 }
-

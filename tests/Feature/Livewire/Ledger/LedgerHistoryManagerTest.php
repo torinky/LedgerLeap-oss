@@ -311,7 +311,7 @@ class LedgerHistoryManagerTest extends TestCase
         // ビューが正常にレンダリングされることを確認
         $component->assertViewHas('baseDiff')
             ->assertViewHas('targetDiff')
-            ->assertViewHas('allAttachments', function ($attachments) use ($attachment) {
+            ->assertViewHas('allAttachments', function ($attachments) {
                 return $attachments !== null && $attachments->count() === 1;
             });
     }

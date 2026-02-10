@@ -436,7 +436,6 @@ class PermissionService
             return $this->permissionCache[$cacheKey];
         }
 
-
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];
         $targetLedgerDefine = $resolved['ledgerDefine'];
@@ -494,7 +493,6 @@ class PermissionService
         if (! $user) {
             return null;
         }
-
 
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];

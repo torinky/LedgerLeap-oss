@@ -228,7 +228,8 @@ class AsColumnArrayJson extends AsJson
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
         );
 
-        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
+        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: '.Str::limit($jsonString, 500));
+
         return [$key => $jsonString];
     }
 

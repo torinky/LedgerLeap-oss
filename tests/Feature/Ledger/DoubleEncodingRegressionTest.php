@@ -16,7 +16,9 @@ class DoubleEncodingRegressionTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -24,7 +26,7 @@ class DoubleEncodingRegressionTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = Tenant::first() ?? Tenant::create(['id' => 'test-tenant-' . uniqid()]);
+        $this->tenant = Tenant::first() ?? Tenant::create(['id' => 'test-tenant-'.uniqid()]);
         tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();
@@ -151,4 +153,3 @@ class DoubleEncodingRegressionTest extends TestCase
         $this->assertTrue($scopeMatches, 'scopeSearch should find "Target" in "TargetContent"');
     }
 }
-

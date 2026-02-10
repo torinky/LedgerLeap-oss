@@ -17,14 +17,14 @@ class AsColumnArrayJsonTest extends TestCase
         ];
 
         // モデルに保存する前にキャストを使用してJSONに変換します。
-        $castedData = (new AsColumnArrayJson())->set(new \stdClass, 'attributes', $data, ['attributes' => $data]);
+        $castedData = (new AsColumnArrayJson)->set(new \stdClass, 'attributes', $data, ['attributes' => $data]);
         // モデルに保存されるデータを確認します。
         $this->assertIsArray($castedData);
         $this->assertIsString($castedData['attributes']);
         $this->assertJson($castedData['attributes']);
 
         // モデルから取得したデータを元の配列に戻します。
-        $decodedData = (new AsColumnArrayJson())->get(new \stdClass, 'attributes', null, ['attributes' => $castedData['attributes']]);
+        $decodedData = (new AsColumnArrayJson)->get(new \stdClass, 'attributes', null, ['attributes' => $castedData['attributes']]);
 
         // 元の配列と復元された配列が一致することを確認します。
         $this->assertEquals($data, $decodedData);
@@ -35,7 +35,7 @@ class AsColumnArrayJsonTest extends TestCase
         $invalidJson = '{"key": "value", "missing_key":';
 
         // AsColumnArrayJsonのgetメソッドを呼び出します。
-        $decodedData = (new AsColumnArrayJson())->get(new \stdClass, 'attributes', null, ['attributes' => $invalidJson]);
+        $decodedData = (new AsColumnArrayJson)->get(new \stdClass, 'attributes', null, ['attributes' => $invalidJson]);
 
         // 予期した動作としてnullが返されることを確認します。
         $this->assertNull($decodedData);
@@ -47,7 +47,7 @@ class AsColumnArrayJsonTest extends TestCase
 
     public function test_does_not_double_encode_when_given_already_encoded_json()
     {
-        $cast = new AsColumnArrayJson();
+        $cast = new AsColumnArrayJson;
         $key = 'attributes';
 
         // Arrange: 既に JSON 文字列としてエンコードされた配列
@@ -55,7 +55,7 @@ class AsColumnArrayJsonTest extends TestCase
         $jsonString = json_encode($original, JSON_UNESCAPED_UNICODE);
 
         // Act: set に既成 JSON 文字列を渡す
-        $result = $cast->set(new \stdClass(), $key, $jsonString, [$key => $jsonString]);
+        $result = $cast->set(new \stdClass, $key, $jsonString, [$key => $jsonString]);
 
         // Assert: 返却値はそのままの JSON 文字列である（再エンコードされていない）
         $this->assertIsArray($result);
@@ -66,14 +66,14 @@ class AsColumnArrayJsonTest extends TestCase
 
     public function test_encodes_array_into_json_string_when_given_array()
     {
-        $cast = new AsColumnArrayJson();
+        $cast = new AsColumnArrayJson;
         $key = 'attributes';
 
         // Arrange: 単純配列を渡す
         $input = ['alpha', 'beta', 'gamma'];
 
         // Act
-        $result = $cast->set(new \stdClass(), $key, $input, [$key => $input]);
+        $result = $cast->set(new \stdClass, $key, $input, [$key => $input]);
 
         // Assert: 返却は JSON 文字列で、デコードすると元の配列に一致する
         $this->assertIsArray($result);

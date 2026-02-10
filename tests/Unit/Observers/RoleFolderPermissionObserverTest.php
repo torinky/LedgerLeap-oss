@@ -20,6 +20,7 @@ class RoleFolderPermissionObserverTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     private MockInterface $serviceMock;
+
     private MockInterface $userServiceMock;
 
     protected function setUp(): void

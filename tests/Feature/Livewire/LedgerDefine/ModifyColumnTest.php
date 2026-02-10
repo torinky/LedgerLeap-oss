@@ -29,8 +29,11 @@ class ModifyColumnTest extends TestCase
     }
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Folder $folder;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -67,8 +70,8 @@ class ModifyColumnTest extends TestCase
     public function it_dispatches_sync_event_when_saving_individual_column()
     {
         Livewire::test(ModifyColumn::class, [
-                'ledgerDefineId' => $this->ledgerDefine->id
-            ])
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
             ->set('columns.0.name', 'Updated Column Name')
             ->call('saveColumn', 0)
             ->assertDispatched('ledgerDefineRecordStored')
@@ -82,8 +85,8 @@ class ModifyColumnTest extends TestCase
     public function it_dispatches_sync_event_when_saving_all_columns()
     {
         Livewire::test(ModifyColumn::class, [
-                'ledgerDefineId' => $this->ledgerDefine->id
-            ])
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
             ->set('columns.0.name', 'Bulk Updated Name')
             ->call('save')
             ->assertDispatched('ledgerDefineRecordStored')
@@ -98,7 +101,7 @@ class ModifyColumnTest extends TestCase
     {
         // 1. Initial preview state
         $preview = Livewire::test(Preview::class, [
-            'ledgerDefineId' => $this->ledgerDefine->id
+            'ledgerDefineId' => $this->ledgerDefine->id,
         ]);
         $preview->assertSee('Column 1');
 
@@ -115,7 +118,7 @@ class ModifyColumnTest extends TestCase
 
         // 3. Dispatch event and assert preview updates
         $preview->dispatch('ledgerDefineRecordStored');
-        
+
         $preview->assertSee('Injected Name');
         $preview->assertDontSee('Column 1');
     }

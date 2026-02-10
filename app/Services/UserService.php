@@ -205,7 +205,7 @@ class UserService
      */
     public function flushAllUserPermissionsCache(): void
     {
-        \Illuminate\Support\Facades\Log::info("UserService: flushing all user permissions cache.");
+        \Illuminate\Support\Facades\Log::info('UserService: flushing all user permissions cache.');
         Cache::tags(['user_permissions'])->flush();
         app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }

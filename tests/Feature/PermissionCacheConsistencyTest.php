@@ -2,11 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Organization;
+use App\Models\Role;
+use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -17,7 +16,9 @@ class PermissionCacheConsistencyTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     private UserService $userService;
+
     private $viewLedgers;
+
     private $manageLedgers;
 
     protected function setUp(): void
@@ -91,7 +92,7 @@ class PermissionCacheConsistencyTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_bypass_Super_Admin_when_folder_permission_is_strictly_required()
+    public function it_does_not_bypass_super_admin_when_folder_permission_is_strictly_required()
     {
         // 以前は Super Admin ロールを持っているだけで pass していた箇所が、今は厳格にチェックされることを確認
         $user = User::factory()->create();
@@ -112,6 +113,7 @@ class PermissionCacheConsistencyTest extends TestCase
 
         expect($this->userService->isWritableFolderForUser($user, $folder))->toBeTrue();
     }
+
     #[Test]
     public function it_clears_accessible_tenants_cache_when_user_is_updated()
     {
@@ -131,5 +133,3 @@ class PermissionCacheConsistencyTest extends TestCase
         expect(\Illuminate\Support\Facades\Cache::tags(['tenant_access'])->has($cacheKey))->toBeFalse();
     }
 }
-
-

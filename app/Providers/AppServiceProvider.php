@@ -10,10 +10,10 @@ use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Modules\ImageUpload\ImageManagerInterface;
 use App\Modules\ImageUpload\LocalImageManager;
-use App\Models\RoleFolderPermission;
 use App\Observers\AutoLinkObserver;
 use App\Observers\FolderObserver;
 use App\Observers\LedgerDefineObserver;
@@ -95,7 +95,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Log::info("AppServiceProvider booting...");
+        \Illuminate\Support\Facades\Log::info('AppServiceProvider booting...');
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);

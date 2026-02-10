@@ -102,8 +102,8 @@ class AttachmentListComponentTest extends TestCase
         // Verify the handleFileClick function dispatches correct event payload structure
         $view->assertSee('id: fileId', false);
         $view->assertSee('column_id: fileColumnId || this.columnId', false);
-       $view->assertSee('search: this.search', false);
-        
+        $view->assertSee('search: this.search', false);
+
         // Verify Alpine x-data includes required properties
         $view->assertSee('search:', false);
         $view->assertSee('columnId:', false);
@@ -159,4 +159,3 @@ class AttachmentListComponentTest extends TestCase
         $view->assertSee('totalCount: 5', false);
     }
 }
-

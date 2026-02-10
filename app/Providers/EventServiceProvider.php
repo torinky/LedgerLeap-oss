@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
-use App\Models\User;
 use App\Observers\RoleFolderPermissionObserver;
 use App\Observers\UserPermissionsObserver;
 use Illuminate\Auth\Events\Registered;
