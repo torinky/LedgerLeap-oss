@@ -12,11 +12,11 @@
     'currentTenantId' => null,
 ])
 <div
-    class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box text-base-content/70 ">
-    <h3 class="text-2xl font-medium leading-tight text-primary space-x-3 my-2 mr-4">
+    class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box bg-primary/50 ">
+    <h3 class="text-2xl font-medium leading-tight card-title text-primary-content space-x-3 my-2 mr-4">
         <span><i class="fa-solid fa-book-open mr-2"></i>{{$ledgerDefine->title}}</span>
         @if($scoreStats && $scoreStats['has_scores'])
-            <span class="text-sm font-normal text-base-content/70 ml-4">
+            <span class="text-sm font-normal text-base-content/50 ml-4">
                 @php
                     $avgScoreClass = match(true) {
                         $scoreStats['avg_score'] >= 70 => 'badge-success',
