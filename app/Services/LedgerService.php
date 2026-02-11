@@ -6,10 +6,15 @@ use App\Enums\WorkflowStatus;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Models\Tag;
+use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -103,7 +108,7 @@ class LedgerService
     public function searchLedgers(string $keyword)
     {
         //        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
-        $result = Ledger::scopeSearch($keyword)->orderBy('created_at', 'DESC')->get();
+        $result = Ledger::search($keyword)->orderBy('created_at', 'DESC')->get();
 
         //        var_dump(DB::getQueryLog());
         return $result;
@@ -330,24 +335,24 @@ class LedgerService
 
     public function createLedger(array $data): Ledger
     {
-        return \DB::transaction(function () use ($data) {
-            $ledgerDefine = \App\Models\LedgerDefine::findOrFail($data['ledger_define_id']);
+        return DB::transaction(function () use ($data) {
+            $ledgerDefine = LedgerDefine::findOrFail($data['ledger_define_id']);
 
             $ledger = Ledger::create([
                 'ledger_define_id' => $ledgerDefine->id,
                 'content' => $data['content'],
-                'creator_id' => auth()->id(),
-                'modifier_id' => auth()->id(),
+                'creator_id' => Auth::id(),
+                'modifier_id' => Auth::id(),
             ]);
 
             if (! empty($data['tags'])) {
                 foreach ($data['tags'] as $tagName) {
-                    \App\Models\Tag::firstOrCreate([
+                    Tag::firstOrCreate([
                         'name' => $tagName,
                         'ledger_define_id' => $ledgerDefine->id,
                         'folder_id' => $ledgerDefine->folder_id,
-                        'creator_id' => auth()->id(), // creator_id を追加
-                        'modifier_id' => auth()->id(), // modifier_id も追加
+                        'creator_id' => Auth::id(), // creator_id を追加
+                        'modifier_id' => Auth::id(), // modifier_id も追加
                     ]);
                 }
             }
