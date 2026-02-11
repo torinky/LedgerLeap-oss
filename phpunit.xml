@@ -20,8 +20,8 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="LOG_CHANNEL" value="single"/>
-        <!-- SQLite の場合は不要。MySQL テストDBを強制したい場合は下記を追加 -->
-        <server name="DB_CONNECTION" value="mysql"/>
+        <!-- テスト専用のMySQL接続を使用 -->
+        <server name="DB_CONNECTION" value="mysql_testing"/>
         <server name="DB_DATABASE" value="ledgerleap_test"/>
         <env name="BCRYPT_ROUNDS" value="10"/>
         <env name="CACHE_DRIVER" value="array"/>

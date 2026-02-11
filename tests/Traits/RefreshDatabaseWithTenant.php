@@ -292,8 +292,8 @@ trait RefreshDatabaseWithTenant
             return $this->connectionsToTransact;
         }
 
-        // セントラル（mysql）とテナント接続の両方を使用
-        return ['mysql', 'tenant'];
+        // セントラル（mysql_testing）とテナント接続の両方を使用
+        return ['mysql_testing', 'tenant'];
     }
 
     /**

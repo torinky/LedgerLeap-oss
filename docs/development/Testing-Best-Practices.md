@@ -1,9 +1,10 @@
 # LedgerLeap テストベストプラクティス
 
-**最終更新:** 2026年02月09日  
+**最終更新:** 2026年02月11日  
 **適用対象:** LedgerLeap全体のテスト開発
 
 **更新履歴:**
+- 2026-02-11: マイグレーション管理とトラブルシューティングセクションを追加（デッドロック対策、冪等性の確保）
 - 2026-02-09: Livewire 3 親子コンポーネント（IndexManager + RecordsTable）のテストベストプラクティスを追加（Issue #60対応）
 - 2026-02-08: Sail環境におけるモデルイベントの発火挙動（touch() vs update()）およびトレースログによるデバッグ手法を追加
 - 2026-01-31: Phase 7 リアクティブ統合の不具合是正に基づく知見を追加（データ型の厳密性、テナント初期化の重複回避、権限不足の盲点）
@@ -19,6 +20,41 @@
 - **1テストメソッド = 1HTTPリクエスト**を厳守
 - **Single Responsibility**: 各テストは1つの機能・条件のみテスト
 - **明確な命名**: テスト名でテスト内容を完全に理解できること
+
+### 1.5. テスト環境の設定（重要）
+
+**`.env.testing`ファイルの設定**
+
+テスト環境では、必ず`.env.testing`ファイルで専用のデータベース接続を設定してください：
+
+```dotenv
+# .env.testing
+DB_CONNECTION=mysql_testing
+DB_HOST=mysql
+DB_PORT=3306
+DB_USERNAME=sail
+DB_PASSWORD=password
+DB_DATABASE=ledgerleap_test
+```
+
+**`config/database.php`でテスト専用接続を定義**
+
+```php
+'mysql_testing' => [
+    'driver' => 'mysql',
+    'host' => env('DB_HOST', '127.0.0.1'),
+    'port' => env('DB_PORT', '3306'),
+    'database' => 'ledgerleap_test', // ハードコード
+    'username' => env('DB_USERNAME', 'forge'),
+    'password' => env('DB_PASSWORD', ''),
+    // ...その他の設定
+],
+```
+
+**理由:**
+- `--env=testing`を指定しても、.envの`DB_DATABASE`が優先される場合がある
+- 専用接続を作成することで、確実にテストデータベースに接続できる
+- 本番データベースを誤って操作するリスクを回避
 
 ### 2. データベーストレイトの使い分け
 
@@ -995,4 +1031,112 @@ $component->assertSet('selectedLedgerDefineIds', [$id])
 関連ドキュメント:
 - 📄 `docs/work/testing/2026-02-09_issue-60-test-failure-investigation.md`
 - 📄 `docs/work/ui-ux/2026-02-01_issue-53-completion-report.md`
+
+---
+
+## 🔄 マイグレーション管理とトラブルシューティング
+
+### 1. テスト環境でのマイグレーションリセット
+
+**推奨方法: 専用スクリプトの使用**
+
+```bash
+# 最も確実な方法
+./bin/reset-test-db.sh
+```
+
+**このスクリプトの動作:**
+1. データベースを完全に削除・再作成（docker execで直接実行）
+2. 設定キャッシュをクリア
+3. テーブル数を確認（0になることを期待）
+4. マイグレーションを実行
+5. マイグレーション状態を表示
+
+**手動実行が必要な場合:**
+
+```bash
+# データベースを削除・再作成
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS ledgerleap_test;"
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e "CREATE DATABASE ledgerleap_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# キャッシュクリアとマイグレーション実行
+./vendor/bin/sail artisan config:clear
+./vendor/bin/sail artisan migrate --env=testing
+```
+
+**⚠️ 注意:**
+- `migrate:fresh` - MySQLモニタに入ってしまう場合があります
+- `migrate:refresh` - デッドロックリスクがあります（使用非推奨）
+- `--env=testing` だけでは `.env` の設定が優先される場合があります
+- 必ず `.env.testing` で `DB_CONNECTION=mysql_testing` を設定してください
+
+### 2. 必須設定
+
+**`.env.testing`**
+```dotenv
+DB_CONNECTION=mysql_testing  # 重要！
+DB_DATABASE=ledgerleap_test
+```
+
+**`config/database.php`**
+```php
+'mysql_testing' => [
+    'driver' => 'mysql',
+    'database' => 'ledgerleap_test', // ハードコード
+    // ...その他env()で取得
+],
+```
+
+### 3. マイグレーションファイルの冪等性（必須）
+
+**カラム追加:**
+```php
+$afterColumn = Schema::hasColumn('table', 'preferred_col') 
+    ? 'preferred_col' : 'fallback_col';
+
+if (! Schema::hasColumn('table', 'new_col')) {
+    $table->timestamp('new_col')->nullable()->after($afterColumn);
+}
+```
+
+**インデックス追加:**
+```php
+if (! Schema::hasIndex('table', 'idx_name')) {
+    $table->index('column', 'idx_name');
+}
+```
+
+**安全な削除:**
+```php
+public function down(): void
+{
+    Schema::table('table', function (Blueprint $table) {
+        if (Schema::hasIndex('table', 'idx_name')) {
+            $table->dropIndex('idx_name');
+        }
+        
+        $cols = [];
+        foreach (['col1', 'col2'] as $col) {
+            if (Schema::hasColumn('table', $col)) {
+                $cols[] = $col;
+            }
+        }
+        if (! empty($cols)) {
+            $table->dropColumn($cols);
+        }
+    });
+}
+```
+
+### 4. チェックリスト
+
+マイグレーション作成時:
+- [ ] `hasColumn()`/`hasIndex()`で存在チェック
+- [ ] `after()`句は動的に決定
+- [ ] `down()`メソッドも冪等性を確保
+- [ ] `comment()`で日本語説明を記述
+
+参考: `database/migrations/2025_11_03_014829_add_vlm_columns_to_attached_files_table.php`
+
+
 
