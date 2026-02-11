@@ -113,7 +113,7 @@ Route::group([
 
     // VLM Result Download Route
     Route::get('/files/{attachedFile}/download-vlm', [\App\Http\Controllers\AttachedFileDownloadController::class, 'downloadVlm'])
-        ->name('files.download-vlm')
+        ->name('file.download-vlm')
         ->where('attachedFile', '[0-9]+');
 
     // OCR PDF Download Route

@@ -217,7 +217,7 @@ class TextPreviewModalTest extends TestCase
             'contain_content' => true,
         ]);
 
-        $expectedMarkdownUrl = route('files.download-vlm', [
+        $expectedMarkdownUrl = route('file.download-vlm', [
             'tenant' => $file->tenant_id,
             'attachedFile' => $file->id,
             'format' => 'markdown',

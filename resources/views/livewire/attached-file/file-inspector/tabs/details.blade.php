@@ -153,7 +153,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col gap-1">
-                            <a href="{{ route('files.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
                                 class="btn btn-xs btn-primary gap-1" @click="handleDownload()" :disabled="downloading">
                                 <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
                                 <i class="fa-solid fa-download" x-show="!downloading"></i>

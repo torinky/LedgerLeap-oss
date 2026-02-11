@@ -60,7 +60,7 @@
             $ocrPdfUrl = $isMockFile
                 ? '#download-ocr-pdf-' . $file->id
                 : route(
-                    'files.download-ocr-pdf',
+                    'file.download-ocr-pdf',
                     [
                         'tenant' => tenant('id'),
                         'attachedFile' => $file->id,

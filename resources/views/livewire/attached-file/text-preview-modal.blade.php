@@ -83,8 +83,8 @@
 
         @php
             $isVlmSource = $file?->finalized_source === 'vlm';
-            $downloadMarkdownUrl = $isVlmSource && $tenantId ? route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) : '#';
-            $downloadJsonUrl = $isVlmSource && $tenantId ? route('files.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) : '#';
+            $downloadMarkdownUrl = $isVlmSource && $tenantId ? route('file.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'markdown']) : '#';
+            $downloadJsonUrl = $isVlmSource && $tenantId ? route('file.download-vlm', ['tenant' => $tenantId, 'attachedFile' => $file->id, 'format' => 'json']) : '#';
         @endphp
 
         {{-- ダウンロードボタン --}}
