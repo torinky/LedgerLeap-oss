@@ -1,0 +1,12 @@
+{
+    $schema: "vendor/infection/infection/resources/schema.json",
+    source: {
+        directories: ["app/Services"],
+    },
+    mutators: {
+        "@default": true,
+    },
+    phpUnit: {
+        customPath: "vendor/bin/pest",
+    },
+}

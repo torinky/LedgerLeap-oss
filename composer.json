@@ -52,6 +52,7 @@
     "bottelet/translation-checker": "^1",
     "cweagans/composer-patches": "^2.0",
     "fakerphp/faker": "^1",
+    "infection/infection": "^0.32.4",
     "laravel-lang/attributes": "^2",
     "laravel-lang/common": "*",
     "laravel/boost": "^1.8",
@@ -65,7 +66,8 @@
     "phpunit/phpunit": "^11",
     "roave/security-advisories": "dev-latest",
     "spatie/laravel-ignition": "^2",
-    "squizlabs/php_codesniffer": "3.*"
+    "squizlabs/php_codesniffer": "3.*",
+    "systemsdk/phpcpd": "^8.0"
   },
   "autoload": {
     "psr-4": {
@@ -96,7 +98,10 @@
     ],
     "post-create-project-cmd": [
       "@php artisan key:generate --ansi"
-    ]
+    ],
+    "test:coverage": "vendor/bin/pest --coverage-html coverage",
+    "test:duplication": "vendor/bin/phpcpd app",
+    "test:mutation": "vendor/bin/infection"
   },
   "extra": {
     "laravel": {
@@ -116,10 +121,12 @@
     "preferred-install": "dist",
     "sort-packages": true,
     "allow-plugins": {
+      "cweagans/composer-patches": true,
+      "infection/extension-installer": true,
       "pestphp/pest-plugin": true,
-      "php-http/discovery": true,
-      "cweagans/composer-patches": true
-    }
+      "php-http/discovery": true
+    },
+    "process-timeout": 1200
   },
   "minimum-stability": "stable",
   "prefer-stable": true
