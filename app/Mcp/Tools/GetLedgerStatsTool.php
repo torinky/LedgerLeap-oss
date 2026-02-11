@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\HasStatsFormatting;
 use App\Services\AnalyticsService;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -15,7 +16,7 @@ use Laravel\Mcp\Server\Tool;
  */
 class GetLedgerStatsTool extends Tool
 {
-    use AuthenticatedMcpTool;
+    use AuthenticatedMcpTool, HasStatsFormatting;
 
     protected string $description = <<<'MARKDOWN'
         Get ledger statistics for a specified period.
@@ -64,28 +65,6 @@ MARKDOWN;
         }
     }
 
-    /**
-     * 期間文字列をCarbonインスタンスの配列に変換
-     */
-    private function parsePeriod(string $period): array
-    {
-        return match ($period) {
-            'today' => [now()->startOfDay(), now()->endOfDay()],
-            'yesterday' => [now()->subDay()->startOfDay(), now()->subDay()->endOfDay()],
-            'this_week' => [now()->startOfWeek(), now()->endOfWeek()],
-            'last_week' => [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()],
-            'this_month' => [now()->startOfMonth(), now()->endOfMonth()],
-            'last_month' => [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()],
-            'this_quarter' => [now()->startOfQuarter(), now()->endOfQuarter()],
-            'last_quarter' => [now()->subQuarter()->startOfQuarter(), now()->subQuarter()->endOfQuarter()],
-            'this_year' => [now()->startOfYear(), now()->endOfYear()],
-            'last_year' => [now()->subYear()->startOfYear(), now()->subYear()->endOfYear()],
-            'last_7_days' => [now()->subDays(7)->startOfDay(), now()->endOfDay()],
-            'last_30_days' => [now()->subDays(30)->startOfDay(), now()->endOfDay()],
-            'last_90_days' => [now()->subDays(90)->startOfDay(), now()->endOfDay()],
-            default => [now()->startOfWeek(), now()->endOfWeek()],
-        };
-    }
 
     /**
      * 表示用フィールド
@@ -102,9 +81,9 @@ MARKDOWN;
         $displayFields = [
             'period' => $periodDisplay,
             'total_created' => trans('ledger.statistics.count_items', ['count' => $stats['total_created']], 'ja'),
-            'top_ledger_defines' => $this->formatTopDefines($stats['by_define']),
+            'top_ledger_defines' => $this->formatTopList($stats['by_define'], 'ledger_define_name'),
             'status_breakdown' => $this->formatStatusBreakdown($stats['by_status']),
-            'top_creators' => $this->formatTopCreators($stats['by_creator']),
+            'top_creators' => $this->formatTopList($stats['by_creator'], 'user_name'),
         ];
 
         return [
@@ -118,13 +97,6 @@ MARKDOWN;
         ];
     }
 
-    /**
-     * 期間の日本語表示を取得
-     */
-    private function getPeriodDisplay(string $period): string
-    {
-        return trans("ledger.period.{$period}", [], 'ja');
-    }
 
     /**
      * サマリーテキストを生成
@@ -167,23 +139,6 @@ MARKDOWN;
         return trim($summary);
     }
 
-    /**
-     * トップ台帳定義をフォーマット
-     */
-    private function formatTopDefines(array $byDefine): string
-    {
-        if (empty($byDefine)) {
-            return trans('ledger.statistics.no_data', [], 'ja');
-        }
-
-        $lines = [];
-        foreach (array_slice($byDefine, 0, 5) as $define) {
-            $lines[] = $define['ledger_define_name'].' ('.
-                trans('ledger.statistics.count_items', ['count' => $define['count']], 'ja').')';
-        }
-
-        return implode(', ', $lines);
-    }
 
     /**
      * ステータス内訳をフォーマット
@@ -203,23 +158,6 @@ MARKDOWN;
         return implode(', ', $lines);
     }
 
-    /**
-     * トップ作成者をフォーマット
-     */
-    private function formatTopCreators(array $byCreator): string
-    {
-        if (empty($byCreator)) {
-            return trans('ledger.statistics.no_data', [], 'ja');
-        }
-
-        $lines = [];
-        foreach (array_slice($byCreator, 0, 5) as $creator) {
-            $lines[] = $creator['user_name'].' ('.
-                trans('ledger.statistics.count_items', ['count' => $creator['count']], 'ja').')';
-        }
-
-        return implode(', ', $lines);
-    }
 
     /**
      * Get the tool's input schema.

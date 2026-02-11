@@ -7,6 +7,7 @@ namespace App\Filament\Resources\RoleResource\RelationManagers;
 use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\RoleFolderPermission;
+use App\Filament\Traits\HasFolderSelection;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Exception;
 use Filament\Forms\Components\CheckboxList;
@@ -33,6 +34,7 @@ use Illuminate\Support\Facades\Log;
 // ★ クラス名を変更
 class FolderPermissionRelationManager extends RelationManager
 {
+    use HasFolderSelection;
     // ★ リレーションシップ名を roleFolderPermissions に変更
     protected static string $relationship = 'roleFolderPermissions';
 
@@ -135,47 +137,8 @@ class FolderPermissionRelationManager extends RelationManager
                     ->sortable(),
             ])
             ->filters([
-                Filter::make('tenant_id')
-                    ->form([
-                        Select::make('value')
-                            ->label(__('ledger.tenant'))
-                            ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
-                            ->searchable()
-                            ->preload(),
-                    ])
-                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
-                        if (blank($data['value'])) {
-                            return $query;
-                        }
-
-                        return $query->whereHas('folder', function (EloquentBuilder $query) use ($data) {
-                            $query->where('tenant_id', $data['value']);
-                        });
-                    })
-                    ->label(__('ledger.tenant')),
-                Filter::make('folder_id')
-                    ->form([
-                        Select::make('value')
-                            ->label(__('ledger.folder.title'))
-                            ->relationship('folder', 'title')
-                            ->searchable()
-                            ->multiple()
-                            ->preload(),
-                    ])
-                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
-                        if (blank($data['value'])) {
-                            return $query;
-                        }
-
-                        return $query->whereIn('folder_id', $data['value']);
-                    })
-                    ->label(__('ledger.folder.title')),
+                $this->getTenantFilter(),
+                $this->getFolderFilter(),
 
                 Filter::make('permission')
                     ->form([
@@ -199,37 +162,7 @@ class FolderPermissionRelationManager extends RelationManager
                     ->label(__('permission.attach_folder_permissions'))
                     ->modalHeading(__('permission.attach_folder_modal_heading')) // モーダルタイトル
                     ->form([ // Create 用のフォーム
-                        // New Select field for tenant_id
-                        Select::make('tenant_id')
-                            ->label(__('ledger.tenant'))
-                            ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
-                            ->live()
-                            ->afterStateUpdated(function (callable $set) {
-                                $set('folder_id', null); // Clear folder selection when tenant changes
-                            })
-                            ->required(),
-
-                        SelectTree::make('folder_id')
-                            ->label(__('ledger.folder.title'))
-                            ->relationship(relationship: 'folder', titleAttribute: 'display_title', parentAttribute: 'parent_id',
-                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
-                                    $selectedTenantId = $get('tenant_id');
-                                    if ($selectedTenantId) {
-                                        $query->where('tenant_id', $selectedTenantId);
-                                    }
-
-                                    return $query->with('tenant')->orderBy('_lft');
-                                }))
-                            ->required()
-                            ->searchable()
-                            ->enableBranchNode()
-                            ->defaultOpenLevel(1),
+                        ...$this->getFolderSelectionForm(),
                         CheckboxList::make('permissions') // 権限は複数選択
                             ->label(__('permission.access_permissions'))
                             ->options(FolderPermissionType::asAccessSelectArray())

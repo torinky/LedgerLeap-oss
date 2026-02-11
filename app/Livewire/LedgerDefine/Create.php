@@ -5,19 +5,16 @@ namespace App\Livewire\LedgerDefine;
 use App\Http\Requests\LedgerDefine\CreateRequest;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\HasFolderTree;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Mary\Traits\Toast;
 
 class Create extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast;
+    use InitializesTenantContext, Toast, HasFolderTree;
 
     public $ledgerDefineRecord;
-
-    public $folderRecords = [];
-
-    public $folderIdNameMap = [];
 
     public $title;
 
@@ -38,32 +35,7 @@ class Create extends BaseLivewireComponent
         $this->title = $request->title;
         $this->parentFolderId = $request->folderId();
         //        dd($this->parentFolderId);
-        $this->folderRecords = [];
-        $nodes = $this->folderRecords = Folder::get()->toTree();
-        $traverse = function ($categories, $prefix = '-') use (&$traverse) {
-            foreach ($categories as $category) {
-                $category->title = $prefix.' '.$category->title;
-                $this->folderRecords[] = $category;
-
-                $traverse($category->children, $prefix.'-');
-            }
-        };
-
-        $traverse($nodes);
-        $this->folderRecords = collect($this->folderRecords);
-
-        $this->folderIdNameMap = $this->folderRecords->mapWithKeys(function ($folderRecord) {
-            $selected = $folderRecord->id == $this->parentFolderId ? true : false;
-
-            return [
-                $folderRecord->id => [
-                    'id' => $folderRecord->id,
-                    'name' => $folderRecord->title,
-                    'selected' => $selected,
-                ],
-            ];
-        });
-
+        $this->initializeFolderTree($this->parentFolderId);
     }
 
     public function store()

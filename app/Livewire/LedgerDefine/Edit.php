@@ -5,6 +5,7 @@ namespace App\Livewire\LedgerDefine;
 use App\Enums\WorkflowStatus;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\HasFolderTree;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -15,19 +16,15 @@ use Mary\Traits\Toast;
 
 class Edit extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast;
+    use InitializesTenantContext, Toast, HasFolderTree;
 
     public $ledgerDefineRecord;
-
-    public $folderRecords = [];
 
     public $createDescription;
 
     public $detailDescription;
 
     public $listDescription;
-
-    public $folderIdNameMap = [];
 
     public $title;
 
@@ -69,31 +66,9 @@ class Edit extends BaseLivewireComponent
         $this->detailDescription = $this->ledgerDefineRecord->detail_description;
         $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
 
-        $this->folderRecords = [];
-        $nodes = $this->folderRecords = Folder::get()->toTree();
-        $traverse = function ($categories, $prefix = '-') use (&$traverse) {
-            foreach ($categories as $category) {
-                $category->title = $prefix.' '.$category->title;
-                $this->folderRecords[] = $category;
+        $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
 
-                $traverse($category->children, $prefix.'-');
-            }
-        };
-
-        $traverse($nodes);
-        $this->folderRecords = collect($this->folderRecords);
-
-        $this->folderIdNameMap = $this->folderRecords->mapWithKeys(function ($folderRecord) {
-            $selected = $folderRecord->id == $this->parentFolderId ? true : false;
-
-            return [
-                $folderRecord->id => [
-                    'id' => $folderRecord->id,
-                    'name' => $folderRecord->title,
-                    'selected' => $selected,
-                ],
-            ];
-        });
+        $this->initializeFolderTree($this->parentFolderId);
     }
 
     public function store(): void

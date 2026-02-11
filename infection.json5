@@ -9,5 +9,5 @@
     phpUnit: {
         customPath: "vendor/bin/pest",
     },
-    timeout: 900
+    timeout: 1200
 }

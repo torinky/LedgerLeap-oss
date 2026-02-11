@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\HasStatsFormatting;
 use App\Services\AnalyticsService;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,6 +17,7 @@ use Laravel\Mcp\Server\Tool;
 class GetUserActivityStatsTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use HasStatsFormatting;
 
     protected string $description = <<<'MARKDOWN'
         Get user activity statistics for a specified period.
@@ -64,28 +66,6 @@ MARKDOWN;
         }
     }
 
-    /**
-     * 期間文字列をCarbonインスタンスの配列に変換
-     */
-    private function parsePeriod(string $period): array
-    {
-        return match ($period) {
-            'today' => [now()->startOfDay(), now()->endOfDay()],
-            'yesterday' => [now()->subDay()->startOfDay(), now()->subDay()->endOfDay()],
-            'this_week' => [now()->startOfWeek(), now()->endOfWeek()],
-            'last_week' => [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()],
-            'this_month' => [now()->startOfMonth(), now()->endOfMonth()],
-            'last_month' => [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()],
-            'this_quarter' => [now()->startOfQuarter(), now()->endOfQuarter()],
-            'last_quarter' => [now()->subQuarter()->startOfQuarter(), now()->subQuarter()->endOfQuarter()],
-            'this_year' => [now()->startOfYear(), now()->endOfYear()],
-            'last_year' => [now()->subYear()->startOfYear(), now()->subYear()->endOfYear()],
-            'last_7_days' => [now()->subDays(7)->startOfDay(), now()->endOfDay()],
-            'last_30_days' => [now()->subDays(30)->startOfDay(), now()->endOfDay()],
-            'last_90_days' => [now()->subDays(90)->startOfDay(), now()->endOfDay()],
-            default => [now()->startOfWeek(), now()->endOfWeek()],
-        };
-    }
 
     /**
      * 統計データをサマリーフォーマットに変換
@@ -93,7 +73,7 @@ MARKDOWN;
     private function formatStatsSummary(array $stats, string $period): array
     {
         // 期間の日本語表示
-        $periodDisplay = trans("ledger.period.{$period}", [], 'ja');
+        $periodDisplay = $this->getPeriodDisplay($period);
 
         // サマリーテキストの生成
         $summary = $this->generateSummaryText($stats, $periodDisplay);
@@ -102,8 +82,8 @@ MARKDOWN;
         $displayFields = [
             'period' => $periodDisplay,
             'total_activities' => trans('ledger.statistics.count_items', ['count' => $stats['total_activities']], 'ja'),
-            'top_events' => $this->formatTopEvents($stats['by_event']),
-            'top_users' => $this->formatTopUsers($stats['by_user']),
+            'top_events' => $this->formatTopList($stats['by_event'], 'event_display'),
+            'top_users' => $this->formatTopList($stats['by_user'], 'user_name'),
             'peak_hours' => $this->formatPeakHours($stats['by_hour']),
         ];
 
@@ -161,41 +141,7 @@ MARKDOWN;
         return trim($summary);
     }
 
-    /**
-     * トップイベントをフォーマット
-     */
-    private function formatTopEvents(array $byEvent): string
-    {
-        if (empty($byEvent)) {
-            return trans('ledger.statistics.no_data', [], 'ja');
-        }
 
-        $lines = [];
-        foreach (array_slice($byEvent, 0, 5) as $event) {
-            $lines[] = $event['event_display'].' ('.
-                trans('ledger.statistics.count_items', ['count' => $event['count']], 'ja').')';
-        }
-
-        return implode(', ', $lines);
-    }
-
-    /**
-     * トップユーザーをフォーマット
-     */
-    private function formatTopUsers(array $byUser): string
-    {
-        if (empty($byUser)) {
-            return trans('ledger.statistics.no_data', [], 'ja');
-        }
-
-        $lines = [];
-        foreach (array_slice($byUser, 0, 5) as $user) {
-            $lines[] = $user['user_name'].' ('.
-                trans('ledger.statistics.count_items', ['count' => $user['count']], 'ja').')';
-        }
-
-        return implode(', ', $lines);
-    }
 
     /**
      * ピーク時間帯をフォーマット

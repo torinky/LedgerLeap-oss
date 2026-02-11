@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
-
+ 
+use App\Filament\Traits\HasFolderSelection;
 use App\Enums\FolderPermissionType;
 // ★ DeleteNotification アクションの修正が必要になる可能性
 // use App\Filament\Tables\Actions\DeleteNotification;
@@ -48,6 +49,7 @@ use Illuminate\Support\Facades\Log;
 // ★ ログ出力用
 class NotificationSettingsRelationManager extends RelationManager
 {
+    use HasFolderSelection;
     // ★ リレーションシップ名を RoleFolderPermission に変更
     protected static string $relationship = 'roleFolderPermissions';
 
@@ -156,48 +158,8 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->getStateUsing(fn (RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON),
             ])
             ->filters([
-                Filter::make('tenant_id')
-                    ->form([
-                        Select::make('value')
-                            ->label(__('ledger.tenant'))
-                            ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
-                            ->searchable()
-                            ->preload(),
-                    ])
-                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
-                        if (blank($data['value'])) {
-                            return $query;
-                        }
-
-                        return $query->whereHas('folder', function (EloquentBuilder $query) use ($data) {
-                            $query->where('tenant_id', $data['value']);
-                        });
-                    })
-                    ->label(__('ledger.tenant')),
-
-                Filter::make('folder_id')
-                    ->form([
-                        Select::make('value')
-                            ->label(__('ledger.folder.title'))
-                            ->relationship('folder', 'title')
-                            ->searchable()
-                            ->multiple()
-                            ->preload(),
-                    ])
-                    ->query(function (EloquentBuilder $query, array $data): EloquentBuilder {
-                        if (blank($data['value'])) {
-                            return $query;
-                        }
-
-                        return $query->whereIn('folder_id', $data['value']);
-                    })
-                    ->label(__('ledger.folder.title')),
+                $this->getTenantFilter(),
+                $this->getFolderFilter(),
 
                 Filter::make('notification_type_id')
                     ->form([
@@ -229,36 +191,7 @@ class NotificationSettingsRelationManager extends RelationManager
                 Action::make('create') // アクション名を 'create' に設定
                     ->label(__('ledger.new_relation_attach'))
                     ->form([
-                        Select::make('tenant_id')
-                            ->label(__('ledger.tenant'))
-                            ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
-                            ->live()
-                            ->afterStateUpdated(function (callable $set) {
-                                $set('folder_id', null);
-                            })
-                            ->required(),
-
-                        SelectTree::make('folder_id')
-                            ->label(__('ledger.folder.title'))
-                            ->relationship(relationship: 'folder', titleAttribute: 'display_title', parentAttribute: 'parent_id',
-                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
-                                    $selectedTenantId = $get('tenant_id');
-                                    if ($selectedTenantId) {
-                                        $query->where('tenant_id', $selectedTenantId);
-                                    }
-
-                                    return $query->with('tenant')->orderBy('_lft');
-                                }))
-                            ->required()
-                            ->searchable()
-                            ->enableBranchNode()
-                            ->defaultOpenLevel(1),
+                        ...$this->getFolderSelectionForm(),
                         CheckboxList::make('notification_type_ids')
                             ->label(__('ledger.notification_type'))
                             ->options(function () {
