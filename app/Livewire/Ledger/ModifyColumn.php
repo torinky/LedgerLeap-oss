@@ -502,6 +502,8 @@ class ModifyColumn extends CreateColumn
                                 'hashedBasename' => $hashedBasename,
                                 'poster' => $posterUrl,
                                 'is_icon' => $isIconFlag,
+                                'isExisting' => true, // 既存ファイルフラグ
+                                'attachmentId' => $attachmentId, // ファイルID
                             ],
                         ],
                     ];

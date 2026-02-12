@@ -684,4 +684,21 @@ class ModifyColumnTest extends TestCase
             $this->assertStringContainsString('/icons/mime?type=', $file['options']['metadata']['poster']);
         }
     }
+
+    #[Test]
+    public function it_renders_file_inspector_component()
+    {
+        $ledger = $this->ledgerDefine->ledgers()->create([
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [],
+            'content_attached' => [],
+        ]);
+
+        Livewire::test(ModifyColumn::class, [
+            'ledgerId' => $ledger->id,
+        ])
+        ->assertSeeLivewire('attached-file.file-inspector');
+    }
 }
