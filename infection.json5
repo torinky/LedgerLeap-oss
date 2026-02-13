@@ -1,7 +1,13 @@
 {
     $schema: "vendor/infection/infection/resources/schema.json",
     source: {
-        directories: ["app/Services"],
+        directories: [
+            "app/Services",
+            "app/Rules",
+            "app/Casts",
+            "app/Models",
+            "app/Policies"
+        ],
     },
     mutators: {
         "@default": true,
@@ -9,5 +15,5 @@
     phpUnit: {
         customPath: "vendor/bin/pest",
     },
-    timeout: 1200
+    timeout: 2500
 }
