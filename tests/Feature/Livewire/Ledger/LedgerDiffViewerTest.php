@@ -471,4 +471,109 @@ class LedgerDiffViewerTest extends TestCase
         // ファイル名も表示されていることを確認
         $livewire->assertSee($attachedFile->filename);
     }
+
+    #[Test]
+    public function it_displays_placeholder_for_unchanged_columns_in_diff_view(): void
+    {
+        // 1. カラム定義を作成
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 1, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'group' => 'Group 1', 'required' => false],
+                ['id' => 2, 'name' => 'Age', 'type' => 'text', 'order' => 2, 'group' => 'Group 1', 'required' => false],
+                ['id' => 3, 'name' => 'Address', 'type' => 'text', 'order' => 3, 'group' => 'Group 1', 'required' => false],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()
+            ->for($ledgerDefine, 'define')
+            ->for($this->user, 'creator')
+            ->create([
+                'tenant_id' => $this->tenant->id,
+                'content' => ['Taro Yamada', '30', 'Tokyo'],
+                'version' => 2,
+            ]);
+
+        // 2. 過去バージョンの Diff を作成 (Name のみ変更)
+        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'version' => 1,
+            'content' => ['Hanako Tanaka', '30', 'Tokyo'], // Name が異なる
+            'column_define' => $ledgerDefine->column_define,
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $ledgerDefine->id,
+        ]);
+
+        // 3. Livewire コンポーネントをテスト
+        $component = Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'comparisonTargetDiff' => $oldDiff,
+            'showChanges' => true,
+            'canView' => true,
+        ]);
+
+        // 4. 検証
+        // Name (modified) - 両方の値が表示される
+        $component->assertSee('Taro Yamada');
+        $component->assertSee('Hanako Tanaka');
+
+        // Age と Address (unchanged) - プレースホルダーが表示される
+        $component->assertSee(__('ledger.diff.same_as_current'));
+
+        // 値が2回表示される（現行側のみ）、3回は表示されない（過去側はプレースホルダー）
+        $ageCount = substr_count($component->html(), '30');
+        $this->assertGreaterThanOrEqual(1, $ageCount, 'Age should appear at least once (current side)');
+
+        $addressCount = substr_count($component->html(), 'Tokyo');
+        $this->assertGreaterThanOrEqual(1, $addressCount, 'Address should appear at least once (current side)');
+    }
+
+    #[Test]
+    public function it_shows_group_placeholder_when_all_columns_unchanged(): void
+    {
+        // 1. カラム定義を作成
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 1, 'name' => 'Column A', 'type' => 'text', 'order' => 1, 'group' => 'Group 1', 'required' => false],
+                ['id' => 2, 'name' => 'Column B', 'type' => 'text', 'order' => 2, 'group' => 'Group 1', 'required' => false],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()
+            ->for($ledgerDefine, 'define')
+            ->for($this->user, 'creator')
+            ->create([
+                'tenant_id' => $this->tenant->id,
+                'content' => ['Value A', 'Value B'],
+                'version' => 2,
+            ]);
+
+        // 2. 過去バージョンの Diff を作成 (全カラム同じ内容)
+        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'version' => 1,
+            'content' => ['Value A', 'Value B'], // 全て同じ
+            'column_define' => $ledgerDefine->column_define,
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $ledgerDefine->id,
+        ]);
+
+        // 3. Livewire コンポーネントをテスト
+        $component = Livewire::test(LedgerDiffViewer::class, [
+            'ledgerRecord' => $ledger,
+            'comparisonTargetDiff' => $oldDiff,
+            'showChanges' => true,
+            'canView' => true,
+        ]);
+
+        // 4. 検証: グループ単位の大きなプレースホルダーが表示される（後方互換性）
+        $component->assertSee(__('ledger.diff.identical_content'));
+        $component->assertSee(__('ledger.diff.no_changes'));
+
+        // カラム単位のプレースホルダーは表示されない
+        $component->assertDontSee(__('ledger.diff.same_as_current'));
+    }
 }

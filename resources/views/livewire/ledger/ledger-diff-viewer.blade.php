@@ -253,6 +253,14 @@ if ($store.ledgerState) {
                                                         </div>
                                                     </td>
                                                 @endif
+                                            @elseif ($column['status'] === 'unchanged')
+                                                {{-- カラム単位で変更がない場合のプレースホルダー --}}
+                                                <td class="align-middle py-3 px-4 bg-base-200/10 text-center">
+                                                    <div class="flex items-center justify-center gap-2 text-base-content/40 text-xs">
+                                                        <x-mary-icon name="o-check-circle" class="w-4 h-4" />
+                                                        <span>{{ __('ledger.diff.same_as_current') }}</span>
+                                                    </div>
+                                                </td>
                                             @else
                                                 <td class="align-top py-3 text-sm prose-sm max-w-none">
                                                     <div class="break-words">
