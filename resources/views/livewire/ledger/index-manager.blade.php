@@ -135,7 +135,8 @@
                             </div>
                         @elseif(!empty($search) || !empty($filter))
                             {{-- 検索・フィルタ中はスケルトンを表示（計算中） --}}
-                            <div class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse">
+                            <div
+                                class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse">
                                 <div class="self-center flex items-center gap-2">
                                     <i class="fas fa-list opacity-30"></i>
                                     <span class="font-bold opacity-30">...</span>
@@ -163,7 +164,7 @@
                 {{-- Breadcrumbs Section --}}
                 <div class="mt-4">
                     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbs" />
+                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$this->breadcrumbs" />
                     </div>
                 </div>
 
@@ -174,20 +175,20 @@
                         target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
 
                     <div>
-                        @if ($currentFolder)
+                        @if ($this->currentFolder)
                             <div class="card bg-base-200/50 shadow-sm mb-4">
                                 <div class="card-body p-4 flex flex-row items-center justify-between">
                                     <div>
                                         <h2 class="card-title text-base-content text-lg">
                                             <i class="fas fa-folder text-warning"></i>
-                                            {{ $currentFolder->title }}
+                                            {{ $this->currentFolder->title }}
                                         </h2>
                                         <p class="text-sm text-base-content/70">
                                             {{ __('ledger.access_and_permissions.your_access_level') }}:
-                                            @if ($currentUserPermissionForFolder)
+                                            @if ($this->currentUserPermissionForFolder)
                                                 <span
-                                                    class="badge badge-sm badge-{{ $currentUserPermissionForFolder->getColor() }} text-{{ $currentUserPermissionForFolder->getColor() }}-content font-bold">
-                                                    {{ $currentUserPermissionForFolder->getLabel() }}
+                                                    class="badge badge-sm badge-{{ $this->currentUserPermissionForFolder->getColor() }} text-{{ $this->currentUserPermissionForFolder->getColor() }}-content font-bold">
+                                                    {{ $this->currentUserPermissionForFolder->getLabel() }}
                                                 </span>
                                             @else
                                                 <span
@@ -197,11 +198,11 @@
                                     </div>
                                     <div class="card-actions">
                                         <x-mary-button
-                                            wire:click="openPermissionModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                            wire:click="openPermissionModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
                                             label="{{ __('ledger.access_and_permissions.title') }}"
                                             icon="o-shield-check" class="btn-sm btn-outline btn-ghost" spinner />
                                         <x-mary-button
-                                            wire:click="openActivityModal('Folder', {{ $currentFolder->id }}, '{{ $currentFolder->title }}')"
+                                            wire:click="openActivityModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
                                             label="{{ __('ledger.activity.title') }}" icon="o-clock"
                                             class="btn-sm btn-outline btn-ghost" spinner />
                                     </div>
@@ -209,7 +210,7 @@
                             </div>
                         @endif
 
-                        <x-folder.folder-and-ledger-panels :folderRecords="$folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$ledgerDefineRecords"
+                        <x-folder.folder-and-ledger-panels :folderRecords="$this->folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$this->ledgerDefineRecords"
                             :selectedLedgerDefineIds="$selectedLedgerDefineIds" :currentTenantId="$currentTenantId" />
                     </div>
                 </div>

@@ -13,6 +13,7 @@ use App\Services\Ledger\SearchContext;
 use App\Services\SynonymService; // 追加
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema as FacadesSchema;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
@@ -71,15 +72,69 @@ class IndexManager extends BaseLivewireComponent
     public $highlights = [];
 
     // フォルダーアセット関連
-    public $breadcrumbs = [];
+    #[Computed]
+    public function currentFolder()
+    {
+        if (empty($this->currentFolderId)) {
+            return null;
+        }
 
-    public $folderRecords;
+        return Folder::with('ancestors')->find($this->currentFolderId);
+    }
 
-    public $ledgerDefineRecords;
+    #[Computed]
+    public function currentUserPermissionForFolder()
+    {
+        if (! $this->currentFolder) {
+            return null;
+        }
 
-    public $currentFolder;
+        return app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
+    }
 
-    public $currentUserPermissionForFolder;
+    #[Computed]
+    public function breadcrumbs()
+    {
+        if (! $this->currentFolder) {
+            return [];
+        }
+
+        $breadcrumbs = $this->currentFolder->ancestors->all();
+        $breadcrumbs[] = $this->currentFolder;
+
+        return $breadcrumbs;
+    }
+
+    #[Computed]
+    public function folderRecords()
+    {
+        if (! $this->currentFolder) {
+            return collect();
+        }
+
+        return $this->currentFolder->children()
+            ->addSelect(['ledger_defines_count' => \App\Models\LedgerDefine::selectRaw('count(*)')
+                ->whereIn('folder_id', function ($query) {
+                    $query->select('id')
+                        ->from('folders as f2')
+                        ->whereColumn('f2._lft', '>=', 'folders._lft')
+                        ->whereColumn('f2._lft', '<', 'folders._rgt');
+                }),
+            ])
+            ->get();
+    }
+
+    #[Computed]
+    public function ledgerDefineRecords()
+    {
+        if (empty($this->currentFolderId)) {
+            return collect();
+        }
+
+        return LedgerDefine::where('folder_id', '=', $this->currentFolderId)
+            ->withCount(['ledgers'])
+            ->get();
+    }
 
     // セマンティック検索ON前の同義語トグル状態を保存
     private $savedUseSynonymState = null;
@@ -135,35 +190,10 @@ class IndexManager extends BaseLivewireComponent
             }
         }
 
-        $this->prepareFolderAsset();
         $this->updateSearchMetadata();
         $this->initSearchContext();
     }
 
-    public function prepareFolderAsset()
-    {
-        // 既に準備済みの場合はスキップ（重複実行を防ぐ）
-        if (isset($this->currentFolder) && $this->currentFolder && $this->currentFolder->id === $this->currentFolderId) {
-            return;
-        }
-
-        $this->currentFolder = Folder::with('ancestors')->find($this->currentFolderId);
-        if (! $this->currentFolder) {
-            return;
-        }
-
-        $this->currentUserPermissionForFolder = app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
-
-        $this->breadcrumbs = $this->currentFolder->ancestors->all();
-        $this->breadcrumbs[] = $this->currentFolder;
-
-        $this->folderRecords = $this->currentFolder->children()
-            ->withCount(['ledgerDefines']) // 追加: 子フォルダごとの台帳定義数
-            ->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)
-            ->withCount(['ledgers']) // 追加: 台帳定義ごとの台帳レコード数
-            ->get();
-    }
 
     public function initSearchContext()
     {
@@ -314,7 +344,6 @@ class IndexManager extends BaseLivewireComponent
             }
         }
         $this->currentFolderId = $newFolderId;
-        $this->prepareFolderAsset();
         $this->updateSearchMetadata();
     }
 
