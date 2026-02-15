@@ -59,6 +59,13 @@ if ($store.ledgerState) {
 
     <div class="space-y-4">
         @foreach ($displayData as $group)
+            @php
+                // グループ単位でのプレースホルダー表示判定（ループの外で1回だけ計算）
+                $showIdenticalPlaceholder = $showChanges &&
+                    !$hasChangedColumns &&
+                    !collect($group['columns'])->contains('is_omitted', true);
+            @endphp
+
             <div class="collapse collapse-arrow bg-base-100 border border-base-200 shadow-sm" x-data="{
                 isOpen: {{ $group['is_required_group'] ? 'true' : 'false' }},
                 initialized: false,
@@ -232,11 +239,6 @@ if ($store.ledgerState) {
 
                                         {{-- 旧データ (比較対象) --}}
                                         @if ($showChanges)
-                                            @php
-                                                $showIdenticalPlaceholder =
-                                                    !$hasChangedColumns &&
-                                                    !collect($group['columns'])->contains('is_omitted', true);
-                                            @endphp
 
                                             @if ($showIdenticalPlaceholder)
                                                 @if ($loop->first)

@@ -382,7 +382,7 @@ return [
         'omitted_items' => ':count項目の非表示項目があります',
         'past_version' => '過去',
         'previous_value' => '以前の値',
-        'same_as_current' => '同じ内容',
+        'same_as_current' => '変更なし',
         'select_version_hint' => '左のリストから比較したいバージョンを選択してください。',
         'selection_added' => 'バージョン :version を選択しました',
         'selection_removed' => 'バージョン :version の選択を解除しました',
