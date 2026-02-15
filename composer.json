@@ -126,7 +126,7 @@
       "pestphp/pest-plugin": true,
       "php-http/discovery": true
     },
-    "process-timeout": 1200
+    "process-timeout": 2500
   },
   "minimum-stability": "stable",
   "prefer-stable": true
