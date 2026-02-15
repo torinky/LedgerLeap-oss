@@ -7,10 +7,11 @@
         'changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine,gotoPage,nextPage,previousPage';
     // RecordsTable 内部で個別に隠蔽/表示を制御するための全ターゲット
     // 子コンポーネント内での Tier 2 オーバーレイ（ぼかし）の対象となるアクション
-    // 頻繁な入力アクション（search, filter, filterUpdated）は、入力中に出ると邪魔なため除外し、親の透過（opacity-50）に任せる
+    // 頻繁な入力アクション（search, filter, filterUpdated）は、入力中に出ると邪魔なため除外されていたが、
+    // ユーザーへのフィードバックを優先するため filter, updateFilterFromChild を追加
     $heavyNavTargets =
         'gotoPage,nextPage,previousPage,perPage,changeCurrentFolder,toggleFolderId,toggleLedgerDefineId,focusLedgerDefine';
-    $itemActionTargets = 'sortRequested,displayLevel,setDisplayLevel,orderBy,orderAsc,filterStatus';
+    $itemActionTargets = 'sortRequested,displayLevel,setDisplayLevel,orderBy,orderAsc,filterStatus,filter,updateFilterFromChild';
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 

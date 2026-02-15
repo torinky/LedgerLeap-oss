@@ -42,7 +42,7 @@
         <th class="px-4 py-2 space-y-1 text-center {{ $highlightClass }}"
             wire:key="ledger_table_header_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}">
             <div
-                @if ($orderBy === 'default' && $sortIndex !== null) class="tooltip" data-tip="{{ __('ledger.sort_priority') }}: {{ $sortIndex }}" @endif>
+                @if ($orderBy === 'default' && $sortIndex !== null) class="tooltip tooltip-bottom z-50" data-tip="{{ __('ledger.sort_priority') }}: {{ $sortIndex }}" @endif>
                 <span class=" text-accent-content font-bold">
                     {{ $column_define->name }}
                 </span>

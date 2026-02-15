@@ -15,8 +15,8 @@
 
         // 軽い処理（表示レベル変更、ソート、フィルタ、箇別のトグルなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
         $lightMethods =
-            'displayLevel,updateDisplayLevel,sort,filter,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,openPermissionModal,openActivityModal';
-        // recordsUpdated を追加することで、子コンポーネントからの件数更新通知        // 子コンポーネントからの通知などは IndexManager 全体の透過 (opacity-50) で対応し、
+            'displayLevel,updateDisplayLevel,sort,filter,updateFilterFromChild,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,openPermissionModal,openActivityModal';
+        // 子コンポーネントからの通知などは IndexManager 全体の透過 (opacity-50) で対応し、
         // 頻繁に発生するイベント (recordsUpdated) や個別のフィルタ (filterUpdated) は Tier 1 / Tier 2 の対象外にする
         $lightEvents =
             'displayLevelRequested,sortRequested,perPageUpdated,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,openPermissionModalRequested,openActivityModalRequested';

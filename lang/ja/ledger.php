@@ -1203,6 +1203,7 @@ return [
         'top_users' => 'トップユーザー',
         'total_created' => '作成数',
     ],
+    'sort_priority' => '優先度',
     'stop' => '停止する',
     'stored' => [
         'fail' => '登録に失敗しました',
