@@ -64,7 +64,7 @@
                                     :canView="$canView" :ledgerDefineId="$ledgerDefineId" :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById" :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
                                     :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null" :currentTenantId="$currentTenantId" />
 
-                                <div class="overflow-x-auto" wire:key="ledgerDefine_block-{{ $ledgerDefineId }}">
+                                <div class="overflow-x-auto max-h-[70vh]" wire:key="ledgerDefine_block-{{ $ledgerDefineId }}">
                                     @php
                                         $displayColumns = $filteredColumnDefines[$ledgerDefineId] ?? [];
                                         if ($displayColumns instanceof \Illuminate\Support\Collection) {
