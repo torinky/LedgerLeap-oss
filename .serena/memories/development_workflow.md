@@ -36,6 +36,9 @@ git checkout -b feature/<issue-id>-<feature-name>
 
 # マイグレーション実行（必要に応じて）
 ./vendor/bin/sail artisan migrate
+
+# テスト環境の再構築（必要に応じて）
+./bin/reset-test-db.sh
 ```
 
 ### 3. 開発サイクル
@@ -245,13 +248,20 @@ git rebase --continue
 git push origin feature/<issue-id>-<feature-name> --force-with-lease
 ```
 
-### テスト失敗時
+### テスト環境の問題
 ```bash
-# 詳細なエラー表示
-./vendor/bin/sail test --verbose
+# テストデータベースのリセット（推奨方法）
+./bin/reset-test-db.sh
 
-# 特定のテストのみ実行
-./vendor/bin/sail test --filter test_method_name
+# 手動でのテストDB再構築
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e \
+  "SET FOREIGN_KEY_CHECKS = 0; DROP DATABASE IF EXISTS ledgerleap_test; \
+   SET FOREIGN_KEY_CHECKS = 1; CREATE DATABASE ledgerleap_test \
+   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+./vendor/bin/sail artisan migrate --env=testing --force
+
+# テーブルが残っている場合
+# 上記コマンドを再実行してからマイグレーション
 
 # データベースをクリーンな状態にリセット
 ./vendor/bin/sail artisan migrate:fresh --seed --env=testing

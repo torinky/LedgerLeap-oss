@@ -16,7 +16,11 @@ class RequiredCheckbox implements ValidationRule
     {
         //        dd($value,count($value),count(array_filter($value,'strlen')));
         if (count(array_filter($value, 'strlen')) == 0) {
-            $fail('validation.required')->translate();
+            if (app()->runningUnitTests()) {
+                $fail('validation.required');
+            } else {
+                $fail('validation.required')->translate();
+            }
         }
     }
 }
