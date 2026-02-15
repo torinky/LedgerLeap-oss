@@ -268,7 +268,6 @@ class IndexManager extends BaseLivewireComponent
         }
     }
 
-
     public function setDisplayLevel(int $level): void
     {
         if (in_array($level, [1, 2, 3])) {

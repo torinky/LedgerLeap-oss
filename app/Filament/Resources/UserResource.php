@@ -4,9 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
-use App\Models\Permission;
-use App\Models\Role;
 use App\Filament\Traits\HasPermissionMetadata;
+use App\Models\Role;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -17,7 +16,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class UserResource extends Resource
 {
@@ -304,5 +302,4 @@ class UserResource extends Resource
     {
         return auth()->user()->can('delete', User::class);
     }
-
 }

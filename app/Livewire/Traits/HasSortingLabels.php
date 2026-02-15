@@ -6,9 +6,6 @@ trait HasSortingLabels
 {
     /**
      * 標準的なソート列のラベルを取得します。
-     *
-     * @param string $columnName
-     * @return string
      */
     protected function getStandardSortLabel(string $columnName): string
     {
@@ -24,9 +21,6 @@ trait HasSortingLabels
 
     /**
      * 動的なカラム名のラベルを取得する
-     *
-     * @param string $columnName
-     * @return string
      */
     protected function getColumnLabel(string $columnName): string
     {
@@ -56,8 +50,6 @@ trait HasSortingLabels
 
     /**
      * デフォルトのソートラベルを取得する
-     *
-     * @return string
      */
     protected function getDefaultSortLabel(): string
     {

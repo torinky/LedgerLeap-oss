@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
- 
-use App\Filament\Traits\HasFolderSelection;
+
 use App\Enums\FolderPermissionType;
+use App\Filament\Traits\HasFolderSelection;
 // ★ DeleteNotification アクションの修正が必要になる可能性
 // use App\Filament\Tables\Actions\DeleteNotification;
 use App\Models\Folder;
@@ -11,7 +11,6 @@ use App\Models\NotificationType;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 // ★ 使用するモデル
-use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Exception;
 use Filament\Forms\Components\CheckboxList;
 // ★ Toggle を使う方がシンプル
@@ -50,6 +49,7 @@ use Illuminate\Support\Facades\Log;
 class NotificationSettingsRelationManager extends RelationManager
 {
     use HasFolderSelection;
+
     // ★ リレーションシップ名を RoleFolderPermission に変更
     protected static string $relationship = 'roleFolderPermissions';
 

@@ -699,6 +699,6 @@ class ModifyColumnTest extends TestCase
         Livewire::test(ModifyColumn::class, [
             'ledgerId' => $ledger->id,
         ])
-        ->assertSeeLivewire('attached-file.file-inspector');
+            ->assertSeeLivewire('attached-file.file-inspector');
     }
 }

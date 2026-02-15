@@ -3,15 +3,14 @@
 namespace App\Livewire\Folder;
 
 use App\Http\Requests\Folder\StoreRequest;
-use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\HasFolderTree;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class Create extends BaseLivewireComponent
 {
-    use InitializesTenantContext, HasFolderTree;
+    use HasFolderTree, InitializesTenantContext;
 
     public $parentFolderId;
 

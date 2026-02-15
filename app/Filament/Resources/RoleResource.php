@@ -8,10 +8,10 @@ use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
+use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Folder;
 use App\Models\NotificationType;
 use App\Models\Permission;
-use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use Filament\Forms\Components\Grid;
@@ -24,7 +24,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 class RoleResource extends BaseRoleResource
 {
@@ -283,5 +282,4 @@ class RoleResource extends BaseRoleResource
     {
         return auth()->user()->can('delete', Role::class);
     }
-
 }

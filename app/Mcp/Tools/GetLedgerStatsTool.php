@@ -65,7 +65,6 @@ MARKDOWN;
         }
     }
 
-
     /**
      * 表示用フィールド
      */
@@ -96,7 +95,6 @@ MARKDOWN;
             ],
         ];
     }
-
 
     /**
      * サマリーテキストを生成
@@ -139,7 +137,6 @@ MARKDOWN;
         return trim($summary);
     }
 
-
     /**
      * ステータス内訳をフォーマット
      */
@@ -157,7 +154,6 @@ MARKDOWN;
 
         return implode(', ', $lines);
     }
-
 
     /**
      * Get the tool's input schema.

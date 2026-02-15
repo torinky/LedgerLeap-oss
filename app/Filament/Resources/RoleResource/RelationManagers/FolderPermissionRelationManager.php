@@ -5,10 +5,9 @@
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
+use App\Filament\Traits\HasFolderSelection;
 use App\Models\Folder;
 use App\Models\RoleFolderPermission;
-use App\Filament\Traits\HasFolderSelection;
-use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Exception;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -35,6 +34,7 @@ use Illuminate\Support\Facades\Log;
 class FolderPermissionRelationManager extends RelationManager
 {
     use HasFolderSelection;
+
     // ★ リレーションシップ名を roleFolderPermissions に変更
     protected static string $relationship = 'roleFolderPermissions';
 

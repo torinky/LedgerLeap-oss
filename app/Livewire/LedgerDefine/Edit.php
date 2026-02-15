@@ -4,9 +4,8 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\BaseLivewireComponent;
-use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\HasFolderTree;
-use App\Models\Folder;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
@@ -16,7 +15,7 @@ use Mary\Traits\Toast;
 
 class Edit extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast, HasFolderTree;
+    use HasFolderTree, InitializesTenantContext, Toast;
 
     public $ledgerDefineRecord;
 

@@ -247,7 +247,6 @@ class RecordsTable extends BaseLivewireComponent
         $this->resetPage();
     }
 
-
     /**
      * コレクションに対してソートを適用する
      *

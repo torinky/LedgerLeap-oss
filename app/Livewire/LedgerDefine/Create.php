@@ -4,15 +4,14 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\CreateRequest;
 use App\Livewire\BaseLivewireComponent;
-use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\HasFolderTree;
-use App\Models\Folder;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Mary\Traits\Toast;
 
 class Create extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast, HasFolderTree;
+    use HasFolderTree, InitializesTenantContext, Toast;
 
     public $ledgerDefineRecord;
 
