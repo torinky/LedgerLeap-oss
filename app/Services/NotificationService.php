@@ -79,15 +79,6 @@ class NotificationService
         //        return $user->unreadNotifications()->count();
     }
 
-    /*    public function getUnreadNotificationsForUser(User $user, int $perPage = 10): LengthAwarePaginator
-        {
-            return $this->unreadNotificationsForUser($user)->paginate($perPage);
-        }
-
-        public function getUnreadNotificationCountForUser(User $user): int
-        {
-            return $this->unreadNotificationsForUser($user)->count();
-        }*/
 
     // 既読処理 (単数/複数)
     public function markAsRead(User $user, $notificationIds = null): void
@@ -232,59 +223,7 @@ class NotificationService
         return Role::whereIn('id', $roleIds)->get();
     }
 
-    /**
-     * ワークフロー関連の個別通知を送信する
-     *
-     * 変更点: メール送信の可否は GenericNotification::via() で判断されるため、
-     *         このメソッド内でのメール送信 Permission チェックは不要。
-     *         ただし、システム内通知を送るかどうかの判断のために
-     *         shouldReceiveNotification (RoleFolderPermission チェック) は維持する。
-     *
-     * @param  LedgerDiff  $ledgerDiff
-     * @param  Folder|null  $folder  対象フォルダ
-     */
-    //    public function sendWorkflowNotification(User $recipient, NotificationType $notificationType, LedgerDiff $ledgerDiff, ?string $comment = null, ?Folder $folder = null): void
-    //    {
-    //        Log::info("Attempting to send workflow notification (system/mail) for User ID: {$recipient->id}, Type: {$notificationType->name}, Diff ID: {$ledgerDiff->id}");
-    //
-    //        // 1. ユーザーがこのフォルダでこの通知タイプを *システム内通知で* 受け取る設定か確認
-    //        if (!$this->shouldReceiveNotification($recipient, $notificationType, $folder)) {
-    //            Log::info("User {$recipient->id} should not receive system notification type {$notificationType->name} for this folder.");
-    //            // メールだけ送りたい場合はこの return を消すが、基本はシステム通知と連動させる
-    //            return;
-    //        }
-    //
-    //        // 2. 通知を送信 (GenericNotification インスタンスを渡すだけ)
-    //        try {
-    //            $causer = $ledgerDiff->modifier;
-    //            $subject = $ledgerDiff->ledger;
-    //            $eventName = $notificationType->event ?? $notificationType->name;
-    //            $payloadOverrides = [];
-    //            if ($comment) $payloadOverrides['comments'] = $comment;
-    //            if ($notificationType->name === 'inspection_requested') $payloadOverrides['inspector_id'] = $ledgerDiff->inspector_id;
-    //            if ($notificationType->name === 'approval_requested') $payloadOverrides['approver_id'] = $ledgerDiff->approver_id;
-    //
-    //            // GenericNotification をインスタンス化
-    //            $notification = new GenericNotification(
-    //                notificationTypeId: $notificationType->id,
-    //                subject: $subject, // subject は Ledger になっているはず
-    //                activity: null,
-    //                causer: $causer,
-    //                eventName: $eventName,
-    //                comment: $comment,
-    //                payloadOverrides: $payloadOverrides
-    //            );
-    //
-    //            // Notification Facade を使って送信
-    //            Notification::send($recipient, $notification);
-    //
-    //            Log::info("Workflow notification (system/mail if permitted) dispatched successfully.", ['recipient_id' => $recipient->id, 'type' => $notificationType->name]);
-    //        } catch (\Exception $e) {
-    //            Log::error("Failed to dispatch workflow notification: " . $e->getMessage(), [
-    //                'recipient_id' => $recipient->id, 'type' => $notificationType->name, 'diff_id' => $ledgerDiff->id, 'exception' => $e
-    //            ]);
-    //        }
-    //    }
+
 
     /**
      * ワークフロー関連の通知を送信する (修正: task_claimed に対応)
