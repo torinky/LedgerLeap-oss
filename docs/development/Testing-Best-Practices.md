@@ -1138,5 +1138,236 @@ public function down(): void
 
 参考: `database/migrations/2025_11_03_014829_add_vlm_columns_to_attached_files_table.php`
 
+---
+
+## 📊 カバレッジ測定
+
+**最終更新:** 2026年02月15日
+
+### 1. カバレッジ測定ツール
+
+LedgerLeapでは**Pest**（PHPUnitベース）を使用してコードカバレッジを測定します。
+
+**利用可能なツール:**
+- **Pest**: テスト実行とカバレッジ測定
+- **PHPUnit**: Pestの内部で使用
+- **Xdebug**: カバレッジデータ収集（Sail環境で有効化済み）
+
+### 2. カバレッジ測定コマンド
+
+#### 2.1 基本的なカバレッジ測定
+
+```bash
+# 全テストのカバレッジをHTMLレポートで生成
+./vendor/bin/sail composer test:coverage
+
+# 特定のテストディレクトリのカバレッジ
+./vendor/bin/sail pest tests/Unit/Rules --coverage
+
+# 特定のテストファイルのカバレッジ
+./vendor/bin/sail pest tests/Unit/Services/PermissionServiceTest.php --coverage
+```
+
+#### 2.2 最小カバレッジ率の指定
+
+```bash
+# 最小カバレッジ率を80%に設定（達成できない場合は失敗）
+./vendor/bin/sail pest tests/Unit/Rules --coverage --min=80
+
+# 最小カバレッジ率を指定しない（0%でもOK）
+./vendor/bin/sail pest tests/Unit/Services --coverage --min=0
+```
+
+#### 2.3 HTMLレポートの生成
+
+```bash
+# HTMLレポートを生成（coverage/index.htmlに出力）
+./vendor/bin/sail pest tests/Unit/Rules --coverage-html=coverage
+
+# ブラウザで確認（macOS）
+open coverage/index.html
+```
+
+### 3. カバレッジレポートの読み方
+
+#### 3.1 コンソール出力の見方
+
+```
+Rules/RequiredCheckbox ............................................. 22 / 75.0%  
+Rules/UniqueAutoNumber ............................................. 89 / 96.4%  
+Rules/UniqueColumnValue .................................. 92..115 / 63.6%  
+Rules/ValidAutoLinkPattern ......................................... 100.0%  
+
+Services/NotificationService ........................ 53..468 / 26.0%  
+Services/PermissionService .................... 51..417 / 10.8%  
+────────────────────────────────────────────────────────────────────
+                                                        Total: 45.2 %
+```
+
+**解説:**
+- `75.0%`: カバレッジ率（75%のコードがテストされている）
+- `22`: カバーされていない行番号
+- `92..115`: カバーされていない行範囲
+- `100.0%`: 完全にカバーされている（未カバー行なし）
+
+#### 3.2 HTMLレポートの活用
+
+HTMLレポートでは以下が確認できます：
+- **緑色**: カバーされたコード
+- **赤色**: カバーされていないコード
+- **黄色**: 部分的にカバーされたコード（条件分岐の一部のみ）
+
+**確認手順:**
+1. `coverage/index.html`をブラウザで開く
+2. 対象のクラスをクリック
+3. 行ごとのカバレッジ状況を確認
+4. 赤色の行を重点的にテスト追加
+
+### 4. Phase 1の実測カバレッジ結果（2026-02-15）
+
+#### 4.1 Rules（目標: 95%以上）
+
+| ファイル | カバレッジ率 | 評価 | 未カバー行 |
+|:---|---:|:---:|:---|
+| RequiredCheckbox | 75.0% | ⚠️ | 行22 |
+| UniqueAutoNumber | 96.4% | ✅ | 行89 |
+| UniqueColumnValue | 63.6% | ⚠️ | 行92-115 |
+| ValidAutoLinkPattern | 100% | ✅ | なし |
+
+**総合評価**: 83.8%（目標95%未達）
+
+**改善方針**:
+- RequiredCheckbox: `translate()`エラーケースのテスト追加
+- UniqueColumnValue: エラーハンドリングのテスト追加
+
+#### 4.2 Services（目標: PermissionService 80%、NotificationService 70%）
+
+| ファイル | カバレッジ率 | 評価 | 未カバー行 |
+|:---|---:|:---:|:---|
+| PermissionService | 10.8% | ❌ | 行51-417（大部分） |
+| NotificationService | 26.0% | ❌ | 行53-468（大部分） |
+
+**総合評価**: 18.4%（目標大幅未達）
+
+**現状分析**:
+- Phase 1では**基本スモークテスト**のみ実装（メソッドが呼び出せることを確認）
+- 詳細なロジックテストは未実装
+- フォルダベース権限、通知配信ロジックなどは未カバー
+
+**改善方針（Phase 2以降）**:
+- PermissionService: フォルダ階層権限、キャッシュ無効化のテスト追加
+- NotificationService: 通知配信ロジック、ユーザー/ロール別通知のテスト追加
+
+### 5. カバレッジ測定のベストプラクティス
+
+#### 5.1 測定対象の絞り込み
+
+```bash
+# ❌ 全体のカバレッジを測定すると時間がかかる
+./vendor/bin/sail pest --coverage
+
+# ✅ 関心のあるディレクトリのみ測定
+./vendor/bin/sail pest tests/Unit/Rules --coverage
+
+# ✅ 複数のテストファイルを指定
+./vendor/bin/sail pest \
+  tests/Unit/Services/PermissionServiceTest.php \
+  tests/Unit/Services/NotificationServiceTest.php \
+  --coverage
+```
+
+#### 5.2 段階的なカバレッジ向上
+
+**Phase 1**: 基本スモークテスト（10-30%）
+```bash
+# メソッドが呼び出せることを確認
+./vendor/bin/sail pest tests/Unit/Services --coverage --min=10
+```
+
+**Phase 2**: 主要パスのテスト（50-70%）
+```bash
+# 正常系と主要な異常系をカバー
+./vendor/bin/sail pest tests/Unit/Services --coverage --min=50
+```
+
+**Phase 3**: エッジケースのテスト（80-95%）
+```bash
+# 境界値、エラーハンドリングを網羅
+./vendor/bin/sail pest tests/Unit/Services --coverage --min=80
+```
+
+#### 5.3 カバレッジ率の目標設定
+
+| コンポーネント | 目標カバレッジ | 理由 |
+|:---|---:|:---|
+| **Casts** | 100% | データ破損防止の最重要ロジック |
+| **Rules** | 95%以上 | バリデーションは高精度が必須 |
+| **Services（Core）** | 80%以上 | ビジネスロジックの信頼性確保 |
+| **Services（Support）** | 70%以上 | 補助的なサービス |
+| **Controllers** | 50%以上 | 統合テストでカバー可能 |
+| **Livewire** | 60%以上 | UIロジックの動作確認 |
+
+#### 5.4 Mutation Testingとの併用
+
+カバレッジ率が高くても、テストの質が低い場合があります。**Mutation Testing**で確認：
+
+```bash
+# Mutation Testing実行（Phase 2以降）
+./vendor/bin/sail composer test:mutation -- \
+  --filter=app/Rules/UniqueAutoNumber.php \
+  --test-framework-options="--filter=UniqueAutoNumber" \
+  --map-source-class-to-test
+```
+
+**Mutation Score Indicator (MSI)の目標:**
+- Casts: 80%以上
+- Rules: 85%以上
+- Services: 75%以上
+
+### 6. トラブルシューティング
+
+#### 6.1 カバレッジが0%になる
+
+**原因**: Xdebugが有効になっていない
+
+**解決策**:
+```bash
+# Xdebugの状態確認
+./vendor/bin/sail php -v | grep Xdebug
+
+# Sailの再起動
+./vendor/bin/sail down && ./vendor/bin/sail up -d
+```
+
+#### 6.2 カバレッジ測定が遅い
+
+**原因**: 全体のカバレッジを測定している
+
+**解決策**:
+```bash
+# 必要なテストのみ測定
+./vendor/bin/sail pest tests/Unit/Rules --coverage
+
+# HTMLレポート生成をスキップ
+./vendor/bin/sail pest tests/Unit/Rules --coverage --min=80
+```
+
+#### 6.3 特定のファイルが表示されない
+
+**原因**: テストがそのファイルを全く実行していない
+
+**解決策**:
+- そのファイルを使用するテストを追加
+- `phpunit.xml`の`<source>`設定を確認
+
+### 7. 参考リンク
+
+- [Pest公式ドキュメント - Coverage](https://pestphp.com/docs/coverage)
+- [PHPUnit公式ドキュメント - Code Coverage](https://docs.phpunit.de/en/11.0/code-coverage.html)
+- [Infection (Mutation Testing)](https://infection.github.io/)
+
+---
+
+**次の更新予定:** Phase 1.5完了後、Castsのカバレッジ結果を追加
 
 
