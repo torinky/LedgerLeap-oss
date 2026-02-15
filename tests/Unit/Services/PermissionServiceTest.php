@@ -399,4 +399,143 @@ class PermissionServiceTest extends TestCase
         // getAccessUsersが正常に動作し、ページネーションが返されることを確認
         $this->assertGreaterThanOrEqual(0, $result->total());
     }
+
+    #[Test]
+    public function it_can_get_current_user_highest_permission_for_folder()
+    {
+        // Arrange
+        $role = Role::firstOrCreate(['name' => 'CurrentUserRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        // ログインユーザーとして認証
+        $this->actingAs($user);
+
+        $folder = Folder::factory()->create();
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::WRITE->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $permission = $this->permissionService->getCurrentUserHighestPermission($folder->id, 'Folder');
+
+        // Assert
+        $this->assertInstanceOf(FolderPermissionType::class, $permission);
+    }
+
+    #[Test]
+    public function it_returns_null_when_no_user_authenticated()
+    {
+        // Arrange - ユーザーが認証されていない
+        $folder = Folder::factory()->create();
+
+        // Act
+        $permission = $this->permissionService->getCurrentUserHighestPermission($folder->id, 'Folder');
+
+        // Assert
+        $this->assertNull($permission);
+    }
+
+    #[Test]
+    public function it_uses_cache_for_current_user_highest_permission()
+    {
+        // Arrange
+        $role = Role::firstOrCreate(['name' => 'CacheTestRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $this->actingAs($user);
+
+        $folder = Folder::factory()->create();
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act - 2回呼び出してキャッシュをテスト
+        $permission1 = $this->permissionService->getCurrentUserHighestPermission($folder->id, 'Folder');
+        $permission2 = $this->permissionService->getCurrentUserHighestPermission($folder->id, 'Folder');
+
+        // Assert
+        $this->assertEquals($permission1, $permission2);
+        $this->assertInstanceOf(FolderPermissionType::class, $permission1);
+    }
+
+    #[Test]
+    public function it_can_get_current_user_all_permissions()
+    {
+        // Arrange
+        $role = Role::firstOrCreate(['name' => 'AllPermissionsRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $this->actingAs($user);
+
+        $folder = Folder::factory()->create();
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::ADMIN->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $permissions = $this->permissionService->getCurrentUserAllPermissions($folder->id, 'Folder');
+
+        // Assert
+        $this->assertIsArray($permissions);
+        $this->assertNotEmpty($permissions);
+        foreach ($permissions as $permission) {
+            $this->assertInstanceOf(FolderPermissionType::class, $permission);
+        }
+    }
+
+    #[Test]
+    public function it_returns_null_for_all_permissions_when_no_user()
+    {
+        // Arrange - 認証なし
+        $folder = Folder::factory()->create();
+
+        // Act
+        $permissions = $this->permissionService->getCurrentUserAllPermissions($folder->id, 'Folder');
+
+        // Assert
+        $this->assertNull($permissions);
+    }
+
+    #[Test]
+    public function it_can_get_highest_permission_for_ledger_define()
+    {
+        // Arrange
+        $permission = Permission::firstOrCreate(['name' => FolderPermissionType::WRITE->value, 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'LedgerDefineHighestPermRole', 'guard_name' => 'web']);
+        $role->givePermissionTo($permission);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $this->actingAs($user);
+
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        // フォルダにも権限を設定
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $highestPerm = $this->permissionService->getCurrentUserHighestPermission($ledgerDefine->id, 'LedgerDefine');
+
+        // Assert
+        $this->assertInstanceOf(FolderPermissionType::class, $highestPerm);
+    }
 }

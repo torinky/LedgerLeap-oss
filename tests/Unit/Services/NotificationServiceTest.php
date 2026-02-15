@@ -3,8 +3,11 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\NotificationType;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
@@ -295,5 +298,234 @@ class NotificationServiceTest extends TestCase
         $this->assertEquals(5, $notifications->count());
         $this->assertEquals(20, $notifications->total());
         $this->assertEquals(4, $notifications->lastPage());
+    }
+
+    #[Test]
+    public function it_can_check_should_receive_notification_with_folder()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $notificationType = NotificationType::create([
+            'name' => 'test_notification_receive',
+            'model' => Folder::class,
+            'event' => 'created',
+        ]);
+
+        $role = Role::firstOrCreate(['name' => 'NotificationReceiveRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'notification_type_id' => $notificationType->id,
+            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act - protectedメソッドを呼び出すためReflectionを使用
+        $reflection = new \ReflectionClass($this->notificationService);
+        $method = $reflection->getMethod('shouldReceiveNotification');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->notificationService, $user, $notificationType, $folder);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function it_returns_false_when_user_has_no_roles()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $notificationType = NotificationType::create([
+            'name' => 'test_notification_no_role',
+            'model' => Folder::class,
+            'event' => 'created',
+        ]);
+
+        $user = User::factory()->create(); // ロールなし
+
+        // Act
+        $reflection = new \ReflectionClass($this->notificationService);
+        $method = $reflection->getMethod('shouldReceiveNotification');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->notificationService, $user, $notificationType, $folder);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    public function it_returns_true_for_workflow_summary_without_folder()
+    {
+        // Arrange
+        $notificationType = NotificationType::create([
+            'name' => 'workflow_summary',
+            'model' => 'App\Models\Ledger',
+            'event' => 'workflow_action',
+        ]);
+
+        $user = User::factory()->create();
+
+        // Act - folderがnullでworkflow_summaryの場合はtrueを返す
+        $reflection = new \ReflectionClass($this->notificationService);
+        $method = $reflection->getMethod('shouldReceiveNotification');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->notificationService, $user, $notificationType, null);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function it_returns_false_when_folder_is_null_for_non_workflow_summary()
+    {
+        // Arrange
+        $notificationType = NotificationType::create([
+            'name' => 'other_notification',
+            'model' => Folder::class,
+            'event' => 'created',
+        ]);
+
+        $user = User::factory()->create();
+
+        // Act - folderがnullで通常の通知タイプの場合はfalseを返す
+        $reflection = new \ReflectionClass($this->notificationService);
+        $method = $reflection->getMethod('shouldReceiveNotification');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->notificationService, $user, $notificationType, null);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    public function it_checks_notification_permission_with_ancestor_folders()
+    {
+        // Arrange
+        $parentFolder = Folder::factory()->create();
+        $childFolder = Folder::factory()->create(['parent_id' => $parentFolder->id]);
+
+        $notificationType = NotificationType::create([
+            'name' => 'ancestor_notification',
+            'model' => Folder::class,
+            'event' => 'updated',
+        ]);
+
+        $role = Role::firstOrCreate(['name' => 'AncestorNotificationRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        // 親フォルダに通知権限を設定
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $parentFolder->id,
+            'notification_type_id' => $notificationType->id,
+            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act - 子フォルダで確認しても親フォルダの権限が有効
+        $reflection = new \ReflectionClass($this->notificationService);
+        $method = $reflection->getMethod('shouldReceiveNotification');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->notificationService, $user, $notificationType, $childFolder);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function it_handles_ledger_subject_in_get_notifiable_recipients()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [],
+        ]);
+
+        $notificationType = NotificationType::create([
+            'name' => 'ledger_updated',
+            'model' => Ledger::class,
+            'event' => 'updated',
+        ]);
+
+        $role = Role::firstOrCreate(['name' => 'LedgerNotificationRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'notification_type_id' => $notificationType->id,
+            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        $activity = Activity::create([
+            'log_name' => 'default',
+            'description' => 'Ledger updated',
+            'subject_type' => Ledger::class,
+            'subject_id' => $ledger->id,
+            'causer_type' => User::class,
+            'causer_id' => $user->id,
+            'event' => 'updated',
+        ]);
+
+        // Act
+        $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
+
+        // Assert
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+    }
+
+    #[Test]
+    public function it_handles_ledger_define_subject_in_get_notifiable_recipients()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        $notificationType = NotificationType::create([
+            'name' => 'ledger_define_created',
+            'model' => LedgerDefine::class,
+            'event' => 'created',
+        ]);
+
+        $role = Role::firstOrCreate(['name' => 'LedgerDefineNotifRole', 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'notification_type_id' => $notificationType->id,
+            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'modifier_id' => $user->id,
+        ]);
+
+        $activity = Activity::create([
+            'log_name' => 'default',
+            'description' => 'LedgerDefine created',
+            'subject_type' => LedgerDefine::class,
+            'subject_id' => $ledgerDefine->id,
+            'causer_type' => User::class,
+            'causer_id' => $user->id,
+            'event' => 'created',
+        ]);
+
+        // Act
+        $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
+
+        // Assert
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
     }
 }
