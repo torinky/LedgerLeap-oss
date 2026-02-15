@@ -64,6 +64,31 @@ class LedgerDiffProcessor
     }
 
     /**
+     * 空値を正規化する
+     * null, 空文字列, 空配列を全て null に統一することで、実質的に「空」である値を同一視する
+     *
+     * @param  mixed  $value  正規化対象の値
+     * @return mixed 正規化後の値 (空の場合は null)
+     */
+    private function normalizeEmptyValue(mixed $value): mixed
+    {
+        // null, 空文字列, 空配列は全て null に統一
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        // 配列の場合、中身が全て空（null または ''）なら null に統一
+        if (is_array($value)) {
+            $filtered = array_filter($value, fn ($v) => $v !== null && $v !== '');
+            if (empty($filtered)) {
+                return null;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
      * 差分表示のためのデータを準備する
      */
     public function prepareContentDiff(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff, ?int $baseDiffId = null): array
@@ -136,18 +161,24 @@ class LedgerDiffProcessor
                 }
             }
 
+            // 正規化後の値で比較を実施
+            $normalizedCurrent = $this->normalizeEmptyValue($currentValue);
+            $normalizedOld = $this->normalizeEmptyValue($oldValue);
+
             $status = 'unchanged';
-            if (empty($currentValue)) {
-                $status = 'empty';
-            }
+
             if (! $oldColDef) {
                 // 古い定義に存在しない（追加された）カラムの場合
                 // 現在の値が空であれば「変更なし」とみなす（スキーマ追加による差分を無視）
-                $isEmpty = $currentValue === null || $currentValue === '' || $currentValue === [];
-                $status = $isEmpty ? 'unchanged' : 'added';
+                $status = ($normalizedCurrent === null) ? 'unchanged' : 'added';
+
+                // 追加されたカラムで値が空の場合は empty として明示
+                if ($status === 'unchanged' && $normalizedCurrent === null) {
+                    $status = 'empty';
+                }
             } elseif (! $currentColDef) {
                 $status = 'deleted';
-            } elseif (json_encode($currentValue) !== json_encode($oldValue)) {
+            } elseif (json_encode($normalizedCurrent) !== json_encode($normalizedOld)) {
                 $status = 'modified';
             }
 

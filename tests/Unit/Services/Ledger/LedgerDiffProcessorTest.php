@@ -267,4 +267,185 @@ class LedgerDiffProcessorTest extends TestCase
         $this->assertEquals(['new_file_hash' => 'new_file.pdf'], $result['contentChanges'][0]['current_value']);
         $this->assertEquals(['old_file_hash' => 'old_file.pdf'], $result['contentChanges'][0]['old_value']);
     }
+
+    #[Test]
+    public function it_treats_null_and_empty_string_as_unchanged_for_text_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
+                ['id' => 1, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 2],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['', ''], // 空文字列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null, null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空文字列とnullは同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+    }
+
+    #[Test]
+    public function it_treats_null_and_empty_array_as_unchanged_for_array_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Checkbox Column', 'type' => 'chk', 'order' => 1],
+                ['id' => 1, 'name' => 'Files Column', 'type' => 'files', 'order' => 2],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [[], []], // 空配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null, null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空配列とnullは同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+    }
+
+    #[Test]
+    public function it_treats_array_with_empty_strings_as_empty(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Checkbox', 'type' => 'chk', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [['', null]], // 空要素のみの配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [[]], // 空配列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空要素のみの配列と空配列は同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+    }
+
+    #[Test]
+    public function it_does_not_treat_zero_as_empty_for_number_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Amount', 'type' => 'number', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [0], // 数値のゼロ
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [''], // 空文字列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 0 と '' は異なる値なので modified
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals(0, $result['contentChanges'][0]['current_value']);
+        $this->assertEquals('', $result['contentChanges'][0]['old_value']);
+    }
+
+    #[Test]
+    public function it_detects_actual_content_change_in_textarea(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Notes', 'type' => 'textarea', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['Some important notes'], // 実際の内容
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [''], // 空文字列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 実際の内容変更は検出される
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals('Some important notes', $result['contentChanges'][0]['current_value']);
+    }
+
+    #[Test]
+    public function it_treats_null_and_empty_array_as_unchanged_for_files(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Attachments', 'type' => 'files', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [[]], // 空配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // ファイル未添付の状態で、nullと空配列は同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+    }
 }
