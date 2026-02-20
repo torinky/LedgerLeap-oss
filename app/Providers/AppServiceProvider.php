@@ -23,18 +23,12 @@ use App\Observers\RoleFolderPermissionObserver;
 use App\Observers\UserPermissionsObserver;
 use App\Services\TenantAccessService;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
-use Filament\Support\Facades\FilamentView;
 use Illuminate\Database\Connection;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Stancl\Tenancy\Database\Models\Domain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByRequestData;
-
-// use App\Modules\ImageUpload\CloudinaryImageManager;
-
-// use Cloudinary\Cloudinary;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,18 +39,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        /*        $this->app->bind(Cloudinary::class, function () {
-                    return new Cloudinary([
-                        'cloud' => [
-                            'cloud_name' => config('cloudinary.cloud_name'),
-                            'api_key' => config('cloudinary.api_key'),
-                            'api_secret' => config('cloudinary.api_secret'),
-                        ],
-                    ]);
-                });
-                if ($this->app->environment('production')) {
-                    $this->app->bind(ImageManagerInterface::class, CloudinaryImageManager::class);
-                } else {*/
         $this->app->bind(ImageManagerInterface::class, LocalImageManager::class);
         $this->app->register(IdeHelperServiceProvider::class);
 
@@ -73,14 +55,7 @@ class AppServiceProvider extends ServiceProvider
             return \Vaites\ApacheTika\Client::make('tika', 9998);
         });
 
-        //        }
-
         $this->setCustomResolverForMySql();
-
-        /*        FilamentView::registerRenderHook(
-                    'panels::head.end',
-                    fn(): string => Blade::render('@vite([\'resources/css/app.css\', \'resources/js/app.js\'])'),
-                );*/
     }
 
     /**

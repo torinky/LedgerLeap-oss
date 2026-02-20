@@ -102,4 +102,82 @@ class TenantAccessServiceTest extends TestCase
 
         DB::disableQueryLog();
     }
+
+    // -------------------------------------------------------
+    // clearUserCache テスト（Sprint 2 追加）
+    // -------------------------------------------------------
+
+    #[Test]
+    public function clear_user_cache_allows_fresh_query_on_next_call(): void
+    {
+        $user = User::factory()->create();
+
+        // 1回目でキャッシュ生成
+        $this->service->getAccessibleTenants($user);
+
+        // キャッシュクリア後は再クエリが走ることを確認
+        $this->service->clearUserCache($user);
+
+        DB::enableQueryLog();
+        $this->service->getAccessibleTenants($user);
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertGreaterThan(0, $queryCount);
+    }
+
+    #[Test]
+    public function clear_user_cache_does_not_throw_when_cache_not_exists(): void
+    {
+        $user = User::factory()->create();
+
+        // キャッシュなしで clearUserCache を呼んでも例外が発生しない
+        $this->expectNotToPerformAssertions();
+        $this->service->clearUserCache($user);
+    }
+
+    // -------------------------------------------------------
+    // clearAllCache テスト（Sprint 2 追加）
+    // -------------------------------------------------------
+
+    #[Test]
+    public function clear_all_cache_flushes_all_tenant_access_caches(): void
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+
+        // 複数ユーザーのキャッシュを生成
+        $this->service->getAccessibleTenants($user1);
+        $this->service->getAccessibleTenants($user2);
+
+        // 全クリア後に両者のキャッシュが再生成されることを確認
+        $this->service->clearAllCache();
+
+        DB::enableQueryLog();
+        $this->service->getAccessibleTenants($user1);
+        $this->service->getAccessibleTenants($user2);
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // キャッシュがクリアされたため、両ユーザーともクエリが発行される
+        $this->assertGreaterThan(0, $queryCount);
+    }
+
+    // -------------------------------------------------------
+    // getCacheKey テスト（Sprint 2 追加）
+    // -------------------------------------------------------
+
+    #[Test]
+    public function get_cache_key_returns_expected_format(): void
+    {
+        $user = User::factory()->create();
+
+        $reflection = new \ReflectionClass($this->service);
+        $method = $reflection->getMethod('getCacheKey');
+        $method->setAccessible(true);
+
+        $key = $method->invoke($this->service, $user);
+
+        $this->assertEquals("user.{$user->id}.accessible_tenants", $key);
+    }
 }
