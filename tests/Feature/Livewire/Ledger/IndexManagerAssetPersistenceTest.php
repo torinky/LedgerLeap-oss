@@ -7,6 +7,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Livewire\Ledger\IndexManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -54,9 +55,7 @@ class IndexManagerAssetPersistenceTest extends TestCase
         ]);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_maintains_counts_after_livewire_action()
     {
         // ルートフォルダを表示した状態で開始
@@ -87,9 +86,7 @@ class IndexManagerAssetPersistenceTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_updates_assets_when_folder_is_changed()
     {
         $component = Livewire::actingAs($this->user)
@@ -112,9 +109,7 @@ class IndexManagerAssetPersistenceTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function it_counts_ledger_defines_recursively()
     {
         // 階層の追加: Root -> SubFolder -> ChildFolder -> ChildLedger
