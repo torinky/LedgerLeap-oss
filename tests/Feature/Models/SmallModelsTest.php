@@ -2,13 +2,18 @@
 
 namespace Tests\Feature\Models;
 
+use App\Models\AutoLink;
+use App\Models\AutoLinkScope;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerChunk;
 use App\Models\LedgerDefine;
+use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\Organization;
+use App\Models\Permission;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\RoleTag;
 use App\Models\Tag;
 use App\Models\User;
@@ -22,6 +27,11 @@ use Tests\Traits\RefreshDatabaseWithTenant;
 #[CoversClass(LedgerChunk::class)]
 #[CoversClass(RoleTag::class)]
 #[CoversClass(UserOrganization::class)]
+#[CoversClass(LedgerDiff::class)]
+#[CoversClass(AutoLink::class)]
+#[CoversClass(AutoLinkScope::class)]
+#[CoversClass(Permission::class)]
+#[CoversClass(RoleFolderPermission::class)]
 class SmallModelsTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -233,5 +243,201 @@ class SmallModelsTest extends TestCase
 
         $uo = UserOrganization::where('user_id', $user->id)->where('organization_id', $org->id)->first();
         $this->assertInstanceOf(Organization::class, $uo->organization);
+    }
+
+    // ================================================================
+    // LedgerDiff
+    // ================================================================
+
+    public function test_ledger_diff_belongs_to_ledger(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id]);
+
+        $this->assertInstanceOf(Ledger::class, $diff->ledger);
+        $this->assertEquals($ledger->id, $diff->ledger->id);
+    }
+
+    public function test_ledger_diff_belongs_to_define(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id, 'ledger_define_id' => $define->id]);
+
+        $this->assertInstanceOf(LedgerDefine::class, $diff->define);
+    }
+
+    public function test_ledger_diff_belongs_to_creator(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id]);
+
+        $this->assertInstanceOf(User::class, $diff->creator);
+    }
+
+    public function test_ledger_diff_belongs_to_modifier(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id]);
+
+        $this->assertInstanceOf(User::class, $diff->modifier);
+    }
+
+    public function test_ledger_diff_inspector_and_approver_relations(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $user = User::factory()->create();
+        $diff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'inspector_id' => $user->id,
+            'approver_id' => $user->id,
+        ]);
+
+        $this->assertInstanceOf(User::class, $diff->inspector);
+        $this->assertInstanceOf(User::class, $diff->approver);
+    }
+
+    // ================================================================
+    // AutoLink
+    // ================================================================
+
+    public function test_auto_link_can_create_instance(): void
+    {
+        $autoLink = new AutoLink;
+        $autoLink->label = 'test';
+        $autoLink->pattern = 'https://example.com';
+        $autoLink->url_template = 'https://example.com/{0}';
+
+        $this->assertEquals('test', $autoLink->label);
+        $this->assertFalse($autoLink->is_enabled ?? false);
+    }
+
+    public function test_auto_link_scopes_relation_returns_has_many(): void
+    {
+        $relation = (new AutoLink)->scopes();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $relation);
+    }
+
+    public function test_auto_link_creator_relation_returns_belongs_to(): void
+    {
+        $autoLink = new AutoLink;
+        $relation = $autoLink->creator();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    public function test_auto_link_modifier_relation_returns_belongs_to(): void
+    {
+        $autoLink = new AutoLink;
+        $relation = $autoLink->modifier();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    public function test_auto_link_get_activitylog_options(): void
+    {
+        $autoLink = new AutoLink;
+        $autoLink->label = 'テストリンク';
+        $options = $autoLink->getActivitylogOptions();
+        $this->assertNotNull($options);
+    }
+
+    public function test_auto_link_scopeable_relation(): void
+    {
+        $autoLink = new AutoLink;
+        $relation = $autoLink->scopeable();
+        $this->assertNotNull($relation);
+    }
+
+    public function test_auto_link_folders_relation(): void
+    {
+        $autoLink = new AutoLink;
+        $relation = $autoLink->folders();
+        $this->assertNotNull($relation);
+    }
+
+    // ================================================================
+    // AutoLinkScope (MorphPivot)
+    // ================================================================
+
+    public function test_auto_link_scope_auto_link_relation(): void
+    {
+        $scope = new AutoLinkScope;
+        $relation = $scope->autoLink();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    // ================================================================
+    // Permission
+    // ================================================================
+
+    public function test_permission_get_description_for_event(): void
+    {
+        $perm = new Permission;
+        $perm->name = 'test-permission';
+        $perm->guard_name = 'web';
+
+        // getDescriptionForEvent はイベント名の文字列を返す
+        $desc = $perm->getDescriptionForEvent('created');
+        $this->assertIsString($desc);
+    }
+
+    public function test_permission_get_activitylog_options(): void
+    {
+        $perm = new Permission;
+        $perm->name = 'test-permission';
+        $perm->guard_name = 'web';
+
+        $options = $perm->getActivitylogOptions();
+        $this->assertNotNull($options);
+    }
+
+    // ================================================================
+    // RoleFolderPermission
+    // ================================================================
+
+    public function test_role_folder_permission_notification_type_relation(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $relation = $rfp->notificationType();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    public function test_role_folder_permission_folder_relation(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $relation = $rfp->folder();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    public function test_role_folder_permission_role_relation(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $relation = $rfp->role();
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+    }
+
+    public function test_role_folder_permission_get_description_for_event(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $desc = $rfp->getDescriptionForEvent('created');
+        $this->assertIsString($desc);
+    }
+
+    public function test_role_folder_permission_get_activitylog_options(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $options = $rfp->getActivitylogOptions();
+        $this->assertNotNull($options);
+    }
+
+    public function test_role_folder_permission_attribute_values_to_be_logged(): void
+    {
+        $rfp = new RoleFolderPermission;
+        $rfp->forceFill(['role_id' => 1, 'folder_id' => 2, 'permission' => 'read']);
+        $values = $rfp->attributeValuesToBeLogged();
+        $this->assertIsArray($values);
     }
 }
