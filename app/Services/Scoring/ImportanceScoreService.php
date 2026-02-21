@@ -10,16 +10,21 @@ class ImportanceScoreService
     /**
      * Calculate the importance score for a ledger based on workflow status.
      *
-     * Phase 1では既存のワークフロー状態のみを使用し、
-     * is_pinned や priority_level は使用しない（既存機能に存在しないため）。
+     * 仕様（docs/features/scoring-system.md より）:
+     * - 承認待ち (PENDING_APPROVAL): 100点
+     * - 点検待ち (PENDING_INSPECTION): 60点
+     * - 下書き (DRAFT): 20点
+     * - 承認済み (APPROVED): 10点
+     * - その他 (NONE等): 0点
      */
     public function calculate(Ledger $ledger): float
     {
         $score = match ($ledger->status) {
-            WorkflowStatus::PENDING_APPROVAL => 30,    // 承認待ち（最優先）
-            WorkflowStatus::PENDING_INSPECTION => 20,  // 点検待ち
-            WorkflowStatus::DRAFT => 10,               // 下書き
-            default => 0,                               // 通常
+            WorkflowStatus::PENDING_APPROVAL => 100,   // 承認待ち（最優先）
+            WorkflowStatus::PENDING_INSPECTION => 60,   // 点検待ち
+            WorkflowStatus::DRAFT => 20,   // 下書き
+            WorkflowStatus::APPROVED => 10,   // 承認済み
+            default => 0,    // NONE など
         };
 
         return (float) $score;
