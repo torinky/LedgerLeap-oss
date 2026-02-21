@@ -3,16 +3,25 @@
 namespace Tests\Feature\Models;
 
 use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerChunk;
 use App\Models\LedgerDefine;
 use App\Models\NotificationType;
+use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleTag;
 use App\Models\Tag;
+use App\Models\User;
+use App\Models\UserOrganization;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
 #[CoversClass(Tag::class)]
 #[CoversClass(NotificationType::class)]
+#[CoversClass(LedgerChunk::class)]
+#[CoversClass(RoleTag::class)]
+#[CoversClass(UserOrganization::class)]
 class SmallModelsTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -38,16 +47,23 @@ class SmallModelsTest extends TestCase
         $this->assertEquals($define->id, $tag->ledgerDefine->id);
     }
 
-    public function test_tag_define_relation_returns_ledger_when_exists(): void
+    public function test_tag_belongs_to_folder(): void
     {
-        // define() は ledger_define_id を外部キーとして Ledger を返す
+        // Sprint 5 修正: hasOne(Folder,'folder_id') → belongsTo(Folder,'folder_id')
         $define = LedgerDefine::factory()->create();
-        $ledger = \App\Models\Ledger::factory()->create(['ledger_define_id' => $define->id]);
         $tag = Tag::factory()->create(['ledger_define_id' => $define->id]);
 
-        // define() は Ledger::hasOne で ledger_define_id をキーに返す
-        // Tag 作成後に Ledger が存在すれば non-null になる
+        $this->assertInstanceOf(Folder::class, $tag->folder);
+    }
+
+    public function test_tag_define_relation_returns_ledger_when_exists(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+        $tag = Tag::factory()->create(['ledger_define_id' => $define->id]);
+
         $this->assertNotNull($tag->define);
+        $this->assertEquals($ledger->id, $tag->define->id);
     }
 
     public function test_tag_roles_relation_returns_collection(): void
@@ -60,38 +76,162 @@ class SmallModelsTest extends TestCase
         $this->assertTrue($tag->roles->contains('id', $role->id));
     }
 
+    public function test_tag_creator_belongs_to_user(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $tag = Tag::factory()->create(['ledger_define_id' => $define->id]);
+
+        $this->assertInstanceOf(User::class, $tag->creator);
+    }
+
     // ================================================================
     // NotificationType
     // ================================================================
 
-    public function test_notification_type_is_for_model_returns_true_for_matching_class(): void
+    public function test_notification_type_is_for_model_returns_true(): void
     {
         $nt = new NotificationType;
-        $nt->model = \App\Models\Ledger::class;
+        $nt->model = Ledger::class;
 
-        $ledger = \App\Models\Ledger::factory()->make();
-        $this->assertTrue($nt->isForModel($ledger));
+        $this->assertTrue($nt->isForModel(Ledger::factory()->make()));
     }
 
-    public function test_notification_type_is_for_model_returns_false_for_different_class(): void
+    public function test_notification_type_is_for_model_returns_false(): void
     {
         $nt = new NotificationType;
-        $nt->model = \App\Models\Ledger::class;
+        $nt->model = Ledger::class;
 
-        $folder = Folder::factory()->make();
-        $this->assertFalse($nt->isForModel($folder));
+        $this->assertFalse($nt->isForModel(Folder::factory()->make()));
     }
 
-    public function test_notification_type_can_be_saved_with_valid_fields(): void
+    public function test_notification_type_folder_returns_null_when_no_folder_relation(): void
     {
-        // folder_id は fillable 外なので DB::statement で直接テスト
+        $nt = new NotificationType;
+        // folder_relation が未設定なら null を返す
+        $this->assertNull($nt->folder());
+    }
+
+    public function test_notification_type_can_be_saved(): void
+    {
         $nt = new NotificationType;
         $nt->name = 'test_event_'.uniqid();
-        $nt->model = \App\Models\Ledger::class;
+        $nt->model = Ledger::class;
         $nt->event = 'created';
         $nt->save();
 
         $this->assertNotNull($nt->id);
         $this->assertDatabaseHas('notification_types', ['id' => $nt->id]);
+    }
+
+    // ================================================================
+    // LedgerChunk
+    // ================================================================
+
+    public function test_ledger_chunk_belongs_to_ledger(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+
+        $chunk = LedgerChunk::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $define->id,
+            'folder_id' => $define->folder_id,
+            'chunk_index' => 0,
+            'content' => 'test chunk content',
+            'chunk_text' => 'test chunk content',
+            'tenant_id' => tenant()->id,
+        ]);
+
+        $this->assertInstanceOf(Ledger::class, $chunk->ledger);
+        $this->assertEquals($ledger->id, $chunk->ledger->id);
+    }
+
+    public function test_ledger_chunk_belongs_to_ledger_define(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+
+        $chunk = LedgerChunk::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $define->id,
+            'folder_id' => $define->folder_id,
+            'chunk_index' => 0,
+            'content' => 'define relation test',
+            'chunk_text' => 'define relation test',
+            'tenant_id' => tenant()->id,
+        ]);
+
+        $this->assertInstanceOf(LedgerDefine::class, $chunk->ledgerDefine);
+        $this->assertEquals($define->id, $chunk->ledgerDefine->id);
+    }
+
+    public function test_ledger_chunk_belongs_to_folder(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+
+        $chunk = LedgerChunk::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $define->id,
+            'folder_id' => $define->folder_id,
+            'chunk_index' => 0,
+            'content' => 'folder relation test',
+            'chunk_text' => 'folder relation test',
+            'tenant_id' => tenant()->id,
+        ]);
+
+        $this->assertInstanceOf(Folder::class, $chunk->folder);
+    }
+
+    // ================================================================
+    // RoleTag (Pivot)
+    // ================================================================
+
+    public function test_role_tag_belongs_to_role(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $tag = Tag::factory()->create(['ledger_define_id' => $define->id]);
+        $role = Role::create(['name' => 'rt-role-'.uniqid()]);
+        $tag->roles()->attach($role->id);
+
+        $roleTag = RoleTag::where('role_id', $role->id)->where('tag_id', $tag->id)->first();
+        $this->assertNotNull($roleTag);
+        $this->assertInstanceOf(Role::class, $roleTag->role);
+    }
+
+    public function test_role_tag_belongs_to_tag(): void
+    {
+        $define = LedgerDefine::factory()->create();
+        $tag = Tag::factory()->create(['ledger_define_id' => $define->id]);
+        $role = Role::create(['name' => 'rt-role2-'.uniqid()]);
+        $tag->roles()->attach($role->id);
+
+        $roleTag = RoleTag::where('role_id', $role->id)->where('tag_id', $tag->id)->first();
+        $this->assertInstanceOf(Tag::class, $roleTag->tag);
+    }
+
+    // ================================================================
+    // UserOrganization (Pivot)
+    // ================================================================
+
+    public function test_user_organization_belongs_to_user(): void
+    {
+        $user = User::factory()->create();
+        $org = Organization::create(['name' => 'uo-org-'.uniqid()]);
+        $user->organizations()->attach($org->id);
+
+        $uo = UserOrganization::where('user_id', $user->id)->where('organization_id', $org->id)->first();
+        $this->assertNotNull($uo);
+        $this->assertInstanceOf(User::class, $uo->user);
+    }
+
+    public function test_user_organization_belongs_to_organization(): void
+    {
+        $user = User::factory()->create();
+        $org = Organization::create(['name' => 'uo-org2-'.uniqid()]);
+        $user->organizations()->attach($org->id);
+
+        $uo = UserOrganization::where('user_id', $user->id)->where('organization_id', $org->id)->first();
+        $this->assertInstanceOf(Organization::class, $uo->organization);
     }
 }

@@ -20,7 +20,7 @@ class Tag extends Model
 
     public function folder()
     {
-        return $this->hasOne(Folder::class, 'folder_id');
+        return $this->belongsTo(Folder::class, 'folder_id');
     }
 
     public function creator()
