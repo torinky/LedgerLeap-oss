@@ -510,4 +510,38 @@ class UserServiceFeatureTest extends TestCase
         $this->assertNotNull($result);
         $this->assertIsInt($result);
     }
+
+    // ----------------------------------------------------------------
+    // getAccessibleTenantsForUser
+    // ----------------------------------------------------------------
+
+    public function test_get_accessible_tenants_returns_empty_when_no_roles(): void
+    {
+        $result = $this->userService->getAccessibleTenantsForUser($this->user);
+        $this->assertCount(0, $result);
+    }
+
+    public function test_get_accessible_tenants_returns_tenant_when_folder_permission_exists(): void
+    {
+        $this->user->assignRole($this->role);
+        RoleFolderPermission::create([
+            'role_id' => $this->role->id,
+            'folder_id' => $this->folder->id,
+            'permission' => FolderPermissionType::READ,
+        ]);
+
+        $result = $this->userService->getAccessibleTenantsForUser($this->user);
+
+        // テナントが1件以上返る
+        $this->assertGreaterThanOrEqual(1, $result->count());
+    }
+
+    public function test_get_accessible_tenants_returns_empty_when_no_permissions(): void
+    {
+        // ロールは持つが folder_permission なし
+        $this->user->assignRole($this->role);
+
+        $result = $this->userService->getAccessibleTenantsForUser($this->user);
+        $this->assertCount(0, $result);
+    }
 }
