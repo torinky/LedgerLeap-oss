@@ -137,7 +137,7 @@ class LedgerDefine extends Model
             return $query;
         }
 
-        return $query->whereHas('tag', function ($query) use ($keywords) {
+        return $query->whereHas('tags', function ($query) use ($keywords) {
             foreach ($keywords as $keyword) {
                 $query->where('name', 'LIKE', '%'.$keyword.'%');
             }

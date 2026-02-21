@@ -158,7 +158,7 @@ class Organization extends Model
             $inheritedPermissions = $inheritedPermissions->merge($ancestor->getAllPermissions());
         }
 
-        return $inheritedPermissions->unique('id')->diff($this->permissions());
+        return $inheritedPermissions->unique('id')->diff($this->getDirectPermissions());
     }
 
     public function getAllUniquePermissions()

@@ -93,7 +93,7 @@ class WorkflowSummaryNotification extends Notification implements ShouldQueue
             'total_count' => $totalCount,
             'inspection_count' => $this->inspectionCount,
             'approval_count' => $this->approvalCount,
-            'link' => route('notifications.index', ['tab' => 'tasks']), // リンク先
+            'link' => route('notifications.index', ['tenant' => $notifiable->tenant_id ?? tenancy()->tenant?->id, 'tab' => 'tasks']), // リンク先
             // GenericNotification と形式を合わせる場合
             /*
             'payload' => [
