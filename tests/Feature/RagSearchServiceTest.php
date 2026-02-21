@@ -11,10 +11,12 @@ use App\Services\EmbeddingService;
 use App\Services\RagSearchService;
 use Illuminate\Support\Facades\DB;
 use Mockery;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(RagSearchService::class)]
 class RagSearchServiceTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -405,8 +407,110 @@ class RagSearchServiceTest extends TestCase
             }));
     }
 
+    // ================================================================
+    // searchLedgersWithModels
+    // ================================================================
+
     #[Test]
-    public function search_attaches_semantic_scores_to_ledgers()
+    public function search_ledgers_with_models_returns_collection_with_scores(): void
+    {
+        // Mock embedding service
+        $vector = array_fill(0, 768, 0.5);
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->andReturnUsing(function ($input, $type) use ($vector) {
+                if ($type === 'query') {
+                    return $vector;
+                }
+
+                return is_array($input) ? array_fill(0, count($input), $vector) : [$vector];
+            });
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        $ledger = $this->createAndProcessLedger(['title' => 'Model Test Document'], $this->ledgerDefine);
+
+        $results = $this->ragSearchService->searchLedgersWithModels('model test', 10);
+
+        // Mroonga検索結果がある場合はLedgerインスタンスを返す
+        $this->assertNotNull($results);
+        if ($results->count() > 0) {
+            $first = $results->first();
+            $this->assertInstanceOf(Ledger::class, $first);
+            // searchLedgersWithModels は similarity_score を setAttribute でセットする
+            $this->assertTrue(isset($first->similarity_score) || $first->getAttribute('similarity_score') !== null);
+        }
+    }
+
+    #[Test]
+    public function search_ledgers_with_models_returns_empty_collection_when_no_results(): void
+    {
+        // EmbeddingServiceをモックしてDB::selectが空を返すようにする
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->with('no match query', 'query')
+            ->andReturn(array_fill(0, 768, 0.0));
+
+        DB::shouldReceive('select')
+            ->once()
+            ->andReturn([]);
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        $results = $this->ragSearchService->searchLedgersWithModels('no match query', 5);
+
+        $this->assertEmpty($results);
+    }
+
+    // ================================================================
+    // search() / searchLedgers() — エラーハンドリング
+    // ================================================================
+
+    #[Test]
+    public function search_returns_empty_paginator_when_user_has_no_readable_folders(): void
+    {
+        // フォルダアクセス権のないユーザーを作成
+        $noAccessUser = User::factory()->create();
+
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')->never();
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        $result = $this->ragSearchService->search('test', $noAccessUser);
+
+        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertEquals(0, $result->total());
+        $this->assertEmpty($result->items());
+    }
+
+    #[Test]
+    public function search_ledgers_returns_empty_array_when_mroonga_throws_exception(): void
+    {
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->with('error query', 'query')
+            ->andReturn(array_fill(0, 768, 0.1));
+
+        // DB::selectが例外をスローするようにモック
+        DB::shouldReceive('select')
+            ->andThrow(new \Exception('Mroonga connection error'));
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        $results = $this->ragSearchService->searchLedgers('error query');
+
+        // 例外はcatchされて空配列が返る
+        $this->assertIsArray($results);
+        $this->assertEmpty($results);
+    }
+
+    // ================================================================
+    // search_attaches_semantic_scores_to_ledgers
+    // ================================================================
+
+    #[Test]
+    public function search_attaches_semantic_scores_to_ledgers(): void
     {
         // Setup: Create user and folder with permissions
         $role = \App\Models\Role::create(['name' => 'ScoreTestRole', 'guard_name' => 'web']);
