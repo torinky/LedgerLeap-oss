@@ -29,7 +29,7 @@ class ShowDiff extends BaseLivewireComponent
 
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
-    public ?\Illuminate\Database\Eloquent\Collection $allAttachments = null;
+    public ?\Illuminate\Support\Collection $allAttachments = null;
 
     public array $displayColumns = []; // 追加
 

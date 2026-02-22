@@ -686,6 +686,94 @@ class ModifyColumnTest extends TestCase
     }
 
     #[Test]
+    public function it_syncs_all_expanded_when_toggling_individual_groups()
+    {
+        // 準備
+        tenancy()->initialize($this->tenant);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [0 => []],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        // 初期状態: 全て閉じている、allExpanded は false
+        $component->assertSet('allExpanded', false);
+
+        // 1つのグループを展開する
+        $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
+        $component->call('toggleGroup', $groupName, false); // false = 非折りたたみ = 展開
+
+        // 1つだけ展開されている場合、allExpanded は false のはず（複数グループ想定なら）
+        // このテストケースではグループが1つ（Files）しかないので、1つ展開＝全て展開になるはず
+        $component->assertSet('allExpanded', true);
+
+        // 再度閉じる
+        $component->call('toggleGroup', $groupName, true); // true = 折りたたみ
+        $component->assertSet('allExpanded', false);
+    }
+
+    #[Test]
+    public function it_syncs_individual_groups_when_toggling_all_expanded()
+    {
+        // 準備
+        tenancy()->initialize($this->tenant);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [0 => []],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        // 1. 「全て展開」をオンにする
+        $component->set('allExpanded', true);
+        
+        // すべてのグループが展開されているか検証
+        $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
+        $collapsedStates = $component->get('collapsedStates');
+        $this->assertFalse($collapsedStates[$groupName]);
+
+        // 2. 「全て展開」をオフにする
+        $component->set('allExpanded', false);
+        
+        // すべてのグループが閉じているか検証
+        $collapsedStates = $component->get('collapsedStates');
+        $this->assertTrue($collapsedStates[$groupName]);
+    }
+
+    #[Test]
+    public function it_remains_active_when_re_rendering()
+    {
+        // 準備
+        tenancy()->initialize($this->tenant);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [0 => []],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        // グループを展開する
+        $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
+        $component->call('toggleGroup', $groupName, false);
+        $component->assertSet('allExpanded', true);
+
+        // 再描画（バリデーションエラーなどが発生したと想定）
+        $component->set('content.0', 'trigger re-render');
+        
+        // 状態が維持されていることを確認
+        $component->assertSet('allExpanded', true);
+        $collapsedStates = $component->get('collapsedStates');
+        $this->assertFalse($collapsedStates[$groupName]);
+    }
+
+    #[Test]
     public function it_renders_file_inspector_component()
     {
         $ledger = $this->ledgerDefine->ledgers()->create([
@@ -700,5 +788,32 @@ class ModifyColumnTest extends TestCase
             'ledgerId' => $ledger->id,
         ])
             ->assertSeeLivewire('attached-file.file-inspector');
+    }
+
+    #[Test]
+    public function it_syncs_all_expanded_when_collapsed_states_is_updated_via_entanglement()
+    {
+        // 準備
+        tenancy()->initialize($this->tenant);
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [0 => []],
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
+
+        // 全て展開された状態からシミュレート
+        $component->set('collapsedStates.' . $groupName, false);
+        $component->assertSet('allExpanded', true);
+
+        // 1つ閉じる（シミュレート: @entangle による更新を想定）
+        $component->set('collapsedStates.' . $groupName, true);
+        
+        // allExpanded が false になることを確認
+        $component->assertSet('allExpanded', false);
     }
 }
