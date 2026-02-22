@@ -179,4 +179,3 @@ class NumberTypeTest extends TestCase
         $this->assertEquals(25.0, $result);
     }
 }
-
