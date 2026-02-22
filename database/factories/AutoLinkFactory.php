@@ -26,6 +26,7 @@ class AutoLinkFactory extends Factory
             'pattern' => $this->faker->regexify('[A-Z]{3}-\\d{3}'),
             'url_template' => '/l/'.$this->faker->word,
             'is_enabled' => $this->faker->boolean,
+            'link_type' => 'default', // isOptionDisabled の null-label バグ防止 (AutoLinkResource)
         ];
     }
 }

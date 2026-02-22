@@ -134,7 +134,13 @@ class RoleResource extends BaseRoleResource
                                             ->toArray();
                                         $component->state($hasGlobalNotify);
                                     })
-                                    ->dehydrateStateUsing(function ($component, Role $record, $state) {
+                                    ->dehydrateStateUsing(function ($component, ?Role $record, $state) {
+                                        // 新規作成時は record が null になるため、保存処理をスキップする
+                                        // グローバル通知設定はロール編集時のみ有効（docs/function/Role.md 参照）
+                                        if (! $record) {
+                                            return null;
+                                        }
+
                                         $globalNotifyTypes = NotificationType::where('folder_relation', null)->pluck('id')->toArray();
                                         // state が null (未選択) の場合は空配列として扱う
                                         $selectedTypes = $state ?? [];

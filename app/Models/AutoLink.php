@@ -27,6 +27,11 @@ class AutoLink extends Model
         'modifier_id',
     ];
 
+    /** link_type が未設定のレコードを安全に扱えるようにデフォルト値を設定 */
+    protected $attributes = [
+        'link_type' => 'default',
+    ];
+
     protected $casts = [
         'is_enabled' => 'boolean',
         'open_in_new_tab' => 'boolean',

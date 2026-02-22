@@ -139,14 +139,12 @@ class AutoLinkResource extends Resource
                         ->options(
                             collect(config('ledgerleap.auto_links.link_types'))
                                 ->mapWithKeys(function ($type, $key) {
-                                    $label = __($type['label_key']);
-                                    $icon = $type['icon'];
+                                    $label = (string) __($type['label_key']);
 
-                                    return [$key => Blade::render("<x-mary-icon name='{$icon}' class='inline-block h-4 w-4' /> {$label}")];
+                                    return [$key => $label];
                                 })
                                 ->all()
                         )
-                        ->allowHtml()
                         ->default('default')
                         ->live(),
 
@@ -296,7 +294,9 @@ class AutoLinkResource extends Resource
             ->filters([
                 SelectFilter::make('tenant_id')
                     ->label(__('auto_links.fields.link_to_tenant'))
-                    ->options(fn () => Tenant::all()->pluck('name', 'id')->all())
+                    ->options(fn () => Tenant::all()->mapWithKeys(function ($tenant) {
+                        return [$tenant->id => $tenant->name ?? $tenant->id];
+                    })->all())
                     ->searchable(),
             ])
             ->actions([
