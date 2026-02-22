@@ -1,9 +1,10 @@
 # LedgerLeap テストベストプラクティス
 
-**最終更新:** 2026年02月11日  
+**最終更新:** 2026年02月22日  
 **適用対象:** LedgerLeap全体のテスト開発
 
 **更新履歴:**
+- 2026-02-22: Livewire `#[Computed]` プロパティのカバレッジ取得手法、`CoversClass` の重要性、`latest_diff_id` パターンを追加（Issue #69対応）
 - 2026-02-11: マイグレーション管理とトラブルシューティングセクションを追加（デッドロック対策、冪等性の確保）
 - 2026-02-09: Livewire 3 親子コンポーネント（IndexManager + RecordsTable）のテストベストプラクティスを追加（Issue #60対応）
 - 2026-02-08: Sail環境におけるモデルイベントの発火挙動（touch() vs update()）およびトレースログによるデバッグ手法を追加
@@ -849,6 +850,160 @@ public function mount() {
     if (! $this->myParam) {
         $this->myParam = 'default';
     }
+}
+```
+
+---
+
+## ⚡ Livewire `#[Computed]` プロパティのテスト (2026-02-22 追加)
+
+Issue #69 の実装で発見した重要な知見です。`#[Computed]` プロパティは通常のテストでカバレッジが計上されず **0%** のままになるケースがあります。
+
+### 問題の背景
+
+Livewire v3 の `#[Computed]` プロパティは以下の特性を持ちます：
+
+1. **ビューから参照されて初めて実行される** — `render()` を呼ぶだけでは、ビューテンプレートが `$property` を参照していない限り実行されない
+2. **初回実行結果がキャッシュされる** — 一度呼ばれた後は同じリクエスト内でキャッシュが返る
+3. **`assertStatus(200)` だけではカバレッジが計上されない** — `render()` が成功してもメソッドが呼ばれていなければ 0% のまま
+
+```php
+class WorkflowStatusCard extends BaseLivewireComponent
+{
+    #[Computed]
+    public function workflowHistory(): Collection
+    {
+        // ビューで $workflowHistory として参照されていない場合、render()後も 0%
+        return $this->ledgerRecord->ledgerDiff()->orderBy('created_at', 'desc')->get();
+    }
+
+    #[Computed]
+    public function requiredRolesProgress(): array
+    {
+        if ($this->ledgerRecord->define->workflow_enabled && ...) {
+            return $this->ledgerRecord->getRequiredRolesProgressDetails();
+        }
+        return [];
+    }
+}
+```
+
+### 解決策: `instance()` 経由でメソッドを直接呼び出す
+
+```php
+#[Test]
+public function workflow_history_returns_empty_collection_when_no_diffs(): void
+{
+    // ❌ 悪い: assertStatus(200) だけではメソッドが実行されない
+    Livewire::test(WorkflowStatusCard::class, ['ledgerRecord' => $this->ledger])
+        ->assertStatus(200);  // workflowHistory() は呼ばれていない → 0%
+
+    // ✅ 良い: instance() 経由でメソッドを直接呼び出す
+    $instance = Livewire::test(WorkflowStatusCard::class, ['ledgerRecord' => $this->ledger])
+        ->instance();
+
+    $history = $instance->workflowHistory();  // ← 直接呼び出し → カバレッジ計上
+    $this->assertInstanceOf(Collection::class, $history);
+}
+```
+
+### キャッシュ問題への対処
+
+`render()` が走った時点で Computed プロパティがキャッシュされます。**テストに渡すモデルは `Livewire::test()` を呼ぶ前に正しい状態にしておく必要があります。**
+
+```php
+#[Test]
+public function required_roles_progress_is_computed_when_workflow_enabled(): void
+{
+    // ❌ 悪い: setUp()で workflow_enabled=false → render()時に空配列がキャッシュされる
+    $this->ledgerDefine->update(['workflow_enabled' => true]);  // 手遅れ
+    $instance = Livewire::test(WorkflowStatusCard::class, ['ledgerRecord' => $this->ledger])
+        ->instance();
+    $progress = $instance->requiredRolesProgress();  // キャッシュの空配列が返る
+
+    // ✅ 良い: workflow_enabled=true のデータを最初から作成して渡す
+    $ledgerDefineEnabled = LedgerDefine::factory()
+        ->for($this->folder)
+        ->create(['workflow_enabled' => true]);  // ← 最初からtrue
+
+    $ledger = Ledger::with(['define.folder', 'latestDiff'])->find(
+        Ledger::factory()->create(['ledger_define_id' => $ledgerDefineEnabled->id])->id
+    );
+
+    $instance = Livewire::test(WorkflowStatusCard::class, ['ledgerRecord' => $ledger])
+        ->instance();  // ← render()時点で workflow_enabled=true が確定している
+
+    $progress = $instance->requiredRolesProgress();  // 正しく実行される
+    $this->assertArrayHasKey('inspection', $progress);
+}
+```
+
+> **補足**: Livewire v3 では `unset($instance->propertyName)` でキャッシュをクリアできますが、
+> `render()` が走った後では既にキャッシュが確定しているため効果がない場合があります。
+
+### `#[CoversClass]` アトリビュートの重要性
+
+PHPUnit のコードカバレッジは `#[CoversClass]` が付いているテストのみを該当クラスのカバレッジとして厳密に計上します。**既存テストに `#[CoversClass]` がない場合、新しいテストを追加しても 0% のままになる可能性があります。**
+
+```php
+// ❌ 悪い: CoversClass なし → カバレッジが計上されないことがある
+class WorkflowStatusCardTest extends TestCase
+{
+    // ...
+}
+
+// ✅ 良い: 必ず CoversClass を付ける
+#[CoversClass(WorkflowStatusCard::class)]
+class WorkflowStatusCardTest extends TestCase
+{
+    // ...
+}
+```
+
+> 既存テストファイルに `#[CoversClass]` がない場合は追加してください。
+
+---
+
+## 🔑 Ledger ワークフローテストのデータ準備パターン (2026-02-22 追加)
+
+`Ledger.latestDiff()` は `belongsTo(LedgerDiff::class, 'latest_diff_id')` です。`LedgerDiff::factory()` で差分を作成しただけでは `Ledger.latest_diff_id` が更新されません。
+
+### `latest_diff_id` の正しい設定方法
+
+```php
+// ❌ 悪い: latest_diff_id が null のまま → latestDiff()->first() が null を返す
+$ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+$diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id]);
+// $ledger->latestDiff()->first() === null  ← Xmatch fails
+
+// ✅ 良い: latest_diff_id を明示的に設定する
+$ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
+$diff = LedgerDiff::factory()->create(['ledger_id' => $ledger->id]);
+$ledger->update(['latest_diff_id' => $diff->id]);
+$ledger = $ledger->fresh();  // latest_diff_id を反映した新しいインスタンスを取得
+// $ledger->latestDiff → $diff が返る ✅
+```
+
+### `PendingList::openApproverSelectModal()` のテストで必須
+
+`openApproverSelectModal()` は内部で `$ledger->latestDiff()->first()` の `inspector_id` と `Auth::id()` を比較します。`latest_diff_id` が設定されていないと権限チェックで早期 return し、モーダルが開きません。
+
+```php
+// PendingList の openApproverSelectModal をテストする場合の必須手順
+private function createPendingLedgerWithDiff(): array
+{
+    $ledger = Ledger::factory()->create([
+        'ledger_define_id' => $this->ledgerDefine->id,
+        'status'           => WorkflowStatus::PENDING_INSPECTION,
+    ]);
+    $diff = LedgerDiff::factory()->create([
+        'ledger_id'    => $ledger->id,
+        'inspector_id' => $this->inspector->id,  // ← Auth::id() と一致させる
+        'status'       => WorkflowStatus::PENDING_INSPECTION,
+    ]);
+    $ledger->update(['latest_diff_id' => $diff->id]);  // ← 必須
+
+    return [$ledger->fresh(), $diff];
 }
 ```
 
