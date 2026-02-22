@@ -36,6 +36,9 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
+        // インポート（upsert）時に id を明示的にセットできるよう追加。
+        // 通常の Ledger::create() 呼び出しは id を渡さないため autoincrement には影響しない。
+        'id',
         'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version',
         'activity_score', 'composite_score', 'default_sort_value',
     ];

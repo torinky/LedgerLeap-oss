@@ -55,12 +55,12 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
         HeadingRowFormatter::default('none');
 
         if ($this->importMode == self::MODE_DESTOROY) {
-            // 外部キー制約を一時的に無効にする
-            Ledger::disableForeignKeyConstraints();
+            // 外部キー制約を一時的に無効にして既存レコードを全削除する
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
 
             Ledger::where('ledger_define_id', $ledgerDefine->id)->delete();
-            // 外部キー制約を復旧する
-            Ledger::enableForeignKeyConstraints();
+
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
         }
 
         Cache::forget("total_rows_{$this->id}");
@@ -98,7 +98,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
         }
 
         $ledger = new Ledger([
-            'id' => $id,
+            'id' => $id ?: null,
             'updated_at' => $row['[[[updated_at]]]'] ?? '',
             'created_at' => $row['[[[created_at]]]'] ?? '',
             'modifier_id' => $row['[[[modifier_id]]]'] ?? Auth::user()->id,
