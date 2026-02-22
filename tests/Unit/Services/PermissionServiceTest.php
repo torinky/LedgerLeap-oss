@@ -398,6 +398,8 @@ class PermissionServiceTest extends TestCase
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
         // getAccessUsersが正常に動作し、ページネーションが返されることを確認
         $this->assertGreaterThanOrEqual(0, $result->total());
+        // pageName が permission_user_page であること（他コンポーネントとの衝突回避）
+        $this->assertSame('permission_user_page', $result->getPageName());
     }
 
     #[Test]

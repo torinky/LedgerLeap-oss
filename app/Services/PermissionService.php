@@ -314,7 +314,7 @@ class PermissionService
             });
         }
 
-        $users = $query->paginate(10);
+        $users = $query->paginate(10, ['*'], 'permission_user_page');
 
         $users->getCollection()->transform(function ($user) use ($targetFolder) {
             // ユーザーの直接ロール

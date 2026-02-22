@@ -251,7 +251,7 @@ class PermissionDisplay extends BaseLivewireComponent
     // ユーザーリストの検索クエリが変更された時にページネーションをリセット
     public function updatedSearchUserQuery(): void
     {
-        $this->resetPage('accessUsersPage');
+        $this->resetPage('permission_user_page');
     }
 
     /**
@@ -260,7 +260,7 @@ class PermissionDisplay extends BaseLivewireComponent
     public function updated($propertyName): void
     {
         if (in_array($propertyName, ['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue'])) {
-            $this->resetPage('accessUsersPage');
+            $this->resetPage('permission_user_page');
             $this->resetPage('accessOrganizationsPage');
             $this->resetPage('accessRolesPage');
         }
@@ -272,6 +272,6 @@ class PermissionDisplay extends BaseLivewireComponent
     public function resetFilters(): void
     {
         $this->reset(['filterByRoleId', 'filterByOrganizationId', 'filterByPermissionValue', 'searchUserQuery']);
-        $this->resetPage();
+        $this->resetPage('permission_user_page');
     }
 }
