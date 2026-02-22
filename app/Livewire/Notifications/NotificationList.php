@@ -9,11 +9,12 @@ use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 
 class NotificationList extends BaseLivewireComponent
 {
-    use WithPagination;
+    use WithoutUrlPagination, WithPagination;
 
     public int $totalNotifications = 0; // 合計件数用プロパティ
 
@@ -49,7 +50,7 @@ class NotificationList extends BaseLivewireComponent
 
         if ($query) {
             $this->totalNotifications = $query->count();
-            $notifications = $query->paginate(10) // 1ページあたりの件数を調整
+            $notifications = $query->paginate(10, ['*'], pageName: 'notification_page') // 1ページあたりの件数を調整
                 ->through(function ($notification) { // 各通知データを加工
                     $notification->displayData = $this->formatNotificationData($notification);
 

@@ -35,6 +35,6 @@ class WorkflowTaskRepository
                 // ToDo: ロール指定承認者
             })
             ->latest('updated_at') // Ledger の更新日時でソート (または latestDiff.created_at でソート?)
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], pageName: 'task_page');
     }
 }

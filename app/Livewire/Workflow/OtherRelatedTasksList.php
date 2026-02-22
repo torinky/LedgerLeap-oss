@@ -16,12 +16,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 // Eloquent Collection
 // Support Collection
+use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 class OtherRelatedTasksList extends BaseLivewireComponent
 {
-    use Toast, WithPagination;
+    use Toast, WithoutUrlPagination, WithPagination;
 
     public int $perPage = 10;
 
@@ -182,11 +183,11 @@ class OtherRelatedTasksList extends BaseLivewireComponent
         */
 
         $paginatedTasks = new \Illuminate\Pagination\LengthAwarePaginator(
-            $this->tasksData->forPage($this->getPage(), $this->perPage),
+            $this->tasksData->forPage($this->getPage('related_task_page'), $this->perPage),
             $this->tasksData->count(),
             $this->perPage,
-            $this->getPage(),
-            ['path' => request()->url(), 'query' => request()->query()]
+            $this->getPage('related_task_page'),
+            ['path' => request()->url(), 'query' => request()->query(), 'pageName' => 'related_task_page']
         );
 
         return view('livewire.workflow.other-related-tasks-list', [

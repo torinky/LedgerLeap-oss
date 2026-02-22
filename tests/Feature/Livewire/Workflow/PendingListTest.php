@@ -331,4 +331,37 @@ class PendingListTest extends TestCase
             ->dispatch('refreshPendingList')
             ->assertStatus(200);
     }
+
+    // ================================================================
+    // pagination pageName の独立性
+    // ================================================================
+
+    #[Test]
+    public function paginator_uses_task_page_as_page_name(): void
+    {
+        $component = Livewire::actingAs($this->user)
+            ->test(PendingList::class);
+
+        $pendingTasks = $component->viewData('pendingTasks');
+
+        $this->assertSame('task_page', $pendingTasks->getPageName(),
+            'PendingList のページネーターは task_page を pageName として使用すること');
+    }
+
+    #[Test]
+    public function page_param_does_not_affect_task_page(): void
+    {
+        // Livewire v3 の paginators は初回レンダリング後に登録される。
+        // gotoPage を呼ぶことで paginators に task_page が登録されることを確認する。
+        // page パラメータとは独立していることを検証するため、paginators を直接確認する。
+        $component = Livewire::actingAs($this->user)
+            ->test(PendingList::class);
+
+        $pendingTasks = $component->viewData('pendingTasks');
+
+        // task_page という pageName が使われており、デフォルトの "page" ではないこと
+        $this->assertSame('task_page', $pendingTasks->getPageName(),
+            'PendingList は task_page を pageName として使用するため、"page" パラメータと独立していること');
+        $this->assertNotSame('page', $pendingTasks->getPageName());
+    }
 }

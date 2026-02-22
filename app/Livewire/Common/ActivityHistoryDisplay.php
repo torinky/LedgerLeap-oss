@@ -14,11 +14,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Computed;
+use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 
 class ActivityHistoryDisplay extends BaseLivewireComponent
 {
-    use WithPagination;
+    use WithoutUrlPagination, WithPagination;
 
     // リソースタイプとIDが指定されない場合、全件表示モードとなる
     public ?int $resourceId = null;
@@ -203,7 +204,7 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
     public function updated($propertyName): void
     {
         if (in_array($propertyName, ['filterByUserId', 'filterByEvent', 'filterByDescription', 'filterStartDate', 'filterEndDate'])) {
-            $this->resetPage();
+            $this->resetPage(pageName: 'activity_page');
         }
     }
 
@@ -213,7 +214,7 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
     public function resetFilters(): void
     {
         $this->reset(['filterByUserId', 'filterByEvent', 'filterByDescription', 'filterStartDate', 'filterByDescription', 'filterEndDate']);
-        $this->resetPage();
+        $this->resetPage(pageName: 'activity_page');
     }
 
     /**
@@ -239,7 +240,7 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
             ->orderBy('description')
             ->get();
 
-        $activities = $this->getActivitiesQuery()->paginate(10);
+        $activities = $this->getActivitiesQuery()->paginate(10, ['*'], pageName: 'activity_page');
 
         // ★★★ Bladeに渡すヘッダー情報を動的に生成 ★★★
         $headers = $this->getVisibleHeaders();

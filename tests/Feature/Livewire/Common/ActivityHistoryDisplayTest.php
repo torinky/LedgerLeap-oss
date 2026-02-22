@@ -248,8 +248,16 @@ class ActivityHistoryDisplayTest extends TestCase
     {
         $this->actingAs($this->adminUser);
 
-        Livewire::withQueryParams(['page' => 2])
-            ->test(ActivityHistoryDisplay::class)
+        // ページ2が存在するよう、合計11件以上のアクティビティを作成する（setUp の5件 + 6件追加）
+        for ($i = 0; $i < 6; $i++) {
+            activity()->causedBy($this->adminUser)->performedOn($this->folderA)->log('updated');
+        }
+
+        // Livewire v3 の paginators はコンポーネント内部のプロパティで管理される。
+        // withQueryParams は初回レンダリング前に paginators が未登録のため activity_page を
+        // queryString に反映できない。set() で直接 paginators 配列を操作する。
+        Livewire::test(ActivityHistoryDisplay::class)
+            ->call('gotoPage', 2, 'activity_page')
             ->assertViewHas('activities', fn ($activities) => $activities->currentPage() === 2)
             ->set('filterByEvent', 'created')
             ->assertViewHas('activities', fn ($activities) => $activities->currentPage() === 1);

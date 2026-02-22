@@ -14,12 +14,13 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
+use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 class PendingList extends BaseLivewireComponent
 {
-    use InitializesTenantContext, Toast, WithPagination;
+    use InitializesTenantContext, Toast, WithoutUrlPagination, WithPagination;
 
     #[Locked] // selectedTaskId はURL等から不正に変更されたくない場合 Locked を付ける
     public $selectedTaskId = null;

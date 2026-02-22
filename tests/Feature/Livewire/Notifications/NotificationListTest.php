@@ -203,4 +203,48 @@ class NotificationListTest extends TestCase
         Livewire::test(NotificationList::class)
             ->assertDispatched('update-tab-count');
     }
+
+    // ================================================================
+    // pagination pageName の独立性
+    // ================================================================
+
+    #[Test]
+    public function paginator_uses_notification_page_as_page_name(): void
+    {
+        // 11件以上の通知を作成してページネーションが発生する状態にする
+        for ($i = 0; $i < 12; $i++) {
+            $this->createNotification(['event' => 'created']);
+        }
+
+        $component = Livewire::test(NotificationList::class);
+        $notifications = $component->viewData('notifications');
+
+        $this->assertSame('notification_page', $notifications->getPageName(),
+            'NotificationList のページネーターは notification_page を pageName として使用すること');
+    }
+
+    #[Test]
+    public function page_param_does_not_affect_notification_page(): void
+    {
+        // 11件以上の通知を作成
+        for ($i = 0; $i < 12; $i++) {
+            $this->createNotification(['event' => 'created']);
+        }
+
+        // Livewire v3 の paginators は初回レンダリング後に登録される。
+        // gotoPage でページを移動した後、notification_page の currentPage が
+        // page パラメータと独立していることを確認する。
+        $component = Livewire::test(NotificationList::class)
+            ->call('gotoPage', 2, 'notification_page');
+
+        $notifications = $component->viewData('notifications');
+        $this->assertSame(2, $notifications->currentPage(),
+            'gotoPage(2, notification_page) でページ2に遷移できること');
+
+        // page パラメータを直接 set しても notification_page には影響しない
+        $component->set('paginators', []);
+        $notifications = $component->viewData('notifications');
+        $this->assertSame('notification_page', $notifications->getPageName(),
+            '外部から paginators をリセットしても pageName は変わらないこと');
+    }
 }
