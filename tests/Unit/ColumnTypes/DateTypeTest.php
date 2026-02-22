@@ -3,9 +3,11 @@
 namespace Tests\Unit\ColumnTypes;
 
 use App\Models\ColumnTypes\DateType;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
+#[CoversClass(DateType::class)]
 class DateTypeTest extends TestCase
 {
     #[Test]
@@ -198,5 +200,136 @@ class DateTypeTest extends TestCase
         // Restore from string
         $restored = $dateType->restoreFromString($text);
         $this->assertEquals(strtotime($dateStr), $restored);
+    }
+
+    // ================================================================
+    // 未カバーパスの補強テスト
+    // ================================================================
+
+    #[Test]
+    public function test_get_validation_rules_for_ymd()
+    {
+        $dateType = new DateType([], 'YMD');
+        $rules = $dateType->getValidationRules();
+        $this->assertEquals(['date_format:Y-m-d'], $rules);
+    }
+
+    #[Test]
+    public function test_get_validation_rules_for_ymdhm()
+    {
+        $dateType = new DateType([], 'YMDHM');
+        $rules = $dateType->getValidationRules();
+        $this->assertEquals(['date_format:Y-m-d H:i'], $rules);
+    }
+
+    #[Test]
+    public function test_get_label_for_ymdhm()
+    {
+        $dateType = new DateType([], 'YMDHM');
+        // datetime ラベルが返る（翻訳キー確認）
+        $label = $dateType->getLabel();
+        $this->assertNotEmpty($label);
+    }
+
+    #[Test]
+    public function test_get_label_for_ymd()
+    {
+        $dateType = new DateType([], 'YMD');
+        $label = $dateType->getLabel();
+        $this->assertNotEmpty($label);
+    }
+
+    #[Test]
+    public function test_is_hidden_returns_true_when_default_offset_set()
+    {
+        $dateType = new DateType(['default_offset' => '1d'], 'YMD');
+        $this->assertTrue($dateType->isHidden());
+    }
+
+    #[Test]
+    public function test_is_hidden_returns_false_when_no_default_offset()
+    {
+        $dateType = new DateType([], 'YMD');
+        $this->assertFalse($dateType->isHidden());
+    }
+
+    #[Test]
+    public function test_date_type_with_hour_offset()
+    {
+        $dateType = new DateType(['default_offset' => '2h'], 'YMDHM');
+        $result = $dateType->getDefaultDate();
+        $expected = (new \DateTime)->modify('2 hours')->format('Y-m-d H:i');
+        $this->assertEquals($expected, $result);
+    }
+
+    #[Test]
+    public function test_date_type_with_minute_offset()
+    {
+        $dateType = new DateType(['default_offset' => '30m'], 'YMDHM');
+        $result = $dateType->getDefaultDate();
+        $expected = (new \DateTime)->modify('30 minutes')->format('Y-m-d H:i');
+        $this->assertEquals($expected, $result);
+    }
+
+    #[Test]
+    public function test_get_default_date_returns_ymdhm_format_when_type_is_ymdhm()
+    {
+        $dateType = new DateType(['default_offset' => '0d'], 'YMDHM');
+        $result = $dateType->getDefaultDate();
+        // YMDHM 形式 (Y-m-d H:i)
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $result);
+    }
+
+    #[Test]
+    public function test_convert_to_text_with_string_input()
+    {
+        $dateType = new DateType([], 'YMD');
+        $result = $dateType->convertToText('2026-01-15');
+        $this->assertEquals('2026-01-15', $result);
+    }
+
+    #[Test]
+    public function test_convert_to_text_with_invalid_string_returns_string()
+    {
+        $dateType = new DateType([], 'YMD');
+        $result = $dateType->convertToText('not-a-date');
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function test_restore_from_string_with_empty_returns_null()
+    {
+        $dateType = new DateType([], 'YMD');
+        $this->assertNull($dateType->restoreFromString(''));
+        $this->assertNull($dateType->restoreFromString(null));
+    }
+
+    #[Test]
+    public function test_restore_from_string_with_invalid_date_returns_null()
+    {
+        $dateType = new DateType([], 'YMD');
+        $result = $dateType->restoreFromString('not-a-valid-date-xyz');
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    public function test_magic_get_returns_null_for_unknown_property()
+    {
+        $dateType = new DateType([], 'YMD');
+        $this->assertNull($dateType->unknown_property);
+    }
+
+    #[Test]
+    public function test_has_options_returns_true()
+    {
+        $dateType = new DateType([], 'YMD');
+        $this->assertTrue($dateType->hasOptions());
+    }
+
+    #[Test]
+    public function test_should_convert_to_json_returns_false()
+    {
+        $dateType = new DateType([], 'YMD');
+        $this->assertFalse($dateType->shouldConvertToJson());
     }
 }

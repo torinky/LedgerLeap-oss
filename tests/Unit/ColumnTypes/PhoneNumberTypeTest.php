@@ -3,7 +3,11 @@
 namespace Tests\Unit\ColumnTypes;
 
 use App\Models\ColumnTypes\PhoneNumberType;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+
+#[CoversClass(PhoneNumberType::class)]
 
 class PhoneNumberTypeTest extends TestCase
 {
@@ -69,5 +73,66 @@ class PhoneNumberTypeTest extends TestCase
     {
         $type = new PhoneNumberType;
         $this->assertTrue($type->hasOptions());
+    }
+
+    // ================================================================
+    // 未カバーパスの補強テスト
+    // ================================================================
+
+    #[Test]
+    public function get_name_returns_phone(): void
+    {
+        $type = new PhoneNumberType;
+        $this->assertEquals('phone', $type->getName());
+    }
+
+    #[Test]
+    public function get_label_returns_non_empty_string(): void
+    {
+        $type = new PhoneNumberType;
+        $this->assertNotEmpty($type->getLabel());
+    }
+
+    #[Test]
+    public function should_convert_to_json_returns_false(): void
+    {
+        $type = new PhoneNumberType;
+        $this->assertFalse($type->shouldConvertToJson());
+    }
+
+    #[Test]
+    public function is_hidden_returns_false(): void
+    {
+        $type = new PhoneNumberType;
+        $this->assertFalse($type->isHidden());
+    }
+
+    #[Test]
+    public function restore_from_string_returns_string(): void
+    {
+        $type = new PhoneNumberType;
+        $result = $type->restoreFromString('090-1234-5678');
+        $this->assertEquals('090-1234-5678', $result);
+    }
+
+    #[Test]
+    public function magic_get_returns_normalize_property(): void
+    {
+        $type = new PhoneNumberType(['normalize' => true]);
+        $this->assertTrue($type->normalize);
+    }
+
+    #[Test]
+    public function magic_get_returns_allow_extension_property(): void
+    {
+        $type = new PhoneNumberType(['allow_extension' => false]);
+        $this->assertFalse($type->allow_extension);
+    }
+
+    #[Test]
+    public function magic_get_returns_null_for_unknown_property(): void
+    {
+        $type = new PhoneNumberType;
+        $this->assertNull($type->unknown_property);
     }
 }
