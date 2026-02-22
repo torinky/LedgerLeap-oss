@@ -12,6 +12,11 @@ trait HandlesFormGroups
     public array $collapsedStates = [];
 
     /**
+     * 「すべて展開」の状態
+     */
+    public bool $allExpanded = false;
+
+    /**
      * グループの開閉を切り替える
      */
     #[Renderless]
@@ -19,6 +24,45 @@ trait HandlesFormGroups
     {
         if (isset($this->collapsedStates[$groupName])) {
             $this->collapsedStates[$groupName] = $force ?? ! $this->collapsedStates[$groupName];
+
+            // 「すべて展開」の状態を同期
+            $this->syncAllExpandedState();
+        }
+    }
+
+    /**
+     * 個別の折りたたみ状態が更新された際の同期
+     */
+    public function updatedCollapsedStates($value, $key): void
+    {
+        $this->syncAllExpandedState();
+    }
+
+    /**
+     * 「すべて展開」の状態を現在の折りたたみ状態に合わせる
+     */
+    protected function syncAllExpandedState(): void
+    {
+        if (empty($this->collapsedStates)) {
+            $this->allExpanded = false;
+
+            return;
+        }
+
+        // 1つでも閉じている（true）ものがあれば、allExpanded は false
+        $hasCollapsed = in_array(true, $this->collapsedStates, true);
+        $this->allExpanded = ! $hasCollapsed;
+    }
+
+    /**
+     * 「すべて展開」の状態が更新された際のフック
+     */
+    public function updatedAllExpanded(bool $value): void
+    {
+        if ($value) {
+            $this->expandAllGroups();
+        } else {
+            $this->collapseAllGroups();
         }
     }
 
@@ -31,6 +75,7 @@ trait HandlesFormGroups
         foreach ($this->collapsedStates as $groupName => $value) {
             $this->collapsedStates[$groupName] = true;
         }
+        $this->allExpanded = false;
     }
 
     /**
@@ -42,6 +87,7 @@ trait HandlesFormGroups
         foreach ($this->collapsedStates as $groupName => $value) {
             $this->collapsedStates[$groupName] = false;
         }
+        $this->allExpanded = true;
     }
 
     /**

@@ -59,29 +59,27 @@
                             <x-validation-error-summary :errors="$validationErrors" :ledger-define="$ledgerDefineRecord" />
 
                             {{-- 全て展開・折りたたみトグル (Issue #53) --}}
-                            <div class="flex justify-end items-center gap-3 bg-base-200/30 px-4 py-2 rounded-full border border-base-300 mb-4 self-end transition-all hover:bg-base-200/50"
-                                x-data="{ allExpanded: false }">
+                            <div
+                                class="flex justify-end items-center gap-3 bg-base-200/30 px-4 py-2 rounded-full border border-base-300 mb-4 self-end transition-all hover:bg-base-200/50">
                                 <span
                                     class="text-[10px] font-black text-base-content/40 uppercase tracking-widest">{{ __('ledger.column.expand_all') }}</span>
-                                <x-mary-toggle x-model="allExpanded"
-                                    @change="allExpanded ? $wire.expandAllGroups() : $wire.collapseAllGroups()" right
-                                    tight class="toggle-xs toggle-primary" />
+                                <x-mary-toggle wire:model.live="allExpanded" right tight
+                                    class="toggle-xs toggle-primary" />
                             </div>
 
                             @foreach ($groupedColumns as $groupName => $columnsInGroup)
                                 @php
                                     $isGroupRequired = collect($columnsInGroup)->contains(fn($col) => $col->required);
                                 @endphp
-                                <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2 transition-all duration-300"
-                                    wire:key="group-{{ $groupName }}" x-data="{
+                                <div class="collapse collapse-plus bg-base-200 hover:bg-base-200/20 mb-2 {{ !$collapsedStates[$groupName] ? 'collapse-open' : '' }}"
+                                    wire:key="group-{{ md5($groupName) }}" x-data="{
                                         ...groupErrorBadge(),
-                                        isCollapsed: @entangle('collapsedStates.' . $groupName),
+                                        isCollapsed: @entangle('collapsedStates.' . $groupName).live,
                                         toggle() {
                                             this.isCollapsed = !this.isCollapsed;
                                         }
                                     }"
-                                    :class="{ 'collapse-open': !isCollapsed, 'collapse-close': isCollapsed }"
-                                    data-group-name="{{ $groupName }}">
+                                    :class="{ 'collapse-open': !isCollapsed }" data-group-name="{{ $groupName }}">
                                     {{-- checkboxを使わずにJSで制御することで、瞬時の開閉アニメーションを実現 --}}
                                     <div class="collapse-title text-xl font-medium cursor-pointer" @click="toggle()">
                                         <h3 class="text-lg font-bold flex items-center pr-10">

@@ -7,7 +7,7 @@
             <h2 class="card-title">{{__('CSV File Upload')}}</h2>
             <p>
                 @if(!$importing && !$importFinished)
-                    {{__('import to ')}}「{{$ledgerDefine->title}}」<br/>
+                    {{__('import to ')}}「{{$ledgerDefine?->title}}」<br/>
             {{__('Select CSV File.')}}
             @endif
 
