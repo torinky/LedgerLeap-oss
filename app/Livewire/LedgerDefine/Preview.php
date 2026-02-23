@@ -18,6 +18,9 @@ class Preview extends BaseLivewireComponent
 
     public $backgroundImages = [];
 
+    /** @var array プレビュー用のダミーcontentプロパティ（isDemo=trueで使用） */
+    public array $content = [];
+
     public $descriptionGroup = 'createDescription';
 
     public function mount(Request $request)

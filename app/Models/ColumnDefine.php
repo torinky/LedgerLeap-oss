@@ -196,7 +196,12 @@ class ColumnDefine implements \JsonSerializable
      */
     public function setOptions($options): void
     {
-        $this->options = (array) $options;
+        $arr = (array) $options;
+        // {"options": [...]} のような二重ラップを正規化する
+        if (count($arr) === 1 && isset($arr['options']) && is_array($arr['options'])) {
+            $arr = $arr['options'];
+        }
+        $this->options = $arr;
     }
 
     /**

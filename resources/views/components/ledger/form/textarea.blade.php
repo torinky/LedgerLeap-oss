@@ -1,12 +1,13 @@
 @props([
     'columnDefine' => [],
     'ledgerRecord' => [],
+    'isDemo' => false,
 ])
 
 <x-mary-markdown
     label="{{ $columnDefine->name }}"
-    wire:model.defer="content.{{ $columnDefine->id }}"
+    @if(!$isDemo) wire:model.defer="content.{{ $columnDefine->id }}" @endif
     placeholder="{{ $columnDefine->options['placeholder'] ?? '' }}"
     hint="{{ $columnDefine->options['hint'] ?? '' }}"
-    rows="5" {{-- You can adjust the default rows --}}
+    rows="5"
 />
