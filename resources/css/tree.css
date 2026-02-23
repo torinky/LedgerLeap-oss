@@ -36,6 +36,15 @@
      * fa-stack が 2 * 0.9em ≈ 1.8em のため 2em で余裕を持つ。
      */
     --row-h: 2.2em;
+    /*
+     * 接続線の基準X位置。
+     * ul.paddingLeft(5px) + li.paddingLeft(16px) = 21px が li の左端の絶対位置。
+     * ルートアイコン（SVG 16px幅）の left=20px, centerX=28px。
+     * 縦線は「直前の階層のアイコン中心」に揃えるため、
+     *   connector-x = rootIconCenterX - firstLi.left = 28 - 21 = 7px
+     * em 単位: 7px / (0.85rem × 16px/rem) = 7 / 13.6 ≈ 0.51em → 0.52em を採用。
+     */
+    --connector-x: 0.52em;
     font-size: .85rem;
     font-weight: 400;
     line-height: 1.5;
@@ -113,26 +122,29 @@
     width: 100%;
 }
 
+
 /*
  * 水平接続線: フォントサイズに追従するよう calc(var(--row-h) / 2) で行の中央に配置。
+ * left を --connector-x にしてアイコン中心付近に揃え、
+ * width は縦線X（28px）からアイコン左端（41px）までの距離≈13px に設定。
  */
 .tree ul li:not(.root):before {
     position: absolute;
     top: calc(var(--row-h) / 2);
-    left: 0;
-    width: 12px;
+    left: var(--connector-x);
+    width: 13px;
     height: 1px;
     margin: auto;
     content: '';
     background-color: #999;
 }
 
-/* 垂直接続線 */
+/* 垂直接続線: left を --connector-x にしてアイコン中心付近に揃える */
 .tree ul li:not(.root):after {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 0;
+    left: var(--connector-x);
     width: 1px;
     height: 100%;
     content: '';
@@ -155,12 +167,15 @@
 /*
  * daisyUI の .menu が li > div に強制付与する display: grid を
  * 折りたたみアニメーション用 div.tree-collapse にはリセットする。
+ * padding-top/bottom もリセットすることで縦線とルート行の間のギャップを解消。
  */
 .menu .tree li > div.tree-collapse {
     display: block;
     grid-template-rows: unset !important;
     grid-auto-columns: unset !important;
     grid-auto-flow: unset !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
     margin-left: 0 !important;

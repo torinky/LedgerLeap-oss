@@ -87,9 +87,16 @@
             サイドバー幅は xl:w-64 / 2xl:w-72 でレスポンシブに変化。
         --}}
         <div class="drawer-side z-40 xl:w-64 2xl:w-72"
-            style="position: fixed; top: 64px; height: calc(100vh - 64px); overflow-y: auto; overflow-x: hidden;">
+            style="position: fixed; top: 64px; height: calc(100vh - 64px); overflow-y: auto; overflow-x: clip;">
             <label for="app-drawer" class="drawer-overlay w-full"></label>
-            <ul class="menu overflow-y-auto overflow-x-hidden h-full xl:w-64 2xl:w-72 p-2">
+            {{--
+                overflow-x は hidden から clip に変更。
+                clip は overflow-y: auto との組み合わせで縦スクロールを妨げない。
+                また、子の .tree-scroll-container (overflow-x: auto) はスクロールコンテナとして
+                独立しているため、clip によってクリップされず横スクロールが正常に機能する。
+                hidden は子のスクロールコンテナもブロックするが、clip はそれを許容する。
+            --}}
+            <ul class="menu overflow-y-auto h-full xl:w-64 2xl:w-72 p-2" style="overflow-x: clip;">
                 {{ $drawer ?? '' }}
             </ul>
         </div>

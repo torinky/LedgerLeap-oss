@@ -36,8 +36,13 @@
         </div>
 
         <x-slot:drawer>
-            {{-- Tree Content: 瞬時に真っ白にならないよう opacity で制御。クリックを妨げない。 --}}
-            <div wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
+            {{--
+                Sprint 7: w-full min-w-0 を付与し ul.menu（flex column コンテナ）内で
+                flex child としての幅制約を機能させる。これがないと min-width: auto で
+                コンテンツ幅（深い階層では400px超）に拡張してしまう。
+                Tree Content: 瞬時に真っ白にならないよう opacity で制御。クリックを妨げない。
+            --}}
+            <div class="w-full min-w-0" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
                 <livewire:folder.tree :currentFolderId="$currentFolderId" :selectedFolderIds="$selectedFolderIds" :parentComponentId="$this->getId()"
                     wire:key="folder-tree-stable" />
             </div>
