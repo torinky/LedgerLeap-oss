@@ -29,7 +29,6 @@
             </div>
         </template>
     </div>
-    </div>
 @else
     <x-mary-file label="{{__('ledger.column.bg_file')}}"
                  wire:model.live="columnUploadedFile.{{$column['id']}}"
