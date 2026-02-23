@@ -104,8 +104,10 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
     public function getActivitiesQuery()
     {
         $query = CustomActivity::query()
-            ->with(['causer', 'subject'])
             ->orderBy('created_at', 'desc');
+
+        // NOTE: properties は必要だが JSON で大容量のため orderBy との組み合わせで
+        // sort_buffer_size を超える場合がある。インデックス追加と sort_buffer_size 設定で対処済み。
 
         // 特定のリソースに絞り込む場合
         if ($this->resourceId !== null && $this->resourceType !== null) {
@@ -240,7 +242,24 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
             ->orderBy('description')
             ->get();
 
-        $activities = $this->getActivitiesQuery()->paginate(10, ['*'], pageName: 'activity_page');
+        // 2段階クエリ: まず ID のみで ORDER BY + LIMIT を実行（sort_buffer_size 節約）
+        // → 対象 ID で本データを取得することで大容量の properties カラムをソートに含めない
+        $idsQuery = $this->getActivitiesQuery()->select('id');
+        $activities = $idsQuery->paginate(10, ['id'], pageName: 'activity_page');
+        $orderedIds = $activities->pluck('id')->toArray();
+
+        if (! empty($orderedIds)) {
+            // ID順を維持して本データを取得
+            $idOrder = implode(',', $orderedIds);
+            $fullRecords = CustomActivity::with(['causer', 'subject'])
+                ->whereIn('id', $orderedIds)
+                ->orderByRaw("FIELD(id, {$idOrder})")
+                ->get()
+                ->keyBy('id');
+
+            // Paginator の items を差し替える
+            $activities->setCollection($fullRecords->values());
+        }
 
         // ★★★ Bladeに渡すヘッダー情報を動的に生成 ★★★
         $headers = $this->getVisibleHeaders();
