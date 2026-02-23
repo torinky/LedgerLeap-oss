@@ -1,3 +1,32 @@
+/*
+ * ツリーカードのスクロールコンテナ。
+ * Sprint 8 修正: overflow-x を hidden から visible に変更。
+ * tree-row は width: 100% のため横スクロールは不要だが、
+ * overflow を visible にすることでツールチップ等が切れない。
+ * 横スクロールは .tree-row-left 内で行う。
+ */
+.tree-scroll-container {
+    overflow-x: visible; /* tree-row-left が内部でスクロールするため visible に変更 */
+    overflow-y: visible;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-base-content) 30%, transparent) transparent;
+}
+
+.tree-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tree-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tree-scroll-container::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--color-base-content) 30%, transparent);
+    border-radius: 2px;
+}
 
 .tree {
     position: relative;
@@ -10,26 +39,25 @@
     font-size: .85rem;
     font-weight: 400;
     line-height: 1.5;
+    /*
+     * Sprint 7 最終修正: width: 100% でコンテナ幅に収める。
+     * tree-row も 100% 幅にすることでボタンが右端固定になる。
+     */
     width: 100%;
-    max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
-    /*color: #212529;*/
+    overflow: visible;
 }
 
 .tree span {
-    /* px固定を避け em で指定するとフォントサイズ変更に追従する */
     font-size: 0.95em;
     letter-spacing: .4px;
-    /*color: #a8a8a8;*/
 }
 
-/* 行コンテナ: 最小高さを --row-h で保証し、daisyUIのpadding付与を確実にリセット */
-/* overflow は visible にして折りたたみボタンがクリップされないようにする */
 /*
- * li の tree-collapse を display:block に修正したことで li の幅が正しくなったため、
- * width: 100% でそのまま li の右端まで伸びる。
- * .tree-row に絞り込むことで折りたたみアニメーション用 .tree-collapse への誤適用を防ぐ。
+ * 行コンテナ: width: 100% でスクロールコンテナ幅に収める。
+ * Sprint 7 最終修正: max-content から 100% に変更。
+ * これによりボタンが li の右端（= コンテナ右端）に常に配置され、
+ * 深い階層でもボタンが表示域外に押し出されなくなる。
  */
 .tree li > div.tree-row {
     min-height: var(--row-h);
@@ -41,7 +69,7 @@
     box-sizing: border-box;
 }
 
-/* ルートノードは padding-left: 0 なので補正不要（共通ルールと同じ） */
+/* ルートノード */
 .tree li.root > div.tree-row {
     width: 100%;
     margin-right: 0;
@@ -49,18 +77,10 @@
 
 /*
  * fa-stack のフォントサイズを em で制御。
- * インラインスタイル (style="font-size:0.9em") からこちらに移動。
- * --row-h が 2.2em (= 2×1.1em) を前提に、fa-stack 2em 高さと合わせるため 0.9em。
  */
 .tree .fa-stack {
     font-size: 0.9em;
 }
-
-/*
-.tree .fa-folder-open, .tree .fa-folder {
-    color: #007bff;
-}
-*/
 
 .tree .fa-html5 {
     color: #f21f10;
@@ -70,6 +90,10 @@
     padding-left: 5px;
     list-style: none;
     margin-inline-start: 0;
+    /*
+     * Sprint 7 最終修正: width: 100% でコンテナ幅に収める。
+     * インデントは padding-left で表現し、ul 自体は幅を超えない。
+     */
     width: 100%;
     box-sizing: border-box;
 }
@@ -81,12 +105,16 @@
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     display: inherit;
-    max-width: 100%;
+    /*
+     * Sprint 7 最終修正: width: 100% でコンテナ幅に収める。
+     * padding-left の累積によりタイトルエリアが狭くなるが、
+     * <a> の flex-1 min-w-0 truncate で対応。
+     */
+    width: 100%;
 }
 
 /*
  * 水平接続線: フォントサイズに追従するよう calc(var(--row-h) / 2) で行の中央に配置。
- * px固定 (19px) は廃止。
  */
 .tree ul li:not(.root):before {
     position: absolute;
@@ -127,14 +155,6 @@
 /*
  * daisyUI の .menu が li > div に強制付与する display: grid を
  * 折りたたみアニメーション用 div.tree-collapse にはリセットする。
- * tree-collapse は width: 100% のブロック要素として動作させる必要がある。
- *
- * 注意: display: block !important は Alpine.js の x-show (display: none) を
- * 上書きしてしまい折りたたみが効かなくなるため使用不可。
- * daisyUI の :where() セレクターは詳細度0のため、!important なしの通常ルールで上書き可能。
- * display: block（!important なし）を指定することで:
- *   - 展開時: CSS の display: block が適用される
- *   - 非表示時: Alpine.js x-show が inline style で display: none を書き込み CSS より優先される
  */
 .menu .tree li > div.tree-collapse {
     display: block;
@@ -150,8 +170,6 @@
 
 /*
  * daisyUI の .menu が li > * に強制付与する padding-left / margin-left をリセット。
- * ツリーの div 行コンテナ（.tree-row）と a リンクに適用して補助線とのズレを防ぐ。
- * .tree-collapse（折りたたみアニメーション用div）は除外する。
  */
 .menu .tree li > div.tree-row,
 .menu .tree li > a {
@@ -162,29 +180,33 @@
 
 /*
  * daisyUI が .menu li > a に強制付与する display:grid をリセット。
- * ツリーの <a> は flex で横並びにするため上書きが必要。
- * また padding-inline もリセットして補助線のずれを防ぐ。
+ * Sprint 8: .tree-row-left div 内の a にも適用。
+ * .tree-row-left > a は inline-flex + min-width: max-content で
+ * コンテンツ幅を保持し、親の overflow-x: auto による横スクロールを有効にする。
  */
 .menu .tree li > div.tree-row > a {
     display: flex !important;
     padding-inline: 0.25rem !important;
-    /* daisyUI の grid-auto-columns / grid-auto-flow も無効化 */
     grid-auto-columns: unset !important;
     grid-auto-flow: unset !important;
+}
+.menu .tree li > div.tree-row > div.tree-row-left > a {
+    display: inline-flex !important;
+    min-width: max-content !important;
+    padding-inline: 0.25rem !important;
+    grid-auto-columns: unset !important;
+    grid-auto-flow: unset !important;
+}
+
+/* tree-row-left 内の <a> ホバー背景も二重表示を防ぐ */
+.menu .tree li > div.tree-row:hover > div.tree-row-left > a,
+.menu .tree li > div.tree-row:focus-within > div.tree-row-left > a {
+    background-color: transparent !important;
 }
 
 .menu .tree :where(li ul):before {
     background: inherit;
 }
-
-/*
- * daisyUI .menu が li > div に付与するデフォルト背景（白ボックス）を無効化し、
- * ツリー独自のピルホバーに差し替える。
- *
- * ホバー時は <div> 全体（アイコン＋タイトル＋バッジ＋ボタン）を
- * 薄いグレーのピル（rounded + bg-base-200/60）で囲う。
- * <a> 側の個別ホバーは <div> ホバーと重ならないよう透明に上書きする。
- */
 
 /* daisyUI が li > div に付与する白ボックス背景をリセット（非ホバー時） */
 .menu .tree li > div.tree-row {
@@ -202,15 +224,24 @@
 
 /* <div> がホバーされているとき <a> 個別の背景を消して二重表示を防ぐ */
 .menu .tree li > div.tree-row:hover > a,
-.menu .tree li > div.tree-row:focus-within > a {
+.menu .tree li > div.tree-row:focus-within > a,
+.menu .tree li > div.tree-row:hover > div.tree-row-left > a,
+.menu .tree li > div.tree-row:focus-within > div.tree-row-left > a {
     background-color: transparent !important;
 }
 
 /*
+ * 折りたたみボタン: .tree-row の flex 末尾に shrink-0 で固定。
+ * Sprint 7 最終修正: width: 100% の tree-row 内にあるため、
+ * ボタンは常にコンテナ幅の右端に位置する。
+ * position: sticky は不要（tree-row が max-content ではないため）。
+ */
+.menu .tree li > div.tree-row > button.tree-toggle-btn {
+    flex-shrink: 0;
+}
+
+/*
  * ツリーノードの権限ツールチップ。
- * daisyUI の .tooltip + data-tip 属性で表示する。
- * サイドバー幅が狭いため tooltip-right を指定。
- * z-index は drawer-side (z-40) より高くする必要があるため明示的に上書き。
  */
 .menu .tree li > div > a > span[title] {
     cursor: help;
@@ -222,3 +253,31 @@
     z-index: 100;
 }
 
+/*
+ * .tree-row-left: 2カラム構造の左カラム。
+ * flex-1 min-w-0 で残り幅を使い切りつつ、overflow-x: auto で横スクロール可能。
+ * 内部の <a> は whitespace-nowrap で全文表示（truncate しない）。
+ * インデントが深くなってもボタンは右固定のまま維持される。
+ * scrollbar-width: thin でスクロールバーを細く表示。
+ */
+.tree li > div.tree-row > div.tree-row-left {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-base-content) 20%, transparent) transparent;
+}
+
+.tree li > div.tree-row > div.tree-row-left::-webkit-scrollbar {
+    height: 3px;
+}
+
+.tree li > div.tree-row > div.tree-row-left::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tree li > div.tree-row > div.tree-row-left::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+    border-radius: 2px;
+}
