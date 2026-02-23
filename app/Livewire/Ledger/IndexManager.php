@@ -194,7 +194,6 @@ class IndexManager extends BaseLivewireComponent
         $this->initSearchContext();
     }
 
-
     public function initSearchContext()
     {
         $synonymServiceConfig = new SynonymServiceConfig([

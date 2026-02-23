@@ -193,4 +193,3 @@ class SearchContextTest extends TestCase
         $this->assertTrue($config->useTechnicalTerm);
     }
 }
-

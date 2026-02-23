@@ -2,14 +2,14 @@
 
 namespace Tests\Unit\Mail;
 
+use App\Mail\TaskClaimedMail;
+use App\Mail\WorkflowActionMail;
 use App\Mail\WorkflowSummaryMail;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\NotificationType;
 use App\Models\User;
-use App\Mail\WorkflowActionMail;
-use App\Mail\TaskClaimedMail;
 use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -409,4 +409,3 @@ class MailClassesTest extends TestCase
         $this->assertEmpty($mail->attachments());
     }
 }
-

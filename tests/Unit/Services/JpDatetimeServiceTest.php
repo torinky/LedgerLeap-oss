@@ -291,4 +291,3 @@ class JpDatetimeServiceTest extends TestCase
         $this->assertEquals('令和', $result);
     }
 }
-

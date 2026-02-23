@@ -52,7 +52,7 @@ class LdapRealConnectionTest extends TestCase
     #[Group('ldap')]
     #[Group('integration')]
     #[Test]
-    public function canConnectToRealLdapServer()
+    public function can_connect_to_real_ldap_server()
     {
         // LDAPサーバーの可用性をチェック
         if (! $this->isLdapServerAvailable()) {
@@ -91,7 +91,7 @@ class LdapRealConnectionTest extends TestCase
     #[Group('integration')]
     #[Group('ldap')]
     #[Test]
-    public function canSearchRootDseInRealLdapServer()
+    public function can_search_root_dse_in_real_ldap_server()
     {
         // LDAPサーバーの可用性をチェック
         if (! $this->isLdapServerAvailable()) {

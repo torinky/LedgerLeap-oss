@@ -2,15 +2,14 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use App\Livewire\Ledger\IndexManager;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\Traits\RefreshDatabaseWithTenant;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class IndexManagerAssetPersistenceTest extends TestCase
 {
@@ -19,8 +18,11 @@ class IndexManagerAssetPersistenceTest extends TestCase
     protected bool $tenancy = false;
 
     protected User $user;
+
     protected Folder $folder;
+
     protected Folder $subFolder;
+
     protected LedgerDefine $ledgerDefine;
 
     protected function setUp(): void
@@ -39,19 +41,19 @@ class IndexManagerAssetPersistenceTest extends TestCase
         $this->folder = Folder::factory()->create(['title' => 'Root Folder']);
         $this->subFolder = Folder::factory()->create([
             'title' => 'Sub Folder',
-            'parent_id' => $this->folder->id
+            'parent_id' => $this->folder->id,
         ]);
 
         // 台帳定義の作成（サブフォルダ内に1つ）
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'title' => 'Test Ledger',
-            'folder_id' => $this->subFolder->id
+            'folder_id' => $this->subFolder->id,
         ]);
-        
+
         // 別の台帳定義（ルートフォルダ内に1つ）
         LedgerDefine::factory()->create([
             'title' => 'Root Ledger',
-            'folder_id' => $this->folder->id
+            'folder_id' => $this->folder->id,
         ]);
     }
 
@@ -65,11 +67,13 @@ class IndexManagerAssetPersistenceTest extends TestCase
         // 初期状態で counts が存在することを確認
         $component->assertViewHas('folderRecords', function ($folders) {
             $folder = $folders->where('id', $this->subFolder->id)->first();
+
             return $folder && isset($folder->ledger_defines_count) && $folder->ledger_defines_count === 1;
         });
 
         $component->assertViewHas('ledgerDefineRecords', function ($defines) {
             $define = $defines->where('id', '!=', $this->ledgerDefine->id)->first();
+
             // ルートフォルダには1つの台帳定義があるはず
             return $define && isset($define->ledgers_count);
         });
@@ -82,6 +86,7 @@ class IndexManagerAssetPersistenceTest extends TestCase
         // Computed プロパティの場合、再レンダリング時に再取得されるため、常に含まれるはず
         $component->assertViewHas('folderRecords', function ($folders) {
             $folder = $folders->where('id', $this->subFolder->id)->first();
+
             return $folder && isset($folder->ledger_defines_count) && $folder->ledger_defines_count === 1;
         });
     }
@@ -102,7 +107,7 @@ class IndexManagerAssetPersistenceTest extends TestCase
         $component->assertViewHas('ledgerDefineRecords', function ($defines) {
             return $defines->count() === 1 && $defines->first()->id === $this->ledgerDefine->id;
         });
-        
+
         // カウントも含まれていること
         $component->assertViewHas('ledgerDefineRecords', function ($defines) {
             return isset($defines->first()->ledgers_count);
@@ -115,12 +120,12 @@ class IndexManagerAssetPersistenceTest extends TestCase
         // 階層の追加: Root -> SubFolder -> ChildFolder -> ChildLedger
         $childFolder = Folder::factory()->create([
             'title' => 'Child Folder',
-            'parent_id' => $this->subFolder->id
+            'parent_id' => $this->subFolder->id,
         ]);
 
         LedgerDefine::factory()->create([
             'title' => 'Child Ledger',
-            'folder_id' => $childFolder->id
+            'folder_id' => $childFolder->id,
         ]);
 
         // $this->folder (Root) を表示
@@ -131,7 +136,8 @@ class IndexManagerAssetPersistenceTest extends TestCase
 
         $component->assertViewHas('folderRecords', function ($folders) {
             $folder = $folders->where('id', $this->subFolder->id)->first();
-            return $folder && (int)$folder->ledger_defines_count === 2;
+
+            return $folder && (int) $folder->ledger_defines_count === 2;
         });
     }
 }

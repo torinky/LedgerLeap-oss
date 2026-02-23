@@ -83,4 +83,3 @@ class LocalImageManagerTest extends TestCase
         Storage::assertExists('public/images/file-b.jpg');
     }
 }
-

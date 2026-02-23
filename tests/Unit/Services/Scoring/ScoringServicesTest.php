@@ -195,4 +195,3 @@ class ScoringServicesTest extends TestCase
         $this->assertEqualsWithDelta(0.0, $result['composite_score'], 0.01);
     }
 }
-

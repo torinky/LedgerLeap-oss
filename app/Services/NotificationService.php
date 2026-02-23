@@ -79,7 +79,6 @@ class NotificationService
         //        return $user->unreadNotifications()->count();
     }
 
-
     // 既読処理 (単数/複数)
     public function markAsRead(User $user, $notificationIds = null): void
     {
@@ -222,8 +221,6 @@ class NotificationService
         // Role の ID から Role モデルを取得
         return Role::whereIn('id', $roleIds)->get();
     }
-
-
 
     /**
      * ワークフロー関連の通知を送信する (修正: task_claimed に対応)

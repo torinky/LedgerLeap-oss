@@ -731,7 +731,7 @@ class ModifyColumnTest extends TestCase
 
         // 1. 「全て展開」をオンにする
         $component->set('allExpanded', true);
-        
+
         // すべてのグループが展開されているか検証
         $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
         $collapsedStates = $component->get('collapsedStates');
@@ -739,7 +739,7 @@ class ModifyColumnTest extends TestCase
 
         // 2. 「全て展開」をオフにする
         $component->set('allExpanded', false);
-        
+
         // すべてのグループが閉じているか検証
         $collapsedStates = $component->get('collapsedStates');
         $this->assertTrue($collapsedStates[$groupName]);
@@ -766,7 +766,7 @@ class ModifyColumnTest extends TestCase
 
         // 再描画（バリデーションエラーなどが発生したと想定）
         $component->set('content.0', 'trigger re-render');
-        
+
         // 状態が維持されていることを確認
         $component->assertSet('allExpanded', true);
         $collapsedStates = $component->get('collapsedStates');
@@ -807,12 +807,12 @@ class ModifyColumnTest extends TestCase
         $groupName = collect($this->ledgerDefine->column_define)->first()->group ?: __('ledger.form.group_default');
 
         // 全て展開された状態からシミュレート
-        $component->set('collapsedStates.' . $groupName, false);
+        $component->set('collapsedStates.'.$groupName, false);
         $component->assertSet('allExpanded', true);
 
         // 1つ閉じる（シミュレート: @entangle による更新を想定）
-        $component->set('collapsedStates.' . $groupName, true);
-        
+        $component->set('collapsedStates.'.$groupName, true);
+
         // allExpanded が false になることを確認
         $component->assertSet('allExpanded', false);
     }
