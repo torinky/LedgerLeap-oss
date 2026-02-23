@@ -139,15 +139,15 @@ class TreeTest extends TestCase
         $this->assertNotNull($component->folders);
         $this->assertGreaterThan(0, $component->folders->count());
 
-        // 各フォルダーの ledgerDefines がEager Loadされていることを確認
+        // Sprint 4: descendants リレーションで全子孫が一括 Eager Load されていることを確認
         foreach ($component->folders as $folder) {
             $this->assertTrue($folder->relationLoaded('ledgerDefines'));
+            // descendants リレーションがロードされていることを確認
+            $this->assertTrue($folder->relationLoaded('descendants'));
 
-            // 子フォルダーも確認
-            if ($folder->children && $folder->children->count() > 0) {
-                foreach ($folder->children as $child) {
-                    $this->assertTrue($child->relationLoaded('ledgerDefines'));
-                }
+            // 各子孫フォルダーの ledgerDefines も Eager Load されていることを確認
+            foreach ($folder->descendants as $descendant) {
+                $this->assertTrue($descendant->relationLoaded('ledgerDefines'));
             }
         }
     }
@@ -201,9 +201,8 @@ class TreeTest extends TestCase
      * N+1 クエリ防止テスト（浅い階層 + 深い5段階層の両方を一括検証）
      *
      * setUp では Child 1〜2, Grandchild 1, Deep L2〜L5 の計7ノードが作成される。
-     * 上限: 25クエリ（現状の eagerLoadDescendants() は再帰処理のため）
-     * Sprint 4 で Folder::whereIsRoot()->with('descendants.ledgerDefines') に最適化後、
-     * このしきい値は 20 未満に締め直すこと。
+     * Sprint 4: Folder::whereIsRoot()->with('descendants.ledgerDefines') による最適化で
+     * クエリ数は階層の深さに依存しない固定値となるため、上限を 20 未満に締め直す。
      */
     #[Test]
     public function it_avoids_n_plus_one_queries_for_ledger_defines()
@@ -217,9 +216,8 @@ class TreeTest extends TestCase
 
         Livewire::test(Tree::class);
 
-        // setUp で Deep L2〜L5 の5段階層も含まれるため上限は25
-        // Sprint 4 の descendants 最適化後に 20 未満へ締め直すこと
-        $this->assertLessThan(25, $queryCount, 'N+1 query problem detected');
+        // Sprint 4: descendants リレーション最適化後は 20 クエリ未満を維持すること
+        $this->assertLessThan(20, $queryCount, 'N+1 query problem detected');
     }
 
     #[Test]
@@ -290,7 +288,8 @@ class TreeTest extends TestCase
         $component->assertSee('Child 1');
 
         // Sprint 3: 折りたたみボタン（fa-chevron）が存在することを確認（子を持つフォルダにのみ表示）
-        $component->assertSee('fa-chevron-down', false);
+        // fa-chevron-right を CSS transform で回転させてアニメーションを実現するため
+        $component->assertSee('fa-chevron-right', false);
     }
 
     /**
@@ -314,5 +313,35 @@ class TreeTest extends TestCase
         $component->assertStatus(200);
         // currentFolderId に対応するノードの x-data に open: true が埋め込まれる
         $component->assertSeeHtml('open: (function()');
+    }
+
+    /**
+     * Sprint 4: 5段階層での descendants 一括 Eager Load 回帰テスト
+     *
+     * setUp で作成した Deep L2〜L5 の5段階層が descendants リレーションで
+     * 正しく全子孫を取得できることを確認する。
+     * descendants リレーション最適化後もクエリ数が 20 未満を維持していることを
+     * it_avoids_n_plus_one_queries_for_ledger_defines で保証している。
+     */
+    #[Test]
+    public function it_loads_all_descendants_in_deep_hierarchy()
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Tree::class);
+
+        $component->assertStatus(200);
+
+        // ルートフォルダーに descendants が一括ロードされていることを確認
+        $rootFolder = $component->folders->first();
+        $this->assertTrue($rootFolder->relationLoaded('descendants'));
+
+        // 5段階層（Deep L2〜L5 を含む計7ノード）が全て descendants に含まれることを確認
+        $this->assertEquals(7, $rootFolder->descendants->count());
+
+        // 深い階層の末端ノード（Deep L5）も descendants に含まれることを確認
+        $deepL5 = $rootFolder->descendants->firstWhere('title', 'Deep L5');
+        $this->assertNotNull($deepL5, 'Deep L5 should be loaded via descendants relation');
+        $this->assertTrue($deepL5->relationLoaded('ledgerDefines'));
     }
 }

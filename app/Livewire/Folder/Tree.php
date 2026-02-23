@@ -8,6 +8,7 @@ use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Kalnoy\Nestedset\Collection as NestedSetCollection;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive;
 
@@ -37,35 +38,24 @@ class Tree extends BaseLivewireComponent
         // 渡されるため、ここでの再初期化は不要。また、Reactive プロパティを子で書き換えると
         // CannotMutateReactivePropException の原因になる。
 
-        // 全てのフォルダーを階層構造でEager Loadし、各フォルダーの台帳定義もロード
-        // Nestedsetの機能を使って、ルートから全子孫を一度に取得
+        // kalnoy/nestedset の descendants リレーションで全子孫を一括取得。
+        // 再帰的 Eager Load (eagerLoadDescendants) を廃止し、
+        // クエリ数を階層の深さに依存しない固定値に最適化（Sprint 4）。
         $this->folders = Folder::whereIsRoot()
-            ->with(['ledgerDefines', 'children' => function ($query) {
-                $query->with('ledgerDefines');
+            ->with(['ledgerDefines', 'descendants' => function ($query) {
+                $query->with('ledgerDefines')->defaultOrder();
             }])
             ->get();
 
-        // 全フォルダーを取得して、再帰的にledgerDefinesをEager Load
-        // これにより、N+1問題を回避
-        $this->eagerLoadDescendants($this->folders);
+        // descendants で取得した全子孫を NestedSetCollection::linkNodes() で
+        // children リレーションにポピュレートする。
+        // ビューは $folder->children を再帰的に使って描画するため必須。
+        foreach ($this->folders as $root) {
+            $allNodes = new NestedSetCollection(array_merge([$root], $root->descendants->all()));
+            $allNodes->linkNodes();
+        }
 
         $this->initializePermissions($writableFolderRepository);
-    }
-
-    /**
-     * 全ての子孫フォルダーのledgerDefinesを再帰的にEager Load
-     */
-    private function eagerLoadDescendants($folders)
-    {
-        foreach ($folders as $folder) {
-            if ($folder->children && $folder->children->count() > 0) {
-                // 子フォルダーのledgerDefinesをロード
-                $folder->children->load('ledgerDefines');
-
-                // 再帰的に子孫を処理
-                $this->eagerLoadDescendants($folder->children);
-            }
-        }
     }
 
     #[On('permissions-changed')]
