@@ -154,7 +154,7 @@
                 </x-slot:empty>
             </x-mary-table>
             <div class="mt-4">
-                {{ $activities->links() }}
+                {!! $activities->links('components.common.pagination-links', ['position' => 'activity']) !!}
             </div>
             </div>
             </div> {{-- End of relative container for loading-overlay --}}

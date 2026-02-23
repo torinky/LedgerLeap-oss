@@ -191,7 +191,7 @@
         </x-mary-modal>
 
         {{-- ページネーション (必要なら) --}}
-        <div class="mt-4"> {{ $pendingTasks->links() }} </div>
+        <div class="mt-4">{!! $pendingTasks->links('components.common.pagination-links', ['position' => 'task']) !!}</div>
 
     </x-mary-card>
     </div> {{-- End of wire:loading.delay.remove --}}

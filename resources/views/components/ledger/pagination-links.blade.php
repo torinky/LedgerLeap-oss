@@ -1,10 +1,8 @@
 @php
     $currentPage = $paginator->currentPage();
-    $startCount = ($currentPage-1) * $this->perPage + 1;
+    $startCount = ($currentPage - 1) * $this->perPage + 1;
     $lastPage = $this->lastPage();
-    if(empty($position)){
-        $position = 'default';
-    }
+    $position = $position ?? 'default';
 @endphp
 
 <div class="grid justify-items-center">
@@ -75,7 +73,7 @@
         </nav>
     @endif
     <div role="record count" aria-label="record count" class="">
-        {{$startCount}} 〜 @if( ($startCount + $this->perPage -1)<=$this->totalRecords)
+        {{$startCount}} 〜 @if( ($startCount + $this->perPage - 1) <= $this->totalRecords)
             {{$startCount + $this->perPage - 1}}
         @else
             {{$this->totalRecords}}
