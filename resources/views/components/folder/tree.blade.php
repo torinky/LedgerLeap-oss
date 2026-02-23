@@ -3,6 +3,7 @@
     'currentFolderId' => 1,
     'selectedFolderIds' => [],
     'selectedFolderChildrenIds' => [],
+    'selectedFolderAncestorIds' => [],
     'writableFolderIds' => [],
     'readableFolderIds' => [],
     'manageableFolderIds' => [],
@@ -15,16 +16,19 @@
             $isOpen = $folder->isRoot()
                 || $folder->id == $currentFolderId
                 || in_array($folder->id, $selectedFolderIds)
-                || in_array($folder->id, $selectedFolderChildrenIds);
+                || in_array($folder->id, $selectedFolderChildrenIds)
+                || in_array($folder->id, $selectedFolderAncestorIds);
             $hasChildren = $folder->children->isNotEmpty();
         @endphp
         <li class="{{ $folder->isRoot() ? 'root' : '' }}" wire:key="f_li_{{ $folder->id }}"
             x-data="{
                 open: (function() {
+                    {{-- 選択フォルダ・先祖フォルダは localStorage より強制展開を優先 --}}
+                    @if ($isOpen) return true; @endif
                     try {
                         var state = JSON.parse(localStorage.getItem('folderTree') || '{}');
-                        return state[{{ $folder->id }}] !== undefined ? state[{{ $folder->id }}] : {{ $isOpen ? 'true' : 'false' }};
-                    } catch(e) { return {{ $isOpen ? 'true' : 'false' }}; }
+                        return state[{{ $folder->id }}] !== undefined ? state[{{ $folder->id }}] : false;
+                    } catch(e) { return false; }
                 })(),
                 toggleOpen() {
                     this.open = !this.open;
@@ -166,6 +170,7 @@
                         :currentFolderId="$currentFolderId ?? null"
                         :selectedFolderIds="$selectedFolderIds ?? []"
                         :selectedFolderChildrenIds="$selectedFolderChildrenIds ?? []"
+                        :selectedFolderAncestorIds="$selectedFolderAncestorIds ?? []"
                         :parentComponentId="$parentComponentId" />
                 </div>
             @endif

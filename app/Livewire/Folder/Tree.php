@@ -78,6 +78,30 @@ class Tree extends BaseLivewireComponent
             'selectedFolderIds' => $this->selectedFolderIds,
         ]);
 
-        return view('livewire.folder.tree');
+        // selectedFolderIds および currentFolderId の先祖フォルダを計算し、
+        // ツリーで選択済みフォルダへのパスを自動展開するために使用する。
+        $targetIds = array_filter(array_unique(array_merge(
+            $this->selectedFolderIds,
+            $this->currentFolderId ? [$this->currentFolderId] : []
+        )));
+
+        $selectedFolderAncestorIds = [];
+        if (! empty($targetIds)) {
+            $targetFolders = Folder::whereIn('id', $targetIds)->get(['id', '_lft', '_rgt']);
+            if ($targetFolders->isNotEmpty()) {
+                $selectedFolderAncestorIds = Folder::where(function ($query) use ($targetFolders) {
+                    foreach ($targetFolders as $folder) {
+                        $query->orWhere(function ($q) use ($folder) {
+                            $q->where('_lft', '<', $folder->_lft)
+                                ->where('_rgt', '>', $folder->_rgt);
+                        });
+                    }
+                })->pluck('id')->toArray();
+            }
+        }
+
+        return view('livewire.folder.tree', [
+            'selectedFolderAncestorIds' => $selectedFolderAncestorIds,
+        ]);
     }
 }
