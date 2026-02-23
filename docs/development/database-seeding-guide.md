@@ -328,3 +328,74 @@ SEEDER_MODE=demo
 ## 🔗 関連ドキュメント
 
 - **[デモ・統合テストデータ マスタープラン](./test-data-design.md)**: デモデータ全体の設計思想と詳細なデータセットの定義。
+
+---
+
+## 🏥 DemoDeepHierarchySeeder（深い階層デモデータ）
+
+**追加日:** 2026-02-23  
+**Issue:** [#73 台帳リスト画面: フォルダツリーのスクロール追従・深い階層対応](https://github.com/torinky/LedgerLeap/issues/73)
+
+### 目的
+
+医療現場（総合病院）を模した **5〜6 段の深いフォルダ階層** を検証するためのオプション Seeder。
+`DemoCompleteSeeder` が提供する 3 段階層では検証できない以下を可能にする。
+
+| 検証項目 | 説明 |
+| :--- | :--- |
+| Sticky ツリーの動作 | スクロール時にツリーが追従するか |
+| アコーディオン UI | 深い階層を折りたたみ・展開できるか |
+| descendants クエリ最適化 | 階層に依存しない固定クエリ数を実測確認 |
+| 選択ノード自動スクロール | 深いノードを選択時に自動スクロールするか |
+
+### 生成されるデータ
+
+```
+[DEMO-DEEP] 総合病院（ルート）             [1段目]
+├── [DEMO-DEEP] 内科部門                   [2段目]
+│   ├── [DEMO-DEEP] 外来診療科             [3段目]
+│   │   ├── [DEMO-DEEP] 第一外来病棟       [4段目]
+│   │   │   ├── [DEMO-DEEP] 朝番チーム ←台帳定義あり  [5段目]
+│   │   │   └── [DEMO-DEEP] 夜番チーム ←台帳定義あり  [5段目]
+│   │   └── [DEMO-DEEP] 第二外来病棟       [4段目]
+│   └── [DEMO-DEEP] 入院診療科             [3段目]
+│       ├── [DEMO-DEEP] 第一病棟           [4段目]
+│       └── [DEMO-DEEP] 第二病棟           [4段目]
+├── [DEMO-DEEP] 外科部門                   [2段目]
+│   ├── [DEMO-DEEP] 一般外科              [3段目]
+│   │   └── [DEMO-DEEP] 手術室 ←台帳定義あり  [4段目]
+│   └── [DEMO-DEEP] 整形外科              [3段目]
+│       └── [DEMO-DEEP] リハビリ病棟       [4段目]
+└── [DEMO-DEEP] 管理部門                   [2段目]
+    ├── [DEMO-DEEP] 診療録管理             [3段目]
+    └── [DEMO-DEEP] 医療安全管理           [3段目]
+        └── [DEMO-DEEP] インシデント管理 ←台帳定義あり  [4段目]
+```
+
+| 台帳定義 | 配置フォルダ | レコード数 |
+| :--- | :--- | ---: |
+| `[DEMO-DEEP] 申し送り記録（朝番）` | 朝番チーム | 5 件 |
+| `[DEMO-DEEP] 申し送り記録（夜番）` | 夜番チーム | 3 件 |
+| `[DEMO-DEEP] 手術記録` | 手術室 | 4 件 |
+| `[DEMO-DEEP] インシデント報告` | インシデント管理 | 2 件 |
+
+### 実行方法
+
+```bash
+# DemoCompleteSeeder 実行済みの環境に追加投入（推奨）
+./vendor/bin/sail artisan db:seed --class=DemoDeepHierarchySeeder
+```
+
+### 設計原則
+
+- **`[DEMO-DEEP]` プレフィックス:** 既存データと明確に区別。削除も容易。
+- **冪等性:** `firstOrCreate` / 重複チェックにより2回実行しても安全。
+- **独立実行:** `DemoCompleteSeeder` 未実行でも単体で動作（ユーザー・ロールを自動作成）。
+- **権限:** `Super Admin` ロールに `[DEMO-DEEP] 総合病院` への ADMIN 権限を付与。
+
+### 関連ファイル
+
+- `database/seeders/DemoDeepHierarchySeeder.php`
+- `docs/work/ui-ux/ledger-list-redesign/2026-02-23_deep-hierarchy-demo-data-plan.md`
+- `docs/work/ui-ux/ledger-list-redesign/2026-02-23_folder-tree-sticky-improvement-plan.md`
+
