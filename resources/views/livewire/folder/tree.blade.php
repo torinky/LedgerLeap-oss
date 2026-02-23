@@ -12,7 +12,7 @@
         <div class="card-body p-2">
             <div class="tree-scroll-container">
                 <x-folder.tree :folders="$folders" :writableFolderIds="$writableFolderIds" :readableFolderIds="$readableFolderIds" :currentFolderId="$effectiveFolderId ?? $currentFolderId" :manageableFolderIds="$manageableFolderIds"
-                    :selectedFolderIds="$selectedFolderIds" :selectedFolderAncestorIds="$selectedFolderAncestorIds ?? []" :parentComponentId="$parentComponentId" />
+                    :selectedFolderIds="$selectedFolderIds ?? []" :selectedFolderAncestorIds="$selectedFolderAncestorIds ?? []" :parentComponentId="$parentComponentId" />
             </div>
         </div>
     </div>

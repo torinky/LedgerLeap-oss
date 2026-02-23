@@ -1,5 +1,33 @@
-@php use App\Models\LedgerDefine; @endphp
+@php
+    use App\Models\LedgerDefine;
+@endphp
 <div class="card bg-warning/50 h-full relative overflow-hidden">
+    {{-- ドロワー: parentComponentId を渡すことでツリーが直接 changeCurrentFolder を呼ぶ --}}
+    <x-slot:drawer>
+        <div class="w-full min-w-0" wire:loading.class="opacity-50" wire:target="changeCurrentFolder">
+            <livewire:folder.tree
+                :parentComponentId="$componentId"
+                :currentFolderId="$currentFolderId"
+                :selectedFolderIds="$selectedFolderIds"
+                wire:key="folder-tree-ledger-define-stable" />
+        </div>
+        <div wire:loading.delay wire:target="changeCurrentFolder" class="p-4 space-y-3">
+            @foreach (range(1, 5) as $i)
+                <div class="flex items-center gap-2">
+                    <div class="h-4 w-4 bg-base-content/10 rounded shimmer"></div>
+                    <div class="h-4 bg-base-content/10 rounded w-3/4 shimmer"></div>
+                </div>
+            @endforeach
+        </div>
+    </x-slot:drawer>
+
+    {{-- Tier 1: フォルダ切り替え時のグローバルオーバーレイ（1秒以上かかった場合のみ） --}}
+    <div wire:loading.delay.longest wire:target="changeCurrentFolder"
+        class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
+        <x-element.loading-overlay tier="1" manual message="{{ __('ledger.loading') }}"
+            class="!static !inset-auto !m-0" />
+    </div>
+
     <div class="bg-warning text-warning-content/70 rounded-t-box px-4 mb-4 font-bold ">
         <x-ledger.livewire-breadcrumbs
             :breadcrumbs="$breadcrumbs"
@@ -8,13 +36,15 @@
 
     <div class="card-body pt-0">
         {{-- Skeleton Grid during folder change --}}
-        <div wire:loading.delay wire:target="changeCurrentFolder" class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 gap-4">
-            @foreach(range(1, 10) as $i)
-                <x-folder.folder-avatar-skeleton />
-            @endforeach
+        <div wire:loading.delay wire:target="changeCurrentFolder">
+            <div class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4">
+                @foreach(range(1, 10) as $i)
+                    <x-folder.folder-avatar-skeleton />
+                @endforeach
+            </div>
         </div>
 
-        <div wire:loading.delay.remove wire:target="changeCurrentFolder"
+        <div wire:loading.remove.delay wire:target="changeCurrentFolder"
             class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center ">
 
             @foreach($folderRecords as $fKey => $folderRecord)

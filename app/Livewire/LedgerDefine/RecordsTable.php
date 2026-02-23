@@ -54,6 +54,9 @@ class RecordsTable extends BaseLivewireComponent
         return view('livewire.ledger-define.records-table', [
             'ledgerDefineRecords' => $this->ledgerDefineRecords,
             'currentFolder' => $currentFolder,
+            'componentId' => $this->getId(),
+            'currentFolderId' => $this->currentFolderId,
+            'selectedFolderIds' => $this->selectedFolderIds,
         ]);
     }
 

@@ -22,7 +22,7 @@ class Tree extends BaseLivewireComponent
     public $currentFolderId = null;
 
     #[Reactive]
-    public array $selectedFolderIds = [];
+    public ?array $selectedFolderIds = [];
 
     /**
      * parentComponentId なし（スタンドアロン）時に currentFolderChangeRequested イベントで
