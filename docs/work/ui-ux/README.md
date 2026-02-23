@@ -35,6 +35,9 @@
 - ### [カラム管理 (column-management)](./column-management/)
   台帳定義のカラム編集UIや、台帳の表示・入力フォームにおけるカラムの表示方法（グループ化、表示レベル制御など）の改善に関するドキュメント。
 
+- ### [台帳リストデザイン再設計 (ledger-list-redesign)](./ledger-list-redesign/)
+  - **[フォルダツリー固定表示・深い階層対応 改善提案 (2026-02-23)](./ledger-list-redesign/2026-02-23_folder-tree-sticky-improvement-plan.md)** 📝 提案段階: 広い画面でのスクロール時ツリー消失問題の解消と、深い階層・多ノード時のUX向上に向けた4つの改善提案。
+
 - ### [ナビゲーション (navigation)](./navigation/)
   テナント切り替えメニューなど、システムの主要なナビゲーション機能の改善に関するドキュメント。
 

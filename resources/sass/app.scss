@@ -1,4 +1,3 @@
-@use "../css/tree.css";
 @use "../css/loading-unification.css";
 
 // Tailwind CSS v4用のインポートに変更
@@ -12,6 +11,10 @@
 @plugin "daisyui" {
     themes: #{$daisyui-light} --default, #{$daisyui-dark} --prefersdark;
 }
+
+// tree.css は daisyUI の後に配置してオーバーライドが確実に適用されるようにする
+// @use は先頭にしか書けないため @import を使用（純粋CSS読み込みとして扱う）
+@import "../css/tree.css";
 
 // @tailwindcss/typography プラグインの有効化
 @plugin "@tailwindcss/typography";

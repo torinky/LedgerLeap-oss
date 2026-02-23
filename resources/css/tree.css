@@ -1,20 +1,59 @@
 
 .tree {
     position: relative;
-    /*background: white;*/
-    /*margin:0 0 0 50px;*/
-    /*font-family: 'Roboto Mono', monospace;*/
+    /*
+     * フォントサイズ変更に追従するため em 単位で行高さを定義。
+     * --row-h: 1行コンテナ(div)の最小高さ。before/after の top/height もここを参照。
+     * fa-stack が 2 * 0.9em ≈ 1.8em のため 2em で余裕を持つ。
+     */
+    --row-h: 2.2em;
     font-size: .85rem;
     font-weight: 400;
     line-height: 1.5;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
     /*color: #212529;*/
 }
 
 .tree span {
-    font-size: 13px;
-    /*font-style: italic;*/
+    /* px固定を避け em で指定するとフォントサイズ変更に追従する */
+    font-size: 0.95em;
     letter-spacing: .4px;
     /*color: #a8a8a8;*/
+}
+
+/* 行コンテナ: 最小高さを --row-h で保証し、daisyUIのpadding付与を確実にリセット */
+/* overflow は visible にして折りたたみボタンがクリップされないようにする */
+/*
+ * li の tree-collapse を display:block に修正したことで li の幅が正しくなったため、
+ * width: 100% でそのまま li の右端まで伸びる。
+ * .tree-row に絞り込むことで折りたたみアニメーション用 .tree-collapse への誤適用を防ぐ。
+ */
+.tree li > div.tree-row {
+    min-height: var(--row-h);
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    align-items: center;
+    overflow: visible;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ルートノードは padding-left: 0 なので補正不要（共通ルールと同じ） */
+.tree li.root > div.tree-row {
+    width: 100%;
+    margin-right: 0;
+}
+
+/*
+ * fa-stack のフォントサイズを em で制御。
+ * インラインスタイル (style="font-size:0.9em") からこちらに移動。
+ * --row-h が 2.2em (= 2×1.1em) を前提に、fa-stack 2em 高さと合わせるため 0.9em。
+ */
+.tree .fa-stack {
+    font-size: 0.9em;
 }
 
 /*
@@ -31,30 +70,36 @@
     padding-left: 5px;
     list-style: none;
     margin-inline-start: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .tree ul li {
     position: relative;
-    /*padding-top: 5px;*/
-    /*padding-bottom: 5px;*/
-    padding-left: 15px;
+    padding-left: 16px;
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     display: inherit;
+    max-width: 100%;
 }
 
+/*
+ * 水平接続線: フォントサイズに追従するよう calc(var(--row-h) / 2) で行の中央に配置。
+ * px固定 (19px) は廃止。
+ */
 .tree ul li:not(.root):before {
     position: absolute;
-    top: 15px;
+    top: calc(var(--row-h) / 2);
     left: 0;
-    width: 10px;
+    width: 12px;
     height: 1px;
     margin: auto;
     content: '';
-    background-color: #666;
+    background-color: #999;
 }
 
+/* 垂直接続線 */
 .tree ul li:not(.root):after {
     position: absolute;
     top: 0;
@@ -63,11 +108,12 @@
     width: 1px;
     height: 100%;
     content: '';
-    background-color: #666;
+    background-color: #999;
 }
 
+/* 最後の子は垂直線を行の中央で切る（--row-h / 2 に追従） */
 .tree ul li:last-child:after {
-    height: 15px;
+    height: calc(var(--row-h) / 2);
 }
 
 .tree ul a {
@@ -78,13 +124,101 @@
     text-decoration: none;
 }
 
-.menu .tree :where(li) > :where(*:not(ul)) {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-left: 1.5rem;
-    margin-left: -1.5rem
+/*
+ * daisyUI の .menu が li > div に強制付与する display: grid を
+ * 折りたたみアニメーション用 div.tree-collapse にはリセットする。
+ * tree-collapse は width: 100% のブロック要素として動作させる必要がある。
+ *
+ * 注意: display: block !important は Alpine.js の x-show (display: none) を
+ * 上書きしてしまい折りたたみが効かなくなるため使用不可。
+ * daisyUI の :where() セレクターは詳細度0のため、!important なしの通常ルールで上書き可能。
+ * display: block（!important なし）を指定することで:
+ *   - 展開時: CSS の display: block が適用される
+ *   - 非表示時: Alpine.js x-show が inline style で display: none を書き込み CSS より優先される
+ */
+.menu .tree li > div.tree-collapse {
+    display: block;
+    grid-template-rows: unset !important;
+    grid-auto-columns: unset !important;
+    grid-auto-flow: unset !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    background-color: transparent !important;
+    width: 100% !important;
+}
+
+/*
+ * daisyUI の .menu が li > * に強制付与する padding-left / margin-left をリセット。
+ * ツリーの div 行コンテナ（.tree-row）と a リンクに適用して補助線とのズレを防ぐ。
+ * .tree-collapse（折りたたみアニメーション用div）は除外する。
+ */
+.menu .tree li > div.tree-row,
+.menu .tree li > a {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+/*
+ * daisyUI が .menu li > a に強制付与する display:grid をリセット。
+ * ツリーの <a> は flex で横並びにするため上書きが必要。
+ * また padding-inline もリセットして補助線のずれを防ぐ。
+ */
+.menu .tree li > div.tree-row > a {
+    display: flex !important;
+    padding-inline: 0.25rem !important;
+    /* daisyUI の grid-auto-columns / grid-auto-flow も無効化 */
+    grid-auto-columns: unset !important;
+    grid-auto-flow: unset !important;
 }
 
 .menu .tree :where(li ul):before {
     background: inherit;
 }
+
+/*
+ * daisyUI .menu が li > div に付与するデフォルト背景（白ボックス）を無効化し、
+ * ツリー独自のピルホバーに差し替える。
+ *
+ * ホバー時は <div> 全体（アイコン＋タイトル＋バッジ＋ボタン）を
+ * 薄いグレーのピル（rounded + bg-base-200/60）で囲う。
+ * <a> 側の個別ホバーは <div> ホバーと重ならないよう透明に上書きする。
+ */
+
+/* daisyUI が li > div に付与する白ボックス背景をリセット（非ホバー時） */
+.menu .tree li > div.tree-row {
+    background-color: transparent !important;
+    border-radius: 0.375rem; /* rounded */
+    transition: background-color 0.15s ease;
+}
+
+/* <div> 全体をピルとしてホバー表現 */
+.menu .tree li > div.tree-row:hover,
+.menu .tree li > div.tree-row:focus-within {
+    background-color: color-mix(in oklab, var(--color-base-200) 60%, transparent) !important;
+    color: inherit !important;
+}
+
+/* <div> がホバーされているとき <a> 個別の背景を消して二重表示を防ぐ */
+.menu .tree li > div.tree-row:hover > a,
+.menu .tree li > div.tree-row:focus-within > a {
+    background-color: transparent !important;
+}
+
+/*
+ * ツリーノードの権限ツールチップ。
+ * daisyUI の .tooltip + data-tip 属性で表示する。
+ * サイドバー幅が狭いため tooltip-right を指定。
+ * z-index は drawer-side (z-40) より高くする必要があるため明示的に上書き。
+ */
+.menu .tree li > div > a > span[title] {
+    cursor: help;
+}
+
+/* daisyUI tooltip が .menu li > div の overflow:hidden でクリップされないよう z-index を確保 */
+.menu .tree .tooltip::before,
+.menu .tree .tooltip::after {
+    z-index: 100;
+}
+

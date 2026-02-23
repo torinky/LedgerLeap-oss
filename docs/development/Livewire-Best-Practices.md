@@ -72,6 +72,108 @@ DaisyUIの`table-pin-rows`クラスを使用してスティッキーヘッダー
   ```
 - **背景色**: DaisyUIが自動的にテーマの背景色を適用するため、カスタムCSSは不要です。
 
-## 4. 既存の実装例
+## 4. Alpine.js と daisyUI の CSS 詳細度に関する注意点
+
+### `x-show` と `!important` の競合
+
+Alpine.js の `x-show` は要素を非表示にする際に **inline style** で `display: none` を書き込む。  
+CSS に `display: block !important` が存在すると、**inline style よりも `!important` の CSS が優先**されるため `x-show` による折りたたみが機能しなくなる。
+
+```css
+/* ❌ 悪い例: x-show が効かなくなる */
+.some-class {
+    display: block !important;
+}
+
+/* ✅ 良い例: !important なし → x-show の inline style が優先される */
+.some-class {
+    display: block;
+}
+```
+
+> **法則:** `!important` の優先順位は「CSSの!important > inline style > 通常CSS」ではなく、  
+> 正確には「inline style の !important > CSS の !important > inline style > 通常CSS」。  
+> Alpine.js の `x-show` は **!important なし** の inline style を使うため、CSS 側に `!important` があると負ける。
+
+### daisyUI の `:where()` セレクターと上書き
+
+daisyUI v5 の `.menu` は `:where()` 擬似クラスを多用しており、**詳細度が 0** になる。  
+これにより、**通常のクラスセレクター**（詳細度 > 0）なら `!important` なしで簡単に上書きできる。
+
+```css
+/* daisyUI 内部（詳細度0）:where() 内で display: grid が付与される */
+/* :where(li:not(.menu-title) > :not(ul,details,...)) { display: grid } */
+
+/* ✅ 詳細度が 1 以上のセレクターで上書き可能（!important 不要） */
+.menu .tree li > div.tree-collapse {
+    display: block; /* daisyUI の display:grid を上書き */
+}
+```
+
+### daisyUI の `li > div` への `display: grid` 強制付与
+
+`.menu` 内の `li > div`（`.btn` 以外）に daisyUI が `display: grid` を自動付与する。  
+Alpine.js の `x-show` で制御する `div` がこのセレクターにマッチする場合は必ずリセットすること。
+
+```css
+/* tree.css での実例 */
+.menu .tree li > div.tree-collapse {
+    display: block;               /* grid → block（!important なしで x-show が正常動作） */
+    grid-template-rows: unset !important;
+    grid-auto-columns: unset !important;
+    grid-auto-flow: unset !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    background-color: transparent !important;
+    width: 100% !important;
+}
+```
+
+---
+
+## 5. DaisyUI Drawer のサイドバー固定（Sticky/Fixed）
+
+### 問題
+
+`xl:drawer-open` 時、`drawer-side` の `ul.menu` はページスクロールに追従して画面外に流れる。  
+DaisyUI が期待する `sticky` が効かない理由は、**親要素 `.drawer` がスクロールコンテナでない**ため。
+
+### 解決策: `position: fixed` を inline style で強制
+
+```html
+{{-- appWithDrawer.blade.php --}}
+<div class="drawer-side z-40 xl:w-64 2xl:w-72"
+    style="position: fixed; top: 64px; height: calc(100vh - 64px); overflow-y: auto; overflow-x: hidden;">
+    <label for="app-drawer" class="drawer-overlay w-full"></label>
+    <ul class="menu overflow-y-auto overflow-x-hidden h-full xl:w-64 2xl:w-72 p-2">
+        {{ $drawer ?? '' }}
+    </ul>
+</div>
+```
+
+- `top: 64px` — ナビバー高さ（`pt-20` = 80px ではなく実測で調整）
+- `height: calc(100vh - 64px)` — ビューポート全体からナビバー分を引いた高さ
+- `overflow-y: auto` — サイドバー内のコンテンツが独立してスクロール可能
+
+> **注意:** Tailwind の `sticky` や `top-16` は、親要素に `overflow: hidden/auto` があると効かない。  
+> その場合は迷わず `position: fixed` を使うこと。
+
+### Alpine.js による選択ノード自動スクロール
+
+サイドバーが独立スクロールになった後、フォルダ切り替え時に選択ノードが画面外になる場合がある。  
+Livewire の再レンダリング後に確実に動作させるため `$nextTick` が**必須**。
+
+```html
+{{-- resources/views/components/folder/tree.blade.php --}}
+@if ($folder->id == $currentFolderId)
+    x-init="$nextTick(() => $el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))"
+@endif
+```
+
+---
+
+## 6. 既存の実装例
 - 参照先: `app/Livewire/Ledger/IndexManager.php`, `resources/views/livewire/ledger/index-manager.blade.php`
 - ローディング統合計画: `docs/work/ui-ux/2026-01-25_loading_unification_plan.md`
+- フォルダツリー実装: `resources/views/components/folder/tree.blade.php`, `resources/css/tree.css`

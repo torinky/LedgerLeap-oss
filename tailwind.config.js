@@ -22,6 +22,16 @@ export default {
         './vendor/robsontenorio/mary/resources/views/**/*.blade.php'
     ],
 
+    safelist: [
+        // folder/tree.blade.php の x-transition で使用する動的クラス（Alpine.js経由でJITスキャン不可）
+        'max-h-0',
+        'max-h-screen',
+        'opacity-0',
+        'opacity-100',
+        '-translate-y-1',
+        'translate-y-0',
+    ],
+
     theme: {
         extend: {
             fontFamily: {

@@ -70,12 +70,26 @@
 
         <input id="app-drawer" type="checkbox" class="drawer-toggle" />
 
-        <main class="drawer-content h-screen">
+        {{--
+            サイドバー幅をレスポンシブに変化させる。
+            xl: 256px (w-64) / 2xl: 288px (w-72) / 3xl+: 320px (w-80)
+            コンテンツ領域 (pl) も同じ幅を確保する。
+        --}}
+        <main class="drawer-content h-screen xl:pl-64 2xl:pl-72">
             {{ $slot }}
         </main>
-        <div class="drawer-side z-40 h-screen">
+        {{--
+            DaisyUI の drawer-side は xl:drawer-open 時に position:sticky で描画されるが、
+            親要素(.drawer)がスクロールコンテナでないためページスクロールと一緒に流れてしまう。
+            position:fixed をインラインスタイルで強制することでビューポートに完全固定する。
+            top: ナビバー高さ(64px)分下げ、height: calc(100vh-64px) でビューポートに収める。
+            overflow-y:auto でツリーが独立スクロールできるようにする。
+            サイドバー幅は xl:w-64 / 2xl:w-72 でレスポンシブに変化。
+        --}}
+        <div class="drawer-side z-40 xl:w-64 2xl:w-72"
+            style="position: fixed; top: 64px; height: calc(100vh - 64px); overflow-y: auto; overflow-x: hidden;">
             <label for="app-drawer" class="drawer-overlay w-full"></label>
-            <ul class="menu">
+            <ul class="menu overflow-y-auto overflow-x-hidden h-full xl:w-64 2xl:w-72 p-2">
                 {{ $drawer ?? '' }}
             </ul>
         </div>
