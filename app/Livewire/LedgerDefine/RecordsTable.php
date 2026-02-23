@@ -57,6 +57,13 @@ class RecordsTable extends BaseLivewireComponent
         ]);
     }
 
+    /**
+     * ツリーコンポーネントからのフォルダ選択を受け取る。
+     * livewire:folder.tree が parentComponentId なしで呼ばれる場合、
+     * Livewire.dispatch('currentFolderChangeRequested') で発火されるため
+     * #[On] でリッスンする。
+     */
+    #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;

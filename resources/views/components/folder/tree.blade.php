@@ -20,7 +20,7 @@
                 || in_array($folder->id, $selectedFolderAncestorIds);
             $hasChildren = $folder->children->isNotEmpty();
         @endphp
-        <li class="{{ $folder->isRoot() ? 'root' : '' }}" wire:key="f_li_{{ $folder->id }}"
+        <li class="{{ $folder->isRoot() ? 'root' : '' }}" wire:key="f_li_{{ $folder->id }}_{{ $isOpen ? 1 : 0 }}"
             x-data="{
                 open: (function() {
                     {{-- 選択フォルダ・先祖フォルダは localStorage より強制展開を優先 --}}
@@ -49,7 +49,7 @@
                 li は width: 100% でコンテナ幅に収まるため、
                 どんなに深い階層でもボタンが表示領域外に出ない。
             --}}
-            <div class="tree-row flex items-center" wire:key="f_row_{{ $folder->id }}">
+            <div class="tree-row flex items-center" wire:key="f_row_{{ $folder->id }}_{{ $isOpen ? 1 : 0 }}">
                 {{-- 左部分: スクロール可能エリア（flex-1 min-w-0 overflow-x-auto） --}}
                 <div class="tree-row-left">
                     <a @if ($interactive)

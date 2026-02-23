@@ -11,7 +11,7 @@
     <div class="card bg-base-300 shadow-sm relative min-w-0 overflow-hidden">
         <div class="card-body p-2">
             <div class="tree-scroll-container">
-                <x-folder.tree :folders="$folders" :writableFolderIds="$writableFolderIds" :readableFolderIds="$readableFolderIds" :currentFolderId="$currentFolderId" :manageableFolderIds="$manageableFolderIds"
+                <x-folder.tree :folders="$folders" :writableFolderIds="$writableFolderIds" :readableFolderIds="$readableFolderIds" :currentFolderId="$effectiveFolderId ?? $currentFolderId" :manageableFolderIds="$manageableFolderIds"
                     :selectedFolderIds="$selectedFolderIds" :selectedFolderAncestorIds="$selectedFolderAncestorIds ?? []" :parentComponentId="$parentComponentId" />
             </div>
         </div>

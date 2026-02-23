@@ -24,6 +24,13 @@ class Tree extends BaseLivewireComponent
     #[Reactive]
     public array $selectedFolderIds = [];
 
+    /**
+     * parentComponentId なし（スタンドアロン）時に currentFolderChangeRequested イベントで
+     * 更新するフォルダID。#[Reactive] の currentFolderId は親から渡される値のため
+     * 子から直接 mutate できない。スタンドアロン時はこちらで追跡する。
+     */
+    public $standaloneFolderId = null;
+
     public array $writableFolderIds;
 
     public array $manageableFolderIds;
@@ -58,6 +65,35 @@ class Tree extends BaseLivewireComponent
         $this->initializePermissions($writableFolderRepository);
     }
 
+    /**
+     * parentComponentId なし（スタンドアロン）でツリーを使用している画面向け。
+     * IndexManager 配下では Reactive プロパティとして親から渡されるため不要だが、
+     * ledgerDefine 等の独立ページでは #[On] でイベントを受け取り standaloneFolderId を更新する。
+     * #[Reactive] の currentFolderId は親から渡される値のため子から mutate できない。
+     */
+    #[On('currentFolderChangeRequested')]
+    public function syncCurrentFolder($newFolderId): void
+    {
+        if (! $this->parentComponentId) {
+            $this->standaloneFolderId = $newFolderId;
+        }
+    }
+
+    /**
+     * RecordsTable 等のメインコンポーネントがサーバーサイドで dispatch する
+     * currentFolderChangedByMain イベントを受け取り、standaloneFolderId を同期する。
+     * currentFolderChangeRequested はフロントエンドから発火されるが、
+     * RecordsTable が同イベントをキャッチして changeCurrentFolder を実行した後に
+     * このイベントを dispatch するため、両方をリッスンして確実に同期する。
+     */
+    #[On('currentFolderChangedByMain')]
+    public function syncCurrentFolderFromMain($newFolderId): void
+    {
+        if (! $this->parentComponentId) {
+            $this->standaloneFolderId = $newFolderId;
+        }
+    }
+
     #[On('permissions-changed')]
     public function refreshPermissions(WritableFolderRepository $writableFolderRepository)
     {
@@ -73,16 +109,22 @@ class Tree extends BaseLivewireComponent
 
     public function render()
     {
+        // スタンドアロン（parentComponentId なし）の場合は standaloneFolderId を優先する。
+        // IndexManager 配下では #[Reactive] の currentFolderId が親から渡される。
+        $effectiveFolderId = $this->standaloneFolderId ?? $this->currentFolderId;
+
         Log::info('[Folder\Tree] rendering', [
             'currentFolderId' => $this->currentFolderId,
+            'standaloneFolderId' => $this->standaloneFolderId,
+            'effectiveFolderId' => $effectiveFolderId,
             'selectedFolderIds' => $this->selectedFolderIds,
         ]);
 
-        // selectedFolderIds および currentFolderId の先祖フォルダを計算し、
+        // selectedFolderIds および effectiveFolderId の先祖フォルダを計算し、
         // ツリーで選択済みフォルダへのパスを自動展開するために使用する。
         $targetIds = array_filter(array_unique(array_merge(
             $this->selectedFolderIds,
-            $this->currentFolderId ? [$this->currentFolderId] : []
+            $effectiveFolderId ? [$effectiveFolderId] : []
         )));
 
         $selectedFolderAncestorIds = [];
@@ -102,6 +144,7 @@ class Tree extends BaseLivewireComponent
 
         return view('livewire.folder.tree', [
             'selectedFolderAncestorIds' => $selectedFolderAncestorIds,
+            'effectiveFolderId' => $effectiveFolderId,
         ]);
     }
 }
