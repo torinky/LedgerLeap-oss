@@ -221,9 +221,9 @@ class ShowAdditionalTest extends TestCase
     #[Test]
     public function it_activates_compare_with_previous_when_show_changes_enabled_without_target(): void
     {
-        // 2バージョン以上作成
-        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 1]);
-        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 2]);
+        // 2バージョン以上作成 (setUp の $this->diff との version 衝突を避けるためランダム範囲(1-10)を超える番号を使用)
+        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 100]);
+        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 101]);
         $this->ledger->update(['latest_diff_id' => $v2->id]);
 
         $this->actingAs($this->user);
@@ -246,8 +246,8 @@ class ShowAdditionalTest extends TestCase
     #[Test]
     public function it_updates_target_diff_id_on_versions_selected_event(): void
     {
-        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 1]);
-        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 2]);
+        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 100]);
+        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 101]);
         $this->ledger->update(['latest_diff_id' => $v2->id]);
 
         $this->actingAs($this->user);
@@ -267,8 +267,8 @@ class ShowAdditionalTest extends TestCase
     #[Test]
     public function it_handles_rollback_completed_event_with_target_diff(): void
     {
-        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 1]);
-        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 2]);
+        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 100]);
+        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 101]);
         $this->ledger->update(['latest_diff_id' => $v2->id]);
 
         $this->actingAs($this->user);
@@ -302,8 +302,9 @@ class ShowAdditionalTest extends TestCase
     #[Test]
     public function it_handles_rollback_completed_without_target_diff(): void
     {
-        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 1]);
-        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 2]);
+        // setUp の $this->diff との version 衝突を避けるため、ランダム範囲(1-10)を超えるバージョン番号を使用
+        $v1 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 100]);
+        $v2 = LedgerDiff::factory()->for($this->ledger)->create(['version' => 101]);
         $this->ledger->update(['latest_diff_id' => $v2->id]);
 
         $this->actingAs($this->user);
