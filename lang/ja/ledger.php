@@ -642,10 +642,12 @@ return [
     'filter' => 'フィルタ',
     'filter_expired_users' => '期限切れユーザーをフィルタ',
     'folder' => [
+        'collapse' => '折りたたむ',
         'containing' => '所属するフォルダ',
         'create' => 'フォルダーを新規作成',
         'created' => 'フォルダーが作成されました',
         'edit' => 'フォルダーを編集',
+        'expand' => '展開する',
         'fix' => 'ツリー構造を修復する',
         'form' => [
             'header' => [
@@ -683,6 +685,7 @@ return [
             ],
         ],
         'goto_ledger' => '同じ階層の台帳リストに移動',
+        'ledger_count' => '台帳定義数',
         'manageable' => '管理できます',
         'not_allow_create' => 'フォルダーの作成権限がありません',
         'not_allow_edit' => 'フォルダーの編集権限がありません',
@@ -690,13 +693,10 @@ return [
         'opened_count' => '検索対象のフォルダ数',
         'parent' => '親フォルダ',
         'permission' => 'フォルダー権限',
-        'collapse' => '折りたたむ',
-        'expand' => '展開する',
-        'ledger_count' => '台帳定義数',
         'readable' => '閲覧できます',
         'remove' => 'フォルダーを削除する',
-        'root' => 'Top',
         'remove_message' => 'このフォルダーを削除しようとしています',
+        'root' => 'Top',
         'scoped' => '関係フォルダ',
         'settings' => 'フォルダー設定',
         'title' => 'フォルダー名',
@@ -1184,6 +1184,7 @@ return [
         'low_to_high' => '低い順',
     ],
     'sort_by' => '並び順',
+    'sort_priority' => '優先度',
     'start' => '始める',
     'statistics' => [
         'activities_in_period' => ':periodに:count件の活動がありました。',
@@ -1207,7 +1208,6 @@ return [
         'top_users' => 'トップユーザー',
         'total_created' => '作成数',
     ],
-    'sort_priority' => '優先度',
     'stop' => '停止する',
     'stored' => [
         'fail' => '登録に失敗しました',
