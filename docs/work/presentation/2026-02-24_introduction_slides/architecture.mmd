@@ -1,0 +1,69 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0f172a', 'edgeLabelBackground':'#fff', 'tertiaryColor': '#fff'}}}%%
+graph TD
+    subgraph UserSide [ユーザー環境]
+        direction TB
+        Users("ユーザー<br>(PC / タブレット / スマホ)")
+    end
+
+    subgraph LedgerLeap [LedgerLeap プラットフォーム]
+        direction TB
+
+        subgraph Core [アプリケーション層]
+            Web("Web サーバー")
+            App("アプリケーション<br>(5段階権限・承認ワークフロー)")
+            Async("非同期処理ワーカー")
+        end
+
+        subgraph Data [データ・検索基盤]
+            direction TB
+            MySQL[("データベース<br>(マルチテナント対応)")]
+
+            subgraph MroongaLayer [高速検索レイヤー]
+                direction TB
+                Groonga[("<b>Mroonga 高速日本語検索</b><br>(同義語展開 + 意味検索)") ]
+            end
+        end
+
+        subgraph AI [AI・解析エンジン群]
+            OcrMyPDF("OCR 先行処理<br>(透過テキスト・レイアウト保持)")
+            Tika("書類解析・テキスト化<br>(Word / Excel / PDF)")
+            VLM("AI 構造抽出エンジン<br>(フォーム構造・座標のJSON化)")
+        end
+    end
+
+    subgraph External [外部連携・拡張]
+        LLM("生成 AI エコシステム<br>(Dify/Claude等の外部LLM)")
+        MCP("MCPプロトコル / API")
+    end
+
+    %% Flows
+    Users ==> Web
+    Web ==> App
+    App <==> MySQL
+    MySQL --- MroongaLayer
+    MroongaLayer --- Groonga
+    
+    App --> Async
+    Async --> OcrMyPDF
+    Async --> Tika
+    Async --> VLM
+    
+    OcrMyPDF -.->|透過PDF| Tika
+    
+    App <--> MCP
+    MCP <--> LLM
+
+    %% Styling
+    classDef user fill:#3b82f6,color:#fff,stroke:#fff,stroke-width:2px;
+    classDef app fill:#e0e7ff,color:#3730a3,stroke:#3730a3,stroke-width:2px;
+    classDef db fill:#0f172a,color:#fff,stroke:#fff,stroke-width:2px;
+    classDef engine fill:#06b6d4,color:#fff,stroke:#fff,stroke-width:2px,font-weight:bold;
+    classDef ai fill:#fee2e2,color:#991b1b,stroke:#991b1b,stroke-width:2px;
+    classDef ext fill:#f3f4f6,color:#374151,stroke:#374151,stroke-width:2px;
+    
+    class Users user;
+    class Web,App,Async app;
+    class MySQL db;
+    class Groonga engine;
+    class VLM,OcrMyPDF,Tika ai;
+    class LLM,MCP ext;
