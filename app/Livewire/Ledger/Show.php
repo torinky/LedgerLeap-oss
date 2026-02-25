@@ -179,6 +179,7 @@ class Show extends BaseLivewireComponent
             $previousDiff = LedgerDiff::where('ledger_id', $this->ledgerRecord->id)
                 ->where('version', '<', $currentDiff->version)
                 ->orderByDesc('version')
+                ->orderByDesc('id')
                 ->first();
 
             if ($previousDiff) {
