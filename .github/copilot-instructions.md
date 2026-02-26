@@ -44,6 +44,12 @@
 - **/docs/function/Attachment.md:** VLM/OCR/Tika を含む複雑なファイル処理フロー。
 - **/docs/database/schema.md:** 核心テーブル構造。
 
+## 4a. Skills (定型ワークフロー)
+
+**特定の操作パターンについては、以下のスキル定義を必ず参照・遵守すること。**
+
+- **/.github/skills/github-issue-workflow/SKILL.md:** GitHubイシューの調査・更新・カバレッジ評価・進捗反映の標準フロー。イシュー操作を行う際は**必ずこのファイルを先に読むこと**。
+
 ## 5. Development Workflow
 
 1. **Pint:** コミット前に必ず `./vendor/bin/sail pint` 実行。
