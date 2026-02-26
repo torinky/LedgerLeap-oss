@@ -3,20 +3,24 @@
 namespace Tests\Unit\Rules;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Rules\UniqueAutoNumber;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use Mockery;
 use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use Tests\TestCase;
 
 class UniqueAutoNumberTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $tenancy = true;
+
     protected LedgerDefine $ledgerDefine;
+
     protected ColumnDefine $columnDefine;
 
     protected function setUp(): void
@@ -30,7 +34,9 @@ class UniqueAutoNumberTest extends TestCase
         });
         $this->app->instance('translator', $translatorMock);
 
-        $this->ledgerDefine = LedgerDefine::factory()->create();
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => Folder::factory(),
+        ]);
         $this->columnDefine = new ColumnDefine(
             0,
             '資料番号',
@@ -43,8 +49,11 @@ class UniqueAutoNumberTest extends TestCase
             ],
             true,
             true, // unique = true
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
     }
 

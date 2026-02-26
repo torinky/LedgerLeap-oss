@@ -9,9 +9,6 @@
     @push('stylesheets')
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
-    <x-slot name="drawer">
-        <livewire:folder.tree/>
-    </x-slot>
     <div class="container max-w-full px-0 md:px-4">
         <livewire:ledger-define.records-table/>
     </div>

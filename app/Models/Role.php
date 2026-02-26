@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\FolderPermissionType;
 use App\Repositories\WritableFolderRepository;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,7 +17,9 @@ use Spatie\Permission\PermissionRegistrar;
 
 class Role extends SpatieRole
 {
-    use LogsActivity, Notifiable;
+    use HasFactory, LogsActivity, Notifiable;
+
+    public const string SUPER_ADMIN = 'Super Admin';
 
     protected $fillable = [
         'name', 'guard_name',
@@ -26,6 +29,7 @@ class Role extends SpatieRole
     protected static function booted()
     {
         static::updated(function ($role) {
+            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted updated closure fired for Role ID: '.$role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
@@ -33,6 +37,7 @@ class Role extends SpatieRole
         });
 
         static::deleted(function ($role) {
+            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted deleted closure fired for Role ID: '.$role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
@@ -50,7 +55,7 @@ class Role extends SpatieRole
             ->useLogName('role')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**
@@ -118,6 +123,7 @@ class Role extends SpatieRole
     {
         if (empty($permission)) {
             return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+                ->using(RoleFolderPermission::class)
                 ->withPivot('permission')
                 ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
                 ->select('folders.*')
@@ -125,8 +131,9 @@ class Role extends SpatieRole
         }
 
         return $this->belongsToMany(Folder::class, RoleFolderPermission::class, 'role_id', 'folder_id')
+            ->using(RoleFolderPermission::class)
             ->withPivot('permission')
-            ->wherePivot('permission', $permission->value)
+            ->wherePivot('permission', '>=', $permission->value)
             ->whereNotIn('permission', [FolderPermissionType::NOTIFY_ON, FolderPermissionType::NOTIFY_OFF])
             ->select('folders.*')
             ->withTimestamps();

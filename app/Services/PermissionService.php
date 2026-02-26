@@ -9,17 +9,22 @@ use App\Models\LedgerDefine;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * 権限表示に関するロジックを提供するサービス
  */
 class PermissionService
 {
+    /** @var array<string, ?FolderPermissionType> リクエスト内キャッシュ */
+    protected array $permissionCache = [];
+
+    /** @var array<string, array{folder: ?Folder, ledgerDefine: ?LedgerDefine}> */
+    protected static array $resolutionCache = [];
+
     protected UserService $userService;
 
     public function __construct(UserService $userService)
@@ -31,8 +36,6 @@ class PermissionService
      * 指定されたリソースに対するアクセス可能なロールとその権限タイプを取得する
      * (変更なし)
      *
-     * @param int $resourceId
-     * @param string $resourceType
      * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
      */
     public function getAccessRolesWithPermissions(int $resourceId, string $resourceType): Collection
@@ -77,21 +80,21 @@ class PermissionService
                     $permType = FolderPermissionType::tryFrom($permValue);
                     if ($permType && $permType->isAccessType()) {
                         // 既に同じ強度の権限が追加されていないか確認し、重複を防ぐ
-                        $foundStrongerOrEqual = $accessPermissions->contains(fn($p) => $p->getOrder() >= $permType->getOrder());
-                        if (!$foundStrongerOrEqual) {
+                        $foundStrongerOrEqual = $accessPermissions->contains(fn ($p) => $p->getOrder() >= $permType->getOrder());
+                        if (! $foundStrongerOrEqual) {
                             $accessPermissions->push($permType);
                         }
                     }
                 }
-                $accessPermissions = $accessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder());
-//                dd($accessPermissions);
+                $accessPermissions = $accessPermissions->unique('value')->sortByDesc(fn ($p) => $p->getOrder());
+                //                dd($accessPermissions);
 
                 if ($accessPermissions->isNotEmpty()) {
-                    $rolesWithPermissions->push((object)[
+                    $rolesWithPermissions->push((object) [
                         'role' => $role,
                         'permissions' => $accessPermissions,
                         'source' => 'folder', // 権限のソース
-                        'is_inherited' => $targetFolder->id !== $resourceId // 対象がフォルダ自身でなければ継承
+                        'is_inherited' => $targetFolder->id !== $resourceId, // 対象がフォルダ自身でなければ継承
                     ]);
                 }
             }
@@ -102,31 +105,31 @@ class PermissionService
             $ledgerDefineRoles = $targetLedgerDefine->roles;
             foreach ($ledgerDefineRoles as $role) {
                 $directPermissions = collect();
-                // HasModelRoles トレイトの hasPermissionTo() を使用して、台帳定義に直接紐づく権限をチェック
+                /** @var Role $role */
+                // ロール自体が持っている権限をチェック
                 foreach (FolderPermissionType::accessPermissions() as $permType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permType->value, $role->name)) {
+                    if ($role->hasPermissionTo($permType->value)) {
                         $directPermissions->push($permType);
                     }
                 }
 
                 if ($directPermissions->isNotEmpty()) {
-                    $rolesWithPermissions->push((object)[
+                    $rolesWithPermissions->push((object) [
                         'role' => $role,
-                        'permissions' => $directPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
+                        'permissions' => $directPermissions->unique('value')->sortByDesc(fn ($p) => $p->getOrder()),
                         'source' => 'ledger_define',
-                        'is_inherited' => false // 台帳定義への直接割り当て
+                        'is_inherited' => false, // 台帳定義への直接割り当て
                     ]);
                 }
             }
         }
+
         return $rolesWithPermissions;
     }
 
     /**
      * 指定されたリソースにアクセス可能な組織とその権限タイプを取得する
      *
-     * @param int $resourceId
-     * @param string $resourceType
      * @return Collection<object{organization: Organization, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool, direct_roles: Collection<Role>, inherited_roles: Collection<Role>}>
      */
     public function getAccessOrganizationsWithPermissions(int $resourceId, string $resourceType): Collection
@@ -135,7 +138,7 @@ class PermissionService
 
         // 1. 対象リソースにアクセス権限を持つロールを取得
         $accessRoles = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
-            ->filter(fn($item) => $item->permissions->isNotEmpty());
+            ->filter(fn ($item) => $item->permissions->isNotEmpty());
 
         if ($accessRoles->isEmpty()) {
             return collect();
@@ -151,7 +154,7 @@ class PermissionService
         })->with('ancestors', 'roles')->get(); // 祖先と直接ロールをイーガーロード
 
         // 関連する全ての組織とその祖先を結合し、ツリーを構築
-        $allRelevantOrganizations = $relevantOrganizations->flatMap(fn($org) => $org->ancestors->push($org))->unique('id');
+        $allRelevantOrganizations = $relevantOrganizations->flatMap(fn ($org) => $org->ancestors->push($org))->unique('id');
 
         // ツリー構造を再構築 (nestedsetのchildrenリレーションが正しくロードされるように)
         $rootOrganizations = $allRelevantOrganizations->whereNull('parent_id');
@@ -176,7 +179,9 @@ class PermissionService
                         $orgAccessPermissions->push($perm);
                     }
                     $orgSources->push($accessItem->source);
-                    if ($accessItem->is_inherited) $orgIsInherited = true;
+                    if ($accessItem->is_inherited) {
+                        $orgIsInherited = true;
+                    }
                 }
             }
 
@@ -188,20 +193,21 @@ class PermissionService
             }
 
             if ($orgAccessPermissions->isNotEmpty()) {
-                $organizationsWithPermissions->push((object)[
+                $organizationsWithPermissions->push((object) [
                     'organization' => $org,
-                    'permissions' => $orgAccessPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
+                    'permissions' => $orgAccessPermissions->unique('value')->sortByDesc(fn ($p) => $p->getOrder()),
                     'source' => $orgSources->unique()->implode(', '),
                     'is_inherited' => $orgIsInherited,
                     'direct_roles' => $orgDirectRoles->sortBy('name'), // 直接のロール
-                    'inherited_roles' => $orgInheritedRoles->sortBy('name') // 継承ロール
+                    'inherited_roles' => $orgInheritedRoles->sortBy('name'), // 継承ロール
                 ]);
             }
         }
 
         // 組織名を階層表示のために整形してからソート
-        return $organizationsWithPermissions->map(function($item) {
-            $item->display_name = $item->organization->ancestors->pluck('name')->implode(' > ') . ($item->organization->ancestors->isNotEmpty() ? ' > ' : '') . $item->organization->name;
+        return $organizationsWithPermissions->map(function ($item) {
+            $item->display_name = $item->organization->ancestors->pluck('name')->implode(' > ').($item->organization->ancestors->isNotEmpty() ? ' > ' : '').$item->organization->name;
+
             return $item;
         })->sortBy('display_name')->values();
     }
@@ -209,51 +215,39 @@ class PermissionService
     /**
      * 組織コレクションからツリーを構築するヘルパー
      * （NestedSet モデルの children リレーションが正しくロードされていない場合に対応）
-     *
-     * @param Collection $nodes
-     * @param Collection $allOrganizations
-     * @return void
      */
     private function buildOrganizationTree(Collection $nodes, Collection $allOrganizations): void
     {
         foreach ($nodes as $node) {
-            $node->setRelation('children', $allOrganizations->filter(fn($org) => $org->parent_id === $node->id)->values());
+            $node->setRelation('children', $allOrganizations->filter(fn ($org) => $org->parent_id === $node->id)->values());
             $this->buildOrganizationTree($node->children, $allOrganizations);
         }
     }
 
-
     /**
      * 指定されたリソースにアクセス可能なユーザーのリストを取得する
      *
-     * @param int $resourceId
-     * @param string $resourceType
-     * @param string|null $searchQuery
-     * @param int|null $filterByRoleId
-     * @param int|null $filterByOrganizationId
-     * @param string|null $filterByPermissionValue
      * @return LengthAwarePaginator<User>
      */
     public function getAccessUsers(
-        int     $resourceId,
-        string  $resourceType,
+        int $resourceId,
+        string $resourceType,
         ?string $searchQuery = null,
-        ?int    $filterByRoleId = null,
-        ?int    $filterByOrganizationId = null,
+        ?int $filterByRoleId = null,
+        ?int $filterByOrganizationId = null,
         ?string $filterByPermissionValue = ''
-    ): LengthAwarePaginator
-    {
+    ): LengthAwarePaginator {
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
         $targetFolder = $resolved['folder'];
 
         // まず、対象リソースにアクセス権限を持つロールと権限の情報を取得
         $accessItems = $this->getAccessRolesWithPermissions($resourceId, $resourceType)
-            ->filter(fn($item) => $item->permissions->isNotEmpty());
+            ->filter(fn ($item) => $item->permissions->isNotEmpty());
 
         // ★★★ 権限タイプでフィルタリング ★★★
         if ($filterByPermissionValue) {
             $accessItems = $accessItems->filter(function ($item) use ($filterByPermissionValue) {
-                return $item->permissions->contains(fn(FolderPermissionType $p) => $p->value === $filterByPermissionValue);
+                return $item->permissions->contains(fn (FolderPermissionType $p) => $p->value === $filterByPermissionValue);
             });
         }
         // ★★★ ロールでフィルタリング ★★★
@@ -315,14 +309,14 @@ class PermissionService
 
         if ($searchQuery) {
             $query->where(function ($q) use ($searchQuery) {
-                $q->where('name', 'like', '%' . $searchQuery . '%')
-                    ->orWhere('email', 'like', '%' . $searchQuery . '%');
+                $q->where('name', 'like', '%'.$searchQuery.'%')
+                    ->orWhere('email', 'like', '%'.$searchQuery.'%');
             });
         }
 
-        $users = $query->paginate(10);
+        $users = $query->paginate(10, ['*'], 'permission_user_page');
 
-        $users->getCollection()->transform(function ($user) use ($targetFolder,$filterByRoleId) {
+        $users->getCollection()->transform(function ($user) use ($targetFolder) {
             // ユーザーの直接ロール
             $directRoles = $user->roles->keyBy('id');
 
@@ -332,7 +326,7 @@ class PermissionService
                 // 組織が持つ全ロール（直接＋継承）を取得
                 $org->getAllRoles()->each(function ($role) use (&$inheritedRoles, $directRoles) {
                     // ユーザーの直接ロールと重複せず、まだ追加されていないロールを追加
-                    if (!$directRoles->has($role->id) && !$inheritedRoles->has($role->id)) {
+                    if (! $directRoles->has($role->id) && ! $inheritedRoles->has($role->id)) {
                         $inheritedRoles->put($role->id, $role);
                     }
                 });
@@ -369,8 +363,8 @@ class PermissionService
                 }
             }
             $user->categorized_permissions = [
-                'direct' => $directPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
-                'inherited_from_organizations' => $inheritedPermissions->unique('value')->sortByDesc(fn($p) => $p->getOrder()),
+                'direct' => $directPermissions->unique('value')->sortByDesc(fn ($p) => $p->getOrder()),
+                'inherited_from_organizations' => $inheritedPermissions->unique('value')->sortByDesc(fn ($p) => $p->getOrder()),
             ];
 
             return $user;
@@ -379,43 +373,45 @@ class PermissionService
         return $users;
     }
 
-
-
     /**
      * 指定されたリソースID・タイプから対象のフォルダ・台帳定義を取得する共通処理
      *
-     * @param int $resourceId
-     * @param string $resourceType
      * @return array{folder: ?Folder, ledgerDefine: ?LedgerDefine}
      */
     private function resolveTargetFolderAndLedgerDefine(int $resourceId, string $resourceType): array
     {
+        $cacheKey = "{$resourceType}_{$resourceId}";
+
+        if (isset(self::$resolutionCache[$cacheKey])) {
+            return self::$resolutionCache[$cacheKey];
+        }
+
         $targetFolder = null;
         $targetLedgerDefine = null;
 
         switch ($resourceType) {
             case 'Ledger':
-                $ledger = Ledger::find($resourceId);
+                $ledger = Ledger::with('define.folder.ancestors.roles')->find($resourceId);
                 if ($ledger) {
                     $targetLedgerDefine = $ledger->define;
                     $targetFolder = $targetLedgerDefine->folder;
                 }
                 break;
             case 'LedgerDefine':
-                $targetLedgerDefine = LedgerDefine::find($resourceId);
+                $targetLedgerDefine = LedgerDefine::with('folder.ancestors.roles')->find($resourceId);
                 if ($targetLedgerDefine) {
                     $targetFolder = $targetLedgerDefine->folder;
                 }
                 break;
             case 'Folder':
-                $targetFolder = Folder::find($resourceId);
+                $targetFolder = Folder::with('ancestors.roles')->find($resourceId);
                 break;
             default:
                 // 何もしない
                 break;
         }
 
-        return [
+        return self::$resolutionCache[$cacheKey] = [
             'folder' => $targetFolder,
             'ledgerDefine' => $targetLedgerDefine,
         ];
@@ -423,22 +419,21 @@ class PermissionService
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する
-     * (変更なし)
-     *
-     * @param int $resourceId
-     * @param string $resourceType
-     * @return FolderPermissionType|null
+     * リクエスト内キャッシュを使用してDB呼び出しを削減
      */
     public function getCurrentUserHighestPermission(int $resourceId, string $resourceType): ?FolderPermissionType
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
-        // スーパー管理者なら ADMIN を返す
-        if ($user->hasRole('super_admin')) {
-//            return FolderPermissionType::ADMIN;
+        // リクエスト内キャッシュキー
+        $cacheKey = "permission:{$user->id}:{$resourceType}:{$resourceId}";
+
+        // キャッシュがあれば返す
+        if (isset($this->permissionCache[$cacheKey])) {
+            return $this->permissionCache[$cacheKey];
         }
 
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
@@ -452,7 +447,7 @@ class PermissionService
             foreach (FolderPermissionType::accessPermissions() as $permissionType) {
                 // ユーザーがこのフォルダに対してこの権限を持っているか（包含関係考慮済み）
                 if ($this->userService->hasFolderPermission($user, $targetFolder, $permissionType)) {
-                    if (!$highestPermission || $permissionType->getOrder() > $highestPermission->getOrder()) {
+                    if (! $highestPermission || $permissionType->getOrder() > $highestPermission->getOrder()) {
                         $highestPermission = $permissionType;
                     }
                 }
@@ -461,14 +456,19 @@ class PermissionService
 
         // 2. 台帳定義の直接権限 (LedgerDefine または Ledger が対象の場合のみ)
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
-            // 台帳定義に直接割り当てられたロール経由の権限
+            // 台帳定義に直接割り当てられたロールを取得
+            $definedRoles = $targetLedgerDefine->roles;
             $userRoles = $this->userService->getAllUniqueRolesForUser($user);
-            foreach ($userRoles as $userRole) {
-                // hasPermissionTo は Spatie の permission system を使う
-                // HasModelRoles トレイトの hasPermissionTo() は role name を受け取る
+
+            // ユーザーのロールのうち、この台帳定義に割り当てられているものを抽出
+            $relevantRoles = $userRoles->intersect($definedRoles);
+
+            foreach ($relevantRoles as $role) {
                 foreach (FolderPermissionType::accessPermissions() as $permissionType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permissionType->value, $userRole->name)) {
-                        if (!$highestPermission || $permissionType->getOrder() > $highestPermission->getOrder()) {
+                    // ロール自体がその権限（read, write等）を持っているかチェック
+                    // SpatieのRoleモデルはHasPermissionsをトレイトとして持っているため hasPermissionTo が使える
+                    if ($role->hasPermissionTo($permissionType->value)) {
+                        if (! $highestPermission || $permissionType->getOrder() > $highestPermission->getOrder()) {
                             $highestPermission = $permissionType;
                         }
                     }
@@ -476,26 +476,22 @@ class PermissionService
             }
         }
 
+        // キャッシュに保存
+        $this->permissionCache[$cacheKey] = $highestPermission;
+
         return $highestPermission;
     }
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ全ての権限を取得する
      *
-     * @param int $resourceId
-     * @param string $resourceType
      * @return FolderPermissionType[]|null
      */
     public function getCurrentUserAllPermissions(int $resourceId, string $resourceType): ?array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return null;
-        }
-
-        // スーパー管理者なら全権限を返す
-        if ($user->hasRole('super_admin')) {
-//            return FolderPermissionType::cases();
         }
 
         $resolved = $this->resolveTargetFolderAndLedgerDefine($resourceId, $resourceType);
@@ -515,10 +511,16 @@ class PermissionService
 
         // 2. 台帳定義の直接権限 (LedgerDefine または Ledger が対象の場合のみ)
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
+            // 台帳定義に直接割り当てられたロールを取得
+            $definedRoles = $targetLedgerDefine->roles;
             $userRoles = $this->userService->getAllUniqueRolesForUser($user);
-            foreach ($userRoles as $userRole) {
+
+            // ユーザーのロールのうち、この台帳定義に割り当てられているものを抽出
+            $relevantRoles = $userRoles->intersect($definedRoles);
+
+            foreach ($relevantRoles as $role) {
                 foreach (FolderPermissionType::cases() as $permissionType) {
-                    if ($targetLedgerDefine->hasPermissionTo($permissionType->value, $userRole->name)) {
+                    if ($role->hasPermissionTo($permissionType->value)) {
                         $permissions[$permissionType->value] = $permissionType;
                     }
                 }

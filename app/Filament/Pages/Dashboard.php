@@ -12,6 +12,20 @@ class Dashboard extends \Filament\Pages\Dashboard
 {
     public static bool $shouldRegisterNavigation = false;
 
+    public ?string $fromTenant = null;
+
+    public function mount(): void
+    {
+        $this->fromTenant = request()->query('from_tenant');
+    }
+
+    public function getWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\DashboardLinksWidget::class,
+        ];
+    }
+
     //    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     //    protected static string $view = 'filament.pages.dashboard';
@@ -21,10 +35,10 @@ class Dashboard extends \Filament\Pages\Dashboard
         return static::$title ?? __('ledger.setting');
     }
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
-/*            Action::make('updateModel')
+            /*            Action::make('updateModel')
                 ->label(__('ledger.folder.fix'))
                 ->action('fixFolderTree')
                 ->icon('heroicon-o-wrench')
@@ -44,7 +58,7 @@ class Dashboard extends \Filament\Pages\Dashboard
         } catch (Exception $e) {
             Notification::make()
                 ->title(__('ledger.error'))
-                ->body(__('ledger.action_error') . ': ' . $e->getMessage())
+                ->body(__('ledger.action_error').': '.$e->getMessage())
                 ->danger()
                 ->send();
         }

@@ -2,275 +2,450 @@
 
 namespace Tests\Unit\Services\Ledger;
 
-use App\Models\AttachedFile;
-use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerDiffProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LedgerDiffProcessorTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected LedgerDiffProcessor $processor;
+    protected bool $tenancy = true;
+
+    private LedgerDiffProcessor $processor;
+
+    private LedgerDefine $ledgerDefine;
+
+    private Ledger $ledger;
+
+    private Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->processor = new LedgerDiffProcessor();
-    }
+        $this->processor = new LedgerDiffProcessor;
+        $this->folder = Folder::factory()->create();
 
-    #[Test]
-    public function it_finds_comparison_target_diff_correctly()
-    {
-        // テストデータの準備
-        $ledgerDefine = LedgerDefine::factory()->create();
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => ['col1' => 'initial'],
+        // テストの基本となる台帳定義と台帳レコードを作成
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
+                ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2],
+            ],
         ]);
 
-        // Diff 1 (内容変更なし)
-        LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => ['col1' => 'initial'],
+        $this->ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['Value 1', 'Value 2'],
+        ]);
+    }
+
+    // --- findComparisonTargetDiff Tests ---
+
+    #[Test]
+    public function it_finds_comparison_target_diff_correctly(): void
+    {
+        // Diff 1 (内容変更あり)
+        $diff1 = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['Value 1', 'Value 2'], // 初期値と異なる
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
         // Diff 2 (内容変更あり)
-        $diff2 = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => ['col1' => 'changed'],
+        $diff2 = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['Value 1', 'Changed Value 2'],
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
-        // Diff 3 (内容変更なし)
-        $diff3 = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => ['col1' => 'changed'],
+        // Diff 3 (現在の内容と同じ)
+        $diff3 = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['Value 1', 'Final Value 2'],
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
-        // Ledger の latest_diff_id を設定
-        $ledger->latest_diff_id = $diff3->id;
-        $ledger->save();
+        // Ledgerの最新状態を更新
+        $this->ledger->latest_diff_id = $diff3->id;
+        $this->ledger->content = ['Value 1', 'Final Value 2'];
+        $this->ledger->save();
 
-        // Ledger の content を最新の状態に更新
-        $ledger->content = ['col1' => 'changed'];
+        $comparisonTarget = $this->processor->findComparisonTargetDiff($this->ledger);
 
-        // 実行
-        $comparisonTarget = $this->processor->findComparisonTargetDiff($ledger);
-
-        // 検証: diff2 が比較対象として返されるべき
         $this->assertNotNull($comparisonTarget);
+        // findComparisonTargetDiffは、現在の内容と異なる直近のdiffを返すため、diff2が期待値
         $this->assertEquals($diff2->id, $comparisonTarget->id);
     }
 
     #[Test]
-    public function it_returns_null_if_no_comparison_target_diff_found()
+    public function it_returns_null_if_no_comparison_target_diff_found(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => ['col1' => 'initial'],
+        $diff1 = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledger->content,
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
-        // Diff を一つだけ作成 (内容変更なし)
-        $diff1 = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => ['col1' => 'initial'],
-        ]);
+        $this->ledger->latest_diff_id = $diff1->id;
+        $this->ledger->save();
 
-        $ledger->latest_diff_id = $diff1->id;
-        $ledger->save();
-        $ledger->content = ['col1' => 'initial'];
+        $comparisonTarget = $this->processor->findComparisonTargetDiff($this->ledger);
 
-        $comparisonTarget = $this->processor->findComparisonTargetDiff($ledger);
         $this->assertNull($comparisonTarget);
     }
 
+    // --- prepareContentDiff Tests ---
+
     #[Test]
-    public function it_prepares_content_diff_with_changes()
+    public function it_returns_added_status_when_no_comparison_target_is_given(): void
     {
-        // テストデータの準備
-        $columnDefinesForTest = [
-            ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
-            ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2],
-        ];
+        // 比較対象がない場合、すべてのカラムが 'added' として扱われる
+        $result = $this->processor->prepareContentDiff($this->ledger, null);
 
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [0 => 'new_value', 1 => 'value2'],
-        ]);
-
-        $oldDiff = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => [0 => 'old_value', 1 => 'value2'],
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger->latest_diff_id = $oldDiff->id + 1; // 最新のDiff IDを設定 (実際には存在しないが、ロジック上必要)
-        $ledger->save();
-
-        // 実行
-        $result = $this->processor->prepareContentDiff($ledger, $ledger->define, $oldDiff);
-
-        // 検証
-        $this->assertTrue($result['hasChangedColumns']);
+        // 最初のバージョンのため差分「なし」と見なす（変更ではないため）
+        $this->assertFalse($result['hasChangedColumns']);
         $this->assertCount(2, $result['contentChanges']);
-        $this->assertTrue($result['contentChanges'][0]['changed']); // Column 0 changed
-        $this->assertFalse($result['contentChanges'][1]['changed']); // Column 1 not changed
-        $this->assertEquals('new_value', $result['contentChanges'][0]['current_value']); // Column 0 changed
-        $this->assertEquals('old_value', $result['contentChanges'][0]['old_value']); // Column 0 changed
+        $this->assertEquals('added', $result['contentChanges'][0]['status']);
+        $this->assertEquals('added', $result['contentChanges'][1]['status']);
     }
 
     #[Test]
-    public function it_prepares_content_diff_with_no_changes()
+    public function it_returns_unchanged_status_when_content_is_identical(): void
     {
-        $columnDefinesForTest = [
-            ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
-            ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2],
-        ];
-
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [0 => 'value1', 1 => 'value2'],
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledger->content,
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
-        $oldDiff = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => [0 => 'value1', 1 => 'value2'],
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger->latest_diff_id = $oldDiff->id + 1;
-        $ledger->save();
-
-        $result = $this->processor->prepareContentDiff($ledger, $ledger->define, $oldDiff);
+        $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
         $this->assertFalse($result['hasChangedColumns']);
         $this->assertCount(2, $result['contentChanges']);
-        $this->assertFalse($result['contentChanges'][0]['changed']);
-        $this->assertFalse($result['contentChanges'][1]['changed']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
     }
 
     #[Test]
-    public function it_prepares_content_diff_with_added_column()
+    public function it_identifies_modified_columns(): void
     {
-        $columnDefinesForTest = [
-            ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
-            ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2],
-        ];
-
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [0 => 'value1', 1 => 'value2'],
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => ['Old Value 1', 'Value 2'],
+            'column_define' => $this->ledgerDefine->column_define,
         ]);
 
-        $oldDiff = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => [0 => 'value1'],
-            'column_define' => [['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]],
+        // メインの台帳の値を変更
+        $this->ledger->content = ['New Value 1', 'Value 2'];
+        $this->ledger->save();
+
+        $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
+
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+        $this->assertEquals('New Value 1', $result['contentChanges'][0]['current_value']);
+        $this->assertEquals('Old Value 1', $result['contentChanges'][0]['old_value']);
+    }
+
+    #[Test]
+    public function it_identifies_added_columns(): void
+    {
+        // V1: カラム0のみ
+        $oldColumnDefine = [['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]];
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_define' => $oldColumnDefine,
+            'content' => ['Value 1'],
         ]);
-        $ledger->latest_diff_id = $oldDiff->id + 1;
-        $ledger->save();
 
-        $result = $this->processor->prepareContentDiff($ledger, $ledger->define, $oldDiff);
+        // V2: カラム0と1 (setUpで定義済み)
+        $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
-        $this->assertTrue($result['hasChangedColumns']); // 新しいカラムが追加されたので変更あり
+        $this->assertTrue($result['hasChangedColumns']);
         $this->assertCount(2, $result['contentChanges']);
-        $this->assertFalse($result['contentChanges'][0]['changed']); // Column 0 not changed
-        $this->assertTrue($result['contentChanges'][1]['changed']); // New column (Column 1) is changed
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('added', $result['contentChanges'][1]['status']);
+        $this->assertNull($result['contentChanges'][1]['old_value']);
+        $this->assertEquals('Value 2', $result['contentChanges'][1]['current_value']);
     }
 
     #[Test]
-    public function it_prepares_content_diff_with_removed_column()
+    public function it_identifies_deleted_columns(): void
     {
-        $columnDefinesForTest = [
-            ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1],
-        ];
-
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [0 => 'value1'],
+        // V1: カラム0と1 (oldDiff)
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_define' => $this->ledgerDefine->column_define,
+            'content' => ['Value 1', 'Value 2'],
         ]);
 
-        $oldDiff = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => [0 => 'value1', 1 => 'value2'],
-            'column_define' => [['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1], ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 2]],
-        ]);
-        $ledger->latest_diff_id = $oldDiff->id + 1;
-        $ledger->save();
+        // V2: カラム0のみ
+        $newColumnDefine = [['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 1]];
+        $this->ledger->define->column_define = $newColumnDefine;
+        $this->ledger->content = ['Value 1'];
+        $this->ledger->save();
 
-        $result = $this->processor->prepareContentDiff($ledger, $ledger->define, $oldDiff);
+        $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
-        $this->assertTrue($result['hasChangedColumns']); // カラムが削除されたので変更あり
-        $this->assertCount(2, $result['contentChanges']); // 削除されたカラムも含まれる
-        $this->assertFalse($result['contentChanges'][0]['changed']); // Column 0 not changed
-        $this->assertTrue($result['contentChanges'][1]['changed']); // Removed column (Column 1) is changed
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertCount(2, $result['contentChanges']); // 削除されたカラムも結果に含まれる
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('deleted', $result['contentChanges'][1]['status']);
+        $this->assertEquals('Value 2', $result['contentChanges'][1]['old_value']);
+        $this->assertNull($result['contentChanges'][1]['current_value']);
     }
 
     #[Test]
-    public function it_prepares_content_diff_with_attached_files()
+    public function it_identifies_reordered_columns_as_modified(): void
     {
-        // テストデータの準備
-        $columnDefinesForTest = [
-            ['id' => 0, 'name' => 'File Column', 'type' => 'files', 'order' => 1],
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_define' => $this->ledgerDefine->column_define, // order: 1, 2
+            'content' => ['Value 1', 'Value 2'],
+        ]);
+
+        // カラムの順序を入れ替え
+        $reorderedDefine = [
+            ['id' => 1, 'name' => 'Column 2', 'type' => 'text', 'order' => 1],
+            ['id' => 0, 'name' => 'Column 1', 'type' => 'text', 'order' => 2],
         ];
+        $this->ledger->define->column_define = $reorderedDefine;
+        // contentの順序も定義に合わせて変更される
+        $this->ledger->content = ['Value 2', 'Value 1'];
+        $this->ledger->save();
 
-        $ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => $columnDefinesForTest,
-        ]);
-        $ledger = Ledger::factory()->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'content' => [0 => ['file_new_hash' => 'new_file.pdf']],
-        ]);
-        $ledger->define->column_define = collect([
-            new ColumnDefine(['id' => 0, 'name' => 'File Column', 'type' => 'files', 'order' => 1]),
-        ]);
+        $result = $this->processor->prepareContentDiff($this->ledger, $oldDiff);
 
-        // 添付ファイルを作成
-        AttachedFile::factory()->for($ledger)->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'hashedbasename' => 'file_new_hash',
-            'ledger_id' => $ledger->id,
-        ]);
-        AttachedFile::factory()->for($ledger)->create([
-            'ledger_define_id' => $ledgerDefine->id,
-            'hashedbasename' => 'file_old_hash',
-            'ledger_id' => $ledger->id, // 同じLedger IDだが、古いDiffにのみ関連
-        ]);
+        // カラムの順序変更は定義の変更とみなされ、差分ありとなる
+        $this->assertTrue($result['hasChangedColumns']);
+        // 値自体は同じでも、カラム定義のコンテキスト（特に順序）が変わったため、両方とも 'modified' となる
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals('modified', $result['contentChanges'][1]['status']);
+    }
 
-        $oldDiff = LedgerDiff::factory()->for($ledger)->create([
-            'ledger_id' => $ledger->id,
-            'content' => [0 => ['file_old_hash' => 'old_file.pdf']],
+    #[Test]
+    public function it_identifies_changes_in_file_attachments(): void
+    {
+        $fileColumnDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
             'column_define' => [['id' => 0, 'name' => 'File Column', 'type' => 'files', 'order' => 1]],
         ]);
-        $ledger->latest_diff_id = $oldDiff->id + 1;
-        $ledger->save();
+        $fileLedger = Ledger::factory()->create([
+            'ledger_define_id' => $fileColumnDefine->id,
+            'content' => [0 => ['new_file_hash' => 'new_file.pdf']],
+        ]);
 
-        // 実行
-        $result = $this->processor->prepareContentDiff($ledger, $ledger->define, $oldDiff);
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $fileLedger->id,
+            'ledger_define_id' => $fileColumnDefine->id,
+            'column_define' => $fileColumnDefine->column_define,
+            'content' => [0 => ['old_file_hash' => 'old_file.pdf']],
+        ]);
 
-        // 検証
+        $result = $this->processor->prepareContentDiff($fileLedger, $oldDiff);
+
         $this->assertTrue($result['hasChangedColumns']);
         $this->assertCount(1, $result['contentChanges']);
-        $this->assertTrue($result['contentChanges'][0]['changed']); // Column 0 changed
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals(['new_file_hash' => 'new_file.pdf'], $result['contentChanges'][0]['current_value']);
+        $this->assertEquals(['old_file_hash' => 'old_file.pdf'], $result['contentChanges'][0]['old_value']);
+    }
 
-        // 添付ファイルの検証
-        $this->assertArrayHasKey('file_new_hash', $result['contentChanges'][0]['current_attachments']);
-        $this->assertArrayHasKey('file_old_hash', $result['contentChanges'][0]['old_attachments']);
+    #[Test]
+    public function it_treats_null_and_empty_string_as_unchanged_for_text_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Text Column', 'type' => 'text', 'order' => 1],
+                ['id' => 1, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 2],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['', ''], // 空文字列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null, null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空文字列とnullは同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+    }
+
+    #[Test]
+    public function it_treats_null_and_empty_array_as_unchanged_for_array_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Checkbox Column', 'type' => 'chk', 'order' => 1],
+                ['id' => 1, 'name' => 'Files Column', 'type' => 'files', 'order' => 2],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [[], []], // 空配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null, null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空配列とnullは同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+        $this->assertEquals('unchanged', $result['contentChanges'][1]['status']);
+    }
+
+    #[Test]
+    public function it_treats_array_with_empty_strings_as_empty(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Checkbox', 'type' => 'chk', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [['', null]], // 空要素のみの配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [[]], // 空配列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 空要素のみの配列と空配列は同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
+    }
+
+    #[Test]
+    public function it_does_not_treat_zero_as_empty_for_number_columns(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Amount', 'type' => 'number', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [0], // 数値のゼロ
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [''], // 空文字列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 0 と '' は異なる値なので modified
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals(0, $result['contentChanges'][0]['current_value']);
+        $this->assertEquals('', $result['contentChanges'][0]['old_value']);
+    }
+
+    #[Test]
+    public function it_detects_actual_content_change_in_textarea(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Notes', 'type' => 'textarea', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['Some important notes'], // 実際の内容
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [''], // 空文字列
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // 実際の内容変更は検出される
+        $this->assertTrue($result['hasChangedColumns']);
+        $this->assertEquals('modified', $result['contentChanges'][0]['status']);
+        $this->assertEquals('Some important notes', $result['contentChanges'][0]['current_value']);
+    }
+
+    #[Test]
+    public function it_treats_null_and_empty_array_as_unchanged_for_files(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => 'Attachments', 'type' => 'files', 'order' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => [[]], // 空配列
+        ]);
+
+        $oldDiff = LedgerDiff::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_define' => $ledgerDefine->column_define,
+            'content' => [null], // null
+        ]);
+
+        $result = $this->processor->prepareContentDiff($ledger, $oldDiff);
+
+        // ファイル未添付の状態で、nullと空配列は同じ「空」として扱われるべき
+        $this->assertFalse($result['hasChangedColumns']);
+        $this->assertEquals('unchanged', $result['contentChanges'][0]['status']);
     }
 }

@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -76,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'receive_workflow_summary_email' => 'ワークフローの集約通知メールを受け取る', // ワークフロー通知グループ
             'receive_workflow_action_email' => 'ワークフローの個別アクション通知メールを受け取る', // ワークフロー通知グループ
 
+            'manage_attachments' => '添付ファイルの高度な管理（VLM再処理等）ができる', // 添付ファイル管理グループ
+
         ];
 
         // 権限を登録
@@ -96,7 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ロールを定義し、権限を付与
         $roles = [
-            'Super Admin' => [
+            Role::SUPER_ADMIN => [
                 'description' => 'システム全体の管理者',
                 'permissions' => array_keys($permissions), // 全権限を持つ
             ],
@@ -112,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'view_folder_permissions', 'create_folder_permissions', 'update_folder_permissions', 'delete_folder_permissions',
                     'view_activity_logs',
                     'manage_auto_links',
+                    'manage_attachments', // 添付ファイルの高度な管理
                     'notify', // システム内通知も受け取る想定
                 ], $defaultEmailPermissions),
             ],
@@ -183,8 +186,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // super_admin@ll.com に Super Admin ロールを付与
         $user = User::where('email', 'super_admin@ll.com')->first();
         if ($user) {
-            $superAdminRole = Role::where('name', 'Super Admin')->first();
-            if ($superAdminRole && !$user->hasRole($superAdminRole)) {
+            $superAdminRole = Role::where('name', Role::SUPER_ADMIN)->first();
+            if ($superAdminRole && ! $user->hasRole($superAdminRole)) {
                 $user->assignRole($superAdminRole);
             }
         }

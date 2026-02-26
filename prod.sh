@@ -1,6 +1,14 @@
-# .env.productionをコピー
-cp .env.production .env
+#!/bin/bash
+# Production environment launcher
+# This is a wrapper script for setup.sh
 
-# docker-composeを本番環境用の設定で実行
-#docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml up --build -d
+set -e
+
+# .env.production を .env にコピー（存在する場合）
+if [ -f .env.production ]; then
+    echo "INFO: Copying .env.production to .env"
+    cp .env.production .env
+fi
+
+# setup.sh を -p オプション付きで呼び出し
+./bin/setup.sh -p "$@"

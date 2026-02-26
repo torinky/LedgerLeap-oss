@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
-use App\Models\Organization;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,7 +11,6 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class OrganizationRelationManager extends RelationManager
 {
@@ -25,6 +23,7 @@ class OrganizationRelationManager extends RelationManager
     {
         return __('ledger.organization');
     }
+
     protected static function getModelLabel(): string
     {
         return __('ledger.organization');
@@ -87,7 +86,7 @@ class OrganizationRelationManager extends RelationManager
             ->headerActions([
                 Tables\Actions\AttachAction::make()
                     ->preloadRecordSelect()
-                    ->form(fn(Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (Tables\Actions\AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_primary')
                             ->label(__('ledger.organizations.primary'))

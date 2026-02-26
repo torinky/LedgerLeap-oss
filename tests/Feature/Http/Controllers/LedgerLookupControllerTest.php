@@ -7,64 +7,93 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
-use Tests\TestCase;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase; // 追加
 
 class LedgerLookupControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    private User $adminUser;
 
-    private User $user;
     private LedgerDefine $ledgerDefine;
+
+    protected bool $tenancy = true;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create();
-        // 必要なパーミッションを付与
-        Permission::findOrCreate('view_ledger_defines');
-        Permission::findOrCreate('view_ledgers');
-        $this->user->givePermissionTo('view_ledger_defines');
-        $this->user->givePermissionTo('view_ledgers');
 
-        $this->actingAs($this->user);
+        DB::table('ledgers')->truncate(); // 追加
 
-        // テスト用のLedgerDefineを作成
-        // ColumnDefineを配列として定義し、LedgerDefineに渡す
-        $columnDefineData = [
-            'id' => 1, // ユニークなID
-            'name' => 'description',
-            'type' => 'text',
-            'order' => 1, // order は 1 から始める
-            'useOptions' => false,
-            'options' => [],
-            'required' => false,
-            'unique' => false,
-            'sortBy' => false,
-            'hint' => 'Hint',
-            'file' => [],
-            'display_level' => 3,
-            'group' => null,
+        // Permissions
+        $permissions = [
+            'view ledgers',
+            'create ledgers',
+            'edit ledgers',
+            'delete ledgers',
+            'import ledgers',
+            'export ledgers',
+            'view ledgerDefines',
+            'create ledgerDefines',
+            'edit ledgerDefines',
+            'delete ledgerDefines',
         ];
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+
+        // Roles
+        $adminRole = Role::findOrCreate('admin', 'web');
+        $adminRole->givePermissionTo($permissions);
+
+        // Users
+        $this->adminUser = User::factory()->create();
+        $this->adminUser->assignRole('admin');
+
+        // Acting as admin user for all tests in this class
+        $this->actingAs($this->adminUser);
+
+        // Grant folder permission to the admin role
+        $this->tenant->run(function () use ($adminRole) {
+            $folder = Folder::create(['title' => '/', 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
+            \App\Models\RoleFolderPermission::create([
+                'role_id' => $adminRole->id,
+                'folder_id' => $folder->id,
+                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'modifier_id' => $this->adminUser->id,
+            ]);
+        });
+
+        // Ledger Definition
         $this->ledgerDefine = LedgerDefine::factory()->create([
-            'column_define' => [$columnDefineData]
+            'title' => 'Test Ledger',
+            'column_define' => [
+                new ColumnDefine([
+                    'id' => 1,
+                    'name' => 'unique_text',
+                    'label' => 'Unique Text',
+                    'type' => 'text',
+                    'unique' => true,
+                    'order' => 1,
+                    'sort_index' => null,
+                ]),
+            ],
         ]);
     }
 
     #[Test]
     public function it_redirects_to_show_page_on_unique_match()
     {
-        // setUpで作成したledgerDefineのcolumn_defineのIDを使用
         $columnId = $this->ledgerDefine->column_define->first()->id;
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => [$columnId => 'unique-id-123'] // ColumnDefineのIDをキーとして使用
+            'content' => [$columnId => 'unique-id-123'], // ColumnDefineのIDをキーとして使用
         ]);
 
-        $this->get(route('ledger.lookup', ['query' => 'unique-id-123']))
-            ->assertRedirect(route('ledger.show', ['ledgerId' => $ledger->id, 'highlight' => 'unique-id-123']));
+        $this->get('/'.$this->tenant->id.'/l/unique-id-123')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id.'?highlight=unique-id-123');
     }
 
     #[Test]
@@ -73,22 +102,22 @@ class LedgerLookupControllerTest extends TestCase
         $columnId = $this->ledgerDefine->column_define->first()->id;
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => [$columnId => 'common-term']
+            'content' => [$columnId => 'common-term'],
         ]);
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => [$columnId => 'common-term']
+            'content' => [$columnId => 'common-term'],
         ]);
 
-        $this->get(route('ledger.lookup', ['query' => 'common-term']))
-            ->assertRedirect(route('ledger.index', ['q' => 'common-term', 'highlight' => 'common-term', 'l' => [], 'f' => []]));
+        $this->get('/'.$this->tenant->id.'/l/common-term')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term&highlight=common-term&l=&f=');
     }
 
     #[Test]
     public function it_redirects_to_index_on_zero_matches()
     {
-        $this->get(route('ledger.lookup', ['query' => 'non-existent']))
-            ->assertRedirect(route('ledger.index', ['q' => 'non-existent', 'highlight' => 'non-existent', 'l' => [], 'f' => []]));
+        $this->get('/'.$this->tenant->id.'/l/non-existent')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent&highlight=non-existent&l=&f=');
     }
 
     #[Test]
@@ -97,10 +126,10 @@ class LedgerLookupControllerTest extends TestCase
         $columnId = $this->ledgerDefine->column_define->first()->id;
         Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
-            'content' => [$columnId => 'unique-id-for-list']
+            'content' => [$columnId => 'unique-id-for-list'],
         ]);
 
-        $this->get(route('ledger.lookup', ['query' => 'unique-id-for-list', 'mode' => 'list']))
-            ->assertRedirect(route('ledger.index', ['q' => 'unique-id-for-list', 'highlight' => 'unique-id-for-list', 'l' => [], 'f' => []]));
+        $this->get('/'.$this->tenant->id.'/l/unique-id-for-list?mode=list')
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list&highlight=unique-id-for-list&l=&f=');
     }
 }

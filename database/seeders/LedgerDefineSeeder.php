@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Folder;
 use App\Models\LedgerDefine;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class LedgerDefineSeeder extends Seeder
@@ -15,6 +15,17 @@ class LedgerDefineSeeder extends Seeder
      */
     public function run()
     {
-        LedgerDefine::factory()->count(10)->create();
+        $folderIds = Folder::pluck('id');
+
+        if ($folderIds->isEmpty()) {
+            // フォルダが存在しない場合は、警告を出すか、何もしない
+            $this->command->warn('No folders found, skipping LedgerDefineSeeder.');
+
+            return;
+        }
+
+        LedgerDefine::factory()->count(50)->create([
+            'folder_id' => fn () => $folderIds->random(),
+        ]);
     }
 }

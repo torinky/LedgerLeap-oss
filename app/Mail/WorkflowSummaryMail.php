@@ -14,7 +14,9 @@ class WorkflowSummaryMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public int $inspectionCount;
+
     public int $approvalCount;
+
     public int $totalCount;
 
     /** Create a new message instance. */
@@ -29,6 +31,7 @@ class WorkflowSummaryMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $appName = config('app.name', 'LedgerLeap');
+
         // 翻訳キーを使用
         return new Envelope(
             subject: __('ledger.mail.subject.summary', ['appName' => $appName, 'count' => $this->totalCount]),

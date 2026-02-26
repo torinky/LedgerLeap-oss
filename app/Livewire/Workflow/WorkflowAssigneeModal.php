@@ -2,20 +2,26 @@
 
 namespace App\Livewire\Workflow;
 
-//use LivewireUI\Modal\ModalComponent; // LivewireUI\Modal を使用する場合
+use App\Livewire\BaseLivewireComponent;
+// use LivewireUI\Modal\ModalComponent; // LivewireUI\Modal を使用する場合
 // use Livewire\Component; // 標準的な Livewire Component として作成する場合
+use App\Livewire\Traits\InitializesTenantContext;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
 // 標準的な Livewire Component として作成する場合
-class WorkflowAssigneeModal extends Component
+class WorkflowAssigneeModal extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
+
     public bool $showModal = false; // モーダル表示状態
 
     // 親から渡されるパラメータ
     public int $ledgerDefineId;
+
     public int $folderId;
+
     public string $roleType;
+
     public ?int $ledgerId = null;
 
     // WorkflowAssigneeSelect とバインドするプロパティ

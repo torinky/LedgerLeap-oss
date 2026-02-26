@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tag extends Model
 {
-    use HasFactory;
+    use HasFactory, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
         'folder_id', 'ledger_define_id', 'creator_id', 'modifier_id', 'name',
@@ -20,7 +20,7 @@ class Tag extends Model
 
     public function folder()
     {
-        return $this->hasOne(Folder::class, 'folder_id');
+        return $this->belongsTo(Folder::class, 'folder_id');
     }
 
     public function creator()

@@ -8,7 +8,7 @@
             {{-- 編集ボタン --}}
             @php $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerRecord->define); @endphp
             @if($canUpdate && !$ledgerRecord->isLocked())
-                <a href="{{ route('ledger.edit', ['ledgerId'=>$ledgerRecord->id]) }}"
+                <a href="{{ route('ledger.edit', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
                    class="join-item btn btn-primary btn-wide"
                 ><i class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</a>
             @else
@@ -18,6 +18,24 @@
                                 class="fa-solid fa-pencil mr-2"></i>{{__('ledger.edit')}}</button>
                 </div>
             @endif
+
+            {{-- 複製ボタン --}}
+            @php $canCreate = auth()->user()->can('create', [App\Models\Ledger::class, $ledgerRecord->define]); @endphp
+            @if($canCreate)
+                <a href="{{ route('ledger.duplicate', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
+                   class="join-item btn btn-outline btn-sm md:btn-md"
+                   target="_blank"
+                >
+                    <i class="fa-solid fa-copy mr-2"></i>{{__('ledger.duplicate_from_this')}}
+                </a>
+            @else
+                <div class="tooltip" data-tip="{{ __('ledger.no_create_permission') }}">
+                    <button class="join-item btn btn-outline btn-sm md:btn-md" disabled>
+                        <i class="fa-solid fa-copy mr-2"></i>{{__('ledger.duplicate_from_this')}}
+                    </button>
+                </div>
+            @endif
+
             {{-- ワークフローアクションボタン --}}
             {{-- 点検完了（承認申請）ボタン --}}
             @if($this->canRequestApproval())
@@ -68,7 +86,7 @@
         {{-- 変更履歴ボタン --}}
         @if($ledgerRecord->ledgerDiff()->where(DB::raw('content'), '!=', '')->count() > 0)
             {{-- 変更履歴がある場合のみ --}}
-            <a href="{{ route('ledgerDiff.show', ['ledgerId'=>$ledgerRecord->id]) }}"
+            <a href="{{ route('ledgerDiff.show', ['tenant' => tenant('id'), 'ledgerId'=>$ledgerRecord->id]) }}"
                class="btn btn-outline btn-info btn-wide"
             ><i class="fa-solid fa-clock-rotate-left mr-2"></i>{{__('ledger.view_history')}}
                 @if($ledgerRecord->version-1>0)
@@ -79,8 +97,16 @@
             </a>
         @endif
 
-        {{-- 閉じるボタン --}}
-        <x-ledger.close-window-button/>
+        {{-- 閉じるボタンとリストに戻るボタン --}}
+        <div class="flex gap-2 items-center justify-center">
+            <x-mary-button
+                    label="{{ __('ledger.back_to_list') }}"
+                    icon="o-list-bullet"
+                    class="btn-sm btn-outline"
+                    onclick="window.open('{{ route('ledger.index', ['tenant' => tenant('id'), 'l' => [$ledgerRecord->define->id], 'cf' => $ledgerRecord->define->folder_id ])}}', 'ledger-list');"
+            />
+            <x-ledger.close-window-button/>
+        </div>
 
     </div>
     {{-- 現在のステータス表示 --}}

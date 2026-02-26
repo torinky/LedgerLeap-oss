@@ -19,8 +19,6 @@ class ListOrganizationsTree extends TreePage
 
     /**
      * ページのタイトルを定義します。
-     *
-     * @return string|Htmlable
      */
     public function getTitle(): string|Htmlable
     {
@@ -86,7 +84,6 @@ class ListOrganizationsTree extends TreePage
         ];
     }
 
-
     /**
      * ツリーの各ノードに表示するアクションを定義します。
      */
@@ -94,7 +91,7 @@ class ListOrganizationsTree extends TreePage
     {
         return [
             Actions\EditAction::make()
-                ->url(fn(Organization $record): string => OrganizationResource::getUrl('edit', ['record' => $record])),
+                ->url(fn (Organization $record): string => OrganizationResource::getUrl('edit', ['record' => $record])),
             Actions\DeleteAction::make(),
             Actions\ForceDeleteAction::make(),
             Actions\RestoreAction::make(),
@@ -114,5 +111,4 @@ class ListOrganizationsTree extends TreePage
                 ->url(OrganizationResource::getUrl('index')),
         ];
     }
-
 }

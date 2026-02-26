@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Activitylog\LogOptions;
@@ -20,23 +18,44 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\PermissionRegistrar;
 use Studio15\FilamentTree\Concerns\InteractsWithTree;
 
-//use CubeAgency\FilamentTreeView\Traits\HasTreeView;
+// use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 
 class Folder extends Model
 {
-    use HasFactory, LogsActivity, NodeTrait, SoftDeletes, InteractsWithTree;
+    use HasFactory, InteractsWithTree, LogsActivity, NodeTrait, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
-        'title', 'modifier_id', 'creator_id', 'parent_id',
+        'title', 'modifier_id', 'creator_id', 'parent_id', 'tenant_id',
     ];
 
     /**
      * Get the folder's name (alias for title).
-     *
-     * @return string
      */
     public function getNameAttribute(): string
     {
+        return $this->title;
+    }
+
+    public function getDisplayTitleAttribute(): string
+    {
+        if ($this->tenant) {
+            $tenantIdentifier = $this->tenant->name ?? $this->tenant->id;
+
+            return $this->title.' ('.$tenantIdentifier.')';
+        }
+
+        return $this->title;
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->parent_id === null && $this->tenant) {
+            // dataカラムからnameを取得
+            $tenantName = $this->tenant->name ?? $this->tenant->id;
+
+            return '【'.$tenantName.'】 '.$this->title;
+        }
+
         return $this->title;
     }
 
@@ -44,13 +63,12 @@ class Folder extends Model
 
     /**
      * ツリー表示で使用するラベルのカラム名を返します。
-     *
-     * @return string
      */
     public static function getTreeLabelAttribute(): string
     {
         return 'title';
     }
+
     /**
      * このフォルダに関連するロールフォルダ権限（通知設定を含む）を取得します。
      */
@@ -68,16 +86,16 @@ class Folder extends Model
         static::updated(function ($folder) {
             Cache::forget('folder_tree_list_');
             foreach (Role::all() as $role) {
-                Cache::forget('folder_permissions_' . $folder->id . '_' . $role->id);
-                Cache::forget('role_writable_folders_' . $role->id);
+                Cache::forget('folder_permissions_'.$folder->id.'_'.$role->id);
+                Cache::forget('role_writable_folders_'.$role->id);
             }
         });
 
         static::deleted(function ($folder) {
             Cache::forget('folder_tree_list_');
             foreach (Role::all() as $role) {
-                Cache::forget('folder_permissions_' . $folder->id . '_' . $role->id);
-                Cache::forget('role_writable_folders_' . $role->id);
+                Cache::forget('folder_permissions_'.$folder->id.'_'.$role->id);
+                Cache::forget('role_writable_folders_'.$role->id);
             }
         });
     }
@@ -97,25 +115,20 @@ class Folder extends Model
         return $this->hasMany(Tag::class, 'ledger_define_id');
     }
 
-    /**
-     * 子孫フォルダーのすべての`LedgerDefine`モデルの件数を取得します。
-     *
-     * @return int
-     */
     public function descendantLedgerDefinesCount()
     {
-        return $this->descendantsAndSelf($this->id)
-            ->reduce(fn($carry, $folder) => $carry + $folder->ledgerDefines()->count(), 0);
+        // ループ内での ledgerDefines()->count() を避け、一括で集計
+        return LedgerDefine::whereIn('folder_id', $this->descendantsAndSelf($this->id)->pluck('id'))->count();
     }
 
-    /**
-     * 子孫フォルダーのすべての件数を取得します。
-     *
-     * @return int
-     */
     public function descendantCount()
     {
-        return $this->descendants()->count();
+        // NestedSet の _lft, _rgt プロパティを使用して高速に計算します
+        // NodeTraitが提供するメソッドを使用して正しいカラム名でアクセス
+        $lft = $this->{$this->getLftName()};
+        $rgt = $this->{$this->getRgtName()};
+
+        return ($rgt - $lft - 1) / 2;
     }
 
     /**
@@ -138,7 +151,7 @@ class Folder extends Model
      * 与えられたノードからツリー形式のオプション配列を生成します。
      * 各ノードのタイトルは、階層を表すプレフィックスが付いたものがオプションのキーとなります。
      *
-     * @param Collection $nodes ルートノードのコレクション
+     * @param  Collection  $nodes  ルートノードのコレクション
      * @return array 階層化されたオプション配列
      */
     public static function treeList($nodes)
@@ -149,9 +162,9 @@ class Folder extends Model
             $options = [];
             $traverse = function ($categories, $prefix = '-') use (&$traverse, &$options) {
                 foreach ($categories as $category) {
-                    $options[$category->id] = $prefix . ' ' . $category->title;
+                    $options[$category->id] = $prefix.' '.$category->title;
 
-                    $traverse($category->children, $prefix . '-');
+                    $traverse($category->children, $prefix.'-');
                 }
             };
 
@@ -189,8 +202,8 @@ class Folder extends Model
     /**
      *  指定されたロールがこのフォルダに対して特定の権限を持っているか、親フォルダから権限を継承しているかをチェックします。
      *
-     * @param Role $role チェックするロール
-     * @param string $permission チェックする権限
+     * @param  Role  $role  チェックするロール
+     * @param  string  $permission  チェックする権限
      */
     public function hasPermissionWithInheritance(Role $role, string $permission): bool
     {
@@ -202,8 +215,8 @@ class Folder extends Model
     /**
      *  指定されたロールが直接このフォルダに対して特定の権限を持っているかをチェックします。
      *
-     * @param Role $role チェックするロール
-     * @param string $permission チェックする権限
+     * @param  Role  $role  チェックするロール
+     * @param  string  $permission  チェックする権限
      */
     public function hasDirectPermission(Role $role, string $permission): bool
     {
@@ -217,7 +230,7 @@ class Folder extends Model
     /**
      * 指定されたロールが直接このフォルダに対して持っているすべての権限を返します。
      *
-     * @param Role $role チェックするロール
+     * @param  Role  $role  チェックするロール
      */
     public function getDirectPermissions(Role $role): array
     {
@@ -230,11 +243,11 @@ class Folder extends Model
     /**
      * 指定されたロールが持つ、このフォルダとその祖先フォルダのすべての権限を返します。
      *
-     * @param Role $role チェックするロール
+     * @param  Role  $role  チェックするロール
      */
     public function getAllPermissionsWithInheritance(Role $role): array
     {
-        $cacheKey = 'folder_permissions_' . $this->id . '_' . $role->id; // キャッシュキーを生成
+        $cacheKey = 'folder_permissions_'.$this->id.'_'.$role->id; // キャッシュキーを生成
 
         return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($role) {
             $permissions = $this->getDirectPermissions($role);
@@ -249,7 +262,7 @@ class Folder extends Model
     /**
      * 指定された権限を持つロールに紐づくフォルダを取得する
      *
-     * @param FolderPermissionType $permission 'write', 'read', 'manageable' など
+     * @param  FolderPermissionType  $permission  'write', 'read', 'manageable' など
      * @return BelongsToMany
      */
     public function accessibleRoles(?FolderPermissionType $permission = null)
@@ -271,8 +284,7 @@ class Folder extends Model
         return $this->belongsToMany(Role::class, 'role_folder_permissions', 'folder_id', 'role_id')
             ->withPivot('notification_type_id', 'permission')
             ->withTimestamps()
-            ->using(RoleFolderPermission::class)
-            ;
+            ->using(RoleFolderPermission::class);
         //            ->as('setting')
     }
 
@@ -286,7 +298,7 @@ class Folder extends Model
             ->useLogName('folder')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**

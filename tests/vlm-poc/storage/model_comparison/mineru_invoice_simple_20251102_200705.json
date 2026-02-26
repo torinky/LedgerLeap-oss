@@ -1,0 +1,97 @@
+{
+  "success": true,
+  "html": "<html><body>\n<h1>請求書</h1>\n<p>下記の通りご請求申し上げます。</p>\n<p><table><tr><td></td><td>請求金額 20,158円</td></tr></table></p>\n<p>お支払期限:0000年00月00日振込先:銀行△△支店普通預金1234567振込手数料は貴社のご負担にてお願いいたします。</p>\n<p>![](images/b8218495809bfe2102899c5e5fd601ab33a21ba855b3e525a9d812047719ce1e.jpg)</p>\n<p>請求書番号:00000000発行日:0000年00月00日</p>\n<p>税理士●●●●\n東京都足立区●●町1-2-3\n〇Oビル〇〇階\n0120-11-2222\n登録番号:T1234567890123振込先：\nO銀行 △△支店\n〇〇預金 1234567\n恐れ入りますが、振込手数料は\n貴社にてご負担いただきますようお願いいたします。</p>\n<p>は軽減税率対象</p>\n<p><table><tr><td rowspan=1 colspan=1>税率区分</td><td rowspan=1 colspan=1>金額(税抜)</td><td rowspan=1 colspan=1>消費税</td></tr><tr><td rowspan=1 colspan=1>10％対象</td><td rowspan=1 colspan=1>20,000</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>8％対象</td><td rowspan=1 colspan=1></td><td rowspan=1 colspan=1></td></tr></table></p>\n<p><table><tr><td rowspan=1 colspan=1>小計</td><td rowspan=1 colspan=1>20,200</td></tr><tr><td rowspan=1 colspan=1>消費税</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>合計</td><td rowspan=1 colspan=1>22,200</td></tr><tr><td rowspan=1 colspan=1>源泉所得税</td><td rowspan=1 colspan=1>2,042</td></tr><tr><td rowspan=1 colspan=1>差引請求額</td><td rowspan=1 colspan=1>20,158</td></tr></table></p>\n</body></html>",
+  "markdown": "# 請求書\n\n下記の通りご請求申し上げます。\n\n<table><tr><td></td><td>請求金額 20,158円</td></tr></table>\n\nお支払期限:0000年00月00日振込先:銀行△△支店普通預金1234567振込手数料は貴社のご負担にてお願いいたします。\n\n![](images/b8218495809bfe2102899c5e5fd601ab33a21ba855b3e525a9d812047719ce1e.jpg)\n\n請求書番号:00000000発行日:0000年00月00日\n\n税理士●●●●  \n東京都足立区●●町1-2-3  \n〇Oビル〇〇階  \n0120-11-2222  \n登録番号:T1234567890123振込先：  \nO銀行 △△支店  \n〇〇預金 1234567  \n恐れ入りますが、振込手数料は  \n貴社にてご負担いただきますようお願いいたします。\n\nは軽減税率対象  \n\n<table><tr><td rowspan=1 colspan=1>税率区分</td><td rowspan=1 colspan=1>金額(税抜)</td><td rowspan=1 colspan=1>消費税</td></tr><tr><td rowspan=1 colspan=1>10％対象</td><td rowspan=1 colspan=1>20,000</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>8％対象</td><td rowspan=1 colspan=1></td><td rowspan=1 colspan=1></td></tr></table>\n\n<table><tr><td rowspan=1 colspan=1>小計</td><td rowspan=1 colspan=1>20,200</td></tr><tr><td rowspan=1 colspan=1>消費税</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>合計</td><td rowspan=1 colspan=1>22,200</td></tr><tr><td rowspan=1 colspan=1>源泉所得税</td><td rowspan=1 colspan=1>2,042</td></tr><tr><td rowspan=1 colspan=1>差引請求額</td><td rowspan=1 colspan=1>20,158</td></tr></table>",
+  "structured_data": {
+    "pages": [
+      {
+        "page_index": 0,
+        "text_lines": [
+          "請求書",
+          "下記の通りご請求申し上げます。",
+          "<table><tr><td></td><td>請求金額 20,158円</td></tr></table>",
+          "お支払期限:0000年00月00日振込先:銀行△△支店普通預金1234567振込手数料は貴社のご負担にてお願いいたします。",
+          "![](images/b8218495809bfe2102899c5e5fd601ab33a21ba855b3e525a9d812047719ce1e.jpg)",
+          "請求書番号:00000000発行日:0000年00月00日",
+          "税理士●●●●\n東京都足立区●●町1-2-3\n〇Oビル〇〇階\n0120-11-2222\n登録番号:T1234567890123振込先：\nO銀行 △△支店\n〇〇預金 1234567\n恐れ入りますが、振込手数料は\n貴社にてご負担いただきますようお願いいたします。",
+          "は軽減税率対象",
+          "<table><tr><td rowspan=1 colspan=1>税率区分</td><td rowspan=1 colspan=1>金額(税抜)</td><td rowspan=1 colspan=1>消費税</td></tr><tr><td rowspan=1 colspan=1>10％対象</td><td rowspan=1 colspan=1>20,000</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>8％対象</td><td rowspan=1 colspan=1></td><td rowspan=1 colspan=1></td></tr></table>",
+          "<table><tr><td rowspan=1 colspan=1>小計</td><td rowspan=1 colspan=1>20,200</td></tr><tr><td rowspan=1 colspan=1>消費税</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>合計</td><td rowspan=1 colspan=1>22,200</td></tr><tr><td rowspan=1 colspan=1>源泉所得税</td><td rowspan=1 colspan=1>2,042</td></tr><tr><td rowspan=1 colspan=1>差引請求額</td><td rowspan=1 colspan=1>20,158</td></tr></table>"
+        ],
+        "line_count": 10
+      }
+    ],
+    "text_blocks": [
+      {
+        "type": "header_1",
+        "content": "請求書",
+        "line_index": 0,
+        "confidence": 0.98
+      },
+      {
+        "type": "text",
+        "content": "下記の通りご請求申し上げます。",
+        "line_index": 1,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "<table><tr><td></td><td>請求金額 20,158円</td></tr></table>",
+        "line_index": 4,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "お支払期限:0000年00月00日振込先:銀行△△支店普通預金1234567振込手数料は貴社のご負担にてお願いいたします。",
+        "line_index": 6,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "![](images/b8218495809bfe2102899c5e5fd601ab33a21ba855b3e525a9d812047719ce1e.jpg)",
+        "line_index": 8,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "請求書番号:00000000発行日:0000年00月00日",
+        "line_index": 10,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "税理士●●●●\n東京都足立区●●町1-2-3\n〇Oビル〇〇階\n0120-11-2222\n登録番号:T1234567890123振込先：\nO銀行 △△支店\n〇〇預金 1234567\n恐れ入りますが、振込手数料は\n貴社にてご負担いただきますようお願いいたします。",
+        "line_index": 12,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "は軽減税率対象",
+        "line_index": 22,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "<table><tr><td rowspan=1 colspan=1>税率区分</td><td rowspan=1 colspan=1>金額(税抜)</td><td rowspan=1 colspan=1>消費税</td></tr><tr><td rowspan=1 colspan=1>10％対象</td><td rowspan=1 colspan=1>20,000</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>8％対象</td><td rowspan=1 colspan=1></td><td rowspan=1 colspan=1></td></tr></table>",
+        "line_index": 24,
+        "confidence": 0.95
+      },
+      {
+        "type": "text",
+        "content": "<table><tr><td rowspan=1 colspan=1>小計</td><td rowspan=1 colspan=1>20,200</td></tr><tr><td rowspan=1 colspan=1>消費税</td><td rowspan=1 colspan=1>2,000</td></tr><tr><td rowspan=1 colspan=1>合計</td><td rowspan=1 colspan=1>22,200</td></tr><tr><td rowspan=1 colspan=1>源泉所得税</td><td rowspan=1 colspan=1>2,042</td></tr><tr><td rowspan=1 colspan=1>差引請求額</td><td rowspan=1 colspan=1>20,158</td></tr></table>",
+        "line_index": 26,
+        "confidence": 0.95
+      }
+    ],
+    "tables": [],
+    "key_value_pairs": []
+  },
+  "processing_time_s": 37.98640823364258,
+  "model": "mineru",
+  "device": "cpu",
+  "_test_metadata": {
+    "model_name": "mineru",
+    "processing_time_total": 37.99993,
+    "timestamp": "2025-11-02T20:07:05.745979"
+  }
+}

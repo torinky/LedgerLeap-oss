@@ -1,7 +1,21 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Auto Links Configuration
+    |--------------------------------------------------------------------------
+    */
     'auto_links' => [
+        /*
+        | 仮想AutoLinkのベースURL設定
+        |
+        | テナント識別方式によって適切なホストを設定:
+        | - パスベース: 'http://localhost' (推奨)
+        | - サブドメイン: null (相対URLを使用)
+        */
+        'base_url' => env('AUTO_LINK_BASE_URL', 'http://localhost'),
+
         'link_types' => [
             'default' => [
                 'icon' => 'o-link',
@@ -20,6 +34,124 @@ return [
                 'label_key' => 'auto_links.link_types.ticket',
             ],
             // 他のタイプを追加可能
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | File Processing Configuration
+    |--------------------------------------------------------------------------
+    |
+    | 添付ファイル処理に関する設定
+    |
+    */
+    'processing_timeout_hours' => env('FILE_PROCESSING_TIMEOUT_HOURS', 24),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scoring System Configuration
+    |--------------------------------------------------------------------------
+    |
+    | ハイブリッド型情報価値評価システムの設定
+    | Phase 1: 簡素化版（活動・新鮮度・重要度のみ）
+    |
+    */
+    'scoring' => [
+        /*
+        | 活動スコア設定
+        | 期間別カウント方式: 直近の活動を評価
+        */
+        'activity' => [
+            'windows' => [
+                ['days' => 7, 'multiplier' => 10],   // 直近7日間のイベント × 10点
+                ['days' => 30, 'multiplier' => 3],   // 直近30日間のイベント × 3点
+            ],
+        ],
+
+        /*
+        | 複合スコアの重み付け
+        | 合計が1.0になるように設定
+        */
+        'weights' => [
+            'activity' => 0.40,      // 活動スコア: 今使われている情報を優先
+            'freshness' => 0.30,     // 新鮮度スコア: 新しい情報を優先
+            'importance' => 0.30,    // 重要度スコア: 承認待ち等を優先
+            'relevance' => 0.00,     // 関連性スコア: Phase 3で有効化
+            'popularity' => 0.00,    // 人気度スコア: Phase 5で有効化
+        ],
+
+        /*
+        | バッチ処理設定
+        */
+        'batch' => [
+            'chunk_size' => 100,     // 一度に処理するレコード数
+            'schedule' => 'daily',   // 実行頻度（daily: 日次）
+        ],
+
+        /*
+        | スコア計算の実行頻度
+        |
+        | 環境別推奨値:
+        | - 開発/デモ: 'everyFiveMinutes' - リアルタイムに近い動作確認
+        | - 本番（小〜中規模）: 'hourly' - 活発な環境
+        | - 本番（通常）: 'daily' - 標準設定
+        | - 本番（大規模）: 'weekly' - データ量が多い場合
+        |
+        | 注意: 'everyMinute' はデバッグ時のみ使用すること
+        */
+        'schedule_frequency' => env('SCORING_SCHEDULE_FREQUENCY', 'daily'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance Monitoring Configuration
+    |--------------------------------------------------------------------------
+    |
+    | パフォーマンス測定機能の設定
+    | FileInspectorコンポーネントのパフォーマンスメトリクスを収集します
+    |
+    */
+    'performance' => [
+        /*
+        | パフォーマンス測定の有効化
+        |
+        | 環境別推奨値:
+        | - 開発環境: true - パフォーマンス測定・改善のため
+        | - ステージング: true - 本番環境前の検証のため
+        | - 本番環境: false - オーバーヘッド削減のため（必要に応じてtrue）
+        */
+        'enabled' => env('PERFORMANCE_MONITORING_ENABLED', env('APP_ENV') === 'local'),
+
+        /*
+        | パフォーマンスログの出力先
+        |
+        | 'log': Laravel標準ログ（storage/logs/laravel-*.log）
+        | 'json': JSON統計ファイル（storage/logs/performance_stats.json）
+        | 'both': 両方に出力
+        | 'none': ログ出力なし（コンソールのみ）
+        */
+        'log_destination' => env('PERFORMANCE_LOG_DESTINATION', 'both'),
+
+        /*
+        | パフォーマンスメトリクスの種類
+        |
+        | 測定する項目を選択（配列形式）
+        | 'drawer_open': ドロワー開閉時間
+        | 'tab_switch': タブ切り替え時間
+        | 'search_keyword_update': キーワード検索更新時間（サーバー側）
+        | 'search_render': 検索結果のレンダリング時間（フロントエンド側）
+        | 'image_preview_load': 画像プレビュー読み込み時間
+        */
+        'metrics' => [
+            'drawer_open' => env('PERFORMANCE_METRIC_DRAWER_OPEN', true),
+            'tab_switch' => env('PERFORMANCE_METRIC_TAB_SWITCH', true),
+            'search_keyword_update' => env('PERFORMANCE_METRIC_SEARCH', true),
+            'search_render' => env('PERFORMANCE_METRIC_SEARCH', true),
+            'image_preview_load' => env('PERFORMANCE_METRIC_IMAGE_PREVIEW', true),
+            'ledger_diff_render' => env('PERFORMANCE_METRIC_LEDGER_DIFF', true),
+            'ledger_load_more' => env('PERFORMANCE_METRIC_LEDGER_LOAD_MORE', true),
+            'ledger_mount' => env('PERFORMANCE_METRIC_LEDGER_MOUNT', true),
+            'ledger_toggle_selection' => env('PERFORMANCE_METRIC_LEDGER_TOGGLE', true),
         ],
     ],
 ];

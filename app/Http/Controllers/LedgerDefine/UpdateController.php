@@ -14,9 +14,11 @@ class UpdateController extends Controller
     public function edit(request $request): \Illuminate\Contracts\View\View
     {
         $ledgerDefine = new LedgerDefine;
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $ledgerDefineRecord = $ledgerDefine->where('id', $ledgerDefineId)->firstOrFail();
+
+        $this->authorize('update', $ledgerDefineRecord);
 
         $rootFolder = Folder::root()->get();
         $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
@@ -34,14 +36,14 @@ class UpdateController extends Controller
         $ledgerDefineRecord->folder_id = $request->folderId();
         $ledgerDefineRecord->save();
 
-        return redirect()->route('ledgerDefine.edit', ['ledgerDefineId' => $request->id])
+        return redirect()->route('ledgerDefine.edit', ['tenant' => tenant()->id, 'ledgerDefineId' => $request->id])
             ->with('status', __('ledger define updated successfully !'));
 
     }
 
     public function delete(request $request)
     {
-        $ledgerDefineId = (int)$request->route('ledgerDefineId');
+        $ledgerDefineId = (int) $request->route('ledgerDefineId');
 
         $ledgerDefine = LedgerDefine::find($ledgerDefineId);
 

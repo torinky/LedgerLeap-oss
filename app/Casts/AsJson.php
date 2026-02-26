@@ -11,10 +11,10 @@ class AsJson implements CastsAttributes
     /**
      * 属性を取得します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
      * @return mixed
      */
     public function get($model, $key, $value, $attributes)
@@ -34,10 +34,10 @@ class AsJson implements CastsAttributes
     /**
      * 属性を設定します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
      * @return array
      */
     public function set($model, $key, $value, $attributes)

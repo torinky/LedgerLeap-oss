@@ -19,6 +19,12 @@ services:
       - '.:/var/www/html'
     networks:
       - sail
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       mysql:
         condition: service_healthy
@@ -33,10 +39,12 @@ services:
       args:
         WWWGROUP: '${WWWGROUP}'
         DOCKER_GROUP_ID: '${DOCKER_GROUP_ID}'
-    image: sail-8.4/app
-    command: [ "php", "/var/www/html/artisan", "queue:work", "--tries=3" ]
+    image: sail-8.4/app-queue
+    # Phase5: Use supervisor to manage multiple queue workers
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
     environment:
       WWWUSER: '${WWWUSER}'
+      WWWGROUP: '${WWWGROUP}'
       DOCKER_GROUP_ID: "${DOCKER_GROUP_ID}"
       LARAVEL_SAIL: 1
       XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
@@ -57,9 +65,14 @@ services:
         condition: service_started
       tika:
         condition: service_started
-    #            - mysql
-    #            - redis
-    #            - tika
+      embedding:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "! supervisorctl status | grep -E 'FATAL|EXITED'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: on-failure
 
   # --- scheduler サービス ---
@@ -72,7 +85,7 @@ services:
     image: sail-8.4/app
     volumes:
       - .:/var/www/html
-    command: [ "php", "/var/www/html/artisan", "schedule:work", "--no-interaction" ]
+    command: /bin/sh -c "php /var/www/html/artisan schedule:work --no-interaction >> /var/www/html/storage/logs/scheduler.log 2>&1"
     environment:
       WWWUSER: '${WWWUSER}'
       LARAVEL_SAIL: 1
@@ -88,6 +101,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "schedule:work"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: always
 
     # --- 追加: 定期的な再起動のためのヘルスチェックと連動 (例: 12時間ごと) ---
@@ -113,7 +132,6 @@ services:
 
   mysql:
     image: 'groonga/mroonga:mysql-8.0-latest'
-    platform: linux/amd64
     ports:
       - '${FORWARD_DB_PORT:-3306}:3306'
     environment:
@@ -126,7 +144,8 @@ services:
     volumes:
       - 'sail-mysql:/var/lib/mysql'
       - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
-      - './docker/mroonga/my.cnf:/etc/mysql/conf.d/mroonga.cnf'
+      - './docker/mysql/init:/docker-entrypoint-initdb.d'
+      - './docker/mroonga/my.cnf/mroonga.cnf:/etc/mysql/conf.d/mroonga.cnf'
     networks:
       - sail
     healthcheck:
@@ -149,51 +168,23 @@ services:
         - ping
       retries: 3
       timeout: 5s
-  meilisearch:
-    image: 'getmeili/meilisearch:latest'
-    platform: linux/amd64
-    ports:
-      - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
-    volumes:
-      - 'sail-meilisearch:/meili_data'
-    networks:
-      - sail
-    healthcheck:
-      test:
-        - CMD
-        - wget
-        - '--no-verbose'
-        - '--spider'
-        - 'http://localhost:7700/health'
-      retries: 3
-      timeout: 5s
-  mailpit:
-    image: 'axllent/mailpit:latest'
-    ports:
-      - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-      - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
-    networks:
-      - sail
-  selenium:
-    image: seleniarm/standalone-chromium
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    volumes:
-      - '/dev/shm:/dev/shm'
-    networks:
-      - sail
+
   tika:
     image: apache/tika:latest
-    platform: linux/amd64
     ports:
       - 9998:9998
     #        command: -c /tika-config.xml
     #        command: [ '-Xmx4g', '-c', '/tika-config.xml' ]  # メモリ割当最適化
     restart: on-failure
-    volumes:
-      - './docker/tika/tika-config.xml:/tika-config.xml'
     networks:
       - sail
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9998'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
   ocrmypdf:
     build:
       context: ./docker/ocrmypdf
@@ -203,9 +194,81 @@ services:
     working_dir: /var/www/html
     entrypoint: []
     command: tail -f /dev/null
-    restart: unless-stopped
     networks:
       - sail
+    healthcheck:
+      test: ["CMD", "ocrmypdf", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  embedding:
+    build:
+      context: ./docker/embedding
+      dockerfile: Dockerfile
+    volumes:
+      - ./storage/app/embedding:/app/models
+    environment:
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-cl-nagoya/ruri-v3-310m}
+      - USE_ONNX=${EMBEDDING_USE_ONNX:-false}
+      - CPU_THREADS=${EMBEDDING_CPU_THREADS:-4}
+      - EMBEDDING_BATCH_SIZE=${RAG_BATCH_SIZE:-1}
+      - RAG_NUM_THREADS=${RAG_NUM_THREADS:-0}
+      - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}
+      - RAG_CONVERT_TO_NUMPY=${RAG_CONVERT_TO_NUMPY:-true}
+      - RAG_DEVICE=${RAG_DEVICE:-cpu}
+    networks:
+      - sail
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 2G
+
+  vlm:
+    build:
+      context: ${VLM_SERVICE_CONTEXT:-./docker/paddle} # Use environment variable to switch context, default to paddle
+      dockerfile: Dockerfile
+      args:
+        PADDLE_VERSION: cpu
+    ports:
+      - "${VLM_SERVICE_PORT:-8001}:8000"
+    volumes:
+      # Note: vlm-cache volume disabled for MinerU (models baked into image)
+      # For PaddleOCR/Marker, models are small enough to download at runtime
+      - .:/var/www/html
+    environment:
+      - PYTHONUNBUFFERED=1
+      - VLM_MODEL=${VLM_MODEL:-paddleocr}
+      - PADDLEOCR_DEVICE=${PADDLEOCR_DEVICE:-cpu}
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 10G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s # Model download can be slow
+    networks:
+      - sail
+
 networks:
   sail:
     driver: bridge

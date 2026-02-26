@@ -86,30 +86,39 @@
                         @else
                             @if($justSaved && !$isCreating)
                                 {{-- 更新保存直後 --}}
-                                <x-mary-button label="{{ __('actions.continue_editing') }}"
+                                <x-mary-button label="{{ __('ledger.continue_editing') }}"
                                                class="btn-ghost"
                                                wire:click="$set('justSaved', false)"/>
+                                <x-ledger.close-window-button/>
+{{--
                                 <x-mary-button label="{{ __('actions.close_window_after_save') }}"
                                                onclick="window.close()"
                                                class="btn-primary" icon="o-x-mark"/>
+--}}
                             @elseif($justSaved && $isCreating)
                                 {{-- 新規保存直後 --}}
                                 <x-mary-button label="{{ __('ledger.create_another') }}" class="btn-outline"
                                                wire:click="resetFormForNew" spinner="resetFormForNew"/>
                                 <x-mary-button label="{{ __('ledger.edit_this_folder') }}"
                                                wire:click="$set('justSaved', false)" class="btn-ghost"/>
+                                <x-ledger.close-window-button/>
+{{--
                                 <x-mary-button label="{{ __('ledger.close_window_after_save') }}"
                                                onclick="window.close()"
                                                class="btn-primary"/>
+--}}
                             @else
                                 {{-- 通常の保存/更新ボタン --}}
                                 <x-mary-button
                                         label="{{ $isCreating ? __('actions.create') : __('actions.update') }}"
                                         class="btn-primary md:btn-wide" type="submit" spinner="save"
                                         icon="o-pencil-square"/>
+                                <x-ledger.close-window-button/>
+{{--
                                 <x-mary-button label="{{ __('ledger.cancel_and_close') }}"
                                                onclick="window.close()"
                                                class="btn-ghost" icon="o-x-mark"/>
+--}}
                             @endif
                         @endif
                         @if(!$isCreating && $folder->exists && !$formDisabled)
@@ -129,13 +138,13 @@
     <x-mary-modal wire:model="confirmingFolderDeletion"
                   title="{{ __('ledger.folder.form.modal_title.confirm_delete') }}" persistent>
         <div>
-            <p class="mb-4">{{ __('ledger.folder.form.message.confirm_delete_body', ['name' => $folder->title ?? '']) }}</p>
+            <p class="mb-4">{{ __('ledger.folder.remove_message', ['name' => $folder->title ?? '']) }}</p>
             <p class="text-sm text-warning">{{ __('ledger.folder.form.warning.cannot_delete_if_children_exist') }}</p>
         </div>
         <x-slot:actions>
             <x-mary-button label="{{ __('actions.cancel') }}" @click="$wire.confirmingFolderDeletion = false"
                            icon="o-x-mark"/>
-            <x-mary-button label="{{ __('actions.delete_confirm') }}" class="btn-error" wire:click="deleteFolder"
+            <x-mary-button label="{{ __('ledger.delete_confirm') }}" class="btn-error" wire:click="deleteFolder"
                            spinner="deleteFolder" icon="o-trash"/>
         </x-slot:actions>
     </x-mary-modal>

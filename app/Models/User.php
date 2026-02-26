@@ -35,10 +35,15 @@ class User extends Authenticatable implements FilamentUser
      * @var array<int, string>
      */
     protected $fillable = [
+        'objectguid',
         'name',
         'email',
         'password',
         'login_landing_page',
+        'ignore_ad_org_sync_until',
+        'manual_sync_reason',
+        'ad_last_synced_at',
+        'chat_link',
     ];
 
     /**
@@ -62,6 +67,8 @@ class User extends Authenticatable implements FilamentUser
         'login_landing_page' => LoginLandingPage::class,
         'pending_inspection_count' => 'integer',
         'pending_approval_count' => 'integer',
+        'ad_last_synced_at' => 'datetime',
+        'ignore_ad_org_sync_until' => 'datetime',
     ];
 
     protected static function boot()
@@ -154,7 +161,7 @@ class User extends Authenticatable implements FilamentUser
      * SpatieのassignRoleメソッドをオーバーライドして、
      * ロール割り当て後にWritableFolderRepositoryのキャッシュをクリアする
      *
-     * @param mixed ...$roles
+     * @param  mixed  ...$roles
      * @return $this
      */
     public function assignRole(...$roles): static
@@ -170,17 +177,15 @@ class User extends Authenticatable implements FilamentUser
     /**
      * ユーザーからロールを削除し、関連するキャッシュをクリアする
      *
-     * @param mixed ...$roles
+     * @param  mixed  ...$roles
      * @return $this
      */
     public function removeRole($role)
     {
-        $this->spatieRemoveRole(...$role);
+        $this->spatieRemoveRole($role);
 
         app(WritableFolderRepository::class)->clearAllCache($this);
         app(UserService::class)->clearUserPermissionsCache($this);
-
-        return $this;
     }
 
     /**
@@ -191,7 +196,7 @@ class User extends Authenticatable implements FilamentUser
         return LogOptions::defaults()
             ->logFillable()
             ->useLogName('user')
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**
@@ -215,6 +220,15 @@ class User extends Authenticatable implements FilamentUser
         // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
         return Lang::has($key) ? trans($key) : "ユーザーが{$eventName}されました";
     }
+
+    /**
+     * グローバル通知をさせるためにルートフォルダーを返す
+     *
+     * @return Folder
+     */
+    /**
+     * ユーザーが所属するテナントへの多対多リレーションシップを定義します。
+     */
 
     /**
      * グローバル通知をさせるためにルートフォルダーを返す

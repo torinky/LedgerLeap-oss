@@ -3,6 +3,8 @@
 @use 'filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css' as *;
 @use '../css/filepondCustom.css' as *;
 @use '../css/ledgerEdit.css' as *;
+@use '../css/validation-highlight.css' as *;
+@use '../css/field-highlight-animation.css' as *;
 @use "flatpickr/dist/flatpickr.min.css" as *;
 @use "easymde/dist/easymde.min.css" as *;
 

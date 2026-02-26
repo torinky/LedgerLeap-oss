@@ -1,4 +1,4 @@
-<div>
+<div class="min-h-[400px]">
     @php use App\Helpers\ActivityLogFormatter; @endphp
     {{--    <x-mary-header title="{{ __('ledger.activity.title') }}" icon="o-clock" />--}}
 
@@ -8,7 +8,10 @@
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
             {{-- ★★★ フィルタリングUI ★★★ --}}
-            <x-mary-card  class="pt-0" shadow>
+            <div class="relative">
+                <x-element.loading-overlay tier="2" target="filterByUserId,filterByEvent,filterByDescription,gotoPage" />
+
+                <x-mary-card  class="pt-0" shadow>
 
 {{--
                 <x-mary-header
@@ -79,13 +82,22 @@
             </x-mary-card>
             <div class="divider"></div>
 
-            <x-mary-table
-                    class="table-sm w-full overflow-x-auto bg-base-100"
-                    :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
-                    :rows="$activities"
-                    striped
-                    hover
-            >
+            @php
+                $activityTargets = 'filterByUserId,filterByEvent,filterByDescription,filterStartDate,filterEndDate,gotoPage,nextPage,previousPage';
+            @endphp
+
+            <div wire:loading wire:target="{{ $activityTargets }}">
+                <x-element.skeleton-table rows="10" cols="5" />
+            </div>
+
+            <div wire:loading.remove wire:target="{{ $activityTargets }}">
+                <x-mary-table
+                        class="table-sm w-full overflow-x-auto bg-base-100"
+                        :headers="$headers" {{-- ★★★ 動的に生成されたヘッダーを使用 ★★★ --}}
+                        :rows="$activities"
+                        striped
+                        hover
+                >
 
                 @scope('cell_time', $activity)
                 {{ $activity->created_at->format('Y/m/d H:i') }}<br>
@@ -113,11 +125,28 @@
                 @endscope
 
                 @scope('cell_changes', $activity)
-                {!! ActivityLogFormatter::formatChanges($activity) !!}
+                @php
+                    $changesHtml = ActivityLogFormatter::formatChanges($activity);
+                    $changesContent = is_string($changesHtml) ? $changesHtml : $changesHtml->toHtml();
+                @endphp
+                @if(!empty($changesContent))
+                    <x-expandable-content 
+                        :content="$changesContent"
+                        max-height="6rem"
+                    />
+                @endif
                 @endscope
 
                 @scope('cell_comment', $activity)
-                {{ ActivityLogFormatter::formatComment($activity) }}
+                @php
+                    $comment = ActivityLogFormatter::formatComment($activity);
+                @endphp
+                @if(!empty($comment))
+                    <x-expandable-content 
+                        :content="e($comment)"
+                        max-height="4rem"
+                    />
+                @endif
                 @endscope
 
                 <x-slot:empty>
@@ -125,11 +154,13 @@
                 </x-slot:empty>
             </x-mary-table>
             <div class="mt-4">
-                <x-mary-loading wire:loading class=""/>
-                {{ $activities->links() }}
+                {!! $activities->links('components.common.pagination-links', ['position' => 'activity']) !!}
             </div>
+            </div>
+            </div> {{-- End of relative container for loading-overlay --}}
         @endif
 
 
 
 </div>
+

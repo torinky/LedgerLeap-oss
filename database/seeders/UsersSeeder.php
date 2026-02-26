@@ -16,21 +16,23 @@ class UsersSeeder extends Seeder
     public function run()
     {
         //        User::factory(10)->create();
-        User::make([
-            'name' => 'super_admin',
+        User::updateOrCreate([
             'email' => 'super_admin@ll.com',
+        ], [
+            'name' => 'super_admin',
             'email_verified_at' => now(),
             'password' => '$2y$10$O4kUm3TSL9gIhws1xNQcJ.d3kbis37b.aZo5we665Z.wYV.L.QaEi', // aaaaaaaa
             'remember_token' => Str::random(10),
-        ])->save();
+        ]);
 
-        User::make([
-            'name' => 'general_user',
+        User::updateOrCreate([
             'email' => 'general_user@ll.com',
+        ], [
+            'name' => 'general_user',
             'email_verified_at' => now(),
             'password' => '$2y$10$O4kUm3TSL9gIhws1xNQcJ.d3kbis37b.aZo5we665Z.wYV.L.QaEi', // aaaaaaaa
             'remember_token' => Str::random(10),
-        ])->save();
+        ]);
 
     }
 }

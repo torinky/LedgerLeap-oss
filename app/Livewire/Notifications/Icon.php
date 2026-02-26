@@ -2,14 +2,20 @@
 
 namespace App\Livewire\Notifications;
 
-use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
+use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Auth;
 
-class Icon extends Component
+class Icon extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
+
     public $unreadCount = 0;
+
     public $pendingTaskCount = 0; // ワークフロー未処理件数
+
+    //    public $tenantId; // ここを追加
 
     // NotificationService は boot でインジェクトする方がより安全
     protected NotificationService $notificationService;
@@ -19,11 +25,11 @@ class Icon extends Component
         $this->notificationService = $notificationService;
     }
 
-
     public function mount() // NotificationService のインジェクト削除
     {
         // mount 時にも両方の件数を取得
         $this->refreshCounts();
+        //        $this->tenantId = tenant()?->id; // ここを追加
     }
 
     /**

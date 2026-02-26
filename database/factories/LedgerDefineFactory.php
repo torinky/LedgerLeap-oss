@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,77 +23,89 @@ class LedgerDefineFactory extends Factory
     public function definition()
     {
         $this->faker = \Faker\Factory::create('en_US');
-        $columnDefineLoop = random_int(3, 20);
+
+        // デフォルトは最小限のカラム定義
         $columnDefine = [];
         $columnDefine[] = new ColumnDefine(
             0,
-            $this->faker->word(),
-            'chk',
+            'test_field',
+            'text',
             1,
-            $this->faker->words(random_int(3, 10)),
-            $this->faker->boolean(),
-            $this->faker->boolean(),
-            $this->faker->boolean()
+            [],
+            false,
+            false,
+            null,
+            '',
+            [],
+            1
         );
-        $columnDefine[] = new ColumnDefine(
-            1,
-            $this->faker->word(),
-            'chk',
-            2,
-            $this->faker->words(random_int(3, 10)),
-            $this->faker->boolean(),
-            $this->faker->boolean(),
-            $this->faker->boolean()
-        );
-        /*        $columnDefine[]=new ColumnDefine(
-                    1,
-                    $this->faker->word(),
-                    'files',
-                    2,
-                    [],
-                    $this->faker->boolean(),
-                    $this->faker->boolean(),
-                    $this->faker->boolean()
-                );*/
-        // Correctly get type identifiers once before the loop
-        $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
-
-        for ($i = 2; $i < $columnDefineLoop; $i++) {
-            $tempColumnDefine = new ColumnDefine(
-                $i,
-                $this->faker->word(),
-                $this->faker->randomElement($typeIdentifiers), // Use the fetched type identifiers
-                $i + 1,
-                $this->faker->words(random_int(3, 10)),
-                $this->faker->boolean(),
-                $this->faker->boolean(),
-                $this->faker->boolean(),
-                $this->faker->word(),
-                ['name' => $this->faker->word() . '.png', 'path' => $this->faker->word() . '.png']
-            );
-
-            $columnDefine[] = $tempColumnDefine;
-        }
-
-
-        $markdownText = $this->faker->paragraph();
-        $markdownText = str_replace("
-", "
-
-", $markdownText);
 
         return [
             'title' => $this->faker->word(),
             'column_define' => $columnDefine,
-            'folder_id' => random_int(1, 10),
-            'create_description' => $markdownText,
+            'create_description' => $this->faker->sentence(),
             'list_description' => $this->faker->word(),
             'detail_description' => $this->faker->word(),
-            //            'folder_id' => Folder::factory(),
-            //            'creator_id' => 1,
-            //            'modifier_id' => 1,
+            'folder_id' => Folder::count() > 0 ? Folder::all()->random()->id : Folder::factory()->create()->id,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
+            'tenant_id' => tenant()->id ?? \App\Models\Tenant::factory()->create()->id,
         ];
+    }
+
+    /**
+     * 複雑なカラム定義を持つバージョン（本来のファクトリ）
+     */
+    public function complex()
+    {
+        return $this->state(function (array $attributes) {
+            $columnDefineLoop = random_int(3, 20);
+            $columnDefine = [];
+            $columnDefine[] = new ColumnDefine(
+                0,
+                $this->faker->word(),
+                'chk',
+                1,
+                $this->faker->words(random_int(3, 10)),
+                $this->faker->boolean(),
+                $this->faker->boolean(),
+                ($this->faker->boolean() ? 1 : null)
+            );
+            $columnDefine[] = new ColumnDefine(
+                1,
+                $this->faker->word(),
+                'chk',
+                2,
+                $this->faker->words(random_int(3, 10)),
+                $this->faker->boolean(),
+                $this->faker->boolean(),
+                ($this->faker->boolean() ? 1 : null)
+            );
+
+            // Correctly get type identifiers once before the loop
+            $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
+
+            for ($i = 2; $i < $columnDefineLoop; $i++) {
+                $tempColumnDefine = new ColumnDefine(
+                    $i,
+                    $this->faker->word(),
+                    $this->faker->randomElement($typeIdentifiers), // Use the fetched type identifiers
+                    $i + 1,
+                    $this->faker->words(random_int(3, 10)),
+                    $this->faker->boolean(),
+                    $this->faker->boolean(),
+                    ($this->faker->boolean() ? 1 : null),
+                    $this->faker->word(),
+                    ['name' => $this->faker->word().'.png', 'path' => $this->faker->word().'.png']
+                );
+
+                $columnDefine[] = $tempColumnDefine;
+            }
+
+            return [
+                'column_define' => $columnDefine,
+                'create_description' => str_replace("\n", "\n\n", $this->faker->paragraph()),
+            ];
+        });
     }
 }

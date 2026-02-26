@@ -29,10 +29,6 @@ class UniqueColumnValue implements ValidationRule
 
     /**
      * Create a new rule instance.
-     *
-     * @param int $ledgerDefineId
-     * @param int $columnId
-     * @param int|null $ignoreLedgerId
      */
     public function __construct(int $ledgerDefineId, int $columnId, ?int $ignoreLedgerId = null)
     {
@@ -50,9 +46,7 @@ class UniqueColumnValue implements ValidationRule
      * 2. 絞り込まれた候補レコードに対し、PHP側でcontentカラムの値を厳密に比較します。
      *    JSONデコードされた値と入力値を `===` で比較し、型まで含めた完全一致を検証します。
      *
-     * @param string $attribute
-     * @param mixed $value
-     * @param \Closure(string): PotentiallyTranslatedString $fail
+     * @param  \Closure(string): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -82,6 +76,7 @@ class UniqueColumnValue implements ValidationRule
                 if ($actualValue === $value) {
                     // メッセージとしては unique を返す（互換維持）
                     $fail(__('validation.unique'));
+
                     return;
                 }
             }
@@ -94,10 +89,10 @@ class UniqueColumnValue implements ValidationRule
      */
     public function toLaravelUniqueRule(): Unique
     {
-        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")
+        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")->where('tenant_id', tenant('id'))
             ->where('ledger_define_id', $this->ledgerDefineId);
 
-        if (!is_null($this->ignoreLedgerId)) {
+        if (! is_null($this->ignoreLedgerId)) {
             $rule = $rule->ignore($this->ignoreLedgerId);
         }
 
@@ -119,6 +114,4 @@ class UniqueColumnValue implements ValidationRule
     {
         return [$this, $this->toLaravelUniqueRule()];
     }
-
-
 }

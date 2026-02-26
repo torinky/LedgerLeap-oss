@@ -3,28 +3,36 @@
 namespace Tests\Unit\Services;
 
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\NumberingService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class NumberingServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = true;
 
     protected NumberingService $numberingService;
+
+    protected Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->numberingService = new NumberingService();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->numberingService = new NumberingService;
+        $this->folder = Folder::factory()->create();
     }
 
     public function test_it_generates_initial_number_when_no_records_exist(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             '資料番号',
@@ -37,8 +45,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         $nextNumber = $this->numberingService->getNextNumber($columnDefine, $ledgerDefine->id);
@@ -48,7 +59,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_increments_number_when_unique_is_false_and_revision_matches(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             '資料番号',
@@ -61,8 +72,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         // 既存レコードを作成
@@ -100,7 +114,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_increments_number_when_unique_is_true_ignoring_revision(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             'プロジェクトID',
@@ -113,8 +127,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             true, // unique = true
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         // 既存レコードを作成 (異なる版記号)
@@ -144,7 +161,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_applies_correct_padding_based_on_digits(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             'テスト番号',
@@ -157,8 +174,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -179,7 +199,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_handles_empty_prefix_and_revision(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             'シンプル番号',
@@ -192,8 +212,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -214,7 +237,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_handles_non_consecutive_existing_numbers(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             '非連続番号',
@@ -227,8 +250,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();
@@ -257,7 +283,7 @@ class NumberingServiceTest extends TestCase
 
     public function test_it_ignores_non_matching_content_values(): void
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
         $columnDefine = new ColumnDefine(
             0,
             '無視テスト',
@@ -270,8 +296,11 @@ class NumberingServiceTest extends TestCase
             ],
             true,
             false,
-            false,
-            'ヒント'
+            null,
+            'ヒント',
+            [],
+            3,
+            null
         );
 
         User::unguard();

@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
@@ -12,6 +13,8 @@ return new class extends Migration {
      */
     public function up()
     {
+        Schema::disableForeignKeyConstraints(); // 外部キー制約を一時的に無効化
+
         Schema::create('tags', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('ledger_define_id')->index();
@@ -22,6 +25,8 @@ return new class extends Migration {
 
             $table->timestamps();
         });
+
+        Schema::enableForeignKeyConstraints(); // 外部キー制約を有効化
     }
 
     /**

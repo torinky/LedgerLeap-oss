@@ -3,6 +3,9 @@
 namespace App\Livewire\Ledger;
 
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\HasSortingLabels;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,28 +16,36 @@ use App\Services\SynonymService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Url;
-use Livewire\Component;
+use Livewire\Attributes\Reactive; // 追加
 use Livewire\WithPagination;
+use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
-use Illuminate\Support\Collection;
 
-class RecordsTable extends Component
+class RecordsTable extends BaseLivewireComponent
 {
-    use withPagination;
+    use HasSortingLabels, InitializesTenantContext, Toast, WithPagination;
 
+    #[Reactive]
     public $perPage = 100;
 
-    #[Url(as: 'q')]
+    public string|int|null $currentTenantId = null;
+
+    #[Reactive]
     public $search = '';
 
-    public $orderBy = 'id';
+    #[Reactive]
+    public $orderBy = 'composite_score';
 
+    #[Reactive]
     public $orderAsc = false;
 
-    #[Url(as: 'fi')]
+    #[Reactive]
+    public $filterStatus = '';
+
+    #[Reactive]
     public $filter = [];
 
     public $defineId = null;
@@ -45,43 +56,65 @@ class RecordsTable extends Component
 
     public $breadcrumbs = [];
 
-    #[Url(as: 'l')]
+    #[Reactive]
     public $selectedLedgerDefineIds = [];
 
-    #[Url(as: 'f')]
+    #[Reactive]
     public $selectedFolderIds = [];
 
-    #[Url(as: 'cf')]
+    #[Reactive]
     public $currentFolderId;
 
-    #[Url(as: 'dl')]
+    #[Reactive]
     public int $displayLevel = 1;
 
     private $tags = [];
 
+    #[Reactive]
     public $keywords = [];
 
     public $totalRecords;
 
+    #[Reactive]
     public $highlights = [];
 
-    public array $synonyms;
+    #[Reactive]
+    public $synonyms = [];
 
+    #[Reactive]
+    public bool $useSemanticSearch = false;
+
+    #[Reactive]
     public $useSynonym = true;
 
+    #[Reactive]
     public $useTechnicalTerm = true;
 
-    protected SynonymService $synonymService;
+    // セマンティック検索ON前の同義語トグル状態を保存
+    private $savedUseSynonymState = null;
 
-    protected SearchContext $searchContext;
+    private SynonymService $synonymService;
+
+    private SearchContext $searchContext;
 
     private $synonymServiceConfig;
 
     public bool $showPermissionModal = false;
+
     public bool $showActivityModal = false;
+
     public ?string $modalTitle = null;
+
     public ?int $modalResourceId = null;
+
     public ?string $modalResourceType = null;
+
+    public bool $hasWorkflowEnabled = false;
+
+    public string $orderByLabel = '';
+
+    #[Reactive]
+    public array $defaultSortColumns = []; // 追加: デフォルトソートカラムを保持
 
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
@@ -93,104 +126,150 @@ class RecordsTable extends Component
      */
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
-        // 検索キーワードの初期化
-        $search = $request->keyword();
-        if (empty($this->search) && !empty($search)) {
-            $this->search = $search;
-        } elseif (empty($this->search)) {
-            $this->search = session()->get('search', '');
+        if (session()->has('success')) {
+            $this->success(session('success'));
         }
+
+        $this->currentTenantId = tenant()?->id;
+
+        // 状態初期化の多くは IndexManager (親) に移行したため、
+        // RecordsTable では計算が必要なプロパティの初期化のみを行う。
+
         $this->synonymServiceConfig = $synonymServiceConfig;
-        $this->filter = $request->filter ?? [];
-        $this->initSearchContext();
-
-        // 現在のフォルダーIDを初期化
-        // URLパラメータ 'f' (selectedFolderIds) が存在する場合はそれを優先
-        if (empty($this->selectedFolderIds) && $request->folderId()) {
-            $this->selectedFolderIds = [$request->folderId()];
-        } elseif (empty($this->selectedFolderIds)) {
-            $this->selectedFolderIds = []; // デフォルトは空
-        }
-
-        $this->currentFolderId = $request->currentFolderId();
-
-        // もし台帳IDが指定されていれば、選択済みリストに追加
-        // URLパラメータ 'l' (selectedLedgerDefineIds) が存在する場合はそれを優先
-        if (empty($this->selectedLedgerDefineIds) && $request->ledgerDefineId()) {
-            $this->selectedLedgerDefineIds = [$request->ledgerDefineId()];
-        } elseif (empty($this->selectedLedgerDefineIds)) {
-            $this->selectedLedgerDefineIds = []; // デフォルトは空
-        }
-
-        // displayLevelがURLクエリ文字列から設定されている場合、その値を使用
-        // そうでない場合、または不正な値の場合はデフォルトの1を使用
-        if (!in_array($this->displayLevel, [1, 2, 3])) {
-            $this->displayLevel = 1;
-        }
 
         // フォルダーアセットを準備
         $this->prepareFolderAsset();
+
+        $this->hasWorkflowEnabled = $this->ledgerDefineRecords->contains('workflow_enabled', true);
+
+        // 初期orderByLabelの設定
+        $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
     }
 
     /**
      * 検索コンテキストを初期化
      *
-     * 検索コンテキストを作成し、検索キーワード、フィルター、タグ、キーワード、ハイライト、およびシノニムを設定します。
-     * また、検索コンテキストの構成に使用するシノニムサービスの設定も行います。
-     *
-     * @return void
+     * 親から Reactive プロパティとして受け取るため、ここではインスタンスの作成のみ行い、
+     * 計算済みの値をセットする。重い再計算（類義語展開など）は行わない。
      */
     protected function initSearchContext()
     {
-        if (!$this->synonymServiceConfig) {
-            $this->synonymServiceConfig = new SynonymServiceConfig([
-                'useSynonym' => $this->useSynonym,
-                'useTechnicalTerm' => $this->useTechnicalTerm,
-            ]);
-        }
-
         $synonymService = new SynonymService($this->synonymServiceConfig);
         $this->searchContext = new SearchContext($synonymService);
 
-        $this->searchContext->setSearch($this->search);
-        $this->searchContext->setFilter($this->filter);
-        $this->tags = $this->searchContext->tags;
-        $this->keywords = $this->searchContext->keywords;
-        $this->highlights = $this->searchContext->highlights;
-        $this->synonyms = $this->searchContext->synonyms;
-        //        dd($this->searchContext,$this->keywords);
+        // プロパティ値をセットして検索に備える
+        // 注意: setSearch() などを呼ぶと内部で再計算される可能性があるため、
+        // 必要なプロパティのみを直接セットするか、再計算を防ぐ構成にする。
+        $this->searchContext->keywords = $this->keywords ?? [];
+        $this->searchContext->highlights = $this->highlights ?? [];
+        $this->searchContext->synonyms = $this->synonyms ?? [];
+        $this->searchContext->filter = $this->filter ?? [];
     }
 
     /**
-     * 列のソートを行う
-     *
-     * @param string $columnName
-     * @return void
+     * orderByが変更されたときにorderByLabelを更新するライフサイクルフック
      */
-    public function sort($columnName)
+    public function updatedOrderBy($value)
     {
-        $this->orderBy = $columnName;
-
-        // 現在のソート順をトグル
-        $this->orderAsc = !$this->orderAsc;
-
-        $this->initSearchContext();
-        $this->render($this->searchContext);
+        $this->orderByLabel = $this->getStandardSortLabel($value);
     }
+
+    /**
+     * 検索語が変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedSearch($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * フィルターが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedFilter($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 表示フォルダが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedCurrentFolderId($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 選択フォルダが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedSelectedFolderIds($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 選択台帳が変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedSelectedLedgerDefineIds($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * ソート順が変更された際に SearchContext を再初期化
+     */
+    public function updatedOrderAsc($value)
+    {
+        // ページのリセットのみ
+        $this->resetPage();
+    }
+
+    /**
+     * セマンティック検索トグルが変更されたときに実行されるライフサイクルフック
+     */
+    public function updatedUseSemanticSearch($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 同義語トグルが変更された際に SearchContext を再初期化
+     */
+    public function updatedUseSynonym($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * 専門用語トグルが変更された際に SearchContext を再初期化
+     */
+    public function updatedUseTechnicalTerm($value)
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * コレクションに対してソートを適用する
+     *
+     * @param  \Illuminate\Support\Collection  $collection
+     * @param  string  $sortBy
+     * @param  bool  $orderAsc
+     * @return \Illuminate\Support\Collection
+     */
+    private function applySorting($collection, $sortBy, $orderAsc)
+    {
+        return $collection->sortBy($sortBy, SORT_REGULAR, ! $orderAsc);
+    }
+
+    /**
+     * ページネーションのリセット（親側での変更を検知してリセットが必要な場合に使用する hooks があれば）
+     */
 
     /**
      * 表示レベルを設定する
-     *
-     * @param int $level
-     * @return void
      */
     public function setDisplayLevel(int $level): void
     {
-        if (!in_array($level, [1, 2, 3])) {
-            // 不正なレベルが指定された場合は何もしないか、エラーをログに記録
-            return;
-        }
-        $this->displayLevel = $level;
+        $this->dispatch('displayLevelRequested', level: $level);
     }
 
     /**
@@ -199,32 +278,64 @@ class RecordsTable extends Component
      * @return Application|Factory|View
      */
     #[On('ledgerStored')]
-    public function render(SearchContext $searchContext)
+    #[On('permissions-changed')]
+    #[On('recordsUpdated')]
+    public function refresh()
     {
-        $this->authorize('view', LedgerDefine::class);
+        $this->prepareFolderAsset();
+    }
+
+    #[On('openPermissionModalRequested')]
+    public function handleOpenPermissionModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->openPermissionModal($resourceType, $resourceId, $title);
+    }
+
+    #[On('openActivityModalRequested')]
+    public function handleOpenActivityModal(string $resourceType, int $resourceId, string $title): void
+    {
+        $this->openActivityModal($resourceType, $resourceId, $title);
+    }
+
+    public function render()
+    {
+        $tenantId = tenancy()->tenant?->id ?? 'central';
+        $dbName = \DB::connection()->getDatabaseName();
+        Log::info('[MCP Debug] RecordsTable.render START', [
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+            'search' => $this->search,
+            'selectedLedgerDefineIds' => $this->selectedLedgerDefineIds,
+        ]);
+
         $this->initSearchContext();
+
+        // Reactiveプロパティの変更に伴い、フォルダーアセット（パンくず、子フォルダ等）を再取得
+        // render で毎回呼ぶのを避けるため、必要な時のみ実行されるように mount と updatedXXX で管理されるべきだが、
+        // 現状は安全のためここでの実行を維持（クエリキャッシュがあれば高速）。
+        $this->prepareFolderAsset();
 
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
-            'keywords' => $this->searchContext->keywords,
+            'keywords' => $this->keywords,
             'filter' => $this->filter,
         ]);
 
-                // グローバル検索かどうかの判定
-        $isGlobalSearch = !empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
+        // グローバル検索かどうかの判定
+        $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
 
         if ($isGlobalSearch) {
             // グローバル検索の場合、すべての台帳定義を対象にする
             $displayLedgerDefines = LedgerDefine::query()
                 ->searchTags($this->searchContext->tags)
-                ->with('folder')
+                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
                 ->get();
             $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
         } else {
             // 通常の場合、選択された台帳定義のみを対象にする
             $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
                 ->searchTags($this->searchContext->tags)
-                ->with('folder')
+                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
                 ->get();
             $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
         }
@@ -232,32 +343,165 @@ class RecordsTable extends Component
         $breadcrumbsPerLedgerDefine = [];
         foreach ($displayLedgerDefines as $displayLedgerDefine) {
             // 台帳ごとのパンくずリストを準備
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $displayLedgerDefine->folder->parent()->get();
-            $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id][] = $displayLedgerDefine->folder;
+            if ($displayLedgerDefine->folder) {
+                // with('folder.ancestors') により、ここでは追加クエリが発生しないはず
+                $ancestors = $displayLedgerDefine->folder->ancestors;
+                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $ancestors->push($displayLedgerDefine->folder)->all();
+            } else {
+                // フォルダが存在しない場合のフォールバック処理
+                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = [];
+            }
         }
 
         // 表示対象の台帳に紐づく仕訳データを取得
-        $ledgerRecords = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
-//            ->search($this->searchContext)
-            ->searchContext($this->searchContext)
-            ->contentsFilter($this->filter)
-//          重複データを持たないように
-//          ->with('define.folder')
-            ->orderBy('ledger_define_id', 'asc')
-            ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
-        // dd($ledgerRecords);
+        if ($this->useSemanticSearch && ! empty($this->search)) {
+            // ============================================
+            // セマンティック検索モード
+            // ============================================
 
-        //      重複データを持たないように台帳定義とフォルダ情報は別に取得する
-        $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->get()->unique('ledger_define_id')->pluck('ledger_define_id')->toArray())
-            ->with('folder')
-            ->get()
-            ->keyBy('id');
+            // Step 1: 検索クエリの準備
+            // セマンティック検索では元のキーワードのみを使用（同義語展開はしない）
+            // 理由: ベクトル検索は意味的な類似性を計算するため、
+            //       同義語を追加するとクエリの意味がぼやけて精度が落ちる
+            $searchQuery = ! empty($this->searchContext->keywords)
+                ? implode(' ', $this->searchContext->keywords)
+                : $this->search;
 
-        // 台帳レコードの総数を取得
-        $this->totalRecords = $ledgerRecords->count();
+            // Step 2: RAGで検索（スコア情報付きで全件取得）
+            $ragResults = app(\App\Services\RagSearchService::class)->searchLedgers(
+                query: $searchQuery,
+                limit: 1000, // 十分な件数を取得（後でソート・ページネーション）
+                filters: array_merge($this->filter, [
+                    'user' => auth()->user(),
+                    'ledger_define_ids' => $searchTargetLedgerDefineIds,
+                ])
+            );
 
-        // ページネーション実行
-        $ledgerRecords = $ledgerRecords->simplePaginate($this->perPage);
+            if (empty($ragResults)) {
+                // 検索結果がない場合
+                $this->totalRecords = 0;
+                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                    [],
+                    0,
+                    $this->perPage,
+                    \Illuminate\Pagination\Paginator::resolveCurrentPage()
+                );
+                $ledgerDefineRecords = collect()->keyBy('id');
+            } else {
+                // Step 2: Ledgerモデルを取得
+                $ledgerIds = array_column($ragResults, 'ledger_id');
+                $scoreMap = collect($ragResults)->pluck('max_score', 'ledger_id');
+
+                $ledgersCollection = Ledger::whereIn('id', $ledgerIds)
+                    ->whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                    ->when(! empty($this->filterStatus), function ($query) {
+                        return $query->where('status', $this->filterStatus);
+                    })
+                    ->with(['define'])
+                    ->get();
+
+                // Step 3: スコアを動的属性として付与
+                $ledgersCollection->each(function ($ledger) use ($scoreMap) {
+                    $ledger->semantic_score = $scoreMap[$ledger->id] ?? 0;
+                });
+
+                // Step 4: 並び順を適用
+                // セマンティック検索時、composite_scoreが選択されている場合はsemantic_scoreを使用
+                $sortBy = ($this->orderBy === 'composite_score') ? 'semantic_score' : $this->orderBy;
+
+                $sortedLedgers = $this->applySorting($ledgersCollection, $sortBy, $this->orderAsc);
+
+                // Step 5: ページネーション
+                $this->totalRecords = $sortedLedgers->count();
+                $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+                $currentPageItems = $sortedLedgers->slice(($currentPage - 1) * $this->perPage, $this->perPage)->values();
+
+                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $currentPageItems,
+                    $this->totalRecords,
+                    $this->perPage,
+                    $currentPage
+                );
+
+                // 台帳定義情報を取得
+                $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->pluck('ledger_define_id')->unique()->toArray())
+                    ->with(['folder.ancestors.roles', 'folder.roles', 'tags'])
+                    ->get()
+                    ->keyBy('id');
+            }
+        } else {
+            // ============================================
+            // 通常検索モード
+            // ============================================
+            $ledgerRecordsQuery = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                ->searchContext($this->searchContext)
+                ->contentsFilter($this->filter)
+                ->when(! empty($this->filterStatus), function ($query) {
+                    return $query->where('status', $this->filterStatus);
+                })
+                ->with(['define.folder'])
+                ->orderBy('ledger_define_id', 'asc')
+                ->when($this->orderBy === 'default', function ($query) {
+                    // 新設した denormalized カラムを使用して高速にソート
+                    return $query->orderBy('default_sort_value', $this->orderAsc ? 'asc' : 'desc');
+                })
+                ->when($this->orderBy === 'composite_score', function ($query) {
+                    return $query->orderByRaw('composite_score = 0, composite_score '.
+                        ($this->orderAsc ? 'ASC' : 'DESC'));
+                }, function ($query) {
+                    // デフォルトソートが設定されていない、かつ orderBy が default ではない場合
+                    if ($this->orderBy !== 'default') {
+                        return $query->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc');
+                    }
+                });
+
+            // 台帳定義とフォルダ情報を先に取得
+            // $displayLedgerDefines を再利用して重複クエリを削減
+            $relatedLedgerDefineIds = (clone $ledgerRecordsQuery)
+                ->reorder()
+                ->distinct()
+                ->pluck('ledger_define_id')
+                ->toArray();
+
+            // 既に取得済みの$displayLedgerDefinesから必要なものを抽出
+            // 追加で必要なものがあれば取得
+            $displayDefineIds = $displayLedgerDefines->pluck('id')->toArray();
+            $missingDefineIds = array_diff($relatedLedgerDefineIds, $displayDefineIds);
+
+            if (! empty($missingDefineIds)) {
+                // 不足している台帳定義を追加取得
+                $additionalDefines = LedgerDefine::whereIn('id', $missingDefineIds)
+                    ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
+                    ->get();
+                $displayLedgerDefines = $displayLedgerDefines->merge($additionalDefines);
+            }
+
+            $ledgerDefineRecords = $displayLedgerDefines->whereIn('id', $relatedLedgerDefineIds)->keyBy('id');
+
+            // 総数を取得
+            Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: '.json_encode($searchTargetLedgerDefineIds));
+            Log::info('[MCP Debug] RecordsTable.render search: '.$this->search);
+
+            $newTotal = $ledgerRecordsQuery->count();
+            Log::info('[MCP Debug] RecordsTable.render count result', [
+                'count' => $newTotal,
+                'sql' => $ledgerRecordsQuery->toSql(),
+                'bindings' => $ledgerRecordsQuery->getBindings(),
+            ]);
+
+            if ($this->totalRecords !== $newTotal) {
+                $this->totalRecords = $newTotal;
+                $this->dispatch('recordsUpdated', total: $this->totalRecords);
+            }
+
+            Log::info('[MCP Debug] RecordsTable.render totalRecords: '.$this->totalRecords);
+            Log::info('[MCP Debug] RecordsTable.render query SQL: '.$ledgerRecordsQuery->toSql());
+            Log::info('[MCP Debug] RecordsTable.render query bindings: '.json_encode($ledgerRecordsQuery->getBindings()));
+
+            // ページネーション実行
+            $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
+            //            Log::info('RecordsTable render: ledgerRecords after simplePaginate', ['ledgerRecords' => $ledgerRecords->toArray()]);
+        }
 
         // 表示される台帳レコードIDリストを取得
         $ledgerIds = $ledgerRecords->pluck('id');
@@ -268,6 +512,11 @@ class RecordsTable extends Component
 
         // 検索結果のフラグを設定
         $ledgerRecords->getCollection()->transform(function ($ledger) {
+            // DBから取得したデータを正規化（二重エンコード等の破損データへの耐性を持たせる）
+            // これにより、content_attached が文字列（破損データ）の場合でも配列に復元される。
+            $ledger->content = $ledger->define->normalizeByColumnDefine($ledger->content ?? []);
+            $ledger->content_attached = $ledger->define->normalizeByColumnDefine($ledger->content_attached ?? []);
+
             if (empty($ledger->content_attached) || empty($this->search)) {
                 return $ledger;
             }
@@ -278,23 +527,11 @@ class RecordsTable extends Component
                     continue;
                 }
                 foreach ($attached as $hashedfilename => $metaData) {
-                    foreach ($hits as $hit) {
-                        // $metaDataが配列かオブジェクトかを判定
-                        $content = null;
-                        if (is_array($metaData) && isset($metaData['meta']['content'])) {
-                            $content = $metaData['meta']['content'];
-                        } elseif (is_object($metaData) && isset($metaData->meta->content)) {
-                            $content = $metaData->meta->content;
-                        }
-
-                        if ($content !== null && stripos($content, $hit) !== false) {
-                            // hitフラグも型で分岐
-                            if (is_array($metaData)) {
-                                $contentAttached[$key][$hashedfilename]['hit'] = true;
-                            } else {
-                                $contentAttached[$key][$hashedfilename]->hit = true;
-                            }
-                            break;
+                    if (\App\Helpers\SearchHelper::isFileDataHit($metaData, $hits)) {
+                        if (is_array($metaData)) {
+                            $contentAttached[$key][$hashedfilename]['hit'] = true;
+                        } else {
+                            $contentAttached[$key][$hashedfilename]->hit = true;
                         }
                     }
                 }
@@ -305,168 +542,167 @@ class RecordsTable extends Component
             return $ledger;
         });
 
-        $currentFolder = Folder::find($this->currentFolderId);
+        $currentFolder = $this->currentFolder;
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
-
 
         // Filter column_define for each ledgerDefine based on displayLevel
         $filteredColumnDefines = $ledgerDefineRecords->map(function ($ledgerDefine) {
             return collect($ledgerDefine->column_define)
                 ->filter(function ($column) {
                     $columnDisplayLevel = $column->display_level ?? 3;
+
                     return $columnDisplayLevel <= $this->displayLevel;
                 })
                 ->sortBy('order');
         });
 
+        // 台帳定義ごとのスコア統計を計算
+        $scoreStatsByDefineId = $ledgerRecords->groupBy('ledger_define_id')->map(function ($records) {
+            $scores = $records->pluck('composite_score')->filter(fn ($score) => $score > 0);
+
+            return [
+                'count' => $records->count(),
+                'avg_score' => $scores->count() > 0 ? round($scores->avg(), 1) : 0,
+                'max_score' => $scores->count() > 0 ? round($scores->max(), 1) : 0,
+                'min_score' => $scores->count() > 0 ? round($scores->min(), 1) : 0,
+                'has_scores' => $scores->count() > 0,
+            ];
+        });
+
+        // 台帳定義をグループ化（順序を保持）
+        // セマンティック検索時は既にソート済みなので、順序を維持したままグループ化
+        $ledgerRecordsGroupByDefineIds = collect();
+        foreach ($ledgerRecords as $ledger) {
+            $defineId = $ledger->ledger_define_id;
+            if (! $ledgerRecordsGroupByDefineIds->has($defineId)) {
+                $ledgerRecordsGroupByDefineIds->put($defineId, collect());
+            }
+            $ledgerRecordsGroupByDefineIds->get($defineId)->push($ledger);
+        }
+
+        // 検索時は平均スコアの降順で台帳定義をソート
+        if (! empty($this->search)) {
+            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortByDesc(function ($records, $defineId) use ($scoreStatsByDefineId) {
+                return $scoreStatsByDefineId[$defineId]['avg_score'] ?? 0;
+            });
+        } else {
+            // 検索していない場合は、台帳定義のID順（または本来意図した順序）でソートを固定する
+            // そうしないと、中のレコードの並び順（スコア順など）によって台帳カードの並びが変わってしまうため
+            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortKeys();
+        }
+
+        Log::info('RecordsTable render end, returning view');
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
-            //          表示用のledgerRecords（View側で変則的な表示をしないように台帳ごとにレコードをまとめておく）
-            'ledgerRecordsGroupByDefineIds' => $ledgerRecords->groupBy('ledger_define_id'),
-            'allAttachments' => $allAttachments, // ★ ビューに渡す
-            'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
-            'totalRecords' => $this->totalRecords,
+            'ledgerRecordsGroupByDefineIds' => $ledgerRecordsGroupByDefineIds,
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
+            'displayLevel' => $this->displayLevel,
             'currentFolder' => $currentFolder,
             'currentUserPermissionForFolder' => $currentUserPermission,
-            'filteredColumnDefines' => $filteredColumnDefines, // Pass filtered columns to the view
+            'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
+            'allAttachments' => $allAttachments,
+            'filteredColumnDefines' => $filteredColumnDefines,
+            'scoreStatsByDefineId' => $scoreStatsByDefineId,
+            'keywords' => $this->keywords,
+            'synonyms' => $this->synonyms,
+            'highlights' => $this->highlights,
+            'totalRecords' => $this->totalRecords,
         ]);
+    }
+
+    #[On('permissions-changed')]
+    public function refreshDueToPermissionChange()
+    {
+        // このメソッドが存在し、イベントをリッスンするだけで、
+        // Livewireがコンポーネントを再レンダリングし、render()が自動的に呼び出される
+    }
+
+    /**
+     * 列のソートを行う
+     */
+    public function sort($columnName, $columnLabel = null)
+    {
+        $this->dispatch('sortRequested', columnName: $columnName, columnLabel: $columnLabel);
+    }
+
+    /**
+     * フィルターを更新する (IndexManager側で処理されるため、このメソッドは基本呼ばれない想定だが整理のために残す、または削除)
+     * 現在、Viewからは $parent.updateFilterFromChild が呼ばれている。
+     */
+    // 削除
+
+    /**
+     * 現在のフォルダーを変更する
+     */
+    public function changeCurrentFolder($newFolderId)
+    {
+        $this->dispatch('currentFolderChangeRequested', newFolderId: $newFolderId);
+    }
+
+    /**
+     * フォルダの選択状態をトグルする
+     */
+    public function toggleFolderId($folderId)
+    {
+        $this->dispatch('folderIdToggled', folderId: $folderId);
+    }
+
+    /**
+     * 台帳の選択状態をトグルする
+     */
+    public function toggleLedgerDefineId($ledgerDefineId)
+    {
+        $this->dispatch('ledgerDefineIdToggled', ledgerDefineId: $ledgerDefineId);
     }
 
     /**
      * 選択する台帳を1つにする
-     *
-     * @param int $defineId
-     * @return void
      */
-    #[On('focusLedgerDefine')]
     public function focusLedgerDefine($defineId)
     {
-        $this->defineId = $defineId;
-        $this->selectedLedgerDefineIds = [$defineId];
+        $this->dispatch('focusLedgerDefineRequested', defineId: $defineId);
     }
-
-    /**
-     * 現在のフォルダーを変更する
-     *
-     * @param int $newFolderId
-     * @return void
-     */
-    public function changeCurrentFolder($newFolderId)
-    {
-        if ($newFolderId == 1) {
-            $this->selectedFolderIds = [];
-            $this->selectedLedgerDefineIds = [];
-        } else {
-            if ($newFolderId == $this->currentFolderId && !empty($this->selectedFolderIds)) {
-                $this->selectedFolderIds = [];
-            } else {
-                $this->selectedFolderIds = Folder::descendantsAndSelf($newFolderId)->pluck('id')->toArray();
-                $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
-            }
-        }
-        $this->currentFolderId = $newFolderId;
-
-        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
-
-        $this->prepareFolderAsset();
-    }
-
-    #[On('currentFolderChangedByTree')]
-    public function changeCurrentFolderByTree($newFolderId, $newSelectedFolderIds)
-    {
-        if ($newFolderId == 1) {
-            $this->selectedLedgerDefineIds = [];
-        }
-        // フォルダーIDを更新
-        $this->currentFolderId = $newFolderId;
-
-        $this->selectedFolderIds = $newSelectedFolderIds;
-        $this->selectedLedgerDefineIds = LedgerDefine::whereIn('folder_id', $this->selectedFolderIds)->pluck('id')->toArray();
-
-        // フォルダーアセットを再準備
-        $this->prepareFolderAsset();
-
-    }
-
-    /**
-     * 台帳を開閉する（コメントアウト済みのコード）
-     *
-     * @param int $targetLedgerDefineId
-     */
-    /*
-    public function toggleLedgerDefineOpen($targetLedgerDefineId)
-    {
-        if (in_array($targetLedgerDefineId, $this->selectedLedgerDefineIds)) {
-            $this->selectedLedgerDefineIds = collect($this->selectedLedgerDefineIds)->reject(function ($item) use ($targetLedgerDefineId) {
-                return ($item === $targetLedgerDefineId) || ($item === false);
-            })->toArray();
-        } else {
-            $this->selectedLedgerDefineIds[] = $targetLedgerDefineId;
-        }
-    }
-    */
 
     /**
      * フォルダーアセットを準備する
      */
     public function prepareFolderAsset(): void
     {
-        $currentFolder = Folder::findOrFail($this->currentFolderId);
-
-        if (!empty($currentFolder)) {
-            $this->breadcrumbs = $currentFolder->ancestors()->get();
+        // 既に準備済みの場合はスキップ（重複実行を防ぐ）
+        if (isset($this->currentFolder) && $this->currentFolder && $this->currentFolder->id === $this->currentFolderId) {
+            return;
         }
+
+        // currentFolderId が未設定、または別テナントのID/存在しないIDの可能性があるためガードする
+        $currentFolder = null;
+
+        if (! empty($this->currentFolderId)) {
+            // IndexManager と同様に、子フォルダや台帳定義の件数をカウントするために withCount を追加
+            $currentFolder = Folder::with(['ancestors'])->find($this->currentFolderId);
+        }
+
+        // それでも見つからなければ、例外にせず空データで返す（UI崩壊防止）
+        if (! $currentFolder) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+
+            return;
+        }
+
+        // render() で再検索するのを避けるため、プロパティに保持
+        $this->currentFolder = $currentFolder;
+
+        $this->breadcrumbs = $currentFolder->ancestors->all();
         $this->breadcrumbs[] = $currentFolder;
 
-        $this->folderRecords = $currentFolder->children()->get();
-        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)->get();
-    }
-
-    /**
-     * フォルダの選択状態をトグルする
-     *
-     * @param int $folderId
-     * @return void
-     */
-    public function toggleFolderId($folderId)
-    {
-        if ($folderId == 1) {
-            $this->selectedFolderIds = [];
-            $this->selectedLedgerDefineIds = [];
-        } elseif (in_array($folderId, $this->selectedFolderIds)) {
-            $removeFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
-            $this->selectedFolderIds = array_values(array_diff($this->selectedFolderIds, $removeFolderIds));
-
-            $removeLedgerRecordIds = LedgerDefine::whereIn('folder_id', $removeFolderIds)->pluck('id')->toArray();
-            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, $removeLedgerRecordIds));
-        } else {
-            $mergingFolderIds = Folder::descendantsAndSelf($folderId)->pluck('id')->toArray();
-            $this->selectedFolderIds = array_merge($this->selectedFolderIds, $mergingFolderIds);
-            $this->selectedLedgerDefineIds = array_merge($this->selectedLedgerDefineIds, LedgerDefine::whereIn('folder_id', $mergingFolderIds)->pluck('id')->toArray());
-        }
-
-        $this->dispatch('selectedFolderChangedByMain', newSelectedFolderIds: $this->selectedFolderIds);
-
-        $this->resetPage();
-    }
-
-    /**
-     * 台帳の選択状態をトグルする
-     *
-     * @param int $ledgerDefineId
-     * @return void
-     */
-    public function toggleLedgerDefineId($ledgerDefineId)
-    {
-        if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
-            // 選択済みの場合、リストから削除
-            $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
-        } else {
-            // 選択されていない場合、リストに追加
-            $this->selectedLedgerDefineIds[] = $ledgerDefineId;
-        }
-        $this->resetPage();
+        $this->folderRecords = $currentFolder->children()
+            ->withCount(['ledgerDefines']) // 追加
+            ->get();
+        $this->ledgerDefineRecords = LedgerDefine::where('folder_id', '=', $this->currentFolderId)
+            ->withCount(['ledgers']) // 追加
+            ->get();
     }
 
     /**
@@ -476,7 +712,11 @@ class RecordsTable extends Component
      */
     public function lastPage()
     {
-        return ceil($this->totalRecords / $this->perPage);
+        if (empty($this->perPage) || $this->perPage == 0) {
+            return 1;
+        }
+
+        return ceil(($this->totalRecords ?? 0) / $this->perPage);
     }
 
     /**
@@ -494,7 +734,7 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.access_and_permissions.title');
+        $this->modalTitle = $title.' '.__('ledger.access_and_permissions.title');
         $this->showPermissionModal = true;
     }
 
@@ -502,16 +742,18 @@ class RecordsTable extends Component
     {
         $this->modalResourceType = $resourceType;
         $this->modalResourceId = $resourceId;
-        $this->modalTitle = $title . ' ' . __('ledger.activity.title');
+        $this->modalTitle = $title.' '.__('ledger.activity.title');
         $this->showActivityModal = true;
     }
 
+    #[On('retryProcessingEvent')]
     public function retryProcessing(int $attachedFileId): void
     {
         $attachedFile = AttachedFile::find($attachedFileId);
 
-        if (!$attachedFile) {
+        if (! $attachedFile) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.file_not_found'));
+
             return;
         }
 
@@ -522,5 +764,21 @@ class RecordsTable extends Component
         } catch (\Exception $e) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.processing_retry_failed', ['error' => $e->getMessage()]));
         }
+    }
+
+    /**
+     * 自動採番型が純粋な数値のみ（プレフィックスやリビジョンなし）であるか判定
+     */
+    private function isPurelyNumericAutoNumber(array $column): bool
+    {
+        if (($column['type'] ?? '') !== 'auto_number') {
+            return false;
+        }
+
+        $options = $column['options'] ?? [];
+        $prefix = $options['prefix'] ?? '';
+        $revision = $options['revision'] ?? '';
+
+        return empty($prefix) && empty($revision);
     }
 }

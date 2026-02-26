@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Services\NotificationService;
-use Spatie\Activitylog\Models\Activity ;
+use Spatie\Activitylog\Models\Activity;
 
 class CustomActivity extends Activity
 {
+    use \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
+
     protected static function booted()
     {
         static::created(function (CustomActivity $activity) {

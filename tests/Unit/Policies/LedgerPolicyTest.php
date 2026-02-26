@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Policies;
+namespace Tests\Unit\Policies;
 
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -9,13 +9,21 @@ use App\Models\User;
 use App\Policies\LedgerDefinePolicy;
 use App\Policies\LedgerPolicy;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use tests\TestCase;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerPolicyTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+    }
 
     public function test_view_any_returns_true_for_user_with_view_ledgers_permission()
     {
@@ -34,6 +42,7 @@ class LedgerPolicyTest extends TestCase
         // Act & Assert
         $this->assertTrue($policy->viewAny($user));
     }
+
     public function test_view_any_returns_false_for_user_without_view_ledgers_permission()
     {
         // Arrange
@@ -72,11 +81,13 @@ class LedgerPolicyTest extends TestCase
         // Act & Assert
         $this->assertTrue($policy->view($user, $ledger));
     }
+
     public function test_view_returns_false_for_user_when_folder_is_not_readable()
     {
         // Arrange
         $user = User::factory()->create();
-        $ledgerDefine = LedgerDefine::factory()->create();
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
         $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
 
         $userServiceMock = Mockery::mock(UserService::class);

@@ -2,6 +2,12 @@ import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
 import daisyui from 'daisyui';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const lightTheme = process.env.DAISYUI_THEME_LIGHT || 'corporate';
+const darkTheme = process.env.DAISYUI_THEME_DARK || 'coffee';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -11,7 +17,19 @@ export default {
         './resources/views/**/*.blade.php',
         './app/Filament/**/*.php',
         './resources/views/filament/**/*.blade.php',
-        './vendor/filament/**/*.blade.php'
+        './vendor/filament/**/*.blade.php',
+        './vendor/robsontenorio/mary/src/View/Components/**/*.php',
+        './vendor/robsontenorio/mary/resources/views/**/*.blade.php'
+    ],
+
+    safelist: [
+        // folder/tree.blade.php の x-transition で使用する動的クラス（Alpine.js経由でJITスキャン不可）
+        'max-h-0',
+        'max-h-screen',
+        'opacity-0',
+        'opacity-100',
+        '-translate-y-1',
+        'translate-y-0',
     ],
 
     theme: {
@@ -39,11 +57,8 @@ export default {
                 '4xl': '2048px', // 4xlブレークポイントを設定
                 '5xl': '2560px', // 5xlブレークポイントを設定
                 '6xl': '3840px', // 6xlブレークポイントを設定
-            },
-            colors: {
-                'warning-content': '#c27c07',
             }
-        },
+        }
     },
 
     plugins: [
@@ -53,8 +68,8 @@ export default {
     ],
 
     daisyui: {
-        themes: ["light", "dark"], // アプリケーションで使用するテーマを指定
-        darkTheme: "dark", // ダークモード時のデフォルトテーマ
+        themes: [lightTheme, darkTheme], // アプリケーションで使用するテーマを指定
+        darkTheme: darkTheme, // ダークモード時のデフォルトテーマ
     },
 
 };

@@ -7,15 +7,41 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use JsonException;
 
+/**
+ * Mroonga全文検索対応のJSON配列キャストクラス
+ *
+ * このクラスはMroongaの制約に対応するため、以下の特別な処理を行います：
+ *
+ * 1. 配列の1階層目は強制的にインデックス配列にする
+ * 2. 2階層目以降の配列/オブジェクトは___serialized___プレフィックス付きでシリアライズ
+ *
+ * **重要な注意事項（Mroongaのベクターカラム処理）：**
+ *
+ * Mroongaは数値キーのJSON配列内に整数値がある場合、ベクターカラムの前処理で
+ * その配列をさらにJSON配列としてエンコードする副作用があります。
+ *
+ * 例：
+ * - 正常: ["EXP-0001", "2025-10-11", "交通費", "1000", "説明", []]
+ * - 異常: ["EXP-0001", "2025-10-11", "交通費", 1000, "説明", []]
+ *         ↓ Mroongaのベクターカラム処理
+ *         ["[\"EXP-00","01\",\"2025-","10-11\",..."]"] （二重配列化＋分割）
+ *
+ * この問題を回避するため、contentに格納する値はすべて文字列として渡す必要があります。
+ * 特に数値型（number）のカラムは、シーダーやテストデータ作成時に
+ * 必ず (string) キャストして文字列として渡してください。
+ *
+ * UIからのフォーム入力は自動的に文字列として渡されるため問題ありませんが、
+ * プログラムから直接整数を渡すと上記の問題が発生します。
+ */
 class AsColumnArrayJson extends AsJson
 {
     /**
      * モデルの属性から値を取得します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
      * @return mixed|null
      */
     public function get($model, $key, $value, $attributes): mixed
@@ -34,7 +60,7 @@ class AsColumnArrayJson extends AsJson
             return []; // または、空文字列読み取り時の望ましい動作に応じて null を返す
         }
         // すでに null であるか、文字列でない場合は、JSON デコード試行前にそのまま返します。
-        if ($content === null || !is_string($content)) {
+        if ($content === null || ! is_string($content)) {
             // Log::info('AsColumnArrayJson: Content is null or not a string, returning as is.');
             return $content;
         }
@@ -47,7 +73,8 @@ class AsColumnArrayJson extends AsJson
             // Log::info('AsColumnArrayJson: Decoded content: ' . Str::limit(json_encode($decodedContent), 500));
         } catch (JsonException $e) {
             // JSONデコードに失敗した場合はログを出力します。
-            Log::alert('AsColumnArrayJson: JSON decode error: ' . $e->getMessage() . ' for value: ' . Str::limit($content, 500));
+            Log::alert('AsColumnArrayJson: JSON decode error: '.$e->getMessage().' for value: '.Str::limit($content, 500));
+
             return null; // または空配列 [] を返す？
         }
 
@@ -63,6 +90,7 @@ class AsColumnArrayJson extends AsJson
                     $processedContent[$index] = $this->getContent($item);
                 }
             }
+
             // Log::info('AsColumnArrayJson: Processed content: ' . Str::limit(json_encode($processedContent), 500));
             return $processedContent;
         }
@@ -73,8 +101,8 @@ class AsColumnArrayJson extends AsJson
     }
 
     /**
-     * @param mixed $item
      * @return mixed|string
+     *
      * @noinspection UnserializeExploitsInspection
      */
     public function getContent(mixed $item): mixed
@@ -88,40 +116,73 @@ class AsColumnArrayJson extends AsJson
             return null; // または望ましい動作に応じて ''
         }
 
-        if (is_string($item) && Str::startsWith($item, "___serialized___")) {
+        if (is_string($item) && Str::startsWith($item, '___serialized___')) {
             $temp = substr($item, 16);
             // Log::info('AsColumnArrayJson: getContent: Attempting to unserialize: ' . Str::limit($temp, 500));
             // unserialize のエラーハンドリングを追加します。
             $unserialized = @unserialize($temp);
             if ($unserialized === false && $temp !== serialize(false)) {
-                Log::warning('AsColumnArrayJson: getContent: Failed to unserialize value: ' . Str::limit($temp, 500));
+                Log::warning('AsColumnArrayJson: getContent: Failed to unserialize value: '.Str::limit($temp, 500));
+
                 return $item; // 失敗時には元のシリアライズされた文字列を返す？ それとも null？
             }
+
             // Log::info('AsColumnArrayJson: getContent: Successfully unserialized: ' . Str::limit(json_encode($unserialized), 500));
             return $unserialized;
         }
+
         return $item;
     }
-
 
     /**
      * モデルの属性に値を設定します。
      *
-     * @param Model $model モデルのインスタンス
-     * @param string $key 属性のキー
-     * @param mixed $value 属性の値
-     * @param array $attributes モデルの全ての属性
-     * @return array
+     * @param  Model  $model  モデルのインスタンス
+     * @param  string  $key  属性のキー
+     * @param  mixed  $value  属性の値
+     * @param  array  $attributes  モデルの全ての属性
+     *
      * @throws JsonException
      */
     public function set($model, $key, $value, $attributes): array
     {
         // 利用可能であれば $value を直接使用します。
-        $content = $value ?? $attributes[$key];
+        $content = $value ?? $attributes[$key] ?? null;
+
+        // ----- 新規ガード: 入力が既に JSON 文字列の場合は再エンコードを行わない -----
+        // 文字列かつ '[' または '{' で始まる場合に JSON と仮定し、デコード可能か検証する。
+        if (is_string($content)) {
+            // BOMや前後空白を除去して判定
+            $trimmed = preg_replace('/^\x{FEFF}|\s+$/u', '', $content);
+            if (Str::startsWith($trimmed, '[') || Str::startsWith($trimmed, '{')) {
+                try {
+                    // JSON_THROW_ON_ERROR を使って厳密に検証
+                    $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                    // デコードに成功し配列またはオブジェクトとなる場合は、そのまま DB に保存する
+                    if (is_array($decoded) || is_object($decoded)) {
+                        // 既に JSON 文字列なのでそのまま戻す（再エンコードを防止）
+                        return [$key => $trimmed];
+                    }
+                    // 数値や文字列単体が返る場合は通常の処理にフォールスルー
+                } catch (\JsonException $e) {
+                    // 無効な JSON であれば通常の処理に進む（ログに警告を残す）
+                    Log::warning('AsColumnArrayJson: set: Input value appears to be invalid JSON despite starting with [ or {');
+                    Log::warning('AsColumnArrayJson: set: Input value: '.Str::limit($content, 200));
+                }
+            }
+        }
+        // ----- ガードここまで -----
+
+        // 追加ガード: stdClass 等のオブジェクトがトップレベルで渡されるケースに対応
+        // テストや AsColumnArrayJson を模擬するコードでは、content_attached を stdClass として
+        // 直接代入することがあるため、その場合は連想配列に変換して配列処理に委ねます。
+        if (is_object($content)) {
+            $content = (array) $content;
+        }
 
         // 値が配列かどうかを確認します。
         if (is_array($content)) {
-            // 配列内のすべての要素が空配˚または空文字列であるかを確認します。
+            // Mroonga 用にトップレベルはインデックス配列であることが望まれるため、
             $allEmpty = true;
             foreach ($content as $item) {
                 // 要素が空配列ではなく、かつ空文字列でもない場合、空でないとみなします。
@@ -162,16 +223,17 @@ class AsColumnArrayJson extends AsJson
         // 上記の `elseif ($content === null)` チェックは、代わりに '' が必要な場合にこれを防ぎます。
 
         $jsonString = json_encode(
-        // (処理された可能性のある) content をエンコードします。
+            // (処理された可能性のある) content をエンコードします。
             $content,
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
         );
-        // Log::info('AsColumnArrayJson: set: Final JSON string to be saved: ' . Str::limit($jsonString, 500));
+
+        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: '.Str::limit($jsonString, 500));
+
         return [$key => $jsonString];
     }
 
     /**
-     * @param mixed $item
      * @return mixed|string
      */
     public function setContent(mixed $item): mixed
@@ -184,10 +246,16 @@ class AsColumnArrayJson extends AsJson
             return '';
         }
 
+        // Mroongaのベクターカラム処理の副作用を回避するため、
+        // 整数・浮動小数点数は文字列に変換する
+        if (is_int($item) || is_float($item)) {
+            return (string) $item;
+        }
+
         // メイン配列内の配列/オブジェクトに対するシリアライズロジックを保持します。
         if (is_array($item) || is_object($item)) {
             // Mroongaの仕様でjson2階層目以降は第1階層に展開されて保存されてしまうため、serializeする
-            return "___serialized___" . serialize($item);
+            return '___serialized___'.serialize($item);
         }
 
         // 他の型 (文字列、数値、ブール値) はそのまま返します。

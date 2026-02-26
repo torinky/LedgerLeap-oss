@@ -1,0 +1,223 @@
+<?php
+
+namespace Tests\Feature\Exports;
+
+use App\Exports\LedgerExport;
+use App\Models\ColumnDefine;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
+use Maatwebsite\Excel\Facades\Excel;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+#[CoversClass(LedgerExport::class)]
+class LedgerExportTest extends TestCase
+{
+    use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = true;
+
+    private LedgerDefine $ledgerDefine;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->ledgerDefine = LedgerDefine::factory()->create();
+    }
+
+    // ----------------------------------------------------------------
+    // headings
+    // ----------------------------------------------------------------
+
+    public function test_headings_includes_column_names(): void
+    {
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $headings = $export->headings();
+
+        $this->assertIsArray($headings);
+        // カラム名 + システム列が含まれる
+        $this->assertContains('[[[id]]]', $headings);
+        $this->assertContains('[[[ledger_define_id]]]', $headings);
+        $this->assertContains('[[[updated_at]]]', $headings);
+        $this->assertContains('[[[created_at]]]', $headings);
+    }
+
+    public function test_headings_includes_column_define_names(): void
+    {
+        $textColumn = new ColumnDefine(0, 'テスト項目', 'text', 1, [], false, false, null, '', [], 1);
+        $define = LedgerDefine::factory()->create(['column_define' => [$textColumn]]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $define->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $define->column_define
+        );
+
+        $headings = $export->headings();
+        $this->assertContains('テスト項目', $headings);
+    }
+
+    public function test_headings_count_equals_columns_plus_system_fields(): void
+    {
+        // デフォルト 1カラム + システム列 6つ = 7
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $this->assertCount(7, $export->headings());
+    }
+
+    // ----------------------------------------------------------------
+    // map
+    // ----------------------------------------------------------------
+
+    public function test_map_returns_array_with_correct_count(): void
+    {
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'test value'],
+        ]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $row = $export->map($ledger);
+
+        $this->assertIsArray($row);
+        // カラム数(1) + システム列(6) = 7
+        $this->assertCount(7, $row);
+    }
+
+    public function test_map_includes_ledger_content_value(): void
+    {
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'exported value'],
+        ]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $row = $export->map($ledger);
+        $this->assertContains('exported value', $row);
+    }
+
+    public function test_map_includes_ledger_id(): void
+    {
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+        ]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $row = $export->map($ledger);
+        $this->assertContains($ledger->id, $row);
+    }
+
+    // ----------------------------------------------------------------
+    // query
+    // ----------------------------------------------------------------
+
+    public function test_query_returns_ledgers_for_define(): void
+    {
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+        ]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $results = $export->query()->get();
+        $this->assertTrue($results->contains('id', $ledger->id));
+    }
+
+    public function test_query_excludes_other_define_ledgers(): void
+    {
+        $otherDefine = LedgerDefine::factory()->create();
+        Ledger::factory()->create(['ledger_define_id' => $otherDefine->id]);
+        $ledger = Ledger::factory()->create(['ledger_define_id' => $this->ledgerDefine->id]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $results = $export->query()->get();
+        $this->assertTrue($results->contains('id', $ledger->id));
+        $this->assertFalse($results->contains('ledger_define_id', $otherDefine->id));
+    }
+
+    // ----------------------------------------------------------------
+    // getCsvSettings
+    // ----------------------------------------------------------------
+
+    public function test_get_csv_settings_returns_expected_keys(): void
+    {
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        $settings = $export->getCsvSettings();
+        $this->assertIsArray($settings);
+        $this->assertArrayHasKey('use_bom', $settings);
+        $this->assertArrayHasKey('delimiter', $settings);
+        $this->assertEquals(',', $settings['delimiter']);
+    }
+
+    // ----------------------------------------------------------------
+    // Excel::fake() による出力確認
+    // ----------------------------------------------------------------
+
+    public function test_export_can_be_downloaded_via_excel_facade(): void
+    {
+        Excel::fake();
+
+        Ledger::factory()->create(['ledger_define_id' => $this->ledgerDefine->id]);
+
+        $export = new LedgerExport(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define
+        );
+
+        Excel::download($export, 'test.csv');
+
+        Excel::assertDownloaded('test.csv');
+    }
+}

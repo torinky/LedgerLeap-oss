@@ -20,67 +20,57 @@
         </div>
     </x-slot>
 
-    <div class="container  ">
-        {{--
-                @if (session('status'))
-                    @include('components.ledger.alert',[
-                       'type'=>'success',
-                       'message'=>session('status'),
-                       'refreshParentWindow'=>true,
-                    ])
-                @endif
-        --}}
-
+    <div class="mx-auto px-4 py-6 max-w-[1600px]">
         @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 space-y-5 z-10 w-full w-screen">
-                <!-- 2段組みのコンテンツ -->
-                <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-20">
 
-                    <div class="card w-full bg-base-300 shadow-xl mx-5 z-0">
-                        <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
-                            <i class="fa-solid fa-gear"></i> {{__('ledger.define.basic_setting')}}
+                {{-- 上段: 基本設定 (常に全幅) --}}
+                <div class="lg:col-span-2">
+                    <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
+                        <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                            <x-mary-icon name="o-cog-6-tooth" />
+                            {{__('ledger.define.basic_setting')}}
                         </h2>
-                        <div class="card-body p-3">
+                        <div class="card-body p-6 md:p-8">
                             <livewire:ledger-define.edit/>
                         </div>
                     </div>
-                    <div class="card w-full bg-base-300 shadow-xl mx-5 z-10">
-                        <h2 class="card-title font-bold bg-accent/70 text-accent-content/70 rounded-t-box px-4 py-2 ">
-                            <i class="fa-regular fa-rectangle-list"></i> {{__('ledger.column.group_title')}}
-                        </h2>
-
-                        <div class="card-body p-3">
-                            <livewire:ledger-define.modify-column/>
-                        </div>
-                    </div>
-
-
-                    {{--                </form>--}}
                 </div>
-                <div class="flex flex-wrap items-center justify-center w-full z-0">
-                    <div class="card w-full bg-base-300 shadow-xl mx-5">
-                        <h2 class="card-title font-bold bg-secondary/70 text-secondary-content/70 rounded-t-box px-4 py-2 ">
-                            <i class="fa-solid fa-magnifying-glass"></i> {{__('ledger.define.preview')}}
-                        </h2>
 
-                        <div class="card-body p-3">
-                            <livewire:ledger-define.preview>
-                        </div>
+                {{-- 下段左: 項目設定 --}}
+                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden h-fit">
+                    <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                        <x-mary-icon name="o-queue-list" class="w-5 h-5"/>
+                        {{__('ledger.column.group_title')}}
+                    </h2>
+                    <div class="card-body p-4 md:p-6">
+                        <livewire:ledger-define.modify-column/>
                     </div>
+                </div>
 
+                {{-- 下段右: プレビュー (追従) --}}
+                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden lg:sticky lg:top-24 h-fit">
+                    <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                        <x-mary-icon name="o-magnifying-glass" class="w-5 h-5"/>
+                        {{__('ledger.define.preview')}}
+                    </h2>
+                    <div class="card-body p-4 md:p-6">
+                        <livewire:ledger-define.preview/>
+                    </div>
                 </div>
             </div>
-            <div
-                    class="mx-auto md:w-full inset-x-0 fixed bottom-3">
-                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                    <div class="card-body">
+
+            {{-- 画面下部アクションツールバー --}}
+            <div class="mx-auto md:w-full inset-x-0 fixed bottom-6 z-50 px-4 pointer-events-none">
+                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity pointer-events-auto">
+                    <div class="card-body p-4">
                         <div class="card-actions justify-center items-center">
 
                             <x-mary-button
                                     label="{{__('ledger.go_to')}}"
                                     icon="o-arrow-right-circle"
                                     class="btn btn-sm btn-neutral mr-4"
-                                    link="{{ route('ledger.index',['l[0]'=>$ledgerDefineRecord->id]) }}"
+                                    link="{{ route('ledger.index', ['tenant' => tenant()?->id, 'l[0]' => $ledgerDefineRecord->id]) }}"
                             />
 
                             <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">
@@ -92,36 +82,40 @@
                 </div>
             </div>
 
-            <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-            <div class="modal">
-                <div class="modal-box bg-error/70 text-error-content">
-                    <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
-                    </h3>
-                    <p class="py-4">{{__('ledger.define.remove_message')}}
-                        <br/>{{__('ledger.remove_records_message')}}
-                    </p>
-                    @can('delete_ledger_defines')
-                        <div class="modal-action">
-                            <div class="btnContainer">
-                                <form method="POST"
-                                      action="{{route('ledgerDefine.delete',$ledgerDefineRecord->id)}}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-error"
-                                            name="deleteLedgerDefine"><i
-                                                class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
-                                </form>
+            <div x-data>
+                <template x-teleport="body">
+                    <div>
+                        <input type="checkbox" id="delete-modal" class="modal-toggle"/>
+                        <div class="modal !z-[9999]" role="dialog">
+                            <div class="modal-box bg-error/70 text-error-content">
+                                <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
+                                </h3>
+                                <p class="py-4">{{__('ledger.define.remove_message')}}
+                                    <br/>{{__('ledger.remove_records_message')}}
+                                </p>
+                                @can('delete_ledger_defines')
+                                    <div class="modal-action">
+                                        <div class="btnContainer">
+                                            <form method="POST"
+                                                  action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-error"
+                                                        name="deleteLedgerDefine"><i
+                                                            class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
+                                            </form>
+                                        </div>
+                                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
+                                    </div>
+                                @else
+                                    <!-- 権限がない場合の表示 -->
+                                    <span class="text-error">削除する権限がありません</span>
+                                @endcan
                             </div>
-                            <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
                         </div>
-                    @else
-                        <!-- 権限がない場合の表示 -->
-                        <span class="text-error">削除する権限がありません</span>
-                    @endcan
-                </div>
+                    </div>
+                </template>
             </div>
         @endif
     </div>
-
-
 </x-app-layout>

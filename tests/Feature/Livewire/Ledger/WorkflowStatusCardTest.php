@@ -8,23 +8,29 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\WorkflowService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class WorkflowStatusCardTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected User $user;
+
     protected LedgerDefine $ledgerDefine;
+
     protected Ledger $ledger;
+
     protected WorkflowService $workflowServiceMock;
+
     protected \App\Models\Folder $folder;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);

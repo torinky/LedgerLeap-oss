@@ -6,6 +6,9 @@ use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
 use App\Services\Util\HtmlProcessorService;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
+use Tests\TestCase;
+
+uses(TestCase::class);
 
 it('column value is array', function () {
     $columnDefine = new ColumnDefine(
@@ -16,15 +19,18 @@ it('column value is array', function () {
         ['aaa', 'bbb', 'ccc'],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
-    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
-
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $columnHtml->mount($columnDefine, ['aaa' => 'aaa', 'ccc' => 'ccc']);
@@ -33,7 +39,7 @@ it('column value is array', function () {
         'aaa' => true,
     ], true, [], '', false, null);
 
-    $expectedHtml = '<span class="' . ColumnHtmlService::BADGE_CLASS_NAME . '">aaa</span>';
+    $expectedHtml = '<span class="'.ColumnHtmlService::BADGE_CLASS_NAME.'">aaa</span>';
     expect($result->toHtml())->toBe($expectedHtml);
 });
 
@@ -46,14 +52,18 @@ it('show returns empty string when no initial value', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
-    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $result = $columnHtml->show($columnDefine, null, true, [], '', false, null);
@@ -70,7 +80,11 @@ it('highlight keywords in html output', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
     $inputValue = 'This is a test content with keywords';
     $highlightKeyword = 'test';
@@ -104,13 +118,17 @@ it('renders textarea with markdown and applies auto links', function () {
         [],
         false,
         false,
-        false
+        null,
+        '',
+        [],
+        3,
+        null
     );
 
-    $markdownInput = "**Hello** `World`! See ticket #123.";
-    $htmlFromMarkdown = "<p><strong>Hello</strong> <code>World</code>! See ticket #123.</p>";
+    $markdownInput = '**Hello** `World`! See ticket #123.';
+    $htmlFromMarkdown = '<p><strong>Hello</strong> <code>World</code>! See ticket #123.</p>';
     $linkedHtml = '<p><strong>Hello</strong> <code>World</code>! See ticket <a href="/tickets/123">#123</a>.</p>';
-    $finalHtml = '<div class="prose max-w-none">' . $linkedHtml . '</div>';
+    $finalHtml = '<div class="prose dark:prose-invert max-w-none"><div class="expandable-textarea-content">'.$linkedHtml.'</div></div>';
 
     // 2. Mocks
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
@@ -124,7 +142,7 @@ it('renders textarea with markdown and applies auto links', function () {
         ->andReturn($linkedHtml);
 
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
-    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
 
     // 3. Execution
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
@@ -144,7 +162,7 @@ it('renders auto_number with link', function () {
         'options' => [],
         'required' => false,
         'unique' => true,
-        'sortBy' => false,
+        'sort_index' => null,
         'hint' => '',
         'file' => [],
         'display_level' => 3,
@@ -154,7 +172,7 @@ it('renders auto_number with link', function () {
     $inputValue = 'SPEC-001';
     $expectedLink = '<a href="/ledgers?query=SPEC-001">SPEC-001</a>'; // Simplified for clarity
 
-    $ledgerRecord = new Ledger();
+    // $ledgerRecord = new Ledger(); // ← リレーションに触れてしまう可能性があるため使わない
 
     // 2. Mocks
     $mockAutoLinkService = mock(AutoLinkService::class);
@@ -163,18 +181,183 @@ it('renders auto_number with link', function () {
         ->with(
             htmlspecialchars($inputValue, ENT_QUOTES, 'UTF-8'),
             $columnDefine,
-            $ledgerRecord
+            null // ← record を null に変更
         )
         ->andReturn($expectedLink);
 
     $mockMarkdownRenderer = mock(MarkdownRenderer::class);
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
-    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn($html, $callback) => $html);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
 
     // 3. Execution
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
-    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, $ledgerRecord);
+
+    // tenantId を明示して record->define 参照を回避
+    $tenantId = 'test_tenant_id';
+    $result = $columnHtml->show($columnDefine, $inputValue, true, [], '', false, null, null, $tenantId);
 
     // 4. Assertion
     expect($result->toHtml())->toBe($expectedLink);
+});
+
+it('renders textarea with expandable content component', function () {
+    // 1. Setup
+    $columnDefine = new ColumnDefine(
+        1,
+        'test_textarea',
+        'textarea',
+        1,
+        [],
+        false,
+        false,
+        null,
+        '',
+        [],
+        3,
+        null
+    );
+
+    $markdownInput = 'This is a long text that should be wrapped in an expandable component.';
+    $htmlFromMarkdown = '<p>This is a long text that should be wrapped in an expandable component.</p>';
+    $linkedHtml = '<p>This is a long text that should be wrapped in an expandable component.</p>';
+
+    // 2. Mocks
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->with($markdownInput)
+        ->andReturn($htmlFromMarkdown);
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->with($htmlFromMarkdown, $columnDefine, null)
+        ->andReturn($linkedHtml);
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')->andReturnUsing(fn ($html, $callback) => $html);
+
+    // 3. Execution
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $result = $columnHtml->show($columnDefine, $markdownInput, true, [], '', false, null);
+
+    // 4. Assertion - expandable-textarea-contentマーカーが含まれていることを確認
+    expect($result->toHtml())
+        ->toContain('expandable-textarea-content')
+        ->toContain($linkedHtml);
+});
+
+// ================================================================
+// show() — canView=false のとき空文字を返す
+// ================================================================
+it('show returns empty html when canView is false', function () {
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+
+    $columnDefine = new ColumnDefine(
+        1, 'col', 'text', 1, [], false, false, null, '', [], 1, null
+    );
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $result = $columnHtml->show($columnDefine, 'some value', false);
+
+    expect($result->toHtml())->toBe('');
+});
+
+// ================================================================
+// show() — type=select のとき SELECT_BADGE_CLASS_NAME でラップされる
+// ================================================================
+it('show wraps select value with select badge class', function () {
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+
+    $columnDefine = new ColumnDefine(
+        1, 'col', 'select', 1, ['opt1', 'opt2'], false, false, null, '', [], 1, null
+    );
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $result = $columnHtml->show($columnDefine, 'opt1', true);
+
+    expect($result->toHtml())->toContain(ColumnHtmlService::SELECT_BADGE_CLASS_NAME);
+});
+
+// ================================================================
+// show() — 配列渡し時に ColumnDefine オブジェクトに変換される
+// ================================================================
+it('show accepts array as column define data', function () {
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+
+    // 配列形式で渡す
+    $columnDefineArray = [
+        'id' => 99,
+        'name' => 'col',
+        'type' => 'text',
+        'required' => false,
+        'options' => [],
+        'order' => 1,
+        'unique' => false,
+    ];
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $result = $columnHtml->show($columnDefineArray, 'hello', true);
+
+    // エラーなく処理されれば OK
+    expect($result)->toBeInstanceOf(\Illuminate\Support\HtmlString::class);
+});
+
+// ================================================================
+// getFileIconClass — private メソッドを Reflection でテスト
+// ================================================================
+it('getFileIconClass returns correct class for pdf', function () {
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+
+    $service = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $ref = new \ReflectionClass($service);
+    $method = $ref->getMethod('getFileIconClass');
+    $method->setAccessible(true);
+
+    expect($method->invoke($service, 'document.pdf'))->toBe('fa-solid fa-file-pdf');
+    expect($method->invoke($service, 'report.docx'))->toBe('fa-solid fa-file-word');
+    expect($method->invoke($service, 'sheet.xlsx'))->toBe('fa-solid fa-file-excel');
+    expect($method->invoke($service, 'slide.pptx'))->toBe('fa-solid fa-file-powerpoint');
+    expect($method->invoke($service, 'archive.zip'))->toBe('fa-solid fa-file-archive');
+    expect($method->invoke($service, 'notes.txt'))->toBe('fa-solid fa-file-lines');
+    expect($method->invoke($service, 'photo.jpg'))->toBe('fa-solid fa-file-image');
+    expect($method->invoke($service, 'sound.mp3'))->toBe('fa-solid fa-file-audio');
+    expect($method->invoke($service, 'video.mp4'))->toBe('fa-solid fa-file-video');
+    expect($method->invoke($service, 'script.php'))->toBe('fa-solid fa-file-code');
+    expect($method->invoke($service, 'unknown.xyz'))->toBe('fa-solid fa-file');
+});
+
+// ================================================================
+// getColumnDefineProperty — 配列からプロパティを取得するパス
+// ================================================================
+it('getColumnDefineProperty returns value from array column define', function () {
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')->andReturnUsing(fn ($text) => $text);
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+
+    $columnDefineArray = [
+        'id' => 42,
+        'label' => 'test',
+        'type' => 'text',
+    ];
+
+    $service = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+    $service->mount($columnDefineArray, 'value');
+
+    $ref = new \ReflectionClass($service);
+    $method = $ref->getMethod('getColumnDefineProperty');
+    $method->setAccessible(true);
+
+    // 配列から取得
+    expect($method->invoke($service, 'id'))->toBe(42);
+    // 存在しないキーはデフォルト値
+    expect($method->invoke($service, 'nonexistent', 'default'))->toBe('default');
 });

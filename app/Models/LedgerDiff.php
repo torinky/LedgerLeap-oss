@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class LedgerDiff extends Model
 {
-    use HasFactory;
+    use HasFactory, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'content' => AsColumnArrayJson::class,
@@ -27,7 +27,7 @@ class LedgerDiff extends Model
         'returned_at' => 'datetime',
         'completed_inspector_role_ids' => 'array',
         'completed_approver_role_ids' => 'array',
-        ];
+    ];
 
     protected $fillable = [
         'content', 'ledger_id', 'column_define', 'ledger_define_id',
@@ -49,8 +49,6 @@ class LedgerDiff extends Model
 
     /**
      * Ledger モデルへのリレーションを定義します。(修正)
-     *
-     * @return BelongsTo
      */
     public function ledger(): BelongsTo // メソッド名を単数形に (Laravelの慣習) & 戻り値の型ヒント追加
     {
@@ -79,7 +77,6 @@ class LedgerDiff extends Model
     {
         return $this->belongsTo(User::class, 'modifier_id');
     }
-
 
     public function inspector(): BelongsTo
     {

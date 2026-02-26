@@ -1,34 +1,295 @@
-## Development Workflow
+# LedgerLeap 開発ワークフロー
 
-### Git Branch Strategy (Gitflow-based)
-- **`main`**: Reflects the latest stable version released to production. Merges only from `release/*` or `hotfix/*`. Tagged with `vX.Y.Z` upon merge. Direct commits are strictly prohibited.
-- **`develop`**: Integration branch for the next release. Merges from `feature/*` or `hotfix/*`.
-- **`feature/<issue-id>-<feature-name>`**: For new feature development or bug fixes included in the release plan. Branch from `develop`. Merge to `develop` via Pull Request (PR).
-- **`release/<version>`**: For release preparation (bug fixes, documentation, final testing). Branch from `develop`. Merge to both `main` and `develop`. Tag `main` with the release version.
-- **`hotfix/<issue-id>-<fix-name>`**: For urgent bug fixes in production. Branch from the relevant tag on `main`. Merge to both `main` and `develop`. Tag `main` with a new patch version.
+## ブランチ戦略
 
-### Pull Request (PR) Rules
-- All merges to `develop` and `main` must go through a PR.
-- **Creation**: `feature/*` -> `develop`; `release/*` -> `main`, `develop`; `hotfix/*` -> `main`, `develop`.
-- **Review**: Requires approval from at least one reviewer (project leader or other developer). Review checks include coding standard compliance, logic validity, test code presence, and documentation updates. Self-review is also encouraged.
-- **Merge Conditions**: Reviewer approval, all automated tests (CI) passed, conflicts resolved, and (if possible) related issues closed.
-- **Branch Deletion**: `feature/*`, `release/*`, `hotfix/*` branches should be deleted promptly after merging.
+### ブランチ命名規則
+```
+feature/<issue-id>-<feature-name>   # 新機能開発
+bugfix/<issue-id>-<bug-name>        # バグ修正
+hotfix/<issue-id>-<fix-name>        # 緊急修正
+```
 
-### Commit Message Convention
-- **Conventional Commits** format, written in **Japanese**.
-- **Format**: `<type>(<scope>): <subject>
+### 現在のブランチ
+- **メインブランチ**: `main`
+- **現在の作業ブランチ**: `feature/rag-phase1-planning`（LLM統合機能開発中）
 
-<body>
+## 開発フロー
 
-<footer>`
-- **`<type>`**: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `style` (formatting), `refactor` (code structure), `perf` (performance), `test` (tests), `build` (build system/deps), `ci` (CI/CD config), `chore` (miscellaneous), `revert` (revert previous commit).
-- **`<scope>`**: Optional, e.g., `(auth)`, `(ledger-api)`.
-- **`<subject>`**: Concise summary (max 50 chars), imperative mood (e.g., `ユーザー登録機能を追加`).
-- **`<body>`**: Optional, detailed explanation, reasons, background.
-- **`<footer>`**: Optional, Breaking Changes, Issue references (e.g., `Closes #123`).
+### 1. 機能開発の開始
+```bash
+# 最新のmainブランチを取得
+git checkout main
+git pull origin main
 
-### Task Completion Checklist
-1. Run `./vendor/bin/sail pint` for code formatting.
-2. Ensure all automated tests (CI) pass.
-3. Create a Pull Request following the specified rules.
-4. Write commit messages following the Conventional Commits format in Japanese.
+# 新しいブランチを作成
+git checkout -b feature/<issue-id>-<feature-name>
+```
+
+### 2. 開発環境のセットアップ
+```bash
+# 開発環境起動
+./vendor/bin/sail up -d
+
+# 依存関係が更新されている場合
+./vendor/bin/sail composer install
+./vendor/bin/sail npm install
+
+# マイグレーション実行（必要に応じて）
+./vendor/bin/sail artisan migrate
+
+# テスト環境の再構築（必要に応じて）
+./bin/reset-test-db.sh
+```
+
+### 3. 開発サイクル
+```bash
+# アセットのウォッチ（別ターミナル）
+./vendor/bin/sail npm run dev
+
+# コード編集
+# ...
+
+# テスト実行（頻繁に）
+./vendor/bin/sail test
+
+# または Pest
+./vendor/bin/sail pest
+```
+
+### 4. コミット前の準備
+```bash
+# コード整形（必須）
+./vendor/bin/sail pint
+
+# 全テスト実行（必須）
+./vendor/bin/sail test
+
+# 変更内容の確認
+git status
+git diff
+```
+
+### 5. コミット
+```bash
+# ステージング
+git add .
+
+# コミット（規約に従う）
+git commit -m "feat(scope): 日本語での説明"
+
+# 例:
+# git commit -m "feat(auth): ユーザー登録APIエンドポイント実装"
+# git commit -m "fix(ledger): 全文検索の類義語展開バグ修正"
+# git commit -m "docs(readme): セットアップ手順を更新"
+```
+
+### 6. プッシュとプルリクエスト
+```bash
+# リモートにプッシュ
+git push origin feature/<issue-id>-<feature-name>
+
+# GitHub上でプルリクエストを作成
+# - タイトル: わかりやすく簡潔に
+# - 説明: 変更内容、理由、影響範囲を記載
+# - レビュワーを指定
+```
+
+## コミットメッセージ規約
+
+### フォーマット
+```
+<type>(scope): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### Type一覧
+- `feat`: 新機能
+- `fix`: バグ修正
+- `docs`: ドキュメント変更
+- `style`: コードスタイル修正（動作変更なし）
+- `refactor`: リファクタリング
+- `perf`: パフォーマンス改善
+- `test`: テスト追加・修正
+- `chore`: ビルド、設定、依存関係の変更
+
+### Scope例
+- `auth`: 認証・認可
+- `ledger`: 台帳機能
+- `search`: 検索機能
+- `workflow`: ワークフロー
+- `api`: API
+- `ui`: ユーザーインターフェース
+- `db`: データベース
+- `deps`: 依存関係
+
+### 良いコミットメッセージの例
+```
+feat(auth): ユーザー登録APIエンドポイント実装
+
+Laravel Sanctumを使用したAPI認証を追加。
+トークン発行・管理機能も実装。
+
+Closes #123
+
+---
+
+fix(ledger): 全文検索の類義語展開バグ修正
+
+Mroongaの制約により複合インデックスが使用できないため、
+OR結合を使用した検索クエリに修正。
+
+Fixes #456
+
+---
+
+docs(readme): セットアップ手順を更新
+
+GPU環境のセットアップ手順を追加。
+PaddleOCR-VLの設定方法を明記。
+```
+
+## テスト戦略
+
+### テストの種類
+1. **ユニットテスト**: クラス/メソッド単体のロジック検証
+2. **フィーチャーテスト**: 機能全体の統合テスト
+
+### テスト実行タイミング
+- **頻繁**: コード変更のたびに関連テスト実行
+- **コミット前**: 全テスト実行（必須）
+- **プッシュ前**: 全テスト実行（必須）
+
+### 全文検索機能のテスト
+```php
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+
+class LedgerSearchTest extends TestCase
+{
+    use DatabaseMigrations; // RefreshDatabase不可
+    
+    public function test_mroonga_search()
+    {
+        $ledger = Ledger::factory()->create([
+            'content' => ['title' => 'テスト台帳']
+        ]);
+        
+        sleep(1); // インデックス更新待機
+        
+        $results = Ledger::scopeSearch('テスト')->get();
+        $this->assertCount(1, $results);
+    }
+}
+```
+
+## コードレビュー
+
+### レビュー観点
+- [ ] コーディング規約に準拠しているか
+- [ ] テストが適切に実装されているか
+- [ ] ドキュメントが更新されているか
+- [ ] セキュリティ上の問題がないか
+- [ ] パフォーマンスへの影響はないか
+- [ ] 既存機能への影響はないか
+
+### レビュー後の対応
+```bash
+# フィードバックを反映
+# コード修正
+# ...
+
+# コード整形
+./vendor/bin/sail pint
+
+# テスト実行
+./vendor/bin/sail test
+
+# コミット・プッシュ
+git add .
+git commit -m "fix(scope): レビュー指摘事項を修正"
+git push origin feature/<issue-id>-<feature-name>
+```
+
+## マージ後
+
+### ローカルブランチのクリーンアップ
+```bash
+# mainブランチに移動
+git checkout main
+
+# 最新を取得
+git pull origin main
+
+# マージ済みブランチを削除
+git branch -d feature/<issue-id>-<feature-name>
+
+# リモートブランチも削除（必要に応じて）
+git push origin --delete feature/<issue-id>-<feature-name>
+```
+
+## トラブルシューティング
+
+### コンフリクト解決
+```bash
+# mainブランチの最新を取得
+git fetch origin main
+
+# リベース
+git rebase origin/main
+
+# コンフリクトがある場合は手動で解決
+# ファイルを編集して競合を解消
+git add <resolved-files>
+git rebase --continue
+
+# リベース完了後
+git push origin feature/<issue-id>-<feature-name> --force-with-lease
+```
+
+### テスト環境の問題
+```bash
+# テストデータベースのリセット（推奨方法）
+./bin/reset-test-db.sh
+
+# 手動でのテストDB再構築
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e \
+  "SET FOREIGN_KEY_CHECKS = 0; DROP DATABASE IF EXISTS ledgerleap_test; \
+   SET FOREIGN_KEY_CHECKS = 1; CREATE DATABASE ledgerleap_test \
+   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+./vendor/bin/sail artisan migrate --env=testing --force
+
+# テーブルが残っている場合
+# 上記コマンドを再実行してからマイグレーション
+
+# データベースをクリーンな状態にリセット
+./vendor/bin/sail artisan migrate:fresh --seed --env=testing
+```
+
+### Docker環境の問題
+```bash
+# コンテナを完全に削除して再構築
+./vendor/bin/sail down --volumes
+./vendor/bin/sail build --no-cache
+./vendor/bin/sail up -d
+
+# キャッシュクリア
+./vendor/bin/sail artisan cache:clear
+./vendor/bin/sail artisan config:clear
+./vendor/bin/sail artisan view:clear
+```
+
+## 重要なリマインダー
+
+✅ **コミット前必須**:
+1. `./vendor/bin/sail pint` - コード整形
+2. `./vendor/bin/sail test` - 全テスト通過
+3. ドキュメント更新
+4. セキュリティ確認
+
+✅ **開発中の心得**:
+- 小さく頻繁にコミット
+- わかりやすいコミットメッセージ
+- テストを先に書く（TDD推奨）
+- コードレビューを恐れない

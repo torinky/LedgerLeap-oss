@@ -39,6 +39,21 @@ enum WorkflowStatus: string
     }
 
     /**
+     * ステータスに応じた Font Awesome アイコンクラスを返すメソッド (新規追加)
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::NONE => 'fas fa-minus-circle', // ワークフロー非適用
+            self::DRAFT => 'fas fa-file-alt', // 下書き
+            self::PENDING_INSPECTION => 'fas fa-search', // 点検待ち
+            self::PENDING_APPROVAL => 'fas fa-hourglass-half', // 承認待ち
+            self::APPROVED => 'fas fa-check-circle', // 承認済み
+            // default => 'fas fa-info-circle', // 万が一の場合のデフォルト
+        };
+    }
+
+    /**
      * このステータスが承認済みかどうかを判定する
      */
     public function isApproved(): bool
@@ -53,7 +68,7 @@ enum WorkflowStatus: string
             self::DRAFT,
             self::PENDING_INSPECTION,
             self::PENDING_APPROVAL,
-            self::APPROVED // 承認済みもワークフローの結果
+            self::APPROVED, // 承認済みもワークフローの結果
         ]);
     }
 
@@ -62,7 +77,7 @@ enum WorkflowStatus: string
     {
         return in_array($this, [
             self::PENDING_INSPECTION,
-            self::PENDING_APPROVAL
+            self::PENDING_APPROVAL,
         ]);
     }
 }

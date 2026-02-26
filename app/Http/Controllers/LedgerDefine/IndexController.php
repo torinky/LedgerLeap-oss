@@ -13,7 +13,7 @@ class IndexController extends Controller
     /**
      * @return Application|Factory|View
      */
-    public function __invoke()
+    public function index()
     {
         $this->authorize('view_ledger_defines', LedgerDefine::class);
 

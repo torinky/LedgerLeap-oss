@@ -4,12 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints(); // 外部キー制約を一時的に無効化
+
         Schema::create('attached_files', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('ledger_id')->index();
@@ -30,6 +33,8 @@ return new class extends Migration {
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::enableForeignKeyConstraints(); // 外部キー制約を有効化
     }
 
     /**

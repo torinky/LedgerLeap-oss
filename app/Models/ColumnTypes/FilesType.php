@@ -28,29 +28,39 @@ class FilesType implements InputType
 
     public function convertToText($value)
     {
-        if ($this->shouldConvertToJson()) {
-            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // プロジェクト規約（二重エンコード厳禁）に基づき、配列の場合はそのまま返す。
+        // キャスト (AsColumnArrayJson) がシリアライズを担当するため。
+        if (is_array($value)) {
+            return $value;
         }
+
         return (string) $value;
     }
 
     public function restoreFromString($value)
     {
-        if ($this->shouldConvertToJson()) {
-            // Logic from ColumnDefine::restoreColumnValueFromText for 'files'
-            if (is_string($value)) {
-                $files = json_decode($value, true);
-                // The original code had a check for $files === $value, which seems redundant
-                // if json_decode fails, it returns null. If it succeeds, it's an array.
-                // A string input that is also valid JSON and identical to itself after decoding is unlikely.
-                // Let's simplify to just returning the decoded value.
-                return $files;
-            } elseif (is_array($value)) { // Already an array, no need to decode
-                return $value;
-            }
-            return null; // Or handle error appropriately
+        if (empty($value)) {
+            return [];
         }
-        return $value;
+
+        if (is_string($value) && (str_starts_with($value, '[') || str_starts_with($value, '{'))) {
+            try {
+                return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                return [$value];
+            }
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return [$value];
+    }
+
+    public function isHidden(): bool
+    {
+        return false;
     }
 
     public function getValidationRules(): array

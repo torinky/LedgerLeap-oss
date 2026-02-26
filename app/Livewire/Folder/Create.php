@@ -3,15 +3,16 @@
 namespace App\Livewire\Folder;
 
 use App\Http\Requests\Folder\StoreRequest;
+use App\Livewire\Traits\HasFolderTree;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
-use Illuminate\Support\Collection;
-use Livewire\Component;
+use Illuminate\Support\Facades\Log;
 
-class Create extends Component
+class Create extends BaseLivewireComponent
 {
-    public $folderRecords;
+    use HasFolderTree, InitializesTenantContext;
+
     public $parentFolderId;
-    public Collection $folderIdNameMap;
 
     public mixed $title;
 
@@ -22,40 +23,22 @@ class Create extends Component
 
     public function mount(StoreRequest $request)
     {
+        // 認可チェックを追加
+        $canCreate = auth()->user()->can('create', Folder::class);
+        Log::info('Livewire/Folder/Create mount: User ID: '.auth()->id().', Can create folder: '.($canCreate ? 'true' : 'false'));
+
+        if (! $canCreate) {
+            abort(403, __('auth.unauthorized')); // 権限がない場合は403を返す
+        }
 
         $this->parentFolderId = $request->folderId();
 
-        $this->folderRecords = [];
-        $nodes = $this->folderRecords = Folder::get()->toTree();
-        $traverse = function ($categories, $prefix = '-') use (&$traverse) {
-            foreach ($categories as $category) {
-                $category->title = $prefix . ' ' . $category->title;
-                $this->folderRecords[] = $category;
-
-                $traverse($category->children, $prefix . '-');
-            }
-        };
-
-        $traverse($nodes);
-        $this->folderRecords = collect($this->folderRecords);
-        $this->folderIdNameMap = $this->folderRecords->mapWithKeys(function ($folderRecord) {
-            $selected = $folderRecord->id == $this->parentFolderId ? true : false;
-
-            return [
-                $folderRecord->id => [
-                    'id' => $folderRecord->id,
-                    'name' => $folderRecord->title,
-                    'selected' => $selected,
-                ],
-            ];
-        });
-
+        $this->initializeFolderTree($this->parentFolderId);
     }
 
     public function store()
     {
         $parentFolderRecord = Folder::findOrFail($this->parentFolderId);
-
 
         $folderRecord = $parentFolderRecord->children()->create([
             'title' => $this->title,
@@ -63,7 +46,7 @@ class Create extends Component
             'modifier_id' => auth()->id(),
         ]);
 
-        return redirect()->route('folder.edit', $folderRecord)
+        return redirect()->route('folder.edit', ['tenant' => tenant()->id, 'folder' => $folderRecord])
             ->with('status', __('ledger.folder.created'));
 
     }

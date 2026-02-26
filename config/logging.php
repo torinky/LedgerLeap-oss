@@ -133,11 +133,18 @@ return [
             'level' => 'debug',
             'days' => 14, // ログを保持する日数
         ],
-        'schedule' => [
+        'scheduler' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/schedule.log'),
+            'path' => storage_path('logs/scheduler.log'),
             'level' => 'debug',
             'days' => 14, // ログを保持する日数
+        ],
+        'rag' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/rag.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
         ],
     ],
 

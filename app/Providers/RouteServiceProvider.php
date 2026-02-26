@@ -17,7 +17,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/ledger';
+    public const HOME = '/my-portal';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
@@ -35,6 +35,19 @@ class RouteServiceProvider extends ServiceProvider
 
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/auth.php'));
+
+            // Central domains routes
+            Route::middleware('web')
+                ->group(base_path('routes/central.php'));
+
+            // Tenant routes
+            Route::middleware([
+                'web',
+                \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class,
+            ])->group(base_path('routes/tenant.php'));
         });
     }
 }

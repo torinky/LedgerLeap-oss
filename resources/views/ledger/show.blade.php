@@ -24,11 +24,30 @@
                    class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
             <div class="collapse-content">
                 @if($ledgerDefineRecord->detail_description)
-                    {!! app(App\Services\AutoLinkService::class)->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), null, $ledgerDefineRecord) !!}
+                    @php
+                        $detailDescriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+                            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), 
+                            null, 
+                            $ledgerDefineRecord
+                        );
+                    @endphp
+                    <div class="prose text-sm leading-relaxed max-w-none">
+                        <x-expandable-content 
+                            :content="$detailDescriptionHtml"
+                            max-height="6rem"
+                        />
+                    </div>
                 @endif
             </div>
         </div>
         <livewire:ledger.show :ledgerId="$ledger->id"/>
     </div>
 
+    <script>
+        (function() {
+            @if (session('refresh_opener'))
+                localStorage.setItem('ledger_list_needs_refresh', Date.now());
+            @endif
+        })();
+    </script>
 </x-app-layout>

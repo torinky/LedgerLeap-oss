@@ -18,7 +18,7 @@ class SynonymService
     /**
      * クラスの新しいインスタンスを構築します。
      *
-     * @param SynonymServiceConfig|null $config 類義語サービスの構成オブジェクト。指定されていない場合は、SynonymServiceConfigの新しいインスタンスが作成されます。
+     * @param  SynonymServiceConfig|null  $config  類義語サービスの構成オブジェクト。指定されていない場合は、SynonymServiceConfigの新しいインスタンスが作成されます。
      */
     public function __construct(?SynonymServiceConfig $config = null)
     {
@@ -28,7 +28,7 @@ class SynonymService
     /**
      * 指定された単語の形態を取得します。
      *
-     * @param string $lemma 単語の基本形
+     * @param  string  $lemma  単語の基本形
      * @return Collection
      */
     public static function getWords($lemma)
@@ -39,8 +39,8 @@ class SynonymService
     /**
      * 指定された単語の類義語を取得します。
      *
-     * @param string $word 類義語を取得する単語
-     * @param array $options オプションの配列
+     * @param  string  $word  類義語を取得する単語
+     * @param  array  $options  オプションの配列
      *                          - 'useSynonym': (bool) 類義語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
      *                          - 'useTechnicalTerm': (bool) 技術用語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
      * @return array 指定された単語の類義語の配列
@@ -115,8 +115,8 @@ class SynonymService
      * 文章の類似度をコサイン類似度を用いて求めます
      * https://tech.excite.co.jp/entry/2021/11/29/175826
      *
-     * @param string $text1 文章1つ目
-     * @param string $text2 文章2つ目
+     * @param  string  $text1  文章1つ目
+     * @param  string  $text2  文章2つ目
      */
     public function cosineSimilarity(string $text1, string $text2): float
     {
@@ -167,13 +167,13 @@ class SynonymService
         $l1 = mb_strlen($s1, 'UTF-8');
         $l2 = mb_strlen($s2, 'UTF-8');
         $size = max($l1, $l2);
-        if (!$size) {
+        if (! $size) {
             return 0;
         }
-        if (!$s1) {
+        if (! $s1) {
             return $l2 / $size;
         }
-        if (!$s2) {
+        if (! $s2) {
             return $l1 / $size;
         }
 
@@ -186,10 +186,10 @@ class SynonymService
         $s2 = preg_split('//u', $s2, -1, PREG_SPLIT_NO_EMPTY);
         $l1 = count($s1);
         $l2 = count($s2);
-        if (!$l1) {
+        if (! $l1) {
             return $l2 * $cost_ins;
         }
-        if (!$l2) {
+        if (! $l2) {
             return $l1 * $cost_del;
         }
         $p1 = array_fill(0, $l2 + 1, 0);

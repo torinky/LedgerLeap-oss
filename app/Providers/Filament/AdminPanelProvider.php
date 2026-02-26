@@ -18,17 +18,25 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
+        if ($fromTenantId = request()->query('tenant')) {
+            if (! empty($fromTenantId)) {
+                session()->put('filament_from_tenant_id', $fromTenantId);
+            }
+        }
+        $fromTenantId = session('filament_from_tenant_id');
+
         return $panel
             ->default()
             ->id('admin')
             ->path('app')
-            ->login()
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -52,16 +60,25 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
 //            ->navigation(false)
             ->navigationItems([
-                NavigationItem::make(__('ledger.go_home'))
-                    ->url(fn() => route('ledger.index'))
+                NavigationItem::make(__('ledger.navigation.back_to_tenant'))
+                    ->url(function () {
+                        $fromTenantId = session('filament_from_tenant_id');
+
+                        return $fromTenantId ? route('my-portal', ['tenant' => $fromTenantId]) : '#';
+                    })
                     ->icon('heroicon-o-arrow-uturn-left')
-                    ->activeIcon('heroicon-s-arrow-uturn-left')
+//                    ->visible(!empty(session('filament_from_tenant_id')))
+                    ->visible(function () {
+                        $fromTenantId = session('filament_from_tenant_id');
+
+                        return ! empty($fromTenantId);
+                    })
                     ->sort(2),
                 NavigationItem::make(__('ledger.setting'))
                     ->icon('heroicon-o-adjustments-vertical')
                     ->activeIcon('heroicon-s-adjustments-vertical')
-                    ->isActiveWhen(fn(): bool => request()->routeIs('filament.admin.pages.dashboard'))
-                    ->url(fn(): string => Dashboard::getUrl())
+                    ->isActiveWhen(fn (): bool => request()->routeIs('filament.admin.pages.dashboard'))
+                    ->url(fn (): string => Dashboard::getUrl().'?tenant='.$fromTenantId)
                     ->sort(1),
             ])
             ->navigationGroups([])
@@ -108,6 +125,9 @@ class AdminPanelProvider extends PanelProvider
 //            ->theme(asset('css/filament/admin/theme.css'))
 
 //            ->viteTheme('resources/css/filament/admin/theme.css')
-            ;
+            ->renderHook(
+                'panels::global-search.after',
+                fn (): string => Blade::render('<livewire:tenant-switcher-filament :show-folders="false" />'),
+            );
     }
 }

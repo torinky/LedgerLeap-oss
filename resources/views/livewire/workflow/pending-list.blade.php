@@ -1,7 +1,15 @@
 @php use App\Enums\WorkflowStatus; @endphp
-<div>
+<div class="relative">
+    <x-element.loading-overlay tier="1" />
 
-    <x-mary-card :title="__('ledger.workflow.pending_tasks')">
+    {{-- Tier 1 Skeleton --}}
+    <div wire:loading.delay class="space-y-6">
+        <div class="h-10 bg-base-300 rounded-lg w-1/4 animate-pulse ml-2"></div>
+        <x-element.skeleton-list items="8" />
+    </div>
+
+    <div wire:loading.delay.remove>
+        <x-mary-card :title="__('ledger.workflow.pending_tasks')">
         {{-- テーブルヘッダーのラベルを翻訳キーに --}}
         {{--        // 修正: 申請日時は latestDiff から取得 or updated_at を使う？ -> updated_at が現実的か--}}
         <x-mary-table class="table-sm w-full table-zebra overflow-x-auto"
@@ -136,7 +144,7 @@
                 @endif
                 <x-mary-button data-tip="{{ __('ledger.view_details') }}" icon="o-eye"
                                class="btn-square btn-ghost tooltip"
-                               link="{{ route('ledger.show', ['ledgerId' => $ledger->id]) }}"/>
+                               link="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $ledger->id]) }}"/>
 
             </div>
             {{-- 戻し理由入力モーダル (修正: task->id ではなく ledger->id を使う？ $selectedTaskId で制御) --}}
@@ -183,7 +191,8 @@
         </x-mary-modal>
 
         {{-- ページネーション (必要なら) --}}
-        <div class="mt-4"> {{ $pendingTasks->links() }} </div>
+        <div class="mt-4">{!! $pendingTasks->links('components.common.pagination-links', ['position' => 'task']) !!}</div>
 
     </x-mary-card>
+    </div> {{-- End of wire:loading.delay.remove --}}
 </div>

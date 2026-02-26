@@ -20,14 +20,14 @@ use Spatie\Activitylog\Traits\LogsActivity;
 /**
  * @property array $content_attached
  * @property array $content
- * @property BelongsTo $define
+ * @property LedgerDefine $define
  *
  * @method static create(array $array)
  * @method static find(string $ledgerId)
  */
 class Ledger extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'content' => AsColumnArrayJson::class,
@@ -36,7 +36,11 @@ class Ledger extends Model
     ];
 
     protected $fillable = [
+        // インポート（upsert）時に id を明示的にセットできるよう追加。
+        // 通常の Ledger::create() 呼び出しは id を渡さないため autoincrement には影響しない。
+        'id',
         'content', 'content_attached', 'ledger_define_id', 'creator_id', 'modifier_id', 'status', 'latest_diff_id', 'version',
+        'activity_score', 'composite_score', 'default_sort_value',
     ];
 
     /**
@@ -60,20 +64,52 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
+        $connection = $query->getConnection();
+        $dbName = $connection->getDatabaseName();
+        $tenantId = tenancy()->tenant?->id ?? 'central';
+
+        \Log::info('[MCP Search Debug] scopeSearch START', [
+            'freeWord' => $freeWord,
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+            'connection' => $connection->getName(),
+        ]);
+
         $freeWord = trim($freeWord);
         if (empty($freeWord)) {
+            \Log::info('[MCP Search Debug] scopeSearch: freeWord is empty after trim, returning original query');
+
             return $query;
         }
-        //        dd($freeWord);
-        //        $query->whereRaw("match(`content`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        //        $query->whereRaw("match(`content`,`content_attached`) against (? IN BOOLEAN MODE)", [$freeWord]);
-        $query->where(function (EloquentBuilder $q) use ($freeWord) {
-            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$freeWord])
-                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$freeWord]);
+
+        $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
+        \Log::info('[MCP Search Debug] scopeSearch: extracted keywords: '.json_encode($keywords, JSON_UNESCAPED_UNICODE));
+
+        if (empty($keywords)) {
+            \Log::info('[MCP Search Debug] scopeSearch: no keywords found, returning original query');
+
+            return $query;
+        }
+
+        // OR検索: 各キーワードをスペース区切りで渡す（+を付けない）
+        // Mroongaでは複数単語をスペース区切りにするとOR検索になる
+        $searchString = implode(' ', $keywords);
+        \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: '.$searchString);
+
+        // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
+        \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
+        $query->where(function (EloquentBuilder $q) use ($searchString) {
+            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
+                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
         });
 
-        //        dd($query->toSql(), $query->getBindings());
-
+        // Debug: Log the count
+        $count = (clone $query)->count();
+        \Log::info("[MCP Search Debug] scopeSearch: found {$count} records", [
+            'tenantId' => $tenantId,
+            'dbName' => $dbName,
+        ]);
+        \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
     }
 
     /**
@@ -113,12 +149,169 @@ class Ledger extends Model
             // Mroongaの列番号は1始まり
             $mroongaColumnCount = $column + 1;
             //            $query->whereRaw("match(`content`) against ('*W" . $mroongaColumnCount . " +" . $filterStr . "' IN BOOLEAN MODE)");
-            $query->where(function (Builder $q) use ($mroongaColumnCount, $filterStr) {
+            $query->where(function ($q) use ($mroongaColumnCount, $filterStr) {
                 $q->whereRaw("match(`content`) against ('*W".$mroongaColumnCount.' +"'.$filterStr."\"' IN BOOLEAN MODE)")
                     ->orWhereRaw("match(`content_attached`) against ('*W".$mroongaColumnCount.' +'.$filterStr."' IN BOOLEAN MODE)");
             });
         }
 
+    }
+
+    public function scopeCreatedBetween(EloquentBuilder $query, $value)
+    {
+        // $value が配列の場合と文字列の場合の両方に対応
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            // $value は 'YYYY-MM-DD,YYYY-MM-DD' の形式を想定
+            $dates = explode(',', $value);
+        }
+
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        return $query;
+    }
+
+    /**
+     * 更新日時範囲での絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeUpdatedBetween(EloquentBuilder $query, $value)
+    {
+        if (is_array($value)) {
+            $dates = $value;
+        } else {
+            $dates = explode(',', $value);
+        }
+
+        $startDate = $dates[0] ?? null;
+        $endDate = $dates[1] ?? null;
+
+        if ($startDate) {
+            $query->whereDate('updated_at', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('updated_at', '<=', $endDate);
+        }
+
+        return $query;
+    }
+
+    /**
+     * フォルダIDでの階層的絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeFolderHierarchy(EloquentBuilder $query, $folderId)
+    {
+        if (! empty($folderId)) {
+            $folderIds = Folder::descendantsAndSelf($folderId)->pluck('id');
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($folderIds) {
+                $q->whereIn('id', $folderIds);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * タグでの絞り込みスコープ (AND条件)
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeWithTags(EloquentBuilder $query, $tags)
+    {
+        if (! empty($tags)) {
+            $tagNames = is_string($tags) ? array_filter(explode(',', $tags)) : $tags;
+            if (! empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * 除外タグでの絞り込みスコープ
+     * spatie/laravel-query-builder 用
+     */
+    public function scopeWithoutTags(EloquentBuilder $query, $excludeTags)
+    {
+        if (! empty($excludeTags)) {
+            $excludeTagNames = is_string($excludeTags) ? array_filter(explode(',', $excludeTags)) : $excludeTags;
+            if (! empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+
+        return $query;
+    }
+
+    public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
+    {
+        // キーワード検索
+        if (! empty($params['q'])) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$params['q']])
+                    ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$params['q']]);
+            });
+        }
+
+        // 除外キーワード検索 (全文検索のNOT演算子を利用)
+        if (! empty($params['exclude_q'])) {
+            $excludeKeywords = '-'.implode(' -', explode(' ', $params['exclude_q']));
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
+                $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
+                    ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
+            });
+        }
+
+        // 台帳定義IDでの絞り込み
+        if (! empty($params['ledger_define_id'])) {
+            $query->where('ledger_define_id', $params['ledger_define_id']);
+        }
+
+        // フォルダIDでの絞り込み (再帰的)
+        if (! empty($params['folder_id'])) {
+            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+                $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
+                $q->whereIn('id', $folderIds);
+            });
+        }
+
+        // タグでの絞り込み (AND条件)
+        if (! empty($params['tags'])) {
+            $tagNames = array_filter(explode(',', $params['tags']));
+            if (! empty($tagNames)) {
+                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                    $q->whereIn('name', $tagNames);
+                }, '=', count($tagNames));
+            }
+        }
+
+        // 除外タグでの絞り込み
+        if (! empty($params['exclude_tags'])) {
+            $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
+            if (! empty($excludeTagNames)) {
+                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                    $q->whereIn('name', $excludeTagNames);
+                });
+            }
+        }
+
+        return $query;
     }
 
     /**
@@ -191,7 +384,7 @@ class Ledger extends Model
             ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName))
             ->logFillable()
             // ->logUnguarded() // ガードされていないすべての属性をログに記録 (fillable の逆)
-            ->dontLogIfAttributesChangedOnly(['latest_diff_id']); // 特定の属性のみが変更された場合はログを記録しない
+            ->dontLogIfAttributesChangedOnly(['latest_diff_id', 'activity_score', 'composite_score']); // 特定の属性のみが変更された場合はログを記録しない
     }
 
     /**
@@ -400,5 +593,110 @@ class Ledger extends Model
         $progress = $this->getRequiredRolesProgressDetails(); // 内部で latestDiff を参照
 
         return $progress['inspection']['completed_count'] > 0;
+    }
+
+    /**
+     * デフォルトソート用正規化文字列を生成します。
+     * ColumnDefine の sort_index に基づき、優先順位に従ってカラム値を連結します。
+     */
+    public function generateDefaultSortValue(): ?string
+    {
+        $define = $this->define;
+        if (! $define || ! $define->column_define) {
+            return null;
+        }
+
+        // sort_index が設定されているカラムを優先順に取得
+        $columns = collect($define->column_define)
+            ->filter(fn ($col) => ! is_null($col->sort_index))
+            ->sortBy('sort_index');
+
+        if ($columns->isEmpty()) {
+            return null;
+        }
+
+        $normalizedValues = [];
+        foreach ($columns as $column) {
+            $value = $this->content[$column->id] ?? null;
+            $normalizedValues[] = $this->normalizeValueForSort($column, $value);
+        }
+
+        $result = implode('|', $normalizedValues);
+
+        // キー長制限(512文字)を考慮
+        return mb_strimwidth($result, 0, 512);
+    }
+
+    /**
+     * カラム型に応じた正規化処理
+     */
+    protected function normalizeValueForSort(ColumnDefine $column, $value): string
+    {
+        if (is_null($value) || $value === '') {
+            return '';
+        }
+
+        switch ($column->type) {
+            case 'number':
+                // 正負、整数20桁、小数10桁のゼロパディング
+                if (! is_numeric($value)) {
+                    return str_repeat(' ', 32);
+                }
+                $num = (float) $value;
+                $sign = $num >= 0 ? '+' : '-';
+                $abs = abs($num);
+                $parts = explode('.', sprintf('%.10f', $abs));
+                $intPart = str_pad($parts[0], 20, '0', STR_PAD_LEFT);
+                $decPart = str_pad($parts[1] ?? '', 10, '0', STR_PAD_RIGHT);
+
+                return "{$sign}{$intPart}.{$decPart}";
+
+            case 'auto_number':
+                // そのまま使用（既にパディング済み）
+                return (string) $value;
+
+            case 'YMD':
+            case 'YMDHM':
+                try {
+                    return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    return '0000-00-00';
+                }
+
+            case 'files':
+                // 最初のオリジナルファイル名を取得
+                if (is_array($value) && ! empty($value)) {
+                    $originalName = reset($value);
+
+                    return $this->normalizeTextForSort($originalName);
+                }
+
+                return '';
+
+            case 'chk':
+                return $value ? '1' : '0';
+
+            default:
+                // text, textarea, select, phone, user_name 等
+                return $this->normalizeTextForSort($value);
+        }
+    }
+
+    /**
+     * テキスト型の正規化
+     */
+    protected function normalizeTextForSort($value): string
+    {
+        $text = (string) $value;
+        $text = strip_tags($text);
+        // Markdown簡易除去（あくまでソート用なので厳密でなくて良い）
+        // _ はファイル名等で一般的かつソートに有用なため除外対象から外す
+        $text = preg_replace('/[#*`~\[\]]/', '', $text);
+        // 改行、タブを空白置換
+        $text = str_replace(["\r", "\n", "\t"], ' ', $text);
+        // 連続空白を1つに
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        return mb_substr(trim($text), 0, 50);
     }
 }

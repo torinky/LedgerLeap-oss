@@ -3,30 +3,28 @@
 namespace App\Livewire\Notifications;
 
 use App\Helpers\ActivityLogFormatter;
+use App\Livewire\BaseLivewireComponent;
 use App\Models\CustomActivity;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Route;
-use Livewire\Component;
+use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 
-class NotificationList extends Component
+class NotificationList extends BaseLivewireComponent
 {
-    use WithPagination;
+    use WithoutUrlPagination, WithPagination;
 
     public int $totalNotifications = 0; // 合計件数用プロパティ
 
-    public function mount(NotificationService $notificationService)
-    {
-    }
+    public function mount(NotificationService $notificationService) {}
 
     // 通知を既読にするメソッド (変更なし)
     public function markAsRead(NotificationService $notificationService, string $notificationId)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -38,7 +36,7 @@ class NotificationList extends Component
     public function markAllAsRead(NotificationService $notificationService)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return;
         }
         $notificationService->markAsRead($user);
@@ -52,11 +50,12 @@ class NotificationList extends Component
 
         if ($query) {
             $this->totalNotifications = $query->count();
-            $notifications = $query->paginate(10) // 1ページあたりの件数を調整
-            ->through(function ($notification) { // 各通知データを加工
-                $notification->displayData = $this->formatNotificationData($notification);
-                return $notification;
-            });
+            $notifications = $query->paginate(10, ['*'], pageName: 'notification_page') // 1ページあたりの件数を調整
+                ->through(function ($notification) { // 各通知データを加工
+                    $notification->displayData = $this->formatNotificationData($notification);
+
+                    return $notification;
+                });
         } else {
             $this->totalNotifications = 0;
             $notifications = collect()->paginate(10);
@@ -65,14 +64,14 @@ class NotificationList extends Component
         $this->dispatch('update-tab-count', tab: 'notifications', count: $this->totalNotifications);
 
         return view('livewire.notifications.notification-list', [
-            'notifications' => $notifications
+            'notifications' => $notifications,
         ]);
     }
 
     /**
      * 通知データをビュー表示用に整形するヘルパーメソッド
      *
-     * @param $notification DatabaseNotification オブジェクト
+     * @param  $notification  DatabaseNotification オブジェクト
      * @return array 整形済みデータの連想配列
      */
     protected function formatNotificationData($notification): array
@@ -96,27 +95,27 @@ class NotificationList extends Component
         $routeName = $payload['route'] ?? null;
         $routeParams = $payload['route_params'] ?? []; // payload に route_params があれば使う
 
-
         // --- Activity Log の changes 部分のフォーマット ---
         // Notification のデータに activity_log_id が含まれている場合
-        if (!empty($payload['activity_log_id'])) {
+        if (! empty($payload['activity_log_id'])) {
             $activityLog = CustomActivity::find($payload['activity_log_id']);
             $displayData['message'] =
                 "<strong>{$causerName}</strong>"
-                . __('ledger.user_action_suffix')
-                . ActivityLogFormatter::getSubjectNameForDisplay($activityLog ?? null)
-                . __('ledger.user_object_suffix')
-                . ActivityLogFormatter::getOperationDescription($activityLog ?? null);
+                .__('ledger.user_action_suffix')
+                .ActivityLogFormatter::getSubjectNameForDisplay($activityLog ?? null)
+                .__('ledger.user_object_suffix')
+                .ActivityLogFormatter::getOperationDescription($activityLog ?? null);
             if (empty($displayData['link'])) {
                 $displayData['link'] = ActivityLogFormatter::getSubjectDetailLink($activityLog ?? null);
             }
             $displayData['changes_formatted'] = ActivityLogFormatter::formatChanges($activityLog ?? null);
+
             return $displayData; // 早期リターン
 
         } else {
             // --- メッセージ生成 ---
-            $subjectLabel = $subjectType ? (__('ledger.activity.model_name.' . strtolower(class_basename($subjectType))) ?? class_basename($subjectType)) : ''; // 翻訳キーを ledger.activity.model_name.* に変更
-            $eventLabel = $event ? __('ledger.activity.event.' . $event) : ''; // 翻訳キーを ledger.activity.event.* に変更
+            $subjectLabel = $subjectType ? (__('ledger.activity.model_name.'.strtolower(class_basename($subjectType))) ?? class_basename($subjectType)) : ''; // 翻訳キーを ledger.activity.model_name.* に変更
+            $eventLabel = $event ? __('ledger.activity.event.'.$event) : ''; // 翻訳キーを ledger.activity.event.* に変更
             $subjectName = '';
             if ($subjectType === 'App\\Models\\Ledger') {
                 $subjectName = $payload['ledger_name'] ?? "ID:{$subjectId}";
@@ -131,10 +130,10 @@ class NotificationList extends Component
                 $baseMessage .= __('ledger.user_object_suffix');
                 if ($causerName) {
                     // $causer_name は 'causer_name' キーで直接渡されることを想定
-                    $baseMessage = "<strong>{$causerName}</strong>" . __('ledger.user_action_suffix')
-                        . "{$baseMessage}"; // 自然な日本語になるよう調整
+                    $baseMessage = "<strong>{$causerName}</strong>".__('ledger.user_action_suffix')
+                        ."{$baseMessage}"; // 自然な日本語になるよう調整
                 }
-                $displayData['message'] = $baseMessage . " {$eventLabel}"; // eventLabel を最後に結合
+                $displayData['message'] = $baseMessage." {$eventLabel}"; // eventLabel を最後に結合
             }
         }
 

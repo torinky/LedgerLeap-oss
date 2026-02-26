@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Folder;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class FolderSeeder extends Seeder
@@ -14,21 +15,31 @@ class FolderSeeder extends Seeder
      */
     public function run()
     {
-        $root = Folder::create(['title' => 'Root structure', 'modifier_id' => 1, 'creator_id' => 1]);
+        // テナントに最初のユーザーが存在するか確認し、なければ作成する
+        // このユーザーはフォルダの作成者・更新者として使用される
+        $user = User::first();
+        if (! $user) {
+            $user = User::factory()->create();
+        }
+        $userId = $user->id;
 
-        $sub1 = $root->children()->create(['title' => 'sub1', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub5 = $root->children()->create(['title' => 'sub5', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub9 = $root->children()->create(['title' => 'sub9', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub10 = $root->children()->create(['title' => 'sub10', 'modifier_id' => 1, 'creator_id' => 1]);
+        // ルートフォルダを作成
+        $root = Folder::create(['title' => '/', 'creator_id' => $userId, 'modifier_id' => $userId]);
 
-        $sub2 = $sub1->children()->create(['title' => 'sub2', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub3 = $sub1->children()->create(['title' => 'sub3', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub4 = $sub1->children()->create(['title' => 'sub4', 'modifier_id' => 1, 'creator_id' => 1]);
+        // デモ用の階層フォルダを作成
+        $sub1 = $root->children()->create(['title' => 'Subfolder 1', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $sub5 = $root->children()->create(['title' => 'Subfolder 5', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $root->children()->create(['title' => 'Subfolder 9', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $root->children()->create(['title' => 'Subfolder 10', 'creator_id' => $userId, 'modifier_id' => $userId]);
 
-        $sub11 = $sub4->children()->create(['title' => 'sub11', 'modifier_id' => 1, 'creator_id' => 1]);
+        $sub1->children()->create(['title' => 'Subfolder 2', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $sub1->children()->create(['title' => 'Subfolder 3', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $sub4 = $sub1->children()->create(['title' => 'Subfolder 4', 'creator_id' => $userId, 'modifier_id' => $userId]);
 
-        $sub6 = $sub5->children()->create(['title' => 'sub6', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub7 = $sub6->children()->create(['title' => 'sub7', 'modifier_id' => 1, 'creator_id' => 1]);
-        $sub8 = $sub7->children()->create(['title' => 'sub8', 'modifier_id' => 1, 'creator_id' => 1]);
+        $sub4->children()->create(['title' => 'Subfolder 11', 'creator_id' => $userId, 'modifier_id' => $userId]);
+
+        $sub6 = $sub5->children()->create(['title' => 'Subfolder 6', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $sub7 = $sub6->children()->create(['title' => 'Subfolder 7', 'creator_id' => $userId, 'modifier_id' => $userId]);
+        $sub7->children()->create(['title' => 'Subfolder 8', 'creator_id' => $userId, 'modifier_id' => $userId]);
     }
 }

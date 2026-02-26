@@ -35,7 +35,7 @@ class AuthServiceProvider extends ServiceProvider
         Folder::class => FolderPolicy::class,
         Permission::class => PermissionPolicy::class,
         Role::class => RolePolicy::class,
-        CustomActivity::class =>CustomActivityPolicy::class,
+        CustomActivity::class => CustomActivityPolicy::class,
         AutoLink::class => AutoLinkPolicy::class,
 
     ];
@@ -46,16 +46,17 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
-        Gate::before(function (User $user, $ability) {
-            if ($user->hasRole('Super Admin')) {
-                //                return true;
-            }
-        });
+        Gate::before(function (User $user, $ability) {});
 
         Gate::define('inherit-permissions', function (User $user, $permission, Organization $organization) {
             $ancestors = $organization->ancestors;
             foreach ($ancestors as $ancestor) {
-                if ($user->hasPermissionTo($permission, $ancestor)) {
+                // $ancestor は Organization モデル。 hasPermissionTo の 第2引数は guard 名である必要がある。
+                // もし、その組織がそのパーミッションを持っているかをチェックしたいのであれば、
+                // $ancestor->hasPermissionTo($permission) を使うべき。
+                // もし、ユーザーがその組織経由でパーミッションを持っているかをチェックしたいのであれば、
+                // 別のロジックが必要。
+                if ($ancestor->hasPermissionTo($permission)) {
                     return true;
                 }
             }
@@ -69,6 +70,25 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->app->bind(WritableFolderRepository::class, function ($app) {
             return new WritableFolderRepository;
+        });
+    }
+
+    /**
+     * Register the request rebind handler.
+     *
+     * @return void
+     */
+    protected function registerRequestRebindHandler()
+    {
+        if (app()->runningUnitTests()) {
+            // テスト中は setUserResolver を呼び出さない
+            return;
+        }
+
+        $this->app->rebinding('request', function ($app, $request) {
+            $request->setUserResolver(function ($guard = null) use ($app) {
+                return call_user_func($app['auth']->userResolver(), $guard);
+            });
         });
     }
 }

@@ -4,44 +4,46 @@ namespace App\Livewire;
 
 use App\Models\Folder;
 use App\Models\Organization;
-use App\Models\Role;
 use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Support\Collection;
-
-// Collection を use
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-
-// View を use
-use Livewire\Component;
 use Log;
 
-class MyPortal extends Component
+class MyPortal extends BaseLivewireComponent
 {
     public User $user;
+
     public ?Organization $primaryOrganization; // Nullable に
+
     public Collection $otherOrganizations;
+
     public Collection $activeRoles;
+
     public string $roleDisplayString = ''; // 表示用の役割文字列
+
     // ステップ2で追加: 主な権限とその有無を保持する配列
     public array $majorPermissions = [];
+
     // ステップ3で追加: 担当フォルダリスト
     public Collection $assignedFolders;
+
     // ステップ3で追加: 管理可能フォルダID (ビューでの権限判定用)
     public array $manageableFolderIds = [];
+
     // ステップ3で追加: 書き込み可能フォルダID (ビューでの権限判定用)
     public array $writableFolderIds = []; // 読み取り専用の場合もあるため、書き込み可能も保持
 
     // ステップ4で追加: 全フォルダツリー表示用データ
     public Collection $allRootFolders; // ルートフォルダのコレクション
+
     public array $readableFolderIds = []; // 読み取り可能フォルダID (Write/Manage も含む)
 
-
-// --- 承認待ち件数用 ---
+    // --- 承認待ち件数用 ---
     public int $pendingTaskCount = 0;
-//    protected WorkflowTaskRepository $taskRepository;
+    //    protected WorkflowTaskRepository $taskRepository;
 
     // 表示する主要権限リスト (ここで定義)
     protected array $permissionsToCheck = [
@@ -54,6 +56,7 @@ class MyPortal extends Component
         'manage_organizations',    // 組織を管理できる (Seederにはないが、想定として)
         'view_activity_logs',     // アクティビティログを閲覧できる
     ];
+
     // WritableFolderRepository をインジェクト
     protected WritableFolderRepository $writableFolderRepository;
 
@@ -63,7 +66,6 @@ class MyPortal extends Component
     {
         $this->writableFolderRepository = $writableFolderRepository;
     }
-
 
     /**
      * コンポーネントのマウント時にデータを準備
@@ -86,7 +88,7 @@ class MyPortal extends Component
         $this->prepareAllFolderTreeData();
 
         // --- 承認待ち件数を取得 ---
-//        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
+        //        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
         // --- 承認待ち件数を取得 (修正) ---
         // $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // 古い方法
         $this->pendingTaskCount = $this->user->pending_inspection_count + $this->user->pending_approval_count; // <<<--- 修正: User モデルから直接取得
@@ -109,27 +111,28 @@ class MyPortal extends Component
             // labelがあればlabelを、なければnameを使い、翻訳を試みる
             $roleKey = $representativeRole->label ?? $representativeRole->name;
             // 翻訳キーを生成 (例: 'ledger.role_label.admin' や 'ledger.role_label.メンバー')
-            $translationKey = 'ledger.role_label.' . $roleKey;
+            $translationKey = 'ledger.role_label.'.$roleKey;
             // 翻訳が存在すれば翻訳を、なければキー自体を使う
-            $roleName = trans()->has($translationKey) ? __($translationKey) : $roleKey;
+            $translation = trans()->has($translationKey) ? __($translationKey) : $roleKey;
+            $roleName = $translation;
             // $roleName = __('ledger.role_label.' . ($representativeRole->label ?? $representativeRole->name)); // labelを優先する場合
         } else {
             $roleName = __('ledger.no_specific_role'); // ロールがない場合の代替テキスト
         }
 
         // 主所属がある場合は "(主所属)" を付ける
-        $primaryBadge = $this->primaryOrganization ? ' (' . __('ledger.organizations.primary') . ')' : '';
+        $primaryBadge = $this->primaryOrganization ? ' ('.__('ledger.organizations.primary').')' : '';
 
         $this->roleDisplayString = sprintf('%s %s%s', $orgName, $roleName, $primaryBadge);
 
         // 主所属がなく、その他の所属がある場合は、最初のその他の所属を使うなどの代替ロジックも検討可能
-        if (!$this->primaryOrganization && $this->otherOrganizations->isNotEmpty()) {
+        if (! $this->primaryOrganization && $this->otherOrganizations->isNotEmpty()) {
             $firstOtherOrg = $this->otherOrganizations->first();
             $this->roleDisplayString = sprintf('%s %s', $firstOtherOrg->name, $roleName);
             // この場合、主所属ではないことを示す何らかの表示が必要かもしれない
-        } elseif (!$this->primaryOrganization && $this->otherOrganizations->isEmpty()) {
+        } elseif (! $this->primaryOrganization && $this->otherOrganizations->isEmpty()) {
             // 主所属もその他の所属もない場合の表示
-            $this->roleDisplayString = __('ledger.no_organization_assigned') . ' ' . $roleName;
+            $this->roleDisplayString = __('ledger.no_organization_assigned').' '.$roleName;
         }
     }
 
@@ -140,10 +143,10 @@ class MyPortal extends Component
     {
         // ユーザーの全権限名を一度だけ取得
         $userPermissionNames = $this->user->getAllUniquePermissions()->pluck('name')->all();
-//dd($userPermissionNames);
+        // dd($userPermissionNames);
         foreach ($this->permissionsToCheck as $permissionName) {
             $hasPermission = in_array($permissionName, $userPermissionNames);
-            $translationKey = 'ledger.permission_description.' . $permissionName;
+            $translationKey = 'ledger.permission_description.'.$permissionName;
 
             // 翻訳が存在するか確認し、表示用配列に追加
             if (trans()->has($translationKey)) {
@@ -153,7 +156,7 @@ class MyPortal extends Component
                 ];
             } // 翻訳がない場合はログに残すなどの処理も検討
             else {
-                Log::warning("Missing translation key: " . $translationKey);
+                Log::warning('Missing translation key: '.$translationKey);
             }
         }
     }
@@ -171,7 +174,8 @@ class MyPortal extends Component
         $targetFolderIds = array_unique(array_merge($this->writableFolderIds, $this->manageableFolderIds));
 
         if (empty($targetFolderIds)) {
-            $this->assignedFolders = new Collection(); // 空のコレクションをセット
+            $this->assignedFolders = new Collection; // 空のコレクションをセット
+
             return;
         }
 
@@ -210,7 +214,6 @@ class MyPortal extends Component
         $this->readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($this->user);
         // $this->writableFolderIds と $this->manageableFolderIds は prepareAssignedFolders で既に取得済み
     }
-
 
     /**
      * ビューをレンダリング

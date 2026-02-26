@@ -1,19 +1,27 @@
 <?php
 
-namespace tests\Unit\Policies;
+namespace Tests\Unit\Policies;
 
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Policies\LedgerDefinePolicy;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use tests\TestCase;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerDefinePolicyTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+    }
 
     public function test_view_any_returns_true_for_user_with_view_ledger_defines_permission()
     {
@@ -153,6 +161,7 @@ class LedgerDefinePolicyTest extends TestCase
         // Assert
         $this->assertTrue($result);
     }
+
     public function test_update_returns_false_for_user_without_manage_ledger_defines_permission()
     {
         // Arrange
@@ -278,7 +287,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->restore($user, $ledgerDefine));
     }
 
-    public function test_forceDelete_returns_true_for_user_with_force_delete_ledger_defines_permission_and_Writable_folder()
+    public function test_force_delete_returns_true_for_user_with_force_delete_ledger_defines_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -294,7 +303,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->forceDelete($user, $ledgerDefine));
     }
 
-    public function test_forceDelete_returns_false_for_user_without_force_delete_ledger_defines_permission()
+    public function test_force_delete_returns_false_for_user_without_force_delete_ledger_defines_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -309,7 +318,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->forceDelete($user, $ledgerDefine));
     }
 
-    public function test_forceDelete_returns_false_for_user_with_force_delete_ledger_defines_permission_but_not_writable_folder()
+    public function test_force_delete_returns_false_for_user_with_force_delete_ledger_defines_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -325,7 +334,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->forceDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerView_returns_true_for_user_with_view_ledgers_permission_and_readable_folder()
+    public function test_ledger_view_returns_true_for_user_with_view_ledgers_permission_and_readable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -341,7 +350,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerView($user, $ledgerDefine));
     }
 
-    public function test_ledgerView_returns_false_for_user_without_view_ledgers_permission()
+    public function test_ledger_view_returns_false_for_user_without_view_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -356,7 +365,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerView($user, $ledgerDefine));
     }
 
-    public function test_ledgerView_returns_false_for_user_with_view_ledgers_permission_but_not_readable_folder()
+    public function test_ledger_view_returns_false_for_user_with_view_ledgers_permission_but_not_readable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -372,7 +381,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerView($user, $ledgerDefine));
     }
 
-    public function test_ledgerCreate_returns_true_for_user_with_create_ledgers_permission_and_writable_folder()
+    public function test_ledger_create_returns_true_for_user_with_create_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -388,7 +397,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerCreate($user, $ledgerDefine));
     }
 
-    public function test_ledgerCreate_returns_false_for_user_without_create_ledgers_permission()
+    public function test_ledger_create_returns_false_for_user_without_create_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -403,7 +412,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerCreate($user, $ledgerDefine));
     }
 
-    public function test_ledgerCreate_returns_false_for_user_with_create_ledgers_permission_but_not_writable_folder()
+    public function test_ledger_create_returns_false_for_user_with_create_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -419,7 +428,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerCreate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_true_for_user_with_update_ledgers_permission_and_writable_folder()
+    public function test_ledger_update_returns_true_for_user_with_update_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -435,7 +444,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerUpdate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_false_for_user_without_update_ledgers_permission()
+    public function test_ledger_update_returns_false_for_user_without_update_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -450,7 +459,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerUpdate($user, $ledgerDefine));
     }
 
-    public function test_ledgerUpdate_returns_false_for_user_with_update_ledgers_permission_but_not_writable_folder()
+    public function test_ledger_update_returns_false_for_user_with_update_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -466,7 +475,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerUpdate($user, $ledgerDefine));
     }
 
-    public function test_ledgerDelete_returns_true_for_user_with_delete_ledgers_permission_and_writable_folder()
+    public function test_ledger_delete_returns_true_for_user_with_delete_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -482,7 +491,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerDelete_returns_false_for_user_without_delete_ledgers_permission()
+    public function test_ledger_delete_returns_false_for_user_without_delete_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -497,7 +506,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerDelete_returns_false_for_user_with_delete_ledgers_permission_but_not_writable_folder()
+    public function test_ledger_delete_returns_false_for_user_with_delete_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -513,7 +522,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerRestore_returns_true_for_user_with_restore_ledgers_permission_and_writable_folder()
+    public function test_ledger_restore_returns_true_for_user_with_restore_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -529,7 +538,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerRestore($user, $ledgerDefine));
     }
 
-    public function test_ledgerRestore_returns_false_for_user_without_restore_ledgers_permission()
+    public function test_ledger_restore_returns_false_for_user_without_restore_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -544,7 +553,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerRestore($user, $ledgerDefine));
     }
 
-    public function test_ledgerRestore_returns_false_for_user_with_restore_ledgers_permission_but_not_writable_folder()
+    public function test_ledger_restore_returns_false_for_user_with_restore_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -560,7 +569,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerRestore($user, $ledgerDefine));
     }
 
-    public function test_ledgerForceDelete_returns_true_for_user_with_delete_ledgers_permission_and_writable_folder()
+    public function test_ledger_force_delete_returns_true_for_user_with_delete_ledgers_permission_and_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();
@@ -576,7 +585,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertTrue($policy->ledgerForceDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerForceDelete_returns_false_for_user_without_delete_ledgers_permission()
+    public function test_ledger_force_delete_returns_false_for_user_without_delete_ledgers_permission()
     {
         // Arrange
         $user = User::factory()->create();
@@ -591,7 +600,7 @@ class LedgerDefinePolicyTest extends TestCase
         $this->assertFalse($policy->ledgerForceDelete($user, $ledgerDefine));
     }
 
-    public function test_ledgerForceDelete_returns_false_for_user_with_delete_ledgers_permission_but_not_writable_folder()
+    public function test_ledger_force_delete_returns_false_for_user_with_delete_ledgers_permission_but_not_writable_folder()
     {
         // Arrange
         $user = User::factory()->create();

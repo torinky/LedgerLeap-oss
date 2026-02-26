@@ -3,22 +3,27 @@
 namespace App\Models;
 
 use App\Casts\AsColumnDefinesArrayJson;
+use App\Rules\UniqueAutoNumber;
+use App\Rules\UniqueColumnValue;
 use App\Traits\HasModelRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
+ * @property Collection<int, \App\Models\ColumnDefine> $column_define
+ *
  * @method static find(Route|object|string|null $route)
  * @method maxColumnId()
  */
 class LedgerDefine extends Model
 {
-    use HasFactory, HasModelRoles, LogsActivity, SoftDeletes;
+    use HasFactory, HasModelRoles, LogsActivity, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
@@ -66,15 +71,75 @@ class LedgerDefine extends Model
         return $this->belongsTo(User::class, 'modifier_id');
     }
 
+    /**
+     * バリデーションルールを取得します。
+     */
+    public function getValidationRules(?int $ledgerId = null): array
+    {
+        $validationRules = [];
+
+        foreach ($this->column_define as $column) {
+            $columnId = $column->id;
+            $columnName = 'content.'.$columnId;
+            $inputType = $column->getInputType();
+
+            // 1. InputTypeから型固有のルールを取得
+            $rules = $inputType->getValidationRules();
+
+            // 2. 共通のルールをマージ
+            if ($column->type === 'chk') {
+                $rules[] = \Illuminate\Validation\Rule::array();
+                // 必須項目の場合、少なくとも1つ選択されていることを検証
+                if ($column->required) {
+                    $rules[] = new \App\Rules\RequiredCheckbox;
+                }
+            } else {
+                // その他の型
+                if ($column->required) {
+                    array_unshift($rules, 'required');
+                }
+            }
+
+            if ($column->unique) {
+                if ($column->type === 'auto_number') {
+                    $rules[] = new UniqueAutoNumber($this->id, $column, $ledgerId);
+                } else {
+                    // UniqueColumnValue 側に処理を集約（カスタム + 標準 unique のペアを返す）
+                    $customUnique = new UniqueColumnValue($this->id, $columnId, $ledgerId);
+                    $rules = array_merge($rules, $customUnique->toRules());
+                }
+            }
+
+            // カラムごとのバリデーションルールを配列に追加
+            $validationRules[$columnName] = $rules;
+        }
+
+        return $validationRules;
+    }
+
+    /**
+     * バリデーション属性名を取得します。
+     */
+    public function getValidationAttributes(): array
+    {
+        $attributes = [];
+
+        foreach ($this->column_define as $column) {
+            $attributes["content.{$column->id}"] = $column->name;
+        }
+
+        return $attributes;
+    }
+
     public function scopeSearchTags($query, $keywords)
     {
         if (empty($keywords)) {
             return $query;
         }
 
-        return $query->whereHas('tag', function ($query) use ($keywords) {
+        return $query->whereHas('tags', function ($query) use ($keywords) {
             foreach ($keywords as $keyword) {
-                $query->where('name', 'LIKE', '%' . $keyword . '%');
+                $query->where('name', 'LIKE', '%'.$keyword.'%');
             }
         });
     }
@@ -109,23 +174,65 @@ class LedgerDefine extends Model
 
         // 欠番を埋める
         for ($i = 0; $i <= $maxId; $i++) {
-            if (!$contentCollection->has($i)) {
+            if (! $contentCollection->has($i)) {
                 if ($columnDefineKeyById->has($i)) {
-                    $contentCollection[$i] = $columnDefineKeyById[$i]->type === 'chk' ? [] : '';
+                    $contentCollection[$i] = in_array($columnDefineKeyById[$i]->type, ['chk', 'files']) ? [] : '';
+                } else {
+                    // 他の欠番（削除されたカラム等）も空文字で埋めてインデックスを維持する
+                    $contentCollection[$i] = '';
                 }
             }
         }
 
-        // キーで並び替え
-        $sortedContentArray = $contentCollection->sortKeys();
-
-        // 数字添字配列に作り直し
-        return $sortedContentArray->values()->toArray();
+        // キーで並び替え（ID順を維持）
+        // values() は呼び出さず、連想配列（ID => Value）の状態を維持する。
+        // これにより、後続の calculateAutoFillValues で ID ベースのアクセスが可能になる。
+        // 最終的な添字配列化はモデルのキャスト(AsColumnArrayJson)に任せる。
+        return $contentCollection->sortKeys()->toArray();
     }
 
-    public function hasPermissionTo($permission, ?string $guardName): bool
+    /**
+     * 自動入力項目の値を計算する
+     *
+     * @param  array  $currentContent  既存の内容
+     * @param  bool  $isUpdating  更新かどうか(falseなら新規作成)
+     * @return array 更新された内容
+     */
+    public function calculateAutoFillValues(array $currentContent, bool $isUpdating = false): array
     {
-        return $this->roles->flatMap->permissions->contains('name', $permission);
+        foreach ($this->column_define as $column) {
+            $columnId = $column->id;
+            $inputType = $column->getInputType();
+
+            // 1. 自動入力ロジック (default_offset と overwrite_existing に統合)
+            if ($inputType instanceof \App\Models\ColumnTypes\DateType) {
+                $offset = $inputType->default_offset;
+                $overwrite = $inputType->overwrite_existing;
+
+                if (! empty($offset)) {
+                    // オフセットがある場合は自動入力対象
+                    if ($overwrite) {
+                        // 「既存値を上書き」が ON の場合は常にセット（更新時含む）
+                        $currentContent[$columnId] = $inputType->getDefaultDate($currentContent[$columnId] ?? null);
+                    } elseif (! $isUpdating && empty($currentContent[$columnId])) {
+                        // 「既存値を上書き」が OFF の場合は新規作成時かつ未設定の場合のみセット
+                        $currentContent[$columnId] = $inputType->getDefaultDate();
+                    }
+                }
+            }
+
+            // 2. 正規化・クレンジング処理 (全カラム共通)
+            // phone の全角変換や、number の半角変換などを保存直前に実行する
+            // shouldConvertToJson が true の型（files, chk 等）は、キャスト側でシリアライズするため
+            // ここでの convertColumnValue2Text（JSON文字列化）をスキップする
+            // また、インデックス不整合を防ぐため、$currentContent 内に該当 $columnId が存在するか、
+            // または defaultValue が必要な場合のみ処理を行う
+            if (array_key_exists($columnId, $currentContent) && ! $inputType->shouldConvertToJson()) {
+                $currentContent[$columnId] = $column->convertColumnValue2Text($currentContent[$columnId]);
+            }
+        }
+
+        return $currentContent;
     }
 
     /**
@@ -138,7 +245,7 @@ class LedgerDefine extends Model
             ->useLogName('ledger_define')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**

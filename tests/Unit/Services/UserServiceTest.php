@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\Unit\Services;
+namespace Tests\Unit\Services;
 
 use App\Models\Folder;
 use App\Models\Organization;
@@ -14,10 +14,12 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Collection;
 use Mockery;
 use Spatie\Permission\PermissionRegistrar;
-use tests\TestCase;
+use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
+    protected bool $tenancy = true;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -93,7 +95,7 @@ class UserServiceTest extends TestCase
         $user = Mockery::mock(User::class);
         $organization = Mockery::mock(Organization::class);
 
-        $user->shouldReceive('hasRole')->with('super-admin')->andReturn(false);
+        $user->shouldReceive('hasRole')->with(\App\Models\Role::SUPER_ADMIN)->andReturn(false);
         $user->shouldReceive('hasPermissionTo')->with('specific-permission')->andReturn(true);
 
         $userService->shouldReceive('hasPermissionForOrganization')
@@ -252,7 +254,7 @@ class UserServiceTest extends TestCase
         //        dd(Folder::all()->pluck('id','title')->toArray());
         $writableFolderIds = $repository->getWritableFolderIds($user);
         // dd($writableFolderIds,Folder::all()->pluck('id','title')->toArray());
-        $this->assertCount(6, $writableFolderIds); // ルートフォルダ, フォルダ1, フォルダ1-1, フォルダ2, その他フォルダ
+        $this->assertCount(5, $writableFolderIds); // ルートフォルダ, フォルダ1, フォルダ1-1, フォルダ2, その他フォルダ
         $this->assertContains($rootFolder->id, $writableFolderIds);
         $this->assertContains($childFolder1->id, $writableFolderIds);
         $this->assertContains($childFolder2->id, $writableFolderIds);

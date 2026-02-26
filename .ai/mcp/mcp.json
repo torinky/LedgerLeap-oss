@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "ledgerleap-laravel-1",
+        "php",
+        "artisan",
+        "boost:mcp"
+      ],
+      "type": "stdio"
+    },
+    "ledgerleap-api": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "ledgerleap-laravel-1",
+        "php",
+        "artisan",
+        "mcp:start",
+        "ledgerleap:mcp"
+      ],
+      "type": "stdio"
+    }
+  }
+}

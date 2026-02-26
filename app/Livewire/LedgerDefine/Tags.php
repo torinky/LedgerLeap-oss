@@ -2,22 +2,26 @@
 
 namespace App\Livewire\LedgerDefine;
 
+use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 
-class Tags extends Component
+class Tags extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
+
     public $ledgerDefineId;
 
     public $tags = [];
 
     public $newTag = '';
 
-    public function mount($ledgerDefineId)
+    public function mount($ledgerDefineId, $tags = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-        $this->tags = Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
+        // 親から渡された場合はそれを使用、なければクエリ実行
+        $this->tags = $tags ?? Tag::where('ledger_define_id', $this->ledgerDefineId)->get();
     }
 
     public function addTag()

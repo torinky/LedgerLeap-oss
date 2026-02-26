@@ -14,7 +14,7 @@
             ]" :rows="$listedTasks" striped with-pagination wire:sortable="sortBy" wire:key="other-related-tasks-table">
 
             @scope('cell_ledger_title', $taskData)
-            <a href="{{ route('ledger.show', ['ledgerId' => $taskData['ledger_id']]) }}"
+            <a href="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                class="hover:underline font-semibold">
                 {{ $taskData['ledger_title'] }} (ID: {{ $taskData['ledger_id'] }})
             </a>
@@ -128,7 +128,7 @@
             @scope('actions', $taskData)
             <div class="flex justify-end gap-1">
                 @if (in_array($taskData['task_type'], ['my_submission_pending_inspection', 'my_submission_pending_approval']) && !$taskData['is_locked'])
-                    <a href="{{ route('ledger.edit', ['ledgerId' => $taskData['ledger_id']]) }}"
+                    <a href="{{ route('ledger.edit', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                        class="btn btn-square btn-ghost text-primary tooltip" data-tip="{{__('ledger.edit')}}">
                         <x-mary-icon name="o-pencil-square"/>
                     </a>
@@ -139,7 +139,7 @@
                         <x-mary-icon name="o-hand-raised"/>
                     </x-mary-button>
                 @endif
-                <a href="{{ route('ledger.show', ['ledgerId' => $taskData['ledger_id']]) }}"
+                <a href="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                    class="btn btn-square btn-ghost tooltip" data-tip="{{__('ledger.view_details')}}">
                     <x-mary-icon name="o-eye"/>
                 </a>

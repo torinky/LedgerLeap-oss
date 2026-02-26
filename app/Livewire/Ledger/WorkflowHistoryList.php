@@ -2,13 +2,14 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Ledger;
 use Illuminate\Database\Eloquent\Collection;
-use Livewire\Component;
 
-class WorkflowHistoryList extends Component
+class WorkflowHistoryList extends BaseLivewireComponent
 {
     public Ledger $ledgerRecord;
+
     public Collection $workflowHistory;
 
     public function mount(): void

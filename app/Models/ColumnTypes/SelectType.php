@@ -2,7 +2,6 @@
 
 namespace App\Models\ColumnTypes;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class SelectType implements InputType
@@ -43,7 +42,12 @@ class SelectType implements InputType
 
     public function restoreFromString($value)
     {
-        return (string) $value;
+        return $value;
+    }
+
+    public function isHidden(): bool
+    {
+        return false;
     }
 
     public function getValidationRules(): array

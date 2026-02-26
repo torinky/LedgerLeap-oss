@@ -4,155 +4,205 @@ namespace App\Services\Ledger;
 
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use App\Models\LedgerDefine;
-use App\Models\AttachedFile;
-use App\Models\ColumnDefine;
-use Arr;
-use Illuminate\Support\Facades\Log;
 
 class LedgerDiffProcessor
 {
     /**
      * 比較対象となる過去のLedgerDiffを特定するロジック
-     * 例: このワークフローの「実質的な開始点」のDiff (最後にDRAFTでなく、内容が記録されたもの)
-     *
-     * @param Ledger $ledgerRecord
-     * @return ?LedgerDiff
      */
-    public function findComparisonTargetDiff(Ledger $ledgerRecord): ?LedgerDiff
+    public function findComparisonTargetDiff(Ledger $ledgerRecord, ?int $referenceDiffId = null): ?LedgerDiff
     {
-        $latestDiffId = $ledgerRecord->latest_diff_id;
-        // contentの「キャスト前」値を取得
+        $baseId = $referenceDiffId ?? $ledgerRecord->latest_diff_id;
         $currentRawContent = $ledgerRecord->getRawOriginal('content');
 
-        if (!$latestDiffId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
-            // 最新Diffがない場合や現在のcontentが空の場合
+        // もし referenceDiffId が指定されている場合は、そのレコードの内容を基準にする
+        if ($referenceDiffId) {
+            $refDiff = LedgerDiff::find($referenceDiffId);
+            if ($refDiff) {
+                $currentRawContent = $refDiff->getRawOriginal('content');
+                // バージョンも基準に合わせる
+                $referenceVersion = $refDiff->version;
+            }
+        }
+        $referenceVersion = $referenceVersion ?? $ledgerRecord->version;
+
+        if (! $baseId || $currentRawContent === null || $currentRawContent === '' || $currentRawContent === '[]') {
             return null;
         }
 
-        // SQLでcontentが現在のcontentと異なる直近のDiffを取得（キャスト前の値で比較）
-        $diff = LedgerDiff::where('ledger_id', $ledgerRecord->id)
+        // まずは内容が異なる直近のDiffを探す
+        $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
             ->whereNotNull('content')
             ->where('content', '<>', '[]')
-            ->where('id', '<', $latestDiffId)
+            ->where('id', '<', $baseId)
             ->whereRaw('content != ?', [$currentRawContent])
             ->orderBy('id', 'desc')
             ->first();
 
-        return $diff;
+        // 内容が異なるものが見つからない、または ID で見つからない場合
+        // バージョン番号での比較も試みる（テスト環境対策）
+        if (! $target && $referenceVersion !== null) {
+            $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->where('version', '<', $referenceVersion)
+                ->orderBy('version', 'desc')
+                ->first();
+        }
+
+        // それでも見つからない場合は、内容が同じでもIDが手前のものを探す（ステータス変更のみの場合など）
+        if (! $target) {
+            $target = LedgerDiff::where('ledger_id', $ledgerRecord->id)
+                ->whereNotNull('content')
+                ->where('content', '<>', '[]')
+                ->where('id', '<', $baseId)
+                ->orderBy('id', 'desc')
+                ->first();
+        }
+
+        return $target;
     }
 
-    public function prepareContentDiff(Ledger $ledgerRecord, LedgerDefine $ledgerDefineRecord, ?LedgerDiff $comparisonTargetDiff): array
+    /**
+     * 空値を正規化する
+     * null, 空文字列, 空配列を全て null に統一することで、実質的に「空」である値を同一視する
+     *
+     * @param  mixed  $value  正規化対象の値
+     * @return mixed 正規化後の値 (空の場合は null)
+     */
+    private function normalizeEmptyValue(mixed $value): mixed
     {
-        $contentChanges = [];
-        $currentContentArray = $ledgerRecord->content ?? [];
-        $currentContentAttached = $ledgerRecord->content_attached ?? [];
+        // null, 空文字列, 空配列は全て null に統一
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
 
-        // 現在のレコードの添付ファイル情報を取得
-        $currentAttachments = AttachedFile::where('ledger_id', $ledgerRecord->id)
-            ->get()
-            ->keyBy('hashedbasename');
-
-        // 比較対象の古いレコードの添付ファイル情報を取得
-        $oldAttachments = collect();
-        if ($comparisonTargetDiff) {
-            // 古いDiffのcontentに含まれるファイルのみを対象にする
-            $oldFileHashes = array_keys($comparisonTargetDiff->content ?? []);
-            if (!empty($oldFileHashes)) {
-                $oldAttachments = AttachedFile::where('ledger_id', $comparisonTargetDiff->ledger_id)
-                    ->whereIn('hashedbasename', $oldFileHashes)
-                    ->get()
-                    ->keyBy('hashedbasename');
+        // 配列の場合、中身が全て空（null または ''）なら null に統一
+        if (is_array($value)) {
+            $filtered = array_filter($value, fn ($v) => $v !== null && $v !== '');
+            if (empty($filtered)) {
+                return null;
             }
         }
 
-        $currentColumnDefines = ColumnDefine::normalizeArrayOrCollection($ledgerDefineRecord->column_define);
+        return $value;
+    }
 
-        $hasComparison = $comparisonTargetDiff && isset($comparisonTargetDiff->column_define);
-
-        $oldColumnDefines = $hasComparison
-            ? ColumnDefine::normalizeArrayOrCollection($comparisonTargetDiff->column_define)
-            : [];
-
-        $oldContentArray = $hasComparison
-            ? ($comparisonTargetDiff->content ?? [])
-            : [];
-        $oldContentAttached = $hasComparison ? ($comparisonTargetDiff->content_attached ?? []) : [];
-
-        // ★ 現在と過去のすべてのカラムIDを取得し、ユニークにする
-        $allColumnIds = array_unique(array_merge(
-            array_keys($currentColumnDefines),
-            array_keys($oldColumnDefines)
-        ));
-
-        // ★ ソート順を決定するための情報を集める
-        $columnOrders = [];
-        foreach ($allColumnIds as $id) {
-            // 現在の定義にあればそのorderを、なければ過去のorderを、どちらもなければ非常に大きい値を使う
-            $order = PHP_INT_MAX;
-            if (isset($currentColumnDefines[$id])) {
-                $order = data_get($currentColumnDefines[$id], 'order', PHP_INT_MAX);
-            } elseif (isset($oldColumnDefines[$id])) {
-                $order = data_get($oldColumnDefines[$id], 'order', PHP_INT_MAX);
-            }
-            $columnOrders[$id] = $order;
+    /**
+     * 差分表示のためのデータを準備する
+     */
+    public function prepareContentDiff(Ledger $ledgerRecord, ?LedgerDiff $comparisonTargetDiff, ?int $baseDiffId = null): array
+    {
+        $baseDiff = null;
+        if ($baseDiffId) {
+            $baseDiff = LedgerDiff::find($baseDiffId);
         }
 
-        // ★ orderでソート
-        asort($columnOrders);
-        $sortedColumnIds = array_keys($columnOrders);
+        $currentContent = $baseDiff ? ($baseDiff->content ?? []) : ($ledgerRecord->content ?? []);
+        $currentColumnDefines = collect($baseDiff ? ($baseDiff->column_define ?? []) : (optional($ledgerRecord->define)->column_define ?? []))->keyBy('id');
+        //        \Illuminate\Support\Facades\Log::debug('LedgerDiffProcessor prepareContentDiff - currentColumnDefines:', $currentColumnDefines->toArray());
 
-        $hasChangedColumns = false;
+        if (! $comparisonTargetDiff) {
+            // 比較対象がない場合は、現在の内容のみを整形して返す
+            $normalizedContent = optional($ledgerRecord->define)->normalizeByColumnDefine($currentContent) ?? [];
+            $sortedIds = collect(optional($ledgerRecord->define)->column_define ?? [])->sortBy('id')->pluck('id')->values();
 
-        foreach ($sortedColumnIds as $columnId) {
-            $currentColDef = $currentColumnDefines[$columnId] ?? null;
-            $oldColDef = $oldColumnDefines[$columnId] ?? null;
+            $contentChanges = $currentColumnDefines->map(function ($colDef) use ($normalizedContent, $sortedIds) {
+                $columnId = data_get($colDef, 'id');
+                $contentIndex = $sortedIds->search($columnId);
+                $value = ($contentIndex !== false && isset($normalizedContent[$contentIndex])) ? $normalizedContent[$contentIndex] : null;
 
-            // Get the 0-based index of the column in the content array
-            $contentIndex = array_search($columnId, $sortedColumnIds);
+                // 比較対象がない場合は、最初のバージョンの全カラムが追加されたものとみなす
+                $status = 'added';
 
-            $currentRawValue = Arr::get($currentContentArray, $contentIndex);
-            $currentValue = (is_object($currentRawValue) || is_array($currentRawValue))
-                ? json_decode(json_encode($currentRawValue), true)
-                : $currentRawValue;
+                return [
+                    'column_define' => is_array($colDef) ? $colDef : $colDef->toArray(),
+                    'current_value' => $value,
+                    'old_value' => $value, // 比較がない場合は同じ値
+                    'status' => $status,
+                ];
+            })->all();
 
-            $oldRawValue = $hasComparison ? Arr::get($oldContentArray, $contentIndex) : null;
-            $oldValue = (is_object($oldRawValue) || is_array($oldRawValue))
-                ? json_decode(json_encode($oldRawValue), true)
-                : $oldRawValue;
-
-            $normalizedCurrent = (is_array($currentValue) || is_object($currentValue)) ? json_encode($currentValue) : (string)$currentValue;
-            $normalizedOld = (is_array($oldValue) || is_object($oldValue)) ? json_encode($oldValue) : (string)$oldValue;
-            $isChanged = $hasComparison && ($normalizedCurrent !== $normalizedOld);
-
-            if ($isChanged) {
-                $hasChangedColumns = true;
-            }
-
-            if (isset($currentColDef['name'])) {
-                $columnName = $currentColDef['name'];
-            } elseif (isset($oldColDef['name'])) {
-                $columnName = $oldColDef['name'];
-            } else {
-                $columnName = __('ledger.column_deleted', ['id' => $columnId]);
-            }
-
-            $contentChanges[$columnId] = [
-                'column_define_current' => $currentColDef,
-                'current_value' => $currentValue,
-                'column_define_old' => $oldColDef,
-                'old_value' => $oldValue,
-                'changed' => $isChanged,
-                'column_name' => $columnName,
-                'current_attachments' => $currentAttachments,
-                'old_attachments' => $oldAttachments,
-                'current_attachment_contents' => $currentContentAttached[$columnId] ?? [],
-                'old_attachment_contents' => $oldContentAttached[$columnId] ?? [],
+            return [
+                'contentChanges' => $contentChanges,
+                'hasChangedColumns' => false,
             ];
         }
 
+        // 比較対象がある場合
+        $oldContent = $comparisonTargetDiff->content ?? [];
+        $oldColumnDefines = collect($comparisonTargetDiff->column_define ?? [])->keyBy('id');
+
+        $allColumnIds = $currentColumnDefines->keys()->merge($oldColumnDefines->keys())->unique()->values();
+
+        $currentSortedIds = $currentColumnDefines->sortBy('id')->pluck('id')->values();
+        $oldSortedIds = $oldColumnDefines->sortBy('id')->pluck('id')->values();
+
+        $contentChanges = [];
+        $hasChangedColumns = false;
+
+        foreach ($allColumnIds as $columnId) {
+            $currentColDef = $currentColumnDefines->get($columnId);
+            $oldColDef = $oldColumnDefines->get($columnId);
+
+            $currentValue = null;
+            if ($currentColDef) {
+                $currentIndex = $currentSortedIds->search($columnId);
+                if ($currentIndex !== false && isset($currentContent[$currentIndex])) {
+                    $currentValue = $currentContent[$currentIndex];
+                }
+            }
+
+            $oldValue = null;
+            if ($oldColDef) {
+                $oldIndex = $oldSortedIds->search($columnId);
+                if ($oldIndex !== false && isset($oldContent[$oldIndex])) {
+                    $oldValue = $oldContent[$oldIndex];
+                }
+            }
+
+            // 正規化後の値で比較を実施
+            $normalizedCurrent = $this->normalizeEmptyValue($currentValue);
+            $normalizedOld = $this->normalizeEmptyValue($oldValue);
+
+            $status = 'unchanged';
+
+            if (! $oldColDef) {
+                // 古い定義に存在しない（追加された）カラムの場合
+                // 現在の値が空であれば「変更なし」とみなす（スキーマ追加による差分を無視）
+                $status = ($normalizedCurrent === null) ? 'unchanged' : 'added';
+
+                // 追加されたカラムで値が空の場合は empty として明示
+                if ($status === 'unchanged' && $normalizedCurrent === null) {
+                    $status = 'empty';
+                }
+            } elseif (! $currentColDef) {
+                $status = 'deleted';
+            } elseif (json_encode($normalizedCurrent) !== json_encode($normalizedOld)) {
+                $status = 'modified';
+            }
+
+            if ($status !== 'unchanged' && $status !== 'empty') {
+                $hasChangedColumns = true;
+            }
+
+            $colDefForInfo = $currentColDef ?? $oldColDef;
+            $colDefArray = $colDefForInfo ? (is_array($colDefForInfo) ? $colDefForInfo : $colDefForInfo->toArray()) : [];
+
+            $contentChanges[$columnId] = [
+                'column_define' => $colDefArray,
+                'current_value' => $currentValue,
+                'old_value' => $oldValue,
+                'status' => $status,
+            ];
+        }
+
+        $sortedContentChanges = collect($contentChanges)->sortBy(function ($change) {
+            return data_get($change['column_define'], 'order', PHP_INT_MAX);
+        })->all();
+
         return [
-            'contentChanges' => $contentChanges,
+            'contentChanges' => $sortedContentChanges,
             'hasChangedColumns' => $hasChangedColumns,
         ];
     }

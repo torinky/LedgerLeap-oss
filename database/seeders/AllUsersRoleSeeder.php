@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
-use App\Models\User;
 
 class AllUsersRoleSeeder extends Seeder
 {
@@ -22,7 +22,7 @@ class AllUsersRoleSeeder extends Seeder
         $users = User::all();
         foreach ($users as $user) {
             // 既に All Users ロールを持っている場合は付与しない
-            if (!$user->hasRole($allUsersRole)) {
+            if (! $user->hasRole($allUsersRole)) {
                 $user->assignRole($allUsersRole);
             }
         }

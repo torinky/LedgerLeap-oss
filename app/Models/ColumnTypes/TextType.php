@@ -31,7 +31,12 @@ class TextType implements InputType
 
     public function restoreFromString($value)
     {
-        return (string) $value;
+        return $value;
+    }
+
+    public function isHidden(): bool
+    {
+        return false;
     }
 
     public function getValidationRules(): array

@@ -29,14 +29,14 @@ class AutoNumberLedgerDefineFactory extends Factory
             '資料番号 (連番+版記号)',
             'auto_number',
             1,
-            (object)[
+            (object) [
                 'prefix' => 'DOC-',
                 'digits' => 3,
                 'revision' => '-A',
             ],
             true, // required
             false, // unique = false
-            false,
+            null,
             '資料番号を自動採番します (版記号考慮)'
         );
 
@@ -46,14 +46,14 @@ class AutoNumberLedgerDefineFactory extends Factory
             'プロジェクトID (重複禁止)',
             'auto_number',
             2,
-            (object)[
+            (object) [
                 'prefix' => 'PROJ-',
                 'digits' => 4,
                 'revision' => '',
             ],
             true, // required
             true, // unique = true
-            false,
+            null,
             'プロジェクトIDを自動採番します (重複禁止)'
         );
 
@@ -63,15 +63,15 @@ class AutoNumberLedgerDefineFactory extends Factory
             'タイトル',
             'text',
             3,
-            (object)[],
+            (object) [],
             true,
             false,
-            false,
+            null,
             '台帳のタイトルを入力してください'
         );
 
         return [
-            'title' => '自動採番テスト台帳 '. $this->faker->unique()->word(),
+            'title' => '自動採番テスト台帳 '.$this->faker->unique()->word(),
             'column_define' => $columnDefine,
             'folder_id' => 1, // 既存のフォルダIDを使用
             'create_description' => '自動採番機能のテスト用台帳です。',

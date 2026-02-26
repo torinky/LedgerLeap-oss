@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\FolderPermissionType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -15,6 +14,20 @@ class RoleFolderPermission extends Pivot
     use LogsActivity;
 
     protected $table = 'role_folder_permissions';
+
+    /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * Indicates if the model's ID is auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = true;
 
     protected $fillable = [
         'role_id',
@@ -28,41 +41,10 @@ class RoleFolderPermission extends Pivot
         'permission' => FolderPermissionType::class,
     ];
 
-    protected static function booted()
-    {
-        static::created(function ($roleFolderPermission) {
-            Cache::forget('role_writable_folders_' . $roleFolderPermission->role_id);
-            Cache::forget('folder_permissions_' . $roleFolderPermission->folder_id . '_' . $roleFolderPermission->role_id);
-        });
-
-        static::updated(function ($roleFolderPermission) {
-            //            dd('updated : ',$roleFolderPermission);
-            Cache::forget('role_writable_folders_' . $roleFolderPermission->role_id);
-            Cache::forget('folder_permissions_' . $roleFolderPermission->folder_id . '_' . $roleFolderPermission->role_id);
-        });
-
-        static::deleted(function ($roleFolderPermission) {
-            Cache::forget('role_writable_folders_' . $roleFolderPermission->role_id);
-            Cache::forget('folder_permissions_' . $roleFolderPermission->folder_id . '_' . $roleFolderPermission->role_id);
-        });
-        /*
-                static::creating(function ($roleFolderPermission) {
-                    \Log::info('Creating RoleFolderPermission', $roleFolderPermission->toArray());
-                });
-
-                static::updating(function ($roleFolderPermission) {
-                    \Log::info('Updating RoleFolderPermission', $roleFolderPermission->toArray());
-                });
-
-                static::deleting(function ($roleFolderPermission) {
-                    \Log::info('Deleting RoleFolderPermission', $roleFolderPermission->toArray());
-                });*/
-    }
-
     // Optionally disable logging of empty attributes.
     public function attributeValuesToBeLogged(): array
     {
-//        $attributes = parent::attributeValues();
+        //        $attributes = parent::attributeValues();
         $attributes = $this->getAttributes();
 
         return array_filter($attributes, function ($value, $key) {
@@ -98,7 +80,7 @@ class RoleFolderPermission extends Pivot
             ->useLogName('roleFolderPermission')
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn(string $eventName) => $this->getLogDescriptionForEvent($eventName));
+            ->setDescriptionForEvent(fn (string $eventName) => $this->getLogDescriptionForEvent($eventName));
     }
 
     /**
@@ -122,5 +104,4 @@ class RoleFolderPermission extends Pivot
         // 言語ファイルにキーがあれば、言語ファイルから取得。なければ、デフォルト値を返す
         return Lang::has($key) ? trans($key) : "フォルダー権限またはフォルダー通知が{$eventName}されました";
     }
-
 }

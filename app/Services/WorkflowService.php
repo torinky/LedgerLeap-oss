@@ -90,14 +90,20 @@ class WorkflowService
         array $contentAttached,
         int $modifierId
     ): array {
-        Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached); // デバッグログ追加
+        // Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached);
         // ToDo: 権限チェック (modifierId が下書き保存できるか？)
 
-        return DB::transaction(function () use ($ledgerId, $ledgerDefineId, $content, $contentAttached, $modifierId) {
+        $ledgerDefine = \App\Models\LedgerDefine::findOrFail($ledgerDefineId);
+
+        return DB::transaction(function () use ($ledgerId, $ledgerDefine, $ledgerDefineId, $content, $contentAttached, $modifierId) {
             $ledger = null;
+            $isUpdating = ! is_null($ledgerId);
             $isNewLedger = false;
 
-            if ($ledgerId) {
+            // 自動入力項目の計算
+            $content = $ledgerDefine->calculateAutoFillValues($content, $isUpdating);
+
+            if ($isUpdating) {
                 $ledger = Ledger::findOrFail($ledgerId);
                 // 承認済みなら編集できない
                 if ($ledger->isLocked()) {
@@ -171,10 +177,10 @@ class WorkflowService
      * 点検依頼を処理する
      * 新しい LedgerDiff (Content無し) を作成し、Ledger のステータス等を更新
      *
-     * @param int $ledgerId 台帳レコードID
-     * @param int $requesterId 点検依頼を行った User ID
-     * @param int $inspectorId 次の担当者 User ID
-     * @param string|null $comments 点検コメント (任意)
+     * @param  int  $ledgerId  台帳レコードID
+     * @param  int  $requesterId  点検依頼を行った User ID
+     * @param  int  $inspectorId  次の担当者 User ID
+     * @param  string|null  $comments  点検コメント (任意)
      * @return Ledger 更新後の Ledger
      *
      * @throws Throwable
@@ -343,10 +349,11 @@ class WorkflowService
                 'version' => $ledgerVersion,
                 'inspector_id' => $inspectorId, // 点検完了者
                 'approver_id' => $approverId, // 次の承認者
-                'requested_at' => $ledgerDiff->requested_at,
+                'requested_at' => self::getInspectedAtCarbonDate($ledgerDiff->requested_at),
                 'inspected_at' => now(), // 点検完了日時
                 'comments' => $comments,
-                'approved_at' => null, 'returned_at' => null,
+                'approved_at' => self::getInspectedAtCarbonDate($ledgerDiff->approved_at),
+                'returned_at' => null,
                 'completed_inspector_role_ids' => array_unique($completedInspectorRoleIds),
                 'completed_approver_role_ids' => $previousDiff?->completed_approver_role_ids ?? [], // 承認ロールは引き継ぎ
 
@@ -469,7 +476,7 @@ class WorkflowService
                 'inspector_id' => $previousDiff?->inspector_id,
                 // 次の担当者を設定: 最終承認ならnull、そうでなければ $nextApproverId (UIから指定)
                 'approver_id' => ($nextStatus === WorkflowStatus::APPROVED) ? null : $nextApproverId,
-                'requested_at' => $previousDiff?->requested_at,
+                'requested_at' => self::getInspectedAtCarbonDate($previousDiff?->requested_at),
                 'inspected_at' => self::getInspectedAtCarbonDate($previousDiff?->inspected_at),
                 'approved_at' => ($nextStatus === WorkflowStatus::APPROVED) ? now() : null,
                 'comments' => $comments,
@@ -600,9 +607,9 @@ class WorkflowService
                 'returned_at' => now(), // 戻された日時
                 'inspector_id' => $previousDiff->inspector_id, // 戻す直前の担当者
                 'approver_id' => $previousDiff->approver_id,  // 戻す直前の担当者
-                'requested_at' => $previousDiff->requested_at,
+                'requested_at' => self::getInspectedAtCarbonDate($previousDiff->requested_at),
                 'inspected_at' => self::getInspectedAtCarbonDate($previousDiff->inspected_at),
-                'approved_at' => null, // クリア
+                'approved_at' => self::getInspectedAtCarbonDate($previousDiff->approved_at), // クリア
                 'completed_inspector_role_ids' => $previousDiff?->completed_inspector_role_ids ?? [],
                 'completed_approver_role_ids' => $previousDiff?->completed_approver_role_ids ?? [],
             ];
@@ -617,17 +624,11 @@ class WorkflowService
             ]);
 
             // カウンター調整 (担当者-)
-            if ($handlerId && in_array($currentStatus, [WorkflowStatus::PENDING_INSPECTION, WorkflowStatus::PENDING_APPROVAL], true)) {
-                $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
-                $this->decrementPendingTaskCount($handlerId, $taskType);
-            }
-
-            // カウンター調整
             if ($previousDiff) {
                 $taskType = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? 'inspection' : 'approval';
-                $handlerId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $previousDiff->inspector_id : $previousDiff->approver_id;
-                if ($handlerId) {
-                    $this->decrementPendingTaskCount($handlerId, $taskType);
+                $decrementTargetId = ($currentStatus === WorkflowStatus::PENDING_INSPECTION) ? $previousDiff->inspector_id : $previousDiff->approver_id;
+                if ($decrementTargetId) {
+                    $this->decrementPendingTaskCount($decrementTargetId, $taskType);
                 }
             }
 
@@ -666,7 +667,7 @@ class WorkflowService
         int $modifierId,
         ?string $comments
     ): array {
-        Log::debug('[WorkflowService::saveEditedRecord] Received content_attached:', is_array($newContentAttached) ? $newContentAttached : []); // デバッグログ追加
+        // Log::debug('[WorkflowService::saveEditedRecord] Received content_attached:', is_array($newContentAttached) ? $newContentAttached : []);
         if ($ledger->isLocked()) {
             throw new Exception('Cannot modify an approved record.');
         }
@@ -697,7 +698,7 @@ class WorkflowService
                 // 他のWFカラムはクリア
                 'inspector_id' => $latestDiff->inspector_id ?? null,
                 'approver_id' => $latestDiff->approver_id ?? null,
-                'requested_at' => $latestDiff->requested_at ?? null,
+                'requested_at' => self::getInspectedAtCarbonDate($latestDiff->requested_at),
                 'inspected_at' => null,
                 'approved_at' => null,
                 'returned_at' => now(), // 編集により戻された日時
@@ -751,7 +752,7 @@ class WorkflowService
      * @param  int  $userId  対象ユーザーID
      * @param  string  $type  'inspection' または 'approval'
      */
-    protected function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
+    public function incrementPendingTaskCount(int $userId, string $type = 'approval'): void
     {
         try {
             $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';
@@ -770,7 +771,7 @@ class WorkflowService
      * @param  int  $userId  対象ユーザーID
      * @param  string  $type  'inspection' または 'approval'
      */
-    protected function decrementPendingTaskCount(int $userId, string $type): void
+    public function decrementPendingTaskCount(int $userId, string $type): void
     {
         try {
             $column = ($type === 'inspection') ? 'pending_inspection_count' : 'pending_approval_count';
@@ -788,6 +789,21 @@ class WorkflowService
      */
     public static function getInspectedAtCarbonDate($targetDate): ?Carbon
     {
+        // null の場合はそのまま null を返す
+        if ($targetDate === null) {
+            return null;
+        }
+
+        // すでに有効な Carbon インスタンスであればそのまま返す
+        if ($targetDate instanceof Carbon) {
+            // Carbon の無効な日付値 (timestamp=0 由来の -0001-11-30 等) をガード
+            if ($targetDate->year < 1) {
+                return null;
+            }
+
+            return $targetDate;
+        }
+
         return Carbon::hasFormat($targetDate, 'Y-m-d H:i:s')
         && $targetDate !== '0000-00-00 00:00:00'
         && $targetDate !== '-0001-11-30 00:00:00'
@@ -894,8 +910,8 @@ class WorkflowService
                 'status' => $newStatus, // ステータスは維持
                 'version' => $ledger->version, // バージョンも維持
                 'comments' => $comments, // 引き継ぎコメント
-                'requested_at' => $latestDiff->requested_at, // 元の依頼日時は維持
-                'inspected_at' => ($newStatus === WorkflowStatus::PENDING_APPROVAL) ? $latestDiff->inspected_at : null, // 点検完了日時は維持 (承認待ちの場合)
+                'requested_at' => self::getInspectedAtCarbonDate($latestDiff->requested_at), // 元の依頼日時は維持
+                'inspected_at' => ($newStatus === WorkflowStatus::PENDING_APPROVAL) ? self::getInspectedAtCarbonDate($latestDiff->inspected_at) : null, // 点検完了日時は維持 (承認待ちの場合)
                 'approved_at' => null, // 承認日時はクリア
                 'returned_at' => null, // 差し戻しではない
                 // 新しい担当者を設定

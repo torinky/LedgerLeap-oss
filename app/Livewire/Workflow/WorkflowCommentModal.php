@@ -2,26 +2,33 @@
 
 namespace App\Livewire\Workflow;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Ledger\CreateColumn;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Livewire\Ledger\Show;
+use App\Livewire\Traits\InitializesTenantContext;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class WorkflowCommentModal extends Component
+class WorkflowCommentModal extends BaseLivewireComponent
 {
-    use Toast;
+    use InitializesTenantContext, Toast;
 
     public bool $showCommentModal = false;
+
     public string $modalTitle = '';
+
     public string $actionButtonLabel = '';
+
     public string $actionButtonClass = 'btn-primary';
+
     public string $actionType = ''; // 親に渡すアクション識別子
+
     public ?int $targetLedgerId = null;
 
     public string $comment = '';
-    public string $text='';
+
+    public string $text = '';
 
     #[On('open-workflow-comment-modal')]
     public function open(string $title, string $actionLabel, string $actionClass, string $actionType, int $ledgerId, ?string $initialComment = '', ?string $text = ''): void
@@ -35,7 +42,7 @@ class WorkflowCommentModal extends Component
         $this->resetValidation('comment');
         $this->showCommentModal = true;
         $this->text = $text;
-//        dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId,$this->comment);
+        //        dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId,$this->comment);
         $this->render();
     }
 
@@ -53,11 +60,10 @@ class WorkflowCommentModal extends Component
             actionType: $this->actionType,
             ledgerId: $this->targetLedgerId,
             comment: $this->comment
-        )
-//            コンポーネントを絞るとModifyColumnに向けたイベントが発火しないのでグローバルにする
-//            ->to(Show::class)->to(ModifyColumn::class)->to(CreateColumn::class)
-        ; // 対象コンポーネントを指定 (必要なら)
-//dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId, $this->comment);
+        );
+        //            コンポーネントを絞るとModifyColumnに向けたイベントが発火しないのでグローバルにする
+        //            ->to(Show::class)->to(ModifyColumn::class)->to(CreateColumn::class)// 対象コンポーネントを指定 (必要なら)
+        // dd($this->modalTitle,$this->actionButtonLabel,$this->actionButtonClass,$this->actionType,$this->targetLedgerId, $this->comment);
         $this->closeModal();
     }
 

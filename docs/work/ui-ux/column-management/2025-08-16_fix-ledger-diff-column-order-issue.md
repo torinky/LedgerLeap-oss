@@ -1,0 +1,89 @@
+# 台帳差分表示におけるカラム順序の不整合および関連エラーの修正計画
+
+## 1. 概要
+
+台帳定義のカラムの並び順を変更したり、カラムを削除したりした後、該当台帳の古い変更履歴（差分）を表示すると、表示の不整合が発生する問題が確認された。この問題を修正する過程で、Livewireコンポーネントのプロパティに関する複数の潜在的なエラーが連鎖的に発生した。
+
+本ドキュメントは、これらの問題の根本原因と具体的な修正方針、そして最終的な解決策を記録するものである。
+
+## 2. 根本原因の技術的詳細
+
+一連の問題は、それぞれ異なるが相互に関連する原因に起因する。
+
+### 2.1. 差分計算ロジックの不整合 (初期の問題)
+
+*   **現象:** カラムの並び順を変更すると、差分表示が崩れる。
+*   **原因:** `LedgerDiffProcessor` サービスが、過去の台帳データ (`content`) を解釈する際に、そのデータが記録された時点のカラム定義スナップショット (`column_define`) を参照せず、常に**最新の台帳定義**を誤って適用していた。台帳データ (`content`) は**順序が意味を持つ「数値インデックス配列」**として保存されているため、定義の順序が変わるとデータの解釈に不整合が生じていた。
+
+### 2.2. Livewireプロパティの型に関する問題 (派生した問題)
+
+*   **現象:** `Property type not supported in Livewire` エラーが頻発。
+*   **原因:** Livewireコンポーネント (`Show.php`, `LedgerDiffViewer.php`) の `public` プロパティに、Livewireがシリアライズ（フロントエンドとのデータ同期のために変換）できない複雑なオブジェクトが格納されていた。
+    1.  **`ColumnDefine` オブジェクト:** EloquentモデルではないプレーンなPHPオブジェクトである `ColumnDefine` がプロパティに含まれていた。
+    2.  **ネストしたCollection:** `groupBy` の結果である、`Collection` の中に `Collection` が入った構造のプロパティが存在した。
+
+### 2.3. PHPの厳密な型チェックによるエラー
+
+*   **現象:** `TypeError: Cannot assign Illuminate\Support\Collection to property ... of type ?Illuminate\Database\Eloquent\Collection` エラーが発生。
+*   **原因:** `Eloquent\Collection` 型を期待するプロパティに対し、`collect()` ヘルパーが返す汎用的な `Support\Collection` を代入しようとしていた。
+
+### 2.4. テスト環境における依存関係の解決不足 (追加で判明した問題)
+
+*   **現象:** `ColumnHtmlService::show` がテスト環境で空のHTMLを返す。
+*   **原因:** `ColumnHtmlService` が依存する `AutoLinkService` が、テスト環境で正しくモック化されていなかった。`AutoLinkService` はコンストラクタでリポジトリを依存注入しており、テスト環境ではこれらのリポジトリが正しく解決されないため、`convert` メソッドが期待通りのHTMLを生成できなかった。
+
+## 3. 修正方針と最終的な実装
+
+上記の問題を解決するため、以下のステップで修正を実施した。
+
+### 3.1. 差分計算ロジックの修正 (`LedgerDiffProcessor`)
+
+*   **方針:** 原因2.1を解決するため、`prepareContentDiff` メソッドのロジックを全面的に刷新。
+*   **実装:**
+    1.  新旧両方の `column_define` を受け取り、それぞれに含まれるすべてのユニークなカラムIDをリストアップする。
+    2.  各カラムIDについて、**それぞれの時点の `column_define` を基準に** `content` 配列内でのインデックスを特定し、値を取得する。
+    3.  カラムの状態（`added`, `deleted`, `modified`, `unchanged`）を判定するロジックを追加。
+    4.  **Livewireエラー対策として、最終的に返却するデータ構造内の `ColumnDefine` オブジェクトは、`toArray()` メソッドでプレーンな配列に変換する。**
+    5.  **`mapContentToColumnIds` ヘルパーメソッドの導入:** `content` 配列が `column_define` の `order` に従って格納されていることを前提とし、`column_define` の `id` をキーとする連想配列に変換するヘルパーメソッド `mapContentToColumnIds` を導入した。これにより、カラムの並び順の変更が差分として検出されないようにした。
+
+### 3.2. Livewireコンポーネントの修正
+
+*   **方針:** 原因2.2および2.3を解決するため、Livewireコンポーネントが保持する `public` プロパティの型を単純化し、厳密な型定義に準拠させる。
+*   **実装:**
+    1.  **`ColumnDefine` モデルへの `toArray()` 実装:** `app/Models/ColumnDefine.php` に、自身のプロパティを配列として返す `toArray()` メソッドを実装した。
+    2.  **ネストしたCollectionの配列化:** `Show.php` と `LedgerDiffViewer.php` 内で、カラム情報をグループ化・ソートした後に、`.map(fn(Collection $group) => $group->all())->all()` をチェーンすることで、最終的な結果をLivewireが安全に扱える多次元配列に変換した。
+    3.  **Eloquent Collectionの型一致:** `LedgerDiffViewer.php` で、空のコレクションを生成する際に `collect()` の代わりに `new EloquentCollection()` を使用し、プロパティの型（`?Illuminate\Database\Eloquent\Collection`）と一致させた。
+    4.  **`displayLevel` の初期値調整:** `LedgerDiffViewer.php` の `displayLevel` プロパティの初期値を `1` から `3` に変更した。これにより、デフォルトの表示レベルでカラムがフィルタリングされてしまう問題を解消した。
+
+### 3.3. テスト環境のセットアップ修正
+
+*   **方針:** 原因2.4を解決するため、テスト環境における依存関係のモック化を適切に行う。
+*   **実装:**
+    1.  **`tests/Feature/Livewire/Common/ActivityHistoryDisplayTest.php` の修正:** ユーザー作成時のメールアドレス重複エラーを解消するため、`User::factory()->create()` に `fake()->unique()->safeEmail()` を渡すように修正した。
+    2.  **`tests/Feature/Livewire/Ledger/LedgerDiffViewerTest.php` の修正:** `ColumnHtmlService` がテスト環境で空のHTMLを返す問題を解決するため、`ColumnHtmlService` 自体をモック化し、`show` メソッドが `initialValue` をHTMLエスケープした文字列として返すように設定した。これにより、`ColumnHtmlService` の内部的な依存関係（`AutoLinkService` など）のモック化を気にすることなく、`ColumnHtmlService` の挙動を制御できるようになった。
+    3.  **`tests/Feature/Livewire/Ledger/ShowTest.php` の修正:** `prepareContentDiff` メソッドの戻り値の配列に `'changed'` キーが存在しないため、`$contentChanges[3]['changed']` を `status` に変更し、期待値を `added` に変更した。
+
+## 4. テスト計画と結果
+
+本修正の品質を保証するため、以下のテストケースを実装し、すべてパスすることを確認した。
+
+*   **ユニットテスト (`LedgerDiffProcessorTest`)**:
+    *   **カラム順序変更ケース:** カラムの順序が異なる2つの `column_define` を使って差分が正しく計算されることを検証する。**（修正後パス）**
+    *   **カラム削除ケース:** 古い定義には存在するが新しい定義には存在しないカラムについて、生成される差分オブジェクトに `deleted` フラグが正しく設定されることを検証する。**（パス）**
+    *   **カラム追加ケース:** 新しい定義にのみ存在するカラムについて、`added` フラグが正しく設定されることを検証する。**（パス）**
+
+*   **フィーチャーテスト (`LedgerDiffViewerTest`)**:
+    *   **セットアップ:**
+        1.  特定のカラム定義 (`[A, B, C]`) で台帳レコードを作成・保存する (Version 1)。
+        2.  台帳定義を修正し、カラムBを削除、カラムCの順序を変更し、新しいカラムDを追加する (`[C, A, D]`)。
+        3.  台帳レコードを再度編集・保存する (Version 2)。
+    *   **検証:**
+        1.  `LedgerDiffViewer` コンポーネントで Version 1 と Version 2 の差分を表示する。
+        2.  レンダリングされたHTML内に、カラムBが「(削除済み)」として表示されていることをアサートする。**（テスト修正後パス）**
+        3.  カラムAとCの値が、それぞれの列で正しく表示されていることをアサートする。**（テスト修正後パス）**
+        4.  カラムDが「(追加)」として表示されていることをアサートする。**（テスト修正後パス）**
+
+## 5. 影響範囲
+
+*   **影響を受ける機能:** 台帳の変更履歴（差分）表示機能全体。
+*   **影響を受けない機能:** データの保存処理、台帳の通常表示、権限管理など、差分表示以外の機能への影響はない。本修正は表示ロジックの不整合を解消するものであり、データ構造や永続化ロジックには変更を加えない。

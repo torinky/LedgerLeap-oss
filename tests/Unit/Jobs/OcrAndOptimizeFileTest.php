@@ -1,21 +1,19 @@
 <?php
 
-namespace tests\Unit\Jobs;
+namespace Tests\Unit\Jobs;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\OcrAndOptimizeFile;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\User;
-use App\Models\ColumnDefine;
-use App\Helpers\AttachedFilePathHelper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-//use Mockery;
-use Illuminate\Support\Facades\Process; // ★ use を変更
+use Illuminate\Support\Facades\Process;
+// use Mockery;
+use Illuminate\Support\Facades\Storage; // ★ use を変更
 use Tests\TestCase;
 
 class OcrAndOptimizeFileTest extends TestCase
@@ -48,7 +46,7 @@ class OcrAndOptimizeFileTest extends TestCase
             'column_id' => 1,
             'creator_id' => $user->id,
             'modifier_id' => $user->id,
-            'hashedbasename' => \Illuminate\Support\Str::random(40) . '.jpeg',
+            'hashedbasename' => \Illuminate\Support\Str::random(40).'.jpeg',
             'optimized' => false,
             'original_file_path' => 'originals/test.jpeg',
         ]);
@@ -58,7 +56,7 @@ class OcrAndOptimizeFileTest extends TestCase
 
         // OCR後の出力ファイルを事前に作成しておく
         // ジョブ内で Storage::size() が呼ばれるため、ファイルが存在しないとエラーになるのを防ぎます
-        $outputFilename = pathinfo($attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf';
+        $outputFilename = pathinfo($attachedFile->hashedbasename, PATHINFO_FILENAME).'.pdf';
         $outputStoragePath = AttachedFilePathHelper::getAttachmentPath($attachedFile->ledger_define_id, $outputFilename);
         Storage::disk('public')->put($outputStoragePath, 'dummy ocr content');
 

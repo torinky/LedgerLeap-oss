@@ -6,13 +6,15 @@ use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
+use App\Models\Tenant; // ★ 追加
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
 use Mockery;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Throwable;
 
@@ -24,7 +26,10 @@ class GenerateThumbnailTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
-        Bus::fake();
+        Queue::fake(); // Bus::fake() から Queue::fake() に変更
+        // ★ 追加
+        $tenant = Tenant::factory()->create();
+        tenancy()->initialize($tenant);
     }
 
     #[Test]
@@ -58,6 +63,7 @@ class GenerateThumbnailTest extends TestCase
         $job->handle($this->app->make(ImageManager::class));
 
         // --- Assert ---
+        // ★ 修正
         $expectedThumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
         Storage::disk('public')->assertExists($expectedThumbnailPath);
 
@@ -130,6 +136,7 @@ class GenerateThumbnailTest extends TestCase
 
         // 3. Mockeryによるログの検証はテスト終了時に自動で行われる
     }
+
     #[Test]
     public function it_skips_generation_for_non_image_files()
     {
@@ -151,6 +158,84 @@ class GenerateThumbnailTest extends TestCase
         $this->assertDatabaseHas('attached_files', [
             'id' => $attachedFile->id,
             'status' => AttachedFileStatus::COMPLETED->value,
+        ]);
+    }
+
+    #[Test]
+    public function it_falls_back_to_original_image_if_current_file_is_pdf()
+    {
+        // --- Arrange ---
+        // Mock setting
+        Log::shouldReceive('info')->with(Mockery::pattern('/Using original file as source/'))->once();
+        Log::shouldReceive('info')->with(Mockery::pattern('/Thumbnail successfully generated/'))->once();
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+
+        $mockImage = Mockery::mock(Image::class);
+        $mockImage->shouldReceive('resize')->andReturnSelf();
+        $mockImage->shouldReceive('encode')->with('jpg')->andReturnSelf();
+        $mockImage->shouldReceive('__toString')->andReturn('dummy_image_content');
+
+        $mockImageManager = Mockery::mock(ImageManager::class);
+        $mockImageManager->shouldReceive('make')->andReturn($mockImage);
+        $this->app->instance(ImageManager::class, $mockImageManager);
+
+        // Create AttachedFile (Current: PDF, Original: Image)
+        $attachedFile = AttachedFile::factory()->create([
+            'mime' => 'application/pdf',
+            'path' => 'attachments/test.pdf',
+            'original_file_path' => 'attachments/originals/test.jpg',
+            'original_mime_type' => 'image/jpeg',
+            'hashedbasename' => 'test.jpg',
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+
+        // Create original file
+        Storage::disk('public')->put($attachedFile->original_file_path, 'dummy original content');
+
+        // --- Act ---
+        $job = new GenerateThumbnail($attachedFile->id);
+        $job->handle($this->app->make(ImageManager::class));
+
+        // --- Assert ---
+        $expectedThumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename);
+        Storage::disk('public')->assertExists($expectedThumbnailPath);
+    }
+
+    #[Test]
+    public function it_does_not_update_status_if_processing_is_ongoing()
+    {
+        // --- Arrange ---
+        Log::shouldReceive('info')->with(Mockery::pattern('/Thumbnail successfully generated/'))->once();
+        Log::shouldReceive('info')->with(Mockery::pattern('/Status update skipped/'))->once();
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+
+        $mockImage = Mockery::mock(Image::class);
+        $mockImage->shouldReceive('resize')->andReturnSelf();
+        $mockImage->shouldReceive('encode')->with('jpg')->andReturnSelf();
+        $mockImage->shouldReceive('__toString')->andReturn('dummy_image_content');
+
+        $mockImageManager = Mockery::mock(ImageManager::class);
+        $mockImageManager->shouldReceive('make')->andReturn($mockImage);
+        $this->app->instance(ImageManager::class, $mockImageManager);
+
+        // Status: PARALLEL_PROCESSING
+        $attachedFile = AttachedFile::factory()->create([
+            'mime' => 'image/jpeg',
+            'path' => 'attachments/test_image.jpg',
+            'hashedbasename' => 'test.jpg',
+            'status' => AttachedFileStatus::PARALLEL_PROCESSING,
+        ]);
+        Storage::disk('public')->put($attachedFile->path, 'dummy content');
+
+        // --- Act ---
+        $job = new GenerateThumbnail($attachedFile->id);
+        $job->handle($this->app->make(ImageManager::class));
+
+        // --- Assert ---
+        // Status should NOT be changed to COMPLETED
+        $this->assertDatabaseHas('attached_files', [
+            'id' => $attachedFile->id,
+            'status' => AttachedFileStatus::PARALLEL_PROCESSING->value,
         ]);
     }
 }

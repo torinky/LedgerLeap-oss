@@ -19,6 +19,8 @@ class UpdateController extends Controller
 
         $currentFolderRecord = Folder::where('id', $initialFolderId)->firstOrFail();
 
+        $this->authorize('update', $currentFolderRecord);
+
         return View::make('folder.edit', compact('currentFolderRecord', 'folderRecords', 'initialFolderId'));
 
     }
@@ -32,13 +34,13 @@ class UpdateController extends Controller
         //        $folderRecord->appendTo($parentFolderRecord)->save();
         $folderRecord->save();
 
-        return redirect()->route('folder.edit', ['folderId' => $request->id])
+        return redirect()->route('folder.edit', ['tenant' => tenant()->id, 'folder' => $request->id])
             ->with('status', __('folder updated successfully !'));
     }
 
     public function delete(UpdateRequest $request)
     {
-        $folderId = (int)$request->route('folderId');
+        $folderId = (int) $request->route('folderId');
 
         $folder = Folder::find($folderId);
         $folder->delete();

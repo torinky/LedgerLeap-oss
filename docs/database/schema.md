@@ -1,9 +1,24 @@
 # LedgerLeap データベーススキーマ概要
 
-## 概要説明
-LedgerLeapが使用する主要なデータベーステーブルの構造とテーブル間の関連についての概要を記述します。このドキュメントは、システム全体のデータ構造を理解するための一助となることを目的としています。
+**最終更新:** 2026年2月11日  
+**Phase 1-5実装完了:** 添付ファイル機能統合（2025年12月-2026年1月）
+**最新追記:** マイグレーション管理の注意事項（2026年2月11日）
 
-## 主要テーブルER図 (Mermaid.js)
+## 1. 概要
+
+LedgerLeapが使用する主要なデータベーステーブルの構造とテーブル間の関連についての概要を記述します。
+
+**記載範囲:**
+- 主要テーブルの構造とリレーション
+- 全文検索（Mroonga）の仕様と制約
+- テスト実装時の注意点
+
+**記載しない内容:**
+- モデルクラスの詳細 → `docs/models/`
+- マイグレーションの実装 → `database/migrations/`
+- 機能説明 → `docs/function/`
+
+## 2. 主要テーブルER図 (Mermaid.js)
 
 ```mermaid
 erDiagram
@@ -46,7 +61,7 @@ erDiagram
     ledger_defines {
         int id PK
         string title
-        text column_define JSON
+        text column_define "JSON column definitions"
         int folder_id FK
         int creator_id FK
         int modifier_id FK
@@ -144,13 +159,30 @@ erDiagram
     attached_files {
         int id PK
         int ledger_id FK
-        string file_path
-        string file_name
-        string mime_type
-        bigint size
-        string status
-        string original_file_path
+        int column_id
+        string tenant_id
+        string filename
+        string hashedbasename
+        string mime
         string original_mime_type
+        string path
+        bigint size
+        string status "Enum: PENDING, TIKA_PROCESSING, COMPLETED, etc."
+        longtext vlm_markdown "VLM抽出Markdown (Phase 2追加)"
+        json vlm_structured_data "VLM構造化データ (Phase 2追加)"
+        string vlm_model
+        decimal vlm_confidence "0.0000-1.0000"
+        int vlm_processing_time_ms
+        timestamp vlm_processed_at
+        timestamp vlm_failed_at
+        timestamp ocr_processed_at
+        timestamp ocr_failed_at
+        timestamp tika_processed_at
+        timestamp processing_finalized_at "Phase 3追加"
+        string finalized_source "vlm|ocr|tika (Phase 3追加)"
+        longtext content "最終化後の採用テキスト (Phase 3追加)"
+        boolean optimized
+        text error_message
         datetime created_at
         datetime updated_at
     }
@@ -201,8 +233,8 @@ erDiagram
         morphs subject
         string event
         morphs causer
-        text properties JSON
-        uuid batch_uuid
+        text properties "properties in JSON format"
+        string batch_uuid "UUID"
         datetime created_at
         datetime updated_at
     }
@@ -236,9 +268,93 @@ erDiagram
     tags ||--o{ taggables : "applied_to"
     users ||--o{ activity_log : "caused_by"
     notification_types ||--o{ notifications : "categorizes"
+
 ```
 
-## 主要テーブルの説明
+## 3. 全文検索 (Mroonga) に関する仕様と注意点
+
+`ledgers` テーブルの `content` および `content_attached` カラムは、Mroongaを利用した全文検索のために特別な設定がされています。開発およびテストを行う際には、以下の点に注意してください。
+
+### 3.1. スキーマとデータ構造
+
+-   **カラム定義:** `content` と `content_attached` は `longtext` 型ですが、Mroongaの `flags "COLUMN_VECTOR"` コメントによって、**ベクターカラム**として扱われます。これにより、JSON配列の各要素がインデックス化の対象となります。
+-   **データ形式:** これらのカラムには、Laravelのカスタムキャスト (`AsColumnArrayJson`) を通じてPHPの配列がJSON配列として保存されます。注意点として、配列の要素には単純な文字列だけでなく、**PHPでシリアライズされた配列 (`___serialized___...`) が含まれる**ことがあり、データ構造は複雑です。
+
+### 3.2. content の正規化プロセス
+
+台帳の各項目（カラム）は、保存前に以下のプロセスで正規化されます。これにより、**カラムIDが配列インデックスと一致**し、`$ledger->content[$columnId]` での直接アクセスが可能になります。
+
+1. **Livewireでの管理**: カラムIDをキーとした連想配列 `[1 => 'value', 3 => 'value']`
+2. **正規化処理**: カラムIDの欠番を空文字で埋める → `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+3. **DB保存**: `array_values()` で連番配列に変換 → JSON: `["", "value", "", "value"]`
+4. **DB読み取り**: 連番配列として復元 → `[0 => '', 1 => 'value', 2 => '', 3 => 'value']`
+
+**重要な注意点:**
+- この正規化は**0から始まる連番配列の場合のみ**正しく動作します。
+- カラムIDが1から始まる場合、インデックス0に空要素が必要です（例: `[0 => [], 1 => 'value']`）。
+- テストやシーダーでデータを作成する際は、必ず0から始まる連番配列として準備してください。詳細は [Testing-Best-Practices.md](../development/Testing-Best-Practices.md) を参照してください。
+
+### 3.3. AsColumnArrayJson キャストの仕様
+`ledgers` テーブルの `content` カラム等は `AsColumnArrayJson` キャストを使用して保存されます。
+
+- **重要: 二重エンコードの禁止**:
+  - `files` 型や `chk` 型のような配列構造を持つカラムを保存する際、保存前に手動で `json_encode` を行わないでください。
+  - キャストクラスがモデル保存時に自動的にシリアライズを行うため、事前に文字列化すると「JSON文字列を値に持つJSON（二重エンコード）」としてDBに保存され、UIでの表示や再編集ができなくなります。
+- **データ取得時の挙動**:
+  - デコード時は常に連想配列 (`json_decode(..., true)`) を返します。
+  - プロジェクト規約に基づき、常に `$ledger->content[0]` 形式での安全な配列アクセスを保証します。
+
+### 3.4. 複合インデックスの制約（重要）
+
+Mroongaでは、**複合インデックス（複数カラムを跨ぐインデックス）が正常に機能しません。** 全文検索クエリを書く際は、以下のルールを厳守してください。
+
+-   **単一カラムインデックスの利用:** `content` と `content_attached` それぞれに個別の `FULLTEXT` インデックスを使用して検索してください。
+-   **複合検索の実現:** 複数のカラムを対象とする場合は、`OR` で結合します。
+
+```sql
+-- ○ 正解（単独インデックスのOR結合）
+SELECT * FROM ledgers WHERE 
+  MATCH(content) AGAINST('キーワード') OR 
+  MATCH(content_attached) AGAINST('キーワード');
+
+-- × 動作しない（複合インデックス）
+SELECT * FROM ledgers WHERE MATCH(content, content_attached) AGAINST('キーワード');
+```
+
+-   **`Ledger::scopeSearch`:** モデルに定義されたこのメソッドを使用すると、自動的に最適なOR結合クエリが生成されます。
+
+### 3.4. Mroonga対応の自動型変換（重要）
+
+**問題:** Mroongaのベクターカラム処理において、数値キーのJSON配列内に整数値がある場合、副作用で二重配列化や文字の分断が発生し、Eloquentでの取得時にデコードエラー（null）になることがあります。
+
+**解決策:** `AsColumnArrayJson` カスタムキャストの `setContent()` メソッドで、**整数・浮動小数点数を自動的に文字列に変換**して保存しています。これにより、開発者は副作用を意識せず、UIやテストからの入力をそのまま扱えます。
+
+### 3.5. AsColumnArrayJsonキャストの制約（data_get 不適合）
+
+`AsColumnArrayJson` は内部で独自のシリアライゼーションを使用しているため、Laravelの `data_get()` や `Arr::get()` ヘルパーが正しく動作しません。
+
+-   **対策:** 常に `$ledger->content[$id]` や `$ledger->content_attached[$id][$filename]` の形式で**直接配列アクセス**を行ってください。
+
+### 3.6. テスト実装時の極めて重要な注意点
+
+-   **`RefreshDatabase` トレイトとの非互換性:** Mroongaのインデックス更新はコミット後に行われるため、`RefreshDatabase` トレイトを使用したテスト（トランザクションロールバック方式）では全文検索が機能しません。
+-   **必須の対策:** 全文検索機能を含むフィーチャーテストを記述する際は、必ず **`DatabaseMigrations` トレイトを使用**してください。
+-   **インデックス更新の待機:** データ作成からインデックスの更新完了までにごくわずかな遅延が発生する可能性があるため、テストが不安定な場合は `sleep(1);` を入れることを検討してください。
+
+---
+
+## 4. 主要テーブルの説明
+
+システムを構成する核心テーブルと、その論理的なグループ分けを解説します。
+
+### 4.0. テーブルグループ概観
+
+- **台帳・テンプレート関連**: `ledgers`, `ledger_defines`, `ledger_diffs`
+- **フォルダ・権限管理**: `folders`, `role_folder_permissions`, `roles`, `permissions`
+- **ユーザー・組織**: `users`, `organizations`, `user_organizations`
+- **添付ファイル・通知・その他**: `attached_files`, `notifications`, `tags`, `taggables`, `activity_log`, `jobs`
+
+### 4.1. ユーザーと組織
 
 *   **`users`**:
     *   目的: システムの全ユーザー情報を格納します。認証、ユーザープロファイル情報が含まれます。
@@ -249,52 +365,111 @@ erDiagram
 *   **`user_organizations`**:
     *   目的: `users` と `organizations` の多対多の関係を定義する中間テーブル。ユーザーがどの組織に所属し、主要な所属組織がどれかを示します。
     *   主要カラム: `user_id`, `organization_id`, `is_primary`。
+
+### 4.2. フォルダと台帳定義
+
 *   **`folders`**:
     *   目的: 台帳定義 (`ledger_defines`) を格納・整理するためのフォルダ。階層構造を持ち、フォルダ単位での権限設定の基盤となります。
     *   主要カラム: `id`, `title`, `parent_id` (自己参照), `creator_id`, `modifier_id`。
 *   **`ledger_defines`**:
     *   目的: 台帳のテンプレート（カラム構成、ワークフロー設定など）を定義します。
     *   主要カラム: `id`, `title`, `column_define` (JSON形式でカラム定義を格納。`number` 型の場合、`min`, `max`, `step`, `unit` などの属性を含む), `folder_id`, `workflow_enabled`。
+
+### 4.3. 台帳データと履歴
+
 *   **`ledgers`**:
     *   目的: 台帳レコードの最新データを格納します。`content` カラムはJSON形式で柔軟なデータを保持します。`status` カラムでワークフローの状態を管理します。
-    *   主要カラム: `id`, `ledger_define_id`, `content` (JSON), `content_attached` (JSON, 添付ファイル検索用インデックス), `status`, `creator_id`, `modifier_id`, `latest_diff_id`, `version`。
+    *   主要カラム: `id`, `ledger_define_id`, `content` (JSON), `content_attached` (JSON, 添付ファイル検索用インデックス), `status`, `creator_id`, `modifier_id`, `latest_diff_id`, `version`, `activity_score` (活動スコア), `composite_score` (複合スコア)。
+    *   **スコアリング関連カラム:**
+        *   `activity_score` (DECIMAL 5,2): 直近の操作頻度を反映した活動スコア (0-100)
+        *   `composite_score` (DECIMAL 5,2): 活動・新鮮度・重要度を統合した複合スコア (0-100)
 *   **`ledger_diffs`**:
     *   目的: 台帳レコードの変更履歴（スナップショット）を格納します。ワークフローの各ステップ（点検依頼、承認など）や編集時のデータ変更が記録されます。
     *   主要カラム: `id`, `ledger_id`, `content` (JSON, 変更時のデータ), `column_define` (JSON, 変更時の定義), `status` (変更時のステータス), `creator_id`, `modifier_id`, `inspector_id`, `approver_id`, `version`, `comments`。
-*   **`roles`**:
-    *   目的: (Spatie/laravel-permission) ユーザーに割り当てる役割（ロール）を定義します。パーミッションをグループ化します。
-    *   主要カラム: `id`, `name`, `guard_name`, `description`。
-*   **`permissions`**:
-    *   目的: (Spatie/laravel-permission) システム内の個別の操作権限（パーミッション）を定義します。
-    *   主要カラム: `id`, `name`, `guard_name`, `description`。
-*   **`model_has_roles`**:
-    *   目的: (Spatie/laravel-permission) `User` や `Organization` などのモデルと `roles` の多対多の関係（ポリモーフィック）を定義する中間テーブル。
-    *   主要カラム: `role_id`, `model_type`, `model_id`。
-*   **`role_has_permissions`**:
-    *   目的: (Spatie/laravel-permission) `roles` と `permissions` の多対多の関係を定義する中間テーブル。
-    *   主要カラム: `permission_id`, `role_id`。
-*   **`role_folder_permissions`**:
-    *   目的: ロールとフォルダに対する詳細な権限（読み取り、書き込み、点検、承認、通知設定など）を管理します。
-    *   主要カラム: `id`, `role_id`, `folder_id`, `permission` (権限の種類), `notification_type_id`。
-*   **`tags`**:
-    *   目的: 台帳定義などに付与できるタグを定義します。
-    *   主要カラム: `id`, `name`, `slug`。
-*   **`taggables`**:
-    *   目的: `tags` と他のモデル（例: `LedgerDefine`）との多対多の関係（ポリモーフィック）を定義する中間テーブル。
-    *   主要カラム: `tag_id`, `taggable_type`, `taggable_id`。
+
+### 4.4. 添付ファイル（Phase 1-5で大幅拡張）
+
 *   **`attached_files`**:
-    *   目的: `ledgers` レコードに添付されたファイルのメタデータ（パス、ファイル名、MIMEタイプ、サイズなど）を格納します。OCR処理の状態管理やオリジナルファイルのパスも保持します。
-    *   主要カラム: `id`, `ledger_id`, `file_path`, `file_name`, `mime_type`, `size`, `status`, `original_file_path`, `original_mime_type`。
-*   **`notifications`**:
-    *   目的: (Laravel標準) システム内で発生した通知（ワークフロー関連、お知らせなど）を格納します。
-    *   主要カラム: `id`, `type` (通知クラス名), `notifiable_type`, `notifiable_id`, `data` (JSON), `read_at`。
-*   **`notification_types`**:
-    *   目的: システム内で送信される通知の種類を定義・管理します（例: 点検依頼通知、承認完了通知）。
-    *   主要カラム: `id`, `name`, `description`。
-*   **`jobs` / `job_batches`**:
-    *   目的: (Laravel Queue) 非同期処理のためのジョブおよびバッチジョブの情報を格納します。メール送信や重い処理などに使用されます。
-    *   主要カラム (`jobs`): `id`, `queue`, `payload`, `attempts`, `reserved_at`, `available_at`。
-    *   主要カラム (`job_batches`): `id`, `name`, `total_jobs`, `pending_jobs`, `failed_jobs`。
-*   **`activity_log`**:
-    *   目的: (spatie/laravel-activitylog) システム内の主要なモデルに対する操作ログ（作成、更新、削除など）を記録します。
-    *   主要カラム: `id`, `log_name`, `description`, `subject_type`, `subject_id`, `event`, `causer_type`, `causer_id`, `properties` (JSON)。
+    *   目的: `ledgers` レコードに添付されたファイルのメタデータと処理状態を格納します。Phase 1-5（2025年12月-2026年1月）でVLM/OCR統合に伴い大幅に拡張されました。
+    *   **主要なカラム:**
+        *   `vlm_markdown`: VLM抽出結果（Markdown形式、RAG統合用）
+        *   `ocr_processed_at`: OCR処理完了日時
+        *   `finalized_source`: 最終的に採用されたテキストソース（'vlm' | 'ocr' | 'tika'）
+        *   `content`: 最終化後の採用テキスト（Mroonga全文検索対象）
+    *   **重要:** エンジン選択優先順位は VLM（最優先） > OCR（次点） > Tika（フォールバック）です。詳細は [AttachedFileモデルの詳細](../models/AttachedFile.md) を参照してください。
+
+### 4.5. 権限管理
+
+*   **`roles`**: Spatie Roles。
+*   **`permissions`**: Spatie Permissions。
+*   **`role_folder_permissions`**: フォルダごとの詳細権限管理。
+    *   主要カラム: `id`, `role_id`, `folder_id`, `permission` (閲覧・書き込み・点検・承認・管理)。
+
+### 4.6. タグと通知
+
+*   **`tags`**, **`taggables`**: タグ管理。
+*   **`notifications`**, **`notification_types`**: ワークフロー連動通知。
+
+### 4.7. 非同期処理とログ
+
+*   **`jobs`**, **`job_batches`**: VLM/OCR処理などの非同期タスク管理。
+*   **`activity_log`**: 全操作の監査証跡（Spatie）。
+
+---
+
+## 5. 関連ドキュメント
+
+### データモデル
+- **[AttachedFileモデル](../models/AttachedFile.md)** - 添付ファイルの詳細仕様
+- **[Ledgerモデル](../models/Ledger.md)** - 台帳データの詳細仕様
+
+### アーキテクチャ
+- **[VLM-OCR技術選定](../architecture/vlm-ocr-technology-selection.md)** - 添付ファイル処理の技術選定
+- **[非同期処理](../architecture/QueueProcessing.md)** - ジョブフローとエラーハンドリング
+
+### 開発ガイド
+- **[テストのベストプラクティス](../development/Testing-Best-Practices.md)** - Mroonga対応テストの書き方
+- **[VLM/OCR開発者ガイド](../development/vlm-ocr.md)** - VLM/OCR機能の実装ガイド
+
+### マイグレーション管理
+- **[マイグレーション冪等性の実装](../development/Testing-Best-Practices.md#-マイグレーション管理とトラブルシューティング)** - 安全なマイグレーションの書き方
+- **実装例:** `database/migrations/2025_11_03_014829_add_vlm_columns_to_attached_files_table.php`
+
+---
+
+## 6. マイグレーション実行時の注意事項
+
+### 6.1. テスト環境での推奨コマンド
+
+```bash
+# ✅ 推奨: 専用スクリプト使用（最も確実）
+./bin/reset-test-db.sh
+
+# または手動実行
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS ledgerleap_test;"
+docker exec ledgerleap-mysql-1 mysql -uroot -ppassword -e "CREATE DATABASE ledgerleap_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+./vendor/bin/sail artisan config:clear
+./vendor/bin/sail artisan migrate --env=testing
+```
+
+**重要:** 以下のコマンドは環境によって動作しない可能性があります：
+- `migrate:fresh` - MySQLモニタに入ってしまう場合がある
+- `migrate:refresh` - デッドロックリスクがある
+- `db:wipe` - クエリ長制限エラーが発生する場合がある
+
+### 6.2. マイグレーションファイルの冪等性
+
+全てのマイグレーションファイルは**冪等性**を持つように実装する必要があります：
+
+```php
+// ✅ 良い例: 存在確認してから追加
+if (! Schema::hasColumn('attached_files', 'tika_processed_at')) {
+    $table->timestamp('tika_processed_at')->nullable();
+}
+
+// ❌ 悪い例: 存在確認なし
+$table->timestamp('tika_processed_at')->nullable();
+```
+
+詳細は [テストベストプラクティス - マイグレーション管理](../development/Testing-Best-Practices.md#-マイグレーション管理とトラブルシューティング) を参照してください。
+

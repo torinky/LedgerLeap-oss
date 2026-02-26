@@ -24,7 +24,6 @@ use Illuminate\Support\Facades\DB;
 
 class NotificationSettingsRelationManager extends RelationManager
 {
-
     // 1. リレーションシップを中間テーブルモデルを直接返すものに変更
     protected static string $relationship = 'roleFolderPermissions';
 
@@ -72,7 +71,7 @@ class NotificationSettingsRelationManager extends RelationManager
 
                 TextColumn::make('notificationType.name')
                     ->label(__('ledger.notification_type'))
-                    ->formatStateUsing(fn(?string $state) => $state ? __('ledger.notification_types.' . $state, [], $state) : '')
+                    ->formatStateUsing(fn (?string $state) => $state ? __('ledger.notification_types.'.$state, [], $state) : '')
                     ->searchable()
                     ->sortable(),
 
@@ -84,7 +83,7 @@ class NotificationSettingsRelationManager extends RelationManager
                     ->onColor('success')
                     ->offColor('danger')
                     // 初期状態をboolで返す
-                    ->getStateUsing(fn(RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON)
+                    ->getStateUsing(fn (RoleFolderPermission $record): bool => $record->permission === FolderPermissionType::NOTIFY_ON)
                     // 更新処理
                     ->updateStateUsing(function (RoleFolderPermission $record, bool $state) {
                         try {
@@ -116,7 +115,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->searchable(),
                         CheckboxList::make('notification_type_ids')
                             ->label(__('ledger.notification_type'))
-                            ->options(fn() => NotificationType::all()->mapWithKeys(fn($type) => [$type->id => __('ledger.notification_types.' . $type->name, [], $type->name)]))
+                            ->options(fn () => NotificationType::all()->mapWithKeys(fn ($type) => [$type->id => __('ledger.notification_types.'.$type->name, [], $type->name)]))
                             ->columns(3)
                             ->required(),
                         Toggle::make('permission')
@@ -176,7 +175,7 @@ class NotificationSettingsRelationManager extends RelationManager
                             ->disabled(), // ロールは変更不可
                         CheckboxList::make('notification_type_ids')
                             ->label(__('ledger.notification_type'))
-                            ->options(fn() => NotificationType::all()->mapWithKeys(fn($type) => [$type->id => __('ledger.notification_types.' . $type->name, [], $type->name)]))
+                            ->options(fn () => NotificationType::all()->mapWithKeys(fn ($type) => [$type->id => __('ledger.notification_types.'.$type->name, [], $type->name)]))
                             ->columns(3)
                             ->required(),
                         Toggle::make('permission')
@@ -214,7 +213,7 @@ class NotificationSettingsRelationManager extends RelationManager
 
                             // 選択されなかった通知タイプを削除
                             foreach ($existingNotificationSettings as $setting) {
-                                if (!in_array($setting->notification_type_id, $selectedNotificationTypeIds)) {
+                                if (! in_array($setting->notification_type_id, $selectedNotificationTypeIds)) {
                                     $setting->delete();
                                 }
                             }

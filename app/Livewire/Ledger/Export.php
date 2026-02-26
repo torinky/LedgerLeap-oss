@@ -4,17 +4,20 @@ namespace App\Livewire\Ledger;
 
 use App\Exports\LedgerExport;
 use App\Jobs\Ledger\ExportJob;
+use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
 /**
  * Ledgerのエクスポートを管理するLivewireコンポーネント
  */
-class Export extends Component
+class Export extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
+
     public $batchId;
 
     public $exporting = false;
@@ -35,7 +38,7 @@ class Export extends Component
     /**
      * 親からの更新を受け取るメソッド
      *
-     * @param array $data キーワードとフィルター情報を含む配列
+     * @param  array  $data  キーワードとフィルター情報を含む配列
      */
     #[On('refreshChildren')]
     public function updateFromParent($data)
@@ -47,18 +50,25 @@ class Export extends Component
     /**
      * コンポーネントをマウントするメソッド
      *
-     * @param int $ledgerDefineId Ledger定義のID
-     * @param string $keywords キーワード情報（JSON形式）
-     * @param string $filter フィルター情報（JSON形式）
+     * @param  int  $ledgerDefineId  Ledger定義のID
+     * @param  string  $keywords  キーワード情報（JSON形式）
+     * @param  string  $filter  フィルター情報（JSON形式）
+     * @param  string|null  $ledgerDefineTitle  Ledger定義のタイトル（省略時はDB取得）
      */
-    public function mount($ledgerDefineId, $keywords, $filter)
+    public function mount($ledgerDefineId, $keywords, $filter, $ledgerDefineTitle = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
         //        $this->keywords = json_decode($keywords, true);
         $this->keywords = $keywords;
         //        $this->filter = json_decode($filter, true);
         $this->filter = $filter;
-        $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title . '.csv';
+
+        // 親から渡された場合はそれを使用、なければDB取得
+        if ($ledgerDefineTitle) {
+            $this->exportFilename = $ledgerDefineTitle.'.csv';
+        } else {
+            $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title.'.csv';
+        }
     }
 
     public function export()
@@ -77,7 +87,7 @@ class Export extends Component
 
     public function getExportBatchProperty()
     {
-        if (!$this->batchId) {
+        if (! $this->batchId) {
             return null;
         }
 
@@ -86,9 +96,9 @@ class Export extends Component
 
     public function downloadExport()
     {
-        $headers = ['Content-Disposition' => 'attachment; filename="' . $this->exportFilename . '"'];
+        $headers = ['Content-Disposition' => 'attachment; filename="'.$this->exportFilename.'"'];
 
-        return Storage::download('public/' . $this->exportFilename, $this->exportFilename, $headers);
+        return Storage::download('public/'.$this->exportFilename, $this->exportFilename, $headers);
     }
 
     public function updateExportProgress()

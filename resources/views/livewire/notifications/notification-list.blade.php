@@ -68,7 +68,7 @@
                 <div
                         class="card bg-base-300 opacity-70 transition-opacity hover:opacity-100 shadow-lg">
                     <div class="card-body">
-                        {!! $notifications->links() !!}
+                        {!! $notifications->links('components.common.pagination-links', ['position' => 'notification']) !!}
                     </div>
                 </div>
             </div>

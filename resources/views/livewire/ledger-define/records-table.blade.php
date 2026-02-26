@@ -1,5 +1,33 @@
-@php use App\Models\LedgerDefine; @endphp
-<div class="card bg-warning/50 h-full">
+@php
+    use App\Models\LedgerDefine;
+@endphp
+<div class="card bg-warning/50 h-full relative overflow-hidden">
+    {{-- ドロワー: parentComponentId を渡すことでツリーが直接 changeCurrentFolder を呼ぶ --}}
+    <x-slot:drawer>
+        <div class="w-full min-w-0" wire:loading.class="opacity-50" wire:target="changeCurrentFolder">
+            <livewire:folder.tree
+                :parentComponentId="$componentId"
+                :currentFolderId="$currentFolderId"
+                :selectedFolderIds="$selectedFolderIds"
+                wire:key="folder-tree-ledger-define-stable" />
+        </div>
+        <div wire:loading.delay wire:target="changeCurrentFolder" class="p-4 space-y-3">
+            @foreach (range(1, 5) as $i)
+                <div class="flex items-center gap-2">
+                    <div class="h-4 w-4 bg-base-content/10 rounded shimmer"></div>
+                    <div class="h-4 bg-base-content/10 rounded w-3/4 shimmer"></div>
+                </div>
+            @endforeach
+        </div>
+    </x-slot:drawer>
+
+    {{-- Tier 1: フォルダ切り替え時のグローバルオーバーレイ（1秒以上かかった場合のみ） --}}
+    <div wire:loading.delay.longest wire:target="changeCurrentFolder"
+        class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
+        <x-element.loading-overlay tier="1" manual message="{{ __('ledger.loading') }}"
+            class="!static !inset-auto !m-0" />
+    </div>
+
     <div class="bg-warning text-warning-content/70 rounded-t-box px-4 mb-4 font-bold ">
         <x-ledger.livewire-breadcrumbs
             :breadcrumbs="$breadcrumbs"
@@ -7,9 +35,16 @@
     </div>
 
     <div class="card-body pt-0">
+        {{-- Skeleton Grid during folder change --}}
+        <div wire:loading.delay wire:target="changeCurrentFolder">
+            <div class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4">
+                @foreach(range(1, 10) as $i)
+                    <x-folder.folder-avatar-skeleton />
+                @endforeach
+            </div>
+        </div>
 
-
-        <div
+        <div wire:loading.remove.delay wire:target="changeCurrentFolder"
             class="grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-5 2xl:grid-cols-7 3xl:grid-cols-8 4xl:grid-cols-10 grid-flow-row-dense gap-4 text-white text-center ">
 
             @foreach($folderRecords as $fKey => $folderRecord)
@@ -22,7 +57,7 @@
                         <div class="indicator">
                             @if($canUpdateFolder)
                                 <a
-                                    href="{{ route('folder.edit', $folderRecord) }}"
+                                    href="{{ route('folder.edit', ['tenant' => $this->tenantId, 'folder' => $folderRecord]) }}"
                                     class="btn btn-ghost tooltip flex items-center"
                                     data-tip="{{__('ledger.folder.edit')}}"
                                     target="folderEdit_{{$folderRecord->id}}}}"
@@ -53,7 +88,7 @@
                             @endif
 
                             <a href="#" class="btn btn-ghost"
-                               wire:click="changeCurrentFolder({{$folderRecord->id}})">
+                               wire:click="changeCurrentFolder({{$folderRecord->id}})" @click="$dispatch('navigation-start')">
                                 <i class="text-3xl fa-solid fa-right-to-bracket"></i></a>
                         </div>
                     </div>
@@ -72,7 +107,7 @@
                     @if($canUpdateLedgerDefine)
                         data-tip="{{__('ledger.edit')}}"
                     {{--                    wire:click="changeCurrentLedgerDefine({{$ledgerDefineRecord->id}})"--}}
-                    href="{{ route('ledgerDefine.edit', ['ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
+                    href="{{ route('ledgerDefine.edit', ['tenant' => $this->tenantId, 'ledgerDefineId'=>$ledgerDefineRecord->id]) }}"
                     class="tooltip cursor-pointer p-4 rounded-lg shadow-lg bg-accent hover:shadow-accent hover:opacity-100
                        {{in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'opacity-90' : 'opacity-60'}}  min-w-36 relative grid"
                     @else
@@ -118,7 +153,7 @@
                 <div class="card-actions place-items-center">
 
                     @can('create',$currentFolder)
-                        <a href="{{ route('folder.create',$currentFolderId)}}"
+                        <a href="{{ route('folder.create',['tenant' => $this->tenantId, 'parentId' => $currentFolderId])}}"
                            class="btn btn-primary btn-lg mx-3"
                            target="folderCreate">
                             <span class="fa-layers fa-fw mr-2">
@@ -145,7 +180,7 @@
                     @endcan
 
                     @can('create', [LedgerDefine::class,$currentFolder])
-                        <a href="{{ route('ledgerDefine.createWithFolderId',$currentFolderId)}}"
+                        <a href="{{ route('ledgerDefine.createWithFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
                            class="btn btn-primary btn-lg mx-3"
                            target="ledgerDefineCreate"
                         >
@@ -173,7 +208,7 @@
 
                     @endcan
 
-                    <a href="{{ route('ledgersByFolderId',$currentFolderId)}}"
+                    <a href="{{ route('ledgersByFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
                        class="btn btn-outline btn-info btn-sm ml-10"
                        target="ledgersByFolderId">
                         <i class="fa-solid fa-arrow-circle-right mr-1"></i>

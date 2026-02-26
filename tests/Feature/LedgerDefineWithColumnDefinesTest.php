@@ -2,21 +2,23 @@
 
 namespace Tests\Feature;
 
-use App\Models\LedgerDefine;
 use App\Models\ColumnDefine;
+use App\Models\LedgerDefine;
 use App\Models\User; // Required by LedgerDefineFactory
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LedgerDefineWithColumnDefinesTest extends TestCase
 {
     use RefreshDatabase; // Ensures a clean database for each test
 
+    protected bool $tenancy = true;
+
     /**
      * Test LedgerDefine creation, serialization, and deserialization of ColumnDefine objects.
      */
-
     #[Test]
     public function test_ledger_define_with_various_column_types_serialization_and_deserialization()
     {
@@ -42,7 +44,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
             // Find the original column define for comparison using the ID as the key.
             $originalColumn = $originalColumnDefines->get($columnDefine->id);
-            
+
             $this->assertNotNull($originalColumn, "Original column with ID {$columnDefine->id} not found for comparison.");
 
             $this->assertEquals($originalColumn->id, $columnDefine->id);
@@ -52,7 +54,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             $this->assertEquals($originalColumn->options, $columnDefine->options);
             $this->assertEquals($originalColumn->required, $columnDefine->required);
             $this->assertEquals($originalColumn->unique, $columnDefine->unique);
-            $this->assertEquals($originalColumn->sortBy, $columnDefine->sortBy);
+            $this->assertEquals($originalColumn->sort_index, $columnDefine->sort_index);
             $this->assertEquals($originalColumn->hint, $columnDefine->hint);
             $this->assertEquals($originalColumn->file, $columnDefine->file); // file property
             $this->assertEquals($originalColumn->useOptions, $columnDefine->useOptions);
@@ -71,13 +73,13 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
         // Define a set of ColumnDefine objects with diverse types
         $columnDefines = [
-            new ColumnDefine(0, 'Text Column', 'text', 1, [], false, false, false, 'Hint1', []),
-            new ColumnDefine(1, 'Checkbox Column', 'chk', 2, ['opt1', 'opt2'], true, false, true, 'Hint2', []),
-            new ColumnDefine(2, 'Files Column', 'files', 3, [], false, true, false, 'Hint3', []),
-            new ColumnDefine(3, 'Number Column', 'number', 4, [], true, true, true, 'Hint4', []),
-            new ColumnDefine(4, 'Select Column', 'select', 5, ['s1', 's2', 's3'], false, false, false, 'Hint5', []),
-            new ColumnDefine(5, 'Date Column', 'YMD', 6, [], true, false, true, 'Hint6', []),
-            new ColumnDefine(6, 'Textarea Column', 'textarea', 7, [], false, false, false, 'Hint7', []),
+            new ColumnDefine(0, 'Text Column', 'text', 1, [], false, false, null, 'Hint1', []),
+            new ColumnDefine(1, 'Checkbox Column', 'chk', 2, ['opt1', 'opt2'], true, false, 1, 'Hint2', []), // sortBy: true -> sort_index: 1
+            new ColumnDefine(2, 'Files Column', 'files', 3, [], false, true, null, 'Hint3', []),
+            new ColumnDefine(3, 'Number Column', 'number', 4, [], true, true, 2, 'Hint4', []), // sortBy: true -> sort_index: 2
+            new ColumnDefine(4, 'Select Column', 'select', 5, ['s1', 's2', 's3'], false, false, null, 'Hint5', []),
+            new ColumnDefine(5, 'Date Column', 'YMD', 6, [], true, false, 3, 'Hint6', []), // sortBy: true -> sort_index: 3
+            new ColumnDefine(6, 'Textarea Column', 'textarea', 7, [], false, false, null, 'Hint7', []),
         ];
 
         $ledgerDefine = LedgerDefine::factory()->create(['column_define' => $columnDefines]);
@@ -97,7 +99,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
             $this->assertInstanceOf(ColumnDefine::class, $column);
             $type = $column->getType();
 
-            if (!isset($testData[$type])) {
+            if (! isset($testData[$type])) {
                 $this->fail("Test data for type '{$type}' not defined.");
             }
 
@@ -106,56 +108,56 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
                 // but restoreFromString returns a timestamp which is then used as originalData here.
                 $dataToConvert = $originalData;
                 if ($type === 'YMD' && is_numeric($originalData)) {
-                     // Convert timestamp back to 'Y-m-d' string for convertColumnValue2Text
+                    // Convert timestamp back to 'Y-m-d' string for convertColumnValue2Text
                     $dataToConvert = date('Y-m-d', $originalData);
-                }  elseif ($type === 'YMD' && $originalData === 'invalid-date-string') {
+                } elseif ($type === 'YMD' && $originalData === 'invalid-date-string') {
                     // DateType::convertToText will try strtotime, then return original string if invalid
                     // DateType::restoreFromString will return null for 'invalid-date-string'
                     // So, the round trip for 'invalid-date-string' will be 'invalid-date-string' -> null
                     // We need to adjust the assertion for this specific case.
                 }
 
-
                 $textValue = $column->convertColumnValue2Text($dataToConvert);
                 $restoredData = $column->restoreColumnValueFromText($textValue);
 
                 if ($type === 'YMD' && $originalData === 'invalid-date-string') {
-                    $this->assertNull($restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
+                    $this->assertNull($restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
+                } elseif (in_array($type, ['chk', 'files']) && $originalData === null) {
+                    $this->assertEquals([], $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 } elseif ($type === 'number' && $originalData === 'not-a-number-string') {
-                     $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
-                }
-                else {
-                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: " . print_r($originalData, true));
+                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
+                } else {
+                    $this->assertEquals($originalData, $restoredData, "Round trip failed for type {$type} with data: ".print_r($originalData, true));
                 }
             }
         }
     }
 
     /**
-     * @test
      * Test the custom PhoneNumberType for extensibility.
      */
+    #[Test]
     public function test_custom_phone_number_type_extensibility()
     {
         // 1. Create a ColumnDefine instance with the new 'phone' type
-        $phoneColumn = new \App\Models\ColumnDefine(10, 'Contact Phone', 'phone', 1);
+        $phoneColumn = new \App\Models\ColumnDefine(10, 'Contact Phone', 'phone', 1, [], false, false, null);
 
         // 2. Verify its properties
         $this->assertEquals('phone', $phoneColumn->getType());
         $this->assertInstanceOf(\App\Models\ColumnTypes\PhoneNumberType::class, $phoneColumn->getInputType());
-        $this->assertEquals('Phone Number', $phoneColumn->getInputType()->getLabel());
-        $this->assertFalse($phoneColumn->useOptions);
-        $this->assertFalse($phoneColumn->getInputType()->hasOptions()); // Double check via inputType
+        $this->assertEquals(__('ledger.form.phone'), $phoneColumn->getInputType()->getLabel());
+        $this->assertTrue($phoneColumn->useOptions);
+        $this->assertTrue($phoneColumn->getInputType()->hasOptions()); // Double check via inputType
 
         // 3. Test its convertToText and restoreFromString methods
         $originalPhone = '(123) 456-7890 ext. 123';
         $converted = $phoneColumn->convertColumnValue2Text($originalPhone);
-        // PhoneNumberType's convertToText removes non-numeric characters
-        $this->assertEquals('1234567890123', $converted);
+        // PhoneNumberType's convertToText keeps the string by default (normalize=false)
+        $this->assertEquals('(123) 456-7890 ext. 123', $converted);
 
         $restored = $phoneColumn->restoreColumnValueFromText($converted);
-        // PhoneNumberType's restoreFromString currently returns the string as is
-        $this->assertEquals('1234567890123', $restored);
+        // PhoneNumberType's restoreFromString returns the string as is
+        $this->assertEquals('(123) 456-7890 ext. 123', $restored);
 
         // Test with a phone number that is already just digits
         $originalCleanPhone = '0987654321';
@@ -171,7 +173,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         }
 
         $columnDefines = [
-            new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1), // Existing type
+            new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1, [], false, false, null), // Existing type
             $phoneColumn, // Our new phone type
         ];
 
@@ -201,8 +203,8 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
         // Test the conversion methods on the retrieved column as well
         $retrievedConverted = $retrievedPhoneColumn->convertColumnValue2Text('(987) 654-3210');
-        $this->assertEquals('9876543210', $retrievedConverted);
+        $this->assertEquals('(987) 654-3210', $retrievedConverted);
         $retrievedRestored = $retrievedPhoneColumn->restoreColumnValueFromText($retrievedConverted);
-        $this->assertEquals('9876543210', $retrievedRestored);
+        $this->assertEquals('(987) 654-3210', $retrievedRestored);
     }
 }

@@ -1,0 +1,15 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# PaddleOCR with latest stable version 3.x (CPU)
+paddlepaddle>=3.0.0
+paddleocr>=3.3.0
+
+# Force numpy to compatible version
+numpy<2
+
+# Other dependencies
+PyMuPDF==1.19.0
+opencv-python-headless
+Pillow==10.1.0

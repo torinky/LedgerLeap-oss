@@ -24,6 +24,8 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
 
     protected $columnDefines;
 
+    protected $id;
+
     private $currentRows = 0;
 
     private $updateRows = 0;
@@ -41,7 +43,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
     /**
      * コンストラクタ
      *
-     * @param array $columnDefines Ledgerモデルのカラム定義情報
+     * @param  array  $columnDefines  Ledgerモデルのカラム定義情報
      */
     public function __construct(LedgerDefine $ledgerDefine, $mode = self::MODE_UPDATE)
     {
@@ -53,12 +55,12 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
         HeadingRowFormatter::default('none');
 
         if ($this->importMode == self::MODE_DESTOROY) {
-            // 外部キー制約を一時的に無効にする
-            Ledger::disableForeignKeyConstraints();
+            // 外部キー制約を一時的に無効にして既存レコードを全削除する
+            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
 
             Ledger::where('ledger_define_id', $ledgerDefine->id)->delete();
-            // 外部キー制約を復旧する
-            Ledger::enableForeignKeyConstraints();
+
+            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
         }
 
         Cache::forget("total_rows_{$this->id}");
@@ -81,7 +83,7 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
     {
         $this->currentRows++;
         Cache::forever("current_rows_{$this->id}", $this->currentRows);
-        //dd($this->currentRows);
+        // dd($this->currentRows);
         $id = '';
         if ($this->importMode == self::MODE_UPDATE) {
             $id = $row['[[[id]]]'] ?? '';
@@ -95,8 +97,8 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
             Cache::forever("update_rows_{$this->id}", $this->updateRows);
         }
 
-        return new Ledger([
-            'id' => $id,
+        $ledger = new Ledger([
+            'id' => $id ?: null,
             'updated_at' => $row['[[[updated_at]]]'] ?? '',
             'created_at' => $row['[[[created_at]]]'] ?? '',
             'modifier_id' => $row['[[[modifier_id]]]'] ?? Auth::user()->id,
@@ -105,12 +107,17 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
             'content' => $this->generateLedgerContent($row),
         ]);
 
+        // generateDefaultSortValue() のためにリレーションをセット
+        $ledger->setRelation('define', $this->ledgerDefine);
+        $ledger->default_sort_value = $ledger->generateDefaultSortValue();
+
+        return $ledger;
     }
 
     /**
      * Ledgerモデルのcontentを更新
      *
-     * @param array $contentData コンテンツ行のデータ
+     * @param  array  $contentData  コンテンツ行のデータ
      * @return array
      */
     protected function generateLedgerContent($contentData)

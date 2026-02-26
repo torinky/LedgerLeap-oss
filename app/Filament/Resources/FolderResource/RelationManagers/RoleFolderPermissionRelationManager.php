@@ -58,7 +58,7 @@ class RoleFolderPermissionRelationManager extends RelationManager
                                 return $folderPermission->isAccessType();
                             })
                             ->mapWithKeys(function ($folderPermission) {
-                                return [$folderPermission->value => __('permission.name.' . $folderPermission->value)];
+                                return [$folderPermission->value => __('permission.name.'.$folderPermission->value)];
                             })->toArray();
                     })
                     ->afterStateUpdated(function ($state, $column, $record) {
@@ -67,7 +67,7 @@ class RoleFolderPermissionRelationManager extends RelationManager
                         $folderId = $folder->id;
                         $roleFolderPermission = RoleFolderPermission::where('role_id', $roleId)->where('folder_id', $folderId)->first();
 
-                        if (!is_null($roleFolderPermission)) {
+                        if (! is_null($roleFolderPermission)) {
                             $roleFolderPermission->permission = $state;
                             $roleFolderPermission->save();
                         }
@@ -90,7 +90,7 @@ class RoleFolderPermissionRelationManager extends RelationManager
                                     return $folderPermission->isAccessType();
                                 })
                                 ->mapWithKeys(function ($folderPermission) {
-                                    return [$folderPermission->value => __('ledger.permissions.' . $folderPermission->value)];
+                                    return [$folderPermission->value => __('ledger.permissions.'.$folderPermission->value)];
                                 })->toArray();
                         })
                         ->required(),
@@ -121,8 +121,8 @@ class RoleFolderPermissionRelationManager extends RelationManager
                         return null;
 
                     })
-                ->icon('heroicon-o-link')
-                ->color('primary'),
+                    ->icon('heroicon-o-link')
+                    ->color('primary'),
             ])->actions([
                 DetachAction::make(),
             ])->bulkActions([

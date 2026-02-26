@@ -22,7 +22,7 @@
                 @endif
 
                     <div class="flex justify-center w-full">
-                    <form action="{{ route('folder.store')}}" method="post">
+                    <form action="{{ route('folder.store', ['tenant' => tenant()?->id]) }}" method="post">
                         @csrf
                         @method('POST')
 

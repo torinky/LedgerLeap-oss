@@ -29,7 +29,7 @@ class SynonymController extends Controller
             $synonyms = array_merge($synonyms, $this->getSynonyms($word));
 
         }
-        dd($synonyms);
+        //        dd($synonyms);
 
         //        return $synonyms;
         // ビューで表示
@@ -43,7 +43,7 @@ class SynonymController extends Controller
     {
         $synonyms = [];
         $words = $this->synonymService->getWords($word);
-        if (!empty($words)) {
+        if (! empty($words)) {
             foreach ($words as $w) {
                 $s = $this->synonymService->getSynonyms($w->wordid);
                 $synonyms = array_merge($synonyms, $s);

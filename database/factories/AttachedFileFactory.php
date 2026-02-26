@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\AttachedFileStatus;
 use App\Models\AttachedFile;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
@@ -22,13 +23,21 @@ class AttachedFileFactory extends Factory
      */
     public function definition(): array
     {
-        $ledgerDefine = LedgerDefine::factory()->create();
-        $ledger = Ledger::factory()->create(['ledger_define_id' => $ledgerDefine->id]);
+        // Use existing tenant if initialized, otherwise create new one
+        if (tenancy()->initialized) {
+            $tenant = tenancy()->tenant;
+        } else {
+            $tenant = \App\Models\Tenant::factory()->create();
+            tenancy()->initialize($tenant);
+        }
+
+        $ledgerDefine = LedgerDefine::factory()->for(Folder::factory()->create(['tenant_id' => $tenant->id]))->create(['tenant_id' => $tenant->id]);
+        $ledger = Ledger::factory()->for($ledgerDefine, 'define')->create(['tenant_id' => $tenant->id]);
         $user = User::factory()->create();
 
-        $filename = $this->faker->word() . '.pdf';
-        $hashedbasename = Str::random(40) . '.pdf';
-        $path = 'public/Ledger/Attachments/' . $ledgerDefine->id . '/' . $hashedbasename;
+        $filename = $this->faker->word().'.pdf';
+        $hashedbasename = Str::random(40).'.pdf';
+        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($ledgerDefine->id, $hashedbasename);
 
         return [
             'filename' => $filename,
@@ -46,15 +55,16 @@ class AttachedFileFactory extends Factory
             'modifier_id' => $user->id,
             'original_file_path' => null,
             'original_mime_type' => null,
+            'tenant_id' => $tenant->id, // AttachedFileにもtenant_idを追加
         ];
     }
 
     public function image(): Factory
     {
         return $this->state(function (array $attributes) {
-            $filename = $this->faker->word() . '.jpg';
-            $hashedbasename = Str::random(40) . '.jpg';
-            $path = 'public/Ledger/Attachments/' . $attributes['ledger_define_id'] . '/' . $hashedbasename;
+            $filename = $this->faker->word().'.jpg';
+            $hashedbasename = Str::random(40).'.jpg';
+            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'filename' => $filename,
@@ -68,13 +78,27 @@ class AttachedFileFactory extends Factory
     public function withOriginalFile(): Factory
     {
         return $this->state(function (array $attributes) {
-            $originalFilename = $this->faker->word() . '.png';
+            $originalFilename = $this->faker->word().'.png';
             $originalMimeType = 'image/png';
-            $originalPath = 'public/Ledger/Attachments/' . $attributes['ledger_define_id'] . '/Originals/' . Str::random(40) . '.png';
+            $hashedbasename = Str::random(40).'.png';
+            $originalPath = \App\Helpers\AttachedFilePathHelper::getOriginalAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'original_file_path' => $originalPath,
                 'original_mime_type' => $originalMimeType,
+            ];
+        });
+    }
+
+    public function forLedger(Ledger $ledger): Factory
+    {
+        return $this->state(function (array $attributes) use ($ledger) {
+            return [
+                'ledger_id' => $ledger->id,
+                'ledger_define_id' => $ledger->ledger_define_id,
+                'tenant_id' => $ledger->tenant_id,
+                'creator_id' => $ledger->creator_id,
+                'modifier_id' => $ledger->modifier_id,
             ];
         });
     }

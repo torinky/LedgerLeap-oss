@@ -19,14 +19,23 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public NotificationType $notificationType;
+
     public LedgerDiff $ledgerDiff;
+
     public ?User $causer;
+
     public ?string $comment;
+
     public string $subjectLine;
+
     public string $greeting;
+
     public string $line1;
+
     public ?string $line2 = null;
+
     public string $actionText;
+
     public string $actionUrl;
 
     public $subject;
@@ -39,7 +48,6 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
         $this->comment = $comment;
         $this->configureMailContent();
     }
-
 
     /**
      * 通知タイプに応じてメールの内容を設定する
@@ -62,28 +70,28 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
                 $this->greeting = __('ledger.mail.greeting.returned', ['userName' => $causerName]);
                 $this->line1 = __('ledger.mail.body.line1.returned', ['comment' => $this->comment ?: __('ledger.no_comment')]);
                 $this->actionText = __('ledger.mail.action.view_ledger');
-                $this->actionUrl = $ledger ? route('ledger.show', ['ledgerId' => $ledger->id]) : '#'; // $ledger null チェック
+                $this->actionUrl = $ledger ? route('ledger.show', ['tenant' => $ledger->tenant_id, 'ledgerId' => $ledger->id]) : '#'; // $ledger null チェック
                 break;
             case 'approved':
                 $this->subjectLine = __('ledger.mail.subject.approved', ['appName' => $appName, 'title' => $ledgerTitle]);
                 $this->greeting = __('ledger.mail.greeting.approved', ['userName' => $applicantName]); // 受信者は申請者
                 $this->line1 = __('ledger.mail.body.line1.approved', ['approverName' => $causerName]);
                 $this->actionText = __('ledger.mail.action.view_approved_ledger');
-                $this->actionUrl = $ledger ? route('ledger.show', ['ledgerId' => $ledger->id]) : '#';
+                $this->actionUrl = $ledger ? route('ledger.show', ['tenant' => $ledger->tenant_id, 'ledgerId' => $ledger->id]) : '#';
                 break;
             case 'inspection_requested':
                 $this->subjectLine = __('ledger.mail.subject.inspection_requested', ['appName' => $appName, 'title' => $ledgerTitle]);
                 $this->greeting = __('ledger.mail.greeting.inspection_requested', ['userName' => __('担当者')]); // 受信者名は不明なので固定テキスト
                 $this->line1 = __('ledger.mail.body.line1.inspection_requested', ['requesterName' => $causerName]);
                 $this->actionText = __('ledger.mail.action.view_inspection_tasks');
-                $this->actionUrl = $ledger ? route('notifications.index', ['tab' => 'tasks']) : '#';
+                $this->actionUrl = $ledger ? route('notifications.index', ['tenant' => $ledger->tenant_id, 'tab' => 'tasks']) : '#';
                 break;
             case 'approval_requested':
                 $this->subjectLine = __('ledger.mail.subject.approval_requested', ['appName' => $appName, 'title' => $ledgerTitle]);
                 $this->greeting = __('ledger.mail.greeting.approval_requested', ['userName' => __('担当者')]); // 受信者名は不明なので固定テキスト
                 $this->line1 = __('ledger.mail.body.line1.approval_requested', ['inspectorName' => $causerName]);
                 $this->actionText = __('ledger.mail.action.view_approval_tasks');
-                $this->actionUrl = $ledger ? route('notifications.index', ['tab' => 'tasks']) : '#';
+                $this->actionUrl = $ledger ? route('notifications.index', ['tenant' => $ledger->tenant_id, 'tab' => 'tasks']) : '#';
                 break;
             case 'inspection_completed':
                 $this->subjectLine = __('ledger.mail.subject.inspection_completed', ['appName' => $appName, 'title' => $ledgerTitle]);
@@ -91,12 +99,12 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
                 $this->line1 = __('ledger.mail.body.line1.inspection_completed', ['inspectorName' => $causerName]);
                 $this->line2 = __('ledger.mail.body.line2.inspection_completed');
                 $this->actionText = __('ledger.mail.action.view_ledger_status');
-                $this->actionUrl = $ledger ? route('ledger.show', ['ledgerId' => $ledger->id]) : '#';
+                $this->actionUrl = $ledger ? route('ledger.show', ['tenant' => $ledger->tenant_id, 'ledgerId' => $ledger->id]) : '#';
                 break;
             default: // GenericNotification から呼ばれた場合など
                 $this->subjectLine = __('ledger.mail.subject.generic', ['appName' => $appName, 'type' => $this->notificationType->name]);
                 $this->greeting = __('ledger.mail.greeting.generic');
-                $subjectTypeName = __('ledger.notification_types.' . $this->notificationType->name) ?? $this->notificationType->name;
+                $subjectTypeName = __('ledger.notification_types.'.$this->notificationType->name) ?? $this->notificationType->name;
                 $this->line1 = __('ledger.mail.body.line1.generic', [
                     'causerName' => $causerName,
                     'subjectType' => $subjectTypeName,
@@ -104,7 +112,7 @@ class WorkflowActionMail extends Mailable implements ShouldQueue
                 ]);
                 $this->actionText = __('ledger.mail.action.view_details');
                 // 適切なリンク先を決定 (例: subject が Ledger なら詳細へ)
-                $this->actionUrl = ($ledger) ? route('ledger.show', ['ledgerId' => $ledger->id]) : '#';
+                $this->actionUrl = ($ledger) ? route('ledger.show', ['tenant' => $ledger->tenant_id, 'ledgerId' => $ledger->id]) : '#';
 
         }
     }

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\CustomActivity;
+use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -15,7 +15,7 @@ class CustomActivityPolicy
 
     public function __construct(UserService $userService)
     {
-//        dd('ActivityLogPolicy::__construct called');
+        //        dd('ActivityLogPolicy::__construct called');
         $this->userService = $userService;
     }
 

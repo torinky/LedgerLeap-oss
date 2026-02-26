@@ -3,16 +3,19 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Http\Requests\LedgerDefine\IndexRequest;
+use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class RecordsTable extends Component
+class RecordsTable extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
+
     public $orderBy = 'title';
 
     public $orderAsc = true;
@@ -27,6 +30,8 @@ class RecordsTable extends Component
 
     public $currentFolderId;
 
+    //    public $tenantId; // ここを追加
+
     private $ledgerDefineRecords;
 
     /**
@@ -36,7 +41,6 @@ class RecordsTable extends Component
     {
         $this->currentFolderId = $request->folderId();
         $this->prepareFolderAsset();
-
     }
 
     /**
@@ -50,9 +54,19 @@ class RecordsTable extends Component
         return view('livewire.ledger-define.records-table', [
             'ledgerDefineRecords' => $this->ledgerDefineRecords,
             'currentFolder' => $currentFolder,
+            'componentId' => $this->getId(),
+            'currentFolderId' => $this->currentFolderId,
+            'selectedFolderIds' => $this->selectedFolderIds,
         ]);
     }
 
+    /**
+     * ツリーコンポーネントからのフォルダ選択を受け取る。
+     * livewire:folder.tree が parentComponentId なしで呼ばれる場合、
+     * Livewire.dispatch('currentFolderChangeRequested') で発火されるため
+     * #[On] でリッスンする。
+     */
+    #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
         $this->currentFolderId = $newFolderId;
@@ -76,7 +90,16 @@ class RecordsTable extends Component
     {
         $currentFolder = Folder::where('id', '=', $this->currentFolderId)->first();
 
-        if (!empty($currentFolder)) {
+        // currentFolder が見つからない場合は、空の状態で初期化して処理を終了する
+        if (is_null($currentFolder)) {
+            $this->breadcrumbs = [];
+            $this->folderRecords = collect();
+            $this->ledgerDefineRecords = collect();
+
+            return;
+        }
+
+        if (! empty($currentFolder)) {
             $this->breadcrumbs = $currentFolder->parent()->get();
         }
         $this->breadcrumbs[] = $currentFolder;
@@ -86,6 +109,7 @@ class RecordsTable extends Component
             ->orderBy($this->orderBy, $this->orderAsc ? 'asc' : 'desc')
             ->get();
 
+        $this->dispatch('navigation-end');
     }
 
     public function fixFolderTree()
@@ -93,6 +117,7 @@ class RecordsTable extends Component
         Folder::fixtree();
         $this->prepareFolderAsset();
     }
+
     #[On('folderSavedAndRefreshList')]
     public function refreshList(): void
     {

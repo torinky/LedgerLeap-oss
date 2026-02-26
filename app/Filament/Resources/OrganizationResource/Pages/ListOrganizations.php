@@ -10,7 +10,6 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class ListOrganizations extends ListRecords
 {
@@ -18,8 +17,6 @@ class ListOrganizations extends ListRecords
 
     /**
      * ページのタイトルを定義します。
-     *
-     * @return string
      */
     public function getTitle(): string
     {
@@ -42,13 +39,13 @@ class ListOrganizations extends ListRecords
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn() => Organization::withDepth()->orderBy('_lft'))
-            ->recordUrl(fn($record) => null)
+            ->query(fn () => Organization::withDepth()->orderBy('_lft'))
+            ->recordUrl(fn ($record) => null)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->getStateUsing(function (Organization $record) {
-                        return str_repeat('・', $record->depth) . ' ' . $record->name;
+                        return str_repeat('・', $record->depth).' '.$record->name;
                     }),
                 Tables\Columns\TextColumn::make('org_id')
                     ->label('Organization ID')
@@ -59,7 +56,7 @@ class ListOrganizations extends ListRecords
                 Tables\Columns\ViewColumn::make('combined_roles_permissions')
                     ->label(__('role.combined_roles_and_permissions'))
                     ->view('filament.tables.columns.user-combined-roles-permissions') // User用ビューを再利用
-//                    ->wrap()
+                //                    ->wrap()
                 ,
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label(__('ledger.organizations.parent')),
@@ -73,8 +70,13 @@ class ListOrganizations extends ListRecords
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ad_last_synced_at')
+                    ->label(__('ledger.ad_last_synced_at'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 //                Tables\Columns\TextColumn::make('roles.name')->badge(),
-/*                Tables\Columns\TextColumn::make('direct_roles')
+                /*                Tables\Columns\TextColumn::make('direct_roles')
                     ->label('Direct Roles')
                     ->badge()
                     ->getStateUsing(fn(Organization $record) => $record->getDirectRoles()->pluck('name'))
@@ -117,10 +119,9 @@ class ListOrganizations extends ListRecords
                 Tables\Actions\DeleteBulkAction::make(),
                 Tables\Actions\ForceDeleteBulkAction::make(),
                 Tables\Actions\RestoreBulkAction::make(),
-            ])
-//            ->reorderable('sort_order')
-//            ->defaultSort('sort_order')
-;
+            ]);
+        //            ->reorderable('sort_order')
+        //            ->defaultSort('sort_order')
 
     }
 }

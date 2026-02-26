@@ -14,8 +14,10 @@ class InputTypeFactory
         'chk' => CheckboxType::class,
         'select' => SelectType::class,
         'YMD' => DateType::class,
+        'YMDHM' => DateType::class,
         'files' => FilesType::class,
-        'phone' => PhoneNumberType::class, // New type
+        'phone' => PhoneNumberType::class,
+        'user_name' => UserNameType::class,
     ];
 
     /**
@@ -26,11 +28,16 @@ class InputTypeFactory
         $typeIdentifier = $columnDefineArray['type'] ?? 'text';
         $options = $columnDefineArray['options'] ?? [];
 
-        if (!isset(self::$typeMap[$typeIdentifier])) {
+        if (! isset(self::$typeMap[$typeIdentifier])) {
             throw new InvalidArgumentException("Invalid input type: {$typeIdentifier}");
         }
 
         $className = self::$typeMap[$typeIdentifier];
+
+        if ($className === DateType::class) {
+            return new $className($options, $typeIdentifier);
+        }
+
         return new $className($options);
     }
 
@@ -38,8 +45,13 @@ class InputTypeFactory
     {
         $types = [];
         foreach (self::$typeMap as $identifier => $className) {
-            $types[$identifier] = new $className();
+            if ($className === DateType::class) {
+                $types[$identifier] = new $className([], $identifier);
+            } else {
+                $types[$identifier] = new $className;
+            }
         }
+
         return $types;
     }
 

@@ -2,16 +2,16 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Livewire\BaseLivewireComponent;
 use App\Models\Ledger;
 use App\Services\WorkflowService;
 use App\Traits\WorkflowActions;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\Computed;
-use Livewire\Component;
 use Mary\Traits\Toast;
 
-class WorkflowStatusCard extends Component
+class WorkflowStatusCard extends BaseLivewireComponent
 {
     use AuthorizesRequests, Toast, WorkflowActions;
 
@@ -40,6 +40,7 @@ class WorkflowStatusCard extends Component
         if ($this->ledgerRecord->define->workflow_enabled && $this->ledgerRecord->define?->folder) {
             return $this->ledgerRecord->getRequiredRolesProgressDetails();
         }
+
         return [];
     }
 

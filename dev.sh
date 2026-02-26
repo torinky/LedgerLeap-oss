@@ -1,6 +1,14 @@
-# .env.developmentをコピー
-cp .env.development .env
+#!/bin/bash
+# Development environment launcher
+# This is a wrapper script for setup.sh
 
-# docker-composeを開発環境用の設定で実行
-#docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-docker compose -f docker-compose.yml up -d
+set -e
+
+# .env.development を .env にコピー（存在する場合）
+if [ -f .env.development ]; then
+    echo "INFO: Copying .env.development to .env"
+    cp .env.development .env
+fi
+
+# setup.sh を呼び出し
+./bin/setup.sh "$@"

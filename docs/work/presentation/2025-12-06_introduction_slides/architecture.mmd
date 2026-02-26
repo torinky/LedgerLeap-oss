@@ -1,0 +1,61 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0f172a', 'edgeLabelBackground':'#fff', 'tertiaryColor': '#fff'}}}%%
+graph TD
+    subgraph UserSide [ユーザー環境]
+        direction TB
+        Users("ユーザー<br>(PC / タブレット / スマホ)")
+    end
+
+    subgraph LedgerLeap [LedgerLeap プラットフォーム]
+        direction TB
+
+        subgraph Core [アプリケーション層]
+            Web("Webサーバー<br>(Nginx)")
+            App("アプリケーション実行環境<br>(Laravel / PHP)")
+            Async("非同期処理キュー<br>(Redis)")
+        end
+
+        subgraph Data [データ・検索基盤]
+            direction TB
+            MySQL[("MySQL<br>(データベース)")]
+            
+            subgraph MroongaLayer [Mroonga ストレージエンジン]
+                direction TB
+                Groonga[("<b>Groonga</b><br>(ベクトル・全文検索エンジン)")]
+            end
+        end
+
+        subgraph AI [AI・解析エンジン]
+            VLM("VLM<br>(画像認識・視覚野)")
+            Tika("Tika<br>(ファイル解析)")
+        end
+    end
+
+    subgraph External [外部エコシステム]
+        LLM("生成AI / LLM<br>(Dify 等)")
+    end
+
+    %% Flows
+    Users ==> Web
+    Web ==> App
+    App <==> MySQL
+    MySQL --- MroongaLayer
+    MroongaLayer --- Groonga
+    
+    App --> Async
+    Async --> VLM
+    Async --> Tika
+    
+    App <--> LLM
+
+    %% Styling
+    classDef user fill:#3b82f6,color:#fff,stroke:#fff,stroke-width:2px;
+    classDef app fill:#e0e7ff,color:#3730a3,stroke:#3730a3,stroke-width:2px;
+    classDef db fill:#0f172a,color:#fff,stroke:#fff,stroke-width:2px;
+    classDef engine fill:#06b6d4,color:#fff,stroke:#fff,stroke-width:2px,font-weight:bold;
+    classDef ai fill:#fee2e2,color:#991b1b,stroke:#991b1b,stroke-width:2px;
+    
+    class Users user;
+    class Web,App,Async app;
+    class MySQL db;
+    class Groonga engine;
+    class VLM,Tika,LLM ai;

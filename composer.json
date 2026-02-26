@@ -9,51 +9,65 @@
   "license": "MIT",
   "require": {
     "php": "^8.4",
+    "ext-bcmath": "*",
+    "ext-curl": "*",
+    "ext-dom": "*",
     "ext-fileinfo": "*",
+    "ext-gd": "*",
+    "ext-intl": "*",
     "ext-mbstring": "*",
     "ext-pdo": "*",
     "15web/filament-tree": "*",
-    "althinect/filament-spatie-roles-permissions": "^2.2",
-    "codewithdennis/filament-select-tree": "^3.1",
-    "filament/filament": "^3.2",
-    "guzzlehttp/guzzle": "^7.2",
-    "intervention/image": "^2.7",
-    "kalnoy/nestedset": "^6.0",
-    "laravel/framework": "^12.0",
+    "althinect/filament-spatie-roles-permissions": "^2",
+    "codewithdennis/filament-select-tree": "^3",
+    "darkaonline/l5-swagger": "^9.0",
+    "directorytree/ldaprecord-laravel": "^3.4",
+    "filament/filament": "^3",
+    "guzzlehttp/guzzle": "^7",
+    "intervention/image": "^2",
+    "kalnoy/nestedset": "^6",
+    "laravel/framework": "^12",
+    "laravel/mcp": "^0.5",
     "laravel/sanctum": "^4",
-    "laravel/tinker": "^2.8",
-    "livewire/livewire": "^3.6",
-    "livewire/volt": "^1.7",
-    "logue/igo-php": "^0.2.1",
-    "maatwebsite/excel": "^3.1.48",
+    "laravel/tinker": "^2",
+    "livewire/livewire": "^3",
+    "livewire/volt": "^1",
+    "logue/igo-php": "^0.2",
+    "maatwebsite/excel": "^3",
     "predis/predis": "^3.0",
-    "robsontenorio/mary": "^2.0",
+    "robsontenorio/mary": "^2",
     "sebastian/diff": "^6.0",
-    "spatie/laravel-activitylog": "^4.9",
+    "simplesoftwareio/simple-qrcode": "^4.2",
+    "spatie/laravel-activitylog": "^4",
     "spatie/laravel-markdown": "^2.7",
-    "spatie/laravel-permission": "^6.9",
-    "vaites/php-apache-tika": "^1.3",
-    "ext-dom": "*"
+    "spatie/laravel-permission": "^6",
+    "spatie/laravel-query-builder": "^6",
+    "stancl/tenancy": "^3",
+    "vaites/php-apache-tika": "^1"
   },
   "require-dev": {
     "ext-json": "*",
-    "barryvdh/laravel-debugbar": "^3.8",
+    "barryvdh/laravel-debugbar": "^3",
     "barryvdh/laravel-ide-helper": "^3",
-    "bottelet/translation-checker": "^1.1",
-    "fakerphp/faker": "^1.9.1",
-    "laravel-lang/attributes": "^2.7",
+    "bottelet/translation-checker": "^1",
+    "cweagans/composer-patches": "^2.0",
+    "fakerphp/faker": "^1",
+    "infection/infection": "^0.32.4",
+    "laravel-lang/attributes": "^2",
     "laravel-lang/common": "*",
+    "laravel/boost": "^1.8",
     "laravel/breeze": "^2",
-    "laravel/pint": "^1.0",
+    "laravel/pint": "^1",
     "laravel/sail": "*",
-    "mockery/mockery": "^1.4.4",
-    "nunomaduro/collision": "^8.0",
-    "squizlabs/php_codesniffer": "3.*",
-    "pestphp/pest": "^3.0",
+    "mockery/mockery": "^1",
+    "nunomaduro/collision": "^8",
+    "pestphp/pest": "^3",
     "pestphp/pest-plugin-laravel": "^3.2",
     "phpunit/phpunit": "^11",
     "roave/security-advisories": "dev-latest",
-    "spatie/laravel-ignition": "^2.0"
+    "spatie/laravel-ignition": "^2",
+    "squizlabs/php_codesniffer": "3.*",
+    "systemsdk/phpcpd": "^8.0"
   },
   "autoload": {
     "psr-4": {
@@ -64,7 +78,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "tests\\": "tests/"
+      "Tests\\": "tests/"
     }
   },
   "scripts": {
@@ -84,11 +98,22 @@
     ],
     "post-create-project-cmd": [
       "@php artisan key:generate --ansi"
-    ]
+    ],
+    "test:coverage": "vendor/bin/pest --coverage-html coverage",
+    "test:duplication": "vendor/bin/phpcpd app",
+    "test:mutation": "vendor/bin/infection"
   },
   "extra": {
     "laravel": {
       "dont-discover": []
+    },
+    "patches": {
+      "laravel/boost": {
+        "Fix MCP tools schema for Laravel 12": "patches/fix_mcp_tools_schema.patch"
+      },
+      "stancl/tenancy": {
+        "PHP 8.4 compatibility - Fix deprecated trait static property access": "patches/fix_tenancy_php84_trait_property.patch"
+      }
     }
   },
   "config": {
@@ -96,9 +121,12 @@
     "preferred-install": "dist",
     "sort-packages": true,
     "allow-plugins": {
+      "cweagans/composer-patches": true,
+      "infection/extension-installer": true,
       "pestphp/pest-plugin": true,
       "php-http/discovery": true
-    }
+    },
+    "process-timeout": 8000
   },
   "minimum-stability": "stable",
   "prefer-stable": true

@@ -3,22 +3,18 @@
 namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Process\Exceptions\ProcessFailedException;
-
-// ★ use を変更
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Process;
-
-// ★ use を変更
-//use Symfony\Component\Process\Process;
-use App\Helpers\AttachedFilePathHelper;
+// use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Storage;
 
 class OcrAndOptimizeFile implements ShouldQueue
 {
@@ -39,6 +35,8 @@ class OcrAndOptimizeFile implements ShouldQueue
      */
     public function handle(): void
     {
+        tenancy()->initialize($this->attachedFile->tenant_id);
+
         // Log::info('OcrAndOptimizeFile job started for file: ' . $this->attachedFile->id);
 
         // 1. status を OCR_PROCESSING に更新
@@ -48,9 +46,10 @@ class OcrAndOptimizeFile implements ShouldQueue
         $inputFilePathForOcr = $this->attachedFile->original_file_path ?: $this->attachedFile->path;
 
         // Log::info('Input file path for OCR: ' . $inputFilePathForOcr);
-        if (!Storage::disk('public')->exists($inputFilePathForOcr)) {
-            Log::error('Original file does not exist at path for OCR: ' . $inputFilePathForOcr);
+        if (! Storage::disk('public')->exists($inputFilePathForOcr)) {
+            Log::error('Original file does not exist at path for OCR: '.$inputFilePathForOcr);
             $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
+
             return;
         }
 
@@ -81,8 +80,9 @@ class OcrAndOptimizeFile implements ShouldQueue
                 // Log::info('AttachedFile original_file_path after update: ' . $this->attachedFile->original_file_path);
                 $originalFilePath = Storage::disk('public')->path($newOriginalPath); // Update physical path
             } catch (\Exception $e) {
-                Log::error('Failed to move original file: ' . $e->getMessage());
+                Log::error('Failed to move original file: '.$e->getMessage());
                 $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
+
                 return;
             }
         } else {
@@ -96,7 +96,7 @@ class OcrAndOptimizeFile implements ShouldQueue
         // Log::info('Dirname of attachedFile path: ' . dirname($this->attachedFile->path));
 
         // Determine the new path for the OCR\'d PDF within the storage system
-        $outputFileName = pathinfo($this->attachedFile->hashedbasename, PATHINFO_FILENAME) . '.pdf';
+        $outputFileName = pathinfo($this->attachedFile->hashedbasename, PATHINFO_FILENAME).'.pdf';
         $outputStoragePath = AttachedFilePathHelper::getAttachmentPath($this->attachedFile->ledger_define_id, $outputFileName);
 
         // Log::info('Calculated outputStoragePath: ' . $outputStoragePath);
@@ -108,10 +108,10 @@ class OcrAndOptimizeFile implements ShouldQueue
         $outputPhysicalPath = Storage::disk('public')->path($outputStoragePath);
 
         // コンテナ内のパスに変換
-//        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $inputFilePathForOcr);
-//        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $outputStoragePath);
-        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace(Storage::disk('public')->path(''), '', $originalFilePath);
-        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace(Storage::disk('public')->path(''), '', $outputPhysicalPath);
+        //        $containerOriginalFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $inputFilePathForOcr);
+        //        $containerOutputFilePath = '/var/www/html/storage/app/public/' . str_replace('public/', '', $outputStoragePath);
+        $containerOriginalFilePath = '/var/www/html/storage/app/public/'.str_replace(Storage::disk('public')->path(''), '', $originalFilePath);
+        $containerOutputFilePath = '/var/www/html/storage/app/public/'.str_replace(Storage::disk('public')->path(''), '', $outputPhysicalPath);
 
         // ocrmypdf コマンドの構築
         $command = [
@@ -123,10 +123,10 @@ class OcrAndOptimizeFile implements ShouldQueue
             'jpn',
             '--image-dpi',
             '300',
+            '--skip-text',
             $containerOriginalFilePath,
             $containerOutputFilePath,
         ];
-
 
         try {
             // ★ Process ファサードを使ってコマンドを実行
@@ -136,22 +136,6 @@ class OcrAndOptimizeFile implements ShouldQueue
             $result->throw();
 
             // 4. レコード情報の更新
-//            $this->attachedFile->path = $outputStoragePath;
-//            $this->attachedFile->filename = $outputFileName; // ファイル名を.pdfに更新
-//            $this->attachedFile->mime = 'application/pdf'; // mime_typeではなくmimeを使用
-//            $this->attachedFile->optimized = true; // optimized を true に設定
-
-            // Log::info('Checking existence before Storage::size(): ' . Storage::disk('public')->exists($this->attachedFile->path));
-            // try {
-            //     $fileContent = Storage::disk('public')->get($this->attachedFile->path);
-            //     Log::info('File content length: ' . strlen($fileContent));
-            // } catch (\Exception $e) {
-            //     Log::error('Failed to get file content: ' . $e->getMessage());
-            // }
-
-//            $this->attachedFile->size = Storage::disk('public')->size($this->attachedFile->path);
-//            $this->attachedFile->save();
-            // Log::info('OCR and optimization successful for file: ' . $this->attachedFile->id);
             // --- 成功時の処理 ---
             $this->attachedFile->update([
                 'path' => $outputStoragePath,
@@ -160,22 +144,43 @@ class OcrAndOptimizeFile implements ShouldQueue
                 'optimized' => true,
                 'size' => Storage::disk('public')->size($outputStoragePath),
                 'status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value, // Tika再処理のためのステータス
+                'ocr_processed_at' => now(), // ★ Phase5: OCR成功時のタイムスタンプ
             ]);
 
+            Log::info('[OCR] Processing successful', [
+                'file_id' => $this->attachedFile->id,
+                'output_file' => $outputFileName,
+            ]);
+
+            // ★ Phase2.6: OCR完了後、即座にベクトル化（Tikaより高品質で上書き）
+            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+                $this->attachedFile->id,
+                'ocr'
+            );
+
             // 5. Tikaによる再処理
-//            $this->attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
             ProcessAttachedFile::dispatch($this->attachedFile);
-            // Log::info('Dispatched ProcessAttachedFile for re-processing: ' . $this->attachedFile->id);
+            Log::info('[OCR] Dispatched Tika re-processing for file: '.$this->attachedFile->id);
 
         } catch (ProcessFailedException $e) {
             // --- 失敗時の処理 ---
-            Log::error('OCR and optimization failed for file ' . $this->attachedFile->id, [
+            Log::error('[OCR] Processing failed', [
+                'file_id' => $this->attachedFile->id,
                 'error' => $e->getMessage(),
                 'output' => $e->result->output(),
                 'errorOutput' => $e->result->errorOutput(),
             ]);
-            // 失敗時: status を OCR_FAILED に更新
-            $this->attachedFile->update(['status' => AttachedFileStatus::OCR_FAILED->value]);
+
+            // ★ Phase5: OCR失敗時のタイムスタンプを設定
+            $this->attachedFile->update([
+                'status' => AttachedFileStatus::OCR_FAILED->value,
+                'ocr_failed_at' => now(), // ★ Phase5: OCR失敗時のタイムスタンプ
+            ]);
+
+            // ★ Phase5: VLMフォールバック削除（並列処理なので不要）
+            // OCR失敗はOCR失敗として記録し、最終化処理がVLM結果を選択する
         }
     }
+
+    // ★ Phase5: shouldProcessWithVlmメソッドは不要（並列処理で削除）
 }

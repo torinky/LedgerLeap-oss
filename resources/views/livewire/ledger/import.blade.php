@@ -1,12 +1,13 @@
 @php use App\Imports\LedgerImport; @endphp
 <div class="grid justify-items-center mt-10">
 
-    <div class="card w-1/2 bg-base-100 shadow-xl">
+    <div class="card w-1/2 bg-base-100 shadow-xl relative overflow-hidden">
+        <x-element.loading-overlay tier="2" target="importExcelCSV" message="{{ __('ledger.importing') }}" />
         <div class="card-body">
             <h2 class="card-title">{{__('CSV File Upload')}}</h2>
             <p>
                 @if(!$importing && !$importFinished)
-                    {{__('import to ')}}「{{$ledgerDefine->title}}」<br/>
+                    {{__('import to ')}}「{{$ledgerDefine?->title}}」<br/>
             {{__('Select CSV File.')}}
             @endif
 
