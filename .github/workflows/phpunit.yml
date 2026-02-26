@@ -88,6 +88,13 @@ jobs:
       - name: Laravel Setting
         run: |
           cp .env.example .env
+          # CI環境にはRedisがないため、キャッシュ/セッション/キューをメモリ/同期に上書き
+          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
+          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
+          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+          # DB接続もCI用に統一
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
           php artisan optimize:clear
           php artisan config:clear
           php artisan view:clear
