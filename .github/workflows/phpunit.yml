@@ -10,9 +10,11 @@ on:
 env:
   DB_USERNAME: sail
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-  MAIL_FROM_ADDRESS: info@example.com
+  DB_HOST: 127.0.0.1
   DB_PORT: 3306
-  DB_DATABASE: ledgerleap
+  # テスト用DBはledgerleap_testを使用（Pest.phpのセーフガード回避のため）
+  DB_DATABASE: ledgerleap_test
+  MAIL_FROM_ADDRESS: info@example.com
 
 jobs:
   phpunit:
@@ -24,16 +26,17 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_DATABASE: ledgerleap
+          # テスト用DB名で初期化（ledgerleapはPest.phpにブロックされるため使用不可）
+          MYSQL_DATABASE: ledgerleap_test
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
         options: >-
           --health-cmd "mysqladmin ping"
-          --health-interval 10s
+          --health-interval 15s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -60,12 +63,13 @@ jobs:
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          # Vite 7.x は Node.js 20+ を要求
+          node-version: '20'
 
       - name: Cache Node.js modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: node-cache
         with:
           path: ~/.npm
@@ -74,12 +78,8 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install Frontend Dependencies
-        if: steps.node-cache.outputs.cache-hit != 'true'
         working-directory: ./
-        run: |
-          npm install
-          npm ci
-          npm install vite --save-dev
+        run: npm ci
 
       - name: Build Frontend Assets
         working-directory: ./
@@ -92,31 +92,24 @@ jobs:
           php artisan config:clear
           php artisan view:clear
           php artisan route:clear
-          php artisan key:generate --env=testing 
           git config --local core.fileMode false
           chmod -R 777 storage bootstrap/cache
 
-      - name: Set hostname
-        run: sudo echo "127.0.0.1 mysql" | sudo tee -a /etc/hosts
+      - name: Generate key
+        run: php artisan key:generate --env=testing
 
       - name: Grant database privileges
         env:
           MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
         run: |
-          mysql -h mysql -u root --force <<EOF
-            GRANT ALL PRIVILEGES ON ledgerleap.* TO '${{ env.DB_USERNAME }}'@'%';
+          mysql -h 127.0.0.1 -u root --force <<EOF
+            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
+            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO '${{ env.DB_USERNAME }}'@'%';
             FLUSH PRIVILEGES;
-            CREATE DATABASE IF NOT EXISTS ledgerleap;
           EOF
-
-      - name: Generate key
-        run: php artisan key:generate --env testing
 
       - name: Migrate database
         run: php artisan migrate --force
-
-      - name: Seed database
-        run: php artisan db:seed --force
 
       - name: Run tests
         run: ./vendor/bin/pest
