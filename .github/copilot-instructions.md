@@ -13,7 +13,7 @@
 - **Livewire Parent Access:** ソートやフィルタなどの高頻度な操作には `Livewire.dispatch()` を避け、`$parent.method()` または `$wire.$parent.method()` を使用してください。これにより `wire:loading` の追跡が安定し、レスポンスが向上します。
 - **Model Event Reliability (Sail):** Sail環境のテストでは `touch()` が `updated` イベントを確実に発火させない場合があります。イベント駆動のテストでは `$model->update(['column' => 'value'])` を使用してください。
 - **Permission Cache Invalidation:** パーミッションに影響するモデル (`Role`, `Organization`, `User`) の変更時は、必ず `UserService` を通じて関連キャッシュをクリアするか、広範囲な変更では `flushAllUserPermissionsCache()` を実行してください。
-- **Database Migrations:** 全文検索が絡むテストでは `RefreshDatabase` ではなく `DatabaseMigrations` トレイトを使用してください。
+- **Database Migrations:** 全文検索が絡むテストでは `RefreshDatabase` ではなく `DatabaseMigrationsOnce` トレイトを使用してください（`DatabaseMigrations` は各テストで `migrate:fresh` が走るため300秒超かかります）。詳細は `/.github/skills/database-migrations-test-optimization/SKILL.md` を参照。
 
 ## 2. MCP & Data Access (行動原理)
 
@@ -49,6 +49,20 @@
 **特定の操作パターンについては、以下のスキル定義を必ず参照・遵守すること。**
 
 - **/.github/skills/github-issue-workflow/SKILL.md:** GitHubイシューの調査・更新・カバレッジ評価・進捗反映の標準フロー。イシュー操作を行う際は**必ずこのファイルを先に読むこと**。
+
+- **/.github/skills/test-external-dependency-isolation/SKILL.md:** 外部サービス（Embedding/VLM/LDAP等）に依存するコードのテスト設計方針。以下のいずれかに該当する場合は**必ずこのファイルを先に読むこと**:
+    - テストを新規作成・変更するとき（特に `Ledger` / `AttachedFile` 等を扱う場合）
+    - `Ledger::factory()->create()` を含むテストを書くとき
+    - CI でテストが「60秒タイムアウト」または「0秒即時失敗」するとき
+    - Observer / Job / Service が外部コンテナを呼び出すコードに触れるとき
+
+- **/.github/skills/database-migrations-test-optimization/SKILL.md:** `DatabaseMigrations` / `DatabaseMigrationsOnce` の使い分けと高速化パターン。以下のいずれかに該当する場合は**必ずこのファイルを先に読むこと**:
+    - Mroonga 全文検索（`Ledger::search()` / `MATCH() AGAINST()`）を使うテストを書くとき
+    - 複数テナントを跨ぐ境界検証テストを書くとき
+    - CI でテストが300秒超かかる、またはタイムアウトが発生するとき
+    - `DatabaseMigrations` トレイトを使うテストを新規作成・変更するとき
+
+- **/.github/skills/ci-failure-investigation/SKILL.md:** GitHub Actions CI の失敗ログ調査ワークフロー。CI が失敗したとき、またはテストのタイムアウト・即時失敗を調査するときは**必ずこのファイルを先に読むこと**。
 
 ## 5. Development Workflow
 

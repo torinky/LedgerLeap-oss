@@ -1,0 +1,193 @@
+---
+name: test-external-dependency-isolation
+description: >
+  外部サービス（Embedding/VLM/LDAP等）に依存するコードのテスト設計方針。
+  テストを新規作成・変更する際は必ずこのスキルを参照し、外部依存の分離が適切かを確認すること。
+---
+
+# 外部サービス依存テストの分離パターン
+
+## このスキルを使うタイミング
+
+以下のいずれかに該当するとき、**このスキルを参照すること**:
+
+- テストを新規作成・変更するとき（特に `Ledger`, `AttachedFile` 等を扱う場合）
+- `Ledger::factory()->create()` や `$this->postJson(route('api.v1.ledgers.store'), ...)` を含むテストを書くとき
+- CI でテストが「60秒タイムアウト」または「即時失敗（0秒）」するとき
+- Observer / Job / Service が外部コンテナ（Embedding/VLM/LDAP/OCR）を呼び出すコードに触れるとき
+
+---
+
+## 1. なぜ分離が必要か
+
+### 問題の構造
+
+```
+Ledger::factory()->create()
+  → LedgerObserver::created()
+    → config('rag.enabled') が true
+      → dispatchRagJob()
+        → QUEUE_CONNECTION=sync の場合
+          → EmbeddingService::embed() を直接同期呼び出し
+            → http://embedding:8000 への接続試行
+              → CI環境にコンテナなし → 60秒タイムアウト
+```
+
+### 本番動作との切り離し
+
+テストの目的は「台帳が作成できること」や「全文検索が動作すること」であり、
+**RAG/Embedding/VLM の実行は責務外**である。
+外部サービスをテスト内で実行させることは：
+- CI の不安定化を招く（コンテナがあるかどうかで結果が変わる）
+- テスト時間を増大させる（タイムアウト60秒）
+- テストの責務を超えた結合度を生む
+
+---
+
+## 2. 外部サービスの種類と対応方針
+
+| サービス | 関連クラス | CI で使用可能か | 対応方針 |
+|---|---|---|---|
+| Embedding | `EmbeddingService`, `ProcessLedgerForRagJob` | ❌ | `Queue::fake()` |
+| VLM | `VlmClientService`, `ProcessVlmJob` | ❌ | `Queue::fake()` または `#[Group('external')]` |
+| LDAP | `LdapService` | ❌ | `#[Group('external')]` |
+| OCR (ocrmypdf) | `OcrService` | ❌ | `#[Group('external')]` |
+| MySQL/Mroonga | DB接続 | ✅ | そのまま（CIにMroongaコンテナあり） |
+
+---
+
+## 3. Queue::fake() パターン（最重要）
+
+### いつ使うか
+
+`Ledger::factory()->create()` を呼ぶテストすべてに必須。
+`LedgerObserver` が `ProcessLedgerForRagJob` を dispatch するため。
+
+### 書き方
+
+```php
+use Illuminate\Support\Facades\Queue;
+use App\Jobs\ProcessLedgerForRagJob;
+
+protected function setUp(): void
+{
+    parent::setUp();
+
+    // Ledger::factory()->create() が LedgerObserver 経由で ProcessLedgerForRagJob を
+    // dispatch する。Queue::fake() でジョブを実際には実行させず、
+    // Embeddingコンテナへの接続を防ぐ（このテストの責務外）。
+    Queue::fake();
+
+    // ...通常のsetUp...
+}
+```
+
+### RAGジョブのdispatch検証（オプション）
+
+台帳作成APIのテストなど、RAGジョブが dispatch されることを確認したい場合：
+
+```php
+// RAGが有効な場合、台帳作成時にRAGジョブがdispatchされることを確認
+if (config('rag.enabled')) {
+    Queue::assertPushed(ProcessLedgerForRagJob::class);
+}
+```
+
+### ローカル動作との関係
+
+- **`Queue::fake()` あり**: ジョブはキューに積まれるだけで実行されない（ローカル・CI 共通）
+- **`Queue::fake()` なし + `QUEUE_CONNECTION=sync`**: ジョブが同期実行される
+  - ローカル（Embeddingコンテナあり）: 動作する
+  - CI（Embeddingコンテナなし）: 60秒タイムアウト ❌
+
+`Queue::fake()` はテストの「実行環境への依存」を切り離すための設計であり、
+ローカルでの手動確認を妨げるものではない。
+
+---
+
+## 4. Observer の dispatch 設計方針
+
+### 問題のあるパターン（禁止）
+
+```php
+// ❌ QUEUE_CONNECTION=sync 時に直接同期実行している
+if (config('queue.default') === 'sync') {
+    (new ProcessLedgerForRagJob($ledger->id))->handle(
+        app(EmbeddingService::class),
+        app(RuriChunkFormatter::class)
+    );
+}
+```
+
+この設計では `Queue::fake()` が効かず、Embeddingサービスが直接呼ばれる。
+
+### 正しいパターン
+
+```php
+// ✅ 常に dispatch() を使う
+// Queue::fake() → キューに積まれるだけ
+// QUEUE_CONNECTION=sync → Laravel が同期実行（コンテナがあれば動作）
+// 非同期キュー → QueueTenancyBootstrapper がテナントを処理
+ProcessLedgerForRagJob::dispatch($ledger->id);
+```
+
+**Observer や Service が外部サービスを直接呼び出すコードを書く際は、
+必ず `dispatch()` を経由させること。**
+
+---
+
+## 5. グループ分類（#[Group]属性）
+
+テストを新規作成する際は、外部依存の種類に応じてグループを付与すること。
+
+| グループ | 付与条件 | CI での扱い |
+|---|---|---|
+| `external` | 実コンテナ（VLM/LDAP/OCR）への接続が必須 | 除外（unit/feature ジョブ） |
+| `database-migrations` | `DatabaseMigrations` トレイトを使用（migrate:rollback が他テストを破壊） | 専用ジョブで実行 |
+| （なし）| `Queue::fake()` 等で外部依存を分離済み | 通常実行 |
+
+### グループ付与の判断フロー
+
+```
+テストを書いた
+  ↓
+Ledger::factory()->create() を呼ぶ？
+  → YES → Queue::fake() を setUp に追加（グループ不要）
+  → NO  → 続く
+  ↓
+実コンテナ（VLM/LDAP/OCR）への接続が必須？
+  → YES → #[Group('external')] を付与
+  → NO  → 続く
+  ↓
+DatabaseMigrations トレイトを使う？
+  → YES → #[Group('database-migrations')] を付与 + DB Migrations Jobs で実行
+  → NO  → グループ不要（通常テスト）
+```
+
+---
+
+## 6. CI ワークフロー構成
+
+`.github/workflows/phpunit.yml` の現在の構成：
+
+| ジョブ名 | 実行コマンド | 対象 |
+|---|---|---|
+| `unit` | `--testsuite=Unit --exclude-group=external,database-migrations` | 外部依存なしのユニットテスト |
+| `feature` | `--testsuite=Feature --exclude-group=external,database-migrations` | 外部依存なしの機能テスト |
+| `db-migrations` | `--group=database-migrations` | `DatabaseMigrations` 使用テスト |
+
+`external` グループは CI で実行しない（ローカルのみ）。
+
+---
+
+## 7. チェックリスト（テスト変更・新規作成時）
+
+テストを変更・新規作成した後は以下を確認すること：
+
+- [ ] `Ledger::factory()->create()` を呼ぶ場合、`setUp()` に `Queue::fake()` を追加したか
+- [ ] `AttachedFile::factory()->create()` など VLM が走るファクトリを使う場合も同様に `Queue::fake()` を追加したか
+- [ ] 実コンテナ（VLM/LDAP/OCR）への接続が必須なテストに `#[Group('external')]` を付与したか
+- [ ] `DatabaseMigrations` トレイトを使う場合に `#[Group('database-migrations')]` を付与したか
+- [ ] Observer や Service が外部サービスを `dispatch()` 経由で呼んでいるか（直接同期呼び出しになっていないか）
+- [ ] ローカルで `./vendor/bin/sail pest --filter="テストクラス名"` を実行して通過することを確認したか
+
