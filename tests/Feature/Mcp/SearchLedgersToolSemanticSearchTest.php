@@ -225,6 +225,8 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 
         // 3. ベクトル化 Job実行 (同期)
         // ここでMockされたEmbeddingServiceが呼ばれ、ダミーベクトルが保存される
+        // phpunit.xml では RAG_ENABLED=false のため、Job実行前に明示的に有効化する
+        config(['rag.enabled' => true]);
         ProcessLedgerForRagJob::dispatchSync($ledger->id);
 
         // テナントを再初期化（念のため）

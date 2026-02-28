@@ -23,6 +23,9 @@ class LedgerObserverTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
+        // phpunit.xml では RAG_ENABLED=false のため、Observer の Job dispatch テストには明示的に有効化が必要
+        config(['rag.enabled' => true]);
+
         $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
         tenancy()->initialize($this->tenant);
     }

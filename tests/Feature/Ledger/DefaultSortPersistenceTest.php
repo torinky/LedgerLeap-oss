@@ -73,7 +73,7 @@ class DefaultSortPersistenceTest extends TestCase
     }
 
     /**
-     * カラン定義の sort_index 変更時にジョブがディスパッチされ、再生成されることを確認
+     * カラム定義の sort_index 変更時にジョブが再生成を実行することを確認
      */
     public function test_regeneration_triggered_on_define_change(): void
     {
@@ -82,19 +82,22 @@ class DefaultSortPersistenceTest extends TestCase
             'content' => [0 => 'EXP-0001', 1 => '2025-02-01', 2 => '1000'],
         ]);
 
-        // sort_index を変更（日付→IDの順に入れ替え）
+        // sort_index を変更（日付→IDの順に入れ替え: 日付が sort_index=1, ID が sort_index=2）
         $newColumns = [
             new ColumnDefine(0, 'ID', 'auto_number', 1, [], false, false, 2, '', [], 1, null),
             new ColumnDefine(1, '日付', 'YMD', 2, [], false, false, 1, '', [], 1, null),
             new ColumnDefine(2, '金額', 'number', 3, [], false, false, null, '', [], 1, null),
         ];
 
-        // Observer が RegenerateLedgerSortValuesJob をディスパッチするはず
-        // テスト環境では同期実行されるか、明示的にジョブを実行する必要がある
         $this->ledgerDefine->column_define = $newColumns;
         $this->ledgerDefine->save();
 
-        // 期待される値: 2025-02-01|EXP-0001
+        // LedgerDefineObserver は delay(5秒) 付きで RegenerateLedgerSortValuesJob を dispatch する。
+        // Queue::fake() 環境では BusFake::dispatchSync() もジョブを実際には実行しない。
+        // そのためジョブを直接インスタンス化して handle() を呼び出す。
+        (new \App\Jobs\Ledger\RegenerateLedgerSortValuesJob($this->ledgerDefine->id))->handle();
+
+        // 期待される値: 日付(sort_index=1)→ID(sort_index=2) の順で 2025-02-01|EXP-0001
         $ledger->refresh();
         $this->assertEquals('2025-02-01|EXP-0001', $ledger->default_sort_value);
     }

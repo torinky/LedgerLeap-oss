@@ -226,6 +226,137 @@ class MyJobDispatchTest extends TestCase
 
 ---
 
+## 7a. BusFake が dispatchSync を横取りする問題
+
+### 問題
+
+`Queue::fake()` を呼ぶと内部で `BusFake` が有効になる。
+`BusFake::dispatchSync()` は `shouldFakeJob($command)` が `true` の場合、
+**ジョブを実際には実行せず** `commandsSync` コレクションに記録するだけで返る。
+
+```php
+// vendor/laravel/framework/.../BusFake.php
+public function dispatchSync($command, $handler = null)
+{
+    if ($this->shouldFakeJob($command)) {
+        $this->commandsSync[get_class($command)][] = ...; // 実行されない！
+    } else {
+        return $this->dispatcher->dispatchSync($command, $handler);
+    }
+}
+```
+
+### 症状
+
+```
+// テストが Queue::fake() 環境で以下を呼ぶ
+SomeJob::dispatchSync($id);
+
+// → Job::handle() が呼ばれない
+// → ジョブ内のアサーションが通らない
+// → ログも出ない
+// → 見た目には何も起きない
+```
+
+### 対処法
+
+**① `->handle()` を直接呼び出す（推奨）**
+
+```php
+// Queue::fake() 環境でジョブのロジックを直接検証
+(new SomeJob($id))->handle();
+```
+
+**② `Bus::fake()->except([SomeJob::class])` で特定Jobを除外する**
+
+```php
+Bus::fake()->except([SomeJob::class]);
+SomeJob::dispatchSync($id);  // このJobだけ実際に実行される
+```
+
+**③ `$fakeQueue = false` にして setUp() で必要なfakeだけ設定する**
+
+```php
+protected bool $fakeQueue = false;
+
+public function setUp(): void
+{
+    parent::setUp();
+    // SomeJob 以外の偽装のみ設定
+}
+```
+
+### delay() 付き dispatch も fake される
+
+`Queue::fake()` 環境では `->delay()` 付きの dispatch も実際には実行されない。
+`LedgerDefineObserver` のように `->delay(now()->addSeconds(5))` を使う場合も同様。
+
+```php
+// Observer 内のコード
+SomeJob::dispatch($id)->delay(now()->addSeconds(5));
+// Queue::fake() 環境 → キューに積まれるだけ。QUEUE_CONNECTION=sync でも実行されない
+
+// テストでの正しい対処
+(new SomeJob($id))->handle();  // 直接呼び出し
+```
+
+---
+
+## 7b. phpunit.xml で RAG_ENABLED=false を設定する
+
+### 問題
+
+`LedgerObserver::created()` は `config('rag.enabled', false)` で保護されているが、
+`.env.example` に `RAG_ENABLED=true` が設定されていると、`phpunit.xml` で明示指定がない限り
+`Queue::fake()` を `false` にしたテストで Embedding コンテナへの接続試行が発生する。
+
+### 解決策
+
+`phpunit.xml` に `RAG_ENABLED=false` を追加してテスト環境のデフォルトを無効化する：
+
+```xml
+<!-- phpunit.xml -->
+<php>
+    <!-- 既存の設定 -->
+    <env name="QUEUE_CONNECTION" value="sync"/>
+    <!-- RAGジョブをテスト環境でデフォルト無効化 -->
+    <env name="RAG_ENABLED" value="false"/>
+</php>
+```
+
+### RAG 機能が必要なテストでの対処
+
+RAGジョブ・Observer の dispatch を検証するテストは `setUp()` で明示的に有効化する：
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+    config(['rag.enabled' => true]);  // このテストクラスでのみ有効化
+}
+```
+
+また `ProcessLedgerForRagJob::dispatchSync()` を直接呼ぶ場合も、
+Job 内部で `if (! config('rag.enabled', false)) { return; }` があるため
+呼び出し前に `config(['rag.enabled' => true])` が必要：
+
+```php
+config(['rag.enabled' => true]);
+ProcessLedgerForRagJob::dispatchSync($ledger->id);
+```
+
+### 対象ファイル（RAG_ENABLED=false の影響を受けてオプトインが必要なもの）
+
+| ファイル | 対処 |
+|---|---|
+| `LedgerObserverTest` | `setUp()` で `config(['rag.enabled' => true])` |
+| `ProcessLedgerForRagJobTest` | `setUp()` or 各テストで `config(['rag.enabled' => true])` |
+| `RagSearchServiceTest` | `setUp()` で `config(['rag.enabled' => true])` （既存） |
+| `VlmRagIntegrationTest` | テスト内で `Config::set('rag.enabled', true)` （既存） |
+| `SearchLedgersToolSemanticSearchTest` | `dispatchSync` 前に `config(['rag.enabled' => true])` |
+
+---
+
 ## 8. キュー関連機能の4層テスト担保マップ
 
 「Queue::fake() で省略した処理」が別のテストで担保されていることを示す構造：
@@ -270,5 +401,7 @@ Embedding の実際の呼び出し        → RagSearchServiceTest / RagPerforma
 - [ ] `DatabaseMigrations` トレイトを使う場合に `#[Group('database-migrations')]` を付与したか
 - [ ] Observer や Service が外部サービスを `dispatch()` 経由で呼んでいるか（直接同期呼び出しになっていないか）
 - [ ] 「Queue::fake() で省略した外部処理」が別テストで担保されているか確認したか
+- [ ] `dispatchSync()` を呼ぶテストで `Queue::fake()` が有効な場合、`(new Job())->handle()` に書き換えたか（§7a 参照）
+- [ ] RAG 機能を使うテストで `config(['rag.enabled' => true])` を呼び出しているか（§7b 参照）
 - [ ] ローカルで `./vendor/bin/sail pest --filter="テストクラス名"` を実行して通過することを確認したか
 

@@ -34,6 +34,9 @@ class RegenerateLedgerSortValuesJob implements ShouldQueue
             return;
         }
 
+        // column_define のキャッシュを確実にクリアして最新定義を取得
+        $define->refresh();
+
         // チャンク処理で全件更新 (1000件推奨)
         Ledger::where('ledger_define_id', $this->ledgerDefineId)
             ->chunkById(1000, function ($ledgers) use ($define) {
