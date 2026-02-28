@@ -110,6 +110,7 @@ jobs:
           mysql -h 127.0.0.1 -u root --force <<EOF
             CREATE DATABASE IF NOT EXISTS ledgerleap_test;
             GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
+            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
             FLUSH PRIVILEGES;
           EOF
 
@@ -219,6 +220,7 @@ jobs:
           mysql -h 127.0.0.1 -u root --force <<EOF
             CREATE DATABASE IF NOT EXISTS ledgerleap_test;
             GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
+            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
             FLUSH PRIVILEGES;
           EOF
 
