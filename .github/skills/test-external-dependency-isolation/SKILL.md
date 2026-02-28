@@ -180,14 +180,95 @@ DatabaseMigrations トレイトを使う？
 
 ---
 
-## 7. チェックリスト（テスト変更・新規作成時）
+## 7. TestCase デフォルト Queue::fake() と $fakeQueue オプトアウト
+
+Issue #74（2026-02-28）で `tests/TestCase.php` に以下が追加された。
+
+```php
+protected bool $fakeQueue = true;  // デフォルトで全テストに Queue::fake() を適用
+
+protected function setUp(): void
+{
+    parent::setUp();
+    if ($this->fakeQueue) {
+        Queue::fake();
+    }
+}
+```
+
+**`Ledger::factory()->create()` を含む新規テストでは、追加作業なしで保護される。**
+
+### $fakeQueue = false が必要なケース
+
+`Queue::fake()` が有効だと `Bus::fake()` と競合するため、以下のテストはオプトアウトが必要：
+
+```php
+class MyJobDispatchTest extends TestCase
+{
+    // Bus::fake() を使う場合（Queue::fake() と競合するため）
+    // または dispatch 自体を Queue::assertPushed() で検証する場合
+    protected bool $fakeQueue = false;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        Bus::fake();  // or Queue::fake() をメソッド内で個別に呼ぶ
+    }
+}
+```
+
+**$fakeQueue = false を設定すべきテストの種類:**
+- `Queue::assertPushed()` で dispatch の発火を検証するテスト
+- `Bus::fake()` を使うテスト（Bus と Queue の fake は競合する）
+- `->handle()` を直接呼び出してジョブのロジックをテストするテスト
+- `dispatchSync()` を使うテスト
+- `#[Group('external')]` の実コンテナテスト
+
+---
+
+## 8. キュー関連機能の4層テスト担保マップ
+
+「Queue::fake() で省略した処理」が別のテストで担保されていることを示す構造：
+
+```
+Queue::fake() で分離した処理        → 担保するテスト
+─────────────────────────────────────────────────────
+dispatch の発火タイミング          → LedgerObserverTest ($fakeQueue=false)
+  ├ 作成時に dispatch されること         Queue::assertPushed で検証
+  ├ content 更新時に dispatch されること
+  ├ 無関係フィールド更新では dispatch されないこと
+  └ 台帳削除時に chunks が削除されること
+
+RAGジョブ本体のロジック           → ProcessLedgerForRagJobTest ($fakeQueue=false)
+  ├ チャンク生成                         ->handle() で直接呼び出し
+  ├ 差分更新（変更チャンクのみ）
+  └ VLMマークダウンが空のときのフォールバック
+
+添付ファイル処理のジョブ連鎖       → ProcessAttachedFileTest / VectorizeAttachedFileTest
+  ├ サムネイルジョブの dispatch          Bus::fake() で検証
+  ├ VLM/OCR 対象ファイルの並列ジョブ
+  └ Tika→OCR→VLM のアップグレード判定
+
+Embedding の実際の呼び出し        → RagSearchServiceTest / RagPerformanceTest
+  └ 実際の Embedding コンテナに接続       #[Group('external')]（ローカルのみ）
+```
+
+**「責務外として除外した処理は別テストで保護されているか」を必ず確認すること。**
+
+詳細は [docs/development/testing/03-external-dependency-isolation.md](../../docs/development/testing/03-external-dependency-isolation.md) を参照。
+
+---
+
+## 9. チェックリスト（テスト変更・新規作成時）
 
 テストを変更・新規作成した後は以下を確認すること：
 
-- [ ] `Ledger::factory()->create()` を呼ぶ場合、`setUp()` に `Queue::fake()` を追加したか
-- [ ] `AttachedFile::factory()->create()` など VLM が走るファクトリを使う場合も同様に `Queue::fake()` を追加したか
+- [ ] `Ledger::factory()->create()` を呼ぶ場合、`$fakeQueue = true`（デフォルト）のままか確認
+- [ ] `Bus::fake()` を使う場合は `$fakeQueue = false` を追加したか
+- [ ] `Queue::assertPushed()` で dispatch を検証する場合は `$fakeQueue = false` を追加したか
 - [ ] 実コンテナ（VLM/LDAP/OCR）への接続が必須なテストに `#[Group('external')]` を付与したか
 - [ ] `DatabaseMigrations` トレイトを使う場合に `#[Group('database-migrations')]` を付与したか
 - [ ] Observer や Service が外部サービスを `dispatch()` 経由で呼んでいるか（直接同期呼び出しになっていないか）
+- [ ] 「Queue::fake() で省略した外部処理」が別テストで担保されているか確認したか
 - [ ] ローカルで `./vendor/bin/sail pest --filter="テストクラス名"` を実行して通過することを確認したか
 

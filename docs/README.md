@@ -177,7 +177,7 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 
 *   [コーディング規約](/docs/development/coding_standards.md)
 *   [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md)
-*   [テストのベストプラクティス](/docs/development/Testing-Best-Practices.md)
+*   [テストのベストプラクティス](/docs/development/testing/README.md)（旧: [Testing-Best-Practices.md](/docs/development/Testing-Best-Practices.md)）
 *   [ユーティリティコマンド](/docs/development/utility-commands.md)
 *   [デモ環境構築ガイド](/docs/development/demo-environment-setup.md) - サンプルデータ付きデモ環境の構築
 *   [MCP アーキテクチャと動作フロー](/docs/development/MCP_Architecture_and_Flow.md) - LLM統合のための技術詳解

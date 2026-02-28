@@ -39,7 +39,7 @@
 
 - **/docs/README.md:** プロジェクト全体の目次と概要。
 - **/docs/development/coding_standards.md:** 命名規則、コメント、Git規約。
-- **/docs/development/Testing-Best-Practices.md:** テナント初期化、Mroongaテスト、Livewireテスト。
+- **/docs/development/testing/README.md:** テスト設計の目次。テナント初期化、Mroonga、Livewire、外部依存分離など各トピックへ誘導。
 - **/docs/development/MCP_Architecture_and_Flow.md:** MCPの動作詳細とレスポンス設計。
 - **/docs/function/Attachment.md:** VLM/OCR/Tika を含む複雑なファイル処理フロー。
 - **/docs/database/schema.md:** 核心テーブル構造。
