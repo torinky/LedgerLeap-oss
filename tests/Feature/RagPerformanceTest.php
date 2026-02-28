@@ -11,10 +11,16 @@ use App\Services\Embedding\RuriChunkFormatter;
 use App\Services\EmbeddingService;
 use App\Services\RagSearchService;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+/**
+ * パフォーマンステスト（大量データ・手動実行専用）。
+ * CI環境では除外する。ローカル実行: ./vendor/bin/pest --group=external
+ */
+#[Group('external')]
 class RagPerformanceTest extends TestCase
 {
     use RefreshDatabaseWithTenant;

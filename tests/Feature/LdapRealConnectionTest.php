@@ -8,6 +8,11 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
+/**
+ * 実LDAPサーバー（openldap コンテナ）への接続が必要なテスト。
+ * CI環境では除外する。ローカル実行: ./vendor/bin/pest --group=external
+ */
+#[Group('external')]
 class LdapRealConnectionTest extends TestCase
 {
     /**

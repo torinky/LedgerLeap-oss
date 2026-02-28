@@ -3,8 +3,17 @@
 namespace Tests\Feature\Vlm;
 
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
+/**
+ * VLM実コンテナ（vlm:8000）への接続が必要なテスト群の基底クラス。
+ * CI環境ではコンテナが存在しないため `external` グループとして除外する。
+ *
+ * ローカルでVLMコンテナを起動した状態で実行する場合:
+ *   ./vendor/bin/pest --group=external
+ */
+#[Group('external')]
 abstract class VlmTestBase extends TestCase
 {
     protected string $vlmBaseUrl;

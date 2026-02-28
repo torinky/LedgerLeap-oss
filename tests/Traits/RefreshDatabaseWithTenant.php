@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * RefreshDatabaseWithTenant トレイト
  *
- * テストクラスの最初のテスト実行前に1回だけマイグレーションとテナント作成を行い、
+ * テスト実行プロセス全体で1回だけ migrate:fresh + tenants:migrate を行い、
  * 各テストケースはトランザクション内で実行されます。
  *
  * 特徴:
- * - クラス全体で1回だけマイグレーション実行
+ * - プロセス全体で1回だけマイグレーション実行（高速化）
  * - テナントも1回だけ作成・初期化
- * - 各テストはトランザクション内で実行（高速）
+ * - 各テストはトランザクション内で実行（ロールバックで副作用なし）
  * - テナントデータはトランザクション外なので永続化
  *
  * 使用方法:
@@ -33,6 +33,12 @@ trait RefreshDatabaseWithTenant
     protected static array $databaseInitializedByClass = [];
 
     /**
+     * プロセス全体で migrate:fresh が実行済みかを管理するグローバルフラグ
+     * 全クラスで共有し、1回のみ migrate:fresh を実行する
+     */
+    protected static bool $globalDatabaseMigrated = false;
+
+    /**
      * 作成されたテナント（クラス全体で共有）
      */
     protected static $sharedTenant = null;
@@ -49,10 +55,9 @@ trait RefreshDatabaseWithTenant
     {
         parent::setUpBeforeClass();
 
-        // クラスごとにフラグをリセット
+        // クラスごとのフラグをリセット（グローバルフラグはリセットしない）
         $className = static::class;
         static::$databaseInitializedByClass[$className] = false;
-        // 注: $sharedTenant と $truncatableTablesCache はリセットしない（複数クラスで共有）
     }
 
     /**
@@ -72,14 +77,13 @@ trait RefreshDatabaseWithTenant
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
-        // デバッグログは本番環境では削除可能
-        if (config('app.debug')) {
-            \Log::info("setUpRefreshDatabaseWithTenant() called: class=$className, initialized=".($initialized ? 'true' : 'false'));
-        }
-
         // このクラスで最初のテストの場合のみ初期化
         if (! $initialized) {
-            $this->refreshDatabase();
+            // プロセス全体でまだマイグレーションが実行されていない場合のみ実行
+            if (! static::$globalDatabaseMigrated) {
+                $this->refreshDatabase();
+                static::$globalDatabaseMigrated = true;
+            }
 
             // テナントが存在しない場合のみ作成
             if (! static::$sharedTenant) {
@@ -115,7 +119,7 @@ trait RefreshDatabaseWithTenant
     }
 
     /**
-     * データベースのリフレッシュ（最初の1回のみ実行）
+     * データベースのリフレッシュ（プロセス全体で1回のみ実行）
      *
      * セントラルデータベース（tenants テーブル等）をリフレッシュ
      */

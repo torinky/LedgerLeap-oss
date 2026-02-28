@@ -1,9 +1,10 @@
-name: Laravel Sail with Mroonga Debug
+name: Laravel CI (PHPUnit / Pest)
 
 on:
   push:
     branches:
       - 'main'
+      - 'develop'
   pull_request:
   workflow_dispatch:
 
@@ -12,23 +13,28 @@ env:
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   DB_HOST: 127.0.0.1
   DB_PORT: 3306
-  # テスト用DBはledgerleap_testを使用（tests/Pest.phpのセーフガード回避のため）
   DB_DATABASE: ledgerleap_test
   MAIL_FROM_ADDRESS: info@example.com
 
+# ───────────────────────────────────────────────
+# 共通セットアップをコンポジット化できないため
+# 各ジョブで同じステップを繰り返す（vendorキャッシュで高速化）
+# ───────────────────────────────────────────────
 jobs:
-  phpunit:
+
+  # ── ① Unit テスト（外部サービス不要・高速） ──────────────────
+  unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       mysql:
         image: groonga/mroonga:mysql-8.0-latest
         ports:
           - 3306:3306
         env:
-          # テスト用DB名で初期化（ledgerleapはPest.phpにブロックされるため使用不可）
           MYSQL_DATABASE: ledgerleap_test
-          MYSQL_USER: ${{ env.DB_USERNAME }}
+          MYSQL_USER: sail
           MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
@@ -39,8 +45,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -49,14 +54,13 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
           tools: composer:v2
 
-      - name: Cache Vendor dependencies
+      - name: Cache Vendor
         id: cache-vendor
         uses: actions/cache@v4
         with:
           path: vendor
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
         if: steps.cache-vendor.outputs.cache-hit != 'true'
@@ -65,41 +69,33 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # Vite 7.x は Node.js 20+ を要求
           node-version: '20'
 
-      - name: Cache Node.js modules
+      - name: Cache npm
         uses: actions/cache@v4
-        id: node-cache
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          restore-keys: ${{ runner.os }}-node-
 
       - name: Install Frontend Dependencies
-        working-directory: ./
         run: npm ci
 
       - name: Build Frontend Assets
-        working-directory: ./
         run: npm run build
 
       - name: Laravel Setting
         run: |
           cp .env.example .env
-          # CI環境にはRedisがないため、キャッシュ/セッション/キューをメモリ/同期に上書き
           sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
           sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
           sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
-          # DB接続もCI用に統一
           sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
           php artisan optimize:clear
           php artisan config:clear
           php artisan view:clear
           php artisan route:clear
-          git config --local core.fileMode false
           chmod -R 777 storage bootstrap/cache
 
       - name: Generate key
@@ -111,13 +107,109 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -u root --force <<EOF
             CREATE DATABASE IF NOT EXISTS ledgerleap_test;
-            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO '${{ env.DB_USERNAME }}'@'%';
+            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
             FLUSH PRIVILEGES;
           EOF
 
       - name: Migrate database
         run: php artisan migrate --force
 
+      - name: Run Unit Tests
+        # external グループ（外部コンテナ依存）は除外する
+        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external
 
-      - name: Run tests
-        run: ./vendor/bin/pest
+  # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
+  feature:
+    name: Feature Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ledgerleap_test
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 15s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
+          tools: composer:v2
+
+      - name: Cache Vendor
+        id: cache-vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Frontend Assets
+        run: npm run build
+
+      - name: Laravel Setting
+        run: |
+          cp .env.example .env
+          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
+          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
+          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
+          php artisan optimize:clear
+          php artisan config:clear
+          php artisan view:clear
+          php artisan route:clear
+          chmod -R 777 storage bootstrap/cache
+
+      - name: Generate key
+        run: php artisan key:generate --env=testing
+
+      - name: Grant database privileges
+        env:
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          mysql -h 127.0.0.1 -u root --force <<EOF
+            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
+            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
+            FLUSH PRIVILEGES;
+          EOF
+
+      - name: Migrate database
+        run: php artisan migrate --force
+
+      - name: Run Feature Tests
+        # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
+        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external
