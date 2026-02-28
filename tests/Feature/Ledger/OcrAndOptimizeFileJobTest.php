@@ -22,6 +22,8 @@ class OcrAndOptimizeFileJobTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $fakeQueue = false;
+
     protected Tenant $tenant;
 
     protected User $user;

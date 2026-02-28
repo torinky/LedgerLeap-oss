@@ -20,6 +20,8 @@ class FileInspectorTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $fakeQueue = false;
+
     protected Tenant $tenant;
 
     protected User $user;

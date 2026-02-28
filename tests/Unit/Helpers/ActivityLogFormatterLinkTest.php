@@ -6,6 +6,7 @@ use App\Helpers\ActivityLogFormatter;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -18,6 +19,11 @@ class ActivityLogFormatterLinkTest extends TestCase
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
+
+        // Ledger::factory()->create() が LedgerObserver 経由で ProcessLedgerForRagJob を
+        // dispatch する。Queue::fake() でジョブを実際には実行させず、
+        // Embeddingコンテナへの接続を防ぐ（このテストの責務外）。
+        Queue::fake();
     }
 
     #[Test]

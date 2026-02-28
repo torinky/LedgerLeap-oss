@@ -4,6 +4,7 @@ namespace Tests;
 
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Queue;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -12,6 +13,20 @@ abstract class TestCase extends BaseTestCase
     protected bool $tenancy = false;
 
     protected Tenant $tenant;
+
+    /**
+     * true（デフォルト）の場合、setUp() で Queue::fake() を自動実行する。
+     * Ledger::factory()->create() → LedgerObserver → ProcessLedgerForRagJob が
+     * Embeddingコンテナに接続しないようにするための措置。
+     *
+     * RAGジョブ/Observerのdispatch自体を検証するテストではfalseに設定すること:
+     *   - LedgerObserverTest
+     *   - ProcessLedgerForRagJobTest
+     *   - VectorizeAttachedFileTest
+     *   - FinalizeAttachedFileProcessingTest
+     * 実コンテナが必要なテストは #[Group('external')] を付与してCIから除外すること。
+     */
+    protected bool $fakeQueue = true;
 
     /**
      * Creates the application.
@@ -39,6 +54,10 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        if ($this->fakeQueue) {
+            Queue::fake();
+        }
 
         if ($this->tenancy) {
             $this->initializeTenancy();

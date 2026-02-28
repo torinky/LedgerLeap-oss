@@ -21,6 +21,8 @@ class RagSearchServiceTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $fakeQueue = false;
+
     private User $user;
 
     private Folder $folder;

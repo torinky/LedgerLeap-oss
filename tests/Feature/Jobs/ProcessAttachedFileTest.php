@@ -20,6 +20,8 @@ class ProcessAttachedFileTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $fakeQueue = false;
+
     protected function setUp(): void
     {
         parent::setUp();

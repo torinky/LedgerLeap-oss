@@ -28,6 +28,8 @@ class LedgerDiffViewerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $fakeQueue = false;
+
     private User $user;
 
     private Ledger $ledger;

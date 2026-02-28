@@ -5,6 +5,7 @@ namespace Tests\Unit\Helpers;
 use App\Helpers\ActivityLogFormatter;
 use App\Models\AttachedFile;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
@@ -18,6 +19,10 @@ class ActivityLogFormatterTest extends TestCase
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
+
+        // AttachedFile::factory()->create() → Ledger生成 → LedgerObserver → ProcessLedgerForRagJob
+        // Queue::fake() でジョブを実際には実行させず Embeddingコンテナへの接続を防ぐ。
+        Queue::fake();
     }
 
     #[Test]

@@ -14,6 +14,8 @@ class LedgerObserverTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $fakeQueue = false;
+
     protected \App\Models\Tenant $tenant;
 
     protected function setUp(): void

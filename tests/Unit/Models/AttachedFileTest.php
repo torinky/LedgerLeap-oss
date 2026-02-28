@@ -15,6 +15,8 @@ class AttachedFileTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $fakeQueue = false;
+
     protected function setUp(): void
     {
         parent::setUp();

@@ -26,6 +26,8 @@ class ShowTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $fakeQueue = false;
+
     private User $user;
 
     private User $inspector;

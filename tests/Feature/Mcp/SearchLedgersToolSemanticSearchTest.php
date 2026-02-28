@@ -17,6 +17,8 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
+    protected bool $fakeQueue = false;
+
     private User $user;
 
     protected function setUp(): void
