@@ -130,7 +130,8 @@ jobs:
 
       - name: Run Unit Tests
         # external グループ（外部コンテナ依存）は除外する
-        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external
+        # --display-errors でスタックトレースを出力（デバッグ用）
+        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external --display-errors
 
   # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
   feature:
@@ -238,4 +239,5 @@ jobs:
 
       - name: Run Feature Tests
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
-        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external
+        # --display-errors でスタックトレースを出力（デバッグ用）
+        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external --display-errors
