@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\LedgerService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -21,8 +22,11 @@ use Tests\TestCase;
  *
  * 既存の SearchApiTest が権限フィルタ・pagination・tags 等を網羅しているため、
  * このテストでは未カバー領域（デバッグモード・例外処理・POST メソッド）を対象とする。
+ *
+ * DatabaseMigrations を使用するため、CI では専用の db-migrations ジョブで実行される。
  */
 #[CoversClass(SearchController::class)]
+#[Group('database-migrations')]
 class SearchControllerAdditionalTest extends TestCase
 {
     use DatabaseMigrations;

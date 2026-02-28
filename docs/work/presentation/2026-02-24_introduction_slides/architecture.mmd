@@ -1,21 +1,31 @@
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0f172a', 'edgeLabelBackground':'#fff', 'tertiaryColor': '#fff'}}}%%
 graph TD
-    subgraph UserSide [👤 利用者]
-        Users("社員・管理者<br>PC・スマホ・タブレットから利用")
+    subgraph UserSide [ユーザー環境]
+        direction TB
+        Users("ユーザー<br>(PC / タブレット / スマホ)")
     end
 
-    subgraph LedgerLeap [🏢 LedgerLeap プラットフォーム]
+    subgraph LedgerLeap [LedgerLeap プラットフォーム]
         direction TB
 
-        subgraph Core [業務アプリケーション]
-            App("台帳の登録・閲覧・承認<br>権限管理・ワークフロー")
-            Async("📬 バックグラウンド処理<br>ファイルの解析を自動実行")
+        subgraph Core [アプリケーション層]
+            Web("Web サーバー")
+            App("アプリケーション<br>(5段階権限・承認ワークフロー)")
+            Async("非同期処理ワーカー")
         end
 
         subgraph Storage [💾 データベース（MySQL）]
             direction LR
             DB[("台帳データ・権限・履歴<br>等すべてのデータを保存")]
             Search[("🔍 日本語全文検索エンジン<br>キーワードで即座に検索<br>同義語も自動展開")]
+        subgraph Data [データ・検索基盤]
+            direction TB
+            MySQL[("データベース<br>(マルチテナント対応)")]
+
+            subgraph MroongaLayer [高速検索レイヤー]
+                direction TB
+                Groonga[("<b>Mroonga 高速日本語検索</b><br>(同義語展開 + 意味検索)")]
+            end
         end
 
         subgraph AI [🤖 書類 AI 解析エンジン（自動・非同期）]

@@ -9,6 +9,7 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -18,12 +19,16 @@ use Tests\TestCase;
  * 全文検索が絡むテストは RefreshDatabase ではなく DatabaseMigrations を使用すること。
  * （docs/development/coding_standards.md 制約）
  *
+ * DatabaseMigrations を使用するため、CI では専用の db-migrations ジョブで実行される。
+ * RefreshDatabaseWithTenant と混在させると他テストの DB 状態を破壊するため分離が必要。
+ *
  * テスト方針:
  *   - Ledger::scopeSearch() の MATCH() AGAINST() 実動作を検証
  *   - 単独インデックスに対して OR 結合でマルチカラム検索（Mroonga 制約準拠）
  *   - 日本語キーワード・空キーワード・特殊文字のエッジケース
  */
 #[CoversClass(Ledger::class)]
+#[Group('database-migrations')]
 class LedgerFullTextSearchTest extends TestCase
 {
     use DatabaseMigrations;

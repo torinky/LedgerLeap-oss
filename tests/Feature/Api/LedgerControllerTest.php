@@ -8,6 +8,7 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -15,6 +16,12 @@ use Tests\TestCase;
 
 // 追加
 
+/**
+ * DatabaseMigrations を使うため、CI では専用の db-migrations ジョブで実行される。
+ * RefreshDatabaseWithTenant と混在させると他テストの DB 状態を破壊するため分離が必要。
+ * ローカルでは `./vendor/bin/sail test --group=database-migrations` で実行する。
+ */
+#[Group('database-migrations')]
 class LedgerControllerTest extends TestCase
 {
     use DatabaseMigrations;

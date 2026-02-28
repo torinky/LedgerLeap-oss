@@ -130,8 +130,9 @@ jobs:
 
       - name: Run Unit Tests
         # external グループ（外部コンテナ依存）は除外する
+        # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external --display-errors
+        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external,database-migrations --display-errors
 
   # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
   feature:
@@ -239,5 +240,116 @@ jobs:
 
       - name: Run Feature Tests
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
+        # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外し、専用ジョブで実行する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external --display-errors
+        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external,database-migrations --display-errors
+
+  # ── ③ DatabaseMigrations テスト（migrate:fresh が必要なテスト群） ──────
+  #
+  # 実行対象:
+  #   - FolderTest          (マルチテナント境界の検証)
+  #   - LedgerControllerTest (API + 権限 + テナント統合)
+  #   - LedgerFullTextSearchTest (Mroonga 全文検索 - トランザクションロールバック不可)
+  #   - SearchControllerAdditionalTest (全文検索コントローラ)
+  #
+  # なぜ分離するか:
+  #   DatabaseMigrations は tearDown() で migrate:rollback を実行し全テーブルをdropする。
+  #   これが同一プロセス内の RefreshDatabaseWithTenant 使用テストの DB 状態を破壊するため、
+  #   独立したジョブ（独立したプロセス・コンテナ）で実行する必要がある。
+  #
+  db-migrations:
+    name: DB Migrations Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ledgerleap_test
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 15s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
+          tools: composer:v2
+
+      - name: Cache Vendor
+        id: cache-vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Frontend Assets
+        run: npm run build
+
+      - name: Laravel Setting
+        run: |
+          cp .env.example .env
+          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
+          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
+          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
+          php artisan optimize:clear
+          php artisan config:clear
+          php artisan view:clear
+          php artisan route:clear
+          chmod -R 777 storage bootstrap/cache
+
+      - name: Generate key
+        run: php artisan key:generate --env=testing
+
+      - name: Grant database privileges
+        env:
+          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          mysql -h 127.0.0.1 -u root --force <<EOF
+            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
+            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
+            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
+            FLUSH PRIVILEGES;
+          EOF
+
+      - name: Run DB Migrations Tests
+        # DatabaseMigrations を使うテストのみ実行する
+        # このジョブは独立したコンテナで実行されるため migrate:rollback による他テストへの影響なし
+        # --display-errors でスタックトレースを出力（デバッグ用）
+        run: ./vendor/bin/pest --group=database-migrations --display-errors
