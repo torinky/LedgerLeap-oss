@@ -64,12 +64,16 @@
 
 - **/.github/skills/ci-failure-investigation/SKILL.md:** GitHub Actions CI の失敗ログ調査ワークフロー。CI が失敗したとき、またはテストのタイムアウト・即時失敗を調査するときは**必ずこのファイルを先に読むこと**。
 
+- **/.github/skills/git-commit/SKILL.md:** コミットメッセージのフォーマット規約と文字化け対策の実行手順。**`git commit` を実行するときは必ずこのファイルを先に読むこと**。
+    - 日本語・記号を含むメッセージを `-m` で渡すと文字化け・シェル展開が発生する
+    - 正しい手順: Python でメッセージファイルを作成 → `git commit -F /tmp/commit_msg.txt`
+
 ## 5. Development Workflow
 
 1. **Pint:** コミット前に必ず `./vendor/bin/sail pint` 実行。
 2. **Error Check:** 実装・変更の完了後は必ず `laravel-boost` (`last-error`, `browser-logs`) を使用してエラーの有無を**自律的に**確認すること。
 3. **Test:** 変更後は `./vendor/bin/sail test` でリグレッションを確認。
-4. **Commit:** `feat(scope): 日本語説明` の形式を厳守。
+4. **Commit:** `feat(scope): 日本語説明` の形式を厳守。**実行手順は `/.github/skills/git-commit/SKILL.md` を参照すること**（`-m` による直接渡しは文字化けするため禁止）。
 
 ---
 
