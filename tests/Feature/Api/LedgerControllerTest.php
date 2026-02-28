@@ -3,30 +3,27 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\FolderPermissionType;
+use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use PHPUnit\Framework\Attributes\Group;
+use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
-
-// 追加
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
- * DatabaseMigrations を使うため、CI では専用の db-migrations ジョブで実行される。
- * RefreshDatabaseWithTenant と混在させると他テストの DB 状態を破壊するため分離が必要。
- * ローカルでは `./vendor/bin/sail test --group=database-migrations` で実行する。
+ * 台帳作成 API テスト
+ *
+ * 全文検索は使用しないため RefreshDatabaseWithTenant で十分。
+ * RAGジョブは Queue::fake() でモック化し、Embeddingコンテナへの接続を防ぐ。
  */
-#[Group('database-migrations')]
 class LedgerControllerTest extends TestCase
 {
-    use DatabaseMigrations;
-
-    protected bool $tenancy = true;
+    use RefreshDatabaseWithTenant;
 
     private User $writerUser;
 
@@ -36,16 +33,20 @@ class LedgerControllerTest extends TestCase
 
     private LedgerDefine $ledgerDefine;
 
-    protected \App\Models\Tenant $tenant;
-
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        // テナントを作成
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test_tenant']);
-        $this->tenant->domains()->create(['domain' => 'localhost']);
-        tenancy()->initialize($this->tenant);
+        // RAGジョブはdispatchされることだけを確認する。
+        // EmbeddingServiceの実行はこのテストの責務外（Embeddingコンテナ不要）。
+        Queue::fake();
+
+        // APIリクエストのテナント識別に必要な設定
+        config(['tenancy.central_domains' => ['127.0.0.1']]);
+        if (! $this->getTenant()->domains()->where('domain', 'localhost')->exists()) {
+            $this->getTenant()->domains()->create(['domain' => 'localhost']);
+        }
 
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -169,6 +170,11 @@ class LedgerControllerTest extends TestCase
         // Tagの作成はLedgerService内で行われるため、ここではDBに存在することを確認
         $this->assertDatabaseHas('tags', ['name' => 'new-tag', 'ledger_define_id' => $this->ledgerDefine->id]);
         $this->assertDatabaseHas('tags', ['name' => 'another-tag', 'ledger_define_id' => $this->ledgerDefine->id]);
+
+        // RAGが有効な場合、台帳作成時にRAGジョブがdispatchされることを確認
+        if (config('rag.enabled')) {
+            Queue::assertPushed(ProcessLedgerForRagJob::class);
+        }
     }
 
     // 検索関連のテストはSearchApiTestに移動済みのため削除

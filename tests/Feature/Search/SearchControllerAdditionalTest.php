@@ -9,13 +9,14 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\DatabaseMigrationsOnce;
 
 /**
  * Api/V1/SearchController の追加テスト
@@ -23,13 +24,13 @@ use Tests\TestCase;
  * 既存の SearchApiTest が権限フィルタ・pagination・tags 等を網羅しているため、
  * このテストでは未カバー領域（デバッグモード・例外処理・POST メソッド）を対象とする。
  *
- * DatabaseMigrations を使用するため、CI では専用の db-migrations ジョブで実行される。
+ * DatabaseMigrationsOnce を使用: migrate:fresh をクラスで1回だけ実行する。
  */
 #[CoversClass(SearchController::class)]
 #[Group('database-migrations')]
 class SearchControllerAdditionalTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseMigrationsOnce;
 
     protected bool $tenancy = true;
 
@@ -44,6 +45,12 @@ class SearchControllerAdditionalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Queue::fake();
+
+        $this->setUpDatabaseMigrationsOnce();
+
+        $this->tenant = static::$sharedTenantForMigrationsOnce;
 
         // 権限・ロール設定
         $permission = Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']);
@@ -76,6 +83,12 @@ class SearchControllerAdditionalTest extends TestCase
         }
 
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownDatabaseMigrationsOnce();
+        parent::tearDown();
     }
 
     // ================================================================

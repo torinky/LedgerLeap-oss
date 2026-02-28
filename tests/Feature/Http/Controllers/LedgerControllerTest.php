@@ -8,14 +8,15 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
 
@@ -38,6 +39,11 @@ class LedgerControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        // Ledger::factory()->create() が LedgerObserver 経由で RAGジョブを dispatch する。
+        // Queue::fake() でジョブを実際には実行させず Embeddingコンテナへの接続を防ぐ。
+        Queue::fake();
 
         // Define permissions based on the seeder
         Permission::findOrCreate('view_ledgers', 'web');
@@ -56,7 +62,7 @@ class LedgerControllerTest extends TestCase
         $this->viewerUser = User::factory()->create()->assignRole($viewerRole);
 
         // Create folders and grant permissions within tenant context
-        $this->tenant->run(function () use ($adminRole, $writerRole, $viewerRole) {
+        $this->getTenant()->run(function () use ($adminRole, $writerRole, $viewerRole) {
             $this->writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
             $this->readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
 

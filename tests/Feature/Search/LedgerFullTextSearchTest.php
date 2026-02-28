@@ -7,20 +7,22 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\DatabaseMigrationsOnce;
 
 /**
  * Mroonga 全文検索 統合テスト
  *
- * 全文検索が絡むテストは RefreshDatabase ではなく DatabaseMigrations を使用すること。
+ * 全文検索が絡むテストは RefreshDatabase ではなく DatabaseMigrationsOnce を使用すること。
  * （docs/development/coding_standards.md 制約）
  *
- * DatabaseMigrations を使用するため、CI では専用の db-migrations ジョブで実行される。
- * RefreshDatabaseWithTenant と混在させると他テストの DB 状態を破壊するため分離が必要。
+ * DatabaseMigrationsOnce を使用するため、CI では専用の db-migrations ジョブで実行される。
+ * migrate:fresh はクラスで1回だけ実行し、各テスト後は TRUNCATE でクリーンアップする。
+ * （通常の DatabaseMigrations では各テストごとに migrate:fresh が走り 339秒かかるため）
  *
  * テスト方針:
  *   - Ledger::scopeSearch() の MATCH() AGAINST() 実動作を検証
@@ -31,7 +33,7 @@ use Tests\TestCase;
 #[Group('database-migrations')]
 class LedgerFullTextSearchTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseMigrationsOnce;
 
     protected bool $tenancy = true;
 
@@ -42,6 +44,16 @@ class LedgerFullTextSearchTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Ledger::factory()->create() が LedgerObserver を経由して ProcessLedgerForRagJob を
+        // dispatch する。Queue::fake() でジョブを実際には実行させず、
+        // Embeddingコンテナへの接続を防ぐ（全文検索テストの責務外）。
+        Queue::fake();
+
+        $this->setUpDatabaseMigrationsOnce();
+
+        // テナントは DatabaseMigrationsOnce が共有テナントを作成・初期化済み
+        $this->tenant = static::$sharedTenantForMigrationsOnce;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -54,6 +66,12 @@ class LedgerFullTextSearchTest extends TestCase
                 new ColumnDefine(1, '説明', 'textarea', 2, [], false, false, 2, '', [], 1, null),
             ],
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownDatabaseMigrationsOnce();
+        parent::tearDown();
     }
 
     // ================================================================

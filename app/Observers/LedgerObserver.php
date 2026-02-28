@@ -4,8 +4,6 @@ namespace App\Observers;
 
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Ledger;
-use App\Services\Embedding\RuriChunkFormatter;
-use App\Services\EmbeddingService;
 use Illuminate\Support\Facades\DB;
 
 class LedgerObserver
@@ -42,28 +40,14 @@ class LedgerObserver
 
     private function dispatchRagJob(Ledger $ledger): void
     {
-        // Queue::fake()使用時はQueueFakeが使われるのでdispatchを使用
-        $queueManager = app('queue');
-        $isFake = $queueManager instanceof \Illuminate\Support\Testing\Fakes\QueueFake;
-
-        if ($isFake) {
-            // テスト環境でQueue::fake()使用時
-            ProcessLedgerForRagJob::dispatch($ledger->id);
-
-            return;
-        }
-
-        if (config('queue.default') === 'sync') {
-            // 同期実行の場合は直接実行（tenancyコンテキストを維持）
-            (new ProcessLedgerForRagJob($ledger->id))->handle(
-                app(EmbeddingService::class),
-                app(RuriChunkFormatter::class)
-            );
-        } else {
-            // 非同期の場合は通常通りdispatch
-            // QueueTenancyBootstrapperがtenancyを処理
-            ProcessLedgerForRagJob::dispatch($ledger->id);
-        }
+        // sync/fake/async いずれの場合も dispatch() を使用する。
+        // 旧実装では QUEUE_CONNECTION=sync 時に EmbeddingService を直接同期呼び出し
+        // していたが、これはテスト環境でコンテナ不在の場合に60秒タイムアウトを引き起こす。
+        // dispatch() を使えば:
+        //   - QUEUE_CONNECTION=sync  → Laravel が同期実行（コンテナがあれば動作）
+        //   - Queue::fake()          → ジョブはキューに積まれるだけで実行されない
+        //   - 非同期キュー           → QueueTenancyBootstrapper がテナントを処理
+        ProcessLedgerForRagJob::dispatch($ledger->id);
     }
 
     /**
