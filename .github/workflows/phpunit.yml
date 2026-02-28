@@ -92,6 +92,8 @@ jobs:
           sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
           sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
           php artisan optimize:clear
           php artisan config:clear
           php artisan view:clear
@@ -113,6 +115,17 @@ jobs:
 
       - name: Migrate database
         run: php artisan migrate --force
+
+      - name: Setup test tenant
+        # テスト用テナントを事前作成してテナントDBをマイグレーション済みにしておく
+        # → テスト内で migrate:fresh / tenants:migrate を実行せずに済む（高速化）
+        run: |
+          php artisan tinker --no-interaction <<'PHP'
+          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+          tenancy()->initialize($t);
+          \Artisan::call('tenants:migrate', ['--force' => true]);
+          echo "Tenant ready: " . $t->id . PHP_EOL;
+          PHP
 
       - name: Run Unit Tests
         # external グループ（外部コンテナ依存）は除外する
@@ -188,6 +201,8 @@ jobs:
           sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
           sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
           sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
           php artisan optimize:clear
           php artisan config:clear
           php artisan view:clear
@@ -209,6 +224,15 @@ jobs:
 
       - name: Migrate database
         run: php artisan migrate --force
+
+      - name: Setup test tenant
+        run: |
+          php artisan tinker --no-interaction <<'PHP'
+          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+          tenancy()->initialize($t);
+          \Artisan::call('tenants:migrate', ['--force' => true]);
+          echo "Tenant ready: " . $t->id . PHP_EOL;
+          PHP
 
       - name: Run Feature Tests
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する

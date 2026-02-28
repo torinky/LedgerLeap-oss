@@ -111,9 +111,21 @@ trait RefreshDatabaseWithTenant
 
     /**
      * 各テストの後処理
+     *
+     * tenancy()->end() を呼ぶテストの後でも次のテストが正常に動作するよう
+     * テナントコンテキストを必ず復元する。
      */
     protected function tearDown(): void
     {
+        // tenancy()->end() が呼ばれた場合に備えてテナントを再初期化
+        if (static::$sharedTenant && ! tenancy()->initialized) {
+            try {
+                tenancy()->initialize(static::$sharedTenant);
+            } catch (\Throwable) {
+                // 初期化失敗は握りつぶす（次のテストの setUp で再試行される）
+            }
+        }
+
         // トランザクションロールバックは beforeApplicationDestroyed で自動実行される
         parent::tearDown();
     }
@@ -121,39 +133,65 @@ trait RefreshDatabaseWithTenant
     /**
      * データベースのリフレッシュ（プロセス全体で1回のみ実行）
      *
-     * セントラルデータベース（tenants テーブル等）をリフレッシュ
+     * - CI環境（CI=true）: migrate:fresh はスキップ。
+     *   ワークフローの "Migrate database" ステップで既に実行済みのため、
+     *   再実行すると全テーブル drop/recreate で60秒超かかる。
+     * - ローカル環境: 従来通り migrate:fresh で完全リセット。
      */
     protected function refreshDatabase(): void
     {
-        $this->artisan('migrate:fresh', [
-            '--drop-views' => $this->shouldDropViews(),
-            '--drop-types' => $this->shouldDropTypes(),
-            '--seed' => $this->shouldSeed(),
-        ]);
+        if (env('CI')) {
+            // CI: ワークフローで migrate --force 実行済みのため何もしない
+        } else {
+            $this->artisan('migrate:fresh', [
+                '--drop-views' => $this->shouldDropViews(),
+                '--drop-types' => $this->shouldDropTypes(),
+                '--seed' => $this->shouldSeed(),
+            ]);
 
-        $this->app[Kernel::class]->setArtisan(null);
+            $this->app[Kernel::class]->setArtisan(null);
+        }
     }
 
     /**
      * テナントデータベースのマイグレーション（最初の1回のみ実行）
      *
-     * テナント初期化後に実行される
+     * テナント初期化後に実行される。
+     * CI環境ではワークフローの "Setup test tenant" ステップで実行済みのためスキップ。
      */
     protected function migrateTenantDatabase(): void
     {
-        $this->artisan('tenants:migrate', [
-            '--tenants' => [static::$sharedTenant->id],
-        ]);
+        if (env('CI')) {
+            // CI: ワークフローで tenants:migrate 実行済みのため何もしない
+        } else {
+            $this->artisan('tenants:migrate', [
+                '--tenants' => [static::$sharedTenant->id],
+            ]);
 
-        $this->app[Kernel::class]->setArtisan(null);
+            $this->app[Kernel::class]->setArtisan(null);
+        }
     }
 
     /**
      * 共有テナントの作成（最初の1回のみ実行）
+     *
+     * CI環境ではワークフローの "Setup test tenant" ステップで ci-test-tenant が
+     * 作成済みのため、それを再利用する。
      */
     protected function createSharedTenant(): void
     {
-        // テナントを作成（トランザクション外なので永続化される）
+        if (env('CI')) {
+            // CI: ワークフローで作成済みの ci-test-tenant を再利用
+            $existing = \App\Models\Tenant::find('ci-test-tenant')
+                ?? \App\Models\Tenant::first();
+            if ($existing) {
+                static::$sharedTenant = $existing;
+
+                return;
+            }
+        }
+
+        // ローカル: テナントを新規作成（トランザクション外なので永続化される）
         static::$sharedTenant = \App\Models\Tenant::factory()->create();
     }
 
