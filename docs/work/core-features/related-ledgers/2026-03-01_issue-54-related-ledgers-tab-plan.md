@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月1日  
 **更新日:** 2026年3月1日  
-**ステータス:** 🚧 Sprint 1・2 完了 / Sprint 3 進行中  
+**ステータス:** 🚧 Sprint 1・2・3 完了 / Sprint 4 進行中  
 **目的:** 台帳レコード詳細画面に「関連案件」タブを追加し、識別番号検索・意味検索の2軸で関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/54
 
@@ -265,47 +265,46 @@ $groupedByDefine = collect($pagedItems)
 
 ---
 
-### 🏁 Sprint 3: マージ・グルーピング・ページングバックエンド
+### ✅ Sprint 3: マージ・グルーピング・ページングバックエンド — 完了
 
-**目標:** 識別番号検索と意味検索の結果をマージし、識別理由付与・ページング・グルーピングロジックを実装してテストで検証する  
-**確認ポイント:** `reason` が正しく付与され、ページングとグルーピングが機能すること
+**完了日:** 2026-03-01 — テスト 17 passed / 1 skipped  
+**エビデンス:** [e2a5cb22](https://github.com/torinky/LedgerLeap/commit/e2a5cb22)
 
 #### Block 3.1: 結果マージと識別理由付与
 
-- [ ] **Task 3.1.1**: `RelatedLedgers.php` に `mergeResults(Collection $identifiers, Collection $semantics): array` メソッドを実装
+- [x] **Task 3.1.1**: `mergeResults()` を実装
   - 識別番号のみヒット → `reason = 'identifier'`
   - 意味検索のみヒット → `reason = 'semantic'`
-  - 両方ヒット → `reason = 'both'`、スコアは意味検索のスコアを保持
-  - 出力: `[['ledger' => Ledger, 'reason' => string, 'score' => float|null, 'matched_keys' => string[]], ...]`
+  - 両方ヒット → `reason = 'both'`
 
-- [ ] **Task 3.1.2**: `applyFilter(array $merged): array` メソッドを実装
-  - `$showIdentifier` / `$showSemantic` プロパティに基づきフィルタリング
+- [x] **Task 3.1.2**: `applyFilter()` を実装
+  - `showIdentifier` / `showSemantic` トグルに基づきフィルタリング
   - `reason = 'both'` はどちらかのトグルがオンなら表示
 
 #### Block 3.2: ページングとグルーピング
 
-- [ ] **Task 3.2.1**: `buildPaginator(array $filtered): LengthAwarePaginator` メソッドを実装
-  - `perPage = 20`、`pageName = 'related_page'`（他ページネーターとの衝突を回避）
+- [x] **Task 3.2.1**: `buildPaginator()` を実装
+  - `perPage = 20`、`pageName = 'related_page'`（他ページネーターとの衝突回避）
   - `LengthAwarePaginator` でラップ
 
-- [ ] **Task 3.2.2**: `groupByDefine(array $pageItems): Collection` メソッドを実装
-  - `ledger_define_id` でグループ化し、台帳定義モデルも付与
+- [x] **Task 3.2.2**: `groupByDefine()` を実装
+  - `ledger_define_id` でグループ化
 
 #### Block 3.3: テスト実装
 
-- [ ] **Task 3.3.1**: `RelatedLedgersTest.php` にマージ・フィルター・ページングテストを追加
-  - `it_merges_identifier_and_semantic_results_with_correct_reason`
-  - `it_marks_both_when_ledger_appears_in_both_searches`
-  - `it_filters_by_show_identifier_toggle`
-  - `it_filters_by_show_semantic_toggle`
-  - `it_paginates_merged_results`
-  - `it_groups_results_by_ledger_define`
+- [x] **Task 3.3.1**: テスト 6 件追加
+  - `it_merges_identifier_and_semantic_results_with_correct_reason` ✅
+  - `it_marks_both_when_ledger_appears_in_both_searches` ✅
+  - `it_filters_by_show_identifier_toggle` ✅
+  - `it_filters_by_show_semantic_toggle` ✅
+  - `it_paginates_merged_results` ✅
+  - `it_groups_results_by_ledger_define` ✅
 
-- [ ] **Task 3.3.2**: テスト実行・パス確認
+- [x] **Task 3.3.2**: テスト実行・パス確認 — 17 passed / 1 skipped ✅
 
 **✅ Sprint 3 完了条件**
-- マージ・フィルター・ページング・グルーピングテストが全てパスする
-- Pint 実行済み
+- マージ・フィルター・ページング・グルーピングテストが全てパスする ✅
+- Pint 実行済み ✅
 
 ---
 
@@ -452,7 +451,7 @@ $groupedByDefine = collect($pagedItems)
 2026-03-01 — テスト 11 passed / 1 skipped (Livewire コンポーネントテストは Sprint 5 で有効化)
 
 ### Sprint 3 完了日時
-_未完了_
+2026-03-01 — テスト 17 passed / 1 skipped (Livewire コンポーネントテストは Sprint 5 で有効化)
 
 ### Sprint 4 完了日時
 _未完了_
