@@ -16,23 +16,24 @@ Three approaches **look like they work but silently corrupt newlines or characte
 | heredoc `<< 'EOF'` | Same collapse when piped; `$`, backtick expansion risk |
 | `python3 -c "..."` | Shell-escaping required for `"`, `(`, `)`, `$`, backtick |
 
-**Use `create_file` tool + `python3 script.py` — the only method proven safe:**
+**Use the bundled script — the only method proven safe:**
 
-```
-Step 1 — create_file tool writes /tmp/mk_commit_msg.py:
-# -*- coding: utf-8 -*-
-msg = "feat(scope): subject line (≤50 chars)\n\nBody detail.\n\nCloses #123\n"
-open('/tmp/commit_msg.txt', 'w', encoding='utf-8').write(msg)
-print('OK')
+```bash
+# Structured mode (recommended)
+python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+  --type fix --scope test \
+  --subject "SearchApiTest を DatabaseMigrationsOnce に移行" \
+  --body "理由と変更内容。\n複数行は \\n で区切る。" \
+  --footer "Closes #74"
+git commit -F /tmp/commit_msg.txt
 
-Step 2 — execute:
-python3 /tmp/mk_commit_msg.py && cat /tmp/commit_msg.txt
-
-Step 3 — commit:
+# Raw mode (for complex messages)
+python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+  --raw "feat(auth): ログイン機能を追加\n\n詳細。\n\nCloses #42"
 git commit -F /tmp/commit_msg.txt
 ```
 
-The `create_file` tool writes bytes directly as UTF-8, bypassing all shell encoding issues.
+See [scripts/make_commit_msg.py](scripts/make_commit_msg.py) for full usage (`--help`).
 
 ## Commit Format
 
@@ -61,7 +62,9 @@ git status --short   # verify no unintended files (coverage-*/, wnjpn.db, etc.)
 ```bash
 git status --short
 git add <files>
-# create_file → python3 /tmp/mk_commit_msg.py
+python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+  --type <type> --scope <scope> --subject "<subject>" \
+  --body "<body with \\n>" --footer "Closes #N"
 git commit -F /tmp/commit_msg.txt
 git push origin <branch>
 ```

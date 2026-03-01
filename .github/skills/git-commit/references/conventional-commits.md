@@ -76,10 +76,12 @@ EOF
 
 ### Correct method
 
-```python
-# ✅ create_file tool writes /tmp/mk_commit_msg.py, then:
-msg = "fix(test): subject\n\nBody line 1.\nBody line 2.\n\nCloses #74\n"
-open('/tmp/commit_msg.txt', 'w', encoding='utf-8').write(msg)
+```bash
+# Use the bundled script — no shell escaping, no newline collapse
+python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+  --type fix --scope test --subject "subject" \
+  --body "line 1.\nline 2." --footer "Closes #74"
+git commit -F /tmp/commit_msg.txt
 ```
 
 ## .gitignore Conflict Note
