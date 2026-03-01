@@ -30,9 +30,9 @@ class PrefillParametersTest extends TestCase
     {
         parent::setUp();
 
-        // テナントとドメインを作成し、テナンシーを初期化
-        $this->tenant = Tenant::create();
-        $this->tenant->domains()->create(['domain' => 'test.localhost']);
+        // テナントとドメインを作成し、テナンシーを初期化（CI で複数テストが同ドメインを作らないようユニーク化）
+        $this->tenant = Tenant::create(['id' => 'prefill-'.uniqid()]);
+        $this->tenant->domains()->firstOrCreate(['domain' => 'prefill-params-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         // ユーザーを作成

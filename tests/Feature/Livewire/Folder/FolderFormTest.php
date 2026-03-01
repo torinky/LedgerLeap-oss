@@ -30,9 +30,9 @@ class FolderFormTest extends TestCase
     {
         parent::setUp();
 
-        // テナントを作成
-        $this->tenant = Tenant::create();
-        $this->tenant->domains()->create(['domain' => 'test.localhost']);
+        // テナントを作成（CI で複数テストが同ドメインを作らないようユニーク化）
+        $this->tenant = Tenant::create(['id' => 'folder-form-'.uniqid()]);
+        $this->tenant->domains()->firstOrCreate(['domain' => 'folder-form-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         // ユーザーを作成

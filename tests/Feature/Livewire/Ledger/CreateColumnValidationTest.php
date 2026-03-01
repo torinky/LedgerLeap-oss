@@ -28,8 +28,8 @@ class CreateColumnValidationTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenant = Tenant::create();
-        $this->tenant->domains()->create(['domain' => 'test.localhost']);
+        $this->tenant = Tenant::create(['id' => 'col-val-'.uniqid()]);
+        $this->tenant->domains()->firstOrCreate(['domain' => 'create-col-validation-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();

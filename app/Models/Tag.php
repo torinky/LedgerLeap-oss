@@ -15,7 +15,9 @@ class Tag extends Model
 
     public function define()
     {
-        return $this->hasOne(Ledger::class, 'ledger_define_id');
+        // Tag.ledger_define_id と Ledger.ledger_define_id が一致する最初の Ledger を取得する
+        // hasOne(関連モデル, 外部キー, ローカルキー)
+        return $this->hasOne(Ledger::class, 'ledger_define_id', 'ledger_define_id');
     }
 
     public function folder()

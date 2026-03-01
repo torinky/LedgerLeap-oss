@@ -9,11 +9,15 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
 use App\Models\User;
+use PHPUnit\Framework\Attributes\Group;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+// SearchApiTest は Mroonga 全文検索を使い他テストのデータ混入を防ぐため、
+// 独立したクリーンな DB が必要。database-migrations ジョブで実行する。
+#[Group('database-migrations')]
 class SearchApiTest extends TestCase
 {
     use RefreshDatabaseWithTenant;

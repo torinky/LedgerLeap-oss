@@ -100,8 +100,12 @@ class LedgerObserverTest extends TestCase
     #[Test]
     public function it_deletes_chunks_on_ledger_deletion()
     {
-        // This test requires a real job dispatch to create chunks first.
-        // We will simulate the chunk creation.
+        // このテストの目的は「削除時にチャンクが消えること」の検証。
+        // Ledger 生成時に LedgerObserver::created() が発火するが、
+        // $fakeQueue=false クラス全体の設定では EmbeddingService タイムアウトが発生するため
+        // このテストのみ Queue::fake() でジョブ実行をブロックする。
+        Queue::fake();
+
         $ledger = Ledger::factory()->create([
             'content' => ['body' => 'test content'],
         ]);

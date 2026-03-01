@@ -32,9 +32,9 @@ class ModifyColumnTenancyTest extends TestCase
     {
         parent::setUp();
 
-        // テナントとドメインを作成し、テナンシーを初期化
-        $this->tenant = Tenant::create(['id' => 'test-tenant']);
-        $this->tenant->domains()->create(['domain' => 'test.localhost']);
+        // テナントとドメインを作成し、テナンシーを初期化（CI で複数テストが同ドメインを作らないようユニーク化）
+        $this->tenant = Tenant::create(['id' => 'mod-col-'.uniqid()]);
+        $this->tenant->domains()->firstOrCreate(['domain' => 'modify-col-tenancy-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         // ユーザーを作成

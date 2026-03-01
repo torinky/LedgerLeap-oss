@@ -128,6 +128,14 @@ jobs:
           echo "Tenant ready: " . $t->id . PHP_EOL;
           PHP
 
+      - name: Restore wnjpn.db from split zips
+        # wnjpn.db (194MB) は .gitignore で除外されているため、
+        # リポジトリに分割コミットされた zip を結合して復元する
+        run: |
+          cat database/wordnet_data/wnjpn.db.zip.aa \
+              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
+          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
+
       - name: Run Unit Tests
         # external グループ（外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外する
@@ -138,7 +146,7 @@ jobs:
   feature:
     name: Feature Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40  # 実績 ~24分のため余裕を持たせて40分に設定
     services:
       mysql:
         image: groonga/mroonga:mysql-8.0-latest
@@ -237,6 +245,12 @@ jobs:
           \Artisan::call('tenants:migrate', ['--force' => true]);
           echo "Tenant ready: " . $t->id . PHP_EOL;
           PHP
+
+      - name: Restore wnjpn.db from split zips
+        run: |
+          cat database/wordnet_data/wnjpn.db.zip.aa \
+              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
+          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
 
       - name: Run Feature Tests
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
@@ -347,6 +361,24 @@ jobs:
             GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
             FLUSH PRIVILEGES;
           EOF
+
+      - name: Migrate database
+        run: php artisan migrate --force
+
+      - name: Setup test tenant
+        run: |
+          php artisan tinker --no-interaction <<'PHP'
+          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+          tenancy()->initialize($t);
+          \Artisan::call('tenants:migrate', ['--force' => true]);
+          echo "Tenant ready: " . $t->id . PHP_EOL;
+          PHP
+
+      - name: Restore wnjpn.db from split zips
+        run: |
+          cat database/wordnet_data/wnjpn.db.zip.aa \
+              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
+          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
 
       - name: Run DB Migrations Tests
         # DatabaseMigrations を使うテストのみ実行する

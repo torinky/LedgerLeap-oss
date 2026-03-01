@@ -9,10 +9,12 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
+#[Group('database-migrations')]
 class TreeTest extends TestCase
 {
     use RefreshDatabase;
@@ -25,15 +27,15 @@ class TreeTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenant = Tenant::factory()->create(['id' => 'test-tenant', 'name' => 'Test Tenant']);
+        $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-'.uniqid(), 'name' => 'Test Tenant']);
 
         $this->tenant->run(function () {
             $this->user = User::factory()->create([
-                'email' => 'test@example.com',
+                'email' => 'test-'.uniqid().'@example.com',
                 'password' => bcrypt('password'),
             ]);
 
-            $adminRole = Role::create(['name' => 'Admin']);
+            $adminRole = Role::firstOrCreate(['name' => 'Admin']);
             $this->user->assignRole($adminRole);
 
             $rootFolder = Folder::factory()->create([

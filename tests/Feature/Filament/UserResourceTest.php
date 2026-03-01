@@ -22,8 +22,8 @@ class UserResourceTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenant = Tenant::create();
-        $this->tenant->domains()->create(['domain' => 'test.localhost']);
+        $this->tenant = Tenant::create(['id' => 'user-resource-'.uniqid()]);
+        $this->tenant->domains()->firstOrCreate(['domain' => 'user-resource-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         // UserPolicy が期待するパーミッション名で作成

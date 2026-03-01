@@ -146,6 +146,9 @@
                                             // auto_number タイプの場合、text コンポーネントを使用
                                             if ($columnDefine->type === 'auto_number') {
                                                 $componentName = 'ledger.form.text';
+                                            } elseif (in_array($columnDefine->type, ['YMD', 'YMDHM'])) {
+                                                // YMD/YMDHM は同じ y-m-d コンポーネントで処理（enableTime で切り替え）
+                                                $componentName = 'ledger.form.y-m-d';
                                             }
                                         @endphp
                                         <x-dynamic-component :component="$componentName" wire:model.live="content"
