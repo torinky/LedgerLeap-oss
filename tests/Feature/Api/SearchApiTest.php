@@ -9,16 +9,11 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
 use App\Models\User;
-use PHPUnit\Framework\Attributes\Group;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\Support\TestDatabaseState;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
-// SearchApiTest は Mroonga 全文検索を使い他テストのデータ混入を防ぐため、
-// 独立したクリーンな DB が必要。database-migrations ジョブで実行する。
-#[Group('database-migrations')]
 class SearchApiTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -66,23 +61,6 @@ class SearchApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // FolderTest (DatabaseMigrations) が migrate:rollback で central テーブルを消した後に
-        // $sharedTenant が古いオブジェクトのまま残っていると tenancy()->initialize() で
-        // QueryException が発生する。
-        // テーブルが消えているかを try/catch で確実に検知してフェイルセーフを発動する。
-        try {
-            // tenants テーブルが存在するか確認（hasTable はキャッシュの影響を受ける場合があるため直接クエリ）
-            \Illuminate\Support\Facades\DB::connection('mysql_testing')
-                ->select('SELECT 1 FROM tenants LIMIT 1');
-        } catch (\Throwable) {
-            // テーブルが消えている → migrate で再構築し、グローバル状態をリセット
-            $this->artisan('migrate', ['--force' => true]);
-            $tenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
-            tenancy()->initialize($tenant);
-            $this->artisan('tenants:migrate', ['--force' => true]);
-            TestDatabaseState::reset();
-        }
 
         $this->setUpRefreshDatabaseWithTenant();
 
