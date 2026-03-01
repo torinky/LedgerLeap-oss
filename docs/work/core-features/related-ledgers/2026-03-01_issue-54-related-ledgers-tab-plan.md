@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月1日  
 **更新日:** 2026年3月1日  
-**ステータス:** 📋 計画中  
+**ステータス:** 🚧 Sprint 1 完了 / Sprint 2 進行中  
 **目的:** 台帳レコード詳細画面に「関連案件」タブを追加し、識別番号検索・意味検索の2軸で関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/54
 
@@ -158,34 +158,35 @@ Show.php（親）
 
 #### Block 1.1: 識別番号抽出ロジック
 
-- [ ] **Task 1.1.1**: `auto_number` カラム値の抽出メソッドを `RelatedLedgers.php` に実装
+- [x] **Task 1.1.1**: `auto_number` カラム値の抽出メソッドを `RelatedLedgers.php` に実装
   - 対象: `$ledger->content` から `auto_number` タイプのカラムを取得
   - 出力: `['SPEC-001', 'EQ-042']` のような文字列配列
   - 依存: なし
 
 #### Block 1.2: 識別番号による横断検索
 
-- [ ] **Task 1.2.1**: `LedgerLookupController` のバックエンドロジックを Service として切り出し（または直接利用）
-  - 既存の `AutoLinkService` がどこまで担えるか調査し、不足分を実装
+- [x] **Task 1.2.1**: `LedgerLookupController` のバックエンドロジックを調査し、`SearchContext` + `scopeSearchContext` を直接利用する方針に決定
+  - `AutoLinkService` は HTML 生成担当のため不流用。`LedgerLookupController::handle()` と同一ロジックを `RelatedLedgers` に実装
   - 依存: Task 1.1.1
 
-- [ ] **Task 1.2.2**: 識別番号検索メソッドを実装
+- [x] **Task 1.2.2**: 識別番号検索メソッドを実装
   - 複数キーを OR で検索、自身を除外、権限フィルター適用
   - 依存: Task 1.2.1
 
 #### Block 1.3: テスト実装（識別番号検索）
 
-- [ ] **Task 1.3.1**: `tests/Feature/Livewire/Ledger/RelatedLedgersTest.php` を新規作成
-  - `it_finds_related_ledgers_by_identifier` : 識別番号で関連レコードを取得
-  - `it_excludes_self_from_identifier_search` : 自身が結果から除外される
-  - `it_returns_empty_when_no_auto_number_columns` : auto_number なし時は空配列
+- [x] **Task 1.3.1**: `tests/Feature/Livewire/Ledger/RelatedLedgersTest.php` を新規作成
+  - `it_finds_related_ledgers_by_identifier` ✅
+  - `it_excludes_self_from_identifier_search` ✅
+  - `it_returns_empty_when_no_auto_number_columns` ✅
+  - `it_returns_empty_collection_when_no_identifiers_given` ✅ (追加)
+  - `it_filters_out_results_from_inaccessible_folders` ✅ (追加)
 
-- [ ] **Task 1.3.2**: テスト実行・パス確認
-  - コマンド: `./vendor/bin/sail test tests/Feature/Livewire/Ledger/RelatedLedgersTest.php`
+- [x] **Task 1.3.2**: テスト実行・パス確認 — **8 passed, 1 skipped** (2026-03-01)
 
 **✅ Sprint 1 完了条件**
-- 識別番号検索テストが全てパスする
-- Pint 実行済み
+- 識別番号検索テストが全てパスする ✅
+- Pint 実行済み ✅
 
 ---
 
@@ -360,7 +361,7 @@ Show.php（親）
 ## 実装結果（Sprint 完了後に記入）
 
 ### Sprint 1 完了日時
-_未完了_
+2026-03-01 — テスト 8 passed / 1 skipped (Lazy placeholder は Sprint 3 で対応)
 
 ### Sprint 2 完了日時
 _未完了_
