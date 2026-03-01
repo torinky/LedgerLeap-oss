@@ -16,6 +16,7 @@
 - **Permission cache**: When changing `Role`, `Organization`, or `User`, clear caches via `UserService` or call `flushAllUserPermissionsCache()`.
 - **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.
 - **Git in Sail env**: After `sail` commands, plain `cd && git` produces silent empty output. Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
+- **`#[Lazy]` + tenant**: `placeholder()` snapshots `tenantId=null`. In `render()`, always fall back to `$model->tenant_id` — never rely solely on `tenant()?->id`. See Issue #54.
 
 ## Architecture Patterns
 - Business logic → `App\Services`
@@ -32,6 +33,7 @@
 | CI failure / timeout investigation | `.github/skills/ci-failure-investigation/SKILL.md` |
 | Writing tests with `Ledger`, `AttachedFile`, external services | `.github/skills/test-external-dependency-isolation/SKILL.md` |
 | Mroonga search tests / `DatabaseMigrations` trait | `.github/skills/database-migrations-test-optimization/SKILL.md` |
+| `tenant()` null / missing tenant param in Livewire | `.github/skills/livewire-tenant-context/SKILL.md` |
 | End of sprint / creating or updating a skill | `.github/skills/skill-maintenance/SKILL.md` |
 
 ## Workflow
