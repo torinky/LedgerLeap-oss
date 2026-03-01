@@ -61,6 +61,7 @@ TRUNCATE table list, and `DomainOccupiedByOtherTenantException` fix patterns.
 
 - [ ] Full-text search test uses `DatabaseMigrationsOnce` (not `RefreshDatabase`)
 - [ ] `DatabaseMigrations*` tests have `#[Group('database-migrations')]`
+- [ ] **`RefreshDatabaseWithTenant` tests do NOT have `#[Group('database-migrations')]`** — would put them in same job as `FolderTest` whose `migrate:rollback` drops `tenants` table
 - [ ] `tearDown()` calls `tearDownDatabaseMigrationsOnce()` for TRUNCATE cleanup
 - [ ] Tenant domain names are unique per class (no `test.localhost` collision)
 - [ ] Verified locally: `./vendor/bin/sail pest --group=database-migrations`
