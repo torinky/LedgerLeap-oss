@@ -9,32 +9,23 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
 use App\Models\User;
+use PHPUnit\Framework\Attributes\Group;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant;
+use Tests\Traits\DatabaseMigrationsOnce;
 
+// SearchApiTest は Mroonga 全文検索を使うため DatabaseMigrationsOnce を使用し、
+// 各テスト後に TRUNCATE でインデックスをクリアする。
+// RefreshDatabaseWithTenant（トランザクション方式）では Mroonga インデックスに
+// 他テストの Ledger が残留して件数アサーションが失敗する。
+#[Group('database-migrations')]
 class SearchApiTest extends TestCase
 {
-    use RefreshDatabaseWithTenant;
+    use DatabaseMigrationsOnce;
 
-    protected bool $tenancy = true;
-
-    /**
-     * 共有データを保持するため、トランケートを完全に無効化
-     * RefreshDatabaseWithTenantトレイトは、テナント環境でデータが予期せず消える問題があるため、
-     * このテストクラスでは共有データを1回作成し、全テストで再利用する
-     */
-    protected array $tablesToTruncate = [];
-
-    /**
-     * トランケートを完全に無効化してデータ消失を防ぐ
-     */
-    protected function truncateTenantTables(): void
-    {
-        // 何もしない - stancl/tenancyの既知の問題により、
-        // トランケートするとデータが消えるため無効化
-    }
+    /** テストデータ初期化済みフラグ（クラス全体で1回のみ作成） */
+    private static bool $dataInitialized = false;
 
     private static User $adminUser;
 
@@ -58,150 +49,133 @@ class SearchApiTest extends TestCase
 
     private static string $adminToken;
 
+    protected function getTablesToTruncateForMigrationsOnce(): array
+    {
+        return [
+            'ledgers',
+            'ledger_chunks',
+            'attached_files',
+            'activity_log',
+            'taggables',
+            'tags',
+            'role_folder_permissions',
+            'folders',
+            'ledger_defines',
+            'personal_access_tokens',
+        ];
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->setUpRefreshDatabaseWithTenant();
+        $this->setUpDatabaseMigrationsOnce();
 
         // APIテスト実行時にlocalhostをテナントドメインとして扱うための設定
         config(['tenancy.central_domains' => ['127.0.0.1']]);
 
-        // 共有テナントにドメインを追加（初回のみ）
-        if (! $this->getTenant()->domains()->where('domain', 'localhost')->exists()) {
-            $this->getTenant()->domains()->create(['domain' => 'localhost']);
+        // テナントにドメインを追加（初回のみ）
+        $tenant = static::$sharedTenantForMigrationsOnce;
+        if (! $tenant->domains()->where('domain', 'localhost')->exists()) {
+            $tenant->domains()->create(['domain' => 'localhost']);
         }
+
+        // テストデータはクラスで1回のみ作成
+        if (! static::$dataInitialized) {
+            $this->createSharedData();
+            static::$dataInitialized = true;
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownDatabaseMigrationsOnce();
+        parent::tearDown();
     }
 
     /**
      * クラス全体で共有するテストデータを作成
      */
-    protected function createSharedData(): void
+    private function createSharedData(): void
     {
-        // 権限キャッシュクリア（1回のみ）
         $permissionRegistrar = $this->app->make(\Spatie\Permission\PermissionRegistrar::class);
         $permissionRegistrar->forgetCachedPermissions();
 
-        // 権限とロール定義を効率化（最小限）
         $permission = Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']);
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $writerRole = Role::firstOrCreate(['name' => 'writer', 'guard_name' => 'web']);
         $viewerRole = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
 
-        // 権限付与
         $adminRole->givePermissionTo($permission);
         $writerRole->givePermissionTo($permission);
         $viewerRole->givePermissionTo($permission);
 
-        // ユーザー作成（最小限）
         self::$adminUser = User::factory()->create(['name' => 'Admin User']);
         self::$writerUser = User::factory()->create(['name' => 'Writer User']);
         self::$viewerUser = User::factory()->create(['name' => 'Viewer User']);
         self::$noRoleUser = User::factory()->create(['name' => 'No Role User']);
 
-        // ロール付与
         self::$adminUser->assignRole($adminRole);
         self::$writerUser->assignRole($writerRole);
         self::$viewerUser->assignRole($viewerRole);
 
-        // テナント内処理を最適化（必要最小限のデータ作成）
-        $this->getTenant()->run(function () use ($adminRole, $writerRole, $viewerRole) {
-            try {
-                // フォルダ作成（軽量）
-                self::$writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
-                self::$readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
-                self::$privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
+        $tenant = static::$sharedTenantForMigrationsOnce;
+        $tenant->run(function () use ($adminRole, $writerRole, $viewerRole) {
+            self::$writeFolder = Folder::factory()->create(['title' => 'Writable Folder']);
+            self::$readFolder = Folder::factory()->create(['title' => 'Readable Folder']);
+            self::$privateFolder = Folder::factory()->create(['title' => 'Private Folder']);
 
-                // フォルダ権限作成（最小限）
-                $folderPermissions = [
-                    ['role_id' => $adminRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                    ['role_id' => $adminRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                    ['role_id' => $adminRole->id, 'folder_id' => self::$privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                    ['role_id' => $writerRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                    ['role_id' => $viewerRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
-                ];
-
-                foreach ($folderPermissions as $permission) {
-                    RoleFolderPermission::create($permission);
-                }
-
-                // 台帳定義作成（最小限）
-                $writeLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$writeFolder->id]);
-                $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$readFolder->id]);
-                $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$privateFolder->id]);
-
-                // 台帳作成（最小限のコンテンツ）
-                $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
-                self::$writeLedger = Ledger::factory()->minimal()->create([
-                    'ledger_define_id' => $writeLedgerDefine->id,
-                    'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'],
-                    'creator_id' => self::$adminUser->id,
-                ]);
-                \Log::info('Created writeLedger: '.self::$writeLedger->id);
-
-                $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
-                self::$readLedger = Ledger::factory()->minimal()->create([
-                    'ledger_define_id' => $readLedgerDefine->id,
-                    'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder'],
-                    'creator_id' => self::$adminUser->id,
-                ]);
-                \Log::info('Created readLedger: '.self::$readLedger->id);
-
-                $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
-                self::$privateLedger = Ledger::factory()->minimal()->create([
-                    'ledger_define_id' => $privateLedgerDefine->id,
-                    'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder'],
-                    'creator_id' => self::$adminUser->id,
-                ]);
-                \Log::info('Created privateLedger: '.self::$privateLedger->id);
-
-                \Log::info('Total ledgers in DB after creation: '.Ledger::count());
-            } catch (\Exception $e) {
-                \Log::error('Error in createSharedData: '.$e->getMessage());
-                \Log::error($e->getTraceAsString());
-                throw $e;
+            $folderPermissions = [
+                ['role_id' => $adminRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                ['role_id' => $adminRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                ['role_id' => $adminRole->id, 'folder_id' => self::$privateFolder->id, 'permission' => FolderPermissionType::ADMIN, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                ['role_id' => $writerRole->id, 'folder_id' => self::$writeFolder->id, 'permission' => FolderPermissionType::WRITE, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+                ['role_id' => $viewerRole->id, 'folder_id' => self::$readFolder->id, 'permission' => FolderPermissionType::READ, 'creator_id' => self::$adminUser->id, 'modifier_id' => self::$adminUser->id],
+            ];
+            foreach ($folderPermissions as $perm) {
+                RoleFolderPermission::create($perm);
             }
 
-            // タグ作成（最小限）
-            Tag::factory()->create([
-                'name' => 'ProjectA',
+            $writeLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$writeFolder->id]);
+            $readLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$readFolder->id]);
+            $privateLedgerDefine = LedgerDefine::factory()->create(['folder_id' => self::$privateFolder->id]);
+
+            $writeLedgerFirstColumnId = $writeLedgerDefine->column_define[0]->id;
+            self::$writeLedger = Ledger::factory()->minimal()->create([
                 'ledger_define_id' => $writeLedgerDefine->id,
-                'folder_id' => self::$writeFolder->id,
+                'content' => [$writeLedgerFirstColumnId => 'Ledger in Writable Folder'],
+                'creator_id' => self::$adminUser->id,
             ]);
-            Tag::factory()->create([
-                'name' => 'Urgent',
-                'ledger_define_id' => $writeLedgerDefine->id,
-                'folder_id' => self::$writeFolder->id,
-            ]);
-            Tag::factory()->create([
-                'name' => 'ProjectB',
+
+            $readLedgerFirstColumnId = $readLedgerDefine->column_define[0]->id;
+            self::$readLedger = Ledger::factory()->minimal()->create([
                 'ledger_define_id' => $readLedgerDefine->id,
-                'folder_id' => self::$readFolder->id,
+                'content' => [$readLedgerFirstColumnId => 'Ledger in Readable Folder'],
+                'creator_id' => self::$adminUser->id,
             ]);
+
+            $privateLedgerFirstColumnId = $privateLedgerDefine->column_define[0]->id;
+            self::$privateLedger = Ledger::factory()->minimal()->create([
+                'ledger_define_id' => $privateLedgerDefine->id,
+                'content' => [$privateLedgerFirstColumnId => 'Ledger in Private Folder'],
+                'creator_id' => self::$adminUser->id,
+            ]);
+
+            Tag::factory()->create(['name' => 'ProjectA', 'ledger_define_id' => $writeLedgerDefine->id, 'folder_id' => self::$writeFolder->id]);
+            Tag::factory()->create(['name' => 'Urgent', 'ledger_define_id' => $writeLedgerDefine->id, 'folder_id' => self::$writeFolder->id]);
+            Tag::factory()->create(['name' => 'ProjectB', 'ledger_define_id' => $readLedgerDefine->id, 'folder_id' => self::$readFolder->id]);
         });
 
         self::$adminToken = self::$adminUser->createToken('test-token')->plainTextToken;
-
-        // 権限キャッシュクリア（最後に1回のみ）
         $permissionRegistrar->forgetCachedPermissions();
 
         // Mroonga全文検索インデックスの更新を待つ
-        usleep(100000); // 0.1秒待機
-    }
-
-    protected function getTablesToTruncate(): array
-    {
-        return [
-            // トランザクション内で作成されるテストデータをクリーンアップ
-            // 共有データはcreateSharedData()で作成されるのでクリーンアップ不要
-            'personal_access_tokens',
-        ];
+        usleep(100000);
     }
 
     public function test_admin_can_search_all_ledgers()
     {
         // テナントコンテキストを確実に初期化
-        tenancy()->initialize($this->getTenant());
+        tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
 
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -364,10 +338,7 @@ class SearchApiTest extends TestCase
 
     public function test_can_filter_by_creator_id()
     {
-        // 既存の台帳（writeLedger, readLedger, privateLedger）はadminUserによって作成されている
-        // これらが実際にadminUserのcreator_idを持っているか確認
-        $this->getTenant()->run(function () {
-            // 作成済みの台帳のcreator_idを確認・修正
+        static::$sharedTenantForMigrationsOnce->run(function () {
             self::$writeLedger->update(['creator_id' => self::$adminUser->id]);
             self::$readLedger->update(['creator_id' => self::$adminUser->id]);
             self::$privateLedger->update(['creator_id' => self::$adminUser->id]);
@@ -384,7 +355,7 @@ class SearchApiTest extends TestCase
 
     public function test_can_filter_by_different_creator_id()
     {
-        $this->getTenant()->run(function () {
+        static::$sharedTenantForMigrationsOnce->run(function () {
             $writeLedgerDefine = LedgerDefine::where('folder_id', self::$writeFolder->id)->first();
             $columnId = $writeLedgerDefine->column_define[0]->id;
 

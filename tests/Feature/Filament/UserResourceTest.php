@@ -41,6 +41,10 @@ class UserResourceTest extends TestCase
         ]);
         $this->adminUser->assignRole($adminRole);
         $this->actingAs($this->adminUser);
+
+        // Filament の ListUsers は central コンテキストで動作するため、
+        // tenancy()->initialize() 後は必ず central に戻す
+        tenancy()->end();
     }
 
     #[Test]
