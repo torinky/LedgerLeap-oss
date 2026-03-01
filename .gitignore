@@ -74,7 +74,6 @@ out
 gen
 /_ide_helper.php
 !/database/tansi/tansi_v110.db
-!/database/wordnet_data/wnjpn.db
 /.env.development
 /.env.production
 /storage/app/
@@ -92,3 +91,4 @@ coverage-*/
 coverage-unit-check/
 .playwright-mcp/
 1cd
+/database/wordnet_data/wnjpn.db
