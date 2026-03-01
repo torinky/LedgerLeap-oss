@@ -38,7 +38,7 @@ For each modified SKILL.md, verify:
 
 ## Step 4 — Commit with git-commit skill
 
-Use `skill-maintenance` skill for the commit type guidance:
+Use `skill-commit` skill for the commit type guidance:
 
 ```
 docs(.github/skills): <what changed and why>
@@ -50,7 +50,36 @@ Updated skills based on Sprint N findings:
 Closes #N  (if triggered by an issue)
 ```
 
+**Use `bash -c` for all git operations** (see git-commit skill):
+
+```bash
+bash -c "cd /path && git add .github/skills .github/copilot-instructions.md && git status --short"
+bash -c "cd /path && git commit -m 'docs(.github/skills): Sprint N skill updates
+
+- git-commit: added Sail silent-failure pattern
+- skill-maintenance: added sprint completion checklist
+
+Refs #N'"
+bash -c "cd /path && git log --oneline origin/main..HEAD"
+```
+
 ---
+
+## Sprint Completion Checklist (run at end of EVERY sprint)
+
+Execute in this order — do not skip steps:
+
+- [ ] **1. Plan doc**: Update sprint checkbox in `docs/work/.../*plan.md` (mark tasks ✅, add completion date)
+- [ ] **2. Issue**: Update GitHub issue body with completed checklist + evidence (commit hash or test output)
+- [ ] **3. Skill maintenance**: Check if new patterns emerged → update skills (this workflow)
+- [ ] **4. Commit**: Stage only relevant files, commit with `bash -c "cd /path && git commit -m '...'"` 
+- [ ] **5. Verify**: `bash -c "cd /path && git log --oneline origin/main..HEAD"` — confirm commit is there
+- [ ] **6. Push**: `bash -c "cd /path && git push origin <branch>"`
+
+**Critical**: Steps 4–6 must use `bash -c` after any `sail` command in the session.
+If `git status` shows nothing staged after `git add`, switch to `bash -c` immediately.
+
+
 
 ## Anti-Patterns to Avoid
 
@@ -62,26 +91,8 @@ Closes #N  (if triggered by an issue)
 | Nested reference chains (A→B→C) | Agent uses `head -100` preview and misses content | Keep all refs one level from SKILL.md |
 | `git add -A` before commit | Stages `coverage-*/`, `wnjpn.db`, `.playwright-mcp/` | Explicit `git add <file>` only |
 | Duplicate patterns across skills | Maintenance burden, inconsistency | Single source of truth; cross-link |
-
----
-
-## Reference: Progressive Disclosure Architecture
-
-```
-Agent startup (always loaded):
-  copilot-instructions.md  ← ≤50 lines, constraints + skill trigger table
-
-On task match (loaded when triggered):
-  SKILL.md body            ← ≤80 lines, decision tree + comparison table + links
-
-On demand (loaded only when referenced):
-  references/*.md          ← ≤120 lines each, code examples + detailed procedures
-```
-
-Token budget intuition:
-- SKILL.md body at 80 lines ≈ ~1,000 tokens
-- 5 skills × 80 lines = ~5,000 tokens (acceptable for active context)
-- references/ file at 120 lines ≈ ~1,500 tokens (only loaded if needed)
+| `cd /path && git ...` after Sail commands | Silent empty output — git appears to do nothing | Use `bash -c "cd /path && git ..."` |
+| `git commit -F /tmp/commit_msg.txt` after Sail | File write succeeds but commit sees no changes | Include both script + commit inside one `bash -c` |
 
 ---
 
@@ -89,7 +100,7 @@ Token budget intuition:
 
 | Skill | Trigger | Key references |
 |---|---|---|
-| `git-commit` | any git commit | `conventional-commits.md` |
+| `git-commit` | any git commit | `conventional-commits.md`, `sail-environment.md` |
 | `github-issue-workflow` | issue read/write/sprint | `comment-format.md` |
 | `ci-failure-investigation` | CI failure / timeout | `fix-patterns.md` |
 | `database-migrations-test-optimization` | Mroonga tests / slow CI | `trait-usage.md` |

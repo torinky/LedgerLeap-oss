@@ -15,6 +15,7 @@
 - **Model events in Sail**: `touch()` does not reliably fire `updated` events. Use `$model->update(['column' => 'value'])` in event-driven tests.
 - **Permission cache**: When changing `Role`, `Organization`, or `User`, clear caches via `UserService` or call `flushAllUserPermissionsCache()`.
 - **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.
+- **Git in Sail env**: After `sail` commands, plain `cd && git` produces silent empty output. Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
 
 ## Architecture Patterns
 - Business logic → `App\Services`

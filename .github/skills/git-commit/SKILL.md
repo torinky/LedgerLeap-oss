@@ -6,65 +6,67 @@ compatibility: LedgerLeap (macOS/Linux, requires python3)
 
 # git-commit
 
-## ⚠️ ALWAYS Use This Method — No Exceptions
+## ⚠️ Sail Environment: Always Use `bash -c` (Issue #54)
 
-Three approaches **look like they work but silently corrupt newlines or characters**:
+After `./vendor/bin/sail ...` runs, plain `cd && git` commands produce **empty
+output silently** — `git add`, `git log`, `git commit` all appear to do nothing.
+
+**Fix: wrap every git operation in `bash -c "..."`**
+
+```bash
+bash -c "cd /path && git add file1 file2 && git status --short"
+bash -c "cd /path && git commit -m 'feat(scope): subject
+
+body
+
+Refs #N'"
+bash -c "cd /path && git log --oneline origin/main..HEAD"
+```
+
+See [references/sail-environment.md](references/sail-environment.md) for full diagnosis and detection heuristic.
+
+## ⚠️ Commit Message Encoding — No Exceptions
 
 | Method | Failure mode |
 |---|---|
-| `printf 'msg\n...'` | Newlines collapsed → body becomes 1 line in git log |
-| heredoc `<< 'EOF'` | Same collapse when piped; `$`, backtick expansion risk |
-| `python3 -c "..."` | Shell-escaping required for `"`, `(`, `)`, `$`, backtick |
+| `printf 'msg\n...'` | Newlines collapsed → body becomes 1 line |
+| heredoc `<< 'EOF'` | Same collapse; `$`, backtick expansion risk |
+| `python3 -c "..."` | Shell-escaping corrupts Japanese / special chars |
 
-**Use the bundled script — the only method proven safe:**
+**Preferred: direct `git commit -m` inside `bash -c` (no script needed)**
+
+**Long body alternative (script):**
 
 ```bash
-# Structured mode (recommended)
-python3 .github/skills/git-commit/scripts/make_commit_msg.py \
-  --type fix --scope test \
-  --subject "SearchApiTest を DatabaseMigrationsOnce に移行" \
-  --body "理由と変更内容。\n複数行は \\n で区切る。" \
-  --footer "Closes #74"
-git commit -F /tmp/commit_msg.txt
-
-# Raw mode (for complex messages)
-python3 .github/skills/git-commit/scripts/make_commit_msg.py \
-  --raw "feat(auth): ログイン機能を追加\n\n詳細。\n\nCloses #42"
-git commit -F /tmp/commit_msg.txt
+bash -c "cd /path && python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+  --type feat --scope foo --subject 'subject' \
+  --body 'line1\nline2' --footer 'Refs #N' && \
+  git commit -F /tmp/commit_msg.txt"
 ```
 
-See [scripts/make_commit_msg.py](scripts/make_commit_msg.py) for full usage (`--help`).
+See [references/conventional-commits.md](references/conventional-commits.md) for type list.
 
 ## Commit Format
 
 ```
 <type>(<scope>): <subject>   ← ≤50 chars
-                              ← blank line
+<blank line>
 <body>                        ← why / what
-                              ← blank line
+<blank line>
 <footer>                      ← Closes #N / Breaking changes
 ```
 
 **Common types**: `feat` `fix` `test` `refactor` `docs` `ci` `chore`
 
-See [references/conventional-commits.md](references/conventional-commits.md) for full type list and examples.
-
-## Staging Rules
+## Full Workflow (Sail-safe)
 
 ```bash
-# Always stage files explicitly — never use git add -A
-git add path/to/file1 path/to/file2
-git status --short   # verify no unintended files (coverage-*/, wnjpn.db, etc.)
-```
+bash -c "cd /path && git add <files> && git status --short"
+bash -c "cd /path && git commit -m 'type(scope): subject
 
-## Full Workflow
+body
 
-```bash
-git status --short
-git add <files>
-python3 .github/skills/git-commit/scripts/make_commit_msg.py \
-  --type <type> --scope <scope> --subject "<subject>" \
-  --body "<body with \\n>" --footer "Closes #N"
-git commit -F /tmp/commit_msg.txt
-git push origin <branch>
+Refs #N'"
+bash -c "cd /path && git log --oneline origin/main..HEAD"
+bash -c "cd /path && git push origin <branch>"
 ```
