@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月1日  
 **更新日:** 2026年3月1日  
-**ステータス:** 🚧 Sprint 1 完了 / Sprint 2 進行中  
+**ステータス:** 🚧 Sprint 1・2 完了 / Sprint 3 進行中  
 **目的:** 台帳レコード詳細画面に「関連案件」タブを追加し、識別番号検索・意味検索の2軸で関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/54
 
@@ -212,17 +212,29 @@ Show.php（親）
 
 #### Block 2.3: テスト実装（意味検索）
 
-- [ ] **Task 2.3.1**: `RelatedLedgersTest.php` に意味検索テストを追加
-  - `it_finds_related_ledgers_by_semantic_search` : 意味検索で関連レコードを取得（RAG モック）
-  - `it_excludes_self_from_semantic_search` : 自身が結果から除外される
-  - `it_handles_rag_service_unavailable_gracefully` : RAGサービス例外時は空配列を返す
+- [x] **Task 2.3.1**: `RelatedLedgersTest.php` に意味検索テスト 3 件を追加
+  - `it_finds_related_ledgers_by_semantic_search` ✅ — RAG モックで関連レコード取得を検証
+  - `it_excludes_self_from_semantic_search` ✅ — 自身が結果から除外されることを検証
+  - `it_returns_empty_when_semantic_query_is_empty` ✅ — 空クエリ時の早期リターンを検証
+  - `it_handles_rag_service_unavailable_gracefully` ✅ — Sprint 1 で実装済み
 
-- [ ] **Task 2.3.2**: テスト実行・パス確認
+- [x] **Task 2.3.2**: テスト実行・パス確認 — **11 passed, 1 skipped** (2026-03-01)
+
+#### CI 考慮事項（確認済み）
+
+| 項目 | 対応 | 根拠 |
+|---|---|---|
+| Embedding コンテナ依存 | ✅ 排除済み | `fakeQueue=true`（TestCase 基底）で `ProcessLedgerForRagJob` をキューに積まない |
+| RAG コンテナ依存 | ✅ 排除済み | `$this->mock(RagSearchService::class)` で外部依存を差し替え |
+| テスト間 DB 汚染 | ✅ 排除済み | `RefreshDatabase` トレイトを追加 |
+| CI ジョブ分類 | ✅ 確認済み | `external` / `database-migrations` グループに属さず、`feature` ジョブで自動実行 |
+| Mroonga 全文検索 | ✅ 確認済み | CI は `groonga/mroonga:mysql-8.0-latest` を使用、同環境でローカルも動作確認済み |
 
 **✅ Sprint 2 完了条件**
-- 意味検索テストが全てパスする
-- RAGサービス未起動時もエラーにならない
-- Pint 実行済み
+- 意味検索テストが全てパスする ✅
+- RAGサービス未起動時もエラーにならない ✅
+- CI 考慮事項を確認・ドキュメント化済み ✅
+- Pint 実行済み ✅
 
 ---
 
@@ -233,14 +245,14 @@ Show.php（親）
 
 #### Block 3.1: Livewire コンポーネント
 
-- [ ] **Task 3.1.1**: `app/Livewire/Ledger/RelatedLedgers.php` を作成
+- [x] **Task 3.1.1**: `app/Livewire/Ledger/RelatedLedgers.php` を作成 ← Sprint 1 で先行実装済み
   - `mount(int $ledgerId)` で `$ledgerRecord` をロード
   - `InitializesTenantContext` trait を使用
   - 識別番号検索結果・意味検索結果をプロパティとして保持
-  - `$identifierCount` / `$semanticCount` プロパティを公開
+  - `$identifierCount` / `$semanticCount` / `$totalCount` プロパティを公開
 
-- [ ] **Task 3.1.2**: Lazy ロード対応
-  - `#[Lazy]` 属性またはタブ内での `wire:init` による遅延ロードを実装
+- [x] **Task 3.1.2**: Lazy ロード対応 ← Sprint 1 で先行実装済み
+  - `#[Lazy]` 属性を付与、`placeholder()` メソッドでプレースホルダービューを返す実装済み
 
 #### Block 3.2: Blade ビュー
 
@@ -364,7 +376,7 @@ Show.php（親）
 2026-03-01 — テスト 8 passed / 1 skipped (Lazy placeholder は Sprint 3 で対応)
 
 ### Sprint 2 完了日時
-_未完了_
+2026-03-01 — テスト 11 passed / 1 skipped (Lazy placeholder は Sprint 3 で対応)
 
 ### Sprint 3 完了日時
 _未完了_
