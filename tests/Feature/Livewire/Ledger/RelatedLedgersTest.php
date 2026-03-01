@@ -393,22 +393,202 @@ class RelatedLedgersTest extends TestCase
     }
 
     // ─────────────────────────────────────────────
-    // Livewire コンポーネントレンダリング（Sprint 3 へ向けた基礎確認）
+    // Sprint 3: マージ・識別理由付与
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_merges_identifier_and_semantic_results_with_correct_reason(): void
+    {
+        $identifierLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-010', 1 => '識別番号専用', 2 => '']]);
+
+        $semanticLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-020', 1 => '意味検索専用', 2 => '']]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $merged = $component->mergeResults(
+            collect([$identifierLedger]),
+            collect([$semanticLedger])
+        );
+
+        $this->assertCount(2, $merged);
+
+        $identifierReason = collect($merged)->firstWhere(fn ($item) => $item['ledger']->id === $identifierLedger->id);
+        $semanticReason = collect($merged)->firstWhere(fn ($item) => $item['ledger']->id === $semanticLedger->id);
+
+        $this->assertSame('identifier', $identifierReason['reason']);
+        $this->assertSame('semantic', $semanticReason['reason']);
+    }
+
+    #[Test]
+    public function it_marks_both_when_ledger_appears_in_both_searches(): void
+    {
+        $bothLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-001', 1 => '両方ヒット', 2 => '詳細説明']]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $merged = $component->mergeResults(
+            collect([$bothLedger]),   // 識別番号検索にも含まれる
+            collect([$bothLedger])    // 意味検索にも含まれる
+        );
+
+        $this->assertCount(1, $merged);
+        $this->assertSame('both', $merged[0]['reason']);
+        $this->assertSame($bothLedger->id, $merged[0]['ledger']->id);
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint 3: フィルタリング
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_filters_by_show_identifier_toggle(): void
+    {
+        $identifierLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-031', 1 => '識別番号のみ', 2 => '']]);
+        $semanticLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-032', 1 => '意味検索のみ', 2 => '']]);
+
+        $merged = [
+            ['ledger' => $identifierLedger, 'reason' => 'identifier', 'score' => null, 'matched_keys' => []],
+            ['ledger' => $semanticLedger, 'reason' => 'semantic', 'score' => null, 'matched_keys' => []],
+        ];
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+        $component->showIdentifier = false;  // 識別番号をオフ
+        $component->showSemantic = true;
+
+        $filtered = $component->applyFilter($merged);
+
+        $this->assertCount(1, $filtered);
+        $this->assertSame('semantic', $filtered[0]['reason']);
+    }
+
+    #[Test]
+    public function it_filters_by_show_semantic_toggle(): void
+    {
+        $identifierLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-041', 1 => '識別番号のみ', 2 => '']]);
+        $semanticLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-042', 1 => '意味検索のみ', 2 => '']]);
+        $bothLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-043', 1 => '両方', 2 => '']]);
+
+        $merged = [
+            ['ledger' => $identifierLedger, 'reason' => 'identifier', 'score' => null, 'matched_keys' => []],
+            ['ledger' => $semanticLedger, 'reason' => 'semantic', 'score' => null, 'matched_keys' => []],
+            ['ledger' => $bothLedger, 'reason' => 'both', 'score' => 0.9, 'matched_keys' => []],
+        ];
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+        $component->showIdentifier = true;
+        $component->showSemantic = false;  // 意味検索をオフ
+
+        $filtered = $component->applyFilter($merged);
+
+        $this->assertCount(2, $filtered);  // identifier + both（どちらかオンなので表示）
+        $reasons = array_column($filtered, 'reason');
+        $this->assertContains('identifier', $reasons);
+        $this->assertContains('both', $reasons);
+        $this->assertNotContains('semantic', $reasons);
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint 3: ページング
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_paginates_merged_results(): void
+    {
+        // 25件のアイテムを生成（デフォルト perPage=20 なので2ページに分かれる）
+        $items = [];
+        for ($i = 0; $i < 25; $i++) {
+            $l = Ledger::factory()
+                ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+                ->create(['content' => [0 => "EQ-{$i}", 1 => "テスト{$i}", 2 => '']]);
+            $items[] = ['ledger' => $l, 'reason' => 'identifier', 'score' => null, 'matched_keys' => []];
+        }
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $paginator = $component->buildPaginator($items);
+
+        $this->assertSame(25, $paginator->total());
+        $this->assertCount(20, $paginator->items());  // 1ページ目は20件
+        $this->assertTrue($paginator->hasMorePages());
+        $this->assertSame('related_page', $paginator->getPageName());
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint 3: グルーピング
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_groups_results_by_ledger_define(): void
+    {
+        // 別台帳定義を作成
+        $otherDefine = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    new \App\Models\ColumnDefine(0, '管理番号', 'auto_number', 1),
+                    new \App\Models\ColumnDefine(1, 'タイトル', 'text', 2),
+                ],
+            ]);
+
+        $ledger1 = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-051', 1 => '台帳Aのレコード', 2 => '']]);
+        $ledger2 = Ledger::factory()
+            ->for($otherDefine, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-052', 1 => '台帳Bのレコード']]);
+
+        $items = [
+            ['ledger' => $ledger1, 'reason' => 'identifier', 'score' => null, 'matched_keys' => []],
+            ['ledger' => $ledger2, 'reason' => 'semantic', 'score' => null, 'matched_keys' => []],
+        ];
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $grouped = $component->groupByDefine($items);
+
+        $this->assertCount(2, $grouped);  // 2グループ
+        $this->assertTrue($grouped->has($this->define->id));
+        $this->assertTrue($grouped->has($otherDefine->id));
+        $this->assertCount(1, $grouped[$this->define->id]);
+        $this->assertCount(1, $grouped[$otherDefine->id]);
+    }
+
+    // ─────────────────────────────────────────────
+    // Livewire コンポーネントレンダリング（Sprint 4 ビュー作成後に有効化）
     // ─────────────────────────────────────────────
 
     #[Test]
     public function it_can_be_instantiated_as_livewire_component(): void
     {
-        // Lazy コンポーネントはプレースホルダーが先に表示されるため、
-        // ここでは mount が例外を投げないことを確認するに留める
         $this->expectNotToPerformAssertions();
 
         try {
             Livewire::test(RelatedLedgers::class, ['ledgerId' => $this->ledger->id]);
         } catch (\Throwable $e) {
-            // Lazy コンポーネントのプレースホルダービューが未存在の場合はスキップ
             if (str_contains($e->getMessage(), 'View') && str_contains($e->getMessage(), 'not found')) {
-                $this->markTestSkipped('Placeholder view not yet created (Sprint 3 task)');
+                $this->markTestSkipped('Placeholder/main view not yet created (Sprint 4 task)');
             }
             throw $e;
         }

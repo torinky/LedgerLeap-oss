@@ -10,36 +10,47 @@ use App\Repositories\WritableFolderRepository;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
 use App\Services\SynonymService;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Lazy;
+use Livewire\WithPagination;
 
 #[Lazy]
 class RelatedLedgers extends BaseLivewireComponent
 {
     use InitializesTenantContext;
+    use WithPagination;
 
     public int $ledgerId;
 
-    /** 識別番号検索の結果 */
-    public array $identifierResults = [];
+    /** 識別番号フィルタートグル */
+    public bool $showIdentifier = true;
 
-    /** 意味検索の結果 */
-    public array $semanticResults = [];
+    /** 意味検索フィルタートグル */
+    public bool $showSemantic = true;
 
-    /** 識別番号検索の件数 */
+    /** 重複排除した合計件数（フィルター前） */
+    public int $totalCount = 0;
+
+    /** 識別番号検索の件数（フィルター前） */
     public int $identifierCount = 0;
 
-    /** 意味検索の件数 */
+    /** 意味検索の件数（フィルター前） */
     public int $semanticCount = 0;
-
-    /** 重複排除した合計件数 */
-    public int $totalCount = 0;
 
     /** RAGサービスが利用可能か */
     public bool $ragAvailable = false;
 
+    /** auto_number カラムを持つか */
+    public bool $hasAutoNumber = false;
+
+    /** 1ページあたりの件数 */
+    protected int $perPage = 20;
+
     /** エラーメッセージ（内部用） */
     private string $lastError = '';
+
+    protected string $paginationTheme = 'tailwind';
 
     public function mount(int $ledgerId): void
     {
@@ -52,6 +63,20 @@ class RelatedLedgers extends BaseLivewireComponent
     public function placeholder()
     {
         return view('livewire.ledger.related-ledgers-placeholder');
+    }
+
+    // ─────────────────────────────────────────────
+    // トグル変更時にページをリセット
+    // ─────────────────────────────────────────────
+
+    public function updatedShowIdentifier(): void
+    {
+        $this->resetPage('related_page');
+    }
+
+    public function updatedShowSemantic(): void
+    {
+        $this->resetPage('related_page');
     }
 
     // ─────────────────────────────────────────────
@@ -216,9 +241,7 @@ class RelatedLedgers extends BaseLivewireComponent
             $ragResults = $ragService->searchLedgers(
                 query: $query,
                 limit: 20,
-                filters: [
-                    'user' => $user,
-                ]
+                filters: ['user' => $user]
             );
 
             if (empty($ragResults)) {
@@ -253,6 +276,108 @@ class RelatedLedgers extends BaseLivewireComponent
     }
 
     // ─────────────────────────────────────────────
+    // Sprint 3: マージ・フィルター・ページング・グルーピング
+    // ─────────────────────────────────────────────
+
+    /**
+     * 識別番号検索と意味検索の結果をマージし、識別理由（reason）を付与する
+     *
+     * @param  Collection<int, Ledger>  $identifiers
+     * @param  Collection<int, Ledger>  $semantics
+     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>
+     */
+    public function mergeResults(Collection $identifiers, Collection $semantics): array
+    {
+        $merged = [];
+
+        // 識別番号検索結果を追加
+        foreach ($identifiers as $ledger) {
+            $merged[$ledger->id] = [
+                'ledger' => $ledger,
+                'reason' => 'identifier',
+                'score' => null,
+                'matched_keys' => [],
+            ];
+        }
+
+        // 意味検索結果をマージ（識別番号検索にも含まれる場合は 'both' に昇格）
+        foreach ($semantics as $ledger) {
+            if (isset($merged[$ledger->id])) {
+                // 両方ヒット → reason を 'both' に昇格
+                $merged[$ledger->id]['reason'] = 'both';
+            } else {
+                $merged[$ledger->id] = [
+                    'ledger' => $ledger,
+                    'reason' => 'semantic',
+                    'score' => null,
+                    'matched_keys' => [],
+                ];
+            }
+        }
+
+        return array_values($merged);
+    }
+
+    /**
+     * トグル状態に基づき結果をフィルタリングする
+     *
+     * reason='both' はどちらかのトグルがオンなら表示
+     *
+     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>  $merged
+     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>
+     */
+    public function applyFilter(array $merged): array
+    {
+        return array_values(array_filter($merged, function (array $item) {
+            return match ($item['reason']) {
+                'identifier' => $this->showIdentifier,
+                'semantic' => $this->showSemantic,
+                'both' => $this->showIdentifier || $this->showSemantic,
+                default => true,
+            };
+        }));
+    }
+
+    /**
+     * フィルター済み配列を LengthAwarePaginator でラップする
+     *
+     * pageName='related_page' で他のページネーターとの衝突を回避
+     *
+     * @param  array<int, mixed>  $filtered
+     */
+    public function buildPaginator(array $filtered): LengthAwarePaginator
+    {
+        $total = count($filtered);
+        $currentPage = (int) request()->get('related_page', 1);
+        $currentPage = max(1, $currentPage);
+
+        $sliced = array_slice($filtered, ($currentPage - 1) * $this->perPage, $this->perPage);
+
+        return new LengthAwarePaginator(
+            items: $sliced,
+            total: $total,
+            perPage: $this->perPage,
+            currentPage: $currentPage,
+            options: [
+                'path' => request()->url(),
+                'pageName' => 'related_page',
+            ]
+        );
+    }
+
+    /**
+     * ページ内のアイテムを ledger_define_id でグループ化する
+     *
+     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>  $pageItems
+     * @return Collection<int|string, Collection<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>>
+     */
+    public function groupByDefine(array $pageItems): Collection
+    {
+        return collect($pageItems)
+            ->groupBy(fn (array $item) => $item['ledger']->ledger_define_id);
+    }
+
+    // ─────────────────────────────────────────────
     // レンダリング
     // ─────────────────────────────────────────────
 
@@ -262,20 +387,30 @@ class RelatedLedgers extends BaseLivewireComponent
 
         // 識別番号検索
         $identifierKeys = $this->extractAutoNumberValues($ledger);
+        $this->hasAutoNumber = ! empty($identifierKeys);
         $identifierCollection = $this->searchByIdentifiers($identifierKeys);
 
         // 意味検索
         $semanticCollection = $this->searchBySemantic($ledger);
 
-        // 重複排除: 識別番号検索・意味検索の両方に含まれるIDを除外しない（両セクションに表示する）
-        // 合計件数は Union で重複排除
-        $allIds = $identifierCollection->pluck('id')
-            ->merge($semanticCollection->pluck('id'))
-            ->unique();
-
+        // マージ・件数集計（フィルター前）
+        $merged = $this->mergeResults($identifierCollection, $semanticCollection);
         $this->identifierCount = $identifierCollection->count();
         $this->semanticCount = $semanticCollection->count();
-        $this->totalCount = $allIds->count();
+        $this->totalCount = count($merged);
+
+        // フィルター適用
+        $filtered = $this->applyFilter($merged);
+
+        // ページング
+        $paginator = $this->buildPaginator($filtered);
+
+        // ページ内アイテムをグルーピング
+        $groupedResults = $this->groupByDefine($paginator->items());
+
+        // 台帳定義モデルのマップ（ヘッダー表示用）
+        $defineIds = $groupedResults->keys()->toArray();
+        $defines = LedgerDefine::whereIn('id', $defineIds)->with('folder')->get()->keyBy('id');
 
         // 親コンポーネントにバッジ件数を通知
         $this->dispatch('relatedCountUpdated', count: $this->totalCount);
@@ -283,8 +418,10 @@ class RelatedLedgers extends BaseLivewireComponent
         return view('livewire.ledger.related-ledgers', [
             'ledger' => $ledger,
             'identifierKeys' => $identifierKeys,
-            'identifierResults' => $identifierCollection,
-            'semanticResults' => $semanticCollection,
+            'groupedResults' => $groupedResults,
+            'defines' => $defines,
+            'paginator' => $paginator,
+            'filteredCount' => count($filtered),
         ]);
     }
 }
