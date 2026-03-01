@@ -67,18 +67,20 @@ class SearchApiTest extends TestCase
     {
         parent::setUp();
 
-        // FolderTest (DatabaseMigrations) が migrate:rollback でcentralテーブルを消した場合に備えて
-        // DBテーブルの存在確認後に必要に応じて再マイグレーション・テナント再作成を行う。
-        // CI環境でも FolderTest→SearchApiTest の順で実行されると tenants テーブルが消える。
-        if (! \Illuminate\Support\Facades\Schema::connection('mysql_testing')->hasTable('tenants')) {
-            // テーブルが消えている → migrate:fresh で再構築
+        // FolderTest (DatabaseMigrations) が migrate:rollback で central テーブルを消した後に
+        // $sharedTenant が古いオブジェクトのまま残っていると tenancy()->initialize() で
+        // QueryException が発生する。
+        // テーブルが消えているかを try/catch で確実に検知してフェイルセーフを発動する。
+        try {
+            // tenants テーブルが存在するか確認（hasTable はキャッシュの影響を受ける場合があるため直接クエリ）
+            \Illuminate\Support\Facades\DB::connection('mysql_testing')
+                ->select('SELECT 1 FROM tenants LIMIT 1');
+        } catch (\Throwable) {
+            // テーブルが消えている → migrate で再構築し、グローバル状態をリセット
             $this->artisan('migrate', ['--force' => true]);
-            // ci-test-tenant を再作成してテナントDBをマイグレーション
             $tenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
             tenancy()->initialize($tenant);
             $this->artisan('tenants:migrate', ['--force' => true]);
-            // RefreshDatabaseWithTenant のグローバル状態をリセットして
-            // このクラスで ci-test-tenant を正常に取得できるようにする
             TestDatabaseState::reset();
         }
 
