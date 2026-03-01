@@ -53,49 +53,6 @@ remove it and add `/database/wordnet_data/wnjpn.db` at the end of the file.
 
 ---
 
-## §4 Wrong `#[Group('database-migrations')]` Placement (since Issue #74 Sprint 8)
-
-Adding `#[Group('database-migrations')]` to a test that uses `RefreshDatabaseWithTenant`
-(not `DatabaseMigrations`) puts it in the same CI job as `FolderTest`.
-
-`FolderTest` uses `DatabaseMigrations` whose `tearDown()` calls `migrate:rollback`,
-dropping all central tables (`tenants`, `domains`, etc.). The next class that calls
-`tenancy()->initialize($sharedTenant)` gets `SQLSTATE[42S02]: Table 'tenants' doesn't exist`.
-
-### Rule
-
-| Trait used | Correct CI job |
-|---|---|
-| `DatabaseMigrations` | `db-migrations` — add `#[Group('database-migrations')]` |
-| `DatabaseMigrationsOnce` | `db-migrations` — add `#[Group('database-migrations')]` |
-| `RefreshDatabaseWithTenant` | `feature` — **do NOT add** `#[Group('database-migrations')]` |
-| `RefreshDatabase` | `feature` — **do NOT add** `#[Group('database-migrations')]` |
-
-### Diagnosis
-
-If `SearchApiTest` (or any `RefreshDatabaseWithTenant` class) suddenly fails with
-`Table 'tenants' doesn't exist` after another class passes, check for
-`#[Group('database-migrations')]` on the failing class.
-
----
-
-## §5 TestDatabaseState — Resetting RefreshDatabaseWithTenant Global State
-
-When a test calls `migrate:fresh` in `setUp()` (e.g. `SearchApiPoCTest`),
-`RefreshDatabaseWithTenant::$globalDatabaseMigrated` is still `true` from a previous class,
-so subsequent classes skip re-migration. Fix: call `TestDatabaseState::reset()` after
-`migrate:fresh`.
-
-```php
-$this->artisan('migrate:fresh', ['--force' => true]);
-TestDatabaseState::reset();  // resets $globalDatabaseMigrated, $sharedTenant, etc.
-```
-
-`TestDatabaseState` lives at `tests/Support/TestDatabaseState.php`.
-The 4 static properties of `RefreshDatabaseWithTenant` are `public` so this helper can reach them.
-
----
-
 ## §3 Local vs CI Environment Differences
 
 | Item | Local | CI |
@@ -106,21 +63,33 @@ The 4 static properties of `RefreshDatabaseWithTenant` are `public` so this help
 | `RAG_ENABLED` | often `true` in `.env` | `false` (set in phpunit.xml) |
 | `wnjpn.db` | present | needs zip merge step |
 
-### RAG_ENABLED in phpunit.xml
+Tests that need RAG must opt in: `config(['rag.enabled' => true])` in `setUp()`.
 
-```xml
-<php>
-    <env name="QUEUE_CONNECTION" value="sync"/>
-    <env name="RAG_ENABLED" value="false"/>
-</php>
-```
+---
 
-Tests that need RAG must opt in explicitly:
+## §4 Wrong `#[Group('database-migrations')]` Placement (since Issue #74 Sprint 8)
+
+Adding this group to a `RefreshDatabaseWithTenant` test puts it in the same job as
+`FolderTest`, whose `tearDown()` calls `migrate:rollback` and drops all central tables.
+
+| Trait used | Correct CI job |
+|---|---|
+| `DatabaseMigrations` / `DatabaseMigrationsOnce` | `db-migrations` — **add** group |
+| `RefreshDatabaseWithTenant` / `RefreshDatabase` | `feature` — **do NOT add** group |
+
+**Diagnosis**: `SQLSTATE[42S02]: Table 'tenants' doesn't exist` after a passing class
+→ check for `#[Group('database-migrations')]` on the failing class.
+
+---
+
+## §5 TestDatabaseState — Resetting RefreshDatabaseWithTenant Global State
+
+When a test calls `migrate:fresh` in `setUp()`, `$globalDatabaseMigrated` stays `true`.
+Fix: call `TestDatabaseState::reset()` after `migrate:fresh`.
+
 ```php
-protected function setUp(): void
-{
-    parent::setUp();
-    config(['rag.enabled' => true]);
-}
+$this->artisan('migrate:fresh', ['--force' => true]);
+TestDatabaseState::reset();  // resets $globalDatabaseMigrated, $sharedTenant, etc.
 ```
 
+`TestDatabaseState` lives at `tests/Support/TestDatabaseState.php`.

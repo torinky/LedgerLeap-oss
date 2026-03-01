@@ -29,17 +29,13 @@ After every sprint/task completion, check:
 
 ```yaml
 ---
-name: skill-name               # lowercase, hyphens only, ≤64 chars, matches dir name
-description: >                 # third-person; "does X. Use when Y." ≤1024 chars
-  <what it does>. Use when <specific trigger conditions>.
-compatibility: LedgerLeap (...)  # environment constraints
+name: skill-name
+description: <what it does>. Use when <specific trigger conditions>.
+compatibility: LedgerLeap (...)
 ---
 ```
 
-**description rules**:
-- Third-person voice: "Manages X" not "Use this to manage X"
-- Include both WHAT and WHEN: "Isolates external services. Use when writing tests involving Ledger..."
-- Include specific keywords the agent matches on (class names, error names, trait names)
+**description rules**: Third-person voice. Include WHAT and WHEN. Include class/error names.
 
 ## SKILL.md Body Rules
 
@@ -49,7 +45,7 @@ compatibility: LedgerLeap (...)  # environment constraints
 | Decision tree first | Agent needs to reach the right branch fast |
 | Comparison table second | Concise alternative enumeration |
 | Reference links last | `See [references/foo.md](references/foo.md) for details` |
-| No time-sensitive info | "as of 2026-02" becomes misleading; use "since Issue #N" instead |
+| No time-sensitive info | Use "since Issue #N" instead of "as of 2026-02" |
 | English preferred | Agent processes English constraints with highest accuracy |
 | Checklist at bottom | Compact format; max 6–8 items |
 
@@ -82,4 +78,3 @@ compatibility: LedgerLeap (...)  # environment constraints
 
 See [references/workflow.md](references/workflow.md) for the complete
 end-of-sprint checklist and quality gate table.
-

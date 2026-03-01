@@ -52,6 +52,36 @@ Closes #74
 Shell expands `$var`, `` `cmd` ``, `(subshell)`, `!history` inside `-m "..."`.
 Japanese multi-byte characters depend on terminal locale — unreliable in non-UTF-8 environments.
 
+## Known Failure Cases (do not repeat)
+
+### printf → newlines collapsed (Sprint 8/9 violation)
+
+```bash
+# ❌ This was used in Sprint 8/9 — body becomes one line in git log
+printf 'fix(test): subject\n\nBody line 1.\nBody line 2.\n' > /tmp/commit_msg.txt
+git commit -F /tmp/commit_msg.txt
+# Result in git log: "fix(test): subject ## Body line 1. Body line 2."
+```
+
+### heredoc → same collapse when piped
+
+```bash
+# ❌ Also produces collapsed single-line body
+cat > /tmp/commit_msg.txt << 'EOF'
+fix(test): subject
+
+Body line.
+EOF
+```
+
+### Correct method
+
+```python
+# ✅ create_file tool writes /tmp/mk_commit_msg.py, then:
+msg = "fix(test): subject\n\nBody line 1.\nBody line 2.\n\nCloses #74\n"
+open('/tmp/commit_msg.txt', 'w', encoding='utf-8').write(msg)
+```
+
 ## .gitignore Conflict Note
 
 If `.gitignore` has `!/database/wordnet_data/wnjpn.db` (force-include) AND

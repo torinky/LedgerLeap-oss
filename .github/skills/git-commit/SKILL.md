@@ -6,11 +6,17 @@ compatibility: LedgerLeap (macOS/Linux, requires python3)
 
 # git-commit
 
-## The Only Reliable Method (proven in Sprint 7)
+## ⚠️ ALWAYS Use This Method — No Exceptions
 
-`python3 -c` and heredoc **both fail** when the message contains Japanese, `$`, `(`, `)`, or `` ` ``.
+Three approaches **look like they work but silently corrupt newlines or characters**:
 
-**Use `create_file` tool + `python3 script.py` instead:**
+| Method | Failure mode |
+|---|---|
+| `printf 'msg\n...'` | Newlines collapsed → body becomes 1 line in git log |
+| heredoc `<< 'EOF'` | Same collapse when piped; `$`, backtick expansion risk |
+| `python3 -c "..."` | Shell-escaping required for `"`, `(`, `)`, `$`, backtick |
+
+**Use `create_file` tool + `python3 script.py` — the only method proven safe:**
 
 ```
 Step 1 — create_file tool writes /tmp/mk_commit_msg.py:
