@@ -1,80 +1,41 @@
-# GitHub Copilot Instructions - LedgerLeap
+# LedgerLeap — Copilot Instructions
 
-## 1. Critical Constraints (最優先制約)
+## Repository
+- **owner**: `torinky` / **repo**: `LedgerLeap`
+- **Stack**: PHP 8.4 / Laravel 12 / MySQL (Mroonga) / Livewire / Alpine.js / TailwindCSS (daisyUI, maryUI)
 
-**これらを無視すると修復不可能なバグやテスト失敗を招きます。**
+## Critical Constraints
 
-- **Language** 会話や思考は日本語で進めてください。
-- **Mroonga 全文検索:** 複合インデックスは機能しません。検索時は必ず単独インデックスに対して `MATCH() AGAINST()` を行い、複数カラムは `OR` で結合してください。
-- **テナント初期化:** 全てのFeatureテストの `setUp()` で `tenancy()->initialize($tenant)` が**必須**です。これを忘れるとリレーションが `null` を返します。
-- **AsColumnArrayJson Access:** シリアライゼーションの制約により `data_get()` は動作しません。必ず `$ledger->content[0]` のように直接配列アクセスを行ってください。
-    - **二重エンコード厳禁:** `files` や `chk` 型等の配列として保存されるカラムに対し、保存前に手動で `json_encode` を行わないでください。キャストが自動的にシリアライズを行うため、手動で変換するとDB上で破損データ（文字列化されたJSON）となり、UIが表示不能になります。
-- **Livewire State:** パブリックプロパティは「シンプルな連想配列」のみを使用してください。オブジェクトを直接持たせるとシリアライズエラーが発生します。
-- **Livewire Parent Access:** ソートやフィルタなどの高頻度な操作には `Livewire.dispatch()` を避け、`$parent.method()` または `$wire.$parent.method()` を使用してください。これにより `wire:loading` の追跡が安定し、レスポンスが向上します。
-- **Model Event Reliability (Sail):** Sail環境のテストでは `touch()` が `updated` イベントを確実に発火させない場合があります。イベント駆動のテストでは `$model->update(['column' => 'value'])` を使用してください。
-- **Permission Cache Invalidation:** パーミッションに影響するモデル (`Role`, `Organization`, `User`) の変更時は、必ず `UserService` を通じて関連キャッシュをクリアするか、広範囲な変更では `flushAllUserPermissionsCache()` を実行してください。
-- **Database Migrations:** 全文検索が絡むテストでは `RefreshDatabase` ではなく `DatabaseMigrationsOnce` トレイトを使用してください（`DatabaseMigrations` は各テストで `migrate:fresh` が走るため300秒超かかります）。詳細は `/.github/skills/database-migrations-test-optimization/SKILL.md` を参照。
+- **Mroonga full-text search**: Composite indexes do NOT work. Use single-column `MATCH() AGAINST()`, combine multiple columns with `OR`.
+- **Tenant init in tests**: Every Feature test `setUp()` MUST call `tenancy()->initialize($tenant)`. Missing it returns `null` relations.
+- **AsColumnArrayJson access**: `data_get()` does NOT work. Use direct array access: `$ledger->content[0]`.
+- **No manual json_encode**: Never call `json_encode()` before saving `files`, `chk`, or other cast-array columns. The cast handles serialization; doing it manually corrupts the DB.
+- **Livewire state**: Public properties must be plain associative arrays. Objects cause serialization errors.
+- **Livewire parent calls**: For frequent operations (sort/filter), use `$parent.method()` or `$wire.$parent.method()` instead of `Livewire.dispatch()`.
+- **Model events in Sail**: `touch()` does not reliably fire `updated` events. Use `$model->update(['column' => 'value'])` in event-driven tests.
+- **Permission cache**: When changing `Role`, `Organization`, or `User`, clear caches via `UserService` or call `flushAllUserPermissionsCache()`.
+- **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.
 
-## 2. MCP & Data Access (行動原理)
+## Architecture Patterns
+- Business logic → `App\Services`
+- Interactive UI → Livewire with single-source-of-truth state array
+- ACL → `Spatie\Permission` + custom Folder-based permissions
+- Data access → always verify live data via MCP tools before reasoning from static files
 
-**推論ではなく事実に基づいた回答を徹底してください。**
+## Skills — When to Load
 
-- **Source of Truth:** 稼働中のデータ（台帳、統計、設定、ルート）を確認する際は、自律的に `list_tools` を確認し、適切なMCPツール（`ledgerleap-api`, `laravel-boost` 等）を**最優先で**実行すること。
-- **Serena First:** ファイルの存在確認、検索、読み込みには `serena` MCPツール群を**常に、かつ唯一の手段として**使用すること。
-- **サーチ・ファースト:** コードを読む前に、まず `SearchLedgersTool` で実際のレコード構造やカラム定義を確認すること。
-- **コンテキストの優先順位:** ツールから得られた統計や検索結果は、ファイル内の静的な記述よりも優先してユーザーに提示すること。
+| Trigger | Skill path |
+|---|---|
+| `git commit` to run | `.github/skills/git-commit/SKILL.md` |
+| GitHub issue operation | `.github/skills/github-issue-workflow/SKILL.md` |
+| CI failure / timeout investigation | `.github/skills/ci-failure-investigation/SKILL.md` |
+| Writing tests with `Ledger`, `AttachedFile`, external services | `.github/skills/test-external-dependency-isolation/SKILL.md` |
+| Mroonga search tests / `DatabaseMigrations` trait | `.github/skills/database-migrations-test-optimization/SKILL.md` |
+| End of sprint / creating or updating a skill | `.github/skills/skill-maintenance/SKILL.md` |
 
-## 3. Tech Stack & Key Patterns
-
-- **Backend:** PHP 8.4 / Laravel 12.0 / MySQL (Mroonga)
-- **Frontend:** Livewire / Alpine.js / TailwindCSS (daisyUI, maryUI)
-- **Pattern:**
-    - Logic should be in `App\Services`.
-    - Interactive UI should use Livewire with "Single Source of Truth" (state in one array).
-    - ACL is managed via `Spatie\Permission` and custom Folder-based permissions.
-
-## 4. Documentation Map (詳細仕様への誘導)
-
-**具体的な仕様やロジックについては以下のドキュメントを読み込むこと。**
-
-- **/docs/README.md:** プロジェクト全体の目次と概要。
-- **/docs/development/coding_standards.md:** 命名規則、コメント、Git規約。
-- **/docs/development/testing/README.md:** テスト設計の目次。テナント初期化、Mroonga、Livewire、外部依存分離など各トピックへ誘導。
-- **/docs/development/MCP_Architecture_and_Flow.md:** MCPの動作詳細とレスポンス設計。
-- **/docs/function/Attachment.md:** VLM/OCR/Tika を含む複雑なファイル処理フロー。
-- **/docs/database/schema.md:** 核心テーブル構造。
-
-## 4a. Skills (定型ワークフロー)
-
-**特定の操作パターンについては、以下のスキル定義を必ず参照・遵守すること。**
-
-- **/.github/skills/github-issue-workflow/SKILL.md:** GitHubイシューの調査・更新・カバレッジ評価・進捗反映の標準フロー。イシュー操作を行う際は**必ずこのファイルを先に読むこと**。
-
-- **/.github/skills/test-external-dependency-isolation/SKILL.md:** 外部サービス（Embedding/VLM/LDAP等）に依存するコードのテスト設計方針。以下のいずれかに該当する場合は**必ずこのファイルを先に読むこと**:
-    - テストを新規作成・変更するとき（特に `Ledger` / `AttachedFile` 等を扱う場合）
-    - `Ledger::factory()->create()` を含むテストを書くとき
-    - CI でテストが「60秒タイムアウト」または「0秒即時失敗」するとき
-    - Observer / Job / Service が外部コンテナを呼び出すコードに触れるとき
-
-- **/.github/skills/database-migrations-test-optimization/SKILL.md:** `DatabaseMigrations` / `DatabaseMigrationsOnce` の使い分けと高速化パターン。以下のいずれかに該当する場合は**必ずこのファイルを先に読むこと**:
-    - Mroonga 全文検索（`Ledger::search()` / `MATCH() AGAINST()`）を使うテストを書くとき
-    - 複数テナントを跨ぐ境界検証テストを書くとき
-    - CI でテストが300秒超かかる、またはタイムアウトが発生するとき
-    - `DatabaseMigrations` トレイトを使うテストを新規作成・変更するとき
-
-- **/.github/skills/ci-failure-investigation/SKILL.md:** GitHub Actions CI の失敗ログ調査ワークフロー。CI が失敗したとき、またはテストのタイムアウト・即時失敗を調査するときは**必ずこのファイルを先に読むこと**。
-
-- **/.github/skills/git-commit/SKILL.md:** コミットメッセージのフォーマット規約と文字化け対策の実行手順。**`git commit` を実行するときは必ずこのファイルを先に読むこと**。
-    - 日本語・記号を含むメッセージを `-m` で渡すと文字化け・シェル展開が発生する
-    - 正しい手順: Python でメッセージファイルを作成 → `git commit -F /tmp/commit_msg.txt`
-
-## 5. Development Workflow
-
-1. **Pint:** コミット前に必ず `./vendor/bin/sail pint` 実行。
-2. **Error Check:** 実装・変更の完了後は必ず `laravel-boost` (`last-error`, `browser-logs`) を使用してエラーの有無を**自律的に**確認すること。
-3. **Test:** 変更後は `./vendor/bin/sail test` でリグレッションを確認。
-4. **Commit:** `feat(scope): 日本語説明` の形式を厳守。**実行手順は `/.github/skills/git-commit/SKILL.md` を参照すること**（`-m` による直接渡しは文字化けするため禁止）。
-
----
-
-**この指示書はAIエージェント向けです。詳細な進捗やフェーズ履歴は `/docs/work/` を参照してください。**
+## Workflow
+1. **Lint**: run `./vendor/bin/sail pint` before commit
+2. **Error check**: use `laravel-boost` (`last-error`, `browser-logs`) after every change
+3. **Test**: run `./vendor/bin/sail test` to check for regressions
+4. **Commit**: follow Conventional Commits — load `git-commit` skill first
+5. **After sprint**: load `skill-maintenance` skill — capture new patterns into skills

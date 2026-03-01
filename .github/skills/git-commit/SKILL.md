@@ -1,193 +1,61 @@
 ---
 name: git-commit
-description: >
-  コミットメッセージの作成とgit commitコマンドの実行手順。
-  日本語を含むメッセージのシェル文字化け問題と、Conventional Commits規約を一元管理する。
-  コミット操作を行う際は必ずこのスキルを参照すること。
+description: Creates git commit messages without character corruption, following Conventional Commits. Use when running git commit with Japanese or special characters in the message.
+compatibility: LedgerLeap (macOS/Linux, requires python3)
 ---
 
-# git commit 操作スキル
+# git-commit
 
-## このスキルを使うタイミング
+## The Only Reliable Method (proven in Sprint 7)
 
-- `git commit` を実行するとき（**毎回必ずこのスキルを参照すること**）
-- コミットメッセージのフォーマットに迷ったとき
-- コミットが文字化けで失敗したとき
+`python3 -c` and heredoc **both fail** when the message contains Japanese, `$`, `(`, `)`, or `` ` ``.
 
----
-
-## 1. コミットメッセージのフォーマット（Conventional Commits）
-
-LedgerLeap では **Conventional Commits** 形式を採用。メッセージは**日本語**で記述する。
+**Use `create_file` tool + `python3 script.py` instead:**
 
 ```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-### type 一覧
-
-| type | 用途 |
-|---|---|
-| `feat` | 新機能の追加 |
-| `fix` | バグ修正 |
-| `docs` | ドキュメントのみの変更 |
-| `style` | コードの整形・フォーマット変更（動作に影響しないもの）|
-| `refactor` | リファクタリング（バグ修正・機能追加を含まない）|
-| `perf` | パフォーマンス改善 |
-| `test` | テストコードの追加・修正 |
-| `build` | ビルドシステム・外部依存関係の変更 |
-| `ci` | CI/CD 設定ファイルの変更 |
-| `chore` | 上記いずれにも当てはまらない雑多な変更 |
-| `revert` | 以前のコミットの取り消し |
-
-### subject のルール
-
-- 50文字以内
-- 体言止め、または「〜する」「〜した」で記述
-- 例: `ユーザー認証機能を追加`、`台帳検索時のN+1問題を修正`
-
-### コミットメッセージの例
-
-```
-feat(auth): ユーザー登録機能のAPIエンドポイント実装
-
-ユーザーがメールアドレスとパスワードで新規登録できるAPIを追加。
-登録成功時にはユーザートークンを返却する。
-
-Closes #42
-```
-
----
-
-## 2. コミット実行手順（文字化け対策）
-
-### ❌ やってはいけない方法
-
-```bash
-# 日本語・記号($, (, ), `, #, ! など)を含むメッセージを -m で渡すと文字化け・展開が起きる
-git commit -m "feat(scope): 日本語の説明 $変数 (詳細)"
-```
-
-**失敗する理由:**
-- `$変数` → シェル変数として展開される
-- `(` `)` → サブシェルとして解釈される場合がある
-- `` ` `` → コマンド置換として展開される
-- `!` → history展開される場合がある
-
----
-
-### ✅ 正しい方法: Python でメッセージファイルを作成してから -F で渡す
-
-#### ステップ1: メッセージファイルを Python で作成する
-
-```python
-python3 -c "
-open('/tmp/commit_msg.txt', 'w').write('''feat(scope): 件名（50文字以内）
-
-変更の詳細説明。
-なぜこの変更が必要か、何を変えたかを記述。
-
-Closes #123
-''')
+Step 1 — create_file tool writes /tmp/mk_commit_msg.py:
+# -*- coding: utf-8 -*-
+msg = "feat(scope): subject line (≤50 chars)\n\nBody detail.\n\nCloses #123\n"
+open('/tmp/commit_msg.txt', 'w', encoding='utf-8').write(msg)
 print('OK')
-"
-```
 
-**Python を使う理由:**
-- `cat > file << 'EOF'` はメッセージに `$`, `(`, `)`, `#` 等が含まれると失敗する
-- Python の文字列リテラルはシェル展開を受けない
-- ファイルが既に存在する場合は `open(..., 'w')` で上書きできる
+Step 2 — execute:
+python3 /tmp/mk_commit_msg.py && cat /tmp/commit_msg.txt
 
-#### ステップ2: 内容を確認する
-
-```bash
-cat /tmp/commit_msg.txt
-```
-
-#### ステップ3: `git commit -F` でコミットする
-
-```bash
+Step 3 — commit:
 git commit -F /tmp/commit_msg.txt
 ```
 
----
+The `create_file` tool writes bytes directly as UTF-8, bypassing all shell encoding issues.
 
-## 3. よくある失敗パターンと対処
+## Commit Format
 
-### パターン1: `cat > /tmp/commit_msg.txt << 'EOF'` が空ファイルになる
-
-**原因:** メッセージに `$`, `(`, `)`, `` ` ``, `#` 等が含まれていると heredoc が途中で終了する。
-
-**対処:** Python で作成する（§2 を参照）。
-
-### パターン2: `/tmp/commit_msg.txt` に古い内容が残っている
-
-**原因:** 前回のコミット操作で作成したファイルが残っている。
-
-**対処:**
-```bash
-rm /tmp/commit_msg.txt
-python3 -c "open('/tmp/commit_msg.txt', 'w').write('...')"
+```
+<type>(<scope>): <subject>   ← ≤50 chars
+                              ← blank line
+<body>                        ← why / what
+                              ← blank line
+<footer>                      ← Closes #N / Breaking changes
 ```
 
-### パターン3: `python3 -c` 内でシングルクォートが使えない
+**Common types**: `feat` `fix` `test` `refactor` `docs` `ci` `chore`
 
-**原因:** Python の `-c` 引数がシングルクォートで囲まれているため、内部でシングルクォートが使えない。
+See [references/conventional-commits.md](references/conventional-commits.md) for full type list and examples.
 
-**対処:** Python 内でダブルクォートを使う。または `\\'` でエスケープする。
-
-```python
-# OK: ダブルクォートを使う
-open('/tmp/commit_msg.txt', 'w').write("feat: 説明")
-
-# OK: \\' でエスケープ（シェルから渡す場合）
-python3 -c 'open("/tmp/commit_msg.txt", "w").write("feat: 説明")'
-```
-
----
-
-## 4. 複数ファイルのステージングからコミットまでの完全手順
+## Staging Rules
 
 ```bash
-# 1. 変更状態を確認
-git status --short
-
-# 2. 必要なファイルをステージング
+# Always stage files explicitly — never use git add -A
 git add path/to/file1 path/to/file2
-
-# 3. ステージング内容を確認
-git status --short
-
-# 4. メッセージファイルを Python で作成
-python3 -c "
-open('/tmp/commit_msg.txt', 'w').write('''docs(testing): ドキュメントを分割
-
-1529行の単一ファイルをテーマ別に分割し参照性を向上。
-
-変更ファイル
-- docs/development/testing/ 以下に新規作成
-- Testing-Best-Practices.md を転送案内に縮小
-''')
-print('OK')
-"
-
-# 5. 内容確認
-cat /tmp/commit_msg.txt
-
-# 6. コミット
-git commit -F /tmp/commit_msg.txt
-
-# 7. プッシュ
-git push origin main
+git status --short   # verify no unintended files (coverage-*/, wnjpn.db, etc.)
 ```
 
----
+## Full Workflow
 
-## 5. 参考ドキュメント
-
-- [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md) — 公式のtype一覧・フォーマット定義
-
+```bash
+git status --short
+git add <files>
+# create_file → python3 /tmp/mk_commit_msg.py
+git commit -F /tmp/commit_msg.txt
+git push origin <branch>
+```
