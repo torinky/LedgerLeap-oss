@@ -19,6 +19,19 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
+/**
+ * 関連案件タブ（RelatedLedgers）のバックエンドロジックテスト
+ *
+ * CI考慮事項:
+ * - RefreshDatabase: 各テスト後にDBをロールバックし、テスト間のデータ汚染を防止
+ * - Queue::fake(): TestCase基底クラスの fakeQueue=true により自動適用
+ *   → Ledger::factory()->create() が LedgerObserver → ProcessLedgerForRagJob を
+ *     発火しても Embedding コンテナへの接続は発生しない
+ * - RagSearchService のモック: $this->mock() で外部 RAG コンテナへの依存を排除
+ * - 全文検索: Mroonga (groonga/mroonga:mysql-8.0-latest) を使用するため
+ *   Feature スイートで実行（CI の feature ジョブ対象）
+ * - グループ: external / database-migrations に属さないため CI feature ジョブで自動実行される
+ */
 class RelatedLedgersTest extends TestCase
 {
     use RefreshDatabase;
@@ -281,6 +294,102 @@ class RelatedLedgersTest extends TestCase
 
         $this->assertTrue($results->isEmpty());
         $this->assertFalse($component->ragAvailable);
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint 2: 意味検索の詳細テスト
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_finds_related_ledgers_by_semantic_search(): void
+    {
+        // 関連するレコードを作成
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-002',
+                    1 => '設備点検報告書',
+                    2 => '設備の定期点検を実施した記録',
+                ],
+            ]);
+
+        // RagSearchService が関連レコードを返すようにモック
+        // 戻り値の形式: [['ledger_id' => id, 'max_score' => float, ...], ...]
+        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+            $mock->shouldReceive('searchLedgers')
+                ->once()
+                ->andReturn([
+                    [
+                        'ledger_id' => $relatedLedger->id,
+                        'max_score' => 0.95,
+                        'best_chunk_text' => '設備の定期点検を実施した記録',
+                        'chunk_count' => 1,
+                    ],
+                ]);
+        });
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchBySemantic($this->ledger);
+
+        $this->assertFalse($results->isEmpty());
+        $resultIds = $results->pluck('id')->toArray();
+        $this->assertContains($relatedLedger->id, $resultIds);
+        $this->assertTrue($component->ragAvailable);
+    }
+
+    #[Test]
+    public function it_excludes_self_from_semantic_search(): void
+    {
+        // RagSearchService が自身も含む結果を返すモック
+        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+            $mock->shouldReceive('searchLedgers')
+                ->once()
+                ->andReturn([
+                    [
+                        'ledger_id' => $this->ledger->id, // 自身
+                        'max_score' => 1.0,
+                        'best_chunk_text' => 'メインテスト設備',
+                        'chunk_count' => 1,
+                    ],
+                ]);
+        });
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchBySemantic($this->ledger);
+
+        // 自身は結果から除外される
+        $resultIds = $results->pluck('id')->toArray();
+        $this->assertNotContains($this->ledger->id, $resultIds);
+    }
+
+    #[Test]
+    public function it_returns_empty_when_semantic_query_is_empty(): void
+    {
+        // コンテンツが全て空のレコード
+        $emptyLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [0 => '', 1 => '', 2 => ''],
+            ]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $emptyLedger->id;
+
+        $query = $component->buildSemanticQuery($emptyLedger);
+        $this->assertEmpty($query);
+
+        // クエリが空のため searchBySemantic も空を返す（RAGを呼ばない）
+        $results = $component->searchBySemantic($emptyLedger);
+        $this->assertTrue($results->isEmpty());
     }
 
     // ─────────────────────────────────────────────
