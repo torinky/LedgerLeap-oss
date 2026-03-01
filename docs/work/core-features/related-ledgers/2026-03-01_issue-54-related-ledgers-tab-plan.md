@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月1日  
 **更新日:** 2026年3月1日  
-**ステータス:** 🚧 Sprint 1・2・3 完了 / Sprint 4 進行中  
+**ステータス:** 🚧 Sprint 1・2・3・4 完了 / Sprint 5 進行中  
 **目的:** 台帳レコード詳細画面に「関連案件」タブを追加し、識別番号検索・意味検索の2軸で関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/54
 
@@ -308,20 +308,21 @@ $groupedByDefine = collect($pagedItems)
 
 ---
 
-### 🏁 Sprint 4: Blade ビュー実装（テーブル表示・識別理由バッジ・トグル）
+### ✅ Sprint 4: Blade ビュー実装（テーブル表示・識別理由バッジ・トグル）— 完了
 
+**完了日:** 2026-03-01  
 **目標:** `related-ledgers.blade.php` を実装し、既存の table-row / header コンポーネントと整合した UI でブラウザ表示を確認する  
 **確認ポイント:** トグルで表示が切り替わり、識別理由バッジが表示され、台帳リスト画面と視覚的に統一されていること
 
 #### Block 4.1: プレースホルダービュー
 
-- [ ] **Task 4.1.1**: `related-ledgers-placeholder.blade.php` を作成
+- [x] **Task 4.1.1**: `related-ledgers-placeholder.blade.php` を作成
   - `x-element.skeleton-table` 2 ブロック
   - Lazy ロード中に表示
 
 #### Block 4.2: 識別理由バッジコンポーネント
 
-- [ ] **Task 4.2.1**: `resources/views/components/ledger/related-reason-badge.blade.php` を新規作成
+- [x] **Task 4.2.1**: `resources/views/components/ledger/related-reason-badge.blade.php` を新規作成
   - props: `reason` (`identifier` / `semantic` / `both`)
   - `identifier` → `badge-warning` 🔖 識別番号
   - `semantic` → `badge-info` 🔍 意味検索
@@ -329,7 +330,7 @@ $groupedByDefine = collect($pagedItems)
 
 #### Block 4.3: メインビュー
 
-- [ ] **Task 4.3.1**: `related-ledgers.blade.php` を作成
+- [x] **Task 4.3.1**: `related-ledgers.blade.php` を作成
   - **ツールバーセクション**: トグルスイッチ2個 + 件数表示
     - `wire:model.live="showIdentifier"` / `wire:model.live="showSemantic"`
     - RAGサービス利用不可時は意味検索トグルを `disabled` + ツールチップ
@@ -346,11 +347,11 @@ $groupedByDefine = collect($pagedItems)
 
 #### Block 4.4: `show.blade.php` へのタブ追加
 
-- [ ] **Task 4.4.1**: `show.blade.php` に「関連案件」タブを追加
+- [x] **Task 4.4.1**: `show.blade.php` に「関連案件」タブを追加
   - `#[Lazy]` 遅延ロード、`wire:key="related-ledgers-{{ $ledgerRecord->id }}"`
   - タブラベルバッジ: `@listen('relatedCountUpdated')` で `$relatedCount` を更新
 
-- [ ] **Task 4.4.2**: `lang/ja/ledger.php` に翻訳キーを追加
+- [x] **Task 4.4.2**: `lang/ja/ledger.php` に翻訳キーを追加
   ```php
   'tab' => [/* ... */ 'related' => '関連案件'],
   'related' => [
@@ -370,14 +371,14 @@ $groupedByDefine = collect($pagedItems)
 
 #### Block 4.5: ブラウザ動作確認
 
-- [ ] **Task 4.5.1**: auto_number カラムを持つ台帳のレコード詳細画面で確認
+- [x] **Task 4.5.1**: auto_number カラムを持つ台帳のレコード詳細画面で確認
   - 識別番号バッジ・意味検索バッジ・両方バッジが正しく表示される
   - トグルで表示が切り替わる
   - ページングが機能する（複数ページある場合）
   - 台帳ヘッダーが台帳定義ごとに表示される
-- [ ] **Task 4.5.2**: `laravel-boost` MCP でエラーログ確認
+- [x] **Task 4.5.2**: `laravel-boost` MCP でエラーログ確認（`#[Lazy]` テナントコンテキスト欠落バグを修正: [1633cc30](https://github.com/torinky/LedgerLeap/commit/1633cc30)）
 
-**✅ Sprint 4 完了条件**
+**✅ Sprint 4 完了条件 — 達成**
 - ブラウザでトグル・バッジ・ページング・グルーピングが全て動作する ✅
 - 台帳リスト画面と視覚的に統一されている ✅
 - `laravel-boost` エラーなし ✅

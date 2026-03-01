@@ -339,6 +339,32 @@
                 </div>
             </x-mary-tab>
 
+            {{-- ★★★ 関連案件タブ ★★★ --}}
+            <x-mary-tab name="related"
+                label="{{ __('ledger.tab.related') }}{{ $relatedCount > 0 ? ' (' . $relatedCount . ')' : '' }}"
+                icon="o-link"
+                class="shadow-md relative min-h-[400px]">
+                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
+
+                {{-- スケルトン（タブ切替時） --}}
+                <div wire:loading wire:target="{{ $tabNavTargets }}">
+                    <div class="space-y-4 p-2">
+                        <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
+                            <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
+                            <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
+                        </div>
+                        <x-element.skeleton-table rows="5" cols="5" />
+                    </div>
+                </div>
+
+                <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
+                    <livewire:ledger.related-ledgers
+                        :ledgerId="$ledgerRecord->id"
+                        wire:key="related-ledgers-{{ $ledgerRecord->id }}"
+                        lazy />
+                </div>
+            </x-mary-tab>
+
         </x-mary-tabs>
 
         {{-- フッターパネル (アクションボタン集約) --}}

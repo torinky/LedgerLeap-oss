@@ -48,6 +48,9 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'highlight')]
     public ?string $highlight = null;
 
+    /** 関連案件タブのバッジ件数（RelatedLedgers コンポーネントから通知） */
+    public int $relatedCount = 0;
+
     public ?LedgerDiff $comparisonTargetDiffModel = null;
 
     public function isComparingWithPrevious(): bool
@@ -111,6 +114,12 @@ class Show extends BaseLivewireComponent
     public function navigateToTab(string $tab): void
     {
         $this->selectedTab = $tab;
+    }
+
+    #[On('relatedCountUpdated')]
+    public function updateRelatedCount(int $count): void
+    {
+        $this->relatedCount = $count;
     }
 
     #[On('displayLevelUpdated')]
