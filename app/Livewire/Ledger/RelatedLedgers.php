@@ -55,6 +55,25 @@ class RelatedLedgers extends BaseLivewireComponent
     public function mount(int $ledgerId): void
     {
         $this->ledgerId = $ledgerId;
+        // boot より後に実行されるため、ここで明示的にテナントコンテキストを初期化する
+        // （bootInitializesTenantContext は lazy コンポーネントの初回リクエスト時に
+        //   ルートパラメータがまだ利用できない場合があるため）
+        if (is_null($this->tenantId)) {
+            $route = request()->route();
+            if ($route) {
+                $this->tenantId = $route->originalParameters()['tenant'] ?? null;
+            }
+        }
+
+        if ($this->tenantId) {
+            $tenancy = app(\Stancl\Tenancy\Tenancy::class);
+            if (! $tenancy->initialized) {
+                $tenant = \App\Models\Tenant::find($this->tenantId);
+                if ($tenant) {
+                    $tenancy->initialize($tenant);
+                }
+            }
+        }
     }
 
     /**
@@ -412,6 +431,26 @@ class RelatedLedgers extends BaseLivewireComponent
         $defineIds = $groupedResults->keys()->toArray();
         $defines = LedgerDefine::whereIn('id', $defineIds)->with('folder')->get()->keyBy('id');
 
+        // 台帳定義ごとの表示カラム（display_level=1 のみ）
+        $filteredColumnDefinesPerDefine = $defines->map(function (LedgerDefine $define) {
+            return collect($define->column_define)
+                ->filter(fn ($col) => ($col->display_level ?? 3) <= 1)
+                ->sortBy('order')
+                ->values();
+        });
+
+        // 権限チェック（ビューで再利用）
+        $user = auth()->user();
+        $permissionsPerDefine = $defines->map(fn (LedgerDefine $define) => [
+            'canUpdate' => $user?->can('ledgerUpdate', $define) ?? false,
+            'canView' => $user?->can('ledgerView', $define) ?? false,
+        ]);
+
+        // テナントID取得: $this->tenantId → tenant() → Ledgerのtenant_id の優先順でフォールバック
+        // Lazy コンポーネントの後続リクエスト時に tenant() が null になる場合に備え、
+        // すでに取得済みの $ledger から tenant_id を取得するのが最も確実。
+        $currentTenantId = $this->tenantId ?? tenant()?->id ?? $ledger->tenant_id;
+
         // 親コンポーネントにバッジ件数を通知
         $this->dispatch('relatedCountUpdated', count: $this->totalCount);
 
@@ -420,8 +459,11 @@ class RelatedLedgers extends BaseLivewireComponent
             'identifierKeys' => $identifierKeys,
             'groupedResults' => $groupedResults,
             'defines' => $defines,
+            'filteredColumnDefinesPerDefine' => $filteredColumnDefinesPerDefine,
+            'permissionsPerDefine' => $permissionsPerDefine,
             'paginator' => $paginator,
             'filteredCount' => count($filtered),
+            'currentTenantId' => $currentTenantId,
         ]);
     }
 }
