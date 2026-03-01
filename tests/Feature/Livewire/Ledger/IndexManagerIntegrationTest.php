@@ -65,11 +65,14 @@ class IndexManagerIntegrationTest extends TestCase
     #[Test]
     public function it_renders_correctly_with_initial_state()
     {
+        // テナントコンテキストを確実に設定した上で currentFolderId を初期値として渡す。
+        // Livewire::test() はHTTPリクエストをシミュレートするため、テナントミドルウェアが
+        // 動作せず mount() 内の Folder::root()->first() が null になる場合がある。
+        // currentFolderId を公開プロパティとして直接渡すことでテナントなしでも初期化できる。
         Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
             ->assertStatus(200)
             ->assertSee('Root');
-        // 'Test Ledger' は Root フォルダ直下ではないので初期状態では見えない可能性がある。
-        // 確実に表示させるにはサブフォルダに移動するか、l パラメータで指定する。
     }
 
     #[Test]

@@ -12,6 +12,7 @@ use App\Models\User;
 use PHPUnit\Framework\Attributes\Group;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\TestDatabaseState;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -65,6 +66,22 @@ class SearchApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // FolderTest (DatabaseMigrations) が migrate:rollback でcentralテーブルを消した場合に備えて
+        // DBテーブルの存在確認後に必要に応じて再マイグレーション・テナント再作成を行う。
+        // CI環境でも FolderTest→SearchApiTest の順で実行されると tenants テーブルが消える。
+        if (! \Illuminate\Support\Facades\Schema::connection('mysql_testing')->hasTable('tenants')) {
+            // テーブルが消えている → migrate:fresh で再構築
+            $this->artisan('migrate', ['--force' => true]);
+            // ci-test-tenant を再作成してテナントDBをマイグレーション
+            $tenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+            tenancy()->initialize($tenant);
+            $this->artisan('tenants:migrate', ['--force' => true]);
+            // RefreshDatabaseWithTenant のグローバル状態をリセットして
+            // このクラスで ci-test-tenant を正常に取得できるようにする
+            TestDatabaseState::reset();
+        }
+
         $this->setUpRefreshDatabaseWithTenant();
 
         // APIテスト実行時にlocalhostをテナントドメインとして扱うための設定

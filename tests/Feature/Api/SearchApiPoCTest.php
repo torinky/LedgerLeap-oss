@@ -10,6 +10,7 @@ use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\TestDatabaseState;
 use Tests\TestCase;
 
 class SearchApiPoCTest extends TestCase
@@ -22,7 +23,10 @@ class SearchApiPoCTest extends TestCase
         config(['rag.enabled' => false]);
 
         // マイグレーションを実行
+        // 注意: migrate:fresh は RefreshDatabaseWithTenant の globalDatabaseMigrated フラグを
+        // 無効化するため、実行後にフラグをリセットして後続テストが再マイグレーションできるようにする。
         $this->artisan('migrate:fresh', ['--force' => true]);
+        TestDatabaseState::reset();
     }
 
     /**
@@ -33,8 +37,11 @@ class SearchApiPoCTest extends TestCase
         echo "\n=== PoC Test Start ===\n";
 
         // 1. テナント作成と初期化（ベストプラクティス）
-        $tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
-        $tenant->domains()->create(['domain' => 'test.localhost']);
+        // ドメインはテスト間の汚染を避けるためユニーク化する（test.localhost は他テストと競合するため使用禁止）
+        $uniqueId = uniqid('', true);
+        $tenant = \App\Models\Tenant::create(['id' => 'test-'.substr(md5($uniqueId), 0, 8)]);
+        $fqdn = "poc-{$uniqueId}.localhost";
+        $tenant->domains()->create(['domain' => $fqdn]);
 
         // 2. テナントを初期化
         tenancy()->initialize($tenant);
@@ -53,7 +60,7 @@ class SearchApiPoCTest extends TestCase
         }
 
         // 4. URLジェネレータを設定（ベストプラクティス）
-        $fqdn = 'test.localhost';
+        // $fqdn は上記で poc-{uniqueId}.localhost として設定済み
         config(['app.url' => "http://{$fqdn}"]);
         \URL::forceRootUrl(config('app.url'));
 

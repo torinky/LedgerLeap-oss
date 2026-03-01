@@ -29,24 +29,32 @@ trait RefreshDatabaseWithTenant
 {
     /**
      * クラスごとにデータベースが初期化されたかを管理
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
      */
-    protected static array $databaseInitializedByClass = [];
+    public static array $databaseInitializedByClass = [];
 
     /**
      * プロセス全体で migrate:fresh が実行済みかを管理するグローバルフラグ
      * 全クラスで共有し、1回のみ migrate:fresh を実行する
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
      */
-    protected static bool $globalDatabaseMigrated = false;
+    public static bool $globalDatabaseMigrated = false;
 
     /**
      * 作成されたテナント（クラス全体で共有）
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
      */
-    protected static $sharedTenant = null;
+    public static $sharedTenant = null;
 
     /**
      * トランケート可能なテーブルのキャッシュ
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
      */
-    protected static ?array $truncatableTablesCache = null;
+    public static ?array $truncatableTablesCache = null;
 
     /**
      * テストクラスの最初の実行前に1回だけ初期化
