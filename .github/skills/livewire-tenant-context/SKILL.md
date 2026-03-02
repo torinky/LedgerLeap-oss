@@ -1,6 +1,6 @@
 ---
 name: livewire-tenant-context
-description: Diagnoses and fixes tenant context (tenancy()) returning null inside Livewire components. Use when tenant()?->id is null in render(), route generation fails with missing tenant parameter, or #[Lazy] components show tenant-related errors.
+description: Diagnoses and fixes tenant context (tenancy()) returning null inside Livewire components. Also covers child↔parent property sync via wire:model.live="$parent.prop" and loading indicator control from parent. Use when tenant()?->id is null in render(), route generation fails with missing tenant parameter, #[Lazy] components show tenant-related errors, or child component displayLevel sync is needed.
 compatibility: LedgerLeap (Livewire v3 + Stancl Tenancy + InitializesTenantContext trait)
 ---
 
@@ -65,5 +65,6 @@ public function mount(int $ledgerId): void
 | Subsequent update | `mount()` NOT called; `boot()` runs with `tenantId` from snapshot (OK if saved) |
 | BUT: lazy-load via `/livewire/update` | Route has no `{tenant}` param → `boot()` cannot recover `tenantId` from route |
 
-See [references/patterns.md](references/patterns.md) for more examples.
+See [references/patterns.md](references/patterns.md) for full examples, tenant context edge cases, and loading indicator control.  
+See [references/parent-binding.md](references/parent-binding.md) for `$parent` binding patterns and Tailwind JIT note.
 

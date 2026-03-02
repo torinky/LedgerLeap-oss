@@ -12,6 +12,8 @@
 - **No manual json_encode**: Never call `json_encode()` before saving `files`, `chk`, or other cast-array columns. The cast handles serialization; doing it manually corrupts the DB.
 - **Livewire state**: Public properties must be plain associative arrays. Objects cause serialization errors.
 - **Livewire parent calls**: For frequent operations (sort/filter), use `$parent.method()` or `$wire.$parent.method()` instead of `Livewire.dispatch()`.
+- **Livewire child↔parent prop sync**: Use `wire:model.live="$parent.propName"` to bind a child input directly to the parent's property. The parent's `updatedPropName()` hook fires automatically — no `dispatch()` needed. See `livewire-tenant-context` skill.
+- **Tailwind JIT**: After adding new utility classes (e.g. `group-hover:`, `opacity-*`), run `sail npm run build`. Missing build causes classes to silently have no effect.
 - **Model events in Sail**: `touch()` does not reliably fire `updated` events. Use `$model->update(['column' => 'value'])` in event-driven tests.
 - **Permission cache**: When changing `Role`, `Organization`, or `User`, clear caches via `UserService` or call `flushAllUserPermissionsCache()`.
 - **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.

@@ -78,5 +78,6 @@ Root cause: `placeholder()` was rendered before tenancy was initialized.
 ## Issue reference
 
 - First discovered and fixed in Issue #54 (Sprint 4)
+- `$parent` binding and loading patterns added in Issue #54 (Sprint 8) — see [parent-binding.md](parent-binding.md)
 - Commit: 1633cc30
 

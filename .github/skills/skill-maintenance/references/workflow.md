@@ -98,12 +98,17 @@ If `git status` shows nothing staged after `git add`, switch to `bash -c` immedi
 
 ## LedgerLeap Skill Inventory
 
-| Skill | Trigger | Key references |
-|---|---|---|
-| `git-commit` | any git commit | `conventional-commits.md`, `sail-environment.md` |
-| `github-issue-workflow` | issue read/write/sprint | `comment-format.md` |
-| `ci-failure-investigation` | CI failure / timeout | `fix-patterns.md` |
-| `database-migrations-test-optimization` | Mroonga tests / slow CI | `trait-usage.md` |
-| `test-external-dependency-isolation` | Ledger/AttachedFile tests | `queue-fake-patterns.md` |
-| `skill-maintenance` | end of sprint / new pattern | `workflow.md` (this file) |
+| Category | Skill | Trigger | Key references |
+|---|---|---|---|
+| **Git / CI** | `git-commit` | any git commit | `conventional-commits.md`, `sail-environment.md` |
+| **Git / CI** | `ci-failure-investigation` | CI failure / timeout | `fix-patterns.md` |
+| **GitHub** | `github-issue-workflow` | issue read/write/sprint | `comment-format.md` |
+| **Testing** | `database-migrations-test-optimization` | Mroonga tests / slow CI | `trait-usage.md` |
+| **Testing** | `test-external-dependency-isolation` | Ledger/AttachedFile tests | `queue-fake-patterns.md` |
+| **Livewire** | `livewire-tenant-context` | tenant() null / #[Lazy] / $parent binding | `patterns.md`, `parent-binding.md` |
+| **Meta** | `skill-maintenance` | end of sprint / new pattern | `workflow.md` (this file) |
+
+> **Note on directory structure**: The agentskills.io spec requires `name` to match the directory name.
+> Subdirectory grouping (e.g. `skills/workflow/git-commit/`) breaks this constraint and may not be
+> discovered by agent implementations scanning for `skills/*/SKILL.md`. Keep skills flat.
 
