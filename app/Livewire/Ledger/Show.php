@@ -102,6 +102,27 @@ class Show extends BaseLivewireComponent
         if ($this->targetDiffId) {
             $this->loadComparisonTarget();
         }
+
+        // ── 関連案件タブの初期件数計算 ──────────────────────────────────────
+        // RelatedLedgers は #[Lazy] のため、タブを開くまで render() が実行されない。
+        // Show の mount() で識別番号 + 意味検索（RAG）の両方を先行実行してタブバッジを初期表示する。
+        try {
+            $relatedComponent = new RelatedLedgers;
+            $relatedComponent->ledgerId = $this->ledgerRecord->id;
+
+            $identifierKeys = $relatedComponent->extractAutoNumberValues($this->ledgerRecord);
+            $identifierCollection = ! empty($identifierKeys)
+                ? $relatedComponent->searchByIdentifiers($identifierKeys)
+                : collect();
+
+            // RAG が利用不可の場合は空コレクションを返す（グレースフルデグラデーション）
+            $semanticCollection = $relatedComponent->searchBySemantic($this->ledgerRecord);
+
+            $merged = $relatedComponent->mergeResults($identifierCollection, $semanticCollection);
+            $this->relatedCount = count($merged);
+        } catch (\Throwable $e) {
+            // 件数計算の失敗はサイレントに無視（タブバッジが空のまま → タブを開いたときに更新）
+        }
     }
 
     #[On('workflowUpdated')]

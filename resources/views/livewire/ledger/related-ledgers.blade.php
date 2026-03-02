@@ -1,5 +1,5 @@
 <div class="space-y-4 p-2">
-    <x-element.loading-overlay tier="2" target="showIdentifier,showSemantic,displayLevel" />
+    <x-element.loading-overlay tier="2" target="showIdentifier,showSemantic" />
 
     {{-- ─────────────────────────────────────────────────── --}}
     {{-- ツールバー: トグル + 件数バッジ + 表示レベル         --}}
@@ -60,7 +60,7 @@
             ];
         @endphp
         <div class="flex items-center gap-1">
-            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
+            <x-mary-group wire:model.live="$parent.displayLevel" :options="$displayLevelOptions"
                 class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
                 option-value="id" option-label="name"
                 wire:key="related-display-level-group" />
@@ -143,13 +143,10 @@
                     <table class="table table-zebra table-compact table-auto table-pin-rows table-pin-cols w-full">
                         <thead>
                             <tr class="hover z-30" wire:key="related_header_{{ $defineId }}">
-                                {{-- 識別理由インジケーター列（アイコンのみ・最小幅） --}}
-                                <th class="w-8 text-center px-2 py-2 bg-accent/30"></th>
                                 {{-- アクションボタン列 --}}
                                 <th class="w-10 text-center px-4 py-2 bg-accent/30">
                                     <i class="fas fa-cogs"></i>
                                 </th>
-                                {{-- カラムヘッダー --}}
                                 @foreach ($columns as $col)
                                     <th class="px-4 py-2 text-center bg-accent/30"
                                         wire:key="related_col_{{ $defineId }}_{{ $col->id }}">
@@ -169,54 +166,22 @@
                                     $matchedKeys  = $item['matched_keys'] ?? [];
                                     $score        = $item['score'] ?? null;
                                 @endphp
-                                <tr class="hover group hover:bg-accent/20"
+                                <x-ledger.table-row
+                                    :ledgerRecord="$ledgerRecord"
+                                    :canUpdate="$canUpdate"
+                                    :canView="$canView"
+                                    :allAttachments="$allAttachments"
+                                    :filteredColumnDefines="$columns->toArray()"
+                                    :currentTenantId="$currentTenantId"
+                                    :highlightKeyword="null"
                                     wire:key="related_row_{{ $ledgerRecord->id }}">
-                                    {{-- 識別理由インジケーター --}}
-                                    <td class="border text-center px-2">
+                                    <x-slot:relatedBadge>
                                         <x-ledger.related-reason-badge
                                             :reason="$reason"
                                             :matchedKeys="$matchedKeys"
                                             :score="$score" />
-                                    </td>
-                                    {{-- 編集・詳細ボタン --}}
-                                    <th class="border flex-col bg-accent/20">
-                                        <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
-                                            @if ($canUpdate && ! $ledgerRecord->isLocked())
-                                                <a href="{{ route('ledger.edit', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id]) }}"
-                                                    class="btn btn-neutral opacity-70 hover:opacity-100 btn-sm my-1 btn-square"
-                                                    target="ledgerEdit_{{ $defineId }}">
-                                                    <i class="fas fa-pencil"></i>
-                                                </a>
-                                            @else
-                                                <button class="btn btn-neutral opacity-70 btn-sm my-1 btn-square" disabled>
-                                                    <i class="fas fa-pencil"></i>
-                                                </button>
-                                            @endif
-                                        </div>
-                                        <div class="tooltip tooltip-right" data-tip="{{ __('ledger.show_details') }}">
-                                            <a href="{{ route('ledger.show', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id]) }}"
-                                                class="btn btn-outline btn-info btn-sm my-1 btn-square opacity-70 hover:opacity-100"
-                                                target="ledgerShow_{{ $defineId }}">
-                                                <i class="fas fa-table-list"></i>
-                                            </a>
-                                        </div>
-                                    </th>
-                                    {{-- カラム値 --}}
-                                    @foreach ($columns as $col)
-                                        <td class="px-4 py-2 text-sm"
-                                            wire:key="related_cell_{{ $ledgerRecord->id }}_{{ $col->id }}">
-                                            @php
-                                                $val = $ledgerRecord->content[$col->id] ?? null;
-                                                $display = is_array($val) ? implode(', ', array_filter($val)) : ($val ?? '');
-                                            @endphp
-                                            <span class="line-clamp-2">{{ $display }}</span>
-                                        </td>
-                                    @endforeach
-                                    {{-- 更新日時 --}}
-                                    <td class="px-4 py-2 text-xs text-base-content/60 whitespace-nowrap">
-                                        {{ $ledgerRecord->updated_at?->format('Y-m-d H:i') }}
-                                    </td>
-                                </tr>
+                                    </x-slot:relatedBadge>
+                                </x-ledger.table-row>
                             @endforeach
                         </tbody>
                     </table>

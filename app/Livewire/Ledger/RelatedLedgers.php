@@ -509,6 +509,16 @@ class RelatedLedgers extends BaseLivewireComponent
             ->get()
             ->groupBy('ledger_id');
 
+        // content / content_attached を台帳定義に基づいて正規化（table-row が期待する形式）
+        $groupedResults->flatten(1)->each(function (array $item) {
+            $ledger = $item['ledger'];
+            $define = $ledger->define;
+            if ($define) {
+                $ledger->content = $define->normalizeByColumnDefine($ledger->content ?? []);
+                $ledger->content_attached = $define->normalizeByColumnDefine($ledger->content_attached ?? []);
+            }
+        });
+
         // semantic_score を Ledger インスタンスに動的付与（table-row のスコアオーバーレイで使用）
         // identifier のみのレコードは score=null のまま（オーバーレイなし）
         $groupedResults->flatten(1)->each(function (array $item) {

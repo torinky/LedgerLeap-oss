@@ -6,6 +6,7 @@
     'allAttachments' => [],
     'filteredColumnDefines' => [],
     'currentTenantId' => null,
+    'relatedBadge' => null,    {{-- 関連案件タブ用: 識別理由インジケーター（null=通常リスト） --}}
 ])
 @php
     use App\Helpers\SearchHelper;
@@ -258,6 +259,11 @@
         <!-- スコア・ステータスのオーバーレイ表示 -->
         <div
             class="absolute top-1 right-2 z-10 flex items-center gap-2 transition-opacity duration-300 opacity-30 group-hover:opacity-100 backdrop-blur-sm p-1 rounded-lg">
+
+            {{-- 関連案件タブ用: 識別理由インジケーター（通常リストでは非表示） --}}
+            @if ($relatedBadge !== null)
+                {{ $relatedBadge }}
+            @endif
             @php
                 // 表示するスコアとその種類を決定
                 $displayScore = null;

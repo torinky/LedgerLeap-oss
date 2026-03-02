@@ -1,4 +1,4 @@
-<div class="space-y-6 p-4">
+<div class="space-y-6 p-4 w-full min-h-[400px]">
     {{-- ツールバースケルトン --}}
     <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
         <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
