@@ -1,8 +1,8 @@
 # Issue #54: 詳細画面に関連案件タブを追加
 
 **作成日:** 2026年3月1日  
-**更新日:** 2026年3月1日  
-**ステータス:** 🚧 Sprint 1・2・3・4 完了 / Sprint 5 進行中  
+**更新日:** 2026年3月2日  
+**ステータス:** 🚧 Sprint 1・2・3・4 完了 / Sprint 5・6 計画中  
 **目的:** 台帳レコード詳細画面に「関連案件」タブを追加し、識別番号検索・意味検索の2軸で関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/54
 
@@ -24,14 +24,17 @@
 - **UC2「過去の業務記録の検索と参照」の延長:** 特定の案件（レコード）を閲覧中に「この案件と似たケースを過去に扱ったか」をその場で確認したい
 - 例: 設備点検記録を見ながら「同じ設備番号 EQ-042 に関する過去の保守依頼（保守台帳）・作業報告（報告台帳）を一覧したい」
 - **重要**: 複数の台帳フォーマットにまたがって結果が出るため、**どの台帳のレコードか**をひと目で識別できる必要がある
+- **補足（複数 auto_number カラム）**: 1レコードに「設備番号（EQ-042）」「案件番号（WO-099）」の2つの識別番号列がある場合、両方の値で検索が走り、どちらかでヒットした全レコードが表示される。`matched_keys` にはどの番号値でヒットしたかが記録されツールチップに表示されるため、ユーザーは「なぜ表示されているか」を確認できる。
 
 #### 現場リーダー / 作業班長
 - **UC2「チーム内の情報共有と確認」の延長:** 障害報告レコードを確認中に「類似の過去インシデント」を即座に参照し、対応方針の参考にしたい
 - **重要**: 識別番号でヒットしたレコードと意味的に近いレコードは性質が異なる。**どちらの理由で表示されているかを区別**したい
+- **補足（他台帳の識別番号がテキスト欄に記載）**: 作業報告の「作業内容」欄に `EQ-042` と書かれているケースは、識別番号検索の「識別番号列の値が一致」という厳密な根拠には該当しない。このようなケースは意味検索が文脈的に拾うことを期待する設計とする（詳細は「識別番号検索範囲の設計判断」を参照）。
 
 #### 管理者
 - **UC3「活動状況の監査」の延長:** 特定の台帳レコードを起点に、識別番号で紐づく全関連文書を一覧確認し監査の網羅性を担保したい
 - **重要**: 「識別番号でヒット」と「意味検索でヒット」は監査上の根拠が異なる。**フィルタリングして表示件数を絞れる**必要がある
+- **補足（監査根拠の明確化）**: 識別番号トグルをオンにして表示されるレコードは「`auto_number` 型カラムの値が一致した」という厳密な関連性を意味する。テキスト欄に番号が書かれているだけのレコードは意味検索（semantic）として区別されるため、監査根拠として利用できる。
 
 ---
 
@@ -67,15 +70,19 @@
 - `filteredColumnDefines` には `display_level = 1` のカラムのみ（= リスト画面のデフォルト表示と同じ）
 - ページングは全結果をまとめた1つの `LengthAwarePaginator` で行う（台帳をまたいで1ページ N 件）
 
-### 3. 識別理由バッジ（行ごとの表示）
+### 3. 識別理由インジケーター（行ごとの表示）— Sprint 6 で改訂
 
-各レコード行の先頭に **識別理由バッジ** を表示する。
+各レコード行の先頭に **識別理由アイコン** を表示する（Sprint 4 のバッジ表示から変更）。  
+列幅を最小化するため、テキストラベルを廃止しアイコン＋ツールチップに変更する。
 
-| バッジ | 条件 | 色 |
-|---|---|---|
-| `🔖 識別番号` | 識別番号検索のみヒット | `badge-warning` |
-| `🔍 意味検索` | 意味検索のみヒット | `badge-info` |
-| `⭐ 両方` | 識別番号・意味検索 両方ヒット | `badge-success` |
+| アイコン | 条件 | 色 | ツールチップ |
+|---|---|---|---|
+| `🔖`（fa-bookmark） | 識別番号検索のみヒット | `text-warning` | `識別番号: [一致した番号]` |
+| `🔍`（fa-magnifying-glass） | 意味検索のみヒット | `text-info` | `類似度: XX%` |
+| `⭐`（fa-star） | 識別番号・意味検索 両方ヒット | `text-success` | `識別番号 & 意味検索` |
+
+- テーブルの「関連理由」列をアイコン列（`w-8`）に縮小
+- ツールチップは `data-tip` で表示（識別番号の場合は一致した番号値も表示）
 
 ### 4. トグルスイッチによるフィルタリング
 
@@ -90,11 +97,32 @@
 - トグル状態は Livewire プロパティ（`$showIdentifier`, `$showSemantic`）で管理
 - 状態変更はブラウザ側で再レンダリング（`wire:model.live`）
 
-### 5. タブバッジ（件数表示）
+### 4-B. 表示レベル調節 UI — Sprint 6 で追加
 
-- タブラベル横に `badge badge-neutral badge-sm` で件数表示
+「基本情報」タブの表示レベルセレクタと同期する形で、関連案件タブにも表示レベル調節 UI を追加する。
+
+```
+表示レベル: [ 基本 ][ 詳細 ][ すべて ]   ← x-mary-group (displayLevel)
+```
+
+- `$displayLevel` プロパティは `Show.php` から `displayLevelUpdated` イベント経由で受け取る
+  （`RelatedLedgers` に `#[On('displayLevelUpdated')]` リスナーを追加）
+- ツールバーに表示レベルセレクタを配置し、基本情報タブと常に同期
+- 表示カラムフィルタは `display_level <= $displayLevel` で統一
+
+### 5. タブバッジ（件数表示）— Sprint 6 で改訂
+
+- タブラベル横に `badge` で件数表示（括弧書き数字から変更）
 - 件数はフィルター前の総数（識別番号 + 意味検索の重複排除後）
 - 0件時はバッジ非表示（タブ自体は常に表示）
+- ツールバーの件数表示も括弧書き数字からバッジに統一:
+
+```
+[ 🔖 識別番号  <badge-warning>5</badge>  ●ON ]  [ 🔍 意味検索  <badge-info>8</badge>  ●ON ]
+```
+
+- 識別番号件数バッジ: `badge-warning`（トグルアイコン色と同期）
+- 意味検索件数バッジ: `badge-info`（トグルアイコン色と同期）
 
 ### 6. ページネーション
 
@@ -103,12 +131,30 @@
 - ページをまたいで台帳グループが分断される場合、次ページ先頭に台帳ヘッダーを再表示
 - 既存の `components.ledger.pagination-links` コンポーネントを流用
 
-### 7. 権限フィルター
+### 7. 意味検索スコア表示 — Sprint 6 で追加
+
+- 意味検索でヒットしたレコード（`reason='semantic'` / `reason='both'`）にコサイン類似度スコアを表示
+- スコアは `RagSearchService::searchLedgers()` が返す `max_score`（0.0〜1.0）をパーセント表示
+- 表示箇所: ツールチップ（`data-tip="類似度: 85%"`）
+- 表示順: 意味検索ヒットのレコードはスコア降順でソート、識別番号のみのレコードはその後に配置
+- スコアの保持: `searchBySemantic()` の戻り値を `Collection<Ledger>` から
+  `Collection<array{ledger: Ledger, score: float}>` に変更し、`mergeResults()` でスコアを保持
+
+### 8. 識別番号強調表示 — Sprint 6 で追加
+
+- 識別番号でヒットしたレコード（`reason='identifier'` / `reason='both'`）のセル値に含まれる
+  一致した識別番号を `<mark>` タグや強調スタイルで視覚的に強調表示
+- 一致した識別番号は `matched_keys` 配列に格納
+- `searchByIdentifiers()` を改修: 各 `$key` に対してヒットした `ledger_id` と一致キーのマッピングを保持し、
+  `mergeResults()` に渡す
+- ツールチップ: `🔖` アイコンのツールチップに「識別番号: [一致した番号]」を表示
+
+### 9. 権限フィルター
 
 - 表示結果はログインユーザーが閲覧可能なレコードのみ
 - `WritableFolderRepository::getReadableFolderIds()` による権限フィルターを通す
 
-### 8. RAGサービス未起動時のグレースフルデグラデーション
+### 10. RAGサービス未起動時のグレースフルデグラデーション
 
 - RAGサービスが利用不可の場合、意味検索トグルをグレーアウト + ツールチップ「意味検索は現在利用できません」
 - 識別番号検索は影響を受けない
@@ -163,16 +209,42 @@ Show.php（親）
 
 ### データ構造設計
 
+### データ構造設計（Sprint 6 更新）
+
 #### `RelatedLedgerItem`（内部 DTO）
 
 ```php
 // app/Livewire/Ledger/RelatedLedgers.php 内で使用する配列構造
 [
-    'ledger'      => Ledger,         // Ledgerモデル（with define ロード済み）
-    'reason'      => 'identifier' | 'semantic' | 'both',
-    'score'       => float|null,     // 意味検索スコア（identifier のみの場合は null）
-    'matched_keys' => string[],      // ヒットした識別番号キー（identifier の場合）
+    'ledger'       => Ledger,            // Ledgerモデル（with define ロード済み）
+    'reason'       => 'identifier' | 'semantic' | 'both',
+    'score'        => float|null,        // 意味検索コサイン類似度（0.0〜1.0、identifierのみは null）
+    'matched_keys' => string[],          // ヒットした識別番号の値（identifier の場合に格納）
 ]
+```
+
+**Sprint 6 変更点:**
+- `score` が実際の `max_score` 値を保持するよう `searchBySemantic()` を改修
+  - `searchLedgers()` の戻り値 `['ledger_id', 'max_score', ...]` の `max_score` を保持
+  - 戻り値を `Collection<int, array{ledger: Ledger, score: float}>` に変更
+- `matched_keys` が実際の一致識別番号値を保持するよう `searchByIdentifiers()` を改修
+  - `$key → [ledger_id, ...]` のマッピングを保持し、`mergeResults()` に渡す
+
+#### ソート戦略（Sprint 6 追加）
+
+```
+意味検索結果は score 降順 → 識別番号のみ結果 → スコアなし の順
+```
+
+```php
+// mergeResults() 内でのソート
+usort($merged, function ($a, $b) {
+    // 'both' / 'semantic' は score で降順
+    // 'identifier' のみは score=null → 末尾
+    $scoreA = $a['score'] ?? -1;
+    $scoreB = $b['score'] ?? -1;
+    return $scoreB <=> $scoreA;
+});
 ```
 
 #### ページング後のグルーピング
@@ -184,7 +256,7 @@ $groupedByDefine = collect($pagedItems)
     ->groupBy(fn($item) => $item['ledger']->ledger_define_id);
 ```
 
-### データフロー（更新）
+### データフロー（Sprint 6 更新）
 
 ```
 [RelatedLedgers::mount(int $ledgerId)]
@@ -194,12 +266,14 @@ $groupedByDefine = collect($pagedItems)
    3. getReadableFolderIds() → $readableFolderIds[]
 
 [render()]
-   ├── searchByIdentifiers($identifierKeys) → Collection<Ledger>
-   │     各レコードに reason='identifier' を付与
-   ├── searchBySemantic($ledger) → Collection<Ledger>（RAG利用可能な場合）
-   │     各レコードに reason='semantic', score=float を付与
-   ├── マージ・重複処理
-   │     同一 ledger_id が両方に存在 → reason='both'
+   ├── searchByIdentifiers($identifierKeys)
+   │     → Collection<array{ledger: Ledger, matched_keys: string[]}>
+   │     （各 $key でヒットした ledger_id と key のマッピングを保持）
+   ├── searchBySemantic($ledger)（RAG利用可能な場合）
+   │     → Collection<array{ledger: Ledger, score: float}>
+   │     （max_score を保持、スコア降順ソート済み）
+   ├── mergeResults($identifiers, $semantics)
+   │     → reason 付与 + score 保持 + matched_keys 保持 + スコア降順ソート
    ├── フィルタリング（$showIdentifier / $showSemantic トグル）
    ├── ページネーション（LengthAwarePaginator, perPage=20）
    └── グルーピング（ledger_define_id でグループ化）
@@ -229,6 +303,59 @@ $groupedByDefine = collect($pagedItems)
 | ページをまたいで台帳グループが分断 | 次ページ先頭にも台帳ヘッダーを再表示 |
 | 意味検索のみ有効（識別番号なし） | 識別番号トグルを非表示、意味検索のみ表示 |
 | フィルターで全件非表示 | 「フィルターを調整してください」メッセージ |
+| **自レコードに複数の `auto_number` カラム** | 全カラムの値を `$identifierKeys[]` に収集し全てOR検索（現実装で対応済み） |
+| **他の台帳の識別番号が自レコードのテキスト列に書かれている** | 下記「識別番号検索範囲の設計判断」を参照 |
+
+### 識別番号検索範囲の設計判断
+
+#### 問題の整理
+
+`auto_number` カラムには以下の2つの利用パターンがある：
+
+| パターン | 例 | 現在の挙動 |
+|---|---|---|
+| **A. 自台帳の識別番号列** | 点検記録の「設備番号」列（auto_number型）に `EQ-042` | `extractAutoNumberValues()` が取得 → **検索対象になる** ✅ |
+| **B. 他台帳の識別番号がテキスト列に記載** | 点検記録の「作業内容」列（text型）に `「EQ-042 の修理」` と記述 | `extractAutoNumberValues()` は `auto_number` 型のみ見るため **検索対象にならない** ⚠️ |
+
+AutoLink機能（`AutoLink.md` §2.1）では「他のカラムに記載された自動採番形式の値もリンク化する」とあり、  
+関連案件検索との一貫性という観点では、パターンBも検索できた方がよいように見える。
+
+#### ペルソナ視点での望ましい動作
+
+**実務担当者（業務記録の参照）**  
+作業報告の「作業内容」欄に `EQ-042` と書いた場合、その記録から `EQ-042` に関わる他記録を辿れることは自然な業務フロー。  
+→ パターンBも拾えることが理想だが、テキスト列に「EQ-042」という**文字列が含まれる**だけでは意図的な識別番号紐付けか偶然の記述かが判断できない。
+
+**現場リーダー（過去事例の参照）**  
+「識別番号でヒット」は「同じ番号が記録されている＝明確な関連性あり」という根拠として使いたい。  
+テキスト欄の偶然の言及も拾ってしまうと、トグルフィルターの「識別番号」の信頼性が下がる。
+
+**管理者（監査）**  
+監査根拠として「識別番号でヒット」を使う場合、「明確に識別番号として登録されている列の値が一致する」という厳密な基準を求める。
+
+#### 設計判断: **フェーズ1はパターンAのみ（現実装）。パターンBは意味検索で補完する**
+
+```
+識別番号検索 = 自台帳定義の auto_number 型カラムの値でのみ検索（厳密な紐付け根拠）
+意味検索     = テキスト内容全体のベクトル類似度（パターンBを含む文脈的な関連を補完）
+```
+
+**根拠:**
+1. **信頼性の担保**: 識別番号トグルは「明確な識別番号の一致」のみを意味するため、監査根拠として利用できる
+2. **意味検索による補完**: テキスト欄に他台帳の番号が書かれているケースは、意味検索（semantic）が文脈的に拾う可能性が高い
+3. **実装の複雑度**: パターンBを拾うには AutoLink と同様に全テナントの `auto_number` カラムパターンを動的に生成する仕組みが必要で、Sprint 1〜4 で構築した基盤への影響が大きい
+4. **ユーザー認識との整合**: AutoLink のリンクをクリックして詳細画面を開いた時に「関連案件タブ」が表示されるため、「識別番号でリンクされた記録」は意味検索を通じて見えることが多い
+
+#### 将来の拡張余地（→ Issue #76 として独立管理）
+
+パターンBを識別番号検索に含める場合の実装方針は [Issue #76](https://github.com/torinky/LedgerLeap/issues/76) および  
+[`2026-03-02_issue-related-ledgers-text-identifier-search.md`](./2026-03-02_issue-related-ledgers-text-identifier-search.md) を参照。
+
+概要:
+- `AutoLinkService::getVirtualAutoNumberLinks()` と `generateAutoNumberPattern()` のロジックを `AutoNumberPatternService` に切り出す
+- `extractAutoNumberValues()` に Step B を追加（全テキスト列へのパターンマッチング）
+- `matched_keys` に `source` 情報（パターンAかBか・どのカラムから）を付与してツールチップに表示
+- **Issue #54 の全スプリント完了後に着手する**
 
 ### Mroonga 制約（Critical）
 
@@ -385,36 +512,153 @@ $groupedByDefine = collect($pagedItems)
 
 ---
 
-### 🏁 Sprint 5: タブバッジ・テスト整備・全体仕上げ
+### 🏁 Sprint 5: タブバッジ・表示レベル同期・テスト整備・全体仕上げ
 
-**目標:** タブバッジ（件数）の親への通知、Livewire テストの整備、全テストパスで完成  
+**目標:** タブバッジ（件数）の親への通知、`displayLevel` イベント受信、Livewire テストの整備、全テストパスで完成  
 **確認ポイント:** タブバッジが更新され、全テストがパスすること
 
 #### Block 5.1: タブバッジ実装
 
 - [ ] **Task 5.1.1**: `RelatedLedgers.php` の `render()` 末尾で `$this->dispatch('relatedCountUpdated', count: $this->totalCount)` を送信
 - [ ] **Task 5.1.2**: `Show.php` に `$relatedCount = 0` プロパティと `#[On('relatedCountUpdated')]` リスナーを追加
-- [ ] **Task 5.1.3**: `show.blade.php` のタブラベルに `{{ $relatedCount > 0 ? $relatedCount : '' }}` バッジを追加
+- [ ] **Task 5.1.3**: `show.blade.php` のタブラベルに `badge` でバッジ表示（`$relatedCount > 0` の場合のみ）
 
-#### Block 5.2: Feature テスト整備
+#### Block 5.2: 表示レベル同期
 
-- [ ] **Task 5.2.1**: `RelatedLedgersTest.php` に Livewire レンダリングテストを追加（Sprint 3 の skipped テストを有効化）
+- [ ] **Task 5.2.1**: `RelatedLedgers.php` に `public int $displayLevel = 1` プロパティを追加
+- [ ] **Task 5.2.2**: `#[On('displayLevelUpdated')]` リスナーを追加し、`Show.php` からの `displayLevel` 変更を受け取る
+- [ ] **Task 5.2.3**: `render()` の表示カラムフィルタを `<= $this->displayLevel` に変更（現状は `<= 1` 固定）
+
+#### Block 5.3: Feature テスト整備
+
+- [ ] **Task 5.3.1**: `RelatedLedgersTest.php` に Livewire レンダリングテストを追加（Sprint 3 の skipped テストを有効化）
   - `it_can_be_instantiated_as_livewire_component` → skipped 解除
   - `it_renders_with_toggle_toolbar`
-  - `it_shows_badge_count_after_render`
+  - `it_dispatches_related_count_updated_event`
 
-- [ ] **Task 5.2.2**: 全テスト実行・リグレッション確認
+- [ ] **Task 5.3.2**: 全テスト実行・リグレッション確認
   - コマンド: `./vendor/bin/sail test`
   - 既存テストへの影響がないこと
 
-#### Block 5.3: コード品質
+#### Block 5.4: コード品質
 
-- [ ] **Task 5.3.1**: Pint 実行
-- [ ] **Task 5.3.2**: `laravel-boost` エラーチェック（`last-error` / `browser-logs`）
+- [ ] **Task 5.4.1**: Pint 実行
+- [ ] **Task 5.4.2**: `laravel-boost` エラーチェック（`last-error` / `browser-logs`）
 
 **✅ Sprint 5 完了条件**
 - タブバッジが件数を正しく表示する ✅
+- `displayLevel` が基本情報タブと同期する ✅
 - `./vendor/bin/sail test` 全テストパス ✅
+- Pint 実行済み・エラーなし ✅
+
+---
+
+### 🏁 Sprint 6: UI品質改善（UIテスト指摘対応）
+
+**目標:** UIテスト結果で指摘された6点を実装する  
+**背景:** Sprint 4 のブラウザ確認で以下の課題が発覚  
+1. 関連理由列が幅を取りすぎ → アイコン＋ツールチップへ変更  
+2. 表示レベルを基本情報タブと同期する調整 UI が未実装  
+3. 意味検索ヒットのスコアが未表示（スコア順ソートも未実装）  
+4. 識別番号でヒットした番号値が強調表示されていない  
+5. 件数が括弧書き数字 → バッジ形式に変更  
+6. 件数のアイコン・色がトグルと不一致  
+
+**前提:** Sprint 5 完了後に着手
+
+---
+
+#### Block 6.1: バックエンド改修（スコア保持・matched_keys保持）
+
+- [ ] **Task 6.1.1**: `searchBySemantic()` の戻り値を `Collection<int, array{ledger: Ledger, score: float}>` に変更
+  - `ragResults` の `max_score` を各要素に付与
+  - スコア降順でソート済みの状態で返す
+
+- [ ] **Task 6.1.2**: `searchByIdentifiers()` の戻り値を `Collection<int, array{ledger: Ledger, matched_keys: string[]}>` に変更
+  - `$key → ledger_id[]` のマッピングを保持し、各 Ledger に一致した識別番号値を付与
+
+- [ ] **Task 6.1.3**: `mergeResults()` の引数・内部処理を変更
+  - 引数: `Collection<array{ledger, matched_keys}>` + `Collection<array{ledger, score}>`
+  - score を保持、matched_keys を保持
+  - スコアのある要素（semantic/both）を score 降順、identifier のみを末尾に配置
+
+- [ ] **Task 6.1.4**: `RelatedLedgers.php` プロパティに `public int $displayLevel = 1` を追加（Sprint 5 未完の場合）
+
+#### Block 6.2: バックエンドテスト
+
+- [ ] **Task 6.2.1**: `RelatedLedgersTest.php` に以下のテストを追加
+  - `it_retains_score_from_semantic_search` — `searchBySemantic()` が score を保持することを確認
+  - `it_retains_matched_keys_from_identifier_search` — `searchByIdentifiers()` が matched_keys を保持することを確認
+  - `it_sorts_by_score_descending_with_identifier_last` — `mergeResults()` のソート順を確認
+  - `it_marks_both_score_when_ledger_appears_in_both` — both 時にスコアが引き継がれることを確認
+
+- [ ] **Task 6.2.2**: テスト実行・パス確認
+
+#### Block 6.3: ビュー改修（識別理由インジケーター）
+
+- [ ] **Task 6.3.1**: `related-reason-badge.blade.php` を **アイコン＋ツールチップ形式** に改修
+  - テキストラベルを廃止し、アイコンのみ（`w-5 h-5`）
+  - `data-tip` に識別番号値またはスコアを表示
+  - Props 拡張: `reason`, `matched_keys` (array), `score` (float|null)
+  
+  ```blade
+  @props(['reason' => 'identifier', 'matchedKeys' => [], 'score' => null])
+  {{-- identifier: 🔖 tooltip="識別番号: EQ-042" --}}
+  {{-- semantic:   🔍 tooltip="類似度: 85%" --}}
+  {{-- both:       ⭐ tooltip="識別番号: EQ-042 / 類似度: 85%" --}}
+  ```
+
+- [ ] **Task 6.3.2**: `related-ledgers.blade.php` のテーブルヘッダー列幅を変更
+  - `w-24` → `w-8`（アイコン1つ分）
+  - ヘッダーラベル廃止（`—` またはアイコン）
+
+- [ ] **Task 6.3.3**: `related-ledgers.blade.php` の各行で `matched_keys` と `score` を `related-reason-badge` に渡す
+
+#### Block 6.4: ビュー改修（件数バッジ）
+
+- [ ] **Task 6.4.1**: ツールバーの件数表示を括弧書き数字からバッジに変更
+  - 識別番号件数: `<span class="badge badge-warning badge-sm">{{ $identifierCount }}</span>`
+  - 意味検索件数: `<span class="badge badge-info badge-sm">{{ $semanticCount }}</span>`
+  - 合計件数ラベルも `badge-neutral` のバッジ形式に変更
+  - 件数が 0 の場合はバッジを非表示（ゼロ表示しない）
+
+#### Block 6.5: ビュー改修（表示レベル調節 UI）
+
+- [ ] **Task 6.5.1**: ツールバーに表示レベルセレクタを追加
+  - `x-mary-group` コンポーネントで `wire:model.live="displayLevel"` をバインド
+  - オプション: `基本(1)` / `詳細(2)` / `すべて(3)`
+  - `show.blade.php` の基本情報タブと同じ `displayLevelOptions` 配列を使用
+  - `#[On('displayLevelUpdated')]` リスナーで `Show.php` のセレクタ変更を受け取り自動同期
+
+- [ ] **Task 6.5.2**: `render()` の表示カラムフィルタを `<= $this->displayLevel` に変更
+
+#### Block 6.6: 翻訳キー追加
+
+- [ ] **Task 6.6.1**: `lang/ja/ledger.php` の `related` セクションに追加
+  ```php
+  'score_tooltip'    => '類似度: :score%',
+  'identifier_tooltip' => '識別番号: :keys',
+  'both_tooltip'     => '識別番号: :keys / 類似度: :score%',
+  'display_level_label' => '表示レベル',
+  ```
+
+#### Block 6.7: ブラウザ動作確認
+
+- [ ] **Task 6.7.1**: 識別番号ヒットのアイコンにツールチップで番号値が表示されること
+- [ ] **Task 6.7.2**: 意味検索ヒットの行にスコアがツールチップで表示されること
+- [ ] **Task 6.7.3**: 結果がスコア降順→識別番号のみ の順で表示されること
+- [ ] **Task 6.7.4**: ツールバーの件数がバッジ形式で表示されること（アイコン・色が一致）
+- [ ] **Task 6.7.5**: 表示レベルを変更すると関連案件タブのカラムが変わること
+- [ ] **Task 6.7.6**: 基本情報タブの表示レベル変更と連動すること
+- [ ] **Task 6.7.7**: `laravel-boost` エラーチェック
+
+**✅ Sprint 6 完了条件**
+- 識別理由列がアイコン（`w-8`）に縮小され、ツールチップで詳細表示 ✅
+- 意味検索ヒットのレコードにスコア（ツールチップ）が表示される ✅
+- 結果がスコア降順でソートされる ✅
+- 件数がバッジ形式で表示され、アイコン・色がトグルと一致する ✅
+- 表示レベルが基本情報タブと同期する ✅
+- 全テストパス（新規テスト 4 件追加） ✅
 - Pint 実行済み・エラーなし ✅
 
 ---
@@ -425,10 +669,11 @@ $groupedByDefine = collect($pagedItems)
 |---|---|---|
 | Sprint 1 | 識別番号検索バックエンド + テスト | ✅ 完了 |
 | Sprint 2 | 意味検索バックエンド + テスト + CI確認 | ✅ 完了 |
-| Sprint 3 | マージ・識別理由・ページング・グルーピングバックエンド | 2〜3時間 |
-| Sprint 4 | Blade ビュー（テーブル・バッジ・トグル・show統合） | 3〜4時間 |
-| Sprint 5 | タブバッジ・テスト整備・全体仕上げ | 1〜2時間 |
-| **合計** | | **6〜9時間**（残り） |
+| Sprint 3 | マージ・識別理由・ページング・グルーピングバックエンド | ✅ 完了 |
+| Sprint 4 | Blade ビュー（テーブル・バッジ・トグル・show統合） | ✅ 完了 |
+| Sprint 5 | タブバッジ・displayLevel同期・テスト整備・全体仕上げ | 1〜2時間 |
+| Sprint 6 | UI品質改善（アイコン化・スコア表示・バッジ件数・表示レベル調節） | 2〜3時間 |
+| **合計** | | **3〜5時間**（残り） |
 
 ---
 
@@ -455,7 +700,11 @@ $groupedByDefine = collect($pagedItems)
 2026-03-01 — テスト 17 passed / 1 skipped (Livewire コンポーネントテストは Sprint 5 で有効化)
 
 ### Sprint 4 完了日時
-_未完了_
+2026-03-01 — ブラウザ動作確認済み・#[Lazy] テナントコンテキストバグ修正済み
 
 ### Sprint 5 完了日時
 _未完了_
+
+### Sprint 6 完了日時
+_未完了_
+
