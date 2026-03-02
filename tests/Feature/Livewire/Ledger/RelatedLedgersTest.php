@@ -177,7 +177,8 @@ class RelatedLedgersTest extends TestCase
         $results = $component->searchByIdentifiers(['EQ-001']);
 
         $this->assertGreaterThan(0, $results->count());
-        $resultIds = $results->pluck('id')->toArray();
+        // 戻り値は array{ledger, matched_keys} の Collection
+        $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertContains($relatedLedger->id, $resultIds);
     }
 
@@ -189,7 +190,7 @@ class RelatedLedgersTest extends TestCase
 
         $results = $component->searchByIdentifiers(['EQ-001']);
 
-        $resultIds = $results->pluck('id')->toArray();
+        $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertNotContains($this->ledger->id, $resultIds);
     }
 
@@ -232,7 +233,7 @@ class RelatedLedgersTest extends TestCase
         $results = $component->searchByIdentifiers(['EQ-001']);
 
         // 権限のないフォルダのレコードは含まれない
-        $resultFolderIds = $results->map(fn ($l) => $l->define->folder_id ?? null)->unique()->toArray();
+        $resultFolderIds = $results->map(fn ($item) => $item['ledger']->define->folder_id ?? null)->unique()->toArray();
         $this->assertNotContains($restrictedFolder->id, $resultFolderIds);
     }
 
@@ -337,7 +338,7 @@ class RelatedLedgersTest extends TestCase
         $results = $component->searchBySemantic($this->ledger);
 
         $this->assertFalse($results->isEmpty());
-        $resultIds = $results->pluck('id')->toArray();
+        $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertContains($relatedLedger->id, $resultIds);
         $this->assertTrue($component->ragAvailable);
     }
@@ -365,7 +366,7 @@ class RelatedLedgersTest extends TestCase
         $results = $component->searchBySemantic($this->ledger);
 
         // 自身は結果から除外される
-        $resultIds = $results->pluck('id')->toArray();
+        $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertNotContains($this->ledger->id, $resultIds);
     }
 
@@ -411,8 +412,8 @@ class RelatedLedgersTest extends TestCase
         $component->ledgerId = $this->ledger->id;
 
         $merged = $component->mergeResults(
-            collect([$identifierLedger]),
-            collect([$semanticLedger])
+            collect([['ledger' => $identifierLedger, 'matched_keys' => ['EQ-010']]]),
+            collect([['ledger' => $semanticLedger,   'score' => 0.85]])
         );
 
         $this->assertCount(2, $merged);
@@ -435,13 +436,14 @@ class RelatedLedgersTest extends TestCase
         $component->ledgerId = $this->ledger->id;
 
         $merged = $component->mergeResults(
-            collect([$bothLedger]),   // 識別番号検索にも含まれる
-            collect([$bothLedger])    // 意味検索にも含まれる
+            collect([['ledger' => $bothLedger, 'matched_keys' => ['EQ-001']]]),
+            collect([['ledger' => $bothLedger, 'score' => 0.92]])
         );
 
         $this->assertCount(1, $merged);
         $this->assertSame('both', $merged[0]['reason']);
         $this->assertSame($bothLedger->id, $merged[0]['ledger']->id);
+        $this->assertSame(0.92, $merged[0]['score']);
     }
 
     // ─────────────────────────────────────────────
@@ -592,5 +594,103 @@ class RelatedLedgersTest extends TestCase
             }
             throw $e;
         }
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint 6: スコア保持・matched_keys保持・ソート
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_retains_score_from_semantic_search(): void
+    {
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-099', 1 => 'スコアテスト', 2 => '']]);
+
+        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+            $mock->shouldReceive('searchLedgers')->once()->andReturn([
+                ['ledger_id' => $relatedLedger->id, 'max_score' => 0.87, 'best_chunk_text' => '', 'chunk_count' => 1],
+            ]);
+        });
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchBySemantic($this->ledger);
+
+        $this->assertFalse($results->isEmpty());
+        $item = $results->first();
+        $this->assertArrayHasKey('score', $item);
+        $this->assertEqualsWithDelta(0.87, $item['score'], 0.001);
+    }
+
+    #[Test]
+    public function it_retains_matched_keys_from_identifier_search(): void
+    {
+        // 同じ識別番号を持つ別レコードを作成
+        Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-001', 1 => 'matched_keysテスト', 2 => '']]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchByIdentifiers(['EQ-001']);
+
+        $this->assertFalse($results->isEmpty());
+        $item = $results->first();
+        $this->assertArrayHasKey('matched_keys', $item);
+        $this->assertContains('EQ-001', $item['matched_keys']);
+    }
+
+    #[Test]
+    public function it_sorts_by_score_descending_with_identifier_last(): void
+    {
+        $ledgerA = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-A', 1 => 'ハイスコア', 2 => '']]);
+        $ledgerB = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-B', 1 => 'ロースコア', 2 => '']]);
+        $ledgerC = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-C', 1, '識別番号のみ', 2 => '']]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $merged = $component->mergeResults(
+            collect([['ledger' => $ledgerC, 'matched_keys' => ['EQ-C']]]),       // identifier のみ
+            collect([
+                ['ledger' => $ledgerA, 'score' => 0.95],
+                ['ledger' => $ledgerB, 'score' => 0.60],
+            ])
+        );
+
+        // 期待するソート順: A(0.95) → B(0.60) → C(null=identifier のみ)
+        $this->assertSame($ledgerA->id, $merged[0]['ledger']->id);
+        $this->assertSame($ledgerB->id, $merged[1]['ledger']->id);
+        $this->assertSame($ledgerC->id, $merged[2]['ledger']->id);
+    }
+
+    #[Test]
+    public function it_marks_both_score_when_ledger_appears_in_both(): void
+    {
+        $bothLedger = Ledger::factory()
+            ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
+            ->create(['content' => [0 => 'EQ-001', 1 => '両方テスト', 2 => '']]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $merged = $component->mergeResults(
+            collect([['ledger' => $bothLedger, 'matched_keys' => ['EQ-001']]]),
+            collect([['ledger' => $bothLedger, 'score' => 0.75]])
+        );
+
+        $this->assertCount(1, $merged);
+        $this->assertSame('both', $merged[0]['reason']);
+        $this->assertEqualsWithDelta(0.75, $merged[0]['score'], 0.001);
+        $this->assertContains('EQ-001', $merged[0]['matched_keys']);
     }
 }
