@@ -61,6 +61,9 @@ compatibility: LedgerLeap (...)
 
 1. Identify the recurring workflow (at least 2 occurrences justify a skill)
 2. Name it: `verb-noun` or `noun-noun` pattern, lowercase hyphenated
+   - **No subdirectories** — `name` must equal the directory name (agentskills.io spec).
+     Grouping via `skills/category/skill-name/` breaks this and may not be discovered.
+     Use the `Category` column in the Inventory table instead (see `references/workflow.md`).
 3. Write description: run the "does X / Use when Y" test
 4. Write the body: start with decision tree or classification table
 5. Move all code examples to `references/`
@@ -74,7 +77,4 @@ compatibility: LedgerLeap (...)
 - Remove triggers for deleted/merged skills immediately
 - Never add implementation details — they belong in skills
 
-## Full Workflow
-
-See [references/workflow.md](references/workflow.md) for the complete
-end-of-sprint checklist and quality gate table.
+See [references/workflow.md](references/workflow.md) for end-of-sprint checklist and quality gate.

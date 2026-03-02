@@ -27,6 +27,7 @@ After completing a sprint, gather:
 For each modified SKILL.md, verify:
 
 - [ ] `name` matches directory name exactly (lowercase, hyphens only)
+- [ ] **No subdirectory nesting** — `skills/category/skill-name/` violates the spec; `name` must equal the directory name. Use the `Category` column in the Inventory table for grouping instead.
 - [ ] `description` is third-person voice and includes "Use when <trigger>"
 - [ ] `compatibility` field present
 - [ ] Body ≤80 lines
@@ -35,6 +36,20 @@ For each modified SKILL.md, verify:
 - [ ] Each `references/*.md` file ≤120 lines and covers one topic
 - [ ] All reference links in SKILL.md are one level deep (`references/foo.md`)
 - [ ] copilot-instructions.md ≤50 lines
+
+## SKILL.md Body Rules (complete)
+
+| Rule | Rationale |
+|---|---|
+| ≤80 lines | Loaded entirely on activation — every token competes with context |
+| Decision tree first | Agent needs to reach the right branch fast |
+| Comparison table second | Concise alternative enumeration |
+| Reference links last | `See [references/foo.md](references/foo.md) for details` |
+| No time-sensitive info | Use "since Issue #N" instead of "as of 2026-02" |
+| English preferred | Agent processes English constraints with highest accuracy |
+| Checklist at bottom | Compact format; max 6–8 items |
+
+> The SKILL.md body shows a condensed subset of this table. This is the authoritative version.
 
 ## Step 4 — Commit with git-commit skill
 
