@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月2日  
 **更新日:** 2026年3月2日  
-**ステータス:** 📋 提案・バックログ  
+**ステータス:** 🚧 実装中（Sprint A 完了）  
 **目的:** 関連案件タブの識別番号検索を拡張し、`auto_number` 型列だけでなく、テキスト列に記載された識別番号でも関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/76  
 **前提Issue:** [Issue #54: 詳細画面に関連案件タブを追加](https://github.com/torinky/LedgerLeap/issues/54)
@@ -210,17 +210,17 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 
 ## 📋 WBS：スプリント計画（草案）
 
-### Sprint A: AutoNumberPatternService の切り出し・テスト
+### ✅ Sprint A: AutoNumberPatternService の切り出し・テスト — 完了 (2026-03-03)
 
-**目標:** `AutoLinkService` の `generateAutoNumberPattern()` + `getVirtualAutoNumberLinks()` を  
-`AutoNumberPatternService`（新サービス）に切り出し、単体テストを整備する
+**エビデンス:** [46ab6bfc](https://github.com/torinky/LedgerLeap/commit/46ab6bfc)
 
-- [ ] `app/Services/AutoNumberPatternService.php` を新規作成
+- [x] `app/Services/AutoNumberPatternService.php` を新規作成
   - `getPatterns(): Collection` — 全テナントの `auto_number` カラム定義からパターンと列情報のコレクションを返す
   - `generatePattern(object $options, bool $isUnique): string` — 正規表現文字列を生成
-- [ ] `AutoLinkService` が `AutoNumberPatternService` を DI で利用するよう変更
-- [ ] `AutoNumberPatternServiceTest.php` を新規作成（パターン生成・キャッシュのテスト）
-- [ ] 既存の AutoLink テストがリグレッションしないことを確認
+- [x] `AutoLinkService` が `AutoNumberPatternService` を DI で利用するよう変更
+- [x] `AutoNumberPatternServiceTest.php` を新規作成（パターン生成・キャッシュのテスト）
+- [x] 既存の AutoLink テストがリグレッションしないことを確認
+- [x] `./vendor/bin/sail test` パス確認（28 passed）・Pint 実行
 
 ---
 
@@ -266,15 +266,24 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 
 ---
 
-## 📊 予想工数
+## 📊 工数・進捗サマリー
 
-| スプリント | 内容 | 予想工数 |
-|---|---|---|
-| Sprint A | AutoNumberPatternService 切り出し・テスト | 2〜3時間 |
-| Sprint B | extractAutoNumberValues 拡張 | 1〜2時間 |
-| Sprint C | テスト整備（5件） | 1〜2時間 |
-| Sprint D | ビュー対応 | 1時間 |
-| **合計** | | **5〜8時間** |
+| スプリント | 内容 | 予想工数 | 状態 | 完了日 |
+|---|---|---|---|---|
+| **Sprint A** | AutoNumberPatternService 切り出し・テスト | 2〜3時間 | ✅ 完了 | 2026-03-03 |
+| Sprint B | extractAutoNumberValues 拡張 | 1〜2時間 | 🔲 未着手 | — |
+| Sprint C | テスト整備（5件） | 1〜2時間 | 🔲 未着手 | — |
+| Sprint D | ビュー対応 | 1時間 | 🔲 未着手 | — |
+| **合計** | | **5〜8時間** | | |
+
+## 📝 実装結果
+
+### Sprint A 完了 (2026-03-03)
+- **コミット:** [46ab6bfc](https://github.com/torinky/LedgerLeap/commit/46ab6bfc)
+- **新規ファイル:** `app/Services/AutoNumberPatternService.php`
+- **変更ファイル:** `app/Services/AutoLinkService.php`（DI 追加・委譲）
+- **新規テスト:** `tests/Feature/Services/AutoNumberPatternServiceTest.php`（6件）
+- **テスト結果:** 28 passed（AutoNumberPatternServiceTest 6 + RelatedLedgersTest 22）
 
 ---
 
