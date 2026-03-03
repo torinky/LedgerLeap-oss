@@ -1,11 +1,8 @@
 # LedgerLeap — Copilot Instructions
-
 ## Repository
 - **owner**: `torinky` / **repo**: `LedgerLeap`
 - **Stack**: PHP 8.4 / Laravel 12 / MySQL (Mroonga) / Livewire / Alpine.js / TailwindCSS (daisyUI, maryUI)
-
 ## Critical Constraints
-
 - **Mroonga full-text search**: Composite indexes do NOT work. Use single-column `MATCH() AGAINST()`, combine multiple columns with `OR`.
 - **Tenant init in tests**: Every Feature test `setUp()` MUST call `tenancy()->initialize($tenant)`. Missing it returns `null` relations.
 - **AsColumnArrayJson access**: `data_get()` does NOT work. Use direct array access: `$ledger->content[0]`.
@@ -19,15 +16,12 @@
 - **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.
 - **Git in Sail env**: After `sail` commands, plain `cd && git` produces silent empty output. Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
 - **`#[Lazy]` + tenant**: `placeholder()` snapshots `tenantId=null`. In `render()`, always fall back to `$model->tenant_id` — never rely solely on `tenant()?->id`. See Issue #54.
-
 ## Architecture Patterns
 - Business logic → `App\Services`
 - Interactive UI → Livewire with single-source-of-truth state array
 - ACL → `Spatie\Permission` + custom Folder-based permissions
 - Data access → always verify live data via MCP tools before reasoning from static files
-
 ## Skills — When to Load
-
 | Trigger | Skill path |
 |---|---|
 | `git commit` to run | `.github/skills/git-commit/SKILL.md` |
@@ -36,8 +30,19 @@
 | Writing tests with `Ledger`, `AttachedFile`, external services | `.github/skills/test-external-dependency-isolation/SKILL.md` |
 | Mroonga search tests / `DatabaseMigrations` trait | `.github/skills/database-migrations-test-optimization/SKILL.md` |
 | `tenant()` null / missing tenant param in Livewire | `.github/skills/livewire-tenant-context/SKILL.md` |
+| `content[n]` null / test data index shift / `data_get()` on content | `.github/skills/ledger-content-data-structure/SKILL.md` |
+| `wire:loading` / `wire:key` flicker / `x-show` not hiding / sticky header | `.github/skills/livewire-loading-ui/SKILL.md` |
+| `#[Computed]` 0% coverage / `#[Reactive]` sync / `#[Url]` init / parent-child test | `.github/skills/livewire-computed-properties/SKILL.md` |
 | End of sprint / creating or updating a skill | `.github/skills/skill-maintenance/SKILL.md` |
-
+## Reference Docs — Load when working on related areas
+| Area | Document |
+|---|---|
+| Livewire UI/UX patterns, loading tiers, Alpine.js CSS | `docs/development/Livewire-Best-Practices.md` |
+| Multi-tenancy migration, model setup, validation | `docs/development/multi-tenancy-guidelines.md` |
+| Performance (Vite, Eloquent, cache, Mroonga index) | `docs/development/performance-optimization.md` |
+| VLM/OCR engine setup, switching PaddleOCR version | `docs/development/vlm-ocr.md` |
+| MCP tool architecture and data structure | `docs/development/MCP_Architecture_and_Flow.md` |
+| Test fundamentals, DB trait selection, tenant setup | `docs/development/testing/` |
 ## Workflow
 1. **Lint**: run `./vendor/bin/sail pint` before commit
 2. **Error check**: use `laravel-boost` (`last-error`, `browser-logs`) after every change
