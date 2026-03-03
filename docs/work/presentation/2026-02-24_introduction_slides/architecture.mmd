@@ -14,10 +14,6 @@ graph TD
             Async("非同期処理ワーカー")
         end
 
-        subgraph Storage [💾 データベース（MySQL）]
-            direction LR
-            DB[("台帳データ・権限・履歴<br>等すべてのデータを保存")]
-            Search[("🔍 日本語全文検索エンジン<br>キーワードで即座に検索<br>同義語も自動展開")]
         subgraph Data [データ・検索基盤]
             direction TB
             MySQL[("データベース<br>(マルチテナント対応)")]
@@ -42,16 +38,16 @@ graph TD
 
     %% メインフロー
     Users ==>|ブラウザでアクセス| App
-    App <==>|データ保存・読込| DB
-    App -->|キーワード検索| Search
-    DB -.-|書き込み時に自動でインデックス更新| Search
+    App <==>|データ保存・読込| MySQL
+    App -->|キーワード検索| Groonga
+    MySQL -.-|書き込み時に自動でインデックス更新| Groonga
 
     %% 添付ファイル → AI → 検索可能に
     App -->|ファイル添付時に自動起動| Async
     Async --> Extract
     Async --> Vision
-    Extract -->|抽出テキストをデータベースに保存| DB
-    Vision -->|認識テキストをデータベースに保存| DB
+    Extract -->|抽出テキストをデータベースに保存| MySQL
+    Vision -->|認識テキストをデータベースに保存| MySQL
 
     %% 外部連携
     App <-->|台帳操作・データ取得| API
@@ -67,7 +63,7 @@ graph TD
 
     class Users user;
     class App,Async app;
-    class DB db;
-    class Search search;
+    class MySQL db;
+    class Groonga search;
     class Extract,Vision ai;
     class LLM,API ext;
