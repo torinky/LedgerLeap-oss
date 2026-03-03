@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月2日  
 **更新日:** 2026年3月2日  
-**ステータス:** 🚧 実装中（Sprint A 完了）  
+**ステータス:** 🚧 実装中（Sprint A・B・C 完了）  
 **目的:** 関連案件タブの識別番号検索を拡張し、`auto_number` 型列だけでなく、テキスト列に記載された識別番号でも関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/76  
 **前提Issue:** [Issue #54: 詳細画面に関連案件タブを追加](https://github.com/torinky/LedgerLeap/issues/54)
@@ -224,30 +224,30 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 
 ---
 
-### Sprint B: `extractAutoNumberValues()` の拡張
+### ✅ Sprint B: `extractAutoNumberValues()` の拡張 — 完了 (2026-03-03)
 
-**目標:** `RelatedLedgers.php` の `extractAutoNumberValues()` にパターンBのロジックを追加する
+**エビデンス:** [c5ee7130](https://github.com/torinky/LedgerLeap/commit/c5ee7130)
 
-- [ ] `extractAutoNumberValues()` を拡張
+- [x] `extractAutoNumberValues()` を拡張
   - Step A（従来）: `auto_number` 型列の値を収集
   - Step B（新規）: `AutoNumberPatternService::getPatterns()` でパターン取得 → 全テキスト列にマッチング
   - 戻り値を `string[]` から `array<string, array{source: string, column: string}>` に変更
-- [ ] `searchByIdentifiers()` に `source` 情報を渡せるよう引数を調整
-- [ ] `mergeResults()` で `matched_keys` に `source` 情報を保持
+- [x] `searchByIdentifiers()` に `source` 情報を渡せるよう引数を調整
+- [x] `mergeResults()` で `matched_keys` に `source` 情報を保持
 
 ---
 
-### Sprint C: テスト整備
+### ✅ Sprint C: テスト整備 — 完了 (2026-03-03)
 
-**目標:** パターンBの各ケースをテストでカバーする
+**エビデンス:** [c5ee7130](https://github.com/torinky/LedgerLeap/commit/c5ee7130)
 
-- [ ] `RelatedLedgersTest.php` に以下のテストを追加
+- [x] `RelatedLedgersTest.php` に以下のテストを追加
   - `it_extracts_identifier_from_text_column` — テキスト列から識別番号が抽出されることを確認
   - `it_does_not_extract_from_files_or_auto_number_column` — 除外列からは抽出されないことを確認
   - `it_searches_by_text_column_identifier` — 抽出した値で横断検索が実行されることを確認
   - `it_marks_source_as_text_column_in_matched_keys` — `source='text_column'` が `matched_keys` に記録されることを確認
   - `it_deduplicates_keys_across_pattern_a_and_b` — パターンAとBで同じ値が抽出された場合に重複排除されることを確認
-- [ ] `./vendor/bin/sail test` 全テストパス確認
+- [x] `./vendor/bin/sail test` 全テストパス確認（33 passed）
 
 ---
 
@@ -271,8 +271,8 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 | スプリント | 内容 | 予想工数 | 状態 | 完了日 |
 |---|---|---|---|---|
 | **Sprint A** | AutoNumberPatternService 切り出し・テスト | 2〜3時間 | ✅ 完了 | 2026-03-03 |
-| Sprint B | extractAutoNumberValues 拡張 | 1〜2時間 | 🔲 未着手 | — |
-| Sprint C | テスト整備（5件） | 1〜2時間 | 🔲 未着手 | — |
+| **Sprint B** | extractAutoNumberValues 拡張 | 1〜2時間 | ✅ 完了 | 2026-03-03 |
+| **Sprint C** | テスト整備（5件） | 1〜2時間 | ✅ 完了 | 2026-03-03 |
 | Sprint D | ビュー対応 | 1時間 | 🔲 未着手 | — |
 | **合計** | | **5〜8時間** | | |
 
@@ -284,6 +284,14 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 - **変更ファイル:** `app/Services/AutoLinkService.php`（DI 追加・委譲）
 - **新規テスト:** `tests/Feature/Services/AutoNumberPatternServiceTest.php`（6件）
 - **テスト結果:** 28 passed（AutoNumberPatternServiceTest 6 + RelatedLedgersTest 22）
+
+### Sprint B・C 完了 (2026-03-03)
+- **コミット:** [c5ee7130](https://github.com/torinky/LedgerLeap/commit/c5ee7130)
+- **変更ファイル:** `app/Livewire/Ledger/RelatedLedgers.php`
+  - `extractAutoNumberValues()` に Step B（テキスト列パターンマッチング）追加
+  - `searchByIdentifiers()` の引数・`matched_keys` を `{value, source, column}[]` 形式に拡張
+- **テスト追加:** `RelatedLedgersTest.php`（+5件、既存22件リグレッションなし）
+- **テスト結果:** 33 passed（97 assertions）
 
 ---
 
