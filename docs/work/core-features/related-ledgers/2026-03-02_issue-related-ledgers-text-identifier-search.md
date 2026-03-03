@@ -2,7 +2,7 @@
 
 **作成日:** 2026年3月2日  
 **更新日:** 2026年3月2日  
-**ステータス:** 🚧 実装中（Sprint A・B・C 完了）  
+**ステータス:** ✅ 実装完了（Sprint A〜D 完了）  
 **目的:** 関連案件タブの識別番号検索を拡張し、`auto_number` 型列だけでなく、テキスト列に記載された識別番号でも関連レコードを探索できるようにする  
 **関連Issue:** https://github.com/torinky/LedgerLeap/issues/76  
 **前提Issue:** [Issue #54: 詳細画面に関連案件タブを追加](https://github.com/torinky/LedgerLeap/issues/54)
@@ -251,18 +251,25 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 
 ---
 
-### Sprint D: ビュー対応
+### ✅ Sprint D: ビュー対応 — 完了 (2026-03-03)
 
-**目標:** ツールチップに `source` 情報（どのカラムから抽出したか）を表示する
+**エビデンス:** [586c5299](https://github.com/torinky/LedgerLeap/commit/586c5299)
 
-- [ ] `related-reason-badge.blade.php` の `identifier` / `both` ツールチップに `source_column` を追加
-  - パターンA: `識別番号: EQ-042（設備番号列）`
+- [x] `related-reason-badge.blade.php` のツールチップに `source` 情報を追加
+  - パターンA: `識別番号: EQ-042（識別番号列）`
   - パターンB: `識別番号: EQ-042（テキスト記載）`
-- [ ] `lang/ja/ledger.php` に翻訳キーを追加
+- [x] `lang/ja/ledger.php` に翻訳キーを追加
   - `related.identifier_source_auto_number` → `識別番号列`
   - `related.identifier_source_text_column` → `テキスト記載`
-- [ ] ブラウザ動作確認
-- [ ] `laravel-boost` エラーチェック・Pint 実行
+  - `related.identifier_key_with_source` → `:value（:source）`
+- [x] ブラウザ動作確認（tinker で全パターンのレンダリングを確認）
+- [x] `laravel-boost` エラーチェック・Pint 実行
+
+> **🐛 バグ修正（同コミット）:** マルチテナントキャッシュキー衝突
+> - `AutoNumberPatternService::getPatterns()` と `AutoLinkService::getVirtualAutoNumberLinks()` の
+>   キャッシュキーにテナントIDが含まれておらず、auto_number カラムを持たないテナントが
+>   先にキャッシュを生成すると他テナントでも 0 件が返り自動リンクが生成されなくなっていた。
+> - キー形式を `"...:${tenantId}"` に変更して修正。
 
 ---
 
@@ -273,8 +280,8 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 | **Sprint A** | AutoNumberPatternService 切り出し・テスト | 2〜3時間 | ✅ 完了 | 2026-03-03 |
 | **Sprint B** | extractAutoNumberValues 拡張 | 1〜2時間 | ✅ 完了 | 2026-03-03 |
 | **Sprint C** | テスト整備（5件） | 1〜2時間 | ✅ 完了 | 2026-03-03 |
-| Sprint D | ビュー対応 | 1時間 | 🔲 未着手 | — |
-| **合計** | | **5〜8時間** | | |
+| **Sprint D** | ビュー対応 | 1時間 | ✅ 完了 | 2026-03-03 |
+| **合計** | | **5〜8時間** | ✅ **全完了** | |
 
 ## 📝 実装結果
 
@@ -283,15 +290,22 @@ private function generateAutoNumberPattern(object $options, bool $isUnique): str
 - **新規ファイル:** `app/Services/AutoNumberPatternService.php`
 - **変更ファイル:** `app/Services/AutoLinkService.php`（DI 追加・委譲）
 - **新規テスト:** `tests/Feature/Services/AutoNumberPatternServiceTest.php`（6件）
-- **テスト結果:** 28 passed（AutoNumberPatternServiceTest 6 + RelatedLedgersTest 22）
+- **テスト結果:** 28 passed
 
 ### Sprint B・C 完了 (2026-03-03)
 - **コミット:** [c5ee7130](https://github.com/torinky/LedgerLeap/commit/c5ee7130)
 - **変更ファイル:** `app/Livewire/Ledger/RelatedLedgers.php`
-  - `extractAutoNumberValues()` に Step B（テキスト列パターンマッチング）追加
-  - `searchByIdentifiers()` の引数・`matched_keys` を `{value, source, column}[]` 形式に拡張
-- **テスト追加:** `RelatedLedgersTest.php`（+5件、既存22件リグレッションなし）
+- **テスト追加:** `RelatedLedgersTest.php`（+5件）
 - **テスト結果:** 33 passed（97 assertions）
+
+### Sprint D + バグ修正 完了 (2026-03-03)
+- **コミット:** [586c5299](https://github.com/torinky/LedgerLeap/commit/586c5299)
+- **変更ファイル:**
+  - `resources/views/components/ledger/related-reason-badge.blade.php`（ソース情報付きツールチップ）
+  - `lang/ja/ledger.php`（翻訳キー3件追加）
+  - `app/Services/AutoNumberPatternService.php`（キャッシュキーにテナントID付与）
+  - `app/Services/AutoLinkService.php`（同上）
+- **テスト結果:** 33 passed（リグレッションなし）
 
 ---
 
