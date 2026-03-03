@@ -113,9 +113,10 @@ class RelatedLedgersTest extends TestCase
         $values = $component->extractAutoNumberValues($this->ledger);
 
         $this->assertIsArray($values);
-        $this->assertContains('EQ-001', $values);
-        // text タイプの値は含まれない
-        $this->assertNotContains('メインテスト設備', $values);
+        $this->assertArrayHasKey('EQ-001', $values);
+        $this->assertSame('auto_number', $values['EQ-001']['source']);
+        // text タイプの値はキーに含まれない
+        $this->assertArrayNotHasKey('メインテスト設備', $values);
     }
 
     #[Test]
@@ -174,7 +175,7 @@ class RelatedLedgersTest extends TestCase
         $component = new RelatedLedgers;
         $component->ledgerId = $this->ledger->id;
 
-        $results = $component->searchByIdentifiers(['EQ-001']);
+        $results = $component->searchByIdentifiers(['EQ-001' => ['source' => 'auto_number', 'column' => '管理番号']]);
 
         $this->assertGreaterThan(0, $results->count());
         // 戻り値は array{ledger, matched_keys} の Collection
@@ -188,7 +189,7 @@ class RelatedLedgersTest extends TestCase
         $component = new RelatedLedgers;
         $component->ledgerId = $this->ledger->id;
 
-        $results = $component->searchByIdentifiers(['EQ-001']);
+        $results = $component->searchByIdentifiers(['EQ-001' => ['source' => 'auto_number', 'column' => '管理番号']]);
 
         $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertNotContains($this->ledger->id, $resultIds);
@@ -230,7 +231,7 @@ class RelatedLedgersTest extends TestCase
         $component = new RelatedLedgers;
         $component->ledgerId = $this->ledger->id;
 
-        $results = $component->searchByIdentifiers(['EQ-001']);
+        $results = $component->searchByIdentifiers(['EQ-001' => ['source' => 'auto_number', 'column' => '管理番号']]);
 
         // 権限のないフォルダのレコードは含まれない
         $resultFolderIds = $results->map(fn ($item) => $item['ledger']->define->folder_id ?? null)->unique()->toArray();
@@ -635,12 +636,15 @@ class RelatedLedgersTest extends TestCase
         $component = new RelatedLedgers;
         $component->ledgerId = $this->ledger->id;
 
-        $results = $component->searchByIdentifiers(['EQ-001']);
+        $results = $component->searchByIdentifiers(['EQ-001' => ['source' => 'auto_number', 'column' => '管理番号']]);
 
         $this->assertFalse($results->isEmpty());
         $item = $results->first();
         $this->assertArrayHasKey('matched_keys', $item);
-        $this->assertContains('EQ-001', $item['matched_keys']);
+        // matched_keys は {value, source, column} の配列
+        $matchedValues = array_column($item['matched_keys'], 'value');
+        $this->assertContains('EQ-001', $matchedValues);
+        $this->assertSame('auto_number', $item['matched_keys'][0]['source']);
     }
 
     #[Test]
@@ -692,5 +696,207 @@ class RelatedLedgersTest extends TestCase
         $this->assertSame('both', $merged[0]['reason']);
         $this->assertEqualsWithDelta(0.75, $merged[0]['score'], 0.001);
         $this->assertContains('EQ-001', $merged[0]['matched_keys']);
+    }
+
+    // ─────────────────────────────────────────────
+    // Sprint C (Issue #76): パターンB — テキスト列識別番号抽出
+    // ─────────────────────────────────────────────
+
+    #[Test]
+    public function it_extracts_identifier_from_text_column(): void
+    {
+        // prefix='EQ-', digits=3 の auto_number カラムを持つ台帳定義を作成
+        // → 'EQ-001' にマッチするパターン '/( EQ-\d{3,})(?![0-9])/u' が生成される
+        $defineWithPrefix = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    new ColumnDefine(0, '設備番号', 'auto_number', 1, ['prefix' => 'EQ-', 'digits' => 3, 'revision' => '']),
+                    new ColumnDefine(1, '作業内容', 'text', 2),
+                ],
+            ]);
+
+        // テキスト列に 'EQ-001' を含むレコードを作成
+        $ledgerWithTextRef = Ledger::factory()
+            ->for($defineWithPrefix, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => '',                             // auto_number 列は空
+                    1 => 'EQ-001 の修理作業を実施した', // text 列に識別番号が含まれる
+                ],
+            ]);
+
+        // キャッシュをクリアして確実に最新パターンを取得
+        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $ledgerWithTextRef->id;
+
+        $values = $component->extractAutoNumberValues($ledgerWithTextRef);
+
+        // テキスト列から EQ-001 が抽出される（パターンB）
+        $this->assertArrayHasKey('EQ-001', $values);
+        $this->assertSame('text_column', $values['EQ-001']['source']);
+        $this->assertSame('作業内容', $values['EQ-001']['column']);
+    }
+
+    #[Test]
+    public function it_does_not_extract_from_files_or_auto_number_column(): void
+    {
+        // files / auto_number 型列はパターンBの対象外
+        $defineWithFiles = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    new ColumnDefine(0, '管理番号', 'auto_number', 1),
+                    new ColumnDefine(1, '添付', 'files', 2),
+                    new ColumnDefine(2, '備考', 'textarea', 3),
+                ],
+            ]);
+
+        $ledger = Ledger::factory()
+            ->for($defineWithFiles, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-001',                           // auto_number 列 → パターンA
+                    1 => [['original_name' => 'EQ-001.pdf']], // files 列 → 除外
+                    2 => '通常のメモ（識別番号なし）',
+                ],
+            ]);
+
+        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $ledger->id;
+
+        $values = $component->extractAutoNumberValues($ledger);
+
+        // auto_number 列の値はパターンAとして取得
+        $this->assertArrayHasKey('EQ-001', $values);
+        $this->assertSame('auto_number', $values['EQ-001']['source']);
+
+        // files 列のファイル名から抽出されていないこと（EQ-001 が2重登録されていないこと）
+        // → パターンAで先に取得済みのため、text_column で上書きされないこと
+        $this->assertNotSame('text_column', $values['EQ-001']['source']);
+    }
+
+    #[Test]
+    public function it_searches_by_text_column_identifier(): void
+    {
+        // prefix='EQ-' の auto_number カラムを持つ台帳定義
+        $defineWithPrefix = LedgerDefine::factory()
+            ->for($this->folder)
+            ->create([
+                'column_define' => [
+                    new ColumnDefine(0, '設備番号', 'auto_number', 1, ['prefix' => 'EQ-', 'digits' => 3, 'revision' => '']),
+                    new ColumnDefine(1, '作業内容', 'text', 2),
+                ],
+            ]);
+
+        // テキスト列に識別番号が記載されたレコード（パターンB抽出元）
+        $sourceledger = Ledger::factory()
+            ->for($defineWithPrefix, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => '',
+                    1 => 'EQ-001 に関連する作業を実施',  // text 列に識別番号
+                ],
+            ]);
+
+        // EQ-001 を auto_number 列に持つ別レコード（検索でヒットする側）
+        $targetLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-001',
+                    1 => '設備台帳',
+                    2 => '',
+                ],
+            ]);
+
+        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $sourceledger->id;
+
+        // extractAutoNumberValues でパターンBとして EQ-001 が抽出されることを確認
+        $values = $component->extractAutoNumberValues($sourceledger);
+        $this->assertArrayHasKey('EQ-001', $values);
+        $this->assertSame('text_column', $values['EQ-001']['source']);
+
+        // searchByIdentifiers で targetLedger がヒットすることを確認
+        $results = $component->searchByIdentifiers($values);
+        $resultIds = $results->pluck('ledger.id')->toArray();
+        $this->assertContains($targetLedger->id, $resultIds);
+    }
+
+    #[Test]
+    public function it_marks_source_as_text_column_in_matched_keys(): void
+    {
+        // パターンBで抽出した識別番号での検索結果に source='text_column' が付与されること
+        $targetLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [0 => 'EQ-001', 1 => '設備台帳', 2 => ''],
+            ]);
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchByIdentifiers([
+            'EQ-001' => ['source' => 'text_column', 'column' => '作業内容'],
+        ]);
+
+        $this->assertFalse($results->isEmpty());
+        $item = $results->first();
+        $matchedKeys = $item['matched_keys'];
+
+        $this->assertNotEmpty($matchedKeys);
+        $this->assertSame('EQ-001', $matchedKeys[0]['value']);
+        $this->assertSame('text_column', $matchedKeys[0]['source']);
+        $this->assertSame('作業内容', $matchedKeys[0]['column']);
+    }
+
+    #[Test]
+    public function it_deduplicates_keys_across_pattern_a_and_b(): void
+    {
+        // 同じ値がパターンA（auto_number 列）とパターンB（text 列）の両方に存在する場合、
+        // パターンAが優先され、パターンBで上書きされないこと
+        $ledger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-001',                    // auto_number 列（パターンA）
+                    1 => 'EQ-001 の追加作業を実施',   // text 列（パターンB）
+                    2 => '',
+                ],
+            ]);
+
+        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $ledger->id;
+
+        $values = $component->extractAutoNumberValues($ledger);
+
+        // EQ-001 はパターンAとパターンBの両方に現れるが、重複排除されて1件のみ
+        $eq001Entries = array_filter($values, fn ($info) => true, ARRAY_FILTER_USE_KEY);
+        $this->assertArrayHasKey('EQ-001', $eq001Entries);
+        $this->assertCount(1, array_filter(array_keys($values), fn ($k) => $k === 'EQ-001'));
+
+        // パターンAが優先される（source = 'auto_number'）
+        $this->assertSame('auto_number', $values['EQ-001']['source']);
     }
 }

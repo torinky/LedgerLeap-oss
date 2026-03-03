@@ -8,6 +8,7 @@ use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Repositories\WritableFolderRepository;
+use App\Services\AutoNumberPatternService;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
 use App\Services\SynonymService;
@@ -115,9 +116,15 @@ class RelatedLedgers extends BaseLivewireComponent
     // ─────────────────────────────────────────────
 
     /**
-     * 現在のレコードが持つ auto_number カラムの値を抽出する
+     * 現在のレコードが持つ識別番号値を抽出する（パターンA・B両対応）
      *
-     * @return string[] 例: ['SPEC-001', 'EQ-042']
+     * - パターンA: auto_number 型列の値を直接取得
+     * - パターンB: 全 auto_number パターンで自レコードのテキスト列にマッチング
+     *
+     * @return array<string, array{source: string, column: string}>
+     *                                                              キー = 識別番号値、値 = ['source' => 'auto_number'|'text_column', 'column' => 列名]
+     *                                                              例: ['EQ-042' => ['source' => 'auto_number', 'column' => '設備番号'],
+     *                                                              'SPEC-001' => ['source' => 'text_column', 'column' => '作業内容']]
      */
     public function extractAutoNumberValues(Ledger $ledger): array
     {
@@ -127,7 +134,9 @@ class RelatedLedgers extends BaseLivewireComponent
             return [];
         }
 
-        $values = [];
+        $result = [];
+
+        // ─── Step A: auto_number 型列の値を直接取得 ───
         foreach ($define->column_define as $column) {
             if ($column->type !== 'auto_number') {
                 continue;
@@ -135,18 +144,60 @@ class RelatedLedgers extends BaseLivewireComponent
             // AsColumnArrayJson cast 済みの配列に直接アクセス（data_get() は不可）
             $value = $ledger->content[$column->id] ?? null;
             if (! empty($value)) {
-                $values[] = (string) $value;
+                $result[(string) $value] = [
+                    'source' => 'auto_number',
+                    'column' => $column->name,
+                ];
             }
         }
 
-        return array_unique(array_values($values));
+        // ─── Step B: テキスト列に含まれる識別番号値を正規表現で抽出 ───
+        // パターンB対象の列型（auto_number / files / chk / YMD / YMDHM / user_name は除外）
+        $textColumnTypes = ['text', 'textarea', 'memo'];
+
+        /** @var AutoNumberPatternService $patternService */
+        $patternService = app(AutoNumberPatternService::class);
+        $patterns = $patternService->getPatterns();
+
+        if ($patterns->isNotEmpty()) {
+            foreach ($define->column_define as $column) {
+                if (! in_array($column->type, $textColumnTypes, true)) {
+                    continue;
+                }
+                $text = $ledger->content[$column->id] ?? null;
+                if (empty($text) || ! is_string($text)) {
+                    continue;
+                }
+
+                foreach ($patterns as $entry) {
+                    if (preg_match_all($entry['pattern'], $text, $matches)) {
+                        foreach ($matches[1] as $matched) {
+                            $matched = trim($matched);
+                            if (empty($matched)) {
+                                continue;
+                            }
+                            // パターンAで既に取得済みの値は上書きしない
+                            if (! isset($result[$matched])) {
+                                $result[$matched] = [
+                                    'source' => 'text_column',
+                                    'column' => $column->name,
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
-     * 識別番号の配列で台帳を横断検索し、自身を除外した結果を返す
+     * 識別番号の連想配列で台帳を横断検索し、自身を除外した結果を返す
      *
-     * @param  string[]  $identifierKeys
-     * @return Collection<int, array{ledger: Ledger, matched_keys: string[]}>
+     * @param  array<string, array{source: string, column: string}>  $identifierKeys
+     *                                                                                キー = 識別番号値、値 = source 情報
+     * @return Collection<int, array{ledger: Ledger, matched_keys: array<int, array{value: string, source: string, column: string}>}>
      */
     public function searchByIdentifiers(array $identifierKeys): Collection
     {
@@ -179,7 +230,7 @@ class RelatedLedgers extends BaseLivewireComponent
         // $key → [ledger_id, ...] のマッピングを保持しながら検索
         // Mroonga 制約: 複合インデックス不可 → 単一カラム MATCH() AGAINST() を使用
         $keyToIds = [];   // ['EQ-042' => [1, 3, 5], ...]
-        foreach ($identifierKeys as $key) {
+        foreach ($identifierKeys as $key => $sourceInfo) {
             $synonymServiceConfig = new SynonymServiceConfig(['useSynonym' => false, 'useTechnicalTerm' => false]);
             $synonymService = new SynonymService($synonymServiceConfig);
             $searchContext = new SearchContext($synonymService);
@@ -208,11 +259,17 @@ class RelatedLedgers extends BaseLivewireComponent
             ->get()
             ->keyBy('id');
 
-        // 各 Ledger に matched_keys（一致した識別番号値の配列）を付与して返す
-        $idToKeys = [];  // [ledger_id => ['EQ-042', ...]]
+        // 各 Ledger に matched_keys（source 情報付き構造体の配列）を付与して返す
+        // [ledger_id => [['value' => 'EQ-042', 'source' => 'auto_number', 'column' => '設備番号'], ...]]
+        $idToKeys = [];
         foreach ($keyToIds as $key => $ids) {
+            $sourceInfo = $identifierKeys[$key];
             foreach ($ids as $id) {
-                $idToKeys[$id][] = $key;
+                $idToKeys[$id][] = [
+                    'value' => $key,
+                    'source' => $sourceInfo['source'],
+                    'column' => $sourceInfo['column'],
+                ];
             }
         }
 
@@ -222,9 +279,15 @@ class RelatedLedgers extends BaseLivewireComponent
                 return null;
             }
 
+            // 同一 value の重複を排除
+            $matchedKeys = collect($idToKeys[$id] ?? [])
+                ->unique('value')
+                ->values()
+                ->all();
+
             return [
                 'ledger' => $ledger,
-                'matched_keys' => array_unique($idToKeys[$id] ?? []),
+                'matched_keys' => $matchedKeys,
             ];
         })->filter()->values();
     }
@@ -357,9 +420,9 @@ class RelatedLedgers extends BaseLivewireComponent
      * 識別番号検索と意味検索の結果をマージし、識別理由（reason）・スコア・matched_keys を付与する
      * ソート: semantic/both はスコア降順、identifier のみは末尾
      *
-     * @param  Collection<int, array{ledger: Ledger, matched_keys: string[]}>  $identifiers
+     * @param  Collection<int, array{ledger: Ledger, matched_keys: array<int, array{value: string, source: string, column: string}>}>  $identifiers
      * @param  Collection<int, array{ledger: Ledger, score: float}>  $semantics
-     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>
+     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array{value: string, source: string, column: string}>}>
      */
     public function mergeResults(Collection $identifiers, Collection $semantics): array
     {
