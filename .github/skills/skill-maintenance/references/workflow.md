@@ -53,7 +53,7 @@ For each modified SKILL.md, verify:
 
 ## Step 4 — Commit with git-commit skill
 
-Use `skill-commit` skill for the commit type guidance:
+Commit type: `docs(.github/skills): <what changed and why>`.
 
 ```
 docs(.github/skills): <what changed and why>
@@ -71,59 +71,27 @@ Closes #N  (if triggered by an issue)
 bash -c "cd /path && git add .github/skills .github/copilot-instructions.md && git status --short"
 bash -c "cd /path && git commit -m 'docs(.github/skills): Sprint N skill updates
 
-- git-commit: added Sail silent-failure pattern
-- skill-maintenance: added sprint completion checklist
+- skill-name: added X pattern
+- skill-name: fixed Y
 
 Refs #N'"
-bash -c "cd /path && git log --oneline origin/main..HEAD"
+bash -c "cd /path && git push origin <branch>"
 ```
 
 ---
 
-## Sprint Completion Checklist (run at end of EVERY sprint)
+## Sprint Completion Checklist
 
 Execute in this order — do not skip steps:
 
-- [ ] **1. Plan doc**: Update sprint checkbox in `docs/work/.../*plan.md` (mark tasks ✅, add completion date)
-- [ ] **2. Issue**: Update GitHub issue body with completed checklist + evidence (commit hash or test output)
-- [ ] **3. Skill maintenance**: Check if new patterns emerged → update skills (this workflow)
-- [ ] **4. Commit**: Stage only relevant files, commit with `bash -c "cd /path && git commit -m '...'"` 
-- [ ] **5. Verify**: `bash -c "cd /path && git log --oneline origin/main..HEAD"` — confirm commit is there
-- [ ] **6. Push**: `bash -c "cd /path && git push origin <branch>"`
+- [ ] **Plan doc**: Update sprint checkbox in `docs/work/.../*plan.md` (mark tasks ✅)
+- [ ] **Issue**: Update GitHub issue body with evidence (commit hash or test output)
+- [ ] **Skill maintenance**: Check if new patterns emerged → update skills (this workflow)
+- [ ] **Commit**: `bash -c "cd /path && git add .github/skills .github/copilot-instructions.md"`
+- [ ] **Commit**: `bash -c "cd /path && git commit -m 'docs(.github/skills): ...'"`
+- [ ] **Push**: `bash -c "cd /path && git push origin <branch>"`
 
-**Critical**: Steps 4–6 must use `bash -c` after any `sail` command in the session.
+**Critical**: All git commands after any `sail` command in the session MUST use `bash -c`.
 If `git status` shows nothing staged after `git add`, switch to `bash -c` immediately.
 
-
-
-## Anti-Patterns to Avoid
-
-| Anti-pattern | Problem | Fix |
-|---|---|---|
-| Instructions in Japanese imperative form ("〜すること") | Agent interprets as user-to-agent command, not system fact | Rewrite as third-person English fact |
-| All details in SKILL.md body | Every token loaded on activation regardless of relevance | Move code examples to `references/` |
-| `python3 -c` for commit messages | Shell encoding corrupts Japanese/special chars | `create_file` tool → `python3 script.py` |
-| Nested reference chains (A→B→C) | Agent uses `head -100` preview and misses content | Keep all refs one level from SKILL.md |
-| `git add -A` before commit | Stages `coverage-*/`, `wnjpn.db`, `.playwright-mcp/` | Explicit `git add <file>` only |
-| Duplicate patterns across skills | Maintenance burden, inconsistency | Single source of truth; cross-link |
-| `cd /path && git ...` after Sail commands | Silent empty output — git appears to do nothing | Use `bash -c "cd /path && git ..."` |
-| `git commit -F /tmp/commit_msg.txt` after Sail | File write succeeds but commit sees no changes | Include both script + commit inside one `bash -c` |
-
----
-
-## LedgerLeap Skill Inventory
-
-| Category | Skill | Trigger | Key references |
-|---|---|---|---|
-| **Git / CI** | `git-commit` | any git commit | `conventional-commits.md`, `sail-environment.md` |
-| **Git / CI** | `ci-failure-investigation` | CI failure / timeout | `fix-patterns.md` |
-| **GitHub** | `github-issue-workflow` | issue read/write/sprint | `comment-format.md` |
-| **Testing** | `database-migrations-test-optimization` | Mroonga tests / slow CI | `trait-usage.md` |
-| **Testing** | `test-external-dependency-isolation` | Ledger/AttachedFile tests | `queue-fake-patterns.md` |
-| **Livewire** | `livewire-tenant-context` | tenant() null / #[Lazy] / $parent binding | `patterns.md`, `parent-binding.md` |
-| **Meta** | `skill-maintenance` | end of sprint / new pattern | `workflow.md` (this file) |
-
-> **Note on directory structure**: The agentskills.io spec requires `name` to match the directory name.
-> Subdirectory grouping (e.g. `skills/workflow/git-commit/`) breaks this constraint and may not be
-> discovered by agent implementations scanning for `skills/*/SKILL.md`. Keep skills flat.
-
+See [skill-inventory.md](skill-inventory.md) for Anti-Patterns, Skill Inventory, and Reference Docs.

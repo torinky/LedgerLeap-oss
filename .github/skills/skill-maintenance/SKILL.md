@@ -78,3 +78,4 @@ compatibility: LedgerLeap (...)
 - Never add implementation details — they belong in skills
 
 See [references/workflow.md](references/workflow.md) for end-of-sprint checklist and quality gate.
+See [references/skill-inventory.md](references/skill-inventory.md) for Anti-Patterns, Skill Inventory, and Reference Docs.

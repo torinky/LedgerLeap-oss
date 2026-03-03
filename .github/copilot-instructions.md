@@ -3,49 +3,43 @@
 - **owner**: `torinky` / **repo**: `LedgerLeap`
 - **Stack**: PHP 8.4 / Laravel 12 / MySQL (Mroonga) / Livewire / Alpine.js / TailwindCSS (daisyUI, maryUI)
 ## Critical Constraints
-- **Mroonga full-text search**: Composite indexes do NOT work. Use single-column `MATCH() AGAINST()`, combine multiple columns with `OR`.
-- **Tenant init in tests**: Every Feature test `setUp()` MUST call `tenancy()->initialize($tenant)`. Missing it returns `null` relations.
+- **Mroonga full-text search**: Single-column `MATCH() AGAINST()` only. Composite indexes do NOT work.
+- **Tenant init in tests**: Every Feature test `setUp()` MUST call `tenancy()->initialize($tenant)`.
 - **AsColumnArrayJson access**: `data_get()` does NOT work. Use direct array access: `$ledger->content[0]`.
-- **No manual json_encode**: Never call `json_encode()` before saving `files`, `chk`, or other cast-array columns. The cast handles serialization; doing it manually corrupts the DB.
-- **Livewire state**: Public properties must be plain associative arrays. Objects cause serialization errors.
-- **Livewire parent calls**: For frequent operations (sort/filter), use `$parent.method()` or `$wire.$parent.method()` instead of `Livewire.dispatch()`.
-- **Livewire child↔parent prop sync**: Use `wire:model.live="$parent.propName"` to bind a child input directly to the parent's property. The parent's `updatedPropName()` hook fires automatically — no `dispatch()` needed. See `livewire-tenant-context` skill.
-- **Tailwind JIT**: After adding new utility classes (e.g. `group-hover:`, `opacity-*`), run `sail npm run build`. Missing build causes classes to silently have no effect.
-- **Model events in Sail**: `touch()` does not reliably fire `updated` events. Use `$model->update(['column' => 'value'])` in event-driven tests.
-- **Permission cache**: When changing `Role`, `Organization`, or `User`, clear caches via `UserService` or call `flushAllUserPermissionsCache()`.
-- **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`. See skill `database-migrations-test-optimization`.
-- **Git in Sail env**: After `sail` commands, plain `cd && git` produces silent empty output. Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
-- **`#[Lazy]` + tenant**: `placeholder()` snapshots `tenantId=null`. In `render()`, always fall back to `$model->tenant_id` — never rely solely on `tenant()?->id`. See Issue #54.
+- **No manual json_encode**: Never call `json_encode()` on `files`, `chk`, or other cast-array columns.
+- **Livewire state**: Public properties must be plain arrays. Objects cause serialization errors.
+- **Livewire parent calls**: Use `$parent.method()` for sort/filter; not `Livewire.dispatch()`.
+- **Tailwind JIT**: After adding new utility classes, run `sail npm run build`.
+- **Model events in Sail**: Use `$model->update([...])` not `touch()` in event-driven tests.
+- **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`. See `permission-model` skill.
+- **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`.
+- **Git in Sail env**: Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
+- **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely solely on `tenant()?->id`.
 ## Architecture Patterns
-- Business logic → `App\Services`
-- Interactive UI → Livewire with single-source-of-truth state array
-- ACL → `Spatie\Permission` + custom Folder-based permissions
-- Data access → always verify live data via MCP tools before reasoning from static files
-## Skills — When to Load
-| Trigger | Skill path |
+- Business logic: `App\Services`
+- Interactive UI: Livewire with single-source-of-truth state array
+- ACL: `Spatie\Permission` + `WritableFolderRepository` (folder-level)
+- Data access: always verify live data via MCP tools before reasoning from static files
+## Skills — Load when triggered
+| Trigger | Skill |
 |---|---|
-| `git commit` to run | `.github/skills/git-commit/SKILL.md` |
-| GitHub issue operation | `.github/skills/github-issue-workflow/SKILL.md` |
-| CI failure / timeout investigation | `.github/skills/ci-failure-investigation/SKILL.md` |
-| Writing tests with `Ledger`, `AttachedFile`, external services | `.github/skills/test-external-dependency-isolation/SKILL.md` |
-| Mroonga search tests / `DatabaseMigrations` trait | `.github/skills/database-migrations-test-optimization/SKILL.md` |
-| `tenant()` null / missing tenant param in Livewire | `.github/skills/livewire-tenant-context/SKILL.md` |
-| `content[n]` null / test data index shift / `data_get()` on content | `.github/skills/ledger-content-data-structure/SKILL.md` |
-| `wire:loading` / `wire:key` flicker / `x-show` not hiding / sticky header | `.github/skills/livewire-loading-ui/SKILL.md` |
-| `#[Computed]` 0% coverage / `#[Reactive]` sync / `#[Url]` init / parent-child test | `.github/skills/livewire-computed-properties/SKILL.md` |
-| End of sprint / creating or updating a skill | `.github/skills/skill-maintenance/SKILL.md` |
-## Reference Docs — Load when working on related areas
-| Area | Document |
-|---|---|
-| Livewire UI/UX patterns, loading tiers, Alpine.js CSS | `docs/development/Livewire-Best-Practices.md` |
-| Multi-tenancy migration, model setup, validation | `docs/development/multi-tenancy-guidelines.md` |
-| Performance (Vite, Eloquent, cache, Mroonga index) | `docs/development/performance-optimization.md` |
-| VLM/OCR engine setup, switching PaddleOCR version | `docs/development/vlm-ocr.md` |
-| MCP tool architecture and data structure | `docs/development/MCP_Architecture_and_Flow.md` |
-| Test fundamentals, DB trait selection, tenant setup | `docs/development/testing/` |
+| `git commit` | `git-commit` |
+| GitHub issue / PR | `github-issue-workflow` |
+| CI failure / timeout | `ci-failure-investigation` |
+| External service / `AttachedFile` test | `test-external-dependency-isolation` |
+| Mroonga / `DatabaseMigrations` trait | `database-migrations-test-optimization` |
+| `tenant()` null in Livewire | `livewire-tenant-context` |
+| `content[n]` null / index shift | `ledger-content-data-structure` |
+| `wire:loading` / `x-show` / sticky header | `livewire-loading-ui` |
+| `#[Computed]` 0% / `#[Url]` / parent-child | `livewire-computed-properties` |
+| 403 / permission cache stale | `permission-model` |
+| Workflow status stuck / `latestDiff` null | `workflow-status-machine` |
+| RAG search wrong / re-index / CI timeout | `rag-vector-search` |
+| git silent / CSS stale / test DB broken | `sail-dev-workflow` |
+| Sprint end / new skill | `skill-maintenance` |
 ## Workflow
-1. **Lint**: run `./vendor/bin/sail pint` before commit
-2. **Error check**: use `laravel-boost` (`last-error`, `browser-logs`) after every change
-3. **Test**: run `./vendor/bin/sail test` to check for regressions
-4. **Commit**: follow Conventional Commits — load `git-commit` skill first
-5. **After sprint**: load `skill-maintenance` skill — capture new patterns into skills
+1. **Lint**: `./vendor/bin/sail pint` before commit
+2. **Error check**: `last-error` / `browser-logs` after every change
+3. **Test**: `./vendor/bin/sail test` for regressions
+4. **Commit**: load `git-commit` skill first
+5. **After sprint**: load `skill-maintenance` skill
