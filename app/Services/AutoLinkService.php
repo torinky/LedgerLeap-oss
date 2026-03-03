@@ -65,7 +65,9 @@ class AutoLinkService
 
     private function getVirtualAutoNumberLinks(): \Illuminate\Support\Collection
     {
-        $cacheKey = 'auto_links_virtual_auto_numbers';
+        // テナントIDをキャッシュキーに含めてテナント間の混在を防ぐ
+        $tenantId = tenant()?->id ?? 'global';
+        $cacheKey = "auto_links_virtual_auto_numbers:{$tenantId}";
 
         return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () {
             $virtualLinks = collect();

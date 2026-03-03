@@ -52,7 +52,9 @@ class AutoNumberPatternService
      */
     public function getPatterns(): Collection
     {
-        $cacheKey = 'auto_number_patterns';
+        // テナントIDをキャッシュキーに含めてテナント間の混在を防ぐ
+        $tenantId = tenant()?->id ?? 'global';
+        $cacheKey = "auto_number_patterns:{$tenantId}";
 
         return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () {
             $patterns = collect();
