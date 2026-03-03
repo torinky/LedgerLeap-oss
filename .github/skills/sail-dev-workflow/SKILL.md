@@ -22,6 +22,12 @@ CSS/JS changes not visible in browser?
 Test failures with "table not found" or stale tenant data?
 │  FIX: bin/reset-test-db.sh    (drops and recreates test DB)
 │
+Auto-links / auto_number patterns return 0 for a tenant that has columns?
+│  CAUSE: Cache key missing tenantId — another tenant's 0-result was cached first.
+│  FIX: $cacheKey = "my_key:{$tenantId}";  (tenant()?->id ?? 'global')
+│  Apply to ALL Cache::remember() calls over tenant-scoped models.
+│  See: references/multitenant-cache-pitfalls.md
+│
 VLM container (port 8080) not responding?
 │  FIX: curl http://localhost:8080/health — check response
 │       docker compose logs vlm --tail=50
@@ -69,7 +75,9 @@ bash .github/skills/sail-dev-workflow/scripts/check-env.sh
 - [ ] After new Tailwind class: `sail npm run build`
 - [ ] After schema change: re-run `sail artisan migrate`
 - [ ] Test DB broken: `bin/reset-test-db.sh`
-- [ ] Before commit: `sail pint` (lint) + `sail test` (regression check)
+- [ ] Cache over tenant-scoped model: include `tenant()?->id` in key
+- [ ] Before commit: `sail pint` + `sail test`
 
 See [references/container-troubleshooting.md](references/container-troubleshooting.md) for VLM/embedding diagnostics.
+See [references/multitenant-cache-pitfalls.md](references/multitenant-cache-pitfalls.md) for cache key isolation patterns.
 
