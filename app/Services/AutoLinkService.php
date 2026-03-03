@@ -16,7 +16,10 @@ class AutoLinkService
     /** @var array<int, \Illuminate\Support\Collection> リクエスト内フォルダ子孫キャッシュ */
     private array $folderDescendantsCache = [];
 
-    public function __construct(private HtmlProcessorService $htmlProcessorService) {}
+    public function __construct(
+        private HtmlProcessorService $htmlProcessorService,
+        private AutoNumberPatternService $autoNumberPatternService,
+    ) {}
 
     /**
      * テキストを自動リンクに変換する
@@ -57,24 +60,7 @@ class AutoLinkService
      */
     private function generateAutoNumberPattern(object $options, bool $isUnique): string
     {
-        $prefix = preg_quote($options->prefix ?? '', '/');
-        $digits = max(1, (int) ($options->digits ?? 3));
-        $revision = preg_quote($options->revision ?? '', '/');
-
-        // 数字部分: 指定桁数以上の数字にマッチ
-        $numberPattern = '\d{'.$digits.',}';
-
-        if ($isUnique) {
-            // unique の場合、版記号は無視（任意の文字が続いても可）
-            return '/('.$prefix.$numberPattern.'.*?)/u';
-        } else {
-            // unique でない場合、版記号まで厳密にマッチ
-            if (! empty($revision)) {
-                return '/('.$prefix.$numberPattern.$revision.')/u';
-            } else {
-                return '/('.$prefix.$numberPattern.')(?![0-9])/u'; // 後ろに数字が続かない
-            }
-        }
+        return $this->autoNumberPatternService->generatePattern($options, $isUnique);
     }
 
     private function getVirtualAutoNumberLinks(): \Illuminate\Support\Collection
@@ -84,39 +70,23 @@ class AutoLinkService
         return Cache::tags(['auto_links'])->remember($cacheKey, now()->addMinutes(60), function () {
             $virtualLinks = collect();
 
-            // 全テナントの台帳定義を取得（マルチテナント対応）
-            $ledgerDefines = LedgerDefine::with('folder')->get();
+            // AutoNumberPatternService からパターン情報を取得
+            $patterns = $this->autoNumberPatternService->getPatterns();
 
-            foreach ($ledgerDefines as $define) {
-                foreach ($define->column_define as $column) {
-                    if ($column->type !== 'auto_number') {
-                        continue;
-                    }
+            foreach ($patterns as $entry) {
+                // 仮想 AutoLink オブジェクトを生成
+                $virtualLink = new AutoLink([
+                    'label' => "自動リンク: {$entry['define_title']} - {$entry['column_name']}",
+                    'pattern' => $entry['pattern'],
+                    'url_template' => '/l/$1',
+                    'priority' => -1000, // 最高優先度（負の値で既存より優先）
+                    'is_enabled' => true,
+                    'open_in_new_tab' => true,
+                    'link_type' => 'default',
+                ]);
 
-                    // パターン生成
-                    $pattern = $this->generateAutoNumberPattern(
-                        (object) $column->options,
-                        $column->unique ?? false
-                    );
-
-                    // テナント横断検索ルートを使用（/l/{query}）
-                    // このルートは全テナントを検索し、1件なら直接リダイレクト、複数件なら選択画面を表示
-                    $urlTemplate = '/l/$1';
-
-                    // 仮想 AutoLink オブジェクトを生成
-                    $virtualLink = new AutoLink([
-                        'label' => "自動リンク: {$define->title} - {$column->name}",
-                        'pattern' => $pattern,
-                        'url_template' => $urlTemplate,
-                        'priority' => -1000, // 最高優先度（負の値で既存より優先）
-                        'is_enabled' => true,
-                        'open_in_new_tab' => true, // 別ウィンドウで開く（デバッグのため戻す）
-                        'link_type' => 'default',
-                    ]);
-
-                    // データベースに保存しないため、id は設定しない
-                    $virtualLinks->push($virtualLink);
-                }
+                // データベースに保存しないため、id は設定しない
+                $virtualLinks->push($virtualLink);
             }
 
             return $virtualLinks;
