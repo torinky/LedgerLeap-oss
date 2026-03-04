@@ -55,3 +55,19 @@
 ## 5. 依存性
 
 - **`Spatie\LaravelMarkdown\MarkdownRenderer`**: コンストラクタインジェクションにより注入され、Markdownのレンダリングに使用されます。
+- **`AutoNumberPatternService`**: 2026年3月にDI追加。`auto_number` カラムからの正規表現パターン生成ロジックを委譲しています（詳細は下記参照）。
+
+## 6. AutoNumberPatternService との分担（2026年3月追加）
+
+`auto_number` カラムのパターン生成と収集は `AutoNumberPatternService`（`app/Services/AutoNumberPatternService.php`）に切り出されています。
+
+| メソッド | 移動先 | 役割 |
+|---|---|---|
+| `generateAutoNumberPattern()` | `AutoNumberPatternService::generatePattern()` | 正規表現文字列の生成 |
+| `getVirtualAutoNumberLinks()` | `AutoNumberPatternService::getPatterns()` を内部利用 | パターン収集・キャッシュ |
+
+`AutoNumberPatternService` は `AutoLinkService` と `RelatedLedgers` Livewire コンポーネントの両方から共用されます。
+キャッシュキーはテナントIDを含む形式（`"auto_number_patterns:{$tenantId}"`）を採用しており、
+マルチテナント環境でのキャッシュ混在を防止しています。
+
+詳細は [関連案件タブ機能](../features/related-ledgers.md) を参照。
