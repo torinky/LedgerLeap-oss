@@ -6,6 +6,32 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
+    {{--
+        台帳リスト初期化中オーバーレイ
+        - Alpine.js x-data で制御。livewire:navigated を @window で受け取り非表示にする。
+        - Livewireのルート<div>内に配置することで Livewire のレンダリングに含まれる。
+        - position:fixed のためビューポート全体をカバーし、ボタン等を pointer-events:none で素通しする。
+        - フォールバック: 8秒後にタイムアウトで強制非表示。
+        - x-show + x-transition で opacity フェードアウト。
+        - x-data内でfunction記法を使用（Bladeコンパイラのクロージャ誤解釈を回避）
+    --}}
+    <div id="ledger-init-overlay"
+        x-data="ledgerInitOverlay()"
+        x-show="visible"
+        x-transition:leave="transition-opacity duration-400"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        x-on:livewire:navigated.window.once="hide()"
+        x-init="startFallbackTimer()"
+        style="position:fixed;inset:0;z-index:150;background:rgba(255,255,255,0.75);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:2.5rem;pointer-events:none;">
+        <div style="display:flex;align-items:center;gap:0.75rem;background:rgba(210,210,210,0.9);backdrop-filter:blur(4px);border-radius:9999px;padding:0.5rem 1.25rem;box-shadow:0 4px 24px rgba(0,0,0,.12);border:1px solid rgba(128,128,128,0.2);">
+            <span class="loading loading-spinner loading-sm text-primary"></span>
+            <span style="font-size:0.75rem;font-weight:700;letter-spacing:.05em;opacity:.75;">
+                {{ __('ledger.loading') }}
+            </span>
+        </div>
+    </div>
+
     @php
         // IndexManager で監視すべき主要なアクションとプロパティ
         // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
@@ -271,3 +297,4 @@
         </div>
     </div>
 </div>
+
