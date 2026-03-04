@@ -90,4 +90,5 @@ the font loads.
 
 - `app/Livewire/Ledger/IndexManager.php` — $heavyTargets / $lightTargets pattern
 - `resources/views/livewire/ledger/index-manager.blade.php` — Tier 1/2 combined
+- See [alpine-init-overlay.md](alpine-init-overlay.md) for Tier 0.5 overlay + requestIdleCallback pattern (since #77)
 
