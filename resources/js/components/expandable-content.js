@@ -29,12 +29,6 @@ export default (options) => ({
         const overflows = content.scrollHeight > maxHeightInPixels + 1;
         this.showToggle = overflows;
         this._measured = true;
-
-        console.log('[INIT-TIMING] expandable-content measured', {
-            scrollHeight: content.scrollHeight,
-            maxHeight: maxHeightInPixels,
-            showToggle: this.showToggle,
-        });
     },
 
     get contentStyle() {
