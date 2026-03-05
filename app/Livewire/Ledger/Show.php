@@ -116,7 +116,10 @@ class Show extends BaseLivewireComponent
                 : collect();
 
             // RAG が利用不可の場合は空コレクションを返す（グレースフルデグラデーション）
-            $semanticCollection = $relatedComponent->searchBySemantic($this->ledgerRecord);
+            // EmbeddingService のタイムアウトを防ぐため、rag.enabled が false の場合は検索をスキップする
+            $semanticCollection = config('rag.enabled', false)
+                ? $relatedComponent->searchBySemantic($this->ledgerRecord)
+                : collect();
 
             $merged = $relatedComponent->mergeResults($identifierCollection, $semanticCollection);
             $this->relatedCount = count($merged);
