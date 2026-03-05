@@ -18,7 +18,7 @@
     <div id="ledger-init-overlay"
         x-data="ledgerInitOverlay()"
         x-show="visible"
-        x-transition:leave="transition-opacity duration-400"
+        x-transition:leave="transition-opacity duration-300"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
         x-on:livewire:navigated.window.once="hide()"
