@@ -5,7 +5,7 @@
     'showLessText' => __('ledger.show_less'),
 ])
 
-<div x-data="expandableContent({ maxHeight: '{{ $maxHeight }}' })" x-intersect.threshold.10="checkOverflow()" class="relative">
+<div x-data="expandableContent({ maxHeight: '{{ $maxHeight }}' })" x-intersect.once.threshold.10="checkOverflow()" class="relative">
     <div x-ref="content" :class="{ 'overflow-hidden': !expanded }" :style="contentStyle"
         {{ $attributes->merge(['class' => 'transition-all duration-500']) }}>
         {!! $content !!}

@@ -343,6 +343,11 @@ class RelatedLedgers extends BaseLivewireComponent
      */
     public function searchBySemantic(Ledger $ledger): Collection
     {
+        if (! config('rag.enabled', false)) {
+            $this->ragAvailable = false;
+            return collect();
+        }
+
         $query = $this->buildSemanticQuery($ledger);
         if (empty($query)) {
             return collect();

@@ -12,6 +12,8 @@ compatibility: LedgerLeap (Livewire v3, Alpine.js, daisyUI v5, TailwindCSS JIT)
 What changes when the action completes?
 ├─ Page navigation (wire:navigate)?
 │   → Tier 0: top progress bar (built-in)
+├─ Alpine.js client-side init (height measurement, many components)?
+│   → Tier 0.5: Alpine init overlay — see references/alpine-init-overlay.md
 ├─ Major structure change (folder switch, initial load)?
 │   → Tier 1: skeleton (wire:loading.remove + skeleton element)
 ├─ List content changes, structure stays (sort/filter/pagination)?
@@ -22,7 +24,8 @@ What changes when the action completes?
 
 **Always specify `wire:target`** — omitting it causes unrelated components to flicker.
 
-See [references/loading-patterns.md](references/loading-patterns.md) for Tier 1/2 code examples.
+See [references/loading-patterns.md](references/loading-patterns.md) for Tier 1/2/3 examples.
+See [references/alpine-init-overlay.md](references/alpine-init-overlay.md) for Tier 0.5 + pitfalls (since #77).
 
 ## wire:key Rules
 
@@ -58,10 +61,8 @@ Parent element **must** have a height constraint — without it sticky never tri
 
 ## Drawer sidebar fixed positioning
 
-`xl:drawer-open` — daisyUI's `.drawer-side` does not scroll independently.
-Tailwind `sticky` fails when an ancestor has `overflow: hidden/auto`.
-Use `position: fixed` inline style instead.
-See [references/drawer-sidebar.md](references/drawer-sidebar.md).
+`xl:drawer-open` — `.drawer-side` doesn't scroll independently; `sticky` fails with `overflow:hidden/auto` ancestor.
+Use `position: fixed` inline style. See [references/drawer-sidebar.md](references/drawer-sidebar.md).
 
 ## Tailwind JIT reminder
 
@@ -75,3 +76,5 @@ run `sail npm run build`. New classes are silently ignored without a rebuild.
 - [ ] `x-show` elements have no conflicting `display !important` CSS
 - [ ] `table-pin-rows` parent has explicit height
 - [ ] New Tailwind classes → `sail npm run build`
+- [ ] Alpine init overlay: use `x-on:livewire:navigated.window.once` (NOT `@livewire:navigated`)
+- [ ] Alpine `x-data` with methods: register via `Alpine.data()`, not inline shorthand

@@ -6,6 +6,33 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
+    {{--
+        台帳リスト初期化中オーバーレイ
+        - Alpine.js x-data で制御。livewire:navigated を @window で受け取り非表示にする。
+        - Livewireのルート<div>内に配置することで Livewire のレンダリングに含まれる。
+        - position:fixed のためビューポート全体をカバーし、ボタン等を pointer-events:none で素通しする。
+        - フォールバック: 8秒後にタイムアウトで強制非表示。
+        - x-show + x-transition で opacity フェードアウト。
+        - x-data内でfunction記法を使用（Bladeコンパイラのクロージャ誤解釈を回避）
+    --}}
+    <div id="ledger-init-overlay"
+        x-data="ledgerInitOverlay()"
+        x-show="visible"
+        x-transition:leave="transition-opacity duration-300"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        x-on:livewire:navigated.window.once="hide()"
+        x-on:livewire:load.window.once="hide()"
+        x-init="startFallbackTimer()"
+        class="fixed inset-0 z-[150] bg-base-100/75 backdrop-blur-sm flex items-end justify-center pb-10 pointer-events-none">
+        <div class="flex items-center gap-3 bg-base-200/90 backdrop-blur rounded-full px-5 py-2 shadow-lg border border-base-300">
+            <span class="loading loading-spinner loading-sm text-primary"></span>
+            <span class="text-xs font-bold tracking-wider opacity-75 text-base-content">
+                {{ __('ledger.loading') }}
+            </span>
+        </div>
+    </div>
+
     @php
         // IndexManager で監視すべき主要なアクションとプロパティ
         // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
@@ -271,3 +298,4 @@
         </div>
     </div>
 </div>
+
