@@ -5,17 +5,8 @@ export default (options) => ({
     _measured: false,
 
     init() {
-        // requestIdleCallback でブラウザのアイドル時間に checkOverflow() を実行することで
-        // 他の初期化処理（高さ計測・DOM構築）と競合しないように分散実行する。
-        // フォールバックとして setTimeout(200ms) を用意し、rIC 未対応ブラウザにも対応。
-        const measure = () => this.checkOverflow();
-
-        if (typeof requestIdleCallback !== 'undefined') {
-            requestIdleCallback(measure, { timeout: 500 });
-        } else {
-            setTimeout(measure, 200);
-        }
-
+        // 初回計測はテンプレート側の x-intersect.once から明示的に呼び出し、
+        // ここではリサイズ時の再計測のみを担当する。
         // リサイズ時は debounce して再計測
         let resizeTimer = null;
         window.addEventListener('resize', () => {
