@@ -116,5 +116,5 @@ on scroll-back). The `_measured` flag acts as a secondary guard.
 ## Observed Timing (since #77)
 
 Safari: 681–1092ms visible. Chrome: 47–66ms (barely perceptible).
-Fallback timer set to 3000ms ensures overlay always clears.
+Fallback timer set to 8000ms ensures overlay always clears.
 
