@@ -9,12 +9,17 @@ export default (options) => ({
         // ここではリサイズ時の再計測のみを担当する。
         // リサイズ時は debounce して再計測
         let resizeTimer = null;
-        window.addEventListener('resize', () => {
+        const resizeHandler = () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 this._measured = false; // リサイズ後は再計測を許可
                 this.checkOverflow();
             }, 150);
+        };
+        window.addEventListener('resize', resizeHandler);
+        this.$cleanup(() => {
+            clearTimeout(resizeTimer);
+            window.removeEventListener('resize', resizeHandler);
         });
     },
 
