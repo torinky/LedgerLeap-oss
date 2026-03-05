@@ -22,13 +22,13 @@ Livewire has no request in flight.
 // resources/js/components/ledger-init-overlay.js
 export default () => ({
     visible: true,
-    t0: Date.now(),
+    t0: performance.now(),
     hide() {
         this.visible = false;
-        console.log('[INIT-TIMING] overlay hidden at', Date.now() - this.t0, 'ms');
+        console.log('[INIT-TIMING] overlay hidden at', performance.now() - this.t0, 'ms');
     },
     startFallbackTimer() {
-        setTimeout(() => { if (this.visible) this.hide(); }, 3000);
+        setTimeout(() => { if (this.visible) this.hide(); }, 8000);
     },
 });
 ```
