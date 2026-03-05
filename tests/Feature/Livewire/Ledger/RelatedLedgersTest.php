@@ -50,6 +50,9 @@ class RelatedLedgersTest extends TestCase
     {
         parent::setUp();
 
+        // このクラスは意味検索の挙動を検証するため、RAGを明示的に有効化する
+        config(['rag.enabled' => true]);
+
         $this->tenant = Tenant::factory()->create();
         tenancy()->initialize($this->tenant);
 
