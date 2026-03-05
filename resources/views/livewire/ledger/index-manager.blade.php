@@ -24,10 +24,10 @@
         x-on:livewire:navigated.window.once="hide()"
         x-on:livewire:load.window.once="hide()"
         x-init="startFallbackTimer()"
-        style="position:fixed;inset:0;z-index:150;background:rgba(255,255,255,0.75);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:2.5rem;pointer-events:none;">
-        <div style="display:flex;align-items:center;gap:0.75rem;background:rgba(210,210,210,0.9);backdrop-filter:blur(4px);border-radius:9999px;padding:0.5rem 1.25rem;box-shadow:0 4px 24px rgba(0,0,0,.12);border:1px solid rgba(128,128,128,0.2);">
+        class="fixed inset-0 z-[150] bg-base-100/75 backdrop-blur-sm flex items-end justify-center pb-10 pointer-events-none">
+        <div class="flex items-center gap-3 bg-base-200/90 backdrop-blur rounded-full px-5 py-2 shadow-lg border border-base-300">
             <span class="loading loading-spinner loading-sm text-primary"></span>
-            <span style="font-size:0.75rem;font-weight:700;letter-spacing:.05em;opacity:.75;">
+            <span class="text-xs font-bold tracking-wider opacity-75 text-base-content">
                 {{ __('ledger.loading') }}
             </span>
         </div>
