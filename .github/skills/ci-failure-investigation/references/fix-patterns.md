@@ -93,3 +93,51 @@ TestDatabaseState::reset();  // resets $globalDatabaseMigrated, $sharedTenant, e
 ```
 
 `TestDatabaseState` lives at `tests/Support/TestDatabaseState.php`.
+
+---
+
+## §6 DatabaseMigrationsOnce: tenants テーブルが FolderTest 後に DROP される
+
+**症状**: `db-migrations` ジョブで `FolderTest` が PASS した直後、
+`SearchApiTest` / `LedgerFullTextSearchTest` / `SearchControllerAdditionalTest` が
+`SQLSTATE[42S02]: Table 'ledgerleap_test.tenants' doesn't exist` で一括 FAIL。
+
+**根本原因**:
+- `FolderTest` は `DatabaseMigrations` を使用
+- `DatabaseMigrations::tearDown()` が各テストメソッド後に `migrate:rollback` を実行
+- `migrate:rollback` は central DB の **全テーブル**（`tenants` を含む）を DROP する
+- その後、`DatabaseMigrationsOnce` の CI モードが `Tenant::find('ci-test-tenant')` を呼ぶと
+  `tenants` テーブルが存在しないため `QueryException` が発生
+
+**実行順（問題が起きるパターン）**:
+```
+FolderTest (DatabaseMigrations) → migrate:rollback で tenants DROP
+  ↓
+SearchApiTest (DatabaseMigrationsOnce) → Tenant::find() → FAIL
+```
+
+**修正**: `DatabaseMigrationsOnce::setUpDatabaseMigrationsOnce()` に
+`Schema::connection('mysql_testing')->hasTable('tenants')` のガードを追加。
+テーブルが存在しない場合は `migrate --force` + `tenants:migrate` を再実行する。
+
+```php
+// tests/Traits/DatabaseMigrationsOnce.php (CI ブランチ)
+if (! Schema::connection('mysql_testing')->hasTable('tenants')) {
+    $this->artisan('migrate', ['--force' => true]);
+    $this->app[Kernel::class]->setArtisan(null);
+    $newTenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+    $this->artisan('tenants:migrate', ['--tenants' => [$newTenant->id], '--force' => true]);
+    $this->app[Kernel::class]->setArtisan(null);
+    static::$sharedTenantForMigrationsOnce = $newTenant;
+} else {
+    // 通常パス: ci-test-tenant を find() して再利用
+}
+```
+
+同様に「2回目以降」パスにも同じガードを追加（`static::$migratedOnceByClass` フラグが
+`true` のまま残っているケースにも対応）。
+
+**再発防止**: `db-migrations` ジョブのテスト実行順は PHPUnit のアルファベット順に依存する。
+`FolderTest` → `LedgerFullTextSearchTest` → `SearchApiTest` のように `F < L < S` の順になるため、
+この問題は構造的に発生しうる。`Schema::hasTable()` ガードが常に有効。
+

@@ -4,6 +4,7 @@ namespace Tests\Traits;
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * DatabaseMigrationsOnce トレイト
@@ -75,17 +76,34 @@ trait DatabaseMigrationsOnce
             if (env('CI')) {
                 // CI: ワークフローで migrate --force / tenants:migrate 実行済み
                 // ci-test-tenant を再利用してテナント初期化のみ行う
-                $candidates = ['ci-test-tenant'];
-                foreach ($candidates as $id) {
-                    $existing = \App\Models\Tenant::find($id);
-                    if ($existing) {
-                        static::$sharedTenantForMigrationsOnce = $existing;
-                        break;
+                //
+                // ただし FolderTest (DatabaseMigrations) の tearDown() が migrate:rollback を
+                // 実行して central DB の tenants テーブルを DROP する場合がある。
+                // その場合は migrate を再実行してテーブルを復元してから Tenant を再作成する。
+                if (! Schema::connection('mysql_testing')->hasTable('tenants')) {
+                    $this->artisan('migrate', ['--force' => true]);
+                    $this->app[Kernel::class]->setArtisan(null);
+                    // テナント再作成後に tenants:migrate も実行
+                    $newTenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+                    $this->artisan('tenants:migrate', [
+                        '--tenants' => [$newTenant->id],
+                        '--force' => true,
+                    ]);
+                    $this->app[Kernel::class]->setArtisan(null);
+                    static::$sharedTenantForMigrationsOnce = $newTenant;
+                } else {
+                    $candidates = ['ci-test-tenant'];
+                    foreach ($candidates as $id) {
+                        $existing = \App\Models\Tenant::find($id);
+                        if ($existing) {
+                            static::$sharedTenantForMigrationsOnce = $existing;
+                            break;
+                        }
                     }
-                }
-                if (! static::$sharedTenantForMigrationsOnce) {
-                    static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::first()
-                        ?? \App\Models\Tenant::factory()->create();
+                    if (! static::$sharedTenantForMigrationsOnce) {
+                        static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::first()
+                            ?? \App\Models\Tenant::factory()->create();
+                    }
                 }
             } else {
                 // ローカル: クラスで初回だけ migrate:fresh を実行
@@ -104,7 +122,16 @@ trait DatabaseMigrationsOnce
             tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
             static::$migratedOnceByClass[$className] = true;
         } else {
-            // 2回目以降はテナントを再初期化するだけ
+            // 2回目以降: CI で FolderTest の migrate:rollback により tenants テーブルが
+            // DROP されている場合は static フラグをリセットして再初期化する
+            if (env('CI') && ! Schema::connection('mysql_testing')->hasTable('tenants')) {
+                static::$migratedOnceByClass[$className] = false;
+                static::$sharedTenantForMigrationsOnce = null;
+                $this->setUpDatabaseMigrationsOnce();
+
+                return;
+            }
+            // テナントを再初期化するだけ
             tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
         }
     }
