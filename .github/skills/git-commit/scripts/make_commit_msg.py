@@ -14,6 +14,10 @@ Usage:
     python3 .github/skills/git-commit/scripts/make_commit_msg.py \
         --raw "feat(auth): ログイン機能を追加\n\n詳細説明。\n\nCloses #42"
 
+    # Recommended for Japanese body (avoids shell quoting hang):
+    python3 .github/skills/git-commit/scripts/make_commit_msg.py \
+        --file /tmp/msg_input.txt
+
 Output:
     Writes to /tmp/commit_msg.txt and prints a preview.
     Use: git commit -F /tmp/commit_msg.txt
@@ -43,10 +47,16 @@ def main() -> None:
     parser.add_argument("--body", default="", help="Body text (use \\n for newlines)")
     parser.add_argument("--footer", default="", help="Footer (e.g. Closes #74)")
     parser.add_argument("--raw", help="Full message as a raw string with \\n (bypasses structured args)")
+    parser.add_argument("--file", help="Read full message from a text file (avoids shell quoting issues)")
     parser.add_argument("--output", default="/tmp/commit_msg.txt", help="Output file path")
     args = parser.parse_args()
 
-    if args.raw:
+    if args.file:
+        with open(args.file, "r", encoding="utf-8") as f:
+            msg = f.read()
+        if not msg.endswith("\n"):
+            msg += "\n"
+    elif args.raw:
         msg = args.raw.replace("\\n", "\n")
         if not msg.endswith("\n"):
             msg += "\n"

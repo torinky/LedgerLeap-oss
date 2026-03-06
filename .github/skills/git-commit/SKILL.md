@@ -32,17 +32,28 @@ See [references/sail-environment.md](references/sail-environment.md) for full di
 | `printf 'msg\n...'` | Newlines collapsed → body becomes 1 line |
 | heredoc `<< 'EOF'` | Same collapse; `$`, backtick expansion risk |
 | `python3 -c "..."` | Shell-escaping corrupts Japanese / special chars |
+| `bash -c "... 'Japanese body'"` | Single-quote inside `bash -c` → `dquote>` hang (Issue #81) |
+| `make_commit_msg.py --body 'Japanese'` | Same hang — all quoted args with Japanese affected |
 
-**Preferred: direct `git commit -m` inside `bash -c` (no script needed)**
-
-**Long body alternative (script):**
+**Preferred: `create_file` で `/tmp/msg_input.txt` に書いて `--file` で渡す**
 
 ```bash
-bash -c "cd /path && python3 .github/skills/git-commit/scripts/make_commit_msg.py \
-  --type feat --scope foo --subject 'subject' \
-  --body 'line1\nline2' --footer 'Refs #N' && \
-  git commit -F /tmp/commit_msg.txt"
+# Step 1: create_file tool で /tmp/msg_input.txt を作成（plain text、シェル不要）
+# Step 2:
+python3 .github/skills/git-commit/scripts/make_commit_msg.py --file /tmp/msg_input.txt
+bash -c "cd /path && git commit -F /tmp/commit_msg.txt"
 ```
+
+`/tmp/msg_input.txt` の書式（Conventional Commits プレーンテキスト）:
+```
+fix(scope): subject line here
+
+Body paragraph.
+
+Refs #N
+```
+
+**ASCII のみで body なし:** `bash -c` の `-m` で直接渡しても OK。
 
 See [references/conventional-commits.md](references/conventional-commits.md) for type list.
 
@@ -58,15 +69,17 @@ See [references/conventional-commits.md](references/conventional-commits.md) for
 
 **Common types**: `feat` `fix` `test` `refactor` `docs` `ci` `chore`
 
-## Full Workflow (Sail-safe)
+## Full Workflow (Sail-safe, Japanese body)
 
 ```bash
+# 1. Stage
 bash -c "cd /path && git add <files> && git status --short"
-bash -c "cd /path && git commit -m 'type(scope): subject
-
-body
-
-Refs #N'"
+# 2. Write message with create_file tool → /tmp/msg_input.txt, then:
+python3 .github/skills/git-commit/scripts/make_commit_msg.py --file /tmp/msg_input.txt
+# 3. Commit
+bash -c "cd /path && git commit -F /tmp/commit_msg.txt"
+# 4. Verify
 bash -c "cd /path && git log --oneline origin/main..HEAD"
+# 5. Push
 bash -c "cd /path && git push origin <branch>"
 ```
