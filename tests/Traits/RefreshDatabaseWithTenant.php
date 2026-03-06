@@ -172,9 +172,11 @@ trait RefreshDatabaseWithTenant
      * データベースのリフレッシュ（プロセス全体で1回のみ実行）
      *
      * - CI環境（CI=true）: migrate:fresh はスキップ。
-     *   ワークフローの "Migrate database" ステップで既に実行済みのため、
-     *   再実行すると全テーブル drop/recreate で60秒超かかる。
-     * - ローカル環境: 従来通り migrate:fresh で完全リセット。
+     *   ワークフローの "Migrate database" ステップで既に実行済みのため。
+     * - ローカル並列実行（ParallelTesting::token() が非null）:
+     *   --recreate-databases がワーカーDB（ledgerleap_test_test_N）を作成済みのため
+     *   migrate:fresh は不要。ワーカーDBに切り替えて migrate のみ実行する。
+     * - ローカル直列実行: 従来通り migrate:fresh で完全リセット。
      */
     protected function refreshDatabase(): void
     {
@@ -183,6 +185,21 @@ trait RefreshDatabaseWithTenant
             return;
         }
 
+        $token = ParallelTesting::token();
+
+        if ($token) {
+            // ローカル並列実行: ワーカーDBに切り替えてmigrateのみ実行
+            $baseDatabase = env('DB_DATABASE', 'ledgerleap_test');
+            $workerDatabase = "{$baseDatabase}_test_{$token}";
+            $this->switchToTestingDatabase($workerDatabase);
+
+            $this->artisan('migrate', ['--force' => true]);
+            $this->app[Kernel::class]->setArtisan(null);
+
+            return;
+        }
+
+        // ローカル直列実行: 従来通り migrate:fresh
         $this->artisan('migrate:fresh', [
             '--drop-views' => $this->shouldDropViews(),
             '--drop-types' => $this->shouldDropTypes(),
@@ -193,10 +210,28 @@ trait RefreshDatabaseWithTenant
     }
 
     /**
+     * テスト用のデータベース接続先を切り替える
+     *
+     * 並列実行時にワーカーDBへ切り替えるために使用する。
+     * $_SERVER['DB_DATABASE'] も更新して artisan コマンド内での再ロードに対応する。
+     */
+    protected function switchToTestingDatabase(string $database): void
+    {
+        // $_SERVER / $_ENV も書き換えて artisan 再ロード時に上書きされないようにする
+        $_SERVER['DB_DATABASE'] = $database;
+        $_ENV['DB_DATABASE'] = $database;
+
+        \Illuminate\Support\Facades\DB::purge('mysql_testing');
+
+        config()->set('database.connections.mysql_testing.database', $database);
+    }
+
+    /**
      * テナントデータベースのマイグレーション（最初の1回のみ実行）
      *
      * テナント初期化後に実行される。
      * CI環境ではワークフローの "Setup test tenant" ステップで実行済みのためスキップ。
+     * ローカル並列実行時はテナントIDがプロセスキーで分離されているため通常通り実行。
      */
     protected function migrateTenantDatabase(): void
     {

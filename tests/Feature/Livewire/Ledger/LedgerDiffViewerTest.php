@@ -15,18 +15,20 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(LedgerDiffViewer::class)]
 class LedgerDiffViewerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $fakeQueue = false;
 
@@ -49,9 +51,9 @@ class LedgerDiffViewerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = Tenant::factory()->create();
-        tenancy()->initialize($this->tenant);
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
