@@ -63,26 +63,45 @@ trait DatabaseMigrationsOnce
 
     /**
      * setUp() から呼び出す初期化メソッド
+     *
+     * CI環境では migrate:fresh / tenants:migrate はワークフローで実行済みのためスキップし、
+     * ci-test-tenant を再利用する。ローカルでは従来通りクラス初回に migrate:fresh を実行する。
      */
     protected function setUpDatabaseMigrationsOnce(): void
     {
         $className = static::class;
 
         if (empty(static::$migratedOnceByClass[$className])) {
-            // クラスで初回だけ migrate:fresh を実行
-            $this->artisan('migrate:fresh');
-            $this->app[Kernel::class]->setArtisan(null);
+            if (env('CI')) {
+                // CI: ワークフローで migrate --force / tenants:migrate 実行済み
+                // ci-test-tenant を再利用してテナント初期化のみ行う
+                $candidates = ['ci-test-tenant'];
+                foreach ($candidates as $id) {
+                    $existing = \App\Models\Tenant::find($id);
+                    if ($existing) {
+                        static::$sharedTenantForMigrationsOnce = $existing;
+                        break;
+                    }
+                }
+                if (! static::$sharedTenantForMigrationsOnce) {
+                    static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::first()
+                        ?? \App\Models\Tenant::factory()->create();
+                }
+            } else {
+                // ローカル: クラスで初回だけ migrate:fresh を実行
+                $this->artisan('migrate:fresh');
+                $this->app[Kernel::class]->setArtisan(null);
 
-            // テナントを作成してテナントDBをマイグレーション
-            if (! static::$sharedTenantForMigrationsOnce) {
-                static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::factory()->create();
+                if (! static::$sharedTenantForMigrationsOnce) {
+                    static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::factory()->create();
+                }
+                $this->artisan('tenants:migrate', [
+                    '--tenants' => [static::$sharedTenantForMigrationsOnce->id],
+                ]);
+                $this->app[Kernel::class]->setArtisan(null);
             }
-            tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
-            $this->artisan('tenants:migrate', [
-                '--tenants' => [static::$sharedTenantForMigrationsOnce->id],
-            ]);
-            $this->app[Kernel::class]->setArtisan(null);
 
+            tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
             static::$migratedOnceByClass[$className] = true;
         } else {
             // 2回目以降はテナントを再初期化するだけ
