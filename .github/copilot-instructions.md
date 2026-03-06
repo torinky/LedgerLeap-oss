@@ -20,26 +20,21 @@
 - Interactive UI: Livewire with single-source-of-truth state array
 - ACL: `Spatie\Permission` + `WritableFolderRepository` (folder-level)
 - Data access: always verify live data via MCP tools before reasoning from static files
-## Skills — Load when triggered
-| Trigger | Skill |
+## Skills (Prompt Files — call with `/SKILLNAME` in chat)
+| When you need to… | Call |
 |---|---|
-| `git commit` | `git-commit` |
-| GitHub issue / PR | `github-issue-workflow` |
-| CI failure / timeout | `ci-failure-investigation` |
-| External service / `AttachedFile` test | `test-external-dependency-isolation` |
-| Mroonga / `DatabaseMigrations` trait | `database-migrations-test-optimization` |
-| `tenant()` null in Livewire | `livewire-tenant-context` |
-| `content[n]` null / index shift | `ledger-content-data-structure` |
-| `wire:loading` / `x-show` / sticky header | `livewire-loading-ui` |
-| `#[Computed]` 0% / `#[Url]` / parent-child | `livewire-computed-properties` |
-| 403 / permission cache stale | `permission-model` |
-| Workflow status stuck / `latestDiff` null | `workflow-status-machine` |
-| RAG search wrong / re-index / CI timeout | `rag-vector-search` |
-| git silent / CSS stale / test DB broken | `sail-dev-workflow` |
-| Sprint end / new skill | `skill-maintenance` |
+| Run `git commit` (encoding-safe, Sail-safe) | `/git-commit` |
+| Work on a GitHub issue / PR | `/github-issue-workflow` |
+| Investigate CI failure / timeout | `/ci-failure-investigation` |
+| Debug RAG search / re-index embedding | `/rag-vector-search` |
+| End of sprint / update skill files | `/skill-maintenance` |
+
+> **Auto-loaded** (no action needed): Livewire rules → `.github/instructions/livewire.instructions.md` (applyTo: app/Livewire/**, resources/views/livewire/**), PHP/Laravel rules → `.github/instructions/php-laravel.instructions.md` (applyTo: app/**/*.php), Test rules → `.github/instructions/tests.instructions.md` (applyTo: tests/**)
+>
+> **Deep reference**: `.github/skills/*/SKILL.md` — read directly when the above instructions are insufficient.
 ## Workflow
 1. **Lint**: `./vendor/bin/sail pint` before commit
 2. **Error check**: `last-error` / `browser-logs` after every change
 3. **Test**: `./vendor/bin/sail test` for regressions
-4. **Commit**: load `git-commit` skill first
-5. **After sprint**: load `skill-maintenance` skill
+4. **Commit**: call `/git-commit` prompt first
+5. **After sprint**: call `/skill-maintenance` prompt
