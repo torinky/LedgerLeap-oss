@@ -5,8 +5,18 @@ on:
     branches:
       - 'main'
       - 'develop'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   DB_USERNAME: sail
@@ -140,7 +150,7 @@ jobs:
         # external グループ（外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external,database-migrations --display-errors
+        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors
 
   # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
   feature:
@@ -256,14 +266,14 @@ jobs:
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外し、専用ジョブで実行する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external,database-migrations --display-errors
+        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations --display-errors
 
   # ── ③ DatabaseMigrations テスト（migrate:fresh が必要なテスト群） ──────
   #
-  # 実行対象:
-  #   - FolderTest          (マルチテナント境界の検証)
-  #   - LedgerControllerTest (API + 権限 + テナント統合)
-  #   - LedgerFullTextSearchTest (Mroonga 全文検索 - トランザクションロールバック不可)
+  # 実行対象（`#[Group('database-migrations')]` を付与したテストのみ）:
+  #   - FolderTest                    (マルチテナント境界の検証)
+  #   - SearchApiTest                 (Mroonga 検索API統合)
+  #   - LedgerFullTextSearchTest      (Mroonga 全文検索 - トランザクションロールバック不可)
   #   - SearchControllerAdditionalTest (全文検索コントローラ)
   #
   # なぜ分離するか:
