@@ -4,26 +4,13 @@ namespace Tests\Traits;
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\ParallelTesting;
 
 /**
  * RefreshDatabaseWithTenant トレイト
  *
  * テスト実行プロセス全体で1回だけ migrate:fresh + tenants:migrate を行い、
  * 各テストケースはトランザクション内で実行されます。
- *
- * 特徴:
- * - プロセス全体で1回だけマイグレーション実行（高速化）
- * - テナントも1回だけ作成・初期化
- * - 各テストはトランザクション内で実行（ロールバックで副作用なし）
- * - テナントデータはトランザクション外なので永続化
- *
- * 使用方法:
- * ```php
- * class MyTest extends TestCase
- * {
- *     use RefreshDatabaseWithTenant;
- * }
- * ```
  */
 trait RefreshDatabaseWithTenant
 {
@@ -43,11 +30,27 @@ trait RefreshDatabaseWithTenant
     public static bool $globalDatabaseMigrated = false;
 
     /**
-     * 作成されたテナント（クラス全体で共有）
-     *
-     * public: TestDatabaseState::reset() からリセットできるよう公開
+     * 作成されたテナント（後方互換のため保持）
      */
     public static $sharedTenant = null;
+
+    /**
+     * プロセスごとの migrate 実行状態
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
+     *
+     * @var array<string, bool>
+     */
+    public static array $migratedByProcess = [];
+
+    /**
+     * プロセスごとの共有テナント
+     *
+     * public: TestDatabaseState::reset() からリセットできるよう公開
+     *
+     * @var array<string, mixed>
+     */
+    public static array $sharedTenantsByProcess = [];
 
     /**
      * トランケート可能なテーブルのキャッシュ
@@ -85,36 +88,63 @@ trait RefreshDatabaseWithTenant
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
-        // このクラスで最初のテストの場合のみ初期化
         if (! $initialized) {
-            // プロセス全体でまだマイグレーションが実行されていない場合のみ実行
-            if (! static::$globalDatabaseMigrated) {
+            if (! static::hasMigratedForCurrentProcess()) {
                 $this->refreshDatabase();
-                static::$globalDatabaseMigrated = true;
+                static::markMigratedForCurrentProcess();
             }
 
-            // テナントが存在しない場合のみ作成
-            if (! static::$sharedTenant) {
+            $tenant = static::getSharedTenantForCurrentProcess();
+            if (! $tenant) {
                 $this->createSharedTenant();
-                tenancy()->initialize(static::$sharedTenant);
+                $tenant = static::getSharedTenantForCurrentProcess();
+                tenancy()->initialize($tenant);
                 $this->migrateTenantDatabase();
             } else {
-                tenancy()->initialize(static::$sharedTenant);
+                tenancy()->initialize($tenant);
             }
 
-            // 共有データ（ユーザーなど）を作成
             $this->createSharedData();
-
             static::$databaseInitializedByClass[$className] = true;
         } else {
-            // 2回目以降のテストではテナントを初期化
-            if (static::$sharedTenant) {
-                tenancy()->initialize(static::$sharedTenant);
+            if ($tenant = static::getSharedTenantForCurrentProcess()) {
+                tenancy()->initialize($tenant);
             }
         }
 
-        // トランザクションを開始（各テスト後に自動ロールバック）
         $this->beginDatabaseTransaction();
+    }
+
+    /**
+     * 現在のテストプロセスキーを返す
+     */
+    protected static function currentProcessKey(): string
+    {
+        return (string) (ParallelTesting::token() ?: 'global');
+    }
+
+    protected static function hasMigratedForCurrentProcess(): bool
+    {
+        return static::$migratedByProcess[static::currentProcessKey()] ?? false;
+    }
+
+    protected static function markMigratedForCurrentProcess(): void
+    {
+        static::$migratedByProcess[static::currentProcessKey()] = true;
+        // 後方互換: 既存のフラグを参照するコードに配慮
+        static::$globalDatabaseMigrated = true;
+    }
+
+    protected static function getSharedTenantForCurrentProcess()
+    {
+        return static::$sharedTenantsByProcess[static::currentProcessKey()] ?? null;
+    }
+
+    protected static function setSharedTenantForCurrentProcess($tenant): void
+    {
+        static::$sharedTenantsByProcess[static::currentProcessKey()] = $tenant;
+        // 後方互換: 既存の参照先を更新
+        static::$sharedTenant = $tenant;
     }
 
     /**
@@ -125,16 +155,16 @@ trait RefreshDatabaseWithTenant
      */
     protected function tearDown(): void
     {
-        // tenancy()->end() が呼ばれた場合に備えてテナントを再初期化
-        if (static::$sharedTenant && ! tenancy()->initialized) {
-            try {
-                tenancy()->initialize(static::$sharedTenant);
-            } catch (\Throwable) {
-                // 初期化失敗は握りつぶす（次のテストの setUp で再試行される）
+        if ($tenant = static::getSharedTenantForCurrentProcess()) {
+            if (! tenancy()->initialized) {
+                try {
+                    tenancy()->initialize($tenant);
+                } catch (\Throwable) {
+                    // 初期化失敗は次の setUp で再試行する
+                }
             }
         }
 
-        // トランザクションロールバックは beforeApplicationDestroyed で自動実行される
         parent::tearDown();
     }
 
@@ -150,15 +180,16 @@ trait RefreshDatabaseWithTenant
     {
         if (env('CI')) {
             // CI: ワークフローで migrate --force 実行済みのため何もしない
-        } else {
-            $this->artisan('migrate:fresh', [
-                '--drop-views' => $this->shouldDropViews(),
-                '--drop-types' => $this->shouldDropTypes(),
-                '--seed' => $this->shouldSeed(),
-            ]);
-
-            $this->app[Kernel::class]->setArtisan(null);
+            return;
         }
+
+        $this->artisan('migrate:fresh', [
+            '--drop-views' => $this->shouldDropViews(),
+            '--drop-types' => $this->shouldDropTypes(),
+            '--seed' => $this->shouldSeed(),
+        ]);
+
+        $this->app[Kernel::class]->setArtisan(null);
     }
 
     /**
@@ -171,13 +202,15 @@ trait RefreshDatabaseWithTenant
     {
         if (env('CI')) {
             // CI: ワークフローで tenants:migrate 実行済みのため何もしない
-        } else {
-            $this->artisan('tenants:migrate', [
-                '--tenants' => [static::$sharedTenant->id],
-            ]);
-
-            $this->app[Kernel::class]->setArtisan(null);
+            return;
         }
+
+        $tenant = static::getSharedTenantForCurrentProcess();
+        $this->artisan('tenants:migrate', [
+            '--tenants' => [$tenant->id],
+        ]);
+
+        $this->app[Kernel::class]->setArtisan(null);
     }
 
     /**
@@ -188,19 +221,35 @@ trait RefreshDatabaseWithTenant
      */
     protected function createSharedTenant(): void
     {
+        $processKey = static::currentProcessKey();
+
         if (env('CI')) {
-            // CI: ワークフローで作成済みの ci-test-tenant を再利用
-            $existing = \App\Models\Tenant::find('ci-test-tenant')
-                ?? \App\Models\Tenant::first();
-            if ($existing) {
-                static::$sharedTenant = $existing;
+            $candidates = $processKey === 'global'
+                ? ['ci-test-tenant']
+                : ["ci-test-tenant_{$processKey}", 'ci-test-tenant'];
+
+            foreach ($candidates as $candidateId) {
+                $existing = \App\Models\Tenant::find($candidateId);
+                if ($existing) {
+                    static::setSharedTenantForCurrentProcess($existing);
+
+                    return;
+                }
+            }
+
+            if ($existing = \App\Models\Tenant::first()) {
+                static::setSharedTenantForCurrentProcess($existing);
 
                 return;
             }
         }
 
-        // ローカル: テナントを新規作成（トランザクション外なので永続化される）
-        static::$sharedTenant = \App\Models\Tenant::factory()->create();
+        $tenantId = $processKey === 'global' ? 'test_tenant' : "test_tenant_{$processKey}";
+
+        $tenant = \App\Models\Tenant::find($tenantId)
+            ?? \App\Models\Tenant::factory()->create(['id' => $tenantId]);
+
+        static::setSharedTenantForCurrentProcess($tenant);
     }
 
     /**
@@ -263,7 +312,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function getTenant()
     {
-        return static::$sharedTenant;
+        return static::getSharedTenantForCurrentProcess();
     }
 
     /**

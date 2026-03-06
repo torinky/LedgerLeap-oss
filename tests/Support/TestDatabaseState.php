@@ -28,5 +28,7 @@ class TestDatabaseState
         \Tests\Traits\RefreshDatabaseWithTenant::$sharedTenant = null;
         \Tests\Traits\RefreshDatabaseWithTenant::$databaseInitializedByClass = [];
         \Tests\Traits\RefreshDatabaseWithTenant::$truncatableTablesCache = null;
+        \Tests\Traits\RefreshDatabaseWithTenant::$migratedByProcess = [];
+        \Tests\Traits\RefreshDatabaseWithTenant::$sharedTenantsByProcess = [];
     }
 }
