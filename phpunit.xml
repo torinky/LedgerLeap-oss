@@ -11,6 +11,10 @@
         <testsuite name="Feature">
             <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
+        <testsuite name="FeatureParallelSubset">
+            <directory suffix="Test.php">./tests/Feature/Livewire</directory>
+            <directory suffix="Test.php">./tests/Feature/Services</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

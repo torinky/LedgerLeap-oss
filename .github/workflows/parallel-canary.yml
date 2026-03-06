@@ -111,11 +111,12 @@ jobs:
 
       - name: '[Canary] Run Feature Tests (parallel subset)'
         # サブセット: tests/Feature/Livewire と tests/Feature/Services を並列実行
+        # paratest は path 引数を1つしか受け付けないため、phpunit.xml の FeatureParallelSubset
+        # テストスイートにサブセットを定義して --testsuite で指定する
         # 全 Feature に拡大するのは Sprint 5（10 連続成功後）
         run: |
           ./vendor/bin/pest --parallel --recreate-databases \
-            tests/Feature/Livewire \
-            tests/Feature/Services \
+            --testsuite=FeatureParallelSubset \
             --exclude-group=external \
             --exclude-group=database-migrations \
             --display-errors
