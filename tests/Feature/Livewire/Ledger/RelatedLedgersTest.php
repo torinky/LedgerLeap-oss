@@ -46,11 +46,14 @@ class RelatedLedgersTest extends TestCase
 
     protected Tenant $tenant;
 
+    private bool $originalRagEnabled;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         // このクラスは意味検索の挙動を検証するため、RAGを明示的に有効化する
+        $this->originalRagEnabled = config('rag.enabled', false);
         config(['rag.enabled' => true]);
 
         $this->tenant = Tenant::factory()->create();
@@ -101,6 +104,12 @@ class RelatedLedgersTest extends TestCase
                     2 => '設備の詳細説明',
                 ],
             ]);
+    }
+
+    protected function tearDown(): void
+    {
+        config(['rag.enabled' => $this->originalRagEnabled]);
+        parent::tearDown();
     }
 
     // ─────────────────────────────────────────────

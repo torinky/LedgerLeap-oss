@@ -17,10 +17,12 @@ export default (options) => ({
             }, 150);
         };
         window.addEventListener('resize', resizeHandler);
-        this.$cleanup(() => {
-            clearTimeout(resizeTimer);
-            window.removeEventListener('resize', resizeHandler);
-        });
+        if (typeof this.$cleanup === 'function') {
+            this.$cleanup(() => {
+                clearTimeout(resizeTimer);
+                window.removeEventListener('resize', resizeHandler);
+            });
+        }
     },
 
     checkOverflow() {
