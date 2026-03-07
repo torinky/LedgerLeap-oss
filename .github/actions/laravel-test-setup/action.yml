@@ -76,22 +76,17 @@ runs:
         MYSQL_PWD: ${{ inputs.db_password }}
       run: |
         WORKER_COUNT=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 8)
-        mysql -h 127.0.0.1 -u root --force <<EOF
-          CREATE DATABASE IF NOT EXISTS ledgerleap_test;
-          GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
-          GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
-        EOF
+
+        mysql -h 127.0.0.1 -u root --force -e "CREATE DATABASE IF NOT EXISTS ledgerleap_test;"
+        mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';"
+        mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';"
 
         for i in $(seq 1 "$WORKER_COUNT"); do
-          mysql -h 127.0.0.1 -u root --force <<EOF
-            CREATE DATABASE IF NOT EXISTS \`ledgerleap_test_test_${i}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-            GRANT ALL PRIVILEGES ON \`ledgerleap_test_test_${i}\`.* TO 'sail'@'%';
-          EOF
+          mysql -h 127.0.0.1 -u root --force -e "CREATE DATABASE IF NOT EXISTS \`ledgerleap_test_test_${i}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON \`ledgerleap_test_test_${i}\`.* TO 'sail'@'%';"
         done
 
-        mysql -h 127.0.0.1 -u root --force <<EOF
-          FLUSH PRIVILEGES;
-        EOF
+        mysql -h 127.0.0.1 -u root --force -e "FLUSH PRIVILEGES;"
 
     - name: Migrate database
       shell: bash
