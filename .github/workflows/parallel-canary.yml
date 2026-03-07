@@ -69,9 +69,9 @@ jobs:
 
       - name: '[Canary] Run Unit Tests (parallel)'
         # --parallel: 並列実行（ワーカー数はデフォルト CPU コア数）
-        # --recreate-databases: ワーカー別 DB を再作成して並列分離を保証
+        # worker DB の作成と権限付与は shared setup action 側で事前実施する
         run: |
-          ./vendor/bin/pest --parallel --recreate-databases \
+          ./vendor/bin/pest --parallel \
             --testsuite=Unit \
             --exclude-group=external \
             --exclude-group=database-migrations \
@@ -113,9 +113,9 @@ jobs:
         # サブセット: tests/Feature/Livewire と tests/Feature/Services を並列実行
         # paratest は path 引数を1つしか受け付けないため、phpunit.xml の FeatureParallelSubset
         # テストスイートにサブセットを定義して --testsuite で指定する
-        # 全 Feature に拡大するのは Sprint 5（10 連続成功後）
+        # worker DB の作成と権限付与は shared setup action 側で事前実施する
         run: |
-          ./vendor/bin/pest --parallel --recreate-databases \
+          ./vendor/bin/pest --parallel \
             --testsuite=FeatureParallelSubset \
             --exclude-group=external \
             --exclude-group=database-migrations \
