@@ -25,11 +25,11 @@ class TreeTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-'.uniqid(), 'name' => 'Test Tenant']);
+        $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-'.uniqid('', true), 'name' => 'Test Tenant']);
 
         $this->tenant->run(function () {
             $this->user = User::factory()->create([
-                'email' => 'test-'.uniqid().'@example.com',
+                'email' => 'test-'.uniqid('', true).'@example.com',
                 'password' => bcrypt('password'),
             ]);
 
@@ -122,6 +122,7 @@ class TreeTest extends TestCase
             Folder::fixTree();
         });
 
+        tenancy()->initialize($this->tenant);
     }
 
     #[Test]
