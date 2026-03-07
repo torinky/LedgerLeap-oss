@@ -34,7 +34,7 @@
 
 **コマンド**（ローカルでの再現確認）:
 ```bash
-./vendor/bin/sail test --parallel --recreate-databases \
+./vendor/bin/sail test --parallel \
   --testsuite=Unit \
   --exclude-group=external \
   --exclude-group=database-migrations \
@@ -109,6 +109,8 @@
 ---
 
 ## フレーク率の記録フォーマット
+
+Sprint 7 の実績記録テンプレート: `docs/work/architecture/testing/2026-03-08_Parallel_Canary_Tracking_Template.md`
 
 Issue #81 へ週次で以下フォーマットで記録する:
 

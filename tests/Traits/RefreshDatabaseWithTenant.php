@@ -60,27 +60,6 @@ trait RefreshDatabaseWithTenant
     public static ?array $truncatableTablesCache = null;
 
     /**
-     * 並列実行時のベースDB名キャッシュ（_test_N の二重付加を防ぐ）
-     *
-     * トレイトの静的プロパティは use クラスごとに独立コピーされるため
-     * プロセスグローバルな共有が必要な値は $GLOBALS で管理する。
-     */
-    private static function getBaseDatabaseName(): ?string
-    {
-        return $GLOBALS['__refreshDbWithTenant_baseDatabaseName'] ?? null;
-    }
-
-    private static function setBaseDatabaseName(string $name): void
-    {
-        $GLOBALS['__refreshDbWithTenant_baseDatabaseName'] = $name;
-    }
-
-    private static function clearBaseDatabaseName(): void
-    {
-        unset($GLOBALS['__refreshDbWithTenant_baseDatabaseName']);
-    }
-
-    /**
      * グローバル状態を全てリセットする
      *
      * TestDatabaseState::reset() から呼び出す。
@@ -95,7 +74,6 @@ trait RefreshDatabaseWithTenant
         static::$sharedTenant = null;
         static::$databaseInitializedByClass = [];
         static::$truncatableTablesCache = null;
-        static::clearBaseDatabaseName();
         static::$migratedByProcess = [];
         static::$sharedTenantsByProcess = [];
     }
@@ -190,7 +168,8 @@ trait RefreshDatabaseWithTenant
     protected function ensureCurrentTestingDatabaseConnection(): void
     {
         if ($workerDatabase = $this->currentWorkerDatabaseName()) {
-            $this->switchToTestingDatabase($workerDatabase);
+            DB::purge('mysql_testing');
+            config()->set('database.connections.mysql_testing.database', $workerDatabase);
         }
     }
 
@@ -263,7 +242,8 @@ trait RefreshDatabaseWithTenant
                 // CREATE DATABASE に失敗した場合はワーカーDBが既に存在するとみなして続行
             }
 
-            $this->switchToTestingDatabase($workerDatabase);
+            DB::purge('mysql_testing');
+            config()->set('database.connections.mysql_testing.database', $workerDatabase);
 
             $this->artisan('migrate:fresh', [
                 '--drop-views' => $this->shouldDropViews(),
@@ -288,19 +268,6 @@ trait RefreshDatabaseWithTenant
         ]);
 
         $this->app[Kernel::class]->setArtisan(null);
-    }
-
-    /**
-     * テスト用のデータベース接続先を切り替える
-     *
-     * 注意: $_SERVER / $_ENV は書き換えない。
-     * phpunit.xml の <server name="DB_DATABASE"> がベース名を保持しており、
-     * それを書き換えると次回の構築時に多重付加が起きる。
-     */
-    protected function switchToTestingDatabase(string $database): void
-    {
-        DB::purge('mysql_testing');
-        config()->set('database.connections.mysql_testing.database', $database);
     }
 
     /**
