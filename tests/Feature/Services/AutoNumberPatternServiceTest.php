@@ -7,10 +7,10 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Services\AutoNumberPatternService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * AutoNumberPatternService のユニット／フィーチャーテスト
@@ -20,7 +20,7 @@ use Tests\TestCase;
  */
 class AutoNumberPatternServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private AutoNumberPatternService $service;
 
@@ -29,9 +29,8 @@ class AutoNumberPatternServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tenant = Tenant::factory()->create();
-        tenancy()->initialize($this->tenant);
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         $this->service = app(AutoNumberPatternService::class);
     }

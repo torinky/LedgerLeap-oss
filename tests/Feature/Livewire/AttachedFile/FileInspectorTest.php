@@ -33,10 +33,10 @@ class FileInspectorTest extends TestCase
         parent::setUp();
 
         $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         // テナント初期化（RefreshDatabaseWithTenantがstatic::$sharedTenantを作成・初期化している）
         $this->tenant = static::$sharedTenant;
-        tenancy()->initialize($this->tenant);
 
         // テストユーザー作成とログイン
         $this->user = User::factory()->create();

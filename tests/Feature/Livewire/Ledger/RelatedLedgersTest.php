@@ -12,12 +12,12 @@ use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * 関連案件タブ（RelatedLedgers）のバックエンドロジックテスト
@@ -34,7 +34,7 @@ use Tests\TestCase;
  */
 class RelatedLedgersTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private User $user;
 
@@ -51,13 +51,12 @@ class RelatedLedgersTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         // このクラスは意味検索の挙動を検証するため、RAGを明示的に有効化する
         $this->originalRagEnabled = config('rag.enabled', false);
         config(['rag.enabled' => true]);
-
-        $this->tenant = Tenant::factory()->create();
-        tenancy()->initialize($this->tenant);
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);

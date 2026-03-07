@@ -122,7 +122,6 @@ class TreeTest extends TestCase
             Folder::fixTree();
         });
 
-        tenancy()->initialize($this->tenant);
     }
 
     #[Test]

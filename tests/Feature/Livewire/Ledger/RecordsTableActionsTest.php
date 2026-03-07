@@ -8,12 +8,12 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * RecordsTable コンポーネントの未カバーメソッドに対する追加テスト
@@ -31,7 +31,7 @@ use Tests\TestCase;
 #[CoversClass(RecordsTable::class)]
 class RecordsTableActionsTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private User $user;
 
@@ -47,9 +47,8 @@ class RecordsTableActionsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tenant = Tenant::factory()->create();
-        tenancy()->initialize($this->tenant);
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
 
@@ -79,9 +78,6 @@ class RecordsTableActionsTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
         parent::tearDown();
     }
 

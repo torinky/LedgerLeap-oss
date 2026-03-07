@@ -60,6 +60,47 @@ trait RefreshDatabaseWithTenant
     public static ?array $truncatableTablesCache = null;
 
     /**
+     * 並列実行時のベースDB名キャッシュ（_test_N の二重付加を防ぐ）
+     *
+     * トレイトの静的プロパティは use クラスごとに独立コピーされるため
+     * プロセスグローバルな共有が必要な値は $GLOBALS で管理する。
+     */
+    private static function getBaseDatabaseName(): ?string
+    {
+        return $GLOBALS['__refreshDbWithTenant_baseDatabaseName'] ?? null;
+    }
+
+    private static function setBaseDatabaseName(string $name): void
+    {
+        $GLOBALS['__refreshDbWithTenant_baseDatabaseName'] = $name;
+    }
+
+    private static function clearBaseDatabaseName(): void
+    {
+        unset($GLOBALS['__refreshDbWithTenant_baseDatabaseName']);
+    }
+
+    /**
+     * グローバル状態を全てリセットする
+     *
+     * TestDatabaseState::reset() から呼び出す。
+     * トレイトの静的プロパティへの外部直接アクセスを避けるための窓口。
+     *
+     * PHP では trait の静的メンバーをトレイトを use していないクラスから
+     * 直接参照することは非推奨のため、このメソッド経由でリセットする。
+     */
+    public static function resetState(): void
+    {
+        static::$globalDatabaseMigrated = false;
+        static::$sharedTenant = null;
+        static::$databaseInitializedByClass = [];
+        static::$truncatableTablesCache = null;
+        static::clearBaseDatabaseName();
+        static::$migratedByProcess = [];
+        static::$sharedTenantsByProcess = [];
+    }
+
+    /**
      * テストクラスの最初の実行前に1回だけ初期化
      */
     public static function setUpBeforeClass(): void
@@ -85,6 +126,8 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
+        $this->ensureCurrentTestingDatabaseConnection();
+
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
@@ -128,6 +171,29 @@ trait RefreshDatabaseWithTenant
         return static::$migratedByProcess[static::currentProcessKey()] ?? false;
     }
 
+    protected function currentTestingDatabaseName(): string
+    {
+        return $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test';
+    }
+
+    protected function currentWorkerDatabaseName(): ?string
+    {
+        $token = ParallelTesting::token();
+
+        if (! $token) {
+            return null;
+        }
+
+        return $this->currentTestingDatabaseName().'_test_'.$token;
+    }
+
+    protected function ensureCurrentTestingDatabaseConnection(): void
+    {
+        if ($workerDatabase = $this->currentWorkerDatabaseName()) {
+            $this->switchToTestingDatabase($workerDatabase);
+        }
+    }
+
     protected static function markMigratedForCurrentProcess(): void
     {
         static::$migratedByProcess[static::currentProcessKey()] = true;
@@ -150,17 +216,19 @@ trait RefreshDatabaseWithTenant
     /**
      * 各テストの後処理
      *
-     * tenancy()->end() を呼ぶテストの後でも次のテストが正常に動作するよう
-     * テナントコンテキストを必ず復元する。
+     * parent::tearDown() が beforeApplicationDestroyed コールバック（tenant rollBack）を
+     * 実行するため、その直前まで tenancy を確実に初期化状態に保つ。
      */
     protected function tearDown(): void
     {
+        // beforeApplicationDestroyed の rollBack コールバックが tenant 接続を
+        // 使えるよう、parent::tearDown() 前にテナントを再初期化する
         if ($tenant = static::getSharedTenantForCurrentProcess()) {
             if (! tenancy()->initialized) {
                 try {
                     tenancy()->initialize($tenant);
                 } catch (\Throwable) {
-                    // 初期化失敗は次の setUp で再試行する
+                    // 初期化失敗は無視（接続が切断済みなど）
                 }
             }
         }
@@ -173,29 +241,42 @@ trait RefreshDatabaseWithTenant
      *
      * - CI環境（CI=true）: migrate:fresh はスキップ。
      *   ワークフローの "Migrate database" ステップで既に実行済みのため。
-     * - ローカル並列実行（ParallelTesting::token() が非null）:
-     *   --recreate-databases がワーカーDB（ledgerleap_test_test_N）を作成済みのため
-     *   migrate:fresh は不要。ワーカーDBに切り替えて migrate のみ実行する。
+     * - ローカル並列実行（TEST_TOKEN が設定されている）:
+     *   phpunit.xml の $_SERVER['DB_DATABASE']（ベース名）から直接
+     *   ワーカーDB名を構築して切り替え、migrate:fresh で初期化する。
      * - ローカル直列実行: 従来通り migrate:fresh で完全リセット。
      */
     protected function refreshDatabase(): void
     {
-        if (env('CI')) {
-            // CI: ワークフローで migrate --force 実行済みのため何もしない
+        $workerDatabase = $this->currentWorkerDatabaseName();
+
+        if ($workerDatabase) {
+            $baseDb = $this->currentTestingDatabaseName();
+
+            DB::purge('mysql_testing');
+            config()->set('database.connections.mysql_testing.database', $baseDb);
+            try {
+                DB::connection('mysql_testing')->statement(
+                    "CREATE DATABASE IF NOT EXISTS `{$workerDatabase}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                );
+            } catch (\Throwable $e) {
+                // CREATE DATABASE に失敗した場合はワーカーDBが既に存在するとみなして続行
+            }
+
+            $this->switchToTestingDatabase($workerDatabase);
+
+            $this->artisan('migrate:fresh', [
+                '--drop-views' => $this->shouldDropViews(),
+                '--drop-types' => $this->shouldDropTypes(),
+            ]);
+            $this->app[Kernel::class]->setArtisan(null);
+            $this->ensureCurrentTestingDatabaseConnection();
+
             return;
         }
 
-        $token = ParallelTesting::token();
-
-        if ($token) {
-            // ローカル並列実行: ワーカーDBに切り替えてmigrateのみ実行
-            $baseDatabase = env('DB_DATABASE', 'ledgerleap_test');
-            $workerDatabase = "{$baseDatabase}_test_{$token}";
-            $this->switchToTestingDatabase($workerDatabase);
-
-            $this->artisan('migrate', ['--force' => true]);
-            $this->app[Kernel::class]->setArtisan(null);
-
+        if (env('CI')) {
+            // CI の直列実行: ワークフローで migrate --force 実行済みのため何もしない
             return;
         }
 
@@ -212,17 +293,13 @@ trait RefreshDatabaseWithTenant
     /**
      * テスト用のデータベース接続先を切り替える
      *
-     * 並列実行時にワーカーDBへ切り替えるために使用する。
-     * $_SERVER['DB_DATABASE'] も更新して artisan コマンド内での再ロードに対応する。
+     * 注意: $_SERVER / $_ENV は書き換えない。
+     * phpunit.xml の <server name="DB_DATABASE"> がベース名を保持しており、
+     * それを書き換えると次回の構築時に多重付加が起きる。
      */
     protected function switchToTestingDatabase(string $database): void
     {
-        // $_SERVER / $_ENV も書き換えて artisan 再ロード時に上書きされないようにする
-        $_SERVER['DB_DATABASE'] = $database;
-        $_ENV['DB_DATABASE'] = $database;
-
-        \Illuminate\Support\Facades\DB::purge('mysql_testing');
-
+        DB::purge('mysql_testing');
         config()->set('database.connections.mysql_testing.database', $database);
     }
 
@@ -330,7 +407,8 @@ trait RefreshDatabaseWithTenant
                     $connection->unsetEventDispatcher();
                     $connection->rollBack();
                     $connection->setEventDispatcher($dispatcher);
-                    $connection->disconnect();
+                    // disconnect() は呼ばない — 次テストの beginTransaction が
+                    // 同一接続を再利用できるよう接続を維持する
                 } catch (\InvalidArgumentException $e) {
                     // テナント接続が設定されていない場合はスキップ
                     if ($name === 'tenant') {

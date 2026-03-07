@@ -14,6 +14,10 @@
         <testsuite name="FeatureParallelSubset">
             <directory suffix="Test.php">./tests/Feature/Livewire</directory>
             <directory suffix="Test.php">./tests/Feature/Services</directory>
+            <!-- tenant->run() を使う専用テナント設計のため並列対象外 -->
+            <exclude>./tests/Feature/Livewire/Folder/TreeTest.php</exclude>
+            <exclude>./tests/Feature/Livewire/TenantSwitcherTest.php</exclude>
+            <exclude>./tests/Feature/Livewire/LedgerColumnValidationTest.php</exclude>
         </testsuite>
     </testsuites>
     <source>

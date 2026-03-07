@@ -31,7 +31,6 @@ class RecordsTableQueryTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
 
         $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
-        tenancy()->initialize($this->tenant);
 
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
@@ -75,9 +74,6 @@ class RecordsTableQueryTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
         parent::tearDown();
     }
 

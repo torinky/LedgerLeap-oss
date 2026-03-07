@@ -9,17 +9,17 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class ModifyColumnTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $fakeQueue = false;
 
@@ -32,13 +32,13 @@ class ModifyColumnTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = Tenant::factory()->create();
+        $this->tenant = $this->getTenant();
         $this->user = User::factory()->create();
 
         // ユーザーを認証し、テナンシーを初期化
         $this->actingAs($this->user);
-        tenancy()->initialize($this->tenant);
 
         // 権限設定
         $role = \App\Models\Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
