@@ -1,7 +1,7 @@
 # テスト実行ガイド（並列導入後の標準手順）
 
 - 関連Issue: https://github.com/torinky/LedgerLeap/issues/81
-- 最終更新: 2026-03-06（Sprint 5）
+- 最終更新: 2026-03-07（Sprint 6）
 
 ---
 
@@ -13,14 +13,19 @@
 # 1. コード整形
 ./vendor/bin/sail pint
 
-# 2. 並列テスト（高速・parallel-safe 対象）
-./vendor/bin/sail artisan test --parallel --recreate-databases \
+# 2. 並列テスト（高速・current canary）
+./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset \
   --exclude-group=external \
   --exclude-group=database-migrations
 
 # 3. 直列テスト（Mroonga / DatabaseMigrations 系）
 ./vendor/bin/sail test --group=database-migrations
 ```
+
+**備考**:
+- `--recreate-databases` は使わない
+- 現時点のローカル並列標準は `FeatureParallelSubset`（Feature 全件並列化は未昇格）
+- test DB が壊れた場合は `bin/reset-test-db.sh` でリセットしてから再実行する
 
 ### 全テスト実行（CI と同等）
 
@@ -30,8 +35,13 @@
   --exclude-group=external \
   --exclude-group=database-migrations
 
-# Feature のみ
+# Feature のみ（標準 CI は現時点では直列）
 ./vendor/bin/sail test --testsuite=Feature \
+  --exclude-group=external \
+  --exclude-group=database-migrations
+
+# Feature の並列カナリア（ローカル確認用）
+./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset \
   --exclude-group=external \
   --exclude-group=database-migrations
 
@@ -48,8 +58,11 @@
 # フィルタ指定
 ./vendor/bin/sail test --filter=テストクラス名orメソッド名
 
-# 並列 + フィルタ
-./vendor/bin/sail artisan test --parallel --filter=テストクラス名
+# 並列 + フィルタ（最小再現確認に使用）
+./vendor/bin/sail pest --parallel --processes=2 \
+  --filter="LedgerDiffViewerTest" \
+  --testsuite=FeatureParallelSubset \
+  --display-errors
 ```
 
 ---
@@ -76,7 +89,7 @@
 
 ---
 
-## CI ジョブ構成（Sprint 5 時点）
+## CI ジョブ構成（Sprint 6 時点）
 
 ### 標準 CI（`phpunit.yml`）— 全 Push / PR で実行
 
@@ -91,7 +104,13 @@
 | ジョブ | 対象 | 備考 |
 |---|---|---|
 | `canary-unit-parallel` | Unit を `--parallel` で実行 | `continue-on-error: true` |
-| `canary-feature-parallel` | Feature/Livewire + Feature/Services を `--parallel` で実行 | `continue-on-error: true` |
+| `canary-feature-parallel` | `FeatureParallelSubset` を `--parallel` で実行 | `continue-on-error: true` |
+
+**現在のローカル検証結果（2026-03-07）**:
+- `./vendor/bin/sail pest --parallel --processes=2 --filter="LedgerDiffViewerTest" --testsuite=FeatureParallelSubset --display-errors`
+  - `10 passed (44 assertions)` / `18.30s` / `Parallel: 2 processes`
+- `./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations`
+  - `2 skipped, 461 passed (1105 assertions)` / `498.76s` / `Parallel: 8 processes`
 
 **カナリア昇格基準**: 10 連続成功 & フレーク率 < 1% → Feature 全件並列化 → 標準 CI に統合
 
@@ -121,8 +140,10 @@ class MyFeatureTest extends TestCase
 
 **ポイント**:
 - プロセスキー（`ParallelTesting::token() ?: 'global'`）単位で状態管理
+- 並列実行時は `mysql_testing` を worker DB へ毎テスト再選択する
 - CI 環境では `migrate:fresh` / `tenants:migrate` をスキップ（ワークフローで実施済み）
 - `TestDatabaseState::reset()` を呼べば全静的状態をリセット可能
+- shared tenant 取得後に別 `Tenant::create()` で上書きしない
 
 ### `DatabaseMigrationsOnce`（Mroonga 全文検索テスト用）
 
