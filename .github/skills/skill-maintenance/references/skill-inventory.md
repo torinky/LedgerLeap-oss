@@ -24,6 +24,8 @@
 | GitHub | `github-issue-workflow` | issue / PR operations |
 | Testing | `database-migrations-test-optimization` | Mroonga / slow CI |
 | Testing | `test-external-dependency-isolation` | AttachedFile / external service |
+| Debugging | `bug-investigation` | bug triage / logs / root-cause investigation |
+| Debugging | `bug-execution` | selected fix implementation / verification / rollback |
 | Livewire | `livewire-tenant-context` | tenant() null / #[Lazy] |
 | Livewire | `livewire-loading-ui` | wire:loading / x-show / sticky |
 | Livewire | `livewire-computed-properties` | #[Computed] 0% / #[Url] |
@@ -32,7 +34,7 @@
 | Workflow | `workflow-status-machine` | status stuck / latestDiff null |
 | Search | `rag-vector-search` | RAG wrong / re-index / CI timeout |
 | DevEnv | `sail-dev-workflow` | git silent / CSS stale / test DB |
-| Meta | `skill-maintenance` | end of sprint / new pattern |
+| Meta | `skill-maintenance` | proven learning / prompt-skill-instructions sync |
 
 > `name` must equal the directory name (agentskills.io spec). No subdirectory nesting.
 
@@ -49,4 +51,3 @@
 | MCP tool architecture and data structure | `docs/development/MCP_Architecture_and_Flow.md` |
 | Test fundamentals, DB trait selection, tenant setup | `docs/development/testing/` |
 | Scoring system architecture and services | `docs/development/scoring-system.md` |
-

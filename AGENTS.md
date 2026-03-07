@@ -1,0 +1,49 @@
+# LedgerLeap Agent Routing
+
+## Primary Sources
+- Repo-wide facts and invariants: `/.github/copilot-instructions.md`
+- Path-specific codegen rules: `/.github/instructions/*.instructions.md`
+- User-invocable workflows: `/.github/prompts/*.prompt.md`
+- Reusable deep capabilities and decision trees: `/.github/skills/<name>/SKILL.md`
+- Long examples and deep procedures: `/.github/skills/<name>/references/*.md`
+
+## Routing Rules
+- Use prompt files as the primary JetBrains-facing entrypoints.
+- Use skills for recurring diagnosis, decision trees, and reusable capabilities.
+- Keep `copilot-instructions.md` short, repo-wide, and stable.
+- Put agent-wide discovery or maintenance rules here, not in feature skills.
+- Keep one source of truth per rule; link instead of duplicating.
+
+## Proven Learning → Destination
+- Global short invariant → `/.github/copilot-instructions.md`
+- File/path-specific rule → `/.github/instructions/*.instructions.md`
+- Slash workflow / playbook entrypoint → `/.github/prompts/*.prompt.md`
+- Reusable workflow / diagnosis tree → `/.github/skills/<name>/SKILL.md`
+- Detailed examples / evidence formats → `/.github/skills/<name>/references/*.md`
+- Missing structured user input → `/.github/ISSUE_TEMPLATE/*`
+- Repeatable human/AI operating sequence → `docs/runbooks/*`
+- Agent routing / discovery / maintenance policy → `AGENTS.md`
+
+## Mandatory Maintenance Loop
+When a bug fix, investigation, or sprint proves a reusable pattern:
+1. Update the primary destination.
+2. Sync neighbors: prompt ↔ skill ↔ instructions ↔ issue template ↔ runbook ↔ AGENTS.
+3. Remove stale or conflicting guidance.
+4. Run `/skill-maintenance` before considering the work complete.
+
+## Domain Entry Points
+- Bug investigation: `/bug-investigation`
+- Bug implementation: `/bug-execution`
+- Git commits: `/git-commit`
+- GitHub issues / PRs: `/github-issue-workflow`
+- CI failures: `/ci-failure-investigation`
+- RAG / search: `/rag-vector-search`
+- AI asset maintenance: `/skill-maintenance`
+
+## LedgerLeap-Specific Traps
+- Tenancy initialization in tests is mandatory.
+- Permission changes require both permission cache and tenant access cache clearing.
+- Mroonga full-text search is single-column only.
+- Livewire public state must stay plain arrays.
+- `#[Lazy]` tenant-aware components need `tenant_id` fallback.
+
