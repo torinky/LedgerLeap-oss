@@ -1068,6 +1068,11 @@ return [
         'select_url' => 'URLを全選択',
         'url_label' => '事前入力URL',
     ],
+    'page_qr_code' => [
+        'description' => 'QRコードをスキャンして、現在表示している画面をモバイル端末で開くことができます。',
+        'modal_title' => 'この画面をモバイルで開く',
+        'open_in_mobile' => 'モバイルで開く',
+    ],
     'preview' => 'プレビュー',
     'price' => '価格',
     'priority' => [
