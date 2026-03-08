@@ -44,19 +44,7 @@
       "command": "uvx",
       "args": [
         "markitdown-mcp==0.0.1a4"
-      ],
-      "x-metadata": {
-        "registry": {
-          "api": {
-            "baseUrl": "https://api.mcp.github.com",
-            "version": "v0.1"
-          },
-          "mcpServer": {
-            "name": "microsoft/markitdown",
-            "version": "1.0.0"
-          }
-        }
-      }
+      ]
     },
     "io.github.ChromeDevTools/chrome-devtools-mcp": {
       "type": "stdio",
@@ -64,19 +52,7 @@
       "args": [
         "-y",
         "chrome-devtools-mcp@0.12.1"
-      ],
-      "x-metadata": {
-        "registry": {
-          "api": {
-            "baseUrl": "https://api.mcp.github.com",
-            "version": "v0.1"
-          },
-          "mcpServer": {
-            "name": "io.github.ChromeDevTools/chrome-devtools-mcp",
-            "version": "0.12.1"
-          }
-        }
-      }
+      ]
     },
     "microsoft/playwright-mcp": {
       "type": "stdio",
@@ -84,19 +60,7 @@
       "args": [
         "-y",
         "@playwright/mcp@latest"
-      ],
-      "x-metadata": {
-        "registry": {
-          "api": {
-            "baseUrl": "https://api.mcp.github.com",
-            "version": "v0.1"
-          },
-          "mcpServer": {
-            "name": "microsoft/playwright-mcp",
-            "version": "0.0.1-seed"
-          }
-        }
-      }
+      ]
     },
     "io.github.upstash/context7": {
       "type": "stdio",
@@ -107,27 +71,16 @@
       ],
       "env": {
         "CONTEXT7_API_KEY": ""
-      },
-      "x-metadata": {
-        "registry": {
-          "api": {
-            "baseUrl": "https://api.mcp.github.com",
-            "version": "v0.1"
-          },
-          "mcpServer": {
-            "name": "io.github.upstash/context7",
-            "version": "1.0.31"
-          }
-        }
       }
     },
-    "io.github.github/github-mcp-server": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "requestInit": {
-        "headers": {
-          "Authorization": "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"
-        }
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
       }
     }
   },

@@ -129,7 +129,7 @@ class AdminPanelProvider extends PanelProvider
                 'panels::global-search.after',
                 fn (): string => Blade::render('
                     <div class="flex items-center gap-x-3">
-                        <livewire:common.page-qr-code trigger-type="filament" />
+                        @livewire(\App\Livewire\Common\PageQrCode::class, ["triggerType" => "filament"])
                         <livewire:tenant-switcher-filament :show-folders="false" />
                     </div>
                 '),

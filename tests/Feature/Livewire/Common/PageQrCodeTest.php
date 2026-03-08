@@ -36,7 +36,8 @@ class PageQrCodeTest extends TestCase
     {
         Livewire::test(PageQrCode::class, ['triggerType' => 'filament'])
             ->assertStatus(200)
-            ->assertSee(__('ledger.page_qr_code.modal_title'));
+            ->assertSee(__('ledger.page_qr_code.modal_title'))
+            ->assertSee('mountAction(\'qrCode\')'); // Filament action trigger
     }
 
     #[Test]

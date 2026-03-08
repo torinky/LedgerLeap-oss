@@ -24,12 +24,28 @@
                 </p>
 
                 {{-- URLコピーエリア --}}
-                <div class="w-full flex items-center space-x-2 bg-base-200 p-2 rounded truncate text-xs">
+                <div 
+                    x-data="{ 
+                        copied: false,
+                        copyToClipboard() {
+                            window.navigator.clipboard.writeText('{{ $url }}');
+                            this.copied = true;
+                            setTimeout(() => this.copied = false, 2000);
+                            $mary.toast({type: 'success', title: '{{ __('ledger.file_inspector.messages.link_copied') }}'});
+                        }
+                    }"
+                    class="w-full flex items-center space-x-2 bg-base-200 p-2 rounded truncate text-xs"
+                >
                     <span class="truncate flex-1">{{ $url }}</span>
-                    <x-mary-button 
-                        icon="o-clipboard" 
-                        class="btn-ghost btn-xs"
-                        @click="navigator.clipboard.writeText('{{ $url }}'); $mary.toast({type: 'success', title: '{{ __('ledger.file_inspector.messages.link_copied') }}'})" />
+                    <button 
+                        type="button"
+                        @click="copyToClipboard"
+                        class="flex items-center justify-center rounded-lg p-1 transition hover:bg-base-300 focus:outline-none"
+                        :class="copied ? 'text-success' : 'text-base-content/70'"
+                    >
+                        <x-mary-icon x-show="!copied" name="o-clipboard" class="h-4 w-4" />
+                        <x-mary-icon x-show="copied" name="o-check" class="h-4 w-4" />
+                    </button>
                 </div>
             </div>
 
@@ -38,55 +54,8 @@
             </x-slot:actions>
         </x-mary-modal>
     @else
-        <div class="flex items-center">
-            <x-filament::icon-button
-                icon="heroicon-o-qr-code"
-                @click="$wire.openModal(window.location.href)"
-                tooltip="{{ __('ledger.page_qr_code.modal_title') }}"
-            />
-        </div>
+        {{ $this->qrCodeAction }}
 
-        <x-filament::modal wire:model="showModal" width="md">
-            <x-slot name="heading">
-                {{ __('ledger.page_qr_code.modal_title') }}
-            </x-slot>
-
-            <div class="flex flex-col items-center space-y-4">
-                {{-- QRコード表示エリア --}}
-                <div class="bg-white p-4 rounded-lg shadow-inner flex justify-center w-full min-h-[250px] items-center">
-                    @if($showModal && $this->qrCode)
-                        <div class="w-full h-full flex justify-center">
-                            {!! $this->qrCode !!}
-                        </div>
-                    @else
-                        <div wire:loading class="flex justify-center items-center">
-                            <x-filament::loading-indicator class="h-10 w-10 text-primary-500" />
-                        </div>
-                    @endif
-                </div>
-                
-                <p class="text-sm text-center text-gray-600 dark:text-gray-400">
-                    {{ __('ledger.page_qr_code.description') }}
-                </p>
-
-                {{-- URLコピーエリア --}}
-                <div class="w-full flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded truncate text-xs">
-                    <span class="truncate flex-1 dark:text-gray-300">{{ $url }}</span>
-                    <x-filament::icon-button
-                        icon="heroicon-o-clipboard"
-                        size="sm"
-                        @click="navigator.clipboard.writeText('{{ $url }}'); new FilamentNotification().title('{{ __('ledger.file_inspector.messages.link_copied') }}').success().send()" />
-                </div>
-            </div>
-
-            <x-slot name="footerActions">
-                <x-filament::button
-                    color="gray"
-                    @click="showModal = false"
-                >
-                    {{ __('ledger.close') }}
-                </x-filament::button>
-            </x-slot>
-        </x-filament::modal>
+        <x-filament-actions::modals />
     @endif
 </div>
