@@ -8,8 +8,13 @@
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
         </testsuite>
-        <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
+        <testsuite name="FeatureParallelSubset">
+            <directory suffix="Test.php">./tests/Feature/Livewire</directory>
+            <directory suffix="Test.php">./tests/Feature/Services</directory>
+            <!-- tenant->run() を使う専用テナント設計のため並列対象外 -->
+            <exclude>./tests/Feature/Livewire/Folder/TreeTest.php</exclude>
+            <exclude>./tests/Feature/Livewire/TenantSwitcherTest.php</exclude>
+            <exclude>./tests/Feature/Livewire/LedgerColumnValidationTest.php</exclude>
         </testsuite>
     </testsuites>
     <source>
@@ -20,7 +25,6 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="LOG_CHANNEL" value="single"/>
-        <!-- テスト専用のMySQL接続を使用 -->
         <server name="DB_CONNECTION" value="mysql_testing"/>
         <server name="DB_DATABASE" value="ledgerleap_test"/>
         <env name="BCRYPT_ROUNDS" value="10"/>
@@ -29,13 +33,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
-        <!-- RAGジョブを標準では自動実行しない。外部 Embedding コンテナが不要なテストで -->
-        <!-- Queue::fake() なしに QUEUE_CONNECTION=sync が LedgerObserver を通じて      -->
-        <!-- EmbeddingService に接続を試みて 60 秒タイムアウトを引き起こすのを防ぐ。      -->
-        <!-- RAG 機能を必要とするテストは setUp() で config(['rag.enabled' => true]) を設定する。 -->
         <env name="RAG_ENABLED" value="false"/>
-
-        <!-- LDAP Testing Configuration -->
         <env name="LDAP_LOGGING" value="true"/>
         <env name="LDAP_HOST" value="openldap"/>
         <env name="LDAP_USERNAME" value="cn=admin,dc=planetexpress,dc=com"/>
@@ -44,3 +42,4 @@
         <env name="LDAP_BASE_DN" value="dc=planetexpress,dc=com"/>
     </php>
 </phpunit>
+

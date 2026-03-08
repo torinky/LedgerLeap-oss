@@ -1,6 +1,6 @@
 # カバレッジ測定
 
-**最終更新:** 2026-02-28
+**最終更新:** 2026-03-08
 **元ドキュメント:** Testing-Best-Practices.md（2026-02-22版）より分割
 
 ---
@@ -8,8 +8,17 @@
 ## カバレッジ測定コマンド
 
 ```bash
-# 全テストのカバレッジを HTML レポートで生成
+# 全テストのカバレッジを HTML レポートで生成（基準レポート・直列）
 ./vendor/bin/sail composer test:coverage
+
+# CI に近い Unit カバレッジ（直列）
+./vendor/bin/sail composer test:coverage:unit
+
+# parallel-safe な Unit だけを並列でカバレッジ測定
+./vendor/bin/sail composer test:coverage:unit:parallel
+
+# parallel canary 相当の Feature subset を並列でカバレッジ測定
+./vendor/bin/sail composer test:coverage:feature-subset:parallel
 
 # 特定ディレクトリのカバレッジ
 ./vendor/bin/sail pest tests/Unit/Rules --coverage
@@ -24,6 +33,14 @@
 ./vendor/bin/sail pest tests/Unit/Rules --coverage-html=coverage
 open coverage/index.html  # macOS
 ```
+
+### 使い分け
+
+- `test:full`: カバレッジなしの全体入口。まず全体を通したいときはこちらを使う。
+- `test:coverage`: 全体の基準レポート。時間はかかるが最も単純。
+- `test:coverage:unit`: Unit のみを CI 条件に寄せて確認。
+- `test:coverage:unit:parallel`: 日常の高速確認向け。PCOV を有効化して並列実行。
+- `test:coverage:feature-subset:parallel`: `FeatureParallelSubset` のみ対象。`database-migrations` は含めない。`phpunit.parallel.xml` を使用。
 
 ---
 
@@ -133,12 +150,17 @@ Rules/ValidAutoLinkPattern ......................................... 100.0%
 
 ### カバレッジが 0% になる
 
-**原因:** Xdebug が有効になっていない
+**原因:** Xdebug / PCOV が有効になっていない
 
 ```bash
-./vendor/bin/sail php -v | grep Xdebug
+./vendor/bin/sail php -m | grep -Ei 'xdebug|pcov'
 ./vendor/bin/sail down && ./vendor/bin/sail up -d
 ```
+
+### 並列カバレッジを全件で回したくなる
+
+LedgerLeap では `database-migrations` 系テストを通常の並列実行に混ぜない。
+まずは `test:coverage:unit:parallel` または `test:coverage:feature-subset:parallel` を使うこと。
 
 ### `#[Computed]` プロパティのカバレッジが 0% になる
 
@@ -148,4 +170,3 @@ Rules/ValidAutoLinkPattern ......................................... 100.0%
 ### 特定のファイルが表示されない
 
 そのファイルを対象とする `#[CoversClass]` アトリビュートがテストに付いているか確認。
-

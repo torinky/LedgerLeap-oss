@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Canary: Unit Parallel" type="ComposerRunConfigurationType" factoryName="Composer Script">
+    <option name="commandLineParameters" value="" />
+    <option name="pathToComposerJson" value="$PROJECT_DIR$/composer.json" />
+    <option name="script" value="test:canary:unit" />
+    <method v="2" />
+  </configuration>
+</component>
+
