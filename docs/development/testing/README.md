@@ -62,13 +62,21 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 
 ### まず全体を通したいときの入口
 
+#### PhpStorm から実行する場合（通常はこちら）
+
+- `Pest: Full (phpunit.xml)`
+- 実測では `phpunit.xml` ベースの全体実行がローカルで完走しており、**普段の全体確認入口として利用可能**
+- Pest のテストツリーや失敗箇所の追跡もしやすいため、日常運用ではこちらを優先する
+
+#### terminal / Composer から実行する場合
+
 ```bash
 ./vendor/bin/sail composer test:full
 ```
 
-- `test:full` は `test:ci:unit` → `test:ci:feature` → `test:ci:db-migrations` → `test:external` を順番に実行する
+- `test:full` は `test:prepare:local` → `test:ci:unit` → `test:ci:feature` → `test:ci:db-migrations` → `test:external` を順番に実行する
 - ローカルで利用可能な外部コンテナがあれば、その範囲の `external` テストも含めて確認できる
-- **カバレッジは取らない**ため、全体確認の入口としてはこちらを優先する
+- **カバレッジは取らない**が、CI に近い分割順で再現したいときの補助入口として使える
 
 ### 通常確認
 
@@ -107,7 +115,10 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 
 - PHP interpreter は `docker-compose.yml` の `laravel` service に合わせる
 - 通常実行は `phpunit.xml`、並列 canary は `phpunit.parallel.xml` を使う
-- `Full: All Tests` がカバレッジなしの全体入口、`Coverage: Full` は HTML レポート生成用
+- **日常の全体確認は `Pest: Full (phpunit.xml)` を優先**する
+- `Full: All Tests` は `composer test:full` 相当の補助入口で、`test:prepare:local` や `test:external` を含む分割実行を再現したいときに使う
+- `Coverage: Full` は HTML レポート生成用の入口
+- 実運用としては、**Composer 側の主用途は coverage と scripted な再現実行**と考えてよい
 - Run Configuration は上記 scripts と同じ分割で作る
 - `database-migrations` を通常 Feature 実行や全件 parallel に混ぜない
 - 共有 Run Configuration は `.idea/runConfigurations/` にコミットしてあるため、Composer / PHP interpreter を設定するとそのまま使える
