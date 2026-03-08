@@ -27,6 +27,7 @@ A new learning was proven?
 - Keep `.github/copilot-instructions.md` short and repo-wide only.
 - Keep one source of truth per rule; replace duplicates with links.
 - If a prompt and skill cover the same domain, make them cross-reference each other.
+- If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
 
 ## Maintenance Loop
 
@@ -45,6 +46,7 @@ A new learning was proven?
 - [ ] Updated `references/*.md` for long examples or detailed steps
 - [ ] Updated `AGENTS.md` if routing/discovery changed
 - [ ] Updated issue template or runbook if intake/ops flow changed
+- [ ] Added a stable command recipe when repeated CI investigation friction was observed
 
 See [routing](./references/routing.md) for the authoritative destination matrix.
 See [workflow](./references/workflow.md) for the quality gate and commit flow.

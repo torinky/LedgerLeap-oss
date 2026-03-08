@@ -1,35 +1,56 @@
 ---
-description: Investigate GitHub Actions CI failures for LedgerLeap. Fetches logs, classifies failure patterns, and routes to the correct fix.
+description: Investigate GitHub Actions CI failures for LedgerLeap. Fetch logs, classify failures, and route to the correct fix using stable gh command patterns.
 ---
 
 # ci-failure-investigation
 
+## Step 0 — Preflight
+
+```bash
+gh auth status
+```
+
+- Start with plain-text `gh run list`.
+- Prefer `gh api ... --jq` over `python3 -c` JSON parsing.
+- On macOS, if Python unexpectedly asks for the Xcode license, stop using Python and switch to `gh api --jq`.
+- Keep shell quoting shallow.
+
 ## Step 1 — Identify failing run
 
 ```bash
-gh run list --repo torinky/LedgerLeap --limit 5 \
-  --json databaseId,status,conclusion,displayTitle
+gh run list --repo torinky/LedgerLeap --limit 10
+
+gh run list --repo torinky/LedgerLeap \
+  --workflow "Laravel CI (PHPUnit / Pest)" \
+  --branch develop \
+  --limit 5
+
+gh run list --repo torinky/LedgerLeap \
+  --workflow "Parallel Tests Canary (Sprint 4)" \
+  --branch develop \
+  --limit 5
 ```
 
 ## Step 2 — Get job IDs
 
 ```bash
-gh run view {RUN_ID} --repo torinky/LedgerLeap \
-  --json jobs | python3 -c "
-import sys, json
-for j in json.load(sys.stdin)['jobs']:
-    print(j['name'], j['databaseId'], j['conclusion'])
-    for s in j['steps']:
-        if s['conclusion'] not in ('success',''):
-            print('  FAIL:', s['name'])
-"
+gh api repos/torinky/LedgerLeap/actions/runs/{RUN_ID}/jobs \
+  --jq '.jobs[] | [.name, .databaseId, .conclusion] | @tsv'
+```
+
+Failed steps only:
+
+```bash
+gh api repos/torinky/LedgerLeap/actions/runs/{RUN_ID}/jobs \
+  --jq '.jobs[] | {name, failedSteps: [.steps[] | select(.conclusion != null and .conclusion != "success") | .name]}'
 ```
 
 ## Step 3 — Fetch log
 
 ```bash
-gh api /repos/torinky/LedgerLeap/actions/jobs/{JOB_ID}/logs 2>&1 \
-  | grep -E "FAIL|Exception|timeout|SQLSTATE|Error" | head -40
+gh api /repos/torinky/LedgerLeap/actions/jobs/{JOB_ID}/logs > /tmp/ci-job.log
+
+grep -E "FAIL|Exception|timeout|SQLSTATE|Error" /tmp/ci-job.log | head -40
 ```
 
 ## Step 4 — Classify & route
@@ -57,5 +78,4 @@ Post result using `github-issue-workflow` prompt:
 - [ ] 対応1
 ```
 
-See `.github/skills/ci-failure-investigation/SKILL.md` for full patterns.
-
+See `.github/skills/ci-failure-investigation/SKILL.md` for full patterns and references.

@@ -23,6 +23,7 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 - 既存 instruction / prompt / skill が誤っていたと分かったとき
 - 新しい recurring workflow が 2 回以上出現したとき
 - issue template / runbook / AGENTS の不足が判明したとき
+- 同じ CI 調査コマンドや shell 手順で 2 回以上詰まったとき
 
 ## Routing Matrix
 
@@ -44,6 +45,7 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 3. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
 4. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
 5. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint を確認する
+6. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
 
 ## JetBrains / Copilot Rule
 
