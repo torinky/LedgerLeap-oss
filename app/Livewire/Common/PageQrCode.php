@@ -8,7 +8,6 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Illuminate\Support\Facades\Blade;
 use Livewire\Attributes\Computed;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -24,13 +23,20 @@ class PageQrCode extends BaseLivewireComponent implements HasForms, HasActions
     public bool $showModal = false;
 
     /**
-     * モーダルを開き、URLを更新する (MaryUI用)
-     *
-     * @param string $currentUrl クライアント側から渡される現在のURL
+     * 現在のページのURLを取得する
      */
-    public function openModal(string $currentUrl): void
+    protected function resolveCurrentUrl(): string
     {
-        $this->url = $currentUrl;
+        // AJAXリクエストの場合はRefererヘッダーから、そうでない場合は現在のURLを取得
+        return request()->header('Referer') ?? request()->fullUrl();
+    }
+
+    /**
+     * モーダルを開き、URLを更新する (MaryUI用)
+     */
+    public function openModal(): void
+    {
+        $this->url = $this->resolveCurrentUrl();
         $this->showModal = true;
     }
 
@@ -61,15 +67,15 @@ class PageQrCode extends BaseLivewireComponent implements HasForms, HasActions
             ->iconButton()
             ->color('gray')
             ->modalHeading(__('ledger.page_qr_code.modal_title'))
-            ->modalContent(fn () => view('livewire.common.page-qr-code-modal-content', [
-                'url' => $this->url,
-                'qrCode' => $this->qrCode,
-            ]))
+            ->modalContent(function () {
+                $url = $this->resolveCurrentUrl();
+                return view('livewire.common.page-qr-code-modal-content', [
+                    'url' => $url,
+                    'qrCode' => QrCode::size(250)->format('svg')->generate($url)->toHtml(),
+                ]);
+            })
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('ledger.close'))
-            ->extraAttributes([
-                'x-on:click' => '$wire.set("url", window.location.href)',
-            ]);
+            ->modalCancelActionLabel(__('ledger.close'));
     }
 
     public function render()

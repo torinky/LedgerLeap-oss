@@ -2,7 +2,7 @@
     @if($triggerType === 'mary')
         <x-mary-button 
             icon="o-qr-code" 
-            @click="$wire.openModal(window.location.href)"
+            wire:click="openModal"
             class="btn-ghost btn-sm btn-circle tooltip tooltip-bottom"
             data-tip="{{ __('ledger.page_qr_code.modal_title') }}" />
 
@@ -28,7 +28,7 @@
                     x-data="{ 
                         copied: false,
                         copyToClipboard() {
-                            window.navigator.clipboard.writeText('{{ $url }}');
+                            window.navigator.clipboard.writeText($wire.url);
                             this.copied = true;
                             setTimeout(() => this.copied = false, 2000);
                             $mary.toast({type: 'success', title: '{{ __('ledger.file_inspector.messages.link_copied') }}'});
@@ -50,7 +50,7 @@
             </div>
 
             <x-slot:actions>
-                <x-mary-button label="{{ __('ledger.close') }}" @click="showModal = false" />
+                <x-mary-button label="{{ __('ledger.close') }}" @click="$wire.showModal = false" />
             </x-slot:actions>
         </x-mary-modal>
     @else
