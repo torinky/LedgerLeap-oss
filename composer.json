@@ -99,7 +99,9 @@
     "post-create-project-cmd": [
       "@php artisan key:generate --ansi"
     ],
+    "test:prepare:local": "bash ./bin/prepare-local-test-env.sh",
     "test:full": [
+      "@test:prepare:local",
       "@test:ci:unit",
       "@test:ci:feature",
       "@test:ci:db-migrations",
@@ -111,7 +113,10 @@
     "test:external": "vendor/bin/pest --group=external --display-errors",
     "test:canary:unit": "vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors",
     "test:canary:feature": "vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --display-errors",
-    "test:coverage": "vendor/bin/pest --coverage-html coverage",
+    "test:coverage": [
+      "@test:prepare:local",
+      "vendor/bin/pest --coverage-html coverage"
+    ],
     "test:coverage:unit": "php -d pcov.enabled=1 vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/unit",
     "test:coverage:unit:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/unit-parallel",
     "test:coverage:feature-subset:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/feature-subset-parallel",
